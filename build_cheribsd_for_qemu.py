@@ -6,10 +6,33 @@ import os
 import logging
 import shutil
 import tempfile
+import multiprocessing
 from glob import glob
 # import sh
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
+
+def buildQEMU():
+    global cheriDir
+    qemuDir = os.path.join(cheriDir, "qemu-cheri")
+    os.chdir(qemuDir)
+    if not options.skip_update:
+        subprocess.check_call(["git", "pull", "--rebase"])
+    if options.clean:
+        subprocess.check_call(["git", "clean", "-dfx"])
+    if not options.skip_configure:
+        subprocess.check_call(["./configure",
+                               "--target-list=cheri-softmmu",
+                               "--disable-linux-user",
+                               "--disable-linux-aio",
+                               "--disable-kvm",
+                               "--disable-xen",
+                               "--extra-cflags=-g",
+                               "--prefix=" + hostToolsInstallDir])
+    subprocess.check_call(["gmake", makeJFlag])
+    subprocess.check_call(["gmake", "install"])
+    os.chdir(cheriDir)
+
 
 def buildBinUtils():
     global cheriDir
@@ -19,12 +42,10 @@ def buildBinUtils():
     if options.clean:
         subprocess.check_call(["git", "-C", binutilsDir, "clean", "-dfx"])
     os.chdir(binutilsDir)
-    if not options.skip_cmake:
+    if not options.skip_configure:
         subprocess.check_call(["./configure", "--target=mips64", "--disable-werror", "--prefix=" + hostToolsInstallDir])
-    if options.make_jobs:
-        subprocess.check_call(["make", "-j" + str(options.make_jobs)])
-    else:
-        subprocess.check_call(["make", "-j32"])
+
+    subprocess.check_call(["make", makeJFlag])
     subprocess.check_call(["make", "install"])
     os.chdir(cheriDir)
 
@@ -38,14 +59,14 @@ def buildLLVM():
         shutil.rmtree(llvmBuildDir)
     os.makedirs(llvmBuildDir, exist_ok=True)
     os.chdir(llvmBuildDir)
-    if not options.skip_cmake:
+    if not options.skip_configure:
         subprocess.check_call(["cmake", "-G", "Ninja",
                 "-DCMAKE_CXX_COMPILER=clang++37", "-DCMAKE_C_COMPILER=clang37", # need at least 3.7 to build it
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd",
                 # not sure if the following is needed, I just copied them from the build_sdk script
                 "-DCMAKE_INSTALL_PREFIX=" + hostToolsInstallDir,
-                # "-DDEFAULT_SYSROOT=" + os.path.join(cheriDir, "qemu/rootfs"),
+                "-DDEFAULT_SYSROOT=" + os.path.join(cheriDir, "qemu/rootfs"),
                 llvmDir])
     if options.make_jobs:
         subprocess.check_call(["ninja", "-j" + str(options.make_jobs)])
@@ -61,7 +82,7 @@ def buildLLVM():
         print("removing incompatible header", i)
         os.remove(i)
     os.chdir(cheriDir)
-    
+
 
 def buildCHERIBSD():
     cheribsdDir = os.path.join(cheriDir, "cheribsd")
@@ -77,13 +98,15 @@ def buildCHERIBSD():
         if os.path.isdir(os.path.join(cheriDir, "qemu/obj")):
             shutil.rmtree(os.path.join(cheriDir, "qemu/obj"))
     os.makedirs(os.path.join(cheriDir, "qemu/obj"), exist_ok=True)
+    # make sure the old install is purged before building, otherwise we get strange errors
     if os.path.isdir(rootfsDir):
         shutil.rmtree(rootfsDir)
-    os.makedirs(rootfsDir, exist_ok=True)
+    os.makedirs(rootfsDir, exist_ok=True) # if DESTDIR doesn't exist yet install will fail!
+
     makeCmd = ["make", "CHERI=256",
                # "CC=/usr/local/bin/clang37",
                "CHERI_CC=" + cheriCC,
-               "CPUTYPE=mips", # mipsfpu for hardware float
+               "CPUTYPE=mips64", # mipsfpu for hardware float
                #"TARGET=mips",
                #"TARGET_ARCH=mips64",
                #"TARGET_CPUTYPE=mips", # mipsfpu for hardware float
@@ -92,15 +115,10 @@ def buildCHERIBSD():
                #"CFLAGS=-Wno-error=capabilities",
                # "CFLAGS=-nostdinc",
                "-DNO_WERROR",
+               makeJFlag
                ]
-    if options.make_jobs:
-        makeCmd += ["-j" + str(options.make_jobs)]
-    else:
-        makeCmd += ["-j32"]
     subprocess.check_call(makeCmd + ["buildworld"])
     subprocess.check_call(makeCmd + ["KERNCONF=CHERI_MALTA64", "buildkernel"])
-    if os.path.isdir(rootfsDir):
-        shutil.rmtree(rootfsDir)
     subprocess.check_call(makeCmd + ["installworld", "DESTDIR=" + rootfsDir])
     subprocess.check_call(makeCmd + ["KERNCONF=CHERI_MALTA64", "installkernel", "DESTDIR=" + rootfsDir])
     subprocess.check_call(makeCmd + ["distribution", "DESTDIR=" + rootfsDir])
@@ -140,33 +158,50 @@ if __name__ == "__main__":
     parser.add_argument("--clone", action="store_true", help="Perform the initial clone of the repositories")
     parser.add_argument("--make-jobs", "-j", help="Number of jobs to use for compiling", type=int)
     parser.add_argument("--clean", action="store_true", help="Do a clean build")
+    parser.add_argument("--list-targets", action="store_true", help="List all available targets")
     parser.add_argument("--skip-update", action="store_true", help="Skip the git pull step")
-    parser.add_argument("--skip-binutils", action="store_true", help="Don't build binutils")
-    parser.add_argument("--skip-llvm", action="store_true", help="Don't build LLVM")
-    parser.add_argument("--skip-cmake", action="store_true", help="Don't run cmake on LLVM") # TODO: rename to skip-configure?
-    parser.add_argument("--skip-cheribsd", action="store_true", help="Don't build CHERIBSD")
+    parser.add_argument("--skip-configure", action="store_true", help="Don't run the configure step")
+    #parser.add_argument("--skip-binutils", action="store_true", help="Don't build binutils")
+    #parser.add_argument("--skip-llvm", action="store_true", help="Don't build LLVM")
+    #parser.add_argument("--skip-cheribsd", action="store_true", help="Don't build CHERIBSD")
     parser.add_argument("--disk-image", action="store_true", help="Build a disk image usable for QEMU")
     parser.add_argument("--disk-image-path", help="The disk image path (defaults to qemu/disk.img)")
+    parser.add_argument("targets", metavar="TARGET", type=str, nargs="*", help="The targets to build", default=["all"])
     options = parser.parse_args()
-    # print(options)
+    allTargets = ["qemu", "binutils", "llvm", "cheribsd", "disk-image"]
+    if options.list_targets:
+        for i in allTargets:
+            print(i)
+        print("target 'all' can be used to build everything")
+        sys.exit();
     
+    if "all" in options.targets:
+        print("Building all targets")
+        targets = allTargets
+    else:
+        targets = [x.lower() for x in options.targets]
+    # print(options)
+
     logging.basicConfig(level=logging.INFO)
     cheriDir = os.path.expanduser("~/cheri")
     hostToolsInstallDir = os.path.join(cheriDir, "qemu/host-tools")
     llvmBuildDir = os.path.join(cheriDir, "qemu/llvm-build")
     rootfsDir = os.path.join(cheriDir, "qemu/rootfs")
+    makeJFlag = "-j" + str(options.make_jobs) if options.make_jobs else "-j" + str(multiprocessing.cpu_count())
 
     os.chdir(cheriDir)
-    if not options.skip_binutils:
+    if allTargets[0] in targets:
+        buildQEMU()
+    if allTargets[1] in targets:
         buildBinUtils()
-    if not options.skip_llvm:
+    if allTargets[2] in targets:
         buildLLVM()
-    if not options.skip_cheribsd:
+    if allTargets[3] in targets:
         # make sure the new binutils are picked up
         if not os.environ["PATH"].startswith(hostToolsInstallDir):
             os.environ["PATH"] = os.path.join(hostToolsInstallDir, "bin") + ":" + os.environ["PATH"]
             print("Set PATH to", os.environ["PATH"])
         buildCHERIBSD()
-    if options.disk_image:
+    if allTargets[4] in targets:
         buildQEMUImage()
     
