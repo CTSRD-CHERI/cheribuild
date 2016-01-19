@@ -43,10 +43,9 @@ def buildLLVM():
                 "-DCMAKE_CXX_COMPILER=clang++37", "-DCMAKE_C_COMPILER=clang37", # need at least 3.7 to build it
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd",
-                "-DCMAKE_INSTALL_PREFIX=" + hostToolsInstallDir,
                 # not sure if the following is needed, I just copied them from the build_sdk script
+                "-DCMAKE_INSTALL_PREFIX=" + hostToolsInstallDir,
                 # "-DDEFAULT_SYSROOT=" + os.path.join(cheriDir, "qemu/rootfs"),
-                # "-DDEFAULT_SYSROOT=" + hostToolsInstallDir,
                 llvmDir])
     if options.make_jobs:
         subprocess.check_call(["ninja", "-j" + str(options.make_jobs)])
@@ -82,15 +81,16 @@ def buildCHERIBSD():
         shutil.rmtree(rootfsDir)
     os.makedirs(rootfsDir, exist_ok=True)
     makeCmd = ["make", "CHERI=256",
-               # "CC=" + cheriCC,
+               # "CC=/usr/local/bin/clang37",
                "CHERI_CC=" + cheriCC,
                "CPUTYPE=mips", # mipsfpu for hardware float
-               "TARGET=mips",
-               "TARGET_ARCH=mips64",
-               "TARGET_CPUTYPE=mips", # mipsfpu for hardware float
+               #"TARGET=mips",
+               #"TARGET_ARCH=mips64",
+               #"TARGET_CPUTYPE=mips", # mipsfpu for hardware float
                "-DDB_FROM_SRC",
                "-DNO_ROOT", # -DNO_ROOT install without using root privilege
-               # "CFLAGS=-Wno-error=capabilities",
+               #"CFLAGS=-Wno-error=capabilities",
+               # "CFLAGS=-nostdinc",
                "-DNO_WERROR",
                ]
     if options.make_jobs:
