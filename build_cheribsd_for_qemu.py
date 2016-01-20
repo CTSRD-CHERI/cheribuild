@@ -17,8 +17,10 @@ def cleanDir(path, force=False, silent=False):
     if not options.clean and not force:
         return
     if os.path.isdir(path):
-        print("Cleaning", path, "...", end="")
-        shutil.rmtree(path)
+        print("Cleaning", path, "...", end="", flush=True)
+        #http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
+        # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
+        subprocess.check_call(["rm", "-rf", path])
         os.makedirs(path, exist_ok=False)
         print(" done.")
     # always make sure the dir exists
