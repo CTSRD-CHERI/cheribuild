@@ -12,6 +12,19 @@ from glob import glob
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
 
+# removes a directory tree if --clean is passed (or force=True parameter is passed
+def cleanDir(path, force=False, silent=False):
+    if not options.clean and not force:
+        return
+    if os.path.isdir(path):
+        print("Cleaning", path, "...", end="")
+        shutil.rmtree(path)
+        os.makedirs(path, exist_ok=False)
+        print(" done.")
+    # always make sure the dir exists
+    os.makedirs(path, exist_ok=True)
+
+
 def buildQEMU():
     global cheriDir
     qemuDir = os.path.join(cheriDir, "qemu-cheri")
@@ -31,7 +44,6 @@ def buildQEMU():
                                "--prefix=" + hostToolsInstallDir])
     subprocess.check_call(["gmake", makeJFlag])
     subprocess.check_call(["gmake", "install"])
-    os.chdir(cheriDir)
 
 
 def buildBinUtils():
@@ -47,7 +59,6 @@ def buildBinUtils():
 
     subprocess.check_call(["make", makeJFlag])
     subprocess.check_call(["make", "install"])
-    os.chdir(cheriDir)
 
 
 def buildLLVM():
@@ -55,9 +66,7 @@ def buildLLVM():
     if not options.skip_update:
         subprocess.check_call(["git", "-C", llvmDir, "pull", "--rebase"])
         subprocess.check_call(["git", "-C", os.path.join(llvmDir, "tools/clang"), "pull", "--rebase"])
-    if options.clean:
-        shutil.rmtree(llvmBuildDir)
-    os.makedirs(llvmBuildDir, exist_ok=True)
+    cleanDir(llvmBuildDir)
     os.chdir(llvmBuildDir)
     if not options.skip_configure:
         subprocess.check_call(["cmake", "-G", "Ninja",
@@ -81,7 +90,6 @@ def buildLLVM():
     for i in incompatibleFiles:
         print("removing incompatible header", i)
         os.remove(i)
-    os.chdir(cheriDir)
 
 
 def buildCHERIBSD():
@@ -94,24 +102,22 @@ def buildCHERIBSD():
     if not os.path.isfile(cheriCC):
         sys.exit("CHERI CC does not exist: " + cheriCC)
     os.environ["MAKEOBJDIRPREFIX"] = os.path.join(cheriDir, "qemu/obj")
-    if options.clean:
-        if os.path.isdir(os.path.join(cheriDir, "qemu/obj")):
-            shutil.rmtree(os.path.join(cheriDir, "qemu/obj"))
-    os.makedirs(os.path.join(cheriDir, "qemu/obj"), exist_ok=True)
+    
+    cleanDir(os.path.join(cheriDir, "qemu/obj"))
     # make sure the old install is purged before building, otherwise we get strange errors
-    if os.path.isdir(rootfsDir):
-        shutil.rmtree(rootfsDir)
-    os.makedirs(rootfsDir, exist_ok=True) # if DESTDIR doesn't exist yet install will fail!
-
-    makeCmd = ["make", "CHERI=256",
+    # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
+    cleanDir(rootfsDir, force=True)
+    makeCmd = ["make",
+               "CHERI=256",
                # "CC=/usr/local/bin/clang37",
                "CHERI_CC=" + cheriCC,
-               "CPUTYPE=mips64", # mipsfpu for hardware float
+               # "CPUTYPE=mips64", # mipsfpu for hardware float (apparently not needed: https://github.com/CTSRD-CHERI/cheribsd/issues/102)
                #"TARGET=mips",
                #"TARGET_ARCH=mips64",
                #"TARGET_CPUTYPE=mips", # mipsfpu for hardware float
                "-DDB_FROM_SRC",
                "-DNO_ROOT", # -DNO_ROOT install without using root privilege
+               "-DNO_CLEAN", # don't clean before (takes ages) and the rm -rf we do before should be enough
                #"CFLAGS=-Wno-error=capabilities",
                # "CFLAGS=-nostdinc",
                "-DNO_WERROR",
@@ -124,7 +130,6 @@ def buildCHERIBSD():
     subprocess.check_call(makeCmd + ["distribution", "DESTDIR=" + rootfsDir])
     with open(os.path.join(rootfsDir, "etc/fstab"), "w") as fstab:
         fstab.write("/dev/ada0 / ufs rw 1 1\n") # TODO: NFS?
-    os.chdir(cheriDir)
 
 
 def buildQEMUImage():
@@ -136,7 +141,6 @@ def buildQEMUImage():
         yn = input("An image already exists (" + diskImagePath + "). Overwrite? [y/N]")
         if str(yn).lower() == "y":
             os.remove(diskImagePath)
-        
     # as we don't have root access we first have to make an mtree specification of the disk image
     # where we replace uid=... and gid=... with the root uid
     # and then we can run makefs with the mtree spec as input which will create a valid disk image
@@ -198,9 +202,9 @@ if __name__ == "__main__":
         buildLLVM()
     if allTargets[3] in targets:
         # make sure the new binutils are picked up
-        if not os.environ["PATH"].startswith(hostToolsInstallDir):
-            os.environ["PATH"] = os.path.join(hostToolsInstallDir, "bin") + ":" + os.environ["PATH"]
-            print("Set PATH to", os.environ["PATH"])
+        #if not os.environ["PATH"].startswith(hostToolsInstallDir):
+        #    os.environ["PATH"] = os.path.join(hostToolsInstallDir, "bin") + ":" + os.environ["PATH"]
+        #    print("Set PATH to", os.environ["PATH"])
         buildCHERIBSD()
     if allTargets[4] in targets:
         buildQEMUImage()
