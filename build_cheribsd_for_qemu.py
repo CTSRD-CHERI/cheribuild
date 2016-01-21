@@ -135,29 +135,93 @@ def buildCHERIBSD():
 
 
 def buildQEMUImage():
-    # sudo -E makefs -M 1077936128 -B be /var/tmp/disk.img /var/tmp/root
-    diskImagePath = options.disk_image_path
-    if not diskImagePath:
-        diskImagePath = os.path.join(cheriDir, "qemu/disk.img")
     if os.path.exists(diskImagePath):
-        yn = input("An image already exists (" + diskImagePath + "). Overwrite? [y/N]")
+        yn = input("An image already exists (" + diskImagePath + "). Overwrite? [y/N] ")
         if str(yn).lower() == "y":
             os.remove(diskImagePath)
-    # as we don't have root access we first have to make an mtree specification of the disk image
-    # where we replace uid=... and gid=... with the root uid
-    # and then we can run makefs with the mtree spec as input which will create a valid disk image
-    # that has the files correctly marked as owned by root
-    # FIXME: is this correct or do some files need a different owner?
-    with tempfile.NamedTemporaryFile() as manifest:
-        print("Creating disk image manifest file", manifest.name, "...")
-        subprocess.check_call(["mtree", "-c", "-p", rootfsDir, "-K", "uid,gid"], stdout=manifest)
-        # replace all uid=1234 with uid=0 and same for gid
-        subprocess.check_call(["sed", "-i", "-e", "s/uid\=[[:digit:]]*/uid=0/g", manifest.name])
-        subprocess.check_call(["sed", "-i", "-e", "s/gid\=[[:digit:]]*/gid=0/g", manifest.name])
-        # makefs -M 1077936128 -B be -F ../root.mtree "qemu/disk.img"
-        subprocess.check_call(["makefs", "-M", "1077936128", "-B", "be", "-F", manifest.name, diskImagePath, rootfsDir])
-        print("QEMU disk image", diskImagePath, "successfully created!")
+        else:
+            return
+    
+    # make use of the mtree file created by make installworld
+    # this means we can create a disk image without root privilege
+    manifestFile = os.path.join(rootfsDir, "METALOG");
+    if not os.path.isfile(manifestFile):
+        sys.exit("mtree manifest " + manifestFile + " is missing")
+    userGroupDbDir = os.path.join(cheriDir, "cheribsd/etc")
+    if not os.path.isfile(os.path.join(userGroupDbDir, "master.passwd")):
+        sys.exit("master.passwd does not exist in " + userGroupDbDir)
 
+    # for now we need to patch the METALOG FILE:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        originalManifestFile = manifestFile
+        manifestFile = os.path.join(tmpdir, "METALOG")
+        shutil.copyfile(originalManifestFile, manifestFile)
+        print("Patching METALOG", manifestFile)
+        patch = subprocess.Popen(["patch", "-u", "-p1"], stdin=subprocess.PIPE, cwd=tmpdir)    
+        patch.communicate(input=b"""
+--- rootfs/METALOG      2016-01-20 09:51:47.704461046 +0000
++++ rootfs2/METALOG       2016-01-20 11:51:59.831964687 +0000
+@@ -121,6 +121,7 @@
+ ./usr/lib/libxo type=dir uname=root gname=wheel mode=0755
+ ./usr/lib/libxo/encoder type=dir uname=root gname=wheel mode=0755
+ ./usr/libcheri type=dir uname=root gname=wheel mode=0755
++./usr/libcheri/.debug type=dir uname=root gname=wheel mode=0755 tags=debug
+ ./usr/libdata type=dir uname=root gname=wheel mode=0755
+ ./usr/libdata/gcc type=dir uname=root gname=wheel mode=0755
+ ./usr/libdata/ldscripts type=dir uname=root gname=wheel mode=0755
+@@ -4434,7 +4435,6 @@
+ ./usr/include/cheri//helloworld.h type=file uname=root gname=wheel mode=0444 size=2370
+ ./usr/lib//libhelloworld_p.a type=file uname=root gname=wheel mode=0444 size=6598
+ ./usr/libcheri/helloworld.co.0 type=file uname=root gname=wheel mode=0555 size=90032
+-./usr/libcheri/.debug/ type=dir mode=0755 tags=debug
+ ./usr/libcheri/.debug/helloworld.co.0.debug type=file uname=root gname=wheel mode=0444 size=48928 tags=debug
+ ./usr/libcheri//helloworld.co.0.dump type=file uname=root gname=wheel mode=0444 size=1013571
+ ./usr/lib//librpcsec_gss.a type=file uname=root gname=wheel mode=0444 size=53040
+""")
+        patch.stdin.close()
+        patch.wait()
+        print("Sucessfully patched METALOG")
+        # input("about to run makefs on " + manifestFile + ". continue?")
+
+        subprocess.check_call(["makefs",
+            "-M", "1077936128", # minimum image size = 1GB
+            "-B", "be", # big endian byte order
+            "-F", manifestFile, # use METALOG as the manifest for the disk image
+            "-N", userGroupDbDir, # use master.passwd from the cheribsd source not the current systems passwd file (makes sure that the numeric UID values are correct
+            diskImagePath, # output file
+            rootfsDir # directory tree to use for the image
+            ])
+    
+    if False:
+        # no longer needed
+        
+        # as we don't have root access we first have to make an mtree specification of the disk image
+        # where we replace uid=... and gid=... with the root uid
+        # and then we can run makefs with the mtree spec as input which will create a valid disk image
+        # that has the files correctly marked as owned by root
+        # FIXME: is this correct or do some files need a different owner?
+        with tempfile.NamedTemporaryFile() as manifest:
+            print("Creating disk image manifest file", manifest.name, "...")
+            subprocess.check_call(["mtree", "-c", "-p", rootfsDir, "-K", "uid,gid"], stdout=manifest)
+            # replace all uid=1234 with uid=0 and same for gid
+            subprocess.check_call(["sed", "-i", "-e", "s/uid\=[[:digit:]]*/uid=0/g", manifest.name])
+            subprocess.check_call(["sed", "-i", "-e", "s/gid\=[[:digit:]]*/gid=0/g", manifest.name])
+            # makefs -M 1077936128 -B be -F ../root.mtree "qemu/disk.img"
+            subprocess.check_call(["makefs", "-M", "1077936128", "-B", "be", "-F", manifest.name, diskImagePath, rootfsDir])
+            print("QEMU disk image", diskImagePath, "successfully created!")
+
+
+def runQEMU():
+    qemuBinary = os.path.join(hostToolsInstallDir, "bin/qemu-system-cheri")
+    currentKernel = os.path.join(rootfsDir, "boot/kernel/kernel")
+    input("About to run QEMU with image " + diskImagePath + " and kernel " + currentKernel + "\nPress enter to continue")
+    subprocess.check_call([qemuBinary,
+                    "-M", "malta", # malta cpu
+                    "-kernel", currentKernel , # assume the current image matches the kernel currently build
+                    "-nographic", # no GPU
+                    "-m", "2048", # 2GB memory
+                    "-hda", diskImagePath 
+                    ])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -170,11 +234,11 @@ if __name__ == "__main__":
     #parser.add_argument("--skip-binutils", action="store_true", help="Don't build binutils")
     #parser.add_argument("--skip-llvm", action="store_true", help="Don't build LLVM")
     #parser.add_argument("--skip-cheribsd", action="store_true", help="Don't build CHERIBSD")
-    parser.add_argument("--disk-image", action="store_true", help="Build a disk image usable for QEMU")
+    #parser.add_argument("--disk-image", action="store_true", help="Build a disk image usable for QEMU")
     parser.add_argument("--disk-image-path", help="The disk image path (defaults to qemu/disk.img)")
     parser.add_argument("targets", metavar="TARGET", type=str, nargs="*", help="The targets to build", default=["all"])
     options = parser.parse_args()
-    allTargets = ["qemu", "binutils", "llvm", "cheribsd", "disk-image"]
+    allTargets = ["qemu", "binutils", "llvm", "cheribsd", "disk-image", "run"]
     if options.list_targets:
         for i in allTargets:
             print(i)
@@ -187,12 +251,18 @@ if __name__ == "__main__":
     else:
         targets = [x.lower() for x in options.targets]
     # print(options)
+    for i in targets:
+        if i not in allTargets:
+            sys.exit("Unknown target " + i + " see --list-targets")
 
     logging.basicConfig(level=logging.INFO)
     cheriDir = os.path.expanduser("~/cheri")
     hostToolsInstallDir = os.path.join(cheriDir, "qemu/host-tools")
     llvmBuildDir = os.path.join(cheriDir, "qemu/llvm-build")
     rootfsDir = os.path.join(cheriDir, "qemu/rootfs")
+    diskImagePath = options.disk_image_path
+    if not diskImagePath:
+        diskImagePath = os.path.join(cheriDir, "qemu/disk.img")
     makeJFlag = "-j" + str(options.make_jobs) if options.make_jobs else "-j" + str(multiprocessing.cpu_count())
 
     os.chdir(cheriDir)
@@ -210,4 +280,6 @@ if __name__ == "__main__":
         buildCHERIBSD()
     if allTargets[4] in targets:
         buildQEMUImage()
+    if allTargets[5] in targets:
+        runQEMU()
     
