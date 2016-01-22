@@ -5,6 +5,7 @@ import sys
 import os
 import logging
 import shutil
+import shlex
 import tempfile
 import multiprocessing
 import collections
@@ -24,7 +25,7 @@ class Paths(object):
     def __init__(self, cmdlineArgs: argparse.Namespace):
         self.cheriRoot = os.path.expanduser("~/cheri") # change this if you want it somewhere else
         self.outputDir = os.path.join(self.cheriRoot, "output")
-        self.rootfs = os.path.join(self.outputDir, "rootfs")
+        self.rootfsPath = os.path.join(self.outputDir, "rootfs")
         self.diskImagePath = options.disk_image_path
         if not self.diskImagePath:
             self.diskImagePath = os.path.join(self.outputDir, "disk.img")
@@ -45,32 +46,49 @@ class Paths(object):
                             installDir = self.hostToolsInstallDir) # also not needed
         self.cheribsd = Project(srcDir = os.path.join(self.cheriRoot, "cheribsd"),
                             buildDir = os.path.join(self.outputDir, "cheribsd-obj"),
-                            installDir = self.rootfs)
+                            installDir = self.rootfsPath)
+
+def runCmd(*args, **kwargs):
+    if type(args[0]) is str:
+        cmdline = args # multiple strings passed
+    else:
+        cmdline = args[0] # list was passed
+    if options.pretend:
+        # quotes according to msvc rules but should be fine
+        print("executing:", " ".join([shlex.quote(i) for i in cmdline]))
+        if not kwargs:
+            kwargs["cwd"] = os.getcwd()
+        print("  workdir:", kwargs["cwd"])
+
+    else:
+        subprocess.check_call(*args, **kwargs)
 
 
 # removes a directory tree if --clean is passed (or force=True parameter is passed
 def cleanDir(path, force=False, silent=False):
-    if not options.clean and not force:
-        return
-    if os.path.isdir(path):
-        print("Cleaning", path, "...", end="", flush=True)
+    if (options.clean or force) and os.path.isdir(path):
+        print("Cleaning", path, "...")
         #http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
         # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
-        subprocess.check_call(["rm", "-rf", path])
-        os.makedirs(path, exist_ok=False)
-        print(" done.")
+        runCmd(["rm", "-rf", path])
+        os.makedirs(path, exist_ok=True)
+        print("Finished cleaning", path, "...")
     # always make sure the dir exists
     os.makedirs(path, exist_ok=True)
 
 
+def fatalError(message: str):
+    if not options.pretend: # we ignore fatal errors when simulating a run
+        sys.exit(message)
+
 def buildQEMU():
     os.chdir(paths.qemu.srcDir)
     if not options.skip_update:
-        subprocess.check_call(["git", "pull", "--rebase"])
+        runCmd(["git", "pull", "--rebase"])
     if options.clean:
-        subprocess.check_call(["git", "clean", "-dfx"])
+        runCmd(["git", "clean", "-dfx"])
     if not options.skip_configure:
-        subprocess.check_call(["./configure",
+        runCmd(["./configure",
                                "--target-list=cheri-softmmu",
                                "--disable-linux-user",
                                "--disable-linux-aio",
@@ -78,32 +96,31 @@ def buildQEMU():
                                "--disable-xen",
                                "--extra-cflags=-g",
                                "--prefix=" + paths.qemu.installDir])
-    subprocess.check_call(["gmake", makeJFlag])
-    subprocess.check_call(["gmake", "install"])
+    runCmd(["gmake", makeJFlag])
+    runCmd(["gmake", "install"])
 
 
 def buildBinUtils():
-    binutilsDir = os.path.join(cheriDir, "binutils")
+    os.chdir(paths.binutils.srcDir)
     if not options.skip_update:
-        subprocess.check_call(["git", "-C", binutilsDir, "pull", "--rebase"])
+        runCmd(["git", "pull", "--rebase"])
     if options.clean:
-        subprocess.check_call(["git", "-C", binutilsDir, "clean", "-dfx"])
-    os.chdir(binutilsDir)
+        runCmd(["git", "clean", "-dfx"])
     if not options.skip_configure:
-        subprocess.check_call(["./configure", "--target=mips64", "--disable-werror", "--prefix=" + paths.binutils.installDir])
+        runCmd(["./configure", "--target=mips64", "--disable-werror", "--prefix=" + paths.binutils.installDir])
 
-    subprocess.check_call(["make", makeJFlag])
-    subprocess.check_call(["make", "install"])
+    runCmd(["make", makeJFlag])
+    runCmd(["make", "install"])
 
 
 def buildLLVM():
     if not options.skip_update:
-        subprocess.check_call(["git", "-C", paths.llvm.srcDir, "pull", "--rebase"])
-        subprocess.check_call(["git", "-C", paths.clang.srcDir, "pull", "--rebase"])
+        runCmd(["git", "-C", paths.llvm.srcDir, "pull", "--rebase"])
+        runCmd(["git", "-C", paths.clang.srcDir, "pull", "--rebase"])
     cleanDir(paths.llvm.buildDir)
     os.chdir(paths.llvm.buildDir)
     if not options.skip_configure:
-        subprocess.check_call(["cmake", "-G", "Ninja",
+        runCmd(["cmake", "-G", "Ninja",
                 "-DCMAKE_CXX_COMPILER=clang++37", "-DCMAKE_C_COMPILER=clang37", # need at least 3.7 to build it
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd",
@@ -115,15 +132,18 @@ def buildLLVM():
 
                 paths.llvm.srcDir])
     if options.make_jobs:
-        subprocess.check_call(["ninja", "-j" + str(options.make_jobs)])
+        runCmd(["ninja", "-j" + str(options.make_jobs)])
     else:
-        subprocess.check_call(["ninja"])
-    # subprocess.check_call(["ninja", "install"])
+        runCmd(["ninja"])
+    # runCmd(["ninja", "install"])
     # delete the files incompatible with cheribsd
     # incompatibleFiles = glob.glob(hostToolsInstallDir + "/lib/clang/3.*/include/std*") + glob.glob(hostToolsInstallDir + "/lib/clang/3.*/include/limits.h")
     incompatibleFiles = glob.glob("lib/clang/3.*/include/std*") + glob.glob("lib/clang/3.*/include/limits.h")
+    if options.pretend:
+        print("executing: rm -f", " ".join(incompatibleFiles))
+        print("  options: {'cwd':", os.getcwd(), "}")
     if len(incompatibleFiles) == 0:
-        sys.exit("Could not find incompatible builtin includes. Build system changed?")
+        fatalError("Could not find incompatible builtin includes. Build system changed?")
     for i in incompatibleFiles:
         print("removing incompatible header", i)
         os.remove(i)
@@ -132,17 +152,17 @@ def buildLLVM():
 def buildCHERIBSD():
     os.chdir(paths.cheribsd.srcDir)
     if not options.skip_update:
-        subprocess.check_call(["git", "-C", paths.cheribsd.srcDir, "pull", "--rebase"])
+        runCmd(["git", "-C", paths.cheribsd.srcDir, "pull", "--rebase"])
     #cheriCC = os.path.join(paths.llvm.installDir, "bin/clang")
     cheriCC = os.path.join(paths.llvm.buildDir, "bin/clang")
     if not os.path.isfile(cheriCC):
-        sys.exit("CHERI CC does not exist: " + cheriCC)
+        fatalError("CHERI CC does not exist: " + cheriCC)
     os.environ["MAKEOBJDIRPREFIX"] = paths.cheribsd.buildDir
     
     cleanDir(paths.cheribsd.buildDir)
     # make sure the old install is purged before building, otherwise we get strange errors
     # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
-    cleanDir(paths.rootfsDir, force=True)
+    cleanDir(paths.cheribsd.installDir, force=True)
     makeCmd = ["make",
                "CHERI=256",
                # "CC=/usr/local/bin/clang37",
@@ -159,13 +179,21 @@ def buildCHERIBSD():
                "-DNO_WERROR",
                makeJFlag
                ]
-    subprocess.check_call(makeCmd + ["buildworld"])
-    subprocess.check_call(makeCmd + ["KERNCONF=CHERI_MALTA64", "buildkernel"])
-    subprocess.check_call(makeCmd + ["installworld", "DESTDIR=" + paths.rootfsDir])
-    subprocess.check_call(makeCmd + ["KERNCONF=CHERI_MALTA64", "installkernel", "DESTDIR=" + paths.rootfsDir])
-    subprocess.check_call(makeCmd + ["distribution", "DESTDIR=" + paths.rootfsDir])
-    with open(os.path.join(paths.rootfsDir, "etc/fstab"), "w") as fstab:
-        fstab.write("/dev/ada0 / ufs rw 1 1\n") # TODO: NFS?
+    runCmd(makeCmd + ["buildworld"])
+    runCmd(makeCmd + ["KERNCONF=CHERI_MALTA64", "buildkernel"])
+    runCmd(makeCmd + ["installworld", "DESTDIR=" + paths.cheribsd.installDir])
+    runCmd(makeCmd + ["KERNCONF=CHERI_MALTA64", "installkernel", "DESTDIR=" + paths.cheribsd.installDir])
+    runCmd(makeCmd + ["distribution", "DESTDIR=" + paths.cheribsd.installDir])
+    
+    # TODO: make this configurable to allow NFS, etc.
+    fstabContents = "/dev/ada0 / ufs rw 1 1\n"
+    fstabPath = os.path.join(paths.cheribsd.installDir, "etc/fstab")
+    
+    if options.pretend:
+        print("executing: echo", shlex.quote(fstabContents.replace("\n", "\\n")), ">", shlex.quote(fstabPath))
+    else:
+        with open(fstabPath, "w") as fstab:
+            fstab.write(fstabContents) # TODO: NFS?
 
 
 def buildQEMUImage():
@@ -178,21 +206,21 @@ def buildQEMUImage():
     
     # make use of the mtree file created by make installworld
     # this means we can create a disk image without root privilege
-    manifestFile = os.path.join(paths.rootfsDir, "METALOG");
+    manifestFile = os.path.join(paths.cheribsd.installDir, "METALOG");
     if not os.path.isfile(manifestFile):
-        sys.exit("mtree manifest " + manifestFile + " is missing")
-    userGroupDbDir = os.path.join(cheriDir, "cheribsd/etc")
+        fatalError("mtree manifest " + manifestFile + " is missing")
+    userGroupDbDir = os.path.join(paths.cheribsd.srcDir, "etc")
     if not os.path.isfile(os.path.join(userGroupDbDir, "master.passwd")):
-        sys.exit("master.passwd does not exist in " + userGroupDbDir)
-
-    # for now we need to patch the METALOG FILE:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        originalManifestFile = manifestFile
+        fatalError("master.passwd does not exist in " + userGroupDbDir)
+    
+    def patchManifestFile(tmpdir, originalManifestFile):
+        # for now we need to patch the METALOG FILE:
         manifestFile = os.path.join(tmpdir, "METALOG")
-        shutil.copyfile(originalManifestFile, manifestFile)
+        if not options.pretend:
+            shutil.copyfile(originalManifestFile, manifestFile)
         print("Patching METALOG", manifestFile)
-        patch = subprocess.Popen(["patch", "-u", "-p1"], stdin=subprocess.PIPE, cwd=tmpdir)    
-        patch.communicate(input=b"""
+        with open(os.path.join(tmpdir, "METALOG.patch"), "wb") as inputFile:
+            inputFile.write(b"""
 --- rootfs/METALOG      2016-01-20 09:51:47.704461046 +0000
 +++ rootfs2/METALOG       2016-01-20 11:51:59.831964687 +0000
 @@ -121,6 +121,7 @@
@@ -212,18 +240,20 @@ def buildQEMUImage():
  ./usr/libcheri//helloworld.co.0.dump type=file uname=root gname=wheel mode=0444 size=1013571
  ./usr/lib//librpcsec_gss.a type=file uname=root gname=wheel mode=0444 size=53040
 """)
-        patch.stdin.close()
-        patch.wait()
-        print("Sucessfully patched METALOG")
-        # input("about to run makefs on " + manifestFile + ". continue?")
+            inputFile.flush()
+            runCmd("patch", "-u", "-p1", "-i", inputFile.name)
+            print("Sucessfully patched METALOG")
 
-        subprocess.check_call(["makefs",
+    with tempfile.TemporaryDirectory() as tmpdir:
+        patchManifestFile(tmpdir, manifestFile)
+        # input("about to run makefs on " + manifestFile + ". continue?")
+        runCmd(["makefs",
             "-M", "1077936128", # minimum image size = 1GB
             "-B", "be", # big endian byte order
             "-F", manifestFile, # use METALOG as the manifest for the disk image
             "-N", userGroupDbDir, # use master.passwd from the cheribsd source not the current systems passwd file (makes sure that the numeric UID values are correct
             paths.diskImagePath, # output file
-            paths.rootfsDir # directory tree to use for the image
+            paths.cheribsd.installDir # directory tree to use for the image
             ])
     
     #if False:
@@ -236,20 +266,21 @@ def buildQEMUImage():
         ## FIXME: is this correct or do some files need a different owner?
         #with tempfile.NamedTemporaryFile() as manifest:
             #print("Creating disk image manifest file", manifest.name, "...")
-            #subprocess.check_call(["mtree", "-c", "-p", rootfsDir, "-K", "uid,gid"], stdout=manifest)
+            #runCmd(["mtree", "-c", "-p", paths.cheribsd.installDir, "-K", "uid,gid"], stdout=manifest)
             ## replace all uid=1234 with uid=0 and same for gid
-            #subprocess.check_call(["sed", "-i", "-e", "s/uid\=[[:digit:]]*/uid=0/g", manifest.name])
-            #subprocess.check_call(["sed", "-i", "-e", "s/gid\=[[:digit:]]*/gid=0/g", manifest.name])
+            #runCmd(["sed", "-i", "-e", "s/uid\=[[:digit:]]*/uid=0/g", manifest.name])
+            #runCmd(["sed", "-i", "-e", "s/gid\=[[:digit:]]*/gid=0/g", manifest.name])
             ## makefs -M 1077936128 -B be -F ../root.mtree "qemu/disk.img"
-            #subprocess.check_call(["makefs", "-M", "1077936128", "-B", "be", "-F", manifest.name, diskImagePath, rootfsDir])
+            #runCmd(["makefs", "-M", "1077936128", "-B", "be", "-F", manifest.name, diskImagePath, paths.cheribsd.installDir])
             #print("QEMU disk image", diskImagePath, "successfully created!")
 
 
 def runQEMU():
     qemuBinary = os.path.join(paths.qemu.installDir, "bin/qemu-system-cheri")
-    currentKernel = os.path.join(paths.rootfsDir, "boot/kernel/kernel")
-    input("About to run QEMU with image " + paths.diskImagePath + " and kernel " + currentKernel + "\nPress enter to continue")
-    subprocess.check_call([qemuBinary,
+    currentKernel = os.path.join(paths.cheribsd.installDir, "boot/kernel/kernel")
+    print("About to run QEMU with image " + paths.diskImagePath + " and kernel " + currentKernel)
+    #input("Press enter to continue")
+    runCmd([qemuBinary,
                     "-M", "malta", # malta cpu
                     "-kernel", currentKernel , # assume the current image matches the kernel currently build
                     "-nographic", # no GPU
@@ -262,6 +293,7 @@ if __name__ == "__main__":
     parser.add_argument("--clone", action="store_true", help="Perform the initial clone of the repositories")
     parser.add_argument("--make-jobs", "-j", help="Number of jobs to use for compiling", type=int)
     parser.add_argument("--clean", action="store_true", help="Do a clean build")
+    parser.add_argument("--pretend", "-p", action="store_true", help="Print the commands that would be run instead of executing them")
     parser.add_argument("--list-targets", action="store_true", help="List all available targets")
     parser.add_argument("--skip-update", action="store_true", help="Skip the git pull step")
     parser.add_argument("--skip-configure", action="store_true", help="Don't run the configure step")
@@ -272,6 +304,7 @@ if __name__ == "__main__":
     parser.add_argument("--disk-image-path", help="The disk image path (defaults to qemu/disk.img)")
     parser.add_argument("targets", metavar="TARGET", type=str, nargs="*", help="The targets to build", default=["all"])
     options = parser.parse_args()
+    #print(options)
     allTargets = ["qemu", "binutils", "llvm", "cheribsd", "disk-image", "run"]
     if options.list_targets:
         for i in allTargets:
