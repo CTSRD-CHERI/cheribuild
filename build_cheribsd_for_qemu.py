@@ -59,7 +59,7 @@ class Project(object):
         self.buildDir = buildDir
         self.installDir = installDir
         self.makeCommand = "make"
-        self.configureCommand = "cmake"
+        self.configureCommand = "cmake"  # so much better than autotools
         self.configureArgs = []
 
     def update(self):
@@ -197,16 +197,16 @@ def buildCHERIBSD():
     runCmd(makeCmd + ["installworld", "DESTDIR=" + paths.cheribsd.installDir])
     runCmd(makeCmd + ["KERNCONF=CHERI_MALTA64", "installkernel", "DESTDIR=" + paths.cheribsd.installDir])
     runCmd(makeCmd + ["distribution", "DESTDIR=" + paths.cheribsd.installDir])
-    
+
     # TODO: make this configurable to allow NFS, etc.
     fstabContents = "/dev/ada0 / ufs rw 1 1\n"
     fstabPath = os.path.join(paths.cheribsd.installDir, "etc/fstab")
-    
+
     if options.pretend:
         print("executing: echo", shlex.quote(fstabContents.replace("\n", "\\n")), ">", shlex.quote(fstabPath))
     else:
         with open(fstabPath, "w") as fstab:
-            fstab.write(fstabContents) # TODO: NFS?
+            fstab.write(fstabContents)  # TODO: NFS?
 
 
 def buildQEMUImage():
@@ -216,7 +216,7 @@ def buildQEMUImage():
             os.remove(paths.diskImagePath)
         else:
             return
-    
+
     # make use of the mtree file created by make installworld
     # this means we can create a disk image without root privilege
     manifestFile = os.path.join(paths.cheribsd.installDir, "METALOG");
@@ -225,7 +225,7 @@ def buildQEMUImage():
     userGroupDbDir = os.path.join(paths.cheribsd.srcDir, "etc")
     if not os.path.isfile(os.path.join(userGroupDbDir, "master.passwd")):
         fatalError("master.passwd does not exist in " + userGroupDbDir)
-    
+
     def patchManifestFile(tmpdir, originalManifestFile):
         # for now we need to patch the METALOG FILE:
         manifestFile = os.path.join(tmpdir, "METALOG")
@@ -301,29 +301,30 @@ def runQEMU():
                     "-hda", paths.diskImagePath
                     ])
 
+
 class Paths(object):
     def __init__(self, cmdlineArgs: argparse.Namespace):
-        self.cheriRoot = os.path.expanduser("~/cheri") # change this if you want it somewhere else
+        self.cheriRoot = os.path.expanduser("~/cheri")  # change this if you want it somewhere else
         self.outputDir = os.path.join(self.cheriRoot, "output")
         self.rootfsPath = os.path.join(self.outputDir, "rootfs")
         self.diskImagePath = options.disk_image_path
         if not self.diskImagePath:
             self.diskImagePath = os.path.join(self.outputDir, "disk.img")
 
-        self.hostToolsInstallDir = os.path.join(self.outputDir, "host-tools") # qemu and binutils (and llvm/clang)
+        self.hostToolsInstallDir = os.path.join(self.outputDir, "host-tools")  # qemu and binutils (and llvm/clang)
 
-        self.binutils = BuildBinutils(srcDir = os.path.join(self.cheriRoot, "binutils"),
-                            buildDir = os.path.join(self.outputDir, "binutils-build"),
-                            installDir = self.hostToolsInstallDir)
-        self.qemu = BuildQEMU(srcDir = os.path.join(self.cheriRoot, "qemu"),
-                            buildDir = os.path.join(self.outputDir, "qemu-build"),
-                            installDir = self.hostToolsInstallDir)
-        self.cheribsd = Project(srcDir = os.path.join(self.cheriRoot, "cheribsd"),
-                            buildDir = os.path.join(self.outputDir, "cheribsd-obj"),
-                            installDir = self.rootfsPath)
+        self.binutils = BuildBinutils(srcDir=os.path.join(self.cheriRoot, "binutils"),
+                                      buildDir=os.path.join(self.outputDir, "binutils-build"),
+                                      installDir=self.hostToolsInstallDir)
+        self.qemu = BuildQEMU(srcDir=os.path.join(self.cheriRoot, "qemu"),
+                              buildDir=os.path.join(self.outputDir, "qemu-build"),
+                              installDir=self.hostToolsInstallDir)
         self.llvm = BuildLLVM(srcDir=os.path.join(self.cheriRoot, "llvm"),
                               buildDir=os.path.join(self.outputDir, "llvm-build"),
                               installDir=self.hostToolsInstallDir)
+        self.cheribsd = Project(srcDir=os.path.join(self.cheriRoot, "cheribsd"),
+                                buildDir=os.path.join(self.outputDir, "cheribsd-obj"),
+                                installDir=self.rootfsPath)
 
 
 if __name__ == "__main__":
@@ -348,7 +349,7 @@ if __name__ == "__main__":
         for i in allTargets:
             print(i)
         print("target 'all' can be used to build everything")
-        sys.exit();
+        sys.exit()
     
     if "all" in options.targets:
         print("Building all targets")
