@@ -104,6 +104,13 @@ class BuildQEMU(Project):
                               "--extra-cflags=-g",
                               "--prefix=" + self.installDir]
 
+    def update(self):
+        # the build sometimes modifies the po/ subdirectory
+        # reset that directory by checking out the HEAD revision there
+        # this is better than git reset --hard as we don't lose any other changes
+        runCmd("git", "checkout", "HEAD", "po/", cwd=self.srcDir)
+        super().update()
+
 
 class BuildBinutils(Project):
     def __init__(self, srcDir, buildDir, installDir):
