@@ -14,40 +14,6 @@ import glob
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
 
-class Project(object):
-    def __init__(self, srcDir: str, buildDir: str, installDir: str):
-        self.srcDir = srcDir
-        self.buildDir = buildDir
-        self.installDir = installDir
-
-
-class Paths(object):
-    def __init__(self, cmdlineArgs: argparse.Namespace):
-        self.cheriRoot = os.path.expanduser("~/cheri") # change this if you want it somewhere else
-        self.outputDir = os.path.join(self.cheriRoot, "output")
-        self.rootfsPath = os.path.join(self.outputDir, "rootfs")
-        self.diskImagePath = options.disk_image_path
-        if not self.diskImagePath:
-            self.diskImagePath = os.path.join(self.outputDir, "disk.img")
-
-        self.hostToolsInstallDir = os.path.join(self.outputDir, "host-tools") # qemu and binutils (and llvm/clang)
-
-        self.binutils = Project(srcDir = os.path.join(self.cheriRoot, "binutils"),
-                            buildDir = os.path.join(self.outputDir, "binutils-build"),
-                            installDir = self.hostToolsInstallDir)
-        self.qemu = Project(srcDir = os.path.join(self.cheriRoot, "qemu"),
-                            buildDir = os.path.join(self.outputDir, "qemu-build"),
-                            installDir = self.hostToolsInstallDir)
-        self.llvm = Project(srcDir = os.path.join(self.cheriRoot, "llvm"),
-                            buildDir = os.path.join(self.outputDir, "llvm-build"),
-                            installDir = self.hostToolsInstallDir)
-        self.clang = Project(srcDir = os.path.join(self.llvm.srcDir, "tools/clang"),
-                            buildDir = os.path.join(self.llvm.buildDir, "tools/clang"), # not needed as subproject of llvm
-                            installDir = self.hostToolsInstallDir) # also not needed
-        self.cheribsd = Project(srcDir = os.path.join(self.cheriRoot, "cheribsd"),
-                            buildDir = os.path.join(self.outputDir, "cheribsd-obj"),
-                            installDir = self.rootfsPath)
-
 def runCmd(*args, **kwargs):
     if type(args[0]) is str:
         cmdline = args # multiple strings passed
@@ -80,6 +46,46 @@ def cleanDir(path, force=False, silent=False):
 def fatalError(message: str):
     if not options.pretend: # we ignore fatal errors when simulating a run
         sys.exit(message)
+
+class Project(object):
+    def __init__(self, srcDir: str, buildDir: str, installDir: str, makeCommand="make"):
+        self.srcDir = srcDir
+        self.buildDir = buildDir
+        self.installDir = installDir
+        self.makeCommand = makeCommand
+
+    def update(self):
+        runCmd("git", "-C", self.srcDir, "pull", "--rebase", cwd=self.srcDir)
+
+    def clean(self):
+        # TODO: never use the source dir as a build dir
+        # will have to check how well binutils and qemu work there
+        if os.path.isdir(os.path.join(self.buildDir, ".git")):
+            # just use git clean for cleanup
+            runCmd("git", "-C", self.buildDir, "clean", "-dfx", cwd=self.buildDir)
+        else:
+            cleanDir(self.buildDir)
+
+    def configure(self):
+        raise NotImplementedError()
+
+    def compile(self):
+        runCmd(self.makeCommand, makeJFlag, cwd=self.buildDir)
+
+    def install(self):
+        runCmd(self.makeCommand, "install", cwd=self.buildDir)
+
+    def process(self):
+        if not options.skip_update:
+            self.update()
+        if options.clean:
+            self.clean()
+        os.makedirs(self.buildDir, exist_ok=True)
+        if not options.skip_configure:
+            self.configure()
+        self.compile()
+        self.install()
+
 
 def buildQEMU():
     os.chdir(paths.qemu.srcDir)
@@ -287,6 +293,34 @@ def runQEMU():
                     "-m", "2048", # 2GB memory
                     "-hda", paths.diskImagePath
                     ])
+
+class Paths(object):
+    def __init__(self, cmdlineArgs: argparse.Namespace):
+        self.cheriRoot = os.path.expanduser("~/cheri") # change this if you want it somewhere else
+        self.outputDir = os.path.join(self.cheriRoot, "output")
+        self.rootfsPath = os.path.join(self.outputDir, "rootfs")
+        self.diskImagePath = options.disk_image_path
+        if not self.diskImagePath:
+            self.diskImagePath = os.path.join(self.outputDir, "disk.img")
+
+        self.hostToolsInstallDir = os.path.join(self.outputDir, "host-tools") # qemu and binutils (and llvm/clang)
+
+        self.binutils = Project(srcDir = os.path.join(self.cheriRoot, "binutils"),
+                            buildDir = os.path.join(self.outputDir, "binutils-build"),
+                            installDir = self.hostToolsInstallDir)
+        self.qemu = Project(srcDir = os.path.join(self.cheriRoot, "qemu"),
+                            buildDir = os.path.join(self.outputDir, "qemu-build"),
+                            installDir = self.hostToolsInstallDir)
+        self.llvm = Project(srcDir = os.path.join(self.cheriRoot, "llvm"),
+                            buildDir = os.path.join(self.outputDir, "llvm-build"),
+                            installDir = self.hostToolsInstallDir)
+        self.clang = Project(srcDir = os.path.join(self.llvm.srcDir, "tools/clang"),
+                            buildDir = os.path.join(self.llvm.buildDir, "tools/clang"), # not needed as subproject of llvm
+                            installDir = self.hostToolsInstallDir) # also not needed
+        self.cheribsd = Project(srcDir = os.path.join(self.cheriRoot, "cheribsd"),
+                            buildDir = os.path.join(self.outputDir, "cheribsd-obj"),
+                            installDir = self.rootfsPath)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
