@@ -46,7 +46,10 @@ def cleanDir(path, force=False, silent=False):
 
 
 def fatalError(message: str):
-    if not options.pretend: # we ignore fatal errors when simulating a run
+    # we ignore fatal errors when simulating a run
+    if options.pretend:
+        print("Potential fatal error:", message)
+    else:
         sys.exit(message)
 
 
