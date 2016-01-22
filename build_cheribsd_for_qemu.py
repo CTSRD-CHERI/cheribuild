@@ -7,10 +7,46 @@ import logging
 import shutil
 import tempfile
 import multiprocessing
-from glob import glob
+import collections
+import glob
 # import sh
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
+
+class Project(object):
+    def __init__(self, srcDir: str, buildDir: str, installDir: str):
+        self.srcDir = srcDir
+        self.buildDir = buildDir
+        self.installDir = installDir
+
+
+class Paths(object):
+    def __init__(self, cmdlineArgs: argparse.Namespace):
+        self.cheriRoot = os.path.expanduser("~/cheri") # change this if you want it somewhere else
+        self.outputDir = os.path.join(self.cheriRoot, "output")
+        self.rootfs = os.path.join(self.outputDir, "rootfs")
+        self.diskImagePath = options.disk_image_path
+        if not self.diskImagePath:
+            self.diskImagePath = os.path.join(self.outputDir, "disk.img")
+
+        self.hostToolsInstallDir = os.path.join(self.outputDir, "host-tools") # qemu and binutils (and llvm/clang)
+
+        self.binutils = Project(srcDir = os.path.join(self.cheriRoot, "binutils"),
+                            buildDir = os.path.join(self.outputDir, "binutils-build"),
+                            installDir = self.hostToolsInstallDir)
+        self.qemu = Project(srcDir = os.path.join(self.cheriRoot, "qemu"),
+                            buildDir = os.path.join(self.outputDir, "qemu-build"),
+                            installDir = self.hostToolsInstallDir)
+        self.llvm = Project(srcDir = os.path.join(self.cheriRoot, "llvm"),
+                            buildDir = os.path.join(self.outputDir, "llvm-build"),
+                            installDir = self.hostToolsInstallDir)
+        self.clang = Project(srcDir = os.path.join(self.llvm.srcDir, "tools/clang"),
+                            buildDir = os.path.join(self.llvm.buildDir, "tools/clang"), # not needed as subproject of llvm
+                            installDir = self.hostToolsInstallDir) # also not needed
+        self.cheribsd = Project(srcDir = os.path.join(self.cheriRoot, "cheribsd"),
+                            buildDir = os.path.join(self.outputDir, "cheribsd-obj"),
+                            installDir = self.rootfs)
+
 
 # removes a directory tree if --clean is passed (or force=True parameter is passed
 def cleanDir(path, force=False, silent=False):
@@ -28,9 +64,7 @@ def cleanDir(path, force=False, silent=False):
 
 
 def buildQEMU():
-    global cheriDir
-    qemuDir = os.path.join(cheriDir, "qemu-cheri")
-    os.chdir(qemuDir)
+    os.chdir(paths.qemu.srcDir)
     if not options.skip_update:
         subprocess.check_call(["git", "pull", "--rebase"])
     if options.clean:
@@ -43,13 +77,12 @@ def buildQEMU():
                                "--disable-kvm",
                                "--disable-xen",
                                "--extra-cflags=-g",
-                               "--prefix=" + hostToolsInstallDir])
+                               "--prefix=" + paths.qemu.installDir])
     subprocess.check_call(["gmake", makeJFlag])
     subprocess.check_call(["gmake", "install"])
 
 
 def buildBinUtils():
-    global cheriDir
     binutilsDir = os.path.join(cheriDir, "binutils")
     if not options.skip_update:
         subprocess.check_call(["git", "-C", binutilsDir, "pull", "--rebase"])
@@ -57,36 +90,38 @@ def buildBinUtils():
         subprocess.check_call(["git", "-C", binutilsDir, "clean", "-dfx"])
     os.chdir(binutilsDir)
     if not options.skip_configure:
-        subprocess.check_call(["./configure", "--target=mips64", "--disable-werror", "--prefix=" + hostToolsInstallDir])
+        subprocess.check_call(["./configure", "--target=mips64", "--disable-werror", "--prefix=" + paths.binutils.installDir])
 
     subprocess.check_call(["make", makeJFlag])
     subprocess.check_call(["make", "install"])
 
 
 def buildLLVM():
-    llvmDir = os.path.join(cheriDir, "llvm")
     if not options.skip_update:
-        subprocess.check_call(["git", "-C", llvmDir, "pull", "--rebase"])
-        subprocess.check_call(["git", "-C", os.path.join(llvmDir, "tools/clang"), "pull", "--rebase"])
-    cleanDir(llvmBuildDir)
-    os.chdir(llvmBuildDir)
+        subprocess.check_call(["git", "-C", paths.llvm.srcDir, "pull", "--rebase"])
+        subprocess.check_call(["git", "-C", paths.clang.srcDir, "pull", "--rebase"])
+    cleanDir(paths.llvm.buildDir)
+    os.chdir(paths.llvm.buildDir)
     if not options.skip_configure:
         subprocess.check_call(["cmake", "-G", "Ninja",
                 "-DCMAKE_CXX_COMPILER=clang++37", "-DCMAKE_C_COMPILER=clang37", # need at least 3.7 to build it
                 "-DCMAKE_BUILD_TYPE=Release",
                 "-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd",
                 # not sure if the following is needed, I just copied them from the build_sdk script
-                "-DCMAKE_INSTALL_PREFIX=" + hostToolsInstallDir,
-                "-DDEFAULT_SYSROOT=" + os.path.join(cheriDir, "qemu/rootfs"),
-                llvmDir])
+                "-DCMAKE_INSTALL_PREFIX=" + paths.llvm.installDir,
+                # "-DDEFAULT_SYSROOT=" + paths.cheribsd.buildDir, # FIXME: what is the correct value here?
+                # should expand to ~/cheri/qemu/obj/mips.mips64/home/alr48/cheri/cheribsd (I think this is correct: it contains x86 binaries but mips libraries so should be right)
+                "-DDEFAULT_SYSROOT=" + paths.cheribsd.buildDir + "/mips.mips64" + paths.cheribsd.srcDir,
+
+                paths.llvm.srcDir])
     if options.make_jobs:
         subprocess.check_call(["ninja", "-j" + str(options.make_jobs)])
     else:
         subprocess.check_call(["ninja"])
     # subprocess.check_call(["ninja", "install"])
     # delete the files incompatible with cheribsd
-    # incompatibleFiles = glob(hostToolsInstallDir + "/lib/clang/3.*/include/std*") + glob(hostToolsInstallDir + "/lib/clang/3.*/include/limits.h")
-    incompatibleFiles = glob("lib/clang/3.*/include/std*") + glob("lib/clang/3.*/include/limits.h")
+    # incompatibleFiles = glob.glob(hostToolsInstallDir + "/lib/clang/3.*/include/std*") + glob.glob(hostToolsInstallDir + "/lib/clang/3.*/include/limits.h")
+    incompatibleFiles = glob.glob("lib/clang/3.*/include/std*") + glob.glob("lib/clang/3.*/include/limits.h")
     if len(incompatibleFiles) == 0:
         sys.exit("Could not find incompatible builtin includes. Build system changed?")
     for i in incompatibleFiles:
@@ -95,20 +130,19 @@ def buildLLVM():
 
 
 def buildCHERIBSD():
-    cheribsdDir = os.path.join(cheriDir, "cheribsd")
-    os.chdir(cheribsdDir)
+    os.chdir(paths.cheribsd.srcDir)
     if not options.skip_update:
-        subprocess.check_call(["git", "-C", cheribsdDir, "pull", "--rebase"])
-    #cheriCC = os.path.join(hostToolsInstallDir, "bin/clang")
-    cheriCC = os.path.join(llvmBuildDir, "bin/clang")
+        subprocess.check_call(["git", "-C", paths.cheribsd.srcDir, "pull", "--rebase"])
+    #cheriCC = os.path.join(paths.llvm.installDir, "bin/clang")
+    cheriCC = os.path.join(paths.llvm.buildDir, "bin/clang")
     if not os.path.isfile(cheriCC):
         sys.exit("CHERI CC does not exist: " + cheriCC)
-    os.environ["MAKEOBJDIRPREFIX"] = os.path.join(cheriDir, "qemu/obj")
+    os.environ["MAKEOBJDIRPREFIX"] = paths.cheribsd.buildDir
     
-    cleanDir(os.path.join(cheriDir, "qemu/obj"))
+    cleanDir(paths.cheribsd.buildDir)
     # make sure the old install is purged before building, otherwise we get strange errors
     # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
-    cleanDir(rootfsDir, force=True)
+    cleanDir(paths.rootfsDir, force=True)
     makeCmd = ["make",
                "CHERI=256",
                # "CC=/usr/local/bin/clang37",
@@ -127,24 +161,24 @@ def buildCHERIBSD():
                ]
     subprocess.check_call(makeCmd + ["buildworld"])
     subprocess.check_call(makeCmd + ["KERNCONF=CHERI_MALTA64", "buildkernel"])
-    subprocess.check_call(makeCmd + ["installworld", "DESTDIR=" + rootfsDir])
-    subprocess.check_call(makeCmd + ["KERNCONF=CHERI_MALTA64", "installkernel", "DESTDIR=" + rootfsDir])
-    subprocess.check_call(makeCmd + ["distribution", "DESTDIR=" + rootfsDir])
-    with open(os.path.join(rootfsDir, "etc/fstab"), "w") as fstab:
+    subprocess.check_call(makeCmd + ["installworld", "DESTDIR=" + paths.rootfsDir])
+    subprocess.check_call(makeCmd + ["KERNCONF=CHERI_MALTA64", "installkernel", "DESTDIR=" + paths.rootfsDir])
+    subprocess.check_call(makeCmd + ["distribution", "DESTDIR=" + paths.rootfsDir])
+    with open(os.path.join(paths.rootfsDir, "etc/fstab"), "w") as fstab:
         fstab.write("/dev/ada0 / ufs rw 1 1\n") # TODO: NFS?
 
 
 def buildQEMUImage():
-    if os.path.exists(diskImagePath):
-        yn = input("An image already exists (" + diskImagePath + "). Overwrite? [y/N] ")
+    if os.path.exists(paths.diskImagePath):
+        yn = input("An image already exists (" + paths.diskImagePath + "). Overwrite? [y/N] ")
         if str(yn).lower() == "y":
-            os.remove(diskImagePath)
+            os.remove(paths.diskImagePath)
         else:
             return
     
     # make use of the mtree file created by make installworld
     # this means we can create a disk image without root privilege
-    manifestFile = os.path.join(rootfsDir, "METALOG");
+    manifestFile = os.path.join(paths.rootfsDir, "METALOG");
     if not os.path.isfile(manifestFile):
         sys.exit("mtree manifest " + manifestFile + " is missing")
     userGroupDbDir = os.path.join(cheriDir, "cheribsd/etc")
@@ -188,39 +222,39 @@ def buildQEMUImage():
             "-B", "be", # big endian byte order
             "-F", manifestFile, # use METALOG as the manifest for the disk image
             "-N", userGroupDbDir, # use master.passwd from the cheribsd source not the current systems passwd file (makes sure that the numeric UID values are correct
-            diskImagePath, # output file
-            rootfsDir # directory tree to use for the image
+            paths.diskImagePath, # output file
+            paths.rootfsDir # directory tree to use for the image
             ])
     
-    if False:
-        # no longer needed
+    #if False:
+        ## no longer needed
         
-        # as we don't have root access we first have to make an mtree specification of the disk image
-        # where we replace uid=... and gid=... with the root uid
-        # and then we can run makefs with the mtree spec as input which will create a valid disk image
-        # that has the files correctly marked as owned by root
-        # FIXME: is this correct or do some files need a different owner?
-        with tempfile.NamedTemporaryFile() as manifest:
-            print("Creating disk image manifest file", manifest.name, "...")
-            subprocess.check_call(["mtree", "-c", "-p", rootfsDir, "-K", "uid,gid"], stdout=manifest)
-            # replace all uid=1234 with uid=0 and same for gid
-            subprocess.check_call(["sed", "-i", "-e", "s/uid\=[[:digit:]]*/uid=0/g", manifest.name])
-            subprocess.check_call(["sed", "-i", "-e", "s/gid\=[[:digit:]]*/gid=0/g", manifest.name])
-            # makefs -M 1077936128 -B be -F ../root.mtree "qemu/disk.img"
-            subprocess.check_call(["makefs", "-M", "1077936128", "-B", "be", "-F", manifest.name, diskImagePath, rootfsDir])
-            print("QEMU disk image", diskImagePath, "successfully created!")
+        ## as we don't have root access we first have to make an mtree specification of the disk image
+        ## where we replace uid=... and gid=... with the root uid
+        ## and then we can run makefs with the mtree spec as input which will create a valid disk image
+        ## that has the files correctly marked as owned by root
+        ## FIXME: is this correct or do some files need a different owner?
+        #with tempfile.NamedTemporaryFile() as manifest:
+            #print("Creating disk image manifest file", manifest.name, "...")
+            #subprocess.check_call(["mtree", "-c", "-p", rootfsDir, "-K", "uid,gid"], stdout=manifest)
+            ## replace all uid=1234 with uid=0 and same for gid
+            #subprocess.check_call(["sed", "-i", "-e", "s/uid\=[[:digit:]]*/uid=0/g", manifest.name])
+            #subprocess.check_call(["sed", "-i", "-e", "s/gid\=[[:digit:]]*/gid=0/g", manifest.name])
+            ## makefs -M 1077936128 -B be -F ../root.mtree "qemu/disk.img"
+            #subprocess.check_call(["makefs", "-M", "1077936128", "-B", "be", "-F", manifest.name, diskImagePath, rootfsDir])
+            #print("QEMU disk image", diskImagePath, "successfully created!")
 
 
 def runQEMU():
-    qemuBinary = os.path.join(hostToolsInstallDir, "bin/qemu-system-cheri")
-    currentKernel = os.path.join(rootfsDir, "boot/kernel/kernel")
-    input("About to run QEMU with image " + diskImagePath + " and kernel " + currentKernel + "\nPress enter to continue")
+    qemuBinary = os.path.join(paths.qemu.installDir, "bin/qemu-system-cheri")
+    currentKernel = os.path.join(paths.rootfsDir, "boot/kernel/kernel")
+    input("About to run QEMU with image " + paths.diskImagePath + " and kernel " + currentKernel + "\nPress enter to continue")
     subprocess.check_call([qemuBinary,
                     "-M", "malta", # malta cpu
                     "-kernel", currentKernel , # assume the current image matches the kernel currently build
                     "-nographic", # no GPU
                     "-m", "2048", # 2GB memory
-                    "-hda", diskImagePath 
+                    "-hda", paths.diskImagePath
                     ])
 
 if __name__ == "__main__":
@@ -255,17 +289,9 @@ if __name__ == "__main__":
         if i not in allTargets:
             sys.exit("Unknown target " + i + " see --list-targets")
 
-    logging.basicConfig(level=logging.INFO)
-    cheriDir = os.path.expanduser("~/cheri")
-    hostToolsInstallDir = os.path.join(cheriDir, "qemu/host-tools")
-    llvmBuildDir = os.path.join(cheriDir, "qemu/llvm-build")
-    rootfsDir = os.path.join(cheriDir, "qemu/rootfs")
-    diskImagePath = options.disk_image_path
-    if not diskImagePath:
-        diskImagePath = os.path.join(cheriDir, "qemu/disk.img")
+    paths = Paths(options)
     makeJFlag = "-j" + str(options.make_jobs) if options.make_jobs else "-j" + str(multiprocessing.cpu_count())
 
-    os.chdir(cheriDir)
     if allTargets[0] in targets:
         buildQEMU()
     if allTargets[1] in targets:
