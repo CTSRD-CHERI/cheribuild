@@ -33,12 +33,14 @@ def runCmd(*args, **kwargs):
 # removes a directory tree if --clean is passed (or force=True parameter is passed
 def cleanDir(path, force=False, silent=False):
     if (options.clean or force) and os.path.isdir(path):
-        print("Cleaning", path, "...")
-        #http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
+        if not options.pretend:
+            # status update is useful as this can take a long time
+            # when pretending this just spams the output
+            print("Cleaning", path, "...")
+        # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
         # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
         runCmd(["rm", "-rf", path])
         os.makedirs(path, exist_ok=True)
-        print("Finished cleaning", path, "...")
     # always make sure the dir exists
     os.makedirs(path, exist_ok=True)
 
