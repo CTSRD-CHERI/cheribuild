@@ -49,11 +49,13 @@ def fatalError(message: str):
 
 
 class Project(object):
-    def __init__(self, srcDir: str, buildDir: str, installDir: str, makeCommand="make"):
+    def __init__(self, srcDir: str, buildDir: str, installDir: str):
         self.srcDir = srcDir
         self.buildDir = buildDir
         self.installDir = installDir
-        self.makeCommand = makeCommand
+        self.makeCommand = "make"
+        self.configureCommand = "cmake"
+        self.configureArgs = []
 
     def update(self):
         runCmd("git", "-C", self.srcDir, "pull", "--rebase", cwd=self.srcDir)
@@ -68,7 +70,7 @@ class Project(object):
             cleanDir(self.buildDir)
 
     def configure(self):
-        raise NotImplementedError()
+        runCmd([self.configureCommand] + self.configureArgs, cwd=self.buildDir)
 
     def compile(self):
         runCmd(self.makeCommand, makeJFlag, cwd=self.buildDir)
@@ -90,32 +92,24 @@ class Project(object):
 
 class BuildQEMU(Project):
     def __init__(self, srcDir, buildDir, installDir):
+        super().__init__(srcDir, buildDir, installDir)
         # QEMU will not work with BSD make, need GNU make
-        super().__init__(srcDir, buildDir, installDir, makeCommand="gmake")
-
-    def configure(self):
-        runCmd([os.path.join(self.srcDir, "configure"),
-                "--target-list=cheri-softmmu",
-                "--disable-linux-user",
-                "--disable-linux-aio",
-                "--disable-kvm",
-                "--disable-xen",
-                "--extra-cflags=-g",
-                "--prefix=" + paths.qemu.installDir], cwd=self.buildDir)
+        self.makeCommand = "gmake"
+        self.configureCommand = os.path.join(self.srcDir, "configure")
+        self.configureArgs = ["--target-list=cheri-softmmu",
+                              "--disable-linux-user",
+                              "--disable-linux-aio",
+                              "--disable-kvm",
+                              "--disable-xen",
+                              "--extra-cflags=-g",
+                              "--prefix=" + self.installDir]
 
 
-
-def buildBinUtils():
-    os.chdir(paths.binutils.srcDir)
-    if not options.skip_update:
-        runCmd(["git", "pull", "--rebase"])
-    if options.clean:
-        runCmd(["git", "clean", "-dfx"])
-    if not options.skip_configure:
-        runCmd(["./configure", "--target=mips64", "--disable-werror", "--prefix=" + paths.binutils.installDir])
-
-    runCmd(["make", makeJFlag])
-    runCmd(["make", "install"])
+class BuildBinutils(Project):
+    def __init__(self, srcDir, buildDir, installDir):
+        super().__init__(srcDir, buildDir, installDir)
+        self.configureCommand = os.path.join(self.srcDir, "configure")
+        self.configureArgs = ["--target=mips64", "--disable-werror", "--prefix=" + self.installDir]
 
 
 def buildLLVM():
@@ -304,7 +298,7 @@ class Paths(object):
 
         self.hostToolsInstallDir = os.path.join(self.outputDir, "host-tools") # qemu and binutils (and llvm/clang)
 
-        self.binutils = Project(srcDir = os.path.join(self.cheriRoot, "binutils"),
+        self.binutils = BuildBinutils(srcDir = os.path.join(self.cheriRoot, "binutils"),
                             buildDir = os.path.join(self.outputDir, "binutils-build"),
                             installDir = self.hostToolsInstallDir)
         self.qemu = BuildQEMU(srcDir = os.path.join(self.cheriRoot, "qemu"),
@@ -365,7 +359,7 @@ if __name__ == "__main__":
     if allTargets[0] in targets:
         paths.qemu.process()
     if allTargets[1] in targets:
-        buildBinUtils()
+        paths.binutils.process()
     if allTargets[2] in targets:
         buildLLVM()
     if allTargets[3] in targets:
