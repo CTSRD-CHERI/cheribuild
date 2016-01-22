@@ -47,6 +47,7 @@ def fatalError(message: str):
     if not options.pretend: # we ignore fatal errors when simulating a run
         sys.exit(message)
 
+
 class Project(object):
     def __init__(self, srcDir: str, buildDir: str, installDir: str, makeCommand="make"):
         self.srcDir = srcDir
@@ -87,23 +88,21 @@ class Project(object):
         self.install()
 
 
-def buildQEMU():
-    os.chdir(paths.qemu.srcDir)
-    if not options.skip_update:
-        runCmd(["git", "pull", "--rebase"])
-    if options.clean:
-        runCmd(["git", "clean", "-dfx"])
-    if not options.skip_configure:
-        runCmd(["./configure",
-                               "--target-list=cheri-softmmu",
-                               "--disable-linux-user",
-                               "--disable-linux-aio",
-                               "--disable-kvm",
-                               "--disable-xen",
-                               "--extra-cflags=-g",
-                               "--prefix=" + paths.qemu.installDir])
-    runCmd(["gmake", makeJFlag])
-    runCmd(["gmake", "install"])
+class BuildQEMU(Project):
+    def __init__(self, srcDir, buildDir, installDir):
+        # QEMU will not work with BSD make, need GNU make
+        super().__init__(srcDir, buildDir, installDir, makeCommand="gmake")
+
+    def configure(self):
+        runCmd([os.path.join(self.srcDir, "configure"),
+                "--target-list=cheri-softmmu",
+                "--disable-linux-user",
+                "--disable-linux-aio",
+                "--disable-kvm",
+                "--disable-xen",
+                "--extra-cflags=-g",
+                "--prefix=" + paths.qemu.installDir], cwd=self.buildDir)
+
 
 
 def buildBinUtils():
@@ -308,7 +307,7 @@ class Paths(object):
         self.binutils = Project(srcDir = os.path.join(self.cheriRoot, "binutils"),
                             buildDir = os.path.join(self.outputDir, "binutils-build"),
                             installDir = self.hostToolsInstallDir)
-        self.qemu = Project(srcDir = os.path.join(self.cheriRoot, "qemu"),
+        self.qemu = BuildQEMU(srcDir = os.path.join(self.cheriRoot, "qemu"),
                             buildDir = os.path.join(self.outputDir, "qemu-build"),
                             installDir = self.hostToolsInstallDir)
         self.llvm = Project(srcDir = os.path.join(self.cheriRoot, "llvm"),
@@ -364,7 +363,7 @@ if __name__ == "__main__":
     makeJFlag = "-j" + str(options.make_jobs) if options.make_jobs else "-j" + str(numCpus)
 
     if allTargets[0] in targets:
-        buildQEMU()
+        paths.qemu.process()
     if allTargets[1] in targets:
         buildBinUtils()
     if allTargets[2] in targets:
