@@ -323,7 +323,11 @@ if __name__ == "__main__":
             sys.exit("Unknown target " + i + " see --list-targets")
 
     paths = Paths(options)
-    makeJFlag = "-j" + str(options.make_jobs) if options.make_jobs else "-j" + str(multiprocessing.cpu_count())
+    numCpus = multiprocessing.cpu_count()
+    if numCpus > 24:
+        # don't use up all the resources on shared build systems (you can still override this with the -j command line option)
+        numCpus = 16
+    makeJFlag = "-j" + str(options.make_jobs) if options.make_jobs else "-j" + str(numCpus)
 
     if allTargets[0] in targets:
         buildQEMU()
