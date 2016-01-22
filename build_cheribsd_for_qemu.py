@@ -27,7 +27,7 @@ def runCmd(*args, **kwargs):
         print("  workdir:", kwargs["cwd"])
 
     else:
-        subprocess.check_call(*args, **kwargs)
+        subprocess.check_call(cmdline, **kwargs)
 
 
 # removes a directory tree if --clean is passed (or force=True parameter is passed
