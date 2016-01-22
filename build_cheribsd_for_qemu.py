@@ -124,40 +124,42 @@ class BuildBinutils(Project):
         self.configureArgs = ["--target=mips64", "--disable-werror", "--prefix=" + self.installDir]
 
 
-def buildLLVM():
-    if not options.skip_update:
-        runCmd(["git", "-C", paths.llvm.srcDir, "pull", "--rebase"])
-        runCmd(["git", "-C", paths.clang.srcDir, "pull", "--rebase"])
-    cleanDir(paths.llvm.buildDir)
-    os.chdir(paths.llvm.buildDir)
-    if not options.skip_configure:
-        runCmd(["cmake", "-G", "Ninja",
-                "-DCMAKE_CXX_COMPILER=clang++37", "-DCMAKE_C_COMPILER=clang37", # need at least 3.7 to build it
-                "-DCMAKE_BUILD_TYPE=Release",
-                "-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd",
-                # not sure if the following is needed, I just copied them from the build_sdk script
-                "-DCMAKE_INSTALL_PREFIX=" + paths.llvm.installDir,
-                # "-DDEFAULT_SYSROOT=" + paths.cheribsd.buildDir, # FIXME: what is the correct value here?
-                # should expand to ~/cheri/qemu/obj/mips.mips64/home/alr48/cheri/cheribsd (I think this is correct: it contains x86 binaries but mips libraries so should be right)
-                "-DDEFAULT_SYSROOT=" + paths.cheribsd.buildDir + "/mips.mips64" + paths.cheribsd.srcDir,
+class BuildLLVM(Project):
+    def __init__(self, srcDir, buildDir, installDir):
+        super().__init__(srcDir, buildDir, installDir)
 
-                paths.llvm.srcDir])
-    if options.make_jobs:
-        runCmd(["ninja", "-j" + str(options.make_jobs)])
-    else:
-        runCmd(["ninja"])
-    # runCmd(["ninja", "install"])
-    # delete the files incompatible with cheribsd
-    # incompatibleFiles = glob.glob(hostToolsInstallDir + "/lib/clang/3.*/include/std*") + glob.glob(hostToolsInstallDir + "/lib/clang/3.*/include/limits.h")
-    incompatibleFiles = glob.glob("lib/clang/3.*/include/std*") + glob.glob("lib/clang/3.*/include/limits.h")
-    if options.pretend:
-        print("executing: rm -f", " ".join(incompatibleFiles))
-        print("  options: {'cwd':", os.getcwd(), "}")
-    if len(incompatibleFiles) == 0:
-        fatalError("Could not find incompatible builtin includes. Build system changed?")
-    for i in incompatibleFiles:
-        print("removing incompatible header", i)
-        os.remove(i)
+    def update(self):
+        super().update()
+        runCmd(["git", "-C", os.path.join(self.srcDir, "tools/clang"), "pull", "--rebase"])
+
+    def configure(self):
+        # we can only set configureArgs here as paths.cheribsd does not exist when the constructor runs
+        self.configureCommand
+        # FIXME: what is the correct default sysroot
+        # should expand to ~/cheri/qemu/obj/mips.mips64/home/alr48/cheri/cheribsd
+        # I think this might be correct: it contains x86 binaries but mips libraries so should be right)
+        sysroot = paths.cheribsd.buildDir + "/mips.mips64" + paths.cheribsd.srcDir + "/tmp"
+        self.configureArgs = [
+            self.srcDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+            "-DCMAKE_CXX_COMPILER=clang++37", "-DCMAKE_C_COMPILER=clang37",  # need at least 3.7 to build it
+            "-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd",
+            "-DCMAKE_INSTALL_PREFIX=" + self.installDir,
+            "-DDEFAULT_SYSROOT=" + sysroot,
+        ]
+        super().configure()
+
+    def install(self):
+        # runCmd(["ninja", "install"])
+        # we don't actually install yet (TODO: would it make sense to do that?)
+        # delete the files incompatible with cheribsd
+        os.chdir(self.buildDir)  # TODO: if we decide to install change this to self.installDir
+        incompatibleFiles = glob.glob("lib/clang/3.*/include/std*") + glob.glob("lib/clang/3.*/include/limits.h")
+        if len(incompatibleFiles) == 0:
+            fatalError("Could not find incompatible builtin includes. Build system changed?")
+        for i in incompatibleFiles:
+            print("removing incompatible header", i)
+            if not options.pretend:
+                os.remove(i)
 
 
 def buildCHERIBSD():
@@ -169,7 +171,7 @@ def buildCHERIBSD():
     if not os.path.isfile(cheriCC):
         fatalError("CHERI CC does not exist: " + cheriCC)
     os.environ["MAKEOBJDIRPREFIX"] = paths.cheribsd.buildDir
-    
+
     cleanDir(paths.cheribsd.buildDir)
     # make sure the old install is purged before building, otherwise we get strange errors
     # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
@@ -316,15 +318,12 @@ class Paths(object):
         self.qemu = BuildQEMU(srcDir = os.path.join(self.cheriRoot, "qemu"),
                             buildDir = os.path.join(self.outputDir, "qemu-build"),
                             installDir = self.hostToolsInstallDir)
-        self.llvm = Project(srcDir = os.path.join(self.cheriRoot, "llvm"),
-                            buildDir = os.path.join(self.outputDir, "llvm-build"),
-                            installDir = self.hostToolsInstallDir)
-        self.clang = Project(srcDir = os.path.join(self.llvm.srcDir, "tools/clang"),
-                            buildDir = os.path.join(self.llvm.buildDir, "tools/clang"), # not needed as subproject of llvm
-                            installDir = self.hostToolsInstallDir) # also not needed
         self.cheribsd = Project(srcDir = os.path.join(self.cheriRoot, "cheribsd"),
                             buildDir = os.path.join(self.outputDir, "cheribsd-obj"),
                             installDir = self.rootfsPath)
+        self.llvm = BuildLLVM(srcDir=os.path.join(self.cheriRoot, "llvm"),
+                              buildDir=os.path.join(self.outputDir, "llvm-build"),
+                              installDir=self.hostToolsInstallDir)
 
 
 if __name__ == "__main__":
@@ -373,7 +372,7 @@ if __name__ == "__main__":
     if allTargets[1] in targets:
         paths.binutils.process()
     if allTargets[2] in targets:
-        buildLLVM()
+        paths.llvm.process()
     if allTargets[3] in targets:
         # make sure the new binutils are picked up
         #if not os.environ["PATH"].startswith(hostToolsInstallDir):
