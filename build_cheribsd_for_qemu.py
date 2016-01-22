@@ -127,6 +127,7 @@ class BuildBinutils(Project):
 class BuildLLVM(Project):
     def __init__(self, srcDir, buildDir, installDir):
         super().__init__(srcDir, buildDir, installDir)
+        self.makeCommand = "ninja"
 
     def update(self):
         super().update()
