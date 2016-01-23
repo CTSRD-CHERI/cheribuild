@@ -14,14 +14,16 @@ import glob
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
 
+
 def runCmd(*args, **kwargs):
     if type(args[0]) is str:
-        cmdline = args # multiple strings passed
+        cmdline = args  # multiple strings passed
     else:
-        cmdline = args[0] # list was passed
+        cmdline = args[0]  # list was passed
     if options.pretend:
-        # quotes according to msvc rules but should be fine
-        print("executing:", " ".join([shlex.quote(i) for i in cmdline]))
+        colour = "\x1b[1;33m"  # bold yellow
+        endColour = "\x1b[0m"  # reset
+        print(colour, "executing: ", " ".join([shlex.quote(i) for i in cmdline]), endColour, sep="")
         if not kwargs:
             kwargs["cwd"] = os.getcwd()
         print("  workdir:", kwargs["cwd"])
