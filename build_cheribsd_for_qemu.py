@@ -20,15 +20,14 @@ def runCmd(*args, **kwargs):
         cmdline = args  # multiple strings passed
     else:
         cmdline = args[0]  # list was passed
-    if options.pretend:
-        colour = "\x1b[1;33m"  # bold yellow
-        endColour = "\x1b[0m"  # reset
-        print(colour, "executing: ", " ".join([shlex.quote(i) for i in cmdline]), endColour, sep="")
-        if not kwargs:
-            kwargs["cwd"] = os.getcwd()
-        print("  workdir:", kwargs["cwd"])
 
-    else:
+    colour = "\x1b[1;33m"  # bold yellow
+    endColour = "\x1b[0m"  # reset
+    cmdShellEscaped = " ".join([shlex.quote(i) for i in cmdline])
+    if not kwargs:
+        kwargs["cwd"] = os.getcwd()
+    print(colour, "cd ", shlex.quote(kwargs["cwd"]), " && ", cmdShellEscaped, endColour, sep="")
+    if not options.pretend:
         subprocess.check_call(cmdline, **kwargs)
 
 
