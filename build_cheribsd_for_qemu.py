@@ -59,7 +59,7 @@ class Project(object):
         self.buildDir = buildDir
         self.installDir = installDir
         self.makeCommand = "make"
-        self.configureCommand = "cmake"  # so much better than autotools
+        self.configureCommand = None
         self.configureArgs = []
 
     def update(self):
@@ -75,7 +75,8 @@ class Project(object):
             cleanDir(self.buildDir)
 
     def configure(self):
-        runCmd([self.configureCommand] + self.configureArgs, cwd=self.buildDir)
+        if self.configureCommand:
+            runCmd([self.configureCommand] + self.configureArgs, cwd=self.buildDir)
 
     def compile(self):
         runCmd(self.makeCommand, makeJFlag, cwd=self.buildDir)
@@ -135,11 +136,11 @@ class BuildLLVM(Project):
 
     def configure(self):
         # we can only set configureArgs here as paths.cheribsd does not exist when the constructor runs
-        self.configureCommand
         # FIXME: what is the correct default sysroot
         # should expand to ~/cheri/qemu/obj/mips.mips64/home/alr48/cheri/cheribsd
         # I think this might be correct: it contains x86 binaries but mips libraries so should be right)
         sysroot = paths.cheribsd.buildDir + "/mips.mips64" + paths.cheribsd.srcDir + "/tmp"
+        self.configureCommand = "cmake"
         self.configureArgs = [
             self.srcDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
             "-DCMAKE_CXX_COMPILER=clang++37", "-DCMAKE_C_COMPILER=clang37",  # need at least 3.7 to build it
@@ -163,51 +164,49 @@ class BuildLLVM(Project):
                 os.remove(i)
 
 
-def buildCHERIBSD():
-    os.chdir(paths.cheribsd.srcDir)
-    if not options.skip_update:
-        runCmd(["git", "-C", paths.cheribsd.srcDir, "pull", "--rebase"])
-    #cheriCC = os.path.join(paths.llvm.installDir, "bin/clang")
-    cheriCC = os.path.join(paths.llvm.buildDir, "bin/clang")
-    if not os.path.isfile(cheriCC):
-        fatalError("CHERI CC does not exist: " + cheriCC)
-    os.environ["MAKEOBJDIRPREFIX"] = paths.cheribsd.buildDir
+class BuildCHERIBSD(Project):
+    def __init__(self, srcDir, buildDir, installDir):
+        super().__init__(srcDir, buildDir, installDir)
+        # make sure the new binutils are picked up
 
-    cleanDir(paths.cheribsd.buildDir)
-    # make sure the old install is purged before building, otherwise we get strange errors
-    # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
-    cleanDir(paths.cheribsd.installDir, force=True)
-    makeCmd = ["make",
-               "CHERI=256",
-               # "CC=/usr/local/bin/clang37",
-               "CHERI_CC=" + cheriCC,
-               # "CPUTYPE=mips64", # mipsfpu for hardware float (apparently not needed: https://github.com/CTSRD-CHERI/cheribsd/issues/102)
-               #"TARGET=mips",
-               #"TARGET_ARCH=mips64",
-               #"TARGET_CPUTYPE=mips", # mipsfpu for hardware float
-               "-DDB_FROM_SRC",
-               "-DNO_ROOT", # -DNO_ROOT install without using root privilege
-               "-DNO_CLEAN", # don't clean before (takes ages) and the rm -rf we do before should be enough
-               #"CFLAGS=-Wno-error=capabilities",
-               # "CFLAGS=-nostdinc",
-               "-DNO_WERROR",
-               makeJFlag
-               ]
-    runCmd(makeCmd + ["buildworld"])
-    runCmd(makeCmd + ["KERNCONF=CHERI_MALTA64", "buildkernel"])
-    runCmd(makeCmd + ["installworld", "DESTDIR=" + paths.cheribsd.installDir])
-    runCmd(makeCmd + ["KERNCONF=CHERI_MALTA64", "installkernel", "DESTDIR=" + paths.cheribsd.installDir])
-    runCmd(makeCmd + ["distribution", "DESTDIR=" + paths.cheribsd.installDir])
+    def compile(self):
+        os.environ["MAKEOBJDIRPREFIX"] = paths.cheribsd.buildDir
+        if not os.environ["PATH"].startswith(paths.binutils.installDir):
+            os.environ["PATH"] = os.path.join(paths.binutils.installDir, "bin") + ":" + os.environ["PATH"]
+            print("Set PATH to", os.environ["PATH"])
+        cheriCC = os.path.join(paths.llvm.buildDir, "bin/clang")
+        if not os.path.isfile(cheriCC):
+            fatalError("CHERI CC does not exist: " + cheriCC)
+        self.commonMakeArgs = [
+            "make", "CHERI=256", "CHERI_CC=" + cheriCC,
+            # "CPUTYPE=mips64", # mipsfpu for hardware float (apparently no longer supported: https://github.com/CTSRD-CHERI/cheribsd/issues/102)
+            "-DDB_FROM_SRC",  # don't use the system passwd file
+            "-DNO_ROOT",  # -DNO_ROOT install without using root privilege
+            "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
+            "DESTDIR=" + self.installDir,
+            "KERNCONF=CHERI_MALTA64",
+            # "-DNO_CLEAN", # don't clean before (takes ages) and the rm -rf we do before should be enough
+        ]
+        # make sure the old install is purged before building, otherwise we might get strange errors
+        # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
+        cleanDir(self.installDir, force=True)
+        runCmd(self.commonMakeArgs + ["buildworld", makeJFlag], cwd=self.srcDir)
+        runCmd(self.commonMakeArgs + ["buildkernel", makeJFlag], cwd=self.srcDir)
 
-    # TODO: make this configurable to allow NFS, etc.
-    fstabContents = "/dev/ada0 / ufs rw 1 1\n"
-    fstabPath = os.path.join(paths.cheribsd.installDir, "etc/fstab")
+    def install(self):
+        # don't use multiple jobs here
+        runCmd(self.commonMakeArgs + ["installworld"], cwd=self.srcDir)
+        runCmd(self.commonMakeArgs + ["installkernel"], cwd=self.srcDir)
+        runCmd(self.commonMakeArgs + ["distribution"], cwd=self.srcDir)
+        # TODO: make this configurable to allow NFS, etc.
+        fstabContents = "/dev/ada0 / ufs rw 1 1\n"
+        fstabPath = os.path.join(paths.cheribsd.installDir, "etc/fstab")
 
-    if options.pretend:
-        print("executing: echo", shlex.quote(fstabContents.replace("\n", "\\n")), ">", shlex.quote(fstabPath))
-    else:
-        with open(fstabPath, "w") as fstab:
-            fstab.write(fstabContents)  # TODO: NFS?
+        if options.pretend:
+            print("executing: echo", shlex.quote(fstabContents.replace("\n", "\\n")), ">", shlex.quote(fstabPath))
+        else:
+            with open(fstabPath, "w") as fstab:
+                fstab.write(fstabContents)  # TODO: NFS?
 
 
 def buildQEMUImage():
@@ -323,9 +322,9 @@ class Paths(object):
         self.llvm = BuildLLVM(srcDir=os.path.join(self.cheriRoot, "llvm"),
                               buildDir=os.path.join(self.outputDir, "llvm-build"),
                               installDir=self.hostToolsInstallDir)
-        self.cheribsd = Project(srcDir=os.path.join(self.cheriRoot, "cheribsd"),
-                                buildDir=os.path.join(self.outputDir, "cheribsd-obj"),
-                                installDir=self.rootfsPath)
+        self.cheribsd = BuildCHERIBSD(srcDir=os.path.join(self.cheriRoot, "cheribsd"),
+                                      buildDir=os.path.join(self.outputDir, "cheribsd-obj"),
+                                      installDir=self.rootfsPath)
 
 
 if __name__ == "__main__":
@@ -337,21 +336,17 @@ if __name__ == "__main__":
     parser.add_argument("--list-targets", action="store_true", help="List all available targets")
     parser.add_argument("--skip-update", action="store_true", help="Skip the git pull step")
     parser.add_argument("--skip-configure", action="store_true", help="Don't run the configure step")
-    #parser.add_argument("--skip-binutils", action="store_true", help="Don't build binutils")
-    #parser.add_argument("--skip-llvm", action="store_true", help="Don't build LLVM")
-    #parser.add_argument("--skip-cheribsd", action="store_true", help="Don't build CHERIBSD")
-    #parser.add_argument("--disk-image", action="store_true", help="Build a disk image usable for QEMU")
     parser.add_argument("--disk-image-path", help="The disk image path (defaults to qemu/disk.img)")
     parser.add_argument("targets", metavar="TARGET", type=str, nargs="*", help="The targets to build", default=["all"])
     options = parser.parse_args()
-    #print(options)
+    # print(options)
     allTargets = ["qemu", "binutils", "llvm", "cheribsd", "disk-image", "run"]
     if options.list_targets:
         for i in allTargets:
             print(i)
         print("target 'all' can be used to build everything")
         sys.exit()
-    
+
     if "all" in options.targets:
         print("Building all targets")
         targets = allTargets
@@ -376,11 +371,7 @@ if __name__ == "__main__":
     if allTargets[2] in targets:
         paths.llvm.process()
     if allTargets[3] in targets:
-        # make sure the new binutils are picked up
-        #if not os.environ["PATH"].startswith(hostToolsInstallDir):
-        #    os.environ["PATH"] = os.path.join(hostToolsInstallDir, "bin") + ":" + os.environ["PATH"]
-        #    print("Set PATH to", os.environ["PATH"])
-        buildCHERIBSD()
+        paths.cheribsd.process()
     if allTargets[4] in targets:
         buildQEMUImage()
     if allTargets[5] in targets:
