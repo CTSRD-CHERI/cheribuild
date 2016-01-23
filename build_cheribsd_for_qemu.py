@@ -11,6 +11,21 @@ from glob import glob
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
 
+def buildBinUtils():
+    global cheriDir
+    binutilsDir = os.path.join(cheriDir, "binutils")
+    if not options.skip_update:
+        subprocess.check_call(["git", "-C", binutilsDir, "pull", "--rebase"])
+    if options.clean:
+        subprocess.check_call(["git", "-C", binutilsDir, "clean", "-dfx"])
+    os.chdir(binutilsDir)
+    if not options.skip_cmake:
+        subprocess.check_call(["./configure", "--target=mips64", "--disable-werror", "--prefix=" + binutilsInstallDir])
+    subprocess.check_call(["make", "-j32"])
+    subprocess.check_call(["make", "install"])
+    os.chdir(cheriDir)
+
+
 def buildLLVM():
     global cheriDir
     llvmDir = os.path.join(cheriDir, "llvm")
@@ -102,10 +117,12 @@ def buildQEMUImage():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--clone", action="store_true", help="Perform the initial clone of the repositories")
     parser.add_argument("--clean", action="store_true", help="Do a clean build")
     parser.add_argument("--skip-update", action="store_true", help="Skip the git pull step")
+    parser.add_argument("--skip-binutils", action="store_true", help="Don't build binutils")
     parser.add_argument("--skip-llvm", action="store_true", help="Don't build LLVM")
-    parser.add_argument("--skip-cmake", action="store_true", help="Don't run cmake on LLVM")
+    parser.add_argument("--skip-cmake", action="store_true", help="Don't run cmake on LLVM") # TODO: rename to skip-configure?
     parser.add_argument("--skip-cheribsd", action="store_true", help="Don't build CHERIBSD")
     parser.add_argument("--disk-image", action="store_true", help="Build a disk image usable for QEMU")
     parser.add_argument("--disk-image-path", help="The disk image path (defaults to qemu/disk.img)")
@@ -114,9 +131,16 @@ if __name__ == "__main__":
     
     logging.basicConfig(level=logging.INFO)
     cheriDir = os.path.expanduser("~/cheri")
+    binutilsInstallDir = os.path.join(cheriDir, "qemu/binutils")
     rootfsDir = os.path.join(cheriDir, "qemu/rootfs")
+    # make sure the new binutils are picked up
+    if not os.environ["PATH"].startswith(binutilsInstallDir):
+        os.environ["PATH"] = os.path.join(binutilsInstallDir, "bin") + ":" + os.environ["PATH"]
+        print("Set PATH to", os.environ["PATH"])
 
     os.chdir(cheriDir)
+    if not options.skip_binutils:
+        buildBinUtils()
     if not options.skip_llvm:
         buildLLVM()
     if not options.skip_cheribsd:
