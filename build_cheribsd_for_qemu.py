@@ -98,7 +98,7 @@ class Project(object):
 
 
 class BuildQEMU(Project):
-    def __init__(self, srcDir, buildDir, installDir):
+    def __init__(self, srcDir, buildDir, installDir, cmdOptions: argparse.Namespace):
         super().__init__(srcDir, buildDir, installDir)
         # QEMU will not work with BSD make, need GNU make
         self.makeCommand = "gmake"
@@ -110,6 +110,30 @@ class BuildQEMU(Project):
                               "--disable-xen",
                               "--extra-cflags=-g",
                               "--prefix=" + self.installDir]
+        self.diskImagePath = cmdOptions.disk_image_path
+        if not self.diskImagePath:
+            self.diskImagePath = os.path.join(buildDir, "../disk.img")  # TODO: cmdOptions.output_dir
+        # TODO: report CHERIBSD bug to remove the need for this patch
+        self.metalogPatch = b"""
+--- rootfs/METALOG      2016-01-20 09:51:47.704461046 +0000
++++ rootfs2/METALOG       2016-01-20 11:51:59.831964687 +0000
+@@ -121,6 +121,7 @@
+ ./usr/lib/libxo type=dir uname=root gname=wheel mode=0755
+ ./usr/lib/libxo/encoder type=dir uname=root gname=wheel mode=0755
+ ./usr/libcheri type=dir uname=root gname=wheel mode=0755
++./usr/libcheri/.debug type=dir uname=root gname=wheel mode=0755 tags=debug
+ ./usr/libdata type=dir uname=root gname=wheel mode=0755
+ ./usr/libdata/gcc type=dir uname=root gname=wheel mode=0755
+ ./usr/libdata/ldscripts type=dir uname=root gname=wheel mode=0755
+@@ -4434,7 +4435,6 @@
+ ./usr/lib//libhelloworld_p.a type=file uname=root gname=wheel mode=0444 size=6614
+ ./usr/include/cheri//helloworld.h type=file uname=root gname=wheel mode=0444 size=2370
+ ./usr/libcheri/helloworld.co.0 type=file uname=root gname=wheel mode=0555 size=90000
+-./usr/libcheri/.debug/ type=dir mode=0755 tags=debug
+ ./usr/libcheri/.debug/helloworld.co.0.debug type=file uname=root gname=wheel mode=0444 size=49144 tags=debug
+ ./usr/libcheri//helloworld.co.0.dump type=file uname=root gname=wheel mode=0444 size=1014824
+ ./usr/lib//librpcsec_gss.a type=file uname=root gname=wheel mode=0444 size=53040
+"""
 
     def update(self):
         # the build sometimes modifies the po/ subdirectory
@@ -117,6 +141,54 @@ class BuildQEMU(Project):
         # this is better than git reset --hard as we don't lose any other changes
         runCmd("git", "checkout", "HEAD", "po/", cwd=self.srcDir)
         super().update()
+
+    def buildDiskImage(self):
+        if os.path.exists(self.diskImagePath):
+            #yn = input("An image already exists (" + self.diskImagePath + "). Overwrite? [y/N] ")
+            #if str(yn).lower() != "y":
+                #return
+            os.remove(self.diskImagePath)
+        # make use of the mtree file created by make installworld
+        # this means we can create a disk image without root privilege
+        manifestFile = os.path.join(paths.cheribsd.installDir, "METALOG");
+        if not os.path.isfile(manifestFile):
+            fatalError("mtree manifest " + manifestFile + " is missing")
+        userGroupDbDir = os.path.join(paths.cheribsd.srcDir, "etc")
+        if not os.path.isfile(os.path.join(userGroupDbDir, "master.passwd")):
+            fatalError("master.passwd does not exist in " + userGroupDbDir)
+        # for now we need to patch the METALOG FILE:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            patchedManifestFile = os.path.join(tmpdir, "METALOG")
+            if not options.pretend:
+                shutil.copyfile(manifestFile, patchedManifestFile)
+            print("Patching METALOG", manifestFile)
+            with open(os.path.join(tmpdir, "METALOG.patch"), "wb") as inputFile:
+                inputFile.write(self.metalogPatch)
+                inputFile.flush()
+                runCmd("patch", "-u", "-p1", "-i", inputFile.name, cwd=tmpdir)
+                print("Sucessfully patched METALOG")
+            # input("about to run makefs on " + patchedManifestFile + ". continue?")
+            runCmd([
+                "makefs",
+                "-M", "1077936128",  # minimum image size = 1GB
+                "-B", "be",  # big endian byte order
+                "-F", patchedManifestFile,  # use METALOG as the manifest for the disk image
+                "-N", userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file (makes sure that the numeric UID values are correct
+                self.diskImagePath,  # output file
+                paths.cheribsd.installDir  # directory tree to use for the image
+            ])
+
+    def startEmulator(self):
+        qemuBinary = os.path.join(self.installDir, "bin/qemu-system-cheri")
+        currentKernel = os.path.join(paths.cheribsd.installDir, "boot/kernel/kernel")
+        print("About to run QEMU with image " + self.diskImagePath + " and kernel " + currentKernel)
+        # input("Press enter to continue")
+        runCmd([qemuBinary, "-M", "malta", # malta cpu
+                "-kernel", currentKernel , # assume the current image matches the kernel currently build
+                "-nographic", # no GPU
+                "-m", "2048", # 2GB memory
+                "-hda", self.diskImagePath
+                ])
 
 
 class BuildBinutils(Project):
@@ -168,10 +240,10 @@ class BuildLLVM(Project):
 class BuildCHERIBSD(Project):
     def __init__(self, srcDir, buildDir, installDir):
         super().__init__(srcDir, buildDir, installDir)
-        # make sure the new binutils are picked up
 
     def compile(self):
         os.environ["MAKEOBJDIRPREFIX"] = paths.cheribsd.buildDir
+        # make sure the new binutils are picked up
         if not os.environ["PATH"].startswith(paths.binutils.installDir):
             os.environ["PATH"] = os.path.join(paths.binutils.installDir, "bin") + ":" + os.environ["PATH"]
             print("Set PATH to", os.environ["PATH"])
@@ -210,108 +282,11 @@ class BuildCHERIBSD(Project):
                 fstab.write(fstabContents)  # TODO: NFS?
 
 
-def buildQEMUImage():
-    if os.path.exists(paths.diskImagePath):
-        yn = input("An image already exists (" + paths.diskImagePath + "). Overwrite? [y/N] ")
-        if str(yn).lower() == "y":
-            os.remove(paths.diskImagePath)
-        else:
-            return
-
-    # make use of the mtree file created by make installworld
-    # this means we can create a disk image without root privilege
-    manifestFile = os.path.join(paths.cheribsd.installDir, "METALOG");
-    if not os.path.isfile(manifestFile):
-        fatalError("mtree manifest " + manifestFile + " is missing")
-    userGroupDbDir = os.path.join(paths.cheribsd.srcDir, "etc")
-    if not os.path.isfile(os.path.join(userGroupDbDir, "master.passwd")):
-        fatalError("master.passwd does not exist in " + userGroupDbDir)
-
-    def patchManifestFile(tmpdir, originalManifestFile):
-        # for now we need to patch the METALOG FILE:
-        manifestFile = os.path.join(tmpdir, "METALOG")
-        if not options.pretend:
-            shutil.copyfile(originalManifestFile, manifestFile)
-        print("Patching METALOG", manifestFile)
-        with open(os.path.join(tmpdir, "METALOG.patch"), "wb") as inputFile:
-            inputFile.write(b"""
---- rootfs/METALOG      2016-01-20 09:51:47.704461046 +0000
-+++ rootfs2/METALOG       2016-01-20 11:51:59.831964687 +0000
-@@ -121,6 +121,7 @@
- ./usr/lib/libxo type=dir uname=root gname=wheel mode=0755
- ./usr/lib/libxo/encoder type=dir uname=root gname=wheel mode=0755
- ./usr/libcheri type=dir uname=root gname=wheel mode=0755
-+./usr/libcheri/.debug type=dir uname=root gname=wheel mode=0755 tags=debug
- ./usr/libdata type=dir uname=root gname=wheel mode=0755
- ./usr/libdata/gcc type=dir uname=root gname=wheel mode=0755
- ./usr/libdata/ldscripts type=dir uname=root gname=wheel mode=0755
-@@ -4434,7 +4435,6 @@
- ./usr/include/cheri//helloworld.h type=file uname=root gname=wheel mode=0444 size=2370
- ./usr/lib//libhelloworld_p.a type=file uname=root gname=wheel mode=0444 size=6598
- ./usr/libcheri/helloworld.co.0 type=file uname=root gname=wheel mode=0555 size=90032
--./usr/libcheri/.debug/ type=dir mode=0755 tags=debug
- ./usr/libcheri/.debug/helloworld.co.0.debug type=file uname=root gname=wheel mode=0444 size=48928 tags=debug
- ./usr/libcheri//helloworld.co.0.dump type=file uname=root gname=wheel mode=0444 size=1013571
- ./usr/lib//librpcsec_gss.a type=file uname=root gname=wheel mode=0444 size=53040
-""")
-            inputFile.flush()
-            runCmd("patch", "-u", "-p1", "-i", inputFile.name)
-            print("Sucessfully patched METALOG")
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        patchManifestFile(tmpdir, manifestFile)
-        # input("about to run makefs on " + manifestFile + ". continue?")
-        runCmd(["makefs",
-            "-M", "1077936128", # minimum image size = 1GB
-            "-B", "be", # big endian byte order
-            "-F", manifestFile, # use METALOG as the manifest for the disk image
-            "-N", userGroupDbDir, # use master.passwd from the cheribsd source not the current systems passwd file (makes sure that the numeric UID values are correct
-            paths.diskImagePath, # output file
-            paths.cheribsd.installDir # directory tree to use for the image
-            ])
-    
-    #if False:
-        ## no longer needed
-        
-        ## as we don't have root access we first have to make an mtree specification of the disk image
-        ## where we replace uid=... and gid=... with the root uid
-        ## and then we can run makefs with the mtree spec as input which will create a valid disk image
-        ## that has the files correctly marked as owned by root
-        ## FIXME: is this correct or do some files need a different owner?
-        #with tempfile.NamedTemporaryFile() as manifest:
-            #print("Creating disk image manifest file", manifest.name, "...")
-            #runCmd(["mtree", "-c", "-p", paths.cheribsd.installDir, "-K", "uid,gid"], stdout=manifest)
-            ## replace all uid=1234 with uid=0 and same for gid
-            #runCmd(["sed", "-i", "-e", "s/uid\=[[:digit:]]*/uid=0/g", manifest.name])
-            #runCmd(["sed", "-i", "-e", "s/gid\=[[:digit:]]*/gid=0/g", manifest.name])
-            ## makefs -M 1077936128 -B be -F ../root.mtree "qemu/disk.img"
-            #runCmd(["makefs", "-M", "1077936128", "-B", "be", "-F", manifest.name, diskImagePath, paths.cheribsd.installDir])
-            #print("QEMU disk image", diskImagePath, "successfully created!")
-
-
-def runQEMU():
-    qemuBinary = os.path.join(paths.qemu.installDir, "bin/qemu-system-cheri")
-    currentKernel = os.path.join(paths.cheribsd.installDir, "boot/kernel/kernel")
-    print("About to run QEMU with image " + paths.diskImagePath + " and kernel " + currentKernel)
-    #input("Press enter to continue")
-    runCmd([qemuBinary,
-                    "-M", "malta", # malta cpu
-                    "-kernel", currentKernel , # assume the current image matches the kernel currently build
-                    "-nographic", # no GPU
-                    "-m", "2048", # 2GB memory
-                    "-hda", paths.diskImagePath
-                    ])
-
-
 class Paths(object):
     def __init__(self, cmdlineArgs: argparse.Namespace):
         self.cheriRoot = os.path.expanduser("~/cheri")  # change this if you want it somewhere else
         self.outputDir = os.path.join(self.cheriRoot, "output")
         self.rootfsPath = os.path.join(self.outputDir, "rootfs")
-        self.diskImagePath = options.disk_image_path
-        if not self.diskImagePath:
-            self.diskImagePath = os.path.join(self.outputDir, "disk.img")
-
         self.hostToolsInstallDir = os.path.join(self.outputDir, "host-tools")  # qemu and binutils (and llvm/clang)
 
         self.binutils = BuildBinutils(srcDir=os.path.join(self.cheriRoot, "binutils"),
@@ -319,7 +294,8 @@ class Paths(object):
                                       installDir=self.hostToolsInstallDir)
         self.qemu = BuildQEMU(srcDir=os.path.join(self.cheriRoot, "qemu"),
                               buildDir=os.path.join(self.outputDir, "qemu-build"),
-                              installDir=self.hostToolsInstallDir)
+                              installDir=self.hostToolsInstallDir,
+                              cmdOptions=cmdlineArgs)
         self.llvm = BuildLLVM(srcDir=os.path.join(self.cheriRoot, "llvm"),
                               buildDir=os.path.join(self.outputDir, "llvm-build"),
                               installDir=self.hostToolsInstallDir)
@@ -374,7 +350,6 @@ if __name__ == "__main__":
     if allTargets[3] in targets:
         paths.cheribsd.process()
     if allTargets[4] in targets:
-        buildQEMUImage()
+        paths.qemu.buildDiskImage()
     if allTargets[5] in targets:
-        runQEMU()
-    
+        paths.qemu.startEmulator()
