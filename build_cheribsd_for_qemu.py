@@ -90,6 +90,7 @@ def fatalError(message: str):
 
 class Project(object):
     def __init__(self, name: str, paths: CheriPaths, *, sourceDir="", buildDir="", installDir: Path=None):
+        self.name = name
         self.paths = paths
         self.sourceDir = Path(sourceDir if sourceDir else paths.sourceRoot / name)
         self.buildDir = Path(buildDir if buildDir else paths.outputRoot / (name + "-build"))
@@ -321,15 +322,6 @@ class LaunchQEMU(Project):
                 ], stdout=sys.stdout)  # even with --quiet we want stdout here
 
 
-class Targets(object):
-    def __init__(self, paths: CheriPaths):
-        self.binutils = BuildBinutils(paths)
-        self.qemu = BuildQEMU(paths)
-        self.llvm = BuildLLVM(paths)
-        self.cheribsd = BuildCHERIBSD(paths)
-        self.diskImage = BuildDiskImage(paths)
-        self.run = LaunchQEMU(paths)
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--make-jobs", "-j", help="Number of jobs to use for compiling", type=int)
@@ -343,40 +335,36 @@ if __name__ == "__main__":
     parser.add_argument("targets", metavar="TARGET", type=str, nargs="*", help="The targets to build", default=["all"])
     options = parser.parse_args()
     # print(options)
-    allTargets = ["qemu", "binutils", "llvm", "cheribsd", "disk-image", "run"]
-    if options.list_targets:
-        for i in allTargets:
-            print(i)
+    paths = CheriPaths(options)
+
+    # NOTE: Have to ensure that these are in the right dependency order
+    allTargets = [
+        BuildBinutils(paths),
+        BuildQEMU(paths),
+        BuildLLVM(paths),
+        BuildCHERIBSD(paths),
+        BuildDiskImage(paths),
+        LaunchQEMU(paths),
+    ]
+    allTargetNames = [t.name for t in allTargets]
+    selectedTargets = options.targets
+    if "all" in options.targets:
+        selectedTargets = allTargetNames
+    # make sure all targets passed on commandline exist
+    invalidTargets = set(selectedTargets) - set(allTargetNames)
+    if invalidTargets or options.list_targets:
+        for t in invalidTargets:
+            print("Invalid target", t)
+        print("The following targets exist:", list(allTargetNames))
         print("target 'all' can be used to build everything")
         sys.exit()
 
-    if "all" in options.targets:
-        print("Building all targets")
-        targets = allTargets
-    else:
-        targets = [x.lower() for x in options.targets]
-    # print(options)
-    for i in targets:
-        if i not in allTargets:
-            sys.exit("Unknown target " + i + " see --list-targets")
-
-    newPaths = CheriPaths(options)
-    buildTargets = Targets(newPaths)
     numCpus = multiprocessing.cpu_count()
     if numCpus > 24:
         # don't use up all the resources on shared build systems (you can still override this with the -j command line option)
         numCpus = 16
     makeJFlag = "-j" + str(options.make_jobs) if options.make_jobs else "-j" + str(numCpus)
 
-    if allTargets[0] in targets:
-        buildTargets.qemu.process()
-    if allTargets[1] in targets:
-        buildTargets.binutils.process()
-    if allTargets[2] in targets:
-        buildTargets.llvm.process()
-    if allTargets[3] in targets:
-        buildTargets.cheribsd.process()
-    if allTargets[4] in targets:
-        buildTargets.diskImage.process()
-    if allTargets[5] in targets:
-        buildTargets.run.process()
+    for target in allTargets:
+        if target.name in selectedTargets:
+            target.process()
