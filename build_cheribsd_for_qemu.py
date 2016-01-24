@@ -20,7 +20,7 @@ if sys.version_info < (3, 4):
 
 # add the new 3.5 Path.home() and Path("foo").write_text() and 3.4.5 Path("foo").path to pathlib.Path
 if sys.version_info < (3, 5, 2):
-    print("Working around old version of pathlib")
+    # print("Working around old version of pathlib")
     Path.path = property(lambda self: str(self))
 if sys.version_info < (3, 5):
     Path.home = classmethod(lambda cls: cls(os.path.expanduser("~")))
