@@ -11,10 +11,8 @@ from pathlib import Path
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
 
 
-# if you want to customize where the sources or build output goes by default just change these variables
+# change this if you want to customize where the sources go (or use --source-root=...)
 DEFAULT_SOURCE_ROOT = Path(os.path.expanduser("~/cheri"))
-DEFAULT_OUTPUT_ROOT = DEFAULT_SOURCE_ROOT / "output"
-DEFAULT_DISK_IMAGE_PATH = DEFAULT_OUTPUT_ROOT / "disk.img"
 
 if sys.version_info < (3, 4):
     sys.exit("This script requires at least Python 3.4")
@@ -78,9 +76,12 @@ def fatalError(message: str):
 
 class CheriPaths(object):
     def __init__(self, cmdlineArgs: argparse.Namespace):
-        self.sourceRoot = Path(cmdlineArgs.source_root)
-        self.outputRoot = Path(cmdlineArgs.output_root)
-        self.diskImage = Path(cmdlineArgs.disk_image_path)
+        self.sourceRoot = Path(cmdlineArgs.source_root) if cmdlineArgs.source_root else DEFAULT_SOURCE_ROOT
+        self.outputRoot = Path(cmdlineArgs.output_root) if cmdlineArgs.output_root else self.sourceRoot / "output"
+        self.diskImage = Path(cmdlineArgs.disk_image_path) if cmdlineArgs.disk_image_path else self.outputRoot / "disk.img"
+        print("Sources will be stored in", self.sourceRoot)
+        print("Build artifacts will be stored in", self.outputRoot)
+        print("Disk image will saved to", self.diskImage)
         self.cheribsdRootfs = self.outputRoot / "rootfs"
         self.cheribsdSources = self.sourceRoot / "cheribsd"
         self.cheribsdObj = self.outputRoot / "cheribsd-obj"
@@ -284,7 +285,7 @@ class BuildDiskImage(Project):
             fatalError("mtree manifest " + manifestFile + " is missing")
         userGroupDbDir = self.paths.cheribsdSources / "etc"
         if not (userGroupDbDir / "master.passwd").is_file():
-            fatalError("master.passwd does not exist in " + userGroupDbDir)
+            fatalError("master.passwd does not exist in " + userGroupDbDir.path)
         # for now we need to patch the METALOG FILE:
         with tempfile.TemporaryDirectory() as tmpdir:
             patchedManifestFile = Path(tmpdir, "METALOG")
@@ -330,24 +331,26 @@ def defaultNumberOfMakeJobs():
     return makeJobs
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(formatter_class=lambda prog: argparse.ArgumentDefaultsHelpFormatter(
-        prog, width=shutil.get_terminal_size()[0]))
-    parser.add_argument("--make-jobs", "-j", help="Number of jobs to use for compiling", type=int,
-                        default=defaultNumberOfMakeJobs())
-    parser.add_argument("--clean", action="store_true", help="Do a clean build")
+    parser = argparse.ArgumentParser(formatter_class=lambda prog:
+                                     argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
+    parser.add_argument("--make-jobs", "-j", type=int, default=defaultNumberOfMakeJobs(),
+                        help="Number of jobs to use for compiling (default: %d)" % defaultNumberOfMakeJobs())
+    parser.add_argument("--clean", action="store_true", help="Remove the build directory before build")
     parser.add_argument("--pretend", "-p", action="store_true",
                         help="Print the commands that would be run instead of executing them")
-    parser.add_argument("--quiet", "-q", action="store_true", help="Don't show stdout of the commands that are executed")
-    parser.add_argument("--list-targets", action="store_true", help="List all available targets")
+    parser.add_argument("--quiet", "-q", action="store_true",
+                        help="Don't show stdout of the commands that are executed")
+    parser.add_argument("--list-targets", action="store_true", help="List all available targets and exit")
     parser.add_argument("--skip-update", action="store_true", help="Skip the git pull step")
-    parser.add_argument("--skip-configure", action="store_true", help="Don't run the configure step")
-    parser.add_argument("--source-root", help="The directory to store all sources", default=DEFAULT_SOURCE_ROOT)
-    parser.add_argument("--output-root", help="The directory to store all output", default=DEFAULT_OUTPUT_ROOT)
-    parser.add_argument("--disk-image-path", help="The output path for the QEMU disk image",
-                        default=DEFAULT_DISK_IMAGE_PATH)
+    parser.add_argument("--skip-configure", action="store_true", help="Skip the configure step")
+    parser.add_argument("--source-root",
+                        help="The directory to store all sources (default: '%s')" % DEFAULT_SOURCE_ROOT)
+    parser.add_argument("--output-root",
+                        help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
+    parser.add_argument("--disk-image-path",
+                        help="The output path for the QEMU disk image (default: '<OUTPUT_ROOT>/disk.img')")
     parser.add_argument("targets", metavar="TARGET", type=str, nargs="*", help="The targets to build", default=["all"])
     options = parser.parse_args()
-    # print(options)
     paths = CheriPaths(options)
 
     # NOTE: This list must be in the right dependency order
