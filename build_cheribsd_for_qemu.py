@@ -320,7 +320,6 @@ class Targets(object):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--clone", action="store_true", help="Perform the initial clone of the repositories")
     parser.add_argument("--make-jobs", "-j", help="Number of jobs to use for compiling", type=int)
     parser.add_argument("--clean", action="store_true", help="Do a clean build")
     parser.add_argument("--pretend", "-p", action="store_true", help="Print the commands that would be run instead of executing them")
@@ -328,7 +327,7 @@ if __name__ == "__main__":
     parser.add_argument("--list-targets", action="store_true", help="List all available targets")
     parser.add_argument("--skip-update", action="store_true", help="Skip the git pull step")
     parser.add_argument("--skip-configure", action="store_true", help="Don't run the configure step")
-    parser.add_argument("--disk-image-path", help="The disk image path (defaults to qemu/disk.img)")
+    parser.add_argument("--disk-image-path", help="The disk image path (defaults to output/disk.img)")
     parser.add_argument("targets", metavar="TARGET", type=str, nargs="*", help="The targets to build", default=["all"])
     options = parser.parse_args()
     # print(options)
