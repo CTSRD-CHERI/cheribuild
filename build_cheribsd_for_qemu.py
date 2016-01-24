@@ -200,8 +200,8 @@ class BuildQEMU(Project):
                 "makefs",
                 "-M", "1077936128",  # minimum image size = 1GB
                 "-B", "be",  # big endian byte order
-                # "-F", patchedManifestFile,  # use METALOG as the manifest for the disk image
-                "-F", manifestFile,  # use METALOG as the manifest for the disk image
+                "-F", patchedManifestFile,  # use METALOG as the manifest for the disk image
+                # "-F", manifestFile,  # use METALOG as the manifest for the disk image
                 "-N", userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file (makes sure that the numeric UID values are correct
                 self.paths.diskImage,  # output file
                 self.paths.cheribsdRootfs  # directory tree to use for the image
