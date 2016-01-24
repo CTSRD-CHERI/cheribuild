@@ -49,13 +49,13 @@ class CheriPaths(object):
 
 def runCmd(*args, **kwargs):
     if type(args[0]) is str or type(args[0]) is Path:
-        cmdline = map(str, args)  # multiple strings passed
+        cmdline = args  # multiple strings passed
     else:
-        cmdline = map(str, args[0])  # list was passed
+        cmdline = args[0]  # list was passed
 
     colour = "\x1b[1;33m"  # bold yellow
     endColour = "\x1b[0m"  # reset
-    cmdShellEscaped = " ".join(map(shlex.quote, cmdline))
+    cmdShellEscaped = " ".join([shlex.quote(str(i)) for i in cmdline])
     if not kwargs:
         kwargs["cwd"] = os.getcwd()
     print(colour, "cd ", shlex.quote(kwargs["cwd"]), " && ", cmdShellEscaped, endColour, sep="")
