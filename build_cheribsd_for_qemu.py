@@ -56,16 +56,6 @@ def runCmd(*args, **kwargs):
         subprocess.check_call(cmdline, **kwargs)
 
 
-# removes a directory tree if --clean is passed (or force=True parameter is passed
-def cleanDir(path: Path, force=False, silent=False):
-    if (options.clean or force) and path.is_dir():
-        # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
-        # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
-        runCmd(["rm", "-rf", path])
-    # always make sure the dir exists
-    os.makedirs(path.path, exist_ok=True)
-
-
 def fatalError(message: str):
     # we ignore fatal errors when simulating a run
     if options.pretend:
@@ -99,6 +89,17 @@ class Project(object):
         self.configureCommand = None
         self.configureArgs = []
 
+    def _makedirs(self, dir: Path):
+        printCommand("mkdir", "-p", dir)
+        if not options.pretend:
+            os.makedirs(dir.path, exist_ok=True)
+
+    # removes a directory tree if --clean is passed (or force=True parameter is passed)
+    def _cleanDir(self, dir, force=False):
+        if (options.clean or force) and dir.is_dir():
+            # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
+            # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
+            runCmd(["rm", "-rf", dir.path])
     def update(self):
         runCmd("git", "pull", "--rebase", cwd=self.sourceDir)
 
@@ -109,7 +110,9 @@ class Project(object):
             # just use git clean for cleanup
             runCmd("git", "clean", "-dfx", cwd=self.buildDir)
         else:
-            cleanDir(self.buildDir)
+            self._cleanDir(self.buildDir)
+        # make sure the dir is empty afterwards
+        self._makedirs(self.buildDir.path)
 
     def configure(self):
         if self.configureCommand:
@@ -126,7 +129,9 @@ class Project(object):
             self.update()
         if options.clean:
             self.clean()
-        os.makedirs(self.buildDir.path, exist_ok=True)
+        # always make sure the build dir exists
+        if not self.buildDir.is_dir():
+            self._makedirs(self.buildDir)
         if not options.skip_configure:
             self.configure()
         self.compile()
@@ -213,7 +218,7 @@ class BuildCHERIBSD(Project):
             print("Set PATH to", os.environ["PATH"])
         cheriCC = self.paths.outputRoot / "llvm-build/bin/clang"  # FIXME: see if it works with installing
         if not cheriCC.is_file():
-            fatalError("CHERI CC does not exist: " + cheriCC)
+            fatalError("CHERI CC does not exist: " + cheriCC.path)
         self.commonMakeArgs = [
             "make", "CHERI=256", "CHERI_CC=" + cheriCC.path,
             # "CPUTYPE=mips64", # mipsfpu for hardware float (apparently no longer supported: https://github.com/CTSRD-CHERI/cheribsd/issues/102)
@@ -226,7 +231,7 @@ class BuildCHERIBSD(Project):
         ]
         # make sure the old install is purged before building, otherwise we might get strange errors
         # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
-        cleanDir(self.installDir, force=True)
+        self._cleanDir(self.installDir, force=True)
         runCmd(self.commonMakeArgs + ["buildworld", makeJFlag], cwd=self.sourceDir)
         runCmd(self.commonMakeArgs + ["buildkernel", makeJFlag], cwd=self.sourceDir)
 
@@ -282,7 +287,7 @@ class BuildDiskImage(Project):
         # this means we can create a disk image without root privilege
         manifestFile = self.paths.cheribsdRootfs / "METALOG"
         if not manifestFile.is_file():
-            fatalError("mtree manifest " + manifestFile + " is missing")
+            fatalError("mtree manifest " + manifestFile.path + " is missing")
         userGroupDbDir = self.paths.cheribsdSources / "etc"
         if not (userGroupDbDir / "master.passwd").is_file():
             fatalError("master.passwd does not exist in " + userGroupDbDir.path)
