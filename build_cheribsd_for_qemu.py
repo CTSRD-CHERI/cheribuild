@@ -266,11 +266,13 @@ class BuildDiskImage(Project):
 """
 
     def process(self):
-        print(sys.stdin)
         if self.paths.diskImage.is_file():
-            #yn = input("An image already exists (" + self.paths.diskImage.path + "). Overwrite? [y/N] ")
-            #if str(yn).lower() != "y":
-                #return
+            # only show prompt if we can actually input something to stdin
+            if sys.__stdin__.isatty():
+                yn = input("An image already exists (" + self.paths.diskImage.path + "). Overwrite? [y/N] ")
+                if str(yn).lower() != "y":
+                    return
+            printCommand("rm", self.paths.diskImage.path)
             self.paths.diskImage.unlink()
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
@@ -288,7 +290,6 @@ class BuildDiskImage(Project):
             inputFile.write_text(self.metalogPatch)
             runCmd("patch", "-p1", "-i", inputFile, cwd=tmpdir)
             print("Sucessfully patched METALOG")
-            # input("about to run makefs on " + patchedManifestFile + ". continue?")
             runCmd([
                 "makefs",
                 "-M", "1077936128",  # minimum image size = 1GB
