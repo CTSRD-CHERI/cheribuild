@@ -16,6 +16,24 @@ import collections
 import glob
 from pathlib import Path
 
+if sys.version_info < (3, 4):
+    sys.exit("This script requires at least Python 3.4")
+
+# add the new 3.5.2 home() and .path to pathlib.Path
+if sys.version_info < (3, 5, 2):
+    print("Working around old version of pathlib")
+    Path.path = property(lambda self: str(self))
+if sys.version_info < (3, 5):
+    Path.home = lambda: Path(os.path.expanduser("~"))
+    def _write_text(self, data, encoding=None, errors=None):
+        if not isinstance(data, str):
+            raise TypeError('data must be str, not %s' % data.__class__.__name__)
+        with self.open(mode='w', encoding=encoding, errors=errors) as f:
+            return f.write(data)
+
+    Path.write_text = _write_text
+
+
 
 # if you want to customize where the sources/build output goes just change this
 class CheriPaths(object):
