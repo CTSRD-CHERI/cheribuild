@@ -24,7 +24,7 @@ if sys.version_info < (3, 5, 2):
     print("Working around old version of pathlib")
     Path.path = property(lambda self: str(self))
 if sys.version_info < (3, 5):
-    Path.home = lambda: Path(os.path.expanduser("~"))
+    Path.home = classmethod(lambda cls: cls(os.path.expanduser("~")))
     def _write_text(self, data, encoding=None, errors=None):
         if not isinstance(data, str):
             raise TypeError('data must be str, not %s' % data.__class__.__name__)
