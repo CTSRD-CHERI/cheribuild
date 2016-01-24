@@ -4,6 +4,7 @@ import subprocess
 import sys
 import os
 import shlex
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -329,7 +330,8 @@ def defaultNumberOfMakeJobs():
     return makeJobs
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(formatter_class=lambda prog: argparse.ArgumentDefaultsHelpFormatter(
+        prog, width=shutil.get_terminal_size()[0]))
     parser.add_argument("--make-jobs", "-j", help="Number of jobs to use for compiling", type=int,
                         default=defaultNumberOfMakeJobs())
     parser.add_argument("--clean", action="store_true", help="Do a clean build")
@@ -348,7 +350,7 @@ if __name__ == "__main__":
     # print(options)
     paths = CheriPaths(options)
 
-    # NOTE: Have to ensure that these are in the right dependency order
+    # NOTE: This list must be in the right dependency order
     allTargets = [
         BuildBinutils(paths),
         BuildQEMU(paths),
