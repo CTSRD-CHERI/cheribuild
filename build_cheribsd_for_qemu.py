@@ -8,7 +8,6 @@ import subprocess
 import sys
 import os
 import logging
-import shutil
 import shlex
 import tempfile
 import multiprocessing
@@ -19,7 +18,7 @@ from pathlib import Path
 if sys.version_info < (3, 4):
     sys.exit("This script requires at least Python 3.4")
 
-# add the new 3.5.2 home() and .path to pathlib.Path
+# add the new 3.5 Path.home() and Path("foo").write_text() and 3.4.5 Path("foo").path to pathlib.Path
 if sys.version_info < (3, 5, 2):
     print("Working around old version of pathlib")
     Path.path = property(lambda self: str(self))
@@ -184,20 +183,18 @@ class BuildQEMU(Project):
         # for now we need to patch the METALOG FILE:
         with tempfile.TemporaryDirectory() as tmpdir:
             patchedManifestFile = Path(tmpdir, "METALOG")
-            if not options.pretend:
-                shutil.copyfile(manifestFile.path, patchedManifestFile.path)
-            print("Patching METALOG", manifestFile)
+            runCmd("cp", manifestFile, patchedManifestFile)
             inputFile = Path(tmpdir, "METALOG.patch")
             inputFile.write_text(self.metalogPatch)
-            runCmd("patch", "-u", "-p1", "-i", inputFile, cwd=tmpdir)
+            runCmd("patch", "-p1", "-i", inputFile, cwd=tmpdir)
             print("Sucessfully patched METALOG")
             # input("about to run makefs on " + patchedManifestFile + ". continue?")
             runCmd([
                 "makefs",
                 "-M", "1077936128",  # minimum image size = 1GB
                 "-B", "be",  # big endian byte order
-                "-F", patchedManifestFile,  # use METALOG as the manifest for the disk image
-                # "-F", manifestFile,  # use METALOG as the manifest for the disk image
+                # "-F", patchedManifestFile,  # use METALOG as the manifest for the disk image
+                "-F", manifestFile,  # use METALOG as the manifest for the disk image
                 "-N", userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file (makes sure that the numeric UID values are correct
                 self.paths.diskImage,  # output file
                 self.paths.cheribsdRootfs  # directory tree to use for the image
