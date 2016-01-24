@@ -146,17 +146,17 @@ class BuildQEMU(Project):
  ./usr/lib/libxo type=dir uname=root gname=wheel mode=0755
  ./usr/lib/libxo/encoder type=dir uname=root gname=wheel mode=0755
  ./usr/libcheri type=dir uname=root gname=wheel mode=0755
-+./usr/libcheri/.debug type=dir uname=root gname=wheel mode=0755 tags=debug
++./usr/libcheri/.debug type=dir mode=0755 tags=debug
  ./usr/libdata type=dir uname=root gname=wheel mode=0755
  ./usr/libdata/gcc type=dir uname=root gname=wheel mode=0755
  ./usr/libdata/ldscripts type=dir uname=root gname=wheel mode=0755
 @@ -4434,7 +4435,6 @@
  ./usr/lib//libhelloworld_p.a type=file uname=root gname=wheel mode=0444 size=6614
  ./usr/include/cheri//helloworld.h type=file uname=root gname=wheel mode=0444 size=2370
- ./usr/libcheri/helloworld.co.0 type=file uname=root gname=wheel mode=0555 size=90000
+ ./usr/libcheri/helloworld.co.0 type=file uname=root gname=wheel mode=0555 size=77984
 -./usr/libcheri/.debug/ type=dir mode=0755 tags=debug
- ./usr/libcheri/.debug/helloworld.co.0.debug type=file uname=root gname=wheel mode=0444 size=49144 tags=debug
- ./usr/libcheri//helloworld.co.0.dump type=file uname=root gname=wheel mode=0444 size=1014824
+ ./usr/libcheri/.debug/helloworld.co.0.debug type=file uname=root gname=wheel mode=0444 size=67656 tags=debug
+ ./usr/libcheri//helloworld.co.0.dump type=file uname=root gname=wheel mode=0444 size=1049489
  ./usr/lib//librpcsec_gss.a type=file uname=root gname=wheel mode=0444 size=53040
 """
 
@@ -197,6 +197,7 @@ class BuildQEMU(Project):
                 "-M", "1077936128",  # minimum image size = 1GB
                 "-B", "be",  # big endian byte order
                 "-F", patchedManifestFile,  # use METALOG as the manifest for the disk image
+                # "-F", manifestFile,  # use METALOG as the manifest for the disk image
                 "-N", userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file (makes sure that the numeric UID values are correct
                 self.paths.diskImage,  # output file
                 self.paths.cheribsdRootfs  # directory tree to use for the image
