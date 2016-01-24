@@ -261,7 +261,7 @@ class BuildLLVM(Project):
         if len(incompatibleFiles) == 0:
             fatalError("Could not find incompatible builtin includes. Build system changed?")
         for i in incompatibleFiles:
-            print("removing incompatible header", i)
+            printCommand("rm", shlex.quote(i))
             if not options.pretend:
                 i.unlink()
 
@@ -305,7 +305,7 @@ class BuildCHERIBSD(Project):
         fstabPath = self.paths.cheribsdRootfs / "etc/fstab"
 
         if options.pretend:
-            print("executing: echo", shlex.quote(fstabContents.replace("\n", "\\n")), ">", shlex.quote(fstabPath.path))
+            printCommand("echo", shlex.quote(fstabContents.replace("\n", "\\n")), ">", shlex.quote(fstabPath.path))
         else:
             fstabPath.write_text(fstabContents)  # TODO: NFS?
 
