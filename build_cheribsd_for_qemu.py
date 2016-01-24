@@ -52,14 +52,14 @@ def runCmd(*args, **kwargs):
         cmdline = args  # multiple strings passed
     else:
         cmdline = args[0]  # list was passed
-
+    cmdline = list(map(str, cmdline))  # make sure they are all strings
     colour = "\x1b[1;33m"  # bold yellow
     endColour = "\x1b[0m"  # reset
     cmdShellEscaped = " ".join([shlex.quote(str(i)) for i in cmdline])
-    if not kwargs:
-        kwargs["cwd"] = os.getcwd()
+    kwargs["cwd"] = str(kwargs["cwd"]) if "cwd" in kwargs else os.getcwd()
     print(colour, "cd ", shlex.quote(kwargs["cwd"]), " && ", cmdShellEscaped, endColour, sep="")
     if not options.pretend:
+        print(cmdline, kwargs)
         subprocess.check_call(cmdline, **kwargs)
 
 
