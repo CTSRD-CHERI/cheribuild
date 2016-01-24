@@ -185,7 +185,7 @@ class BuildQEMU(Project):
         with tempfile.TemporaryDirectory() as tmpdir:
             patchedManifestFile = Path(tmpdir, "METALOG")
             if not options.pretend:
-                shutil.copyfile(manifestFile, patchedManifestFile)
+                shutil.copyfile(manifestFile.path, patchedManifestFile.path)
             print("Patching METALOG", manifestFile)
             inputFile = Path(tmpdir, "METALOG.patch")
             inputFile.write_text(self.metalogPatch)
