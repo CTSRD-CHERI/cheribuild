@@ -23,11 +23,8 @@ The following targets are available:
 ### Output of `--help`:
 
 ```
-usage: build_cheribsd_for_qemu.py [-h] [--clone] [--make-jobs MAKE_JOBS]
-                                  [--clean] [--pretend] [--quiet]
-                                  [--list-targets] [--skip-update]
-                                  [--skip-configure]
-                                  [--disk-image-path DISK_IMAGE_PATH]
+usage: build_cheribsd_for_qemu.py [-h] [--make-jobs MAKE_JOBS] [--clean] [--pretend] [--quiet] [--list-targets] [--skip-update] [--skip-configure]
+                                  [--source-root SOURCE_ROOT] [--output-root OUTPUT_ROOT] [--disk-image-path DISK_IMAGE_PATH]
                                   [TARGET [TARGET ...]]
 
 positional arguments:
@@ -36,16 +33,20 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --make-jobs MAKE_JOBS, -j MAKE_JOBS
-                        Number of jobs to use for compiling
-  --clean               Do a clean build
-  --pretend, -p         Print the commands that would be run instead of
-                        executing them
-  --quiet               Don't show stdout of the commands that are executed
-  --list-targets        List all available targets
+                        Number of jobs to use for compiling (default: 8)
+  --clean               Remove the build directory before build
+  --pretend, -p         Print the commands that would be run instead of executing them
+  --quiet, -q           Don't show stdout of the commands that are executed
+  --list-targets        List all available targets and exit
   --skip-update         Skip the git pull step
-  --skip-configure      Don't run the configure step
+  --skip-configure      Skip the configure step
+  --source-root SOURCE_ROOT
+                        The directory to store all sources (default: '$HOME/cheri')
+  --output-root OUTPUT_ROOT
+                        The directory to store all output (default: '<SOURCE_ROOT>/output')
   --disk-image-path DISK_IMAGE_PATH
-                        The disk image path (defaults to output/disk.img)
+                        The output path for the QEMU disk image (default: '<OUTPUT_ROOT>/disk.img')
+
 ```
 
 
