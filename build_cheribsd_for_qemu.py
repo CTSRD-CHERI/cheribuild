@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-
-# See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
-
-
 import argparse
 import subprocess
 import sys
@@ -10,6 +6,14 @@ import os
 import shlex
 import tempfile
 from pathlib import Path
+
+# See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
+
+
+# if you want to customize where the sources or build output goes by default just change these variables
+DEFAULT_SOURCE_ROOT = Path(os.path.expanduser("~/cheri"))
+DEFAULT_OUTPUT_ROOT = DEFAULT_SOURCE_ROOT / "output"
+DEFAULT_DISK_IMAGE_PATH = DEFAULT_OUTPUT_ROOT / "disk.img"
 
 if sys.version_info < (3, 4):
     sys.exit("This script requires at least Python 3.4")
@@ -19,7 +23,6 @@ if sys.version_info < (3, 5, 2):
     # print("Working around old version of pathlib")
     Path.path = property(lambda self: str(self))
 if sys.version_info < (3, 5):
-    Path.home = classmethod(lambda cls: cls(os.path.expanduser("~")))
     def _write_text(self, data, encoding=None, errors=None):
         if not isinstance(data, str):
             raise TypeError('data must be str, not %s' % data.__class__.__name__)
@@ -27,18 +30,6 @@ if sys.version_info < (3, 5):
             return f.write(data)
 
     Path.write_text = _write_text
-
-
-# if you want to customize where the sources/build output goes just change this
-class CheriPaths(object):
-    def __init__(self, cmdlineArgs: argparse.Namespace):
-        self.sourceRoot = Path.home() / "cheri"
-        self.outputRoot = self.sourceRoot / "output"
-        self.diskImage = Path(options.disk_image_path) if options.disk_image_path else self.outputRoot / "disk.image"
-        self.cheribsdRootfs = self.outputRoot / "rootfs"
-        self.cheribsdSources = self.sourceRoot / "cheribsd"
-        self.cheribsdObj = self.outputRoot / "cheribsd-obj"
-        self.hostToolsDir = self.outputRoot / "host-tools"  # qemu and binutils (and llvm/clang)
 
 
 def printCommand(firstStr: str, *args, cwd="", **kwargs):
@@ -82,6 +73,17 @@ def fatalError(message: str):
         print("Potential fatal error:", message)
     else:
         sys.exit(message)
+
+
+class CheriPaths(object):
+    def __init__(self, cmdlineArgs: argparse.Namespace):
+        self.sourceRoot = Path(cmdlineArgs.source_root)
+        self.outputRoot = Path(cmdlineArgs.output_root)
+        self.diskImage = Path(cmdlineArgs.disk_image_path)
+        self.cheribsdRootfs = self.outputRoot / "rootfs"
+        self.cheribsdSources = self.sourceRoot / "cheribsd"
+        self.cheribsdObj = self.outputRoot / "cheribsd-obj"
+        self.hostToolsDir = self.outputRoot / "host-tools"  # qemu and binutils (and llvm/clang)
 
 
 class Project(object):
@@ -319,16 +321,28 @@ class LaunchQEMU(Project):
                 ], stdout=sys.stdout)  # even with --quiet we want stdout here
 
 
+def defaultNumberOfMakeJobs():
+    makeJobs = os.cpu_count()
+    if makeJobs > 24:
+        # don't use up all the resources on shared build systems (you can still override this with the -j command line option)
+        makeJobs = 16
+    return makeJobs
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--make-jobs", "-j", help="Number of jobs to use for compiling", type=int)
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--make-jobs", "-j", help="Number of jobs to use for compiling", type=int,
+                        default=defaultNumberOfMakeJobs())
     parser.add_argument("--clean", action="store_true", help="Do a clean build")
-    parser.add_argument("--pretend", "-p", action="store_true", help="Print the commands that would be run instead of executing them")
-    parser.add_argument("--quiet", action="store_true", help="Don't show stdout of the commands that are executed")
+    parser.add_argument("--pretend", "-p", action="store_true",
+                        help="Print the commands that would be run instead of executing them")
+    parser.add_argument("--quiet", "-q", action="store_true", help="Don't show stdout of the commands that are executed")
     parser.add_argument("--list-targets", action="store_true", help="List all available targets")
     parser.add_argument("--skip-update", action="store_true", help="Skip the git pull step")
     parser.add_argument("--skip-configure", action="store_true", help="Don't run the configure step")
-    parser.add_argument("--disk-image-path", help="The disk image path (defaults to output/disk.img)")
+    parser.add_argument("--source-root", help="The directory to store all sources", default=DEFAULT_SOURCE_ROOT)
+    parser.add_argument("--output-root", help="The directory to store all output", default=DEFAULT_OUTPUT_ROOT)
+    parser.add_argument("--disk-image-path", help="The output path for the QEMU disk image",
+                        default=DEFAULT_DISK_IMAGE_PATH)
     parser.add_argument("targets", metavar="TARGET", type=str, nargs="*", help="The targets to build", default=["all"])
     options = parser.parse_args()
     # print(options)
@@ -356,11 +370,7 @@ if __name__ == "__main__":
         print("target 'all' can be used to build everything")
         sys.exit()
 
-    numCpus = os.cpu_count()
-    if numCpus > 24:
-        # don't use up all the resources on shared build systems (you can still override this with the -j command line option)
-        numCpus = 16
-    makeJFlag = "-j" + str(options.make_jobs) if options.make_jobs else "-j" + str(numCpus)
+    makeJFlag = "-j" + str(options.make_jobs)
 
     for target in allTargets:
         if target.name in selectedTargets:
