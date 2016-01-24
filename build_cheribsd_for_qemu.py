@@ -59,7 +59,7 @@ def runCmd(*args, **kwargs):
     kwargs["cwd"] = str(kwargs["cwd"]) if "cwd" in kwargs else os.getcwd()
     print(colour, "cd ", shlex.quote(kwargs["cwd"]), " && ", cmdShellEscaped, endColour, sep="")
     if not options.pretend:
-        print(cmdline, kwargs)
+        # print(cmdline, kwargs)
         subprocess.check_call(cmdline, **kwargs)
 
 
