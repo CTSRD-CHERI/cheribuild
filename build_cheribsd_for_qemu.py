@@ -38,16 +38,13 @@ if sys.version_info < (3, 5):
 # if you want to customize where the sources/build output goes just change this
 class CheriPaths(object):
     def __init__(self, cmdlineArgs: argparse.Namespace):
-        # Path.home() requires python 3.5 (we only have 3.4 currently)
-        # self.sourceRoot = Path.home() / "cheri"
-        self.sourceRoot = Path(os.path.expanduser("~/cheri"))
+        self.sourceRoot = Path.home() / "cheri"
         self.outputRoot = self.sourceRoot / "output"
-        self.diskImage = options.disk_image_path or self.outputRoot / "disk.image"
+        self.diskImage = Path(options.disk_image_path) if options.disk_image_path else self.outputRoot / "disk.image"
         self.cheribsdRootfs = self.outputRoot / "rootfs"
+        self.cheribsdSources = self.sourceRoot / "cheribsd"
+        self.cheribsdObj = self.outputRoot / "cheribsd-obj"
         self.hostToolsDir = self.outputRoot / "host-tools"  # qemu and binutils (and llvm/clang)
-
-
-
 
 
 def runCmd(*args, **kwargs):
@@ -85,7 +82,8 @@ def fatalError(message: str):
 
 
 class Project(object):
-    def __init__(self, srcDir: str, buildDir: str, installDir: str):
+    def __init__(self, paths: CheriPaths, srcDir: str, buildDir: str, installDir: str):
+        self.paths = paths
         self.srcDir = srcDir
         self.buildDir = buildDir
         self.installDir = installDir
@@ -129,7 +127,7 @@ class Project(object):
 
 class BuildQEMU(Project):
     def __init__(self, paths: CheriPaths, srcDir, buildDir, installDir):
-        super().__init__(srcDir, buildDir, installDir)
+        super().__init__(paths, srcDir, buildDir, installDir)
         # QEMU will not work with BSD make, need GNU make
         self.makeCommand = "gmake"
         self.configureCommand = os.path.join(self.srcDir, "configure")
@@ -140,11 +138,8 @@ class BuildQEMU(Project):
                               "--disable-xen",
                               "--extra-cflags=-g",
                               "--prefix=" + self.installDir]
-        self.diskImagePath = str(paths.diskImage)
-        if not self.diskImagePath:
-            self.diskImagePath = os.path.join(buildDir, "../disk.img")  # TODO: cmdOptions.output_dir
         # TODO: report CHERIBSD bug to remove the need for this patch
-        self.metalogPatch = b"""
+        self.metalogPatch = """
 --- rootfs/METALOG      2016-01-20 09:51:47.704461046 +0000
 +++ rootfs2/METALOG       2016-01-20 11:51:59.831964687 +0000
 @@ -121,6 +121,7 @@
@@ -173,30 +168,29 @@ class BuildQEMU(Project):
         super().update()
 
     def buildDiskImage(self):
-        if os.path.exists(self.diskImagePath):
-            #yn = input("An image already exists (" + self.diskImagePath + "). Overwrite? [y/N] ")
+        if self.paths.diskImage.is_file():
+            #yn = input("An image already exists (" + self.paths.diskImage.path + "). Overwrite? [y/N] ")
             #if str(yn).lower() != "y":
                 #return
-            os.remove(self.diskImagePath)
+            self.paths.diskImage.unlink()
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
-        manifestFile = os.path.join(paths.cheribsd.installDir, "METALOG");
-        if not os.path.isfile(manifestFile):
+        manifestFile = self.paths.cheribsdRootfs / "METALOG"
+        if not manifestFile.is_file():
             fatalError("mtree manifest " + manifestFile + " is missing")
-        userGroupDbDir = os.path.join(paths.cheribsd.srcDir, "etc")
-        if not os.path.isfile(os.path.join(userGroupDbDir, "master.passwd")):
+        userGroupDbDir = self.paths.cheribsdSources / "etc"
+        if not (userGroupDbDir / "master.passwd").is_file():
             fatalError("master.passwd does not exist in " + userGroupDbDir)
         # for now we need to patch the METALOG FILE:
         with tempfile.TemporaryDirectory() as tmpdir:
-            patchedManifestFile = os.path.join(tmpdir, "METALOG")
+            patchedManifestFile = Path(tmpdir, "METALOG")
             if not options.pretend:
                 shutil.copyfile(manifestFile, patchedManifestFile)
             print("Patching METALOG", manifestFile)
-            with open(os.path.join(tmpdir, "METALOG.patch"), "wb") as inputFile:
-                inputFile.write(self.metalogPatch)
-                inputFile.flush()
-                runCmd("patch", "-u", "-p1", "-i", inputFile.name, cwd=tmpdir)
-                print("Sucessfully patched METALOG")
+            inputFile = Path(tmpdir, "METALOG.patch")
+            inputFile.write_text(self.metalogPatch)
+            runCmd("patch", "-u", "-p1", "-i", inputFile, cwd=tmpdir)
+            print("Sucessfully patched METALOG")
             # input("about to run makefs on " + patchedManifestFile + ". continue?")
             runCmd([
                 "makefs",
@@ -204,54 +198,52 @@ class BuildQEMU(Project):
                 "-B", "be",  # big endian byte order
                 "-F", patchedManifestFile,  # use METALOG as the manifest for the disk image
                 "-N", userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file (makes sure that the numeric UID values are correct
-                self.diskImagePath,  # output file
-                paths.cheribsd.installDir  # directory tree to use for the image
+                self.paths.diskImage,  # output file
+                self.paths.cheribsdRootfs  # directory tree to use for the image
             ])
 
     def startEmulator(self):
-        qemuBinary = os.path.join(self.installDir, "bin/qemu-system-cheri")
-        currentKernel = os.path.join(paths.cheribsd.installDir, "boot/kernel/kernel")
-        print("About to run QEMU with image " + self.diskImagePath + " and kernel " + currentKernel)
+        qemuBinary = self.paths.hostToolsDir / "bin/qemu-system-cheri"
+        currentKernel = self.paths.cheribsdRootfs / "boot/kernel/kernel"
+        print("About to run QEMU with image " + self.paths.diskImage.path + " and kernel " + currentKernel.path)
         # input("Press enter to continue")
-        runCmd([qemuBinary, "-M", "malta", # malta cpu
-                "-kernel", currentKernel , # assume the current image matches the kernel currently build
-                "-nographic", # no GPU
-                "-m", "2048", # 2GB memory
-                "-hda", self.diskImagePath
+        runCmd([qemuBinary, "-M", "malta",  # malta cpu
+                "-kernel", currentKernel ,  # assume the current image matches the kernel currently build
+                "-nographic",  # no GPU
+                "-m", "2048",  # 2GB memory
+                "-hda", self.paths.diskImage
                 ])
 
 
 class BuildBinutils(Project):
-    def __init__(self, srcDir, buildDir, installDir):
-        super().__init__(srcDir, buildDir, installDir)
+    def __init__(self, paths: CheriPaths, srcDir, buildDir, installDir):
+        super().__init__(paths, srcDir, buildDir, installDir)
         self.configureCommand = os.path.join(self.srcDir, "configure")
         self.configureArgs = ["--target=mips64", "--disable-werror", "--prefix=" + self.installDir]
 
 
 class BuildLLVM(Project):
-    def __init__(self, srcDir, buildDir, installDir):
-        super().__init__(srcDir, buildDir, installDir)
+    def __init__(self, paths: CheriPaths, srcDir, buildDir, installDir):
+        super().__init__(paths, srcDir, buildDir, installDir)
         self.makeCommand = "ninja"
-
-    def update(self):
-        super().update()
-        runCmd(["git", "-C", os.path.join(self.srcDir, "tools/clang"), "pull", "--rebase"])
-
-    def configure(self):
-        # we can only set configureArgs here as paths.cheribsd does not exist when the constructor runs
         # FIXME: what is the correct default sysroot
         # should expand to ~/cheri/qemu/obj/mips.mips64/home/alr48/cheri/cheribsd
         # I think this might be correct: it contains x86 binaries but mips libraries so should be right)
-        sysroot = paths.cheribsd.buildDir + "/mips.mips64" + paths.cheribsd.srcDir + "/tmp"
+        # if we pass a path starting with a slash to Path() it will reset to that absolute path
+        # luckily we have to prepend mips.mips64, so it works out fine
+        sysroot = Path(self.paths.cheribsdObj, "mips.mips64" + self.paths.cheribsdSources.path, "tmp")
         self.configureCommand = "cmake"
         self.configureArgs = [
             self.srcDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
             "-DCMAKE_CXX_COMPILER=clang++37", "-DCMAKE_C_COMPILER=clang37",  # need at least 3.7 to build it
             "-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd",
             "-DCMAKE_INSTALL_PREFIX=" + self.installDir,
-            "-DDEFAULT_SYSROOT=" + sysroot,
+            "-DDEFAULT_SYSROOT=" + sysroot.path,
         ]
-        super().configure()
+
+    def update(self):
+        super().update()
+        runCmd(["git", "-C", os.path.join(self.srcDir, "tools/clang"), "pull", "--rebase"])
 
     def install(self):
         # runCmd(["ninja", "install"])
@@ -268,20 +260,20 @@ class BuildLLVM(Project):
 
 
 class BuildCHERIBSD(Project):
-    def __init__(self, srcDir, buildDir, installDir):
-        super().__init__(srcDir, buildDir, installDir)
+    def __init__(self, paths: CheriPaths, srcDir, buildDir, installDir):
+        super().__init__(paths, srcDir, buildDir, installDir)
 
     def compile(self):
-        os.environ["MAKEOBJDIRPREFIX"] = paths.cheribsd.buildDir
+        os.environ["MAKEOBJDIRPREFIX"] = self.buildDir
         # make sure the new binutils are picked up
-        if not os.environ["PATH"].startswith(paths.binutils.installDir):
-            os.environ["PATH"] = os.path.join(paths.binutils.installDir, "bin") + ":" + os.environ["PATH"]
+        if not os.environ["PATH"].startswith(self.paths.hostToolsDir.path):
+            os.environ["PATH"] = (self.paths.hostToolsDir / "bin").path + ":" + os.environ["PATH"]
             print("Set PATH to", os.environ["PATH"])
-        cheriCC = os.path.join(paths.llvm.buildDir, "bin/clang")
-        if not os.path.isfile(cheriCC):
+        cheriCC = self.paths.outputRoot / "llvm-build/bin/clang"  # FIXME: see if it works with installing
+        if not cheriCC.is_file():
             fatalError("CHERI CC does not exist: " + cheriCC)
         self.commonMakeArgs = [
-            "make", "CHERI=256", "CHERI_CC=" + cheriCC,
+            "make", "CHERI=256", "CHERI_CC=" + cheriCC.path,
             # "CPUTYPE=mips64", # mipsfpu for hardware float (apparently no longer supported: https://github.com/CTSRD-CHERI/cheribsd/issues/102)
             "-DDB_FROM_SRC",  # don't use the system passwd file
             "-DNO_ROOT",  # -DNO_ROOT install without using root privilege
@@ -303,31 +295,30 @@ class BuildCHERIBSD(Project):
         runCmd(self.commonMakeArgs + ["distribution"], cwd=self.srcDir)
         # TODO: make this configurable to allow NFS, etc.
         fstabContents = "/dev/ada0 / ufs rw 1 1\n"
-        fstabPath = os.path.join(paths.cheribsd.installDir, "etc/fstab")
+        fstabPath = self.paths.cheribsdRootfs / "etc/fstab"
 
         if options.pretend:
-            print("executing: echo", shlex.quote(fstabContents.replace("\n", "\\n")), ">", shlex.quote(fstabPath))
+            print("executing: echo", shlex.quote(fstabContents.replace("\n", "\\n")), ">", shlex.quote(fstabPath.path))
         else:
-            with open(fstabPath, "w") as fstab:
-                fstab.write(fstabContents)  # TODO: NFS?
+            fstabPath.write_text(fstabContents)  # TODO: NFS?
 
 
 class Targets(object):
     def __init__(self, paths: CheriPaths):
-        self.cheriRoot = str(paths.sourceRoot)
-        self.outputDir = str(paths.outputRoot)
-        self.hostToolsInstallDir = str(paths.hostToolsDir)
-        self.rootfsPath = str(paths.cheribsdRootfs)
-        self.binutils = BuildBinutils(srcDir=os.path.join(self.cheriRoot, "binutils"),
+        self.cheriRoot = paths.sourceRoot.path
+        self.outputDir = paths.outputRoot.path
+        self.hostToolsInstallDir = paths.hostToolsDir.path
+        self.rootfsPath = paths.cheribsdRootfs.path
+        self.binutils = BuildBinutils(paths, srcDir=os.path.join(self.cheriRoot, "binutils"),
                                       buildDir=os.path.join(self.outputDir, "binutils-build"),
                                       installDir=self.hostToolsInstallDir)
         self.qemu = BuildQEMU(paths, srcDir=os.path.join(self.cheriRoot, "qemu"),
                               buildDir=os.path.join(self.outputDir, "qemu-build"),
                               installDir=self.hostToolsInstallDir)
-        self.llvm = BuildLLVM(srcDir=os.path.join(self.cheriRoot, "llvm"),
+        self.llvm = BuildLLVM(paths, srcDir=os.path.join(self.cheriRoot, "llvm"),
                               buildDir=os.path.join(self.outputDir, "llvm-build"),
                               installDir=self.hostToolsInstallDir)
-        self.cheribsd = BuildCHERIBSD(srcDir=os.path.join(self.cheriRoot, "cheribsd"),
+        self.cheribsd = BuildCHERIBSD(paths, srcDir=os.path.join(self.cheriRoot, "cheribsd"),
                                       buildDir=os.path.join(self.outputDir, "cheribsd-obj"),
                                       installDir=self.rootfsPath)
 
@@ -362,7 +353,7 @@ if __name__ == "__main__":
             sys.exit("Unknown target " + i + " see --list-targets")
 
     newPaths = CheriPaths(options)
-    paths = Targets(newPaths)
+    buildTargets = Targets(newPaths)
     numCpus = multiprocessing.cpu_count()
     if numCpus > 24:
         # don't use up all the resources on shared build systems (you can still override this with the -j command line option)
@@ -370,14 +361,14 @@ if __name__ == "__main__":
     makeJFlag = "-j" + str(options.make_jobs) if options.make_jobs else "-j" + str(numCpus)
 
     if allTargets[0] in targets:
-        paths.qemu.process()
+        buildTargets.qemu.process()
     if allTargets[1] in targets:
-        paths.binutils.process()
+        buildTargets.binutils.process()
     if allTargets[2] in targets:
-        paths.llvm.process()
+        buildTargets.llvm.process()
     if allTargets[3] in targets:
-        paths.cheribsd.process()
+        buildTargets.cheribsd.process()
     if allTargets[4] in targets:
-        paths.qemu.buildDiskImage()
+        buildTargets.qemu.buildDiskImage()
     if allTargets[5] in targets:
-        paths.qemu.startEmulator()
+        buildTargets.qemu.startEmulator()
