@@ -51,7 +51,7 @@ def printCommand(firstStr: str, *args, cwd="", **kwargs):
     newArgs = (yellow + "cd", shlex.quote(str(cwd)), "&&") if cwd else ()
     # comma in tuple is required otherwise it creates a tuple of string chars
     newArgs += (yellow + firstStr,) + args + (endColour,)
-    print(*newArgs, **kwargs)
+    print(*newArgs, flush=True, **kwargs)
 
 
 def runCmd(*args, **kwargs):
