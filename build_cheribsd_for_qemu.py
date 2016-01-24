@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+
+# See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
+
+
 import argparse
 import subprocess
 import sys
@@ -10,9 +14,22 @@ import tempfile
 import multiprocessing
 import collections
 import glob
-# import sh
+from pathlib import Path
 
-# See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
+
+# if you want to customize where the sources/build output goes just change this
+class CheriPaths(object):
+    def __init__(self, cmdlineArgs: argparse.Namespace):
+        # Path.home() requires python 3.5 (we only have 3.4 currently)
+        # self.sourceRoot = Path.home() / "cheri"
+        self.sourceRoot = Path(os.path.expanduser("~/cheri"))
+        self.outputRoot = self.sourceRoot / "output"
+        self.diskImage = options.disk_image_path or self.outputRoot / "disk.image"
+        self.cheribsdRootfs = self.outputRoot / "rootfs"
+        self.hostToolsDir = self.outputRoot / "host-tools"  # qemu and binutils (and llvm/clang)
+
+
+
 
 
 def runCmd(*args, **kwargs):
@@ -34,14 +51,9 @@ def runCmd(*args, **kwargs):
 # removes a directory tree if --clean is passed (or force=True parameter is passed
 def cleanDir(path, force=False, silent=False):
     if (options.clean or force) and os.path.isdir(path):
-        if not options.pretend:
-            # status update is useful as this can take a long time
-            # when pretending this just spams the output
-            print("Cleaning", path, "...")
         # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
         # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
         runCmd(["rm", "-rf", path])
-        os.makedirs(path, exist_ok=True)
     # always make sure the dir exists
     os.makedirs(path, exist_ok=True)
 
@@ -98,7 +110,7 @@ class Project(object):
 
 
 class BuildQEMU(Project):
-    def __init__(self, srcDir, buildDir, installDir, cmdOptions: argparse.Namespace):
+    def __init__(self, paths: CheriPaths, srcDir, buildDir, installDir):
         super().__init__(srcDir, buildDir, installDir)
         # QEMU will not work with BSD make, need GNU make
         self.makeCommand = "gmake"
@@ -110,7 +122,7 @@ class BuildQEMU(Project):
                               "--disable-xen",
                               "--extra-cflags=-g",
                               "--prefix=" + self.installDir]
-        self.diskImagePath = cmdOptions.disk_image_path
+        self.diskImagePath = str(paths.diskImage)
         if not self.diskImagePath:
             self.diskImagePath = os.path.join(buildDir, "../disk.img")  # TODO: cmdOptions.output_dir
         # TODO: report CHERIBSD bug to remove the need for this patch
@@ -282,27 +294,24 @@ class BuildCHERIBSD(Project):
                 fstab.write(fstabContents)  # TODO: NFS?
 
 
-class Paths(object):
-    def __init__(self, cmdlineArgs: argparse.Namespace):
-        self.cheriRoot = os.path.expanduser("~/cheri")  # change this if you want it somewhere else
-        self.outputDir = os.path.join(self.cheriRoot, "output")
-        self.rootfsPath = os.path.join(self.outputDir, "rootfs")
-        self.hostToolsInstallDir = os.path.join(self.outputDir, "host-tools")  # qemu and binutils (and llvm/clang)
-
+class Targets(object):
+    def __init__(self, paths: CheriPaths):
+        self.cheriRoot = str(paths.sourceRoot)
+        self.outputDir = str(paths.outputRoot)
+        self.hostToolsInstallDir = str(paths.hostToolsDir)
+        self.rootfsPath = str(paths.cheribsdRootfs)
         self.binutils = BuildBinutils(srcDir=os.path.join(self.cheriRoot, "binutils"),
                                       buildDir=os.path.join(self.outputDir, "binutils-build"),
                                       installDir=self.hostToolsInstallDir)
-        self.qemu = BuildQEMU(srcDir=os.path.join(self.cheriRoot, "qemu"),
+        self.qemu = BuildQEMU(paths, srcDir=os.path.join(self.cheriRoot, "qemu"),
                               buildDir=os.path.join(self.outputDir, "qemu-build"),
-                              installDir=self.hostToolsInstallDir,
-                              cmdOptions=cmdlineArgs)
+                              installDir=self.hostToolsInstallDir)
         self.llvm = BuildLLVM(srcDir=os.path.join(self.cheriRoot, "llvm"),
                               buildDir=os.path.join(self.outputDir, "llvm-build"),
                               installDir=self.hostToolsInstallDir)
         self.cheribsd = BuildCHERIBSD(srcDir=os.path.join(self.cheriRoot, "cheribsd"),
                                       buildDir=os.path.join(self.outputDir, "cheribsd-obj"),
                                       installDir=self.rootfsPath)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -334,7 +343,8 @@ if __name__ == "__main__":
         if i not in allTargets:
             sys.exit("Unknown target " + i + " see --list-targets")
 
-    paths = Paths(options)
+    newPaths = CheriPaths(options)
+    paths = Targets(newPaths)
     numCpus = multiprocessing.cpu_count()
     if numCpus > 24:
         # don't use up all the resources on shared build systems (you can still override this with the -j command line option)
