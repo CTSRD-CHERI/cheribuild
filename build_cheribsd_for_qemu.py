@@ -82,11 +82,11 @@ def fatalError(message: str):
 
 
 class Project(object):
-    def __init__(self, name: str, paths: CheriPaths, *, sourceDir="", buildDir="", installDir=""):
+    def __init__(self, name: str, paths: CheriPaths, installDir: Path, *, sourceDir="", buildDir=""):
         self.paths = paths
         self.sourceDir = Path(sourceDir if sourceDir else paths.sourceRoot / name)
         self.buildDir = Path(buildDir if buildDir else paths.outputRoot / (name + "-build"))
-        self.installDir = Path(installDir)
+        self.installDir = installDir
         self.makeCommand = "make"
         self.configureCommand = None
         self.configureArgs = []
@@ -127,7 +127,7 @@ class Project(object):
 
 class BuildQEMU(Project):
     def __init__(self, paths: CheriPaths):
-        super().__init__("qemu", paths)
+        super().__init__("qemu", paths, installDir=paths.hostToolsDir)
         # QEMU will not work with BSD make, need GNU make
         self.makeCommand = "gmake"
         self.configureCommand = self.sourceDir / "configure"
@@ -224,6 +224,8 @@ class BuildBinutils(Project):
 
 class BuildLLVM(Project):
     def __init__(self, paths: CheriPaths):
+        # NOTE: currently we don't use the installDir because we use the compiler from the build directory
+        # TODO: install the compiler
         super().__init__("llvm", paths, installDir=paths.hostToolsDir)
         self.makeCommand = "ninja"
         # FIXME: what is the correct default sysroot
@@ -261,7 +263,7 @@ class BuildLLVM(Project):
 
 class BuildCHERIBSD(Project):
     def __init__(self, paths: CheriPaths):
-        super().__init__("cheribsd", paths, buildDir=paths.cheribsdObj, installDir=paths.cheribsdRootfs)
+        super().__init__("cheribsd", paths, installDir=paths.cheribsdRootfs, buildDir=paths.cheribsdObj)
 
     def compile(self):
         os.environ["MAKEOBJDIRPREFIX"] = self.buildDir.path
