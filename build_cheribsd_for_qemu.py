@@ -7,12 +7,8 @@ import argparse
 import subprocess
 import sys
 import os
-import logging
 import shlex
 import tempfile
-import multiprocessing
-import collections
-import glob
 from pathlib import Path
 
 if sys.version_info < (3, 4):
@@ -359,7 +355,7 @@ if __name__ == "__main__":
         print("target 'all' can be used to build everything")
         sys.exit()
 
-    numCpus = multiprocessing.cpu_count()
+    numCpus = os.cpu_count()
     if numCpus > 24:
         # don't use up all the resources on shared build systems (you can still override this with the -j command line option)
         numCpus = 16
