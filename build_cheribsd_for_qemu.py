@@ -262,7 +262,7 @@ class BuildLLVM(Project):
         if len(incompatibleFiles) == 0:
             fatalError("Could not find incompatible builtin includes. Build system changed?")
         for i in incompatibleFiles:
-            printCommand("rm", shlex.quote(i))
+            printCommand("rm", shlex.quote(i.path))
             if not options.pretend:
                 i.unlink()
 
