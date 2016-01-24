@@ -46,17 +46,24 @@ class CheriPaths(object):
         self.hostToolsDir = self.outputRoot / "host-tools"  # qemu and binutils (and llvm/clang)
 
 
+def printCommand(firstStr: str, *args, cwd="", **kwargs):
+    yellow = "\x1b[1;33m"
+    endColour = "\x1b[0m"  # reset
+    newArgs = (yellow + "cd", shlex.quote(str(cwd)), "&&") if cwd else ()
+    # comma in tuple is required otherwise it creates a tuple of string chars
+    newArgs += (yellow + firstStr,) + args + (endColour,)
+    print(*newArgs, **kwargs)
+
+
 def runCmd(*args, **kwargs):
     if type(args[0]) is str or type(args[0]) is Path:
         cmdline = args  # multiple strings passed
     else:
         cmdline = args[0]  # list was passed
     cmdline = list(map(str, cmdline))  # make sure they are all strings
-    colour = "\x1b[1;33m"  # bold yellow
-    endColour = "\x1b[0m"  # reset
-    cmdShellEscaped = " ".join([shlex.quote(str(i)) for i in cmdline])
+    cmdShellEscaped = " ".join(map(shlex.quote, cmdline))
+    printCommand(cmdShellEscaped, cwd=kwargs.get("cwd"))
     kwargs["cwd"] = str(kwargs["cwd"]) if "cwd" in kwargs else os.getcwd()
-    print(colour, "cd ", shlex.quote(kwargs["cwd"]), " && ", cmdShellEscaped, endColour, sep="")
     if not options.pretend:
         # print(cmdline, kwargs)
         subprocess.check_call(cmdline, **kwargs)
