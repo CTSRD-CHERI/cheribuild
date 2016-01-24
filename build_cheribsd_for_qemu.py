@@ -64,13 +64,13 @@ def runCmd(*args, **kwargs):
 
 
 # removes a directory tree if --clean is passed (or force=True parameter is passed
-def cleanDir(path, force=False, silent=False):
-    if (options.clean or force) and os.path.isdir(path):
+def cleanDir(path: Path, force=False, silent=False):
+    if (options.clean or force) and path.is_dir():
         # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
         # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
         runCmd(["rm", "-rf", path])
     # always make sure the dir exists
-    os.makedirs(path, exist_ok=True)
+    os.makedirs(path.path, exist_ok=True)
 
 
 def fatalError(message: str):
@@ -82,24 +82,24 @@ def fatalError(message: str):
 
 
 class Project(object):
-    def __init__(self, paths: CheriPaths, srcDir: str, buildDir: str, installDir: str):
+    def __init__(self, name: str, paths: CheriPaths, *, sourceDir="", buildDir="", installDir=""):
         self.paths = paths
-        self.srcDir = srcDir
-        self.buildDir = buildDir
-        self.installDir = installDir
+        self.sourceDir = Path(sourceDir if sourceDir else paths.sourceRoot / name)
+        self.buildDir = Path(buildDir if buildDir else paths.outputRoot / (name + "-build"))
+        self.installDir = Path(installDir)
         self.makeCommand = "make"
         self.configureCommand = None
         self.configureArgs = []
 
     def update(self):
-        runCmd("git", "-C", self.srcDir, "pull", "--rebase", cwd=self.srcDir)
+        runCmd("git", "pull", "--rebase", cwd=self.sourceDir)
 
     def clean(self):
         # TODO: never use the source dir as a build dir
         # will have to check how well binutils and qemu work there
-        if os.path.isdir(os.path.join(self.buildDir, ".git")):
+        if (self.buildDir / ".git").is_dir():
             # just use git clean for cleanup
-            runCmd("git", "-C", self.buildDir, "clean", "-dfx", cwd=self.buildDir)
+            runCmd("git", "clean", "-dfx", cwd=self.buildDir)
         else:
             cleanDir(self.buildDir)
 
@@ -118,7 +118,7 @@ class Project(object):
             self.update()
         if options.clean:
             self.clean()
-        os.makedirs(self.buildDir, exist_ok=True)
+        os.makedirs(self.buildDir.path, exist_ok=True)
         if not options.skip_configure:
             self.configure()
         self.compile()
@@ -126,18 +126,18 @@ class Project(object):
 
 
 class BuildQEMU(Project):
-    def __init__(self, paths: CheriPaths, srcDir, buildDir, installDir):
-        super().__init__(paths, srcDir, buildDir, installDir)
+    def __init__(self, paths: CheriPaths):
+        super().__init__("qemu", paths)
         # QEMU will not work with BSD make, need GNU make
         self.makeCommand = "gmake"
-        self.configureCommand = os.path.join(self.srcDir, "configure")
+        self.configureCommand = self.sourceDir / "configure"
         self.configureArgs = ["--target-list=cheri-softmmu",
                               "--disable-linux-user",
                               "--disable-linux-aio",
                               "--disable-kvm",
                               "--disable-xen",
                               "--extra-cflags=-g",
-                              "--prefix=" + self.installDir]
+                              "--prefix=" + self.installDir.path]
         # TODO: report CHERIBSD bug to remove the need for this patch
         self.metalogPatch = """
 --- rootfs/METALOG      2016-01-20 09:51:47.704461046 +0000
@@ -164,7 +164,7 @@ class BuildQEMU(Project):
         # the build sometimes modifies the po/ subdirectory
         # reset that directory by checking out the HEAD revision there
         # this is better than git reset --hard as we don't lose any other changes
-        runCmd("git", "checkout", "HEAD", "po/", cwd=self.srcDir)
+        runCmd("git", "checkout", "HEAD", "po/", cwd=self.sourceDir)
         super().update()
 
     def buildDiskImage(self):
@@ -216,15 +216,15 @@ class BuildQEMU(Project):
 
 
 class BuildBinutils(Project):
-    def __init__(self, paths: CheriPaths, srcDir, buildDir, installDir):
-        super().__init__(paths, srcDir, buildDir, installDir)
-        self.configureCommand = os.path.join(self.srcDir, "configure")
-        self.configureArgs = ["--target=mips64", "--disable-werror", "--prefix=" + self.installDir]
+    def __init__(self, paths: CheriPaths):
+        super().__init__("binutils", paths, installDir=paths.hostToolsDir)
+        self.configureCommand = self.sourceDir / "configure"
+        self.configureArgs = ["--target=mips64", "--disable-werror", "--prefix=" + self.installDir.path]
 
 
 class BuildLLVM(Project):
-    def __init__(self, paths: CheriPaths, srcDir, buildDir, installDir):
-        super().__init__(paths, srcDir, buildDir, installDir)
+    def __init__(self, paths: CheriPaths):
+        super().__init__("llvm", paths, installDir=paths.hostToolsDir)
         self.makeCommand = "ninja"
         # FIXME: what is the correct default sysroot
         # should expand to ~/cheri/qemu/obj/mips.mips64/home/alr48/cheri/cheribsd
@@ -234,37 +234,37 @@ class BuildLLVM(Project):
         sysroot = Path(self.paths.cheribsdObj, "mips.mips64" + self.paths.cheribsdSources.path, "tmp")
         self.configureCommand = "cmake"
         self.configureArgs = [
-            self.srcDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
+            self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
             "-DCMAKE_CXX_COMPILER=clang++37", "-DCMAKE_C_COMPILER=clang37",  # need at least 3.7 to build it
             "-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd",
-            "-DCMAKE_INSTALL_PREFIX=" + self.installDir,
+            "-DCMAKE_INSTALL_PREFIX=" + self.installDir.path,
             "-DDEFAULT_SYSROOT=" + sysroot.path,
         ]
 
     def update(self):
         super().update()
-        runCmd(["git", "-C", os.path.join(self.srcDir, "tools/clang"), "pull", "--rebase"])
+        runCmd(["git", "pull", "--rebase"], cwd=(self.sourceDir / "tools/clang"))
 
     def install(self):
         # runCmd(["ninja", "install"])
         # we don't actually install yet (TODO: would it make sense to do that?)
         # delete the files incompatible with cheribsd
-        os.chdir(self.buildDir)  # TODO: if we decide to install change this to self.installDir
-        incompatibleFiles = glob.glob("lib/clang/3.*/include/std*") + glob.glob("lib/clang/3.*/include/limits.h")
+        incompatibleFiles = list(self.buildDir.glob("lib/clang/3.*/include/std*"))
+        incompatibleFiles += self.buildDir.glob("lib/clang/3.*/include/limits.h")
         if len(incompatibleFiles) == 0:
             fatalError("Could not find incompatible builtin includes. Build system changed?")
         for i in incompatibleFiles:
             print("removing incompatible header", i)
             if not options.pretend:
-                os.remove(i)
+                i.unlink()
 
 
 class BuildCHERIBSD(Project):
-    def __init__(self, paths: CheriPaths, srcDir, buildDir, installDir):
-        super().__init__(paths, srcDir, buildDir, installDir)
+    def __init__(self, paths: CheriPaths):
+        super().__init__("cheribsd", paths, buildDir=paths.cheribsdObj, installDir=paths.cheribsdRootfs)
 
     def compile(self):
-        os.environ["MAKEOBJDIRPREFIX"] = self.buildDir
+        os.environ["MAKEOBJDIRPREFIX"] = self.buildDir.path
         # make sure the new binutils are picked up
         if not os.environ["PATH"].startswith(self.paths.hostToolsDir.path):
             os.environ["PATH"] = (self.paths.hostToolsDir / "bin").path + ":" + os.environ["PATH"]
@@ -278,21 +278,21 @@ class BuildCHERIBSD(Project):
             "-DDB_FROM_SRC",  # don't use the system passwd file
             "-DNO_ROOT",  # -DNO_ROOT install without using root privilege
             "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
-            "DESTDIR=" + self.installDir,
+            "DESTDIR=" + self.installDir.path,
             "KERNCONF=CHERI_MALTA64",
             # "-DNO_CLEAN", # don't clean before (takes ages) and the rm -rf we do before should be enough
         ]
         # make sure the old install is purged before building, otherwise we might get strange errors
         # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
         cleanDir(self.installDir, force=True)
-        runCmd(self.commonMakeArgs + ["buildworld", makeJFlag], cwd=self.srcDir)
-        runCmd(self.commonMakeArgs + ["buildkernel", makeJFlag], cwd=self.srcDir)
+        runCmd(self.commonMakeArgs + ["buildworld", makeJFlag], cwd=self.sourceDir)
+        runCmd(self.commonMakeArgs + ["buildkernel", makeJFlag], cwd=self.sourceDir)
 
     def install(self):
         # don't use multiple jobs here
-        runCmd(self.commonMakeArgs + ["installworld"], cwd=self.srcDir)
-        runCmd(self.commonMakeArgs + ["installkernel"], cwd=self.srcDir)
-        runCmd(self.commonMakeArgs + ["distribution"], cwd=self.srcDir)
+        runCmd(self.commonMakeArgs + ["installworld"], cwd=self.sourceDir)
+        runCmd(self.commonMakeArgs + ["installkernel"], cwd=self.sourceDir)
+        runCmd(self.commonMakeArgs + ["distribution"], cwd=self.sourceDir)
         # TODO: make this configurable to allow NFS, etc.
         fstabContents = "/dev/ada0 / ufs rw 1 1\n"
         fstabPath = self.paths.cheribsdRootfs / "etc/fstab"
@@ -305,22 +305,10 @@ class BuildCHERIBSD(Project):
 
 class Targets(object):
     def __init__(self, paths: CheriPaths):
-        self.cheriRoot = paths.sourceRoot.path
-        self.outputDir = paths.outputRoot.path
-        self.hostToolsInstallDir = paths.hostToolsDir.path
-        self.rootfsPath = paths.cheribsdRootfs.path
-        self.binutils = BuildBinutils(paths, srcDir=os.path.join(self.cheriRoot, "binutils"),
-                                      buildDir=os.path.join(self.outputDir, "binutils-build"),
-                                      installDir=self.hostToolsInstallDir)
-        self.qemu = BuildQEMU(paths, srcDir=os.path.join(self.cheriRoot, "qemu"),
-                              buildDir=os.path.join(self.outputDir, "qemu-build"),
-                              installDir=self.hostToolsInstallDir)
-        self.llvm = BuildLLVM(paths, srcDir=os.path.join(self.cheriRoot, "llvm"),
-                              buildDir=os.path.join(self.outputDir, "llvm-build"),
-                              installDir=self.hostToolsInstallDir)
-        self.cheribsd = BuildCHERIBSD(paths, srcDir=os.path.join(self.cheriRoot, "cheribsd"),
-                                      buildDir=os.path.join(self.outputDir, "cheribsd-obj"),
-                                      installDir=self.rootfsPath)
+        self.binutils = BuildBinutils(paths)
+        self.qemu = BuildQEMU(paths)
+        self.llvm = BuildLLVM(paths)
+        self.cheribsd = BuildCHERIBSD(paths)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
