@@ -79,8 +79,9 @@ class CheriPaths(object):
 
 
 class Project(object):
-    def __init__(self, name: str, paths: CheriPaths, *, sourceDir="", buildDir="", installDir: Path=None):
+    def __init__(self, name: str, paths: CheriPaths, *, sourceDir="", buildDir="", installDir: Path=None, gitUrl=""):
         self.name = name
+        self.gitUrl = gitUrl
         self.paths = paths
         self.sourceDir = Path(sourceDir if sourceDir else paths.sourceRoot / name)
         self.buildDir = Path(buildDir if buildDir else paths.outputRoot / (name + "-build"))
@@ -88,6 +89,15 @@ class Project(object):
         self.makeCommand = "make"
         self.configureCommand = None
         self.configureArgs = []
+
+    @staticmethod
+    def _update_git_repo(srcDir: Path, remoteUrl):
+        if not (srcDir / ".git").is_dir():
+            print(srcDir.path, "is not a git repository. Clone it from' " + remoteUrl + "'?")
+            if sys.__stdin__.isatty() and input("y/[N]").lower() != "y":
+                sys.exit("Sources for " + srcDir.path + "missing!")
+            runCmd("git", "clone", remoteUrl, srcDir)
+        runCmd("git", "pull", "--rebase", cwd=srcDir)
 
     def _makedirs(self, dir: Path):
         printCommand("mkdir", "-p", dir)
@@ -100,8 +110,9 @@ class Project(object):
             # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
             # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
             runCmd(["rm", "-rf", dir.path])
+
     def update(self):
-        runCmd("git", "pull", "--rebase", cwd=self.sourceDir)
+        self._update_git_repo(self.sourceDir, self.gitUrl)
 
     def clean(self):
         # TODO: never use the source dir as a build dir
@@ -140,7 +151,8 @@ class Project(object):
 
 class BuildQEMU(Project):
     def __init__(self, paths: CheriPaths):
-        super().__init__("qemu", paths, installDir=paths.hostToolsDir)
+        super().__init__("qemu", paths, installDir=paths.hostToolsDir,
+                         gitUrl="https://github.com/CTSRD-CHERI/qemu.git")
         # QEMU will not work with BSD make, need GNU make
         self.makeCommand = "gmake"
         self.configureCommand = self.sourceDir / "configure"
@@ -156,13 +168,15 @@ class BuildQEMU(Project):
         # the build sometimes modifies the po/ subdirectory
         # reset that directory by checking out the HEAD revision there
         # this is better than git reset --hard as we don't lose any other changes
-        runCmd("git", "checkout", "HEAD", "po/", cwd=self.sourceDir)
+        if (self.sourceDir / "po").is_dir():
+            runCmd("git", "checkout", "HEAD", "po/", cwd=self.sourceDir)
         super().update()
 
 
 class BuildBinutils(Project):
     def __init__(self, paths: CheriPaths):
-        super().__init__("binutils", paths, installDir=paths.hostToolsDir)
+        super().__init__("binutils", paths, installDir=paths.hostToolsDir,
+                         gitUrl="https://github.com/CTSRD-CHERI/binutils.git")
         self.configureCommand = self.sourceDir / "configure"
         self.configureArgs = ["--target=mips64", "--disable-werror", "--prefix=" + self.installDir.path]
 
@@ -189,8 +203,8 @@ class BuildLLVM(Project):
         ]
 
     def update(self):
-        super().update()
-        runCmd(["git", "pull", "--rebase"], cwd=(self.sourceDir / "tools/clang"))
+        self._update_git_repo(self.sourceDir, "https://github.com/CTSRD-CHERI/llvm.git")
+        self._update_git_repo(self.sourceDir / "tools/clang", "https://github.com/CTSRD-CHERI/clang.git")
 
     def install(self):
         # runCmd(["ninja", "install"])
@@ -208,7 +222,8 @@ class BuildLLVM(Project):
 
 class BuildCHERIBSD(Project):
     def __init__(self, paths: CheriPaths):
-        super().__init__("cheribsd", paths, installDir=paths.cheribsdRootfs, buildDir=paths.cheribsdObj)
+        super().__init__("cheribsd", paths, installDir=paths.cheribsdRootfs, buildDir=paths.cheribsdObj,
+                         gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git")
 
     def compile(self):
         os.environ["MAKEOBJDIRPREFIX"] = self.buildDir.path
