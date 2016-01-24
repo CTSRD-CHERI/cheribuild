@@ -33,7 +33,6 @@ if sys.version_info < (3, 5):
     Path.write_text = _write_text
 
 
-
 # if you want to customize where the sources/build output goes just change this
 class CheriPaths(object):
     def __init__(self, cmdlineArgs: argparse.Namespace):
@@ -64,6 +63,8 @@ def runCmd(*args, **kwargs):
     cmdShellEscaped = " ".join(map(shlex.quote, cmdline))
     printCommand(cmdShellEscaped, cwd=kwargs.get("cwd"))
     kwargs["cwd"] = str(kwargs["cwd"]) if "cwd" in kwargs else os.getcwd()
+    if options.quiet and "stdout" not in kwargs:
+        kwargs["stdout"] = subprocess.DEVNULL
     if not options.pretend:
         # print(cmdline, kwargs)
         subprocess.check_call(cmdline, **kwargs)
@@ -217,7 +218,7 @@ class BuildQEMU(Project):
                 "-nographic",  # no GPU
                 "-m", "2048",  # 2GB memory
                 "-hda", self.paths.diskImage
-                ])
+                ], stdout=sys.stdout) # even with --quiet we want stdout here
 
 
 class BuildBinutils(Project):
@@ -323,6 +324,7 @@ if __name__ == "__main__":
     parser.add_argument("--make-jobs", "-j", help="Number of jobs to use for compiling", type=int)
     parser.add_argument("--clean", action="store_true", help="Do a clean build")
     parser.add_argument("--pretend", "-p", action="store_true", help="Print the commands that would be run instead of executing them")
+    parser.add_argument("--quiet", action="store_true", help="Don't show stdout of the commands that are executed")
     parser.add_argument("--list-targets", action="store_true", help="List all available targets")
     parser.add_argument("--skip-update", action="store_true", help="Skip the git pull step")
     parser.add_argument("--skip-configure", action="store_true", help="Don't run the configure step")
