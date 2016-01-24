@@ -153,18 +153,6 @@ class BuildQEMU(Project):
         runCmd("git", "checkout", "HEAD", "po/", cwd=self.sourceDir)
         super().update()
 
-    def startEmulator(self):
-        qemuBinary = self.paths.hostToolsDir / "bin/qemu-system-cheri"
-        currentKernel = self.paths.cheribsdRootfs / "boot/kernel/kernel"
-        print("About to run QEMU with image " + self.paths.diskImage.path + " and kernel " + currentKernel.path)
-        # input("Press enter to continue")
-        runCmd([qemuBinary, "-M", "malta",  # malta cpu
-                "-kernel", currentKernel ,  # assume the current image matches the kernel currently build
-                "-nographic",  # no GPU
-                "-m", "2048",  # 2GB memory
-                "-hda", self.paths.diskImage
-                ], stdout=sys.stdout) # even with --quiet we want stdout here
-
 
 class BuildBinutils(Project):
     def __init__(self, paths: CheriPaths):
@@ -314,6 +302,25 @@ class BuildDiskImage(Project):
                 self.paths.diskImage,  # output file
                 self.paths.cheribsdRootfs  # directory tree to use for the image
             ])
+
+
+class LaunchQEMU(Project):
+    def __init__(self, paths):
+        super().__init__("run", paths)
+
+    def process(self):
+        qemuBinary = self.paths.hostToolsDir / "bin/qemu-system-cheri"
+        currentKernel = self.paths.cheribsdRootfs / "boot/kernel/kernel"
+        print("About to run QEMU with image " + self.paths.diskImage.path + " and kernel " + currentKernel.path)
+        # input("Press enter to continue")
+        runCmd([qemuBinary, "-M", "malta",  # malta cpu
+                "-kernel", currentKernel,  # assume the current image matches the kernel currently build
+                "-nographic",  # no GPU
+                "-m", "2048",  # 2GB memory
+                "-hda", self.paths.diskImage
+                ], stdout=sys.stdout)  # even with --quiet we want stdout here
+
+
 class Targets(object):
     def __init__(self, paths: CheriPaths):
         self.binutils = BuildBinutils(paths)
@@ -321,6 +328,7 @@ class Targets(object):
         self.llvm = BuildLLVM(paths)
         self.cheribsd = BuildCHERIBSD(paths)
         self.diskImage = BuildDiskImage(paths)
+        self.run = LaunchQEMU(paths)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -371,4 +379,4 @@ if __name__ == "__main__":
     if allTargets[4] in targets:
         buildTargets.diskImage.process()
     if allTargets[5] in targets:
-        buildTargets.qemu.startEmulator()
+        buildTargets.run.process()
