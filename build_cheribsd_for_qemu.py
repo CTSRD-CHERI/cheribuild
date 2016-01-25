@@ -7,6 +7,7 @@ import shlex
 import shutil
 import tempfile
 from pathlib import Path
+import difflib
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
 
@@ -308,33 +309,42 @@ class BuildCHERIBSD(Project):
 class BuildDiskImage(Project):
     def __init__(self, paths):
         super().__init__("disk-image", paths)
-        self.metalogPatch = """
---- rootfs/METALOG      2016-01-20 09:51:47.704461046 +0000
-+++ rootfs2/METALOG       2016-01-20 11:51:59.831964687 +0000
-@@ -121,6 +121,7 @@
- ./usr/lib/libxo type=dir uname=root gname=wheel mode=0755
- ./usr/lib/libxo/encoder type=dir uname=root gname=wheel mode=0755
- ./usr/libcheri type=dir uname=root gname=wheel mode=0755
-+./usr/libcheri/.debug type=dir mode=0755 tags=debug
- ./usr/libdata type=dir uname=root gname=wheel mode=0755
- ./usr/libdata/gcc type=dir uname=root gname=wheel mode=0755
- ./usr/libdata/ldscripts type=dir uname=root gname=wheel mode=0755
-@@ -4434,7 +4435,6 @@
- ./usr/lib//libhelloworld_p.a type=file uname=root gname=wheel mode=0444 size=6614
- ./usr/include/cheri//helloworld.h type=file uname=root gname=wheel mode=0444 size=2370
- ./usr/libcheri/helloworld.co.0 type=file uname=root gname=wheel mode=0555 size=77984
--./usr/libcheri/.debug/ type=dir mode=0755 tags=debug
- ./usr/libcheri/.debug/helloworld.co.0.debug type=file uname=root gname=wheel mode=0444 size=67656 tags=debug
- ./usr/libcheri//helloworld.co.0.dump type=file uname=root gname=wheel mode=0444 size=1049489
- ./usr/lib//librpcsec_gss.a type=file uname=root gname=wheel mode=0444 size=53040
-"""
+
+    def patchManifestFile(self, tmpdir, manifestFile):
+        # See https://github.com/CTSRD-CHERI/cheribsd/issues/107
+        patchedManifestFile = Path(tmpdir, "METALOG")
+        if options.pretend:
+            return patchedManifestFile  # don't actually write the file
+
+        # FIXME: multiple variables in one with statement cause will cause the last lines to not be written, WTF is wrong
+        # work around it by using nested with statements
+        with manifestFile.open("r") as orig:
+            with patchedManifestFile.open("w") as patched:
+                for line in orig:
+                    if line.startswith("./usr/libcheri/.debug/ type=dir"):
+                        # print("skipping ./usr/libcheri/.debug/ line")
+                        continue  # don't write this line as we already inserted it further up in the file
+                    patched.write(line)
+                    if line.startswith("./usr/libcheri type=dir"):
+                        # print("found ./usr/libcheri, addding ./usr/libcheri/.debug to METALOG")
+                        patched.write("./usr/libcheri/.debug type=dir mode=0755 tags=debug\n")
+
+        # create a diff to check if the number of changes matches
+        with manifestFile.open() as a, patchedManifestFile.open() as b:
+            diff = list(difflib.unified_diff(list(a), list(b)))
+            if len(diff) != 18:
+                print("Diff of patched METALOG has unexpected format (wrong number of changes):")
+                print("".join(diff))
+                sys.exit("METALOG format has changed, cannot patch it!!")
+        print("Sucessfully patched METALOG")
+        return patchedManifestFile
 
     def process(self):
         if self.paths.diskImage.is_file():
             # only show prompt if we can actually input something to stdin
             if sys.__stdin__.isatty():
-                yn = input("An image already exists (" + self.paths.diskImage.path + "). Overwrite? [y/N] ")
-                if str(yn).lower() != "y":
+                yn = input("An image already exists (" + self.paths.diskImage.path + "). Overwrite? [Y/n] ")
+                if str(yn).lower() == "n":
                     return
             printCommand("rm", self.paths.diskImage.path)
             self.paths.diskImage.unlink()
@@ -348,18 +358,12 @@ class BuildDiskImage(Project):
             fatalError("master.passwd does not exist in " + userGroupDbDir.path)
         # for now we need to patch the METALOG FILE:
         with tempfile.TemporaryDirectory() as tmpdir:
-            patchedManifestFile = Path(tmpdir, "METALOG")
-            runCmd("cp", manifestFile, patchedManifestFile)
-            inputFile = Path(tmpdir, "METALOG.patch")
-            inputFile.write_text(self.metalogPatch)
-            runCmd("patch", "-p1", "-i", inputFile, cwd=tmpdir)
-            print("Sucessfully patched METALOG")
+            manifestFile = self.patchManifestFile(tmpdir, manifestFile)
             runCmd([
                 "makefs",
                 "-M", "1077936128",  # minimum image size = 1GB
                 "-B", "be",  # big endian byte order
-                "-F", patchedManifestFile,  # use METALOG as the manifest for the disk image
-                # "-F", manifestFile,  # use METALOG as the manifest for the disk image
+                "-F", manifestFile,  # use METALOG as the manifest for the disk image
                 "-N", userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file (makes sure that the numeric UID values are correct
                 self.paths.diskImage,  # output file
                 self.paths.cheribsdRootfs  # directory tree to use for the image
