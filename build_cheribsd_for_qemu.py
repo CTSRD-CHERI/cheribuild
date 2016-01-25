@@ -31,12 +31,12 @@ if sys.version_info < (3, 5):
     Path.write_text = _write_text
 
 
-def printCommand(firstStr: str, *args, cwd="", **kwargs):
+def printCommand(*args, cwd="", **kwargs):
     yellow = "\x1b[1;33m"
     endColour = "\x1b[0m"  # reset
     newArgs = (yellow + "cd", shlex.quote(str(cwd)), "&&") if cwd else ()
     # comma in tuple is required otherwise it creates a tuple of string chars
-    newArgs += (yellow + firstStr,) + args + (endColour,)
+    newArgs += (yellow + args[0],) + args[1:] + (endColour,)
     print(*newArgs, flush=True, **kwargs)
 
 
@@ -105,11 +105,13 @@ class Project(object):
             os.makedirs(dir.path, exist_ok=True)
 
     # removes a directory tree if --clean is passed (or force=True parameter is passed)
-    def _cleanDir(self, dir, force=False):
+    def _cleanDir(self, dir: Path, force=False):
         if (options.clean or force) and dir.is_dir():
             # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
             # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
             runCmd(["rm", "-rf", dir.path])
+        # make sure the dir is empty afterwars
+        self._makedirs(dir)
 
     def update(self):
         self._update_git_repo(self.sourceDir, self.gitUrl)
@@ -123,7 +125,7 @@ class Project(object):
         else:
             self._cleanDir(self.buildDir)
         # make sure the dir is empty afterwards
-        self._makedirs(self.buildDir.path)
+        self._makedirs(self.buildDir)
 
     def configure(self):
         if self.configureCommand:
@@ -225,6 +227,44 @@ class BuildCHERIBSD(Project):
         super().__init__("cheribsd", paths, installDir=paths.cheribsdRootfs, buildDir=paths.cheribsdObj,
                          gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git")
 
+    def runMake(self, args, target):
+        args.append(target)
+        printCommand(" ".join(args), cwd=self.sourceDir)
+        if options.pretend:
+            return
+        logfilePath = Path(self.buildDir / ("build." + target + ".log"))
+        print("Saving build log to", logfilePath)
+        with logfilePath.open("wb") as logfile:
+            # TODO: add a verbose option that shows every line
+            # quiet doesn't display anything, normal only status updates and verbose everything
+            if options.quiet:
+                # a lot more efficient than filtering every line
+                subprocess.check_call(args, cwd=self.sourceDir.path, stdout=logfile)
+                return
+            # by default only show limited progress:e.g. ">>> stage 2.1: cleaning up the object tree"
+            make = subprocess.Popen(args, cwd=self.sourceDir.path, stdout=subprocess.PIPE)
+            # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
+            clearLine = b"\x1b[2K\r"
+            for line in make.stdout:
+                logfile.write(line)
+                # TODO: verbose mode
+                # if options.verbose:
+                    # sys.stdout.buffer.write(line)
+                    # continue
+
+                if line.startswith(b">>> "):  # major status update
+                    sys.stdout.buffer.write(clearLine)
+                    sys.stdout.buffer.write(line)
+                elif line.startswith(b"===> "):  # new subdirectory
+                    # clear the old line to have a continuously updating progress
+                    sys.stdout.buffer.write(clearLine)
+                    sys.stdout.buffer.write(line[:-1])  # remove the newline at the end
+                    sys.stdout.buffer.flush()
+            retcode = make.wait()
+            print("")  # add a newline at the end in case it didn't finish with a  >>> line
+            if retcode:
+                raise subprocess.CalledProcessError(retcode, args)
+
     def compile(self):
         os.environ["MAKEOBJDIRPREFIX"] = self.buildDir.path
         # make sure the new binutils are picked up
@@ -247,14 +287,14 @@ class BuildCHERIBSD(Project):
         # make sure the old install is purged before building, otherwise we might get strange errors
         # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
         self._cleanDir(self.installDir, force=True)
-        runCmd(self.commonMakeArgs + ["buildworld", makeJFlag], cwd=self.sourceDir)
-        runCmd(self.commonMakeArgs + ["buildkernel", makeJFlag], cwd=self.sourceDir)
+        self.runMake(self.commonMakeArgs + [makeJFlag], "buildworld")
+        self.runMake(self.commonMakeArgs + [makeJFlag], "buildkernel")
 
     def install(self):
         # don't use multiple jobs here
-        runCmd(self.commonMakeArgs + ["installworld"], cwd=self.sourceDir)
-        runCmd(self.commonMakeArgs + ["installkernel"], cwd=self.sourceDir)
-        runCmd(self.commonMakeArgs + ["distribution"], cwd=self.sourceDir)
+        self.runMake(self.commonMakeArgs, "installworld")
+        self.runMake(self.commonMakeArgs, "installkernel")
+        self.runMake(self.commonMakeArgs, "distribution")
         # TODO: make this configurable to allow NFS, etc.
         fstabContents = "/dev/ada0 / ufs rw 1 1\n"
         fstabPath = self.paths.cheribsdRootfs / "etc/fstab"
