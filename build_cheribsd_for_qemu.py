@@ -186,8 +186,6 @@ class BuildBinutils(Project):
 
 class BuildLLVM(Project):
     def __init__(self, paths: CheriPaths):
-        # NOTE: currently we don't use the installDir because we use the compiler from the build directory
-        # TODO: install the compiler
         super().__init__("llvm", paths, installDir=paths.hostToolsDir)
         self.makeCommand = "ninja"
         # FIXME: what is the correct default sysroot
@@ -210,11 +208,10 @@ class BuildLLVM(Project):
         self._update_git_repo(self.sourceDir / "tools/clang", "https://github.com/CTSRD-CHERI/clang.git")
 
     def install(self):
-        # runCmd(["ninja", "install"])
-        # we don't actually install yet (TODO: would it make sense to do that?)
+        runCmd(["ninja", "install"], cwd=self.buildDir)
         # delete the files incompatible with cheribsd
-        incompatibleFiles = list(self.buildDir.glob("lib/clang/3.*/include/std*"))
-        incompatibleFiles += self.buildDir.glob("lib/clang/3.*/include/limits.h")
+        incompatibleFiles = list(self.installDir.glob("lib/clang/3.*/include/std*"))
+        incompatibleFiles += self.installDir.glob("lib/clang/3.*/include/limits.h")
         if len(incompatibleFiles) == 0:
             fatalError("Could not find incompatible builtin includes. Build system changed?")
         for i in incompatibleFiles:
@@ -272,7 +269,7 @@ class BuildCHERIBSD(Project):
         if not os.environ["PATH"].startswith(self.paths.hostToolsDir.path):
             os.environ["PATH"] = (self.paths.hostToolsDir / "bin").path + ":" + os.environ["PATH"]
             print("Set PATH to", os.environ["PATH"])
-        cheriCC = self.paths.outputRoot / "llvm-build/bin/clang"  # FIXME: see if it works with installing
+        cheriCC = self.paths.hostToolsDir / "bin/clang"
         if not cheriCC.is_file():
             fatalError("CHERI CC does not exist: " + cheriCC.path)
         self.commonMakeArgs = [
