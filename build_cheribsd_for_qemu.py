@@ -257,6 +257,7 @@ class BuildCHERIBSD(Project):
                     # clear the old line to have a continuously updating progress
                     sys.stdout.buffer.write(clearLine)
                     sys.stdout.buffer.write(line[:-1])  # remove the newline at the end
+                    sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
                     sys.stdout.buffer.flush()
             retcode = make.wait()
             print("")  # add a newline at the end in case it didn't finish with a  >>> line
