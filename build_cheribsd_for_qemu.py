@@ -318,35 +318,6 @@ class BuildDiskImage(Project):
     def __init__(self, paths):
         super().__init__("disk-image", paths)
 
-    def patchManifestFile(self, tmpdir, manifestFile):
-        # See https://github.com/CTSRD-CHERI/cheribsd/issues/107
-        patchedManifestFile = Path(tmpdir, "METALOG")
-        if options.pretend:
-            return patchedManifestFile  # don't actually write the file
-
-        # FIXME: multiple variables in one with statement cause will cause the last lines to not be written, WTF is wrong
-        # work around it by using nested with statements
-        with manifestFile.open("r") as orig:
-            with patchedManifestFile.open("w") as patched:
-                for line in orig:
-                    if line.startswith("./usr/libcheri/.debug/ type=dir"):
-                        # print("skipping ./usr/libcheri/.debug/ line")
-                        continue  # don't write this line as we already inserted it further up in the file
-                    patched.write(line)
-                    if line.startswith("./usr/libcheri type=dir"):
-                        # print("found ./usr/libcheri, addding ./usr/libcheri/.debug to METALOG")
-                        patched.write("./usr/libcheri/.debug type=dir mode=0755 tags=debug\n")
-
-        # create a diff to check if the number of changes matches
-        with manifestFile.open() as a, patchedManifestFile.open() as b:
-            diff = list(difflib.unified_diff(list(a), list(b)))
-            if len(diff) != 18:
-                print("Diff of patched METALOG has unexpected format (wrong number of changes):")
-                print("".join(diff))
-                sys.exit("METALOG format has changed, cannot patch it!!")
-        print("Sucessfully patched METALOG")
-        return patchedManifestFile
-
     def process(self):
         if self.paths.diskImage.is_file():
             # only show prompt if we can actually input something to stdin
@@ -364,18 +335,15 @@ class BuildDiskImage(Project):
         userGroupDbDir = self.paths.cheribsdSources / "etc"
         if not (userGroupDbDir / "master.passwd").is_file():
             fatalError("master.passwd does not exist in " + userGroupDbDir.path)
-        # for now we need to patch the METALOG FILE:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            manifestFile = self.patchManifestFile(tmpdir, manifestFile)
-            runCmd([
-                "makefs",
-                "-M", "1077936128",  # minimum image size = 1GB
-                "-B", "be",  # big endian byte order
-                "-F", manifestFile,  # use METALOG as the manifest for the disk image
-                "-N", userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file (makes sure that the numeric UID values are correct
-                self.paths.diskImage,  # output file
-                self.paths.cheribsdRootfs  # directory tree to use for the image
-            ])
+        runCmd([
+            "makefs",
+            "-M", "1077936128",  # minimum image size = 1GB
+            "-B", "be",  # big endian byte order
+            "-F", manifestFile,  # use METALOG as the manifest for the disk image
+            "-N", userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file (makes sure that the numeric UID values are correct
+            self.paths.diskImage,  # output file
+            self.paths.cheribsdRootfs  # directory tree to use for the image
+        ])
 
 
 class LaunchQEMU(Project):
