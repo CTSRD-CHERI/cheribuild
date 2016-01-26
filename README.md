@@ -8,6 +8,9 @@ This script makes it easy to run [CHERIBSD](https://github.com/CTSRD-CHERI/cheri
 Running `build_cheribsd_for_qemu.py all` will clone, build and install all projects, then create a CHERIBSD disk image and launch QEMU with that disk image.
 
 **NOTE**: As this involves building CHERIBSD you will need to run this script on a FreeBSD system.
+If you want to run this script on a remote FreeBSD host you can use the `py3-run-remote.sh` script that is included in this repository:
+
+`py3-run-remote my.freebsd.server ./build_cheribsd_for_qemu.py all` will build and run CHERIBSD on `my.freebsd.server`
 
 The following targets are available:
 
