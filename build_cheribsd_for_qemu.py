@@ -237,7 +237,7 @@ class BuildCHERIBSD(Project):
             # quiet doesn't display anything, normal only status updates and verbose everything
             if options.quiet:
                 # a lot more efficient than filtering every line
-                subprocess.check_call(args, cwd=self.sourceDir.path, stdout=logfile)
+                subprocess.check_call(allArgs, cwd=self.sourceDir.path, stdout=logfile)
                 return
             # by default only show limited progress:e.g. ">>> stage 2.1: cleaning up the object tree"
             make = subprocess.Popen(args, cwd=self.sourceDir.path, stdout=subprocess.PIPE)
@@ -260,9 +260,10 @@ class BuildCHERIBSD(Project):
                     sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
                     sys.stdout.buffer.flush()
             retcode = make.wait()
+            stderrThread.join()
             print("")  # add a newline at the end in case it didn't finish with a  >>> line
             if retcode:
-                raise subprocess.CalledProcessError(retcode, args)
+                raise subprocess.CalledProcessError(retcode, allArgs)
 
     def compile(self):
         os.environ["MAKEOBJDIRPREFIX"] = self.buildDir.path
