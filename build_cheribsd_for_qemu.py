@@ -97,7 +97,7 @@ class Project(object):
         if not (srcDir / ".git").is_dir():
             print(srcDir.path, "is not a git repository. Clone it from' " + remoteUrl + "'?")
             if sys.__stdin__.isatty() and input("y/[N]").lower() != "y":
-                sys.exit("Sources for " + srcDir.path + "missing!")
+                sys.exit("Sources for " + srcDir.path + " missing!")
             runCmd("git", "clone", remoteUrl, srcDir)
         runCmd("git", "pull", "--rebase", cwd=srcDir)
 
