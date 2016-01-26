@@ -5,8 +5,7 @@
 
 This script makes it easy to run [CHERIBSD](https://github.com/CTSRD-CHERI/cheribsd) on [QEMU](https://github.com/CTSRD-CHERI/qemu)
 
-If all the required repositories are checked out `build_cheribsd_for_qemu.py all` will build all project,
-create a CHERIBSD disk image and launch QEMU with that disk image.
+Running `build_cheribsd_for_qemu.py all` will clone, build and install all projects, then create a CHERIBSD disk image and launch QEMU with that disk image.
 
 **NOTE**: As this involves building CHERIBSD you will need to run this script on a FreeBSD system.
 
