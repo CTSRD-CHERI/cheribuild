@@ -226,8 +226,8 @@ class BuildCHERIBSD(Project):
                          gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git")
 
     def runMake(self, args, target):
-        args.append(target)
-        printCommand(" ".join(args), cwd=self.sourceDir)
+        allArgs = args + [target]
+        printCommand(" ".join(allArgs), cwd=self.sourceDir)
         if options.pretend:
             return
         logfilePath = Path(self.buildDir / ("build." + target + ".log"))
