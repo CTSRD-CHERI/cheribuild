@@ -6,6 +6,7 @@ import os
 import shlex
 import shutil
 import tempfile
+import threading
 from pathlib import Path
 import difflib
 
@@ -232,6 +233,13 @@ class BuildCHERIBSD(Project):
             return
         logfilePath = Path(self.buildDir / ("build." + target + ".log"))
         print("Saving build log to", logfilePath)
+
+        def handleStdErr(logfile, stream):
+            for line in stream:
+                sys.stderr.buffer.write(line)
+                sys.stderr.flush()
+                logfile.write(line)
+
         with logfilePath.open("wb") as logfile:
             # TODO: add a verbose option that shows every line
             # quiet doesn't display anything, normal only status updates and verbose everything
@@ -240,16 +248,14 @@ class BuildCHERIBSD(Project):
                 subprocess.check_call(allArgs, cwd=self.sourceDir.path, stdout=logfile)
                 return
             # by default only show limited progress:e.g. ">>> stage 2.1: cleaning up the object tree"
-            make = subprocess.Popen(args, cwd=self.sourceDir.path, stdout=subprocess.PIPE)
+            make = subprocess.Popen(allArgs, cwd=self.sourceDir.path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # use a thread to print stderr output and write it to logfile (not using a thread would block)
+            stderrThread = threading.Thread(target=handleStdErr, args=(logfile, make.stderr))
+            stderrThread.start()
             # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
             clearLine = b"\x1b[2K\r"
             for line in make.stdout:
                 logfile.write(line)
-                # TODO: verbose mode
-                # if options.verbose:
-                    # sys.stdout.buffer.write(line)
-                    # continue
-
                 if line.startswith(b">>> "):  # major status update
                     sys.stdout.buffer.write(clearLine)
                     sys.stdout.buffer.write(line)
