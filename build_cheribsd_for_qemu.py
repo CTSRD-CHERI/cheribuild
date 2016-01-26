@@ -195,10 +195,13 @@ class BuildLLVM(Project):
         # if we pass a path starting with a slash to Path() it will reset to that absolute path
         # luckily we have to prepend mips.mips64, so it works out fine
         sysroot = Path(self.paths.cheribsdObj, "mips.mips64" + self.paths.cheribsdSources.path, "tmp")
+        # try to find clang 3.7, otherwise fall
+        cCompiler = shutil.which("clang37") or "clang"
+        cppCompiler = shutil.which("clang++37") or "clang++"
         self.configureCommand = "cmake"
         self.configureArgs = [
             self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
-            "-DCMAKE_CXX_COMPILER=clang++37", "-DCMAKE_C_COMPILER=clang37",  # need at least 3.7 to build it
+            "-DCMAKE_CXX_COMPILER=" + cppCompiler, "-DCMAKE_C_COMPILER=" + cCompiler,  # need at least 3.7 to build it
             "-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd",
             "-DCMAKE_INSTALL_PREFIX=" + self.installDir.path,
             "-DDEFAULT_SYSROOT=" + sysroot.path,
