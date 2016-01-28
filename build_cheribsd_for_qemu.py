@@ -377,7 +377,9 @@ class LaunchQEMU(Project):
                 "-kernel", currentKernel,  # assume the current image matches the kernel currently build
                 "-nographic",  # no GPU
                 "-m", "2048",  # 2GB memory
-                "-hda", self.paths.diskImage
+                "-hda", self.paths.diskImage,
+                "-net", "nic", "-net", "user",
+                "-redir", "tcp:9999::22",  # bind the qemu ssh port to the hosts port 9999
                 ], stdout=sys.stdout)  # even with --quiet we want stdout here
 
 
