@@ -302,19 +302,32 @@ class BuildCHERIBSD(Project):
         self.runMake(self.commonMakeArgs + [makeJFlag], "buildworld")
         self.runMake(self.commonMakeArgs + [makeJFlag], "buildkernel")
 
+    def writeFile(self, path: Path, contents: str):
+        printCommand("echo", shlex.quote(contents.replace("\n", "\\n")), ">", shlex.quote(path.path))
+        if options.pretend:
+            return
+        if path.is_file():
+            oldContents = path.read_text("utf-8")
+            print("Overwriting old file", path, "- contents:\n\n", oldContents, "\n")
+            if input("Continue? [Y/n]").lower() == "n":
+                sys.exit()
+        path.write_text(contents + "\n")
+
     def install(self):
         # don't use multiple jobs here
         self.runMake(self.commonMakeArgs, "installworld")
         self.runMake(self.commonMakeArgs, "installkernel")
         self.runMake(self.commonMakeArgs, "distribution")
         # TODO: make this configurable to allow NFS, etc.
-        fstabContents = "/dev/ada0 / ufs rw 1 1\n"
-        fstabPath = self.paths.cheribsdRootfs / "etc/fstab"
+        self.writeFile(self.paths.cheribsdRootfs / "etc/fstab", "/dev/ada0 / ufs rw 1 1")
 
-        if options.pretend:
-            printCommand("echo", shlex.quote(fstabContents.replace("\n", "\\n")), ">", shlex.quote(fstabPath.path))
-        else:
-            fstabPath.write_text(fstabContents)  # TODO: NFS?
+        # enable ssh and set hostname
+        # TODO: use seperate file in /etc/rc.conf.d/ ?
+        networkConfigOptions = (
+            'hostname="qemu-cheri-' + os.getlogin() + '"\n'
+            'ifconfig_le0="DHCP"\n'
+            'sshd_enable="YES"')
+        self.writeFile(self.paths.cheribsdRootfs / "etc/rc.conf", networkConfigOptions)
 
 
 class BuildDiskImage(Project):
