@@ -293,6 +293,7 @@ class BuildCHERIBSD(Project):
             "-DNO_ROOT",  # -DNO_ROOT install without using root privilege
             "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
             "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
+            "DEBUG_FLAGS=-g",  # enable debug stuff
             "DESTDIR=" + self.installDir.path,
             "KERNCONF=CHERI_MALTA64",
             # "-DNO_CLEAN", # don't clean before (takes ages) and the rm -rf we do before should be enough
