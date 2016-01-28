@@ -292,6 +292,7 @@ class BuildCHERIBSD(Project):
             "-DDB_FROM_SRC",  # don't use the system passwd file
             "-DNO_ROOT",  # -DNO_ROOT install without using root privilege
             "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
+            "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
             "DESTDIR=" + self.installDir.path,
             "KERNCONF=CHERI_MALTA64",
             # "-DNO_CLEAN", # don't clean before (takes ages) and the rm -rf we do before should be enough
