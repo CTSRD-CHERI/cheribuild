@@ -340,7 +340,9 @@ class BuildDiskImage(Project):
             fatalError("master.passwd does not exist in " + userGroupDbDir.path)
         runCmd([
             "makefs",
-            "-M", "1077936128",  # minimum image size = 1GB
+            "-b", "70%",  # minimum 70% free blocks
+            "-f", "30%",  # minimum 30% free inodes
+            "-M", "2g",  # minimum image size = 2GB
             "-B", "be",  # big endian byte order
             "-F", manifestFile,  # use METALOG as the manifest for the disk image
             "-N", userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file (makes sure that the numeric UID values are correct
