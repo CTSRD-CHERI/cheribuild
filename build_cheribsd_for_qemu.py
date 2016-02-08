@@ -204,11 +204,13 @@ class BuildLLVM(Project):
             "-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd",
             "-DCMAKE_INSTALL_PREFIX=" + self.installDir.path,
             "-DDEFAULT_SYSROOT=" + sysroot.path,
+            "-DLLVM_TOOL_LLDB_BUILD=OFF", # disable LLDB for now
         ]
 
     def update(self):
         self._update_git_repo(self.sourceDir, "https://github.com/CTSRD-CHERI/llvm.git")
         self._update_git_repo(self.sourceDir / "tools/clang", "https://github.com/CTSRD-CHERI/clang.git")
+        self._update_git_repo(self.sourceDir / "tools/lldb", "https://github.com/CTSRD-CHERI/lldb.git")
 
     def install(self):
         runCmd(["ninja", "install"], cwd=self.buildDir)
