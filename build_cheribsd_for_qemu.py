@@ -51,16 +51,16 @@ def runCmd(*args, **kwargs):
     cmdShellEscaped = " ".join(map(shlex.quote, cmdline))
     printCommand(cmdShellEscaped, cwd=kwargs.get("cwd"))
     kwargs["cwd"] = str(kwargs["cwd"]) if "cwd" in kwargs else os.getcwd()
-    if options.quiet and "stdout" not in kwargs:
+    if config.quiet and "stdout" not in kwargs:
         kwargs["stdout"] = subprocess.DEVNULL
-    if not options.pretend:
+    if not config.pretend:
         # print(cmdline, kwargs)
         subprocess.check_call(cmdline, **kwargs)
 
 
 def fatalError(message: str):
     # we ignore fatal errors when simulating a run
-    if options.pretend:
+    if config.pretend:
         print("Potential fatal error:", message)
     else:
         sys.exit(message)
@@ -101,6 +101,7 @@ class CheriConfig(object):
         self.diskImage = Path(self._loadOption(_diskImage, self.outputRoot / "disk.img"))
 
         self.makeJFlag = "-j" + str(self._loadOption(_makeJobs))
+        self.targets = list(self._options.targets)
 
         print("Sources will be stored in", self.sourceRoot)
         print("Build artifacts will be stored in", self.outputRoot)
@@ -112,7 +113,6 @@ class CheriConfig(object):
         self.cheribsdObj = self.outputRoot / "cheribsd-obj"
         self.hostToolsDir = self.outputRoot / "host-tools"  # qemu and binutils (and llvm/clang)
         pprint.pprint(vars(self))
-        sys.exit()
 
     def _addOption(self, name: str, shortname=None, default=None, **kwargs) -> argparse.Action:
         if default and "help" in kwargs:
@@ -158,12 +158,12 @@ class Project(object):
 
     def _makedirs(self, dir: Path):
         printCommand("mkdir", "-p", dir)
-        if not options.pretend:
+        if not self.config.pretend:
             os.makedirs(dir.path, exist_ok=True)
 
     # removes a directory tree if --clean is passed (or force=True parameter is passed)
     def _cleanDir(self, dir: Path, force=False):
-        if (options.clean or force) and dir.is_dir():
+        if (self.config.clean or force) and dir.is_dir():
             # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
             # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
             runCmd(["rm", "-rf", dir.path])
@@ -189,20 +189,20 @@ class Project(object):
             runCmd([self.configureCommand] + self.configureArgs, cwd=self.buildDir)
 
     def compile(self):
-        runCmd(self.makeCommand, makeJFlag, cwd=self.buildDir)
+        runCmd(self.makeCommand, self.config.makeJFlag, cwd=self.buildDir)
 
     def install(self):
         runCmd(self.makeCommand, "install", cwd=self.buildDir)
 
     def process(self):
-        if not options.skip_update:
+        if not self.config.skipUpdate:
             self.update()
-        if options.clean:
+        if self.config.clean:
             self.clean()
         # always make sure the build dir exists
         if not self.buildDir.is_dir():
             self._makedirs(self.buildDir)
-        if not options.skip_configure:
+        if not self.config.skipConfigure:
             self.configure()
         self.compile()
         self.install()
@@ -277,7 +277,7 @@ class BuildLLVM(Project):
             fatalError("Could not find incompatible builtin includes. Build system changed?")
         for i in incompatibleFiles:
             printCommand("rm", shlex.quote(i.path))
-            if not options.pretend:
+            if not self.config.pretend:
                 i.unlink()
 
 
@@ -289,7 +289,7 @@ class BuildCHERIBSD(Project):
     def runMake(self, args, target):
         allArgs = args + [target]
         printCommand(" ".join(allArgs), cwd=self.sourceDir)
-        if options.pretend:
+        if self.config.pretend:
             return
         logfilePath = Path(self.buildDir / ("build." + target + ".log"))
         print("Saving build log to", logfilePath)
@@ -304,7 +304,7 @@ class BuildCHERIBSD(Project):
         with logfilePath.open("wb") as logfile:
             # TODO: add a verbose option that shows every line
             # quiet doesn't display anything, normal only status updates and verbose everything
-            if options.quiet:
+            if self.config.quiet:
                 # a lot more efficient than filtering every line
                 subprocess.check_call(allArgs, cwd=self.sourceDir.path, stdout=logfile)
                 return
@@ -358,12 +358,12 @@ class BuildCHERIBSD(Project):
         # make sure the old install is purged before building, otherwise we might get strange errors
         # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
         self._cleanDir(self.installDir, force=True)
-        self.runMake(self.commonMakeArgs + [makeJFlag], "buildworld")
-        self.runMake(self.commonMakeArgs + [makeJFlag], "buildkernel")
+        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld")
+        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel")
 
     def writeFile(self, path: Path, contents: str):
         printCommand("echo", shlex.quote(contents.replace("\n", "\\n")), ">", shlex.quote(path.path))
-        if options.pretend:
+        if self.config.pretend:
             return
         if path.is_file():
             oldContents = path.read_text("utf-8")
@@ -396,7 +396,7 @@ class BuildDiskImage(Project):
     def process(self):
         if self.config.diskImage.is_file():
             # only show prompt if we can actually input something to stdin
-            if sys.__stdin__.isatty() and not options.pretend:
+            if sys.__stdin__.isatty() and not self.config.pretend:
                 yn = input("An image already exists (" + self.config.diskImage.path + "). Overwrite? [Y/n] ")
                 if str(yn).lower() == "n":
                     return
@@ -462,19 +462,17 @@ if __name__ == "__main__":
         LaunchQEMU(config),
     ]
     allTargetNames = [t.name for t in allTargets]
-    selectedTargets = options.targets
-    if "all" in options.targets:
+    selectedTargets = config.targets
+    if "all" in config.targets:
         selectedTargets = allTargetNames
     # make sure all targets passed on commandline exist
     invalidTargets = set(selectedTargets) - set(allTargetNames)
-    if invalidTargets or options.list_targets:
+    if invalidTargets or config.listTargets:
         for t in invalidTargets:
             print("Invalid target", t)
         print("The following targets exist:", list(allTargetNames))
         print("target 'all' can be used to build everything")
         sys.exit()
-
-    makeJFlag = "-j" + str(options.make_jobs)
 
     for target in allTargets:
         if target.name in selectedTargets:
