@@ -8,6 +8,7 @@ import shutil
 import tempfile
 import threading
 import difflib
+import pprint
 from pathlib import Path
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
@@ -66,18 +67,73 @@ def fatalError(message: str):
 
 
 class CheriConfig(object):
-    def __init__(self, cmdlineArgs: argparse.Namespace):
-        self.sourceRoot = Path(cmdlineArgs.source_root) if cmdlineArgs.source_root else DEFAULT_SOURCE_ROOT
-        self.outputRoot = Path(cmdlineArgs.output_root) if cmdlineArgs.output_root else self.sourceRoot / "output"
-        self.diskImage = Path(cmdlineArgs.disk_image_path) if cmdlineArgs.disk_image_path else self.outputRoot / "disk.img"
+    def __init__(self):
+        self.parser = argparse.ArgumentParser(formatter_class=lambda prog:
+                                              argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
+
+        _pretend = self._addBoolOption("pretend", "p", help="Print the commands that would be run instead of executing them")
+        _quiet = self._addBoolOption("quiet", "q", help="Don't show stdout of the commands that are executed")
+        _clean = self._addBoolOption("clean", "c", help="Remove the build directory before build")
+        _skipUpdate = self._addBoolOption("skip-update", help="Skip the git pull step")
+        _skipConfigure = self._addBoolOption("skip-configure", help="Skip the configure step")
+        _listTargets = self._addBoolOption("list-targets", help="List all available targets and exit")
+
+        _sourceRoot = self._addOption("source-root", default=DEFAULT_SOURCE_ROOT, help="The directory to store all sources")
+        _outputRoot = self._addOption("output-root", help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
+        _diskImage = self._addOption("disk-image-path", help="The output path for the QEMU disk image (default: '<OUTPUT_ROOT>/disk.img')")
+
+        _makeJobs = self._addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(), help="Number of jobs to use for compiling")
+
+        self.parser.add_argument("targets", metavar="TARGET", type=str, nargs="*", help="The targets to build", default=["all"])
+
+        self._options = self.parser.parse_args()
+        # TODO: load from config file
+        # TODO: this can probably be made a lot simpler using lazy evaluation
+        self.pretend = bool(self._loadOption(_pretend))
+        self.quiet = bool(self._loadOption(_quiet))
+        self.clean = bool(self._loadOption(_clean))
+        self.skipUpdate = bool(self._loadOption(_skipUpdate))
+        self.skipConfigure = bool(self._loadOption(_skipConfigure))
+        self.listTargets = bool(self._loadOption(_listTargets))
+        # path config options
+        self.sourceRoot = Path(self._loadOption(_sourceRoot))
+        self.outputRoot = Path(self._loadOption(_outputRoot, self.sourceRoot / "output"))
+        self.diskImage = Path(self._loadOption(_diskImage, self.outputRoot / "disk.img"))
+
+        self.makeJFlag = "-j" + str(self._loadOption(_makeJobs))
+
         print("Sources will be stored in", self.sourceRoot)
         print("Build artifacts will be stored in", self.outputRoot)
         print("Disk image will saved to", self.diskImage)
+
+        # now the derived config options
         self.cheribsdRootfs = self.outputRoot / "rootfs"
         self.cheribsdSources = self.sourceRoot / "cheribsd"
         self.cheribsdObj = self.outputRoot / "cheribsd-obj"
         self.hostToolsDir = self.outputRoot / "host-tools"  # qemu and binutils (and llvm/clang)
+        pprint.pprint(vars(self))
+        sys.exit()
 
+    def _addOption(self, name: str, shortname=None, default=None, **kwargs) -> argparse.Action:
+        if default and "help" in kwargs:
+            kwargs["help"] = kwargs["help"] + " (default: \'" + str(default) + "\')"
+            kwargs["default"] = default
+        if shortname:
+            action = self.parser.add_argument("--" + name, "-" + shortname, **kwargs)
+        else:
+            action = self.parser.add_argument("--" + name, **kwargs)
+        assert isinstance(action, argparse.Action)
+        print("add option:", vars(action))
+        return action
+
+    def _addBoolOption(self, name: str, shortname=None, **kwargs) -> str:
+        return self._addOption(name, shortname, action="store_true", **kwargs)
+
+    def _loadOption(self, action: argparse.Action, default=None) -> str:
+        assert hasattr(self._options, action.dest)
+        result = getattr(self._options, action.dest)
+        print(action.dest, "=", result, "default =", default)
+        return default if result is None else result
 
 class Project(object):
     def __init__(self, name: str, config: CheriConfig, *, sourceDir="", buildDir="", installDir: Path=None, gitUrl=""):
@@ -394,27 +450,7 @@ def defaultNumberOfMakeJobs():
     return makeJobs
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(formatter_class=lambda prog:
-                                     argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
-    parser.add_argument("--make-jobs", "-j", type=int, default=defaultNumberOfMakeJobs(),
-                        help="Number of jobs to use for compiling (default: %d)" % defaultNumberOfMakeJobs())
-    parser.add_argument("--clean", action="store_true", help="Remove the build directory before build")
-    parser.add_argument("--pretend", "-p", action="store_true",
-                        help="Print the commands that would be run instead of executing them")
-    parser.add_argument("--quiet", "-q", action="store_true",
-                        help="Don't show stdout of the commands that are executed")
-    parser.add_argument("--list-targets", action="store_true", help="List all available targets and exit")
-    parser.add_argument("--skip-update", action="store_true", help="Skip the git pull step")
-    parser.add_argument("--skip-configure", action="store_true", help="Skip the configure step")
-    parser.add_argument("--source-root",
-                        help="The directory to store all sources (default: '%s')" % DEFAULT_SOURCE_ROOT)
-    parser.add_argument("--output-root",
-                        help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
-    parser.add_argument("--disk-image-path",
-                        help="The output path for the QEMU disk image (default: '<OUTPUT_ROOT>/disk.img')")
-    parser.add_argument("targets", metavar="TARGET", type=str, nargs="*", help="The targets to build", default=["all"])
-    options = parser.parse_args()
-    config = CheriConfig(options)
+    config = CheriConfig()
 
     # NOTE: This list must be in the right dependency order
     allTargets = [
