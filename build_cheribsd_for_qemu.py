@@ -372,6 +372,23 @@ class BuildCHERIBSD(Project):
                 sys.exit()
         path.write_text(contents + "\n")
 
+    def addFileToImage(self, file: Path, targetDir: str, user="root", group="wheel", mode="0644"):
+        manifestFile = self.config.cheribsdRootfs / "METALOG"
+        assert manifestFile.is_file()
+        userGroupDbDir = self.config.cheribsdSources / "etc"
+        assert userGroupDbDir.is_dir()
+        # e.g. install -N /home/alr48/cheri/cheribsd/etc -U -M /home/alr48/cheri/output/rootfs//METALOG -D /home/alr48/cheri/output/rootfs
+        # -o root -g wheel -m 444 alarm.3.gz  /home/alr48/cheri/output/rootfs/usr/share/man/man3/
+        runCmd(["install",
+                "-N", userGroupDbDir.path,  # Use a custom user/group database text file
+                "-U",  # Indicate that install is running unprivileged (do not change uid/gid)
+                "-M", manifestFile.path,  # the mtree manifest to write the entry to
+                "-D", self.config.cheribsdRootfs.path,  # DESTDIR (will be stripped from the start of the mtree file
+                "-o", user, "-g", group,  # uid and gid
+                "-m", mode,  # access rights
+                file.path, (self.config.cheribsdRootfs / targetDir).path  # target file and desination dir
+                ])
+
     def install(self):
         # don't use multiple jobs here
         self.runMake(self.commonMakeArgs, "installworld")
