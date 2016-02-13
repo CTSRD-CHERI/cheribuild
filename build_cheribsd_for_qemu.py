@@ -181,8 +181,6 @@ class Project(object):
             runCmd("git", "clean", "-dfx", cwd=self.buildDir)
         else:
             self._cleanDir(self.buildDir)
-        # make sure the dir is empty afterwards
-        self._makedirs(self.buildDir)
 
     def configure(self):
         if self.configureCommand:
