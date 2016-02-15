@@ -260,7 +260,7 @@ class Project(object):
                                  (cmdStr, retcode, logfile.name))
             else:
                 # add a newline at the end in case it ended with a filtered line (no final newline)
-                print("\nBuilding", makeTarget, "took", starttime - time.time())
+                print("\nBuilding", makeTarget, "took", time.time() - starttime, "seconds")
 
     def compile(self):
         self.runMake([self.makeCommand, self.config.makeJFlag])
