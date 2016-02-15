@@ -7,6 +7,7 @@ import shlex
 import shutil
 import threading
 import pprint
+import time
 from pathlib import Path
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
@@ -16,6 +17,8 @@ DEFAULT_SOURCE_ROOT = Path(os.path.expanduser("~/cheri"))
 
 if sys.version_info < (3, 4):
     sys.exit("This script requires at least Python 3.4")
+if sys.version_info >= (3, 5):
+    import typing
 
 
 def printCommand(*args, cwd=None, **kwargs):
@@ -151,8 +154,10 @@ class Project(object):
         self.buildDir = Path(buildDir if buildDir else config.outputRoot / (name + "-build"))
         self.installDir = installDir
         self.makeCommand = "make"
-        self.configureCommand = None
-        self.configureArgs = []
+        self.configureCommand = ""
+        self.configureArgs = []  # type: typing.List[str]
+        # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
+        self.clearLineSequence = b"\x1b[2K\r"
 
     @staticmethod
     def _update_git_repo(srcDir: Path, remoteUrl):
@@ -174,6 +179,7 @@ class Project(object):
             # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
             # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
             runCmd(["rm", "-rf", str(dir)])
+
         # make sure the dir is empty afterwards
         self._makedirs(path)
 
@@ -193,11 +199,68 @@ class Project(object):
         if self.configureCommand:
             runCmd([self.configureCommand] + self.configureArgs, cwd=self.buildDir)
 
+    def _makeStdoutFilter(self, line: bytes):
+        # by default we don't filter anything and just write to stdout
+        sys.stdout.write(line)
+
+    @staticmethod
+    def _handleStdErr(outfile, stream, fileLock):
+        for errLine in stream:
+            sys.stderr.buffer.write(errLine)
+            sys.stderr.buffer.flush()
+            with fileLock:
+                outfile.write(errLine)
+
+    def runMake(self, args: "typing.List[str]", makeTarget="") -> None:
+        """
+        Runs make and logs the output
+        :param args: the make command to run (e.g. ["make", "-j32"])
+        :param makeTarget: the target to build (e.g. "install"
+        """
+        if makeTarget:
+            allArgs = args + [makeTarget]
+            logfilePath = Path(self.buildDir / ("build." + makeTarget + ".log"))
+        else:
+            allArgs = args
+            logfilePath = Path(self.buildDir / "build.log")
+
+        printCommand(" ".join(allArgs), cwd=self.sourceDir)
+        if self.config.pretend:
+            return
+        print("Saving build log to", logfilePath)
+
+        with logfilePath.open("wb") as logfile:
+            # TODO: add a verbose option that shows every line
+            starttime = time.time()
+            # quiet doesn't display anything, normal only status updates and verbose everything
+            if self.config.quiet:
+                # a lot more efficient than filtering every line
+                subprocess.check_call(allArgs, cwd=str(self.sourceDir), stdout=logfile)
+                return
+            make = subprocess.Popen(allArgs, cwd=str(self.sourceDir), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # use a thread to print stderr output and write it to logfile (not using a thread would block)
+            logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
+            stderrThread = threading.Thread(target=BuildCHERIBSD._handleStdErr, args=(logfile, make.stderr, logfileLock))
+            stderrThread.start()
+            for line in make.stdout:
+                with logfileLock:
+                    logfile.write(line)
+                    self._makeStdoutFilter(line)
+            retcode = make.wait()
+            stderrThread.join()
+            cmdStr = " ".join([shlex.quote(s) for s in allArgs])
+            if retcode:
+                raise SystemExit("Command \"%s\" failed with exit code %d.\nSee %s for details." %
+                                 (cmdStr, retcode, logfile.name))
+            else:
+                # add a newline at the end in case it ended with a filtered line (no final newline)
+                print("\nBuilding", makeTarget, "took", starttime - time.time())
+
     def compile(self):
-        runCmd(self.makeCommand, self.config.makeJFlag, cwd=self.buildDir)
+        self.runMake([self.makeCommand, self.config.makeJFlag])
 
     def install(self):
-        runCmd(self.makeCommand, "install", cwd=self.buildDir)
+        self.runMake([self.makeCommand], "install")
 
     def process(self):
         if not self.config.skipUpdate:
@@ -291,55 +354,16 @@ class BuildCHERIBSD(Project):
         super().__init__("cheribsd", config, installDir=config.cheribsdRootfs, buildDir=config.cheribsdObj,
                          gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git")
 
-    def runMake(self, args, makeTarget):
-        allArgs = args + [makeTarget]
-        printCommand(" ".join(allArgs), cwd=self.sourceDir)
-        if self.config.pretend:
-            return
-        logfilePath = Path(self.buildDir / ("build." + target + ".log"))
-        print("Saving build log to", logfilePath)
-
-        def handleStdErr(outfile, stream, fileLock):
-            for line in stream:
-                sys.stderr.buffer.write(line)
-                sys.stderr.buffer.flush()
-                with fileLock:
-                    outfile.write(line)
-
-        with logfilePath.open("wb") as logfile:
-            # TODO: add a verbose option that shows every line
-            # quiet doesn't display anything, normal only status updates and verbose everything
-            if self.config.quiet:
-                # a lot more efficient than filtering every line
-                subprocess.check_call(allArgs, cwd=str(self.sourceDir), stdout=logfile)
-                return
-            # by default only show limited progress:e.g. ">>> stage 2.1: cleaning up the object tree"
-            make = subprocess.Popen(allArgs, cwd=str(self.sourceDir), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            # use a thread to print stderr output and write it to logfile (not using a thread would block)
-            logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
-            stderrThread = threading.Thread(target=handleStdErr, args=(logfile, make.stderr, logfileLock))
-            stderrThread.start()
-            # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
-            clearLine = b"\x1b[2K\r"
-            for line in make.stdout:
-                with logfileLock:
-                    logfile.write(line)
-                if line.startswith(b">>> "):  # major status update
-                    sys.stdout.buffer.write(clearLine)
-                    sys.stdout.buffer.write(line)
-                elif line.startswith(b"===> "):  # new subdirectory
-                    # clear the old line to have a continuously updating progress
-                    sys.stdout.buffer.write(clearLine)
-                    sys.stdout.buffer.write(line[:-1])  # remove the newline at the end
-                    sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
-                    sys.stdout.buffer.flush()
-            retcode = make.wait()
-            stderrThread.join()
-            print("")  # add a newline at the end in case it didn't finish with a  >>> line
-            if retcode:
-                cmdStr = " ".join([shlex.quote(s) for s in allArgs])
-                raise SystemExit("Command \"%s\" failed with exit code %d.\nSee %s for details." %
-                                 (cmdStr, retcode, logfile.name))
+    def _makeStdoutFilter(self, line):
+        if line.startswith(b">>> "):  # major status update
+            sys.stdout.buffer.write(self.clearLineSequence)
+            sys.stdout.buffer.write(line)
+        elif line.startswith(b"===> "):  # new subdirectory
+            # clear the old line to have a continuously updating progress
+            sys.stdout.buffer.write(self.clearLineSequence)
+            sys.stdout.buffer.write(line[:-1])  # remove the newline at the end
+            sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
+            sys.stdout.buffer.flush()
 
     def compile(self):
         os.environ["MAKEOBJDIRPREFIX"] = str(self.buildDir)
