@@ -68,21 +68,28 @@ def fatalError(message: str):
 
 class CheriConfig(object):
     def __init__(self):
-        self.parser = argparse.ArgumentParser(formatter_class=lambda prog:
-                                              argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
+        def formatterSetup(prog):
+            return argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0])
 
-        _pretend = self._addBoolOption("pretend", "p", help="Print the commands that would be run instead of executing them")
+        self.parser = argparse.ArgumentParser(formatter_class=formatterSetup)
+
+        _pretend = self._addBoolOption("pretend", "p",
+                                       help="Print the commands that would be run instead of executing them")
         _quiet = self._addBoolOption("quiet", "q", help="Don't show stdout of the commands that are executed")
         _clean = self._addBoolOption("clean", "c", help="Remove the build directory before build")
         _skipUpdate = self._addBoolOption("skip-update", help="Skip the git pull step")
         _skipConfigure = self._addBoolOption("skip-configure", help="Skip the configure step")
         _listTargets = self._addBoolOption("list-targets", help="List all available targets and exit")
 
-        _sourceRoot = self._addOption("source-root", default=DEFAULT_SOURCE_ROOT, help="The directory to store all sources")
-        _outputRoot = self._addOption("output-root", help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
-        _diskImage = self._addOption("disk-image-path", help="The output path for the QEMU disk image (default: '<OUTPUT_ROOT>/disk.img')")
+        _sourceRoot = self._addOption("source-root", default=DEFAULT_SOURCE_ROOT,
+                                      help="The directory to store all sources")
+        _outputRoot = self._addOption("output-root",
+                                      help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
+        _diskImage = self._addOption("disk-image-path",
+                                     help="The output path for the QEMU disk image (default: '<OUTPUT_ROOT>/disk.img')")
 
-        _makeJobs = self._addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(), help="Number of jobs to use for compiling")
+        _makeJobs = self._addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
+                                    help="Number of jobs to use for compiling")
 
         self.parser.add_argument("targets", metavar="TARGET", type=str, nargs="*", help="The targets to build", default=["all"])
 
@@ -432,7 +439,8 @@ class BuildDiskImage(Project):
             "-M", "4g",  # minimum image size = 4GB
             "-B", "be",  # big endian byte order
             "-F", manifestFile,  # use METALOG as the manifest for the disk image
-            "-N", userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file (makes sure that the numeric UID values are correct
+            "-N", userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
+            # which makes sure that the numeric UID values are correct
             self.config.diskImage,  # output file
             self.config.cheribsdRootfs  # directory tree to use for the image
         ])
@@ -460,7 +468,8 @@ class LaunchQEMU(Project):
 def defaultNumberOfMakeJobs():
     makeJobs = os.cpu_count()
     if makeJobs > 24:
-        # don't use up all the resources on shared build systems (you can still override this with the -j command line option)
+        # don't use up all the resources on shared build systems
+        # (you can still override this with the -j command line option)
         makeJobs = 16
     return makeJobs
 
