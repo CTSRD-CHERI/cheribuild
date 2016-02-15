@@ -249,7 +249,7 @@ class Project(object):
             make = subprocess.Popen(allArgs, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             # use a thread to print stderr output and write it to logfile (not using a thread would block)
             logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
-            stderrThread = threading.Thread(target=BuildCHERIBSD._handleStdErr, args=(logfile, make.stderr, logfileLock))
+            stderrThread = threading.Thread(target=self._handleStdErr, args=(logfile, make.stderr, logfileLock))
             stderrThread.start()
             for line in make.stdout:
                 with logfileLock:
@@ -340,13 +340,19 @@ class BuildLLVM(Project):
             "-DLLVM_TOOL_LLDB_BUILD=OFF",  # disable LLDB for now
         ]
 
+    def _makeStdoutFilter(self, line: bytes):
+        # don't show the up-to date install lines
+        if not line.startswith(b"-- Up-to-date:"):
+            sys.stdout.buffer.write(line)
+            sys.stdout.buffer.flush()
+
     def update(self):
         self._update_git_repo(self.sourceDir, "https://github.com/CTSRD-CHERI/llvm.git")
         self._update_git_repo(self.sourceDir / "tools/clang", "https://github.com/CTSRD-CHERI/clang.git")
         self._update_git_repo(self.sourceDir / "tools/lldb", "https://github.com/CTSRD-CHERI/lldb.git")
 
     def install(self):
-        runCmd(["ninja", "install"], cwd=self.buildDir)
+        super().install()
         # delete the files incompatible with cheribsd
         incompatibleFiles = list(self.installDir.glob("lib/clang/3.*/include/std*"))
         incompatibleFiles += self.installDir.glob("lib/clang/3.*/include/limits.h")
