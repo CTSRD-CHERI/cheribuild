@@ -297,6 +297,13 @@ class BuildQEMU(Project):
                               "--extra-cflags=-g",
                               "--prefix=" + str(self.installDir)]
 
+    def _makeStdoutFilter(self, line: bytes):
+        # only keep the linking of binaries persistent
+        sys.stdout.buffer.write(self.clearLineSequence)
+        sys.stdout.buffer.write(line[:-1])  # remove the newline at the end
+        sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
+        sys.stdout.buffer.flush()
+
     def update(self):
         # the build sometimes modifies the po/ subdirectory
         # reset that directory by checking out the HEAD revision there
