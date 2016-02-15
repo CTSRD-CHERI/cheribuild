@@ -5,9 +5,7 @@ import sys
 import os
 import shlex
 import shutil
-import tempfile
 import threading
-import difflib
 import pprint
 from pathlib import Path
 
@@ -19,24 +17,11 @@ DEFAULT_SOURCE_ROOT = Path(os.path.expanduser("~/cheri"))
 if sys.version_info < (3, 4):
     sys.exit("This script requires at least Python 3.4")
 
-# add the new 3.5 Path.home() and Path("foo").write_text() and 3.4.5 Path("foo").path to pathlib.Path
-if sys.version_info < (3, 5, 2):
-    # print("Working around old version of pathlib")
-    Path.path = property(lambda self: str(self))
-if sys.version_info < (3, 5):
-    def _write_text(self, data, encoding=None, errors=None):
-        if not isinstance(data, str):
-            raise TypeError('data must be str, not %s' % data.__class__.__name__)
-        with self.open(mode='w', encoding=encoding, errors=errors) as f:
-            return f.write(data)
 
-    Path.write_text = _write_text
-
-
-def printCommand(*args, cwd="", **kwargs):
+def printCommand(*args, cwd=None, **kwargs):
     yellow = "\x1b[1;33m"
     endColour = "\x1b[0m"  # reset
-    newArgs = (yellow + "cd", shlex.quote(str(cwd)), "&&") if cwd else ()
+    newArgs = (yellow + "cd", shlex.quote(str(cwd)), "&&") if cwd else tuple()
     # comma in tuple is required otherwise it creates a tuple of string chars
     newArgs += (yellow + args[0],) + args[1:] + (endColour,)
     print(*newArgs, flush=True, **kwargs)
@@ -58,12 +43,12 @@ def runCmd(*args, **kwargs):
         subprocess.check_call(cmdline, **kwargs)
 
 
-def fatalError(message: str):
+def fatalError(*args):
     # we ignore fatal errors when simulating a run
     if cheriConfig.pretend:
-        print("Potential fatal error:", message)
+        print("Potential fatal error:", *args)
     else:
-        sys.exit(message)
+        sys.exit(" ".join(args))
 
 
 class CheriConfig(object):
@@ -93,7 +78,8 @@ class CheriConfig(object):
         _makeJobs = self._addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
                                     help="Number of jobs to use for compiling")
 
-        self.parser.add_argument("targets", metavar="TARGET", type=str, nargs="*", help="The targets to build", default=["all"])
+        self.parser.add_argument("targets", metavar="TARGET", type=str, nargs="*",
+                                 help="The targets to build", default=["all"])
 
         self._options = self.parser.parse_args()
         # TODO: load from config file
@@ -124,10 +110,10 @@ class CheriConfig(object):
         self.cheribsdObj = self.outputRoot / "cheribsd-obj"
         self.hostToolsDir = self.outputRoot / "host-tools"  # qemu and binutils (and llvm/clang)
 
-        for dir in (self.sourceRoot.path, self.outputRoot.path, self.extraFiles.path):
+        for d in (self.sourceRoot, self.outputRoot, self.extraFiles):
             if not self.pretend:
-                printCommand("mkdir", "-p", dir)
-                os.makedirs(dir, exist_ok=True)
+                printCommand("mkdir", "-p", str(d))
+                os.makedirs(str(d), exist_ok=True)
 
         pprint.pprint(vars(self))
 
@@ -154,7 +140,8 @@ class CheriConfig(object):
 
 
 class Project(object):
-    def __init__(self, name: str, config: CheriConfig, *, sourceDir="", buildDir="", installDir: Path=None, gitUrl=""):
+    def __init__(self, name: str, config: CheriConfig, *, sourceDir: Path=None, buildDir: Path=None,
+                 installDir: Path=None, gitUrl=""):
         self.name = name
         self.gitUrl = gitUrl
         self.config = config
@@ -168,25 +155,25 @@ class Project(object):
     @staticmethod
     def _update_git_repo(srcDir: Path, remoteUrl):
         if not (srcDir / ".git").is_dir():
-            print(srcDir.path, "is not a git repository. Clone it from' " + remoteUrl + "'?")
+            print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?")
             if sys.__stdin__.isatty() and input("y/[N]").lower() != "y":
-                sys.exit("Sources for " + srcDir.path + " missing!")
+                sys.exit("Sources for " + str(srcDir) + " missing!")
             runCmd("git", "clone", remoteUrl, srcDir)
         runCmd("git", "pull", "--rebase", cwd=srcDir)
 
-    def _makedirs(self, dir: Path):
-        printCommand("mkdir", "-p", dir)
+    def _makedirs(self, path: Path):
+        printCommand("mkdir", "-p", path)
         if not self.config.pretend:
-            os.makedirs(dir.path, exist_ok=True)
+            os.makedirs(str(path), exist_ok=True)
 
     # removes a directory tree if --clean is passed (or force=True parameter is passed)
-    def _cleanDir(self, dir: Path, force=False):
-        if (self.config.clean or force) and dir.is_dir():
+    def _cleanDir(self, path: Path, force=False):
+        if (self.config.clean or force) and path.is_dir():
             # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
             # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
-            runCmd(["rm", "-rf", dir.path])
-        # make sure the dir is empty afterwars
-        self._makedirs(dir)
+            runCmd(["rm", "-rf", str(dir)])
+        # make sure the dir is empty afterwards
+        self._makedirs(path)
 
     def update(self):
         self._update_git_repo(self.sourceDir, self.gitUrl)
@@ -237,7 +224,7 @@ class BuildQEMU(Project):
                               "--disable-kvm",
                               "--disable-xen",
                               "--extra-cflags=-g",
-                              "--prefix=" + self.installDir.path]
+                              "--prefix=" + str(self.installDir)]
 
     def update(self):
         # the build sometimes modifies the po/ subdirectory
@@ -253,7 +240,7 @@ class BuildBinutils(Project):
         super().__init__("binutils", config, installDir=config.hostToolsDir,
                          gitUrl="https://github.com/CTSRD-CHERI/binutils.git")
         self.configureCommand = self.sourceDir / "configure"
-        self.configureArgs = ["--target=mips64", "--disable-werror", "--prefix=" + self.installDir.path]
+        self.configureArgs = ["--target=mips64", "--disable-werror", "--prefix=" + str(self.installDir)]
 
 
 class BuildLLVM(Project):
@@ -265,7 +252,7 @@ class BuildLLVM(Project):
         # I think this might be correct: it contains x86 binaries but mips libraries so should be right)
         # if we pass a path starting with a slash to Path() it will reset to that absolute path
         # luckily we have to prepend mips.mips64, so it works out fine
-        sysroot = Path(self.config.cheribsdObj, "mips.mips64" + self.config.cheribsdSources.path, "tmp")
+        sysroot = Path(self.config.cheribsdObj, "mips.mips64" + str(self.config.cheribsdSources), "tmp")
         # try to find clang 3.7, otherwise fall
         cCompiler = shutil.which("clang37") or "clang"
         cppCompiler = shutil.which("clang++37") or "clang++"
@@ -274,9 +261,9 @@ class BuildLLVM(Project):
             self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
             "-DCMAKE_CXX_COMPILER=" + cppCompiler, "-DCMAKE_C_COMPILER=" + cCompiler,  # need at least 3.7 to build it
             "-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd",
-            "-DCMAKE_INSTALL_PREFIX=" + self.installDir.path,
-            "-DDEFAULT_SYSROOT=" + sysroot.path,
-            "-DLLVM_TOOL_LLDB_BUILD=OFF", # disable LLDB for now
+            "-DCMAKE_INSTALL_PREFIX=" + str(self.installDir),
+            "-DDEFAULT_SYSROOT=" + str(sysroot),
+            "-DLLVM_TOOL_LLDB_BUILD=OFF",  # disable LLDB for now
         ]
 
     def update(self):
@@ -292,7 +279,7 @@ class BuildLLVM(Project):
         if len(incompatibleFiles) == 0:
             fatalError("Could not find incompatible builtin includes. Build system changed?")
         for i in incompatibleFiles:
-            printCommand("rm", shlex.quote(i.path))
+            printCommand("rm", shlex.quote(str(i)))
             if not self.config.pretend:
                 i.unlink()
 
@@ -302,30 +289,30 @@ class BuildCHERIBSD(Project):
         super().__init__("cheribsd", config, installDir=config.cheribsdRootfs, buildDir=config.cheribsdObj,
                          gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git")
 
-    def runMake(self, args, target):
-        allArgs = args + [target]
+    def runMake(self, args, makeTarget):
+        allArgs = args + [makeTarget]
         printCommand(" ".join(allArgs), cwd=self.sourceDir)
         if self.config.pretend:
             return
         logfilePath = Path(self.buildDir / ("build." + target + ".log"))
         print("Saving build log to", logfilePath)
 
-        def handleStdErr(logfile, stream, logfileLock):
+        def handleStdErr(outfile, stream, fileLock):
             for line in stream:
                 sys.stderr.buffer.write(line)
                 sys.stderr.buffer.flush()
-                with logfileLock:
-                    logfile.write(line)
+                with fileLock:
+                    outfile.write(line)
 
         with logfilePath.open("wb") as logfile:
             # TODO: add a verbose option that shows every line
             # quiet doesn't display anything, normal only status updates and verbose everything
             if self.config.quiet:
                 # a lot more efficient than filtering every line
-                subprocess.check_call(allArgs, cwd=self.sourceDir.path, stdout=logfile)
+                subprocess.check_call(allArgs, cwd=str(self.sourceDir), stdout=logfile)
                 return
             # by default only show limited progress:e.g. ">>> stage 2.1: cleaning up the object tree"
-            make = subprocess.Popen(allArgs, cwd=self.sourceDir.path, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            make = subprocess.Popen(allArgs, cwd=str(self.sourceDir), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             # use a thread to print stderr output and write it to logfile (not using a thread would block)
             logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
             stderrThread = threading.Thread(target=handleStdErr, args=(logfile, make.stderr, logfileLock))
@@ -353,23 +340,23 @@ class BuildCHERIBSD(Project):
                                  (cmdStr, retcode, logfile.name))
 
     def compile(self):
-        os.environ["MAKEOBJDIRPREFIX"] = self.buildDir.path
+        os.environ["MAKEOBJDIRPREFIX"] = str(self.buildDir)
         # make sure the new binutils are picked up
-        if not os.environ["PATH"].startswith(self.config.hostToolsDir.path):
-            os.environ["PATH"] = (self.config.hostToolsDir / "bin").path + ":" + os.environ["PATH"]
+        if not os.environ["PATH"].startswith(str(self.config.hostToolsDir)):
+            os.environ["PATH"] = str(self.config.hostToolsDir / "bin") + ":" + os.environ["PATH"]
             print("Set PATH to", os.environ["PATH"])
         cheriCC = self.config.hostToolsDir / "bin/clang"
         if not cheriCC.is_file():
-            fatalError("CHERI CC does not exist: " + cheriCC.path)
+            fatalError("CHERI CC does not exist: " + str(cheriCC))
         self.commonMakeArgs = [
-            "make", "CHERI=256", "CHERI_CC=" + cheriCC.path,
+            "make", "CHERI=256", "CHERI_CC=" + str(cheriCC),
             # "CPUTYPE=mips64", # mipsfpu for hardware float (apparently no longer supported: https://github.com/CTSRD-CHERI/cheribsd/issues/102)
             "-DDB_FROM_SRC",  # don't use the system passwd file
             "-DNO_ROOT",  # -DNO_ROOT install without using root privilege
             "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
             "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
             "DEBUG_FLAGS=-g",  # enable debug stuff
-            "DESTDIR=" + self.installDir.path,
+            "DESTDIR=" + str(self.installDir),
             "KERNCONF=CHERI_MALTA64",
             # "-DNO_CLEAN", # don't clean before (takes ages) and the rm -rf we do before should be enough
         ]
@@ -380,7 +367,7 @@ class BuildCHERIBSD(Project):
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel")
 
     def writeFile(self, path: Path, contents: str):
-        printCommand("echo", shlex.quote(contents.replace("\n", "\\n")), ">", shlex.quote(path.path))
+        printCommand("echo", shlex.quote(contents.replace("\n", "\\n")), ">", shlex.quote(str(path)))
         if self.config.pretend:
             return
         if path.is_file():
@@ -388,23 +375,26 @@ class BuildCHERIBSD(Project):
             print("Overwriting old file", path, "- contents:\n\n", oldContents, "\n")
             if input("Continue? [Y/n]").lower() == "n":
                 sys.exit()
-        path.write_text(contents + "\n")
+        with path.open(mode='w') as f:
+            return f.write(contents + "\n")
 
     def addFileToImage(self, file: Path, targetDir: str, user="root", group="wheel", mode="0644"):
         manifestFile = self.config.cheribsdRootfs / "METALOG"
-        assert manifestFile.is_file()
         userGroupDbDir = self.config.cheribsdSources / "etc"
-        assert userGroupDbDir.is_dir()
-        # e.g. install -N /home/alr48/cheri/cheribsd/etc -U -M /home/alr48/cheri/output/rootfs//METALOG -D /home/alr48/cheri/output/rootfs
-        # -o root -g wheel -m 444 alarm.3.gz  /home/alr48/cheri/output/rootfs/usr/share/man/man3/
+        if not self.config.pretend:
+            assert manifestFile.is_file()
+            assert userGroupDbDir.is_dir()
+        # e.g. "install -N /home/alr48/cheri/cheribsd/etc -U -M /home/alr48/cheri/output/rootfs//METALOG
+        # -D /home/alr48/cheri/output/rootfs -o root -g wheel -m 444 alarm.3.gz
+        # /home/alr48/cheri/output/rootfs/usr/share/man/man3/"
         runCmd(["install",
-                "-N", userGroupDbDir.path,  # Use a custom user/group database text file
+                "-N", str(userGroupDbDir),  # Use a custom user/group database text file
                 "-U",  # Indicate that install is running unprivileged (do not change uid/gid)
-                "-M", manifestFile.path,  # the mtree manifest to write the entry to
-                "-D", self.config.cheribsdRootfs.path,  # DESTDIR (will be stripped from the start of the mtree file
+                "-M", str(manifestFile),  # the mtree manifest to write the entry to
+                "-D", str(self.config.cheribsdRootfs),  # DESTDIR (will be stripped from the start of the mtree file
                 "-o", user, "-g", group,  # uid and gid
                 "-m", mode,  # access rights
-                file.path, (self.config.cheribsdRootfs / targetDir).path  # target file and desination dir
+                str(file), str(self.config.cheribsdRootfs / targetDir)  # target file and destination dir
                 ])
 
     def install(self):
@@ -417,7 +407,7 @@ class BuildCHERIBSD(Project):
         self.addFileToImage(self.config.cheribsdRootfs / "etc/fstab", targetDir="etc")
 
         # enable ssh and set hostname
-        # TODO: use seperate file in /etc/rc.conf.d/ ?
+        # TODO: use separate file in /etc/rc.conf.d/ ?
         networkConfigOptions = (
             'hostname="qemu-cheri-' + os.getlogin() + '"\n'
             'ifconfig_le0="DHCP"\n'
@@ -434,19 +424,19 @@ class BuildDiskImage(Project):
         if self.config.diskImage.is_file():
             # only show prompt if we can actually input something to stdin
             if sys.__stdin__.isatty() and not self.config.pretend:
-                yn = input("An image already exists (" + self.config.diskImage.path + "). Overwrite? [Y/n] ")
+                yn = input("An image already exists (" + str(self.config.diskImage) + "). Overwrite? [Y/n] ")
                 if str(yn).lower() == "n":
                     return
-            printCommand("rm", self.config.diskImage.path)
+            printCommand("rm", self.config.diskImage)
             self.config.diskImage.unlink()
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
         manifestFile = self.config.cheribsdRootfs / "METALOG"
         if not manifestFile.is_file():
-            fatalError("mtree manifest " + manifestFile.path + " is missing")
+            fatalError("mtree manifest", str(manifestFile), "is missing")
         userGroupDbDir = self.config.cheribsdSources / "etc"
         if not (userGroupDbDir / "master.passwd").is_file():
-            fatalError("master.passwd does not exist in " + userGroupDbDir.path)
+            fatalError("master.passwd does not exist in " + str(userGroupDbDir))
         runCmd([
             "makefs",
             "-b", "70%",  # minimum 70% free blocks
@@ -468,7 +458,7 @@ class LaunchQEMU(Project):
     def process(self):
         qemuBinary = self.config.hostToolsDir / "bin/qemu-system-cheri"
         currentKernel = self.config.cheribsdRootfs / "boot/kernel/kernel"
-        print("About to run QEMU with image " + self.config.diskImage.path + " and kernel " + currentKernel.path)
+        print("About to run QEMU with image ", self.config.diskImage, " and kernel ", currentKernel)
         # input("Press enter to continue")
         runCmd([qemuBinary, "-M", "malta",  # malta cpu
                 "-kernel", currentKernel,  # assume the current image matches the kernel currently build
