@@ -56,7 +56,7 @@ class CheriConfig(object):
         def formatterSetup(prog):
             return argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0])
 
-        self.parser = argparse.ArgumentParser(formatter_class=formatterSetup)
+        self._parser = argparse.ArgumentParser(formatter_class=formatterSetup)
 
         _pretend = self._addBoolOption("pretend", "p",
                                        help="Print the commands that would be run instead of executing them")
@@ -78,10 +78,10 @@ class CheriConfig(object):
         _makeJobs = self._addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
                                     help="Number of jobs to use for compiling")
 
-        self.parser.add_argument("targets", metavar="TARGET", type=str, nargs="*",
+        self._parser.add_argument("targets", metavar="TARGET", type=str, nargs="*",
                                  help="The targets to build", default=["all"])
 
-        self._options = self.parser.parse_args()
+        self._options = self._parser.parse_args()
         # TODO: load from config file
         # TODO: this can probably be made a lot simpler using lazy evaluation
         self.pretend = bool(self._loadOption(_pretend))
@@ -115,6 +115,8 @@ class CheriConfig(object):
                 printCommand("mkdir", "-p", str(d))
                 os.makedirs(str(d), exist_ok=True)
 
+        del self._options
+        del self._parser
         pprint.pprint(vars(self))
 
     def _addOption(self, name: str, shortname=None, default=None, **kwargs) -> argparse.Action:
@@ -122,9 +124,9 @@ class CheriConfig(object):
             kwargs["help"] = kwargs["help"] + " (default: \'" + str(default) + "\')"
             kwargs["default"] = default
         if shortname:
-            action = self.parser.add_argument("--" + name, "-" + shortname, **kwargs)
+            action = self._parser.add_argument("--" + name, "-" + shortname, **kwargs)
         else:
-            action = self.parser.add_argument("--" + name, **kwargs)
+            action = self._parser.add_argument("--" + name, **kwargs)
         assert isinstance(action, argparse.Action)
         print("add option:", vars(action))
         return action
@@ -371,12 +373,16 @@ class BuildCHERIBSD(Project):
         if self.config.pretend:
             return
         if path.is_file():
-            oldContents = path.read_text("utf-8")
+            with path.open("r", encoding="utf-8") as f:
+                oldContents = f.read()
+            if oldContents == contents:
+                print("File", path, "already exists with same contents, skipping write operation")
+                return
             print("Overwriting old file", path, "- contents:\n\n", oldContents, "\n")
             if input("Continue? [Y/n]").lower() == "n":
                 sys.exit()
         with path.open(mode='w') as f:
-            return f.write(contents + "\n")
+            f.write(contents + "\n")
 
     def addFileToImage(self, file: Path, targetDir: str, user="root", group="wheel", mode="0644"):
         manifestFile = self.config.cheribsdRootfs / "METALOG"
@@ -478,9 +484,8 @@ def defaultNumberOfMakeJobs():
         makeJobs = 16
     return makeJobs
 
-if __name__ == "__main__":
-    cheriConfig = CheriConfig()
 
+def main():
     # NOTE: This list must be in the right dependency order
     allTargets = [
         BuildBinutils(cheriConfig),
@@ -506,3 +511,8 @@ if __name__ == "__main__":
     for target in allTargets:
         if target.name in selectedTargets:
             target.process()
+
+
+if __name__ == "__main__":
+    cheriConfig = CheriConfig()
+    main()
