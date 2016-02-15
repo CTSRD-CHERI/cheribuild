@@ -414,6 +414,7 @@ class BuildCHERIBSD(Project):
         self.runMake(self.commonMakeArgs, "distribution")
         # TODO: make this configurable to allow NFS, etc.
         self.writeFile(self.config.cheribsdRootfs / "etc/fstab", "/dev/ada0 / ufs rw 1 1")
+        self.addFileToImage(self.config.cheribsdRootfs / "etc/fstab", targetDir="etc")
 
         # enable ssh and set hostname
         # TODO: use seperate file in /etc/rc.conf.d/ ?
@@ -422,6 +423,7 @@ class BuildCHERIBSD(Project):
             'ifconfig_le0="DHCP"\n'
             'sshd_enable="YES"')
         self.writeFile(self.config.cheribsdRootfs / "etc/rc.conf", networkConfigOptions)
+        self.addFileToImage(self.config.cheribsdRootfs / "etc/rc.conf", targetDir="etc")
 
 
 class BuildDiskImage(Project):
