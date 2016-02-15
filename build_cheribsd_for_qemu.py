@@ -133,7 +133,7 @@ class CheriConfig(object):
         else:
             action = self._parser.add_argument("--" + name, **kwargs)
         assert isinstance(action, argparse.Action)
-        print("add option:", vars(action))
+        # print("add option:", vars(action))
         return action
 
     def _addBoolOption(self, name: str, shortname=None, **kwargs) -> argparse.Action:
@@ -142,7 +142,7 @@ class CheriConfig(object):
     def _loadOption(self, action: argparse.Action, default=None) -> argparse.Action:
         assert hasattr(self._options, action.dest)
         result = getattr(self._options, action.dest)
-        print(action.dest, "=", result, "default =", default)
+        # print(action.dest, "=", result, "default =", default)
         return default if result is None else result
 
 
