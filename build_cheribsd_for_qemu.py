@@ -180,7 +180,7 @@ class Project(object):
         if (self.config.clean or force) and path.is_dir():
             # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
             # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
-            runCmd(["rm", "-rf", str(dir)])
+            runCmd(["rm", "-rf", str(path)])
 
         # make sure the dir is empty afterwards
         self._makedirs(path)
@@ -203,7 +203,7 @@ class Project(object):
 
     def _makeStdoutFilter(self, line: bytes):
         # by default we don't filter anything and just write to stdout
-        sys.stdout.write(line)
+        sys.stdout.buffer.write(line)
 
     @staticmethod
     def _handleStdErr(outfile, stream, fileLock):
@@ -213,11 +213,12 @@ class Project(object):
             with fileLock:
                 outfile.write(errLine)
 
-    def runMake(self, args: "typing.List[str]", makeTarget="") -> None:
+    def runMake(self, args: "typing.List[str]", makeTarget="", *, cwd: Path=None) -> None:
         """
         Runs make and logs the output
         :param args: the make command to run (e.g. ["make", "-j32"])
-        :param makeTarget: the target to build (e.g. "install"
+        :param makeTarget: the target to build (e.g. "install")
+        :param cwd the directory to run make in (defaults to self.buildDir)
         """
         if makeTarget:
             allArgs = args + [makeTarget]
@@ -225,6 +226,9 @@ class Project(object):
         else:
             allArgs = args
             logfilePath = Path(self.buildDir / "build.log")
+
+        if not cwd:
+            cwd = self.buildDir
 
         printCommand(" ".join(allArgs), cwd=self.sourceDir)
         if self.config.pretend:
@@ -237,9 +241,9 @@ class Project(object):
             # quiet doesn't display anything, normal only status updates and verbose everything
             if self.config.quiet:
                 # a lot more efficient than filtering every line
-                subprocess.check_call(allArgs, cwd=str(self.sourceDir), stdout=logfile)
+                subprocess.check_call(allArgs, cwd=str(cwd), stdout=logfile)
                 return
-            make = subprocess.Popen(allArgs, cwd=str(self.sourceDir), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            make = subprocess.Popen(allArgs, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             # use a thread to print stderr output and write it to logfile (not using a thread would block)
             logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
             stderrThread = threading.Thread(target=BuildCHERIBSD._handleStdErr, args=(logfile, make.stderr, logfileLock))
