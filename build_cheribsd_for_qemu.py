@@ -8,6 +8,8 @@ import shutil
 import threading
 import pprint
 import time
+import difflib
+import io
 from pathlib import Path
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
@@ -392,46 +394,69 @@ class BuildCHERIBSD(Project):
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld")
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel")
 
+    def install(self):
+        # don't use multiple jobs here
+        self.runMake(self.commonMakeArgs, "installworld")
+        self.runMake(self.commonMakeArgs, "installkernel")
+        self.runMake(self.commonMakeArgs, "distribution")
+
+
+class BuildDiskImage(Project):
+    def __init__(self, config):
+        super().__init__("disk-image", config)
+        # make use of the mtree file created by make installworld
+        # this means we can create a disk image without root privilege
+        self.manifestFile = self.config.cheribsdRootfs / "METALOG"
+        if not self.manifestFile.is_file():
+            fatalError("mtree manifest", self.manifestFile, "is missing")
+        self.userGroupDbDir = self.config.cheribsdSources / "etc"
+        if not (self.userGroupDbDir / "master.passwd").is_file():
+            fatalError("master.passwd does not exist in ", self.userGroupDbDir)
+
     def writeFile(self, path: Path, contents: str):
         printCommand("echo", shlex.quote(contents.replace("\n", "\\n")), ">", shlex.quote(str(path)))
         if self.config.pretend:
             return
+        newContents = contents + "\n"  # make sure the file has a newline at the end
         if path.is_file():
             with path.open("r", encoding="utf-8") as f:
                 oldContents = f.read()
-            if oldContents == contents:
+            if oldContents == newContents:
                 print("File", path, "already exists with same contents, skipping write operation")
                 return
-            print("Overwriting old file", path, "- contents:\n\n", oldContents, "\n")
+            print("About to overwrite file ", path, ". Diff is:", sep="")
+            diff = difflib.unified_diff(io.StringIO(oldContents).readlines(), io.StringIO(newContents).readlines(),
+                                        str(path), str(path))
+            print("".join(diff))  # difflib.unified_diff() returns an iterator with lines
             if input("Continue? [Y/n]").lower() == "n":
                 sys.exit()
         with path.open(mode='w') as f:
             f.write(contents + "\n")
 
     def addFileToImage(self, file: Path, targetDir: str, user="root", group="wheel", mode="0644"):
-        manifestFile = self.config.cheribsdRootfs / "METALOG"
-        userGroupDbDir = self.config.cheribsdSources / "etc"
-        if not self.config.pretend:
-            assert manifestFile.is_file()
-            assert userGroupDbDir.is_dir()
         # e.g. "install -N /home/alr48/cheri/cheribsd/etc -U -M /home/alr48/cheri/output/rootfs//METALOG
         # -D /home/alr48/cheri/output/rootfs -o root -g wheel -m 444 alarm.3.gz
         # /home/alr48/cheri/output/rootfs/usr/share/man/man3/"
         runCmd(["install",
-                "-N", str(userGroupDbDir),  # Use a custom user/group database text file
+                "-N", str(self.userGroupDbDir),  # Use a custom user/group database text file
                 "-U",  # Indicate that install is running unprivileged (do not change uid/gid)
-                "-M", str(manifestFile),  # the mtree manifest to write the entry to
+                "-M", str(self.manifestFile),  # the mtree manifest to write the entry to
                 "-D", str(self.config.cheribsdRootfs),  # DESTDIR (will be stripped from the start of the mtree file
                 "-o", user, "-g", group,  # uid and gid
                 "-m", mode,  # access rights
                 str(file), str(self.config.cheribsdRootfs / targetDir)  # target file and destination dir
                 ])
 
-    def install(self):
-        # don't use multiple jobs here
-        self.runMake(self.commonMakeArgs, "installworld")
-        self.runMake(self.commonMakeArgs, "installkernel")
-        self.runMake(self.commonMakeArgs, "distribution")
+    def process(self):
+        if self.config.diskImage.is_file():
+            # only show prompt if we can actually input something to stdin
+            if sys.__stdin__.isatty() and not self.config.pretend:
+                yn = input("An image already exists (" + str(self.config.diskImage) + "). Overwrite? [Y/n] ")
+                if str(yn).lower() == "n":
+                    return
+            printCommand("rm", self.config.diskImage)
+            self.config.diskImage.unlink()
+
         # TODO: make this configurable to allow NFS, etc.
         self.writeFile(self.config.cheribsdRootfs / "etc/fstab", "/dev/ada0 / ufs rw 1 1")
         self.addFileToImage(self.config.cheribsdRootfs / "etc/fstab", targetDir="etc")
@@ -445,36 +470,17 @@ class BuildCHERIBSD(Project):
         self.writeFile(self.config.cheribsdRootfs / "etc/rc.conf", networkConfigOptions)
         self.addFileToImage(self.config.cheribsdRootfs / "etc/rc.conf", targetDir="etc")
 
+        # TODO: https://www.freebsd.org/cgi/man.cgi?mount_unionfs(8) should make this easier
+        # Overlay extra-files over addtional stuff over cheribsd rootfs dir
 
-class BuildDiskImage(Project):
-    def __init__(self, config):
-        super().__init__("disk-image", config)
-
-    def process(self):
-        if self.config.diskImage.is_file():
-            # only show prompt if we can actually input something to stdin
-            if sys.__stdin__.isatty() and not self.config.pretend:
-                yn = input("An image already exists (" + str(self.config.diskImage) + "). Overwrite? [Y/n] ")
-                if str(yn).lower() == "n":
-                    return
-            printCommand("rm", self.config.diskImage)
-            self.config.diskImage.unlink()
-        # make use of the mtree file created by make installworld
-        # this means we can create a disk image without root privilege
-        manifestFile = self.config.cheribsdRootfs / "METALOG"
-        if not manifestFile.is_file():
-            fatalError("mtree manifest", str(manifestFile), "is missing")
-        userGroupDbDir = self.config.cheribsdSources / "etc"
-        if not (userGroupDbDir / "master.passwd").is_file():
-            fatalError("master.passwd does not exist in " + str(userGroupDbDir))
         runCmd([
             "makefs",
             "-b", "70%",  # minimum 70% free blocks
             "-f", "30%",  # minimum 30% free inodes
             "-M", "4g",  # minimum image size = 4GB
             "-B", "be",  # big endian byte order
-            "-F", manifestFile,  # use METALOG as the manifest for the disk image
-            "-N", userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
+            "-F", self.manifestFile,  # use METALOG as the manifest for the disk image
+            "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
             # which makes sure that the numeric UID values are correct
             self.config.diskImage,  # output file
             self.config.cheribsdRootfs  # directory tree to use for the image
