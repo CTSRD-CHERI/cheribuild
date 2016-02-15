@@ -313,7 +313,7 @@ class BuildCHERIBSD(Project):
         def handleStdErr(logfile, stream, logfileLock):
             for line in stream:
                 sys.stderr.buffer.write(line)
-                sys.stderr.flush()
+                sys.stderr.buffer.flush()
                 with logfileLock:
                     logfile.write(line)
 
