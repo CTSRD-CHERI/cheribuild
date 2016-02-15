@@ -85,6 +85,8 @@ class CheriConfig(object):
                                       help="The directory to store all sources")
         _outputRoot = self._addOption("output-root",
                                       help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
+        _extraFiles = self._addOption("extra-files", help="A directory with additional files that will be added to the"
+                                      " image (default: '<OUTPUT_ROOT>/extra-files')")
         _diskImage = self._addOption("disk-image-path",
                                      help="The output path for the QEMU disk image (default: '<OUTPUT_ROOT>/disk.img')")
 
@@ -105,6 +107,7 @@ class CheriConfig(object):
         # path config options
         self.sourceRoot = Path(self._loadOption(_sourceRoot))
         self.outputRoot = Path(self._loadOption(_outputRoot, self.sourceRoot / "output"))
+        self.extraFiles = Path(self._loadOption(_extraFiles, self.sourceRoot / "extra-files"))
         self.diskImage = Path(self._loadOption(_diskImage, self.outputRoot / "disk.img"))
 
         self.makeJFlag = "-j" + str(self._loadOption(_makeJobs))
@@ -112,6 +115,7 @@ class CheriConfig(object):
 
         print("Sources will be stored in", self.sourceRoot)
         print("Build artifacts will be stored in", self.outputRoot)
+        print("Extra files for disk image will be searched for in", self.extraFiles)
         print("Disk image will saved to", self.diskImage)
 
         # now the derived config options
@@ -119,6 +123,12 @@ class CheriConfig(object):
         self.cheribsdSources = self.sourceRoot / "cheribsd"
         self.cheribsdObj = self.outputRoot / "cheribsd-obj"
         self.hostToolsDir = self.outputRoot / "host-tools"  # qemu and binutils (and llvm/clang)
+
+        for dir in (self.sourceRoot.path, self.outputRoot.path, self.extraFiles.path):
+            if not self.pretend:
+                printCommand("mkdir", "-p", dir)
+                os.makedirs(dir, exist_ok=True)
+
         pprint.pprint(vars(self))
 
     def _addOption(self, name: str, shortname=None, default=None, **kwargs) -> argparse.Action:
@@ -141,6 +151,7 @@ class CheriConfig(object):
         result = getattr(self._options, action.dest)
         print(action.dest, "=", result, "default =", default)
         return default if result is None else result
+
 
 class Project(object):
     def __init__(self, name: str, config: CheriConfig, *, sourceDir="", buildDir="", installDir: Path=None, gitUrl=""):
