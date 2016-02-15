@@ -51,16 +51,16 @@ def runCmd(*args, **kwargs):
     cmdShellEscaped = " ".join(map(shlex.quote, cmdline))
     printCommand(cmdShellEscaped, cwd=kwargs.get("cwd"))
     kwargs["cwd"] = str(kwargs["cwd"]) if "cwd" in kwargs else os.getcwd()
-    if config.quiet and "stdout" not in kwargs:
+    if cheriConfig.quiet and "stdout" not in kwargs:
         kwargs["stdout"] = subprocess.DEVNULL
-    if not config.pretend:
+    if not cheriConfig.pretend:
         # print(cmdline, kwargs)
         subprocess.check_call(cmdline, **kwargs)
 
 
 def fatalError(message: str):
     # we ignore fatal errors when simulating a run
-    if config.pretend:
+    if cheriConfig.pretend:
         print("Potential fatal error:", message)
     else:
         sys.exit(message)
@@ -143,10 +143,10 @@ class CheriConfig(object):
         print("add option:", vars(action))
         return action
 
-    def _addBoolOption(self, name: str, shortname=None, **kwargs) -> str:
+    def _addBoolOption(self, name: str, shortname=None, **kwargs) -> argparse.Action:
         return self._addOption(name, shortname, action="store_true", **kwargs)
 
-    def _loadOption(self, action: argparse.Action, default=None) -> str:
+    def _loadOption(self, action: argparse.Action, default=None) -> argparse.Action:
         assert hasattr(self._options, action.dest)
         result = getattr(self._options, action.dest)
         print(action.dest, "=", result, "default =", default)
@@ -485,24 +485,24 @@ def defaultNumberOfMakeJobs():
     return makeJobs
 
 if __name__ == "__main__":
-    config = CheriConfig()
+    cheriConfig = CheriConfig()
 
     # NOTE: This list must be in the right dependency order
     allTargets = [
-        BuildBinutils(config),
-        BuildQEMU(config),
-        BuildLLVM(config),
-        BuildCHERIBSD(config),
-        BuildDiskImage(config),
-        LaunchQEMU(config),
+        BuildBinutils(cheriConfig),
+        BuildQEMU(cheriConfig),
+        BuildLLVM(cheriConfig),
+        BuildCHERIBSD(cheriConfig),
+        BuildDiskImage(cheriConfig),
+        LaunchQEMU(cheriConfig),
     ]
     allTargetNames = [t.name for t in allTargets]
-    selectedTargets = config.targets
-    if "all" in config.targets:
+    selectedTargets = cheriConfig.targets
+    if "all" in cheriConfig.targets:
         selectedTargets = allTargetNames
     # make sure all targets passed on commandline exist
     invalidTargets = set(selectedTargets) - set(allTargetNames)
-    if invalidTargets or config.listTargets:
+    if invalidTargets or cheriConfig.listTargets:
         for t in invalidTargets:
             print("Invalid target", t)
         print("The following targets exist:", list(allTargetNames))
