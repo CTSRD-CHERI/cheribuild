@@ -348,7 +348,9 @@ class BuildCHERIBSD(Project):
             stderrThread.join()
             print("")  # add a newline at the end in case it didn't finish with a  >>> line
             if retcode:
-                raise subprocess.CalledProcessError(retcode, allArgs)
+                cmdStr = " ".join([shlex.quote(s) for s in allArgs])
+                raise SystemExit("Command \"%s\" failed with exit code %d.\nSee %s for details." %
+                                 (cmdStr, retcode, logfile.name))
 
     def compile(self):
         os.environ["MAKEOBJDIRPREFIX"] = self.buildDir.path
