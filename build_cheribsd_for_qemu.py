@@ -482,9 +482,12 @@ class BuildDiskImage(Project):
             'sshd_enable="YES"')
         self.writeFile(self.config.cheribsdRootfs / "etc/rc.conf", networkConfigOptions)
         self.addFileToImage(self.config.cheribsdRootfs / "etc/rc.conf", targetDir="etc")
+        # make sure that the disk image always has the same SSH host keys
+        # If they don't exist the system will generate one on first boot (which means we keep having to add new ones)
+        self.generateSshHostKeys()
 
         # TODO: https://www.freebsd.org/cgi/man.cgi?mount_unionfs(8) should make this easier
-        # Overlay extra-files over addtional stuff over cheribsd rootfs dir
+        # Overlay extra-files over additional stuff over cheribsd rootfs dir
 
         runCmd([
             "makefs",
@@ -498,6 +501,25 @@ class BuildDiskImage(Project):
             self.config.diskImage,  # output file
             self.config.cheribsdRootfs  # directory tree to use for the image
         ])
+
+    def generateSshHostKeys(self):
+        # do the same as "ssh-keygen -A" just with a different output directory as it does not allow customizing that
+        sshDir = self.config.extraFiles / "etc/ssh"
+        self._makedirs(sshDir)
+        # -t type Specifies the type of key to create.  The possible values are "rsa1" for protocol version 1
+        #  and "dsa", "ecdsa","ed25519", or "rsa" for protocol version 2.
+
+        for keyType in ("rsa1", "rsa", "dsa", "ecdsa", "ed25519"):
+            # SSH1 protocol uses just /etc/ssh/ssh_host_key without the type
+            privateKeyName = "ssh_host_key" if keyType == "rsa1" else "ssh_host_" + keyType + "_key"
+            privateKey = sshDir / privateKeyName
+            publicKey = sshDir / (privateKeyName + ".pub")
+            if not privateKey.is_file():
+                runCmd("ssh-keygen", "-t", keyType,
+                       "-N", "",  # no passphrase
+                       "-f", str(privateKey))
+            self.addFileToImage(privateKey, "etc/ssh", mode="0600")
+            self.addFileToImage(publicKey, "etc/ssh", mode="0644")
 
 
 class LaunchQEMU(Project):
