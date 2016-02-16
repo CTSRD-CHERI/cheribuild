@@ -84,7 +84,7 @@ class CheriConfig(object):
                                     help="Number of jobs to use for compiling")
 
         self._parser.add_argument("targets", metavar="TARGET", type=str, nargs="*",
-                                 help="The targets to build", default=["all"])
+                                  help="The targets to build", default=["all"])
 
         self._options = self._parser.parse_args()
         # TODO: load from config file
