@@ -118,6 +118,7 @@ class CheriConfig(object):
         self.cheribsdSources = self.sourceRoot / "cheribsd"
         self.cheribsdObj = self.outputRoot / "cheribsd-obj"
         self.sdkDir = self.outputRoot / "host-tools"  # qemu and binutils (and llvm/clang)
+        self.sdkSysrootDir = self.sdkDir / "sysroot"
 
         for d in (self.sourceRoot, self.outputRoot, self.extraFiles):
             if not self.pretend:
@@ -340,7 +341,7 @@ class BuildLLVM(Project):
             "-DCMAKE_CXX_COMPILER=" + cppCompiler, "-DCMAKE_C_COMPILER=" + cCompiler,  # need at least 3.7 to build it
             "-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd",
             "-DCMAKE_INSTALL_PREFIX=" + str(self.installDir),
-            "-DDEFAULT_SYSROOT=" + str(self.config.sdkDir / "sysroot"),
+            "-DDEFAULT_SYSROOT=" + str(self.config.sdkSysrootDir),
             "-DLLVM_TOOL_LLDB_BUILD=OFF",  # disable LLDB for now
         ]
 
@@ -526,6 +527,39 @@ class BuildDiskImage(Project):
             self.addFileToImage(publicKey, "etc/ssh", mode="0644")
 
 
+class BuildSDK(Project):
+    def __init__(self, config: CheriConfig):
+        super().__init__("sdk", config)
+        # if we pass a string starting with a slash to Path() it will reset to that absolute path
+        # luckily we have to prepend mips.mips64, so it works out fine
+        # expands to e.g. /home/alr48/cheri/output/cheribsd-obj/mips.mips64/home/alr48/cheri/cheribsd
+        cheribsdBuildRoot = Path(self.config.cheribsdObj, "mips.mips64" + str(self.config.cheribsdSources))
+        self.CHERITOOLS_OBJ = cheribsdBuildRoot / "tmp/usr/bin/"
+        self.CHERIBOOTSTRAPTOOLS_OBJ = cheribsdBuildRoot / "tmp/legacy/usr/bin/"
+        self.CHERILIBEXEC_OBJ = cheribsdBuildRoot / "tmp/usr/libexec/"
+        for i in (self.CHERIBOOTSTRAPTOOLS_OBJ, self.CHERITOOLS_OBJ, self.CHERITOOLS_OBJ):
+            if not i.is_dir():
+                fatalError("Directory", i, "is missing!")
+
+    def fixSymlinks(self):
+        pass
+
+    def buildCheridis(self):
+        pass
+
+    def process(self):
+        # FIXME: build_sdk.sh uses tar with mtree input pipe to extract, what benefit does that have over cp -a
+        # we need to add include files and libraries to the sysroot directory
+        runCmd("cp", "-a",
+               str(self.config.cheribsdRootfs / "usr/include"),
+               str(self.config.cheribsdRootfs / "lib"),
+               str(self.config.cheribsdRootfs / "usr/lib"),
+               str(self.config.cheribsdRootfs / "usr/libcheri"),
+               str(self.config.cheribsdRootfs / "usr/libdata"),
+               str(self.config.sdkSysrootDir))
+        pass
+
+
 class LaunchQEMU(Project):
     def __init__(self, config):
         super().__init__("run", config)
@@ -561,6 +595,7 @@ def main():
         BuildQEMU(cheriConfig),
         BuildLLVM(cheriConfig),
         BuildCHERIBSD(cheriConfig),
+        BuildSDK(cheriConfig),
         BuildDiskImage(cheriConfig),
         LaunchQEMU(cheriConfig),
     ]
