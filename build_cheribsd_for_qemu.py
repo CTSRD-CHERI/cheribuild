@@ -551,6 +551,7 @@ class BuildSDK(Project):
                 fatalError("Directory", i, "is missing!")
         # FIXME: build_sdk.sh uses tar with mtree input pipe to extract, what benefit does that have over cp -a
         # we need to add include files and libraries to the sysroot directory
+        self._makedirs(self.config.sdkSysrootDir)
         runCmd("cp", "-a",
                str(self.config.cheribsdRootfs / "usr/include"),
                str(self.config.cheribsdRootfs / "lib"),
