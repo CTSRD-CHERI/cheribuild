@@ -117,7 +117,7 @@ class CheriConfig(object):
         self.cheribsdRootfs = self.outputRoot / "rootfs"
         self.cheribsdSources = self.sourceRoot / "cheribsd"
         self.cheribsdObj = self.outputRoot / "cheribsd-obj"
-        self.sdkDir = self.outputRoot / "host-tools"  # qemu and binutils (and llvm/clang)
+        self.sdkDir = self.outputRoot / "sdk"  # qemu and binutils (and llvm/clang)
         self.sdkSysrootDir = self.sdkDir / "sysroot"
 
         for d in (self.sourceRoot, self.outputRoot, self.extraFiles):
