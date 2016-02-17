@@ -32,7 +32,7 @@ def printCommand(*args, cwd=None, **kwargs):
     print(*newArgs, flush=True, **kwargs)
 
 
-def runCmd(*args, **kwargs):
+def runCmd(*args, captureOutput=False, **kwargs):
     if type(args[0]) is str or type(args[0]) is Path:
         cmdline = args  # multiple strings passed
     else:
@@ -41,11 +41,15 @@ def runCmd(*args, **kwargs):
     cmdShellEscaped = " ".join(map(shlex.quote, cmdline))
     printCommand(cmdShellEscaped, cwd=kwargs.get("cwd"))
     kwargs["cwd"] = str(kwargs["cwd"]) if "cwd" in kwargs else os.getcwd()
-    if cheriConfig.quiet and "stdout" not in kwargs:
-        kwargs["stdout"] = subprocess.DEVNULL
     if not cheriConfig.pretend:
         # print(cmdline, kwargs)
-        subprocess.check_call(cmdline, **kwargs)
+        if captureOutput:
+            return subprocess.check_output(cmdline, **kwargs)
+        else:
+            if cheriConfig.quiet and "stdout" not in kwargs:
+                kwargs["stdout"] = subprocess.DEVNULL
+            subprocess.check_call(cmdline, **kwargs)
+    return "" if captureOutput else None
 
 
 def fatalError(*args):
@@ -168,7 +172,13 @@ class Project(object):
             if sys.__stdin__.isatty() and input("y/[N]").lower() != "y":
                 sys.exit("Sources for " + str(srcDir) + " missing!")
             runCmd("git", "clone", remoteUrl, srcDir)
+        # make sure we run git stash if we discover any local changes
+        hasChanges = len(runCmd("git", "diff", captureOutput=True, cwd=srcDir)) > 1
+        if hasChanges:
+            runCmd("git", "stash", cwd=srcDir)
         runCmd("git", "pull", "--rebase", cwd=srcDir)
+        if hasChanges:
+            runCmd("git", "stash", "pop", cwd=srcDir)
 
     def _makedirs(self, path: Path):
         printCommand("mkdir", "-p", path)
@@ -180,7 +190,7 @@ class Project(object):
         if (self.config.clean or force) and path.is_dir():
             # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
             # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
-            runCmd(["rm", "-rf", str(path)])
+            runCmd("rm", "-rf", str(path))
 
         # make sure the dir is empty afterwards
         self._makedirs(path)
