@@ -409,14 +409,14 @@ class BuildCHERIBSD(Project):
         # make sure the old install is purged before building, otherwise we might get strange errors
         # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
         self._cleanDir(self.installDir, force=True)
-        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld")
-        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel")
+        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld", cwd=self.sourceDir)
+        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel", cwd=self.sourceDir)
 
     def install(self):
         # don't use multiple jobs here
-        self.runMake(self.commonMakeArgs, "installworld")
-        self.runMake(self.commonMakeArgs, "installkernel")
-        self.runMake(self.commonMakeArgs, "distribution")
+        self.runMake(self.commonMakeArgs, "installworld", cwd=self.sourceDir)
+        self.runMake(self.commonMakeArgs, "installkernel", cwd=self.sourceDir)
+        self.runMake(self.commonMakeArgs, "distribution", cwd=self.sourceDir)
 
 
 class BuildDiskImage(Project):
