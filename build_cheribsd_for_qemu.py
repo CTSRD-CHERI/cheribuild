@@ -347,9 +347,9 @@ class BuildLLVM(Project):
 
     def _makeStdoutFilter(self, line: bytes):
         # don't show the up-to date install lines
-        if not line.startswith(b"-- Up-to-date:"):
-            sys.stdout.buffer.write(line)
-            sys.stdout.buffer.flush()
+        if line.startswith(b"-- Up-to-date:"):
+            return
+        super()._makeStdoutFilter(line)
 
     def update(self):
         self._update_git_repo(self.sourceDir, "https://github.com/CTSRD-CHERI/llvm.git")
