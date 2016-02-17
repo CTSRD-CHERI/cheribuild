@@ -57,7 +57,7 @@ def fatalError(*args):
     if cheriConfig.pretend:
         print("Potential fatal error:", *args)
     else:
-        sys.exit(" ".join(args))
+        sys.exit(" ".join(map(str, args)))
 
 
 class CheriConfig(object):
