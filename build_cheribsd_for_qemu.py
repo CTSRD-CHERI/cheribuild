@@ -117,7 +117,7 @@ class CheriConfig(object):
         self.cheribsdRootfs = self.outputRoot / "rootfs"
         self.cheribsdSources = self.sourceRoot / "cheribsd"
         self.cheribsdObj = self.outputRoot / "cheribsd-obj"
-        self.hostToolsDir = self.outputRoot / "host-tools"  # qemu and binutils (and llvm/clang)
+        self.sdkDir = self.outputRoot / "host-tools"  # qemu and binutils (and llvm/clang)
 
         for d in (self.sourceRoot, self.outputRoot, self.extraFiles):
             if not self.pretend:
@@ -297,7 +297,7 @@ class Project(object):
 
 class BuildQEMU(Project):
     def __init__(self, config: CheriConfig):
-        super().__init__("qemu", config, installDir=config.hostToolsDir,
+        super().__init__("qemu", config, installDir=config.sdkDir,
                          gitUrl="https://github.com/CTSRD-CHERI/qemu.git")
         # QEMU will not work with BSD make, need GNU make
         self.makeCommand = "gmake"
@@ -321,7 +321,7 @@ class BuildQEMU(Project):
 
 class BuildBinutils(Project):
     def __init__(self, config: CheriConfig):
-        super().__init__("binutils", config, installDir=config.hostToolsDir,
+        super().__init__("binutils", config, installDir=config.sdkDir,
                          gitUrl="https://github.com/CTSRD-CHERI/binutils.git")
         self.configureCommand = self.sourceDir / "configure"
         self.configureArgs = ["--target=mips64", "--disable-werror", "--prefix=" + str(self.installDir)]
@@ -329,15 +329,9 @@ class BuildBinutils(Project):
 
 class BuildLLVM(Project):
     def __init__(self, config: CheriConfig):
-        super().__init__("llvm", config, installDir=config.hostToolsDir)
+        super().__init__("llvm", config, installDir=config.sdkDir)
         self.makeCommand = "ninja"
-        # FIXME: what is the correct default sysroot
-        # should expand to ~/cheri/qemu/obj/mips.mips64/home/alr48/cheri/cheribsd
-        # I think this might be correct: it contains x86 binaries but mips libraries so should be right)
-        # if we pass a path starting with a slash to Path() it will reset to that absolute path
-        # luckily we have to prepend mips.mips64, so it works out fine
-        sysroot = Path(self.config.cheribsdObj, "mips.mips64" + str(self.config.cheribsdSources), "tmp")
-        # try to find clang 3.7, otherwise fall
+        # try to find clang 3.7, otherwise fall back to system clang
         cCompiler = shutil.which("clang37") or "clang"
         cppCompiler = shutil.which("clang++37") or "clang++"
         self.configureCommand = "cmake"
@@ -346,7 +340,7 @@ class BuildLLVM(Project):
             "-DCMAKE_CXX_COMPILER=" + cppCompiler, "-DCMAKE_C_COMPILER=" + cCompiler,  # need at least 3.7 to build it
             "-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd",
             "-DCMAKE_INSTALL_PREFIX=" + str(self.installDir),
-            "-DDEFAULT_SYSROOT=" + str(sysroot),
+            "-DDEFAULT_SYSROOT=" + str(self.config.sdkDir / "sysroot"),
             "-DLLVM_TOOL_LLDB_BUILD=OFF",  # disable LLDB for now
         ]
 
@@ -393,10 +387,10 @@ class BuildCHERIBSD(Project):
     def compile(self):
         os.environ["MAKEOBJDIRPREFIX"] = str(self.buildDir)
         # make sure the new binutils are picked up
-        if not os.environ["PATH"].startswith(str(self.config.hostToolsDir)):
-            os.environ["PATH"] = str(self.config.hostToolsDir / "bin") + ":" + os.environ["PATH"]
+        if not os.environ["PATH"].startswith(str(self.config.sdkDir)):
+            os.environ["PATH"] = str(self.config.sdkDir / "bin") + ":" + os.environ["PATH"]
             print("Set PATH to", os.environ["PATH"])
-        cheriCC = self.config.hostToolsDir / "bin/clang"
+        cheriCC = self.config.sdkDir / "bin/clang"
         if not cheriCC.is_file():
             fatalError("CHERI CC does not exist: " + str(cheriCC))
         self.commonMakeArgs = [
@@ -537,7 +531,7 @@ class LaunchQEMU(Project):
         super().__init__("run", config)
 
     def process(self):
-        qemuBinary = self.config.hostToolsDir / "bin/qemu-system-cheri"
+        qemuBinary = self.config.sdkDir / "bin/qemu-system-cheri"
         currentKernel = self.config.cheribsdRootfs / "boot/kernel/kernel"
         print("About to run QEMU with image ", self.config.diskImage, " and kernel ", currentKernel)
         # input("Press enter to continue")
