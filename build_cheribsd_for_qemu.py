@@ -425,11 +425,7 @@ class BuildDiskImage(Project):
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
         self.manifestFile = self.config.cheribsdRootfs / "METALOG"
-        if not self.manifestFile.is_file():
-            fatalError("mtree manifest", self.manifestFile, "is missing")
         self.userGroupDbDir = self.config.cheribsdSources / "etc"
-        if not (self.userGroupDbDir / "master.passwd").is_file():
-            fatalError("master.passwd does not exist in ", self.userGroupDbDir)
 
     def writeFile(self, path: Path, contents: str):
         printCommand("echo", shlex.quote(contents.replace("\n", "\\n")), ">", shlex.quote(str(path)))
@@ -466,6 +462,11 @@ class BuildDiskImage(Project):
                 ])
 
     def process(self):
+        if not self.manifestFile.is_file():
+            fatalError("mtree manifest", self.manifestFile, "is missing")
+        if not (self.userGroupDbDir / "master.passwd").is_file():
+            fatalError("master.passwd does not exist in ", self.userGroupDbDir)
+
         if self.config.diskImage.is_file():
             # only show prompt if we can actually input something to stdin
             if sys.__stdin__.isatty() and not self.config.pretend:
@@ -537,9 +538,6 @@ class BuildSDK(Project):
         self.CHERITOOLS_OBJ = cheribsdBuildRoot / "tmp/usr/bin/"
         self.CHERIBOOTSTRAPTOOLS_OBJ = cheribsdBuildRoot / "tmp/legacy/usr/bin/"
         self.CHERILIBEXEC_OBJ = cheribsdBuildRoot / "tmp/usr/libexec/"
-        for i in (self.CHERIBOOTSTRAPTOOLS_OBJ, self.CHERITOOLS_OBJ, self.CHERITOOLS_OBJ):
-            if not i.is_dir():
-                fatalError("Directory", i, "is missing!")
 
     def fixSymlinks(self):
         pass
@@ -548,6 +546,9 @@ class BuildSDK(Project):
         pass
 
     def process(self):
+        for i in (self.CHERIBOOTSTRAPTOOLS_OBJ, self.CHERITOOLS_OBJ, self.CHERITOOLS_OBJ, self.config.cheribsdRootfs):
+            if not i.is_dir():
+                fatalError("Directory", i, "is missing!")
         # FIXME: build_sdk.sh uses tar with mtree input pipe to extract, what benefit does that have over cp -a
         # we need to add include files and libraries to the sysroot directory
         runCmd("cp", "-a",
