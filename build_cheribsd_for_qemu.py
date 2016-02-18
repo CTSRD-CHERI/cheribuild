@@ -320,6 +320,7 @@ class BuildQEMU(Project):
         super().update()
 
 
+# FIXME: do we need this? seems like cheribsd has all these utilities
 class BuildBinutils(Project):
     def __init__(self, config: CheriConfig):
         super().__init__("binutils", config, installDir=config.sdkDir,
