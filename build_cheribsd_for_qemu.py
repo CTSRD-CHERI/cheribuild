@@ -549,16 +549,18 @@ class BuildSDK(Project):
         for i in (self.CHERIBOOTSTRAPTOOLS_OBJ, self.CHERITOOLS_OBJ, self.CHERITOOLS_OBJ, self.config.cheribsdRootfs):
             if not i.is_dir():
                 fatalError("Directory", i, "is missing!")
-        # FIXME: build_sdk.sh uses tar with mtree input pipe to extract, what benefit does that have over cp -a
         # we need to add include files and libraries to the sysroot directory
-        self._makedirs(self.config.sdkSysrootDir)
-        runCmd("cp", "-a",
+        self._cleanDir(self.config.sdkSysrootDir, force=True)  # make sure the sysroot is cleaned
+        self._makedirs(self.config.sdkSysrootDir / "usr")
+        # FIXME: build_sdk.sh uses tar with mtree input pipe to extract, what benefit does that have over cp -a
+        runCmd("cp", "-af", str(self.config.cheribsdRootfs / "lib"), str(self.config.sdkSysrootDir))
+        runCmd("cp", "-af",
                str(self.config.cheribsdRootfs / "usr/include"),
-               str(self.config.cheribsdRootfs / "lib"),
                str(self.config.cheribsdRootfs / "usr/lib"),
                str(self.config.cheribsdRootfs / "usr/libcheri"),
                str(self.config.cheribsdRootfs / "usr/libdata"),
-               str(self.config.sdkSysrootDir))
+               str(self.config.sdkSysrootDir / "usr"))
+
         pass
 
 
