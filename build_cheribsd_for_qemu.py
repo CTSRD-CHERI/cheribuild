@@ -557,17 +557,18 @@ class BuildSDK(Project):
         # we need to add include files and libraries to the sysroot directory
         self._cleanDir(self.config.sdkSysrootDir, force=True)  # make sure the sysroot is cleaned
         self._makedirs(self.config.sdkSysrootDir / "usr")
-        # FIXME: build_sdk.sh uses tar with mtree input pipe to extract, what benefit does that have over cp -a
-        runCmd("cp", "-af", str(self.config.cheribsdRootfs / "lib"), str(self.config.sdkSysrootDir))
-        runCmd("cp", "-af",
-               str(self.config.cheribsdRootfs / "usr/include"),
-               str(self.config.cheribsdRootfs / "usr/lib"),
-               str(self.config.cheribsdRootfs / "usr/libcheri"),
-               str(self.config.cheribsdRootfs / "usr/libdata"),
-               str(self.config.sdkSysrootDir / "usr"))
-
-        pass
-
+        # use tar+untar to copy all ncessary files listed in metalog to the sysroot dir
+        archiveCmd = ["tar", "cf", "-", "--include=./lib/", "--include=./usr/include/",
+                      "--include=./usr/lib/", "--include=./usr/libcheri", "--include=./usr/libdata/",
+                      # only pack those files that are mentioned in METALOG
+                      "@METALOG"]
+        printCommand(archiveCmd, cwd=self.config.cheribsdRootfs)
+        if not self.config.pretend:
+            tar = subprocess.Popen(archiveCmd, stdout=subprocess.PIPE, cwd=str(self.config.cheribsdRootfs))
+            runCmd(["tar", "xf", "-"], stdin=tar.stdout, cwd=self.config.sdkSysrootDir)
+        if not (self.config.sdkSysrootDir / "lib/libc.so.7").is_file():
+            fatalError(self.config.sdkSysrootDir, "is missing the libc library, install seems to have failed!")
+        print("Successfully populated sysroot")
 
 class LaunchQEMU(Project):
     def __init__(self, config):
