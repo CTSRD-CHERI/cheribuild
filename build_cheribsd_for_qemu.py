@@ -23,12 +23,17 @@ if sys.version_info >= (3, 5):
     import typing
 
 
-def printCommand(*args, cwd=None, **kwargs):
+def printCommand(arg1: "typing.Union[str, typing.Tuple, typing.List]", *args, cwd=None, **kwargs):
     yellow = "\x1b[1;33m"
     endColour = "\x1b[0m"  # reset
+    # also allow passing a single string
+    if not type(arg1) is str:
+        allArgs = tuple(map(shlex.quote, arg1))
+        arg1 = allArgs[0]
+        args = allArgs[1:]
     newArgs = (yellow + "cd", shlex.quote(str(cwd)), "&&") if cwd else tuple()
     # comma in tuple is required otherwise it creates a tuple of string chars
-    newArgs += (yellow + args[0],) + args[1:] + (endColour,)
+    newArgs += (yellow + arg1,) + args + (endColour,)
     print(*newArgs, flush=True, **kwargs)
 
 
@@ -38,8 +43,7 @@ def runCmd(*args, captureOutput=False, **kwargs):
     else:
         cmdline = args[0]  # list was passed
     cmdline = list(map(str, cmdline))  # make sure they are all strings
-    cmdShellEscaped = " ".join(map(shlex.quote, cmdline))
-    printCommand(cmdShellEscaped, cwd=kwargs.get("cwd"))
+    printCommand(cmdline, cwd=kwargs.get("cwd"))
     kwargs["cwd"] = str(kwargs["cwd"]) if "cwd" in kwargs else os.getcwd()
     if not cheriConfig.pretend:
         # print(cmdline, kwargs)
