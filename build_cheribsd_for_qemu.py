@@ -22,6 +22,9 @@ if sys.version_info < (3, 4):
 if sys.version_info >= (3, 5):
     import typing
 
+IS_LINUX = sys.platform.startswith("linux")
+IS_FREEBSD = sys.platform.startswith("freebsd")
+
 
 def printCommand(arg1: "typing.Union[str, typing.Tuple, typing.List]", *args, cwd=None, **kwargs):
     yellow = "\x1b[1;33m"
@@ -305,7 +308,7 @@ class BuildQEMU(Project):
         super().__init__("qemu", config, installDir=config.sdkDir,
                          gitUrl="https://github.com/CTSRD-CHERI/qemu.git")
         # QEMU will not work with BSD make, need GNU make
-        self.makeCommand = "gmake"
+        self.makeCommand = "gmake" if IS_FREEBSD else "make"
         self.configureCommand = self.sourceDir / "configure"
         self.configureArgs = ["--target-list=cheri-softmmu",
                               "--disable-linux-user",
