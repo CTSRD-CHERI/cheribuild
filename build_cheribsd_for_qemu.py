@@ -404,7 +404,8 @@ class BuildCHERIBSD(Project):
             fatalError("CHERI CC does not exist: " + str(cheriCC))
         self.commonMakeArgs = [
             "make", "CHERI=256", "CHERI_CC=" + str(cheriCC),
-            # "CPUTYPE=mips64", # mipsfpu for hardware float (apparently no longer supported: https://github.com/CTSRD-CHERI/cheribsd/issues/102)
+            # "CPUTYPE=mips64", # mipsfpu for hardware float
+            # (apparently no longer supported: https://github.com/CTSRD-CHERI/cheribsd/issues/102)
             "-DDB_FROM_SRC",  # don't use the system passwd file
             "-DNO_ROOT",  # -DNO_ROOT install without using root privilege
             "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
@@ -572,6 +573,7 @@ class BuildSDK(Project):
         if not (self.config.sdkSysrootDir / "lib/libc.so.7").is_file():
             fatalError(self.config.sdkSysrootDir, "is missing the libc library, install seems to have failed!")
         print("Successfully populated sysroot")
+
 
 class LaunchQEMU(Project):
     def __init__(self, config):
