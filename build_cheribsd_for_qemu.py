@@ -312,11 +312,16 @@ class BuildQEMU(Project):
         self.configureCommand = self.sourceDir / "configure"
         self.configureArgs = ["--target-list=cheri-softmmu,i386-softmmu,x86_64-softmmu",
                               "--disable-linux-user",
-                              "--disable-linux-aio",
-                              "--disable-kvm",
+                              "--disable-bsd-user",
                               "--disable-xen",
                               "--extra-cflags=-g",
                               "--prefix=" + str(self.installDir)]
+        if IS_LINUX:
+            # "--enable-libnfs", # version on Ubuntu 14.04 is too old? is it needed?
+            self.configureArgs += ["--enable-kvm", "--enable-linux-aio", "--enable-vte", "--enable-sdl",
+                                   "--with-sdlabi=2.0", "--enable-virtfs"]
+        else:
+            self.configureArgs += ["--disable-linux-aio", "--disable-kvm"]
 
     def update(self):
         # the build sometimes modifies the po/ subdirectory
