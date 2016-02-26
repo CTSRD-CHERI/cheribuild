@@ -632,4 +632,8 @@ def main():
 
 if __name__ == "__main__":
     cheriConfig = CheriConfig()
-    main()
+    try:
+        main()
+    except subprocess.CalledProcessError:
+        # no need for the full traceback here
+        print(sys.exc_info()[1])
