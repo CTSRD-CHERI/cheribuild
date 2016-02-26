@@ -660,6 +660,8 @@ if __name__ == "__main__":
     cheriConfig = CheriConfig()
     try:
         main()
+    except KeyboardInterrupt:
+        sys.exit("Exiting due to Ctrl+C")
     except subprocess.CalledProcessError:
         # no need for the full traceback here
         print(sys.exc_info()[1])
