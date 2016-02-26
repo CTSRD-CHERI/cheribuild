@@ -10,6 +10,7 @@ import pprint
 import time
 import difflib
 import io
+import json
 from pathlib import Path
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
@@ -73,6 +74,15 @@ class CheriConfig(object):
             return argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0])
 
         self._parser = argparse.ArgumentParser(formatter_class=formatterSetup)
+        self._options = []  # type: typing.List[argparse.Action]
+        self._json = {}  # type: typing.Dict[str, str]
+        try:
+            configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+            self._configPath = Path(configdir, "cheribuild.json")
+            with self._configPath.open("r", encoding="utf-8") as f:
+                self._json = json.load(f)
+        except IOError:
+            print("Could not load config file", self._configPath)
 
         _pretend = self._addBoolOption("pretend", "p",
                                        help="Print the commands that would be run instead of executing them")
@@ -146,6 +156,7 @@ class CheriConfig(object):
             action = self._parser.add_argument("--" + name, **kwargs)
         assert isinstance(action, argparse.Action)
         # print("add option:", vars(action))
+        self._options.append(action)
         return action
 
     def _addBoolOption(self, name: str, shortname=None, **kwargs) -> argparse.Action:
@@ -154,8 +165,16 @@ class CheriConfig(object):
     def _loadOption(self, action: argparse.Action, default=None) -> argparse.Action:
         assert hasattr(self._options, action.dest)
         result = getattr(self._options, action.dest)
-        # print(action.dest, "=", result, "default =", default)
-        return default if result is None else result
+        if not default:
+            default = action.default
+        if not result:
+            result = default
+        # override default options from the JSON file
+        fromJSON = self._json.get(action.dest, None)
+        if fromJSON and result == default:
+            print("Overriding default value for", action.dest, "with value from JSON:", fromJSON)
+            result = fromJSON
+        return result
 
 
 class Project(object):
