@@ -96,7 +96,7 @@ class ConfigLoader(object):
         return cls._parsedArgs.targets
 
     @classmethod
-    def addOption(cls, name: str, shortname=None, default=None, **kwargs):
+    def addOption(cls, name: str, shortname=None, default=None, type=None, **kwargs):
         if default and not hasattr(default, '__call__') and "help" in kwargs:
             # only add the default string if it is not lambda
             kwargs["help"] = kwargs["help"] + " (default: \'" + str(default) + "\')"
@@ -106,22 +106,24 @@ class ConfigLoader(object):
             action = cls._parser.add_argument("--" + name, **kwargs)
         assert isinstance(action, argparse.Action)
         assert not action.default  # we handle the default value manually
-        result = cls(action, default)
+        assert not action.type  # we handle the type of the value manually
+        result = cls(action, default, type)
         cls.options.append(result)
         return result
 
     @classmethod
     def addBoolOption(cls, name: str, shortname=None, **kwargs) -> bool:
         kwargs["default"] = False
-        return cls.addOption(name, shortname, action="store_true", **kwargs)
+        return cls.addOption(name, shortname, action="store_true", type=bool, **kwargs)
 
     @classmethod
     def addPathOption(cls, name: str, shortname=None, **kwargs) -> Path:
         return cls.addOption(name, shortname, type=Path, **kwargs)
 
-    def __init__(self, action: argparse.Action, default):
+    def __init__(self, action: argparse.Action, default, valueType):
         self.action = action
         self.default = default
+        self.valueType = valueType
         self._cached = None
         pass
 
@@ -142,8 +144,7 @@ class ConfigLoader(object):
         if fromJSON and isDefault:
             print("Overriding default value for", self.action.dest, "with value from JSON:", fromJSON)
             result = fromJSON
-        configType = self.action.type or str
-        result = configType(result)
+        result = self.valueType(result)  # make sure it has the right type (e.g. Path, int, bool, str)
 
         ConfigLoader.values[self.action.dest] = result  # just for debugging
         return result
@@ -672,7 +673,7 @@ def main():
         selectedTargets = allTargetNames
     # make sure all targets passed on commandline exist
     invalidTargets = set(selectedTargets) - set(allTargetNames)
-    if invalidTargets or cheriConfig.listTargets:
+    if len(invalidTargets) > 0 or cheriConfig.listTargets:
         for t in invalidTargets:
             print("Invalid target", t)
         print("The following targets exist:", list(allTargetNames))
