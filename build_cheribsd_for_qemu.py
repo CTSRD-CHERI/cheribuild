@@ -456,6 +456,8 @@ class BuildCHERIBSD(Project):
             sys.stdout.buffer.flush()
 
     def compile(self):
+        if not IS_FREEBSD:
+            fatalError("Can't build CHERIBSD on a non-FreeBSD host!")
         os.environ["MAKEOBJDIRPREFIX"] = str(self.buildDir)
         # make sure the new binutils are picked up
         if not os.environ["PATH"].startswith(str(self.config.sdkDir)):
