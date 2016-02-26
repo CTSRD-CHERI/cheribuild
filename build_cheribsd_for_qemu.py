@@ -11,6 +11,7 @@ import time
 import difflib
 import io
 import json
+from collections import OrderedDict
 from pathlib import Path
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
@@ -68,62 +69,127 @@ def fatalError(*args):
         sys.exit(" ".join(map(str, args)))
 
 
-class CheriConfig(object):
-    def __init__(self):
-        def formatterSetup(prog):
-            return argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0])
+class ConfigLoader(object):
+    _parser = argparse.ArgumentParser(formatter_class=
+                                      lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
+    options = []
+    _parsedArgs = None
+    _JSON = {}  # type: dict
+    values = OrderedDict()
 
-        self._parser = argparse.ArgumentParser(formatter_class=formatterSetup)
-        self._options = []  # type: typing.List[argparse.Action]
-        self._json = {}  # type: typing.Dict[str, str]
+    @classmethod
+    def loadTargets(cls) -> list:
+        """
+        Loads the configuration from the command line and the JSON file
+        :return The targets to build
+        """
+        cls._parser.add_argument("targets", metavar="TARGET", type=str, nargs="*",
+                                 help="The targets to build", default=["all"])
+        cls._parsedArgs = cls._parser.parse_args()
         try:
             configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
-            self._configPath = Path(configdir, "cheribuild.json")
-            with self._configPath.open("r", encoding="utf-8") as f:
-                self._json = json.load(f)
+            cls._configPath = Path(configdir, "cheribuild.json")
+            with cls._configPath.open("r") as f:
+                cls._JSON = json.load(f, encoding="utf-8")
         except IOError:
-            print("Could not load config file", self._configPath)
+            print("Could not load config file", cls._configPath)
+        return cls._parsedArgs.targets
 
-        _pretend = self._addBoolOption("pretend", "p",
-                                       help="Print the commands that would be run instead of executing them")
-        _quiet = self._addBoolOption("quiet", "q", help="Don't show stdout of the commands that are executed")
-        _clean = self._addBoolOption("clean", "c", help="Remove the build directory before build")
-        _skipUpdate = self._addBoolOption("skip-update", help="Skip the git pull step")
-        _skipConfigure = self._addBoolOption("skip-configure", help="Skip the configure step")
-        _listTargets = self._addBoolOption("list-targets", help="List all available targets and exit")
+    @classmethod
+    def addOption(cls, name: str, shortname=None, default=None, **kwargs):
+        if default and not hasattr(default, '__call__') and "help" in kwargs:
+            # only add the default string if it is not lambda
+            kwargs["help"] = kwargs["help"] + " (default: \'" + str(default) + "\')"
+        if shortname:
+            action = cls._parser.add_argument("--" + name, "-" + shortname, **kwargs)
+        else:
+            action = cls._parser.add_argument("--" + name, **kwargs)
+        assert isinstance(action, argparse.Action)
+        assert not action.default  # we handle the default value manually
+        result = cls(action, default)
+        cls.options.append(result)
+        return result
 
-        _sourceRoot = self._addOption("source-root", default=DEFAULT_SOURCE_ROOT,
-                                      help="The directory to store all sources")
-        _outputRoot = self._addOption("output-root",
-                                      help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
-        _extraFiles = self._addOption("extra-files", help="A directory with additional files that will be added to the"
-                                      " image (default: '<OUTPUT_ROOT>/extra-files')")
-        _diskImage = self._addOption("disk-image-path",
-                                     help="The output path for the QEMU disk image (default: '<OUTPUT_ROOT>/disk.img')")
+    @classmethod
+    def addBoolOption(cls, name: str, shortname=None, **kwargs) -> bool:
+        kwargs["default"] = False
+        return cls.addOption(name, shortname, action="store_true", **kwargs)
 
-        _makeJobs = self._addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
-                                    help="Number of jobs to use for compiling")
+    @classmethod
+    def addPathOption(cls, name: str, shortname=None, **kwargs) -> Path:
+        return cls.addOption(name, shortname, type=Path, **kwargs)
 
-        self._parser.add_argument("targets", metavar="TARGET", type=str, nargs="*",
-                                  help="The targets to build", default=["all"])
+    def __init__(self, action: argparse.Action, default):
+        self.action = action
+        self.default = default
+        self._cached = None
+        pass
 
-        self._options = self._parser.parse_args()
-        # TODO: load from config file
-        # TODO: this can probably be made a lot simpler using lazy evaluation
-        self.pretend = bool(self._loadOption(_pretend))
-        self.quiet = bool(self._loadOption(_quiet))
-        self.clean = bool(self._loadOption(_clean))
-        self.skipUpdate = bool(self._loadOption(_skipUpdate))
-        self.skipConfigure = bool(self._loadOption(_skipConfigure))
-        self.listTargets = bool(self._loadOption(_listTargets))
-        # path config options
-        self.sourceRoot = Path(self._loadOption(_sourceRoot))
-        self.outputRoot = Path(self._loadOption(_outputRoot, self.sourceRoot / "output"))
-        self.extraFiles = Path(self._loadOption(_extraFiles, self.sourceRoot / "extra-files"))
-        self.diskImage = Path(self._loadOption(_diskImage, self.outputRoot / "disk.img"))
+    def _loadOption(self, config: "CheriConfig"):
+        assert self._parsedArgs  # load() must have been called before using this object
+        assert hasattr(self._parsedArgs, self.action.dest)
+        isDefault = False
+        result = getattr(self._parsedArgs, self.action.dest)
+        if not result:
+            isDefault = True
+            # allow lambdas as default values
+            if hasattr(self.default, '__call__'):
+                result = self.default(config)
+            else:
+                result = self.default
+        # override default options from the JSON file
+        fromJSON = self._JSON.get(self.action.dest, None)
+        if fromJSON and isDefault:
+            print("Overriding default value for", self.action.dest, "with value from JSON:", fromJSON)
+            result = fromJSON
+        configType = self.action.type or str
+        result = configType(result)
 
-        self.makeJFlag = "-j" + str(self._loadOption(_makeJobs))
-        self.targets = list(self._options.targets)
+        ConfigLoader.values[self.action.dest] = result  # just for debugging
+        return result
+
+    def __get__(self, instance: "CheriConfig", owner):
+        if not self._cached:
+            self._cached = self._loadOption(instance)
+        return self._cached
+
+
+def defaultNumberOfMakeJobs():
+    makeJobs = os.cpu_count()
+    if makeJobs > 24:
+        # don't use up all the resources on shared build systems
+        # (you can still override this with the -j command line option)
+        makeJobs = 16
+    return makeJobs
+
+
+class CheriConfig(object):
+    # boolean flags
+    pretend = ConfigLoader.addBoolOption("pretend", "p", help="Only print the commands instead of running them")
+    quiet = ConfigLoader.addBoolOption("quiet", "q", help="Don't show stdout of the commands that are executed")
+    clean = ConfigLoader.addBoolOption("clean", "c", help="Remove the build directory before build")
+    skipUpdate = ConfigLoader.addBoolOption("skip-update", help="Skip the git pull step")
+    skipConfigure = ConfigLoader.addBoolOption("skip-configure", help="Skip the configure step")
+    listTargets = ConfigLoader.addBoolOption("list-targets", help="List all available targets and exit")
+
+    # configurable paths
+    sourceRoot = ConfigLoader.addPathOption("source-root", default=DEFAULT_SOURCE_ROOT,
+                                            help="The directory to store all sources")
+    outputRoot = ConfigLoader.addPathOption("output-root", default=lambda self: (self.sourceRoot / "output"),
+                                            help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
+    extraFiles = ConfigLoader.addPathOption("extra-files", default=lambda self: (self.sourceRoot / "extra-files"),
+                                            help="A directory with additional files that will be added to the image "
+                                                 "(default: '<OUTPUT_ROOT>/extra-files')")
+    diskImage = ConfigLoader.addPathOption("disk-image-path", default=lambda self: (self.outputRoot / "disk.img"),
+                                           help="The output path for the QEMU disk image "
+                                                "(default: '<OUTPUT_ROOT>/disk.img')")
+    # other options
+    makeJobs = ConfigLoader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
+                                      help="Number of jobs to use for compiling")  # type: int
+
+    def __init__(self):
+        self.targets = ConfigLoader.loadTargets()
+        self.makeJFlag = "-j" + str(self.makeJobs)
 
         print("Sources will be stored in", self.sourceRoot)
         print("Build artifacts will be stored in", self.outputRoot)
@@ -142,39 +208,10 @@ class CheriConfig(object):
                 printCommand("mkdir", "-p", str(d))
                 os.makedirs(str(d), exist_ok=True)
 
-        del self._options
-        del self._parser
-        pprint.pprint(vars(self))
-
-    def _addOption(self, name: str, shortname=None, default=None, **kwargs) -> argparse.Action:
-        if default and "help" in kwargs:
-            kwargs["help"] = kwargs["help"] + " (default: \'" + str(default) + "\')"
-            kwargs["default"] = default
-        if shortname:
-            action = self._parser.add_argument("--" + name, "-" + shortname, **kwargs)
-        else:
-            action = self._parser.add_argument("--" + name, **kwargs)
-        assert isinstance(action, argparse.Action)
-        # print("add option:", vars(action))
-        self._options.append(action)
-        return action
-
-    def _addBoolOption(self, name: str, shortname=None, **kwargs) -> argparse.Action:
-        return self._addOption(name, shortname, action="store_true", **kwargs)
-
-    def _loadOption(self, action: argparse.Action, default=None) -> argparse.Action:
-        assert hasattr(self._options, action.dest)
-        result = getattr(self._options, action.dest)
-        if not default:
-            default = action.default
-        if not result:
-            result = default
-        # override default options from the JSON file
-        fromJSON = self._json.get(action.dest, None)
-        if fromJSON and result == default:
-            print("Overriding default value for", action.dest, "with value from JSON:", fromJSON)
-            result = fromJSON
-        return result
+        # for debugging purposes print all the options
+        for i in ConfigLoader.options:
+            i.__get__(self, CheriConfig)  # for loading of lazy value
+        pprint.pprint(ConfigLoader.values)
 
 
 class Project(object):
@@ -616,15 +653,6 @@ class LaunchQEMU(Project):
                 "-net", "nic", "-net", "user",
                 "-redir", "tcp:9999::22",  # bind the qemu ssh port to the hosts port 9999
                 ], stdout=sys.stdout)  # even with --quiet we want stdout here
-
-
-def defaultNumberOfMakeJobs():
-    makeJobs = os.cpu_count()
-    if makeJobs > 24:
-        # don't use up all the resources on shared build systems
-        # (you can still override this with the -j command line option)
-        makeJobs = 16
-    return makeJobs
 
 
 def main():
