@@ -1,0 +1,7 @@
+# Custom /etc/fstab for FreeBSD VM images
+/dev/gpt/rootfs              /                 ufs      rw  1  1
+/dev/gpt/swapfs              none              swap     sw  0  0
+fdesc                        /dev/fd           fdescfs  rw  0  0
+tmpfs                        /tmp              tmpfs    rw  0  0
+192.168.122.1:/build/cheri   /mnt/build_output nfs      rw  0  0
+192.168.122.1:/sources/ctsrd /mnt/sources      nfs      rw  0  0
