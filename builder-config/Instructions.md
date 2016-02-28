@@ -135,10 +135,9 @@ Sample XML (not sure which of this is needed):
 
 ## Using a serial console with a VM managed by virt-manager
 
-`echo 'console="comconsole"' >> /boot/loader.conf` to use serial console
+In the VM execute `echo 'console="comconsole"' >> /boot/loader.conf` to use serial console
 
-after that you can access the console using a console with GNU screen
-
+after that you can access the console using a console with GNU screen.
 `virsh dumpxml freebsd-builder | grep pty` will output the right pty to use:
 e.g. `<console type='pty' tty='/dev/pts/2'>`. Then you can connect to the VM
 using `screen /dev/pts/2 19200` and interact with it over a normal console
@@ -148,10 +147,29 @@ with recent versios of screen
 
 
 
-
-
 # enabling networking
 
+Set virtmanager to use virtio for disks and network. Use the default network bridge
+so that
+
+In the VM `/etc/rc.conf` have a least the following lines:
+
+```bash
+# use cheribsd-builder as the hostname
+hostname="cheribsd-builder"
+# tell FreeBSD to use em0 as the name for the first virtio network
+# which is the one bridged to the host adapter
+# this should allow outgoing traffic, but connections to the VM only from the host!!
+ifconfig_vtnet0_name="em0"
+# Use DHCP setup for the virtio network
+ifconfig_em0="DHCP"
+# Use a UK keyboard layout because I have a UK keyboard
+keymap="uk.iso"
+# enable SSH (TODO: set up another user to allow connections from the host)
+sshd_enable="YES"
+# Not sure if this is required but I have /tmp as a tmpfs in my /etc/fstab
+tmpfs="YES"
+```
 
 # Installing stuff:
 
@@ -169,8 +187,6 @@ touch ~/.vimrc
 pkg install python3    # to run the build scripts
 # pkg install plan9port  # for QEMU file shares (doesn't seem to work, I'll use nfs instead)
 ```
-
-
 
 # manual stuff...
 
