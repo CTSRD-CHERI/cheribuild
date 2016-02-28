@@ -157,9 +157,13 @@ TL;DR: Run `screen $(virsh ttyconsole cheribsd-builder)` as root and use `Ctrl+a
 
 **TODO: should probably use SSH**
 
+# mounting the disk image as a local filesystem:
+http://www.rushiagr.com/blog/2014/08/02/qcow2-mount/
 
 
 # enabling networking
+
+See [libvirt wiki](http://wiki.libvirt.org/page/VirtualNetworking)
 
 Set virtmanager to use virtio for disks and network. Use the default network bridge
 so that
@@ -219,6 +223,55 @@ mount -t fdescfs fdesc /dev/fd
 echo "fdesc   /dev/fd         fdescfs         rw      0       0" >> /etc/fstab
 ```
 
-# OLD STUFF
 
-DOESN'T WORK: needs br0 device: To enable networking add the line `allow all` to `/etc/qemu/bridge.conf` (so that current user can access the default network bridge
+# enabling NFS shares:
+
+E.g. on [openSuSE](http://www.unixmen.com/setup-nfs-server-on-opensuse-42-1/)
+
+Create `/etc/exports` with content like this:
+```
+# map all NFS requests to uid=alex,gid=users
+/build/cheri    192.168.122.0/24(rw,async,no_subtree_check,all_squash,anonuid=1000,anongid=100)
+# make sure this one is sync so that we don't get corruption (with the build dir it doesn't matter)
+/sources/ctsrd  192.168.122.0/24(rw,sync,no_subtree_check,all_squash,anonuid=1000,anongid=100)
+```
+
+Make sure that the virtual bridge can access the host computer
+
+On openSuSE this requires adding `virbr0` to the SuSEfirewall "Internal Zone"
+
+This can be done by setting `FW_DEV_INT="virbr0"` in `/etc/sysconfig/SuSEfirewall2`
+this seems to have broken the VM DHCP ....
+
+# Setting up NFS shares to mount CHERIBSD VM
+
+https://www.freebsd.org/doc/handbook/network-nfs.html
+
+```bash
+echo 'nfs_client_enable="YES"' >> /etc/rc.conf
+service nfsclient start
+mkdir -p /mnt/build_output
+mount 192.168.122.1:/build/cheri /mnt/build_output
+mkdir -p /mnt/sources
+mount 192.168.122.1:/sources/ctsrd /mnt/sources
+# check if write access works
+echo test >  /mnt/sources/test
+echo test >  /mnt/build_output/test
+# add it to fstab
+echo "192.168.122.1:/build/cheri    /mnt/build_output  nfs   rw  0  0" >> /etc/fstab
+echo "192.168.122.1:/sources/ctsrd  /mnt/sources       nfs   rw  0  0" >> /etc/fstab
+```
+
+
+# FSTAB:
+
+
+```
+# Custom /etc/fstab for FreeBSD VM images
+/dev/gpt/rootfs              /                 ufs      rw  1  1
+/dev/gpt/swapfs              none              swap     sw  0  0
+fdesc                        /dev/fd           fdescfs  rw  0  0
+tmpfs                        /tmp              tmpfs    rw  0  0
+192.168.122.1:/build/cheri   /mnt/build_output nfs      rw  0  0
+192.168.122.1:/sources/ctsrd /mnt/sources      nfs      rw  0  0
+```
