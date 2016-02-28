@@ -142,11 +142,18 @@ after that you can access the console using a console with GNU screen.
 e.g. `<console type='pty' tty='/dev/pts/2'>`. **NOTE: The pty number will be
 different on every new VM launch!**
 
+A better way of getting the console is `virsh ttyconsole cheribsd-builder`
+
 Then you can connect to the VM using `screen /dev/pts/2 19200` and interact
 with it over a normal console instead of the virt-manager GUI console that
 doesn't allow copy paste, etc.
 The 19200 is the baud rate for the serial and it seems to me it can be omitted
 with recent versios of screen
+
+You can also use `virsh console cheribsd-builder` but that console is not as good
+as it seems to be limited to 80x24 and handles input weirdly
+
+TL;DR: Run `screen $(virsh ttyconsole cheribsd-builder)` as root and use `Ctrl+a, d` to disconnect
 
 **TODO: should probably use SSH**
 
@@ -161,7 +168,7 @@ In the VM `/etc/rc.conf` have a least the following lines:
 
 ```bash
 # use cheribsd-builder as the hostname
-hostname="cheribsd-builder"
+hostname="cheribsd-builder.local.vm"
 # tell FreeBSD to use em0 as the name for the first virtio network
 # which is the one bridged to the host adapter
 # this should allow outgoing traffic, but connections to the VM only from the host!!
@@ -176,9 +183,15 @@ sshd_enable="YES"
 tmpfs="YES"
 ```
 
-# disabling sendmail listening:
+# disabling sendmail listening on external interfaces:
 
 http://lifeisabug.com/configure-sendmail-on-freebsd-to-only-accept-local-mail-for-hostnames-in-etc-mail-local-host-names/
+
+Add `sendmail_enable="NO"` to `/etc/rc.conf`
+Also make sure that you have hostname set to e.g. `hostname="cheribsd-builder.local.vm"` as sendmail will wait
+for ages during boot if there is no FQDN, so just use .local as the domain name.
+
+
 
 # Installing stuff:
 
