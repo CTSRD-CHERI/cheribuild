@@ -138,12 +138,17 @@ Sample XML (not sure which of this is needed):
 In the VM execute `echo 'console="comconsole"' >> /boot/loader.conf` to use serial console
 
 after that you can access the console using a console with GNU screen.
-`virsh dumpxml freebsd-builder | grep pty` will output the right pty to use:
-e.g. `<console type='pty' tty='/dev/pts/2'>`. Then you can connect to the VM
-using `screen /dev/pts/2 19200` and interact with it over a normal console
-instead of the virt-manager GUI console that doesn't allow copy paste, etc.
+`virsh dumpxml cheribsd-builder | grep pty` will output the right pty to use:
+e.g. `<console type='pty' tty='/dev/pts/2'>`. **NOTE: The pty number will be
+different on every new VM launch!**
+
+Then you can connect to the VM using `screen /dev/pts/2 19200` and interact
+with it over a normal console instead of the virt-manager GUI console that
+doesn't allow copy paste, etc.
 The 19200 is the baud rate for the serial and it seems to me it can be omitted
 with recent versios of screen
+
+**TODO: should probably use SSH**
 
 
 
@@ -171,16 +176,20 @@ sshd_enable="YES"
 tmpfs="YES"
 ```
 
+# disabling sendmail listening:
+
+http://lifeisabug.com/configure-sendmail-on-freebsd-to-only-accept-local-mail-for-hostnames-in-etc-mail-local-host-names/
+
 # Installing stuff:
 
 
 ```bash
 pkg install git
-pkg install bash      # not really necessary but I'm used to it
-mount -t fdescfs fdesc /dev/fd
-# permanently add fsdescfs to fstab:
-echo "fdesc   /dev/fd         fdescfs         rw      0       0" >> /etc/fstab
+# setup TMPFS
+mkdir -p /tmp
+mount -t tmpfs fdesc /dev/fd
 echo "tmpfs   /tmp            tmpfs           rw      0       0" >> /etc/fstab
+
 pkg install vim-lite   # because vi is much harder to use than vim
 # echo "set number" >> ~/.vimrc
 touch ~/.vimrc
@@ -188,30 +197,15 @@ pkg install python3    # to run the build scripts
 # pkg install plan9port  # for QEMU file shares (doesn't seem to work, I'll use nfs instead)
 ```
 
-# manual stuff...
-
-DOESN'T WORK: needs br0 device: To enable networking add the line `allow all` to `/etc/qemu/bridge.conf` (so that current user can access the default network bridge
-
-
-You can't use the -nographic mode of QEMU with the default FreeBSD image as the serial console is not enabled by default:
-
-`echo 'console="comconsole"' >> /boot/loader.conf` (https://www.freebsd.org/doc/handbook/serialconsole-setup.html)
-
-after that you can use the -nographic mode
-
-To enable a network use bsdconfig to set hostname and enable DHCP on the default NIC or edit /etc/rc.conf and add
+## optional stuff:
 
 ```bash
-tmpfs="YES"
-# TODO: is this (using .local) correct? sendmail complains if there is no FQDN, or can I somehow stop sendmail from complaining?
-hostname="cheribsd-builder.local"
-ifconfig_em0="DHCP"
-sshd_enable="YES"
-keymap="uk.iso" # for UK keyboard
+pkg install bash      # not really necessary but I'm used to it
+mount -t fdescfs fdesc /dev/fd
+# permanently add fsdescfs to fstab (required by bash):
+echo "fdesc   /dev/fd         fdescfs         rw      0       0" >> /etc/fstab
 ```
 
-Next install all the required stuff
-```
-pkg install git
+# OLD STUFF
 
-```
+DOESN'T WORK: needs br0 device: To enable networking add the line `allow all` to `/etc/qemu/bridge.conf` (so that current user can access the default network bridge
