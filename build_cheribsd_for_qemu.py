@@ -492,11 +492,9 @@ class BuildCHERIBSD(Project):
             "DEBUG_FLAGS=-g",  # enable debug stuff
             "DESTDIR=" + str(self.installDir),
             "KERNCONF=CHERI_MALTA64",
-            # "-DNO_CLEAN", # don't clean before (takes ages) and the rm -rf we do before should be enough
+            "-DNO_ROOT"  # use this even if current user is root, as without it the METALOG file is not created
         ]
-        if os.getuid() != 0:
-            print("Current user is not root, building/installing with -DNO_ROOT")
-            self.commonMakeArgs.append("-DNO_ROOT") # install without using root privilege
+
         # make sure the old install is purged before building, otherwise we might get strange errors
         # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
         # if we installed as root remove the schg flag from files before cleaning (otherwise rm will fail)
@@ -507,8 +505,8 @@ class BuildCHERIBSD(Project):
                                 "usr/bin/ypchsh", "usr/bin/login", "usr/bin/opieinfo", "usr/bin/opiepasswd",
                                 "usr/bin/passwd", "usr/bin/yppasswd", "usr/bin/su", "usr/bin/crontab",
                                 "usr/lib/librt.so.1", "var/empty")
-
         self._cleanDir(self.installDir, force=True)
+
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld", cwd=self.sourceDir)
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel", cwd=self.sourceDir)
 
