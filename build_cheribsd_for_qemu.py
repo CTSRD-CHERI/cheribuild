@@ -481,7 +481,6 @@ class BuildCHERIBSD(Project):
             # "CPUTYPE=mips64", # mipsfpu for hardware float
             # (apparently no longer supported: https://github.com/CTSRD-CHERI/cheribsd/issues/102)
             "-DDB_FROM_SRC",  # don't use the system passwd file
-            "-DNO_ROOT",  # -DNO_ROOT install without using root privilege
             "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
             "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
             "DEBUG_FLAGS=-g",  # enable debug stuff
@@ -489,6 +488,9 @@ class BuildCHERIBSD(Project):
             "KERNCONF=CHERI_MALTA64",
             # "-DNO_CLEAN", # don't clean before (takes ages) and the rm -rf we do before should be enough
         ]
+        if os.getuid() != 0:
+            print("Current user is not root, building/installing with -DNO_ROOT")
+            self.commonMakeArgs.append("-DNO_ROOT") # install without using root privilege
         # make sure the old install is purged before building, otherwise we might get strange errors
         # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
         self._cleanDir(self.installDir, force=True)
