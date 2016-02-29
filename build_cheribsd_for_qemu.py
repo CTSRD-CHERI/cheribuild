@@ -465,6 +465,12 @@ class BuildCHERIBSD(Project):
             sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
             sys.stdout.buffer.flush()
 
+    def removeSchgFlag(self, *paths: "typing.Iterable[str]"):
+        for i in paths:
+            file = self.config.cheribsdRootfs / i
+            if file.exists():
+                runCmd("chflags", "noschg", str(file))
+
     def compile(self):
         if not IS_FREEBSD:
             fatalError("Can't build CHERIBSD on a non-FreeBSD host!")
@@ -493,6 +499,15 @@ class BuildCHERIBSD(Project):
             self.commonMakeArgs.append("-DNO_ROOT") # install without using root privilege
         # make sure the old install is purged before building, otherwise we might get strange errors
         # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
+        # if we installed as root remove the schg flag from files before cleaning (otherwise rm will fail)
+        if os.getuid() == 0:
+            self.removeSchgFlag("lib/libc.so.7", "lib/libcrypt.so.5", "lib/libthr.so.3",
+                                "libexec/ld-cheri-elf.so.1", "libexec/ld-elf.so.1", "sbin/init",
+                                "usr/bin/chpass", "usr/bin/chsh", "usr/bin/ypchpass", "usr/bin/ypchfn",
+                                "usr/bin/ypchsh", "usr/bin/login", "usr/bin/opieinfo", "usr/bin/opiepasswd",
+                                "usr/bin/passwd", "usr/bin/yppasswd", "usr/bin/su", "usr/bin/crontab",
+                                "usr/lib/librt.so.1", "var/empty")
+
         self._cleanDir(self.installDir, force=True)
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld", cwd=self.sourceDir)
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel", cwd=self.sourceDir)
