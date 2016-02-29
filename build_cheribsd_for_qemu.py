@@ -10,6 +10,7 @@ import pprint
 import time
 import difflib
 import io
+import re
 import json
 from collections import OrderedDict
 from pathlib import Path
@@ -58,7 +59,7 @@ def runCmd(*args, captureOutput=False, **kwargs):
             if cheriConfig.quiet and "stdout" not in kwargs:
                 kwargs["stdout"] = subprocess.DEVNULL
             subprocess.check_call(cmdline, **kwargs)
-    return "" if captureOutput else None
+    return b"" if captureOutput else None
 
 
 def fatalError(*args):
@@ -405,6 +406,15 @@ class BuildLLVM(Project):
         # try to find clang 3.7, otherwise fall back to system clang
         cCompiler = shutil.which("clang37") or "clang"
         cppCompiler = shutil.which("clang++37") or "clang++"
+        # make sure we have at least version 3.7
+        versionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
+        # clang prints this output to stderr
+        versionString = runCmd(cCompiler, "-v", captureOutput=True, stderr=subprocess.STDOUT)
+        match = versionPattern.search(versionString)
+        versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
+        if versionComponents < (3, 7):
+            fatalError("Clang version is too old (need at least 3.7): got", str(versionComponents))
+
         self.configureCommand = "cmake"
         self.configureArgs = [
             self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
