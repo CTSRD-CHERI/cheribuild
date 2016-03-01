@@ -507,11 +507,24 @@ class BuildCHERIBSD(Project):
                                 "usr/lib/librt.so.1", "var/empty")
         self._cleanDir(self.installDir, force=True)
 
+        self.xdevArgs = self.commonMakeArgs.copy()
+        self.xdevArgs.remove("DEBUG_FLAGS=-g")
+        self.xdevArgs.remove("-DNO_CLEAN")
+        self.xdevArgs += ["DESTDIR=" + str(self.config.sdkDir / "xdev-install"),
+                     "MK_BINUTILS_BOOTSTRAP=no",  # don't build the binutils from the cheribsd source tree
+                     "MK_ELFTOOLCHAIN_BOOTSTRAP=no",  # don't build elftoolchain binaries
+                     "xdev-build"
+                     ]
+        self.xdevEnv = os.environ.copy()
+        self.xdevEnv["MAKEOBJDIRPREFIX"] = str(self.config.outputRoot / "xdev-build")
+        # self.runMake(xdevArgs, "xdev", cwd=self.sourceDir)
+        self.runMake(self.xdevArgs, "xdev-build", cwd=self.sourceDir, env=self.xdevEnv)
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld", cwd=self.sourceDir)
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel", cwd=self.sourceDir)
 
     def install(self):
         # don't use multiple jobs here
+        self.runMake(self.xdevArgs, "xdev-install", cwd=self.sourceDir, env=self.xdevEnv)
         self.runMake(self.commonMakeArgs, "installworld", cwd=self.sourceDir)
         self.runMake(self.commonMakeArgs, "installkernel", cwd=self.sourceDir)
         self.runMake(self.commonMakeArgs, "distribution", cwd=self.sourceDir)
