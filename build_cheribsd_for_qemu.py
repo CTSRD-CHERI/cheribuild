@@ -453,6 +453,22 @@ class BuildCHERIBSD(Project):
     def __init__(self, config: CheriConfig):
         super().__init__("cheribsd", config, installDir=config.cheribsdRootfs, buildDir=config.cheribsdObj,
                          gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git")
+        self.binutilsDir = self.config.sdkDir / "mips64/bin"
+        self.cheriCC = self.config.sdkDir / "bin/clang"
+        self.commonMakeArgs = [
+            "make", "CHERI=256", "CHERI_CC=" + str(self.cheriCC),
+            # "CPUTYPE=mips64", # mipsfpu for hardware float
+            # (apparently no longer supported: https://github.com/CTSRD-CHERI/cheribsd/issues/102)
+            "-DDB_FROM_SRC",  # don't use the system passwd file
+            "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
+            "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
+            "DEBUG_FLAGS=-g",  # enable debug stuff
+            "KERNCONF=CHERI_MALTA64",
+            "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
+            "-DCROSS_BINUTILS_PREFIX=" + str(self.binutilsDir),  # use the CHERI-aware binutils and not the builtin ones
+            # TODO: once clang can build the kernel:
+            #  "-DCROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin")
+        ]
 
     def _makeStdoutFilter(self, line):
         if line.startswith(b">>> "):  # major status update
@@ -471,30 +487,22 @@ class BuildCHERIBSD(Project):
             if file.exists():
                 runCmd("chflags", "noschg", str(file))
 
-    def compile(self):
+    def setupEnvironment(self):
         if not IS_FREEBSD:
             fatalError("Can't build CHERIBSD on a non-FreeBSD host!")
         os.environ["MAKEOBJDIRPREFIX"] = str(self.buildDir)
+        printCommand("export MAKEOBJDIRPREFIX=" + str(self.buildDir))
         # make sure the new binutils are picked up
         if not os.environ["PATH"].startswith(str(self.config.sdkDir)):
             os.environ["PATH"] = str(self.config.sdkDir / "bin") + ":" + os.environ["PATH"]
             print("Set PATH to", os.environ["PATH"])
-        cheriCC = self.config.sdkDir / "bin/clang"
-        if not cheriCC.is_file():
-            fatalError("CHERI CC does not exist: " + str(cheriCC))
-        self.commonMakeArgs = [
-            "make", "CHERI=256", "CHERI_CC=" + str(cheriCC),
-            # "CPUTYPE=mips64", # mipsfpu for hardware float
-            # (apparently no longer supported: https://github.com/CTSRD-CHERI/cheribsd/issues/102)
-            "-DDB_FROM_SRC",  # don't use the system passwd file
-            "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
-            "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
-            "DEBUG_FLAGS=-g",  # enable debug stuff
-            "DESTDIR=" + str(self.installDir),
-            "KERNCONF=CHERI_MALTA64",
-            "-DNO_ROOT"  # use this even if current user is root, as without it the METALOG file is not created
-        ]
+        if not self.cheriCC.is_file():
+            fatalError("CHERI CC does not exist: ", self.cheriCC)
+        if not (self.binutilsDir / "nm").is_file():
+            fatalError("CHERI MIPS binutils are missing. Run 'build_cheribsd_for_qemu.py binutils'?")
 
+    def compile(self):
+        self.setupEnvironment()
         # make sure the old install is purged before building, otherwise we might get strange errors
         # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
         # if we installed as root remove the schg flag from files before cleaning (otherwise rm will fail)
@@ -507,27 +515,43 @@ class BuildCHERIBSD(Project):
                                 "usr/lib/librt.so.1", "var/empty")
         self._cleanDir(self.installDir, force=True)
 
-        self.xdevArgs = self.commonMakeArgs.copy()
-        self.xdevArgs.remove("DEBUG_FLAGS=-g")
-        self.xdevArgs.remove("-DNO_CLEAN")
-        self.xdevArgs += ["DESTDIR=" + str(self.config.sdkDir / "xdev-install"),
-                     "MK_BINUTILS_BOOTSTRAP=no",  # don't build the binutils from the cheribsd source tree
-                     "MK_ELFTOOLCHAIN_BOOTSTRAP=no",  # don't build elftoolchain binaries
-                     "xdev-build"
-                     ]
-        self.xdevEnv = os.environ.copy()
-        self.xdevEnv["MAKEOBJDIRPREFIX"] = str(self.config.outputRoot / "xdev-build")
-        # self.runMake(xdevArgs, "xdev", cwd=self.sourceDir)
-        self.runMake(self.xdevArgs, "xdev-build", cwd=self.sourceDir, env=self.xdevEnv)
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld", cwd=self.sourceDir)
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel", cwd=self.sourceDir)
 
     def install(self):
         # don't use multiple jobs here
-        self.runMake(self.xdevArgs, "xdev-install", cwd=self.sourceDir, env=self.xdevEnv)
-        self.runMake(self.commonMakeArgs, "installworld", cwd=self.sourceDir)
-        self.runMake(self.commonMakeArgs, "installkernel", cwd=self.sourceDir)
-        self.runMake(self.commonMakeArgs, "distribution", cwd=self.sourceDir)
+        installArgs = self.commonMakeArgs + ["DESTDIR=" + str(self.installDir)]
+        self.runMake(installArgs, "installworld", cwd=self.sourceDir)
+        self.runMake(installArgs, "installkernel", cwd=self.sourceDir)
+        # install the actual distribution
+        self.runMake(installArgs, "distribution", cwd=self.sourceDir)
+
+
+class BuildNewSDK(BuildCHERIBSD):
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        self.name = "new-sdk"
+        self.installDir = self.config.outputRoot / "xdev-install"
+        self.buildDir = self.config.outputRoot / "xdev-build"
+        # use make xdev-build/xdev-install to create the cross build environment
+        # We don't want debug stuff with the SDK:
+        self.commonMakeArgs.remove("DEBUG_FLAGS=-g")
+        self.commonMakeArgs += [
+            "DESTDIR=" + str(self.installDir),
+            "MK_BINUTILS_BOOTSTRAP=no",  # don't build the binutils from the cheribsd source tree
+            "MK_ELFTOOLCHAIN_BOOTSTRAP=no",  # don't build elftoolchain binaries
+        ]
+
+    def process(self):
+        self.setupEnvironment()
+        self._cleanDir(self.installDir, force=True)  # make sure that the install dir is empty (can cause errors)
+        # for now no parallel make
+        # self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "xdev-build", cwd=self.sourceDir)
+        runCmd(self.commonMakeArgs + ["xdev-build"], cwd=self.sourceDir)
+
+    def install(self):
+        # don't use multiple jobs here
+        runCmd(self.commonMakeArgs + ["xdev-install"], cwd=self.sourceDir)
 
 
 class BuildDiskImage(Project):
@@ -703,6 +727,7 @@ def main():
         BuildQEMU(cheriConfig),
         BuildLLVM(cheriConfig),
         BuildCHERIBSD(cheriConfig),
+        BuildNewSDK(cheriConfig),
         BuildSDK(cheriConfig),
         BuildDiskImage(cheriConfig),
         LaunchQEMU(cheriConfig),
