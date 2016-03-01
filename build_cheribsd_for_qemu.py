@@ -498,7 +498,7 @@ class BuildCHERIBSD(Project):
             print("Set PATH to", os.environ["PATH"])
         if not self.cheriCC.is_file():
             fatalError("CHERI CC does not exist: ", self.cheriCC)
-        if not (self.binutilsDir / "nm").is_file():
+        if not (self.binutilsDir / "as").is_file():
             fatalError("CHERI MIPS binutils are missing. Run 'build_cheribsd_for_qemu.py binutils'?")
 
     def compile(self):
