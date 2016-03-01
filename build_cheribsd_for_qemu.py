@@ -292,7 +292,7 @@ class Project(object):
             with fileLock:
                 outfile.write(errLine)
 
-    def runMake(self, args: "typing.List[str]", makeTarget="", *, cwd: Path=None) -> None:
+    def runMake(self, args: "typing.List[str]", makeTarget="", *, cwd: Path=None, env=None) -> None:
         """
         Runs make and logs the output
         :param args: the make command to run (e.g. ["make", "-j32"])
@@ -320,9 +320,9 @@ class Project(object):
             # quiet doesn't display anything, normal only status updates and verbose everything
             if self.config.quiet:
                 # a lot more efficient than filtering every line
-                subprocess.check_call(allArgs, cwd=str(cwd), stdout=logfile)
+                subprocess.check_call(allArgs, cwd=str(cwd), stdout=logfile, env=env)
                 return
-            make = subprocess.Popen(allArgs, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            make = subprocess.Popen(allArgs, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
             # use a thread to print stderr output and write it to logfile (not using a thread would block)
             logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
             stderrThread = threading.Thread(target=self._handleStdErr, args=(logfile, make.stderr, logfileLock))
