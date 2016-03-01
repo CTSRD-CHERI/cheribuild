@@ -463,7 +463,6 @@ class BuildCHERIBSD(Project):
             "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
             "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
             "DEBUG_FLAGS=-g",  # enable debug stuff
-            "KERNCONF=CHERI_MALTA64",
             "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
             "-DCROSS_BINUTILS_PREFIX=" + str(self.binutilsDir),  # use the CHERI-aware binutils and not the builtin ones
             # TODO: once clang can build the kernel:
@@ -516,13 +515,14 @@ class BuildCHERIBSD(Project):
         self._cleanDir(self.installDir, force=True)
 
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld", cwd=self.sourceDir)
-        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel", cwd=self.sourceDir)
+        self.runMake(self.commonMakeArgs + ["KERNCONF=CHERI_MALTA64", self.config.makeJFlag],
+                     "buildkernel", cwd=self.sourceDir)
 
     def install(self):
         # don't use multiple jobs here
         installArgs = self.commonMakeArgs + ["DESTDIR=" + str(self.installDir)]
         self.runMake(installArgs, "installworld", cwd=self.sourceDir)
-        self.runMake(installArgs, "installkernel", cwd=self.sourceDir)
+        self.runMake(installArgs + ["KERNCONF=CHERI_MALTA64"], "installkernel", cwd=self.sourceDir)
         # install the actual distribution
         self.runMake(installArgs, "distribution", cwd=self.sourceDir)
 
