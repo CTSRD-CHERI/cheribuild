@@ -754,7 +754,7 @@ def main():
         BuildQEMU(cheriConfig),
         BuildLLVM(cheriConfig),
         BuildCHERIBSD(cheriConfig),
-        BuildNfsKernel(cheriConfig),
+        # BuildNfsKernel(cheriConfig),
         # BuildNewSDK(cheriConfig),
         BuildSDK(cheriConfig),
         BuildDiskImage(cheriConfig),
