@@ -450,11 +450,12 @@ class BuildLLVM(Project):
 
 
 class BuildCHERIBSD(Project):
-    def __init__(self, config: CheriConfig):
-        super().__init__("cheribsd", config, installDir=config.cheribsdRootfs, buildDir=config.cheribsdObj,
+    def __init__(self, config: CheriConfig, *, name="cheribsd", kernelConfig="CHERI_MALTA64"):
+        super().__init__(name, config, installDir=config.cheribsdRootfs, buildDir=config.cheribsdObj,
                          gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git")
         self.binutilsDir = self.config.sdkDir / "mips64/bin"
         self.cheriCC = self.config.sdkDir / "bin/clang"
+        self.installAsRoot = os.getuid() == 0
         self.commonMakeArgs = [
             "make", "CHERI=256", "CHERI_CC=" + str(self.cheriCC),
             # "CPUTYPE=mips64", # mipsfpu for hardware float
@@ -467,9 +468,10 @@ class BuildCHERIBSD(Project):
             "-DCROSS_BINUTILS_PREFIX=" + str(self.binutilsDir),  # use the CHERI-aware binutils and not the builtin ones
             # TODO: once clang can build the kernel:
             #  "-DCROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin")
+            "KERNCONF=" + kernelConfig,
         ]
 
-    def _makeStdoutFilter(self, line):
+    def _makeStdoutFilter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
             sys.stdout.buffer.write(self.clearLineSequence)
             sys.stdout.buffer.write(line)
@@ -480,7 +482,7 @@ class BuildCHERIBSD(Project):
             sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
             sys.stdout.buffer.flush()
 
-    def removeSchgFlag(self, *paths: "typing.Iterable[str]"):
+    def _removeSchgFlag(self, *paths: "typing.Iterable[str]"):
         for i in paths:
             file = self.config.cheribsdRootfs / i
             if file.exists():
@@ -499,31 +501,28 @@ class BuildCHERIBSD(Project):
             fatalError("CHERI CC does not exist: ", self.cheriCC)
         if not (self.binutilsDir / "as").is_file():
             fatalError("CHERI MIPS binutils are missing. Run 'build_cheribsd_for_qemu.py binutils'?")
-
-    def compile(self):
-        self.setupEnvironment()
+        if os.getuid() == 0 and self.installAsRoot:
+            self._removeSchgFlag("lib/libc.so.7", "lib/libcrypt.so.5", "lib/libthr.so.3",
+                                 "libexec/ld-cheri-elf.so.1", "libexec/ld-elf.so.1", "sbin/init",
+                                 "usr/bin/chpass", "usr/bin/chsh", "usr/bin/ypchpass", "usr/bin/ypchfn",
+                                 "usr/bin/ypchsh", "usr/bin/login", "usr/bin/opieinfo", "usr/bin/opiepasswd",
+                                 "usr/bin/passwd", "usr/bin/yppasswd", "usr/bin/su", "usr/bin/crontab",
+                                 "usr/lib/librt.so.1", "var/empty")
         # make sure the old install is purged before building, otherwise we might get strange errors
         # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
         # if we installed as root remove the schg flag from files before cleaning (otherwise rm will fail)
-        if os.getuid() == 0:
-            self.removeSchgFlag("lib/libc.so.7", "lib/libcrypt.so.5", "lib/libthr.so.3",
-                                "libexec/ld-cheri-elf.so.1", "libexec/ld-elf.so.1", "sbin/init",
-                                "usr/bin/chpass", "usr/bin/chsh", "usr/bin/ypchpass", "usr/bin/ypchfn",
-                                "usr/bin/ypchsh", "usr/bin/login", "usr/bin/opieinfo", "usr/bin/opiepasswd",
-                                "usr/bin/passwd", "usr/bin/yppasswd", "usr/bin/su", "usr/bin/crontab",
-                                "usr/lib/librt.so.1", "var/empty")
         self._cleanDir(self.installDir, force=True)
 
+    def compile(self):
+        self.setupEnvironment()
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld", cwd=self.sourceDir)
-        self.runMake(self.commonMakeArgs + ["KERNCONF=CHERI_MALTA64", self.config.makeJFlag],
-                     "buildkernel", cwd=self.sourceDir)
+        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel", cwd=self.sourceDir)
 
     def install(self):
         # don't use multiple jobs here
         installArgs = self.commonMakeArgs + ["DESTDIR=" + str(self.installDir)]
         self.runMake(installArgs, "installworld", cwd=self.sourceDir)
-        self.runMake(installArgs + ["KERNCONF=CHERI_MALTA64"], "installkernel", cwd=self.sourceDir)
-        # install the actual distribution
+        self.runMake(installArgs, "installkernel", cwd=self.sourceDir)
         self.runMake(installArgs, "distribution", cwd=self.sourceDir)
 
 
