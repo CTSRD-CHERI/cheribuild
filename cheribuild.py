@@ -878,7 +878,11 @@ class AllTargets(object):
 if __name__ == "__main__":
     cheriConfig = CheriConfig()
     try:
-        AllTargets().run(cheriConfig)
+        targets = AllTargets()
+        if cheriConfig.listTargets:
+            print("Available targets are:", ", ".join(targets.targetMap.keys()))
+        else:
+            targets.run(cheriConfig)
     except KeyboardInterrupt:
         sys.exit("Exiting due to Ctrl+C")
     except subprocess.CalledProcessError as err:
