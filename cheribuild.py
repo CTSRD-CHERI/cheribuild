@@ -13,6 +13,7 @@ import io
 import re
 import json
 from collections import OrderedDict
+from functools import reduce
 from pathlib import Path
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
@@ -752,41 +753,85 @@ class LaunchQEMU(Project):
                 ], stdout=sys.stdout)  # even with --quiet we want stdout here
 
 
-def main():
-    # NOTE: This list must be in the right dependency order
-    allTargets = [
-        BuildBinutils(cheriConfig),
-        BuildQEMU(cheriConfig),
-        BuildLLVM(cheriConfig),
-        BuildCHERIBSD(cheriConfig),
-        # BuildNfsKernel(cheriConfig),
-        # BuildNewSDK(cheriConfig),
-        BuildSDK(cheriConfig),
-        BuildDiskImage(cheriConfig),
-        LaunchQEMU(cheriConfig),
-    ]
-    allTargetNames = [t.name for t in allTargets]
-    selectedTargets = cheriConfig.targets
-    if "all" in cheriConfig.targets:
-        selectedTargets = allTargetNames
-    # make sure all targets passed on commandline exist
-    invalidTargets = set(selectedTargets) - set(allTargetNames)
-    if len(invalidTargets) > 0 or cheriConfig.listTargets:
-        for t in invalidTargets:
-            print("Invalid target", t)
-        print("The following targets exist:", list(allTargetNames))
-        print("target 'all' can be used to build everything")
-        sys.exit()
+# A target that does nothing (used for e.g. the all target)
+class PseudoTarget(Project):
+    def __init__(self):
+        super().__init__(name, config)
 
-    for target in allTargets:
-        if target.name in selectedTargets:
-            target.process()
+    def process(self):
+        pass
+
+
+class Target(object):
+    def __init__(self, name, projectClass, *, dependencies: "typing.Iterable[str]"=[]):
+        self.name = name
+        self.dependencies = set(dependencies )
+        self.projectClass = projectClass
+
+
+class AllTargets(object):
+    def __init__(self):
+        self._allTargets = [
+            Target("binutils", BuildBinutils),
+            Target("qemu", BuildQEMU),
+            Target("llvm", BuildLLVM),
+            Target("cheribsd", BuildCHERIBSD, dependencies=["llvm"]),
+            Target("cheribsd-nfs", BuildNfsKernel, dependencies=["llvm"]),
+            Target("disk-image", BuildDiskImage, dependencies=["cheribsd"]),
+            Target("run", LaunchQEMU, dependencies=["qemu", "disk-image"]),
+            Target("all", PseudoTarget, dependencies=["qemu", "llvm", "cheribsd", "disk-image", "run"]),
+        ]
+        self.targetMap = dict((t.name, t) for t in self._allTargets)
+        for t in self._allTargets:
+            print("target:", t.name, ", deps", self.recursiveDependencyNames(t))
+
+    def recursiveDependencyNames(self, target: Target, existing: set=None):
+        if not existing:
+            existing = set()
+        for dep in target.dependencies:
+            existing.add(dep)
+            self.recursiveDependencyNames(self.targetMap[dep], existing)
+        return existing
+
+    def topologicalSort(self, targets: "typing.List[Target]") -> "typing.Iterable[typing.List[Target]]":
+        # based on http://rosettacode.org/wiki/Topological_sort#Python
+        data = dict((t.name, set(t.dependencies)) for t in targets)
+        # add all the targets that aren't included yet
+        print("toposort data:", data)
+        possiblyMissingDependencies = reduce(set.union, [self.recursiveDependencyNames(t) for t in targets])
+        print("missing deps:", possiblyMissingDependencies)
+        for dep in possiblyMissingDependencies:
+            if dep not in data:
+                data[dep] = self.targetMap[dep].dependencies
+        print("toposort data after adding missing deps:", data)
+
+        while True:
+            ordered = set(item for item, dep in data.items() if not dep)
+            if not ordered:
+                break
+            yield list(sorted(ordered))
+            data = {item: (dep - ordered) for item, dep in data.items()
+                    if item not in ordered}
+        assert not data, "A cyclic dependency exists amongst %r" % data
+
+    def run(self, config: CheriConfig):
+        targetMap = dict((t.name, t) for t in self._allTargets)
+        chosenTargets = []
+        for targetName in config.targets:
+            if targetName not in targetMap:
+                fatalError("Target", targetName, "does not exist. Valid choices are", ",".join(targetMap.keys()))
+                sys.exit(1)
+            chosenTargets.append(targetMap[targetName])
+        # Run all targets in dependency order
+        orderedTargets = self.topologicalSort(chosenTargets)  # type: typing.Iterable[typing.List[Target]]
+        for dependecyLevel, targetNames in enumerate(orderedTargets):
+            print("Level", dependecyLevel, "targets:", targetNames)
 
 
 if __name__ == "__main__":
     cheriConfig = CheriConfig()
     try:
-        main()
+        AllTargets().run(cheriConfig)
     except KeyboardInterrupt:
         sys.exit("Exiting due to Ctrl+C")
     except subprocess.CalledProcessError:
