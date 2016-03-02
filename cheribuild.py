@@ -41,12 +41,15 @@ class AnsiColour(Enum):
     white = 37
 
 
-def coloured(colour: AnsiColour, arg: "typing.Union[str, typing.Iterable[str]]", sep=" "):
+def coloured(colour: AnsiColour, *args, sep=" "):
     startColour = "\x1b[1;" + str(colour.value) + "m"
     endColour = "\x1b[0m"  # reset
-    if isinstance(arg, str):
-        return startColour + arg + endColour
-    return startColour + sep.join(map(str, arg)) + endColour
+    if len(args) == 1:
+        if isinstance(args, str):
+            return startColour + args[0] + endColour
+        return startColour + sep.join(map(str, args[0])) + endColour
+    else:
+        return startColour + sep.join(map(str, args)) + endColour
 
 
 def printCommand(arg1: "typing.Union[str, typing.Tuple, typing.List]", *remainingArgs,
