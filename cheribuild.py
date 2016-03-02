@@ -213,6 +213,9 @@ class CheriConfig(object):
     # other options
     makeJobs = ConfigLoader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
                                       help="Number of jobs to use for compiling")  # type: int
+    sshForwardingPort = ConfigLoader.addOption("ssh-forwarding-port", "s", type=int, default=9999, help="The port to "
+                                               "use on localhost to forward the QEMU ssh port. You can then use "
+                                               "`ssh root@localhost -p $PORT` connect to the VM")  # type: int
 
     def __init__(self):
         self.targets = ConfigLoader.loadTargets()
@@ -770,7 +773,8 @@ class LaunchQEMU(Project):
                 "-m", "2048",  # 2GB memory
                 "-hda", self.config.diskImage,
                 "-net", "nic", "-net", "user",
-                "-redir", "tcp:9999::22",  # bind the qemu ssh port to the hosts port 9999
+                # bind the qemu ssh port to the hosts port 9999
+                "-redir", "tcp:" + str(self.config.sshForwardingPort) + "::22",
                 ], stdout=sys.stdout)  # even with --quiet we want stdout here
 
 
