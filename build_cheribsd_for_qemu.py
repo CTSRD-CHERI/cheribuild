@@ -185,6 +185,9 @@ class CheriConfig(object):
     diskImage = ConfigLoader.addPathOption("disk-image-path", default=lambda self: (self.outputRoot / "disk.img"),
                                            help="The output path for the QEMU disk image "
                                                 "(default: '<OUTPUT_ROOT>/disk.img')")
+    nfsKernelPath = ConfigLoader.addPathOption("nfs-kernel-path", default=lambda p: (p.outputRoot / "nfs/kernel"),
+                                               help="The output path for the CheriBSD kernel that boots over NFS "
+                                                    "(default: '<OUTPUT_ROOT>/nfs/kernel')")
     # other options
     makeJobs = ConfigLoader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
                                       help="Number of jobs to use for compiling")  # type: int
@@ -526,6 +529,25 @@ class BuildCHERIBSD(Project):
         self.runMake(installArgs, "distribution", cwd=self.sourceDir)
 
 
+class BuildNfsKernel(BuildCHERIBSD):
+    def __init__(self, config: CheriConfig):
+        super().__init__(config, name="cheribsd-nfs", kernelConfig="CHERI_MALTA64_NFSROOT")
+        self.installAsRoot = True
+        # we don't want a metalog file, we want all files with right permissions
+        self.commonMakeArgs.remove("-DNO_ROOT")
+        # self.buildDir = self.config.outputRoot / "nfskernel-build"
+        self.installDir = self.config.outputRoot / "nfs/rootfs"
+
+    def install(self):
+        if not os.getuid() == 0:
+            fatalError("Need to be root to build the CHERIBSD NFSROOT")
+        super().install()
+        # Also install the kernel to a separate directory (which in my case is on the host machine):
+        self._makedirs(self.config.nfsKernelPath)
+        installArgs = self.commonMakeArgs + ["DESTDIR=" + str(self.config.nfsKernelPath)]
+        self.runMake(installArgs, "installkernel", cwd=self.sourceDir)
+
+
 class BuildNewSDK(BuildCHERIBSD):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -730,6 +752,7 @@ def main():
         BuildQEMU(cheriConfig),
         BuildLLVM(cheriConfig),
         BuildCHERIBSD(cheriConfig),
+        BuildNfsKernel(cheriConfig),
         BuildNewSDK(cheriConfig),
         BuildSDK(cheriConfig),
         BuildDiskImage(cheriConfig),
