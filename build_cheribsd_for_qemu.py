@@ -368,7 +368,7 @@ class BuildQEMU(Project):
         # QEMU will not work with BSD make, need GNU make
         self.makeCommand = "gmake" if IS_FREEBSD else "make"
         self.configureCommand = self.sourceDir / "configure"
-        self.configureArgs = ["--target-list=cheri-softmmu,i386-softmmu,x86_64-softmmu",
+        self.configureArgs = ["--target-list=cheri-softmmu",
                               "--disable-linux-user",
                               "--disable-bsd-user",
                               "--disable-xen",
