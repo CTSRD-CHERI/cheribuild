@@ -176,7 +176,9 @@ class ConfigLoader(object):
             print(coloured(AnsiColour.blue, "Overriding default value for", jsonKey,
                            "with value from JSON:", fromJSON))
             result = fromJSON
-        result = self.valueType(result)  # make sure it has the right type (e.g. Path, int, bool, str)
+        if result:
+            # make sure we don't call str(None) which would result in "None"
+            result = self.valueType(result)  # make sure it has the right type (e.g. Path, int, bool, str)
 
         ConfigLoader.values[jsonKey] = result  # just for debugging
         return result
