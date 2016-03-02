@@ -791,8 +791,8 @@ class AllTargets(object):
             Target("all", PseudoTarget, dependencies=["qemu", "llvm", "cheribsd", "disk-image", "run"]),
         ]
         self.targetMap = dict((t.name, t) for t in self._allTargets)
-        for t in self._allTargets:
-            print("target:", t.name, ", deps", self.recursiveDependencyNames(t))
+        # for t in self._allTargets:
+        #     print("target:", t.name, ", deps", self.recursiveDependencyNames(t))
 
     def recursiveDependencyNames(self, target: Target, existing: set=None):
         if not existing:
@@ -806,13 +806,10 @@ class AllTargets(object):
         # based on http://rosettacode.org/wiki/Topological_sort#Python
         data = dict((t.name, set(t.dependencies)) for t in targets)
         # add all the targets that aren't included yet
-        print("toposort data:", data)
         possiblyMissingDependencies = reduce(set.union, [self.recursiveDependencyNames(t) for t in targets], set())
-        print("missing deps:", possiblyMissingDependencies)
         for dep in possiblyMissingDependencies:
             if dep not in data:
                 data[dep] = self.targetMap[dep].dependencies
-        print("toposort data after adding missing deps:", data)
 
         while True:
             ordered = set(item for item, dep in data.items() if not dep)
@@ -838,7 +835,7 @@ class AllTargets(object):
             chosenTargets = []
             orderedTargets = self.topologicalSort(explicitlyChosenTargets)  # type: typing.Iterable[typing.List[Target]]
             for dependecyLevel, targetNames in enumerate(orderedTargets):
-                print("Level", dependecyLevel, "targets:", targetNames)
+                # print("Level", dependecyLevel, "targets:", targetNames)
                 chosenTargets.extend(self.targetMap[t] for t in targetNames)
         # now that the chosen targets have been resolved run them
         for target in chosenTargets:
