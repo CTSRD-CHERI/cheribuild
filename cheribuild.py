@@ -163,13 +163,22 @@ class ConfigLoader(object):
             else:
                 result = self.default
         # override default options from the JSON file
-        fromJSON = self._JSON.get(self.action.dest, None)
+        assert self.action.option_strings[0].startswith("--")
+        jsonKey = self.action.option_strings[0][2:]  # strip the initial --
+        fromJSON = self._JSON.get(jsonKey, None)
+        if not fromJSON:
+            # also check action.dest (as a fallback so I don't have to update all my config files right now)
+            fromJSON = self._JSON.get(self.action.dest, None)
+            if fromJSON:
+                print(coloured(AnsiColour.cyan, "Old JSON key", self.action.dest, "used, please use",
+                               jsonKey, "instead"))
         if fromJSON and isDefault:
-            print("Overriding default value for", self.action.dest, "with value from JSON:", fromJSON)
+            print(coloured(AnsiColour.blue, "Overriding default value for", jsonKey,
+                           "with value from JSON:", fromJSON))
             result = fromJSON
         result = self.valueType(result)  # make sure it has the right type (e.g. Path, int, bool, str)
 
-        ConfigLoader.values[self.action.dest] = result  # just for debugging
+        ConfigLoader.values[jsonKey] = result  # just for debugging
         return result
 
     def __get__(self, instance: "CheriConfig", owner):
