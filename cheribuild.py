@@ -758,8 +758,8 @@ class LaunchQEMU(Project):
 
 # A target that does nothing (used for e.g. the all target)
 class PseudoTarget(Project):
-    def __init__(self):
-        super().__init__(name, config)
+    def __init__(self, config):
+        super().__init__("pseudo", config)
 
     def process(self):
         pass
@@ -768,8 +768,14 @@ class PseudoTarget(Project):
 class Target(object):
     def __init__(self, name, projectClass, *, dependencies: "typing.Iterable[str]"=[]):
         self.name = name
-        self.dependencies = set(dependencies )
+        self.dependencies = set(dependencies)
         self.projectClass = projectClass
+
+    def execute(self, config: CheriConfig):
+        # instantiate the project and run it
+        project = self.projectClass(config)
+        project.process()
+        print("Built target '" +  self.name + "'")
 
 
 class AllTargets(object):
