@@ -233,6 +233,18 @@ class CheriConfig(object):
                                                "use on localhost to forward the QEMU ssh port. You can then use "
                                                "`ssh root@localhost -p $PORT` connect to the VM")  # type: int
 
+    # allow overriding the git revisions in case there is a regression
+    cheriBsdRevision = ConfigLoader.addOption("cheribsd-revision", type=str,
+                                              help="The git revision or branch of CHERIBSD to check out")  # type: str
+    llvmRevision = ConfigLoader.addOption("llvm-revision", type=str,
+                                          help="The git revision or branch of LLVM to check out")  # type: str
+    clangRevision = ConfigLoader.addOption("clang-revision", type=str,
+                                           help="The git revision or branch of clang to check out")  # type: str
+    lldbRevision = ConfigLoader.addOption("lldb-revision", type=str,
+                                          help="The git revision or branch of clang to check out")  # type: str
+    qemuRevision = ConfigLoader.addOption("qemu-revision", type=str,
+                                          help="The git revision or branch of QEMU to check out")  # type: str
+
     def __init__(self):
         self.targets = ConfigLoader.loadTargets()
         self.makeJFlag = "-j" + str(self.makeJobs)
@@ -262,9 +274,10 @@ class CheriConfig(object):
 
 class Project(object):
     def __init__(self, name: str, config: CheriConfig, *, sourceDir: Path=None, buildDir: Path=None,
-                 installDir: Path=None, gitUrl=""):
+                 installDir: Path=None, gitUrl="", gitRevision=None):
         self.name = name
         self.gitUrl = gitUrl
+        self.gitRevision = gitRevision
         self.config = config
         self.sourceDir = Path(sourceDir if sourceDir else config.sourceRoot / name)
         self.buildDir = Path(buildDir if buildDir else config.outputRoot / (name + "-build"))
@@ -276,7 +289,7 @@ class Project(object):
         self.clearLineSequence = b"\x1b[2K\r"
 
     @staticmethod
-    def _update_git_repo(srcDir: Path, remoteUrl):
+    def _updateGitRepo(srcDir: Path, remoteUrl, revision=None):
         if not (srcDir / ".git").is_dir():
             print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?")
             if sys.__stdin__.isatty() and input("y/[N]").lower() != "y":
@@ -289,6 +302,8 @@ class Project(object):
         runCmd("git", "pull", "--rebase", cwd=srcDir)
         if hasChanges:
             runCmd("git", "stash", "pop", cwd=srcDir)
+        if revision:
+            runCmd("git", "checkout", revision, cwd=srcDir)
 
     def _makedirs(self, path: Path):
         printCommand("mkdir", "-p", path)
@@ -306,7 +321,7 @@ class Project(object):
         self._makedirs(path)
 
     def update(self):
-        self._update_git_repo(self.sourceDir, self.gitUrl)
+        self._updateGitRepo(self.sourceDir, self.gitUrl, self.gitRevision)
 
     def clean(self):
         # TODO: never use the source dir as a build dir
@@ -408,7 +423,7 @@ class Project(object):
 class BuildQEMU(Project):
     def __init__(self, config: CheriConfig):
         super().__init__("qemu", config, installDir=config.sdkDir,
-                         gitUrl="https://github.com/CTSRD-CHERI/qemu.git")
+                         gitUrl="https://github.com/CTSRD-CHERI/qemu.git", gitRevision=config.qemuRevision)
         # QEMU will not work with BSD make, need GNU make
         self.makeCommand = "gmake" if IS_FREEBSD else "make"
         self.configureCommand = self.sourceDir / "configure"
@@ -476,9 +491,12 @@ class BuildLLVM(Project):
         super()._makeStdoutFilter(line)
 
     def update(self):
-        self._update_git_repo(self.sourceDir, "https://github.com/CTSRD-CHERI/llvm.git")
-        self._update_git_repo(self.sourceDir / "tools/clang", "https://github.com/CTSRD-CHERI/clang.git")
-        self._update_git_repo(self.sourceDir / "tools/lldb", "https://github.com/CTSRD-CHERI/lldb.git")
+        self._updateGitRepo(self.sourceDir, "https://github.com/CTSRD-CHERI/llvm.git",
+                            revision=self.config.llvmRevision)
+        self._updateGitRepo(self.sourceDir / "tools/clang", "https://github.com/CTSRD-CHERI/clang.git",
+                            revision=self.config.clangRevision)
+        self._updateGitRepo(self.sourceDir / "tools/lldb", "https://github.com/CTSRD-CHERI/lldb.git",
+                            revision=self.config.lldbRevision)
 
     def install(self):
         super().install()
@@ -496,7 +514,8 @@ class BuildLLVM(Project):
 class BuildCHERIBSD(Project):
     def __init__(self, config: CheriConfig, *, name="cheribsd", kernelConfig="CHERI_MALTA64"):
         super().__init__(name, config, sourceDir=config.sourceRoot / "cheribsd", installDir=config.cheribsdRootfs,
-                         buildDir=config.cheribsdObj, gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git")
+                         buildDir=config.cheribsdObj, gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git",
+                         gitRevision=config.cheriBsdRevision)
         self.binutilsDir = self.config.sdkDir / "mips64/bin"
         self.cheriCC = self.config.sdkDir / "bin/clang"
         self.cheriCXX = self.config.sdkDir / "bin/clang++"
