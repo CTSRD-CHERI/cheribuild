@@ -550,8 +550,7 @@ class BuildNfsKernel(BuildCHERIBSD):
 
 class BuildNewSDK(BuildCHERIBSD):
     def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.name = "new-sdk"
+        super().__init__(config, name="new-sdk")
         self.installDir = self.config.outputRoot / "xdev-install"
         self.buildDir = self.config.outputRoot / "xdev-build"
         # use make xdev-build/xdev-install to create the cross build environment
@@ -559,9 +558,9 @@ class BuildNewSDK(BuildCHERIBSD):
         self.commonMakeArgs.remove("DEBUG_FLAGS=-g")
         self.commonMakeArgs += [
             "DESTDIR=" + str(self.installDir),
-            "MK_BINUTILS_BOOTSTRAP=yes",  # don't build the binutils from the cheribsd source tree
-            "MK_ELFTOOLCHAIN_BOOTSTRAP=yes",  # don't build elftoolchain binaries
-            "XAS=" + str(self.binutilsDir / "as"),  # should not be required
+            "MK_BINUTILS_BOOTSTRAP=no",  # don't build the binutils from the cheribsd source tree
+            "MK_ELFTOOLCHAIN_BOOTSTRAP=no",  # don't build elftoolchain binaries
+            "CROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin")
             # XDTP is not required, but why is it picking the wrong assembler
             # "XDTP=" + str(self.config.sdkDir / "mips64"),  # cross tools prefix
             # "CPUTYPE=mips64",  # cross tools prefix (otherwise makefile only appends -G0 which doesn't work without march=mips64
