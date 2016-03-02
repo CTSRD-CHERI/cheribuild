@@ -458,6 +458,7 @@ class BuildCHERIBSD(Project):
                          buildDir=config.cheribsdObj, gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git")
         self.binutilsDir = self.config.sdkDir / "mips64/bin"
         self.cheriCC = self.config.sdkDir / "bin/clang"
+        self.cheriCXX = self.config.sdkDir / "bin/clang++"
         self.installAsRoot = os.getuid() == 0
         self.commonMakeArgs = [
             "make", "CHERI=256", "CHERI_CC=" + str(self.cheriCC),
@@ -468,7 +469,7 @@ class BuildCHERIBSD(Project):
             "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
             "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
             "DEBUG_FLAGS=-g",  # enable debug stuff
-            "CROSS_BINUTILS_PREFIX=" + str(self.binutilsDir),  # use the CHERI-aware binutils and not the builtin ones
+            #  "CROSS_BINUTILS_PREFIX=" + str(self.binutilsDir),  # use the CHERI-aware binutils and not the builtin ones
             # TODO: once clang can build the kernel:
             #  "-DCROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin")
             "KERNCONF=" + kernelConfig,
@@ -502,6 +503,8 @@ class BuildCHERIBSD(Project):
             print("Set PATH to", os.environ["PATH"])
         if not self.cheriCC.is_file():
             fatalError("CHERI CC does not exist: ", self.cheriCC)
+        if not self.cheriCXX.is_file():
+            fatalError("CHERI CXX does not exist: ", self.cheriCXX)
         if not (self.binutilsDir / "as").is_file():
             fatalError("CHERI MIPS binutils are missing. Run 'build_cheribsd_for_qemu.py binutils'?")
         if self.installAsRoot:
