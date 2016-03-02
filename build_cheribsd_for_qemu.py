@@ -177,12 +177,12 @@ class CheriConfig(object):
     # configurable paths
     sourceRoot = ConfigLoader.addPathOption("source-root", default=DEFAULT_SOURCE_ROOT,
                                             help="The directory to store all sources")
-    outputRoot = ConfigLoader.addPathOption("output-root", default=lambda self: (self.sourceRoot / "output"),
+    outputRoot = ConfigLoader.addPathOption("output-root", default=lambda p: (p.sourceRoot / "output"),
                                             help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
-    extraFiles = ConfigLoader.addPathOption("extra-files", default=lambda self: (self.sourceRoot / "extra-files"),
+    extraFiles = ConfigLoader.addPathOption("extra-files", default=lambda p: (p.sourceRoot / "extra-files"),
                                             help="A directory with additional files that will be added to the image "
                                                  "(default: '<OUTPUT_ROOT>/extra-files')")
-    diskImage = ConfigLoader.addPathOption("disk-image-path", default=lambda self: (self.outputRoot / "disk.img"),
+    diskImage = ConfigLoader.addPathOption("disk-image-path", default=lambda p: (p.outputRoot / "disk.img"),
                                            help="The output path for the QEMU disk image "
                                                 "(default: '<OUTPUT_ROOT>/disk.img')")
     nfsKernelPath = ConfigLoader.addPathOption("nfs-kernel-path", default=lambda p: (p.outputRoot / "nfs/kernel"),
@@ -504,7 +504,7 @@ class BuildCHERIBSD(Project):
             fatalError("CHERI CC does not exist: ", self.cheriCC)
         if not (self.binutilsDir / "as").is_file():
             fatalError("CHERI MIPS binutils are missing. Run 'build_cheribsd_for_qemu.py binutils'?")
-        if os.getuid() == 0 and self.installAsRoot:
+        if self.installAsRoot:
             self._removeSchgFlag("lib/libc.so.7", "lib/libcrypt.so.5", "lib/libthr.so.3",
                                  "libexec/ld-cheri-elf.so.1", "libexec/ld-elf.so.1", "sbin/init",
                                  "usr/bin/chpass", "usr/bin/chsh", "usr/bin/ypchpass", "usr/bin/ypchfn",
