@@ -454,8 +454,8 @@ class BuildLLVM(Project):
 
 class BuildCHERIBSD(Project):
     def __init__(self, config: CheriConfig, *, name="cheribsd", kernelConfig="CHERI_MALTA64"):
-        super().__init__(name, config, installDir=config.cheribsdRootfs, buildDir=config.cheribsdObj,
-                         gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git")
+        super().__init__(name, config, sourceDir=config.sourceRoot / "cheribsd", installDir=config.cheribsdRootfs,
+                         buildDir=config.cheribsdObj, gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git")
         self.binutilsDir = self.config.sdkDir / "mips64/bin"
         self.cheriCC = self.config.sdkDir / "bin/clang"
         self.installAsRoot = os.getuid() == 0
