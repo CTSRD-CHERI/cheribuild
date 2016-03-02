@@ -61,7 +61,7 @@ def printCommand(arg1: "typing.Union[str, typing.Tuple, typing.List]", *remainin
         remainingArgs = allArgs[1:]
     newArgs = ("cd", shlex.quote(str(cwd)), "&&") if cwd else tuple()
     # comma in tuple is required otherwise it creates a tuple of string chars
-    newArgs += (shlex.quote(arg1),) + tuple(map(shlex.quote, remainingArgs))
+    newArgs += (shlex.quote(str(arg1)),) + tuple(map(shlex.quote, map(str, remainingArgs)))
     print(coloured(colour, newArgs, sep=sep), flush=True, **kwargs)
 
 
@@ -87,7 +87,7 @@ def runCmd(*args, captureOutput=False, **kwargs):
 def fatalError(*args):
     # we ignore fatal errors when simulating a run
     if cheriConfig.pretend:
-        print(coloured(AnsiColour.red, tuple("Potential fatal error:", *args)))
+        print(coloured(AnsiColour.red, ("Potential fatal error:",) + args))
     else:
         sys.exit(coloured(AnsiColour.red, args))
 
