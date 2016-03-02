@@ -463,9 +463,9 @@ class BuildCHERIBSD(Project):
             "-DDB_FROM_SRC",  # don't use the system passwd file
             "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
             "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
-            "DEBUG_FLAGS=-g",  # enable debug stuff
             "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
-            "-DCROSS_BINUTILS_PREFIX=" + str(self.binutilsDir),  # use the CHERI-aware binutils and not the builtin ones
+            "DEBUG_FLAGS=-g",  # enable debug stuff
+            "CROSS_BINUTILS_PREFIX=" + str(self.binutilsDir),  # use the CHERI-aware binutils and not the builtin ones
             # TODO: once clang can build the kernel:
             #  "-DCROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin")
             "KERNCONF=" + kernelConfig,
