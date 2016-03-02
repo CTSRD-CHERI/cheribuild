@@ -784,7 +784,7 @@ class PseudoTarget(Project):
 
 
 class Target(object):
-    def __init__(self, name, projectClass, *, dependencies: "typing.Iterable[str]"=[]):
+    def __init__(self, name, projectClass, *, dependencies: "typing.Iterable[str]"=set()):
         self.name = name
         self.dependencies = set(dependencies)
         self.projectClass = projectClass
