@@ -558,27 +558,32 @@ class BuildNewSDK(BuildCHERIBSD):
         self.buildDir = self.config.outputRoot / "xdev-build"
         # use make xdev-build/xdev-install to create the cross build environment
         # We don't want debug stuff with the SDK:
-        self.commonMakeArgs.remove("DEBUG_FLAGS=-g")
         self.commonMakeArgs += [
             "DESTDIR=" + str(self.installDir),
-            "MK_BINUTILS_BOOTSTRAP=no",  # don't build the binutils from the cheribsd source tree
-            "MK_ELFTOOLCHAIN_BOOTSTRAP=no",  # don't build elftoolchain binaries
-            "CROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin")
+            "MK_BINUTILS_BOOTSTRAP=yes",  # don't build the binutils from the cheribsd source tree
+            "MK_ELFTOOLCHAIN_BOOTSTRAP=yes",  # don't build elftoolchain binaries
+            # "CROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin"),
             # XDTP is not required, but why is it picking the wrong assembler
             # "XDTP=" + str(self.config.sdkDir / "mips64"),  # cross tools prefix
             # "CPUTYPE=mips64",  # cross tools prefix (otherwise makefile only appends -G0 which doesn't work without march=mips64
-
+            # "CC=" + str(self.cheriCC),
+            # "CXX=" + str(self.cheriCXX),
+            # "CC=clang", "CXX=clang++",
+            # "XAS=" + str(self.binutilsDir / "as")
         ]
+        self.commonMakeArgs = list(filter(lambda s: not s.startswith("CROSS_") and not s.startswith("DEBUG_"),
+                                          self.commonMakeArgs))
+        print(self.commonMakeArgs)
 
     def compile(self):
         self.setupEnvironment()
         self._cleanDir(self.installDir, force=True)  # make sure that the install dir is empty (can cause errors)
         # for now no parallel make
-        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "xdev-build", cwd=self.sourceDir)
+        runCmd(self.commonMakeArgs + [self.config.makeJFlag, "xdev-build"], cwd=self.sourceDir)
 
     def install(self):
         # don't use multiple jobs here
-        runCmd(self.commonMakeArgs + ["xdev-install"], cwd=self.sourceDir)
+        runCmd(self.commonMakeArgs + ["xdev"], cwd=self.sourceDir)
 
 
 class BuildDiskImage(Project):
