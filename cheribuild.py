@@ -204,6 +204,8 @@ class CheriConfig(object):
     skipUpdate = ConfigLoader.addBoolOption("skip-update", help="Skip the git pull step")
     skipConfigure = ConfigLoader.addBoolOption("skip-configure", help="Skip the configure step")
     listTargets = ConfigLoader.addBoolOption("list-targets", help="List all available targets and exit")
+    dumpConfig = ConfigLoader.addBoolOption("dump-configuration", help="Print the current configuration as JSON."
+                                            " This can be saved to ~/.config/cheribuild.json to make it persistent")
     skipDependencies = ConfigLoader.addBoolOption("skip-dependencies", "t",
                                                   help="Only build the targets that were explicitly passed on the "
                                                        "command line")
@@ -875,12 +877,25 @@ class AllTargets(object):
         for target in chosenTargets:
             target.execute(config)
 
+
+# custom encoder to handle pathlib.Path objects
+class MyJsonEncoder(json.JSONEncoder):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def default(self, o):
+        if isinstance(o, Path):
+            return str(o)
+        return super().default(o)
+
 if __name__ == "__main__":
     cheriConfig = CheriConfig()
     try:
         targets = AllTargets()
         if cheriConfig.listTargets:
             print("Available targets are:", ", ".join(targets.targetMap.keys()))
+        elif cheriConfig.dumpConfig:
+            print(json.dumps(ConfigLoader.values, sort_keys=True, cls=MyJsonEncoder, indent=4))
         else:
             targets.run(cheriConfig)
     except KeyboardInterrupt:
