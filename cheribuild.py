@@ -15,6 +15,7 @@ import json
 from collections import OrderedDict
 from functools import reduce
 from pathlib import Path
+from enum import Enum
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
 
@@ -29,19 +30,36 @@ if sys.version_info >= (3, 5):
 IS_LINUX = sys.platform.startswith("linux")
 IS_FREEBSD = sys.platform.startswith("freebsd")
 
+class AnsiColour(Enum):
+    black = 30
+    red = 31
+    green = 32
+    yellow = 33
+    blue = 34
+    magenta = 35
+    cyan = 36
+    white = 37
 
-def printCommand(arg1: "typing.Union[str, typing.Tuple, typing.List]", *args, cwd=None, **kwargs):
-    yellow = "\x1b[1;33m"
+
+def coloured(colour: AnsiColour, arg: "typing.Union[str, typing.Iterable[str]]", sep=" "):
+    startColour = "\x1b[1;" + str(colour.value) + "m"
     endColour = "\x1b[0m"  # reset
+    if isinstance(arg, str):
+        return startColour + arg + endColour
+    return startColour + sep.join(map(str, arg)) + endColour
+
+
+def printCommand(arg1: "typing.Union[str, typing.Tuple, typing.List]", *remainingArgs,
+                 colour=AnsiColour.yellow, cwd=None, sep=" ", **kwargs):
     # also allow passing a single string
     if not type(arg1) is str:
-        allArgs = tuple(map(shlex.quote, arg1))
+        allArgs = arg1
         arg1 = allArgs[0]
-        args = allArgs[1:]
-    newArgs = (yellow + "cd", shlex.quote(str(cwd)), "&&") if cwd else tuple()
+        remainingArgs = allArgs[1:]
+    newArgs = ("cd", shlex.quote(str(cwd)), "&&") if cwd else tuple()
     # comma in tuple is required otherwise it creates a tuple of string chars
-    newArgs += (yellow + arg1,) + args + (endColour,)
-    print(*newArgs, flush=True, **kwargs)
+    newArgs += (shlex.quote(arg1),) + tuple(map(shlex.quote, remainingArgs))
+    print(coloured(colour, newArgs, sep=sep), flush=True, **kwargs)
 
 
 def runCmd(*args, captureOutput=False, **kwargs):
@@ -66,9 +84,9 @@ def runCmd(*args, captureOutput=False, **kwargs):
 def fatalError(*args):
     # we ignore fatal errors when simulating a run
     if cheriConfig.pretend:
-        print("Potential fatal error:", *args)
+        print(coloured(AnsiColour.red, tuple("Potential fatal error:", *args)))
     else:
-        sys.exit(" ".join(map(str, args)))
+        sys.exit(coloured(AnsiColour.red, args))
 
 
 class ConfigLoader(object):
@@ -847,6 +865,6 @@ if __name__ == "__main__":
         AllTargets().run(cheriConfig)
     except KeyboardInterrupt:
         sys.exit("Exiting due to Ctrl+C")
-    except subprocess.CalledProcessError:
-        # no need for the full traceback here
-        print(sys.exc_info()[1])
+    except subprocess.CalledProcessError as err:
+        fatalError("Command ", "`" + " ".join(map(shlex.quote, err.cmd)) + "` failed with non-zero exit code",
+                   err.returncode)
