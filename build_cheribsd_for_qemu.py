@@ -372,7 +372,7 @@ class BuildQEMU(Project):
                               "--disable-linux-user",
                               "--disable-bsd-user",
                               "--disable-xen",
-                              "--extra-cflags=-g",
+                              "--extra-cflags=-g -Wno-error=deprecated-declarations",
                               "--prefix=" + str(self.installDir)]
         if IS_LINUX:
             # "--enable-libnfs", # version on Ubuntu 14.04 is too old? is it needed?
