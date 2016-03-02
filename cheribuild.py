@@ -174,6 +174,9 @@ class CheriConfig(object):
     skipUpdate = ConfigLoader.addBoolOption("skip-update", help="Skip the git pull step")
     skipConfigure = ConfigLoader.addBoolOption("skip-configure", help="Skip the configure step")
     listTargets = ConfigLoader.addBoolOption("list-targets", help="List all available targets and exit")
+    skipDependencies = ConfigLoader.addBoolOption("skip-dependencies", "t",
+                                                  help="Only build the targets that were explicitly passed on the "
+                                                       "command line")
 
     # configurable paths
     sourceRoot = ConfigLoader.addPathOption("source-root", default=DEFAULT_SOURCE_ROOT,
@@ -798,7 +801,7 @@ class AllTargets(object):
         data = dict((t.name, set(t.dependencies)) for t in targets)
         # add all the targets that aren't included yet
         print("toposort data:", data)
-        possiblyMissingDependencies = reduce(set.union, [self.recursiveDependencyNames(t) for t in targets])
+        possiblyMissingDependencies = reduce(set.union, [self.recursiveDependencyNames(t) for t in targets], set())
         print("missing deps:", possiblyMissingDependencies)
         for dep in possiblyMissingDependencies:
             if dep not in data:
@@ -815,18 +818,25 @@ class AllTargets(object):
         assert not data, "A cyclic dependency exists amongst %r" % data
 
     def run(self, config: CheriConfig):
-        targetMap = dict((t.name, t) for t in self._allTargets)
-        chosenTargets = []
+        explicitlyChosenTargets = []  # type: typing.List[Target]
         for targetName in config.targets:
-            if targetName not in targetMap:
-                fatalError("Target", targetName, "does not exist. Valid choices are", ",".join(targetMap.keys()))
+            if targetName not in self.targetMap:
+                fatalError("Target", targetName, "does not exist. Valid choices are", ",".join(self.targetMap.keys()))
                 sys.exit(1)
-            chosenTargets.append(targetMap[targetName])
-        # Run all targets in dependency order
-        orderedTargets = self.topologicalSort(chosenTargets)  # type: typing.Iterable[typing.List[Target]]
-        for dependecyLevel, targetNames in enumerate(orderedTargets):
-            print("Level", dependecyLevel, "targets:", targetNames)
-
+            explicitlyChosenTargets.append(self.targetMap[targetName])
+        if config.skipDependencies:
+            # The wants only the explicitly passed targets to be executed, don't do any ordering
+            chosenTargets = explicitlyChosenTargets  # TODO: ensure right order?
+        else:
+            # Otherwise run all targets in dependency order
+            chosenTargets = []
+            orderedTargets = self.topologicalSort(explicitlyChosenTargets)  # type: typing.Iterable[typing.List[Target]]
+            for dependecyLevel, targetNames in enumerate(orderedTargets):
+                print("Level", dependecyLevel, "targets:", targetNames)
+                chosenTargets.extend(self.targetMap[t] for t in targetNames)
+        # now that the chosen targets have been resolved run them
+        for target in chosenTargets:
+            target.execute(config)
 
 if __name__ == "__main__":
     cheriConfig = CheriConfig()
