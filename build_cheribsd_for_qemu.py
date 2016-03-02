@@ -538,16 +538,20 @@ class BuildNewSDK(BuildCHERIBSD):
         self.commonMakeArgs.remove("DEBUG_FLAGS=-g")
         self.commonMakeArgs += [
             "DESTDIR=" + str(self.installDir),
-            "MK_BINUTILS_BOOTSTRAP=no",  # don't build the binutils from the cheribsd source tree
-            "MK_ELFTOOLCHAIN_BOOTSTRAP=no",  # don't build elftoolchain binaries
+            "MK_BINUTILS_BOOTSTRAP=yes",  # don't build the binutils from the cheribsd source tree
+            "MK_ELFTOOLCHAIN_BOOTSTRAP=yes",  # don't build elftoolchain binaries
+            "XAS=" + str(self.binutilsDir / "as"),  # should not be required
+            # XDTP is not required, but why is it picking the wrong assembler
+            # "XDTP=" + str(self.config.sdkDir / "mips64"),  # cross tools prefix
+            # "CPUTYPE=mips64",  # cross tools prefix (otherwise makefile only appends -G0 which doesn't work without march=mips64
+
         ]
 
-    def process(self):
+    def compile(self):
         self.setupEnvironment()
         self._cleanDir(self.installDir, force=True)  # make sure that the install dir is empty (can cause errors)
         # for now no parallel make
-        # self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "xdev-build", cwd=self.sourceDir)
-        runCmd(self.commonMakeArgs + ["xdev-build"], cwd=self.sourceDir)
+        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "xdev-build", cwd=self.sourceDir)
 
     def install(self):
         # don't use multiple jobs here
