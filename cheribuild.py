@@ -809,7 +809,6 @@ class LaunchQEMU(Project):
     def process(self):
         qemuBinary = self.config.sdkDir / "bin/qemu-system-cheri"
         currentKernel = self.config.cheribsdRootfs / "boot/kernel/kernel"
-        print("About to run QEMU with image", self.config.diskImage, "and kernel", currentKernel)
 
         if not self.isForwardingPortAvailable():
             print("Port usage information:")
@@ -819,6 +818,9 @@ class LaunchQEMU(Project):
                 runCmd("sh", "-c", "netstat -tulpne | grep \":" + str(str(self.config.sshForwardingPort)) + "\"")
             fatalError("SSH forwarding port", self.config.sshForwardingPort, "is already in use!")
 
+        print("About to run QEMU with image", self.config.diskImage, "and kernel", currentKernel,
+              coloured(AnsiColour.green, "\nListinging for SSH connections on localhost:" +
+                       str(self.config.sshForwardingPort)))
         # input("Press enter to continue")
         runCmd([qemuBinary, "-M", "malta",  # malta cpu
                 "-kernel", currentKernel,  # assume the current image matches the kernel currently build
