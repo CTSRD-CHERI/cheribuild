@@ -548,7 +548,7 @@ class BuildCHERIBSD(Project):
 
     def _removeSchgFlag(self, *paths: "typing.Iterable[str]"):
         for i in paths:
-            file = self.config.cheribsdRootfs / i
+            file = self.installDir / i
             if file.exists():
                 runCmd("chflags", "noschg", str(file))
 
