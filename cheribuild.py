@@ -199,6 +199,11 @@ def defaultNumberOfMakeJobs():
     return makeJobs
 
 
+def defaultSshForwardingPort():
+    # chose a different port for each user (hopefully it isn't in use yet)
+    return 9999 + ((os.getuid() - 1000) % 10000)
+
+
 class CheriConfig(object):
     # boolean flags
     pretend = ConfigLoader.addBoolOption("pretend", "p", help="Only print the commands instead of running them")
@@ -227,12 +232,13 @@ class CheriConfig(object):
     nfsKernelPath = ConfigLoader.addPathOption("nfs-kernel-path", default=lambda p: (p.outputRoot / "nfs/kernel"),
                                                help="The output path for the CheriBSD kernel that boots over NFS "
                                                     "(default: '<OUTPUT_ROOT>/nfs/kernel')")
+
     # other options
     makeJobs = ConfigLoader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
                                       help="Number of jobs to use for compiling")  # type: int
-    sshForwardingPort = ConfigLoader.addOption("ssh-forwarding-port", "s", type=int, default=9999, help="The port to "
-                                               "use on localhost to forward the QEMU ssh port. You can then use "
-                                               "`ssh root@localhost -p $PORT` connect to the VM")  # type: int
+    sshForwardingPort = ConfigLoader.addOption("ssh-forwarding-port", "s", type=int, default=defaultSshForwardingPort(),
+                                               help="The port to use on localhost to forward the QEMU ssh port. "
+                                                    "You can then use `ssh root@localhost -p $PORT` connect to the VM")  # type: int
 
     # allow overriding the git revisions in case there is a regression
     cheriBsdRevision = ConfigLoader.addOption("cheribsd-revision", type=str,
