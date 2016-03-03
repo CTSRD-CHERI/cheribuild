@@ -628,26 +628,19 @@ class BuildNewSDK(BuildCHERIBSD):
             "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
             # "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
             # "DEBUG_FLAGS=-g",  # enable debug stuff
-            # "CROSS_BINUTILS_PREFIX=" + str(self.binutilsDir),  # use the CHERI-aware binutils and not the builtin ones
-            # "DCROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin")
             "DESTDIR=" + str(self.installDir),
             "MK_DEBUG_FILES=no",  # HACK: don't create the debug files
-            # "WITHOUT_GNUCXX=yes",  # libstdc++ fails for some reason (not sure why it is built at all)
-            # "WITH_LIBCPLUSPLUS=yes",   # use libc++ instead (should be default but can't harm adding it)
-            # "WITH_CLANG=yes",  # use clang
-            # "WITH_CLANG_BOOTSTRAP=yes",  # use clang instead of gcc as bootstrap compiler
-            # "WITH_CLANG_IS_CC=yes",  # install clang as /usr/bin/cc
-
-            # "MK_BINUTILS_BOOTSTRAP=yes",  # don't build the binutils from the cheribsd source tree
-            # "MK_ELFTOOLCHAIN_BOOTSTRAP=no",  # don't build elftoolchain binaries
-
-            "WITHOUT_CXX=yes",  # c++ stuff breaks the xdev build
-            # "XDTP=/usr/mips64"),  # cross tools prefix
-            # "CC=" + str(self.cheriCC),
-            # "CXX=" + str(self.cheriCXX),
-            # "CC=clang", "CXX=clang++",
-            # "XAS=" + str(self.binutilsDir / "as")
-
+            # "XDTP=/usr/mips64"),  # cross tools prefix (default is fine)
+            "WITH_LIBCPLUSPLUS=yes",   # compile libc++
+            # We already have our own cross compiler
+            "MK_CLANG_BOOTSTRAP=no",
+            "MK_GCC_BOOTSTRAP=no",
+            "XCC=" + str(self.cheriCC),  # TODO: still needed?
+            "XCXX=" + str(self.cheriCXX),  # TODO: still needed?
+            "CROSS_BINUTILS_PREFIX=" + str(self.binutilsDir),  # use the CHERI-aware binutils and not the builtin ones
+            "DCROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin"),
+            "MK_BINUTILS_BOOTSTRAP=yes",  # don't build the GNU binutils from the cheribsd source tree
+            "MK_ELFTOOLCHAIN_BOOTSTRAP=yes",  # don't build elftoolchain binaries
         ]
 
     def compile(self):
