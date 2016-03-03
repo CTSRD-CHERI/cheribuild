@@ -31,6 +31,7 @@ if sys.version_info >= (3, 5):
 IS_LINUX = sys.platform.startswith("linux")
 IS_FREEBSD = sys.platform.startswith("freebsd")
 
+
 class AnsiColour(Enum):
     black = 30
     red = 31
@@ -805,6 +806,31 @@ class BuildSDK(Project):
             runCmd(["tar", "xf", "-"], stdin=tar.stdout, cwd=self.config.sdkSysrootDir)
         if not (self.config.sdkSysrootDir / "lib/libc.so.7").is_file():
             fatalError(self.config.sdkSysrootDir, "is missing the libc library, install seems to have failed!")
+
+        # install tools:
+        tools = "as objdump strings addr2line crunchide gcc gcov nm strip ld objcopy size brandelf".split()
+        for tool in tools:
+            if (self.CHERITOOLS_OBJ / tool).is_file():
+                runCmd("cp", "-f", self.CHERITOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool)
+            elif (self.CHERIBOOTSTRAPTOOLS_OBJ / tool).is_file():
+                runCmd("cp", "-f", self.CHERIBOOTSTRAPTOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool)
+            else:
+                fatalError("Required tool", tool, "is missing!")
+
+        # GCC wants the cc1 and cc1plus tools to be in the directory specified by -B.
+        # We must make this the same directory that contains ld for linking and
+        # compiling to both work...
+        for tool in ("cc1", "cc1plus"):
+            runCmd("cp", "-f", self.CHERILIBEXEC_OBJ / tool, self.config.sdkDir / "bin" / tool)
+
+        tools += "clang clang++ llvm-mc llvm-objdump llvm-readobj llvm-size llc".split()
+        for tool in tools:
+            runCmd("ln", "-fs", tool, "cheri-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin")
+            runCmd("ln", "-fs", tool, "mips4-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin")
+            runCmd("ln", "-fs", tool, "mips64-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin")
+
+        # TODO: fix symlinks
+        # TODO: add cheridis
         print("Successfully populated sysroot")
 
 
