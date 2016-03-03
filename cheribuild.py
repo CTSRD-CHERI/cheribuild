@@ -878,10 +878,11 @@ class AllTargets(object):
             Target("llvm", BuildLLVM),
             Target("cheribsd", BuildCHERIBSD, dependencies=["llvm"]),
             Target("cheribsd-nfs", BuildNfsKernel, dependencies=["llvm"]),
+            Target("sdk", BuildSDK, dependencies=["cheribsd", "llvm"]),
             Target("new-sdk", BuildNewSDK, dependencies=["binutils", "llvm"]),
             Target("disk-image", BuildDiskImage, dependencies=["cheribsd"]),
             Target("run", LaunchQEMU, dependencies=["qemu", "disk-image"]),
-            Target("all", PseudoTarget, dependencies=["qemu", "llvm", "cheribsd", "disk-image", "run"]),
+            Target("all", PseudoTarget, dependencies=["qemu", "llvm", "cheribsd", "sdk", "disk-image", "run"]),
         ]
         self.targetMap = dict((t.name, t) for t in self._allTargets)
         # for t in self._allTargets:
