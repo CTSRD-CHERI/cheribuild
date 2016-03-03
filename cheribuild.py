@@ -565,8 +565,8 @@ class BuildCHERIBSD(Project):
             fatalError("CHERI CC does not exist: ", self.cheriCC)
         if not self.cheriCXX.is_file():
             fatalError("CHERI CXX does not exist: ", self.cheriCXX)
-        if not (self.binutilsDir / "as").is_file():
-            fatalError("CHERI MIPS binutils are missing. Run 'build_cheribsd_for_qemu.py binutils'?")
+        # if not (self.binutilsDir / "as").is_file():
+        #     fatalError("CHERI MIPS binutils are missing. Run 'cheribuild.py binutils'?")
         if self.installAsRoot:
             self._removeSchgFlag("lib/libc.so.7", "lib/libcrypt.so.5", "lib/libthr.so.3",
                                  "libexec/ld-cheri-elf.so.1", "libexec/ld-elf.so.1", "sbin/init",
@@ -617,23 +617,38 @@ class BuildNewSDK(BuildCHERIBSD):
         self.installDir = self.config.outputRoot / "xdev-install"
         self.buildDir = self.config.outputRoot / "xdev-build"
         # use make xdev-build/xdev-install to create the cross build environment
-        # We don't want debug stuff with the SDK:
-        self.commonMakeArgs += [
+        # MK_DEBUG_FILES seems to be unconditionally true, how do I fix this?
+
+        self.commonMakeArgs = [
+            "make",
+            # "CHERI=256", "CHERI_CC=" + str(self.cheriCC),
+            "TARGET=mips", "TARGET_ARCH=mips64", "CPUTYPE=mips64",
+            "-DDB_FROM_SRC",  # don't use the system passwd file
+            "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
+            "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
+            # "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
+            # "DEBUG_FLAGS=-g",  # enable debug stuff
+            # "CROSS_BINUTILS_PREFIX=" + str(self.binutilsDir),  # use the CHERI-aware binutils and not the builtin ones
+            # "DCROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin")
             "DESTDIR=" + str(self.installDir),
-            "MK_BINUTILS_BOOTSTRAP=yes",  # don't build the binutils from the cheribsd source tree
-            "MK_ELFTOOLCHAIN_BOOTSTRAP=yes",  # don't build elftoolchain binaries
-            # "CROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin"),
-            # XDTP is not required, but why is it picking the wrong assembler
-            # "XDTP=" + str(self.config.sdkDir / "mips64"),  # cross tools prefix
-            # "CPUTYPE=mips64",  # cross tools prefix (otherwise makefile only appends -G0 which doesn't work without march=mips64
+            "MK_DEBUG_FILES=no",  # HACK: don't create the debug files
+            # "WITHOUT_GNUCXX=yes",  # libstdc++ fails for some reason (not sure why it is built at all)
+            # "WITH_LIBCPLUSPLUS=yes",   # use libc++ instead (should be default but can't harm adding it)
+            # "WITH_CLANG=yes",  # use clang
+            # "WITH_CLANG_BOOTSTRAP=yes",  # use clang instead of gcc as bootstrap compiler
+            # "WITH_CLANG_IS_CC=yes",  # install clang as /usr/bin/cc
+
+            # "MK_BINUTILS_BOOTSTRAP=yes",  # don't build the binutils from the cheribsd source tree
+            # "MK_ELFTOOLCHAIN_BOOTSTRAP=no",  # don't build elftoolchain binaries
+
+            "WITHOUT_CXX=yes",  # c++ stuff breaks the xdev build
+            # "XDTP=/usr/mips64"),  # cross tools prefix
             # "CC=" + str(self.cheriCC),
             # "CXX=" + str(self.cheriCXX),
             # "CC=clang", "CXX=clang++",
             # "XAS=" + str(self.binutilsDir / "as")
+
         ]
-        self.commonMakeArgs = list(filter(lambda s: not s.startswith("CROSS_") and not s.startswith("DEBUG_"),
-                                          self.commonMakeArgs))
-        print(self.commonMakeArgs)
 
     def compile(self):
         self.setupEnvironment()
@@ -843,6 +858,7 @@ class AllTargets(object):
             Target("llvm", BuildLLVM),
             Target("cheribsd", BuildCHERIBSD, dependencies=["llvm"]),
             Target("cheribsd-nfs", BuildNfsKernel, dependencies=["llvm"]),
+            Target("new-sdk", BuildNewSDK, dependencies=["binutils", "llvm"]),
             Target("disk-image", BuildDiskImage, dependencies=["cheribsd"]),
             Target("run", LaunchQEMU, dependencies=["qemu", "disk-image"]),
             Target("all", PseudoTarget, dependencies=["qemu", "llvm", "cheribsd", "disk-image", "run"]),
