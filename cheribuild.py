@@ -25,8 +25,32 @@ DEFAULT_SOURCE_ROOT = Path(os.path.expanduser("~/cheri"))
 
 if sys.version_info < (3, 4):
     sys.exit("This script requires at least Python 3.4")
-if sys.version_info >= (3, 5):
+if sys.version_info < (3, 5):
+    # copy of python 3.5 subprocess.CompletedProcess
+    class CompletedProcess(object):
+        def __init__(self, args, returncode, stdout=None, stderr=None):
+            self.args = args
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+        def __repr__(self):
+            args = ['args={!r}'.format(self.args),
+                    'returncode={!r}'.format(self.returncode)]
+            if self.stdout is not None:
+                args.append('stdout={!r}'.format(self.stdout))
+            if self.stderr is not None:
+                args.append('stderr={!r}'.format(self.stderr))
+            return "{}({})".format(type(self).__name__, ', '.join(args))
+else:
+    from subprocess import CompletedProcess
+
+# type hinting for IDE
+try:
     import typing
+except ImportError:
+    typing = None
+    pass
 
 IS_LINUX = sys.platform.startswith("linux")
 IS_FREEBSD = sys.platform.startswith("freebsd")
@@ -67,7 +91,7 @@ def printCommand(arg1: "typing.Union[str, typing.Tuple, typing.List]", *remainin
     print(coloured(colour, newArgs, sep=sep), flush=True, **kwargs)
 
 
-def runCmd(*args, captureOutput=False, **kwargs):
+def runCmd(*args, captureOutput=False, input: "typing.Union[str, bytes]"=None, timeout=None, **kwargs):
     if type(args[0]) is str or type(args[0]) is Path:
         cmdline = args  # multiple strings passed
     else:
@@ -75,15 +99,36 @@ def runCmd(*args, captureOutput=False, **kwargs):
     cmdline = list(map(str, cmdline))  # make sure they are all strings
     printCommand(cmdline, cwd=kwargs.get("cwd"))
     kwargs["cwd"] = str(kwargs["cwd"]) if "cwd" in kwargs else os.getcwd()
-    if not cheriConfig.pretend:
-        # print(cmdline, kwargs)
-        if captureOutput:
-            return subprocess.check_output(cmdline, **kwargs)
-        else:
-            if cheriConfig.quiet and "stdout" not in kwargs:
-                kwargs["stdout"] = subprocess.DEVNULL
-            subprocess.check_call(cmdline, **kwargs)
-    return b"" if captureOutput else None
+    if cheriConfig.pretend:
+        return CompletedProcess(args=cmdline, returncode=0, stdout=b"")
+
+    # actually run the process now:
+    if input is not None:
+        assert "stdin" not in kwargs  # we need to use stdin here
+        kwargs['stdin'] = subprocess.PIPE
+        if not isinstance(input, bytes):
+            input = str(input).encode("utf-8")
+    if captureOutput:
+        assert "stdout" not in kwargs  # we need to use stdout here
+        kwargs["stdout"] = subprocess.PIPE
+    elif cheriConfig.quiet and "stdout" not in kwargs:
+        kwargs["stdout"] = subprocess.DEVNULL
+    with subprocess.Popen(cmdline, **kwargs) as process:
+        try:
+            stdout, stderr = process.communicate(input, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            stdout, stderr = process.communicate()
+            # TODO py35: pass stderr=stderr as well
+            raise subprocess.TimeoutExpired(process.args, timeout, output=stdout)
+        except:
+            process.kill()
+            process.wait()
+            raise
+        retcode = process.poll()
+        if retcode:
+            raise subprocess.CalledProcessError(retcode, process.args, output=stdout)
+        return CompletedProcess(process.args, retcode, stdout, stderr)
 
 
 def fatalError(*args):
@@ -304,7 +349,7 @@ class Project(object):
                 sys.exit("Sources for " + str(srcDir) + " missing!")
             runCmd("git", "clone", remoteUrl, srcDir)
         # make sure we run git stash if we discover any local changes
-        hasChanges = len(runCmd("git", "diff", captureOutput=True, cwd=srcDir)) > 1
+        hasChanges = len(runCmd("git", "diff", captureOutput=True, cwd=srcDir).stdout) > 1
         if hasChanges:
             runCmd("git", "stash", cwd=srcDir)
         runCmd("git", "pull", "--rebase", cwd=srcDir)
@@ -476,7 +521,7 @@ class BuildLLVM(Project):
         # make sure we have at least version 3.7
         versionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         # clang prints this output to stderr
-        versionString = runCmd(cCompiler, "-v", captureOutput=True, stderr=subprocess.STDOUT)
+        versionString = runCmd(cCompiler, "-v", captureOutput=True, stderr=subprocess.STDOUT).stdout
         match = versionPattern.search(versionString)
         versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
         if versionComponents < (3, 7):
