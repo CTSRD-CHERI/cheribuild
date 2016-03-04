@@ -321,11 +321,6 @@ class CheriConfig(object):
             if not self.pretend:
                 printCommand("mkdir", "-p", str(d))
                 os.makedirs(str(d), exist_ok=True)
-        # make sdk a link to the 256 bit sdk
-        if (self.outputRoot / "sdk").is_dir():
-            runCmd("ln", "-rf", self.outputRoot / "sdk", cwd=self.outputRoot)
-        if not self.pretend and not (self.outputRoot / "sdk").exists():
-            runCmd("ln", "-s", "sdk256", "sdk", cwd=self.outputRoot)
 
         # for debugging purposes print all the options
         for i in ConfigLoader.options:
@@ -601,7 +596,7 @@ class BuildCHERIBSD(Project):
             "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
             "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
             "DEBUG_FLAGS=-g",  # enable debug stuff
-            #  "CROSS_BINUTILS_PREFIX=" + str(self.binutilsDir),  # use the CHERI-aware binutils and not the builtin ones
+            # "CROSS_BINUTILS_PREFIX=" + str(self.binutilsDir),  # use the CHERI-aware binutils and not the builtin ones
             # TODO: once clang can build the kernel:
             #  "-DCROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin")
             "KERNCONF=" + kernelConfig,
@@ -856,10 +851,16 @@ class BuildSDK(Project):
         for i in (self.CHERIBOOTSTRAPTOOLS_OBJ, self.CHERITOOLS_OBJ, self.CHERITOOLS_OBJ, self.config.cheribsdRootfs):
             if not i.is_dir():
                 fatalError("Directory", i, "is missing!")
+        # make sdk a link to the 256 bit sdk
+        if (self.config.outputRoot / "sdk").is_dir():
+            # remove the old sdk directory from previous versions of this script
+            runCmd("rm", "-rf", self.config.outputRoot / "sdk")
+        if not self.config.pretend and not (self.config.outputRoot / "sdk").exists():
+            runCmd("ln", "-sf", "sdk256", "sdk", cwd=self.config.outputRoot)
         # we need to add include files and libraries to the sysroot directory
         self._cleanDir(self.config.sdkSysrootDir, force=True)  # make sure the sysroot is cleaned
         self._makedirs(self.config.sdkSysrootDir / "usr")
-        # use tar+untar to copy all ncessary files listed in metalog to the sysroot dir
+        # use tar+untar to copy all necessary files listed in metalog to the sysroot dir
         archiveCmd = ["tar", "cf", "-", "--include=./lib/", "--include=./usr/include/",
                       "--include=./usr/lib/", "--include=./usr/libcheri", "--include=./usr/libdata/",
                       # only pack those files that are mentioned in METALOG
