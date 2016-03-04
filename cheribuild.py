@@ -92,10 +92,10 @@ def printCommand(arg1: "typing.Union[str, typing.Tuple, typing.List]", *remainin
 
 
 def runCmd(*args, captureOutput=False, input: "typing.Union[str, bytes]"=None, timeout=None, **kwargs):
-    if type(args[0]) is str or type(args[0]) is Path:
-        cmdline = args  # multiple strings passed
+    if len(args) == 1 and isinstance(args[0], (list, tuple)):
+        cmdline = args[0]  # list with parameters was passed
     else:
-        cmdline = args[0]  # list was passed
+        cmdline = args
     cmdline = list(map(str, cmdline))  # make sure they are all strings
     printCommand(cmdline, cwd=kwargs.get("cwd"))
     kwargs["cwd"] = str(kwargs["cwd"]) if "cwd" in kwargs else os.getcwd()
