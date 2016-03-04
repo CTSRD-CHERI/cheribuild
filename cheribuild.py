@@ -813,6 +813,17 @@ class BuildDiskImage(Project):
             self.config.diskImage,  # output file
             self.config.cheribsdRootfs  # directory tree to use for the image
         ])
+        # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
+        qcow2Image = Path(str(self.config.diskImage).replace(".img", ".qcow2"))
+        runCmd("qemu-img", "info", self.config.diskImage)
+        runCmd("rm", "-f", qcow2Image)
+        # create a qcow2 version:
+        runCmd("qemu-img", "convert",
+               "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
+               "-O", "qcow2",  # convert to qcow2 format
+               self.config.diskImage,  # input file
+               qcow2Image)  # output file
+        runCmd("qemu-img", "info", qcow2Image)
 
     def generateSshHostKeys(self):
         # do the same as "ssh-keygen -A" just with a different output directory as it does not allow customizing that
