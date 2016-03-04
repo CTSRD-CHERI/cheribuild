@@ -278,6 +278,7 @@ class CheriConfig(object):
     extraFiles = ConfigLoader.addPathOption("extra-files", default=lambda p: (p.sourceRoot / "extra-files"),
                                             help="A directory with additional files that will be added to the image "
                                                  "(default: '<OUTPUT_ROOT>/extra-files')")
+    # TODO: only create a qcow2 image?
     diskImage = ConfigLoader.addPathOption("disk-image-path", default=defaultDiskImagePath, help="The output path for"
                                            " the QEMU disk image (default: '<OUTPUT_ROOT>/cheri256-disk.img')")
     nfsKernelPath = ConfigLoader.addPathOption("nfs-kernel-path", default=lambda p: (p.outputRoot / "nfs/kernel"),
@@ -311,6 +312,7 @@ class CheriConfig(object):
         print("Build artifacts will be stored in", self.outputRoot)
         print("Extra files for disk image will be searched for in", self.extraFiles)
         print("Disk image will saved to", self.diskImage)
+        self.qcow2DiskImage = Path(str(self.diskImage).replace(".img", ".qcow2"))
 
         self.cheriBits = 128 if self.buildCheri128 else 256
         self.cheriBitsStr = str(self.cheriBits)
@@ -814,16 +816,15 @@ class BuildDiskImage(Project):
             self.config.cheribsdRootfs  # directory tree to use for the image
         ])
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
-        qcow2Image = Path(str(self.config.diskImage).replace(".img", ".qcow2"))
-        runCmd("qemu-img", "info", self.config.diskImage)
-        runCmd("rm", "-f", qcow2Image)
+        runCmd("qemu-img", "info", self.config.qcow2DiskImage)
+        runCmd("rm", "-f", self.config.qcow2DiskImage)
         # create a qcow2 version:
         runCmd("qemu-img", "convert",
                "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
                "-O", "qcow2",  # convert to qcow2 format
                self.config.diskImage,  # input file
-               qcow2Image)  # output file
-        runCmd("qemu-img", "info", qcow2Image)
+               self.config.qcow2DiskImage)  # output file
+        runCmd("qemu-img", "info", self.config.qcow2DiskImage)
 
     def generateSshHostKeys(self):
         # do the same as "ssh-keygen -A" just with a different output directory as it does not allow customizing that
@@ -1028,7 +1029,7 @@ class LaunchQEMU(Project):
                 "-kernel", currentKernel,  # assume the current image matches the kernel currently build
                 "-nographic",  # no GPU
                 "-m", "2048",  # 2GB memory
-                "-hda", self.config.diskImage,
+                "-hda", self.config.qcow2DiskImage,
                 "-net", "nic", "-net", "user",
                 # bind the qemu ssh port to the hosts port 9999
                 "-redir", "tcp:" + str(self.config.sshForwardingPort) + "::22",
