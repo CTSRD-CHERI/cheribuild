@@ -263,6 +263,7 @@ class CheriConfig(object):
     skipDependencies = ConfigLoader.addBoolOption("skip-dependencies", "t",
                                                   help="Only build the targets that were explicitly passed on the "
                                                        "command line")
+    buildCheri128 = ConfigLoader.addBoolOption("cheri-128", "-128", help="Build for 128 bit CHERI instead of 256")
 
     # configurable paths
     sourceRoot = ConfigLoader.addPathOption("source-root", default=DEFAULT_SOURCE_ROOT,
@@ -307,17 +308,24 @@ class CheriConfig(object):
         print("Extra files for disk image will be searched for in", self.extraFiles)
         print("Disk image will saved to", self.diskImage)
 
+        self.cheriBits = 128 if self.buildCheri128 else 256
+        self.cheriBitsStr = str(self.cheriBits)
         # now the derived config options
-        self.cheribsdRootfs = self.outputRoot / "rootfs"
+        self.cheribsdRootfs = self.outputRoot / ("rootfs" + self.cheriBitsStr)
         self.cheribsdSources = self.sourceRoot / "cheribsd"
-        self.cheribsdObj = self.outputRoot / "cheribsd-obj"
-        self.sdkDir = self.outputRoot / "sdk"  # qemu and binutils (and llvm/clang)
+        self.cheribsdObj = self.outputRoot / ("cheribsd-obj-" + self.cheriBitsStr)
+        self.sdkDir = self.outputRoot / ("sdk" + self.cheriBitsStr)  # qemu and binutils (and llvm/clang)
         self.sdkSysrootDir = self.sdkDir / "sysroot"
 
         for d in (self.sourceRoot, self.outputRoot, self.extraFiles):
             if not self.pretend:
                 printCommand("mkdir", "-p", str(d))
                 os.makedirs(str(d), exist_ok=True)
+        # make sdk a link to the 256 bit sdk
+        if (self.outputRoot / "sdk").is_dir():
+            runCmd("ln", "-rf", self.outputRoot / "sdk", cwd=self.outputRoot)
+        if not self.pretend and not (self.outputRoot / "sdk").exists():
+            runCmd("ln", "-s", "sdk256", "sdk", cwd=self.outputRoot)
 
         # for debugging purposes print all the options
         for i in ConfigLoader.options:
@@ -327,13 +335,15 @@ class CheriConfig(object):
 
 class Project(object):
     def __init__(self, name: str, config: CheriConfig, *, sourceDir: Path=None, buildDir: Path=None,
-                 installDir: Path=None, gitUrl="", gitRevision=None):
+                 installDir: Path=None, gitUrl="", gitRevision=None, appendCheriBitsToBuildDir=False):
         self.name = name
         self.gitUrl = gitUrl
         self.gitRevision = gitRevision
         self.config = config
         self.sourceDir = Path(sourceDir if sourceDir else config.sourceRoot / name)
-        self.buildDir = Path(buildDir if buildDir else config.outputRoot / (name + "-build"))
+        # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256,
+        buildDirSuffix = "-" + config.cheriBitsStr + "-build" if appendCheriBitsToBuildDir else "-build"
+        self.buildDir = Path(buildDir if buildDir else config.outputRoot / (name + buildDirSuffix))
         self.installDir = installDir
         self.makeCommand = "make"
         self.configureCommand = ""
@@ -475,16 +485,22 @@ class Project(object):
 
 class BuildQEMU(Project):
     def __init__(self, config: CheriConfig):
-        super().__init__("qemu", config, installDir=config.sdkDir,
+        super().__init__("qemu", config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True,
                          gitUrl="https://github.com/CTSRD-CHERI/qemu.git", gitRevision=config.qemuRevision)
         # QEMU will not work with BSD make, need GNU make
         self.makeCommand = "gmake" if IS_FREEBSD else "make"
         self.configureCommand = self.sourceDir / "configure"
+        extraCFlags = "-g -Wno-error=deprecated-declarations"
+
+        if config.cheriBits == 128:
+            # enable QEMU 128 bit capabilities
+            # https://github.com/CTSRD-CHERI/qemu/commit/bb6b29fcd74dde4518146897c22286fd16ca7eb8
+            extraCFlags += " -DCHERI_MAGIC128=1"
         self.configureArgs = ["--target-list=cheri-softmmu",
                               "--disable-linux-user",
                               "--disable-bsd-user",
                               "--disable-xen",
-                              "--extra-cflags=-g -Wno-error=deprecated-declarations",
+                              "--extra-cflags=" + extraCFlags,
                               "--prefix=" + str(self.installDir)]
         if IS_LINUX:
             # "--enable-libnfs", # version on Ubuntu 14.04 is too old? is it needed?
@@ -513,7 +529,7 @@ class BuildBinutils(Project):
 
 class BuildLLVM(Project):
     def __init__(self, config: CheriConfig):
-        super().__init__("llvm", config, installDir=config.sdkDir)
+        super().__init__("llvm", config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
         self.makeCommand = "ninja"
         # try to find clang 3.7, otherwise fall back to system clang
         cCompiler = shutil.which("clang37") or "clang"
@@ -536,6 +552,8 @@ class BuildLLVM(Project):
             "-DDEFAULT_SYSROOT=" + str(self.config.sdkSysrootDir),
             "-DLLVM_TOOL_LLDB_BUILD=OFF",  # disable LLDB for now
         ]
+        if self.config.cheriBits == 128:
+            self.configureArgs.append("-DLLVM_CHERI_IS_128=ON")
 
     def _makeStdoutFilter(self, line: bytes):
         # don't show the up-to date install lines
@@ -568,13 +586,14 @@ class BuildCHERIBSD(Project):
     def __init__(self, config: CheriConfig, *, name="cheribsd", kernelConfig="CHERI_MALTA64"):
         super().__init__(name, config, sourceDir=config.sourceRoot / "cheribsd", installDir=config.cheribsdRootfs,
                          buildDir=config.cheribsdObj, gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git",
-                         gitRevision=config.cheriBsdRevision)
+                         gitRevision=config.cheriBsdRevision, appendCheriBitsToBuildDir=True)
         self.binutilsDir = self.config.sdkDir / "mips64/bin"
         self.cheriCC = self.config.sdkDir / "bin/clang"
         self.cheriCXX = self.config.sdkDir / "bin/clang++"
         self.installAsRoot = os.getuid() == 0
         self.commonMakeArgs = [
-            "make", "CHERI=256", "CHERI_CC=" + str(self.cheriCC),
+            "make", "CHERI=" + self.config.cheriBitsStr,
+            "CHERI_CC=" + str(self.cheriCC),
             # "CPUTYPE=mips64", # mipsfpu for hardware float
             # (apparently no longer supported: https://github.com/CTSRD-CHERI/cheribsd/issues/102)
             "-DDB_FROM_SRC",  # don't use the system passwd file
