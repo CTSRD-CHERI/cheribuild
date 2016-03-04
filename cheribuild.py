@@ -249,6 +249,11 @@ def defaultSshForwardingPort():
     # chose a different port for each user (hopefully it isn't in use yet)
     return 9999 + ((os.getuid() - 1000) % 10000)
 
+def defaultDiskImagePath(conf: "CheriConfig"):
+    if conf.buildCheri128:
+        return conf.outputRoot / "cheri128-disk.img"
+    return conf.outputRoot / "cheri256-disk.img"
+
 
 class CheriConfig(object):
     # boolean flags
@@ -273,9 +278,8 @@ class CheriConfig(object):
     extraFiles = ConfigLoader.addPathOption("extra-files", default=lambda p: (p.sourceRoot / "extra-files"),
                                             help="A directory with additional files that will be added to the image "
                                                  "(default: '<OUTPUT_ROOT>/extra-files')")
-    diskImage = ConfigLoader.addPathOption("disk-image-path", default=lambda p: (p.outputRoot / "disk.img"),
-                                           help="The output path for the QEMU disk image "
-                                                "(default: '<OUTPUT_ROOT>/disk.img')")
+    diskImage = ConfigLoader.addPathOption("disk-image-path", default=defaultDiskImagePath, help="The output path for"
+                                           " the QEMU disk image (default: '<OUTPUT_ROOT>/cheri256-disk.img')")
     nfsKernelPath = ConfigLoader.addPathOption("nfs-kernel-path", default=lambda p: (p.outputRoot / "nfs/kernel"),
                                                help="The output path for the CheriBSD kernel that boots over NFS "
                                                     "(default: '<OUTPUT_ROOT>/nfs/kernel')")
