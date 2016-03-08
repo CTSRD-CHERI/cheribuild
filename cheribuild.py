@@ -259,6 +259,8 @@ class CheriConfig(object):
     clean = ConfigLoader.addBoolOption("clean", "c", help="Remove the build directory before build")
     skipUpdate = ConfigLoader.addBoolOption("skip-update", help="Skip the git pull step")
     skipConfigure = ConfigLoader.addBoolOption("skip-configure", help="Skip the configure step")
+    skipBuildworld = ConfigLoader.addBoolOption("skip-buildworld", help="Skip the FreeBSD buildworld step -> only build"
+                                                " and install the kernel")
     listTargets = ConfigLoader.addBoolOption("list-targets", help="List all available targets and exit")
     dumpConfig = ConfigLoader.addBoolOption("dump-configuration", help="Print the current configuration as JSON."
                                             " This can be saved to ~/.config/cheribuild.json to make it persistent")
@@ -549,6 +551,9 @@ class BuildLLVM(Project):
             "-DCMAKE_INSTALL_PREFIX=" + str(self.installDir),
             "-DDEFAULT_SYSROOT=" + str(self.config.sdkSysrootDir),
             "-DLLVM_TOOL_LLDB_BUILD=OFF",  # disable LLDB for now
+            # doesn't save much time and seems to be slightly broken in current clang:
+            # "-DCLANG_ENABLE_STATIC_ANALYZER=OFF",  # save some build time by skipping the static analyzer
+            # "-DCLANG_ENABLE_ARCMT=OFF",  # need to disable ARCMT to disable static analyzer
         ]
         if self.config.cheriBits == 128:
             self.configureArgs.append("-DLLVM_CHERI_IS_128=ON")
@@ -637,29 +642,44 @@ class BuildCHERIBSD(Project):
             fatalError("CHERI CXX does not exist: ", self.cheriCXX)
         # if not (self.binutilsDir / "as").is_file():
         #     fatalError("CHERI MIPS binutils are missing. Run 'cheribuild.py binutils'?")
-        if self.installAsRoot:
-            self._removeSchgFlag("lib/libc.so.7", "lib/libcrypt.so.5", "lib/libthr.so.3",
-                                 "libexec/ld-cheri-elf.so.1", "libexec/ld-elf.so.1", "sbin/init",
-                                 "usr/bin/chpass", "usr/bin/chsh", "usr/bin/ypchpass", "usr/bin/ypchfn",
-                                 "usr/bin/ypchsh", "usr/bin/login", "usr/bin/opieinfo", "usr/bin/opiepasswd",
-                                 "usr/bin/passwd", "usr/bin/yppasswd", "usr/bin/su", "usr/bin/crontab",
-                                 "usr/lib/librt.so.1", "var/empty")
-        # make sure the old install is purged before building, otherwise we might get strange errors
-        # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
-        # if we installed as root remove the schg flag from files before cleaning (otherwise rm will fail)
-        self._cleanDir(self.installDir, force=True)
+        if not self.config.skipBuildworld:
+            if self.installAsRoot:
+                # we need to remove the schg flag as otherwise rm -rf will fail to remove these files
+                self._removeSchgFlag(
+                    "lib/libc.so.7", "lib/libcrypt.so.5", "lib/libthr.so.3", "libexec/ld-cheri-elf.so.1",
+                    "libexec/ld-elf.so.1", "sbin/init", "usr/bin/chpass", "usr/bin/chsh", "usr/bin/ypchpass",
+                    "usr/bin/ypchfn", "usr/bin/ypchsh", "usr/bin/login", "usr/bin/opieinfo", "usr/bin/opiepasswd",
+                    "usr/bin/passwd", "usr/bin/yppasswd", "usr/bin/su", "usr/bin/crontab", "usr/lib/librt.so.1",
+                    "var/empty"
+                )
+            # make sure the old install is purged before building, otherwise we might get strange errors
+            # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
+            # if we installed as root remove the schg flag from files before cleaning (otherwise rm will fail)
+            self._cleanDir(self.installDir, force=True)
+        else:
+            self._makedirs(self.installDir)
+
+    def clean(self):
+        if self.config.skipBuildworld:
+            # TODO: only clean the kernel build directory
+            fatalError("Not implemented yet!")
+        else:
+            super().clean()
 
     def compile(self):
         self.setupEnvironment()
-        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld", cwd=self.sourceDir)
+        if not self.config.skipBuildworld:
+            self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld", cwd=self.sourceDir)
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel", cwd=self.sourceDir)
 
     def install(self):
         # don't use multiple jobs here
         installArgs = self.commonMakeArgs + ["DESTDIR=" + str(self.installDir)]
-        self.runMake(installArgs, "installworld", cwd=self.sourceDir)
         self.runMake(installArgs, "installkernel", cwd=self.sourceDir)
-        self.runMake(installArgs, "distribution", cwd=self.sourceDir)
+        # TODO: should we run installworld even when --skip-buildworld is passed?
+        if not self.config.skipBuildworld:
+            self.runMake(installArgs, "installworld", cwd=self.sourceDir)
+            self.runMake(installArgs, "distribution", cwd=self.sourceDir)
 
 
 class BuildNfsKernel(BuildCHERIBSD):
@@ -1041,6 +1061,10 @@ class LaunchQEMU(Project):
         except OSError:
             return False
 
+
+# ufstype=ufs2 is required as the Linux kernel can't automatically determine which UFS filesystem is being used
+# Mount the filesystem of a BSD VM: guestmount -a /foo/bar.qcow2 -m /dev/sda1:/:ufstype=ufs2:ufs --ro /mnt/foo
+# Same thing is possible with qemu-nbd, but needs root (might be faster)
 
 # A target that does nothing (used for e.g. the all target)
 class PseudoTarget(Project):
