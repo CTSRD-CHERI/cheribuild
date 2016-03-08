@@ -20,9 +20,6 @@ from enum import Enum
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
 
-# change this if you want to customize where the sources go (or use --source-root=...)
-DEFAULT_SOURCE_ROOT = Path(os.path.expanduser("~/cheri"))
-
 if sys.version_info < (3, 4):
     sys.exit("This script requires at least Python 3.4")
 if sys.version_info < (3, 5):
@@ -271,7 +268,7 @@ class CheriConfig(object):
     buildCheri128 = ConfigLoader.addBoolOption("cheri-128", "-128", help="Build for 128 bit CHERI instead of 256")
 
     # configurable paths
-    sourceRoot = ConfigLoader.addPathOption("source-root", default=DEFAULT_SOURCE_ROOT,
+    sourceRoot = ConfigLoader.addPathOption("source-root", default=Path(os.path.expanduser("~/cheri")),
                                             help="The directory to store all sources")
     outputRoot = ConfigLoader.addPathOption("output-root", default=lambda p: (p.sourceRoot / "output"),
                                             help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
