@@ -146,6 +146,7 @@ class ConfigLoader(object):
     # argument groups:
     revisionGroup = _parser.add_argument_group("Specifying git revisions", "Useful if the current HEAD of a repository "
                                                "does not work but an older one did.")
+    cheriBitsGroup = _parser.add_mutually_exclusive_group()
 
     @classmethod
     def loadTargets(cls) -> list:
@@ -250,8 +251,9 @@ def defaultSshForwardingPort():
     # chose a different port for each user (hopefully it isn't in use yet)
     return 9999 + ((os.getuid() - 1000) % 10000)
 
+
 def defaultDiskImagePath(conf: "CheriConfig"):
-    if conf.buildCheri128:
+    if conf.cheriBits == 128:
         return conf.outputRoot / "cheri128-disk.img"
     return conf.outputRoot / "cheri256-disk.img"
 
@@ -271,7 +273,16 @@ class CheriConfig(object):
     skipDependencies = ConfigLoader.addBoolOption("skip-dependencies", "t",
                                                   help="Only build the targets that were explicitly passed on the "
                                                        "command line")
-    buildCheri128 = ConfigLoader.addBoolOption("cheri-128", "-128", help="Build for 128 bit CHERI instead of 256")
+
+    _buildCheri128 = ConfigLoader.addBoolOption("cheri-128", "-128", group=ConfigLoader.cheriBitsGroup,
+                                                help="Shortcut for --cheri-bits=128")
+    _buildCheri256 = ConfigLoader.addBoolOption("cheri-256", "-256", group=ConfigLoader.cheriBitsGroup,
+                                                help="Shortcut for --cheri-bits=256")
+    _cheriBits = ConfigLoader.addOption("cheri-bits", type=int, group=ConfigLoader.cheriBitsGroup, choices=["128", "256"],
+                                        default=256, help="Whether to build the whole software stack for 128 or 256 bit"
+                                        " CHERI. The output directories will be suffixed with the number of bits to"
+                                        " make sure the right binaries are being used."
+                                        " WARNING: 128-bit CHERI is still very unstable.")
 
     # configurable paths
     sourceRoot = ConfigLoader.addPathOption("source-root", default=Path(os.path.expanduser("~/cheri")),
@@ -317,14 +328,20 @@ class CheriConfig(object):
         self.targets = ConfigLoader.loadTargets()
         self.makeJFlag = "-j" + str(self.makeJobs)
 
+        if self._buildCheri128:
+            self.cheriBits = 128
+        elif self._buildCheri256:
+            self.cheriBits = 256
+        else:
+            self.cheriBits = self._cheriBits
+        self.cheriBitsStr = str(self.cheriBits)
+
         print("Sources will be stored in", self.sourceRoot)
         print("Build artifacts will be stored in", self.outputRoot)
         print("Extra files for disk image will be searched for in", self.extraFiles)
         print("Disk image will saved to", self.diskImage)
         self.qcow2DiskImage = Path(str(self.diskImage).replace(".img", ".qcow2"))
 
-        self.cheriBits = 128 if self.buildCheri128 else 256
-        self.cheriBitsStr = str(self.cheriBits)
         # now the derived config options
         self.cheribsdRootfs = self.outputRoot / ("rootfs" + self.cheriBitsStr)
         self.cheribsdSources = self.sourceRoot / "cheribsd"
