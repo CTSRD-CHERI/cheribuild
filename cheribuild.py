@@ -592,7 +592,7 @@ class BuildCHERIBSD(Project):
                          gitRevision=config.cheriBsdRevision, appendCheriBitsToBuildDir=True)
         if self.config.cheriBits == 128:
             # make sure we use a kernel with 128 bit CPU features selected
-            kernelConfig.replace("CHERI_", "CHERI128_")
+            self.kernelConfig = kernelConfig.replace("CHERI_", "CHERI128_")
         self.binutilsDir = self.config.sdkDir / "mips64/bin"
         self.cheriCC = self.config.sdkDir / "bin/clang"
         self.cheriCXX = self.config.sdkDir / "bin/clang++"
@@ -610,7 +610,7 @@ class BuildCHERIBSD(Project):
             # "CROSS_BINUTILS_PREFIX=" + str(self.binutilsDir),  # use the CHERI-aware binutils and not the builtin ones
             # TODO: once clang can build the kernel:
             #  "-DCROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin")
-            "KERNCONF=" + kernelConfig,
+            "KERNCONF=" + self.kernelConfig,
         ]
 
     def _makeStdoutFilter(self, line: bytes):
