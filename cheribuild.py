@@ -143,6 +143,9 @@ class ConfigLoader(object):
     _parsedArgs = None
     _JSON = {}  # type: dict
     values = OrderedDict()
+    # argument groups:
+    revisionGroup = _parser.add_argument_group("Specifying git revisions", "Useful if the current HEAD of a repository "
+                                               "does not work but an older one did.")
 
     @classmethod
     def loadTargets(cls) -> list:
@@ -163,14 +166,15 @@ class ConfigLoader(object):
         return cls._parsedArgs.targets
 
     @classmethod
-    def addOption(cls, name: str, shortname=None, default=None, type=None, **kwargs):
+    def addOption(cls, name: str, shortname=None, default=None, type=None, group=None, **kwargs):
         if default and not hasattr(default, '__call__') and "help" in kwargs:
             # only add the default string if it is not lambda
             kwargs["help"] = kwargs["help"] + " (default: \'" + str(default) + "\')"
+        parserObj = group if group else cls._parser
         if shortname:
-            action = cls._parser.add_argument("--" + name, "-" + shortname, **kwargs)
+            action = parserObj.add_argument("--" + name, "-" + shortname, **kwargs)
         else:
-            action = cls._parser.add_argument("--" + name, **kwargs)
+            action = parserObj.add_argument("--" + name, **kwargs)
         assert isinstance(action, argparse.Action)
         assert not action.default  # we handle the default value manually
         assert not action.type  # we handle the type of the value manually
@@ -289,19 +293,25 @@ class CheriConfig(object):
                                       help="Number of jobs to use for compiling")  # type: int
     sshForwardingPort = ConfigLoader.addOption("ssh-forwarding-port", "s", type=int, default=defaultSshForwardingPort(),
                                                help="The port to use on localhost to forward the QEMU ssh port. "
-                                                    "You can then use `ssh root@localhost -p $PORT` connect to the VM")  # type: int
+                                                    "You can then use `ssh root@localhost -p $PORT` connect to the VM",
+                                               metavar="PORT")  # type: int
 
     # allow overriding the git revisions in case there is a regression
-    cheriBsdRevision = ConfigLoader.addOption("cheribsd-revision", type=str,
-                                              help="The git revision or branch of CHERIBSD to check out")  # type: str
-    llvmRevision = ConfigLoader.addOption("llvm-revision", type=str,
-                                          help="The git revision or branch of LLVM to check out")  # type: str
-    clangRevision = ConfigLoader.addOption("clang-revision", type=str,
-                                           help="The git revision or branch of clang to check out")  # type: str
-    lldbRevision = ConfigLoader.addOption("lldb-revision", type=str,
-                                          help="The git revision or branch of clang to check out")  # type: str
-    qemuRevision = ConfigLoader.addOption("qemu-revision", type=str,
-                                          help="The git revision or branch of QEMU to check out")  # type: str
+    cheriBsdRevision = ConfigLoader.addOption("cheribsd-revision", type=str, metavar="GIT_COMMIT_ID",
+                                              help="The git revision or branch of CHERIBSD to check out",
+                                              group=ConfigLoader.revisionGroup)  # type: str
+    llvmRevision = ConfigLoader.addOption("llvm-revision", type=str, metavar="GIT_COMMIT_ID",
+                                          help="The git revision or branch of LLVM to check out",
+                                          group=ConfigLoader.revisionGroup)  # type: str
+    clangRevision = ConfigLoader.addOption("clang-revision", type=str, metavar="GIT_COMMIT_ID",
+                                           help="The git revision or branch of clang to check out",
+                                           group=ConfigLoader.revisionGroup)  # type: str
+    lldbRevision = ConfigLoader.addOption("lldb-revision", type=str, metavar="GIT_COMMIT_ID",
+                                          help="The git revision or branch of clang to check out",
+                                          group=ConfigLoader.revisionGroup)  # type: str
+    qemuRevision = ConfigLoader.addOption("qemu-revision", type=str, metavar="GIT_COMMIT_ID",
+                                          help="The git revision or branch of QEMU to check out",
+                                          group=ConfigLoader.revisionGroup)  # type: str
 
     def __init__(self):
         self.targets = ConfigLoader.loadTargets()
