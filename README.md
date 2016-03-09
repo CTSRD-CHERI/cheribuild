@@ -37,7 +37,7 @@ For example if you want cheribuild.py to behave as if you had passed
 {
   "source-root": "/sources/cheri",
   "output-root": "/build/cheri",
-  "cheri-128": true,
+  "cheri-bits": 128,
   "skip-dependencies": true,
   "make-jobs": 4
 }
@@ -45,10 +45,13 @@ For example if you want cheribuild.py to behave as if you had passed
 
 
 ```
-usage: cheribuild.py [-h] [--pretend] [--quiet] [--clean] [--skip-update] [--skip-configure] [--skip-buildworld] [--list-targets] [--dump-configuration] [--skip-dependencies] [--cheri-128]
-                     [--source-root SOURCE_ROOT] [--output-root OUTPUT_ROOT] [--extra-files EXTRA_FILES] [--disk-image-path DISK_IMAGE_PATH] [--nfs-kernel-path NFS_KERNEL_PATH]
-                     [--make-jobs MAKE_JOBS] [--ssh-forwarding-port SSH_FORWARDING_PORT] [--cheribsd-revision CHERIBSD_REVISION] [--llvm-revision LLVM_REVISION]
-                     [--clang-revision CLANG_REVISION] [--lldb-revision LLDB_REVISION] [--qemu-revision QEMU_REVISION]
+usage: cheribuild.py [-h] [--pretend] [--quiet] [--clean] [--skip-update] [--skip-configure] [--skip-buildworld]
+                     [--list-targets] [--dump-configuration] [--skip-dependencies]
+                     [--cheri-128 | --cheri-256 | --cheri-bits {128,256}] [--source-root SOURCE_ROOT]
+                     [--output-root OUTPUT_ROOT] [--extra-files EXTRA_FILES] [--disk-image-path DISK_IMAGE_PATH]
+                     [--nfs-kernel-path NFS_KERNEL_PATH] [--make-jobs MAKE_JOBS] [--ssh-forwarding-port PORT]
+                     [--cheribsd-revision GIT_COMMIT_ID] [--llvm-revision GIT_COMMIT_ID]
+                     [--clang-revision GIT_COMMIT_ID] [--lldb-revision GIT_COMMIT_ID] [--qemu-revision GIT_COMMIT_ID]
                      [TARGET [TARGET ...]]
 
 positional arguments:
@@ -63,35 +66,47 @@ optional arguments:
   --skip-configure      Skip the configure step
   --skip-buildworld     Skip the FreeBSD buildworld step -> only build and install the kernel
   --list-targets        List all available targets and exit
-  --dump-configuration  Print the current configuration as JSON. This can be saved to ~/.config/cheribuild.json to make it persistent
+  --dump-configuration  Print the current configuration as JSON. This can be saved to ~/.config/cheribuild.json to make
+                        it persistent
   --skip-dependencies, -t
                         Only build the targets that were explicitly passed on the command line
-  --cheri-128, --128    Build for 128 bit CHERI instead of 256
+  --cheri-128, --128    Shortcut for --cheri-bits=128
+  --cheri-256, --256    Shortcut for --cheri-bits=256
+  --cheri-bits {128,256}
+                        Whether to build the whole software stack for 128 or 256 bit CHERI. The output directories will
+                        be suffixed with the number of bits to make sure the right binaries are being used. WARNING:
+                        128-bit CHERI is still very unstable. (default: '256')
   --source-root SOURCE_ROOT
                         The directory to store all sources (default: '/home/alex/cheri')
   --output-root OUTPUT_ROOT
                         The directory to store all output (default: '<SOURCE_ROOT>/output')
   --extra-files EXTRA_FILES
-                        A directory with additional files that will be added to the image (default: '<OUTPUT_ROOT>/extra-files')
+                        A directory with additional files that will be added to the image (default:
+                        '<OUTPUT_ROOT>/extra-files')
   --disk-image-path DISK_IMAGE_PATH
                         The output path for the QEMU disk image (default: '<OUTPUT_ROOT>/cheri256-disk.img')
   --nfs-kernel-path NFS_KERNEL_PATH
-                        The output path for the CheriBSD kernel that boots over NFS (default: '<OUTPUT_ROOT>/nfs/kernel')
+                        The output path for the CheriBSD kernel that boots over NFS (default:
+                        '<OUTPUT_ROOT>/nfs/kernel')
   --make-jobs MAKE_JOBS, -j MAKE_JOBS
                         Number of jobs to use for compiling (default: '8')
-  --ssh-forwarding-port SSH_FORWARDING_PORT, -s SSH_FORWARDING_PORT
-                        The port to use on localhost to forward the QEMU ssh port. You can then use `ssh root@localhost -p $PORT` connect to the VM (default: '9999')
-  --cheribsd-revision CHERIBSD_REVISION
-                        The git revision or branch of CHERIBSD to check out
-  --llvm-revision LLVM_REVISION
-                        The git revision or branch of LLVM to check out
-  --clang-revision CLANG_REVISION
-                        The git revision or branch of clang to check out
-  --lldb-revision LLDB_REVISION
-                        The git revision or branch of clang to check out
-  --qemu-revision QEMU_REVISION
-                        The git revision or branch of QEMU to check out
+  --ssh-forwarding-port PORT, -s PORT
+                        The port to use on localhost to forward the QEMU ssh port. You can then use `ssh root@localhost
+                        -p $PORT` connect to the VM (default: '9999')
 
+Specifying git revisions:
+  Useful if the current HEAD of a repository does not work but an older one did.
+
+  --cheribsd-revision GIT_COMMIT_ID
+                        The git revision or branch of CHERIBSD to check out
+  --llvm-revision GIT_COMMIT_ID
+                        The git revision or branch of LLVM to check out
+  --clang-revision GIT_COMMIT_ID
+                        The git revision or branch of clang to check out
+  --lldb-revision GIT_COMMIT_ID
+                        The git revision or branch of clang to check out
+  --qemu-revision GIT_COMMIT_ID
+                        The git revision or branch of QEMU to check out
 ```
 
 
