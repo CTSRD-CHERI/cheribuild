@@ -600,6 +600,7 @@ class BuildCHERIBSD(Project):
         super().__init__(name, config, sourceDir=config.sourceRoot / "cheribsd", installDir=config.cheribsdRootfs,
                          buildDir=config.cheribsdObj, gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git",
                          gitRevision=config.cheriBsdRevision, appendCheriBitsToBuildDir=True)
+        self.kernelConfig = kernelConfig
         if self.config.cheriBits == 128:
             # make sure we use a kernel with 128 bit CPU features selected
             self.kernelConfig = kernelConfig.replace("CHERI_", "CHERI128_")
