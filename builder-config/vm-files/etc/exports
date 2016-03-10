@@ -2,3 +2,7 @@
 /build_output -alldirs -maproot=root * -network 192.168.122.0 -mask 255.255.255.0
 # export it read-only 
 /build_output -ro
+# make /exports visible as NFSV4 (/build_output is bind mounted to /exports/cheri-output)
+V4: /exports
+# export cheri-output read-only and map all remote users to root
+/exports/cheri-output -ro -mapall=root:wheel

@@ -7,3 +7,4 @@ tmpfs                        /tmp              tmpfs    rw  0  0
 192.168.122.1:/sources/ctsrd /mnt/sources      nfs      rw  0  0
 # build output on NFS doesn't currently work
 # 192.168.122.1:/build/cheri   /mnt/host_output  nfs      rw  0  0
+/build_output                /exports/cheri-output   nullfs    rw  0  0
