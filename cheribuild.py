@@ -5,6 +5,7 @@ import sys
 import os
 import shlex
 import shutil
+import tempfile
 import threading
 import pprint
 import time
@@ -447,6 +448,7 @@ class Project(object):
         :param args: the make command to run (e.g. ["make", "-j32"])
         :param makeTarget: the target to build (e.g. "install")
         :param cwd the directory to run make in (defaults to self.buildDir)
+        :param env the environment to pass to make
         """
         if makeTarget:
             allArgs = args + [makeTarget]
@@ -780,30 +782,39 @@ class BuildDiskImage(Project):
         super().__init__("disk-image", config)
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
-        self.manifestFile = self.config.cheribsdRootfs / "METALOG"
+        self.manifestFile = None  # type: Path
         self.userGroupDbDir = self.config.cheribsdSources / "etc"
+        self.extraFiles = []  # type: typing.List[Path]
 
-    def writeFile(self, path: Path, contents: str):
-        printCommand("echo", shlex.quote(contents.replace("\n", "\\n")), ">", shlex.quote(str(path)))
+    def writeFile(self, outDir: str, pathInImage: str, contents: str) -> Path:
+        if not pathInImage.startswith("/"):
+            fatalError("Can't use a relative path for pathInImage:", pathInImage)
+        targetFile = Path(outDir + pathInImage)
+        self._makedirs(targetFile.parent)
+        print(coloured(AnsiColour.yellow, "echo", shlex.quote(contents.replace("\n", "\\n")), ">",
+                       shlex.quote(str(targetFile))))
         if self.config.pretend:
-            return
-        newContents = contents + "\n"  # make sure the file has a newline at the end
-        if path.is_file():
-            with path.open("r", encoding="utf-8") as f:
+            return targetFile
+        if targetFile.is_file():
+            # Should no longer happen with the new logic
+            with targetFile.open("r", encoding="utf-8") as f:
                 oldContents = f.read()
-            if oldContents == newContents:
-                print("File", path, "already exists with same contents, skipping write operation")
-                return
-            print("About to overwrite file ", path, ". Diff is:", sep="")
-            diff = difflib.unified_diff(io.StringIO(oldContents).readlines(), io.StringIO(newContents).readlines(),
-                                        str(path), str(path))
+            if oldContents == contents:
+                print("File", targetFile, "already exists with same contents, skipping write operation")
+                return targetFile
+            print("About to overwrite file ", targetFile, ". Diff is:", sep="")
+            diff = difflib.unified_diff(io.StringIO(oldContents).readlines(), io.StringIO(contents).readlines(),
+                                        str(targetFile), str(targetFile))
             print("".join(diff))  # difflib.unified_diff() returns an iterator with lines
             if input("Continue? [Y/n]").lower() == "n":
                 sys.exit()
-        with path.open(mode='w') as f:
-            f.write(contents + "\n")
+        with targetFile.open(mode='w') as f:
+            f.write(contents)
+        return targetFile
 
     def addFileToImage(self, file: Path, targetDir: str, user="root", group="wheel", mode="0644"):
+        if targetDir.startswith("/"):
+            targetDir = targetDir[1:]
         # e.g. "install -N /home/alr48/cheri/cheribsd/etc -U -M /home/alr48/cheri/output/rootfs//METALOG
         # -D /home/alr48/cheri/output/rootfs -o root -g wheel -m 444 alarm.3.gz
         # /home/alr48/cheri/output/rootfs/usr/share/man/man3/"
@@ -816,10 +827,25 @@ class BuildDiskImage(Project):
                 "-m", mode,  # access rights
                 str(file), str(self.config.cheribsdRootfs / targetDir)  # target file and destination dir
                 ])
+        if file in self.extraFiles:
+            self.extraFiles.remove(file)
+
+    def createFileForImage(self, outDir: str, pathInImage: str, *, contents: str="\n"):
+        assert pathInImage.startswith("/")
+        userProvided = self.config.extraFiles / pathInImage[1:]
+        if userProvided.is_file():
+            print("Using user provided", pathInImage, "instead of generating default")
+            print(str(userProvided))
+            self.extraFiles.remove(userProvided)
+            targetFile = userProvided
+        else:
+            assert userProvided not in self.extraFiles
+            targetFile = self.writeFile(outDir, pathInImage, contents)
+        self.addFileToImage(targetFile, pathInImage)
 
     def process(self):
-        if not self.manifestFile.is_file():
-            fatalError("mtree manifest", self.manifestFile, "is missing")
+        if not (self.config.cheribsdRootfs / "METALOG").is_file():
+            fatalError("mtree manifest", self.config.cheribsdRootfs / "METALOG", "is missing")
         if not (self.userGroupDbDir / "master.passwd").is_file():
             fatalError("master.passwd does not exist in ", self.userGroupDbDir)
 
@@ -832,39 +858,56 @@ class BuildDiskImage(Project):
             printCommand("rm", self.config.diskImage)
             self.config.diskImage.unlink()
 
-        # TODO: make this configurable to allow NFS, etc.
-        self.writeFile(self.config.cheribsdRootfs / "etc/fstab", "/dev/ada0 / ufs rw 1 1")
-        self.addFileToImage(self.config.cheribsdRootfs / "etc/fstab", targetDir="etc")
+        with tempfile.TemporaryDirectory() as outDir:
+            self.manifestFile = outDir + "/METALOG"
+            shutil.copy2(str(self.config.cheribsdRootfs / "METALOG"), self.manifestFile)
 
-        # enable ssh and set hostname
-        # TODO: use separate file in /etc/rc.conf.d/ ?
-        networkConfigOptions = (
-            'hostname="qemu-cheri-' + os.getlogin() + '"\n'
-            'ifconfig_le0="DHCP"\n'
-            'sshd_enable="YES"')
-        self.writeFile(self.config.cheribsdRootfs / "etc/rc.conf", networkConfigOptions)
-        self.addFileToImage(self.config.cheribsdRootfs / "etc/rc.conf", targetDir="etc")
-        # make sure that the disk image always has the same SSH host keys
-        # If they don't exist the system will generate one on first boot (which means we keep having to add new ones)
-        self.generateSshHostKeys()
+            # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
+            # If they do not exist in the extra-files directory yet we generate a default one and use that
+            # Additionally all other files in the extra-files directory will be added to the disk image
+            for root, dirnames, filenames in os.walk(str(self.config.extraFiles)):
+                for filename in filenames:
+                    self.extraFiles.append(Path(root, filename))
 
-        # TODO: https://www.freebsd.org/cgi/man.cgi?mount_unionfs(8) should make this easier
-        # Overlay extra-files over additional stuff over cheribsd rootfs dir
+            # TODO: https://www.freebsd.org/cgi/man.cgi?mount_unionfs(8) should make this easier
+            # Overlay extra-files over additional stuff over cheribsd rootfs dir
 
-        runCmd([
-            "makefs",
-            "-b", "70%",  # minimum 70% free blocks
-            "-f", "30%",  # minimum 30% free inodes
-            "-M", "4g",  # minimum image size = 4GB
-            "-B", "be",  # big endian byte order
-            "-F", self.manifestFile,  # use METALOG as the manifest for the disk image
-            "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
-            # which makes sure that the numeric UID values are correct
-            self.config.diskImage,  # output file
-            self.config.cheribsdRootfs  # directory tree to use for the image
-        ])
+            # create the disk image
+            self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw 1 1\n")
+            # enable ssh and set hostname
+            # TODO: use separate file in /etc/rc.conf.d/ ?
+            networkConfigOptions = (
+                'hostname="qemu-cheri-' + os.getlogin() + '"\n'
+                'ifconfig_le0="DHCP"\n'
+                'sshd_enable="YES"\n'
+            )
+            self.createFileForImage(outDir, "/etc/rc.conf", contents=networkConfigOptions)
+
+            # make sure that the disk image always has the same SSH host keys
+            # If they don't exist the system will generate one on first boot and we have to accept them every time
+            self.generateSshHostKeys()
+            # TODO: add the users SSH key to authorized_keys
+
+            # now add all the user provided files to the image:
+            for p in self.extraFiles:
+                pathInImage = p.relative_to(self.config.extraFiles)
+                print("Adding user provided file", pathInImage)
+                self.addFileToImage(p, str(pathInImage.parent))
+
+            runCmd([
+                "makefs",
+                "-b", "70%",  # minimum 70% free blocks
+                "-f", "30%",  # minimum 30% free inodes
+                "-M", "4g",  # minimum image size = 4GB
+                "-B", "be",  # big endian byte order
+                "-F", self.manifestFile,  # use METALOG as the manifest for the disk image
+                "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
+                # which makes sure that the numeric UID values are correct
+                self.config.diskImage,  # output file
+                self.config.cheribsdRootfs  # directory tree to use for the image
+            ])
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
-        runCmd("qemu-img", "info", self.config.qcow2DiskImage)
+        runCmd("qemu-img", "info", self.config.diskImage)
         runCmd("rm", "-f", self.config.qcow2DiskImage)
         # create a qcow2 version:
         runCmd("qemu-img", "convert",
