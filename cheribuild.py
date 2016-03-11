@@ -167,8 +167,11 @@ class ConfigLoader(object):
         try:
             configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
             cls._configPath = Path(configdir, "cheribuild.json")
-            with cls._configPath.open("r") as f:
-                cls._JSON = json.load(f, encoding="utf-8")
+            if cls._configPath.exists():
+                with cls._configPath.open("r") as f:
+                    cls._JSON = json.load(f, encoding="utf-8")
+            else:
+                print("Configuration file", cls._configPath, "does not exist, using only command line arguments.")
         except IOError:
             print("Could not load config file", cls._configPath)
         return cls._parsedArgs.targets
@@ -344,10 +347,11 @@ class CheriConfig(object):
             self.cheriBits = self._cheriBits
         self.cheriBitsStr = str(self.cheriBits)
 
-        print("Sources will be stored in", self.sourceRoot)
-        print("Build artifacts will be stored in", self.outputRoot)
-        print("Extra files for disk image will be searched for in", self.extraFiles)
-        print("Disk image will saved to", self.diskImage)
+        if not self.quiet:
+            print("Sources will be stored in", self.sourceRoot)
+            print("Build artifacts will be stored in", self.outputRoot)
+            print("Extra files for disk image will be searched for in", self.extraFiles)
+            print("Disk image will saved to", self.diskImage)
         self.qcow2DiskImage = Path(str(self.diskImage).replace(".img", ".qcow2"))
 
         # now the derived config options
@@ -360,7 +364,8 @@ class CheriConfig(object):
         # for debugging purposes print all the options
         for i in ConfigLoader.options:
             i.__get__(self, CheriConfig)  # for loading of lazy value
-        print("cheribuild.py configuration:", dict(ConfigLoader.values))
+        if not self.quiet:
+            print("cheribuild.py configuration:", dict(ConfigLoader.values))
 
 
 class Project(object):
@@ -617,12 +622,11 @@ class BuildLLVM(Project):
         incompatibleFiles += self.installDir.glob("lib/clang/3.*/include/limits.h")
         if len(incompatibleFiles) == 0:
             fatalError("Could not find incompatible builtin includes. Build system changed?")
-        print("Removing incompatible builtin includes...", end="")
+        print("Removing incompatible builtin includes...")
         for i in incompatibleFiles:
             printCommand("rm", shlex.quote(str(i)), printVerboseOnly=True)
             if not self.config.pretend:
                 i.unlink()
-        print(" Done")
 
 
 class BuildCHERIBSD(Project):
