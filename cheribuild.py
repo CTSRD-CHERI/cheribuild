@@ -101,7 +101,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
     printCommand(cmdline, cwd=kwargs.get("cwd"), printVerboseOnly=printVerboseOnly)
     kwargs["cwd"] = str(kwargs["cwd"]) if "cwd" in kwargs else os.getcwd()
     if cheriConfig.pretend:
-        return CompletedProcess(args=cmdline, returncode=0, stdout=b"")
+        return CompletedProcess(args=cmdline, returncode=0, stdout=b"", stderr=b"")
 
     # actually run the process now:
     if input is not None:
