@@ -1194,7 +1194,7 @@ class LaunchQEMU(Project):
             fatalError("SSH forwarding port", self.config.sshForwardingPort, "is already in use!")
 
         print("About to run QEMU with image", self.config.diskImage, "and kernel", currentKernel,
-              coloured(AnsiColour.green, "\nListinging for SSH connections on localhost:" +
+              coloured(AnsiColour.green, "\nListening for SSH connections on localhost:" +
                        str(self.config.sshForwardingPort)))
         # input("Press enter to continue")
         runCmd([qemuBinary, "-M", "malta",  # malta cpu
