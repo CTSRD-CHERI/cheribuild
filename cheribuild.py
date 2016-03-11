@@ -875,10 +875,13 @@ class BuildDiskImage(Project):
             "-o", user, "-g", group,  # uid and gid
             "-m", mode,  # access rights
         ]
-        if not parentDir.is_dir():
-            print("Creating directory /", parentDir.relative_to(self.config.cheribsdRootfs), sep="")
-            # install -d: Create directories. Missing parent directories are created as required.
-            runCmd(["install", "-d"] + commonArgs + [str(parentDir)], printVerboseOnly=True)
+        # install -d: Create directories. Missing parent directories are created as required.
+        # If we only create the parent directory if it doesn't exist yet we might break the build if rootfs wasn't
+        # cleaned before running disk-image. We get errors like this:
+        #   makefs: ./root/.ssh: missing directory in specification
+        #   makefs: failed at line 27169 of the specification
+        # Having the directory in the spec multiple times is fine, so we just do that instead
+        runCmd(["install", "-d"] + commonArgs + [str(parentDir)], printVerboseOnly=True)
         # need to pass target file and destination dir so that METALOG can be filled correctly
         runCmd(["install"] + commonArgs + [str(file), str(parentDir)], printVerboseOnly=True)
         if file in self.extraFiles:
