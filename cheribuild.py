@@ -455,37 +455,41 @@ class Project(object):
                 outfile.write(errLine)
 
     def runMake(self, args: "typing.List[str]", makeTarget="", *, cwd: Path=None, env=None) -> None:
+        if makeTarget:
+            allArgs = args + [makeTarget]
+            logfileName = self.makeCommand + "." + makeTarget
+        else:
+            allArgs = args
+            logfileName = "build"
+        if not cwd:
+            cwd = self.buildDir
+        starttime = time.time()
+        self.runWithLogfile(allArgs, logfileName=logfileName, cwd=cwd, env=env)
+        # add a newline at the end in case it ended with a filtered line (no final newline)
+        print("Running", self.makeCommand, makeTarget, "took", time.time() - starttime, "seconds")
+
+    def runWithLogfile(self, args: "typing.Sequence[str]", logfileName: str, *, cwd: Path = None, env=None) -> None:
         """
         Runs make and logs the output
-        :param args: the make command to run (e.g. ["make", "-j32"])
-        :param makeTarget: the target to build (e.g. "install")
+        :param args: the command to run (e.g. ["make", "-j32"])
+        :param logfileName: the name of the logfile (e.g. "build.log")
         :param cwd the directory to run make in (defaults to self.buildDir)
         :param env the environment to pass to make
         """
-        if makeTarget:
-            allArgs = args + [makeTarget]
-            logfilePath = Path(self.buildDir / ("build." + makeTarget + ".log"))
-        else:
-            allArgs = args
-            logfilePath = Path(self.buildDir / "build.log")
-
-        if not cwd:
-            cwd = self.buildDir
-
-        printCommand(" ".join(allArgs), cwd=self.sourceDir)
+        printCommand(args, cwd=cwd)
+        assert not logfileName.startswith("/")
+        logfilePath = self.buildDir / (logfileName + ".log")
+        print("Saving build log to", logfilePath)
         if self.config.pretend:
             return
-        print("Saving build log to", logfilePath)
 
         with logfilePath.open("wb") as logfile:
-            # TODO: add a verbose option that shows every line
-            starttime = time.time()
             # quiet doesn't display anything, normal only status updates and verbose everything
             if self.config.quiet:
                 # a lot more efficient than filtering every line
-                subprocess.check_call(allArgs, cwd=str(cwd), stdout=logfile, stderr=logfile, env=env)
+                subprocess.check_call(args, cwd=str(cwd), stdout=logfile, stderr=logfile, env=env)
                 return
-            make = subprocess.Popen(allArgs, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+            make = subprocess.Popen(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
             # use a thread to print stderr output and write it to logfile (not using a thread would block)
             logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
             stderrThread = threading.Thread(target=self._handleStdErr, args=(logfile, make.stderr, logfileLock))
@@ -500,13 +504,10 @@ class Project(object):
                         self._makeStdoutFilter(line)
             retcode = make.wait()
             stderrThread.join()
-            cmdStr = " ".join([shlex.quote(s) for s in allArgs])
             if retcode:
+                cmdStr = " ".join([shlex.quote(s) for s in args])
                 raise SystemExit("Command \"%s\" failed with exit code %d.\nSee %s for details." %
                                  (cmdStr, retcode, logfile.name))
-            else:
-                # add a newline at the end in case it ended with a filtered line (no final newline)
-                print("\nBuilding", makeTarget, "took", time.time() - starttime, "seconds")
 
     def compile(self):
         self.runMake([self.makeCommand, self.config.makeJFlag])
