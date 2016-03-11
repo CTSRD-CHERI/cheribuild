@@ -1220,8 +1220,8 @@ class AllTargets(object):
             # Otherwise run all targets in dependency order
             chosenTargets = []
             orderedTargets = self.topologicalSort(explicitlyChosenTargets)  # type: typing.Iterable[typing.List[Target]]
-            for dependecyLevel, targetNames in enumerate(orderedTargets):
-                # print("Level", dependecyLevel, "targets:", targetNames)
+            for dependencyLevel, targetNames in enumerate(orderedTargets):
+                # print("Level", dependencyLevel, "targets:", targetNames)
                 chosenTargets.extend(self.targetMap[t] for t in targetNames)
         # now that the chosen targets have been resolved run them
         for target in chosenTargets:
