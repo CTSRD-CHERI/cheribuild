@@ -862,22 +862,27 @@ class BuildDiskImage(Project):
         return targetFile
 
     def addFileToImage(self, file: Path, targetDir: str, user="root", group="wheel", mode="0644"):
-        if targetDir.startswith("/"):
-            targetDir = targetDir[1:]
+        assert not targetDir.startswith("/")
         # e.g. "install -N /home/alr48/cheri/cheribsd/etc -U -M /home/alr48/cheri/output/rootfs//METALOG
         # -D /home/alr48/cheri/output/rootfs -o root -g wheel -m 444 alarm.3.gz
         # /home/alr48/cheri/output/rootfs/usr/share/man/man3/"
-        runCmd(["install",
-                "-N", str(self.userGroupDbDir),  # Use a custom user/group database text file
-                "-U",  # Indicate that install is running unprivileged (do not change uid/gid)
-                "-M", str(self.manifestFile),  # the mtree manifest to write the entry to
-                "-D", str(self.config.cheribsdRootfs),  # DESTDIR (will be stripped from the start of the mtree file
-                "-o", user, "-g", group,  # uid and gid
-                "-m", mode,  # access rights
-                str(file), str(self.config.cheribsdRootfs / targetDir)  # target file and destination dir
-                ], printVerboseOnly=True)
+        parentDir = self.config.cheribsdRootfs / targetDir
+        commonArgs = [
+            "-N", str(self.userGroupDbDir),  # Use a custom user/group database text file
+            "-U",  # Indicate that install is running unprivileged (do not change uid/gid)
+            "-M", str(self.manifestFile),  # the mtree manifest to write the entry to
+            "-D", str(self.config.cheribsdRootfs),  # DESTDIR (will be stripped from the start of the mtree file
+            "-o", user, "-g", group,  # uid and gid
+            "-m", mode,  # access rights
+        ]
+        if not parentDir.is_dir():
+            print("Creating directory /", parentDir.relative_to(self.config.cheribsdRootfs), sep="")
+            # install -d: Create directories. Missing parent directories are created as required.
+            runCmd(["install", "-d"] + commonArgs + [str(parentDir)], printVerboseOnly=True)
+        # need to pass target file and destination dir so that METALOG can be filled correctly
+        runCmd(["install"] + commonArgs + [str(file), str(parentDir)], printVerboseOnly=True)
         if file in self.extraFiles:
-            self.extraFiles.remove(file)
+            self.extraFiles.remove(file)  # remove it from extraFiles so we don't install it twice
 
     def createFileForImage(self, outDir: str, pathInImage: str, *, contents: str="\n"):
         assert pathInImage.startswith("/")
@@ -889,7 +894,7 @@ class BuildDiskImage(Project):
         else:
             assert userProvided not in self.extraFiles
             targetFile = self.writeFile(outDir, pathInImage, contents)
-        self.addFileToImage(targetFile, pathInImage)
+        self.addFileToImage(targetFile, str(Path(pathInImage).parent.relative_to("/")))
 
     def process(self):
         if not (self.config.cheribsdRootfs / "METALOG").is_file():
@@ -933,14 +938,25 @@ class BuildDiskImage(Project):
             # make sure that the disk image always has the same SSH host keys
             # If they don't exist the system will generate one on first boot and we have to accept them every time
             self.generateSshHostKeys()
+            authorizedKeys = self.config.extraFiles / "root/.ssh/authorized_keys"
+            if not authorizedKeys.is_file():
+                sshKeys = list(Path(os.path.expanduser("~/.ssh/")).glob("id_*.pub"))
+                if len(sshKeys) > 0:
+                    print("Found the following ssh keys:", sshKeys)
+                    if self.queryYesNo("Should they be added to /root/.ssh/authorized_keys?", defaultResult=True):
+                        contents = ""
+                        for p in sshKeys:
+                            with p.open("r") as pubkey:
+                                contents += pubkey.read()
+                        self.createFileForImage(outDir, "/root/.ssh/authorized_keys", contents=contents)
+
             # TODO: add the users SSH key to authorized_keys
 
             # now add all the user provided files to the image:
             for p in self.extraFiles:
                 pathInImage = p.relative_to(self.config.extraFiles)
-                print("Adding user provided file", pathInImage, "to disk image.")
+                print("Adding user provided file /", pathInImage, " to disk image.", sep="")
                 self.addFileToImage(p, str(pathInImage.parent))
-
             runCmd([
                 "makefs",
                 "-b", "70%",  # minimum 70% free blocks
