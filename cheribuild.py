@@ -135,12 +135,16 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
         return CompletedProcess(process.args, retcode, stdout, stderr)
 
 
-def fatalError(*args):
+def statusUpdate(*args, sep=" ", **kwargs):
+    print(coloured(AnsiColour.cyan, *args, sep=sep), **kwargs)
+
+
+def fatalError(*args, sep=" "):
     # we ignore fatal errors when simulating a run
     if cheriConfig.pretend:
-        print(coloured(AnsiColour.red, ("Potential fatal error:",) + args))
+        print(coloured(AnsiColour.red, ("Potential fatal error:",) + args, sep=sep))
     else:
-        sys.exit(coloured(AnsiColour.red, args))
+        sys.exit(coloured(AnsiColour.red, args, sep=sep))
 
 
 class ConfigLoader(object):
@@ -432,7 +436,7 @@ class Project(object):
 
     def configure(self):
         if self.configureCommand:
-            print("Configuring", self.name, "... ")
+            statusUpdate("Configuring", self.name, "... ")
             runCmd([self.configureCommand] + self.configureArgs, cwd=self.buildDir)
 
     def _makeStdoutFilter(self, line: bytes):
@@ -520,9 +524,9 @@ class Project(object):
             self._makedirs(self.buildDir)
         if not self.config.skipConfigure:
             self.configure()
-        print("Building", self.name, "... ")
+        statusUpdate("Building", self.name, "... ")
         self.compile()
-        print("Installing", self.name, "... ")
+        statusUpdate("Installing", self.name, "... ")
         self.install()
 
 
@@ -977,7 +981,7 @@ class BuildSDK(Project):
         # make sdk a link to the 256 bit sdk
         if (self.config.outputRoot / "sdk").is_dir():
             # remove the old sdk directory from previous versions of this script
-            runCmd("rm", "-rf", self.config.outputRoot / "sdk")
+            runCmd("rm", "-rf", self.config.outputRoot / "sdk", printVerboseOnly=True)
         if not self.config.pretend and not (self.config.outputRoot / "sdk").exists():
             runCmd("ln", "-sf", "sdk256", "sdk", cwd=self.config.outputRoot)
         # we need to add include files and libraries to the sysroot directory
@@ -1179,7 +1183,7 @@ class Target(object):
         # instantiate the project and run it
         project = self.projectClass(config)
         project.process()
-        print("Built target '" + self.name + "'")
+        statusUpdate("Built target '" + self.name + "'")
 
 
 class AllTargets(object):
