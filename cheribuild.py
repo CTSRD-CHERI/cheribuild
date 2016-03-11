@@ -471,7 +471,7 @@ class Project(object):
             # quiet doesn't display anything, normal only status updates and verbose everything
             if self.config.quiet:
                 # a lot more efficient than filtering every line
-                subprocess.check_call(allArgs, cwd=str(cwd), stdout=logfile, env=env)
+                subprocess.check_call(allArgs, cwd=str(cwd), stdout=logfile, stderr=logfile, env=env)
                 return
             make = subprocess.Popen(allArgs, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
             # use a thread to print stderr output and write it to logfile (not using a thread would block)
