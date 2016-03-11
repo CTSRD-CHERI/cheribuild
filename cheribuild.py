@@ -91,8 +91,8 @@ def printCommand(arg1: "typing.Union[str, typing.Tuple, typing.List]", *remainin
     print(coloured(colour, newArgs, sep=sep), flush=True, **kwargs)
 
 
-def runCmd(*args, captureOutput=False, input: "typing.Union[str, bytes]"=None, timeout=None, printVerboseOnly=False,
-           **kwargs):
+def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]"=None, timeout=None,
+           printVerboseOnly=False, **kwargs):
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         cmdline = args[0]  # list with parameters was passed
     else:
@@ -112,6 +112,9 @@ def runCmd(*args, captureOutput=False, input: "typing.Union[str, bytes]"=None, t
     if captureOutput:
         assert "stdout" not in kwargs  # we need to use stdout here
         kwargs["stdout"] = subprocess.PIPE
+    if captureError:
+        assert "stderr" not in kwargs  # we need to use stdout here
+        kwargs["stderr"] = subprocess.PIPE
     elif cheriConfig.quiet and "stdout" not in kwargs:
         kwargs["stdout"] = subprocess.DEVNULL
     with subprocess.Popen(cmdline, **kwargs) as process:
@@ -572,7 +575,7 @@ class BuildLLVM(Project):
         # make sure we have at least version 3.7
         versionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         # clang prints this output to stderr
-        versionString = runCmd(cCompiler, "-v", captureOutput=True, stderr=subprocess.STDOUT, printVerboseOnly=True).stdout
+        versionString = runCmd(cCompiler, "-v", captureError=True, printVerboseOnly=True).stderr
         match = versionPattern.search(versionString)
         versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
         if versionComponents < (3, 7):
