@@ -373,6 +373,8 @@ class CheriConfig(object):
 
 
 class Project(object):
+    clearLineSequence = b"\x1b[2K\r"
+
     def __init__(self, name: str, config: CheriConfig, *, sourceDir: Path=None, buildDir: Path=None,
                  installDir: Path=None, gitUrl="", gitRevision=None, appendCheriBitsToBuildDir=False):
         self.name = name
@@ -388,7 +390,6 @@ class Project(object):
         self.configureCommand = ""
         self.configureArgs = []  # type: typing.List[str]
         # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
-        self.clearLineSequence = b"\x1b[2K\r"
 
     @staticmethod
     def _updateGitRepo(srcDir: Path, remoteUrl, revision=None):
@@ -437,11 +438,13 @@ class Project(object):
     def configure(self):
         if self.configureCommand:
             statusUpdate("Configuring", self.name, "... ")
-            runCmd([self.configureCommand] + self.configureArgs, cwd=self.buildDir)
+            self.runWithLogfile([self.configureCommand] + self.configureArgs,
+                                logfileName="configure", cwd=self.buildDir)
 
-    def _makeStdoutFilter(self, line: bytes):
+    @staticmethod
+    def _makeStdoutFilter(line: bytes):
         # by default we don't keep any line persistent, just have updating output
-        sys.stdout.buffer.write(self.clearLineSequence)
+        sys.stdout.buffer.write(Project.clearLineSequence)
         sys.stdout.buffer.write(line[:-1])  # remove the newline at the end
         sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
         sys.stdout.buffer.flush()
@@ -464,16 +467,19 @@ class Project(object):
         if not cwd:
             cwd = self.buildDir
         starttime = time.time()
-        self.runWithLogfile(allArgs, logfileName=logfileName, cwd=cwd, env=env)
+        self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=self._makeStdoutFilter, cwd=cwd, env=env)
         # add a newline at the end in case it ended with a filtered line (no final newline)
         print("Running", self.makeCommand, makeTarget, "took", time.time() - starttime, "seconds")
 
-    def runWithLogfile(self, args: "typing.Sequence[str]", logfileName: str, *, cwd: Path = None, env=None) -> None:
+    def runWithLogfile(self, args: "typing.Sequence[str]", logfileName: str, *, stdoutFilter=None, cwd: Path = None,
+                       env=None) -> None:
         """
         Runs make and logs the output
+        config.quiet doesn't display anything, normal only status updates and config.verbose everything
         :param args: the command to run (e.g. ["make", "-j32"])
         :param logfileName: the name of the logfile (e.g. "build.log")
         :param cwd the directory to run make in (defaults to self.buildDir)
+        :param stdoutFilter a filter to use for standard output (a function that takes a single bytes argument)
         :param env the environment to pass to make
         """
         printCommand(args, cwd=cwd)
@@ -482,9 +488,17 @@ class Project(object):
         print("Saving build log to", logfilePath)
         if self.config.pretend:
             return
+        if self.config.verbose:
+            stdoutFilter = None
 
-        with logfilePath.open("wb") as logfile:
-            # quiet doesn't display anything, normal only status updates and verbose everything
+        if logfilePath.is_file():
+            logfilePath.unlink()  # remove old logfile
+        args = list(map(str, args))  # make sure all arguments are strings
+        cmdStr = " ".join([shlex.quote(s) for s in args])
+        # open file in append mode
+        with logfilePath.open("ab") as logfile:
+            # print the command and then the logfile
+            logfile.write(cmdStr.encode("utf-8") + b"\n\n")
             if self.config.quiet:
                 # a lot more efficient than filtering every line
                 subprocess.check_call(args, cwd=str(cwd), stdout=logfile, stderr=logfile, env=env)
@@ -495,17 +509,19 @@ class Project(object):
             stderrThread = threading.Thread(target=self._handleStdErr, args=(logfile, make.stderr, logfileLock))
             stderrThread.start()
             for line in make.stdout:
-                with logfileLock:
+                with logfileLock:  # make sure we don't interleave stdout and stderr lines
                     logfile.write(line)
-                    if self.config.verbose:
-                        sys.stdout.buffer.write(line)
-                        # sys.stdout.buffer.flush()
+                    if stdoutFilter:
+                        stdoutFilter(line)
                     else:
-                        self._makeStdoutFilter(line)
+                        sys.stdout.buffer.write(line)
+                        sys.stdout.buffer.flush()
             retcode = make.wait()
+            if stdoutFilter:
+                # add the final new line after the filtering
+                sys.stdout.buffer.write(b"\n")
             stderrThread.join()
             if retcode:
-                cmdStr = " ".join([shlex.quote(s) for s in args])
                 raise SystemExit("Command \"%s\" failed with exit code %d.\nSee %s for details." %
                                  (cmdStr, retcode, logfile.name))
 
@@ -606,11 +622,12 @@ class BuildLLVM(Project):
         if self.config.cheriBits == 128:
             self.configureArgs.append("-DLLVM_CHERI_IS_128=ON")
 
-    def _makeStdoutFilter(self, line: bytes):
+    @staticmethod
+    def _makeStdoutFilter(line: bytes):
         # don't show the up-to date install lines
         if line.startswith(b"-- Up-to-date:"):
             return
-        super()._makeStdoutFilter(line)
+        Project._makeStdoutFilter(line)
 
     def update(self):
         self._updateGitRepo(self.sourceDir, "https://github.com/CTSRD-CHERI/llvm.git",
@@ -663,13 +680,14 @@ class BuildCHERIBSD(Project):
             "KERNCONF=" + self.kernelConfig,
         ]
 
-    def _makeStdoutFilter(self, line: bytes):
+    @staticmethod
+    def _makeStdoutFilter(line: bytes):
         if line.startswith(b">>> "):  # major status update
-            sys.stdout.buffer.write(self.clearLineSequence)
+            sys.stdout.buffer.write(Project.clearLineSequence)
             sys.stdout.buffer.write(line)
         elif line.startswith(b"===> "):  # new subdirectory
             # clear the old line to have a continuously updating progress
-            sys.stdout.buffer.write(self.clearLineSequence)
+            sys.stdout.buffer.write(Project.clearLineSequence)
             sys.stdout.buffer.write(line[:-1])  # remove the newline at the end
             sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
             sys.stdout.buffer.flush()
@@ -684,11 +702,12 @@ class BuildCHERIBSD(Project):
         if not IS_FREEBSD:
             fatalError("Can't build CHERIBSD on a non-FreeBSD host!")
         os.environ["MAKEOBJDIRPREFIX"] = str(self.buildDir)
-        printCommand("export MAKEOBJDIRPREFIX=" + str(self.buildDir))
+        printCommand("export", "MAKEOBJDIRPREFIX=" + str(self.buildDir))
         # make sure the new binutils are picked up
+        # TODO: this shouldn't be needed, we build binutils as part of cheribsd
         if not os.environ["PATH"].startswith(str(self.config.sdkDir)):
             os.environ["PATH"] = str(self.config.sdkDir / "bin") + ":" + os.environ["PATH"]
-            print("Set PATH to", os.environ["PATH"])
+            printCommand("export", "PATH=" + os.environ["PATH"])
         if not self.cheriCC.is_file():
             fatalError("CHERI CC does not exist: ", self.cheriCC)
         if not self.cheriCXX.is_file():
