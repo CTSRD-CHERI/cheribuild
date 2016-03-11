@@ -77,7 +77,9 @@ def coloured(colour: AnsiColour, *args, sep=" "):
 
 
 def printCommand(arg1: "typing.Union[str, typing.Tuple, typing.List]", *remainingArgs,
-                 colour=AnsiColour.yellow, cwd=None, sep=" ", **kwargs):
+                 colour=AnsiColour.yellow, cwd=None, sep=" ", printVerboseOnly=False, **kwargs):
+    if cheriConfig.quiet or (printVerboseOnly and not cheriConfig.verbose):
+        return
     # also allow passing a single string
     if not type(arg1) is str:
         allArgs = arg1
@@ -89,13 +91,14 @@ def printCommand(arg1: "typing.Union[str, typing.Tuple, typing.List]", *remainin
     print(coloured(colour, newArgs, sep=sep), flush=True, **kwargs)
 
 
-def runCmd(*args, captureOutput=False, input: "typing.Union[str, bytes]"=None, timeout=None, **kwargs):
+def runCmd(*args, captureOutput=False, input: "typing.Union[str, bytes]"=None, timeout=None, printVerboseOnly=False,
+           **kwargs):
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         cmdline = args[0]  # list with parameters was passed
     else:
         cmdline = args
     cmdline = list(map(str, cmdline))  # make sure they are all strings
-    printCommand(cmdline, cwd=kwargs.get("cwd"))
+    printCommand(cmdline, cwd=kwargs.get("cwd"), printVerboseOnly=printVerboseOnly)
     kwargs["cwd"] = str(kwargs["cwd"]) if "cwd" in kwargs else os.getcwd()
     if cheriConfig.pretend:
         return CompletedProcess(args=cmdline, returncode=0, stdout=b"")
@@ -263,6 +266,7 @@ class CheriConfig(object):
     # boolean flags
     pretend = ConfigLoader.addBoolOption("pretend", "p", help="Only print the commands instead of running them")
     quiet = ConfigLoader.addBoolOption("quiet", "q", help="Don't show stdout of the commands that are executed")
+    verbose = ConfigLoader.addBoolOption("verbose", "v", help="Print all commmands that are executed")
     clean = ConfigLoader.addBoolOption("clean", "c", help="Remove the build directory before build")
     skipUpdate = ConfigLoader.addBoolOption("skip-update", help="Skip the git pull step")
     skipConfigure = ConfigLoader.addBoolOption("skip-configure", help="Skip the configure step")
@@ -350,15 +354,10 @@ class CheriConfig(object):
         self.sdkDir = self.outputRoot / ("sdk" + self.cheriBitsStr)  # qemu and binutils (and llvm/clang)
         self.sdkSysrootDir = self.sdkDir / "sysroot"
 
-        for d in (self.sourceRoot, self.outputRoot, self.extraFiles):
-            if not self.pretend:
-                printCommand("mkdir", "-p", str(d))
-                os.makedirs(str(d), exist_ok=True)
-
         # for debugging purposes print all the options
         for i in ConfigLoader.options:
             i.__get__(self, CheriConfig)  # for loading of lazy value
-        pprint.pprint(ConfigLoader.values)
+        print("cheribuild.py configuration:", dict(ConfigLoader.values))
 
 
 class Project(object):
@@ -387,17 +386,17 @@ class Project(object):
                 sys.exit("Sources for " + str(srcDir) + " missing!")
             runCmd("git", "clone", remoteUrl, srcDir)
         # make sure we run git stash if we discover any local changes
-        hasChanges = len(runCmd("git", "diff", captureOutput=True, cwd=srcDir).stdout) > 1
+        hasChanges = len(runCmd("git", "diff", captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
         if hasChanges:
-            runCmd("git", "stash", cwd=srcDir)
-        runCmd("git", "pull", "--rebase", cwd=srcDir)
+            runCmd("git", "stash", cwd=srcDir, printVerboseOnly=True)
+        runCmd("git", "pull", "--rebase", cwd=srcDir, printVerboseOnly=True)
         if hasChanges:
-            runCmd("git", "stash", "pop", cwd=srcDir)
+            runCmd("git", "stash", "pop", cwd=srcDir, printVerboseOnly=True)
         if revision:
-            runCmd("git", "checkout", revision, cwd=srcDir)
+            runCmd("git", "checkout", revision, cwd=srcDir, printVerboseOnly=True)
 
     def _makedirs(self, path: Path):
-        printCommand("mkdir", "-p", path)
+        printCommand("mkdir", "-p", path, printVerboseOnly=True)
         if not self.config.pretend:
             os.makedirs(str(path), exist_ok=True)
 
@@ -425,6 +424,7 @@ class Project(object):
 
     def configure(self):
         if self.configureCommand:
+            print("Configuring", self.name, "... ")
             runCmd([self.configureCommand] + self.configureArgs, cwd=self.buildDir)
 
     def _makeStdoutFilter(self, line: bytes):
@@ -481,7 +481,11 @@ class Project(object):
             for line in make.stdout:
                 with logfileLock:
                     logfile.write(line)
-                    self._makeStdoutFilter(line)
+                    if self.config.verbose:
+                        sys.stdout.buffer.write(line)
+                        # sys.stdout.buffer.flush()
+                    else:
+                        self._makeStdoutFilter(line)
             retcode = make.wait()
             stderrThread.join()
             cmdStr = " ".join([shlex.quote(s) for s in allArgs])
@@ -508,7 +512,9 @@ class Project(object):
             self._makedirs(self.buildDir)
         if not self.config.skipConfigure:
             self.configure()
+        print("Building", self.name, "... ")
         self.compile()
+        print("Installing", self.name, "... ")
         self.install()
 
 
@@ -543,7 +549,7 @@ class BuildQEMU(Project):
         # reset that directory by checking out the HEAD revision there
         # this is better than git reset --hard as we don't lose any other changes
         if (self.sourceDir / "po").is_dir():
-            runCmd("git", "checkout", "HEAD", "po/", cwd=self.sourceDir)
+            runCmd("git", "checkout", "HEAD", "po/", cwd=self.sourceDir, printVerboseOnly=True)
         super().update()
 
 
@@ -566,7 +572,7 @@ class BuildLLVM(Project):
         # make sure we have at least version 3.7
         versionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         # clang prints this output to stderr
-        versionString = runCmd(cCompiler, "-v", captureOutput=True, stderr=subprocess.STDOUT).stdout
+        versionString = runCmd(cCompiler, "-v", captureOutput=True, stderr=subprocess.STDOUT, printVerboseOnly=True).stdout
         match = versionPattern.search(versionString)
         versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
         if versionComponents < (3, 7):
@@ -608,10 +614,12 @@ class BuildLLVM(Project):
         incompatibleFiles += self.installDir.glob("lib/clang/3.*/include/limits.h")
         if len(incompatibleFiles) == 0:
             fatalError("Could not find incompatible builtin includes. Build system changed?")
+        print("Removing incompatible builtin includes...", end="")
         for i in incompatibleFiles:
-            printCommand("rm", shlex.quote(str(i)))
+            printCommand("rm", shlex.quote(str(i)), printVerboseOnly=True)
             if not self.config.pretend:
                 i.unlink()
+        print(" Done")
 
 
 class BuildCHERIBSD(Project):
@@ -791,8 +799,8 @@ class BuildDiskImage(Project):
             fatalError("Can't use a relative path for pathInImage:", pathInImage)
         targetFile = Path(outDir + pathInImage)
         self._makedirs(targetFile.parent)
-        print(coloured(AnsiColour.yellow, "echo", shlex.quote(contents.replace("\n", "\\n")), ">",
-                       shlex.quote(str(targetFile))))
+        print("Generating ", pathInImage, " with the following contents:\n",
+              coloured(AnsiColour.green, contents), sep="", end="")
         if self.config.pretend:
             return targetFile
         if targetFile.is_file():
@@ -826,7 +834,7 @@ class BuildDiskImage(Project):
                 "-o", user, "-g", group,  # uid and gid
                 "-m", mode,  # access rights
                 str(file), str(self.config.cheribsdRootfs / targetDir)  # target file and destination dir
-                ])
+                ], printVerboseOnly=True)
         if file in self.extraFiles:
             self.extraFiles.remove(file)
 
@@ -835,7 +843,6 @@ class BuildDiskImage(Project):
         userProvided = self.config.extraFiles / pathInImage[1:]
         if userProvided.is_file():
             print("Using user provided", pathInImage, "instead of generating default")
-            print(str(userProvided))
             self.extraFiles.remove(userProvided)
             targetFile = userProvided
         else:
@@ -891,7 +898,7 @@ class BuildDiskImage(Project):
             # now add all the user provided files to the image:
             for p in self.extraFiles:
                 pathInImage = p.relative_to(self.config.extraFiles)
-                print("Adding user provided file", pathInImage)
+                print("Adding user provided file", pathInImage, "to disk image.")
                 self.addFileToImage(p, str(pathInImage.parent))
 
             runCmd([
@@ -907,15 +914,17 @@ class BuildDiskImage(Project):
                 self.config.cheribsdRootfs  # directory tree to use for the image
             ])
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
-        runCmd("qemu-img", "info", self.config.diskImage)
-        runCmd("rm", "-f", self.config.qcow2DiskImage)
+        if not self.config.quiet:
+            runCmd("qemu-img", "info", self.config.diskImage)
+        runCmd("rm", "-f", self.config.qcow2DiskImage, printVerboseOnly=True)
         # create a qcow2 version:
         runCmd("qemu-img", "convert",
                "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
                "-O", "qcow2",  # convert to qcow2 format
                self.config.diskImage,  # input file
                self.config.qcow2DiskImage)  # output file
-        runCmd("qemu-img", "info", self.config.qcow2DiskImage)
+        if not self.config.quiet:
+            runCmd("qemu-img", "info", self.config.qcow2DiskImage)
 
     def generateSshHostKeys(self):
         # do the same as "ssh-keygen -A" just with a different output directory as it does not allow customizing that
@@ -983,9 +992,10 @@ class BuildSDK(Project):
         tools = "as objdump strings addr2line crunchide gcc gcov nm strip ld objcopy size brandelf".split()
         for tool in tools:
             if (self.CHERITOOLS_OBJ / tool).is_file():
-                runCmd("cp", "-f", self.CHERITOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool)
+                runCmd("cp", "-f", self.CHERITOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool, printVerboseOnly=True)
             elif (self.CHERIBOOTSTRAPTOOLS_OBJ / tool).is_file():
-                runCmd("cp", "-f", self.CHERIBOOTSTRAPTOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool)
+                runCmd("cp", "-f", self.CHERIBOOTSTRAPTOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool,
+                       printVerboseOnly=True)
             else:
                 fatalError("Required tool", tool, "is missing!")
 
@@ -993,13 +1003,16 @@ class BuildSDK(Project):
         # We must make this the same directory that contains ld for linking and
         # compiling to both work...
         for tool in ("cc1", "cc1plus"):
-            runCmd("cp", "-f", self.CHERILIBEXEC_OBJ / tool, self.config.sdkDir / "bin" / tool)
+            runCmd("cp", "-f", self.CHERILIBEXEC_OBJ / tool, self.config.sdkDir / "bin" / tool, printVerboseOnly=True)
 
         tools += "clang clang++ llvm-mc llvm-objdump llvm-readobj llvm-size llc".split()
         for tool in tools:
-            runCmd("ln", "-fs", tool, "cheri-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin")
-            runCmd("ln", "-fs", tool, "mips4-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin")
-            runCmd("ln", "-fs", tool, "mips64-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin")
+            runCmd("ln", "-fs", tool, "cheri-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin",
+                   printVerboseOnly=True)
+            runCmd("ln", "-fs", tool, "mips4-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin",
+                   printVerboseOnly=True)
+            runCmd("ln", "-fs", tool, "mips64-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin",
+                   printVerboseOnly=True)
 
         # Compile the cheridis helper (TODO: add it to the LLVM repo instead?)
         cheridisSrc = """
@@ -1159,7 +1172,7 @@ class Target(object):
         # instantiate the project and run it
         project = self.projectClass(config)
         project.process()
-        print("Built target '" +  self.name + "'")
+        print("Built target '" + self.name + "'")
 
 
 class AllTargets(object):
@@ -1240,6 +1253,11 @@ class MyJsonEncoder(json.JSONEncoder):
 
 if __name__ == "__main__":
     cheriConfig = CheriConfig()
+    # create the required directories
+    for d in (cheriConfig.sourceRoot, cheriConfig.outputRoot, cheriConfig.extraFiles):
+        if not cheriConfig.pretend:
+            printCommand("mkdir", "-p", str(d))
+            os.makedirs(str(d), exist_ok=True)
     try:
         targets = AllTargets()
         if cheriConfig.listTargets:
