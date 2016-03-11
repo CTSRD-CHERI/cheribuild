@@ -941,6 +941,15 @@ class BuildDiskImage(Project):
             # make sure that the disk image always has the same SSH host keys
             # If they don't exist the system will generate one on first boot and we have to accept them every time
             self.generateSshHostKeys()
+            print("Adding 'PermitRootLogin without-password' to sshd_config")
+            # make sure we can login as root with pubkey auth:
+            sshdConfig = self.config.cheribsdRootfs / "etc/ssh/sshd_config"
+            assert sshdConfig.is_file()
+            with sshdConfig.open("r") as file:
+                newSshdConfigContents = file.read()
+            newSshdConfigContents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
+            self.createFileForImage(outDir, "/etc/ssh/sshd_config", contents=newSshdConfigContents)
+            # now try adding the right ~/.authorized
             authorizedKeys = self.config.extraFiles / "root/.ssh/authorized_keys"
             if not authorizedKeys.is_file():
                 sshKeys = list(Path(os.path.expanduser("~/.ssh/")).glob("id_*.pub"))
