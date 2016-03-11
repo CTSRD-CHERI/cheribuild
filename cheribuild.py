@@ -391,12 +391,23 @@ class Project(object):
         self.configureArgs = []  # type: typing.List[str]
         # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
 
-    @staticmethod
-    def _updateGitRepo(srcDir: Path, remoteUrl, revision=None):
+    def queryYesNo(self, message: str="", *, defaultResult=False) -> bool:
+        yesNoStr = " [Y]/n " if defaultResult else " y/[N] "
+        if self.config.pretend:
+            print(message + yesNoStr)
+            return True  # in pretend mode we always return true
+        if not sys.__stdin__.isatty():
+            return defaultResult  # can't get any input -> return the default
+        result = input(message + yesNoStr)
+        if defaultResult:
+            return not result.startswith("n")  # if default is yes accept anything other than strings starting with "n"
+        return result.startswith("y")  # any but y will be treated as false
+
+    def _updateGitRepo(self, srcDir: Path, remoteUrl, revision=None):
         if not (srcDir / ".git").is_dir():
-            print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?")
-            if sys.__stdin__.isatty() and input("y/[N]").lower() != "y":
-                sys.exit("Sources for " + str(srcDir) + " missing!")
+            print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?", end="")
+            if self.queryYesNo(defaultResult=False):
+                fatalError("Sources for", str(srcDir), " missing!")
             runCmd("git", "clone", remoteUrl, srcDir)
         # make sure we run git stash if we discover any local changes
         hasChanges = len(runCmd("git", "diff", captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
@@ -748,7 +759,6 @@ class BuildCHERIBSD(Project):
         # don't use multiple jobs here
         installArgs = self.commonMakeArgs + ["DESTDIR=" + str(self.installDir)]
         self.runMake(installArgs, "installkernel", cwd=self.sourceDir)
-        # TODO: should we run installworld even when --skip-buildworld is passed?
         if not self.config.skipBuildworld:
             self.runMake(installArgs, "installworld", cwd=self.sourceDir)
             self.runMake(installArgs, "distribution", cwd=self.sourceDir)
@@ -845,7 +855,7 @@ class BuildDiskImage(Project):
             diff = difflib.unified_diff(io.StringIO(oldContents).readlines(), io.StringIO(contents).readlines(),
                                         str(targetFile), str(targetFile))
             print("".join(diff))  # difflib.unified_diff() returns an iterator with lines
-            if input("Continue? [Y/n]").lower() == "n":
+            if not self.queryYesNo("Continue?", defaultResult=False):
                 sys.exit()
         with targetFile.open(mode='w') as f:
             f.write(contents)
@@ -889,10 +899,9 @@ class BuildDiskImage(Project):
 
         if self.config.diskImage.is_file():
             # only show prompt if we can actually input something to stdin
-            if sys.__stdin__.isatty() and not self.config.pretend:
-                yn = input("An image already exists (" + str(self.config.diskImage) + "). Overwrite? [Y/n] ")
-                if str(yn).lower() == "n":
-                    return
+            print("An image already exists (" + str(self.config.diskImage) + ").", end="")
+            if not self.queryYesNo("Overwrite?", defaultResult=True):
+                return  # we are done here
             printCommand("rm", self.config.diskImage)
             self.config.diskImage.unlink()
 
