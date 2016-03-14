@@ -384,6 +384,8 @@ class CheriConfig(object):
         self.sdkDirectoryName = "sdk" + self.cheriBitsStr
         self.sdkDir = self.outputRoot / self.sdkDirectoryName  # qemu and binutils (and llvm/clang)
         self.sdkSysrootDir = self.sdkDir / "sysroot"
+        self.sysrootArchiveName = "cheri-sysroot.tar.gz"
+
 
         # for debugging purposes print all the options
         for i in ConfigLoader.options:
@@ -622,6 +624,7 @@ class BuildBinutils(Project):
         self.configureArgs = [
             "--target=mips64",  # binutils for MIPS64/CHERI
             "--disable-werror",  # -Werror won't work with recent compilers
+            "--with-sysroot",
             "--prefix=" + str(self.installDir),  # install to the SDK dir
             "MAKEINFO=missing",  # don't build docs, this will fail on recent Linux systems
         ]
@@ -1074,7 +1077,8 @@ class BuildSDK(Project):
             # TODO: improve this information
             fatalError("SDK files must be copied those files from a FreeBSD server. See --help for more info")
             return
-        remoteSysrootPath = os.path.join(self.config.freeBsdBuilderOutputPath, self.config.sdkDirectoryName, "sysroot")
+        remoteSysrootPath = os.path.join(self.config.freeBsdBuilderOutputPath, self.config.sdkDirectoryName,
+                                         self.config.sysrootArchiveName)
         remoteSysrootPath = self.config.freeBsdBuildMachine + ":" + remoteSysrootPath
         statusUpdate("Will build SDK on", self.config.freeBsdBuildMachine, "and copy the sysroot files from",
                      remoteSysrootPath)
@@ -1086,11 +1090,21 @@ class BuildSDK(Project):
             remoteRunScript = Path(__file__).parent.resolve() / "py3-run-remote.sh"
             if not remoteRunScript.is_file():
                 fatalError("Could not find py3-run-remote.sh script. Should be in this directory!")
-            runCmd(remoteRunScript, self.config.freeBsdBuildMachine, __file__, "sdk")
+            runCmd(remoteRunScript, self.config.freeBsdBuildMachine, __file__,
+                   "--cheri-bits", self.config.cheriBits,  # make sure we build for the right number of cheri bits
+                   "sdk")  # run target SDK with dependencies
 
         # now copy the files
         self._makedirs(self.config.sdkSysrootDir)
-        runCmd("scp", "-vr",  remoteSysrootPath, self.config.sdkSysrootDir)
+        # runCmd("rm", "-f", self.config.sdkDir / self.config.sysrootArchiveName, printVerboseOnly=True)
+        # runCmd("scp", remoteSysrootPath, self.config.sdkDir)
+        runCmd("rm", "-rf", self.config.sdkSysrootDir)
+        runCmd("tar", "xzf", self.config.sdkDir / self.config.sysrootArchiveName, cwd=self.config.sdkDir)
+        # add the binutils files to the sysroot
+        runCmd("ln", "-sfn", "../mips64/bin", self.config.sdkSysrootDir / "bin")
+        runCmd("ln", "-sfn", "../../mips64/lib/ldscripts/", self.config.sdkSysrootDir / "lib/ldscripts")
+        for i in ["ar", "as", "ld",  "nm", "objcopy", "objdump", "ranlib", "strip"]:
+            runCmd("ln", "-sfn", "mips64-" + i, self.config.sdkDir / "bin" / i)
 
     def process(self):
         if not IS_FREEBSD:
@@ -1239,6 +1253,10 @@ int main(int argc, char **argv)
 """
         runCmd("cc", "-x", "c", "-", "-o", self.config.sdkDir / "bin/fixlinks", input=fixlinksSrc)
         runCmd(self.config.sdkDir / "bin/fixlinks", cwd=self.config.sdkSysrootDir / "usr/lib")
+        # create an archive to make it easier to copy the sysroot to another machine
+        runCmd("rm", "-f", self.config.sdkDir / self.config.sysrootArchiveName)
+        runCmd("tar", "-czf", self.config.sdkDir / self.config.sysrootArchiveName, "sysroot",
+               cwd=self.config.sdkDir)
         print("Successfully populated sysroot")
 
 
