@@ -599,7 +599,20 @@ class BuildBinutils(Project):
         super().__init__("binutils", config, installDir=config.sdkDir,
                          gitUrl="https://github.com/CTSRD-CHERI/binutils.git")
         self.configureCommand = self.sourceDir / "configure"
-        self.configureArgs = ["--target=mips64", "--disable-werror", "--prefix=" + str(self.installDir)]
+        self.configureArgs = [
+            "--target=mips64",  # binutils for MIPS64/CHERI
+            "--disable-werror",  # -Werror won't work with recent compilers
+            "--prefix=" + str(self.installDir),  # install to the SDK dir
+            "MAKEINFO=missing",  # don't build docs, this will fail on recent Linux systems
+        ]
+
+    def update(self):
+        super().update()
+        # make sure *.info is newer than other files, because newer versions of makeinfo will fail
+        infoFiles = ["bfd/doc/bfd.info", "ld/ld.info", "gprof/gprof.info", "gas/doc/as.info",
+                     "binutils/sysroff.info", "binutils/doc/binutils.info", "etc/configure.info", "etc/standards.info"]
+        for i in infoFiles:
+            runCmd("touch", self.sourceDir / i)
 
 
 class BuildLLVM(Project):
