@@ -401,12 +401,12 @@ class Project(object):
         result = input(message + yesNoStr)
         if defaultResult:
             return not result.startswith("n")  # if default is yes accept anything other than strings starting with "n"
-        return result.startswith("y")  # any but y will be treated as false
+        return str(result).lower().startswith("y")  # anything but y will be treated as false
 
     def _updateGitRepo(self, srcDir: Path, remoteUrl, revision=None):
         if not (srcDir / ".git").is_dir():
             print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?", end="")
-            if self.queryYesNo(defaultResult=False):
+            if not self.queryYesNo(defaultResult=False):
                 fatalError("Sources for", str(srcDir), " missing!")
             runCmd("git", "clone", remoteUrl, srcDir)
         # make sure we run git stash if we discover any local changes
