@@ -157,6 +157,10 @@ class ConfigLoader(object):
     # argument groups:
     revisionGroup = _parser.add_argument_group("Specifying git revisions", "Useful if the current HEAD of a repository "
                                                "does not work but an older one did.")
+    remoteBuilderGroup = _parser.add_argument_group("Specifying a remote FreeBSD build server",
+                                                    "Useful if you want to create a CHERI SDK on a Linux or OS X host"
+                                                    " to allow cross compilation to a CHERI target.")
+
     cheriBitsGroup = _parser.add_mutually_exclusive_group()
 
     @classmethod
@@ -339,6 +343,21 @@ class CheriConfig(object):
                                           help="The git revision or branch of QEMU to check out",
                                           group=ConfigLoader.revisionGroup)  # type: str
 
+    # To allow building CHERI software on non-FreeBSD systems
+    freeBsdBuildMachine = ConfigLoader.addOption("freebsd-builder-hostname", type=str, metavar="SSH_HOSTNAME",
+                                                 help="This string will be passed to ssh and be something like "
+                                                      "user@hostname of a FreeBSD system that can be used to build "
+                                                      "CHERIBSD. Can also be the name of a host in  ~/.ssh/config.",
+                                                 group=ConfigLoader.remoteBuilderGroup)  # type: str
+    # TODO: query this from the remote machine instead of needed an options
+    freeBsdBuilderOutputPath = ConfigLoader.addOption("freebsd-builder-output-path", type=str, metavar="PATH",
+                                                      help="The path where the cheribuild output is stored on the"
+                                                           " FreeBSD build server.",
+                                                      group=ConfigLoader.remoteBuilderGroup)  # type: str
+    freeBsdBuilderCopyOnly = ConfigLoader.addBoolOption("freebsd-builder-copy-only", help="Only scp the SDK from the"
+                                                        "FreeBSD build server and don't build the SDK first.",
+                                                        group=ConfigLoader.remoteBuilderGroup)
+
     def __init__(self):
         self.targets = ConfigLoader.loadTargets()
         self.makeJFlag = "-j" + str(self.makeJobs)
@@ -362,7 +381,8 @@ class CheriConfig(object):
         self.cheribsdRootfs = self.outputRoot / ("rootfs" + self.cheriBitsStr)
         self.cheribsdSources = self.sourceRoot / "cheribsd"
         self.cheribsdObj = self.outputRoot / ("cheribsd-obj-" + self.cheriBitsStr)
-        self.sdkDir = self.outputRoot / ("sdk" + self.cheriBitsStr)  # qemu and binutils (and llvm/clang)
+        self.sdkDirectoryName = "sdk" + self.cheriBitsStr
+        self.sdkDir = self.outputRoot / self.sdkDirectoryName  # qemu and binutils (and llvm/clang)
         self.sdkSysrootDir = self.sdkDir / "sysroot"
 
         # for debugging purposes print all the options
@@ -723,8 +743,6 @@ class BuildCHERIBSD(Project):
                 runCmd("chflags", "noschg", str(file))
 
     def setupEnvironment(self):
-        if not IS_FREEBSD:
-            fatalError("Can't build CHERIBSD on a non-FreeBSD host!")
         os.environ["MAKEOBJDIRPREFIX"] = str(self.buildDir)
         printCommand("export", "MAKEOBJDIRPREFIX=" + str(self.buildDir))
         # make sure the new binutils are picked up
@@ -775,6 +793,13 @@ class BuildCHERIBSD(Project):
         if not self.config.skipBuildworld:
             self.runMake(installArgs, "installworld", cwd=self.sourceDir)
             self.runMake(installArgs, "distribution", cwd=self.sourceDir)
+
+    def process(self):
+        if not IS_FREEBSD:
+            statusUpdate("Can't build CHERIBSD on a non-FreeBSD host! Any targets that depend on this will need to scp",
+                         "the required files from another server (see --frebsd-build-server options)")
+            return
+        super().process()
 
 
 class BuildNfsKernel(BuildCHERIBSD):
@@ -1044,7 +1069,34 @@ class BuildSDK(Project):
     def buildCheridis(self):
         pass
 
+    def createSdkNotOnFreeBSD(self):
+        if not self.config.freeBsdBuilderOutputPath or not self.config.freeBsdBuildMachine:
+            # TODO: improve this information
+            fatalError("SDK files must be copied those files from a FreeBSD server. See --help for more info")
+            return
+        remoteSysrootPath = os.path.join(self.config.freeBsdBuilderOutputPath, self.config.sdkDirectoryName, "sysroot")
+        remoteSysrootPath = self.config.freeBsdBuildMachine + ":" + remoteSysrootPath
+        statusUpdate("Will build SDK on", self.config.freeBsdBuildMachine, "and copy the sysroot files from",
+                     remoteSysrootPath)
+        if not self.queryYesNo("Continue?"):
+            return
+
+        if not self.config.freeBsdBuilderCopyOnly:
+            # build the SDK on the remote machine:
+            remoteRunScript = Path(__file__).parent.resolve() / "py3-run-remote.sh"
+            if not remoteRunScript.is_file():
+                fatalError("Could not find py3-run-remote.sh script. Should be in this directory!")
+            runCmd(remoteRunScript, self.config.freeBsdBuildMachine, __file__, "sdk")
+
+        # now copy the files
+        self._makedirs(self.config.sdkSysrootDir)
+        runCmd("scp", "-vr",  remoteSysrootPath, self.config.sdkSysrootDir)
+
     def process(self):
+        if not IS_FREEBSD:
+            self.createSdkNotOnFreeBSD()
+            return
+
         for i in (self.CHERIBOOTSTRAPTOOLS_OBJ, self.CHERITOOLS_OBJ, self.CHERITOOLS_OBJ, self.config.cheribsdRootfs):
             if not i.is_dir():
                 fatalError("Directory", i, "is missing!")
@@ -1264,6 +1316,7 @@ class AllTargets(object):
             Target("llvm", BuildLLVM),
             Target("cheribsd", BuildCHERIBSD, dependencies=["llvm"]),
             Target("cheribsd-nfs", BuildNfsKernel, dependencies=["llvm"]),
+            # SDK only needs to build CHERIBSD if we are on a FreeBSD host, otherwise the files will be copied
             Target("sdk", BuildSDK, dependencies=["cheribsd", "llvm"]),
             Target("new-sdk", BuildNewSDK, dependencies=["binutils", "llvm"]),
             Target("disk-image", BuildDiskImage, dependencies=["cheribsd"]),
