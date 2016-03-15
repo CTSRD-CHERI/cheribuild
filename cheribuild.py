@@ -1023,17 +1023,21 @@ class BuildDiskImage(Project):
                 self.config.cheribsdRootfs  # directory tree to use for the image
             ])
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
+
+        qemuImgCommand = self.config.sdkDir / "bin/qemu-img"
+        if not qemuImgCommand.is_file():
+            fatalError("qemu-img command was not found! Make sure to build target qemu first")
         if not self.config.quiet:
-            runCmd("qemu-img", "info", self.config.diskImage)
+            runCmd(qemuImgCommand, "info", self.config.diskImage)
         runCmd("rm", "-f", self.config.qcow2DiskImage, printVerboseOnly=True)
         # create a qcow2 version:
-        runCmd("qemu-img", "convert",
+        runCmd(qemuImgCommand, "convert",
                "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
                "-O", "qcow2",  # convert to qcow2 format
                self.config.diskImage,  # input file
                self.config.qcow2DiskImage)  # output file
         if not self.config.quiet:
-            runCmd("qemu-img", "info", self.config.qcow2DiskImage)
+            runCmd(qemuImgCommand, "info", self.config.qcow2DiskImage)
 
     def generateSshHostKeys(self):
         # do the same as "ssh-keygen -A" just with a different output directory as it does not allow customizing that
@@ -1337,7 +1341,7 @@ class AllTargets(object):
             # SDK only needs to build CHERIBSD if we are on a FreeBSD host, otherwise the files will be copied
             Target("sdk", BuildSDK, dependencies=["cheribsd", "llvm"]),
             Target("new-sdk", BuildNewSDK, dependencies=["binutils", "llvm"]),
-            Target("disk-image", BuildDiskImage, dependencies=["cheribsd"]),
+            Target("disk-image", BuildDiskImage, dependencies=["cheribsd", "qemu"]),
             Target("run", LaunchQEMU, dependencies=["qemu", "disk-image"]),
             Target("all", PseudoTarget, dependencies=["qemu", "llvm", "cheribsd", "sdk", "disk-image", "run"]),
         ]
