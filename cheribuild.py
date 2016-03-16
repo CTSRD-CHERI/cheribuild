@@ -456,6 +456,21 @@ class Project(object):
         # make sure the dir is empty afterwards
         self._makedirs(path)
 
+    def readFile(self, file: Path) -> str:
+        # just return an empty string in pretend mode
+        if self.config.pretend and not file.is_file():
+            return "\n"
+        with file.open("r", encoding="utf-8") as f:
+            return f.read()
+
+    def copyFile(self, src: Path, dest: Path, *, force=False):
+        printCommand("cp", "-f" if force else "", src, dest, printVerboseOnly=True)
+        if self.config.pretend:
+            return
+        if dest.exists() and force:
+            dest.unlink()
+        shutil.copy(src, dest, follow_symlinks=False)
+
     def update(self):
         self._updateGitRepo(self.sourceDir, self.gitUrl, self.gitRevision)
 
@@ -888,8 +903,7 @@ class BuildDiskImage(Project):
             return targetFile
         if targetFile.is_file():
             # Should no longer happen with the new logic
-            with targetFile.open("r", encoding="utf-8") as f:
-                oldContents = f.read()
+            oldContents = self.readFile(targetFile)
             if oldContents == contents:
                 print("File", targetFile, "already exists with same contents, skipping write operation")
                 return targetFile
@@ -957,7 +971,7 @@ class BuildDiskImage(Project):
 
         with tempfile.TemporaryDirectory() as outDir:
             self.manifestFile = outDir + "/METALOG"
-            shutil.copy2(str(self.config.cheribsdRootfs / "METALOG"), self.manifestFile)
+            self.copyFile(self.config.cheribsdRootfs / "METALOG", self.manifestFile)
 
             # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
             # If they do not exist in the extra-files directory yet we generate a default one and use that
@@ -989,9 +1003,7 @@ sendmail_msp_queue_enable = "NO"  # Dequeue stuck clientmqueue mail (YES/NO).
             print("Adding 'PermitRootLogin without-password' to sshd_config")
             # make sure we can login as root with pubkey auth:
             sshdConfig = self.config.cheribsdRootfs / "etc/ssh/sshd_config"
-            assert sshdConfig.is_file()
-            with sshdConfig.open("r") as file:
-                newSshdConfigContents = file.read()
+            newSshdConfigContents = self.readFile(sshdConfig)
             newSshdConfigContents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
             self.createFileForImage(outDir, "/etc/ssh/sshd_config", contents=newSshdConfigContents)
             # now try adding the right ~/.authorized
@@ -1002,9 +1014,8 @@ sendmail_msp_queue_enable = "NO"  # Dequeue stuck clientmqueue mail (YES/NO).
                     print("Found the following ssh keys:", sshKeys)
                     if self.queryYesNo("Should they be added to /root/.ssh/authorized_keys?", defaultResult=True):
                         contents = ""
-                        for p in sshKeys:
-                            with p.open("r") as pubkey:
-                                contents += pubkey.read()
+                        for pubkey in sshKeys:
+                            contents + self.readFile(pubkey)
                         self.createFileForImage(outDir, "/root/.ssh/authorized_keys", contents=contents)
 
             # TODO: add the users SSH key to authorized_keys
@@ -1147,10 +1158,9 @@ class BuildSDK(Project):
         tools = "as objdump strings addr2line crunchide gcc gcov nm strip ld objcopy size brandelf".split()
         for tool in tools:
             if (self.CHERITOOLS_OBJ / tool).is_file():
-                runCmd("cp", "-f", self.CHERITOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool, printVerboseOnly=True)
+                self.copyFile(self.CHERITOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
             elif (self.CHERIBOOTSTRAPTOOLS_OBJ / tool).is_file():
-                runCmd("cp", "-f", self.CHERIBOOTSTRAPTOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool,
-                       printVerboseOnly=True)
+                self.copyFile(self.CHERIBOOTSTRAPTOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
             else:
                 fatalError("Required tool", tool, "is missing!")
 
@@ -1158,15 +1168,15 @@ class BuildSDK(Project):
         # We must make this the same directory that contains ld for linking and
         # compiling to both work...
         for tool in ("cc1", "cc1plus"):
-            runCmd("cp", "-f", self.CHERILIBEXEC_OBJ / tool, self.config.sdkDir / "bin" / tool, printVerboseOnly=True)
+            self.copyFile(self.CHERILIBEXEC_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
 
         tools += "clang clang++ llvm-mc llvm-objdump llvm-readobj llvm-size llc".split()
         for tool in tools:
-            runCmd("ln", "-fs", tool, "cheri-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin",
+            runCmd("ln", "-fsn", tool, "cheri-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin",
                    printVerboseOnly=True)
-            runCmd("ln", "-fs", tool, "mips4-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin",
+            runCmd("ln", "-fns", tool, "mips4-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin",
                    printVerboseOnly=True)
-            runCmd("ln", "-fs", tool, "mips64-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin",
+            runCmd("ln", "-fns", tool, "mips64-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin",
                    printVerboseOnly=True)
 
         # Compile the cheridis helper (TODO: add it to the LLVM repo instead?)
