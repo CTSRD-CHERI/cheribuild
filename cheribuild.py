@@ -893,12 +893,11 @@ class BuildDiskImage(Project):
         self.userGroupDbDir = self.config.cheribsdSources / "etc"
         self.extraFiles = []  # type: typing.List[Path]
 
-    def writeFile(self, outDir: str, pathInImage: str, contents: str) -> Path:
-        if not pathInImage.startswith("/"):
-            fatalError("Can't use a relative path for pathInImage:", pathInImage)
-        targetFile = Path(outDir + pathInImage)
+    def writeFile(self, outDir: Path, pathInImage: str, contents: str) -> Path:
+        assert not pathInImage.startswith("/")
+        targetFile = outDir / pathInImage
         self._makedirs(targetFile.parent)
-        print("Generating ", pathInImage, " with the following contents:\n",
+        print("Generating /", pathInImage, " with the following contents:\n",
               coloured(AnsiColour.green, contents), sep="", end="")
         if self.config.pretend:
             return targetFile
@@ -944,17 +943,98 @@ class BuildDiskImage(Project):
         if file in self.extraFiles:
             self.extraFiles.remove(file)  # remove it from extraFiles so we don't install it twice
 
-    def createFileForImage(self, outDir: str, pathInImage: str, *, contents: str="\n"):
-        assert pathInImage.startswith("/")
-        userProvided = self.config.extraFiles / pathInImage[1:]
+    def createFileForImage(self, outDir: Path, pathInImage: str, *, contents: str="\n"):
+        if pathInImage.startswith("/"):
+            pathInImage = pathInImage[1:]
+        assert not pathInImage.startswith("/")
+        userProvided = self.config.extraFiles / pathInImage
         if userProvided.is_file():
-            print("Using user provided", pathInImage, "instead of generating default")
+            print("Using user provided /", pathInImage, " instead of generating default", sep="")
             self.extraFiles.remove(userProvided)
             targetFile = userProvided
         else:
             assert userProvided not in self.extraFiles
             targetFile = self.writeFile(outDir, pathInImage, contents)
-        self.addFileToImage(targetFile, str(Path(pathInImage).parent.relative_to("/")))
+        self.addFileToImage(targetFile, str(Path(pathInImage).parent))
+
+    def prepareRootfs(self, outDir: Path):
+        self.manifestFile = outDir / "METALOG"
+        self.copyFile(self.config.cheribsdRootfs / "METALOG", self.manifestFile)
+
+        # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
+        # If they do not exist in the extra-files directory yet we generate a default one and use that
+        # Additionally all other files in the extra-files directory will be added to the disk image
+        for root, dirnames, filenames in os.walk(str(self.config.extraFiles)):
+            for filename in filenames:
+                self.extraFiles.append(Path(root, filename))
+
+        # TODO: https://www.freebsd.org/cgi/man.cgi?mount_unionfs(8) should make this easier
+        # Overlay extra-files over additional stuff over cheribsd rootfs dir
+
+        # TODO: add /tmp as tmpfs?
+        self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw 1 1\n")
+        # enable ssh and set hostname
+        # TODO: use separate file in /etc/rc.conf.d/ ?
+        rcConfContents = "hostname=\"qemu-cheri-%s\"" % os.getlogin() + """
+ifconfig_le0="DHCP"  # use DHCP on the standard QEMU usermode nic
+sshd_enable="YES"
+# speed up the boot a bit by disabling sendmail
+sendmail_submit_enable="NO"  # Start a localhost-only MTA for mail submission
+sendmail_outbound_enable = "NO"  # Dequeue stuck mail (YES/NO).
+sendmail_msp_queue_enable = "NO"  # Dequeue stuck clientmqueue mail (YES/NO).
+"""
+        self.createFileForImage(outDir, "/etc/rc.conf", contents=rcConfContents)
+
+        # make sure that the disk image always has the same SSH host keys
+        # If they don't exist the system will generate one on first boot and we have to accept them every time
+        self.generateSshHostKeys()
+        print("Adding 'PermitRootLogin without-password' to sshd_config")
+        # make sure we can login as root with pubkey auth:
+        sshdConfig = self.config.cheribsdRootfs / "etc/ssh/sshd_config"
+        newSshdConfigContents = self.readFile(sshdConfig)
+        newSshdConfigContents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
+        self.createFileForImage(outDir, "/etc/ssh/sshd_config", contents=newSshdConfigContents)
+        # now try adding the right ~/.authorized
+        authorizedKeys = self.config.extraFiles / "root/.ssh/authorized_keys"
+        if not authorizedKeys.is_file():
+            sshKeys = list(Path(os.path.expanduser("~/.ssh/")).glob("id_*.pub"))
+            if len(sshKeys) > 0:
+                print("Found the following ssh keys:", sshKeys)
+                if self.queryYesNo("Should they be added to /root/.ssh/authorized_keys?", defaultResult=True):
+                    contents = ""
+                    for pubkey in sshKeys:
+                        contents + self.readFile(pubkey)
+                    self.createFileForImage(outDir, "/root/.ssh/authorized_keys", contents=contents)
+
+    def makeImage(self):
+        rawDiskImage = Path(str(self.config.diskImage).replace(".qcow2", ".img"))
+        runCmd([
+            "makefs",
+            "-b", "70%",  # minimum 70% free blocks
+            "-f", "30%",  # minimum 30% free inodes
+            "-M", "4g",  # minimum image size = 4GB
+            "-B", "be",  # big endian byte order
+            "-F", self.manifestFile,  # use METALOG as the manifest for the disk image
+            "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
+            # which makes sure that the numeric UID values are correct
+            rawDiskImage,  # output file
+            self.config.cheribsdRootfs  # directory tree to use for the image
+        ])
+        # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
+        qemuImgCommand = self.config.sdkDir / "bin/qemu-img"
+        if not qemuImgCommand.is_file():
+            fatalError("qemu-img command was not found! Make sure to build target qemu first")
+        if self.config.verbose:
+            runCmd(qemuImgCommand, "info", rawDiskImage)
+        runCmd("rm", "-f", self.config.diskImage, printVerboseOnly=True)
+        # create a qcow2 version from the raw image:
+        runCmd(qemuImgCommand, "convert",
+               "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
+               "-O", "qcow2",  # convert to qcow2 format
+               rawDiskImage,  # input file
+               self.config.diskImage)  # output file
+        if self.config.verbose:
+            runCmd(qemuImgCommand, "info", self.config.diskImage)
 
     def process(self):
         if not (self.config.cheribsdRootfs / "METALOG").is_file():
@@ -971,90 +1051,14 @@ class BuildDiskImage(Project):
             self.config.diskImage.unlink()
 
         with tempfile.TemporaryDirectory() as outDir:
-            self.manifestFile = outDir + "/METALOG"
-            self.copyFile(self.config.cheribsdRootfs / "METALOG", self.manifestFile)
-
-            # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
-            # If they do not exist in the extra-files directory yet we generate a default one and use that
-            # Additionally all other files in the extra-files directory will be added to the disk image
-            for root, dirnames, filenames in os.walk(str(self.config.extraFiles)):
-                for filename in filenames:
-                    self.extraFiles.append(Path(root, filename))
-
-            # TODO: https://www.freebsd.org/cgi/man.cgi?mount_unionfs(8) should make this easier
-            # Overlay extra-files over additional stuff over cheribsd rootfs dir
-
-            # create the disk image
-            self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw 1 1\n")
-            # enable ssh and set hostname
-            # TODO: use separate file in /etc/rc.conf.d/ ?
-            rcConfContents = "hostname=\"qemu-cheri-%s\"" % os.getlogin() + """
-ifconfig_le0="DHCP"\n
-sshd_enable="YES"\n
-# speed up the boot a bit by disabling sendmail
-sendmail_submit_enable="NO"  # Start a localhost-only MTA for mail submission
-sendmail_outbound_enable = "NO"  # Dequeue stuck mail (YES/NO).
-sendmail_msp_queue_enable = "NO"  # Dequeue stuck clientmqueue mail (YES/NO).
-"""
-            self.createFileForImage(outDir, "/etc/rc.conf", contents=rcConfContents)
-
-            # make sure that the disk image always has the same SSH host keys
-            # If they don't exist the system will generate one on first boot and we have to accept them every time
-            self.generateSshHostKeys()
-            print("Adding 'PermitRootLogin without-password' to sshd_config")
-            # make sure we can login as root with pubkey auth:
-            sshdConfig = self.config.cheribsdRootfs / "etc/ssh/sshd_config"
-            newSshdConfigContents = self.readFile(sshdConfig)
-            newSshdConfigContents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
-            self.createFileForImage(outDir, "/etc/ssh/sshd_config", contents=newSshdConfigContents)
-            # now try adding the right ~/.authorized
-            authorizedKeys = self.config.extraFiles / "root/.ssh/authorized_keys"
-            if not authorizedKeys.is_file():
-                sshKeys = list(Path(os.path.expanduser("~/.ssh/")).glob("id_*.pub"))
-                if len(sshKeys) > 0:
-                    print("Found the following ssh keys:", sshKeys)
-                    if self.queryYesNo("Should they be added to /root/.ssh/authorized_keys?", defaultResult=True):
-                        contents = ""
-                        for pubkey in sshKeys:
-                            contents + self.readFile(pubkey)
-                        self.createFileForImage(outDir, "/root/.ssh/authorized_keys", contents=contents)
-
-            # TODO: add the users SSH key to authorized_keys
-
+            self.prepareRootfs(Path(outDir))
             # now add all the user provided files to the image:
             for p in self.extraFiles:
                 pathInImage = p.relative_to(self.config.extraFiles)
                 print("Adding user provided file /", pathInImage, " to disk image.", sep="")
                 self.addFileToImage(p, str(pathInImage.parent))
-            rawDiskImage = Path(str(self.diskImage).replace(".qcow2", ".img"))
-            runCmd([
-                "makefs",
-                "-b", "70%",  # minimum 70% free blocks
-                "-f", "30%",  # minimum 30% free inodes
-                "-M", "4g",  # minimum image size = 4GB
-                "-B", "be",  # big endian byte order
-                "-F", self.manifestFile,  # use METALOG as the manifest for the disk image
-                "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
-                # which makes sure that the numeric UID values are correct
-                rawDiskImage,  # output file
-                self.config.cheribsdRootfs  # directory tree to use for the image
-            ])
-        # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
-
-        qemuImgCommand = self.config.sdkDir / "bin/qemu-img"
-        if not qemuImgCommand.is_file():
-            fatalError("qemu-img command was not found! Make sure to build target qemu first")
-        if self.config.verbose:
-            runCmd(qemuImgCommand, "info", rawDiskImage)
-        runCmd("rm", "-f", self.config.diskImage, printVerboseOnly=True)
-        # create a qcow2 version from the raw image:
-        runCmd(qemuImgCommand, "convert",
-               "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
-               "-O", "qcow2",  # convert to qcow2 format
-               rawDiskImage,  # input file
-               self.config.diskImage)  # output file
-        if self.config.verbose:
-            runCmd(qemuImgCommand, "info", self.config.diskImage)
+            # finally create the disk image
+            self.makeImage()
 
     def generateSshHostKeys(self):
         # do the same as "ssh-keygen -A" just with a different output directory as it does not allow customizing that
