@@ -272,8 +272,8 @@ def defaultSshForwardingPort():
 
 def defaultDiskImagePath(conf: "CheriConfig"):
     if conf.cheriBits == 128:
-        return conf.outputRoot / "cheri128-disk.img"
-    return conf.outputRoot / "cheri256-disk.img"
+        return conf.outputRoot / "cheri128-disk.qcow2"
+    return conf.outputRoot / "cheri256-disk.qcow2"
 
 
 class CheriConfig(object):
@@ -313,7 +313,7 @@ class CheriConfig(object):
                                                  "(default: '<OUTPUT_ROOT>/extra-files')")
     # TODO: only create a qcow2 image?
     diskImage = ConfigLoader.addPathOption("disk-image-path", default=defaultDiskImagePath, help="The output path for"
-                                           " the QEMU disk image (default: '<OUTPUT_ROOT>/cheri256-disk.img')")
+                                           " the QEMU disk image (default: '<OUTPUT_ROOT>/cheri256-disk.qcow2')")
     nfsKernelPath = ConfigLoader.addPathOption("nfs-kernel-path", default=lambda p: (p.outputRoot / "nfs/kernel"),
                                                help="The output path for the CheriBSD kernel that boots over NFS "
                                                     "(default: '<OUTPUT_ROOT>/nfs/kernel')")
@@ -375,7 +375,6 @@ class CheriConfig(object):
             print("Build artifacts will be stored in", self.outputRoot)
             print("Extra files for disk image will be searched for in", self.extraFiles)
             print("Disk image will saved to", self.diskImage)
-        self.qcow2DiskImage = Path(str(self.diskImage).replace(".img", ".qcow2"))
 
         # now the derived config options
         self.cheribsdRootfs = self.outputRoot / ("rootfs" + self.cheriBitsStr)
@@ -385,7 +384,6 @@ class CheriConfig(object):
         self.sdkDir = self.outputRoot / self.sdkDirectoryName  # qemu and binutils (and llvm/clang)
         self.sdkSysrootDir = self.sdkDir / "sysroot"
         self.sysrootArchiveName = "cheri-sysroot.tar.gz"
-
 
         # for debugging purposes print all the options
         for i in ConfigLoader.options:
@@ -1025,6 +1023,7 @@ sendmail_msp_queue_enable = "NO"  # Dequeue stuck clientmqueue mail (YES/NO).
                 pathInImage = p.relative_to(self.config.extraFiles)
                 print("Adding user provided file /", pathInImage, " to disk image.", sep="")
                 self.addFileToImage(p, str(pathInImage.parent))
+            rawDiskImage = Path(str(self.diskImage).replace(".qcow2", ".img"))
             runCmd([
                 "makefs",
                 "-b", "70%",  # minimum 70% free blocks
@@ -1034,7 +1033,7 @@ sendmail_msp_queue_enable = "NO"  # Dequeue stuck clientmqueue mail (YES/NO).
                 "-F", self.manifestFile,  # use METALOG as the manifest for the disk image
                 "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
                 # which makes sure that the numeric UID values are correct
-                self.config.diskImage,  # output file
+                rawDiskImage,  # output file
                 self.config.cheribsdRootfs  # directory tree to use for the image
             ])
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
@@ -1042,17 +1041,17 @@ sendmail_msp_queue_enable = "NO"  # Dequeue stuck clientmqueue mail (YES/NO).
         qemuImgCommand = self.config.sdkDir / "bin/qemu-img"
         if not qemuImgCommand.is_file():
             fatalError("qemu-img command was not found! Make sure to build target qemu first")
-        if not self.config.quiet:
-            runCmd(qemuImgCommand, "info", self.config.diskImage)
-        runCmd("rm", "-f", self.config.qcow2DiskImage, printVerboseOnly=True)
-        # create a qcow2 version:
+        if self.config.verbose:
+            runCmd(qemuImgCommand, "info", rawDiskImage)
+        runCmd("rm", "-f", self.config.diskImage, printVerboseOnly=True)
+        # create a qcow2 version from the raw image:
         runCmd(qemuImgCommand, "convert",
                "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
                "-O", "qcow2",  # convert to qcow2 format
-               self.config.diskImage,  # input file
-               self.config.qcow2DiskImage)  # output file
-        if not self.config.quiet:
-            runCmd(qemuImgCommand, "info", self.config.qcow2DiskImage)
+               rawDiskImage,  # input file
+               self.config.diskImage)  # output file
+        if self.config.verbose:
+            runCmd(qemuImgCommand, "info", self.config.diskImage)
 
     def generateSshHostKeys(self):
         # do the same as "ssh-keygen -A" just with a different output directory as it does not allow customizing that
