@@ -659,8 +659,10 @@ class BuildLLVM(Project):
         super().__init__("llvm", config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
         self.makeCommand = "ninja"
         # try to find clang 3.7, otherwise fall back to system clang
-        cCompiler = shutil.which("clang37") or "clang"
-        cppCompiler = shutil.which("clang++37") or "clang++"
+        cCompiler = shutil.which("clang37") or shutil.which("clang")
+        cppCompiler = shutil.which("clang++37") or shutil.which("clang++")
+        if not cCompiler or not cppCompiler:
+            fatalError("Could not find clang or clang37 in $PATH, please install it.")
         # make sure we have at least version 3.7
         versionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         # clang prints this output to stderr
