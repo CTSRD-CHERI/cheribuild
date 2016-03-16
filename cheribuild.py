@@ -895,26 +895,17 @@ class BuildDiskImage(Project):
         self.userGroupDbDir = self.config.cheribsdSources / "etc"
         self.extraFiles = []  # type: typing.List[Path]
 
-    def writeFile(self, outDir: Path, pathInImage: str, contents: str) -> Path:
+    def writeFile(self, outDir: Path, pathInImage: str, contents: str, showContentsByDefault=True) -> Path:
         assert not pathInImage.startswith("/")
         targetFile = outDir / pathInImage
         self._makedirs(targetFile.parent)
-        print("Generating /", pathInImage, " with the following contents:\n",
-              coloured(AnsiColour.green, contents), sep="", end="")
+        if self.config.verbose or (showContentsByDefault and not self.config.quiet):
+            print("Generating /", pathInImage, " with the following contents:\n",
+                  coloured(AnsiColour.green, contents), sep="", end="")
         if self.config.pretend:
             return targetFile
         if targetFile.is_file():
-            # Should no longer happen with the new logic
-            oldContents = self.readFile(targetFile)
-            if oldContents == contents:
-                print("File", targetFile, "already exists with same contents, skipping write operation")
-                return targetFile
-            print("About to overwrite file ", targetFile, ". Diff is:", sep="")
-            diff = difflib.unified_diff(io.StringIO(oldContents).readlines(), io.StringIO(contents).readlines(),
-                                        str(targetFile), str(targetFile))
-            print("".join(diff))  # difflib.unified_diff() returns an iterator with lines
-            if not self.queryYesNo("Continue?", defaultResult=False):
-                sys.exit()
+            fatalError("File", targetFile, "already exists!")
         with targetFile.open(mode='w') as f:
             f.write(contents)
         return targetFile
@@ -945,7 +936,7 @@ class BuildDiskImage(Project):
         if file in self.extraFiles:
             self.extraFiles.remove(file)  # remove it from extraFiles so we don't install it twice
 
-    def createFileForImage(self, outDir: Path, pathInImage: str, *, contents: str="\n"):
+    def createFileForImage(self, outDir: Path, pathInImage: str, *, contents: str="\n", showContentsByDefault=True):
         if pathInImage.startswith("/"):
             pathInImage = pathInImage[1:]
         assert not pathInImage.startswith("/")
@@ -956,7 +947,7 @@ class BuildDiskImage(Project):
             targetFile = userProvided
         else:
             assert userProvided not in self.extraFiles
-            targetFile = self.writeFile(outDir, pathInImage, contents)
+            targetFile = self.writeFile(outDir, pathInImage, contents, showContentsByDefault=showContentsByDefault)
         self.addFileToImage(targetFile, str(Path(pathInImage).parent))
 
     def prepareRootfs(self, outDir: Path):
@@ -990,12 +981,13 @@ sendmail_msp_queue_enable = "NO"  # Dequeue stuck clientmqueue mail (YES/NO).
         # make sure that the disk image always has the same SSH host keys
         # If they don't exist the system will generate one on first boot and we have to accept them every time
         self.generateSshHostKeys()
-        print("Adding 'PermitRootLogin without-password' to sshd_config")
+        print("Adding 'PermitRootLogin without-password' to /etc/ssh/sshd_config")
         # make sure we can login as root with pubkey auth:
         sshdConfig = self.config.cheribsdRootfs / "etc/ssh/sshd_config"
         newSshdConfigContents = self.readFile(sshdConfig)
         newSshdConfigContents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
-        self.createFileForImage(outDir, "/etc/ssh/sshd_config", contents=newSshdConfigContents)
+        self.createFileForImage(outDir, "/etc/ssh/sshd_config", contents=newSshdConfigContents,
+                                showContentsByDefault=False)
         # now try adding the right ~/.authorized
         authorizedKeys = self.config.extraFiles / "root/.ssh/authorized_keys"
         if not authorizedKeys.is_file():
