@@ -968,14 +968,14 @@ class BuildDiskImage(Project):
         self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw 1 1\n")
         # enable ssh and set hostname
         # TODO: use separate file in /etc/rc.conf.d/ ?
-        rcConfContents = "hostname=\"qemu-cheri-%s\"" % os.getlogin() + """
+        rcConfContents = """hostname="qemu-cheri-{username}"
 ifconfig_le0="DHCP"  # use DHCP on the standard QEMU usermode nic
 sshd_enable="YES"
 # speed up the boot a bit by disabling sendmail
 sendmail_submit_enable="NO"  # Start a localhost-only MTA for mail submission
 sendmail_outbound_enable = "NO"  # Dequeue stuck mail (YES/NO).
 sendmail_msp_queue_enable = "NO"  # Dequeue stuck clientmqueue mail (YES/NO).
-"""
+""".format(username=os.getlogin())
         self.createFileForImage(outDir, "/etc/rc.conf", contents=rcConfContents)
 
         # make sure that the disk image always has the same SSH host keys
