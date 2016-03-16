@@ -462,12 +462,15 @@ class Project(object):
             return f.read()
 
     def copyFile(self, src: Path, dest: Path, *, force=False):
-        printCommand("cp", "-f" if force else "", src, dest, printVerboseOnly=True)
+        if force:
+            printCommand("cp", "-f", src, dest, printVerboseOnly=True)
+        else:
+            printCommand("cp", src, dest, printVerboseOnly=True)
         if self.config.pretend:
             return
         if dest.exists() and force:
             dest.unlink()
-        shutil.copy(src, dest, follow_symlinks=False)
+        shutil.copy(str(src), str(dest), follow_symlinks=False)
 
     def update(self):
         self._updateGitRepo(self.sourceDir, self.gitUrl, self.gitRevision)
