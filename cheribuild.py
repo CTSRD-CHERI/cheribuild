@@ -713,6 +713,7 @@ class BuildCHERIBSD(Project):
         self.installAsRoot = os.getuid() == 0
         self.commonMakeArgs = [
             "make", "CHERI=" + self.config.cheriBitsStr,
+            # "-dCl",  # add some debug output to trace commands properly
             "CHERI_CC=" + str(self.cheriCC),
             # "CPUTYPE=mips64", # mipsfpu for hardware float
             # (apparently no longer supported: https://github.com/CTSRD-CHERI/cheribsd/issues/102)
@@ -972,12 +973,15 @@ class BuildDiskImage(Project):
             self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw 1 1\n")
             # enable ssh and set hostname
             # TODO: use separate file in /etc/rc.conf.d/ ?
-            networkConfigOptions = (
-                'hostname="qemu-cheri-' + os.getlogin() + '"\n'
-                'ifconfig_le0="DHCP"\n'
-                'sshd_enable="YES"\n'
-            )
-            self.createFileForImage(outDir, "/etc/rc.conf", contents=networkConfigOptions)
+            rcConfContents = "hostname=\"qemu-cheri-%s\"" % os.getlogin() + """
+ifconfig_le0="DHCP"\n
+sshd_enable="YES"\n
+# speed up the boot a bit by disabling sendmail
+sendmail_submit_enable="NO"  # Start a localhost-only MTA for mail submission
+sendmail_outbound_enable = "NO"  # Dequeue stuck mail (YES/NO).
+sendmail_msp_queue_enable = "NO"  # Dequeue stuck clientmqueue mail (YES/NO).
+"""
+            self.createFileForImage(outDir, "/etc/rc.conf", contents=rcConfContents)
 
             # make sure that the disk image always has the same SSH host keys
             # If they don't exist the system will generate one on first boot and we have to accept them every time
