@@ -999,12 +999,16 @@ sendmail_msp_queue_enable = "NO"  # Dequeue stuck clientmqueue mail (YES/NO).
         if not authorizedKeys.is_file():
             sshKeys = list(Path(os.path.expanduser("~/.ssh/")).glob("id_*.pub"))
             if len(sshKeys) > 0:
-                print("Found the following ssh keys:", sshKeys)
+                print("Found the following ssh keys:", list(map(str, sshKeys)))
                 if self.queryYesNo("Should they be added to /root/.ssh/authorized_keys?", defaultResult=True):
                     contents = ""
                     for pubkey in sshKeys:
-                        contents + self.readFile(pubkey)
+                        contents += self.readFile(pubkey)
                     self.createFileForImage(outDir, "/root/.ssh/authorized_keys", contents=contents)
+                    print("Should this authorized_keys file be used by default? ",
+                          "You can always change them by editing/deleting '", authorizedKeys, "'.", end="", sep="")
+                    if self.queryYesNo(""):
+                        self.copyFile(outDir / "root/.ssh/authorized_keys", authorizedKeys)
 
     def makeImage(self):
         rawDiskImage = Path(str(self.config.diskImage).replace(".qcow2", ".img"))
