@@ -971,10 +971,12 @@ class BuildDiskImage(Project):
         rcConfContents = """hostname="qemu-cheri-{username}"
 ifconfig_le0="DHCP"  # use DHCP on the standard QEMU usermode nic
 sshd_enable="YES"
-# speed up the boot a bit by disabling sendmail
-sendmail_submit_enable="NO"  # Start a localhost-only MTA for mail submission
-sendmail_outbound_enable = "NO"  # Dequeue stuck mail (YES/NO).
-sendmail_msp_queue_enable = "NO"  # Dequeue stuck clientmqueue mail (YES/NO).
+sendmail_enable="NONE"  # completely disable sendmail
+# disable cron, as this removes errors like: cron[600]: _secure_path: cannot stat /etc/login.conf: Permission denied
+# it should also speed up boot a bit
+cron_enable="NO"
+# the extra m in tmpmfs is not a typo: it means mount /tmp as a memory filesystem (MFS)
+tmpmfs="YES"
 """.format(username=os.getlogin())
         self.createFileForImage(outDir, "/etc/rc.conf", contents=rcConfContents)
 
@@ -1042,7 +1044,7 @@ sendmail_msp_queue_enable = "NO"  # Dequeue stuck clientmqueue mail (YES/NO).
 
         if self.config.diskImage.is_file():
             # only show prompt if we can actually input something to stdin
-            print("An image already exists (" + str(self.config.diskImage) + ").", end="")
+            print("An image already exists (" + str(self.config.diskImage) + "). ", end="")
             if not self.queryYesNo("Overwrite?", defaultResult=True):
                 return  # we are done here
             printCommand("rm", self.config.diskImage)
