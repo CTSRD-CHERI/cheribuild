@@ -574,6 +574,17 @@ class Project(object):
                 raise SystemExit("Command \"%s\" failed with exit code %d.\nSee %s for details." %
                                  (cmdStr, retcode, logfile.name))
 
+    def createBuildtoolTargetSymlinks(self, tool: Path):
+        """
+        Create mips4-unknown-freebsd, cheri-unknown-freebsd and mips64-unknown-freebsd prefixed symlinks
+        for build tools like clang, ld, etc.
+        :param tool: the binary for which the symlinks will be created
+        """
+        if not tool.is_file():
+            fatalError("Attempting to creat symlink to non-existent build tool:", tool)
+        for target in ("mips4-unknown-freebsd-", "cheri-unknown-freebsd-", "mips64-unknown-freebsd-"):
+            runCmd("ln", "-fsn", tool.name, target + tool.name, cwd=tool.parent, printVerboseOnly=True)
+
     def compile(self):
         self.runMake([self.makeCommand, self.config.makeJFlag])
 
@@ -638,13 +649,24 @@ class BuildBinutils(Project):
                          gitUrl="https://github.com/CTSRD-CHERI/binutils.git")
         self.configureCommand = self.sourceDir / "configure"
         self.configureArgs = [
-            "--target=mips64",  # binutils for MIPS64/CHERI
+            "--target=mips64-unknown-elf",  # binutils for MIPS64/FreeBSD
             "--disable-werror",  # -Werror won't work with recent compilers
             "--with-sysroot",
             "--prefix=" + str(self.installDir),  # install to the SDK dir
             "MAKEINFO=missing",  # don't build docs, this will fail on recent Linux systems
         ]
 
+    def install(self):
+        super().install()
+        bindir = self.installDir / "bin"
+        for tool in "addr2line ld ranlib strip ar nm readelf as objcopy size c++filt objdump strings".split():
+            prefixedName = "mips64-unknown-elf-" + tool
+            if not (bindir / prefixedName).is_file():
+                fatalError("Binutils binary", prefixedName, "is missing!")
+            # create the right symlinks to the tool (ld -> mips64-unknown-elf-ld, etc)
+            runCmd("ln", "-fsn", prefixedName, tool, cwd=bindir)
+            # Also symlink cheri-unknown-freebsd-ld -> ld (and the other targets)
+            self.createBuildtoolTargetSymlinks(bindir / tool)
     def update(self):
         super().update()
         # make sure *.info is newer than other files, because newer versions of makeinfo will fail
@@ -714,6 +736,9 @@ class BuildLLVM(Project):
             printCommand("rm", shlex.quote(str(i)), printVerboseOnly=True)
             if not self.config.pretend:
                 i.unlink()
+        # create a symlink for the target
+        self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang")
+        self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang++")
 
 
 class BuildCHERIBSD(Project):
@@ -1267,12 +1292,7 @@ int main(int argc, char** argv)
 
         tools += "clang clang++ llvm-mc llvm-objdump llvm-readobj llvm-size llc".split()
         for tool in tools:
-            runCmd("ln", "-fsn", tool, "cheri-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin",
-                   printVerboseOnly=True)
-            runCmd("ln", "-fns", tool, "mips4-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin",
-                   printVerboseOnly=True)
-            runCmd("ln", "-fns", tool, "mips64-unknown-freebsd-" + tool, cwd=self.config.sdkDir / "bin",
-                   printVerboseOnly=True)
+            self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin" / tool)
 
         self.buildCheridis()
         # fix symbolic links in the sysroot:
