@@ -1038,8 +1038,7 @@ class BuildDiskImage(Project):
         # TODO: https://www.freebsd.org/cgi/man.cgi?mount_unionfs(8) should make this easier
         # Overlay extra-files over additional stuff over cheribsd rootfs dir
 
-        # TODO: add /tmp as tmpfs?
-        self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw 1 1\n")
+        self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw 1 1\ntmpfs /tmp tmpfs rw 1 1\n")
         # enable ssh and set hostname
         # TODO: use separate file in /etc/rc.conf.d/ ?
         rcConfContents = """hostname="qemu-cheri-{username}"
@@ -1049,8 +1048,9 @@ sendmail_enable="NONE"  # completely disable sendmail
 # disable cron, as this removes errors like: cron[600]: _secure_path: cannot stat /etc/login.conf: Permission denied
 # it should also speed up boot a bit
 cron_enable="NO"
+# tmpmfs="YES" only creates a 20 MB ramdisk for /tmp, use /etc/fstab and tmpfs instead
 # the extra m in tmpmfs is not a typo: it means mount /tmp as a memory filesystem (MFS)
-tmpmfs="YES"
+# tmpmfs="YES"
 """.format(username=os.getlogin())
         self.createFileForImage(outDir, "/etc/rc.conf", contents=rcConfContents)
 
