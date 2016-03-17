@@ -409,6 +409,8 @@ class Project(object):
         self.makeCommand = "make"
         self.configureCommand = ""
         self.configureArgs = []  # type: typing.List[str]
+        self.configureEnvironment = None  # type: typing.Dict[str,str]
+
         # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
 
     def queryYesNo(self, message: str="", *, defaultResult=False) -> bool:
@@ -488,7 +490,7 @@ class Project(object):
         if self.configureCommand:
             statusUpdate("Configuring", self.name, "... ")
             self.runWithLogfile([self.configureCommand] + self.configureArgs,
-                                logfileName="configure", cwd=self.buildDir)
+                                logfileName="configure", cwd=self.buildDir, env=self.configureEnvironment)
 
     @staticmethod
     def _makeStdoutFilter(line: bytes):
@@ -647,14 +649,68 @@ class BuildBinutils(Project):
     def __init__(self, config: CheriConfig):
         super().__init__("binutils", config, installDir=config.sdkDir,
                          gitUrl="https://github.com/CTSRD-CHERI/binutils.git")
+        # http://marcelog.github.io/articles/cross_freebsd_compiler_in_linux.html
         self.configureCommand = self.sourceDir / "configure"
+        # on linux we get an ld binary that is only able to handle 32 bit mips:
+        # GNU ld (GNU Binutils) 2.18
+        # Supported emulations:
+        #     elf32ebmip
+
+        # The version from the FreeBSD source tree supports the right targets:
+        # GNU ld 2.17.50 [FreeBSD] 2007-07-03
+        # Supported emulations:
+        #    elf64btsmip_fbsd
+        #    elf32btsmip_fbsd
+        #    elf32ltsmip_fbsd
+        #    elf64btsmip_fbsd
+        #    elf64ltsmip_fbsd
+        #    elf32btsmipn32_fbsd
+        #    elf32ltsmipn32_fbsd
+
+        # This means we have to manually specify them using the --targets flag
+
+        # TODO: only enable the MIPS targets
+        enabledTargets = "all"
+        # TODO: These targets are enabled on the FreeBSD fork, but are not accepted by this version
+        # enabledTargets = ",".join([
+        #     "elf64btsmip_fbsd",
+        #     "elf32btsmip_fbsd",
+        #     "elf32ltsmip_fbsd",
+        #     "elf64btsmip_fbsd",
+        #     "elf64ltsmip_fbsd",
+        #     "elf32btsmipn32_fbsd",
+        #     "elf32ltsmipn32_fbsd",
+        # ])
+        # enabledTargets = ",".join([
+        #     "elf64btsmip",
+        #     "elf32btsmip",
+        #     "elf32ltsmip",
+        #     "elf64btsmip",
+        #     "elf64ltsmip",
+        #     "elf32btsmipn32",
+        #     "elf32ltsmipn32",
+        # ])
         self.configureArgs = [
+            # on cheri gcc -dumpmachine returns mips64-undermydesk-freebsd, however this is not accepted by BFD
+            # if we just pass --target=mips64 this apparently defaults to mips64-unknown-elf on freebsd
+            # and also on Linux, but let's be explicit in case it assumes ELF binaries to target linux
+            # "--target=mips64-undermydesk-freebsd",  # binutils for MIPS64/CHERI
             "--target=mips64-unknown-elf",  # binutils for MIPS64/FreeBSD
             "--disable-werror",  # -Werror won't work with recent compilers
-            "--with-sysroot",
+            "--enable-ld",  # enable linker (is default, but just be safe)
+            "--enable-libssp",  # not sure if this is needed
+            "--enable-64-bit-bfd",  # Make sure we always have 64 bit support
+            "--enable-targets=" + enabledTargets,
+            # TODO: --with-sysroot doesn't work properly so we need to tell clang not to pass the --sysroot option
+            "--with-sysroot=" + str(self.config.sdkSysrootDir),  # as we pass --sysroot to clang we need this option
             "--prefix=" + str(self.installDir),  # install to the SDK dir
+            "--disable-info",
+            #  "--program-prefix=cheri-unknown-freebsd-",
             "MAKEINFO=missing",  # don't build docs, this will fail on recent Linux systems
         ]
+        # newer compilers will default to -std=c99 which will break binutils:
+        self.configureEnvironment = os.environ.copy()
+        self.configureEnvironment["CFLAGS"] = "-std=gnu89 -O2"
 
     def install(self):
         super().install()
@@ -667,13 +723,6 @@ class BuildBinutils(Project):
             runCmd("ln", "-fsn", prefixedName, tool, cwd=bindir)
             # Also symlink cheri-unknown-freebsd-ld -> ld (and the other targets)
             self.createBuildtoolTargetSymlinks(bindir / tool)
-    def update(self):
-        super().update()
-        # make sure *.info is newer than other files, because newer versions of makeinfo will fail
-        infoFiles = ["bfd/doc/bfd.info", "ld/ld.info", "gprof/gprof.info", "gas/doc/as.info",
-                     "binutils/sysroff.info", "binutils/doc/binutils.info", "etc/configure.info", "etc/standards.info"]
-        for i in infoFiles:
-            runCmd("touch", self.sourceDir / i)
 
 
 class BuildLLVM(Project):
