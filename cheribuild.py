@@ -1214,7 +1214,7 @@ int main(int argc, char** argv)
     def createSdkNotOnFreeBSD(self):
         if not self.config.freeBsdBuilderOutputPath or not self.config.freeBsdBuildMachine:
             # TODO: improve this information
-            fatalError("SDK files must be copied those files from a FreeBSD server. See --help for more info")
+            fatalError("SDK files must be copied from a FreeBSD server. See --help for more info")
             return
         remoteSysrootPath = os.path.join(self.config.freeBsdBuilderOutputPath, self.config.sdkDirectoryName,
                                          self.config.sysrootArchiveName)
@@ -1235,15 +1235,15 @@ int main(int argc, char** argv)
 
         # now copy the files
         self._makedirs(self.config.sdkSysrootDir)
-        # runCmd("rm", "-f", self.config.sdkDir / self.config.sysrootArchiveName, printVerboseOnly=True)
-        # runCmd("scp", remoteSysrootPath, self.config.sdkDir)
+        runCmd("rm", "-f", self.config.sdkDir / self.config.sysrootArchiveName, printVerboseOnly=True)
+        runCmd("scp", remoteSysrootPath, self.config.sdkDir)
         runCmd("rm", "-rf", self.config.sdkSysrootDir)
         runCmd("tar", "xzf", self.config.sdkDir / self.config.sysrootArchiveName, cwd=self.config.sdkDir)
         # add the binutils files to the sysroot
-        runCmd("ln", "-sfn", "../mips64/bin", self.config.sdkSysrootDir / "bin")
-        runCmd("ln", "-sfn", "../../mips64/lib/ldscripts/", self.config.sdkSysrootDir / "lib/ldscripts")
-        for i in ["ar", "as", "ld",  "nm", "objcopy", "objdump", "ranlib", "strip"]:
-            runCmd("ln", "-sfn", "mips64-" + i, self.config.sdkDir / "bin" / i)
+        # runCmd("ln", "-sfn", "../mips64/bin", self.config.sdkSysrootDir / "bin")
+        # runCmd("ln", "-sfn", "../../mips64/lib/ldscripts/", self.config.sdkSysrootDir / "lib/ldscripts")
+        # for i in ["ar", "as", "ld",  "nm", "objcopy", "objdump", "ranlib", "strip"]:
+        #     runCmd("ln", "-sfn", "mips64-" + i, self.config.sdkDir / "bin" / i)
 
     def process(self):
         if not IS_FREEBSD:
