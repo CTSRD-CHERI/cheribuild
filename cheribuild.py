@@ -1039,7 +1039,7 @@ class BuildDiskImage(Project):
         # TODO: https://www.freebsd.org/cgi/man.cgi?mount_unionfs(8) should make this easier
         # Overlay extra-files over additional stuff over cheribsd rootfs dir
 
-        self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw 1 1\ntmpfs /tmp tmpfs rw 1 1\n")
+        self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw 1 1\ntmpfs /tmp tmpfs rw 0 0\n")
         # enable ssh and set hostname
         # TODO: use separate file in /etc/rc.conf.d/ ?
         rcConfContents = """hostname="qemu-cheri-{username}"
@@ -1058,6 +1058,7 @@ cron_enable="NO"
         # make sure that the disk image always has the same SSH host keys
         # If they don't exist the system will generate one on first boot and we have to accept them every time
         self.generateSshHostKeys()
+
         print("Adding 'PermitRootLogin without-password' to /etc/ssh/sshd_config")
         # make sure we can login as root with pubkey auth:
         sshdConfig = self.config.cheribsdRootfs / "etc/ssh/sshd_config"
@@ -1065,6 +1066,7 @@ cron_enable="NO"
         newSshdConfigContents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
         self.createFileForImage(outDir, "/etc/ssh/sshd_config", contents=newSshdConfigContents,
                                 showContentsByDefault=False)
+
         # now try adding the right ~/.ssh/authorized_keys
         authorizedKeys = self.config.extraFiles / "root/.ssh/authorized_keys"
         if not authorizedKeys.is_file():
