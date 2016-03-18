@@ -208,7 +208,8 @@ class ConfigLoader(object):
 
     @classmethod
     def addPathOption(cls, name: str, shortname=None, **kwargs) -> Path:
-        return cls.addOption(name, shortname, type=Path, **kwargs)
+        # we have to make sure we resolve this to an absolute path because otherwise steps where CWD is different fail!
+        return cls.addOption(name, shortname, type=lambda s: Path(s).absolute(), **kwargs)
 
     def __init__(self, action: argparse.Action, default, valueType):
         self.action = action
