@@ -1064,7 +1064,7 @@ cron_enable="NO"
         newSshdConfigContents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
         self.createFileForImage(outDir, "/etc/ssh/sshd_config", contents=newSshdConfigContents,
                                 showContentsByDefault=False)
-        # now try adding the right ~/.authorized
+        # now try adding the right ~/.ssh/authorized_keys
         authorizedKeys = self.config.extraFiles / "root/.ssh/authorized_keys"
         if not authorizedKeys.is_file():
             sshKeys = list(Path(os.path.expanduser("~/.ssh/")).glob("id_*.pub"))
@@ -1127,7 +1127,8 @@ cron_enable="NO"
         with tempfile.TemporaryDirectory() as outDir:
             self.prepareRootfs(Path(outDir))
             # now add all the user provided files to the image:
-            for p in self.extraFiles:
+            # we have to make a copy as we modify self.extraFiles in self.addFileToImage()
+            for p in self.extraFiles.copy():
                 pathInImage = p.relative_to(self.config.extraFiles)
                 print("Adding user provided file /", pathInImage, " to disk image.", sep="")
                 self.addFileToImage(p, str(pathInImage.parent))
