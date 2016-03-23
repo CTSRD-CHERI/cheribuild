@@ -1328,7 +1328,7 @@ int main(int argc, char** argv)
             fatalError(self.config.sdkSysrootDir, "is missing the libc library, install seems to have failed!")
 
         # install tools:
-        tools = "as objdump strings addr2line crunchide gcc gcov nm strip ld objcopy size brandelf".split()
+        tools = "as objdump strings addr2line crunchide gcc gcov nm strip ld objcopy size brandelf elfcopy".split()
         for tool in tools:
             if (self.CHERITOOLS_OBJ / tool).is_file():
                 self.copyFile(self.CHERITOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
