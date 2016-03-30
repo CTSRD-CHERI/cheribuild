@@ -283,6 +283,7 @@ class CheriConfig(object):
     quiet = ConfigLoader.addBoolOption("quiet", "q", help="Don't show stdout of the commands that are executed")
     verbose = ConfigLoader.addBoolOption("verbose", "v", help="Print all commmands that are executed")
     clean = ConfigLoader.addBoolOption("clean", "c", help="Remove the build directory before build")
+    force = ConfigLoader.addBoolOption("force", "f", help="Don't prompt for user input but use the default action")
     skipUpdate = ConfigLoader.addBoolOption("skip-update", help="Skip the git pull step")
     skipConfigure = ConfigLoader.addBoolOption("skip-configure", help="Skip the configure step")
     skipBuildworld = ConfigLoader.addBoolOption("skip-buildworld", help="Skip the FreeBSD buildworld step -> only build"
@@ -414,11 +415,15 @@ class Project(object):
 
         # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
 
-    def queryYesNo(self, message: str="", *, defaultResult=False) -> bool:
+    def queryYesNo(self, message: str="", *, defaultResult=False, forceResult=True) -> bool:
         yesNoStr = " [Y]/n " if defaultResult else " y/[N] "
         if self.config.pretend:
             print(message + yesNoStr)
             return True  # in pretend mode we always return true
+        if self.config.force:
+            # in force mode we always return the forced result without prompting the user
+            print(message + yesNoStr, "y")
+            return forceResult
         if not sys.__stdin__.isatty():
             return defaultResult  # can't get any input -> return the default
         result = input(message + yesNoStr)
