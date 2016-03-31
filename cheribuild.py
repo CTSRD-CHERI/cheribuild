@@ -1424,9 +1424,10 @@ class Target(object):
 
     def execute(self, config: CheriConfig):
         # instantiate the project and run it
+        starttime = time.time()
         project = self.projectClass(config)
         project.process()
-        statusUpdate("Built target '" + self.name + "'")
+        statusUpdate("Built target '" + self.name + "' in", time.time() - starttime, "seconds")
 
 
 class AllTargets(object):
