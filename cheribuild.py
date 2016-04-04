@@ -327,7 +327,19 @@ class CheriConfig(object):
                                                help="The port to use on localhost to forward the QEMU ssh port. "
                                                     "You can then use `ssh root@localhost -p $PORT` connect to the VM",
                                                metavar="PORT")  # type: int
+    extraMakeOptions = " ".join([
+        "-DWITHOUT_HTML",  # should not be needed
+        "-DWITHOUT_SENDMAIL", "-DWITHOUT_MAIL",  # no need for sendmail
+        "-DWITHOUT_GAMES",  # not needed
+        "-DWITHOUT_MAN",  # seems to be a majority of the install time
+        "-DWITH_FAST_DEPEND",  # no separate make depend step, do it while compiling
+        # "-DWITH_INSTALL_AS_USER", should be enforced by -DNO_ROOT
+        "-DWITH_DIRDEPS_BUILD", "-DWITH_DIRDEPS_CACHE",  # experimental fast build options
+    ])
 
+    cheribsdExtraMakeOptions = ConfigLoader.addOption("cheribsd-make-options", type=str, default=extraMakeOptions,
+                                                      help="Additional options to be passed to make when "
+                                                      "building CHERIBSD. See man src.conf for more info")
     # allow overriding the git revisions in case there is a regression
     cheriBsdRevision = ConfigLoader.addOption("cheribsd-revision", type=str, metavar="GIT_COMMIT_ID",
                                               help="The git revision or branch of CHERIBSD to check out",
@@ -825,6 +837,7 @@ class BuildCHERIBSD(Project):
             #  "-DCROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin")
             "KERNCONF=" + self.kernelConfig,
         ]
+        self.commonMakeArgs.extend(shlex.split(self.config.cheribsdExtraMakeOptions))
 
     @staticmethod
     def _makeStdoutFilter(line: bytes):
