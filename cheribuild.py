@@ -1387,7 +1387,7 @@ class LaunchQEMU(Project):
                 "-kernel", currentKernel,  # assume the current image matches the kernel currently build
                 "-nographic",  # no GPU
                 "-m", "2048",  # 2GB memory
-                "-hda", self.config.qcow2DiskImage,
+                "-hda", self.config.diskImage,
                 "-net", "nic", "-net", "user",
                 # bind the qemu ssh port to the hosts port 9999
                 "-redir", "tcp:" + str(self.config.sshForwardingPort) + "::22",
