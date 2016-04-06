@@ -942,49 +942,6 @@ class BuildNfsKernel(BuildCHERIBSD):
         self.runMake(installArgs, "installkernel", cwd=self.sourceDir)
 
 
-class BuildNewSDK(BuildCHERIBSD):
-    def __init__(self, config: CheriConfig):
-        super().__init__(config, name="new-sdk")
-        self.installDir = self.config.outputRoot / "xdev-install"
-        self.buildDir = self.config.outputRoot / "xdev-build"
-        # use make xdev-build/xdev-install to create the cross build environment
-        # MK_DEBUG_FILES seems to be unconditionally true, how do I fix this?
-
-        self.commonMakeArgs = [
-            "make",
-            # "CHERI=256", "CHERI_CC=" + str(self.cheriCC),
-            "TARGET=mips", "TARGET_ARCH=mips64", "CPUTYPE=mips64",
-            "-DDB_FROM_SRC",  # don't use the system passwd file
-            "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
-            "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
-            # "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
-            # "DEBUG_FLAGS=-g",  # enable debug stuff
-            "DESTDIR=" + str(self.installDir),
-            "MK_DEBUG_FILES=no",  # HACK: don't create the debug files
-            # "XDTP=/usr/mips64"),  # cross tools prefix (default is fine)
-            "WITH_LIBCPLUSPLUS=yes",   # compile libc++
-            # We already have our own cross compiler
-            "MK_CLANG_BOOTSTRAP=no",
-            "MK_GCC_BOOTSTRAP=no",
-            "XCC=" + str(self.cheriCC),  # TODO: still needed?
-            "XCXX=" + str(self.cheriCXX),  # TODO: still needed?
-            "CROSS_BINUTILS_PREFIX=" + str(self.binutilsDir),  # use the CHERI-aware binutils and not the builtin ones
-            "DCROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin"),
-            "MK_BINUTILS_BOOTSTRAP=yes",  # don't build the GNU binutils from the cheribsd source tree
-            "MK_ELFTOOLCHAIN_BOOTSTRAP=yes",  # don't build elftoolchain binaries
-        ]
-
-    def compile(self):
-        self.setupEnvironment()
-        self._cleanDir(self.installDir, force=True)  # make sure that the install dir is empty (can cause errors)
-        # for now no parallel make
-        runCmd(self.commonMakeArgs + [self.config.makeJFlag, "xdev-build"], cwd=self.sourceDir)
-
-    def install(self):
-        # don't use multiple jobs here
-        runCmd(self.commonMakeArgs + ["xdev"], cwd=self.sourceDir)
-
-
 class BuildDiskImage(Project):
     def __init__(self, config):
         super().__init__("disk-image", config)
@@ -1459,7 +1416,6 @@ class AllTargets(object):
             Target("cheribsd-nfs", BuildNfsKernel, dependencies=["llvm"]),
             # SDK only needs to build CHERIBSD if we are on a FreeBSD host, otherwise the files will be copied
             Target("sdk", BuildSDK, dependencies=["cheribsd", "llvm"]),
-            Target("new-sdk", BuildNewSDK, dependencies=["binutils", "llvm"]),
             Target("disk-image", BuildDiskImage, dependencies=["cheribsd", "qemu"]),
             Target("run", LaunchQEMU, dependencies=["qemu", "disk-image"]),
             Target("all", PseudoTarget, dependencies=["qemu", "llvm", "cheribsd", "sdk", "disk-image", "run"]),
