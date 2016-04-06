@@ -521,9 +521,9 @@ class Project(object):
     @staticmethod
     def _handleStdErr(outfile, stream, fileLock):
         for errLine in stream:
-            sys.stderr.buffer.write(errLine)
-            sys.stderr.buffer.flush()
             with fileLock:
+                sys.stderr.buffer.write(errLine)
+                sys.stderr.buffer.flush()
                 outfile.write(errLine)
 
     def runMake(self, args: "typing.List[str]", makeTarget="", *, cwd: Path=None, env=None) -> None:
@@ -586,6 +586,11 @@ class Project(object):
                         sys.stdout.buffer.write(line)
                         sys.stdout.buffer.flush()
             retcode = make.wait()
+            remainingErr, remainingOut = make.communicate()
+            sys.stderr.buffer.write(remainingErr)
+            logfile.write(remainingErr)
+            sys.stdout.buffer.write(remainingOut)
+            logfile.write(remainingOut)
             if stdoutFilter:
                 # add the final new line after the filtering
                 sys.stdout.buffer.write(b"\n")
