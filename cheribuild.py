@@ -45,10 +45,6 @@ try:
     import typing
 except ImportError:
     typing = None
-    pass
-
-IS_LINUX = sys.platform.startswith("linux")
-IS_FREEBSD = sys.platform.startswith("freebsd")
 
 
 class AnsiColour(Enum):
@@ -72,6 +68,9 @@ def coloured(colour: AnsiColour, *args, sep=" "):
     else:
         return startColour + sep.join(map(str, args)) + endColour
 
+
+IS_LINUX = sys.platform.startswith("linux")
+IS_FREEBSD = sys.platform.startswith("freebsd")
 _cheriConfig = None  # type: CheriConfig
 
 
