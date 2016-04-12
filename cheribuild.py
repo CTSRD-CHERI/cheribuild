@@ -315,9 +315,6 @@ class CheriConfig(object):
     # TODO: only create a qcow2 image?
     diskImage = ConfigLoader.addPathOption("disk-image-path", default=defaultDiskImagePath, help="The output path for"
                                            " the QEMU disk image (default: '<OUTPUT_ROOT>/cheri256-disk.qcow2')")
-    nfsKernelPath = ConfigLoader.addPathOption("nfs-kernel-path", default=lambda p: (p.outputRoot / "nfs/kernel"),
-                                               help="The output path for the CheriBSD kernel that boots over NFS "
-                                                    "(default: '<OUTPUT_ROOT>/nfs/kernel')")
 
     # other options
     makeJobs = ConfigLoader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
@@ -925,24 +922,6 @@ class BuildCHERIBSD(Project):
         super().process()
 
 
-class BuildNfsKernel(BuildCHERIBSD):
-    def __init__(self, config: CheriConfig):
-        super().__init__(config, name="cheribsd-nfs", kernelConfig="CHERI_MALTA64_NFSROOT")
-        self.installAsRoot = True
-        # we don't want a metalog file, we want all files with right permissions
-        self.commonMakeArgs.remove("-DNO_ROOT")
-        # self.buildDir = self.config.outputRoot / "nfskernel-build"
-        self.installDir = self.config.outputRoot / "nfs/rootfs"
-
-    def install(self):
-        if not os.getuid() == 0:
-            fatalError("Need to be root to build the CHERIBSD NFSROOT")
-        super().install()
-        # Also install the kernel to a separate directory (which in my case is on the host machine):
-        self._makedirs(self.config.nfsKernelPath)
-        installArgs = self.commonMakeArgs + ["DESTDIR=" + str(self.config.nfsKernelPath)]
-        self.runMake(installArgs, "installkernel", cwd=self.sourceDir)
-
 
 class BuildDiskImage(Project):
     def __init__(self, config):
@@ -1417,7 +1396,6 @@ class AllTargets(object):
             Target("qemu", BuildQEMU),
             Target("llvm", BuildLLVM),
             Target("cheribsd", BuildCHERIBSD, dependencies=["llvm"]),
-            Target("cheribsd-nfs", BuildNfsKernel, dependencies=["llvm"]),
             # SDK only needs to build CHERIBSD if we are on a FreeBSD host, otherwise the files will be copied
             Target("sdk", BuildSDK, dependencies=["cheribsd", "llvm"]),
             Target("disk-image", BuildDiskImage, dependencies=["cheribsd", "qemu"]),
