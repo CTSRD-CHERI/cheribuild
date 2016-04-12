@@ -292,6 +292,7 @@ class CheriConfig(object):
     skipDependencies = ConfigLoader.addBoolOption("skip-dependencies", "t",
                                                   help="Only build the targets that were explicitly passed on the "
                                                        "command line")
+    noLogfile = ConfigLoader.addBoolOption("no-logfile", help="Don't write a logfile for the build steps")
 
     _buildCheri128 = ConfigLoader.addBoolOption("cheri-128", "-128", group=ConfigLoader.cheriBitsGroup,
                                                 help="Shortcut for --cheri-bits=128")
@@ -552,7 +553,10 @@ class Project(object):
         """
         printCommand(args, cwd=cwd)
         assert not logfileName.startswith("/")
-        logfilePath = self.buildDir / (logfileName + ".log")
+        if self.config.noLogfile:
+            logfilePath = Path(os.devnull)
+        else:
+            logfilePath = self.buildDir / (logfileName + ".log")
         print("Saving build log to", logfilePath)
         if self.config.pretend:
             return
