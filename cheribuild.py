@@ -609,7 +609,7 @@ class Project(object):
         if not tool.is_file():
             fatalError("Attempting to creat symlink to non-existent build tool:", tool)
         for target in ("mips4-unknown-freebsd-", "cheri-unknown-freebsd-", "mips64-unknown-freebsd-"):
-            if (tool.parent / (target + tool.name)).is_file():
+            if (tool.parent / (target + tool.name)) == tool:
                 continue
             runCmd("ln", "-fsn", tool.name, target + tool.name, cwd=tool.parent, printVerboseOnly=True)
 
