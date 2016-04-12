@@ -602,7 +602,8 @@ class Project(object):
                 raise SystemExit("Command \"%s\" failed with exit code %d.\nSee %s for details." %
                                  (cmdStr, retcode, logfile.name))
 
-    def createBuildtoolTargetSymlinks(self, tool: Path):
+    @staticmethod
+    def createBuildtoolTargetSymlinks(tool: Path):
         """
         Create mips4-unknown-freebsd, cheri-unknown-freebsd and mips64-unknown-freebsd prefixed symlinks
         for build tools like clang, ld, etc.
