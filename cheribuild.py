@@ -1280,6 +1280,8 @@ int main(int argc, char** argv)
         # runCmd("ln", "-sfn", "../../mips64/lib/ldscripts/", self.config.sdkSysrootDir / "lib/ldscripts")
         # for i in ["ar", "as", "ld",  "nm", "objcopy", "objdump", "ranlib", "strip"]:
         #     runCmd("ln", "-sfn", "mips64-" + i, self.config.sdkDir / "bin" / i)
+        # FIXME: HACK: we need to build brandelf
+        runCmd("ln", "-sfn", "/usr/bin/true", "brandelf", cwd=self.config.sdkDir)
 
     def process(self):
         if not IS_FREEBSD:
