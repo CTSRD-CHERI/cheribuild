@@ -82,7 +82,7 @@ def setCheriConfig(c: "CheriConfig"):
     _cheriConfig = c
 
 
-def printCommand(arg1: "typing.Union[str, typing.Tuple, typing.List]", *remainingArgs,
+def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remainingArgs,
                  colour=AnsiColour.yellow, cwd=None, sep=" ", printVerboseOnly=False, **kwargs):
     if _cheriConfig.quiet or (printVerboseOnly and not _cheriConfig.verbose):
         return
