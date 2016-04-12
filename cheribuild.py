@@ -335,7 +335,7 @@ class CheriConfig(object):
         "-DWITH_FAST_DEPEND",  # no separate make depend step, do it while compiling
         # "-DWITH_INSTALL_AS_USER", should be enforced by -DNO_ROOT
         "-DWITH_DIRDEPS_BUILD", "-DWITH_DIRDEPS_CACHE",  # experimental fast build options
-        "-DWITH_LIBCHERI_JEMALLOC"  # use jemalloc instead of -lmalloc_simple
+        # "-DWITH_LIBCHERI_JEMALLOC"  # use jemalloc instead of -lmalloc_simple
     ])
 
     cheribsdExtraMakeOptions = ConfigLoader.addOption("cheribsd-make-options", type=str, default=extraMakeOptions,
