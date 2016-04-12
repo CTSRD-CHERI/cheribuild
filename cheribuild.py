@@ -72,10 +72,19 @@ def coloured(colour: AnsiColour, *args, sep=" "):
     else:
         return startColour + sep.join(map(str, args)) + endColour
 
+_cheriConfig = None  # type: CheriConfig
+
+
+# To make it easier to use this as a module (probably most of these commands should be in Project)
+def setCheriConfig(c: "CheriConfig"):
+    print("Setting cheri config to", c)
+    global _cheriConfig
+    _cheriConfig = c
+
 
 def printCommand(arg1: "typing.Union[str, typing.Tuple, typing.List]", *remainingArgs,
                  colour=AnsiColour.yellow, cwd=None, sep=" ", printVerboseOnly=False, **kwargs):
-    if cheriConfig.quiet or (printVerboseOnly and not cheriConfig.verbose):
+    if _cheriConfig.quiet or (printVerboseOnly and not _cheriConfig.verbose):
         return
     # also allow passing a single string
     if not type(arg1) is str:
@@ -97,7 +106,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
     cmdline = list(map(str, cmdline))  # make sure they are all strings
     printCommand(cmdline, cwd=kwargs.get("cwd"), printVerboseOnly=printVerboseOnly)
     kwargs["cwd"] = str(kwargs["cwd"]) if "cwd" in kwargs else os.getcwd()
-    if cheriConfig.pretend:
+    if _cheriConfig.pretend:
         return CompletedProcess(args=cmdline, returncode=0, stdout=b"", stderr=b"")
 
     # actually run the process now:
@@ -112,7 +121,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
     if captureError:
         assert "stderr" not in kwargs  # we need to use stdout here
         kwargs["stderr"] = subprocess.PIPE
-    elif cheriConfig.quiet and "stdout" not in kwargs:
+    elif _cheriConfig.quiet and "stdout" not in kwargs:
         kwargs["stdout"] = subprocess.DEVNULL
     with subprocess.Popen(cmdline, **kwargs) as process:
         try:
@@ -138,7 +147,7 @@ def statusUpdate(*args, sep=" ", **kwargs):
 
 def fatalError(*args, sep=" "):
     # we ignore fatal errors when simulating a run
-    if cheriConfig.pretend:
+    if _cheriConfig.pretend:
         print(coloured(AnsiColour.red, ("Potential fatal error:",) + args, sep=sep))
     else:
         sys.exit(coloured(AnsiColour.red, ("Fatal error:",) + args, sep=sep))
@@ -1467,6 +1476,7 @@ class MyJsonEncoder(json.JSONEncoder):
 
 if __name__ == "__main__":
     cheriConfig = CheriConfig()
+    setCheriConfig(cheriConfig)
     # create the required directories
     for d in (cheriConfig.sourceRoot, cheriConfig.outputRoot, cheriConfig.extraFiles):
         if not cheriConfig.pretend:
