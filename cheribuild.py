@@ -9,8 +9,6 @@ import tempfile
 import threading
 import pprint
 import time
-import difflib
-import io
 import re
 import json
 import socket
