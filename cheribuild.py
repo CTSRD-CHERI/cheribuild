@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
 import argparse
-import subprocess
-import sys
+import functools
+import json
 import os
+import re
 import shlex
 import shutil
+import socket
+import subprocess
+import sys
 import tempfile
 import threading
-import pprint
 import time
-import re
-import json
-import socket
 from collections import OrderedDict
-from functools import reduce
-from pathlib import Path
 from enum import Enum
+from pathlib import Path
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
 
@@ -1418,7 +1417,8 @@ class AllTargets(object):
         # based on http://rosettacode.org/wiki/Topological_sort#Python
         data = dict((t.name, set(t.dependencies)) for t in targets)
         # add all the targets that aren't included yet
-        possiblyMissingDependencies = reduce(set.union, [self.recursiveDependencyNames(t) for t in targets], set())
+        possiblyMissingDependencies = functools.reduce(set.union,
+                                                       [self.recursiveDependencyNames(t) for t in targets], set())
         for dep in possiblyMissingDependencies:
             if dep not in data:
                 data[dep] = self.targetMap[dep].dependencies
