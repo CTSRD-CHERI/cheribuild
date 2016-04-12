@@ -931,6 +931,10 @@ class BuildCHERIBSD(Project):
         super().process()
 
 
+# Notes:
+# Mount the filesystem of a BSD VM: guestmount -a /foo/bar.qcow2 -m /dev/sda1:/:ufstype=ufs2:ufs --ro /mnt/foo
+# ufstype=ufs2 is required as the Linux kernel can't automatically determine which UFS filesystem is being used
+# Same thing is possible with qemu-nbd, but needs root (might be faster)
 
 class BuildDiskImage(Project):
     def __init__(self, config):
@@ -1370,10 +1374,6 @@ class LaunchQEMU(Project):
         except OSError:
             return False
 
-
-# ufstype=ufs2 is required as the Linux kernel can't automatically determine which UFS filesystem is being used
-# Mount the filesystem of a BSD VM: guestmount -a /foo/bar.qcow2 -m /dev/sda1:/:ufstype=ufs2:ufs --ro /mnt/foo
-# Same thing is possible with qemu-nbd, but needs root (might be faster)
 
 # A target that does nothing (used for e.g. the all target)
 class PseudoTarget(Project):
