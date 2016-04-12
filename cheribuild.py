@@ -142,7 +142,7 @@ def fatalError(*args, sep=" "):
     if cheriConfig.pretend:
         print(coloured(AnsiColour.red, ("Potential fatal error:",) + args, sep=sep))
     else:
-        sys.exit(coloured(AnsiColour.red, ("Fatal eroror:",) + args, sep=sep))
+        sys.exit(coloured(AnsiColour.red, ("Fatal error:",) + args, sep=sep))
 
 
 class ConfigLoader(object):
