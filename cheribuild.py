@@ -519,12 +519,13 @@ class Project(object):
         sys.stdout.buffer.flush()
 
     @staticmethod
-    def _handleStdErr(outfile, stream, fileLock):
+    def _handleStdErr(outfile, stream, fileLock, noLogfile):
         for errLine in stream:
             with fileLock:
                 sys.stderr.buffer.write(errLine)
                 sys.stderr.buffer.flush()
-                outfile.write(errLine)
+                if not noLogfile:
+                    outfile.write(errLine)
 
     def runMake(self, args: "typing.List[str]", makeTarget="", *, cwd: Path=None, env=None) -> None:
         if makeTarget:
@@ -578,11 +579,14 @@ class Project(object):
             make = subprocess.Popen(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
             # use a thread to print stderr output and write it to logfile (not using a thread would block)
             logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
-            stderrThread = threading.Thread(target=self._handleStdErr, args=(logfile, make.stderr, logfileLock))
+            stderrThread = threading.Thread(target=self._handleStdErr,
+                                            args=(logfile, make.stderr, logfileLock, self.config.noLogfile))
             stderrThread.start()
             for line in make.stdout:
                 with logfileLock:  # make sure we don't interleave stdout and stderr lines
-                    logfile.write(line)
+                    if not self.config.noLogfile:
+                        # will be /dev/null with noLogfile anyway but saves a syscall per line
+                        logfile.write(line)
                     if stdoutFilter:
                         stdoutFilter(line)
                     else:
