@@ -11,6 +11,7 @@ class BuildBinutils(Project):
                          gitUrl="https://github.com/CTSRD-CHERI/binutils.git")
         # http://marcelog.github.io/articles/cross_freebsd_compiler_in_linux.html
         self.configureCommand = self.sourceDir / "configure"
+        self.gitBranch = "cheribsd"  # the default branch "cheri" won't work for cross-compiling
 
         # If we don't use a patched binutils version on linux we get an ld binary that is
         # only able to handle 32 bit mips:
