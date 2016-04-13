@@ -214,18 +214,21 @@ class Project(object):
                                  (cmdStr, retcode, logfile.name))
 
     @staticmethod
-    def createBuildtoolTargetSymlinks(tool: Path):
+    def createBuildtoolTargetSymlinks(tool: Path, toolName: str=None):
         """
         Create mips4-unknown-freebsd, cheri-unknown-freebsd and mips64-unknown-freebsd prefixed symlinks
         for build tools like clang, ld, etc.
         :param tool: the binary for which the symlinks will be created
+        :param toolName: the unprefixed name of the tool (defaults to tool.name)
         """
         if not tool.is_file():
             fatalError("Attempting to creat symlink to non-existent build tool:", tool)
+        if not toolName:
+            toolName = tool.name
         for target in ("mips4-unknown-freebsd-", "cheri-unknown-freebsd-", "mips64-unknown-freebsd-"):
-            if (tool.parent / (target + tool.name)) == tool:
-                continue
-            runCmd("ln", "-fsn", tool.name, target + tool.name, cwd=tool.parent, printVerboseOnly=True)
+            if (target + toolName) == tool.name:
+                continue  # happens for binutils, where prefixed tools are installed
+            runCmd("ln", "-fsn", tool.name, target + toolName, cwd=tool.parent, printVerboseOnly=True)
 
     def compile(self):
         self.runMake([self.makeCommand, self.config.makeJFlag])

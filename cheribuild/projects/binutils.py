@@ -71,4 +71,4 @@ class BuildBinutils(Project):
             # create the right symlinks to the tool (ld -> mips64-unknown-elf-ld, etc)
             runCmd("ln", "-fsn", prefixedName, tool, cwd=bindir)
             # Also symlink cheri-unknown-freebsd-ld -> ld (and the other targets)
-            self.createBuildtoolTargetSymlinks(bindir / tool)
+            self.createBuildtoolTargetSymlinks(bindir / prefixedName, toolName=tool)
