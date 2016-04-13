@@ -55,16 +55,11 @@ class BuildBinutils(Project):
         status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
                         cwd=self.sourceDir, captureOutput=True, printVerboseOnly=True)
         if not status.stdout.startswith(b"## cheribsd"):
-            remotes = runCmd("git", "remote", cwd=self.sourceDir, captureOutput=True, printVerboseOnly=True).stdout
-            if b"crossbuild-fixes" not in remotes:
-                runCmd("git", "remote", "add", "crossbuild-fixes", "https://github.com/RichardsonAlex/binutils.git",
-                       cwd=self.sourceDir)
-                runCmd("git", "fetch", "crossbuild-fixes", cwd=self.sourceDir)
-                runCmd("git", "checkout", "-b", "cheribsd", "--track", "crossbuild-fixes/cheribsd", cwd=self.sourceDir)
-
-            runCmd("git", "checkout", "cheribsd", cwd=self.sourceDir)
-        else:
-            print("Already on cheribsd branch, all good")
+            branches = runCmd("git", "branch", "--list", cwd=self.sourceDir, captureOutput=True, printVerboseOnly=True)
+            if b" cheribsd" not in branches.stdout:
+                runCmd("git", "checkout", "-b", "cheribsd", "--track", "origin/cheribsd", cwd=self.sourceDir)
+        runCmd("git", "checkout", "cheribsd", cwd=self.sourceDir)
+        super().update()
 
     def install(self):
         super().install()
