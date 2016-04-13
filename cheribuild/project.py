@@ -17,6 +17,7 @@ class Project(object):
         self.name = name
         self.gitUrl = gitUrl
         self.gitRevision = gitRevision
+        self.gitBranch = ""
         self.config = config
         self.sourceDir = Path(sourceDir if sourceDir else config.sourceRoot / name)
         # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256,
@@ -46,12 +47,15 @@ class Project(object):
             return not result.startswith("n")  # if default is yes accept anything other than strings starting with "n"
         return str(result).lower().startswith("y")  # anything but y will be treated as false
 
-    def _updateGitRepo(self, srcDir: Path, remoteUrl, revision=None):
+    def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None):
         if not (srcDir / ".git").is_dir():
             print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?", end="")
             if not self.queryYesNo(defaultResult=False):
                 fatalError("Sources for", str(srcDir), " missing!")
-            runCmd("git", "clone", remoteUrl, srcDir)
+            if initialBranch:
+                runCmd("git", "clone", "--branch", initialBranch, remoteUrl, srcDir)
+            else:
+                runCmd("git", "clone", remoteUrl, srcDir)
         # make sure we run git stash if we discover any local changes
         hasChanges = len(runCmd("git", "diff", captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
         if hasChanges:
@@ -96,7 +100,7 @@ class Project(object):
         shutil.copy(str(src), str(dest), follow_symlinks=False)
 
     def update(self):
-        self._updateGitRepo(self.sourceDir, self.gitUrl, self.gitRevision)
+        self._updateGitRepo(self.sourceDir, self.gitUrl, revision=self.gitRevision, initialBranch=self.gitBranch)
 
     def clean(self):
         # TODO: never use the source dir as a build dir
