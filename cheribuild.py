@@ -1137,6 +1137,28 @@ cron_enable="NO"
             self.addFileToImage(publicKey, "etc/ssh", mode="0644")
 
 
+class BuildAwk(Project):
+    def __init__(self, config: CheriConfig):
+        super().__init__("awk", config, installDir=config.sdkDir,
+                         gitUrl="https://github.com/danfuzz/one-true-awk.git")
+        self.buildDir = self.sourceDir
+
+    def compile(self):
+        self.runMake([self.makeCommand, "CC=cc", "CFLAGS=-O2 -Wall", "YACC=yacc -y -d"],
+                     "a.out", cwd=self.sourceDir / "latest")
+
+    def install(self):
+        self.runMake([self.makeCommand], "names", cwd=self.sourceDir / "latest")
+        self.copyFile(self.sourceDir / "latest/a.out", self.installDir / "bin/nawk")
+        runCmd("ln", "-sfn", "nawk", "awk", cwd=self.installDir / "bin")
+
+    def process(self):
+        if not IS_LINUX:
+            statusUpdate("Skipping awk as this is only needed on Linux hosts")
+        else:
+            super().process()
+
+
 class BuildElfToolchain(Project):
     def __init__(self, config: CheriConfig):
         super().__init__("elftoolchain", config, installDir=config.sdkDir,
@@ -1421,7 +1443,7 @@ class PseudoTarget(Project):
 
 
 class Target(object):
-    def __init__(self, name, projectClass, *, dependencies: "typing.Iterable[str]"=set()):
+    def __init__(self, name, projectClass, *, dependencies: "typing.Sequence[str]"=set()):
         self.name = name
         self.dependencies = set(dependencies)
         self.projectClass = projectClass
@@ -1436,15 +1458,23 @@ class Target(object):
 
 class AllTargets(object):
     def __init__(self):
+        sdkTarget = Target("sdk", BuildSDK)
+        if IS_FREEBSD:
+            sdkTarget.dependencies = set(["cheribsd", "llvm"])
+        else:
+            # cheribsd files need to be copied from another host
+            sdkTarget.dependencies = set(["awk", "elftoolchain", "binutils", "llvm"])
+
         self._allTargets = [
             Target("binutils", BuildBinutils),
             Target("qemu", BuildQEMU),
             Target("llvm", BuildLLVM),
+            Target("awk", BuildAwk),
             Target("elftoolchain", BuildElfToolchain),
             Target("cheribsd", BuildCHERIBSD, dependencies=["llvm"]),
             # SDK only needs to build CHERIBSD if we are on a FreeBSD host, otherwise the files will be copied
-            Target("sdk", BuildSDK, dependencies=["cheribsd", "llvm"]),
             Target("disk-image", BuildDiskImage, dependencies=["cheribsd", "qemu"]),
+            sdkTarget,
             Target("run", LaunchQEMU, dependencies=["qemu", "disk-image"]),
             Target("all", PseudoTarget, dependencies=["qemu", "llvm", "cheribsd", "sdk", "disk-image", "run"]),
         ]
