@@ -4,6 +4,7 @@ import sys
 
 from .project import Project
 from .utils import *
+from .projects.elftoolchain import BuildElfToolchain
 from .projects.binutils import BuildBinutils
 from .projects.build_qemu import BuildQEMU
 from .projects.cheribsd import BuildCHERIBSD
@@ -23,7 +24,7 @@ class PseudoTarget(Project):
 
 
 class Target(object):
-    def __init__(self, name, projectClass, *, dependencies: "typing.Iterable[str]"=set()):
+    def __init__(self, name, projectClass, *, dependencies: "typing.Sequence[str]"=set()):
         self.name = name
         self.dependencies = set(dependencies)
         self.projectClass = projectClass
@@ -42,6 +43,7 @@ class AllTargets(object):
             Target("binutils", BuildBinutils),
             Target("qemu", BuildQEMU),
             Target("llvm", BuildLLVM),
+            Target("elftoolchain", BuildElfToolchain),
             Target("cheribsd", BuildCHERIBSD, dependencies=["llvm"]),
             # SDK only needs to build CHERIBSD if we are on a FreeBSD host, otherwise the files will be copied
             Target("sdk", BuildSDK, dependencies=["cheribsd", "llvm"]),

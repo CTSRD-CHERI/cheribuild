@@ -52,6 +52,7 @@ addFilteredFile(scriptDir / "projects/binutils.py")
 addFilteredFile(scriptDir / "projects/llvm.py")
 addFilteredFile(scriptDir / "projects/cheribsd.py")
 addFilteredFile(scriptDir / "projects/disk_image.py")
+addFilteredFile(scriptDir / "projects/elftoolchain.py")
 addFilteredFile(scriptDir / "projects/sdk.py")
 addFilteredFile(scriptDir / "projects/run_qemu.py")
 
