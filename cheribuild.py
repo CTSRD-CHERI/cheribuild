@@ -18,6 +18,29 @@ from pathlib import Path
 
 # See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri
 
+
+class AnsiColour(Enum):
+    black = 30
+    red = 31
+    green = 32
+    yellow = 33
+    blue = 34
+    magenta = 35
+    cyan = 36
+    white = 37
+
+
+def coloured(colour: AnsiColour, *args, sep=" "):
+    startColour = "\x1b[1;" + str(colour.value) + "m"
+    endColour = "\x1b[0m"  # reset
+    if len(args) == 1:
+        if isinstance(args[0], str):
+            return startColour + args[0] + endColour
+        return startColour + sep.join(map(str, args[0])) + endColour
+    else:
+        return startColour + sep.join(map(str, args)) + endColour
+
+
 if sys.version_info < (3, 4):
     sys.exit("This script requires at least Python 3.4")
 if sys.version_info < (3, 5):
@@ -45,29 +68,6 @@ try:
     import typing
 except ImportError:
     typing = None
-
-
-class AnsiColour(Enum):
-    black = 30
-    red = 31
-    green = 32
-    yellow = 33
-    blue = 34
-    magenta = 35
-    cyan = 36
-    white = 37
-
-
-def coloured(colour: AnsiColour, *args, sep=" "):
-    startColour = "\x1b[1;" + str(colour.value) + "m"
-    endColour = "\x1b[0m"  # reset
-    if len(args) == 1:
-        if isinstance(args[0], str):
-            return startColour + args[0] + endColour
-        return startColour + sep.join(map(str, args[0])) + endColour
-    else:
-        return startColour + sep.join(map(str, args)) + endColour
-
 
 IS_LINUX = sys.platform.startswith("linux")
 IS_FREEBSD = sys.platform.startswith("freebsd")
