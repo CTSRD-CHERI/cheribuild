@@ -418,6 +418,7 @@ class Project(object):
         self.name = name
         self.gitUrl = gitUrl
         self.gitRevision = gitRevision
+        self.gitBranch = ""
         self.config = config
         self.sourceDir = Path(sourceDir if sourceDir else config.sourceRoot / name)
         # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256,
@@ -447,12 +448,20 @@ class Project(object):
             return not result.startswith("n")  # if default is yes accept anything other than strings starting with "n"
         return str(result).lower().startswith("y")  # anything but y will be treated as false
 
-    def _updateGitRepo(self, srcDir: Path, remoteUrl, revision=None):
+    def runGitCmd(self, *args, cwd=None, **kwargs):
+        if not cwd:
+            cwd = self.sourceDir
+        return runCmd("git", *args, cwd=cwd, **kwargs)
+
+    def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None):
         if not (srcDir / ".git").is_dir():
             print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?", end="")
             if not self.queryYesNo(defaultResult=False):
                 fatalError("Sources for", str(srcDir), " missing!")
-            runCmd("git", "clone", remoteUrl, srcDir)
+            if initialBranch:
+                runCmd("git", "clone", "--branch", initialBranch, remoteUrl, srcDir)
+            else:
+                runCmd("git", "clone", remoteUrl, srcDir)
         # make sure we run git stash if we discover any local changes
         hasChanges = len(runCmd("git", "diff", captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
         if hasChanges:
@@ -497,7 +506,7 @@ class Project(object):
         shutil.copy(str(src), str(dest), follow_symlinks=False)
 
     def update(self):
-        self._updateGitRepo(self.sourceDir, self.gitUrl, self.gitRevision)
+        self._updateGitRepo(self.sourceDir, self.gitUrl, revision=self.gitRevision, initialBranch=self.gitBranch)
 
     def clean(self):
         # TODO: never use the source dir as a build dir
@@ -688,6 +697,7 @@ class BuildBinutils(Project):
                          gitUrl="https://github.com/CTSRD-CHERI/binutils.git")
         # http://marcelog.github.io/articles/cross_freebsd_compiler_in_linux.html
         self.configureCommand = self.sourceDir / "configure"
+        self.gitBranch = "cheribsd"  # the default branch "cheri" won't work for cross-compiling
 
         # If we don't use a patched binutils version on linux we get an ld binary that is
         # only able to handle 32 bit mips:
@@ -729,19 +739,14 @@ class BuildBinutils(Project):
 
     def update(self):
         # Make sure we have the version that can compile FreeBSD binaries
-        status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
-                        cwd=self.sourceDir, captureOutput=True, printVerboseOnly=True)
+        status = self.runGitCmd("status", "-b", "-s", "--porcelain", "-u", "no",
+                                captureOutput=True, printVerboseOnly=True)
         if not status.stdout.startswith(b"## cheribsd"):
-            remotes = runCmd("git", "remote", cwd=self.sourceDir, captureOutput=True, printVerboseOnly=True).stdout
-            if b"crossbuild-fixes" not in remotes:
-                runCmd("git", "remote", "add", "crossbuild-fixes", "https://github.com/RichardsonAlex/binutils.git",
-                       cwd=self.sourceDir)
-                runCmd("git", "fetch", "crossbuild-fixes", cwd=self.sourceDir)
-                runCmd("git", "checkout", "-b", "cheribsd", "--track", "crossbuild-fixes/cheribsd", cwd=self.sourceDir)
-
-            runCmd("git", "checkout", "cheribsd", cwd=self.sourceDir)
-        else:
-            print("Already on cheribsd branch, all good")
+            branches = self.runGitCmd("branch", "--list", captureOutput=True, printVerboseOnly=True).stdout
+            if b" cheribsd" not in branches:
+                self.runGitCmd("checkout", "-b", "cheribsd", "--track", "origin/cheribsd")
+        self.runGitCmd("checkout", "cheribsd")
+        super().update()
 
     def install(self):
         super().install()
@@ -1435,6 +1440,7 @@ class AllTargets(object):
             Target("binutils", BuildBinutils),
             Target("qemu", BuildQEMU),
             Target("llvm", BuildLLVM),
+            Target("elftoolchain", BuildElfToolchain),
             Target("cheribsd", BuildCHERIBSD, dependencies=["llvm"]),
             # SDK only needs to build CHERIBSD if we are on a FreeBSD host, otherwise the files will be copied
             Target("sdk", BuildSDK, dependencies=["cheribsd", "llvm"]),

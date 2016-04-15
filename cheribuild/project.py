@@ -47,6 +47,11 @@ class Project(object):
             return not result.startswith("n")  # if default is yes accept anything other than strings starting with "n"
         return str(result).lower().startswith("y")  # anything but y will be treated as false
 
+    def runGitCmd(self, *args, cwd=None, **kwargs):
+        if not cwd:
+            cwd = self.sourceDir
+        return runCmd("git", *args, cwd=cwd, **kwargs)
+
     def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None):
         if not (srcDir / ".git").is_dir():
             print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?", end="")

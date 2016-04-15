@@ -53,13 +53,13 @@ class BuildBinutils(Project):
 
     def update(self):
         # Make sure we have the version that can compile FreeBSD binaries
-        status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
-                        cwd=self.sourceDir, captureOutput=True, printVerboseOnly=True)
+        status = self.runGitCmd("status", "-b", "-s", "--porcelain", "-u", "no",
+                                captureOutput=True, printVerboseOnly=True)
         if not status.stdout.startswith(b"## cheribsd"):
-            branches = runCmd("git", "branch", "--list", cwd=self.sourceDir, captureOutput=True, printVerboseOnly=True)
-            if b" cheribsd" not in branches.stdout:
-                runCmd("git", "checkout", "-b", "cheribsd", "--track", "origin/cheribsd", cwd=self.sourceDir)
-        runCmd("git", "checkout", "cheribsd", cwd=self.sourceDir)
+            branches = self.runGitCmd("branch", "--list", captureOutput=True, printVerboseOnly=True).stdout
+            if b" cheribsd" not in branches:
+                self.runGitCmd("checkout", "-b", "cheribsd", "--track", "origin/cheribsd")
+        self.runGitCmd("checkout", "cheribsd")
         super().update()
 
     def install(self):
