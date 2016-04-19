@@ -28,14 +28,16 @@ class BuildLLVM(Project):
         self.configureArgs = [
             self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
             "-DCMAKE_CXX_COMPILER=" + cppCompiler, "-DCMAKE_C_COMPILER=" + cCompiler,  # need at least 3.7 to build it
-            "-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd",
             "-DCMAKE_INSTALL_PREFIX=" + str(self.installDir),
-            "-DDEFAULT_SYSROOT=" + str(self.config.sdkSysrootDir),
             "-DLLVM_TOOL_LLDB_BUILD=OFF",  # disable LLDB for now
-            # doesn't save much time and seems to be slightly broken in current clang:
-            # "-DCLANG_ENABLE_STATIC_ANALYZER=OFF",  # save some build time by skipping the static analyzer
-            # "-DCLANG_ENABLE_ARCMT=OFF",  # need to disable ARCMT to disable static analyzer
+            # saves a bit of time and but might be slightly broken in current clang:
+            "-DCLANG_ENABLE_STATIC_ANALYZER=OFF",  # save some build time by skipping the static analyzer
+            "-DCLANG_ENABLE_ARCMT=OFF",  # need to disable ARCMT to disable static analyzer
         ]
+        if IS_FREEBSD:
+            self.configureArgs.append("-DDEFAULT_SYSROOT=" + str(self.config.sdkSysrootDir))
+            self.configureArgs.append("-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd")
+
         if self.config.cheriBits == 128:
             self.configureArgs.append("-DLLVM_CHERI_IS_128=ON")
 
