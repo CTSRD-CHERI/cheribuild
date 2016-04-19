@@ -21,95 +21,13 @@ class BuildSDK(Project):
     def fixSymlinks(self):
         # copied from the build_sdk.sh script
         # TODO: we could do this in python as well, but this method works
-        fixlinksSrc = """
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <dirent.h>
-#include <err.h>
-#include <errno.h>
-#include <stdio.h>
-#include <sysexits.h>
-#include <unistd.h>
-#include <stdlib.h>
-
-int main(int argc, char **argv)
-{
-    DIR *dir = opendir(".");
-    struct dirent *file;
-    char *dirname;
-    int links = 0, fixed = 0;
-
-    while ((file = readdir(dir)) != NULL)
-    {
-        char target[1024];
-        ssize_t index =
-            readlink(file->d_name, target, sizeof(target) - 1);
-
-        if (index < 0) {
-            // Not a symlink?
-            if (errno == EINVAL)
-                continue;
-
-            err(EX_OSERR, "error in readlink('%s')", file->d_name);
-        }
-
-        links++;
-
-        // Fix absolute paths.
-        if (target[0] == '/') {
-            target[index] = 0;
-
-            char *newName;
-            asprintf(&newName, "../..%s", target);
-
-            if (unlink(file->d_name))
-                err(EX_OSERR, "Failed to remove old link");
-
-            if (symlink(newName, file->d_name))
-                err(EX_OSERR, "Failed to create link");
-            free(newName);
-            fixed++;
-        }
-    }
-    closedir(dir);
-
-    if (links == 0)
-        errx(EX_USAGE, "no symbolic links in %s", getwd(NULL));
-
-    printf("fixed %d/%d symbolic links\\n", fixed, links);
-}
-"""
+        fixlinksSrc = includeLocalFile("files/fixlinks.c")
         runCmd("cc", "-x", "c", "-", "-o", self.config.sdkDir / "bin/fixlinks", input=fixlinksSrc)
         runCmd(self.config.sdkDir / "bin/fixlinks", cwd=self.config.sdkSysrootDir / "usr/lib")
 
     def buildCheridis(self):
         # Compile the cheridis helper (TODO: add it to the LLVM repo instead?)
-        cheridisSrc = """
-#include <stdio.h>
-#include <string.h>
-
-int main(int argc, char** argv)
-{
-    int i;
-    int byte;
-
-    FILE *dis = popen(LLVM_PATH "llvm-mc -disassemble -triple=cheri-unknown-freebsd", "w");
-    for (i=1 ; i<argc ; i++)
-    {
-        char *inst = argv[i];
-        if (strlen(inst) == 10)
-        {
-            if (inst[0] != '0' || inst[1] != 'x') continue;
-            inst += 2;
-        }
-        else if (strlen(inst) != 8) continue;
-        for (byte=0 ; byte<8 ; byte+=2)
-        {
-            fprintf(dis, "0x%.2s ", &inst[byte]);
-        }
-    }
-    pclose(dis);
-}"""
+        cheridisSrc = includeLocalFile("files/cheridis.c")
         runCmd("cc", "-DLLVM_PATH=\"%s\"" % str(self.config.sdkDir / "bin"), "-x", "c", "-",
                "-o", self.config.sdkDir / "bin/cheridis", input=cheridisSrc)
 

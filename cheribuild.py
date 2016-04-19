@@ -152,6 +152,14 @@ def fatalError(*args, sep=" "):
         sys.exit(coloured(AnsiColour.red, ("Fatal error:",) + args, sep=sep))
 
 
+def includeLocalFile(path: str):
+    file = Path(__file__).parent / path
+    if not file.is_file():
+        fatalError(file, "is missing!")
+    with file.open("r", encoding="utf-8") as f:
+        return f.read()
+
+
 class ConfigLoader(object):
     _parser = argparse.ArgumentParser(formatter_class=
                                       lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))

@@ -4,9 +4,10 @@ import subprocess
 import sys
 from .colour import coloured, AnsiColour
 from .chericonfig import CheriConfig
+from pathlib import Path
 
 # reduce the number of import statements per project  # no-combine
-__all__ = ["typing", "CheriConfig", "IS_LINUX", "IS_FREEBSD", "printCommand",  # no-combine
+__all__ = ["typing", "CheriConfig", "IS_LINUX", "IS_FREEBSD", "printCommand", "includeLocalFile",  # no-combine
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig"]  # no-combine
 
 if sys.version_info < (3, 4):
@@ -118,3 +119,11 @@ def fatalError(*args, sep=" "):
         print(coloured(AnsiColour.red, ("Potential fatal error:",) + args, sep=sep))
     else:
         sys.exit(coloured(AnsiColour.red, ("Fatal error:",) + args, sep=sep))
+
+
+def includeLocalFile(path: str):
+    file = Path(__file__).parent / path
+    if not file.is_file():
+        fatalError(file, "is missing!")
+    with file.open("r", encoding="utf-8") as f:
+        return f.read()
