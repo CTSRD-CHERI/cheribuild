@@ -3,13 +3,14 @@
 import sys
 from pathlib import Path
 
-scriptDir = Path(__file__).resolve().parent / "cheribuild"  # type: Path
+scriptDir = Path(__file__).resolve().parent / "pycheribuild"  # type: Path
 
 imports = []
 fromImports = []
 lines = []
 handledFiles = []
 emptyLines = 0
+
 
 def addFilteredFile(p: Path):
     # print("adding", p, file=sys.stderr)
