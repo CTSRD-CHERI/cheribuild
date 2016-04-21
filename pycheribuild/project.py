@@ -93,6 +93,13 @@ class Project(object):
         with file.open("r", encoding="utf-8") as f:
             return f.read()
 
+    def writeFile(self, file: Path, contents: str):
+        printCommand("echo", contents, colour=AnsiColour.green, outputFile=file, printVerboseOnly=True)
+        if self.config.pretend:
+            return
+        with file.open("w", encoding="utf-8") as f:
+            return f.write(contents)
+
     def copyFile(self, src: Path, dest: Path, *, force=False):
         if force:
             printCommand("cp", "-f", src, dest, printVerboseOnly=True)

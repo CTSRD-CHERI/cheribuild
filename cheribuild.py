@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import datetime
 import functools
 import json
 import os
@@ -81,7 +82,7 @@ def setCheriConfig(c: "CheriConfig"):
     _cheriConfig = c
 
 
-def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remainingArgs,
+def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remainingArgs, outputFile=None,
                  colour=AnsiColour.yellow, cwd=None, sep=" ", printVerboseOnly=False, **kwargs):
     if _cheriConfig.quiet or (printVerboseOnly and not _cheriConfig.verbose):
         return
@@ -93,6 +94,8 @@ def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remain
     newArgs = ("cd", shlex.quote(str(cwd)), "&&") if cwd else tuple()
     # comma in tuple is required otherwise it creates a tuple of string chars
     newArgs += (shlex.quote(str(arg1)),) + tuple(map(shlex.quote, map(str, remainingArgs)))
+    if outputFile:
+        newArgs += (">", str(outputFile))
     print(coloured(colour, newArgs, sep=sep), flush=True, **kwargs)
 
 
@@ -152,7 +155,7 @@ def fatalError(*args, sep=" "):
         sys.exit(coloured(AnsiColour.red, ("Fatal error:",) + args, sep=sep))
 
 
-def includeLocalFile(path: str):
+def includeLocalFile(path: str) -> str:
     file = Path(__file__).parent / path
     if not file.is_file():
         fatalError(file, "is missing!")
@@ -501,6 +504,13 @@ class Project(object):
             return "\n"
         with file.open("r", encoding="utf-8") as f:
             return f.read()
+
+    def writeFile(self, file: Path, contents: str):
+        printCommand("echo", contents, colour=AnsiColour.green, outputFile=file, printVerboseOnly=True)
+        if self.config.pretend:
+            return
+        with file.open("w", encoding="utf-8") as f:
+            return f.write(contents)
 
     def copyFile(self, src: Path, dest: Path, *, force=False):
         if force:
@@ -1340,11 +1350,42 @@ int main(int argc, char** argv)
         runCmd("scp", remoteSysrootPath, self.config.sdkDir)
         runCmd("rm", "-rf", self.config.sdkSysrootDir)
         runCmd("tar", "xzf", self.config.sdkDir / self.config.sysrootArchiveName, cwd=self.config.sdkDir)
-        # add the binutils files to the sysroot
-        # runCmd("ln", "-sfn", "../mips64/bin", self.config.sdkSysrootDir / "bin")
-        # runCmd("ln", "-sfn", "../../mips64/lib/ldscripts/", self.config.sdkSysrootDir / "lib/ldscripts")
-        # for i in ["ar", "as", "ld",  "nm", "objcopy", "objdump", "ranlib", "strip"]:
-        #     runCmd("ln", "-sfn", "mips64-" + i, self.config.sdkDir / "bin" / i)
+        self.installCMakeConfig()
+
+    def installCMakeConfig(self):
+        date = datetime.datetime.now()
+        microVersion = str(date.year) + str(date.month) + str(date.day)
+        versionFile = """
+set(PACKAGE_VERSION 0.1.@SDK_BUILD_DATE@)
+
+# Check whether the requested PACKAGE_FIND_VERSION is compatible
+if("${PACKAGE_VERSION}" VERSION_LESS "${PACKAGE_FIND_VERSION}")
+    set(PACKAGE_VERSION_COMPATIBLE FALSE)
+else()
+    set(PACKAGE_VERSION_COMPATIBLE TRUE)
+    if ("${PACKAGE_VERSION}" VERSION_EQUAL "${PACKAGE_FIND_VERSION}")
+        set(PACKAGE_VERSION_EXACT TRUE)
+    endif()
+endif()"""
+        versionFile.replace("@SDK_BUILD_DATE@", microVersion)
+        configFile = """
+
+get_filename_component(_cherisdk_rootdir ${CMAKE_CURRENT_LIST_DIR}/../../../ REALPATH)
+
+set(CheriSDK_TOOLCHAIN_DIR "${_cherisdk_rootdir}/bin")
+set(CheriSDK_SYSROOT_DIR "${_cherisdk_rootdir}/sysroot")
+
+set(CheriSDK_CC "${CheriSDK_TOOLCHAIN_DIR}/clang")
+set(CheriSDK_CXX "${CheriSDK_TOOLCHAIN_DIR}/clang++")
+
+if(NOT EXISTS ${CheriSDK_CC})
+    message(FATAL_ERROR "CHERI clang is missing! Expected it to be at ${CheriSDK_CC}")
+endif()
+"""
+        cmakeConfigDir = self.config.sdkDir / "share/cmake/CheriSDK"
+        self._makedirs(cmakeConfigDir)
+        self.writeFile(cmakeConfigDir / "CheriSDKConfig.cmake", configFile)
+        self.writeFile(cmakeConfigDir / "CheriSDKConfigVersion.cmake", versionFile)
 
     def process(self):
         if not IS_FREEBSD:
@@ -1404,6 +1445,7 @@ int main(int argc, char** argv)
         runCmd("tar", "-czf", self.config.sdkDir / self.config.sysrootArchiveName, "sysroot",
                cwd=self.config.sdkDir)
         print("Successfully populated sysroot")
+        self.installCMakeConfig()
 
 
 class LaunchQEMU(Project):

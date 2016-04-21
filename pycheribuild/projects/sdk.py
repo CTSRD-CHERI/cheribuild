@@ -1,5 +1,6 @@
 import os
 import subprocess
+import datetime
 
 from ..project import Project
 from ..utils import *
@@ -59,11 +60,18 @@ class BuildSDK(Project):
         runCmd("scp", remoteSysrootPath, self.config.sdkDir)
         runCmd("rm", "-rf", self.config.sdkSysrootDir)
         runCmd("tar", "xzf", self.config.sdkDir / self.config.sysrootArchiveName, cwd=self.config.sdkDir)
-        # add the binutils files to the sysroot
-        # runCmd("ln", "-sfn", "../mips64/bin", self.config.sdkSysrootDir / "bin")
-        # runCmd("ln", "-sfn", "../../mips64/lib/ldscripts/", self.config.sdkSysrootDir / "lib/ldscripts")
-        # for i in ["ar", "as", "ld",  "nm", "objcopy", "objdump", "ranlib", "strip"]:
-        #     runCmd("ln", "-sfn", "mips64-" + i, self.config.sdkDir / "bin" / i)
+        self.installCMakeConfig()
+
+    def installCMakeConfig(self):
+        date = datetime.datetime.now()
+        microVersion = str(date.year) + str(date.month) + str(date.day)
+        versionFile = includeLocalFile("files/CheriSDKConfigVersion.cmake.in")
+        versionFile.replace("@SDK_BUILD_DATE@", microVersion)
+        configFile = includeLocalFile("files/CheriSDKConfig.cmake")
+        cmakeConfigDir = self.config.sdkDir / "share/cmake/CheriSDK"
+        self._makedirs(cmakeConfigDir)
+        self.writeFile(cmakeConfigDir / "CheriSDKConfig.cmake", configFile)
+        self.writeFile(cmakeConfigDir / "CheriSDKConfigVersion.cmake", versionFile)
 
     def process(self):
         if not IS_FREEBSD:
@@ -123,3 +131,4 @@ class BuildSDK(Project):
         runCmd("tar", "-czf", self.config.sdkDir / self.config.sysrootArchiveName, "sysroot",
                cwd=self.config.sdkDir)
         print("Successfully populated sysroot")
+        self.installCMakeConfig()

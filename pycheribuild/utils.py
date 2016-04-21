@@ -50,7 +50,7 @@ def setCheriConfig(c: "CheriConfig"):
     _cheriConfig = c
 
 
-def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remainingArgs,
+def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remainingArgs, outputFile=None,
                  colour=AnsiColour.yellow, cwd=None, sep=" ", printVerboseOnly=False, **kwargs):
     if _cheriConfig.quiet or (printVerboseOnly and not _cheriConfig.verbose):
         return
@@ -62,6 +62,8 @@ def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remain
     newArgs = ("cd", shlex.quote(str(cwd)), "&&") if cwd else tuple()
     # comma in tuple is required otherwise it creates a tuple of string chars
     newArgs += (shlex.quote(str(arg1)),) + tuple(map(shlex.quote, map(str, remainingArgs)))
+    if outputFile:
+        newArgs += (">", str(outputFile))
     print(coloured(colour, newArgs, sep=sep), flush=True, **kwargs)
 
 
@@ -121,7 +123,7 @@ def fatalError(*args, sep=" "):
         sys.exit(coloured(AnsiColour.red, ("Fatal error:",) + args, sep=sep))
 
 
-def includeLocalFile(path: str):
+def includeLocalFile(path: str) -> str:
     file = Path(__file__).parent / path
     if not file.is_file():
         fatalError(file, "is missing!")
