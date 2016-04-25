@@ -7,6 +7,7 @@ from .utils import *
 from .projects.awk import BuildAwk
 from .projects.elftoolchain import BuildElfToolchain
 from .projects.binutils import BuildBinutils
+from .projects.cmake import BuildCMake
 from .projects.build_qemu import BuildQEMU
 from .projects.cheribsd import BuildCHERIBSD
 from .projects.disk_image import BuildDiskImage
@@ -50,6 +51,7 @@ class AllTargets(object):
         self._allTargets = [
             Target("binutils", BuildBinutils),
             Target("qemu", BuildQEMU),
+            Target("cmake", BuildCMake),
             Target("llvm", BuildLLVM),
             Target("awk", BuildAwk),
             Target("elftoolchain", BuildElfToolchain),
