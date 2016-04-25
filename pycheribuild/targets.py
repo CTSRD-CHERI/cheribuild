@@ -8,6 +8,7 @@ from .projects.awk import BuildAwk
 from .projects.elftoolchain import BuildElfToolchain
 from .projects.binutils import BuildBinutils
 from .projects.cmake import BuildCMake
+from .projects.cherios import BuildCheriOS
 from .projects.build_qemu import BuildQEMU
 from .projects.cheribsd import BuildCHERIBSD
 from .projects.disk_image import BuildDiskImage
@@ -42,11 +43,15 @@ class Target(object):
 class AllTargets(object):
     def __init__(self):
         sdkTarget = Target("sdk", BuildSDK)
+        cheriosTarget = Target("cherios", BuildCheriOS)
         if IS_FREEBSD:
             sdkTarget.dependencies = set(["cheribsd", "llvm"])
+            cheriosTarget.dependencies = set(["sdk"])
         else:
             # cheribsd files need to be copied from another host
             sdkTarget.dependencies = set(["awk", "elftoolchain", "binutils", "llvm"])
+            # TODO: sdk
+            cheriosTarget.dependencies = set(["elftoolchain", "binutils", "llvm"])
 
         self._allTargets = [
             Target("binutils", BuildBinutils),
@@ -59,6 +64,7 @@ class AllTargets(object):
             # SDK only needs to build CHERIBSD if we are on a FreeBSD host, otherwise the files will be copied
             Target("disk-image", BuildDiskImage, dependencies=["cheribsd", "qemu"]),
             sdkTarget,
+            cheriosTarget,
             Target("run", LaunchQEMU, dependencies=["qemu", "disk-image"]),
             Target("all", PseudoTarget, dependencies=["qemu", "llvm", "cheribsd", "sdk", "disk-image", "run"]),
         ]
