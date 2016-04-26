@@ -1,6 +1,7 @@
 import re
 import shlex
 import shutil
+from pathlib import Path
 
 from ..project import Project
 from ..utils import *
@@ -12,13 +13,14 @@ class BuildLLVM(Project):
         self.requiredSystemTools = ["ninja", "cmake"]
         self.makeCommand = "ninja"
 
-        self.configureCommand = "cmake"
+        # TODO: also accept 3.8, 3.9, etc binaries
         # try to find clang 3.7, otherwise fall back to system clang
         self.cCompiler = shutil.which("clang37") or shutil.which("clang-3.7") or shutil.which("clang")
         self.cppCompiler = shutil.which("clang++37") or shutil.which("clang++-3.7") or shutil.which("clang++")
+
+        self.configureCommand = "cmake"
         self.configureArgs = [
             self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
-            "-DCMAKE_CXX_COMPILER=" + str(self.cppCompiler), "-DCMAKE_C_COMPILER=" + str(self.cCompiler),
             "-DCMAKE_INSTALL_PREFIX=" + str(self.installDir),
             "-DLLVM_TOOL_LLDB_BUILD=OFF",  # disable LLDB for now
             # saves a bit of time and but might be slightly broken in current clang:
@@ -32,10 +34,24 @@ class BuildLLVM(Project):
         if self.config.cheriBits == 128:
             self.configureArgs.append("-DLLVM_CHERI_IS_128=ON")
 
+    def printClang37InstallHint(self):
+        print("Clang 3.7 (or newer) was not found.")
+        if IS_FREEBSD:
+            print("Try running `pkg install clang37`")
+        osRelease = self.readFile(Path("/etc/os-release")) if Path("/etc/os-release").is_file() else ""
+        if "Ubuntu" in osRelease:
+            print("""Try following the instructions on http://askubuntu.com/questions/735201/installing-clang-3-8-on-ubuntu-14-04-3:
+    wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
+    sudo apt-add-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.7 main"
+    sudo apt-get update
+    sudo apt-get install clang-3.7
+""")
+
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
         if not self.cCompiler or not self.cppCompiler:
-            return "Could not find clang or clang37 or clang-3.7 in $PATH, please install it and set $PATH correctly."
+            self.printClang37InstallHint()
+            self.dependencyError("Could not find clang!")
         # make sure we have at least version 3.7
         versionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         # clang prints this output to stderr
@@ -45,15 +61,7 @@ class BuildLLVM(Project):
         if versionComponents < (3, 7):
             versionStr = ".".join(map(str, versionComponents))
             if IS_LINUX:
-                if "Ubuntu" in self.readFile("/etc/os-release"):
-                    print("Up-to-date clang was not found, try following the instructions on "
-                          "http://askubuntu.com/questions/735201/installing-clang-3-8-on-ubuntu-14-04-3:\n" """
-    wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
-    sudo apt-add-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.7 main"
-    sudo apt-get update
-    sudo apt-get install clang-3.7
-"""
-                          )
+                self.printClang37InstallHint()
             self.dependencyError(self.cCompiler, "version", versionStr, "is too old (need at least 3.7).")
 
     @staticmethod
@@ -86,3 +94,8 @@ class BuildLLVM(Project):
         # create a symlink for the target
         self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang")
         self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang++")
+
+    def process(self):
+        # this must be added after checkSystemDependencies
+        self.configureArgs.append("-DCMAKE_CXX_COMPILER=" + self.cppCompiler)
+        self.configureArgs.append("-DCMAKE_C_COMPILER=" + self.cCompiler)
