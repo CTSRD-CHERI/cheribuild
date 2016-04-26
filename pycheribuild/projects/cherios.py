@@ -16,7 +16,6 @@ class BuildCheriOS(Project):
             self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Debug",
             "-DCMAKE_INSTALL_PREFIX=" + str(self.installDir),
             "-DCHERI_SDK_DIR=" + str(self.config.sdkDir),
-            "-DCMAKE_RANLIB=/usr/bin/true",
         ]
 
     def checkSystemDependencies(self):
