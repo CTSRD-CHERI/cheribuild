@@ -37,9 +37,7 @@ class Target(object):
         starttime = time.time()
         project = self.projectClass(config)
         # make sure all system dependencies exist first
-        dependencyError = project.checkSystemDependencies()
-        if dependencyError:
-            fatalError("Cannot build", project.projectName + ":", dependencyError)
+        project.checkSystemDependencies()
         project.process()
         statusUpdate("Built target '" + self.name + "' in", time.time() - starttime, "seconds")
 

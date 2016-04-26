@@ -30,8 +30,8 @@ class BuildCheriOS(Project):
         versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
         if versionComponents < (3, 5):
             versionStr = ".".join(map(str, versionComponents))
-            return ("CMake version " + versionStr + " is too old (need at least 3.4). You can run `cheribuild.py cmake`"
-                    " to install an up to date version")
+            self.dependencyError("CMake version" + versionStr + "is too old (need at least 3.4). You can run "
+                       "`cheribuild.py cmake` to install an up to date version")
 
     def install(self):
         pass  # nothing to install yet

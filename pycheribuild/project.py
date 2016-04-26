@@ -237,18 +237,19 @@ class Project(object):
                 continue  # happens for binutils, where prefixed tools are installed
             runCmd("ln", "-fsn", tool.name, target + toolName, cwd=tool.parent, printVerboseOnly=True)
 
-    def checkSystemDependencies(self) -> "typing.Optional[str]":
+    def dependencyError(self, *args):
+        self._systemDepsChecked = True  # make sure this is always set
+        fatalError(*args)
+
+    def checkSystemDependencies(self) -> None:
         """
         Checks that all the system dependencies (required tool, etc) are available
-        :return: a string describing the error or None on success
+        :return: Throws an error if dependencies are missing
         """
-        try:
-            for tool in self.requiredSystemTools:
-                if not shutil.which(tool):
-                    return "Required program " + tool + " is missing!"
-            return None
-        finally:
-            self._systemDepsChecked = True  # make sure this is always set
+        for tool in self.requiredSystemTools:
+            if not shutil.which(tool):
+                self.dependencyError("Required program " + tool + " is missing!")
+        self._systemDepsChecked = True
 
     def update(self):
         self._updateGitRepo(self.sourceDir, self.gitUrl, revision=self.gitRevision, initialBranch=self.gitBranch)
@@ -277,9 +278,8 @@ class Project(object):
         if not self.config.skipUpdate:
             self.update()
         if not self._systemDepsChecked:
-            dependencyError = self.checkSystemDependencies()
-            if dependencyError:
-                fatalError("Cannot build", self.projectName + ":", dependencyError)
+            self.checkSystemDependencies()
+        assert self._systemDepsChecked, "self._systemDepsChecked must be set by now!"
         if self.config.clean:
             self.clean()
         # always make sure the build dir exists
