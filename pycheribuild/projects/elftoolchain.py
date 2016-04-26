@@ -8,7 +8,12 @@ class BuildElfToolchain(Project):
         super().__init__(config, installDir=config.sdkDir,
                          gitUrl="https://github.com/emaste/elftoolchain.git")
         self.buildDir = self.sourceDir
-        self.makeCommand = "bmake"
+        if IS_LINUX:
+            self.requiredSystemTools = ["bmake"]
+            self.makeCommand = "bmake"
+        else:
+            self.makeCommand = "make"
+
         self.gitBranch = "master"
         # self.makeArgs = ["WITH_TESTS=no", "-DNO_ROOT"]
         # TODO: build static?
@@ -27,11 +32,3 @@ class BuildElfToolchain(Project):
         #              "install", cwd=self.sourceDir)
         # make install requires root, just build binaries statically and copy them
         self.copyFile(self.sourceDir / "brandelf/brandelf", self.installDir / "bin/brandelf", force=True)
-
-    def process(self):
-        if not IS_LINUX:
-            statusUpdate("Skipping awk as this is only needed on Linux hosts")
-        else:
-            if not shutil.which("bmake"):
-                fatalError("Please install bmake for Linux!")
-            super().process()

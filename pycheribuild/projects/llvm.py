@@ -10,24 +10,14 @@ class BuildLLVM(Project):
     def __init__(self, config: CheriConfig):
         super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
         self.makeCommand = "ninja"
-        # try to find clang 3.7, otherwise fall back to system clang
-        cCompiler = shutil.which("clang37") or shutil.which("clang")
-        cppCompiler = shutil.which("clang++37") or shutil.which("clang++")
-        if not cCompiler or not cppCompiler:
-            fatalError("Could not find clang or clang37 in $PATH, please install it.")
-        # make sure we have at least version 3.7
-        versionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
-        # clang prints this output to stderr
-        versionString = runCmd(cCompiler, "-v", captureError=True, printVerboseOnly=True).stderr
-        match = versionPattern.search(versionString)
-        versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
-        if versionComponents < (3, 7):
-            fatalError("Clang version is too old (need at least 3.7): got", str(versionComponents))
 
         self.configureCommand = "cmake"
+        # try to find clang 3.7, otherwise fall back to system clang
+        self.cCompiler = shutil.which("clang37") or shutil.which("clang-3.7") or shutil.which("clang")
+        self.cppCompiler = shutil.which("clang++37") or shutil.which("clang++-3.7") or shutil.which("clang++")
         self.configureArgs = [
             self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
-            "-DCMAKE_CXX_COMPILER=" + cppCompiler, "-DCMAKE_C_COMPILER=" + cCompiler,  # need at least 3.7 to build it
+            "-DCMAKE_CXX_COMPILER=" + self.cppCompiler, "-DCMAKE_C_COMPILER=" + self.cCompiler,
             "-DCMAKE_INSTALL_PREFIX=" + str(self.installDir),
             "-DLLVM_TOOL_LLDB_BUILD=OFF",  # disable LLDB for now
             # saves a bit of time and but might be slightly broken in current clang:
@@ -40,6 +30,20 @@ class BuildLLVM(Project):
 
         if self.config.cheriBits == 128:
             self.configureArgs.append("-DLLVM_CHERI_IS_128=ON")
+
+    def checkSystemDependencies(self):
+        super().checkSystemDependencies()
+        if not self.cCompiler or not self.cppCompiler:
+            return "Could not find clang or clang37 or clang-3.7 in $PATH, please install it and set $PATH correctly."
+        # make sure we have at least version 3.7
+        versionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
+        # clang prints this output to stderr
+        versionString = runCmd(self.cCompiler, "-v", captureError=True, printVerboseOnly=True).stderr
+        match = versionPattern.search(versionString)
+        versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
+        if versionComponents < (3, 7):
+            versionStr = ".".join(map(str, versionComponents))
+            return self.cCompiler + " version " + versionStr + " is too old (need at least 3.7)."
 
     @staticmethod
     def _makeStdoutFilter(line: bytes):

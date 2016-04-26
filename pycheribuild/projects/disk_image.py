@@ -19,6 +19,7 @@ class BuildDiskImage(Project):
         self.manifestFile = None  # type: Path
         self.userGroupDbDir = self.config.cheribsdSources / "etc"
         self.extraFiles = []  # type: typing.List[Path]
+        self.requiredSystemTools = ["ssh-keygen", "qemu-img", "makefs"]
 
     def writeFile(self, outDir: Path, pathInImage: str, contents: str, showContentsByDefault=True) -> Path:
         assert not pathInImage.startswith("/")

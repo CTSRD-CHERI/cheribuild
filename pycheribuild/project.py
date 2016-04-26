@@ -13,30 +13,33 @@ class Project(object):
     # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
     clearLineSequence = b"\x1b[2K\r"
 
-    def __init__(self, config: CheriConfig, *, projectName: str, sourceDir: Path=None, buildDir: Path=None,
+    def __init__(self, config: CheriConfig, *, projectName: str=None, sourceDir: Path=None, buildDir: Path=None,
                  installDir: Path=None, gitUrl="", gitRevision=None, appendCheriBitsToBuildDir=False):
         print("Class name:", self.__class__.__name__)
         className = self.__class__.__name__
         if className.startswith("Build"):
-            self.name = className[len("Build"):].lower()
+            self.projectName = className[len("Build"):]
         elif not projectName:
-            fatalError("project name is not set and cannot infer from", className)
+            fatalError("Project name is not set and cannot infer from class", className)
         else:
-            self.name = projectName
+            self.projectName = projectName
+        self.projectNameLower = self.projectName.lower()
 
         self.gitUrl = gitUrl
         self.gitRevision = gitRevision
         self.gitBranch = ""
         self.config = config
-        self.sourceDir = Path(sourceDir if sourceDir else config.sourceRoot / self.name)
+        self.sourceDir = Path(sourceDir if sourceDir else config.sourceRoot / self.projectNameLower)
         # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256,
         buildDirSuffix = "-" + config.cheriBitsStr + "-build" if appendCheriBitsToBuildDir else "-build"
-        self.buildDir = Path(buildDir if buildDir else config.outputRoot / (self.name + buildDirSuffix))
+        self.buildDir = Path(buildDir if buildDir else config.outputRoot / (self.projectNameLower + buildDirSuffix))
         self.installDir = installDir
         self.makeCommand = "make"
         self.configureCommand = ""
         self.configureArgs = []  # type: typing.List[str]
         self.configureEnvironment = None  # type: typing.Dict[str,str]
+        self.requiredSystemTools = []  # type: typing.List[str]
+        self._systemDepsChecked = False
 
     def queryYesNo(self, message: str="", *, defaultResult=False, forceResult=True) -> bool:
         yesNoStr = " [Y]/n " if defaultResult else " y/[N] "
@@ -231,6 +234,19 @@ class Project(object):
                 continue  # happens for binutils, where prefixed tools are installed
             runCmd("ln", "-fsn", tool.name, target + toolName, cwd=tool.parent, printVerboseOnly=True)
 
+    def checkSystemDependencies(self) -> "typing.Optional[str]":
+        """
+        Checks that all the system dependencies (required tool, etc) are available
+        :return: a string describing the error or None on success
+        """
+        try:
+            for tool in self.requiredSystemTools:
+                if not shutil.which(tool):
+                    return "Required program " + tool + " is missing!"
+            return None
+        finally:
+            self._systemDepsChecked = True  # make sure this is always set
+
     def update(self):
         self._updateGitRepo(self.sourceDir, self.gitUrl, revision=self.gitRevision, initialBranch=self.gitBranch)
 
@@ -245,7 +261,6 @@ class Project(object):
 
     def configure(self):
         if self.configureCommand:
-            statusUpdate("Configuring", self.name, "... ")
             self.runWithLogfile([self.configureCommand] + self.configureArgs,
                                 logfileName="configure", cwd=self.buildDir, env=self.configureEnvironment)
 
@@ -258,15 +273,20 @@ class Project(object):
     def process(self):
         if not self.config.skipUpdate:
             self.update()
+        if not self._systemDepsChecked:
+            dependencyError = self.checkSystemDependencies()
+            if dependencyError:
+                fatalError("Cannot build", self.projectName + ":", dependencyError)
         if self.config.clean:
             self.clean()
         # always make sure the build dir exists
         if not self.buildDir.is_dir():
             self._makedirs(self.buildDir)
         if not self.config.skipConfigure:
+            statusUpdate("Configuring", self.projectName, "... ")
             self.configure()
-        statusUpdate("Building", self.name, "... ")
+        statusUpdate("Building", self.projectName, "... ")
         self.compile()
-        statusUpdate("Installing", self.name, "... ")
+        statusUpdate("Installing", self.projectName, "... ")
         self.install()
 

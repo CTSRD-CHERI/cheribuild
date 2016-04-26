@@ -20,7 +20,7 @@ from .projects.sdk import BuildSDK
 # A target that does nothing (used for e.g. the all target)
 class PseudoTarget(Project):
     def __init__(self, config):
-        super().__init__("pseudo", config)
+        super().__init__(config, projectName="pseudo")
 
     def process(self):
         pass
@@ -36,6 +36,10 @@ class Target(object):
         # instantiate the project and run it
         starttime = time.time()
         project = self.projectClass(config)
+        # make sure all system dependencies exist first
+        dependencyError = project.checkSystemDependencies()
+        if dependencyError:
+            fatalError("Cannot build", project.projectName + ":", dependencyError)
         project.process()
         statusUpdate("Built target '" + self.name + "' in", time.time() - starttime, "seconds")
 
