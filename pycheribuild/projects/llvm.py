@@ -9,6 +9,7 @@ from ..utils import *
 class BuildLLVM(Project):
     def __init__(self, config: CheriConfig):
         super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
+        self.requiredSystemTools = ["ninja", "cmake"]
         self.makeCommand = "ninja"
 
         self.configureCommand = "cmake"
@@ -43,7 +44,7 @@ class BuildLLVM(Project):
         versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
         if versionComponents < (3, 7):
             versionStr = ".".join(map(str, versionComponents))
-            return self.cCompiler + " version " + versionStr + " is too old (need at least 3.7)."
+            self.dependencyError(self.cCompiler, "version ", versionStr, " is too old (need at least 3.7).")
 
     @staticmethod
     def _makeStdoutFilter(line: bytes):
