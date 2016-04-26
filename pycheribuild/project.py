@@ -62,7 +62,7 @@ class Project(object):
             cwd = self.sourceDir
         return runCmd("git", *args, cwd=cwd, **kwargs)
 
-    def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None):
+    def _ensureGitRepoIsCloned(self, *, srcDir: Path, remoteUrl, initialBranch=None):
         if not (srcDir / ".git").is_dir():
             print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?", end="")
             if not self.queryYesNo(defaultResult=False):
@@ -71,6 +71,9 @@ class Project(object):
                 runCmd("git", "clone", "--branch", initialBranch, remoteUrl, srcDir)
             else:
                 runCmd("git", "clone", remoteUrl, srcDir)
+
+    def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None):
+        self._ensureGitRepoIsCloned(srcDir=srcDir, remoteUrl=remoteUrl, initialBranch=initialBranch)
         # make sure we run git stash if we discover any local changes
         hasChanges = len(runCmd("git", "diff", captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
         if hasChanges:

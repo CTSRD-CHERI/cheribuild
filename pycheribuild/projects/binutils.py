@@ -51,6 +51,7 @@ class BuildBinutils(Project):
         self.configureEnvironment["CFLAGS"] = "-std=gnu89 -O2"
 
     def update(self):
+        self._ensureGitRepoIsCloned(srcDir=self.sourceDir, remoteUrl=self.gitUrl, initialBranch=self.gitBranch)
         # Make sure we have the version that can compile FreeBSD binaries
         status = self.runGitCmd("status", "-b", "-s", "--porcelain", "-u", "no",
                                 captureOutput=True, printVerboseOnly=True)
