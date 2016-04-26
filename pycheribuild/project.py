@@ -110,24 +110,6 @@ class Project(object):
             dest.unlink()
         shutil.copy(str(src), str(dest), follow_symlinks=False)
 
-    def update(self):
-        self._updateGitRepo(self.sourceDir, self.gitUrl, revision=self.gitRevision, initialBranch=self.gitBranch)
-
-    def clean(self):
-        # TODO: never use the source dir as a build dir
-        # will have to check how well binutils and qemu work there
-        if (self.buildDir / ".git").is_dir():
-            # just use git clean for cleanup
-            runCmd("git", "clean", "-dfx", cwd=self.buildDir)
-        else:
-            self._cleanDir(self.buildDir)
-
-    def configure(self):
-        if self.configureCommand:
-            statusUpdate("Configuring", self.name, "... ")
-            self.runWithLogfile([self.configureCommand] + self.configureArgs,
-                                logfileName="configure", cwd=self.buildDir, env=self.configureEnvironment)
-
     @staticmethod
     def _makeStdoutFilter(line: bytes):
         # by default we don't keep any line persistent, just have updating output
@@ -240,6 +222,24 @@ class Project(object):
             if (target + toolName) == tool.name:
                 continue  # happens for binutils, where prefixed tools are installed
             runCmd("ln", "-fsn", tool.name, target + toolName, cwd=tool.parent, printVerboseOnly=True)
+
+    def update(self):
+        self._updateGitRepo(self.sourceDir, self.gitUrl, revision=self.gitRevision, initialBranch=self.gitBranch)
+
+    def clean(self):
+        # TODO: never use the source dir as a build dir
+        # will have to check how well binutils and qemu work there
+        if (self.buildDir / ".git").is_dir():
+            # just use git clean for cleanup
+            runCmd("git", "clean", "-dfx", cwd=self.buildDir)
+        else:
+            self._cleanDir(self.buildDir)
+
+    def configure(self):
+        if self.configureCommand:
+            statusUpdate("Configuring", self.name, "... ")
+            self.runWithLogfile([self.configureCommand] + self.configureArgs,
+                                logfileName="configure", cwd=self.buildDir, env=self.configureEnvironment)
 
     def compile(self):
         self.runMake([self.makeCommand, self.config.makeJFlag])
