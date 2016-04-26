@@ -18,10 +18,9 @@ class BuildCheriOS(Project):
             "-DCHERI_SDK_DIR=" + str(self.config.sdkDir),
             "-DCMAKE_RANLIB=/usr/bin/true",
         ]
-        self.newPATH = str(self.config.sdkDir / "bin") + ":" + os.getenv("PATH")
 
     def checkSystemDependencies(self):
-        with setEnv(PATH=self.newPATH):
+        with setEnv(PATH=self.config.dollarPathWithOtherTools):
             super().checkSystemDependencies()
             # try to find cmake 3.4 or newer
             versionPattern = re.compile(b"cmake version (\\d+)\\.(\\d+)\\.?(\\d+)?")
@@ -38,5 +37,5 @@ class BuildCheriOS(Project):
         pass  # nothing to install yet
 
     def process(self):
-        with setEnv(PATH=self.newPATH):
+        with setEnv(PATH=self.config.dollarPathWithOtherTools):
             super().process()

@@ -149,7 +149,7 @@ def setEnv(**environ):
     """
     old_environ = dict(os.environ)
     for k, v in environ.items():
-        printCommand("export", k + "=" + v)
+        printCommand("export", k + "=" + v, printVerboseOnly=True)
     os.environ.update(environ)
     try:
         yield

@@ -141,6 +141,8 @@ class CheriConfig(object):
         self.cheribsdObj = self.outputRoot / ("cheribsd-obj-" + self.cheriBitsStr)
         self.sdkDirectoryName = "sdk" + self.cheriBitsStr
         self.sdkDir = self.outputRoot / self.sdkDirectoryName  # qemu and binutils (and llvm/clang)
+        self.otherToolsDir = self.outputRoot / "bootstrap"
+        self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
         self.sdkSysrootDir = self.sdkDir / "sysroot"
         self.sysrootArchiveName = "cheri-sysroot.tar.gz"
 

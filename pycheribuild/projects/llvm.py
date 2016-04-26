@@ -48,7 +48,8 @@ class BuildLLVM(Project):
 """)
 
     def checkSystemDependencies(self):
-        super().checkSystemDependencies()
+        with setEnv(PATH=self.config.dollarPathWithOtherTools):
+            super().checkSystemDependencies()
         if not self.cCompiler or not self.cppCompiler:
             self.printClang37InstallHint()
             self.dependencyError("Could not find clang!")
@@ -99,4 +100,6 @@ class BuildLLVM(Project):
         # this must be added after checkSystemDependencies
         self.configureArgs.append("-DCMAKE_CXX_COMPILER=" + self.cppCompiler)
         self.configureArgs.append("-DCMAKE_C_COMPILER=" + self.cCompiler)
-        super().process()
+
+        with setEnv(PATH=self.config.dollarPathWithOtherTools):
+            super().process()
