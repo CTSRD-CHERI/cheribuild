@@ -15,7 +15,6 @@ class Project(object):
 
     def __init__(self, config: CheriConfig, *, projectName: str=None, sourceDir: Path=None, buildDir: Path=None,
                  installDir: Path=None, gitUrl="", gitRevision=None, appendCheriBitsToBuildDir=False):
-        print("Class name:", self.__class__.__name__)
         className = self.__class__.__name__
         if className.startswith("Build"):
             self.projectName = className[len("Build"):]
