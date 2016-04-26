@@ -11,7 +11,7 @@ class BuildCheriOS(Project):
                          gitUrl="https://github.com/CTSRD-CHERI/cherios.git", appendCheriBitsToBuildDir=True)
         self.makeCommand = "ninja"
         self.configureCommand = "cmake"
-        self.requiredSystemTools = ["cmake"]
+        self.requiredSystemTools = {"cmake": self.cmakeInstallInstructions}
         self.configureArgs = [
             self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Debug",
             "-DCMAKE_INSTALL_PREFIX=" + str(self.installDir),
@@ -30,8 +30,8 @@ class BuildCheriOS(Project):
             versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
             if versionComponents < (3, 5):
                 versionStr = ".".join(map(str, versionComponents))
-                self.dependencyError("CMake version", versionStr, "is too old (need at least 3.4). You can run "
-                                     "`cheribuild.py cmake` to install an up to date version")
+                self.dependencyError("CMake version", versionStr, "is too old (need at least 3.4)",
+                                     installInstructions=self.cmakeInstallInstructions)
 
     def install(self):
         pass  # nothing to install yet

@@ -10,7 +10,10 @@ from ..utils import *
 class BuildLLVM(Project):
     def __init__(self, config: CheriConfig):
         super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
-        self.requiredSystemTools = ["ninja", "cmake"]
+        self.requiredSystemTools = {
+            "cmake": self.cmakeInstallInstructions,
+            "ninja": None,
+        }
         self.makeCommand = "ninja"
 
         # TODO: also accept 3.8, 3.9, etc binaries

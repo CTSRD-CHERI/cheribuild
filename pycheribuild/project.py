@@ -13,6 +13,9 @@ class Project(object):
     # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
     clearLineSequence = b"\x1b[2K\r"
 
+    cmakeInstallInstructions = ("Use your package manager to install CMake > 3.4 or run "
+                                "`cheribuild.py cmake` to install the latest version locally")
+
     def __init__(self, config: CheriConfig, *, projectName: str=None, sourceDir: Path=None, buildDir: Path=None,
                  installDir: Path=None, gitUrl="", gitRevision=None, appendCheriBitsToBuildDir=False):
         className = self.__class__.__name__
@@ -37,7 +40,7 @@ class Project(object):
         self.configureCommand = ""
         self.configureArgs = []  # type: typing.List[str]
         self.configureEnvironment = None  # type: typing.Dict[str,str]
-        self.requiredSystemTools = []  # type: typing.List[str]
+        self.requiredSystemTools = None  # type: typing.Union[typing.Dict[str, str], typing.List[str]]
         self._systemDepsChecked = False
 
     def queryYesNo(self, message: str="", *, defaultResult=False, forceResult=True) -> bool:
@@ -236,18 +239,28 @@ class Project(object):
                 continue  # happens for binutils, where prefixed tools are installed
             runCmd("ln", "-fsn", tool.name, target + toolName, cwd=tool.parent, printVerboseOnly=True)
 
-    def dependencyError(self, *args):
+    def dependencyError(self, *args, installInstructions: str=None):
         self._systemDepsChecked = True  # make sure this is always set
-        fatalError(*args)
+        fatalError(*args, fixitHint=installInstructions)
 
     def checkSystemDependencies(self) -> None:
         """
         Checks that all the system dependencies (required tool, etc) are available
         :return: Throws an error if dependencies are missing
         """
-        for tool in self.requiredSystemTools:
+        if isinstance(self.requiredSystemTools, list):
+            toolsDict = dict([(i, None) for i in self.requiredSystemTools])
+        elif self.requiredSystemTools:
+            toolsDict = self.requiredSystemTools
+        else:
+            toolsDict = dict()
+        for (tool, installInstructions) in toolsDict.items():
             if not shutil.which(tool):
-                self.dependencyError("Required program " + tool + " is missing!")
+                if hasattr(installInstructions, "__call__"):
+                    installInstructions = installInstructions()
+                if not installInstructions:
+                    installInstructions = "Try installing `" + tool + "` using your system package manager."
+                self.dependencyError("Required program", tool, "is missing!", installInstructions=installInstructions)
         self._systemDepsChecked = True
 
     def update(self):

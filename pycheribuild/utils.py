@@ -116,12 +116,15 @@ def statusUpdate(*args, sep=" ", **kwargs):
     print(coloured(AnsiColour.cyan, *args, sep=sep), **kwargs)
 
 
-def fatalError(*args, sep=" "):
+def fatalError(*args, sep=" ", fixitHint=None):
     # we ignore fatal errors when simulating a run
     if _cheriConfig.pretend:
         print(coloured(AnsiColour.red, ("Potential fatal error:",) + args, sep=sep))
     else:
-        sys.exit(coloured(AnsiColour.red, ("Fatal error:",) + args, sep=sep))
+        print(coloured(AnsiColour.red, ("Fatal error:",) + args, sep=sep))
+        if fixitHint:
+            print(coloured(AnsiColour.blue, "Possible solution:", fixitHint))
+        sys.exit(3)
 
 
 def includeLocalFile(path: str) -> str:

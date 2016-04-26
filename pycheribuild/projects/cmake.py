@@ -4,7 +4,7 @@ from ..utils import *
 
 class BuildCMake(Project):
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.sdkDir,
+        super().__init__(config, installDir=config.otherToolsDir,
                          # gitUrl="https://cmake.org/cmake.git")
                          gitUrl="https://github.com/Kitware/CMake")  # a lot faster than the official repo
         self.gitBranch = "release"  # track the stable release branch
