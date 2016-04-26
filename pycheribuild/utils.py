@@ -1,3 +1,4 @@
+import contextlib
 import os
 import shlex
 import subprocess
@@ -8,7 +9,7 @@ from pathlib import Path
 
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "CheriConfig", "IS_LINUX", "IS_FREEBSD", "printCommand", "includeLocalFile",  # no-combine
-           "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig"]  # no-combine
+           "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv"]  # no-combine
 
 if sys.version_info < (3, 4):
     sys.exit("This script requires at least Python 3.4")
@@ -129,3 +130,29 @@ def includeLocalFile(path: str) -> str:
         fatalError(file, "is missing!")
     with file.open("r", encoding="utf-8") as f:
         return f.read()
+
+
+@contextlib.contextmanager
+def setEnv(**environ):
+    """
+    Temporarily set the process environment variables.
+
+    >>> with set_env(PLUGINS_DIR=u'test/plugins'):
+    ...   "PLUGINS_DIR" in os.environ
+    True
+
+    >>> "PLUGINS_DIR" in os.environ
+    False
+
+    :type environ: dict[str, unicode]
+    :param environ: Environment variables to set
+    """
+    old_environ = dict(os.environ)
+    for k, v in environ.items():
+        printCommand("export", k + "=" + v)
+    os.environ.update(environ)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(old_environ)

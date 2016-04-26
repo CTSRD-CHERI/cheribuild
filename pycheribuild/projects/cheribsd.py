@@ -56,13 +56,6 @@ class BuildCHERIBSD(Project):
                 runCmd("chflags", "noschg", str(file))
 
     def setupEnvironment(self):
-        os.environ["MAKEOBJDIRPREFIX"] = str(self.buildDir)
-        printCommand("export", "MAKEOBJDIRPREFIX=" + str(self.buildDir))
-        # make sure the new binutils are picked up
-        # TODO: this shouldn't be needed, we build binutils as part of cheribsd
-        if not os.environ["PATH"].startswith(str(self.config.sdkDir)):
-            os.environ["PATH"] = str(self.config.sdkDir / "bin") + ":" + os.environ["PATH"]
-            printCommand("export", "PATH=" + os.environ["PATH"])
         if not self.cheriCC.is_file():
             fatalError("CHERI CC does not exist: ", self.cheriCC)
         if not self.cheriCXX.is_file():
@@ -112,4 +105,10 @@ class BuildCHERIBSD(Project):
             statusUpdate("Can't build CHERIBSD on a non-FreeBSD host! Any targets that depend on this will need to scp",
                          "the required files from another server (see --frebsd-build-server options)")
             return
-        super().process()
+        # make sure the new clang and other tool are picked up
+        # TODO: this shouldn't be needed, we build binutils as part of cheribsd
+        path = os.getenv("PATH")
+        if not path.startswith(str(self.config.sdkDir)):
+            path = str(self.config.sdkDir / "bin") + ":" + path
+        with setEnv(MAKEOBJDIRPREFIX=str(self.buildDir), PATH=path):
+            super().process()
