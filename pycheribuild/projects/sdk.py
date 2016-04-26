@@ -10,7 +10,7 @@ from pathlib import Path
 
 class BuildSDK(Project):
     def __init__(self, config: CheriConfig):
-        super().__init__("sdk", config)
+        super().__init__(config)
         # if we pass a string starting with a slash to Path() it will reset to that absolute path
         # luckily we have to prepend mips.mips64, so it works out fine
         # expands to e.g. /home/alr48/cheri/output/cheribsd-obj/mips.mips64/home/alr48/cheri/cheribsd

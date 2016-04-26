@@ -7,10 +7,10 @@ from ..utils import *
 
 
 class BuildCHERIBSD(Project):
-    def __init__(self, config: CheriConfig, *, name="cheribsd", kernelConfig="CHERI_MALTA64"):
-        super().__init__(name, config, sourceDir=config.sourceRoot / "cheribsd", installDir=config.cheribsdRootfs,
-                         buildDir=config.cheribsdObj, gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git",
-                         gitRevision=config.cheriBsdRevision, appendCheriBitsToBuildDir=True)
+    def __init__(self, config: CheriConfig, *, projectName="cheribsd", kernelConfig="CHERI_MALTA64"):
+        super().__init__(config, projectName=projectName, sourceDir=config.sourceRoot / "cheribsd",
+                         installDir=config.cheribsdRootfs, buildDir=config.cheribsdObj, appendCheriBitsToBuildDir=True,
+                         gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git", gitRevision=config.cheriBsdRevision)
         self.kernelConfig = kernelConfig
         if self.config.cheriBits == 128:
             # make sure we use a kernel with 128 bit CPU features selected

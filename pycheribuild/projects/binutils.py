@@ -7,8 +7,7 @@ from ..utils import *
 # FIXME: do we need this? seems like cheribsd has all these utilities
 class BuildBinutils(Project):
     def __init__(self, config: CheriConfig):
-        super().__init__("binutils", config, installDir=config.sdkDir,
-                         gitUrl="https://github.com/CTSRD-CHERI/binutils.git")
+        super().__init__(config, installDir=config.sdkDir, gitUrl="https://github.com/CTSRD-CHERI/binutils.git")
         # http://marcelog.github.io/articles/cross_freebsd_compiler_in_linux.html
         self.configureCommand = self.sourceDir / "configure"
         self.gitBranch = "cheribsd"  # the default branch "cheri" won't work for cross-compiling

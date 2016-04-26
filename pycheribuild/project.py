@@ -13,17 +13,25 @@ class Project(object):
     # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
     clearLineSequence = b"\x1b[2K\r"
 
-    def __init__(self, name: str, config: CheriConfig, *, sourceDir: Path=None, buildDir: Path=None,
+    def __init__(self, config: CheriConfig, *, projectName: str, sourceDir: Path=None, buildDir: Path=None,
                  installDir: Path=None, gitUrl="", gitRevision=None, appendCheriBitsToBuildDir=False):
-        self.name = name
+        print("Class name:", self.__class__.__name__)
+        className = self.__class__.__name__
+        if className.startswith("Build"):
+            self.name = className[len("Build"):].lower()
+        elif not projectName:
+            fatalError("project name is not set and cannot infer from", className)
+        else:
+            self.name = projectName
+
         self.gitUrl = gitUrl
         self.gitRevision = gitRevision
         self.gitBranch = ""
         self.config = config
-        self.sourceDir = Path(sourceDir if sourceDir else config.sourceRoot / name)
+        self.sourceDir = Path(sourceDir if sourceDir else config.sourceRoot / self.name)
         # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256,
         buildDirSuffix = "-" + config.cheriBitsStr + "-build" if appendCheriBitsToBuildDir else "-build"
-        self.buildDir = Path(buildDir if buildDir else config.outputRoot / (name + buildDirSuffix))
+        self.buildDir = Path(buildDir if buildDir else config.outputRoot / (self.name + buildDirSuffix))
         self.installDir = installDir
         self.makeCommand = "make"
         self.configureCommand = ""

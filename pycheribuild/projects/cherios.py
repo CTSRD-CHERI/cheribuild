@@ -8,7 +8,7 @@ from ..utils import *
 
 class BuildCheriOS(Project):
     def __init__(self, config: CheriConfig):
-        super().__init__("cherios", config, installDir=config.outputRoot / ("cherios" + config.cheriBitsStr),
+        super().__init__(config, installDir=config.outputRoot / ("cherios" + config.cheriBitsStr),
                          gitUrl="https://github.com/CTSRD-CHERI/cherios.git", appendCheriBitsToBuildDir=True)
         self.makeCommand = "ninja"
         # try to find cmake 3.4 or newer

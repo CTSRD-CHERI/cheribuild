@@ -5,7 +5,7 @@ from ..utils import *
 
 class BuildElfToolchain(Project):
     def __init__(self, config: CheriConfig):
-        super().__init__("elftoolchain", config, installDir=config.sdkDir,
+        super().__init__(config, installDir=config.sdkDir,
                          gitUrl="https://github.com/emaste/elftoolchain.git")
         self.buildDir = self.sourceDir
         self.makeCommand = "bmake"

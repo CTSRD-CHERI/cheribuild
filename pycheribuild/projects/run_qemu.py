@@ -7,7 +7,7 @@ from ..utils import *
 
 class LaunchQEMU(Project):
     def __init__(self, config):
-        super().__init__("run", config)
+        super().__init__(config, projectName="run-qemu")
 
     def process(self):
         qemuBinary = self.config.sdkDir / "bin/qemu-system-cheri"

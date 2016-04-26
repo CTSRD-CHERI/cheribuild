@@ -4,8 +4,7 @@ from ..utils import *
 
 class BuildAwk(Project):
     def __init__(self, config: CheriConfig):
-        super().__init__("awk", config, installDir=config.sdkDir,
-                         gitUrl="https://github.com/danfuzz/one-true-awk.git")
+        super().__init__(config, installDir=config.sdkDir, gitUrl="https://github.com/danfuzz/one-true-awk.git")
         self.buildDir = self.sourceDir
 
     def compile(self):

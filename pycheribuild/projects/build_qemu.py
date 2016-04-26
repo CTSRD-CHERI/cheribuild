@@ -4,7 +4,7 @@ from ..utils import *
 
 class BuildQEMU(Project):
     def __init__(self, config: CheriConfig):
-        super().__init__("qemu", config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True,
+        super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True,
                          gitUrl="https://github.com/CTSRD-CHERI/qemu.git", gitRevision=config.qemuRevision)
         # QEMU will not work with BSD make, need GNU make
         self.makeCommand = "gmake" if IS_FREEBSD else "make"

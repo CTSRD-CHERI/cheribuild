@@ -13,7 +13,7 @@ from pathlib import Path
 
 class BuildDiskImage(Project):
     def __init__(self, config):
-        super().__init__("disk-image", config)
+        super().__init__(config, projectName="disk-image")
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
         self.manifestFile = None  # type: Path

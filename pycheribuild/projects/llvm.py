@@ -8,7 +8,7 @@ from ..utils import *
 
 class BuildLLVM(Project):
     def __init__(self, config: CheriConfig):
-        super().__init__("llvm", config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
+        super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
         self.makeCommand = "ninja"
         # try to find clang 3.7, otherwise fall back to system clang
         cCompiler = shutil.which("clang37") or shutil.which("clang")
