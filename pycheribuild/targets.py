@@ -31,14 +31,17 @@ class Target(object):
         self.name = name
         self.dependencies = set(dependencies)
         self.projectClass = projectClass
+        self.project = None
 
-    def execute(self, config: CheriConfig):
+    def checkSystemDeps(self, config: CheriConfig):
+        self.project = self.projectClass(config)
+        # make sure all system dependencies exist first
+        self.project.checkSystemDependencies()
+
+    def execute(self):
         # instantiate the project and run it
         starttime = time.time()
-        project = self.projectClass(config)
-        # make sure all system dependencies exist first
-        project.checkSystemDependencies()
-        project.process()
+        self.project.process()
         statusUpdate("Built target '" + self.name + "' in", time.time() - starttime, "seconds")
 
 
@@ -120,5 +123,8 @@ class AllTargets(object):
                 chosenTargets.extend(self.targetMap[t] for t in targetNames)
         # now that the chosen targets have been resolved run them
         for target in chosenTargets:
-            target.execute(config)
+            target.checkSystemDeps(config)
+        # all dependencies exist -> run the targets
+        for target in chosenTargets:
+            target.execute()
 
