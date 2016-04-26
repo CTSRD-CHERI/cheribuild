@@ -7,6 +7,19 @@ from ..project import Project
 from ..utils import *
 
 
+def clang37InstallHint(self):
+    if IS_FREEBSD:
+        return "Try running `pkg install clang37`"
+    osRelease = self.readFile(Path("/etc/os-release")) if Path("/etc/os-release").is_file() else ""
+    if "Ubuntu" in osRelease:
+        return """Try following the instructions on http://askubuntu.com/questions/735201/installing-clang-3-8-on-ubuntu-14-04-3:
+        wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
+        sudo apt-add-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.7 main"
+        sudo apt-get update
+        sudo apt-get install clang-3.7"""
+    return "Try installing clang 3.7 or newer using your system package manager"
+
+
 class BuildLLVM(Project):
     def __init__(self, config: CheriConfig):
         super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
@@ -15,12 +28,6 @@ class BuildLLVM(Project):
             "ninja": None,
         }
         self.makeCommand = "ninja"
-
-        # TODO: also accept 3.8, 3.9, etc binaries
-        # try to find clang 3.7, otherwise fall back to system clang
-        self.cCompiler = shutil.which("clang37") or shutil.which("clang-3.7") or shutil.which("clang")
-        self.cppCompiler = shutil.which("clang++37") or shutil.which("clang++-3.7") or shutil.which("clang++")
-
         self.configureCommand = "cmake"
         self.configureArgs = [
             self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
@@ -37,36 +44,25 @@ class BuildLLVM(Project):
         if self.config.cheriBits == 128:
             self.configureArgs.append("-DLLVM_CHERI_IS_128=ON")
 
-    def printClang37InstallHint(self):
-        print("Clang 3.7 (or newer) was not found.")
-        if IS_FREEBSD:
-            print("Try running `pkg install clang37`")
-        osRelease = self.readFile(Path("/etc/os-release")) if Path("/etc/os-release").is_file() else ""
-        if "Ubuntu" in osRelease:
-            print("""Try following the instructions on http://askubuntu.com/questions/735201/installing-clang-3-8-on-ubuntu-14-04-3:
-    wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
-    sudo apt-add-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.7 main"
-    sudo apt-get update
-    sudo apt-get install clang-3.7
-""")
-
     def checkSystemDependencies(self):
         with setEnv(PATH=self.config.dollarPathWithOtherTools):
             super().checkSystemDependencies()
-        if not self.cCompiler or not self.cppCompiler:
-            self.printClang37InstallHint()
-            self.dependencyError("Could not find clang!")
-        # make sure we have at least version 3.7
-        versionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
-        # clang prints this output to stderr
-        versionString = runCmd(self.cCompiler, "-v", captureError=True, printVerboseOnly=True).stderr
-        match = versionPattern.search(versionString)
-        versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
-        if versionComponents < (3, 7):
-            versionStr = ".".join(map(str, versionComponents))
-            if IS_LINUX:
-                self.printClang37InstallHint()
-            self.dependencyError(self.cCompiler, "version", versionStr, "is too old (need at least 3.7).")
+            # TODO: also accept 3.8, 3.9, etc binaries
+            # try to find clang 3.7, otherwise fall back to system clang
+            self.cCompiler = shutil.which("clang37") or shutil.which("clang-3.7") or shutil.which("clang")
+            self.cppCompiler = shutil.which("clang++37") or shutil.which("clang++-3.7") or shutil.which("clang++")
+            if not self.cCompiler or not self.cppCompiler:
+                self.dependencyError("Could not find clang", installInstructions=clang37InstallHint())
+            # make sure we have at least version 3.7
+            versionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
+            # clang prints this output to stderr
+            versionString = runCmd(self.cCompiler, "-v", captureError=True, printVerboseOnly=True).stderr
+            match = versionPattern.search(versionString)
+            versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
+            if versionComponents < (3, 7):
+                versionStr = ".".join(map(str, versionComponents))
+                self.dependencyError(self.cCompiler, "version", versionStr, "is too old (need at least 3.7).",
+                                     installInstructions=clang37InstallHint())
 
     @staticmethod
     def _makeStdoutFilter(line: bytes):
