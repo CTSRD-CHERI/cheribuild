@@ -18,7 +18,7 @@ class BuildLLVM(Project):
         self.cppCompiler = shutil.which("clang++37") or shutil.which("clang++-3.7") or shutil.which("clang++")
         self.configureArgs = [
             self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
-            "-DCMAKE_CXX_COMPILER=" + self.cppCompiler, "-DCMAKE_C_COMPILER=" + self.cCompiler,
+            "-DCMAKE_CXX_COMPILER=" + str(self.cppCompiler), "-DCMAKE_C_COMPILER=" + str(self.cCompiler),
             "-DCMAKE_INSTALL_PREFIX=" + str(self.installDir),
             "-DLLVM_TOOL_LLDB_BUILD=OFF",  # disable LLDB for now
             # saves a bit of time and but might be slightly broken in current clang:
@@ -44,7 +44,17 @@ class BuildLLVM(Project):
         versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
         if versionComponents < (3, 7):
             versionStr = ".".join(map(str, versionComponents))
-            self.dependencyError(self.cCompiler, "version ", versionStr, " is too old (need at least 3.7).")
+            if IS_LINUX:
+                if "Ubuntu" in self.readFile("/etc/os-release"):
+                    print("Up-to-date clang was not found, try following the instructions on "
+                          "http://askubuntu.com/questions/735201/installing-clang-3-8-on-ubuntu-14-04-3:\n" """
+    wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
+    sudo apt-add-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.7 main"
+    sudo apt-get update
+    sudo apt-get install clang-3.7
+"""
+                          )
+            self.dependencyError(self.cCompiler, "version", versionStr, "is too old (need at least 3.7).")
 
     @staticmethod
     def _makeStdoutFilter(line: bytes):
