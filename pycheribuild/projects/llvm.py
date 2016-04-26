@@ -99,3 +99,4 @@ class BuildLLVM(Project):
         # this must be added after checkSystemDependencies
         self.configureArgs.append("-DCMAKE_CXX_COMPILER=" + self.cppCompiler)
         self.configureArgs.append("-DCMAKE_C_COMPILER=" + self.cCompiler)
+        super().process()
