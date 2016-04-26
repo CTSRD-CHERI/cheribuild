@@ -1,7 +1,7 @@
 # Scripts useful for working with CHERI
 
 
-##`build_cheribsd_for_qemu.py` (**Requires Python 3.4**)
+## `build_cheribsd_for_qemu.py` (**Requires Python 3.4**)
 
 This script makes it easy to run [CHERIBSD](https://github.com/CTSRD-CHERI/cheribsd) on [QEMU](https://github.com/CTSRD-CHERI/qemu)
 
@@ -10,9 +10,9 @@ Running `build_cheribsd_for_qemu.py all` will clone, build and install all proje
 **NOTE**: As this involves building CHERIBSD you will need to run this script on a FreeBSD system.
 If you want to run this script on a remote FreeBSD host you can use the `py3-run-remote.sh` script that is included in this repository:
 
-`py3-run-remote my.freebsd.server ./build_cheribsd_for_qemu.py all` will build and run CHERIBSD on `my.freebsd.server`
+`remote-cheribuild.py my.freebsd.server [args...]` will build and run this script on `my.freebsd.server`
 
-The following targets are available:
+The following main targets are available:
 
 - `binutils` build and install [CTSRD-CHERI/binutils](https://github.com/CTSRD-CHERI/binutils)
 - `qemu` build and install [CTSRD-CHERI/qemu](https://github.com/CTSRD-CHERI/qemu)
@@ -21,6 +21,12 @@ The following targets are available:
 - `disk-image` creates a CHERIBSD disk-image
 - `run` launch QEMU with the CHERIBSD disk image
 - `all` execute all of the above targets
+
+Additionally there are the following other independent targets:
+- `cmake` build and install latest [CMake](https://github.com/Kitware/CMake)
+- `elftoolchain` build and install `brandelf` from [elftoolchain](https://github.com/emaste/elftoolchain/)
+- `awk` build and install BSD AWK (if you need it on Linux)
+- `cherios` build and install [CTSRD-CHERI/cherios](https://github.com/CTSRD-CHERI/cherios)
 
 cheribuild.py will also build all the other target that the given target depends on unless you pass the `-t` flag.
 
@@ -108,5 +114,3 @@ Specifying git revisions:
   --qemu-revision GIT_COMMIT_ID
                         The git revision or branch of QEMU to check out
 ```
-
-
