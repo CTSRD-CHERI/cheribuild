@@ -10,6 +10,7 @@ from pathlib import Path
 
 
 class Project(object):
+    # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
     clearLineSequence = b"\x1b[2K\r"
 
     def __init__(self, name: str, config: CheriConfig, *, sourceDir: Path=None, buildDir: Path=None,
@@ -28,8 +29,6 @@ class Project(object):
         self.configureCommand = ""
         self.configureArgs = []  # type: typing.List[str]
         self.configureEnvironment = None  # type: typing.Dict[str,str]
-
-        # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
 
     def queryYesNo(self, message: str="", *, defaultResult=False, forceResult=True) -> bool:
         yesNoStr = " [Y]/n " if defaultResult else " y/[N] "
