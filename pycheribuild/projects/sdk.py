@@ -49,6 +49,8 @@ class BuildSDK(Project):
             # build the SDK on the remote machine:
             remoteRunScript = Path(__file__).parent.resolve() / "py3-run-remote.sh"
             if not remoteRunScript.is_file():
+                remoteRunScript = Path(__file__).parent.parent.parent.resolve() / "py3-run-remote.sh"
+            if not remoteRunScript.is_file():
                 fatalError("Could not find py3-run-remote.sh script. Should be in this directory!")
             runCmd(remoteRunScript, self.config.freeBsdBuildMachine, __file__,
                    "--cheri-bits", self.config.cheriBits,  # make sure we build for the right number of cheri bits
