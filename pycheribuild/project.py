@@ -108,12 +108,22 @@ class Project(object):
         with file.open("r", encoding="utf-8") as f:
             return f.read()
 
-    def writeFile(self, file: Path, contents: str):
-        printCommand("echo", contents, colour=AnsiColour.green, outputFile=file, printVerboseOnly=True)
+    def writeFile(self, file: Path, contents: str, *, overwrite: bool, noCommandPrint=False) -> None:
+        """
+        :param file: The target path to write contents to
+        :param contents: the contents of the new file
+        :param overwrite: If true the file will be overwritten, otherwise it will cause an error if the file exists
+        :param noCommandPrint: don't ever print the echo commmand (even in verbose)
+        """
+        if not noCommandPrint:
+            printCommand("echo", contents, colour=AnsiColour.green, outputFile=file, printVerboseOnly=True)
         if self.config.pretend:
             return
+        if not overwrite and file.exists():
+            fatalError("File", file, "already exists!")
+        self._makedirs(file.parent)
         with file.open("w", encoding="utf-8") as f:
-            return f.write(contents)
+            f.write(contents)
 
     def copyFile(self, src: Path, dest: Path, *, force=False):
         if force:

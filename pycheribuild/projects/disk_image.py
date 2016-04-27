@@ -22,21 +22,6 @@ class BuildDiskImage(Project):
         self.extraFiles = []  # type: typing.List[Path]
         self.requiredSystemTools = ["ssh-keygen", "makefs"]
 
-    def writeFile(self, outDir: Path, pathInImage: str, contents: str, showContentsByDefault=True) -> Path:
-        assert not pathInImage.startswith("/")
-        targetFile = outDir / pathInImage
-        self._makedirs(targetFile.parent)
-        if self.config.verbose or (showContentsByDefault and not self.config.quiet):
-            print("Generating /", pathInImage, " with the following contents:\n",
-                  coloured(AnsiColour.green, contents), sep="", end="")
-        if self.config.pretend:
-            return targetFile
-        if targetFile.is_file():
-            fatalError("File", targetFile, "already exists!")
-        with targetFile.open(mode='w') as f:
-            f.write(contents)
-        return targetFile
-
     def addFileToImage(self, file: Path, targetDir: str, user="root", group="wheel", mode="0644"):
         assert not targetDir.startswith("/")
         # e.g. "install -N /home/alr48/cheri/cheribsd/etc -U -M /home/alr48/cheri/output/rootfs//METALOG
@@ -74,7 +59,11 @@ class BuildDiskImage(Project):
             targetFile = userProvided
         else:
             assert userProvided not in self.extraFiles
-            targetFile = self.writeFile(outDir, pathInImage, contents, showContentsByDefault=showContentsByDefault)
+            targetFile = outDir / pathInImage
+            if self.config.verbose or (showContentsByDefault and not self.config.quiet):
+                print("Generating /", pathInImage, " with the following contents:\n",
+                      coloured(AnsiColour.green, contents), sep="", end="")
+            self.writeFile(targetFile, contents, noCommandPrint=True, overwrite=False)
         self.addFileToImage(targetFile, str(Path(pathInImage).parent))
 
     def prepareRootfs(self, outDir: Path):

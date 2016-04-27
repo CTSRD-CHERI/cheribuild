@@ -72,8 +72,8 @@ class BuildSDK(Project):
         configFile = includeLocalFile("files/CheriSDKConfig.cmake")
         cmakeConfigDir = self.config.sdkDir / "share/cmake/CheriSDK"
         self._makedirs(cmakeConfigDir)
-        self.writeFile(cmakeConfigDir / "CheriSDKConfig.cmake", configFile)
-        self.writeFile(cmakeConfigDir / "CheriSDKConfigVersion.cmake", versionFile)
+        self.writeFile(cmakeConfigDir / "CheriSDKConfig.cmake", configFile, overwrite=True)
+        self.writeFile(cmakeConfigDir / "CheriSDKConfigVersion.cmake", versionFile, overwrite=True)
 
     def process(self):
         if not IS_FREEBSD:
