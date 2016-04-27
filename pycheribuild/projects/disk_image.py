@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 
 from ..project import Project
@@ -19,7 +20,7 @@ class BuildDiskImage(Project):
         self.manifestFile = None  # type: Path
         self.userGroupDbDir = self.config.cheribsdSources / "etc"
         self.extraFiles = []  # type: typing.List[Path]
-        self.requiredSystemTools = ["ssh-keygen", "qemu-img", "makefs"]
+        self.requiredSystemTools = ["ssh-keygen", "makefs"]
 
     def writeFile(self, outDir: Path, pathInImage: str, contents: str, showContentsByDefault=True) -> Path:
         assert not pathInImage.startswith("/")
@@ -135,6 +136,16 @@ cron_enable="NO"
                         self.copyFile(outDir / "root/.ssh/authorized_keys", authorizedKeys)
 
     def makeImage(self):
+        # check that qemu-img exists before starting the potentially long-running makefs command
+        qemuImgCommand = self.config.sdkDir / "bin/qemu-img"
+        if not qemuImgCommand.is_file():
+            systemQemuImg = shutil.which("qemu-img")
+            if systemQemuImg:
+                print("qemu-img from CHERI SDK not found, falling back to system qemu-img")
+                qemuImgCommand = Path(systemQemuImg)
+            else:
+                fatalError("qemu-img command was not found!", fixitHint="Make sure to build target qemu first")
+
         rawDiskImage = Path(str(self.config.diskImage).replace(".qcow2", ".img"))
         runCmd([
             "makefs",
@@ -149,9 +160,6 @@ cron_enable="NO"
             self.config.cheribsdRootfs  # directory tree to use for the image
         ])
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
-        qemuImgCommand = self.config.sdkDir / "bin/qemu-img"
-        if not qemuImgCommand.is_file():
-            fatalError("qemu-img command was not found! Make sure to build target qemu first")
         if self.config.verbose:
             runCmd(qemuImgCommand, "info", rawDiskImage)
         runCmd("rm", "-f", self.config.diskImage, printVerboseOnly=True)
