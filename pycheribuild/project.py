@@ -266,7 +266,7 @@ class Project(object):
             toolsDict = dict()
         for (tool, installInstructions) in toolsDict.items():
             if not shutil.which(tool):
-                if hasattr(installInstructions, "__call__"):
+                if callable(installInstructions):
                     installInstructions = installInstructions()
                 if not installInstructions:
                     installInstructions = "Try installing `" + tool + "` using your system package manager."

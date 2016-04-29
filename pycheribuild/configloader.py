@@ -46,7 +46,7 @@ class ConfigLoader(object):
 
     @classmethod
     def addOption(cls, name: str, shortname=None, default=None, type=None, group=None, **kwargs):
-        if default and not hasattr(default, '__call__') and "help" in kwargs:
+        if default and not callable(default) and "help" in kwargs:
             # only add the default string if it is not lambda
             kwargs["help"] = kwargs["help"] + " (default: \'" + str(default) + "\')"
         parserObj = group if group else cls._parser
@@ -86,7 +86,7 @@ class ConfigLoader(object):
         if not result:
             isDefault = True
             # allow lambdas as default values
-            if hasattr(self.default, '__call__'):
+            if callable(self.default):
                 result = self.default(config)
             else:
                 result = self.default
