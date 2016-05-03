@@ -32,6 +32,7 @@ class CheriConfig(object):
     force = ConfigLoader.addBoolOption("force", "f", help="Don't prompt for user input but use the default action")
     skipUpdate = ConfigLoader.addBoolOption("skip-update", help="Skip the git pull step")
     skipConfigure = ConfigLoader.addBoolOption("skip-configure", help="Skip the configure step")
+    skipInstall = ConfigLoader.addBoolOption("skip-install", help="Skip the install step (only do the build)")
     skipBuildworld = ConfigLoader.addBoolOption("skip-buildworld", help="Skip the FreeBSD buildworld step -> only build"
                                                 " and install the kernel")
     listTargets = ConfigLoader.addBoolOption("list-targets", help="List all available targets and exit")
