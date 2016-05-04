@@ -70,9 +70,9 @@ class Project(object):
             if not self.queryYesNo(defaultResult=False):
                 fatalError("Sources for", str(srcDir), " missing!")
             if initialBranch:
-                runCmd("git", "clone", "--branch", initialBranch, remoteUrl, srcDir)
+                runCmd("git", "clone", "--recurse-submodules", "--branch", initialBranch, remoteUrl, srcDir)
             else:
-                runCmd("git", "clone", remoteUrl, srcDir)
+                runCmd("git", "clone", "--recurse-submodules", remoteUrl, srcDir)
 
     def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None):
         self._ensureGitRepoIsCloned(srcDir=srcDir, remoteUrl=remoteUrl, initialBranch=initialBranch)
@@ -80,7 +80,8 @@ class Project(object):
         hasChanges = len(runCmd("git", "diff", captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
         if hasChanges:
             runCmd("git", "stash", cwd=srcDir, printVerboseOnly=True)
-        runCmd("git", "pull", "--rebase", cwd=srcDir, printVerboseOnly=True)
+        runCmd("git", "pull", "--recurse-submodules", "--rebase", cwd=srcDir, printVerboseOnly=True)
+        runCmd("git", "submodule", "update", "--recursive", cwd=srcDir, printVerboseOnly=True)
         if hasChanges:
             runCmd("git", "stash", "pop", cwd=srcDir, printVerboseOnly=True)
         if revision:
