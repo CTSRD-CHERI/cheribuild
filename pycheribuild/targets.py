@@ -35,13 +35,15 @@ class Target(object):
 
     def checkSystemDeps(self, config: CheriConfig):
         self.project = self.projectClass(config)
-        # make sure all system dependencies exist first
-        self.project.checkSystemDependencies()
+        with setEnv(PATH=self.project.config.dollarPathWithOtherTools):
+            # make sure all system dependencies exist first
+            self.project.checkSystemDependencies()
 
     def execute(self):
         # instantiate the project and run it
         starttime = time.time()
-        self.project.process()
+        with setEnv(PATH=self.project.config.dollarPathWithOtherTools):
+            self.project.process()
         statusUpdate("Built target '" + self.name + "' in", time.time() - starttime, "seconds")
 
 

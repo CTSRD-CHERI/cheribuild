@@ -19,22 +19,17 @@ class BuildCheriOS(Project):
         ]
 
     def checkSystemDependencies(self):
-        with setEnv(PATH=self.config.dollarPathWithOtherTools):
-            super().checkSystemDependencies()
-            # try to find cmake 3.4 or newer
-            versionPattern = re.compile(b"cmake version (\\d+)\\.(\\d+)\\.?(\\d+)?")
-            # cmake prints this output to stdout
-            versionString = runCmd("cmake", "--version", captureOutput=True, printVerboseOnly=True).stdout
-            match = versionPattern.search(versionString)
-            versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
-            if versionComponents < (3, 5):
-                versionStr = ".".join(map(str, versionComponents))
-                self.dependencyError("CMake version", versionStr, "is too old (need at least 3.4)",
-                                     installInstructions=self.cmakeInstallInstructions)
+        super().checkSystemDependencies()
+        # try to find cmake 3.4 or newer
+        versionPattern = re.compile(b"cmake version (\\d+)\\.(\\d+)\\.?(\\d+)?")
+        # cmake prints this output to stdout
+        versionString = runCmd("cmake", "--version", captureOutput=True, printVerboseOnly=True).stdout
+        match = versionPattern.search(versionString)
+        versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
+        if versionComponents < (3, 5):
+            versionStr = ".".join(map(str, versionComponents))
+            self.dependencyError("CMake version", versionStr, "is too old (need at least 3.4)",
+                                 installInstructions=self.cmakeInstallInstructions)
 
     def install(self):
         pass  # nothing to install yet
-
-    def process(self):
-        with setEnv(PATH=self.config.dollarPathWithOtherTools):
-            super().process()

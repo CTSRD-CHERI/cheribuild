@@ -316,4 +316,3 @@ class Project(object):
         if not self.config.skipInstall:
             statusUpdate("Installing", self.projectName, "... ")
             self.install()
-
