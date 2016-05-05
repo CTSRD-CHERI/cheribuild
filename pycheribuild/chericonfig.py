@@ -75,11 +75,11 @@ class CheriConfig(object):
     extraMakeOptions = " ".join([
         "-DWITHOUT_HTML",  # should not be needed
         "-DWITHOUT_SENDMAIL", "-DWITHOUT_MAIL",  # no need for sendmail
-        "-DWITHOUT_GAMES",  # not needed
-        "-DWITHOUT_MAN",  # seems to be a majority of the install time
-        "-DWITH_FAST_DEPEND",  # no separate make depend step, do it while compiling
+        # "-DWITHOUT_GAMES",  # not needed
+        # "-DWITHOUT_MAN",  # seems to be a majority of the install time
+        # "-DWITH_FAST_DEPEND",  # no separate make depend step, do it while compiling
         # "-DWITH_INSTALL_AS_USER", should be enforced by -DNO_ROOT
-        "-DWITH_DIRDEPS_BUILD", "-DWITH_DIRDEPS_CACHE",  # experimental fast build options
+        # "-DWITH_DIRDEPS_BUILD", "-DWITH_DIRDEPS_CACHE",  # experimental fast build options
         # "-DWITH_LIBCHERI_JEMALLOC"  # use jemalloc instead of -lmalloc_simple
     ])
 
