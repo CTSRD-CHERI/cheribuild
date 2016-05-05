@@ -46,7 +46,6 @@ _cheriConfig = None  # type: CheriConfig
 
 # To make it easier to use this as a module (probably most of these commands should be in Project)
 def setCheriConfig(c: "CheriConfig"):
-    print("Setting cheri config to", c)
     global _cheriConfig
     _cheriConfig = c
 

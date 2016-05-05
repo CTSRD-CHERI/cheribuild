@@ -25,8 +25,11 @@ if __name__ == "__main__":
     setCheriConfig(cheriConfig)
     # create the required directories
     for d in (cheriConfig.sourceRoot, cheriConfig.outputRoot, cheriConfig.extraFiles):
+        if d.exists():
+            continue
         if not cheriConfig.pretend:
-            printCommand("mkdir", "-p", str(d))
+            if cheriConfig.verbose:
+                printCommand("mkdir", "-p", str(d))
             os.makedirs(str(d), exist_ok=True)
     try:
         targets = AllTargets()

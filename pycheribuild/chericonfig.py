@@ -150,5 +150,5 @@ class CheriConfig(object):
         # for debugging purposes print all the options
         for i in ConfigLoader.options:
             i.__get__(self, CheriConfig)  # for loading of lazy value
-        if not self.quiet:
+        if self.verbose:
             print("cheribuild.py configuration:", dict(ConfigLoader.values))
