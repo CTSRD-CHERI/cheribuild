@@ -38,7 +38,7 @@ class ConfigLoader(object):
                                       str(defaultConfigPath) + "')")
         cls._parsedArgs = cls._parser.parse_args()
         try:
-            cls._configPath = Path(cls._parsedArgs.config_file).expanduser().absolute()
+            cls._configPath = Path(os.path.expanduser(cls._parsedArgs.config_file)).absolute()
             if cls._configPath.exists():
                 with cls._configPath.open("r") as f:
                     cls._JSON = json.load(f, encoding="utf-8")
