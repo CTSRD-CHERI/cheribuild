@@ -31,10 +31,14 @@ class ConfigLoader(object):
         """
         cls._parser.add_argument("targets", metavar="TARGET", type=str, nargs="*",
                                  help="The targets to build", default=["all"])
+        configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+        defaultConfigPath = Path(configdir, "cheribuild.json")
+        cls._parser.add_argument("--config-file", metavar="FILE", type=str, default=str(defaultConfigPath),
+                                 help="The config file that is used to load the default settings (default: '" +
+                                      str(defaultConfigPath) + "')")
         cls._parsedArgs = cls._parser.parse_args()
         try:
-            configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
-            cls._configPath = Path(configdir, "cheribuild.json")
+            cls._configPath = Path(cls._parsedArgs.config_file).expanduser().absolute()
             if cls._configPath.exists():
                 with cls._configPath.open("r") as f:
                     cls._JSON = json.load(f, encoding="utf-8")
