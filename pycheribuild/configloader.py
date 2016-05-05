@@ -44,9 +44,7 @@ class ConfigLoader(object):
                     cls._JSON = json.load(f, encoding="utf-8")
             else:
                 print("Configuration file", cls._configPath, "does not exist, using only command line arguments.")
-        except json.JSONDecodeError as e:
-            print(coloured(AnsiColour.red, "Could not parse config file", cls._configPath, "-", e))
-        except IOError as e:
+        except Exception as e:
             print(coloured(AnsiColour.red, "Could not load config file", cls._configPath, "-", e))
         return cls._parsedArgs.targets
 
