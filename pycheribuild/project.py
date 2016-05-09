@@ -367,3 +367,15 @@ class CMakeProject(Project):
         if line.startswith(b"-- Up-to-date:"):
             return
         Project._makeStdoutFilter(line)
+
+
+class AutotoolsProject(Project):
+    """
+    Like Project but automatically sets up the defaults for autotools like projects
+    Sets configure command to ./configure, adds --prefix=installdir
+    """
+    def __init__(self, *args, configureScript="configure", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.configureCommand = self.sourceDir / configureScript
+        self.configureArgs.append("--prefix=" + str(self.installDir))
+        self.makeCommand = "make"

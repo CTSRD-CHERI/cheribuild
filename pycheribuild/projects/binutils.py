@@ -1,15 +1,11 @@
-import os
-
-from ..project import Project
+from ..project import AutotoolsProject
 from ..utils import *
 
 
-# FIXME: do we need this? seems like cheribsd has all these utilities
-class BuildBinutils(Project):
+class BuildBinutils(AutotoolsProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config, installDir=config.sdkDir, gitUrl="https://github.com/CTSRD-CHERI/binutils.git")
         # http://marcelog.github.io/articles/cross_freebsd_compiler_in_linux.html
-        self.configureCommand = self.sourceDir / "configure"
         self.gitBranch = "cheribsd"  # the default branch "cheri" won't work for cross-compiling
 
         # If we don't use a patched binutils version on linux we get an ld binary that is
@@ -41,7 +37,6 @@ class BuildBinutils(Project):
             # "--enable-targets=" + enabledTargets,
             # TODO: --with-sysroot doesn't work properly so we need to tell clang not to pass the --sysroot option
             "--with-sysroot=" + str(self.config.sdkSysrootDir),  # as we pass --sysroot to clang we need this option
-            "--prefix=" + str(self.installDir),  # install to the SDK dir
             "--disable-info",
             #  "--program-prefix=cheri-unknown-freebsd-",
             "MAKEINFO=missing",  # don't build docs, this will fail on recent Linux systems

@@ -1,15 +1,14 @@
-from ..project import Project
+from ..project import AutotoolsProject
 from ..utils import *
 
 
-class BuildQEMU(Project):
+class BuildQEMU(AutotoolsProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True,
                          gitUrl="https://github.com/CTSRD-CHERI/qemu.git", gitRevision=config.qemuRevision)
         self.gitBranch = "qemu-cheri"
         # QEMU will not work with BSD make, need GNU make
         self.makeCommand = "gmake" if IS_FREEBSD else "make"
-        self.configureCommand = self.sourceDir / "configure"
         extraCFlags = "-g -Wno-error=deprecated-declarations"
 
         if config.cheriBits == 128:
@@ -23,7 +22,6 @@ class BuildQEMU(Project):
             "--disable-xen",
             "--disable-docs",
             "--extra-cflags=" + extraCFlags,
-            "--prefix=" + str(self.installDir)
         ])
         if IS_LINUX:
             # "--enable-libnfs", # version on Ubuntu 14.04 is too old? is it needed?
