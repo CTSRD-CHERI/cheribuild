@@ -1,23 +1,16 @@
-import os
 import re
 
-from ..project import Project
+from ..project import CMakeProject
 from ..utils import *
 
 
-class BuildCheriOS(Project):
+class BuildCheriOS(CMakeProject):
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.outputRoot / ("cherios" + config.cheriBitsStr),
+        super().__init__(config, installDir=config.outputRoot / ("cherios" + config.cheriBitsStr), buildType="Debug",
                          gitUrl="https://github.com/CTSRD-CHERI/cherios.git", appendCheriBitsToBuildDir=True)
-        self.makeCommand = "ninja"
-        self.configureCommand = "cmake"
-        self._addRequiredSystemTool("cmake", installInstructions=self.cmakeInstallInstructions)
-        self.configureArgs.extend([
-            self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Debug",
-            "-DCMAKE_INSTALL_PREFIX=" + str(self.installDir),
-            "-DCHERI_SDK_DIR=" + str(self.config.sdkDir),
-        ])
+        self.configureArgs.append("-DCHERI_SDK_DIR=" + str(self.config.sdkDir))
 
+    # TODO: move to CMakeProject
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
         # try to find cmake 3.4 or newer

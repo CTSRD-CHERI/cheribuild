@@ -3,19 +3,14 @@ import shlex
 import shutil
 from pathlib import Path
 
-from ..project import Project
+from ..project import CMakeProject
 from ..utils import *
 
 
-class BuildLLVM(Project):
+class BuildLLVM(CMakeProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
-        self._addRequiredSystemTool("cmake", self.cmakeInstallInstructions)
-        self._addRequiredSystemTool("ninja")
-
         self.configureArgs.extend([
-            self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
-            "-DCMAKE_INSTALL_PREFIX=" + str(self.installDir),
             "-DLLVM_TOOL_LLDB_BUILD=OFF",  # disable LLDB for now
             # saves a bit of time and but might be slightly broken in current clang:
             "-DCLANG_ENABLE_STATIC_ANALYZER=OFF",  # save some build time by skipping the static analyzer
@@ -58,13 +53,6 @@ class BuildLLVM(Project):
             versionStr = ".".join(map(str, versionComponents))
             self.dependencyError(self.cCompiler, "version", versionStr, "is too old (need at least 3.7).",
                                  installInstructions=self.clang37InstallHint())
-
-    @staticmethod
-    def _makeStdoutFilter(line: bytes):
-        # don't show the up-to date install lines
-        if line.startswith(b"-- Up-to-date:"):
-            return
-        Project._makeStdoutFilter(line)
 
     def update(self):
         self._updateGitRepo(self.sourceDir, "https://github.com/CTSRD-CHERI/llvm.git",

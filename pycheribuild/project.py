@@ -7,6 +7,7 @@ import threading
 import time
 from .utils import *
 from pathlib import Path
+from enum import Enum
 
 
 class Project(object):
@@ -332,3 +333,37 @@ class Project(object):
         if not self.config.skipInstall:
             statusUpdate("Installing", self.projectName, "... ")
             self.install()
+
+
+class CMakeProject(Project):
+    """
+    Like Project but automatically sets up the defaults for CMake projects
+    Sets configure command to CMake, adds -DCMAKE_INSTALL_PREFIX=installdir
+    and checks that CMake is installed
+    """
+    class Generator(Enum):
+        Default = 0
+        Ninja = 1
+        Makefiles = 2
+
+    def __init__(self, *args, generator=Generator.Ninja, buildType="Release", **kwargs):
+        super().__init__(*args, **kwargs)
+        self.configureCommand = "cmake"
+        self._addRequiredSystemTool("cmake", installInstructions=self.cmakeInstallInstructions)
+        self.generator = generator
+        self.configureArgs.append(str(self.sourceDir))  # TODO: use undocumented -H and -B options?
+        if self.generator == CMakeProject.Generator.Ninja:
+            self.configureArgs.append("-GNinja")
+            self.makeCommand = "ninja"
+            self._addRequiredSystemTool("ninja")
+        if self.generator == CMakeProject.Generator.Makefiles:
+            self.configureArgs.append("-GUnix Makefiles")
+        self.configureArgs.append("-DCMAKE_INSTALL_PREFIX=" + str(self.installDir))
+        self.configureArgs.append("-DCMAKE_BUILD_TYPE=" + buildType)
+
+    @staticmethod
+    def _makeStdoutFilter(line: bytes):
+        # don't show the up-to date install lines
+        if line.startswith(b"-- Up-to-date:"):
+            return
+        Project._makeStdoutFilter(line)
