@@ -42,7 +42,7 @@ class Project(object):
         # non-assignable variables:
         self.configureArgs = []  # type: typing.List[str]
         self.configureEnvironment = {}  # type: typing.Dict[str,str]
-        self.requiredSystemTools = {}  # type: typing.Dict[str, Any]
+        self.__requiredSystemTools = {}  # type: typing.Dict[str, Any]
         self._preventAssign = True
 
     # Make sure that API is used properly
@@ -50,10 +50,13 @@ class Project(object):
         # if self.__dict__.get("_locked") and name == "x":
         #     raise AttributeError, "MyClass does not allow assignment to .x member"
         # self.__dict__[name] = value
-        if self.__dict__.get("_preventAssign") and name in ("configureArgs", "configureEnvironment", "requiredSystemTools"):
+        if self.__dict__.get("_preventAssign") and name in ("configureArgs", "configureEnvironment"):
             fatalError("Project." + name + " mustn't be set, only modification is allowed.", "Called from",
                        self.__class__.__name__)
         self.__dict__[name] = value
+
+    def _addRequiredSystemTool(self, executable: str, installInstructions=None):
+        self.__requiredSystemTools[executable] = installInstructions
 
     def queryYesNo(self, message: str="", *, defaultResult=False, forceResult=True) -> bool:
         yesNoStr = " [Y]/n " if defaultResult else " y/[N] "
@@ -278,13 +281,7 @@ class Project(object):
         Checks that all the system dependencies (required tool, etc) are available
         :return: Throws an error if dependencies are missing
         """
-        if isinstance(self.requiredSystemTools, list):
-            toolsDict = dict([(i, None) for i in self.requiredSystemTools])
-        elif self.requiredSystemTools:
-            toolsDict = self.requiredSystemTools
-        else:
-            toolsDict = dict()
-        for (tool, installInstructions) in toolsDict.items():
+        for (tool, installInstructions) in self.__requiredSystemTools.items():
             if not shutil.which(tool):
                 if callable(installInstructions):
                     installInstructions = installInstructions()

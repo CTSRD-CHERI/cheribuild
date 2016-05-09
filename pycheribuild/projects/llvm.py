@@ -10,12 +10,9 @@ from ..utils import *
 class BuildLLVM(Project):
     def __init__(self, config: CheriConfig):
         super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
-        self.requiredSystemTools.update({
-            "cmake": self.cmakeInstallInstructions,
-            "ninja": None,
-        })
-        self.makeCommand = "ninja"
-        self.configureCommand = "cmake"
+        self._addRequiredSystemTool("cmake", self.cmakeInstallInstructions)
+        self._addRequiredSystemTool("ninja")
+
         self.configureArgs.extend([
             self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
             "-DCMAKE_INSTALL_PREFIX=" + str(self.installDir),

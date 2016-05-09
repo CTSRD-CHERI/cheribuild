@@ -11,7 +11,7 @@ class BuildCheriOS(Project):
                          gitUrl="https://github.com/CTSRD-CHERI/cherios.git", appendCheriBitsToBuildDir=True)
         self.makeCommand = "ninja"
         self.configureCommand = "cmake"
-        self.requiredSystemTools.update({"cmake": self.cmakeInstallInstructions})
+        self._addRequiredSystemTool("cmake", installInstructions=self.cmakeInstallInstructions)
         self.configureArgs.extend([
             self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Debug",
             "-DCMAKE_INSTALL_PREFIX=" + str(self.installDir),
