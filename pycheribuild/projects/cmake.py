@@ -10,7 +10,7 @@ class BuildCMake(Project):
         self.gitBranch = "release"  # track the stable release branch
         self.buildDir = self.sourceDir
         self.configureCommand = self.sourceDir / "bootstrap"
-        self.configureArgs = ["--prefix=" + str(self.installDir)]
+        self.configureArgs.append("--prefix=" + str(self.installDir))
 
     def process(self):
         # TODO: check whether installed CMake version is new enough and if it is don't build it

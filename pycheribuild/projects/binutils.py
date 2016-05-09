@@ -28,7 +28,7 @@ class BuildBinutils(Project):
         #    elf64ltsmip_fbsd
         #    elf32btsmipn32_fbsd
         #    elf32ltsmipn32_fbsd
-        self.configureArgs = [
+        self.configureArgs.extend([
             # on cheri gcc -dumpmachine returns mips64-undermydesk-freebsd, however this is not accepted by BFD
             # if we just pass --target=mips64 this apparently defaults to mips64-unknown-elf on freebsd
             # and also on Linux, but let's be explicit in case it assumes ELF binaries to target linux
@@ -45,9 +45,8 @@ class BuildBinutils(Project):
             "--disable-info",
             #  "--program-prefix=cheri-unknown-freebsd-",
             "MAKEINFO=missing",  # don't build docs, this will fail on recent Linux systems
-        ]
+        ])
         # newer compilers will default to -std=c99 which will break binutils:
-        self.configureEnvironment = os.environ.copy()
         self.configureEnvironment["CFLAGS"] = "-std=gnu89 -O2"
 
     def update(self):

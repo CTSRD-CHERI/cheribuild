@@ -16,20 +16,22 @@ class BuildQEMU(Project):
             # enable QEMU 128 bit capabilities
             # https://github.com/CTSRD-CHERI/qemu/commit/bb6b29fcd74dde4518146897c22286fd16ca7eb8
             extraCFlags += " -DCHERI_MAGIC128=1"
-        self.configureArgs = ["--target-list=cheri-softmmu",
-                              "--disable-linux-user",
-                              "--disable-bsd-user",
-                              "--disable-xen",
-                              "--disable-docs",
-                              "--extra-cflags=" + extraCFlags,
-                              "--prefix=" + str(self.installDir)]
+        self.configureArgs.extend([
+            "--target-list=cheri-softmmu",
+            "--disable-linux-user",
+            "--disable-bsd-user",
+            "--disable-xen",
+            "--disable-docs",
+            "--extra-cflags=" + extraCFlags,
+            "--prefix=" + str(self.installDir)
+        ])
         if IS_LINUX:
             # "--enable-libnfs", # version on Ubuntu 14.04 is too old? is it needed?
             # self.configureArgs += ["--enable-kvm", "--enable-linux-aio", "--enable-vte", "--enable-sdl",
             #                        "--with-sdlabi=2.0", "--enable-virtfs"]
-            self.configureArgs += ["--disable-stack-protector"]  # seems to be broken on some Ubuntu 14.04 systems
+            self.configureArgs.extend(["--disable-stack-protector"])  # seems to be broken on some Ubuntu 14.04 systems
         else:
-            self.configureArgs += ["--disable-linux-aio", "--disable-kvm"]
+            self.configureArgs.extend(["--disable-linux-aio", "--disable-kvm"])
 
     def update(self):
         # the build sometimes modifies the po/ subdirectory

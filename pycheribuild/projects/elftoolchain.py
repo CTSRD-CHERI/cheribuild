@@ -9,7 +9,7 @@ class BuildElfToolchain(Project):
                          gitUrl="https://github.com/emaste/elftoolchain.git")
         self.buildDir = self.sourceDir
         if IS_LINUX:
-            self.requiredSystemTools = ["bmake"]
+            self.requiredSystemTools["bmake"] = None
             self.makeCommand = "bmake"
         else:
             self.makeCommand = "make"

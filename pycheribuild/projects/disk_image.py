@@ -20,7 +20,7 @@ class BuildDiskImage(Project):
         self.manifestFile = None  # type: Path
         self.userGroupDbDir = self.config.cheribsdSources / "etc"
         self.extraFiles = []  # type: typing.List[Path]
-        self.requiredSystemTools = ["ssh-keygen", "makefs"]
+        self.requiredSystemTools.update({"ssh-keygen": None, "makefs": None})
 
     def addFileToImage(self, file: Path, targetDir: str, user="root", group="wheel", mode="0644"):
         assert not targetDir.startswith("/")

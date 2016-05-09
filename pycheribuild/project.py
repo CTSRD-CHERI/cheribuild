@@ -38,10 +38,22 @@ class Project(object):
         self.installDir = installDir
         self.makeCommand = "make"
         self.configureCommand = ""
-        self.configureArgs = []  # type: typing.List[str]
-        self.configureEnvironment = None  # type: typing.Dict[str,str]
-        self.requiredSystemTools = None  # type: typing.Union[typing.Dict[str, str], typing.List[str]]
         self._systemDepsChecked = False
+        # non-assignable variables:
+        self.configureArgs = []  # type: typing.List[str]
+        self.configureEnvironment = {}  # type: typing.Dict[str,str]
+        self.requiredSystemTools = {}  # type: typing.Dict[str, Any]
+        self._preventAssign = True
+
+    # Make sure that API is used properly
+    def __setattr__(self, name, value):
+        # if self.__dict__.get("_locked") and name == "x":
+        #     raise AttributeError, "MyClass does not allow assignment to .x member"
+        # self.__dict__[name] = value
+        if self.__dict__.get("_preventAssign") and name in ("configureArgs", "configureEnvironment", "requiredSystemTools"):
+            fatalError("Project." + name + " mustn't be set, only modification is allowed.", "Called from",
+                       self.__class__.__name__)
+        self.__dict__[name] = value
 
     def queryYesNo(self, message: str="", *, defaultResult=False, forceResult=True) -> bool:
         yesNoStr = " [Y]/n " if defaultResult else " y/[N] "
@@ -169,7 +181,7 @@ class Project(object):
         print("Running", self.makeCommand, makeTarget, "took", time.time() - starttime, "seconds")
 
     def runWithLogfile(self, args: "typing.Sequence[str]", logfileName: str, *, stdoutFilter=None, cwd: Path = None,
-                       env=None) -> None:
+                       env: dict=None) -> None:
         """
         Runs make and logs the output
         config.quiet doesn't display anything, normal only status updates and config.verbose everything
@@ -180,6 +192,13 @@ class Project(object):
         :param env the environment to pass to make
         """
         printCommand(args, cwd=cwd)
+        # make sure that env is either None or a os.environ with the updated entries entries
+        newEnv = None
+        if env:
+            newEnv = os.environ.copy()
+            newEnv.update(env)
+        else:
+            newEnv = None
         assert not logfileName.startswith("/")
         if self.config.noLogfile:
             logfilePath = Path(os.devnull)
@@ -201,9 +220,9 @@ class Project(object):
             logfile.write(cmdStr.encode("utf-8") + b"\n\n")
             if self.config.quiet:
                 # a lot more efficient than filtering every line
-                subprocess.check_call(args, cwd=str(cwd), stdout=logfile, stderr=logfile, env=env)
+                subprocess.check_call(args, cwd=str(cwd), stdout=logfile, stderr=logfile, env=newEnv)
                 return
-            make = subprocess.Popen(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+            make = subprocess.Popen(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=newEnv)
             # use a thread to print stderr output and write it to logfile (not using a thread would block)
             logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
             stderrThread = threading.Thread(target=self._handleStdErr,

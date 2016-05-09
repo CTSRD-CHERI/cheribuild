@@ -11,12 +11,12 @@ class BuildCheriOS(Project):
                          gitUrl="https://github.com/CTSRD-CHERI/cherios.git", appendCheriBitsToBuildDir=True)
         self.makeCommand = "ninja"
         self.configureCommand = "cmake"
-        self.requiredSystemTools = {"cmake": self.cmakeInstallInstructions}
-        self.configureArgs = [
+        self.requiredSystemTools.update({"cmake": self.cmakeInstallInstructions})
+        self.configureArgs.extend([
             self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Debug",
             "-DCMAKE_INSTALL_PREFIX=" + str(self.installDir),
             "-DCHERI_SDK_DIR=" + str(self.config.sdkDir),
-        ]
+        ])
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()

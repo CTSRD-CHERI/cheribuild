@@ -10,20 +10,20 @@ from ..utils import *
 class BuildLLVM(Project):
     def __init__(self, config: CheriConfig):
         super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
-        self.requiredSystemTools = {
+        self.requiredSystemTools.update({
             "cmake": self.cmakeInstallInstructions,
             "ninja": None,
-        }
+        })
         self.makeCommand = "ninja"
         self.configureCommand = "cmake"
-        self.configureArgs = [
+        self.configureArgs.extend([
             self.sourceDir, "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release",
             "-DCMAKE_INSTALL_PREFIX=" + str(self.installDir),
             "-DLLVM_TOOL_LLDB_BUILD=OFF",  # disable LLDB for now
             # saves a bit of time and but might be slightly broken in current clang:
             "-DCLANG_ENABLE_STATIC_ANALYZER=OFF",  # save some build time by skipping the static analyzer
             "-DCLANG_ENABLE_ARCMT=OFF",  # need to disable ARCMT to disable static analyzer
-        ]
+        ])
         if IS_FREEBSD:
             self.configureArgs.append("-DDEFAULT_SYSROOT=" + str(self.config.sdkSysrootDir))
             self.configureArgs.append("-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd")
