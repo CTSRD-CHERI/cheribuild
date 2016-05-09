@@ -9,9 +9,4 @@ class BuildCMake(AutotoolsProject):
                          # gitUrl="https://cmake.org/cmake.git")
                          gitUrl="https://github.com/Kitware/CMake")  # a lot faster than the official repo
         self.gitBranch = "release"  # track the stable release branch
-        self.buildDir = self.sourceDir
         # TODO: do we need to use gmake on FreeBSD?
-
-    def process(self):
-        # TODO: check whether installed CMake version is new enough and if it is don't build it
-        super().process()
