@@ -10,6 +10,8 @@ from .projects.binutils import BuildBinutils
 from .projects.cmake import BuildCMake
 from .projects.cherios import BuildCheriOS
 from .projects.gnustep import BuildGnuStep
+from .projects.cheritrace import BuildCheriTrace
+from .projects.cherivis import BuildCheriVis
 from .projects.build_qemu import BuildQEMU
 from .projects.cheribsd import BuildCHERIBSD
 from .projects.disk_image import BuildDiskImage
@@ -68,6 +70,8 @@ class AllTargets(object):
             Target("llvm", BuildLLVM),
             Target("awk", BuildAwk),
             Target("elftoolchain", BuildElfToolchain),
+            Target("cheritrace", BuildCheriTrace, dependencies=["llvm"]),
+            Target("cherivis", BuildCheriVis, dependencies=["cheritrace"]),
             Target("gnustep", BuildGnuStep),
             Target("cheribsd", BuildCHERIBSD, dependencies=["llvm"]),
             # SDK only needs to build CHERIBSD if we are on a FreeBSD host, otherwise the files will be copied
