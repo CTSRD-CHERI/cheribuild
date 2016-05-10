@@ -53,13 +53,13 @@ class AllTargets(object):
         sdkTarget = Target("sdk", BuildSDK)
         cheriosTarget = Target("cherios", BuildCheriOS)
         if IS_FREEBSD:
-            sdkTarget.dependencies = set(["cheribsd", "llvm"])
-            cheriosTarget.dependencies = set(["sdk"])
+            sdkTarget.dependencies = {"cheribsd", "llvm"}
+            cheriosTarget.dependencies = {"sdk"}
         else:
             # cheribsd files need to be copied from another host
-            sdkTarget.dependencies = set(["awk", "elftoolchain", "binutils", "llvm"])
+            sdkTarget.dependencies = {"awk", "elftoolchain", "binutils", "llvm"}
             # TODO: sdk
-            cheriosTarget.dependencies = set(["elftoolchain", "binutils", "llvm"])
+            cheriosTarget.dependencies = {"elftoolchain", "binutils", "llvm"}
 
         self._allTargets = [
             Target("binutils", BuildBinutils),
