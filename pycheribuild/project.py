@@ -21,7 +21,7 @@ class Project(object):
                  installDir: Path=None, gitUrl="", gitRevision=None, appendCheriBitsToBuildDir=False):
         className = self.__class__.__name__
         if className.startswith("Build"):
-            self.projectName = className[len("Build"):]
+            self.projectName = className[len("Build"):].replace("_", "-")
         elif not projectName:
             fatalError("Project name is not set and cannot infer from class", className)
         else:
