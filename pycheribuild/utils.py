@@ -9,7 +9,8 @@ from pathlib import Path
 
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "CheriConfig", "IS_LINUX", "IS_FREEBSD", "printCommand", "includeLocalFile",  # no-combine
-           "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv"]  # no-combine
+           "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
+           "parseOSRelease", ]  # no-combine
 
 if sys.version_info < (3, 4):
     sys.exit("This script requires at least Python 3.4")
@@ -132,6 +133,16 @@ def includeLocalFile(path: str) -> str:
         fatalError(file, "is missing!")
     with file.open("r", encoding="utf-8") as f:
         return f.read()
+
+
+def parseOSRelease() -> dict:
+    with Path("/etc/os-release").open(encoding="utf-8") as f:
+        d = {}
+        for line in f:
+            k, v = line.rstrip().split("=", maxsplit=1)
+            # .strip('"') will remove if there or else do nothing
+            d[k] = v.strip('"')
+    return d
 
 
 @contextlib.contextmanager
