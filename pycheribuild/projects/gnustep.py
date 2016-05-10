@@ -92,8 +92,7 @@ class BuildGnuStep_Gui(GnuStepModule):
 class BuildGnuStep_Back(GnuStepModule):
     def __init__(self, config: CheriConfig):
         super().__init__(config, moduleName="back")
-        self.configureArgs.extend([
-        ])
+        self.configureArgs.append("--enable-graphics=cairo")
 
 
 # TODO: add MultiProject or something similar to project.py
