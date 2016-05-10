@@ -78,5 +78,4 @@ class BuildCheriVis(Project):
         self.runMake(["gmake"] + self.commonMakeArgs, "all", cwd=self.sourceDir)
 
     def install(self):
-        self._makedirs("/tmp/cherivis")
-        self.runMake(["gmake", "DESTDIR=/tmp/cherivis"] + self.commonMakeArgs, "install", cwd=self.sourceDir)
+        self.runMake(["gmake"] + self.commonMakeArgs, "install", cwd=self.sourceDir)
