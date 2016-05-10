@@ -16,7 +16,7 @@ if sys.version_info < (3, 4):
 if sys.version_info < (3, 5):
     # copy of python 3.5 subprocess.CompletedProcess
     class CompletedProcess(object):
-        def __init__(self, args, returncode, stdout=None, stderr=None):
+        def __init__(self, args, returncode: int, stdout: bytes=None, stderr: bytes=None):
             self.args = args
             self.returncode = returncode
             self.stdout = stdout
