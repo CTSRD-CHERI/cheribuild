@@ -64,7 +64,7 @@ class BuildCheriVis(Project):
             "CXX=clang++", "CC=clang",
             "GNUSTEP_MAKEFILES=" + str(self.gnustepMakefilesDir),
             "CHERITRACE_DIR=" + cheritraceDirRelative,  # make it find the cheritrace library
-            "GNUSTEP_INSTALLATION_DOMAIN=SYSTEM",
+            "GNUSTEP_INSTALLATION_DOMAIN=USER",
             "GNUSTEP_NG_ARC=1",
             "messages=yes",
         ]
@@ -79,3 +79,29 @@ class BuildCheriVis(Project):
 
     def install(self):
         self.runMake(["gmake"] + self.commonMakeArgs, "install", cwd=self.sourceDir)
+
+#
+# Some of these settings seem required:
+"""
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>GSAllowWindowsOverIcons</key>
+    <integer>1</integer>
+    <key>GSAppOwnsMiniwindow</key>
+    <integer>0</integer>
+    <key>GSBackHandlesWindowDecorations</key>
+    <integer>0</integer>
+    <key>GSUseFreedesktopThumbnails</key>
+    <integer>1</integer>
+    <key>GraphicCompositing</key>
+    <integer>1</integer>
+    <key>NSInterfaceStyleDefault</key>
+    <string>NSWindows95InterfaceStyle</string>
+    <key>NSMenuInterfaceStyle</key>
+    <string>NSWindows95InterfaceStyle</string>
+</dict>
+</plist>
+"""
+#
