@@ -36,6 +36,9 @@ class BuildCHERIBSD(Project):
             "KERNCONF=" + self.kernelConfig,
         ]
         self.commonMakeArgs.extend(shlex.split(self.config.cheribsdExtraMakeOptions))
+        if not (self.config.verbose or self.config.quiet):
+            # By default we only want to print the status updates -> use make -s so we have to do less filtering
+            self.commonMakeArgs.append("-s")
 
     @staticmethod
     def _makeStdoutFilter(line: bytes):
