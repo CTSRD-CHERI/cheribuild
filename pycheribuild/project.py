@@ -41,6 +41,7 @@ class Project(object):
         self.configureCommand = ""
         self._systemDepsChecked = False
         # non-assignable variables:
+        self.commonMakeArgs = []
         self.configureArgs = []  # type: typing.List[str]
         self.configureEnvironment = {}  # type: typing.Dict[str,str]
         self.__requiredSystemTools = {}  # type: typing.Dict[str, Any]
@@ -51,7 +52,7 @@ class Project(object):
         # if self.__dict__.get("_locked") and name == "x":
         #     raise AttributeError, "MyClass does not allow assignment to .x member"
         # self.__dict__[name] = value
-        if self.__dict__.get("_preventAssign") and name in ("configureArgs", "configureEnvironment"):
+        if self.__dict__.get("_preventAssign") and name in ("configureArgs", "configureEnvironment", "commonMakeArgs"):
             fatalError("Project." + name + " mustn't be set, only modification is allowed.", "Called from",
                        self.__class__.__name__)
         self.__dict__[name] = value
@@ -170,15 +171,22 @@ class Project(object):
                 if not noLogfile:
                     outfile.write(errLine)
 
-    def runMake(self, args: "typing.List[str]", makeTarget="", *, cwd: Path=None, env=None) -> None:
-        if makeTarget:
-            allArgs = args + [makeTarget]
-            logfileName = self.makeCommand + "." + makeTarget
-        else:
-            allArgs = args
-            logfileName = "build"
+    def runMake(self, args: "typing.List[str]", makeTarget="", *, makeCommand: str=None, logfileName: str=None,
+                cwd: Path=None, env=None) -> None:
+        if not makeCommand:
+            makeCommand = self.makeCommand
         if not cwd:
             cwd = self.buildDir
+
+        if makeTarget:
+            allArgs = args + [makeTarget]
+            if not logfileName:
+                logfileName = self.makeCommand + "." + makeTarget
+        else:
+            allArgs = args
+            if not logfileName:
+                logfileName = makeCommand
+        allArgs = [makeCommand] + allArgs
         starttime = time.time()
         self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=self._makeStdoutFilter, cwd=cwd, env=env)
         # add a newline at the end in case it ended with a filtered line (no final newline)
@@ -309,10 +317,10 @@ class Project(object):
                                 logfileName="configure", cwd=self.buildDir, env=self.configureEnvironment)
 
     def compile(self):
-        self.runMake([self.makeCommand, self.config.makeJFlag])
+        self.runMake(self.commonMakeArgs + [self.config.makeJFlag])
 
     def install(self):
-        self.runMake([self.makeCommand], "install")
+        self.runMake(self.commonMakeArgs, "install")
 
     def process(self):
         if not self.config.skipUpdate:

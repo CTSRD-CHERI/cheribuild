@@ -60,25 +60,25 @@ class BuildCheriVis(Project):
         # library combos:
         # http://www.gnustep.org/resources/documentation/Developer/Make/Manual/gnustep-make_1.html#SEC35
 
-        self.commonMakeArgs = [
+        self.commonMakeArgs.extend([
             "CXX=clang++", "CC=clang",
             "GNUSTEP_MAKEFILES=" + str(self.gnustepMakefilesDir),
             "CHERITRACE_DIR=" + cheritraceDirRelative,  # make it find the cheritrace library
             "GNUSTEP_INSTALLATION_DOMAIN=USER",
             "GNUSTEP_NG_ARC=1",
             "messages=yes",
-        ]
+        ])
 
     def clean(self):
         # doesn't seem to be possible to use a out of source build
-        self.runMake([self.makeCommand] + self.commonMakeArgs, "clean", cwd=self.sourceDir)
+        self.runMake(self.commonMakeArgs, "clean", cwd=self.sourceDir)
 
     def compile(self):
-        self.runMake(["gmake"] + self.commonMakeArgs, "print-gnustep-make-help", cwd=self.sourceDir)
-        self.runMake(["gmake"] + self.commonMakeArgs, "all", cwd=self.sourceDir)
+        self.runMake(self.commonMakeArgs, "print-gnustep-make-help", cwd=self.sourceDir)
+        self.runMake(self.commonMakeArgs, "all", cwd=self.sourceDir)
 
     def install(self):
-        self.runMake(["gmake"] + self.commonMakeArgs, "install", cwd=self.sourceDir)
+        self.runMake(self.commonMakeArgs, "install", cwd=self.sourceDir)
 
 #
 # Some of these settings seem required:

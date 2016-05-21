@@ -1,4 +1,3 @@
-import shutil
 from ..project import Project
 from ..utils import *
 
@@ -17,15 +16,16 @@ class BuildElfToolchain(Project):
         self.gitBranch = "master"
         # self.makeArgs = ["WITH_TESTS=no", "-DNO_ROOT"]
         # TODO: build static?
-        self.makeArgs = ["WITH_TESTS=no", "LDSTATIC=-static"]
+        self.commonMakeArgs.append("WITH_TESTS=no")
+        self.commonMakeArgs.append("LDSTATIC=-static")
 
     def compile(self):
         targets = ["common", "libelf", "libelftc"]
         # tools that we want to build:
         targets += ["brandelf"]
         for tgt in targets:
-            self.runMake([self.makeCommand, self.config.makeJFlag] + self.makeArgs,
-                         "all", cwd=self.sourceDir / tgt)
+            self.runMake(self.commonMakeArgs + [self.config.makeJFlag],
+                         "all", cwd=self.sourceDir / tgt, logfileName="build." + tgt)
 
     def install(self):
         # self.runMake([self.makeCommand, self.config.makeJFlag, "DESTDIR=" + str(self.installDir)] + self.makeArgs,

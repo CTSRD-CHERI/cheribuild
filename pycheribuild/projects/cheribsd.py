@@ -19,8 +19,8 @@ class BuildCHERIBSD(Project):
         self.cheriCC = self.config.sdkDir / "bin/clang"
         self.cheriCXX = self.config.sdkDir / "bin/clang++"
         self.installAsRoot = os.getuid() == 0
-        self.commonMakeArgs = [
-            "make", "CHERI=" + self.config.cheriBitsStr,
+        self.commonMakeArgs.extend([
+            "CHERI=" + self.config.cheriBitsStr,
             # "-dCl",  # add some debug output to trace commands properly
             "CHERI_CC=" + str(self.cheriCC),
             # "CPUTYPE=mips64", # mipsfpu for hardware float
@@ -34,7 +34,7 @@ class BuildCHERIBSD(Project):
             # TODO: once clang can build the kernel:
             #  "-DCROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin")
             "KERNCONF=" + self.kernelConfig,
-        ]
+        ])
         self.commonMakeArgs.extend(shlex.split(self.config.cheribsdExtraMakeOptions))
         if not (self.config.verbose or self.config.quiet):
             # By default we only want to print the status updates -> use make -s so we have to do less filtering
