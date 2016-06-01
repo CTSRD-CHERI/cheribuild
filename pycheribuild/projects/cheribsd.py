@@ -51,6 +51,8 @@ class BuildCHERIBSD(Project):
             sys.stdout.buffer.write(line[:-1])  # remove the newline at the end
             sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
             sys.stdout.buffer.flush()
+        else:
+            sys.stdout.buffer.write(line)
 
     def _removeSchgFlag(self, *paths: "typing.Iterable[str]"):
         for i in paths:
