@@ -27,7 +27,7 @@ def insertLocalFile(line: str, srcFile: Path):
     relativePath = match.groups()[0]
     print("Including file", relativePath, "from", srcFile.relative_to(scriptDir), file=sys.stderr)
     targetFile = scriptDir / relativePath
-    newLine = line[0:match.start()] + "\"\"\"\n"  # start raw string
+    newLine = line[0:match.start()] + "R\"\"\"\n"  # start raw string
     # print("New line is '", newLine, "'", sep="", file=sys.stderr)
     lines.append(newLine)
     with targetFile.open() as f:

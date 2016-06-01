@@ -52,5 +52,5 @@ int main(int argc, char **argv)
     if (links == 0)
         errx(EX_USAGE, "no symbolic links in %s", getwd(NULL));
 
-    printf("fixed %d/%d symbolic links\\n", fixed, links);
+    printf("fixed %d/%d symbolic links\n", fixed, links);
 }
