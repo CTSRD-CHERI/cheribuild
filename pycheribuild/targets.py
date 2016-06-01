@@ -21,7 +21,7 @@ from .projects.sdk import BuildSDK
 
 
 class Target(object):
-    def __init__(self, name, projectClass, *, dependencies: "typing.Sequence[str]"=set()):
+    def __init__(self, name, projectClass, *, dependencies: "typing.Iterable[str]"=set()):
         self.name = name
         self.dependencies = set(dependencies)
         self.projectClass = projectClass
@@ -61,6 +61,8 @@ class PseudoTarget(Target):
             fatalError("PseudoTarget with no dependencies should not exist:!!", "Target name =", name)
 
     def checkSystemDeps(self, config: CheriConfig):
+        if self._completed:
+            return
         for dep in self.sortedDependencies:
             target = self.allTargets.targetMap[dep]  # type: Target
             if target._completed:
@@ -68,6 +70,8 @@ class PseudoTarget(Target):
             target.checkSystemDeps(config)
 
     def execute(self):
+        if self._completed:
+            return
         starttime = time.time()
         for dep in self.sortedDependencies:
             target = self.allTargets.targetMap[dep]  # type: Target
@@ -81,19 +85,18 @@ class PseudoTarget(Target):
 
 class AllTargets(object):
     def __init__(self):
-        sdkTarget = Target("sdk", BuildSDK)
-        cheriosTarget = Target("cherios", BuildCheriOS)
         if IS_FREEBSD:
-            sdkTarget.dependencies = {"cheribsd", "llvm"}
-            cheriosTarget.dependencies = {"sdk"}
-            allTargetDeps = ["qemu", "llvm", "cheribsd", "sdk", "disk-image", "run"]
+            sdkTargetDeps = ["llvm", "cheribsd"]
+            cheriosTargetDeps = {"sdk"}
         else:
-            sdkTarget.dependencies = {"awk", "elftoolchain", "binutils", "llvm"}
-            cheriosTarget.dependencies = {"elftoolchain", "binutils", "llvm"}
+            # CHERIBSD files need to be copied from another host, so we don't build cheribsd
+            sdkTargetDeps = ["awk", "elftoolchain", "binutils", "llvm"]
+            cheriosTargetDeps = {"elftoolchain", "binutils", "llvm"}
             # These need to be built on Linux but are not required on FreeBSD
-            # CHERIBSD files need to be copied from another host, so we don't build cheribsd here
-            allTargetDeps = ["awk", "binutils", "elftoolchain" "qemu", "llvm", "sdk", "disk-image", "run"]
-        allTarget = PseudoTarget(self, "all", dependencies=allTargetDeps)
+        cheriosTarget = Target("cherios", BuildCheriOS, dependencies=cheriosTargetDeps)
+        sdkSysrootTarget = Target("sdk-sysroot", BuildSDK, dependencies=set(sdkTargetDeps))
+        sdkTarget = PseudoTarget(self, "sdk", dependencies=sdkTargetDeps + ["sdk-sysroot"])
+        allTarget = PseudoTarget(self, "all", dependencies=["qemu", "sdk", "disk-image", "run"])
 
         self._allTargets = [
             Target("binutils", BuildBinutils),
@@ -102,15 +105,15 @@ class AllTargets(object):
             Target("llvm", BuildLLVM),
             Target("awk", BuildAwk),
             Target("elftoolchain", BuildElfToolchain),
-            Target("cheritrace", BuildCheriTrace, dependencies=["llvm"]),
-            Target("cherivis", BuildCheriVis, dependencies=["cheritrace"]),
+            Target("cheritrace", BuildCheriTrace, dependencies={"llvm"}),
+            Target("cherivis", BuildCheriVis, dependencies={"cheritrace"}),
             Target("gnustep", BuildGnuStep),
-            Target("cheribsd", BuildCHERIBSD, dependencies=["llvm"]),
-            Target("disk-image", BuildDiskImage, dependencies=["cheribsd", "qemu"]),
-            sdkTarget,  # SDK only needs to build CHERIBSD if we are on FreeBSD, otherwise the files will be copied
+            Target("cheribsd", BuildCHERIBSD, dependencies={"llvm"}),
+            Target("disk-image", BuildDiskImage, dependencies={"cheribsd", "qemu"}),
+            sdkSysrootTarget,
             cheriosTarget,
-            Target("run", LaunchQEMU, dependencies=["qemu", "disk-image"]),
-            allTarget
+            Target("run", LaunchQEMU, dependencies={"qemu", "disk-image"}),
+            allTarget, sdkTarget
         ]
         self.targetMap = dict((t.name, t) for t in self._allTargets)
         # for t in self._allTargets:
