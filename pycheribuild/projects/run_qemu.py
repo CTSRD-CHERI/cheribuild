@@ -37,9 +37,8 @@ class LaunchQEMU(Project):
 
     def isForwardingPortAvailable(self):
         try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.bind(("127.0.0.1", self.config.sshForwardingPort))
-            s.close()
-            return True
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(("127.0.0.1", self.config.sshForwardingPort))
+                return True
         except OSError:
             return False
