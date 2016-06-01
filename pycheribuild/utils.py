@@ -10,7 +10,7 @@ from pathlib import Path
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "CheriConfig", "IS_LINUX", "IS_FREEBSD", "printCommand", "includeLocalFile",  # no-combine
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
-           "parseOSRelease", ]  # no-combine
+           "parseOSRelease", "warningMessage"]  # no-combine
 
 if sys.version_info < (3, 4):
     sys.exit("This script requires at least Python 3.4")
@@ -125,6 +125,11 @@ def fatalError(*args, sep=" ", fixitHint=None):
         if fixitHint:
             print(coloured(AnsiColour.blue, "Possible solution:", fixitHint))
         sys.exit(3)
+
+
+def warningMessage(*args, sep=" "):
+    # we ignore fatal errors when simulating a run
+    print(coloured(AnsiColour.magenta, ("Warning:",) + args, sep=sep))
 
 
 def includeLocalFile(path: str) -> str:

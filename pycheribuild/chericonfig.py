@@ -35,6 +35,7 @@ def defaultClang37Tool(basename: str):
         guess = shutil.which(basename)
     return guess
 
+
 class CheriConfig(object):
     # boolean flags
     pretend = ConfigLoader.addBoolOption("pretend", "p", help="Only print the commands instead of running them")
@@ -51,8 +52,13 @@ class CheriConfig(object):
     dumpConfig = ConfigLoader.addBoolOption("dump-configuration", help="Print the current configuration as JSON."
                                             " This can be saved to ~/.config/cheribuild.json to make it persistent")
     skipDependencies = ConfigLoader.addBoolOption("skip-dependencies", "t",
-                                                  help="Only build the targets that were explicitly passed on the "
-                                                       "command line")
+                                                  help="This option no longer does anything and is only included to"
+                                                       "allow running existing command lines")
+    includeDependencies = ConfigLoader.addBoolOption("include-dependencies", "d", help="Also build the dependencies "
+                                                     "of targets passed on the command line. Targets passed on the"
+                                                     "command line will be reordered and processed in an order that "
+                                                     "ensures dependencies are built before the real target. (run "
+                                                     " with --list-targets for more information)")
     noLogfile = ConfigLoader.addBoolOption("no-logfile", help="Don't write a logfile for the build steps")
 
     _buildCheri128 = ConfigLoader.addBoolOption("cheri-128", "-128", group=ConfigLoader.cheriBitsGroup,
