@@ -1,6 +1,5 @@
 import re
 import shlex
-import shutil
 from pathlib import Path
 
 from ..project import CMakeProject
@@ -10,6 +9,12 @@ from ..utils import *
 class BuildLLVM(CMakeProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
+        self.cCompiler = config.clangPath
+        self.cppCompiler = config.clangPlusPlusPath
+        # this must be added after checkSystemDependencies
+        self.configureArgs.append("-DCMAKE_CXX_COMPILER=" + str(self.cppCompiler))
+        self.configureArgs.append("-DCMAKE_C_COMPILER=" + str(self.cCompiler))
+        # TODO: add another search for newer clang compilers? Probably not required as we can override it on cmdline
         self.configureArgs.extend([
             "-DLLVM_TOOL_LLDB_BUILD=OFF",  # disable LLDB for now
             # saves a bit of time and but might be slightly broken in current clang:
@@ -37,10 +42,6 @@ class BuildLLVM(CMakeProject):
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
-        # TODO: also accept 3.8, 3.9, etc binaries
-        # try to find clang 3.7, otherwise fall back to system clang
-        self.cCompiler = shutil.which("clang37") or shutil.which("clang-3.7") or shutil.which("clang")
-        self.cppCompiler = shutil.which("clang++37") or shutil.which("clang++-3.7") or shutil.which("clang++")
         if not self.cCompiler or not self.cppCompiler:
             self.dependencyError("Could not find clang", installInstructions=self.clang37InstallHint())
         # make sure we have at least version 3.7
@@ -51,7 +52,7 @@ class BuildLLVM(CMakeProject):
         versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
         if versionComponents < (3, 7):
             versionStr = ".".join(map(str, versionComponents))
-            self.dependencyError(self.cCompiler, "version", versionStr, "is too old (need at least 3.7).",
+            self.dependencyError(self.cCompiler, "version", versionStr, "is too old. Version 3.7 or newer is required.",
                                  installInstructions=self.clang37InstallHint())
 
     def update(self):
@@ -77,9 +78,3 @@ class BuildLLVM(CMakeProject):
         # create a symlink for the target
         self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang")
         self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang++")
-
-    def process(self):
-        # this must be added after checkSystemDependencies
-        self.configureArgs.append("-DCMAKE_CXX_COMPILER=" + self.cppCompiler)
-        self.configureArgs.append("-DCMAKE_C_COMPILER=" + self.cCompiler)
-        super().process()

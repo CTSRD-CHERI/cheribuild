@@ -1,4 +1,5 @@
 import os
+import shutil
 from .configloader import ConfigLoader
 from pathlib import Path
 
@@ -22,6 +23,17 @@ def defaultDiskImagePath(conf: "CheriConfig"):
         return conf.outputRoot / "cheri128-disk.qcow2"
     return conf.outputRoot / "cheri256-disk.qcow2"
 
+
+def defaultClang37Tool(basename: str):
+    # TODO: also accept 3.8, 3.9, etc binaries
+    # TODO: search through path and list all clang++.* and clang.* binaries
+    # try to find clang 3.7, otherwise fall back to system clang
+    guess = shutil.which(basename + "37")
+    if not guess:
+        guess = shutil.which(basename + "-3.7")
+    if not guess:
+        guess = shutil.which(basename)
+    return guess
 
 class CheriConfig(object):
     # boolean flags
@@ -61,6 +73,12 @@ class CheriConfig(object):
     extraFiles = ConfigLoader.addPathOption("extra-files", default=lambda p: (p.sourceRoot / "extra-files"),
                                             help="A directory with additional files that will be added to the image "
                                                  "(default: '<OUTPUT_ROOT>/extra-files')")
+    clangPath = ConfigLoader.addPathOption("clang-path", default=defaultClang37Tool("clang"),
+                                           help="The Clang C compiler to use for compiling LLVM+Clang (must be at "
+                                                "least version 3.7)")
+    clangPlusPlusPath = ConfigLoader.addPathOption("clang++-path", default=defaultClang37Tool("clang++"),
+                                                   help="The Clang C++ compiler to use for compiling LLVM+Clang (must "
+                                                        "be at least version 3.7)")
     # TODO: only create a qcow2 image?
     diskImage = ConfigLoader.addPathOption("disk-image-path", default=defaultDiskImagePath, help="The output path for"
                                            " the QEMU disk image (default: '<OUTPUT_ROOT>/cheri256-disk.qcow2')")
