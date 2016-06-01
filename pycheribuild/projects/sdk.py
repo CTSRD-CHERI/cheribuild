@@ -99,8 +99,8 @@ class BuildSDK(Project):
                       "@METALOG"]
         printCommand(archiveCmd, cwd=self.config.cheribsdRootfs)
         if not self.config.pretend:
-            tar = subprocess.Popen(archiveCmd, stdout=subprocess.PIPE, cwd=str(self.config.cheribsdRootfs))
-            runCmd(["tar", "xf", "-"], stdin=tar.stdout, cwd=self.config.sdkSysrootDir)
+            with subprocess.Popen(archiveCmd, stdout=subprocess.PIPE, cwd=str(self.config.cheribsdRootfs)) as tar:
+                runCmd(["tar", "xf", "-"], stdin=tar.stdout, cwd=self.config.sdkSysrootDir)
         if not (self.config.sdkSysrootDir / "lib/libc.so.7").is_file():
             fatalError(self.config.sdkSysrootDir, "is missing the libc library, install seems to have failed!")
 
