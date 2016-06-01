@@ -21,7 +21,7 @@ from .projects.sdk import BuildSDK
 
 
 class Target(object):
-    def __init__(self, name, projectClass, *, dependencies: "typing.Iterable[str]"=set()):
+    def __init__(self, name, projectClass, *, dependencies: set=set()):
         self.name = name
         self.dependencies = set(dependencies)
         self.projectClass = projectClass
@@ -52,18 +52,18 @@ class Target(object):
 # A target that does nothing (used for e.g. the all target)
 # TODO: ideally we would do proper dependency resolution and not run targets multiple times
 class PseudoTarget(Target):
-    def __init__(self, allTargets: "AllTargets", name: str, *, dependencies: "typing.List[str]"=list()):
-        super().__init__(name, None, dependencies=dependencies)
+    def __init__(self, allTargets: "AllTargets", name: str, *, orderedDependencies: "typing.List[str]"=list()):
+        super().__init__(name, None, dependencies=set(orderedDependencies))
         self.allTargets = allTargets
         # TODO: somehow resolve dependencies properly but also include them without --include-dependencies
-        self.sortedDependencies = dependencies
-        if not dependencies:
+        self.orderedDependencies = orderedDependencies
+        if not orderedDependencies:
             fatalError("PseudoTarget with no dependencies should not exist:!!", "Target name =", name)
 
     def checkSystemDeps(self, config: CheriConfig):
         if self._completed:
             return
-        for dep in self.sortedDependencies:
+        for dep in self.orderedDependencies:
             target = self.allTargets.targetMap[dep]  # type: Target
             if target._completed:
                 continue
@@ -73,7 +73,7 @@ class PseudoTarget(Target):
         if self._completed:
             return
         starttime = time.time()
-        for dep in self.sortedDependencies:
+        for dep in self.orderedDependencies:
             target = self.allTargets.targetMap[dep]  # type: Target
             if target._completed:
                 # warningMessage("Already processed", target.name, "while processing pseudo target", self.name)
@@ -95,8 +95,8 @@ class AllTargets(object):
             # These need to be built on Linux but are not required on FreeBSD
         cheriosTarget = Target("cherios", BuildCheriOS, dependencies=cheriosTargetDeps)
         sdkSysrootTarget = Target("sdk-sysroot", BuildSDK, dependencies=set(sdkTargetDeps))
-        sdkTarget = PseudoTarget(self, "sdk", dependencies=sdkTargetDeps + ["sdk-sysroot"])
-        allTarget = PseudoTarget(self, "all", dependencies=["qemu", "sdk", "disk-image", "run"])
+        sdkTarget = PseudoTarget(self, "sdk", orderedDependencies=sdkTargetDeps + ["sdk-sysroot"])
+        allTarget = PseudoTarget(self, "all", orderedDependencies=["qemu", "sdk", "disk-image", "run"])
 
         self._allTargets = [
             Target("binutils", BuildBinutils),
