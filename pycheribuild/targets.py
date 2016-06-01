@@ -26,19 +26,27 @@ class Target(object):
         self.dependencies = set(dependencies)
         self.projectClass = projectClass
         self.project = None
+        self._completed = False
 
     def checkSystemDeps(self, config: CheriConfig):
+        if self._completed:
+            return
         self.project = self.projectClass(config)
         with setEnv(PATH=self.project.config.dollarPathWithOtherTools):
             # make sure all system dependencies exist first
             self.project.checkSystemDependencies()
 
     def execute(self):
+        if self._completed:
+            # TODO: make this an error once I have a clean solution for the pseudo targets
+            # warningMessage(target.name, "has already been executed!")
+            return
         # instantiate the project and run it
         starttime = time.time()
         with setEnv(PATH=self.project.config.dollarPathWithOtherTools):
             self.project.process()
         statusUpdate("Built target '" + self.name + "' in", time.time() - starttime, "seconds")
+        self._completed = True
 
 
 # A target that does nothing (used for e.g. the all target)
@@ -55,12 +63,17 @@ class PseudoTarget(Target):
     def checkSystemDeps(self, config: CheriConfig):
         for dep in self.sortedDependencies:
             target = self.allTargets.targetMap[dep]  # type: Target
+            if target._completed:
+                continue
             target.checkSystemDeps(config)
 
     def execute(self):
         starttime = time.time()
         for dep in self.sortedDependencies:
             target = self.allTargets.targetMap[dep]  # type: Target
+            if target._completed:
+                # warningMessage("Already processed", target.name, "while processing pseudo target", self.name)
+                continue
             target.execute()
         statusUpdate("Built target '" + self.name + "' in", time.time() - starttime, "seconds")
         self._completed = True
