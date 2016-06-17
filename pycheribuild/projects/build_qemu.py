@@ -9,7 +9,7 @@ class BuildQEMU(AutotoolsProject):
         self.gitBranch = "qemu-cheri"
         # QEMU will not work with BSD make, need GNU make
         self.makeCommand = "gmake" if IS_FREEBSD else "make"
-        extraCFlags = "-g -Wno-error=deprecated-declarations"
+        extraCFlags = "-g -Wno-error"
 
         if config.cheriBits == 128:
             # enable QEMU 128 bit capabilities
