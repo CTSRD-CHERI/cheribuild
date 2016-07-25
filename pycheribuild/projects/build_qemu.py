@@ -13,8 +13,8 @@ class BuildQEMU(AutotoolsProject):
 
         if config.cheriBits == 128:
             # enable QEMU 128 bit capabilities
-            # https://github.com/CTSRD-CHERI/qemu/commit/bb6b29fcd74dde4518146897c22286fd16ca7eb8
-            extraCFlags += " -DCHERI_MAGIC128=1"
+            # https://github.com/CTSRD-CHERI/qemu/commit/40a7fc2823e2356fa5ffe1ee1d672f1d5ec39a12
+            extraCFlags += " -DCHERI_128=1"
         self.configureArgs.extend([
             "--target-list=cheri-softmmu",
             "--disable-linux-user",
