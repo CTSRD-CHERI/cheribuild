@@ -7,8 +7,19 @@ class BuildQEMU(AutotoolsProject):
         super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True,
                          gitUrl="https://github.com/CTSRD-CHERI/qemu.git", gitRevision=config.qemuRevision)
         self.gitBranch = "qemu-cheri"
+
+        self._addRequiredSystemTool("pkg-config")
         # QEMU will not work with BSD make, need GNU make
-        self.makeCommand = "gmake" if IS_FREEBSD else "make"
+        if IS_FREEBSD:
+            self._addRequiredSystemTool("gmake")
+            self.makeCommand = "gmake"
+        else:
+            self.makeCommand = "make"
+
+        # TODO: suggest on Ubuntu install libglib2.0-dev libpixman-1-dev libsdl2-dev libgtk2.0-dev
+
+        # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
+        # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
         extraCFlags = "-g -Wno-error"
 
         if config.cheriBits == 128:
