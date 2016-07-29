@@ -61,7 +61,7 @@ class BuildLLVM(CMakeProject):
         self._updateGitRepo(self.sourceDir / "tools/clang", "https://github.com/CTSRD-CHERI/clang.git",
                             revision=self.config.clangRevision)
         self._updateGitRepo(self.sourceDir / "tools/lldb", "https://github.com/CTSRD-CHERI/lldb.git",
-                            revision=self.config.lldbRevision)
+                            revision=self.config.lldbRevision, initialBranch="master")
 
     def install(self):
         super().install()
