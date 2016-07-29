@@ -13,6 +13,7 @@ class BuildAwk(Project):
 
     def install(self):
         self.runMake(self.commonMakeArgs, "names", cwd=self.sourceDir / "latest")
+        self._makedirs(self.installDir / "bin")
         self.copyFile(self.sourceDir / "latest/a.out", self.installDir / "bin/nawk")
         runCmd("ln", "-sfn", "nawk", "awk", cwd=self.installDir / "bin")
 
