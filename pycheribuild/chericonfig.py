@@ -97,6 +97,7 @@ class CheriConfig(object):
                                                     "You can then use `ssh root@localhost -p $PORT` connect to the VM",
                                                metavar="PORT")  # type: int
     extraMakeOptions = " ".join([
+        "-DWITHOUT_TESTS",  # seems to break the creation of disk-image (METALOG is invalid)
         "-DWITHOUT_HTML",  # should not be needed
         "-DWITHOUT_SENDMAIL", "-DWITHOUT_MAIL",  # no need for sendmail
         "-DWITHOUT_SVNLITE",  # no need for SVN
