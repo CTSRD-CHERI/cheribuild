@@ -123,9 +123,9 @@ cron_enable="NO"
                     for pubkey in sshKeys:
                         contents += self.readFile(pubkey)
                     self.createFileForImage(outDir, "/root/.ssh/authorized_keys", contents=contents)
-                    print("Should this authorized_keys file be used by default? ",
-                          "You can always change them by editing/deleting '", authorizedKeys, "'.", end="", sep="")
-                    if self.queryYesNo(""):
+                    if self.queryYesNo("Should this authorized_keys file be used by default? (You can always change them by editing/deleting '" +
+                                       str(authorizedKeys) + "')?", defaultResult=False):
+                        self._makedirs(authorizedKeys.parent)
                         self.copyFile(outDir / "root/.ssh/authorized_keys", authorizedKeys)
 
     def makeImage(self):
