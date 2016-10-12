@@ -36,6 +36,11 @@ class ConfigLoader(object):
         cls._parser.add_argument("--config-file", metavar="FILE", type=str, default=str(defaultConfigPath),
                                  help="The config file that is used to load the default settings (default: '" +
                                       str(defaultConfigPath) + "')")
+        try:
+            import argcomplete
+            argcomplete.autocomplete(cls._parser)
+        except ImportError:
+            pass
         cls._parsedArgs = cls._parser.parse_args()
         try:
             cls._configPath = Path(os.path.expanduser(cls._parsedArgs.config_file)).absolute()

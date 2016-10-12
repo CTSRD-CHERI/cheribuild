@@ -112,6 +112,7 @@ fromImports = sorted(set(fromImports))
 # print(fromImports, file=sys.stderr)
 
 fullFile = ("#!/usr/bin/env python3\n" +
+            "# PYTHON_ARGCOMPLETE_OK\n" +
             "".join(imports) +
             "".join(fromImports) +
             "\n# See https://ctsrd-trac.cl.cam.ac.uk/projects/cheri/wiki/QemuCheri\n" +
