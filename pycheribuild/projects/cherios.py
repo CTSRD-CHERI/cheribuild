@@ -19,7 +19,7 @@ class BuildCheriOS(CMakeProject):
         versionString = runCmd("cmake", "--version", captureOutput=True, printVerboseOnly=True).stdout
         match = versionPattern.search(versionString)
         versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
-        if versionComponents < (3, 5):
+        if versionComponents < (3, 4):
             versionStr = ".".join(map(str, versionComponents))
             self.dependencyError("CMake version", versionStr, "is too old (need at least 3.4)",
                                  installInstructions=self.cmakeInstallInstructions)
