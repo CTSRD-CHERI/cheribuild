@@ -1,7 +1,8 @@
 # `cheribuild.py` - A script to build CHERI-related software (**Requires Python 3.4+**)
 
 This script automates all the steps required to build various [CHERI](http://www.chericpu.com)-related software.
-For example `cheribuild.py [options] run` will start an insanstance of [CHERIBSD](https://github.com/CTSRD-CHERI/cheribsd) on [QEMU](https://github.com/CTSRD-CHERI/qemu)
+For example `cheribuild.py [options] run` will start an insanstance of [CHERIBSD](https://github.com/CTSRD-CHERI/cheribsd) on [QEMU](https://github.com/CTSRD-CHERI/qemu) and
+`cheribuild.py [options] sdk` will create a SDK that can be used to compile software for the CHERI CPU.
 
 **NOTE**: As this involves building CHERIBSD you will need to run this script on a FreeBSD system.
 If you want to run this script on a remote FreeBSD host you can use the `remote-cheribuild.py` script that is included in this repository:
@@ -35,30 +36,32 @@ For example if you want cheribuild.py to behave as if you had passed
 
 ## Available Targets
 
-The following main targets are available:
+When selecting a target you can also build all the targets that it depends on by passing the `--include-dependencies` or `-d` option.
+However, some targets (e.g. `all`, `sdk`) will always build their dependencies because running them without building the dependencies does not make sense (see the list of targets for details).
+
+**TODO: Possibly restore the previous behaviour of dependencies included by default and opt out? It is probably be the more logical behaviour? I changed it because I often want to build only cheribsd without changing the compiler but forget to pass the `--skip-dependencies` flag**
+
+#### The following main targets are available
 
 - `binutils` builds and installs [CTSRD-CHERI/binutils](https://github.com/CTSRD-CHERI/binutils)
 - `qemu` builds and installs [CTSRD-CHERI/qemu](https://github.com/CTSRD-CHERI/qemu)
 - `llvm` builds and installs [CTSRD-CHERI/llvm](https://github.com/CTSRD-CHERI/llvm) and [CTSRD-CHERI/clang](https://github.com/CTSRD-CHERI/clang)
 - `cheribsd` builds and installs [CTSRD-CHERI/cheribsd](https://github.com/CTSRD-CHERI/cheribsd)
 - `disk-image` creates a CHERIBSD disk-image
-- `run` launch QEMU with the CHERIBSD disk image
-- `freestanding-sdk` builds everything required to build and run `-ffreestanding` binaries: compiler, binutils and qemu
+- `run` launches QEMU with the CHERIBSD disk image
 - `cheribsd-sysroot` creates a CheriBSD sysroot. When running this script on a non-FreeBSD system the files will need to be copied from a build server
+- `freestanding-sdk` builds everything required to build and run `-ffreestanding` binaries: compiler, binutils and qemu
 - `cheribsd-sdk` builds everything required to compile binaries for CheriBSD: `freestanding-sdk` and `cheribsd-sysroot`
 - `sdk` is an alias for `cheribsd-sdk` when building on FreeBSD, otherwise builds `freestanding-sdk`
-- `all`: runs all of the above targets
+- `all`: runs all the targets listed so far (`run` comes last so you can then interact with QEMU)
 
-#### Other targets:
+#### Other targets
 - `cmake` builds and installs latest [CMake](https://github.com/Kitware/CMake)
-- `elftoolchain` builds and installs `brandelf` from [elftoolchain](https://github.com/emaste/elftoolchain/)
+- `elftoolchain` builds and installs `brandelf` and `elfcopy` from [elftoolchain](https://github.com/emaste/elftoolchain/) (needed for SDK on non-FreeBSD systems)
 - `awk` builds and installs BSD AWK (if you need it on Linux)
 - `cherios` builds and installs [CTSRD-CHERI/cherios](https://github.com/CTSRD-CHERI/cherios)
 - `cheritrace` builds and installs [CTSRD-CHERI/cheritrace](https://github.com/CTSRD-CHERI/cheritrace)
 - `cherivis` builds and installs [CTSRD-CHERI/cherivis](https://github.com/CTSRD-CHERI/cherivis)
-
-cheribuild.py will also build all the other target that the given target depends on unless you pass the `-t` flag.
-
 
 ## Full list of options
 
