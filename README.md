@@ -8,6 +8,9 @@ If you want to run this script on a remote FreeBSD host you can use the `remote-
 
 `remote-cheribuild.py my.freebsd.server [options] <targets...>` will run this script on `my.freebsd.server`
 
+If you would like to see what the script will do run it with the `--pretend` or `-p` option.
+For even more detail you can also pass `--verbose` or `-v`.
+
 ## Adapting the build configuration
 There are a lot of options to customize the behaviour of this script: e.g. the directory for
 the cloned sources can be changed from the default of `$HOME/cheri` using the `--source-root=` option.
