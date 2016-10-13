@@ -7,6 +7,8 @@ from ..utils import *
 
 
 class BuildCHERIBSD(Project):
+    dependencies = ["llvm"]
+
     def __init__(self, config: CheriConfig, *, projectName="cheribsd", kernelConfig="CHERI_MALTA64"):
         super().__init__(config, projectName=projectName, sourceDir=config.sourceRoot / "cheribsd",
                          installDir=config.cheribsdRootfs, buildDir=config.cheribsdObj, appendCheriBitsToBuildDir=True,

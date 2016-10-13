@@ -6,11 +6,38 @@ import sys
 import threading
 import time
 from .utils import *
+from .targets import Target, targetManager
 from pathlib import Path
 from enum import Enum
 
 
-class Project(object):
+class ProjectSubclassDefinitionHook(type):
+    def __init__(cls, name: str, bases: set, clsdict: dict):
+        print("project hook:", name)
+        if not clsdict.get("doNotAddToTargets"):
+            print(coloured(AnsiColour.blue, "Project subclass was defined:", name, "bases=", bases))
+            if "target" in clsdict:
+                targetName = clsdict["target"]
+            elif name.startswith("Build"):
+                targetName = name[len("Build"):].replace("_", "-").lower()
+            else:
+                sys.exit("Project target name cannot be inferred for " + name + ", set target= or doNotAddToTarget=True")
+            if "dependencies" in clsdict:
+                dependencies = set(clsdict["dependencies"])
+            else:
+                dependencies = set()
+            targetManager.addTarget(Target(targetName, cls, dependencies=dependencies))
+            print("Adding target", targetName, "with deps:", dependencies)
+        super().__init__(name, bases, clsdict)
+
+
+class Project(object, metaclass=ProjectSubclassDefinitionHook):
+    # These two class variables can be defined in subclasses to customize dependency ordering of targets
+    target = ""  # type: str
+    dependencies = []  # type: List[str]
+    # Project subclasses will automatically have a target based on their name generated unless they add this:
+    doNotAddToTargets = True  # type: bool
+
     # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
     clearLineSequence = b"\x1b[2K\r"
 
@@ -344,6 +371,7 @@ class Project(object):
 
 
 class CMakeProject(Project):
+    doNotAddToTargets = True
     """
     Like Project but automatically sets up the defaults for CMake projects
     Sets configure command to CMake, adds -DCMAKE_INSTALL_PREFIX=installdir
@@ -378,6 +406,7 @@ class CMakeProject(Project):
 
 
 class AutotoolsProject(Project):
+    doNotAddToTargets = True
     """
     Like Project but automatically sets up the defaults for autotools like projects
     Sets configure command to ./configure, adds --prefix=installdir

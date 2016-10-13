@@ -5,10 +5,9 @@ import subprocess
 import sys
 
 from .utils import *
-from .targets import AllTargets
+from .targets import targetManager
 from .configloader import ConfigLoader
-from pathlib import Path
-
+from .projects import *  # make sure all projects are loaded so that targetManager gets populated
 
 # custom encoder to handle pathlib.Path objects
 class MyJsonEncoder(json.JSONEncoder):
@@ -32,13 +31,12 @@ if __name__ == "__main__":
                 printCommand("mkdir", "-p", str(d))
             os.makedirs(str(d), exist_ok=True)
     try:
-        targets = AllTargets()
         if cheriConfig.listTargets:
-            print("Available targets are:", ", ".join(targets.targetMap.keys()))
+            print("Available targets are:\n ", "\n  ".join(sorted(targetManager.targetNames)))
         elif cheriConfig.dumpConfig:
             print(json.dumps(ConfigLoader.values, sort_keys=True, cls=MyJsonEncoder, indent=4))
         else:
-            targets.run(cheriConfig)
+            targetManager.run(cheriConfig)
     except KeyboardInterrupt:
         sys.exit("Exiting due to Ctrl+C")
     except subprocess.CalledProcessError as err:

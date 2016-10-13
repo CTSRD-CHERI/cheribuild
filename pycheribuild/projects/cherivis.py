@@ -23,6 +23,8 @@ def gnuStepInstallInstructions():
 
 
 class BuildCheriVis(Project):
+    dependencies = ["cheritrace"]
+
     # TODO: allow external cheritrace
     def __init__(self, config: CheriConfig):
         super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True,

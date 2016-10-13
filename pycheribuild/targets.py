@@ -2,22 +2,7 @@ import functools
 import time
 import sys
 
-from .project import Project
 from .utils import *
-from .projects.awk import BuildAwk
-from .projects.elftoolchain import BuildElfToolchain
-from .projects.binutils import BuildBinutils
-from .projects.cmake import BuildCMake
-from .projects.cherios import BuildCheriOS
-from .projects.gnustep import BuildGnuStep
-from .projects.cheritrace import BuildCheriTrace
-from .projects.cherivis import BuildCheriVis
-from .projects.build_qemu import BuildQEMU
-from .projects.cheribsd import BuildCHERIBSD
-from .projects.disk_image import BuildDiskImage
-from .projects.llvm import BuildLLVM
-from .projects.run_qemu import LaunchQEMU
-from .projects.sdk import BuildSDK
 
 
 class Target(object):
@@ -83,41 +68,32 @@ class PseudoTarget(Target):
         self._completed = True
 
 
-class AllTargets(object):
+class TargetManager(object):
     def __init__(self):
         if IS_FREEBSD:
             sdkTargetDeps = ["llvm", "cheribsd"]
-            cheriosTargetDeps = {"sdk"}
         else:
-            # CHERIBSD files need to be copied from another host, so we don't build cheribsd
             sdkTargetDeps = ["awk", "elftoolchain", "binutils", "llvm"]
-            cheriosTargetDeps = {"elftoolchain", "binutils", "llvm"}
             # These need to be built on Linux but are not required on FreeBSD
-        cheriosTarget = Target("cherios", BuildCheriOS, dependencies=cheriosTargetDeps)
-        sdkSysrootTarget = Target("sdk-sysroot", BuildSDK, dependencies=set(sdkTargetDeps))
         sdkTarget = PseudoTarget(self, "sdk", orderedDependencies=sdkTargetDeps + ["sdk-sysroot"])
         allTarget = PseudoTarget(self, "all", orderedDependencies=["qemu", "sdk", "disk-image", "run"])
 
-        self._allTargets = [
-            Target("binutils", BuildBinutils),
-            Target("qemu", BuildQEMU),
-            Target("cmake", BuildCMake),
-            Target("llvm", BuildLLVM),
-            Target("awk", BuildAwk),
-            Target("elftoolchain", BuildElfToolchain),
-            Target("cheritrace", BuildCheriTrace, dependencies={"llvm"}),
-            Target("cherivis", BuildCheriVis, dependencies={"cheritrace"}),
-            Target("gnustep", BuildGnuStep),
-            Target("cheribsd", BuildCHERIBSD, dependencies={"llvm"}),
-            Target("disk-image", BuildDiskImage, dependencies={"cheribsd", "qemu"}),
-            sdkSysrootTarget,
-            cheriosTarget,
-            Target("run", LaunchQEMU, dependencies={"qemu", "disk-image"}),
-            allTarget, sdkTarget
-        ]
-        self.targetMap = dict((t.name, t) for t in self._allTargets)
-        # for t in self._allTargets:
+        self._allTargets = {}
+        self.addTarget(sdkTarget)
+        self.addTarget(allTarget)
+        # for t in self.allTargets:
         #     print("target:", t.name, ", deps", self.recursiveDependencyNames(t))
+
+    def addTarget(self, target: Target):
+        self._allTargets[target.name] = target
+
+    @property
+    def targetNames(self):
+        return self._allTargets.keys()
+
+    @property
+    def targetMap(self):
+        return self._allTargets.copy()
 
     def recursiveDependencyNames(self, target: Target, *, existing: set=None):
         if not existing:
@@ -165,7 +141,7 @@ class AllTargets(object):
             chosenTargets = []
             orderedTargets = self.topologicalSort(explicitlyChosenTargets)  # type: typing.Iterable[typing.List[Target]]
             for dependencyLevel, targetNames in enumerate(orderedTargets):
-                # print("Level", dependencyLevel, "targets:", targetNames)
+                print("Level", dependencyLevel, "targets:", targetNames)
                 chosenTargets.extend(self.targetMap[t] for t in targetNames)
         # now that the chosen targets have been resolved run them
         for target in chosenTargets:
@@ -174,3 +150,4 @@ class AllTargets(object):
         for target in chosenTargets:
             target.execute()
 
+targetManager = TargetManager()

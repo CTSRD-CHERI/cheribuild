@@ -9,6 +9,9 @@ from pathlib import Path
 
 
 class BuildSDK(Project):
+    target = "sdk-sysroot"
+    dependencies = ["llvm", "cheribsd"] if IS_FREEBSD else ["awk", "elftoolchain", "binutils", "llvm"]
+
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # if we pass a string starting with a slash to Path() it will reset to that absolute path

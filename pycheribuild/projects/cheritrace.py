@@ -3,6 +3,8 @@ from ..utils import *
 
 
 class BuildCheriTrace(CMakeProject):
+    dependencies = ["llvm"]
+
     def __init__(self, config: CheriConfig):
         super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True,
                          gitUrl="https://github.com/CTSRD-CHERI/cheritrace.git")

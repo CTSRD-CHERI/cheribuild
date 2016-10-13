@@ -13,6 +13,9 @@ from pathlib import Path
 # Same thing is possible with qemu-nbd, but needs root (might be faster)
 
 class BuildDiskImage(Project):
+    target = "disk-image"
+    dependencies = ["qemu", "cheribsd"]
+
     def __init__(self, config):
         super().__init__(config, projectName="disk-image")
         # make use of the mtree file created by make installworld
