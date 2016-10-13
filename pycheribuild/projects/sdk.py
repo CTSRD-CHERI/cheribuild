@@ -51,7 +51,7 @@ class BuildFreestandingSdk(Project):
         self.buildCheridis()
         # TODO: symlink the llvm tools in this in llvm.py
         llvmBinaries = "clang clang++ llvm-mc llvm-objdump llvm-readobj llvm-size llc".split()
-        binutilsBinaries = "as objdump strings addr2line nm strip ld objcopy size brandelf elfcopy".split()
+        binutilsBinaries = "as objdump strings addr2line nm strip ld objcopy size brandelf".split()
         toolsToSymlink = llvmBinaries + binutilsBinaries
         if IS_FREEBSD:
             # When building on FreeBSD we also copy the MIPS GCC and related tools
