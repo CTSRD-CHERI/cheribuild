@@ -12,6 +12,23 @@ If you want to run this script on a remote FreeBSD host you can use the `remote-
 
 `remote-cheribuild.py my.freebsd.server [args...]` will build and run this script on `my.freebsd.server`
 
+## Usage
+
+`cheribuild.py [options] targets...`
+
+###Bash completion
+
+Bash completion requires python3-argcomplete. If you have bash >= 4.2 you can run `sudo activate-global-python-argcomplete3` to enable bash completion.
+If you don't have root access, it might also be work with `activate-global-python-argcomplete3 --dest=~/.bash_completion.d`.
+
+If that doesn't work you can enable python bash completion manually by adding the following to your `~/.bashrc`:
+```
+eval "$(register-python-argcomplete3 ./cheribuild.py)"
+eval "$(register-python-argcomplete3 cheribuild.py)"
+```
+
+## Targets
+
 The following main targets are available:
 
 - `binutils` build and install [CTSRD-CHERI/binutils](https://github.com/CTSRD-CHERI/binutils)
