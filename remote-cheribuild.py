@@ -12,7 +12,7 @@ cheribuildArgs = sys.argv[2:]
 with tempfile.NamedTemporaryFile(prefix="cheribuild-", suffix=".py") as tmp:
     combineScript = scriptDir / "combine-files.py"
     assert combineScript.is_file()
-    subprocess.check_call(["python3", str(combineScript)], stdout=tmp)
+    subprocess.check_call([sys.executable, str(combineScript)], stdout=tmp)
     print("About to run cheribuild on host '" + host + "' with the following arguments:", cheribuildArgs)
     print("Note: file that will be run is located at", tmp.name)
     input("Press enter to continue...")
