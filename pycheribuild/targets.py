@@ -101,8 +101,8 @@ class TargetManager(object):
         explicitlyChosenTargets = []  # type: typing.List[Target]
         for targetName in config.targets:
             if targetName not in self._allTargets:
-                fatalError("Target", targetName, "does not exist. Valid choices are", ",".join(self.targetNames))
-                sys.exit(1)
+                sys.exit(coloured(AnsiColour.red, "Target", targetName, "does not exist. Valid choices are",
+                                  ",".join(self.targetNames)))
             explicitlyChosenTargets.append(self.targetMap[targetName])
         if config.skipDependencies:  # FIXME: remove this soon
             warningMessage("--skip-dependencies/-t flag is now the default behaviour and will be removed soon.")
