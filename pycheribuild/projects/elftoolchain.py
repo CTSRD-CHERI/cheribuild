@@ -20,9 +20,9 @@ class BuildElfToolchain(Project):
         self.commonMakeArgs.append("LDSTATIC=-static")
 
     def compile(self):
-        targets = ["common", "libelf", "libelftc"]
+        targets = ["common", "libelf", "libelftc", "libpe"]
         # tools that we want to build:
-        targets += ["brandelf"]
+        targets += ["brandelf", "elfcopy"]
         for tgt in targets:
             self.runMake(self.commonMakeArgs + [self.config.makeJFlag],
                          "all", cwd=self.sourceDir / tgt, logfileName="build." + tgt)
@@ -32,3 +32,4 @@ class BuildElfToolchain(Project):
         #              "install", cwd=self.sourceDir)
         # make install requires root, just build binaries statically and copy them
         self.copyFile(self.sourceDir / "brandelf/brandelf", self.installDir / "bin/brandelf", force=True)
+        self.copyFile(self.sourceDir / "elfcopy/elfcopy", self.installDir / "bin/elfcopy", force=True)
