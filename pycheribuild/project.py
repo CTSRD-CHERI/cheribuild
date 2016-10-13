@@ -35,6 +35,15 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
     # These two class variables can be defined in subclasses to customize dependency ordering of targets
     target = ""  # type: str
     dependencies = []  # type: List[str]
+
+    @classmethod
+    def allDependencyNames(cls):
+        result = set()
+        for dep in cls.dependencies:
+            result.add(dep)
+            result = result.union(targetManager.targetMap[dep].projectClass.allDependencyNames())
+        return result
+
     # Project subclasses will automatically have a target based on their name generated unless they add this:
     doNotAddToTargets = True  # type: bool
 

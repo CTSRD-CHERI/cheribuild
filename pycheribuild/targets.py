@@ -33,6 +33,9 @@ class Target(object):
         statusUpdate("Built target '" + self.name + "' in", time.time() - starttime, "seconds")
         self._completed = True
 
+    def __lt__(self, other: "Target"):
+        # if this target is one of the dependencies order it before
+        return self.name in other.projectClass.allDependencyNames()
 
 # A target that does nothing (used for e.g. the all target)
 # TODO: ideally we would do proper dependency resolution and not run targets multiple times
@@ -95,20 +98,12 @@ class TargetManager(object):
     def targetMap(self):
         return self._allTargets.copy()
 
-    def recursiveDependencyNames(self, target: Target, *, existing: set=None):
-        if not existing:
-            existing = set()
-        for dep in target.dependencies:
-            existing.add(dep)
-            self.recursiveDependencyNames(self.targetMap[dep], existing=existing)
-        return existing
-
     def topologicalSort(self, targets: "typing.List[Target]") -> "typing.Iterable[typing.List[Target]]":
         # based on http://rosettacode.org/wiki/Topological_sort#Python
         data = dict((t.name, set(t.dependencies)) for t in targets)
 
         # add all the targets that aren't included yet
-        allDependencyNames = [self.recursiveDependencyNames(t) for t in targets]
+        allDependencyNames = [t.projectClass.allDependencyNames() for t in targets]
         possiblyMissingDependencies = functools.reduce(set.union, allDependencyNames, set())
         for dep in possiblyMissingDependencies:
             if dep not in data:
@@ -125,6 +120,8 @@ class TargetManager(object):
         assert not data, "A cyclic dependency exists amongst %r" % data
 
     def run(self, config: CheriConfig):
+        assert self._allTargets["llvm"] < self._allTargets["cheribsd"]
+        assert self._allTargets["llvm"] < self._allTargets["all"]
         explicitlyChosenTargets = []  # type: typing.List[Target]
         for targetName in config.targets:
             if targetName not in self.targetMap:
@@ -135,7 +132,8 @@ class TargetManager(object):
             warningMessage("--skip-dependencies/-t flag is now the default behaviour and will be removed soon.")
         if not config.includeDependencies:
             # The wants only the explicitly passed targets to be executed, don't do any ordering
-            chosenTargets = explicitlyChosenTargets  # TODO: ensure right order?
+            # we still reorder them to ensure that they are run in the right order
+            chosenTargets = sorted(explicitlyChosenTargets)
         else:
             # Otherwise run all targets in dependency order
             chosenTargets = []
