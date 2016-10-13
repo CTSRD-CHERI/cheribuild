@@ -38,7 +38,7 @@ def main():
         elif cheriConfig.dumpConfig:
             print(json.dumps(ConfigLoader.values, sort_keys=True, cls=MyJsonEncoder, indent=4))
         else:
-            targetManager.run(cheriConfig, cheriConfig.targets)
+            targetManager.run(cheriConfig)
     except KeyboardInterrupt:
         sys.exit("Exiting due to Ctrl+C")
     except subprocess.CalledProcessError as err:

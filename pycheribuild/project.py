@@ -13,28 +13,28 @@ from enum import Enum
 
 class ProjectSubclassDefinitionHook(type):
     def __init__(cls, name: str, bases: set, clsdict: dict):
-        print("project hook:", name)
-        if not clsdict.get("doNotAddToTargets"):
-            print(coloured(AnsiColour.blue, "Project subclass was defined:", name, "bases=", bases))
-            if "target" in clsdict:
-                targetName = clsdict["target"]
-            elif name.startswith("Build"):
-                targetName = name[len("Build"):].replace("_", "-").lower()
-            else:
-                sys.exit("Project target name cannot be inferred for " + name + ", set target= or doNotAddToTarget=True")
-            if "dependencies" in clsdict:
-                dependencies = set(clsdict["dependencies"])
-            else:
-                dependencies = set()
-            targetManager.addTarget(Target(targetName, cls, dependencies=dependencies))
-            print("Adding target", targetName, "with deps:", dependencies)
         super().__init__(name, bases, clsdict)
+        if clsdict.get("doNotAddToTargets"):
+            return  # if doNotAddToTargets is defined within the class we skip it
+
+        if "target" in clsdict:
+            targetName = clsdict["target"]
+        elif name.startswith("Build"):
+            targetName = name[len("Build"):].replace("_", "-").lower()
+        else:
+            sys.exit("Project target name cannot be inferred for " + name + ", set target= or doNotAddToTarget=True")
+        if cls.__dict__.get("dependenciesMustBeBuilt"):
+            if not cls.dependencies:
+                sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + targetName)
+        targetManager.addTarget(Target(targetName, cls, dependencies=set(cls.dependencies)))
+        # print("Adding target", targetName, "with deps:", cls.dependencies)
 
 
 class Project(object, metaclass=ProjectSubclassDefinitionHook):
     # These two class variables can be defined in subclasses to customize dependency ordering of targets
     target = ""  # type: str
     dependencies = []  # type: typing.List[str]
+    dependenciesMustBeBuilt = False
 
     @classmethod
     def allDependencyNames(cls):

@@ -24,7 +24,7 @@ class Target(object):
     def execute(self):
         if self._completed:
             # TODO: make this an error once I have a clean solution for the pseudo targets
-            # warningMessage(target.name, "has already been executed!")
+            warningMessage(self.name, "has already been executed!")
             return
         # instantiate the project and run it
         starttime = time.time()
@@ -45,55 +45,10 @@ class Target(object):
             return False
         return self.name < other.name  # not a dep and number of deps is the same -> compare name
 
-# A target that does nothing (used for e.g. the all target)
-# TODO: ideally we would do proper dependency resolution and not run targets multiple times
-class PseudoTarget(Target):
-    def __init__(self, allTargets: "AllTargets", name: str, *, orderedDependencies: "typing.List[str]"=list()):
-        super().__init__(name, None, dependencies=set(orderedDependencies))
-        self.allTargets = allTargets
-        # TODO: somehow resolve dependencies properly but also include them without --include-dependencies
-        self.orderedDependencies = orderedDependencies
-        if not orderedDependencies:
-            fatalError("PseudoTarget with no dependencies should not exist:!!", "Target name =", name)
-
-    def checkSystemDeps(self, config: CheriConfig):
-        if self._completed:
-            return
-        for dep in self.orderedDependencies:
-            target = self.allTargets.targetMap[dep]  # type: Target
-            if target._completed:
-                continue
-            target.checkSystemDeps(config)
-
-    def execute(self):
-        if self._completed:
-            return
-        starttime = time.time()
-        for dep in self.orderedDependencies:
-            target = self.allTargets.targetMap[dep]  # type: Target
-            if target._completed:
-                # warningMessage("Already processed", target.name, "while processing pseudo target", self.name)
-                continue
-            target.execute()
-        statusUpdate("Built target '" + self.name + "' in", time.time() - starttime, "seconds")
-        self._completed = True
-
 
 class TargetManager(object):
     def __init__(self):
-        if IS_FREEBSD:
-            sdkTargetDeps = ["llvm", "cheribsd"]
-        else:
-            sdkTargetDeps = ["awk", "elftoolchain", "binutils", "llvm"]
-            # These need to be built on Linux but are not required on FreeBSD
-        sdkTarget = PseudoTarget(self, "sdk", orderedDependencies=sdkTargetDeps + ["sdk-sysroot"])
-        allTarget = PseudoTarget(self, "all", orderedDependencies=["qemu", "sdk", "disk-image", "run"])
-
         self._allTargets = {}
-        self.addTarget(sdkTarget)
-        self.addTarget(allTarget)
-        # for t in self.allTargets:
-        #     print("target:", t.name, ", deps", self.recursiveDependencyNames(t))
 
     def addTarget(self, target: Target):
         self._allTargets[target.name] = target
@@ -128,20 +83,31 @@ class TargetManager(object):
         assert not data, "A cyclic dependency exists amongst %r" % data
 
     def run(self, config: CheriConfig):
-        assert self._allTargets["llvm"] < self._allTargets["cheribsd"]
-        assert self._allTargets["llvm"] < self._allTargets["all"]
+        # targetsSorted = sorted(self._allTargets.values())
+        # print(" ".join(t.name for t in targetsSorted))
+        # assert self._allTargets["llvm"] < self._allTargets["cheribsd"]
+        # assert self._allTargets["llvm"] < self._allTargets["all"]
+        # assert self._allTargets["disk-image"] > self._allTargets["qemu"]
+        # assert self._allTargets["sdk"] > self._allTargets["sdk-sysroot"]
+
         explicitlyChosenTargets = []  # type: typing.List[Target]
         for targetName in config.targets:
-            if targetName not in self.targetMap:
-                fatalError("Target", targetName, "does not exist. Valid choices are", ",".join(self.targetMap.keys()))
+            if targetName not in self._allTargets:
+                fatalError("Target", targetName, "does not exist. Valid choices are", ",".join(self.targetNames))
                 sys.exit(1)
             explicitlyChosenTargets.append(self.targetMap[targetName])
         if config.skipDependencies:  # FIXME: remove this soon
             warningMessage("--skip-dependencies/-t flag is now the default behaviour and will be removed soon.")
+
+        chosenTargets = []
         if not config.includeDependencies:
             # The wants only the explicitly passed targets to be executed, don't do any ordering
             # we still reorder them to ensure that they are run in the right order
-            chosenTargets = sorted(explicitlyChosenTargets)
+            for t in explicitlyChosenTargets:
+                if t.projectClass.dependenciesMustBeBuilt:
+                    chosenTargets.extend(self.targetMap[dep] for dep in t.projectClass.allDependencyNames())
+                chosenTargets.append(t)
+            chosenTargets = sorted(chosenTargets)
         else:
             # Otherwise run all targets in dependency order
             chosenTargets = []
@@ -149,6 +115,9 @@ class TargetManager(object):
             for dependencyLevel, targetNames in enumerate(orderedTargets):
                 # print("Level", dependencyLevel, "targets:", targetNames)
                 chosenTargets.extend(self.targetMap[t] for t in targetNames)
+
+        if config.verbose:
+            print("Will execute the following targets:", " ".join(t.name for t in chosenTargets))
         # now that the chosen targets have been resolved run them
         for target in chosenTargets:
             target.checkSystemDeps(config)
