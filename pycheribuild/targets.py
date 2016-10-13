@@ -34,6 +34,8 @@ class Target(object):
         self._completed = True
 
     def __lt__(self, other: "Target"):
+        if other.name == "run":
+            return True  # run must be executed last
         # if this target is one of the dependencies order it before
         otherDeps = other.projectClass.allDependencyNames()
         if self.name in otherDeps:
