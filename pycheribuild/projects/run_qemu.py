@@ -11,10 +11,19 @@ class LaunchQEMU(Project):
 
     def __init__(self, config):
         super().__init__(config, projectName="run-qemu")
+        self.qemuBinary = self.config.sdkDir / "bin/qemu-system-cheri"
+        self.currentKernel = self.config.cheribsdRootfs / "boot/kernel/kernel"
 
     def process(self):
-        qemuBinary = self.config.sdkDir / "bin/qemu-system-cheri"
-        currentKernel = self.config.cheribsdRootfs / "boot/kernel/kernel"
+        if not self.qemuBinary.exists():
+            self.dependencyError("QEMU is missing:", self.qemuBinary,
+                                 installInstructions="Run `cheribuild.py qemu` or `cheribuild.py run -d`.")
+        if not self.currentKernel.exists():
+            self.dependencyError("CheriBSD kernel is missing:", self.currentKernel,
+                                 installInstructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
+        if not self.config.diskImage.exists():
+            self.dependencyError("CheriBSD disk image is missing:", self.config.diskImage,
+                                 installInstructions="Run `cheribuild.py disk-image` or `cheribuild.py run -d`.")
 
         if not self.isForwardingPortAvailable():
             print("Port usage information:")
@@ -24,12 +33,12 @@ class LaunchQEMU(Project):
                 runCmd("sh", "-c", "netstat -tulpne | grep \":" + str(str(self.config.sshForwardingPort)) + "\"")
             fatalError("SSH forwarding port", self.config.sshForwardingPort, "is already in use!")
 
-        print("About to run QEMU with image", self.config.diskImage, "and kernel", currentKernel,
+        print("About to run QEMU with image", self.config.diskImage, "and kernel", self.currentKernel,
               coloured(AnsiColour.green, "\nListening for SSH connections on localhost:" +
                        str(self.config.sshForwardingPort)))
         # input("Press enter to continue")
-        runCmd([qemuBinary, "-M", "malta",  # malta cpu
-                "-kernel", currentKernel,  # assume the current image matches the kernel currently build
+        runCmd([self.qemuBinary, "-M", "malta",  # malta cpu
+                "-kernel", self.currentKernel,  # assume the current image matches the kernel currently build
                 "-nographic",  # no GPU
                 "-m", "2048",  # 2GB memory
                 "-hda", self.config.diskImage,
