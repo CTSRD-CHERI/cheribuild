@@ -75,6 +75,7 @@ addFilteredFile(scriptDir / "colour.py")
 addFilteredFile(scriptDir / "utils.py")
 addFilteredFile(scriptDir / "configloader.py")
 addFilteredFile(scriptDir / "chericonfig.py")
+addFilteredFile(scriptDir / "targets.py")
 addFilteredFile(scriptDir / "project.py")
 
 # for now keep the original order
@@ -97,11 +98,11 @@ addFilteredFile(scriptDir / "projects/cherivis.py")
 for path in (scriptDir / "projects").iterdir():
     if path.name == "__pycache__":
         continue
+    if path.name == "__init__.py":
+        continue  # only needed when building as a module
     if path not in handledFiles:
         print("\x1b[1;31m", path, " not added!\x1b[0m", file=sys.stderr, sep="")
 
-# targets must come after all the projects have been defined
-addFilteredFile(scriptDir / "targets.py")
 # now add the main() function
 addFilteredFile(scriptDir / "__main__.py")
 
