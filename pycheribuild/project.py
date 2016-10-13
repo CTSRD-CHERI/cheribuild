@@ -299,20 +299,25 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
                 raise SystemExit("Command \"%s\" failed with exit code %d.\nSee %s for details." %
                                  (cmdStr, retcode, logfile.name))
 
-    @staticmethod
-    def createBuildtoolTargetSymlinks(tool: Path, toolName: str=None):
+    def createBuildtoolTargetSymlinks(self, tool: Path, toolName: str=None):
         """
         Create mips4-unknown-freebsd, cheri-unknown-freebsd and mips64-unknown-freebsd prefixed symlinks
         for build tools like clang, ld, etc.
         :param tool: the binary for which the symlinks will be created
         :param toolName: the unprefixed name of the tool (defaults to tool.name)
         """
+        # if the actual tool we are linking to make sure we link to the destinations so we don't create symlink loops
+        if tool.is_symlink():
+            tool = tool.resolve()
         if not tool.is_file():
             fatalError("Attempting to creat symlink to non-existent build tool:", tool)
         if not toolName:
             toolName = tool.name
         for target in ("mips4-unknown-freebsd-", "cheri-unknown-freebsd-", "mips64-unknown-freebsd-"):
-            if (target + toolName) == tool.name:
+            link = tool.parent / (target + toolName)  # type: Path
+            if link.exists() and not link.is_symlink():
+                if self.config.verbose:
+                    print(coloured(AnsiColour.yellow, "Not overwriting", link, "as it is a file not a symlink"))
                 continue  # happens for binutils, where prefixed tools are installed
             runCmd("ln", "-fsn", tool.name, target + toolName, cwd=tool.parent, printVerboseOnly=True)
 
@@ -424,3 +429,16 @@ class AutotoolsProject(Project):
         self.configureCommand = self.sourceDir / configureScript
         self.configureArgs.append("--prefix=" + str(self.installDir))
         self.makeCommand = "make"
+
+
+# A target that does nothing (used for e.g. the "all" target)
+class PseudoTarget(Project):
+    doNotAddToTargets = True
+    dependenciesMustBeBuilt = True
+
+    def process(self):
+        pass
+
+
+class BuildAll(PseudoTarget):
+    dependencies = ["qemu", "sdk", "disk-image", "run"]
