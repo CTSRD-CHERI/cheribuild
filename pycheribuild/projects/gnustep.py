@@ -45,6 +45,7 @@ class BuildGnuStep_Make(AutotoolsProject):
 # FIXME: do we need to source Makefiles/GNUstep.sh before building?
 class GnuStepModule(AutotoolsProject):
     doNotAddToTargets = True
+
     def __init__(self, config: CheriConfig, *args, moduleName: str, **kwargs):
         super().__init__(config, installDir=config.otherToolsDir,
                          gitUrl="https://github.com/gnustep/" + moduleName + " .git", *args, **kwargs)

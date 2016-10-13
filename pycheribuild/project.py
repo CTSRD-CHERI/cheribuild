@@ -34,7 +34,7 @@ class ProjectSubclassDefinitionHook(type):
 class Project(object, metaclass=ProjectSubclassDefinitionHook):
     # These two class variables can be defined in subclasses to customize dependency ordering of targets
     target = ""  # type: str
-    dependencies = []  # type: List[str]
+    dependencies = []  # type: typing.List[str]
 
     @classmethod
     def allDependencyNames(cls):
@@ -80,7 +80,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         self.commonMakeArgs = []
         self.configureArgs = []  # type: typing.List[str]
         self.configureEnvironment = {}  # type: typing.Dict[str,str]
-        self.__requiredSystemTools = {}  # type: typing.Dict[str, Any]
+        self.__requiredSystemTools = {}  # type: typing.Dict[str, typing.Any]
         self._preventAssign = True
 
     # Make sure that API is used properly
@@ -241,7 +241,6 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         """
         printCommand(args, cwd=cwd)
         # make sure that env is either None or a os.environ with the updated entries entries
-        newEnv = None
         if env:
             newEnv = os.environ.copy()
             newEnv.update(env)
