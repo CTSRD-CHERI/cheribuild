@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 # PYTHON_ARGCOMPLETE_OK
-import os
-import subprocess
-import sys
-from pathlib import Path
 
-env = os.environ.copy()
-scriptDir = Path(__file__).resolve().parent  # type: Path
-env["PYTHONPATH"] = str(scriptDir)
-
+# https://stackoverflow.com/questions/1112618/import-python-package-from-local-directory-into-interpreter
+# https://stackoverflow.com/questions/14500183/in-python-can-i-call-the-main-of-an-imported-module
 try:
-    # just run the module and return the corresponding exit code
-    sys.exit(subprocess.call(["python3", "-b", "-Wall", "-m", "pycheribuild"] + sys.argv[1:], env=env))
-except KeyboardInterrupt:
-    sys.exit("Exiting due to Ctrl+C")
+    from .pycheribuild import __main__   # "myapp" case
+except SystemError:
+    import pycheribuild.__main__  # "__main__" case
+
+pycheribuild.__main__.main()

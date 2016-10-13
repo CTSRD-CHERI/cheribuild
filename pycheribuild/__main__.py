@@ -9,6 +9,7 @@ from .targets import targetManager
 from .configloader import ConfigLoader
 from .projects import *  # make sure all projects are loaded so that targetManager gets populated
 
+
 # custom encoder to handle pathlib.Path objects
 class MyJsonEncoder(json.JSONEncoder):
     def __init__(self, *args, **kwargs):
@@ -19,7 +20,8 @@ class MyJsonEncoder(json.JSONEncoder):
             return str(o)
         return super().default(o)
 
-if __name__ == "__main__":
+
+def main():
     cheriConfig = CheriConfig()
     setCheriConfig(cheriConfig)
     # create the required directories
@@ -36,9 +38,13 @@ if __name__ == "__main__":
         elif cheriConfig.dumpConfig:
             print(json.dumps(ConfigLoader.values, sort_keys=True, cls=MyJsonEncoder, indent=4))
         else:
-            targetManager.run(cheriConfig)
+            targetManager.run(cheriConfig, cheriConfig.targets)
     except KeyboardInterrupt:
         sys.exit("Exiting due to Ctrl+C")
     except subprocess.CalledProcessError as err:
         fatalError("Command ", "`" + " ".join(map(shlex.quote, err.cmd)) + "` failed with non-zero exit code",
                    err.returncode)
+
+
+if __name__ == "__main__":
+    main()
