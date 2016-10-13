@@ -85,6 +85,12 @@ class TargetManager(object):
         assert not data, "A cyclic dependency exists amongst %r" % data
 
     def run(self, config: CheriConfig):
+        # check that all target dependencies are correct:
+        for t in self._allTargets.values():
+            for dep in t.dependencies:
+                if dep not in self._allTargets:
+                    sys.exit("Invalid dependency " + dep + " for " + t.projectClass.__name__)
+
         # targetsSorted = sorted(self._allTargets.values())
         # print(" ".join(t.name for t in targetsSorted))
         # assert self._allTargets["llvm"] < self._allTargets["cheribsd"]
