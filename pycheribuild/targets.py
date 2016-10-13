@@ -141,7 +141,7 @@ class TargetManager(object):
             chosenTargets = []
             orderedTargets = self.topologicalSort(explicitlyChosenTargets)  # type: typing.Iterable[typing.List[Target]]
             for dependencyLevel, targetNames in enumerate(orderedTargets):
-                print("Level", dependencyLevel, "targets:", targetNames)
+                # print("Level", dependencyLevel, "targets:", targetNames)
                 chosenTargets.extend(self.targetMap[t] for t in targetNames)
         # now that the chosen targets have been resolved run them
         for target in chosenTargets:
