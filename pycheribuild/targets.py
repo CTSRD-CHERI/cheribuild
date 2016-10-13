@@ -35,7 +35,15 @@ class Target(object):
 
     def __lt__(self, other: "Target"):
         # if this target is one of the dependencies order it before
-        return self.name in other.projectClass.allDependencyNames()
+        otherDeps = other.projectClass.allDependencyNames()
+        if self.name in otherDeps:
+            return True
+        ownDeps = self.projectClass.allDependencyNames()
+        if len(ownDeps) < len(otherDeps):
+            return True
+        if len(ownDeps) > len(otherDeps):
+            return False
+        return self.name < other.name  # not a dep and number of deps is the same -> compare name
 
 # A target that does nothing (used for e.g. the all target)
 # TODO: ideally we would do proper dependency resolution and not run targets multiple times
