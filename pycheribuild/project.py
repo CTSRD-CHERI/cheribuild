@@ -130,7 +130,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
     def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None):
         self._ensureGitRepoIsCloned(srcDir=srcDir, remoteUrl=remoteUrl, initialBranch=initialBranch)
         # make sure we run git stash if we discover any local changes
-        hasChanges = len(runCmd("git", "diff", "--stat",
+        hasChanges = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
                                 captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
         if hasChanges:
             # TODO: ask if we should continue?
