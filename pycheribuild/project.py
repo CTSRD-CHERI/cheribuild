@@ -130,9 +130,15 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
     def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None):
         self._ensureGitRepoIsCloned(srcDir=srcDir, remoteUrl=remoteUrl, initialBranch=initialBranch)
         # make sure we run git stash if we discover any local changes
-        hasChanges = len(runCmd("git", "diff", captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
+        hasChanges = len(runCmd("git", "diff", "--stat",
+                                captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
         if hasChanges:
-            runCmd("git", "stash", cwd=srcDir, printVerboseOnly=True)
+            # TODO: ask if we should continue?
+            stashResult = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
+                                 captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout
+            if "No local changes to save" in stashResult.decode("utf-8"):
+                print("CHANGES IN SUBMODULE")
+                hasChanges = False  # probably git diff showed something from a submodule
         runCmd("git", "pull", "--recurse-submodules", "--rebase", cwd=srcDir, printVerboseOnly=True)
         runCmd("git", "submodule", "update", "--recursive", cwd=srcDir, printVerboseOnly=True)
         if hasChanges:
