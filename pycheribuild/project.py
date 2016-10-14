@@ -133,11 +133,17 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         hasChanges = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
                                 captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
         if hasChanges:
+            print(coloured(AnsiColour.green, "Local changes detected in", srcDir))
+            # TODO: add a config option to skip this query?
+            if not self.queryYesNo("Stash the changes, update and reapply?", defaultResult=True, forceResult=True):
+                statusUpdate("Skipping update of", srcDir)
+                return
             # TODO: ask if we should continue?
             stashResult = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
                                  captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout
+            # print("stashResult =", stashResult)
             if "No local changes to save" in stashResult.decode("utf-8"):
-                print("CHANGES IN SUBMODULE")
+                # print("NO REAL CHANGES")
                 hasChanges = False  # probably git diff showed something from a submodule
         runCmd("git", "pull", "--recurse-submodules", "--rebase", cwd=srcDir, printVerboseOnly=True)
         runCmd("git", "submodule", "update", "--recursive", cwd=srcDir, printVerboseOnly=True)
