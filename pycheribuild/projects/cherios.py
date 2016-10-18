@@ -8,8 +8,7 @@ class BuildCheriOS(CMakeProject):
     # If we are building on FreeBSD we get binutils from CheriBSD, on Linux we build binutils and elftoolchain
     # We could also depend on "sdk" on Linux but that requires configuration of the remote build server, so
     # just depend on the actually required targets
-    # TODO: add a target sdk-freestanding that doesn't include the CheriBSD libs+includes
-    dependencies = {"sdk"} if IS_FREEBSD else {"elftoolchain", "binutils", "llvm"}
+    dependencies = ["freestanding-sdk"]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config, installDir=config.outputRoot / ("cherios" + config.cheriBitsStr), buildType="Debug",
