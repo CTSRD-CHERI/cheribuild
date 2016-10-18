@@ -27,7 +27,7 @@ class ProjectSubclassDefinitionHook(type):
             if not cls.dependencies:
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + targetName)
         targetManager.addTarget(Target(targetName, cls, dependencies=set(cls.dependencies)))
-        # print("Adding target", targetName, "with deps:", cls.dependencies)
+        print("Adding target", targetName, "with deps:", cls.dependencies)
 
 
 class Project(object, metaclass=ProjectSubclassDefinitionHook):
