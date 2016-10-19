@@ -239,7 +239,6 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
                 logfileName = makeCommand
         allArgs = [makeCommand] + allArgs
         starttime = time.time()
-        env = {k: str(v) for k, v in env.items()}  # make sure everything is a string
         self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=self._makeStdoutFilter, cwd=cwd, env=env)
         # add a newline at the end in case it ended with a filtered line (no final newline)
         print("Running", self.makeCommand, makeTarget, "took", time.time() - starttime, "seconds")
@@ -259,6 +258,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         # make sure that env is either None or a os.environ with the updated entries entries
         if env:
             newEnv = os.environ.copy()
+            env = {k: str(v) for k, v in env.items()}  # make sure everything is a string
             newEnv.update(env)
         else:
             newEnv = None
