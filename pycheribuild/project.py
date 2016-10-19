@@ -429,6 +429,15 @@ class CMakeProject(Project):
             return
         Project._makeStdoutFilter(line)
 
+    @staticmethod
+    def findPackage(name: str) -> bool:
+        try:
+            cmd = "cmake --find-package -DCOMPILER_ID=Clang -DLANGUAGE=CXX -DMODE=EXIST -DQUIET=TRUE".split()
+            cmd.append("-DNAME=" + name)
+            return runCmd(cmd).returncode == 0
+        except subprocess.CalledProcessError:
+            return False
+
 
 class AutotoolsProject(Project):
     doNotAddToTargets = True
