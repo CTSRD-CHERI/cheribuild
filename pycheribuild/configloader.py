@@ -29,7 +29,7 @@ class ConfigLoader(object):
         Loads the configuration from the command line and the JSON file
         :return The targets to build
         """
-        cls._parser.add_argument("targets", metavar="TARGET", type=str, nargs="*",
+        cls._parser.add_argument("targets", metavar="TARGET", type=str, nargs=argparse.ONE_OR_MORE,
                                  help="The targets to build", default=["all"])
         configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
         defaultConfigPath = Path(configdir, "cheribuild.json")

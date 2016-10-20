@@ -52,6 +52,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
 
     cmakeInstallInstructions = ("Use your package manager to install CMake > 3.4 or run "
                                 "`cheribuild.py cmake` to install the latest version locally")
+    compileDBRequiresBear = True
 
     def __init__(self, config: CheriConfig, *, projectName: str=None, sourceDir: Path=None, buildDir: Path=None,
                  installDir: Path=None, gitUrl="", gitRevision=None, appendCheriBitsToBuildDir=False):
@@ -85,6 +86,8 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         self.configureEnvironment = {}  # type: typing.Dict[str,str]
         self.__requiredSystemTools = {}  # type: typing.Dict[str, typing.Any]
         self._preventAssign = True
+        if self.config.createCompilationDB and self.compileDBRequiresBear:
+            self._addRequiredSystemTool("bear", installInstructions="Run `cheribuild.py bear`")
 
     # Make sure that API is used properly
     def __setattr__(self, name, value):
@@ -238,6 +241,9 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
             if not logfileName:
                 logfileName = makeCommand
         allArgs = [makeCommand] + allArgs
+        if self.config.createCompilationDB and self.compileDBRequiresBear:
+            allArgs = [self.config.otherToolsDir / "bin/bear", "--cdb", self.buildDir / "compile_commands.json",
+                       "--append"] + allArgs
         starttime = time.time()
         self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=self._makeStdoutFilter, cwd=cwd, env=env)
         # add a newline at the end in case it ended with a filtered line (no final newline)
@@ -401,6 +407,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
 
 class CMakeProject(Project):
     doNotAddToTargets = True
+    compileDBRequiresBear = False  # cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON does it
     """
     Like Project but automatically sets up the defaults for CMake projects
     Sets configure command to CMake, adds -DCMAKE_INSTALL_PREFIX=installdir
@@ -425,6 +432,9 @@ class CMakeProject(Project):
             self.configureArgs.append("-GUnix Makefiles")
         self.configureArgs.append("-DCMAKE_INSTALL_PREFIX=" + str(self.installDir))
         self.configureArgs.append("-DCMAKE_BUILD_TYPE=" + buildType)
+        # TODO: do it always?
+        if self.config.createCompilationDB:
+            self.configureArgs.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
 
     @staticmethod
     def _makeStdoutFilter(line: bytes):

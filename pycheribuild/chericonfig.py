@@ -72,6 +72,10 @@ class CheriConfig(object):
                                         " make sure the right binaries are being used."
                                         " WARNING: 128-bit CHERI is still very unstable.")
 
+    createCompilationDB = ConfigLoader.addBoolOption("compilation-db", "-cdb",
+                                                     help="Create a compile_commands.json file in the build dir "
+                                                          "(requires Bear for non-CMake projects")
+
     # configurable paths
     sourceRoot = ConfigLoader.addPathOption("source-root", default=Path(os.path.expanduser("~/cheri")),
                                             help="The directory to store all sources")
