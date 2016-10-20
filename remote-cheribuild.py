@@ -15,7 +15,8 @@ with tempfile.NamedTemporaryFile(prefix="cheribuild-", suffix=".py") as tmp:
     subprocess.check_call([sys.executable, str(combineScript)], stdout=tmp)
     print("About to run cheribuild on host '" + host + "' with the following arguments:", cheribuildArgs)
     print("Note: file that will be run is located at", tmp.name)
-    input("Press enter to continue...")
+    if "-f" not in sys.argv:
+        input("Press enter to continue...")
     # the bash script:
     """
 # Unfortunately the following line doesn't work propertly, ctrl+C won't kill the script
