@@ -93,6 +93,7 @@ addFilteredFile(scriptDir / "projects/run_qemu.py")
 addFilteredFile(scriptDir / "projects/gnustep.py")
 addFilteredFile(scriptDir / "projects/cheritrace.py")
 addFilteredFile(scriptDir / "projects/cherivis.py")
+addFilteredFile(scriptDir / "projects/makefs_linux.py")
 
 # now make sure that all the projects were handled
 for path in (scriptDir / "projects").iterdir():
