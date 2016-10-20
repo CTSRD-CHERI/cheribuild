@@ -28,6 +28,9 @@ class BuildElfToolchain(Project):
                          "all", cwd=self.sourceDir / tgt, logfileName="build." + tgt)
 
     def install(self):
+        if IS_FREEBSD:
+            statusUpdate("Not installing elftoolchain binaries as they conflict witht he ones from CheriBSD")
+            return
         # self.runMake([self.makeCommand, self.config.makeJFlag, "DESTDIR=" + str(self.installDir)] + self.makeArgs,
         #              "install", cwd=self.sourceDir)
         # make install requires root, just build binaries statically and copy them
