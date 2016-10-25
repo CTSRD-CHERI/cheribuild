@@ -2,6 +2,7 @@ import os
 import subprocess
 import datetime
 import sys
+import shutil
 
 from ..project import Project, PseudoTarget
 from ..utils import *
@@ -28,6 +29,11 @@ class BuildFreestandingSdk(Project):
     target = "freestanding-sdk"
     dependencies = ["llvm", "cheribsd"] if IS_FREEBSD else ["elftoolchain", "binutils", "llvm"]
 
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        if IS_FREEBSD:
+            self._addRequiredSystemTool("ar")
+
     def installCMakeConfig(self):
         date = datetime.datetime.now()
         microVersion = str(date.year) + str(date.month) + str(date.day)
@@ -51,11 +57,16 @@ class BuildFreestandingSdk(Project):
         self.buildCheridis()
         # TODO: symlink the llvm tools in this in llvm.py
         llvmBinaries = "clang clang++ llvm-mc llvm-objdump llvm-readobj llvm-size llc".split()
-        binutilsBinaries = "addr2line ar as brandelf ld nm objcopy objdump ranlib size strings strip".split()
+        binutilsBinaries = "addr2line as brandelf ld nm objcopy objdump size strings strip".split()
         toolsToSymlink = llvmBinaries + binutilsBinaries
         if IS_FREEBSD:
             # When building on FreeBSD we also copy the MIPS GCC and related tools
             toolsToSymlink += self.copyCrossToolsFromCheriBSD(binutilsBinaries)
+            # For some reason CheriBSD does not build a cross ar, let's symlink the system one to the SDK bindir
+            runCmd("ln", "-fsn", shutil.which("ar"), self.config.sdkDir / "bin/ar",
+                   cwd=self.config.sdkDir / "bin", printVerboseOnly=True)
+            self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin/ar")
+
         for tool in set(toolsToSymlink):
             self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin" / tool)
 

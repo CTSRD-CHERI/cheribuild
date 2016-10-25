@@ -321,7 +321,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
                 raise SystemExit("Command \"%s\" failed with exit code %d.\nSee %s for details." %
                                  (cmdStr, retcode, logfile.name))
 
-    def createBuildtoolTargetSymlinks(self, tool: Path, toolName: str=None):
+    def createBuildtoolTargetSymlinks(self, tool: Path, toolName: str=None, cwd: str=None):
         """
         Create mips4-unknown-freebsd, cheri-unknown-freebsd and mips64-unknown-freebsd prefixed symlinks
         for build tools like clang, ld, etc.
@@ -329,10 +329,11 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         :param toolName: the unprefixed name of the tool (defaults to tool.name)
         """
         # if the actual tool we are linking to make sure we link to the destinations so we don't create symlink loops
+        cwd = cwd or tool.parent  # set cwd before resolving potential symlink
         if tool.is_symlink():
             tool = tool.resolve()
         if not tool.is_file():
-            fatalError("Attempting to creat symlink to non-existent build tool:", tool)
+            fatalError("Attempting to create symlink to non-existent build tool:", tool)
         if not toolName:
             toolName = tool.name
         for target in ("mips4-unknown-freebsd-", "cheri-unknown-freebsd-", "mips64-unknown-freebsd-"):
@@ -341,7 +342,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
                 if self.config.verbose:
                     print(coloured(AnsiColour.yellow, "Not overwriting", link, "as it is a file not a symlink"))
                 continue  # happens for binutils, where prefixed tools are installed
-            runCmd("ln", "-fsn", tool.name, target + toolName, cwd=tool.parent, printVerboseOnly=True)
+            runCmd("ln", "-fsn", tool.name, target + toolName, cwd=cwd, printVerboseOnly=True)
 
     def dependencyError(self, *args, installInstructions: str=None):
         self._systemDepsChecked = True  # make sure this is always set
