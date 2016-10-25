@@ -4,7 +4,7 @@ import datetime
 import sys
 import shutil
 
-from ..project import Project, PseudoTarget
+from ..project import Project, PseudoTarget, CMakeProject
 from ..utils import *
 
 from pathlib import Path
@@ -23,6 +23,7 @@ class BuildCheriBSDSdk(PseudoTarget):
 class BuildSdk(PseudoTarget):
     target = "sdk"
     dependencies = ["cheribsd-sdk"] if IS_FREEBSD else ["freestanding-sdk"]
+    dependencies.append("cheri-toolchains")
 
 
 class BuildFreestandingSdk(Project):
@@ -179,3 +180,12 @@ class BuildCheriBsdSysroot(Project):
         runCmd("tar", "-czf", self.config.sdkDir / self.config.sysrootArchiveName, "sysroot",
                cwd=self.config.sdkDir)
         print("Successfully populated sysroot")
+
+
+class InstallCmakeToolchainFiles(CMakeProject):
+    target = "cheri-toolchains"
+    dependencies = ["freestanding-sdk"]
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config, appendCheriBitsToBuildDir=True, projectName="cheri-toolchains",
+                         gitUrl="https://github.com/RichardsonAlex/cheri-toolchains.git", installDir=config.sdkDir)
