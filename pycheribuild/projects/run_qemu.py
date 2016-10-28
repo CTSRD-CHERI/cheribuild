@@ -25,13 +25,22 @@ class LaunchQEMU(Project):
             self.dependencyError("CheriBSD disk image is missing:", self.config.diskImage,
                                  installInstructions="Run `cheribuild.py disk-image` or `cheribuild.py run -d`.")
 
-        if not self.isForwardingPortAvailable():
+        if not self.isPortAvailable(self.config.sshForwardingPort):
             print("Port usage information:")
             if IS_FREEBSD:
                 runCmd("sockstat", "-P", "tcp", "-p", str(self.config.sshForwardingPort))
             elif IS_LINUX:
                 runCmd("sh", "-c", "netstat -tulpne | grep \":" + str(str(self.config.sshForwardingPort)) + "\"")
             fatalError("SSH forwarding port", self.config.sshForwardingPort, "is already in use!")
+
+        monitorOptions = ["-monitor", "telnet:127.0.0.1:" + str(self.config.sshForwardingPort + 1) + ",server,nowait"]
+        if not self.isPortAvailable(self.config.sshForwardingPort + 1):
+            warningMessage("Cannot connect QEMU montitor to port", self.config.sshForwardingPort + 1)
+            if self.queryYesNo("Will connect the monitor to stdio instead. Continue?"):
+                monitorOptions = []
+            else:
+                fatalError("Monitor port not available and stdio is not acceptable.")
+                return
 
         print("About to run QEMU with image", self.config.diskImage, "and kernel", self.currentKernel,
               coloured(AnsiColour.green, "\nListening for SSH connections on localhost:" +
@@ -45,12 +54,13 @@ class LaunchQEMU(Project):
                 "-net", "nic", "-net", "user",
                 # bind the qemu ssh port to the hosts port 9999
                 "-redir", "tcp:" + str(self.config.sshForwardingPort) + "::22",
-                ], stdout=sys.stdout)  # even with --quiet we want stdout here
+                ] + monitorOptions, stdout=sys.stdout)  # even with --quiet we want stdout here
 
-    def isForwardingPortAvailable(self):
+    @staticmethod
+    def isPortAvailable(port: int):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(("127.0.0.1", self.config.sshForwardingPort))
+                s.bind(("127.0.0.1", port))
                 return True
         except OSError:
             return False
