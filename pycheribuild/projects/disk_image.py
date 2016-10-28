@@ -100,7 +100,7 @@ sendmail_enable="NONE"  # completely disable sendmail
 cron_enable="NO"
 # tmpmfs="YES" only creates a 20 MB ramdisk for /tmp, use /etc/fstab and tmpfs instead
 # the extra m in tmpmfs is not a typo: it means mount /tmp as a memory filesystem (MFS)
-# tmpmfs="YES"
+nfs_client_enable="YES"
 """.format(username=os.getlogin())
         self.createFileForImage(outDir, "/etc/rc.conf", contents=rcConfContents)
 
