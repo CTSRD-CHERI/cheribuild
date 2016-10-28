@@ -25,7 +25,7 @@ def main():
     cheriConfig = CheriConfig()
     setCheriConfig(cheriConfig)
     # create the required directories
-    for d in (cheriConfig.sourceRoot, cheriConfig.outputRoot, cheriConfig.extraFiles):
+    for d in (cheriConfig.sourceRoot, cheriConfig.outputRoot, cheriConfig.buildRoot, cheriConfig.extraFiles):
         if d.exists():
             continue
         if not cheriConfig.pretend:

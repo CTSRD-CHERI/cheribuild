@@ -75,7 +75,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         self.sourceDir = Path(sourceDir if sourceDir else config.sourceRoot / self.projectNameLower)
         # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256,
         buildDirSuffix = "-" + config.cheriBitsStr + "-build" if appendCheriBitsToBuildDir else "-build"
-        self.buildDir = Path(buildDir if buildDir else config.outputRoot / (self.projectNameLower + buildDirSuffix))
+        self.buildDir = Path(buildDir if buildDir else config.buildRoot / (self.projectNameLower + buildDirSuffix))
         self.installDir = installDir
         self.makeCommand = "make"
         self.configureCommand = ""

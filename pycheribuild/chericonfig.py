@@ -51,9 +51,6 @@ class CheriConfig(object):
     listTargets = ConfigLoader.addBoolOption("list-targets", help="List all available targets and exit")
     dumpConfig = ConfigLoader.addBoolOption("dump-configuration", help="Print the current configuration as JSON."
                                             " This can be saved to ~/.config/cheribuild.json to make it persistent")
-    skipDependencies = ConfigLoader.addBoolOption("skip-dependencies", "t",
-                                                  help="This option no longer does anything and is only included to"
-                                                       "allow running existing command lines")
     includeDependencies = ConfigLoader.addBoolOption("include-dependencies", "d", help="Also build the dependencies "
                                                      "of targets passed on the command line. Targets passed on the"
                                                      "command line will be reordered and processed in an order that "
@@ -81,6 +78,8 @@ class CheriConfig(object):
                                             help="The directory to store all sources")
     outputRoot = ConfigLoader.addPathOption("output-root", default=lambda p: (p.sourceRoot / "output"),
                                             help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
+    buildRoot = ConfigLoader.addPathOption("build-root", default=lambda p: (p.sourceRoot / "build"),
+                                           help="The directory for all the builds (default: '<SOURCE_ROOT>/build')")
     extraFiles = ConfigLoader.addPathOption("extra-files", default=lambda p: (p.sourceRoot / "extra-files"),
                                             help="A directory with additional files that will be added to the image "
                                                  "(default: '<OUTPUT_ROOT>/extra-files')")
@@ -149,6 +148,11 @@ class CheriConfig(object):
                                                         "FreeBSD build server and don't build the SDK first.",
                                                         group=ConfigLoader.remoteBuilderGroup)
 
+    # Deprecated options:
+    skipDependencies = ConfigLoader.addBoolOption("skip-dependencies", "t", group=ConfigLoader.deprecatedOptionsGroup,
+                                                  help="This option no longer does anything and is only included to"
+                                                       "allow running existing command lines")
+
     def __init__(self):
         self.targets = ConfigLoader.loadTargets()
         self.makeJFlag = "-j" + str(self.makeJobs)
@@ -170,7 +174,7 @@ class CheriConfig(object):
         # now the derived config options
         self.cheribsdRootfs = self.outputRoot / ("rootfs" + self.cheriBitsStr)
         self.cheribsdSources = self.sourceRoot / "cheribsd"
-        self.cheribsdObj = self.outputRoot / ("cheribsd-obj-" + self.cheriBitsStr)
+        self.cheribsdObj = self.buildRoot / ("cheribsd-obj-" + self.cheriBitsStr)
         self.sdkDirectoryName = "sdk" + self.cheriBitsStr
         self.sdkDir = self.outputRoot / self.sdkDirectoryName  # qemu and binutils (and llvm/clang)
         self.otherToolsDir = self.outputRoot / "bootstrap"
