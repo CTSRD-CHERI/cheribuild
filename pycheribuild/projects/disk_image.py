@@ -88,7 +88,7 @@ class BuildDiskImage(Project):
             self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw,noatime,async 1 1\n")
         else:
             self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw,noatime,async 1 1\n"
-                                                                   "tmpfs /tmp tmpfs,noatime rw 0 0\n")
+                                                                   "tmpfs /tmp tmpfs rw 0 0\n")
         # enable ssh and set hostname
         # TODO: use separate file in /etc/rc.conf.d/ ?
         rcConfContents = """hostname="qemu-cheri-{username}"
