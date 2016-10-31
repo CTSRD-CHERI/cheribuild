@@ -33,14 +33,17 @@ class LaunchQEMU(Project):
                 runCmd("sh", "-c", "netstat -tulpne | grep \":" + str(str(self.config.sshForwardingPort)) + "\"")
             fatalError("SSH forwarding port", self.config.sshForwardingPort, "is already in use!")
 
-        monitorOptions = ["-monitor", "telnet:127.0.0.1:" + str(self.config.sshForwardingPort + 1) + ",server,nowait"]
-        if not self.isPortAvailable(self.config.sshForwardingPort + 1):
-            warningMessage("Cannot connect QEMU montitor to port", self.config.sshForwardingPort + 1)
-            if self.queryYesNo("Will connect the monitor to stdio instead. Continue?"):
-                monitorOptions = []
-            else:
-                fatalError("Monitor port not available and stdio is not acceptable.")
-                return
+        monitorOptions = []
+        if self.config.qemuUseTelnet:
+            monitorPort = self.config.sshForwardingPort + 1
+            monitorOptions = ["-monitor", "telnet:127.0.0.1:" + str(monitorPort) + ",server,nowait"]
+            if not self.isPortAvailable(monitorPort):
+                warningMessage("Cannot connect QEMU montitor to port", monitorPort)
+                if self.queryYesNo("Will connect the monitor to stdio instead. Continue?"):
+                    monitorOptions = []
+                else:
+                    fatalError("Monitor port not available and stdio is not acceptable.")
+                    return
 
         print("About to run QEMU with image", self.config.diskImage, "and kernel", self.currentKernel,
               coloured(AnsiColour.green, "\nListening for SSH connections on localhost:" +

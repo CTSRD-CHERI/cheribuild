@@ -72,6 +72,8 @@ class CheriConfig(object):
     createCompilationDB = ConfigLoader.addBoolOption("compilation-db", "-cdb",
                                                      help="Create a compile_commands.json file in the build dir "
                                                           "(requires Bear for non-CMake projects")
+    qemuUseTelnet = ConfigLoader.addBoolOption("qemu-monitor-telnet",
+                                               help="Use telnet to connect to QEMU monitor instead of CTRL+A,C")
 
     # configurable paths
     sourceRoot = ConfigLoader.addPathOption("source-root", default=Path(os.path.expanduser("~/cheri")),
