@@ -90,8 +90,9 @@ class BuildCHERIBSD(Project):
 
     def clean(self):
         if self.config.skipBuildworld:
-            # TODO: only clean the kernel build directory
-            fatalError("Not implemented yet!")
+            # TODO: only clean the current kernel config not all of them
+            kernelBuildDir = self.buildDir / "mips.mips64/home/alr48/cheri/cheribsd/sys/"
+            self._cleanDir(kernelBuildDir)
         else:
             super().clean()
 
