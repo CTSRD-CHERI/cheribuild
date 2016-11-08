@@ -57,7 +57,7 @@ However, some targets (e.g. `all`, `sdk`) will always build their dependencies b
 
 #### Other targets
 - `cmake` builds and installs latest [CMake](https://github.com/Kitware/CMake)
-- `elftoolchain` builds and installs `brandelf` and `elfcopy` from [elftoolchain](https://github.com/emaste/elftoolchain/) (needed for SDK on non-FreeBSD systems)
+- `elftoolchain` builds and installs `brandelf` from [elftoolchain](https://github.com/emaste/elftoolchain/) (needed for SDK on non-FreeBSD systems)
 - `awk` builds and installs BSD AWK (if you need it on Linux)
 - `cherios` builds and installs [CTSRD-CHERI/cherios](https://github.com/CTSRD-CHERI/cherios)
 - `cheritrace` builds and installs [CTSRD-CHERI/cheritrace](https://github.com/CTSRD-CHERI/cheritrace)
