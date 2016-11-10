@@ -23,6 +23,7 @@ class BuildKDevplatform(CMakeProject):
         super().__init__(config, installDir=kdevInstallDir(config), buildType="Debug",
                          gitUrl="https://github.com/RichardsonAlex/kdevplatform.git", appendCheriBitsToBuildDir=True)
         self.gitBranch = "cheri"
+        self.configureArgs.append("-DBUILD_git=OFF")
 
 
 class BuildKDevelop(CMakeProject):
