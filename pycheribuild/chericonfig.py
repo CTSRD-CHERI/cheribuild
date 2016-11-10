@@ -84,7 +84,7 @@ class CheriConfig(object):
                                            help="The directory for all the builds (default: '<SOURCE_ROOT>/build')")
     extraFiles = ConfigLoader.addPathOption("extra-files", default=lambda p: (p.sourceRoot / "extra-files"),
                                             help="A directory with additional files that will be added to the image "
-                                                 "(default: '<OUTPUT_ROOT>/extra-files')")
+                                                 "(default: '<SOURCE_ROOT>/extra-files')")
     clangPath = ConfigLoader.addPathOption("clang-path", default=defaultClang37Tool("clang"),
                                            help="The Clang C compiler to use for compiling LLVM+Clang (must be at "
                                                 "least version 3.7)")
