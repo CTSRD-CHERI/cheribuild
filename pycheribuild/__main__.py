@@ -22,7 +22,8 @@ class MyJsonEncoder(json.JSONEncoder):
 
 
 def main():
-    cheriConfig = CheriConfig()
+    allTargetNames = list(sorted(targetManager.targetNames))
+    cheriConfig = CheriConfig(allTargetNames)
     setCheriConfig(cheriConfig)
     # create the required directories
     for d in (cheriConfig.sourceRoot, cheriConfig.outputRoot, cheriConfig.buildRoot, cheriConfig.extraFiles):
@@ -34,7 +35,7 @@ def main():
             os.makedirs(str(d), exist_ok=True)
     try:
         if cheriConfig.listTargets:
-            print("Available targets are:\n ", "\n  ".join(sorted(targetManager.targetNames)))
+            print("Available targets are:\n ", "\n  ".join(allTargetNames))
         elif cheriConfig.dumpConfig:
             print(json.dumps(ConfigLoader.values, sort_keys=True, cls=MyJsonEncoder, indent=4))
         else:

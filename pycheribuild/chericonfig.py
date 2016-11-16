@@ -155,8 +155,8 @@ class CheriConfig(object):
                                                   help="This option no longer does anything and is only included to"
                                                        "allow running existing command lines")
 
-    def __init__(self):
-        self.targets = ConfigLoader.loadTargets()
+    def __init__(self, availableTargets: list):
+        self.targets = ConfigLoader.loadTargets(availableTargets)
         self.makeJFlag = "-j" + str(self.makeJobs)
 
         if self._buildCheri128:

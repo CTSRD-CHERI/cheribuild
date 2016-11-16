@@ -25,13 +25,13 @@ class ConfigLoader(object):
     cheriBitsGroup = _parser.add_mutually_exclusive_group()
 
     @classmethod
-    def loadTargets(cls) -> list:
+    def loadTargets(cls, availableTargets: list) -> list:
         """
         Loads the configuration from the command line and the JSON file
         :return The targets to build
         """
         cls._parser.add_argument("targets", metavar="TARGET", type=str, nargs=argparse.ONE_OR_MORE,
-                                 help="The targets to build", default=["all"])
+                                 help="The targets to build", default=["all"], choices=availableTargets)
         configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
         defaultConfigPath = Path(configdir, "cheribuild.json")
         cls._parser.add_argument("--config-file", metavar="FILE", type=str, default=str(defaultConfigPath),
