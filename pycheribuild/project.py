@@ -73,7 +73,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def setupConfigOptions(cls):
-        statusUpdate("Setting up config options for", cls, cls.target)
+        # statusUpdate("Setting up config options for", cls, cls.target)
         # TODO: add the gitRevision option
         pass
 
