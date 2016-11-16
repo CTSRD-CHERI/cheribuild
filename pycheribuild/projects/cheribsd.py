@@ -42,6 +42,8 @@ class BuildCHERIBSD(Project):
                                                metavar="CONFIG", shortname="-kernconf",
                                                help="The kernel configuration to use for `make buildkernel` (default: "
                                                     "CHERI_MALTA64 or CHERI128_MALTA64 depending on --cheri-bits)")
+        cls.skipBuildworld = cls.addBoolOption("only-build-kernel", shortname="-skip-buildworld",
+                                               help="Skip the buildworld step -> only build and install the kernel")
 
     def __init__(self, config: CheriConfig, *, projectName="cheribsd"):
         super().__init__(config, projectName=projectName, sourceDir=config.sourceRoot / "cheribsd",
@@ -100,7 +102,7 @@ class BuildCHERIBSD(Project):
             fatalError("CHERI CXX does not exist: ", self.cheriCXX)
         # if not (self.binutilsDir / "as").is_file():
         #     fatalError("CHERI MIPS binutils are missing. Run 'cheribuild.py binutils'?")
-        if not self.config.skipBuildworld:
+        if not self.skipBuildworld:
             if self.installAsRoot:
                 # we need to remove the schg flag as otherwise rm -rf will fail to remove these files
                 self._removeSchgFlag(
@@ -118,7 +120,7 @@ class BuildCHERIBSD(Project):
             self._makedirs(self.installDir)
 
     def clean(self):
-        if self.config.skipBuildworld:
+        if self.skipBuildworld:
             # TODO: only clean the current kernel config not all of them
             kernelBuildDir = self.buildDir / "mips.mips64/home/alr48/cheri/cheribsd/sys/"
             self._cleanDir(kernelBuildDir)
@@ -127,7 +129,7 @@ class BuildCHERIBSD(Project):
 
     def compile(self):
         self.setupEnvironment()
-        if not self.config.skipBuildworld:
+        if not self.skipBuildworld:
             self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld", cwd=self.sourceDir)
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel", cwd=self.sourceDir)
 
@@ -135,7 +137,7 @@ class BuildCHERIBSD(Project):
         # don't use multiple jobs here
         installArgs = self.commonMakeArgs + ["DESTDIR=" + str(self.installDir)]
         self.runMake(installArgs, "installkernel", cwd=self.sourceDir)
-        if not self.config.skipBuildworld:
+        if not self.skipBuildworld:
             self.runMake(installArgs, "installworld", cwd=self.sourceDir)
             self.runMake(installArgs, "distribution", cwd=self.sourceDir)
 

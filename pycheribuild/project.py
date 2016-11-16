@@ -72,6 +72,10 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
                                       group=cls.__commandLineOptionGroup, **kwargs)
 
     @classmethod
+    def addBoolOption(cls, name: str, *, shortname=None, **kwargs):
+        return cls.addConfigOption(name, default=False, kind=bool, shortname=shortname, action="store_true", **kwargs)
+
+    @classmethod
     def setupConfigOptions(cls):
         # statusUpdate("Setting up config options for", cls, cls.target)
         # TODO: add the gitRevision option

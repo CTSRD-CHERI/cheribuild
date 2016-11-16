@@ -46,8 +46,6 @@ class CheriConfig(object):
     skipUpdate = ConfigLoader.addBoolOption("skip-update", help="Skip the git pull step")
     skipConfigure = ConfigLoader.addBoolOption("skip-configure", help="Skip the configure step")
     skipInstall = ConfigLoader.addBoolOption("skip-install", help="Skip the install step (only do the build)")
-    skipBuildworld = ConfigLoader.addBoolOption("skip-buildworld", help="Skip the FreeBSD buildworld step -> only build"
-                                                " and install the kernel")
     listTargets = ConfigLoader.addBoolOption("list-targets", help="List all available targets and exit")
     dumpConfig = ConfigLoader.addBoolOption("dump-configuration", help="Print the current configuration as JSON."
                                             " This can be saved to ~/.config/cheribuild.json to make it persistent")
