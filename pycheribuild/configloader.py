@@ -109,8 +109,17 @@ class ConfigLoader(object):
                 result = self.default
         # override default options from the JSON file
         assert self.action.option_strings[0].startswith("--")
-        jsonKey = self.action.option_strings[0][2:]  # strip the initial --
-        fromJSON = self._JSON.get(jsonKey, None)
+        fullOptionName = self.action.option_strings[0][2:]  # strip the initial "--"
+        # if there are any / characters treat these as an object reference
+        jsonPath = fullOptionName.split(sep="/")
+        jsonKey = jsonPath[-1]  # last item is the key (e.g. llvm/build-type -> build-type)
+        jsonPath = jsonPath[:-1]  # all but the last item is the path (e.g. llvm/build-type -> llvm)
+        jsonObject = self._JSON
+        for objRef in jsonPath:
+            # Return an empty dict if it is not found
+            jsonObject = jsonObject.get(objRef, {})
+
+        fromJSON = jsonObject.get(jsonKey, None)
         if not fromJSON:
             # also check action.dest (as a fallback so I don't have to update all my config files right now)
             fromJSON = self._JSON.get(self.action.dest, None)
