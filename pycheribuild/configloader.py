@@ -129,6 +129,9 @@ class ConfigLoader(object):
         return result
 
     def __get__(self, instance: "CheriConfig", owner):
-        if not self._cached:
+        if self._cached is None:
+            # print("Loading option", self.action)
+            # import traceback
+            # traceback.print_stack()
             self._cached = self._loadOption(instance)
         return self._cached
