@@ -11,6 +11,9 @@ from .utils import coloured, AnsiColour
 
 
 class ConfigLoader(object):
+    # will be set later...
+    _cheriConfig = None  # type: CheriConfig
+
     _parser = argparse.ArgumentParser(formatter_class=
                                       lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
     _parser.add_argument("--help-all", "--help-hidden", action="help", help="Show all help options, including"
@@ -144,7 +147,6 @@ class ConfigLoader(object):
             return self.default
 
     def _loadFromJson(self, fullOptionName: str):
-
         # if there are any / characters treat these as an object reference
         jsonPath = fullOptionName.split(sep="/")
         jsonKey = jsonPath[-1]  # last item is the key (e.g. llvm/build-type -> build-type)
@@ -163,7 +165,8 @@ class ConfigLoader(object):
                                jsonKey, "instead"))
         return result
 
-    def __get__(self, instance: "CheriConfig", owner):
+    def __get__(self, instance, owner):
         if self._cached is None:
-            self._cached = self._loadOption(instance)
+            print(self, instance, owner)
+            self._cached = self._loadOption(self._cheriConfig)
         return self._cached

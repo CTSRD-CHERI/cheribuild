@@ -6,6 +6,13 @@ from ..project import Project
 from ..utils import *
 
 
+def defaultKernelConfig(config: CheriConfig):
+    if config.cheriBits == 128:
+        # make sure we use a kernel with 128 bit CPU features selected
+        return "CHERI128_MALTA64"
+    return "CHERI_MALTA64"
+
+
 class BuildCHERIBSD(Project):
     dependencies = ["llvm"]
 
@@ -28,18 +35,18 @@ class BuildCHERIBSD(Project):
         # For compatibility we still accept --cheribsd-make-options here
         cls.makeOptions = cls.addConfigOption("build-options", default=defaultExtraMakeOptions, kind=list,
                                               metavar="OPTIONS", shortname="-cheribsd-make-options",  # compatibility
-                                              help="Additional options to be passed to make when building CHERIBSD. "
-                                                   "See `man src.conf` for more info.")
+                                              help="Additional make options to be passed to make when building "
+                                                   "CHERIBSD. See `man src.conf` for more info.")
         # TODO: separate options for kernel/install?
+        cls.kernelConfig = cls.addConfigOption("kernel-cofig", default=defaultKernelConfig, kind=str,
+                                               metavar="CONFIG", shortname="-kernconf",
+                                               help="The kernel configuration to use for `make buildkernel` (default: "
+                                                    "CHERI_MALTA64 or CHERI128_MALTA64 depending on --cheri-bits)")
 
-    def __init__(self, config: CheriConfig, *, projectName="cheribsd", kernelConfig="CHERI_MALTA64"):
+    def __init__(self, config: CheriConfig, *, projectName="cheribsd"):
         super().__init__(config, projectName=projectName, sourceDir=config.sourceRoot / "cheribsd",
                          installDir=config.cheribsdRootfs, buildDir=config.cheribsdObj, appendCheriBitsToBuildDir=True,
                          gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git", gitRevision=config.cheriBsdRevision)
-        self.kernelConfig = kernelConfig
-        if self.config.cheriBits == 128:
-            # make sure we use a kernel with 128 bit CPU features selected
-            self.kernelConfig = kernelConfig.replace("CHERI_", "CHERI128_")
         self.binutilsDir = self.config.sdkDir / "mips64/bin"
         self.cheriCC = self.config.sdkDir / "bin/clang"
         self.cheriCXX = self.config.sdkDir / "bin/clang++"

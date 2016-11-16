@@ -140,6 +140,7 @@ class CheriConfig(object):
                                                        "allow running existing command lines")
 
     def __init__(self, availableTargets: list):
+        ConfigLoader._cheriConfig = self
         self.targets = ConfigLoader.loadTargets(availableTargets)
         self.makeJFlag = "-j" + str(self.makeJobs)
 
