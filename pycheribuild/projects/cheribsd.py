@@ -9,6 +9,29 @@ from ..utils import *
 class BuildCHERIBSD(Project):
     dependencies = ["llvm"]
 
+    @classmethod
+    def setupConfigOptions(cls):
+        super().setupConfigOptions()
+        defaultExtraMakeOptions = [
+            "DEBUG_FLAGS=-g",  # enable debug stuff
+            "-DWITHOUT_TESTS",  # seems to break the creation of disk-image (METALOG is invalid)
+            "-DWITHOUT_HTML",  # should not be needed
+            "-DWITHOUT_SENDMAIL", "-DWITHOUT_MAIL",  # no need for sendmail
+            "-DWITHOUT_SVNLITE",  # no need for SVN
+            # "-DWITHOUT_GAMES",  # not needed
+            # "-DWITHOUT_MAN",  # seems to be a majority of the install time
+            # "-DWITH_FAST_DEPEND",  # no separate make depend step, do it while compiling
+            # "-DWITH_INSTALL_AS_USER", should be enforced by -DNO_ROOT
+            # "-DWITH_DIRDEPS_BUILD", "-DWITH_DIRDEPS_CACHE",  # experimental fast build options
+            # "-DWITH_LIBCHERI_JEMALLOC"  # use jemalloc instead of -lmalloc_simple
+        ]
+        # For compatibility we still accept --cheribsd-make-options here
+        cls.makeOptions = cls.addConfigOption("build-options", default=defaultExtraMakeOptions, kind=list,
+                                              metavar="OPTIONS", shortname="-cheribsd-make-options",  # compatibility
+                                              help="Additional options to be passed to make when building CHERIBSD. "
+                                                   "See `man src.conf` for more info.")
+        # TODO: separate options for kernel/install?
+
     def __init__(self, config: CheriConfig, *, projectName="cheribsd", kernelConfig="CHERI_MALTA64"):
         super().__init__(config, projectName=projectName, sourceDir=config.sourceRoot / "cheribsd",
                          installDir=config.cheribsdRootfs, buildDir=config.cheribsdObj, appendCheriBitsToBuildDir=True,
@@ -31,13 +54,12 @@ class BuildCHERIBSD(Project):
             "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
             "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
             "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
-            "DEBUG_FLAGS=-g",  # enable debug stuff
             # "CROSS_BINUTILS_PREFIX=" + str(self.binutilsDir),  # use the CHERI-aware binutils and not the builtin ones
             # TODO: once clang can build the kernel:
             #  "-DCROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin")
             "KERNCONF=" + self.kernelConfig,
         ])
-        self.commonMakeArgs.extend(shlex.split(self.config.cheribsdExtraMakeOptions))
+        self.commonMakeArgs.extend(self.makeOptions)
         if not (self.config.verbose or self.config.quiet):
             # By default we only want to print the status updates -> use make -s so we have to do less filtering
             self.commonMakeArgs.append("-s")
