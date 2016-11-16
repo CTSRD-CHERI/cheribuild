@@ -447,7 +447,7 @@ class CMakeProject(Project):
         super().setupConfigOptions()
         cls.cmakeBuildType = cls.addConfigOption("build-type", default="Release", metavar="BUILD_TYPE",
                                                  help="The CMake build type (Debug, RelWithDebInfo, Release)")
-        cls.cmakeOptions = cls.addConfigOption("cmake-options", default=list(), kind=list, metavar="OPTIONS",
+        cls.cmakeOptions = cls.addConfigOption("cmake-options", default=[], kind=list, metavar="OPTIONS",
                                                help="Additional command line options to pass to CMake")
 
     def __init__(self, *args, generator=Generator.Ninja, buildType="Release", **kwargs):
@@ -469,8 +469,11 @@ class CMakeProject(Project):
         # TODO: do it always?
         if self.config.createCompilationDB:
             self.configureArgs.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
-        # Add the options
+        # Don't add the user provided options here, add them in configure() so that they are put last
+
+    def configure(self):
         self.configureArgs.extend(self.cmakeOptions)
+        super().configure()
 
     @staticmethod
     def _makeStdoutFilter(line: bytes):
