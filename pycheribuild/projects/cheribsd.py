@@ -122,7 +122,7 @@ class BuildCHERIBSD(Project):
     def clean(self):
         if self.skipBuildworld:
             # TODO: only clean the current kernel config not all of them
-            kernelBuildDir = self.buildDir / "mips.mips64/home/alr48/cheri/cheribsd/sys/"
+            kernelBuildDir = self.buildDir / ("mips.mips64" + str(self.config.cheribsdSources) + "/sys/")
             self._cleanDir(kernelBuildDir)
         else:
             super().clean()
