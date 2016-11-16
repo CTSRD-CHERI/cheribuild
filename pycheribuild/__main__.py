@@ -4,6 +4,7 @@ import shlex
 import subprocess
 import sys
 
+from pathlib import Path
 from .utils import *
 from .targets import targetManager
 from .configloader import ConfigLoader
