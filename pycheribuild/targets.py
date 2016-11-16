@@ -55,6 +55,13 @@ class TargetManager(object):
     def addTarget(self, target: Target):
         self._allTargets[target.name] = target
 
+    def registerCommandLineOptions(self):
+        # this cannot be done in the Project metaclass as otherwise we get
+        # RuntimeError: super(): empty __class__ cell
+        # https://stackoverflow.com/questions/13126727/how-is-super-in-python-3-implemented/28605694#28605694
+        for tgt in self._allTargets.values():
+            tgt.projectClass.setupConfigOptions()
+
     @property
     def targetNames(self):
         return self._allTargets.keys()

@@ -24,6 +24,7 @@ class MyJsonEncoder(json.JSONEncoder):
 
 def main():
     allTargetNames = list(sorted(targetManager.targetNames))
+    targetManager.registerCommandLineOptions()
     cheriConfig = CheriConfig(allTargetNames)
     setCheriConfig(cheriConfig)
     # create the required directories

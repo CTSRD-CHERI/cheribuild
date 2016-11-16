@@ -26,7 +26,6 @@ class ProjectSubclassDefinitionHook(type):
             cls.target = targetName
         else:
             sys.exit("Project target name cannot be inferred for " + name + ", set target= or doNotAddToTarget=True")
-        cls.setupConfigOptions()
         if cls.__dict__.get("dependenciesMustBeBuilt"):
             if not cls.dependencies:
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + targetName)
