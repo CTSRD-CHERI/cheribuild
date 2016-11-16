@@ -1,8 +1,10 @@
 import argparse
 import json
 import os
+import shlex
 import shutil
 import sys
+import collections.abc
 from collections import OrderedDict
 from pathlib import Path
 from .utils import coloured, AnsiColour
@@ -62,10 +64,11 @@ class ConfigLoader(object):
 
     @classmethod
     def addOption(cls, name: str, shortname=None, default=None, type=None, group=None, **kwargs):
+        # add the default string to help if it is not lambda and help != argparse.SUPPRESS
         if default and not callable(default) and "help" in kwargs:
-            # only add the default string if it is not lambda
             if kwargs["help"] != argparse.SUPPRESS:
                 kwargs["help"] = kwargs["help"] + " (default: \'" + str(default) + "\')"
+        assert "default" not in kwargs  # Should be handled manually
         parserObj = group if group else cls._parser
         if shortname:
             action = parserObj.add_argument("--" + name, "-" + shortname, **kwargs)
@@ -80,8 +83,7 @@ class ConfigLoader(object):
 
     @classmethod
     def addBoolOption(cls, name: str, shortname=None, **kwargs) -> bool:
-        kwargs["default"] = False
-        return cls.addOption(name, shortname, action="store_true", type=bool, **kwargs)
+        return cls.addOption(name, shortname, default=False, action="store_true", type=bool, **kwargs)
 
     @classmethod
     def addPathOption(cls, name: str, shortname=None, **kwargs) -> Path:
@@ -96,20 +98,53 @@ class ConfigLoader(object):
         pass
 
     def _loadOption(self, config: "CheriConfig"):
+        fullOptionName = self.action.option_strings[0][2:]  # strip the initial "--"
+        result = self._loadOptionImpl(fullOptionName, config)
+        # Now convert it to the right type
+        # check for None to make sure we don't call str(None) which would result in "None"
+        if result is not None:
+            # print("Converting", result, "to", self.valueType)
+            # if the requested type is list, tuple, etc. use shlex.split() to convert strings to lists
+            if self.valueType != str and isinstance(result, str):
+                if isinstance(self.valueType, type) and issubclass(self.valueType, collections.abc.Sequence):
+                    stringValue = result
+                    result = shlex.split(stringValue)
+                    print(coloured(AnsiColour.magenta, "Config option ", fullOptionName, " (", stringValue, ") should "
+                          "be a list, got a string instead -> assuming the correct value is ", result, sep=""))
+            result = self.valueType(result)  # make sure it has the right type (e.g. Path, int, bool, str)
+        # print("Loaded option", self.action, "->", result)
+        # import traceback
+        # traceback.print_stack()
+        ConfigLoader.values[fullOptionName] = self._cached  # just for debugging
+        return result
+
+    def _loadOptionImpl(self, fullOptionName: str, config: "CheriConfig"):
         assert self._parsedArgs  # load() must have been called before using this object
         assert hasattr(self._parsedArgs, self.action.dest)
-        isDefault = False
-        result = getattr(self._parsedArgs, self.action.dest)
-        if not result:
-            isDefault = True
-            # allow lambdas as default values
-            if callable(self.default):
-                result = self.default(config)
-            else:
-                result = self.default
-        # override default options from the JSON file
         assert self.action.option_strings[0].startswith("--")
-        fullOptionName = self.action.option_strings[0][2:]  # strip the initial "--"
+
+        # First check the value specified on the command line, then load JSON and then fallback to the default
+        fromCmdLine = getattr(self._parsedArgs, self.action.dest)  # from command line
+        # print(fullOptionName, "from cmdline:", fromCmdLine)
+        if fromCmdLine is not None:
+            if fromCmdLine != self.action.default:
+                return fromCmdLine
+            # print("From command line == default:", fromCmdLine, self.action.default, "-> trying JSON")
+        # try loading it from the JSON file:
+        fromJson = self._loadFromJson(fullOptionName)
+        # print(fullOptionName, "from JSON:", fromJson)
+        if fromJson is not None:
+            print(coloured(AnsiColour.blue, "Overriding default value for", fullOptionName,
+                           "with value from JSON:", fromJson))
+            return fromJson
+        # load the default value (which could be a lambda)
+        if callable(self.default):
+            return self.default(config)
+        else:
+            return self.default
+
+    def _loadFromJson(self, fullOptionName: str):
+
         # if there are any / characters treat these as an object reference
         jsonPath = fullOptionName.split(sep="/")
         jsonKey = jsonPath[-1]  # last item is the key (e.g. llvm/build-type -> build-type)
@@ -119,28 +154,16 @@ class ConfigLoader(object):
             # Return an empty dict if it is not found
             jsonObject = jsonObject.get(objRef, {})
 
-        fromJSON = jsonObject.get(jsonKey, None)
-        if not fromJSON:
+        result = jsonObject.get(jsonKey, None)
+        if result is None:
             # also check action.dest (as a fallback so I don't have to update all my config files right now)
-            fromJSON = self._JSON.get(self.action.dest, None)
-            if fromJSON:
+            result = self._JSON.get(self.action.dest, None)
+            if result is not None:
                 print(coloured(AnsiColour.cyan, "Old JSON key", self.action.dest, "used, please use",
                                jsonKey, "instead"))
-        if fromJSON and isDefault:
-            print(coloured(AnsiColour.blue, "Overriding default value for", jsonKey,
-                           "with value from JSON:", fromJSON))
-            result = fromJSON
-        if result:
-            # make sure we don't call str(None) which would result in "None"
-            result = self.valueType(result)  # make sure it has the right type (e.g. Path, int, bool, str)
-
-        ConfigLoader.values[jsonKey] = result  # just for debugging
         return result
 
     def __get__(self, instance: "CheriConfig", owner):
         if self._cached is None:
-            # print("Loading option", self.action)
-            # import traceback
-            # traceback.print_stack()
             self._cached = self._loadOption(instance)
         return self._cached
