@@ -184,8 +184,8 @@ class CheriConfig(object):
         self.sdkSysrootDir = self.sdkDir / "sysroot"
         self.sysrootArchiveName = "cheri-sysroot.tar.gz"
 
-        # for debugging purposes print all the options
-        for i in ConfigLoader.options:
-            i.__get__(self, CheriConfig)  # for loading of lazy value
+        # for i in ConfigLoader.options:
+        #   i.__get__(self, CheriConfig)  # force loading of lazy value
         if self.verbose:
+            # for debugging purposes print all the options
             print("cheribuild.py configuration:", dict(ConfigLoader.values))
