@@ -1,3 +1,4 @@
+import argparse
 import os
 import shutil
 import shlex
@@ -61,6 +62,8 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def addConfigOption(cls, name: str, default=None, kind=str, *, shortname=None, **kwargs):
+        if not ConfigLoader.showAllHelp:
+            kwargs["help"] = argparse.SUPPRESS
         if not cls.__commandLineOptionGroup:
             # noinspection PyProtectedMember
             cls.__commandLineOptionGroup = ConfigLoader._parser.add_argument_group(

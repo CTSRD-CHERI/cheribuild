@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import shutil
+import sys
 from collections import OrderedDict
 from pathlib import Path
 from .utils import coloured, AnsiColour
@@ -10,6 +11,8 @@ from .utils import coloured, AnsiColour
 class ConfigLoader(object):
     _parser = argparse.ArgumentParser(formatter_class=
                                       lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
+    _parser.add_argument("--help-all", "--help-hidden", action="help", help="Show all help options, including"
+                                                                            "the target-specific ones.")
     options = []
     _parsedArgs = None
     _JSON = {}  # type: dict
@@ -23,6 +26,8 @@ class ConfigLoader(object):
     deprecatedOptionsGroup = _parser.add_argument_group("Old deprecated options", "These should not be used any more")
 
     cheriBitsGroup = _parser.add_mutually_exclusive_group()
+
+    showAllHelp = any(s in sys.argv for s in ("--help-all", "--help-hidden"))
 
     @classmethod
     def loadTargets(cls, availableTargets: list) -> list:
@@ -38,6 +43,7 @@ class ConfigLoader(object):
                                  help="The config file that is used to load the default settings (default: '" +
                                       str(defaultConfigPath) + "')")
         try:
+            # noinspection PyUnresolvedReferences
             import argcomplete
             argcomplete.autocomplete(cls._parser)
         except ImportError:
@@ -58,7 +64,8 @@ class ConfigLoader(object):
     def addOption(cls, name: str, shortname=None, default=None, type=None, group=None, **kwargs):
         if default and not callable(default) and "help" in kwargs:
             # only add the default string if it is not lambda
-            kwargs["help"] = kwargs["help"] + " (default: \'" + str(default) + "\')"
+            if kwargs["help"] != argparse.SUPPRESS:
+                kwargs["help"] = kwargs["help"] + " (default: \'" + str(default) + "\')"
         parserObj = group if group else cls._parser
         if shortname:
             action = parserObj.add_argument("--" + name, "-" + shortname, **kwargs)
