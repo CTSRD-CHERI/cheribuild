@@ -7,6 +7,7 @@ import threading
 import time
 from .utils import *
 from .targets import Target, targetManager
+from .configloader import ConfigLoader
 from pathlib import Path
 from enum import Enum
 
@@ -21,8 +22,10 @@ class ProjectSubclassDefinitionHook(type):
             targetName = clsdict["target"]
         elif name.startswith("Build"):
             targetName = name[len("Build"):].replace("_", "-").lower()
+            cls.target = targetName
         else:
             sys.exit("Project target name cannot be inferred for " + name + ", set target= or doNotAddToTarget=True")
+        cls.setupConfigOptions()
         if cls.__dict__.get("dependenciesMustBeBuilt"):
             if not cls.dependencies:
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + targetName)
@@ -53,6 +56,24 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
     cmakeInstallInstructions = ("Use your package manager to install CMake > 3.4 or run "
                                 "`cheribuild.py cmake` to install the latest version locally")
     compileDBRequiresBear = True
+
+    __commandLineOptionGroup = None
+
+    @classmethod
+    def addConfigOption(cls, name: str, default=None, kind=str, *, shortname=None, **kwargs):
+        if not cls.__commandLineOptionGroup:
+            # noinspection PyProtectedMember
+            cls.__commandLineOptionGroup = ConfigLoader._parser.add_argument_group(
+                    "Options for target '" + cls.target + "'")
+
+        return ConfigLoader.addOption(cls.target + "/" + name, shortname, default=default, type=kind,
+                                      group=cls.__commandLineOptionGroup, **kwargs)
+
+    @classmethod
+    def setupConfigOptions(cls):
+        statusUpdate("Setting up config options for", cls, cls.target)
+        # TODO: add the gitRevision option
+        pass
 
     def __init__(self, config: CheriConfig, *, projectName: str=None, sourceDir: Path=None, buildDir: Path=None,
                  installDir: Path=None, gitUrl="", gitRevision=None, appendCheriBitsToBuildDir=False):
@@ -419,6 +440,14 @@ class CMakeProject(Project):
         Ninja = 1
         Makefiles = 2
 
+    @classmethod
+    def setupConfigOptions(cls):
+        super().setupConfigOptions()
+        cls.cmakeBuildType = cls.addConfigOption("build-type", default="Release", metavar="BUILD_TYPE",
+                                                 help="The CMake build type (Debug, RelWithDebInfo, Release)")
+        cls.cmakeOptions = cls.addConfigOption("cmake-options", default=list(), kind=list, metavar="OPTIONS",
+                                               help="Additional command line options to pass to CMake")
+
     def __init__(self, *args, generator=Generator.Ninja, buildType="Release", **kwargs):
         super().__init__(*args, **kwargs)
         self.configureCommand = "cmake"
@@ -432,10 +461,14 @@ class CMakeProject(Project):
         if self.generator == CMakeProject.Generator.Makefiles:
             self.configureArgs.append("-GUnix Makefiles")
         self.configureArgs.append("-DCMAKE_INSTALL_PREFIX=" + str(self.installDir))
+        if self.cmakeBuildType:
+            buildType = self.cmakeBuildType
         self.configureArgs.append("-DCMAKE_BUILD_TYPE=" + buildType)
         # TODO: do it always?
         if self.config.createCompilationDB:
             self.configureArgs.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
+        # Add the options
+        self.configureArgs.extend(self.cmakeOptions)
 
     @staticmethod
     def _makeStdoutFilter(line: bytes):
