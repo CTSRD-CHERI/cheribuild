@@ -442,10 +442,12 @@ class CMakeProject(Project):
         Ninja = 1
         Makefiles = 2
 
+    defaultCMakeBuildType = "Release"
+
     @classmethod
     def setupConfigOptions(cls):
         super().setupConfigOptions()
-        cls.cmakeBuildType = cls.addConfigOption("build-type", default="Release", metavar="BUILD_TYPE",
+        cls.cmakeBuildType = cls.addConfigOption("build-type", default=cls.defaultCMakeBuildType, metavar="BUILD_TYPE",
                                                  help="The CMake build type (Debug, RelWithDebInfo, Release)")
         cls.cmakeOptions = cls.addConfigOption("cmake-options", default=[], kind=list, metavar="OPTIONS",
                                                help="Additional command line options to pass to CMake")
@@ -463,9 +465,7 @@ class CMakeProject(Project):
         if self.generator == CMakeProject.Generator.Makefiles:
             self.configureArgs.append("-GUnix Makefiles")
         self.configureArgs.append("-DCMAKE_INSTALL_PREFIX=" + str(self.installDir))
-        if self.cmakeBuildType:
-            buildType = self.cmakeBuildType
-        self.configureArgs.append("-DCMAKE_BUILD_TYPE=" + buildType)
+        self.configureArgs.append("-DCMAKE_BUILD_TYPE=" + self.cmakeBuildType)
         # TODO: do it always?
         if self.config.createCompilationDB:
             self.configureArgs.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
