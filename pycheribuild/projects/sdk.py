@@ -189,3 +189,5 @@ class InstallCmakeToolchainFiles(CMakeProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config, appendCheriBitsToBuildDir=True, projectName="cheri-toolchains",
                          gitUrl="https://github.com/RichardsonAlex/cheri-toolchains.git", installDir=config.sdkDir)
+        self.configureArgs.append("-DCHERI_SDK_BINDIR=" + str(self.config.sdkDir / "bin"))
+        self.configureArgs.append("-DCHERIBSD_SYSROOT=" + str(self.config.sdkDir / "sysroot"))
