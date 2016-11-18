@@ -9,9 +9,6 @@ from ..utils import *
 
 from pathlib import Path
 
-from .binutils import BuildBinutils
-from .llvm import BuildLLVM
-
 
 class BuildCheriBSDSdk(PseudoTarget):
     target = "cheribsd-sdk"
@@ -28,7 +25,7 @@ class BuildSdk(PseudoTarget):
 
 class BuildFreestandingSdk(Project):
     target = "freestanding-sdk"
-    dependencies = ["llvm", "cheribsd"] if IS_FREEBSD else ["elftoolchain", "binutils", "llvm"]
+    dependencies = ["llvm", "cheribsd"] if IS_FREEBSD else ["brandelf", "binutils", "llvm"]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

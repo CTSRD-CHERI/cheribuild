@@ -3,9 +3,9 @@ from ..utils import *
 
 
 class BuildElfToolchain(Project):
-    def __init__(self, config: CheriConfig):
+    def __init__(self, config: CheriConfig, gitUrl="https://github.com/emaste/elftoolchain.git"):
         super().__init__(config, installDir=config.sdkDir,
-                         gitUrl="https://github.com/emaste/elftoolchain.git")
+                         gitUrl=gitUrl)
         self.buildDir = self.sourceDir
         if IS_LINUX:
             self._addRequiredSystemTool("bmake")
@@ -35,3 +35,8 @@ class BuildElfToolchain(Project):
         #              "install", cwd=self.sourceDir)
         # make install requires root, just build binaries statically and copy them
         self.copyFile(self.sourceDir / "brandelf/brandelf", self.installDir / "bin/brandelf", force=True)
+
+
+class BuildBrandelf(BuildElfToolchain):
+    def __init__(self, config: CheriConfig):
+        super().__init__(config, gitUrl="https://github.com/RichardsonAlex/elftoolchain.git")
