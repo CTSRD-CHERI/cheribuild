@@ -135,7 +135,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
             return True  # in pretend mode we always return true
         if self.config.force:
             # in force mode we always return the forced result without prompting the user
-            print(message + yesNoStr, "y")
+            print(message + yesNoStr, "y" if forceResult else "n")
             return forceResult
         if not sys.__stdin__.isatty():
             return defaultResult  # can't get any input -> return the default
