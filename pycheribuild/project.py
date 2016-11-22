@@ -121,6 +121,8 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         #     raise AttributeError, "MyClass does not allow assignment to .x member"
         # self.__dict__[name] = value
         if self.__dict__.get("_preventAssign") and name in ("configureArgs", "configureEnvironment", "commonMakeArgs"):
+            import traceback
+            traceback.print_stack()
             fatalError("Project." + name + " mustn't be set, only modification is allowed.", "Called from",
                        self.__class__.__name__)
         self.__dict__[name] = value
