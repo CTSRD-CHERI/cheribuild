@@ -233,6 +233,8 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
             return
         if dest.exists() and force:
             dest.unlink()
+        if not src.exists():
+            fatalError("Required file", src, "does not exist")
         shutil.copy(str(src), str(dest), follow_symlinks=False)
 
     @staticmethod
