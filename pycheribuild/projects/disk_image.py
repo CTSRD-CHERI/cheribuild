@@ -72,7 +72,7 @@ class BuildDiskImage(Project):
 
     def prepareRootfs(self, outDir: Path):
         self.manifestFile = outDir / "METALOG"
-        self.copyFile(self.config.cheribsdRootfs / "METALOG", self.manifestFile)
+        self.installFile(self.config.cheribsdRootfs / "METALOG", self.manifestFile)
 
         # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
         # If they do not exist in the extra-files directory yet we generate a default one and use that
@@ -129,8 +129,7 @@ nfs_client_enable="YES"
                     self.createFileForImage(outDir, "/root/.ssh/authorized_keys", contents=contents)
                     if self.queryYesNo("Should this authorized_keys file be used by default? (You can always change them by editing/deleting '" +
                                        str(authorizedKeys) + "')?", defaultResult=False):
-                        self._makedirs(authorizedKeys.parent)
-                        self.copyFile(outDir / "root/.ssh/authorized_keys", authorizedKeys)
+                        self.installFile(outDir / "root/.ssh/authorized_keys", authorizedKeys)
 
     def makeImage(self):
         # check that qemu-img exists before starting the potentially long-running makefs command

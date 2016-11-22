@@ -96,7 +96,7 @@ class BuildLLD(BuildLLVM):
         self.runMake(["lld", self.config.makeJFlag])
 
     def install(self):
-        self.copyFile(self.buildDir / "bin/lld", self.config.sdkDir / "bin/lld", force=True)
+        self.installFile(self.buildDir / "bin/lld", self.config.sdkDir / "bin/lld", force=True)
         runCmd("ln", "-fsn", "lld", "ld.lld", cwd=self.config.sdkDir / "bin", printVerboseOnly=True)
         self.createBuildtoolTargetSymlinks(self.installDir / "bin/lld")
 

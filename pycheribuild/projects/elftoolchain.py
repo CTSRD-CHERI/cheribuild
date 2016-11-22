@@ -93,8 +93,7 @@ class BuildElfToolchain(BuildCheriBinutils):
         # self.runMake([self.makeCommand, self.config.makeJFlag, "DESTDIR=" + str(self.installDir)] + self.makeArgs,
         #              "install", cwd=self.sourceDir)
         # make install requires root, just build binaries statically and copy them
-        self._makedirs(self.installDir / "bin")
-        self.copyFile(self.sourceDir / "brandelf/brandelf", self.installDir / "bin/brandelf", force=True)
+        self.installFile(self.sourceDir / "brandelf/brandelf", self.installDir / "bin/brandelf", force=True)
 
 
 # TODO: remove this target and make it an alias for cheri-binutils

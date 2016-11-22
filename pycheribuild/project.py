@@ -225,7 +225,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         with file.open("w", encoding="utf-8") as f:
             f.write(contents)
 
-    def copyFile(self, src: Path, dest: Path, *, force=False):
+    def installFile(self, src: Path, dest: Path, *, force=False, createDirs=True):
         if force:
             printCommand("cp", "-f", src, dest, printVerboseOnly=True)
         else:
@@ -236,6 +236,8 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
             dest.unlink()
         if not src.exists():
             fatalError("Required file", src, "does not exist")
+        if createDirs and not dest.parent.exists():
+            self._makedirs(dest.parent)
         shutil.copy(str(src), str(dest), follow_symlinks=False)
 
     @staticmethod

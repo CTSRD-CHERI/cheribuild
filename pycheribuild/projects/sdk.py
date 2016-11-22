@@ -88,9 +88,9 @@ class BuildFreestandingSdk(Project):
         tools = binutilsBinaries + "gcc g++ gcov crunchide".split()
         for tool in tools:
             if (CHERITOOLS_OBJ / tool).is_file():
-                self.copyFile(CHERITOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
+                self.installFile(CHERITOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
             elif (CHERIBOOTSTRAPTOOLS_OBJ / tool).is_file():
-                self.copyFile(CHERIBOOTSTRAPTOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
+                self.installFile(CHERIBOOTSTRAPTOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
             else:
                 fatalError("Required tool", tool, "is missing!")
 
@@ -98,7 +98,7 @@ class BuildFreestandingSdk(Project):
         # We must make this the same directory that contains ld for linking and
         # compiling to both work...
         for tool in ("cc1", "cc1plus"):
-            self.copyFile(CHERILIBEXEC_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
+            self.installFile(CHERILIBEXEC_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
         return tools
 
 

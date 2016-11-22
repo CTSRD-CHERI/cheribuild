@@ -23,8 +23,7 @@ class BuildMakefsOnLinux(Project):
         self.runMake(self.commonMakeArgs)
 
     def install(self):
-        self._makedirs(self.installDir / "bin")
-        self.copyFile(self.sourceDir / "builddir/usr.sbin/makefs/makefs", self.installDir / "bin/makefs")
+        self.installFile(self.sourceDir / "builddir/usr.sbin/makefs/makefs", self.installDir / "bin/makefs")
 
     def process(self):
         if not IS_LINUX:
