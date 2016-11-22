@@ -64,6 +64,5 @@ class BuildBinutils(AutotoolsProject):
             if not (bindir / prefixedName).is_file():
                 fatalError("Binutils binary", prefixedName, "is missing!")
             # create the right symlinks to the tool (ld -> mips64-unknown-elf-ld, etc)
-            runCmd("ln", "-fsn", prefixedName, tool, cwd=bindir)
             # Also symlink cheri-unknown-freebsd-ld -> ld (and the other targets)
-            self.createBuildtoolTargetSymlinks(bindir / prefixedName, toolName=tool)
+            self.createBuildtoolTargetSymlinks(bindir / prefixedName, toolName=tool, createUnprefixedLink=True)

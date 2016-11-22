@@ -348,27 +348,35 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
                 raise SystemExit("Command \"%s\" failed with exit code %d.\nSee %s for details." %
                                  (cmdStr, retcode, logfile.name))
 
-    def createBuildtoolTargetSymlinks(self, tool: Path, toolName: str=None, cwd: str=None):
+    def createBuildtoolTargetSymlinks(self, tool: Path, toolName: str=None, createUnprefixedLink: bool=False,
+                                      cwd: str=None):
         """
         Create mips4-unknown-freebsd, cheri-unknown-freebsd and mips64-unknown-freebsd prefixed symlinks
         for build tools like clang, ld, etc.
+        :param createUnprefixedLink: whether to create a symlink toolName -> tool.name
+        (in case the real tool is prefixed)
+        :param cwd: the working directory
         :param tool: the binary for which the symlinks will be created
-        :param toolName: the unprefixed name of the tool (defaults to tool.name)
+        :param toolName: the unprefixed name of the tool (defaults to tool.name) such as e.g. "ld", "ar"
         """
         # if the actual tool we are linking to make sure we link to the destinations so we don't create symlink loops
         cwd = cwd or tool.parent  # set cwd before resolving potential symlink
-        if tool.is_symlink():
-            tool = tool.resolve()
-        if not tool.is_file():
-            fatalError("Attempting to create symlink to non-existent build tool:", tool)
         if not toolName:
             toolName = tool.name
+        if not tool.is_file():
+            fatalError("Attempting to create symlink to non-existent build tool:", tool)
+
+        # a prefixed tool was installed -> create link such as mips4-unknown-freebsd-ld -> ld
+        if createUnprefixedLink:
+            assert tool.name != toolName
+            runCmd("ln", "-fsn", tool.name, toolName, cwd=cwd, printVerboseOnly=True)
+
         for target in ("mips4-unknown-freebsd-", "cheri-unknown-freebsd-", "mips64-unknown-freebsd-"):
             link = tool.parent / (target + toolName)  # type: Path
-            if link.exists() and not link.is_symlink():
-                if self.config.verbose:
-                    print(coloured(AnsiColour.yellow, "Not overwriting", link, "as it is a file not a symlink"))
-                continue  # happens for binutils, where prefixed tools are installed
+            if link == tool:  # happens for binutils, where prefixed tools are installed
+                # if self.config.verbose:
+                #    print(coloured(AnsiColour.yellow, "Not overwriting", link, "because it is the target"))
+                continue
             runCmd("ln", "-fsn", tool.name, target + toolName, cwd=cwd, printVerboseOnly=True)
 
     def dependencyError(self, *args, installInstructions: str=None):
