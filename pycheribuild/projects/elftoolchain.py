@@ -49,3 +49,46 @@ class BuildElfToolchain(Project):
 class BuildBrandelf(BuildElfToolchain):
     def __init__(self, config: CheriConfig):
         super().__init__(config, gitUrl="https://github.com/RichardsonAlex/elftoolchain.git")
+
+
+class BuildCheriBsdBinutils(BuildElfToolchain):
+    target = "cheri-binutils"
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config, gitUrl="https://github.com/RichardsonAlex/elftoolchain.git")
+        self.programsToBuild = ["brandelf", "ar", "elfcopy", "elfdump", "strings", "nm", "readelf", "addr2line",
+                                "size", "findtextrel"]
+
+    def install(self):
+        # We don't actually want to install all the files, just copy the binaries that we want
+        group = grp.getgrgid(os.getegid()).gr_name
+        user = pwd.getpwuid(os.geteuid()).pw_name
+        ownerFlags = [
+            # elftoolchain tries to install as root -> override *GRP and *OWN flags
+            "BINGRP=" + group, "BINOWN=" + user,
+            "MANGRP=" + group, "MANOWN=" + user,
+            "INFOGRP=" + group, "INFOOWN=" + user,
+            "LIBGRP=" + group, "LIBOWN=" + user,
+            "FILESGRP=" + group, "FILESOWN=" + user,
+            # override the install paths:
+            "BINDIR=/bin", "MANDIR=/share/man", "LIBDIR=/lib", "INCSDIR=/include"
+        ]
+        if IS_LINUX:
+            # $INSTALL is not set to create leading directories on Ubuntu
+            ownerFlags.append("INSTALL=install -D")
+
+        # some directories are not being created correctly:
+        for i in ("share/man/man1", "share/man/man3", "share/man/man5"):
+            self._makedirs(self.installDir / i)
+        installTargets = list(map(lambda p: "install-" + p, self.programsToBuild))
+        self.runMake(self.commonMakeArgs + ownerFlags + ["DESTDIR=" + str(self.installDir)] + installTargets,
+                     logfileName="install")
+
+        # some make targets install more than one tool:
+        # strip, objcopy and mcs are links to elfcopy and ranlib is a link to ar
+        allInstalledTools = self.programsToBuild + ["strip", "ranlib", "objcopy", "mcs"]
+        for prog in allInstalledTools:
+            self.createBuildtoolTargetSymlinks(self.installDir / "bin" / prog)
+        # we also create symlinks for objdump pointing to elfdump (for some reason this is not installed by elftc)
+        # TODO: should we also create $SDK_DIR/bin/objdump pointing to elfdump? or only the prefixed ones
+        self.createBuildtoolTargetSymlinks(self.installDir / "bin" / "elfdump", toolName="objdump")
