@@ -6,8 +6,10 @@ import grp
 import os
 
 
-class BuildElfToolchain(Project):
-    def __init__(self, config: CheriConfig, gitUrl="https://github.com/emaste/elftoolchain.git", **kwargs):
+class BuildCheriBinutils(Project):
+    target = "cheri-binutils"
+
+    def __init__(self, config: CheriConfig, gitUrl="https://github.com/RichardsonAlex/elftoolchain.git", **kwargs):
         super().__init__(config, installDir=config.sdkDir, gitUrl=gitUrl, **kwargs)
         self.buildDir = self.sourceDir
         if IS_LINUX:
@@ -21,16 +23,10 @@ class BuildElfToolchain(Project):
         # TODO: build static?
         self.commonMakeArgs.append("WITH_TESTS=no")
         self.commonMakeArgs.append("WITH_DOCUMENTATION=no")
-        self.programsToBuild = ["brandelf"]
         if not self.config.verbose:
             self.commonMakeArgs.append("-s")
-
-    def process(self):
-        warningMessage("Building target 'elftoolchain' is deprecated, you should build 'cheri-binutils' instead.")
-        if not self.queryYesNo("Are you sure you want to build this target", forceResult=False):
-            statusUpdate("Skipping deprecated target 'elftoolchain'")
-            return
-        super().process()
+        self.programsToBuild = ["brandelf", "ar", "elfcopy", "elfdump", "strings", "nm", "readelf", "addr2line",
+                                "size", "findtextrel", "as"]
 
     def compile(self):
         libTargets = ["common", "libelf", "libelftc", "libpe", "libdwarf"]
@@ -42,30 +38,6 @@ class BuildElfToolchain(Project):
                          logfileName="build." + tgt)
         progTargets = list(map(lambda p: "all-" + p, self.programsToBuild))
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag] + progTargets, logfileName="build.programs")
-
-    def install(self):
-        if IS_FREEBSD:
-            statusUpdate("Not installing elftoolchain binaries as they conflict witht he ones from CheriBSD")
-            return
-        # self.runMake([self.makeCommand, self.config.makeJFlag, "DESTDIR=" + str(self.installDir)] + self.makeArgs,
-        #              "install", cwd=self.sourceDir)
-        # make install requires root, just build binaries statically and copy them
-        self._makedirs(self.installDir / "bin")
-        self.copyFile(self.sourceDir / "brandelf/brandelf", self.installDir / "bin/brandelf", force=True)
-
-
-class BuildBrandelf(BuildElfToolchain):
-    def __init__(self, config: CheriConfig):
-        super().__init__(config, gitUrl="https://github.com/RichardsonAlex/elftoolchain.git")
-
-
-class BuildCheriBsdBinutils(BuildElfToolchain):
-    target = "cheri-binutils"
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config, gitUrl="https://github.com/RichardsonAlex/elftoolchain.git")
-        self.programsToBuild = ["brandelf", "ar", "elfcopy", "elfdump", "strings", "nm", "readelf", "addr2line",
-                                "size", "findtextrel"]
 
     def install(self):
         # We don't actually want to install all the files, just copy the binaries that we want
@@ -100,3 +72,33 @@ class BuildCheriBsdBinutils(BuildElfToolchain):
         # we also create symlinks for objdump pointing to elfdump (for some reason this is not installed by elftc)
         # TODO: should we also create $SDK_DIR/bin/objdump pointing to elfdump? or only the prefixed ones
         self.createBuildtoolTargetSymlinks(self.installDir / "bin" / "elfdump", toolName="objdump")
+
+
+class BuildElfToolchain(BuildCheriBinutils):
+    def __init__(self, config: CheriConfig):
+        super().__init__(config, gitUrl="https://github.com/emaste/elftoolchain.git")
+        self.programsToBuild = ["brandelf"]
+
+    def process(self):
+        warningMessage("Building target 'elftoolchain' is deprecated, you should build 'cheri-binutils' instead.")
+        if not self.queryYesNo("Are you sure you want to build this target", forceResult=False):
+            statusUpdate("Skipping deprecated target 'elftoolchain'")
+            return
+        super().process()
+
+    def install(self):
+        if IS_FREEBSD:
+            statusUpdate("Not installing elftoolchain binaries as they conflict witht he ones from CheriBSD")
+            return
+        # self.runMake([self.makeCommand, self.config.makeJFlag, "DESTDIR=" + str(self.installDir)] + self.makeArgs,
+        #              "install", cwd=self.sourceDir)
+        # make install requires root, just build binaries statically and copy them
+        self._makedirs(self.installDir / "bin")
+        self.copyFile(self.sourceDir / "brandelf/brandelf", self.installDir / "bin/brandelf", force=True)
+
+
+# TODO: remove this target and make it an alias for cheri-binutils
+class BuildBrandelf(BuildCheriBinutils):
+    def __init__(self, config: CheriConfig):
+        super().__init__(config, gitUrl="https://github.com/RichardsonAlex/elftoolchain.git")
+        self.programsToBuild = ["brandelf"]
