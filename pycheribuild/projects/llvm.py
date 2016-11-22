@@ -7,8 +7,8 @@ from ..utils import *
 
 
 class BuildLLVM(CMakeProject):
-    def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
+    def __init__(self, config: CheriConfig, **kwargs):
+        super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True, **kwargs)
         self.cCompiler = config.clangPath
         self.cppCompiler = config.clangPlusPlusPath
         # this must be added after checkSystemDependencies
@@ -78,3 +78,24 @@ class BuildLLVM(CMakeProject):
         # create a symlink for the target
         self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang")
         self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang++")
+
+
+class BuildLLD(BuildLLVM):
+    def __init__(self, config: CheriConfig,):
+        super().__init__(config, sourceDir=config.sourceRoot / "lld-llvm")
+        self.configureArgs.append("-DLLVM_TOOL_LLD_BUILD=ON")
+
+    def update(self):
+        self._updateGitRepo(self.sourceDir, "https://github.com/llvm-mirror/llvm.git")
+        self._updateGitRepo(self.sourceDir / "tools/lld", "https://github.com/llvm-mirror/lld.git")
+
+    def compile(self):
+        self.runMake(["lld", self.config.makeJFlag])
+
+    def install(self):
+        self.copyFile(self.buildDir / "bin/lld", self.config.sdkDir / "bin/lld", force=True)
+        runCmd("ln", "-fsn", "lld", "ld.lld", cwd=self.config.sdkDir / "bin", printVerboseOnly=True)
+        self.createBuildtoolTargetSymlinks(self.installDir / "bin/lld")
+
+        # use it as the default SDK linker:
+        self.createBuildtoolTargetSymlinks(self.installDir / "bin/lld", toolName="ld", createUnprefixedLink=True)
