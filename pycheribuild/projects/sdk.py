@@ -25,7 +25,7 @@ class BuildSdk(PseudoTarget):
 
 class BuildFreestandingSdk(Project):
     target = "freestanding-sdk"
-    dependencies = ["llvm", "cheribsd"] if IS_FREEBSD else ["cheri-binutils", "lld", "llvm"]
+    dependencies = ["llvm", "lld", "cheribsd"] if IS_FREEBSD else ["cheri-binutils", "lld", "llvm"]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -55,7 +55,7 @@ class BuildFreestandingSdk(Project):
         self.buildCheridis()
         # TODO: symlink the llvm tools in this in llvm.py
         if IS_FREEBSD:
-            binutilsBinaries = "addr2line as brandelf ld nm objcopy objdump size strings strip".split()
+            binutilsBinaries = "addr2line as brandelf nm objcopy objdump size strings strip".split()
             toolsToSymlink = binutilsBinaries
             # When building on FreeBSD we also copy the MIPS GCC and related tools
             toolsToSymlink += self.copyCrossToolsFromCheriBSD(binutilsBinaries)
