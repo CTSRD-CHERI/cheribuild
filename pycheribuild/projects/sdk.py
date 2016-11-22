@@ -25,7 +25,7 @@ class BuildSdk(PseudoTarget):
 
 class BuildFreestandingSdk(Project):
     target = "freestanding-sdk"
-    dependencies = ["llvm", "cheribsd"] if IS_FREEBSD else ["brandelf", "binutils", "llvm"]
+    dependencies = ["llvm", "cheribsd"] if IS_FREEBSD else ["cheri-binutils", "lld", "llvm"]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

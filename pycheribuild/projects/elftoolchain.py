@@ -21,9 +21,16 @@ class BuildElfToolchain(Project):
         # TODO: build static?
         self.commonMakeArgs.append("WITH_TESTS=no")
         self.commonMakeArgs.append("WITH_DOCUMENTATION=no")
-        self.programsToBuild = ["brandelf", "ar"]
+        self.programsToBuild = ["brandelf"]
         if not self.config.verbose:
             self.commonMakeArgs.append("-s")
+
+    def process(self):
+        warningMessage("Building target 'elftoolchain' is deprecated, you should build 'cheri-binutils' instead.")
+        if not self.queryYesNo("Are you sure you want to build this target", forceResult=False):
+            statusUpdate("Skipping deprecated target 'elftoolchain'")
+            return
+        super().process()
 
     def compile(self):
         libTargets = ["common", "libelf", "libelftc", "libpe", "libdwarf"]
@@ -43,6 +50,7 @@ class BuildElfToolchain(Project):
         # self.runMake([self.makeCommand, self.config.makeJFlag, "DESTDIR=" + str(self.installDir)] + self.makeArgs,
         #              "install", cwd=self.sourceDir)
         # make install requires root, just build binaries statically and copy them
+        self._makedirs(self.installDir / "bin")
         self.copyFile(self.sourceDir / "brandelf/brandelf", self.installDir / "bin/brandelf", force=True)
 
 

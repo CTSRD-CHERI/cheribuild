@@ -46,7 +46,8 @@ However, some targets (e.g. `all`, `sdk`) will always build their dependencies b
 - `binutils` builds and installs [CTSRD-CHERI/binutils](https://github.com/CTSRD-CHERI/binutils)
 - `qemu` builds and installs [CTSRD-CHERI/qemu](https://github.com/CTSRD-CHERI/qemu)
 - `llvm` builds and installs [CTSRD-CHERI/llvm](https://github.com/CTSRD-CHERI/llvm) and [CTSRD-CHERI/clang](https://github.com/CTSRD-CHERI/clang)
-- `cheribsd` builds and installs [CTSRD-CHERI/cheribsd](https://github.com/CTSRD-CHERI/cheribsd)
+- `lld` builds and installs the [llvm-mirror/lld](https://github.com/llvm-mirror/lld) linker
+- `cheribsd` builds and installs [CTSRD-CHERI/cheribsd](https://github.com/CTSRD-CHERI/cheribsd) (**NOTE:** Only works on FreeBSD systems)
 - `disk-image` creates a CHERIBSD disk-image
 - `run` launches QEMU with the CHERIBSD disk image
 - `cheribsd-sysroot` creates a CheriBSD sysroot. When running this script on a non-FreeBSD system the files will need to be copied from a build server
@@ -57,6 +58,7 @@ However, some targets (e.g. `all`, `sdk`) will always build their dependencies b
 
 #### Other targets
 - `cmake` builds and installs latest [CMake](https://github.com/Kitware/CMake)
+- `binutils` builds and installs [CTSRD-CHERI/binutils](https://github.com/CTSRD-CHERI/binutils)
 - `brandelf` builds and installs `brandelf` from [elftoolchain](https://github.com/Richardson/elftoolchain/) (needed for SDK on non-FreeBSD systems)
 - `awk` builds and installs BSD AWK (if you need it on Linux)
 - `cherios` builds and installs [CTSRD-CHERI/cherios](https://github.com/CTSRD-CHERI/cherios)

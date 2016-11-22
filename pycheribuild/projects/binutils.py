@@ -66,3 +66,10 @@ class BuildBinutils(AutotoolsProject):
             # create the right symlinks to the tool (ld -> mips64-unknown-elf-ld, etc)
             # Also symlink cheri-unknown-freebsd-ld -> ld (and the other targets)
             self.createBuildtoolTargetSymlinks(bindir / prefixedName, toolName=tool, createUnprefixedLink=True)
+
+    def process(self):
+        warningMessage("Building 'binutils' is probably not what you want, Try 'cheri-binutils'+'lld' instead?")
+        if not self.queryYesNo("Are you sure you want to build this target", forceResult=False):
+            statusUpdate("Skipping target 'binutils'")
+            return
+        super().process()
