@@ -84,15 +84,14 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
     def __init__(self, config: CheriConfig, *, projectName: str=None, sourceDir: Path=None, buildDir: Path=None,
                  installDir: Path=None, gitUrl="", gitRevision=None, appendCheriBitsToBuildDir=False):
         className = self.__class__.__name__
-        if className.startswith("Build"):
-            self.projectName = className[len("Build"):].replace("_", "-")
-        elif projectName:
+        if projectName:
             self.projectName = projectName
+        elif self.target:
+            self.projectName = self.target
+        elif className.startswith("Build"):
+            self.projectName = className[len("Build"):].replace("_", "-")
         else:
-            if self.target:
-                self.projectName = self.target
-            else:
-                fatalError("Project name is not set and cannot infer from class", className)
+            fatalError("Project name is not set and cannot infer from class", className)
         self.projectNameLower = self.projectName.lower()
 
         self.gitUrl = gitUrl
