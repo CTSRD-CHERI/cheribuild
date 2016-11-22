@@ -54,19 +54,17 @@ class BuildFreestandingSdk(Project):
         self.installCMakeConfig()
         self.buildCheridis()
         # TODO: symlink the llvm tools in this in llvm.py
-        llvmBinaries = "clang clang++ llvm-mc llvm-objdump llvm-readobj llvm-size llc".split()
-        binutilsBinaries = "addr2line as brandelf ld nm objcopy objdump size strings strip".split()
-        toolsToSymlink = llvmBinaries + binutilsBinaries
         if IS_FREEBSD:
+            binutilsBinaries = "addr2line as brandelf ld nm objcopy objdump size strings strip".split()
+            toolsToSymlink = binutilsBinaries
             # When building on FreeBSD we also copy the MIPS GCC and related tools
             toolsToSymlink += self.copyCrossToolsFromCheriBSD(binutilsBinaries)
             # For some reason CheriBSD does not build a cross ar, let's symlink the system one to the SDK bindir
             runCmd("ln", "-fsn", shutil.which("ar"), self.config.sdkDir / "bin/ar",
                    cwd=self.config.sdkDir / "bin", printVerboseOnly=True)
             self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin/ar")
-
-        for tool in set(toolsToSymlink):
-            self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin" / tool)
+            for tool in set(toolsToSymlink):
+                self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin" / tool)
 
     def copyCrossToolsFromCheriBSD(self, binutilsBinaries: "typing.List[str]"):
         # if we pass a string starting with a slash to Path() it will reset to that absolute path

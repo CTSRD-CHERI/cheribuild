@@ -76,8 +76,11 @@ class BuildLLVM(CMakeProject):
             if not self.config.pretend:
                 i.unlink()
         # create a symlink for the target
-        self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang")
-        self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang++")
+        llvmBinaries = "clang clang++ llvm-mc llvm-objdump llvm-readobj llvm-size llc".split()
+        for tool in llvmBinaries:
+            self.createBuildtoolTargetSymlinks(self.installDir / "bin" / tool)
+
+
 
 
 class BuildLLD(BuildLLVM):
