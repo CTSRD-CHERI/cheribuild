@@ -20,7 +20,6 @@ class BuildCheriBSDSdk(PseudoTarget):
 class BuildSdk(PseudoTarget):
     target = "sdk"
     dependencies = ["cheribsd-sdk"] if IS_FREEBSD else ["freestanding-sdk"]
-    dependencies.append("cheri-toolchains")
 
 
 class BuildFreestandingSdk(Project):
