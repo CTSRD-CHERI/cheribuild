@@ -26,7 +26,10 @@ class BuildCheriBinutils(Project):
         if not self.config.verbose:
             self.commonMakeArgs.append("-s")
         self.programsToBuild = ["brandelf", "ar", "elfcopy", "elfdump", "strings", "nm", "readelf", "addr2line",
-                                "size", "findtextrel", "as"]
+                                "size", "findtextrel"]
+        # some make targets install more than one tool:
+        # strip, objcopy and mcs are links to elfcopy and ranlib is a link to ar
+        self.extraPrograms = ["strip", "ranlib", "objcopy", "mcs"]
 
     def compile(self):
         libTargets = ["common", "libelf", "libelftc", "libpe", "libdwarf"]
@@ -70,14 +73,9 @@ class BuildCheriBinutils(Project):
                          cwd=self.sourceDir / tgt, logfileName="install", appendToLogfile=not firstCall)
             firstCall = False
 
-        # some make targets install more than one tool:
-        # strip, objcopy and mcs are links to elfcopy and ranlib is a link to ar
-        allInstalledTools = self.programsToBuild + ["strip", "ranlib", "objcopy", "mcs"]
+        allInstalledTools = self.programsToBuild + self.extraPrograms
         for prog in allInstalledTools:
             self.createBuildtoolTargetSymlinks(self.installDir / "bin" / prog)
-        # we also create symlinks for objdump pointing to elfdump (for some reason this is not installed by elftc)
-        # TODO: should we also create $SDK_DIR/bin/objdump pointing to elfdump? or only the prefixed ones
-        self.createBuildtoolTargetSymlinks(self.installDir / "bin" / "elfdump", toolName="objdump")
 
 
 class BuildElfToolchain(BuildCheriBinutils):
@@ -107,3 +105,4 @@ class BuildBrandelf(BuildCheriBinutils):
     def __init__(self, config: CheriConfig):
         super().__init__(config, gitUrl="https://github.com/RichardsonAlex/elftoolchain.git")
         self.programsToBuild = ["brandelf"]
+        self.extraPrograms = []
