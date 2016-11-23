@@ -81,9 +81,9 @@ class BuildLLVM(CMakeProject):
             self.createBuildtoolTargetSymlinks(self.installDir / "bin" / tool)
 
 
-
-
 class BuildLLD(BuildLLVM):
+    defaultCMakeBuildType = "Debug"
+
     def __init__(self, config: CheriConfig,):
         super().__init__(config, sourceDir=config.sourceRoot / "lld-llvm")
         self.configureArgs.append("-DLLVM_TOOL_LLD_BUILD=ON")
