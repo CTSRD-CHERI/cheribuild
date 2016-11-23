@@ -3,6 +3,8 @@ from ..utils import *
 
 
 class BuildBinutils(AutotoolsProject):
+    target = "gnu-binutils"
+
     @classmethod
     def setupConfigOptions(cls):
         cls.fullInstall = cls.addBoolOption("install-all-tools", help="Whether to install all binutils tools instead"

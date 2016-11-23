@@ -24,7 +24,7 @@ class BuildSdk(PseudoTarget):
 
 class BuildFreestandingSdk(Project):
     target = "freestanding-sdk"
-    dependencies = ["llvm", "lld", "cheribsd"] if IS_FREEBSD else ["cheri-binutils", "lld", "llvm"]
+    dependencies = ["llvm", "lld", "cheribsd"] if IS_FREEBSD else ["binutils", "lld", "llvm"]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -196,7 +196,13 @@ class InstallCmakeToolchainFiles(CMakeProject):
         self.configureArgs.append("-DCHERIBSD_SYSROOT=" + str(self.config.sdkDir / "sysroot"))
 
 
-class StartCheriSDKShell(CMakeProject):
+# Replace the old binutils target by on that builds the required tools from GNU binutils and elftoolchain
+class BuildBinutils(PseudoTarget):
+    target = "binutils"
+    dependencies = ["gnu-binutils", "elftoolchain-binutils"] if not IS_FREEBSD else []
+
+
+class StartCheriSDKShell(Project):
     target = "sdk-shell"
 
     def process(self):
