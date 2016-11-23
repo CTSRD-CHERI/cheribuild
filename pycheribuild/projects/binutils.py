@@ -3,8 +3,14 @@ from ..utils import *
 
 
 class BuildBinutils(AutotoolsProject):
+    @classmethod
+    def setupConfigOptions(cls):
+        cls.fullInstall = cls.addBoolOption("install-all-tools", help="Whether to install all binutils tools instead"
+                                                                      "of only as, ld and objdump")
+
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.sdkDir, gitUrl="https://github.com/CTSRD-CHERI/binutils.git")
+        super().__init__(config, installDir=config.sdkDir, gitUrl="https://github.com/CTSRD-CHERI/binutils.git",
+                         projectName="binutils")
         # http://marcelog.github.io/articles/cross_freebsd_compiler_in_linux.html
         self.gitBranch = "cheribsd"  # the default branch "cheri" won't work for cross-compiling
 
@@ -57,19 +63,27 @@ class BuildBinutils(AutotoolsProject):
         super().update()
 
     def install(self):
-        super().install()
         bindir = self.installDir / "bin"
-        for tool in "addr2line ld ranlib strip ar nm readelf as objcopy size c++filt objdump strings".split():
+        if not self.fullInstall:
+            # we don't want to install all programs, as the rest comes from elftoolchain
+            self.runMake(self.commonMakeArgs, "install-ld", logfileName="install")
+            self.runMake(self.commonMakeArgs, "install-gas", logfileName="install", appendToLogfile=True)
+            # copy objdump from the build dir
+            self.installFile(self.buildDir / "binutils/objdump", bindir / "mips64-unknown-freebsd-objdump")
+            installedTools = ["as", "objdump"]
+        else:
+            super().install()
+            installedTools = "addr2line ranlib strip ar nm readelf as objcopy size c++filt objdump strings".split()
+
+        for tool in installedTools:
             prefixedName = "mips64-unknown-freebsd-" + tool
             if not (bindir / prefixedName).is_file():
                 fatalError("Binutils binary", prefixedName, "is missing!")
             # create the right symlinks to the tool (ld -> mips64-unknown-elf-ld, etc)
             # Also symlink cheri-unknown-freebsd-ld -> ld (and the other targets)
             self.createBuildtoolTargetSymlinks(bindir / prefixedName, toolName=tool, createUnprefixedLink=True)
-
-    def process(self):
-        warningMessage("Building 'binutils' is probably not what you want, Try 'cheri-binutils'+'lld' instead?")
-        if not self.queryYesNo("Are you sure you want to build this target", forceResult=False):
-            statusUpdate("Skipping target 'binutils'")
-            return
-        super().process()
+        # create links for ld:
+        self.installFile(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
+        self.createBuildtoolTargetSymlinks(bindir / "ld.bfd")
+        # TODO: replace with lld once it is mature enough to compile cheribsd
+        self.createBuildtoolTargetSymlinks(bindir / "ld.bfd", toolName="ld", createUnprefixedLink=True)
