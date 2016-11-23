@@ -186,3 +186,15 @@ class InstallCmakeToolchainFiles(CMakeProject):
                          gitUrl="https://github.com/RichardsonAlex/cheri-toolchains.git", installDir=config.sdkDir)
         self.configureArgs.append("-DCHERI_SDK_BINDIR=" + str(self.config.sdkDir / "bin"))
         self.configureArgs.append("-DCHERIBSD_SYSROOT=" + str(self.config.sdkDir / "sysroot"))
+
+
+class StartCheriSDKShell(CMakeProject):
+    target = "sdk-shell"
+
+    def process(self):
+        newManPath = str(self.config.sdkDir / "share/man") + ":" + os.getenv("MANPATH", "") + ":"
+        newPath = str(self.config.sdkDir / "bin") + ":" + str(self.config.dollarPathWithOtherTools)
+        shell = os.getenv("SHELL", "/bin/sh")
+        with setEnv(MANPATH=newManPath, PATH=newPath):
+            statusUpdate("Running SDK shell")
+            runCmd(shell, cwd=self.config.sdkDir / "bin")
