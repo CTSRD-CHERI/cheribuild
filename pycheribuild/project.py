@@ -258,7 +258,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
                     outfile.write(errLine)
 
     def runMake(self, args: "typing.List[str]", makeTarget="", *, makeCommand: str=None, logfileName: str=None,
-                cwd: Path=None, env=None) -> None:
+                cwd: Path=None, env=None, appendToLogfile=False) -> None:
         if not makeCommand:
             makeCommand = self.makeCommand
         if not cwd:
@@ -277,15 +277,17 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
             allArgs = [self.config.otherToolsDir / "bin/bear", "--cdb", self.buildDir / "compile_commands.json",
                        "--append"] + allArgs
         starttime = time.time()
-        self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=self._makeStdoutFilter, cwd=cwd, env=env)
+        self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=self._makeStdoutFilter, cwd=cwd, env=env,
+                            appendToLogfile=appendToLogfile)
         # add a newline at the end in case it ended with a filtered line (no final newline)
         print("Running", self.makeCommand, makeTarget, "took", time.time() - starttime, "seconds")
 
     def runWithLogfile(self, args: "typing.Sequence[str]", logfileName: str, *, stdoutFilter=None, cwd: Path = None,
-                       env: dict=None) -> None:
+                       env: dict=None, appendToLogfile=False) -> None:
         """
         Runs make and logs the output
         config.quiet doesn't display anything, normal only status updates and config.verbose everything
+        :param appendToLogfile: whether to append to the logfile if it exists
         :param args: the command to run (e.g. ["make", "-j32"])
         :param logfileName: the name of the logfile (e.g. "build.log")
         :param cwd the directory to run make in (defaults to self.buildDir)
@@ -311,13 +313,17 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         if self.config.verbose:
             stdoutFilter = None
 
-        if logfilePath.is_file():
+        if logfilePath.is_file() and not appendToLogfile:
             logfilePath.unlink()  # remove old logfile
         args = list(map(str, args))  # make sure all arguments are strings
         cmdStr = " ".join([shlex.quote(s) for s in args])
         # open file in append mode
         with logfilePath.open("ab") as logfile:
             # print the command and then the logfile
+            if appendToLogfile:
+                logfile.write(b"\n\n")
+            if cwd:
+                logfile.write(("cd " + shlex.quote(str(cwd)) + " && ").encode("utf-8"))
             logfile.write(cmdStr.encode("utf-8") + b"\n\n")
             if self.config.quiet:
                 # a lot more efficient than filtering every line
