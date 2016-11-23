@@ -6,8 +6,8 @@ import grp
 import os
 
 
-class BuildCheriBinutils(Project):
-    target = "cheri-binutils"
+class BuildElftoolchainBinutils(Project):
+    target = "elftoolchain-binutils"
 
     def __init__(self, config: CheriConfig, gitUrl="https://github.com/RichardsonAlex/elftoolchain.git", **kwargs):
         super().__init__(config, installDir=config.sdkDir, gitUrl=gitUrl, **kwargs)
@@ -78,7 +78,7 @@ class BuildCheriBinutils(Project):
             self.createBuildtoolTargetSymlinks(self.installDir / "bin" / prog)
 
 
-class BuildElfToolchain(BuildCheriBinutils):
+class BuildElfToolchain(BuildElftoolchainBinutils):
     def __init__(self, config: CheriConfig):
         super().__init__(config, gitUrl="https://github.com/emaste/elftoolchain.git")
         self.programsToBuild = ["brandelf"]
@@ -100,9 +100,9 @@ class BuildElfToolchain(BuildCheriBinutils):
         self.installFile(self.sourceDir / "brandelf/brandelf", self.installDir / "bin/brandelf", force=True)
 
 
-# TODO: remove this target and make it an alias for cheri-binutils
-class BuildBrandelf(BuildCheriBinutils):
+# TODO: remove this target and make it an alias for elftoolchain-binutils
+class BuildBrandelf(BuildElftoolchainBinutils):
     def __init__(self, config: CheriConfig):
-        super().__init__(config, gitUrl="https://github.com/RichardsonAlex/elftoolchain.git")
+        super().__init__(config, gitUrl="https://github.com/emaste/elftoolchain.git")
         self.programsToBuild = ["brandelf"]
         self.extraPrograms = []
