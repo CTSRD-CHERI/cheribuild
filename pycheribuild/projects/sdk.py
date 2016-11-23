@@ -58,12 +58,16 @@ class BuildFreestandingSdk(Project):
             toolsToSymlink = binutilsBinaries
             # When building on FreeBSD we also copy the MIPS GCC and related tools
             toolsToSymlink += self.copyCrossToolsFromCheriBSD(binutilsBinaries)
+            for tool in set(toolsToSymlink):
+                self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin" / tool)
+
             # For some reason CheriBSD does not build a cross ar, let's symlink the system one to the SDK bindir
             runCmd("ln", "-fsn", shutil.which("ar"), self.config.sdkDir / "bin/ar",
                    cwd=self.config.sdkDir / "bin", printVerboseOnly=True)
             self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin/ar")
-            for tool in set(toolsToSymlink):
-                self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin" / tool)
+            # create a ld.bfd link
+            self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin/ld",
+                                               toolName="ld.bfd", createUnprefixedLink=True)
 
     def copyCrossToolsFromCheriBSD(self, binutilsBinaries: "typing.List[str]"):
         # if we pass a string starting with a slash to Path() it will reset to that absolute path
