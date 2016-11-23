@@ -225,6 +225,17 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         with file.open("w", encoding="utf-8") as f:
             f.write(contents)
 
+    def createSymlink(self, src: Path, dest: Path, *, relative=True, cwd: Path=None):
+        if relative:
+            assert dest.is_absolute() or cwd is not None
+            if src.is_absolute():
+                src = src.relative_to(dest.parent if dest.is_absolute() else cwd)
+            if cwd is not None and cwd.is_dir():
+                dest = dest.relative_to(cwd)
+            runCmd("ln", "-fsn", src, dest, cwd=cwd, printVerboseOnly=True)
+        else:
+            runCmd("ln", "-fsn", src, dest, cwd=cwd, printVerboseOnly=True)
+
     def installFile(self, src: Path, dest: Path, *, force=False, createDirs=True):
         if force:
             printCommand("cp", "-f", src, dest, printVerboseOnly=True)
@@ -238,6 +249,8 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
             fatalError("Required file", src, "does not exist")
         if createDirs and not dest.parent.exists():
             self._makedirs(dest.parent)
+        if dest.is_symlink():
+            dest.unlink()
         shutil.copy(str(src), str(dest), follow_symlinks=False)
 
     @staticmethod
