@@ -33,11 +33,11 @@ class BuildCheriBinutils(Project):
         # tools that we want to build:
         # build is not parallel-safe -> we can't make with all the all-foo targets and -jN
         # To speed it up run make for the individual library directories instead and then for all the binaries
-        for tgt in libTargets:
-            self.runMake(self.commonMakeArgs + [self.config.makeJFlag], makeTarget="all-" + tgt,
-                         logfileName="build." + tgt)
-        progTargets = list(map(lambda p: "all-" + p, self.programsToBuild))
-        self.runMake(self.commonMakeArgs + [self.config.makeJFlag] + progTargets, logfileName="build.programs")
+        firstCall = True  # recreate logfile on first call, after that append
+        for tgt in libTargets + self.programsToBuild:
+            self.runMake(self.commonMakeArgs + [self.config.makeJFlag], makeTarget="all", cwd=self.sourceDir / tgt,
+                         logfileName="build", appendToLogfile=not firstCall)
+            firstCall = False
 
     def install(self):
         # We don't actually want to install all the files, just copy the binaries that we want
@@ -60,9 +60,11 @@ class BuildCheriBinutils(Project):
         # some directories are not being created correctly:
         for i in ("share/man/man1", "share/man/man3", "share/man/man5"):
             self._makedirs(self.installDir / i)
-        installTargets = list(map(lambda p: "install-" + p, self.programsToBuild))
-        self.runMake(self.commonMakeArgs + ownerFlags + ["DESTDIR=" + str(self.installDir)] + installTargets,
-                     logfileName="install")
+        firstCall = True  # recreate logfile on first call, after that append
+        for tgt in self.programsToBuild:
+            self.runMake(self.commonMakeArgs + ownerFlags + ["DESTDIR=" + str(self.installDir)], makeTarget="install",
+                         cwd=self.sourceDir / tgt, logfileName="install", appendToLogfile=not firstCall)
+            firstCall = False
 
         # some make targets install more than one tool:
         # strip, objcopy and mcs are links to elfcopy and ranlib is a link to ar
