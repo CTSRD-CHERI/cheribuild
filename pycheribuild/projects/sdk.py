@@ -12,7 +12,7 @@ from pathlib import Path
 
 class BuildCheriBSDSdk(PseudoTarget):
     target = "cheribsd-sdk"
-    dependencies = ["freestanding-sdk", "cheribsd-sysroot", "cheri-toolchains"]
+    dependencies = ["freestanding-sdk", "cheribsd-sysroot", "cheri-buildsystem-wrappers"]
     if IS_LINUX:
         dependencies.append("awk")  # also add BSD compatible AWK to the SDK
 
@@ -186,14 +186,13 @@ class BuildCheriBsdSysroot(Project):
                 runCmd("ar", "rc", lib)
 
 
-
 class InstallCmakeToolchainFiles(CMakeProject):
-    target = "cheri-toolchains"
+    target = "cheri-buildsystem-wrappers"
     dependencies = ["freestanding-sdk", "cheribsd-sysroot"]
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, appendCheriBitsToBuildDir=True, projectName="cheri-toolchains",
-                         gitUrl="https://github.com/RichardsonAlex/cheri-toolchains.git", installDir=config.sdkDir)
+        super().__init__(config, appendCheriBitsToBuildDir=True, projectName="cheri-buildsystem-wrappers",
+                         gitUrl="https://github.com/RichardsonAlex/cheri-buildsystem-wrappers.git", installDir=config.sdkDir)
         self.configureArgs.append("-DCHERI_SDK_BINDIR=" + str(self.config.sdkDir / "bin"))
         self.configureArgs.append("-DCHERIBSD_SYSROOT=" + str(self.config.sdkDir / "sysroot"))
 
