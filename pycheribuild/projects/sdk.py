@@ -148,10 +148,7 @@ class BuildCheriBsdSysroot(Project):
         runCmd("rm", "-rf", self.config.sdkSysrootDir)
         runCmd("tar", "xzf", self.config.sdkDir / self.config.sysrootArchiveName, cwd=self.config.sdkDir)
 
-    def process(self):
-        if not IS_FREEBSD:
-            self.copySysrootFromRemoteMachine()
-            return
+    def createSysroot(self):
         # we need to add include files and libraries to the sysroot directory
         self._cleanDir(self.config.sdkSysrootDir, force=True)  # make sure the sysroot is cleaned
         self._makedirs(self.config.sdkSysrootDir / "usr")
@@ -175,6 +172,19 @@ class BuildCheriBsdSysroot(Project):
         runCmd("tar", "-czf", self.config.sdkDir / self.config.sysrootArchiveName, "sysroot",
                cwd=self.config.sdkDir)
         print("Successfully populated sysroot")
+
+    def process(self):
+        if IS_FREEBSD:
+            self.createSysroot()
+        else:
+            self.copySysrootFromRemoteMachine()
+        # lld expects libgcc_s and libgcc_eh to exist:
+        libgcc_s = self.config.sdkDir / "sysroot/usr/libcheri/libgcc_s.a"
+        libgcc_eh = self.config.sdkDir / "sysroot/usr/libcheri/libgcc_eh.a"
+        for lib in (libgcc_s, libgcc_eh):
+            if not lib.is_file():
+                runCmd("ar", "rc", lib)
+
 
 
 class InstallCmakeToolchainFiles(CMakeProject):
