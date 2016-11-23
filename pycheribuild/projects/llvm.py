@@ -96,9 +96,9 @@ class BuildLLD(BuildLLVM):
         self.runMake(["lld", self.config.makeJFlag])
 
     def install(self):
-        self.installFile(self.buildDir / "bin/lld", self.config.sdkDir / "bin/lld", force=True)
+        self.installFile(self.buildDir / "bin/lld", self.config.sdkDir / "bin/ld.lld", force=True)
         runCmd("ln", "-fsn", "lld", "ld.lld", cwd=self.config.sdkDir / "bin", printVerboseOnly=True)
-        self.createBuildtoolTargetSymlinks(self.installDir / "bin/lld")
+        self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld")
 
         # TODO: once it works for building CHERIBSD use it as the default SDK linker:
-        # self.createBuildtoolTargetSymlinks(self.installDir / "bin/lld", toolName="ld", createUnprefixedLink=True)
+        # self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld", toolName="ld", createUnprefixedLink=True)
