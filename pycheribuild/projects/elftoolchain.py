@@ -35,7 +35,11 @@ class BuildCheriBinutils(Project):
         # To speed it up run make for the individual library directories instead and then for all the binaries
         firstCall = True  # recreate logfile on first call, after that append
         for tgt in libTargets + self.programsToBuild:
-            self.runMake(self.commonMakeArgs + [self.config.makeJFlag], makeTarget="all", cwd=self.sourceDir / tgt,
+            # setting SHLIB_FULLVERSION to empty is a hack to prevent building of shared libraries
+            # as we want the build tools to be statically linked but e.g. libarchive might not be available
+            # as a static library (e.g. on openSUSE)
+            makeArgs = self.commonMakeArgs + ["SHLIB_FULLVERSION=", self.config.makeJFlag]
+            self.runMake(makeArgs, makeTarget="all", cwd=self.sourceDir / tgt,
                          logfileName="build", appendToLogfile=not firstCall)
             firstCall = False
 
