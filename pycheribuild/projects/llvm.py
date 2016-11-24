@@ -82,7 +82,7 @@ class BuildLLVM(CMakeProject):
 
 
 class BuildLLD(BuildLLVM):
-    defaultCMakeBuildType = "Debug"
+    defaultCMakeBuildType = "Release"
 
     def __init__(self, config: CheriConfig,):
         super().__init__(config, sourceDir=config.sourceRoot / "lld-llvm")
