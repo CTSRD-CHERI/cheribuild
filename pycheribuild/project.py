@@ -226,8 +226,10 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
             f.write(contents)
 
     def createSymlink(self, src: Path, dest: Path, *, relative=True, cwd: Path=None):
+        assert dest.is_absolute() or cwd is not None
+        if not cwd:
+            cwd = dest.parent
         if relative:
-            assert dest.is_absolute() or cwd is not None
             if src.is_absolute():
                 src = src.relative_to(dest.parent if dest.is_absolute() else cwd)
             if cwd is not None and cwd.is_dir():
