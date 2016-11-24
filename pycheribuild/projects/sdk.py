@@ -52,7 +52,6 @@ class BuildFreestandingSdk(Project):
     def process(self):
         self.installCMakeConfig()
         self.buildCheridis()
-        # TODO: symlink the llvm tools in this in llvm.py
         if IS_FREEBSD:
             binutilsBinaries = "addr2line as brandelf nm objcopy objdump size strings strip".split()
             toolsToSymlink = binutilsBinaries
@@ -65,18 +64,20 @@ class BuildFreestandingSdk(Project):
             runCmd("ln", "-fsn", shutil.which("ar"), self.config.sdkDir / "bin/ar",
                    cwd=self.config.sdkDir / "bin", printVerboseOnly=True)
             self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin/ar")
-            # create a ld.bfd link
-            self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin/ld",
-                                               toolName="ld.bfd", createUnprefixedLink=True)
+            # install ld as ld.bfd and add a symblink
+            self.installFile(self.cheribsdBuildRoot / "tmp/usr/bin/ld", self.config.sdkDir / "bin/ld.bfd")
+            self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin/ld.bfd")
+            self.createSymlink(self.config.sdkDir / "bin/ld.bfd", self.config.sdkDir / "bin/ld")
+            self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin/ld")
 
     def copyCrossToolsFromCheriBSD(self, binutilsBinaries: "typing.List[str]"):
         # if we pass a string starting with a slash to Path() it will reset to that absolute path
         # luckily we have to prepend mips.mips64, so it works out fine
         # expands to e.g. /home/alr48/cheri/output/cheribsd-obj/mips.mips64/home/alr48/cheri/cheribsd
-        cheribsdBuildRoot = Path(self.config.cheribsdObj, "mips.mips64" + str(self.config.cheribsdSources))
-        CHERITOOLS_OBJ = cheribsdBuildRoot / "tmp/usr/bin/"
-        CHERIBOOTSTRAPTOOLS_OBJ = cheribsdBuildRoot / "tmp/legacy/usr/bin/"
-        CHERILIBEXEC_OBJ = cheribsdBuildRoot / "tmp/usr/libexec/"
+        self.cheribsdBuildRoot = Path(self.config.cheribsdObj, "mips.mips64" + str(self.config.cheribsdSources))
+        CHERITOOLS_OBJ = self.cheribsdBuildRoot / "tmp/usr/bin/"
+        CHERIBOOTSTRAPTOOLS_OBJ = self.cheribsdBuildRoot / "tmp/legacy/usr/bin/"
+        CHERILIBEXEC_OBJ = self.cheribsdBuildRoot / "tmp/usr/libexec/"
         for i in (CHERIBOOTSTRAPTOOLS_OBJ, CHERITOOLS_OBJ, CHERITOOLS_OBJ, self.config.cheribsdRootfs):
             if not i.is_dir():
                 fatalError("Directory", i, "is missing!")
