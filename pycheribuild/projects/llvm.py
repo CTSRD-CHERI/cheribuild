@@ -119,7 +119,8 @@ class BuildLLD(BuildLLVM):
 
     def update(self):
         self._updateGitRepo(self.sourceDir, "https://github.com/llvm-mirror/llvm.git")
-        self._updateGitRepo(self.sourceDir / "tools/lld", "https://github.com/llvm-mirror/lld.git")
+        self._updateGitRepo(self.sourceDir / "tools/lld", "https://github.com/RichardsonAlex/lld.git",
+                            initialBranch="cheri")
 
     def compile(self):
         self.runMake(["lld", self.config.makeJFlag])
