@@ -71,15 +71,19 @@ class BuildLLVM(CMakeProject):
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
-        if not self.cCompiler or not self.cppCompiler:
-            self.dependencyError("Could not find clang", installInstructions=self.clang37InstallHint())
         # make sure we have at least version 3.7
+        self.checkClangVersion(3, 7, installInstructions=self.clang37InstallHint())
+
+    def checkClangVersion(self, major: int, minor: int, patch=0, installInstructions=None):
+        if not self.cCompiler or not self.cppCompiler:
+            self.dependencyError("Could not find clang", installInstructions=installInstructions)
+        versionTuple = (major, minor, patch)
         versionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         # clang prints this output to stderr
         versionString = runCmd(self.cCompiler, "-v", captureError=True, printVerboseOnly=True).stderr
         match = versionPattern.search(versionString)
         versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
-        if versionComponents < (3, 7):
+        if versionComponents < versionTuple:
             versionStr = ".".join(map(str, versionComponents))
             self.dependencyError(self.cCompiler, "version", versionStr, "is too old. Version 3.7 or newer is required.",
                                  installInstructions=self.clang37InstallHint())
@@ -132,3 +136,8 @@ class BuildLLD(BuildLLVM):
 
         # TODO: once it works for building CHERIBSD use it as the default SDK linker:
         # self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld", toolName="ld", createUnprefixedLink=True)
+
+    def checkSystemDependencies(self):
+        CMakeProject.checkSystemDependencies(self)
+        # LLD needs at least clang 3.8 sure we have at least version 3.8
+        self.checkClangVersion(3, 8)
