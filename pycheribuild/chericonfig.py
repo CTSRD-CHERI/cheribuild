@@ -53,16 +53,17 @@ def defaultDiskImagePath(conf: "CheriConfig"):
     return conf.outputRoot / "cheri256-disk.qcow2"
 
 
-def defaultClang37Tool(basename: str):
-    # TODO: also accept 3.8, 3.9, etc binaries
-    # TODO: search through path and list all clang++.* and clang.* binaries
+def defaultClangTool(basename: str):
     # try to find clang 3.7, otherwise fall back to system clang
-    guess = shutil.which(basename + "37")
-    if not guess:
-        guess = shutil.which(basename + "-3.7")
-    if not guess:
-        guess = shutil.which(basename)
-    return guess
+    for version in [(4, 0), (3, 9), (3, 8), (3, 7)]:
+        # FreeBSD installs clang39, Linux uses clang-3.9
+        guess = shutil.which(basename + "%d%d" % version)
+        if guess:
+            return guess
+        guess = shutil.which(basename + "-%d.%d" % version)
+        if guess:
+            return guess
+    return None
 
 
 class CheriConfig(object):
@@ -112,10 +113,10 @@ class CheriConfig(object):
     extraFiles = ConfigLoader.addPathOption("extra-files", default=lambda p: (p.sourceRoot / "extra-files"),
                                             help="A directory with additional files that will be added to the image "
                                                  "(default: '<SOURCE_ROOT>/extra-files')")
-    clangPath = ConfigLoader.addPathOption("clang-path", default=defaultClang37Tool("clang"),
+    clangPath = ConfigLoader.addPathOption("clang-path", default=defaultClangTool("clang"),
                                            help="The Clang C compiler to use for compiling LLVM+Clang (must be at "
                                                 "least version 3.7)")
-    clangPlusPlusPath = ConfigLoader.addPathOption("clang++-path", default=defaultClang37Tool("clang++"),
+    clangPlusPlusPath = ConfigLoader.addPathOption("clang++-path", default=defaultClangTool("clang++"),
                                                    help="The Clang C++ compiler to use for compiling LLVM+Clang (must "
                                                         "be at least version 3.7)")
     # TODO: only create a qcow2 image?
