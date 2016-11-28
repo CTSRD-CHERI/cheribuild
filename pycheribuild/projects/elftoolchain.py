@@ -87,11 +87,13 @@ class BuildElftoolchainBinutils(Project):
             "LIBGRP=" + group, "LIBOWN=" + user,
             "FILESGRP=" + group, "FILESOWN=" + user,
             # override the install paths:
-            "BINDIR=/bin", "MANDIR=/share/man", "LIBDIR=/lib", "INCSDIR=/include"
+            "BINDIR=/bin", "LIBDIR=/lib", "INCSDIR=/include", "SHAREDIR=/share"
         ]
         if IS_LINUX:
             # $INSTALL is not set to create leading directories on Ubuntu
             ownerFlags.append("INSTALL=install -D")
+            # on Linux MANDIR is not relative to SHAREDIR so we need to set it manually
+            ownerFlags.append("MANDIR=/share/man")
 
         # some directories are not being created correctly:
         for i in ("share/man/man1", "share/man/man3", "share/man/man5"):
