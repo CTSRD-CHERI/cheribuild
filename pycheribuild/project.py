@@ -302,7 +302,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
                     outfile.write(errLine)
 
     def runMake(self, args: "typing.List[str]", makeTarget="", *, makeCommand: str=None, logfileName: str=None,
-                cwd: Path=None, env=None, appendToLogfile=False) -> None:
+                cwd: Path=None, env=None, appendToLogfile=False, compilationDbName="compile_commands.json") -> None:
         if not makeCommand:
             makeCommand = self.makeCommand
         if not cwd:
@@ -318,7 +318,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
                 logfileName = makeCommand
         allArgs = [makeCommand] + allArgs
         if self.config.createCompilationDB and self.compileDBRequiresBear:
-            allArgs = [self.config.otherToolsDir / "bin/bear", "--cdb", self.buildDir / "compile_commands.json",
+            allArgs = [self.config.otherToolsDir / "bin/bear", "--cdb", self.buildDir / compilationDbName,
                        "--append"] + allArgs
         starttime = time.time()
         self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=self._makeStdoutFilter, cwd=cwd, env=env,

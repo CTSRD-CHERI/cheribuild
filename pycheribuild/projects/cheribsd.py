@@ -160,7 +160,8 @@ class BuildCHERIBSD(Project):
         self.setupEnvironment()
         if not self.skipBuildworld:
             self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld", cwd=self.sourceDir)
-        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel", cwd=self.sourceDir)
+        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel", cwd=self.sourceDir,
+                     compilationDbName="compile_commands_" + self.kernelConfig + ".json")
 
     def install(self):
         # don't use multiple jobs here
