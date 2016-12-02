@@ -12,6 +12,31 @@ If you want to run this script on a remote FreeBSD host you can use the `remote-
 If you would like to see what the script will do run it with the `--pretend` or `-p` option.
 For even more detail you can also pass `--verbose` or `-v`.
 
+## Getting shell completion
+
+You will need to install python3-argcomplete:
+```
+git clone https://github.com/kislyuk/argcomplete.git
+cd argcomplete
+python3 setup.py install --user
+```
+
+### BASH
+```
+# NOTE: the next command doesn't seem to work on FreeBSD
+~/.local/bin/activate-global-python-argcomplete --user
+# On FreeBSD (or if the above work for some other reason) do this:
+echo 'eval "$(register-python-argcomplete cheribuild.py)"' >> ~/.bashrc
+```
+
+### TCSH:
+With tcsh add the following line to `~/.cshrc`:
+```
+eval "`register-python-argcomplete --shell tcsh cheribuild.py`"
+```
+Note: `python-argcomplete-tcsh` must be in `$PATH` (should be in `~/.local/bin/`).
+I would also suggest using `set autolist` to display all options.
+
 ## Adapting the build configuration
 There are a lot of options to customize the behaviour of this script: e.g. the directory for
 the cloned sources can be changed from the default of `$HOME/cheri` using the `--source-root=` option.
