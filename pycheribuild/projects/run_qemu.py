@@ -27,16 +27,29 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import datetime
 import sys
 import socket
 
 from ..project import Project
 from ..utils import *
+from pathlib import Path
 
 
 class LaunchQEMU(Project):
     target = "run"
     dependencies = ["qemu", "disk-image"]
+
+    @classmethod
+    def setupConfigOptions(cls):
+        super().setupConfigOptions()
+        cls.extraOptions = cls.addConfigOption("extra-options", default=[], kind=list, metavar="QEMU_OPTIONS",
+                                               help="Additional command line flags to pass to qemu-system-cheri")
+        cls.logfile = cls.addConfigOption("logfile", default=None, kind=str, metavar="LOGFILE",
+                                          help="The logfile that QEMU should use.")
+        cls.logDir = cls.addConfigOption("log-directory", default=None, kind=str, metavar="DIR",
+                                         help="If set QEMU will log to a timestamped file in this directory. Will be "
+                                              "ignored if the 'logfile' option is set")
 
     def __init__(self, config):
         super().__init__(config, projectName="run-qemu")
@@ -77,6 +90,15 @@ class LaunchQEMU(Project):
         print("About to run QEMU with image", self.config.diskImage, "and kernel", self.currentKernel,
               coloured(AnsiColour.green, "\nListening for SSH connections on localhost:" +
                        str(self.config.sshForwardingPort)))
+        logfileOptions = []
+        if self.logfile:
+            logfileOptions = ["-D", self.logfile]
+        elif self.logDir:
+            logPath = Path(self.logDir)
+            if not logPath.is_dir():
+                self._makedirs(logPath)
+            filename = "qemu-cheri-" + datetime.datetime.now().strftime("%Y%m%d_%H-%M-%S") + ".log"
+            logfileOptions = ["-D", logPath / filename]
         # input("Press enter to continue")
         runCmd([self.qemuBinary, "-M", "malta",  # malta cpu
                 "-kernel", self.currentKernel,  # assume the current image matches the kernel currently build
@@ -86,7 +108,8 @@ class LaunchQEMU(Project):
                 "-net", "nic", "-net", "user",
                 # bind the qemu ssh port to the hosts port 9999
                 "-redir", "tcp:" + str(self.config.sshForwardingPort) + "::22",
-                ] + monitorOptions, stdout=sys.stdout)  # even with --quiet we want stdout here
+                ] + monitorOptions + logfileOptions + self.extraOptions,
+               stdout=sys.stdout)  # even with --quiet we want stdout here
 
     @staticmethod
     def isPortAvailable(port: int):
