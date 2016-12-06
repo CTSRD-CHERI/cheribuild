@@ -32,6 +32,7 @@ import os
 import shlex
 import subprocess
 import sys
+import traceback
 from .colour import coloured, AnsiColour
 from .chericonfig import CheriConfig
 from pathlib import Path
@@ -157,10 +158,13 @@ def statusUpdate(*args, sep=" ", **kwargs):
     print(coloured(AnsiColour.cyan, *args, sep=sep), **kwargs)
 
 
-def fatalError(*args, sep=" ", fixitHint=None):
+def fatalError(*args, sep=" ", fixitHint=None, fatalWhenPretending=False):
     # we ignore fatal errors when simulating a run
     if _cheriConfig.pretend:
         print(coloured(AnsiColour.red, ("Potential fatal error:",) + args, sep=sep))
+        if fatalWhenPretending:
+            traceback.print_stack()
+            sys.exit(3)
     else:
         print(coloured(AnsiColour.red, ("Fatal error:",) + args, sep=sep))
         if fixitHint:
