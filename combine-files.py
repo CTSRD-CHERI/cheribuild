@@ -50,7 +50,7 @@ def insertLocalFile(line: str, srcFile: Path):
     pattern = re.compile('includeLocalFile\\("(.*)"\\)')
     match = re.search(pattern, line)
     if not match or len(match.groups()) < 1:
-        sys.exit("Invalid includeLocalFile:", line, file=sys.stderr)
+        sys.exit("Invalid includeLocalFile: " + line)
         return
     relativePath = match.groups()[0]
     # print("Including file", relativePath, "from", srcFile.relative_to(scriptDir), file=sys.stderr)

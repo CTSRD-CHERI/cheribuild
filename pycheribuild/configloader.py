@@ -36,7 +36,8 @@ import sys
 import collections.abc
 from collections import OrderedDict
 from pathlib import Path
-from .utils import coloured, AnsiColour
+
+from .utils import *
 
 
 class ConfigLoader(object):
@@ -95,7 +96,8 @@ class ConfigLoader(object):
         return cls._parsedArgs.targets
 
     @classmethod
-    def addOption(cls, name: str, shortname=None, default=None, type=None, group=None, **kwargs):
+    def addOption(cls, name: str, shortname=None, default=None, type="typing.Callable[[str], Type_T]", group=None,
+                  **kwargs) -> "Type_T":
         # add the default string to help if it is not lambda and help != argparse.SUPPRESS
         if default and not callable(default) and "help" in kwargs:
             if kwargs["help"] != argparse.SUPPRESS:

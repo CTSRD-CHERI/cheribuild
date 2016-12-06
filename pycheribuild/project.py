@@ -89,7 +89,8 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
     __commandLineOptionGroup = None
 
     @classmethod
-    def addConfigOption(cls, name: str, default=None, kind=str, *, shortname=None, **kwargs):
+    def addConfigOption(cls, name: str, default=None, kind: "typing.Callable[[str], Type_T]"=str, *,
+                        shortname=None, **kwargs) -> "Type_T":
         if not ConfigLoader.showAllHelp:
             kwargs["help"] = argparse.SUPPRESS
         if not cls.__commandLineOptionGroup:

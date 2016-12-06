@@ -36,10 +36,22 @@ from .colour import coloured, AnsiColour
 from .chericonfig import CheriConfig
 from pathlib import Path
 
+try:
+    import typing
+except ImportError:
+    typing = {}
+
+if typing.TYPE_CHECKING:
+    Type_T = typing.TypeVar("T")
+else:
+    Type_T = {}
+
+
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "CheriConfig", "IS_LINUX", "IS_FREEBSD", "printCommand", "includeLocalFile",  # no-combine
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
-           "parseOSRelease", "warningMessage"]  # no-combine
+           "parseOSRelease", "warningMessage", "Type_T", "typing"]  # no-combine
+
 
 if sys.version_info < (3, 4):
     sys.exit("This script requires at least Python 3.4")
