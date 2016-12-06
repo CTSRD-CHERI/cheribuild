@@ -66,7 +66,6 @@ class BuildCheriVis(Project):
             fatalError("Build currently only supported on Linux or FreeBSD!")
         self.gnustepMakefilesDir = None  # type: Path
         self.makeCommand = "make" if IS_LINUX else "gmake"
-        self.commonMakeArgs = []
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
@@ -83,6 +82,7 @@ class BuildCheriVis(Project):
         if not cheritraceLib.exists():
             fatalError(cheritraceLib, "does not exist", fixitHint="Try running `cheribuild.py cheritrace` and if that"
                        " doesn't work set the environment variable CHERITRACE_LIB to point to libcheritrace.so")
+            return
         cheritraceDirRelative = os.path.relpath(str(cheritraceLib.parent.resolve()), str(self.sourceDir.resolve()))
         # TODO: set ADDITIONAL_LIB_DIRS?
         # http://www.gnustep.org/resources/documentation/Developer/Make/Manual/gnustep-make_1.html#SEC17
