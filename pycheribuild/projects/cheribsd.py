@@ -44,6 +44,7 @@ def defaultKernelConfig(config: CheriConfig):
 
 class BuildCHERIBSD(Project):
     dependencies = ["llvm"]
+    repository = "https://github.com/CTSRD-CHERI/cheribsd.git"
 
     @classmethod
     def setupConfigOptions(cls):
@@ -77,7 +78,7 @@ class BuildCHERIBSD(Project):
     def __init__(self, config: CheriConfig, *, projectName="cheribsd"):
         super().__init__(config, projectName=projectName, sourceDir=config.sourceRoot / "cheribsd",
                          installDir=config.cheribsdRootfs, buildDir=config.cheribsdObj, appendCheriBitsToBuildDir=True,
-                         gitUrl="https://github.com/CTSRD-CHERI/cheribsd.git", gitRevision=config.cheriBsdRevision)
+                         gitRevision=config.cheriBsdRevision)
         self.binutilsDir = self.config.sdkDir / "mips64/bin"
         self.cheriCC = self.config.sdkDir / "bin/clang"
         self.cheriCXX = self.config.sdkDir / "bin/clang++"

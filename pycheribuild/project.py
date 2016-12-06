@@ -68,6 +68,8 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
     dependencies = []  # type: typing.List[str]
     dependenciesMustBeBuilt = False
 
+    repository = ""
+
     @classmethod
     def allDependencyNames(cls):
         result = set()
@@ -112,7 +114,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         pass
 
     def __init__(self, config: CheriConfig, *, projectName: str=None, sourceDir: Path=None, buildDir: Path=None,
-                 installDir: Path=None, gitUrl="", gitRevision=None, appendCheriBitsToBuildDir=False):
+                 installDir: Path=None, gitRevision=None, appendCheriBitsToBuildDir=False):
         className = self.__class__.__name__
         if projectName:
             self.projectName = projectName
@@ -124,7 +126,6 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
             fatalError("Project name is not set and cannot infer from class", className)
         self.projectNameLower = self.projectName.lower()
 
-        self.gitUrl = gitUrl
         self.gitRevision = gitRevision
         self.gitBranch = ""
         self.config = config
@@ -454,7 +455,9 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         self._systemDepsChecked = True
 
     def update(self):
-        self._updateGitRepo(self.sourceDir, self.gitUrl, revision=self.gitRevision, initialBranch=self.gitBranch)
+        if not self.repository:
+            fatalError("Cannot update", self.projectName, "as it is missing a git URL", fatalWhenPretending=True)
+        self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision, initialBranch=self.gitBranch)
 
     def clean(self):
         # TODO: never use the source dir as a build dir

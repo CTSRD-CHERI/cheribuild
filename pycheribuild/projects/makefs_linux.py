@@ -35,9 +35,10 @@ from pathlib import Path
 
 class BuildMakefsOnLinux(Project):
     target = "makefs-linux"
+    repository = "https://github.com/Engil/makefs.git"
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.otherToolsDir, gitUrl="https://github.com/Engil/makefs.git")
+        super().__init__(config, installDir=config.otherToolsDir)
         self._addRequiredSystemTool("bmake")
         self.buildDir = self.sourceDir
 

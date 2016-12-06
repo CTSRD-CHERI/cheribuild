@@ -37,9 +37,10 @@ import os
 
 class BuildElftoolchainBinutils(Project):
     target = "elftoolchain-binutils"
+    repository = "https://github.com/RichardsonAlex/elftoolchain.git"
 
-    def __init__(self, config: CheriConfig, gitUrl="https://github.com/RichardsonAlex/elftoolchain.git", **kwargs):
-        super().__init__(config, installDir=config.sdkDir, gitUrl=gitUrl, **kwargs)
+    def __init__(self, config: CheriConfig, **kwargs):
+        super().__init__(config, installDir=config.sdkDir, **kwargs)
         self.buildDir = self.sourceDir
         if IS_LINUX:
             self._addRequiredSystemTool("bmake")
@@ -110,8 +111,10 @@ class BuildElftoolchainBinutils(Project):
 
 
 class BuildElfToolchain(BuildElftoolchainBinutils):
+    repository = "https://github.com/emaste/elftoolchain.git"
+
     def __init__(self, config: CheriConfig):
-        super().__init__(config, gitUrl="https://github.com/emaste/elftoolchain.git")
+        super().__init__(config)
         self.programsToBuild = ["brandelf"]
 
     def process(self):
@@ -133,7 +136,9 @@ class BuildElfToolchain(BuildElftoolchainBinutils):
 
 # TODO: remove this target and make it an alias for elftoolchain-binutils
 class BuildBrandelf(BuildElftoolchainBinutils):
+    repository = "https://github.com/emaste/elftoolchain.git"
+
     def __init__(self, config: CheriConfig):
-        super().__init__(config, gitUrl="https://github.com/emaste/elftoolchain.git")
+        super().__init__(config)
         self.programsToBuild = ["brandelf"]
         self.extraPrograms = []

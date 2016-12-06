@@ -53,11 +53,11 @@ def gnuStepInstallInstructions():
 
 class BuildCheriVis(Project):
     dependencies = ["cheritrace"]
+    repository = "https://github.com/CTSRD-CHERI/CheriVis.git"
 
     # TODO: allow external cheritrace
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True,
-                         gitUrl="https://github.com/CTSRD-CHERI/CheriVis.git")
+        super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
         self._addRequiredSystemTool("clang")
         self._addRequiredSystemTool("clang++")
         if IS_LINUX or IS_FREEBSD:

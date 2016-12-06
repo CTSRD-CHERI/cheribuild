@@ -33,10 +33,10 @@ from ..utils import *
 
 class BuildQtCreator(Project):
     dependencies = ["llvm"]
+    repository = "https://code.qt.io/qt-creator/qt-creator.git"
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, gitUrl="https://code.qt.io/qt-creator/qt-creator.git", installDir=config.sdkDir,
-                         appendCheriBitsToBuildDir=True)
+        super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
         self._addRequiredSystemTool("qmake")
         self.configureCommand = "qmake"
         self.configureArgs.extend(["-r", self.sourceDir / "qtcreator.pro"])

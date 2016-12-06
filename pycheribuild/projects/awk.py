@@ -32,8 +32,10 @@ from ..utils import *
 
 
 class BuildAwk(Project):
+    repository = "https://github.com/danfuzz/one-true-awk.git"
+
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.sdkDir, gitUrl="https://github.com/danfuzz/one-true-awk.git")
+        super().__init__(config, installDir=config.sdkDir)
         self.buildDir = self.sourceDir
         self.commonMakeArgs.extend(["CC=cc", "CFLAGS=-O2 -Wall", "YACC=yacc -y -d"])
 

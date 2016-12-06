@@ -222,10 +222,11 @@ class BuildCheriBsdSysroot(Project):
 class InstallCmakeToolchainFiles(CMakeProject):
     target = "cheri-buildsystem-wrappers"
     dependencies = ["freestanding-sdk", "cheribsd-sysroot"]
+    repository = "https://github.com/RichardsonAlex/cheri-buildsystem-wrappers.git"
 
     def __init__(self, config: CheriConfig):
         super().__init__(config, appendCheriBitsToBuildDir=True, projectName="cheri-buildsystem-wrappers",
-                         gitUrl="https://github.com/RichardsonAlex/cheri-buildsystem-wrappers.git", installDir=config.sdkDir)
+                         installDir=config.sdkDir)
         self.configureArgs.append("-DCHERI_SDK_BINDIR=" + str(self.config.sdkDir / "bin"))
         self.configureArgs.append("-DCHERIBSD_SYSROOT=" + str(self.config.sdkDir / "sysroot"))
 

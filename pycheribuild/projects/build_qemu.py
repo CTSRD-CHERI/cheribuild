@@ -32,9 +32,11 @@ from ..utils import *
 
 
 class BuildQEMU(AutotoolsProject):
+    repository = "https://github.com/CTSRD-CHERI/qemu.git"
+
     def __init__(self, config: CheriConfig):
         super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True,
-                         gitUrl="https://github.com/CTSRD-CHERI/qemu.git", gitRevision=config.qemuRevision)
+                         gitRevision=config.qemuRevision)
         self.gitBranch = "qemu-cheri"
 
         self._addRequiredSystemTool("pkg-config")

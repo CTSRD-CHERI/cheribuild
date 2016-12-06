@@ -33,6 +33,7 @@ from ..utils import *
 
 class BuildBinutils(AutotoolsProject):
     target = "gnu-binutils"
+    repository = "https://github.com/CTSRD-CHERI/binutils.git"
 
     @classmethod
     def setupConfigOptions(cls):
@@ -40,8 +41,7 @@ class BuildBinutils(AutotoolsProject):
                                                                       "of only as, ld and objdump")
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.sdkDir, gitUrl="https://github.com/CTSRD-CHERI/binutils.git",
-                         projectName="binutils")
+        super().__init__(config, installDir=config.sdkDir, projectName="binutils")
         # http://marcelog.github.io/articles/cross_freebsd_compiler_in_linux.html
         self.gitBranch = "cheribsd"  # the default branch "cheri" won't work for cross-compiling
 
@@ -82,7 +82,7 @@ class BuildBinutils(AutotoolsProject):
         self.configureEnvironment["CFLAGS"] = "-std=gnu89 -O2"
 
     def update(self):
-        self._ensureGitRepoIsCloned(srcDir=self.sourceDir, remoteUrl=self.gitUrl, initialBranch=self.gitBranch)
+        self._ensureGitRepoIsCloned(srcDir=self.sourceDir, remoteUrl=self.repository, initialBranch=self.gitBranch)
         # Make sure we have the version that can compile FreeBSD binaries
         status = self.runGitCmd("status", "-b", "-s", "--porcelain", "-u", "no",
                                 captureOutput=True, printVerboseOnly=True)
