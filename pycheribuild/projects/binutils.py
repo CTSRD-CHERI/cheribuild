@@ -148,5 +148,5 @@ class BuildGPLv3Binutils(BuildBinutils):
         # self.runMake(self.commonMakeArgs, "install-gold", logfileName="install", appendToLogfile=True)
         self.installFile(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
         self.createBuildtoolTargetSymlinks(bindir / "ld.bfd", toolName="ld", createUnprefixedLink=True)
-        # self.installFile(self.buildDir / "gold/gold", bindir / "ld.gold", force=True)
+        # self.installFile(self.buildDir / "gold/ld-new", bindir / "ld.gold", force=True)
         # self.createBuildtoolTargetSymlinks(bindir / "ld.gold")
