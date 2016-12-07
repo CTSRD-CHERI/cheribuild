@@ -34,6 +34,13 @@ import shlex
 import shutil
 import sys
 import collections.abc
+
+try:
+    import argcomplete
+except ImportError:
+    argcomplete = None
+
+
 from collections import OrderedDict
 from pathlib import Path
 
@@ -77,12 +84,12 @@ class ConfigLoader(object):
         cls._parser.add_argument("--config-file", metavar="FILE", type=str, default=str(defaultConfigPath),
                                  help="The config file that is used to load the default settings (default: '" +
                                       str(defaultConfigPath) + "')")
-        try:
-            # noinspection PyUnresolvedReferences
-            import argcomplete
-            argcomplete.autocomplete(cls._parser)
-        except ImportError:
-            pass
+        if argcomplete:
+            excludes = ["__run_everything__"]
+            # if IS_FREEBSD: # FIXME: for some reason this won't work
+            if sys.platform.startswith("freebsd"):
+                excludes += ["--freebsd-builder-copy-only", "--freebsd-builder-hostname", "--freebsd-builder-output-path"]
+            argcomplete.autocomplete(cls._parser, always_complete_options=None, exclude=excludes, print_suppressed=True)
         cls._parsedArgs = cls._parser.parse_args()
         try:
             cls._configPath = Path(os.path.expanduser(cls._parsedArgs.config_file)).absolute()
