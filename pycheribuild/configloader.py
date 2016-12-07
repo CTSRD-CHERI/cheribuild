@@ -77,19 +77,30 @@ class ConfigLoader(object):
         Loads the configuration from the command line and the JSON file
         :return The targets to build
         """
-        cls._parser.add_argument("targets", metavar="TARGET", type=str, nargs=argparse.ONE_OR_MORE,
-                                 help="The targets to build", default=["all"], choices=availableTargets)
+        targetOption = cls._parser.add_argument("targets", metavar="TARGET", type=str, nargs=argparse.ZERO_OR_MORE,
+                                                help="The targets to build", default=["all"], choices=availableTargets)
         configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
         defaultConfigPath = Path(configdir, "cheribuild.json")
         cls._parser.add_argument("--config-file", metavar="FILE", type=str, default=str(defaultConfigPath),
                                  help="The config file that is used to load the default settings (default: '" +
                                       str(defaultConfigPath) + "')")
-        if argcomplete:
-            excludes = ["__run_everything__"]
+        if argcomplete and "_ARGCOMPLETE" in os.environ:
             # if IS_FREEBSD: # FIXME: for some reason this won't work
+            excludes = ["-t", "--skip-dependencies"]
             if sys.platform.startswith("freebsd"):
-                excludes += ["--freebsd-builder-copy-only", "--freebsd-builder-hostname", "--freebsd-builder-output-path"]
-            argcomplete.autocomplete(cls._parser, always_complete_options=None, exclude=excludes, print_suppressed=True)
+                excludes += ["--freebsd-builder-copy-only", "--freebsd-builder-hostname",
+                             "--freebsd-builder-output-path"]
+
+            visibleTargets = availableTargets.copy()
+            visibleTargets.remove("__run_everything__")
+            targetCompleter = argcomplete.completers.ChoicesCompleter(visibleTargets)
+            targetOption.completer = targetCompleter
+            argcomplete.autocomplete(
+                cls._parser,
+                always_complete_options=None,  # don't print -/-- by default
+                exclude=excludes,  # hide these options from the output
+                print_suppressed=True,  # also include target-specific options
+            )
         cls._parsedArgs, trailingTargets = cls._parser.parse_known_args()
         # print(cls._parsedArgs, trailingTargets)
         cls._parsedArgs.targets += trailingTargets
