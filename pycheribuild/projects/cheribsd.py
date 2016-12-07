@@ -75,6 +75,8 @@ class BuildCHERIBSD(Project):
         cls.skipBuildworld = cls.addBoolOption("only-build-kernel", shortname="-skip-buildworld",
                                                help="Skip the buildworld step -> only build and install the kernel")
 
+        cls.forceClang = cls.addBoolOption("force-clang", help="Use clang for building everything")
+
     def __init__(self, config: CheriConfig, *, projectName="cheribsd"):
         super().__init__(config, projectName=projectName, sourceDir=config.sourceRoot / "cheribsd",
                          installDir=config.cheribsdRootfs, buildDir=config.cheribsdObj, appendCheriBitsToBuildDir=True,
@@ -98,6 +100,14 @@ class BuildCHERIBSD(Project):
             #  "-DCROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin")
             "KERNCONF=" + self.kernelConfig,
         ])
+
+        if self.forceClang:
+            self.commonMakeArgs.append("XCC=" + str(self.config.sdkDir / "bin/cheri-unknown-freebsd-clang") + " -integrated-as")
+            self.commonMakeArgs.append("XCXX=" + str(self.config.sdkDir / "bin/cheri-unknown-freebsd-clang++") + " -integrated-as")
+            self.commonMakeArgs.append("XCFLAGS=-integrated-as")
+            self.commonMakeArgs.append("XCXXLAGS=-integrated-as")
+
+
         self.commonMakeArgs.extend(self.makeOptions)
         if not (self.config.verbose or self.config.quiet):
             # By default we only want to print the status updates -> use make -s so we have to do less filtering
