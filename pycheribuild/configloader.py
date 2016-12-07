@@ -90,7 +90,9 @@ class ConfigLoader(object):
             if sys.platform.startswith("freebsd"):
                 excludes += ["--freebsd-builder-copy-only", "--freebsd-builder-hostname", "--freebsd-builder-output-path"]
             argcomplete.autocomplete(cls._parser, always_complete_options=None, exclude=excludes, print_suppressed=True)
-        cls._parsedArgs = cls._parser.parse_args()
+        cls._parsedArgs, trailingTargets = cls._parser.parse_known_args()
+        # print(cls._parsedArgs, trailingTargets)
+        cls._parsedArgs.targets += trailingTargets
         try:
             cls._configPath = Path(os.path.expanduser(cls._parsedArgs.config_file)).absolute()
             if cls._configPath.exists():
