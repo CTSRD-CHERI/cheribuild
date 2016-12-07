@@ -95,6 +95,11 @@ class ConfigLoader(object):
             visibleTargets.remove("__run_everything__")
             targetCompleter = argcomplete.completers.ChoicesCompleter(visibleTargets)
             targetOption.completer = targetCompleter
+            # make sure we get target completion for the unparsed args too by adding another zero_or more options
+            # not sure why this works but it's a nice hack
+            unparsed = cls._parser.add_argument("targets", metavar="TARGET", type=str, nargs=argparse.ZERO_OR_MORE,
+                                                help=argparse.SUPPRESS, default=["all"], choices=availableTargets)
+            unparsed.completer = targetCompleter
             argcomplete.autocomplete(
                 cls._parser,
                 always_complete_options=None,  # don't print -/-- by default
