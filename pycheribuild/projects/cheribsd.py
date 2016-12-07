@@ -76,6 +76,9 @@ class BuildCHERIBSD(Project):
                                                help="Skip the buildworld step -> only build and install the kernel")
 
         cls.forceClang = cls.addBoolOption("force-clang", help="Use clang for building everything")
+        cls.forceSDKLinker = cls.addBoolOption("force-sdk-linker", help="Let clang use the linker from the installed "
+                                               "SDK instead of the one built in the bootstrap process. WARNING: May "
+                                               "cause unexpected linker errors!")
 
     def __init__(self, config: CheriConfig, *, projectName="cheribsd"):
         super().__init__(config, projectName=projectName, sourceDir=config.sourceRoot / "cheribsd",
@@ -169,10 +172,23 @@ class BuildCHERIBSD(Project):
 
     def compile(self):
         self.setupEnvironment()
-        if not self.skipBuildworld:
-            self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld", cwd=self.sourceDir)
-        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel", cwd=self.sourceDir,
-                     compilationDbName="compile_commands_" + self.kernelConfig + ".json")
+        linkers = ["cheri-unknown-freebsd-ld", "mips4-unknown-freebsd-ld", "mips64-unknown-freebsd-ld", "ld"]
+        sdkBinDir = self.cheriCC.parent
+        if not self.forceSDKLinker:
+            for l in linkers:
+                if (sdkBinDir / l).exists():
+                    runCmd("mv", "-f", l, l + ".backup", cwd=sdkBinDir)
+        try:
+            if not self.skipBuildworld:
+                self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld", cwd=self.sourceDir)
+            self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel", cwd=self.sourceDir,
+                         compilationDbName="compile_commands_" + self.kernelConfig + ".json")
+        finally:
+            # restore the linkers
+            if not self.forceSDKLinker:
+                for l in linkers:
+                    if (sdkBinDir / (l + ".backup")).exists():
+                        runCmd("mv", "-f", l + ".backup", l, cwd=sdkBinDir)
 
     def install(self):
         # don't use multiple jobs here
