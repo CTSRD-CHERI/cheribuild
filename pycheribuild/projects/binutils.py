@@ -40,8 +40,8 @@ class BuildBinutils(AutotoolsProject):
         cls.fullInstall = cls.addBoolOption("install-all-tools", help="Whether to install all binutils tools instead"
                                                                       "of only as, ld and objdump")
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.sdkDir, projectName="binutils")
+    def __init__(self, config: CheriConfig, projectName="binutils"):
+        super().__init__(config, installDir=config.sdkDir, projectName=projectName)
         # http://marcelog.github.io/articles/cross_freebsd_compiler_in_linux.html
         self.gitBranch = "cheribsd"  # the default branch "cheri" won't work for cross-compiling
 
@@ -118,3 +118,35 @@ class BuildBinutils(AutotoolsProject):
         self.createBuildtoolTargetSymlinks(bindir / "ld.bfd")
         # TODO: replace with lld once it is mature enough to compile cheribsd
         self.createBuildtoolTargetSymlinks(bindir / "ld.bfd", toolName="ld", createUnprefixedLink=True)
+
+
+class BuildGPLv3Binutils(BuildBinutils):
+    target = "gplv3-binutils"
+    # This is much faster to clone than the official repo
+    repository = "https://github.com/RichardsonAlex/binutils-gdb.git"
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config, projectName="gplv3-binutils")
+        self.projectName = ""
+        self.gitBranch = "cheribsd"
+        self.buildDir = config.buildRoot / "gplv3-binutils"
+        # self.configureArgs.append("--enable-gold")
+        del self.configureEnvironment["CFLAGS"]
+
+    def update(self):
+        AutotoolsProject.update(self)
+
+    def compile(self):
+        # FIXME: for some reason a normal make all will fail...
+        self.runMake(self.commonMakeArgs, "all-ld", logfileName="build")
+        # self.runMake(self.commonMakeArgs, "all-gold", logfileName="build", appendToLogfile=True)
+        pass
+
+    def install(self):
+        bindir = self.installDir / "bin"
+        self.runMake(self.commonMakeArgs, "install-ld", logfileName="install")
+        # self.runMake(self.commonMakeArgs, "install-gold", logfileName="install", appendToLogfile=True)
+        self.installFile(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
+        self.createBuildtoolTargetSymlinks(bindir / "ld.bfd", toolName="ld", createUnprefixedLink=True)
+        # self.installFile(self.buildDir / "gold/gold", bindir / "ld.gold", force=True)
+        # self.createBuildtoolTargetSymlinks(bindir / "ld.gold")
