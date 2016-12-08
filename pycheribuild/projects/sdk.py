@@ -245,5 +245,5 @@ class StartCheriSDKShell(Project):
         newPath = str(self.config.sdkDir / "bin") + ":" + str(self.config.dollarPathWithOtherTools)
         shell = os.getenv("SHELL", "/bin/sh")
         with setEnv(MANPATH=newManPath, PATH=newPath):
-            statusUpdate("Running SDK shell")
-            runCmd(shell, cwd=self.config.sdkDir / "bin")
+            statusUpdate("Starting CHERI SDK shell...", end="")
+            runCmd(shell)
