@@ -245,5 +245,10 @@ class StartCheriSDKShell(Project):
         newPath = str(self.config.sdkDir / "bin") + ":" + str(self.config.dollarPathWithOtherTools)
         shell = os.getenv("SHELL", "/bin/sh")
         with setEnv(MANPATH=newManPath, PATH=newPath):
-            statusUpdate("Starting CHERI SDK shell...", end="")
-            runCmd(shell)
+            statusUpdate("Starting CHERI SDK shell... ", end="")
+            try:
+                runCmd(shell)
+            except subprocess.CalledProcessError as e:
+                if e.returncode == 130:
+                    return  # User pressed Ctrl+D to exit shell, don't print an error
+                raise
