@@ -124,6 +124,8 @@ class ConfigLoader(object):
                 print("Configuration file", cls._configPath, "does not exist, using only command line arguments.")
         except Exception as e:
             print(coloured(AnsiColour.red, "Could not load config file", cls._configPath, "-", e))
+            if not input("Invalid config file " + str(cls._configPath) + ". Continue? y/[N]").lower().startswith("y"):
+                raise
         return cls._parsedArgs.targets
 
     @classmethod
