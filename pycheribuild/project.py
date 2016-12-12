@@ -165,7 +165,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         yesNoStr = " [Y]/n " if defaultResult else " y/[N] "
         if self.config.pretend:
             print(message + yesNoStr)
-            return True  # in pretend mode we always return true
+            return forceResult  # in pretend mode we always return true
         if self.config.force:
             # in force mode we always return the forced result without prompting the user
             print(message + yesNoStr, "y" if forceResult else "n")
