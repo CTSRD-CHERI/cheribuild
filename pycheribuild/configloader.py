@@ -112,8 +112,14 @@ class ConfigLoader(object):
         try:
             cls._configPath = Path(os.path.expanduser(cls._parsedArgs.config_file)).absolute()
             if cls._configPath.exists():
-                with cls._configPath.open("r") as f:
-                    cls._JSON = json.load(f, encoding="utf-8")
+                with cls._configPath.open("r", encoding="utf-8") as f:
+                    jsonLines = []
+                    for line in f.readlines():
+                        stripped = line.strip()
+                        if not stripped.startswith("#") and not stripped.startswith("//"):
+                            jsonLines.append(line)
+                    # print("".join(jsonLines))
+                    cls._JSON = json.loads("".join(jsonLines), encoding="utf-8")
             else:
                 print("Configuration file", cls._configPath, "does not exist, using only command line arguments.")
         except Exception as e:
