@@ -129,7 +129,7 @@ class ConfigLoader(object):
         return cls._parsedArgs.targets
 
     @classmethod
-    def addOption(cls, name: str, shortname=None, default=None, type="typing.Callable[[str], Type_T]", group=None,
+    def addOption(cls, name: str, shortname=None, default=None, type: "typing.Callable[[str], Type_T]"=str, group=None,
                   **kwargs) -> "Type_T":
         # add the default string to help if it is not lambda and help != argparse.SUPPRESS
         if default and not callable(default) and "help" in kwargs:
