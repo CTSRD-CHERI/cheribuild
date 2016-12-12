@@ -98,6 +98,11 @@ class LaunchQEMU(Project):
             if not logPath.is_dir():
                 self._makedirs(logPath)
             filename = "qemu-cheri-" + datetime.datetime.now().strftime("%Y%m%d_%H-%M-%S") + ".log"
+            latestSymlink = logPath / "qemu-cheri-latest.log"
+            if latestSymlink.is_symlink():
+                latestSymlink.unlink()
+            if not latestSymlink.exists():
+                self.createSymlink(logPath / filename, latestSymlink, relative=True, cwd=logPath)
             logfileOptions = ["-D", logPath / filename]
         # input("Press enter to continue")
         runCmd([self.qemuBinary, "-M", "malta",  # malta cpu
