@@ -42,7 +42,7 @@ try:
 except ImportError:
     typing = {}
 
-if typing.TYPE_CHECKING:
+if typing:
     Type_T = typing.TypeVar("T")
 else:
     Type_T = {}
