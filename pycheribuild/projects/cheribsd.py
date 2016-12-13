@@ -172,10 +172,11 @@ class BuildCHERIBSD(Project):
 
     def compile(self):
         self.setupEnvironment()
-        linkers = ["cheri-unknown-freebsd-ld", "mips4-unknown-freebsd-ld", "mips64-unknown-freebsd-ld", "ld"]
+        programsToMove = ["cheri-unknown-freebsd-ld", "mips4-unknown-freebsd-ld", "mips64-unknown-freebsd-ld", "ld",
+                          "objcopy", "objdump"]
         sdkBinDir = self.cheriCC.parent
         if not self.forceSDKLinker:
-            for l in linkers:
+            for l in programsToMove:
                 if (sdkBinDir / l).exists():
                     runCmd("mv", "-f", l, l + ".backup", cwd=sdkBinDir)
         try:
@@ -186,7 +187,7 @@ class BuildCHERIBSD(Project):
         finally:
             # restore the linkers
             if not self.forceSDKLinker:
-                for l in linkers:
+                for l in programsToMove:
                     if (sdkBinDir / (l + ".backup")).exists():
                         runCmd("mv", "-f", l + ".backup", l, cwd=sdkBinDir)
 
