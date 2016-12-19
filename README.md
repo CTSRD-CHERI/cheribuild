@@ -16,10 +16,17 @@ For even more detail you can also pass `--verbose` or `-v`.
 
 You will need to install python3-argcomplete:
 ```
+pip3 install --user argcomplete
+
+# Or install latest version from git:
 git clone https://github.com/kislyuk/argcomplete.git
 cd argcomplete
 python3 setup.py install --user
 ```
+
+**NOTE:** On FreeBSD pip and setuptools are not installed by default so you need to run
+`python3 -m ensurepip --user` first.
+
 
 ### BASH
 ```
