@@ -33,6 +33,7 @@ import socket
 
 from ..project import Project
 from ..utils import *
+from .cheribsd import BuildCHERIBSD
 from pathlib import Path
 
 
@@ -54,7 +55,7 @@ class LaunchQEMU(Project):
     def __init__(self, config):
         super().__init__(config, projectName="run-qemu")
         self.qemuBinary = self.config.sdkDir / "bin/qemu-system-cheri"
-        self.currentKernel = self.config.cheribsdRootfs / "boot/kernel/kernel"
+        self.currentKernel = BuildCHERIBSD.rootfsDir / "boot/kernel/kernel"
 
     def process(self):
         if not self.qemuBinary.exists():

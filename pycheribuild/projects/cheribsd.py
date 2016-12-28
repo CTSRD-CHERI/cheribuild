@@ -28,8 +28,8 @@
 # SUCH DAMAGE.
 #
 import os
-import shlex
 import sys
+from pathlib import Path
 
 from ..project import Project
 from ..utils import *
@@ -79,10 +79,14 @@ class BuildCHERIBSD(Project):
         cls.forceSDKLinker = cls.addBoolOption("force-sdk-linker", help="Let clang use the linker from the installed "
                                                "SDK instead of the one built in the bootstrap process. WARNING: May "
                                                "cause unexpected linker errors!")
+        cls.rootfsDir = cls.addConfigOption("rootfs", help="Install directory for CheriBSD root file system (default: "
+                                            "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)",
+                                            default=lambda config: config.outputRoot / ("rootfs" + config.cheriBitsStr),
+                                            kind=Path)
 
     def __init__(self, config: CheriConfig, *, projectName="cheribsd"):
         super().__init__(config, projectName=projectName, sourceDir=config.sourceRoot / "cheribsd",
-                         installDir=config.cheribsdRootfs, buildDir=config.cheribsdObj, appendCheriBitsToBuildDir=True,
+                         installDir=self.rootfsDir, buildDir=config.cheribsdObj, appendCheriBitsToBuildDir=True,
                          gitRevision=config.cheriBsdRevision)
         self.binutilsDir = self.config.sdkDir / "mips64/bin"
         self.cheriCC = self.config.sdkDir / "bin/clang"
@@ -109,7 +113,6 @@ class BuildCHERIBSD(Project):
             self.commonMakeArgs.append("XCXX=" + str(self.config.sdkDir / "bin/cheri-unknown-freebsd-clang++") + " -integrated-as")
             self.commonMakeArgs.append("XCFLAGS=-integrated-as")
             self.commonMakeArgs.append("XCXXLAGS=-integrated-as")
-
 
         self.commonMakeArgs.extend(self.makeOptions)
         if not (self.config.verbose or self.config.quiet):

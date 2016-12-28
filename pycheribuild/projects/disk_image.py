@@ -33,6 +33,7 @@ import tempfile
 
 from ..project import Project
 from ..utils import *
+from .cheribsd import BuildCHERIBSD
 from pathlib import Path
 
 
@@ -60,12 +61,12 @@ class BuildDiskImage(Project):
         # e.g. "install -N /home/alr48/cheri/cheribsd/etc -U -M /home/alr48/cheri/output/rootfs//METALOG
         # -D /home/alr48/cheri/output/rootfs -o root -g wheel -m 444 alarm.3.gz
         # /home/alr48/cheri/output/rootfs/usr/share/man/man3/"
-        parentDir = self.config.cheribsdRootfs / targetDir
+        parentDir = BuildCHERIBSD.rootfsDir / targetDir
         commonArgs = [
             "-N", str(self.userGroupDbDir),  # Use a custom user/group database text file
             "-U",  # Indicate that install is running unprivileged (do not change uid/gid)
             "-M", str(self.manifestFile),  # the mtree manifest to write the entry to
-            "-D", str(self.config.cheribsdRootfs),  # DESTDIR (will be stripped from the start of the mtree file
+            "-D", str(BuildCHERIBSD.rootfsDir),  # DESTDIR (will be stripped from the start of the mtree file
             "-o", user, "-g", group,  # uid and gid
             "-m", mode,  # access rights
         ]
@@ -101,7 +102,7 @@ class BuildDiskImage(Project):
 
     def prepareRootfs(self, outDir: Path):
         self.manifestFile = outDir / "METALOG"
-        self.installFile(self.config.cheribsdRootfs / "METALOG", self.manifestFile)
+        self.installFile(BuildCHERIBSD.rootfsDir / "METALOG", self.manifestFile)
 
         # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
         # If they do not exist in the extra-files directory yet we generate a default one and use that
@@ -139,7 +140,7 @@ nfs_client_enable="YES"
 
         print("Adding 'PermitRootLogin without-password' to /etc/ssh/sshd_config")
         # make sure we can login as root with pubkey auth:
-        sshdConfig = self.config.cheribsdRootfs / "etc/ssh/sshd_config"
+        sshdConfig = BuildCHERIBSD.rootfsDir / "etc/ssh/sshd_config"
         newSshdConfigContents = self.readFile(sshdConfig)
         newSshdConfigContents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
         self.createFileForImage(outDir, "/etc/ssh/sshd_config", contents=newSshdConfigContents,
@@ -182,7 +183,7 @@ nfs_client_enable="YES"
             "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
             # which makes sure that the numeric UID values are correct
             rawDiskImage,  # output file
-            self.config.cheribsdRootfs  # directory tree to use for the image
+            BuildCHERIBSD.rootfsDir  # directory tree to use for the image
         ])
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
         if self.config.verbose:
@@ -198,8 +199,8 @@ nfs_client_enable="YES"
             runCmd(qemuImgCommand, "info", self.config.diskImage)
 
     def process(self):
-        if not (self.config.cheribsdRootfs / "METALOG").is_file():
-            fatalError("mtree manifest", self.config.cheribsdRootfs / "METALOG", "is missing")
+        if not (BuildCHERIBSD.rootfsDir / "METALOG").is_file():
+            fatalError("mtree manifest", BuildCHERIBSD.rootfsDir / "METALOG", "is missing")
         if not (self.userGroupDbDir / "master.passwd").is_file():
             fatalError("master.passwd does not exist in ", self.userGroupDbDir)
 

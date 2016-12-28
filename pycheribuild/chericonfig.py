@@ -188,7 +188,6 @@ class CheriConfig(object):
             print("Disk image will saved to", self.diskImage)
 
         # now the derived config options
-        self.cheribsdRootfs = self.outputRoot / ("rootfs" + self.cheriBitsStr)
         self.cheribsdSources = self.sourceRoot / "cheribsd"
         self.cheribsdObj = self.buildRoot / ("cheribsd-obj-" + self.cheriBitsStr)
         self.sdkDirectoryName = "sdk" + self.cheriBitsStr
