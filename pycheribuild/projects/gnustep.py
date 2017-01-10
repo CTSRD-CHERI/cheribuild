@@ -38,9 +38,10 @@ from pathlib import Path
 
 class BuildLibObjC2(CMakeProject):
     repository = "https://github.com/gnustep/libobjc2.git"
+    defaultInstallDir = CMakeProject._installToBootstrapTools
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.otherToolsDir)
+        super().__init__(config)
         # self.gitBranch = "1.8.1"  # track the stable release branch
         self.configureArgs.extend([
             "-DCMAKE_C_COMPILER=clang",
@@ -61,9 +62,10 @@ class BuildLibObjC2(CMakeProject):
 
 class BuildGnuStep_Make(AutotoolsProject):
     repository = "https://github.com/gnustep/make.git"
+    defaultInstallDir = AutotoolsProject._installToBootstrapTools
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.otherToolsDir)
+        super().__init__(config)
         self.configureArgs.extend([
             "--with-layout=fhs",  # more traditional file system layout
             "--with-library-combo=ng-gnu-gnu",  # use the new libobjc2 that supports ARC
@@ -77,11 +79,12 @@ class BuildGnuStep_Make(AutotoolsProject):
 # FIXME: do we need to source Makefiles/GNUstep.sh before building?
 class GnuStepModule(AutotoolsProject):
     doNotAddToTargets = True
+    defaultInstallDir = AutotoolsProject._installToBootstrapTools
+    defaultBuildDir = AutotoolsProject.defaultSourceDir  # out of source builds don't seem to work!
 
-    def __init__(self, config: CheriConfig, *args, moduleName: str, **kwargs):
-        super().__init__(config, installDir=config.otherToolsDir, *args, **kwargs)
+    def __init__(self, config: CheriConfig, moduleName: str):
+        super().__init__(config)
         self.repository = "https://github.com/gnustep/" + moduleName + " .git"
-        self.buildDir = self.sourceDir  # out of source builds don't seem to work!
 
     def configure(self):
         if not shutil.which("gnustep-config"):

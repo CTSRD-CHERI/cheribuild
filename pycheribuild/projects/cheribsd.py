@@ -45,6 +45,10 @@ def defaultKernelConfig(config: CheriConfig):
 class BuildCHERIBSD(Project):
     dependencies = ["llvm"]
     repository = "https://github.com/CTSRD-CHERI/cheribsd.git"
+    defaultInstallDir = lambda cls, config: config.outputRoot / ("rootfs" + config.cheriBitsStr)
+    appendCheriBitsToBuildDir = True
+    defaultBuildDir = lambda cls, config: config.buildRoot / ("cheribsd-obj-" + config.cheriBitsStr)
+
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -81,20 +85,12 @@ class BuildCHERIBSD(Project):
                                                "SDK instead of the one built in the bootstrap process. WARNING: May "
                                                "cause unexpected linker errors!")
 
-    @staticmethod
-    def defaultRootfsDir(config: CheriConfig):
-        return config.outputRoot / ("rootfs" + config.cheriBitsStr)
-
     @classmethod
     def rootfsDir(cls, config):
-        if cls.installDirOverride:
-            return cls.installDirOverride
-        return cls.defaultRootfsDir(config)
+        return cls.getInstallDir(config)
 
     def __init__(self, config: CheriConfig, *, projectName="cheribsd"):
-        super().__init__(config, sourceDir=config.sourceRoot / "cheribsd",
-                         installDir=self.defaultRootfsDir(config), buildDir=config.cheribsdObj,
-                         appendCheriBitsToBuildDir=True, gitRevision=config.cheriBsdRevision)
+        super().__init__(config, gitRevision=config.cheriBsdRevision)
         self.binutilsDir = self.config.sdkDir / "mips64/bin"
         self.cheriCC = self.config.sdkDir / "bin/clang"
         self.cheriCXX = self.config.sdkDir / "bin/clang++"
@@ -172,12 +168,12 @@ class BuildCHERIBSD(Project):
             # if we installed as root remove the schg flag from files before cleaning (otherwise rm will fail)
             self._cleanDir(self.installDir, force=True)
         else:
-            self._makedirs(self.installDir)
+            self.makedirs(self.installDir)
 
     def clean(self):
         if self.skipBuildworld:
             # TODO: only clean the current kernel config not all of them
-            kernelBuildDir = self.buildDir / ("mips.mips64" + str(self.config.cheribsdSources) + "/sys/")
+            kernelBuildDir = self.buildDir / ("mips.mips64" + str(self.sourceDir) + "/sys/")
             self._cleanDir(kernelBuildDir)
         else:
             super().clean()

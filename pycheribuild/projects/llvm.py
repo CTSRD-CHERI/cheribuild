@@ -36,8 +36,11 @@ from ..utils import *
 
 
 class BuildLLVM(CMakeProject):
-    def __init__(self, config: CheriConfig, **kwargs):
-        super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True, **kwargs)
+    defaultInstallDir = CMakeProject._installToSDK
+    appendCheriBitsToBuildDir = True
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
         self.cCompiler = config.clangPath
         self.cppCompiler = config.clangPlusPlusPath
         # this must be added after checkSystemDependencies
@@ -116,9 +119,11 @@ class BuildLLVM(CMakeProject):
 
 class BuildLLD(BuildLLVM):
     defaultCMakeBuildType = "Release"
+    target = "lld"
+    projectName = "lld-llvm"
 
     def __init__(self, config: CheriConfig,):
-        super().__init__(config, sourceDir=config.sourceRoot / "lld-llvm")
+        super().__init__(config)
         self.configureArgs.append("-DLLVM_TOOL_LLD_BUILD=ON")
 
     def update(self):

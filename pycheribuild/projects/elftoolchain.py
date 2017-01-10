@@ -38,10 +38,11 @@ import os
 class BuildElftoolchainBinutils(Project):
     target = "elftoolchain-binutils"
     repository = "https://github.com/RichardsonAlex/elftoolchain.git"
+    defaultInstallDir = Project._installToSDK
+    defaultBuildDir = Project.defaultSourceDir  # we have to build in the source directory
 
-    def __init__(self, config: CheriConfig, **kwargs):
-        super().__init__(config, installDir=config.sdkDir, **kwargs)
-        self.buildDir = self.sourceDir
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
         if IS_LINUX:
             self._addRequiredSystemTool("bmake")
             self.makeCommand = "bmake"
@@ -98,7 +99,7 @@ class BuildElftoolchainBinutils(Project):
 
         # some directories are not being created correctly:
         for i in ("share/man/man1", "share/man/man3", "share/man/man5"):
-            self._makedirs(self.installDir / i)
+            self.makedirs(self.installDir / i)
         firstCall = True  # recreate logfile on first call, after that append
         for tgt in self.programsToBuild:
             self.runMake(self.commonMakeArgs + ownerFlags + ["DESTDIR=" + str(self.installDir)], makeTarget="install",

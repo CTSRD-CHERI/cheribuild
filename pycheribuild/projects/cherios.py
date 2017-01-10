@@ -39,10 +39,11 @@ class BuildCheriOS(CMakeProject):
         dependencies.append("makefs-linux")
     defaultCMakeBuildType = "Debug"
     repository = "https://github.com/CTSRD-CHERI/cherios.git"
+    appendCheriBitsToBuildDir = True
+    defaultInstallDir = lambda cls, config: config.outputRoot / ("cherios" + config.cheriBitsStr)
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.outputRoot / ("cherios" + config.cheriBitsStr),
-                         appendCheriBitsToBuildDir=True)
+        super().__init__(config)
         self.configureArgs.append("-DCHERI_SDK_DIR=" + str(self.config.sdkDir))
 
     # TODO: move to CMakeProject

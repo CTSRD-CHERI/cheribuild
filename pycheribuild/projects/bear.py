@@ -33,6 +33,4 @@ from ..utils import *
 
 class BuildBear(CMakeProject):
     repository = "https://github.com/rizsotto/Bear.git"
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.otherToolsDir, appendCheriBitsToBuildDir=True)
+    defaultInstallDir = CMakeProject._installToBootstrapTools

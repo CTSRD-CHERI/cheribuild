@@ -34,9 +34,11 @@ from ..utils import *
 class BuildCheriTrace(CMakeProject):
     dependencies = ["llvm"]
     repository = "https://github.com/CTSRD-CHERI/cheritrace.git"
+    defaultInstallDir = CMakeProject._installToSDK
+    appendCheriBitsToBuildDir = True
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
+        super().__init__(config)
         self._addRequiredSystemTool("clang")
         self._addRequiredSystemTool("clang++")
         self.llvmConfigPath = self.config.sdkDir / "bin/llvm-config"

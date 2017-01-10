@@ -52,7 +52,7 @@ class BuildSdk(PseudoTarget):
     dependencies = ["cheribsd-sdk"] if IS_FREEBSD else ["freestanding-sdk"]
 
 
-class BuildFreestandingSdk(Project):
+class BuildFreestandingSdk(SimpleProject):
     target = "freestanding-sdk"
     dependencies = ["llvm", "cheribsd"] if IS_FREEBSD else ["binutils", "llvm"]
 
@@ -68,14 +68,14 @@ class BuildFreestandingSdk(Project):
         versionFile.replace("@SDK_BUILD_DATE@", microVersion)
         configFile = includeLocalFile("files/CheriSDKConfig.cmake")
         cmakeConfigDir = self.config.sdkDir / "share/cmake/CheriSDK"
-        self._makedirs(cmakeConfigDir)
+        self.makedirs(cmakeConfigDir)
         self.writeFile(cmakeConfigDir / "CheriSDKConfig.cmake", configFile, overwrite=True)
         self.writeFile(cmakeConfigDir / "CheriSDKConfigVersion.cmake", versionFile, overwrite=True)
 
     def buildCheridis(self):
         # Compile the cheridis helper (TODO: add it to the LLVM repo instead?)
         cheridisSrc = includeLocalFile("files/cheridis.c")
-        self._makedirs(self.config.sdkDir / "bin")
+        self.makedirs(self.config.sdkDir / "bin")
         runCmd("cc", "-DLLVM_PATH=\"%s\"" % str(self.config.sdkDir / "bin"), "-x", "c", "-",
                "-o", self.config.sdkDir / "bin/cheridis", input=cheridisSrc)
 
@@ -94,7 +94,7 @@ class BuildFreestandingSdk(Project):
             runCmd("ln", "-fsn", shutil.which("ar"), self.config.sdkDir / "bin/ar",
                    cwd=self.config.sdkDir / "bin", printVerboseOnly=True)
             self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin/ar")
-            # install ld as ld.bfd and add a symblink
+            # install ld as ld.bfd and add a symlink
             self.installFile(self.cheribsdBuildRoot / "tmp/usr/bin/ld", self.config.sdkDir / "bin/ld.bfd")
             self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin/ld.bfd")
             self.createSymlink(self.config.sdkDir / "bin/ld.bfd", self.config.sdkDir / "bin/ld")
@@ -104,7 +104,8 @@ class BuildFreestandingSdk(Project):
         # if we pass a string starting with a slash to Path() it will reset to that absolute path
         # luckily we have to prepend mips.mips64, so it works out fine
         # expands to e.g. /home/alr48/cheri/output/cheribsd-obj/mips.mips64/home/alr48/cheri/cheribsd
-        self.cheribsdBuildRoot = Path(self.config.cheribsdObj, "mips.mips64" + str(self.config.cheribsdSources))
+        self.cheribsdBuildRoot = Path(BuildCHERIBSD.getBuildDir(self.config),
+                                      "mips.mips64" + str(BuildCHERIBSD.getSourceDir(self.config)))
         CHERITOOLS_OBJ = self.cheribsdBuildRoot / "tmp/usr/bin/"
         CHERIBOOTSTRAPTOOLS_OBJ = self.cheribsdBuildRoot / "tmp/legacy/usr/bin/"
         CHERILIBEXEC_OBJ = self.cheribsdBuildRoot / "tmp/usr/libexec/"
@@ -136,7 +137,7 @@ class BuildFreestandingSdk(Project):
         return tools
 
 
-class BuildCheriBsdSysroot(Project):
+class BuildCheriBsdSysroot(SimpleProject):
     target = "cheribsd-sysroot"
     dependencies = ["cheribsd"] if IS_FREEBSD else []
 
@@ -176,7 +177,7 @@ class BuildCheriBsdSysroot(Project):
                    "sdk")  # run target SDK with dependencies
 
         # now copy the files
-        self._makedirs(self.config.sdkSysrootDir)
+        self.makedirs(self.config.sdkSysrootDir)
         runCmd("rm", "-f", self.config.sdkDir / self.config.sysrootArchiveName, printVerboseOnly=True)
         runCmd("scp", remoteSysrootPath, self.config.sdkDir)
         runCmd("rm", "-rf", self.config.sdkSysrootDir)
@@ -185,7 +186,7 @@ class BuildCheriBsdSysroot(Project):
     def createSysroot(self):
         # we need to add include files and libraries to the sysroot directory
         self._cleanDir(self.config.sdkSysrootDir, force=True)  # make sure the sysroot is cleaned
-        self._makedirs(self.config.sdkSysrootDir / "usr")
+        self.makedirs(self.config.sdkSysrootDir / "usr")
         # use tar+untar to copy all necessary files listed in metalog to the sysroot dir
         archiveCmd = ["tar", "cf", "-", "--include=./lib/", "--include=./usr/include/",
                       "--include=./usr/lib/", "--include=./usr/libcheri", "--include=./usr/libdata/",
@@ -224,10 +225,11 @@ class InstallCheriBuildsystemWrappers(CMakeProject):
     projectName = "cheri-buildsystem-wrappers"
     dependencies = ["freestanding-sdk", "cheribsd-sysroot"]
     repository = "https://github.com/RichardsonAlex/cheri-buildsystem-wrappers.git"
+    defaultInstallDir = Project._installToSDK
+    appendCheriBitsToBuildDir = True
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, appendCheriBitsToBuildDir=True,
-                         installDir=config.sdkDir)
+        super().__init__(config)
         self.configureArgs.append("-DCHERI_SDK_BINDIR=" + str(self.config.sdkDir / "bin"))
         self.configureArgs.append("-DCHERIBSD_SYSROOT=" + str(self.config.sdkDir / "sysroot"))
 

@@ -128,14 +128,6 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
         return cls.addConfigOption(name, kind=Path, shortname=shortname, **kwargs)
 
     @classmethod
-    def _defaultInstallDir(cls, config: CheriConfig):
-        return None
-
-    @classmethod
-    def _defaultSourceDir(cls, config: CheriConfig):
-        return Path(config.sourceRoot / cls.projectName.lower())
-
-    @classmethod
     def setupConfigOptions(cls, **kwargs):
         pass
 
@@ -163,7 +155,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             return not result.startswith("n")  # if default is yes accept anything other than strings starting with "n"
         return str(result).lower().startswith("y")  # anything but y will be treated as false
 
-    def _makedirs(self, path: Path):
+    def makedirs(self, path: Path):
         printCommand("mkdir", "-p", path, printVerboseOnly=True)
         if not self.config.pretend:
             os.makedirs(str(path), exist_ok=True)
@@ -176,7 +168,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             runCmd("rm", "-rf", str(path))
 
         # make sure the dir is empty afterwards
-        self._makedirs(path)
+        self.makedirs(path)
 
     def readFile(self, file: Path) -> str:
         # just return an empty string in pretend mode
@@ -198,7 +190,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             return
         if not overwrite and file.exists():
             fatalError("File", file, "already exists!")
-        self._makedirs(file.parent)
+        self.makedirs(file.parent)
         with file.open("w", encoding="utf-8") as f:
             f.write(contents)
 
@@ -227,7 +219,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
         if not src.exists():
             fatalError("Required file", src, "does not exist")
         if createDirs and not dest.parent.exists():
-            self._makedirs(dest.parent)
+            self.makedirs(dest.parent)
         if dest.is_symlink():
             dest.unlink()
         shutil.copy(str(src), str(dest), follow_symlinks=False)
@@ -414,6 +406,53 @@ class Project(SimpleProject):
     compileDBRequiresBear = True
     doNotAddToTargets = True
 
+    @staticmethod  # for some reason classmethod won't work when reassigned and called from subclasses...
+    def __defaultSourceDir(project, config: CheriConfig):
+        return Path(config.sourceRoot / project.projectName.lower())
+
+    @classmethod
+    def getSourceDir(cls, config: CheriConfig):
+        # noinspection PyUnresolvedReferences
+        return cls.sourceDirOverride if cls.sourceDirOverride else cls.defaultSourceDir(cls, config)
+
+    @staticmethod  # for some reason classmethod won't work when reassigned and called from subclasses...
+    def __defaultInstallDir(project, config: CheriConfig):
+        raise RuntimeError("dummy impl must not be called: " + str(project))
+
+    @staticmethod  # for some reason classmethod won't work when reassigned and called from subclasses...
+    def _installToSDK(project, config: CheriConfig):
+        return config.sdkDir
+
+    @staticmethod  # for some reason classmethod won't work when reassigned and called from subclasses...
+    def _installToBootstrapTools(project, config: CheriConfig):
+        return config.sdkDir
+
+    @classmethod
+    def getInstallDir(cls, config: CheriConfig):
+        # noinspection PyUnresolvedReferences
+        return cls.installDirOverride if cls.installDirOverride else cls.defaultInstallDir(cls, config)
+
+    appendCheriBitsToBuildDir = False
+    """ Whether to append -128/-256 to the computed source/build directory name"""
+
+    @staticmethod  # for some reason classmethod won't work when reassigned and called from subclasses...
+    def __defaultBuildDir(project, config: CheriConfig):
+        # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
+        buildDirSuffix = "-" + config.cheriBitsStr + "-build" if project.appendCheriBitsToBuildDir else "-build"
+        return config.buildRoot / (project.projectName.lower() + buildDirSuffix)
+
+    @classmethod
+    def getBuildDir(cls, config: CheriConfig):
+        # noinspection PyUnresolvedReferences
+        return cls.buildDirOverride if cls.buildDirOverride else cls.defaultBuildDir(cls, config)
+
+    defaultBuildDir = __defaultBuildDir
+    defaultSourceDir = __defaultSourceDir
+    defaultInstallDir = __defaultInstallDir
+    """ The default installation directory (will probably be set to _installToSDK or _installToBootstrapTools) """
+
+
+
     @classmethod
     def setupConfigOptions(cls, installDirectoryHelp="", **kwargs):
         super().setupConfigOptions(**kwargs)
@@ -423,23 +462,20 @@ class Project(SimpleProject):
         cls.installDirOverride = cls.addPathOption("install-directory", help=installDirectoryHelp)
         # TODO: add the gitRevision option
 
-    def __init__(self, config: CheriConfig, *, sourceDir: Path=None, buildDir: Path=None,
-                 installDir: Path=None, gitRevision=None, appendCheriBitsToBuildDir=False):
+    def __init__(self, config: CheriConfig, gitRevision=None):
         super().__init__(config)
         self.gitRevision = gitRevision
         self.gitBranch = ""
         # set up the install/build/source directories (allowing overrides from config file)
-        defaultSourceDir = Path(sourceDir if sourceDir else config.sourceRoot / self.projectName.lower())
-        # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
-        buildDirSuffix = "-" + config.cheriBitsStr + "-build" if appendCheriBitsToBuildDir else "-build"
-        defaultBuildDir = Path(buildDir if buildDir else config.buildRoot / (self.projectName.lower() + buildDirSuffix))
 
         if self.config.verbose and any((self.sourceDirOverride, self.buildDirOverride, self.installDirOverride)):
             print(self.projectName, "directory overrides: source=%s, build=%s, install=%s" %
                   (self.sourceDirOverride, self.buildDirOverride, self.installDirOverride))
-        self.sourceDir = self.sourceDirOverride if self.sourceDirOverride else defaultSourceDir
-        self.buildDir = self.buildDirOverride if self.buildDirOverride else defaultBuildDir
-        self.installDir = self.installDirOverride if self.installDirOverride else installDir
+        # TODO: add @property?
+        self.sourceDir = self.getSourceDir(config)
+        self.buildDir = self.getBuildDir(config)
+        self.installDir = self.getInstallDir(config)
+
         if self.config.verbose:
             print(self.projectName, "directories: source=%s, build=%s, install=%s" %
                   (self.sourceDir, self.buildDir, self.installDir))
@@ -460,11 +496,13 @@ class Project(SimpleProject):
         # if self.__dict__.get("_locked") and name == "x":
         #     raise AttributeError, "MyClass does not allow assignment to .x member"
         # self.__dict__[name] = value
-        if self.__dict__.get("_preventAssign") and name in ("configureArgs", "configureEnvironment", "commonMakeArgs"):
-            import traceback
-            traceback.print_stack()
-            fatalError("Project." + name + " mustn't be set, only modification is allowed.", "Called from",
-                       self.__class__.__name__)
+        if self.__dict__.get("_preventAssign"):
+            assert name not in ("sourceDir", "buildDir", "installDir")
+            if name in ("configureArgs", "configureEnvironment", "commonMakeArgs"):
+                import traceback
+                traceback.print_stack()
+                fatalError("Project." + name + " mustn't be set, only modification is allowed.", "Called from",
+                           self.__class__.__name__)
         self.__dict__[name] = value
 
     def runGitCmd(self, *args, cwd=None, **kwargs):
@@ -578,7 +616,7 @@ class Project(SimpleProject):
             self.clean()
         # always make sure the build dir exists
         if not self.buildDir.is_dir():
-            self._makedirs(self.buildDir)
+            self.makedirs(self.buildDir)
         if not self.config.skipConfigure:
             statusUpdate("Configuring", self.projectName, "... ")
             self.configure()
@@ -612,8 +650,8 @@ class CMakeProject(Project):
         cls.cmakeOptions = cls.addConfigOption("cmake-options", default=[], kind=list, metavar="OPTIONS",
                                                help="Additional command line options to pass to CMake")
 
-    def __init__(self, *args, generator=Generator.Ninja, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, config, generator=Generator.Ninja, **kwargs):
+        super().__init__(config, **kwargs)
         self.configureCommand = "cmake"
         self._addRequiredSystemTool("cmake", installInstructions=self.cmakeInstallInstructions)
         self.generator = generator
@@ -660,15 +698,15 @@ class AutotoolsProject(Project):
     Like Project but automatically sets up the defaults for autotools like projects
     Sets configure command to ./configure, adds --prefix=installdir
     """
-    def __init__(self, *args, configureScript="configure", **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, config, configureScript="configure", **kwargs):
+        super().__init__(config, **kwargs)
         self.configureCommand = self.sourceDir / configureScript
         self.configureArgs.append("--prefix=" + str(self.installDir))
         self.makeCommand = "make"
 
 
 # A target that does nothing (used for e.g. the "all" target)
-class PseudoTarget(Project):
+class PseudoTarget(SimpleProject):
     doNotAddToTargets = True
     dependenciesMustBeBuilt = True
     hasSourceFiles = False

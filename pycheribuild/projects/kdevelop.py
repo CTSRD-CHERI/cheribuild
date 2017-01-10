@@ -31,26 +31,25 @@ from ..project import CMakeProject, SimpleProject
 from ..utils import *
 
 
-def kdevInstallDir(config: CheriConfig):
-    return config.sdkDir
-
-
 # doesn't seem to be part of distro packages
 class BuildLibKompareDiff2(CMakeProject):
     defaultCMakeBuildType = "Debug"
     repository = "git://anongit.kde.org/libkomparediff2.git"
+    defaultInstallDir = CMakeProject._installToSDK
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=kdevInstallDir(config))
+        super().__init__(config)
 
 
 class BuildKDevplatform(CMakeProject):
     dependencies = ["libkomparediff2"]
     defaultCMakeBuildType = "Debug"
     repository = "https://github.com/RichardsonAlex/kdevplatform.git"
+    defaultInstallDir = CMakeProject._installToSDK
+    appendCheriBitsToBuildDir = True
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=kdevInstallDir(config), appendCheriBitsToBuildDir=True)
+        super().__init__(config)
         self.gitBranch = "cheri"
         self.configureArgs.append("-DBUILD_git=OFF")
 
@@ -59,9 +58,11 @@ class BuildKDevelop(CMakeProject):
     dependencies = ["kdevplatform", "llvm"]
     defaultCMakeBuildType = "Debug"
     repository = "https://github.com/RichardsonAlex/kdevelop.git"
+    defaultInstallDir = CMakeProject._installToSDK
+    appendCheriBitsToBuildDir = True
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=kdevInstallDir(config), appendCheriBitsToBuildDir=True)
+        super().__init__(config)
         # Tell kdevelop to use the CHERI clang
         self.configureArgs.append("-DLLVM_ROOT=" + str(self.config.sdkDir))
         # install the wrapper script that sets the right environment variables

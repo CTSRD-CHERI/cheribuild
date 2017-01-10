@@ -33,10 +33,11 @@ from ..utils import *
 
 class BuildAwk(Project):
     repository = "https://github.com/danfuzz/one-true-awk.git"
+    defaultInstallDir = Project._installToSDK
+    defaultBuildDir = Project.defaultSourceDir  # We build in the source directory
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.sdkDir)
-        self.buildDir = self.sourceDir
+        super().__init__(config)
         self.commonMakeArgs.extend(["CC=cc", "CFLAGS=-O2 -Wall", "YACC=yacc -y -d"])
 
     def compile(self):

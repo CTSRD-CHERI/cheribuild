@@ -36,11 +36,12 @@ from pathlib import Path
 class BuildMakefsOnLinux(Project):
     target = "makefs-linux"
     repository = "https://github.com/Engil/makefs.git"
+    defaultInstallDir = Project._installToBootstrapTools
+    defaultBuildDir = Project.defaultSourceDir  # out of source builds don't work
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.otherToolsDir)
+        super().__init__(config)
         self._addRequiredSystemTool("bmake")
-        self.buildDir = self.sourceDir
 
     def checkSystemDependencies(self):
         if not IS_LINUX:

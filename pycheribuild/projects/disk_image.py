@@ -51,7 +51,7 @@ class BuildDiskImage(SimpleProject):
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
         self.manifestFile = None  # type: Path
-        self.userGroupDbDir = self.config.cheribsdSources / "etc"
+        self.userGroupDbDir = BuildCHERIBSD.getSourceDir(self.config) / "etc"
         self.extraFiles = []  # type: typing.List[Path]
         self._addRequiredSystemTool("ssh-keygen")
         self._addRequiredSystemTool("makefs")
@@ -227,7 +227,7 @@ nfs_client_enable="YES"
     def generateSshHostKeys(self):
         # do the same as "ssh-keygen -A" just with a different output directory as it does not allow customizing that
         sshDir = self.config.extraFiles / "etc/ssh"
-        self._makedirs(sshDir)
+        self.makedirs(sshDir)
         # -t type Specifies the type of key to create.  The possible values are "rsa1" for protocol version 1
         #  and "dsa", "ecdsa","ed25519", or "rsa" for protocol version 2.
 

@@ -34,9 +34,11 @@ from ..utils import *
 class BuildQtCreator(Project):
     dependencies = ["llvm"]
     repository = "https://code.qt.io/qt-creator/qt-creator.git"
+    defaultInstallDir = Project._installToSDK
+    appendCheriBitsToBuildDir = True
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.sdkDir, appendCheriBitsToBuildDir=True)
+        super().__init__(config)
         self._addRequiredSystemTool("qmake")
         self.configureCommand = "qmake"
         self.configureArgs.extend(["-r", self.sourceDir / "qtcreator.pro"])

@@ -31,10 +31,11 @@ from ..project import AutotoolsProject
 from ..utils import *
 
 
-class BuildBinutils(AutotoolsProject):
+class BuildGnuBinutils(AutotoolsProject):
     target = "gnu-binutils"
     projectName = "BinUtils"
     repository = "https://github.com/CTSRD-CHERI/binutils.git"
+    defaultInstallDir = AutotoolsProject._installToSDK
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -43,7 +44,7 @@ class BuildBinutils(AutotoolsProject):
                                                                       "of only as, ld and objdump")
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.sdkDir)
+        super().__init__(config)
         # http://marcelog.github.io/articles/cross_freebsd_compiler_in_linux.html
         self.gitBranch = "cheribsd"  # the default branch "cheri" won't work for cross-compiling
 
@@ -122,17 +123,16 @@ class BuildBinutils(AutotoolsProject):
         self.createBuildtoolTargetSymlinks(bindir / "ld.bfd", toolName="ld", createUnprefixedLink=True)
 
 
-class BuildGPLv3Binutils(BuildBinutils):
+class BuildGPLv3Binutils(BuildGnuBinutils):
     target = "gplv3-binutils"
     projectName = "GPLv3-BinUtils"
     # This is much faster to clone than the official repo
     repository = "https://github.com/RichardsonAlex/binutils-gdb.git"
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, )
+        super().__init__(config)
         self.projectName = ""
         self.gitBranch = "cheribsd"
-        self.buildDir = config.buildRoot / "gplv3-binutils"
         # self.configureArgs.append("--enable-gold")
         del self.configureEnvironment["CFLAGS"]
 

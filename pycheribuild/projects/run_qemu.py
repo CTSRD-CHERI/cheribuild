@@ -31,13 +31,13 @@ import datetime
 import sys
 import socket
 
-from ..project import Project
+from ..project import SimpleProject
 from ..utils import *
 from .cheribsd import BuildCHERIBSD
 from pathlib import Path
 
 
-class LaunchQEMU(Project):
+class LaunchQEMU(SimpleProject):
     target = "run"
     projectName = "run-qemu"
     dependencies = ["qemu", "disk-image"]
@@ -98,7 +98,7 @@ class LaunchQEMU(Project):
         elif self.logDir:
             logPath = Path(self.logDir)
             if not logPath.is_dir():
-                self._makedirs(logPath)
+                self.makedirs(logPath)
             filename = "qemu-cheri-" + datetime.datetime.now().strftime("%Y%m%d_%H-%M-%S") + ".log"
             latestSymlink = logPath / "qemu-cheri-latest.log"
             if latestSymlink.is_symlink():

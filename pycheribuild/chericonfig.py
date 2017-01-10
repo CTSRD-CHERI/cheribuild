@@ -188,8 +188,6 @@ class CheriConfig(object):
             print("Disk image will saved to", self.diskImage)
 
         # now the derived config options
-        self.cheribsdSources = self.sourceRoot / "cheribsd"
-        self.cheribsdObj = self.buildRoot / ("cheribsd-obj-" + self.cheriBitsStr)
         self.sdkDirectoryName = "sdk" + self.cheriBitsStr
         self.sdkDir = self.outputRoot / self.sdkDirectoryName  # qemu and binutils (and llvm/clang)
         self.otherToolsDir = self.outputRoot / "bootstrap"
