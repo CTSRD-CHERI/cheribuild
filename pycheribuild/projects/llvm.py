@@ -42,12 +42,13 @@ class BuildLLVM(CMakeProject):
     @classmethod
     def setupConfigOptions(cls, includeClangRevision=True, includeLldbRevision=False):
         super().setupConfigOptions()
-        cls.llvmGitRevision = cls.addConfigOption("llvm-git-revision", kind=str, help="The git revision for llvm")
+        cls.llvmGitRevision = cls.addConfigOption("llvm-git-revision", kind=str, help="The git revision for llvm",
+                                                  metavar="REVISION")
         if includeClangRevision:
-            cls.clangGitRevision = cls.addConfigOption("clang-git-revision", kind=str,
+            cls.clangGitRevision = cls.addConfigOption("clang-git-revision", kind=str, metavar="REVISION",
                                                        help="The git revision for tools/clang")
         if includeLldbRevision:  # not built yet
-            cls.lldbGitRevision = cls.addConfigOption("lldb-git-revision", kind=str,
+            cls.lldbGitRevision = cls.addConfigOption("lldb-git-revision", kind=str, metavar="REVISION",
                                                       help="The git revision for tools/lldb")
 
     def __init__(self, config: CheriConfig):
@@ -137,7 +138,7 @@ class BuildLLD(BuildLLVM):
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(includeClangRevision=False)
-        cls.lldGitRevision = cls.addConfigOption("lld-git-revision", kind=str,
+        cls.lldGitRevision = cls.addConfigOption("lld-git-revision", kind=str, metavar="REVISION",
                                                  help="The git revision for tools/lld")
 
     def __init__(self, config: CheriConfig,):

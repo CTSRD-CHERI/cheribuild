@@ -458,13 +458,17 @@ class Project(SimpleProject):
     def setupConfigOptions(cls, installDirectoryHelp="", **kwargs):
         super().setupConfigOptions(**kwargs)
         # statusUpdate("Setting up config options for", cls, cls.target)
-        cls.sourceDirOverride = cls.addPathOption("source-directory")
-        cls.buildDirOverride = cls.addPathOption("build-directory")
-        cls.installDirOverride = cls.addPathOption("install-directory", help=installDirectoryHelp)
+        cls.sourceDirOverride = cls.addPathOption("source-directory", metavar="DIR",
+                                                  help="Override default source directory for " + cls.projectName)
+        cls.buildDirOverride = cls.addPathOption("build-directory", metavar="DIR",
+                                                 help="Override default source directory for " + cls.projectName)
+        if not installDirectoryHelp:
+            installDirectoryHelp = "Override default install directory for " + cls.projectName
+        cls.installDirOverride = cls.addPathOption("install-directory", metavar="DIR", help=installDirectoryHelp)
         if cls.repository:
             cls.gitRevision = cls.addConfigOption("git-revision", kind=str, help="The git revision to checkout prior to"
                                                   " building. Useful if HEAD is broken for one project but you still"
-                                                  " want to update the other projects.")
+                                                  " want to update the other projects.", metavar="REVISION")
         # TODO: add the gitRevision option
 
     def __init__(self, config: CheriConfig):
