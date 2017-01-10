@@ -36,7 +36,6 @@ import subprocess
 import sys
 import threading
 import time
-from sys import stdout
 
 from .utils import *
 from .targets import Target, targetManager
@@ -51,27 +50,28 @@ class ProjectSubclassDefinitionHook(type):
         if clsdict.get("doNotAddToTargets"):
             return  # if doNotAddToTargets is defined within the class we skip it
 
-        # load "target" field first then check project name (as that might default to target)
-        targetName = None
-        if "target" in clsdict:
-            targetName = clsdict["target"]
-
+        projectName = None
         if "projectName" in clsdict:
             projectName = clsdict["projectName"]
-        elif not cls.isSimpleProject:
+        else:
             # fall back to name of target then infer from class name
             # if targetName:
             #     projectName = targetName
             if name.startswith("Build"):
                 projectName = name[len("Build"):].replace("_", "-")
-            else:
-                sys.exit("Project name is not set and cannot infer from class " + name +
-                         " -- set projectName=, target= or doNotAddToTarget=True")
             cls.projectName = projectName
 
-        if not targetName and projectName:
+        # load "target" field first then check project name (as that might default to target)
+        targetName = None
+        if "target" in clsdict:
+            targetName = clsdict["target"]
+        elif projectName:
             targetName = projectName.lower()
             cls.target = targetName
+
+        if not targetName:
+            sys.exit("target name is not set and cannot infer from class " + name +
+                     " -- set projectName=, target= or doNotAddToTargets=True")
 
         if cls.__dict__.get("dependenciesMustBeBuilt"):
             if not cls.dependencies:
@@ -80,15 +80,12 @@ class ProjectSubclassDefinitionHook(type):
         # print("Adding target", targetName, "with deps:", cls.dependencies)
 
 
-class Project(object, metaclass=ProjectSubclassDefinitionHook):
+class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
     # These two class variables can be defined in subclasses to customize dependency ordering of targets
     target = ""  # type: str
-    projectName = "__invalid_project_name__"
+    projectName = None
     dependencies = []  # type: typing.List[str]
     dependenciesMustBeBuilt = False
-    isSimpleProject = False
-
-    repository = ""
 
     @classmethod
     def allDependencyNames(cls):
@@ -99,15 +96,13 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         return result
 
     # Project subclasses will automatically have a target based on their name generated unless they add this:
-    doNotAddToTargets = True  # type: bool
+    doNotAddToTargets = True
 
     # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
     clearLineSequence = b"\x1b[2K\r"
 
     cmakeInstallInstructions = ("Use your package manager to install CMake > 3.4 or run "
                                 "`cheribuild.py cmake` to install the latest version locally")
-    compileDBRequiresBear = True
-
     __commandLineOptionGroup = None
 
     @classmethod
@@ -141,69 +136,13 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         return Path(config.sourceRoot / cls.projectName.lower())
 
     @classmethod
-    def setupConfigOptions(cls, *, installDirectoryHelp=None, noPathOptions=False):
-        if noPathOptions:
-            cls.sourceDirOverride = None
-            cls.buildDirOverride = None
-            cls.installDirOverride = None
-            return
+    def setupConfigOptions(cls, **kwargs):
+        pass
 
-        # statusUpdate("Setting up config options for", cls, cls.target)
-        cls.sourceDirOverride = cls.addPathOption("source-directory")
-        cls.buildDirOverride = cls.addPathOption("build-directory")
-        cls.installDirOverride = cls.addPathOption("install-directory", help=installDirectoryHelp)
-        # TODO: add the gitRevision option
-
-    def __init__(self, config: CheriConfig, *, sourceDir: Path=None, buildDir: Path=None,
-                 installDir: Path=None, gitRevision=None, appendCheriBitsToBuildDir=False):
+    def __init__(self, config: CheriConfig):
         self.config = config
         self.__requiredSystemTools = {}  # type: typing.Dict[str, typing.Any]
         self._systemDepsChecked = False
-
-        if self.isSimpleProject:
-            self._preventAssign = True
-            return
-
-        self.gitRevision = gitRevision
-        self.gitBranch = ""
-        # set up the install/build/source directories (allowing overrides from config file)
-        defaultSourceDir = Path(sourceDir if sourceDir else config.sourceRoot / self.projectName.lower())
-        # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
-        buildDirSuffix = "-" + config.cheriBitsStr + "-build" if appendCheriBitsToBuildDir else "-build"
-        defaultBuildDir = Path(buildDir if buildDir else config.buildRoot / (self.projectName.lower() + buildDirSuffix))
-
-        if self.config.verbose and any((self.sourceDirOverride, self.buildDirOverride, self.installDirOverride)):
-            print(self.projectName, "directory overrides: source=%s, build=%s, install=%s" %
-                  (self.sourceDirOverride, self.buildDirOverride, self.installDirOverride))
-        self.sourceDir = self.sourceDirOverride if self.sourceDirOverride else defaultSourceDir
-        self.buildDir = self.buildDirOverride if self.buildDirOverride else defaultBuildDir
-        self.installDir = self.installDirOverride if self.installDirOverride else installDir
-        if self.config.verbose:
-            print(self.projectName, "directories: source=%s, build=%s, install=%s" %
-                  (self.sourceDir, self.buildDir, self.installDir))
-
-        self.makeCommand = "make"
-        self.configureCommand = ""
-        # non-assignable variables:
-        self.commonMakeArgs = []
-        self.configureArgs = []  # type: typing.List[str]
-        self.configureEnvironment = {}  # type: typing.Dict[str,str]
-        self._preventAssign = True
-        if self.config.createCompilationDB and self.compileDBRequiresBear:
-            self._addRequiredSystemTool("bear", installInstructions="Run `cheribuild.py bear`")
-        self._lastStdoutLineCanBeOverwritten = False
-
-    # Make sure that API is used properly
-    def __setattr__(self, name, value):
-        # if self.__dict__.get("_locked") and name == "x":
-        #     raise AttributeError, "MyClass does not allow assignment to .x member"
-        # self.__dict__[name] = value
-        if self.__dict__.get("_preventAssign") and name in ("configureArgs", "configureEnvironment", "commonMakeArgs"):
-            import traceback
-            traceback.print_stack()
-            fatalError("Project." + name + " mustn't be set, only modification is allowed.", "Called from",
-                       self.__class__.__name__)
-        self.__dict__[name] = value
 
     def _addRequiredSystemTool(self, executable: str, installInstructions=None):
         self.__requiredSystemTools[executable] = installInstructions
@@ -223,47 +162,6 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         if defaultResult:
             return not result.startswith("n")  # if default is yes accept anything other than strings starting with "n"
         return str(result).lower().startswith("y")  # anything but y will be treated as false
-
-    def runGitCmd(self, *args, cwd=None, **kwargs):
-        if not cwd:
-            cwd = self.sourceDir
-        return runCmd("git", *args, cwd=cwd, **kwargs)
-
-    def _ensureGitRepoIsCloned(self, *, srcDir: Path, remoteUrl, initialBranch=None):
-        # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
-        if not (srcDir / ".git").exists():
-            print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?", end="")
-            if not self.queryYesNo(defaultResult=False):
-                fatalError("Sources for", str(srcDir), " missing!")
-            if initialBranch:
-                runCmd("git", "clone", "--recurse-submodules", "--branch", initialBranch, remoteUrl, srcDir)
-            else:
-                runCmd("git", "clone", "--recurse-submodules", remoteUrl, srcDir)
-
-    def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None):
-        self._ensureGitRepoIsCloned(srcDir=srcDir, remoteUrl=remoteUrl, initialBranch=initialBranch)
-        # make sure we run git stash if we discover any local changes
-        hasChanges = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
-                                captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
-        if hasChanges:
-            print(coloured(AnsiColour.green, "Local changes detected in", srcDir))
-            # TODO: add a config option to skip this query?
-            if not self.queryYesNo("Stash the changes, update and reapply?", defaultResult=True, forceResult=True):
-                statusUpdate("Skipping update of", srcDir)
-                return
-            # TODO: ask if we should continue?
-            stashResult = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
-                                 captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout
-            # print("stashResult =", stashResult)
-            if "No local changes to save" in stashResult.decode("utf-8"):
-                # print("NO REAL CHANGES")
-                hasChanges = False  # probably git diff showed something from a submodule
-        runCmd("git", "pull", "--recurse-submodules", "--rebase", cwd=srcDir, printVerboseOnly=True)
-        runCmd("git", "submodule", "update", "--recursive", cwd=srcDir, printVerboseOnly=True)
-        if hasChanges:
-            runCmd("git", "stash", "pop", cwd=srcDir, printVerboseOnly=True)
-        if revision:
-            runCmd("git", "checkout", revision, cwd=srcDir, printVerboseOnly=True)
 
     def _makedirs(self, path: Path):
         printCommand("mkdir", "-p", path, printVerboseOnly=True)
@@ -365,41 +263,6 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
 
     def _stdoutFilter(self, line: bytes):
         self._lineNotImportantStdoutFilter(line)
-
-    def runMake(self, args: "typing.List[str]", makeTarget="", *, makeCommand: str=None, logfileName: str=None,
-                cwd: Path=None, env=None, appendToLogfile=False, compilationDbName="compile_commands.json",
-                stdoutFilter="__default_filter__") -> None:
-        if not makeCommand:
-            makeCommand = self.makeCommand
-        if not cwd:
-            cwd = self.buildDir
-
-        if makeTarget:
-            allArgs = args + [makeTarget]
-            if not logfileName:
-                logfileName = self.makeCommand + "." + makeTarget
-        else:
-            allArgs = args
-            if not logfileName:
-                logfileName = makeCommand
-        allArgs = [makeCommand] + allArgs
-        if self.config.createCompilationDB and self.compileDBRequiresBear:
-            allArgs = [self.config.otherToolsDir / "bin/bear", "--cdb", self.buildDir / compilationDbName,
-                       "--append"] + allArgs
-        if not self.config.makeWithoutNice:
-            allArgs = ["nice"] + allArgs
-        starttime = time.time()
-        if self.config.noLogfile and stdoutFilter == "__default_filter__":
-            # if output isatty() (i.e. no logfile) ninja already filters the output -> don't slow this down by
-            # adding a redundant filter in python
-            if self.makeCommand == "ninja" and makeTarget != "install":
-                stdoutFilter = None
-        if stdoutFilter == "__default_filter__":
-            stdoutFilter = self._stdoutFilter
-        self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=stdoutFilter, cwd=cwd, env=env,
-                            appendToLogfile=appendToLogfile)
-        # add a newline at the end in case it ended with a filtered line (no final newline)
-        print("Running", self.makeCommand, makeTarget, "took", time.time() - starttime, "seconds")
 
     def runWithLogfile(self, args: "typing.Sequence[str]", logfileName: str, *, stdoutFilter=None, cwd: Path = None,
                        env: dict=None, appendToLogfile=False) -> None:
@@ -542,6 +405,144 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
                 self.dependencyError("Required program", tool, "is missing!", installInstructions=installInstructions)
         self._systemDepsChecked = True
 
+    def process(self):
+        raise NotImplementedError()
+
+
+class Project(SimpleProject):
+    repository = ""
+    compileDBRequiresBear = True
+    doNotAddToTargets = True
+
+    @classmethod
+    def setupConfigOptions(cls, installDirectoryHelp="", **kwargs):
+        super().setupConfigOptions(**kwargs)
+        # statusUpdate("Setting up config options for", cls, cls.target)
+        cls.sourceDirOverride = cls.addPathOption("source-directory")
+        cls.buildDirOverride = cls.addPathOption("build-directory")
+        cls.installDirOverride = cls.addPathOption("install-directory", help=installDirectoryHelp)
+        # TODO: add the gitRevision option
+
+    def __init__(self, config: CheriConfig, *, sourceDir: Path=None, buildDir: Path=None,
+                 installDir: Path=None, gitRevision=None, appendCheriBitsToBuildDir=False):
+        super().__init__(config)
+        self.gitRevision = gitRevision
+        self.gitBranch = ""
+        # set up the install/build/source directories (allowing overrides from config file)
+        defaultSourceDir = Path(sourceDir if sourceDir else config.sourceRoot / self.projectName.lower())
+        # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
+        buildDirSuffix = "-" + config.cheriBitsStr + "-build" if appendCheriBitsToBuildDir else "-build"
+        defaultBuildDir = Path(buildDir if buildDir else config.buildRoot / (self.projectName.lower() + buildDirSuffix))
+
+        if self.config.verbose and any((self.sourceDirOverride, self.buildDirOverride, self.installDirOverride)):
+            print(self.projectName, "directory overrides: source=%s, build=%s, install=%s" %
+                  (self.sourceDirOverride, self.buildDirOverride, self.installDirOverride))
+        self.sourceDir = self.sourceDirOverride if self.sourceDirOverride else defaultSourceDir
+        self.buildDir = self.buildDirOverride if self.buildDirOverride else defaultBuildDir
+        self.installDir = self.installDirOverride if self.installDirOverride else installDir
+        if self.config.verbose:
+            print(self.projectName, "directories: source=%s, build=%s, install=%s" %
+                  (self.sourceDir, self.buildDir, self.installDir))
+
+        self.makeCommand = "make"
+        self.configureCommand = ""
+        # non-assignable variables:
+        self.commonMakeArgs = []
+        self.configureArgs = []  # type: typing.List[str]
+        self.configureEnvironment = {}  # type: typing.Dict[str,str]
+        if self.config.createCompilationDB and self.compileDBRequiresBear:
+            self._addRequiredSystemTool("bear", installInstructions="Run `cheribuild.py bear`")
+        self._lastStdoutLineCanBeOverwritten = False
+        self._preventAssign = True
+
+    # Make sure that API is used properly
+    def __setattr__(self, name, value):
+        # if self.__dict__.get("_locked") and name == "x":
+        #     raise AttributeError, "MyClass does not allow assignment to .x member"
+        # self.__dict__[name] = value
+        if self.__dict__.get("_preventAssign") and name in ("configureArgs", "configureEnvironment", "commonMakeArgs"):
+            import traceback
+            traceback.print_stack()
+            fatalError("Project." + name + " mustn't be set, only modification is allowed.", "Called from",
+                       self.__class__.__name__)
+        self.__dict__[name] = value
+
+    def runGitCmd(self, *args, cwd=None, **kwargs):
+        if not cwd:
+            cwd = self.sourceDir
+        return runCmd("git", *args, cwd=cwd, **kwargs)
+
+    def _ensureGitRepoIsCloned(self, *, srcDir: Path, remoteUrl, initialBranch=None):
+        # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
+        if not (srcDir / ".git").exists():
+            print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?", end="")
+            if not self.queryYesNo(defaultResult=False):
+                fatalError("Sources for", str(srcDir), " missing!")
+            if initialBranch:
+                runCmd("git", "clone", "--recurse-submodules", "--branch", initialBranch, remoteUrl, srcDir)
+            else:
+                runCmd("git", "clone", "--recurse-submodules", remoteUrl, srcDir)
+
+    def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None):
+        self._ensureGitRepoIsCloned(srcDir=srcDir, remoteUrl=remoteUrl, initialBranch=initialBranch)
+        # make sure we run git stash if we discover any local changes
+        hasChanges = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
+                                captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
+        if hasChanges:
+            print(coloured(AnsiColour.green, "Local changes detected in", srcDir))
+            # TODO: add a config option to skip this query?
+            if not self.queryYesNo("Stash the changes, update and reapply?", defaultResult=True, forceResult=True):
+                statusUpdate("Skipping update of", srcDir)
+                return
+            # TODO: ask if we should continue?
+            stashResult = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
+                                 captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout
+            # print("stashResult =", stashResult)
+            if "No local changes to save" in stashResult.decode("utf-8"):
+                # print("NO REAL CHANGES")
+                hasChanges = False  # probably git diff showed something from a submodule
+        runCmd("git", "pull", "--recurse-submodules", "--rebase", cwd=srcDir, printVerboseOnly=True)
+        runCmd("git", "submodule", "update", "--recursive", cwd=srcDir, printVerboseOnly=True)
+        if hasChanges:
+            runCmd("git", "stash", "pop", cwd=srcDir, printVerboseOnly=True)
+        if revision:
+            runCmd("git", "checkout", revision, cwd=srcDir, printVerboseOnly=True)
+
+    def runMake(self, args: "typing.List[str]", makeTarget="", *, makeCommand: str=None, logfileName: str=None,
+                cwd: Path=None, env=None, appendToLogfile=False, compilationDbName="compile_commands.json",
+                stdoutFilter="__default_filter__") -> None:
+        if not makeCommand:
+            makeCommand = self.makeCommand
+        if not cwd:
+            cwd = self.buildDir
+
+        if makeTarget:
+            allArgs = args + [makeTarget]
+            if not logfileName:
+                logfileName = self.makeCommand + "." + makeTarget
+        else:
+            allArgs = args
+            if not logfileName:
+                logfileName = makeCommand
+        allArgs = [makeCommand] + allArgs
+        if self.config.createCompilationDB and self.compileDBRequiresBear:
+            allArgs = [self.config.otherToolsDir / "bin/bear", "--cdb", self.buildDir / compilationDbName,
+                       "--append"] + allArgs
+        if not self.config.makeWithoutNice:
+            allArgs = ["nice"] + allArgs
+        starttime = time.time()
+        if self.config.noLogfile and stdoutFilter == "__default_filter__":
+            # if output isatty() (i.e. no logfile) ninja already filters the output -> don't slow this down by
+            # adding a redundant filter in python
+            if self.makeCommand == "ninja" and makeTarget != "install":
+                stdoutFilter = None
+        if stdoutFilter == "__default_filter__":
+            stdoutFilter = self._stdoutFilter
+        self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=stdoutFilter, cwd=cwd, env=env,
+                            appendToLogfile=appendToLogfile)
+        # add a newline at the end in case it ended with a filtered line (no final newline)
+        print("Running", self.makeCommand, makeTarget, "took", time.time() - starttime, "seconds")
+
     def update(self):
         if not self.repository:
             fatalError("Cannot update", self.projectName, "as it is missing a git URL", fatalWhenPretending=True)
@@ -587,16 +588,6 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
             statusUpdate("Installing", self.projectName, "... ")
             self.install()
 
-
-class SimpleProject(Project):
-    # FIXME: invert inheritance hierachy
-    projectName = None
-    doNotAddToTargets = True
-    isSimpleProject = True
-
-    @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(noPathOptions=True)
 
 class CMakeProject(Project):
     doNotAddToTargets = True
