@@ -143,10 +143,16 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
         buildDirSuffix = "-" + config.cheriBitsStr + "-build" if appendCheriBitsToBuildDir else "-build"
         defaultBuildDir = Path(buildDir if buildDir else config.buildRoot / (self.projectNameLower + buildDirSuffix))
-        print("Overrides: ", self.sourceDirOverride, self.buildDirOverride, self.installDirOverride)
+
+        if self.config.verbose and any((self.sourceDirOverride, self.buildDirOverride, self.installDirOverride)):
+            print(self.projectName, "directory overrides: source=%s, build=%s, install=%s" %
+                  (self.sourceDirOverride, self.buildDirOverride, self.installDirOverride))
         self.sourceDir = self.sourceDirOverride if self.sourceDirOverride else defaultSourceDir
         self.buildDir = self.buildDirOverride if self.buildDirOverride else defaultBuildDir
         self.installDir = self.installDirOverride if self.installDirOverride else installDir
+        if self.config.verbose:
+            print(self.projectName, "directories: source=%s, build=%s, install=%s" %
+                  (self.sourceDir, self.buildDir, self.installDir))
 
         self.makeCommand = "make"
         self.configureCommand = ""
