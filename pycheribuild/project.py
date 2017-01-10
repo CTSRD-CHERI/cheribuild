@@ -326,7 +326,11 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         if not self.config.makeWithoutNice:
             allArgs = ["nice"] + allArgs
         starttime = time.time()
-        self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=self._makeStdoutFilter, cwd=cwd, env=env,
+        if self.makeCommand == "ninja" and makeTarget != "install":
+            stdoutFilter = None  # ninja already filters the make output, no need for an extra filter
+        else:
+            stdoutFilter = self._makeStdoutFilter
+        self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=stdoutFilter, cwd=cwd, env=env,
                             appendToLogfile=appendToLogfile)
         # add a newline at the end in case it ended with a filtered line (no final newline)
         print("Running", self.makeCommand, makeTarget, "took", time.time() - starttime, "seconds")
