@@ -428,8 +428,8 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
             raise SystemExit("Command \"%s\" failed with exit code %d.\nSee %s for details." %
                              (cmdStr, retcode, logfile.name))
 
-    def createBuildtoolTargetSymlinks(self, tool: Path, toolName: str=None, createUnprefixedLink: bool=False,
-                                      cwd: str=None):
+    @staticmethod
+    def createBuildtoolTargetSymlinks(tool: Path, toolName: str=None, createUnprefixedLink: bool=False, cwd: str=None):
         """
         Create mips4-unknown-freebsd, cheri-unknown-freebsd and mips64-unknown-freebsd prefixed symlinks
         for build tools like clang, ld, etc.
@@ -546,7 +546,7 @@ class CMakeProject(Project):
         cls.cmakeOptions = cls.addConfigOption("cmake-options", default=[], kind=list, metavar="OPTIONS",
                                                help="Additional command line options to pass to CMake")
 
-    def __init__(self, *args, generator=Generator.Ninja, buildType="Release", **kwargs):
+    def __init__(self, *args, generator=Generator.Ninja, **kwargs):
         super().__init__(*args, **kwargs)
         self.configureCommand = "cmake"
         self._addRequiredSystemTool("cmake", installInstructions=self.cmakeInstallInstructions)
