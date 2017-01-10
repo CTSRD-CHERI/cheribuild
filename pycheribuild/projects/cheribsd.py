@@ -135,10 +135,12 @@ class BuildCHERIBSD(Project):
             self._lastStdoutLineCanBeOverwritten = False
         elif line.startswith(b"===> "):  # new subdirectory
             self._lineNotImportantStdoutFilter(line)
-        elif line == b"--------------------------------------------------------------":
+        elif line == b"--------------------------------------------------------------\n":
             return  # ignore separator around status updates
         elif line == b"\n":
             return  # ignore empty lines when filtering
+        elif line.endswith(b"'is up to date.\n"):
+            return  # ignore these messages caused by (unnecessary?) recursive make invocations
         else:
             self._showLineStdoutFilter(line)
 
