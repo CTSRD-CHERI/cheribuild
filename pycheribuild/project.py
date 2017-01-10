@@ -197,7 +197,8 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         return runCmd("git", *args, cwd=cwd, **kwargs)
 
     def _ensureGitRepoIsCloned(self, *, srcDir: Path, remoteUrl, initialBranch=None):
-        if not (srcDir / ".git").is_dir():
+        # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
+        if not (srcDir / ".git").exists():
             print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?", end="")
             if not self.queryYesNo(defaultResult=False):
                 fatalError("Sources for", str(srcDir), " missing!")
