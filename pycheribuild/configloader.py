@@ -155,7 +155,7 @@ class ConfigLoader(object):
     @classmethod
     def addPathOption(cls, name: str, shortname=None, **kwargs) -> Path:
         # we have to make sure we resolve this to an absolute path because otherwise steps where CWD is different fail!
-        return cls.addOption(name, shortname, type=lambda s: Path(s).absolute(), **kwargs)
+        return cls.addOption(name, shortname, type=Path, **kwargs)
 
     def __init__(self, action: argparse.Action, default, valueType):
         self.action = action
@@ -178,7 +178,11 @@ class ConfigLoader(object):
                     result = shlex.split(stringValue)
                     print(coloured(AnsiColour.magenta, "Config option ", fullOptionName, " (", stringValue, ") should "
                           "be a list, got a string instead -> assuming the correct value is ", result, sep=""))
-            result = self.valueType(result)  # make sure it has the right type (e.g. Path, int, bool, str)
+            if self.valueType == Path:
+                expanded = os.path.expanduser(os.path.expandvars(str(result)))
+                result = Path(expanded).absolute()
+            else:
+                result = self.valueType(result)  # make sure it has the right type (e.g. Path, int, bool, str)
         # print("Loaded option", self.action, "->", result)
         # import traceback
         # traceback.print_stack()
