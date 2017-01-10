@@ -55,7 +55,7 @@ class LaunchQEMU(Project):
     def __init__(self, config):
         super().__init__(config, projectName="run-qemu")
         self.qemuBinary = self.config.sdkDir / "bin/qemu-system-cheri"
-        self.currentKernel = BuildCHERIBSD.rootfsDir / "boot/kernel/kernel"
+        self.currentKernel = BuildCHERIBSD.rootfsDir(self.config) / "boot/kernel/kernel"
 
     def process(self):
         if not self.qemuBinary.exists():

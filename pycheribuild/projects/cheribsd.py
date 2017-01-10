@@ -48,7 +48,8 @@ class BuildCHERIBSD(Project):
 
     @classmethod
     def setupConfigOptions(cls):
-        super().setupConfigOptions()
+        super().setupConfigOptions(installDirectoryHelp="Install directory for CheriBSD root file system (default: "
+                                   "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)")
         defaultExtraMakeOptions = [
             "DEBUG_FLAGS=-g",  # enable debug stuff
             "-DWITHOUT_TESTS",  # seems to break the creation of disk-image (METALOG is invalid)
@@ -79,15 +80,21 @@ class BuildCHERIBSD(Project):
         cls.forceSDKLinker = cls.addBoolOption("force-sdk-linker", help="Let clang use the linker from the installed "
                                                "SDK instead of the one built in the bootstrap process. WARNING: May "
                                                "cause unexpected linker errors!")
-        cls.rootfsDir = cls.addConfigOption("rootfs", help="Install directory for CheriBSD root file system (default: "
-                                            "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)",
-                                            default=lambda config: config.outputRoot / ("rootfs" + config.cheriBitsStr),
-                                            kind=Path)
+
+    @staticmethod
+    def defaultRootfsDir(config: CheriConfig):
+        return config.outputRoot / ("rootfs" + config.cheriBitsStr)
+
+    @classmethod
+    def rootfsDir(cls, config):
+        if cls.installDirOverride:
+            return cls.installDirOverride
+        return cls.defaultRootfsDir(config)
 
     def __init__(self, config: CheriConfig, *, projectName="cheribsd"):
         super().__init__(config, projectName=projectName, sourceDir=config.sourceRoot / "cheribsd",
-                         installDir=self.rootfsDir, buildDir=config.cheribsdObj, appendCheriBitsToBuildDir=True,
-                         gitRevision=config.cheriBsdRevision)
+                         installDir=self.defaultRootfsDir(config), buildDir=config.cheribsdObj,
+                         appendCheriBitsToBuildDir=True, gitRevision=config.cheriBsdRevision)
         self.binutilsDir = self.config.sdkDir / "mips64/bin"
         self.cheriCC = self.config.sdkDir / "bin/clang"
         self.cheriCXX = self.config.sdkDir / "bin/clang++"

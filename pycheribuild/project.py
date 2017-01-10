@@ -109,8 +109,16 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         return cls.addConfigOption(name, default=False, kind=bool, shortname=shortname, action="store_true", **kwargs)
 
     @classmethod
-    def setupConfigOptions(cls):
+    def addPathOption(cls, name: str, *, shortname=None, **kwargs):
+        return cls.addConfigOption(name, kind=Path, shortname=shortname, **kwargs)
+
+    @classmethod
+    def setupConfigOptions(cls, installDirectoryHelp=None):
         # statusUpdate("Setting up config options for", cls, cls.target)
+        cls.sourceDirOverride = cls.addPathOption("source-directory")
+        cls.buildDirOverride = cls.addPathOption("build-directory")
+        # To allow cheribsd rootfs to work
+        cls.installDirOverride = cls.addPathOption("install-directory", help=installDirectoryHelp)
         # TODO: add the gitRevision option
         pass
 
@@ -130,11 +138,16 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         self.gitRevision = gitRevision
         self.gitBranch = ""
         self.config = config
-        self.sourceDir = Path(sourceDir if sourceDir else config.sourceRoot / self.projectNameLower)
-        # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256,
+        # set up the install/build/source directories (allowing overrides from config file)
+        defaultSourceDir = Path(sourceDir if sourceDir else config.sourceRoot / self.projectNameLower)
+        # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
         buildDirSuffix = "-" + config.cheriBitsStr + "-build" if appendCheriBitsToBuildDir else "-build"
-        self.buildDir = Path(buildDir if buildDir else config.buildRoot / (self.projectNameLower + buildDirSuffix))
-        self.installDir = installDir
+        defaultBuildDir = Path(buildDir if buildDir else config.buildRoot / (self.projectNameLower + buildDirSuffix))
+        print("Overrides: ", self.sourceDirOverride, self.buildDirOverride, self.installDirOverride)
+        self.sourceDir = self.sourceDirOverride if self.sourceDirOverride else defaultSourceDir
+        self.buildDir = self.buildDirOverride if self.buildDirOverride else defaultBuildDir
+        self.installDir = self.installDirOverride if self.installDirOverride else installDir
+
         self.makeCommand = "make"
         self.configureCommand = ""
         self._systemDepsChecked = False

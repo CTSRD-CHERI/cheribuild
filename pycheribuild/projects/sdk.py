@@ -108,7 +108,7 @@ class BuildFreestandingSdk(Project):
         CHERITOOLS_OBJ = self.cheribsdBuildRoot / "tmp/usr/bin/"
         CHERIBOOTSTRAPTOOLS_OBJ = self.cheribsdBuildRoot / "tmp/legacy/usr/bin/"
         CHERILIBEXEC_OBJ = self.cheribsdBuildRoot / "tmp/usr/libexec/"
-        for i in (CHERIBOOTSTRAPTOOLS_OBJ, CHERITOOLS_OBJ, CHERITOOLS_OBJ, BuildCHERIBSD.rootfsDir):
+        for i in (CHERIBOOTSTRAPTOOLS_OBJ, CHERITOOLS_OBJ, CHERITOOLS_OBJ, BuildCHERIBSD.rootfsDir(self.config)):
             if not i.is_dir():
                 fatalError("Directory", i, "is missing!")
                 # make sdk a link to the 256 bit sdk
@@ -191,9 +191,9 @@ class BuildCheriBsdSysroot(Project):
                       "--include=./usr/lib/", "--include=./usr/libcheri", "--include=./usr/libdata/",
                       # only pack those files that are mentioned in METALOG
                       "@METALOG"]
-        printCommand(archiveCmd, cwd=BuildCHERIBSD.rootfsDir)
+        printCommand(archiveCmd, cwd=BuildCHERIBSD.rootfsDir(self.config))
         if not self.config.pretend:
-            with subprocess.Popen(archiveCmd, stdout=subprocess.PIPE, cwd=str(BuildCHERIBSD.rootfsDir)) as tar:
+            with subprocess.Popen(archiveCmd, stdout=subprocess.PIPE, cwd=str(BuildCHERIBSD.rootfsDir(self.config))) as tar:
                 runCmd(["tar", "xf", "-"], stdin=tar.stdout, cwd=self.config.sdkSysrootDir)
         if not (self.config.sdkSysrootDir / "lib/libc.so.7").is_file():
             fatalError(self.config.sdkSysrootDir, "is missing the libc library, install seems to have failed!")
