@@ -39,6 +39,7 @@ from pathlib import Path
 
 class LaunchQEMU(Project):
     target = "run"
+    projectName = "run-qemu"
     dependencies = ["qemu", "disk-image"]
 
     @classmethod
@@ -53,7 +54,7 @@ class LaunchQEMU(Project):
                                               "ignored if the 'logfile' option is set")
 
     def __init__(self, config):
-        super().__init__(config, projectName="run-qemu")
+        super().__init__(config)
         self.qemuBinary = self.config.sdkDir / "bin/qemu-system-cheri"
         self.currentKernel = BuildCHERIBSD.rootfsDir(self.config) / "boot/kernel/kernel"
 

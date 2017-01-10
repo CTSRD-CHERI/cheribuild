@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from ..project import Project, AutotoolsProject, CMakeProject
+from ..project import PseudoTarget, AutotoolsProject, CMakeProject
 from ..utils import *
 
 import shutil
@@ -129,22 +129,6 @@ class BuildGnuStep_Back(GnuStepModule):
         self.configureArgs.append("--enable-graphics=cairo")
 
 
-# TODO: add MultiProject or something similar to project.py
-class BuildGnuStep(Project):
-    def __init__(self, config: CheriConfig):
-        super().__init__(config, installDir=config.otherToolsDir)
-        self.subprojects = [
-            BuildLibObjC2(config),
-            BuildGnuStep_Make(config),
-            BuildGnuStep_Base(config),
-            BuildGnuStep_Gui(config),
-            BuildGnuStep_Back(config),
-        ]
-
-    def checkSystemDependencies(self):
-        for p in self.subprojects:
-            p.checkSystemDependencies()
-
-    def process(self):
-        for p in self.subprojects:
-            p.process()
+class BuildGnuStep(PseudoTarget):
+    target = "gnustep"
+    dependencies = ["libobjc2", "gnustep-make", "gnustep-base", "gnustep-gui", "gnustep-back"]

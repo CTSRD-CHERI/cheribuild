@@ -47,7 +47,7 @@ class BuildCHERIBSD(Project):
     repository = "https://github.com/CTSRD-CHERI/cheribsd.git"
 
     @classmethod
-    def setupConfigOptions(cls):
+    def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(installDirectoryHelp="Install directory for CheriBSD root file system (default: "
                                    "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)")
         defaultExtraMakeOptions = [
@@ -92,7 +92,7 @@ class BuildCHERIBSD(Project):
         return cls.defaultRootfsDir(config)
 
     def __init__(self, config: CheriConfig, *, projectName="cheribsd"):
-        super().__init__(config, projectName=projectName, sourceDir=config.sourceRoot / "cheribsd",
+        super().__init__(config, sourceDir=config.sourceRoot / "cheribsd",
                          installDir=self.defaultRootfsDir(config), buildDir=config.cheribsdObj,
                          appendCheriBitsToBuildDir=True, gitRevision=config.cheriBsdRevision)
         self.binutilsDir = self.config.sdkDir / "mips64/bin"

@@ -51,13 +51,28 @@ class ProjectSubclassDefinitionHook(type):
         if clsdict.get("doNotAddToTargets"):
             return  # if doNotAddToTargets is defined within the class we skip it
 
+        # load "target" field first then check project name (as that might default to target)
+        targetName = None
         if "target" in clsdict:
             targetName = clsdict["target"]
-        elif name.startswith("Build"):
-            targetName = name[len("Build"):].replace("_", "-").lower()
+
+        if "projectName" in clsdict:
+            projectName = clsdict["projectName"]
+        elif not cls.isSimpleProject:
+            # fall back to name of target then infer from class name
+            # if targetName:
+            #     projectName = targetName
+            if name.startswith("Build"):
+                projectName = name[len("Build"):].replace("_", "-")
+            else:
+                sys.exit("Project name is not set and cannot infer from class " + name +
+                         " -- set projectName=, target= or doNotAddToTarget=True")
+            cls.projectName = projectName
+
+        if not targetName and projectName:
+            targetName = projectName.lower()
             cls.target = targetName
-        else:
-            sys.exit("Project target name cannot be inferred for " + name + ", set target= or doNotAddToTarget=True")
+
         if cls.__dict__.get("dependenciesMustBeBuilt"):
             if not cls.dependencies:
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + targetName)
@@ -68,8 +83,10 @@ class ProjectSubclassDefinitionHook(type):
 class Project(object, metaclass=ProjectSubclassDefinitionHook):
     # These two class variables can be defined in subclasses to customize dependency ordering of targets
     target = ""  # type: str
+    projectName = "__invalid_project_name__"
     dependencies = []  # type: typing.List[str]
     dependenciesMustBeBuilt = False
+    isSimpleProject = False
 
     repository = ""
 
@@ -96,6 +113,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
     @classmethod
     def addConfigOption(cls, name: str, default=None, kind: "typing.Callable[[str], Type_T]"=str, *,
                         shortname=None, **kwargs) -> "Type_T":
+        assert cls.target, "target not set for " + cls.__name__
         if not ConfigLoader.showAllHelp:
             kwargs["help"] = argparse.SUPPRESS
         if not cls.__commandLineOptionGroup:
@@ -115,36 +133,44 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         return cls.addConfigOption(name, kind=Path, shortname=shortname, **kwargs)
 
     @classmethod
-    def setupConfigOptions(cls, installDirectoryHelp=None):
+    def _defaultInstallDir(cls, config: CheriConfig):
+        return None
+
+    @classmethod
+    def _defaultSourceDir(cls, config: CheriConfig):
+        return Path(config.sourceRoot / cls.projectName.lower())
+
+    @classmethod
+    def setupConfigOptions(cls, *, installDirectoryHelp=None, noPathOptions=False):
+        if noPathOptions:
+            cls.sourceDirOverride = None
+            cls.buildDirOverride = None
+            cls.installDirOverride = None
+            return
+
         # statusUpdate("Setting up config options for", cls, cls.target)
         cls.sourceDirOverride = cls.addPathOption("source-directory")
         cls.buildDirOverride = cls.addPathOption("build-directory")
-        # To allow cheribsd rootfs to work
         cls.installDirOverride = cls.addPathOption("install-directory", help=installDirectoryHelp)
         # TODO: add the gitRevision option
-        pass
 
-    def __init__(self, config: CheriConfig, *, projectName: str=None, sourceDir: Path=None, buildDir: Path=None,
+    def __init__(self, config: CheriConfig, *, sourceDir: Path=None, buildDir: Path=None,
                  installDir: Path=None, gitRevision=None, appendCheriBitsToBuildDir=False):
-        className = self.__class__.__name__
-        if projectName:
-            self.projectName = projectName
-        elif self.target:
-            self.projectName = self.target
-        elif className.startswith("Build"):
-            self.projectName = className[len("Build"):].replace("_", "-")
-        else:
-            fatalError("Project name is not set and cannot infer from class", className)
-        self.projectNameLower = self.projectName.lower()
+        self.config = config
+        self.__requiredSystemTools = {}  # type: typing.Dict[str, typing.Any]
+        self._systemDepsChecked = False
+
+        if self.isSimpleProject:
+            self._preventAssign = True
+            return
 
         self.gitRevision = gitRevision
         self.gitBranch = ""
-        self.config = config
         # set up the install/build/source directories (allowing overrides from config file)
-        defaultSourceDir = Path(sourceDir if sourceDir else config.sourceRoot / self.projectNameLower)
+        defaultSourceDir = Path(sourceDir if sourceDir else config.sourceRoot / self.projectName.lower())
         # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
         buildDirSuffix = "-" + config.cheriBitsStr + "-build" if appendCheriBitsToBuildDir else "-build"
-        defaultBuildDir = Path(buildDir if buildDir else config.buildRoot / (self.projectNameLower + buildDirSuffix))
+        defaultBuildDir = Path(buildDir if buildDir else config.buildRoot / (self.projectName.lower() + buildDirSuffix))
 
         if self.config.verbose and any((self.sourceDirOverride, self.buildDirOverride, self.installDirOverride)):
             print(self.projectName, "directory overrides: source=%s, build=%s, install=%s" %
@@ -158,12 +184,10 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
 
         self.makeCommand = "make"
         self.configureCommand = ""
-        self._systemDepsChecked = False
         # non-assignable variables:
         self.commonMakeArgs = []
         self.configureArgs = []  # type: typing.List[str]
         self.configureEnvironment = {}  # type: typing.Dict[str,str]
-        self.__requiredSystemTools = {}  # type: typing.Dict[str, typing.Any]
         self._preventAssign = True
         if self.config.createCompilationDB and self.compileDBRequiresBear:
             self._addRequiredSystemTool("bear", installInstructions="Run `cheribuild.py bear`")
@@ -564,6 +588,16 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
             self.install()
 
 
+class SimpleProject(Project):
+    # FIXME: invert inheritance hierachy
+    projectName = None
+    doNotAddToTargets = True
+    isSimpleProject = True
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(noPathOptions=True)
+
 class CMakeProject(Project):
     doNotAddToTargets = True
     compileDBRequiresBear = False  # cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON does it
@@ -646,6 +680,7 @@ class AutotoolsProject(Project):
 class PseudoTarget(Project):
     doNotAddToTargets = True
     dependenciesMustBeBuilt = True
+    hasSourceFiles = False
 
     def process(self):
         pass

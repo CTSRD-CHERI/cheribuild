@@ -31,7 +31,7 @@ import os
 import shutil
 import tempfile
 
-from ..project import Project
+from ..project import SimpleProject
 from ..utils import *
 from .cheribsd import BuildCHERIBSD
 from pathlib import Path
@@ -42,12 +42,12 @@ from pathlib import Path
 # ufstype=ufs2 is required as the Linux kernel can't automatically determine which UFS filesystem is being used
 # Same thing is possible with qemu-nbd, but needs root (might be faster)
 
-class BuildDiskImage(Project):
+class BuildDiskImage(SimpleProject):
     target = "disk-image"
     dependencies = ["qemu", "cheribsd"]
 
     def __init__(self, config):
-        super().__init__(config, projectName="disk-image")
+        super().__init__(config)
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
         self.manifestFile = None  # type: Path

@@ -27,12 +27,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from ..project import CMakeProject, Project
+from ..project import CMakeProject, SimpleProject
 from ..utils import *
-from pathlib import Path
-import tempfile
-
-import os
 
 
 def kdevInstallDir(config: CheriConfig):
@@ -73,7 +69,7 @@ class BuildKDevelop(CMakeProject):
         self.gitBranch = "cheri"
 
 
-class StartKDevelop(Project):
+class StartKDevelop(SimpleProject):
     target = "run-kdevelop"
     dependencies = ["kdevelop"]
 

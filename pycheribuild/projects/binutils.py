@@ -33,15 +33,17 @@ from ..utils import *
 
 class BuildBinutils(AutotoolsProject):
     target = "gnu-binutils"
+    projectName = "BinUtils"
     repository = "https://github.com/CTSRD-CHERI/binutils.git"
 
     @classmethod
-    def setupConfigOptions(cls):
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions()
         cls.fullInstall = cls.addBoolOption("install-all-tools", help="Whether to install all binutils tools instead"
                                                                       "of only as, ld and objdump")
 
-    def __init__(self, config: CheriConfig, projectName="binutils"):
-        super().__init__(config, installDir=config.sdkDir, projectName=projectName)
+    def __init__(self, config: CheriConfig):
+        super().__init__(config, installDir=config.sdkDir)
         # http://marcelog.github.io/articles/cross_freebsd_compiler_in_linux.html
         self.gitBranch = "cheribsd"  # the default branch "cheri" won't work for cross-compiling
 
@@ -122,11 +124,12 @@ class BuildBinutils(AutotoolsProject):
 
 class BuildGPLv3Binutils(BuildBinutils):
     target = "gplv3-binutils"
+    projectName = "GPLv3-BinUtils"
     # This is much faster to clone than the official repo
     repository = "https://github.com/RichardsonAlex/binutils-gdb.git"
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, projectName="gplv3-binutils")
+        super().__init__(config, )
         self.projectName = ""
         self.gitBranch = "cheribsd"
         self.buildDir = config.buildRoot / "gplv3-binutils"

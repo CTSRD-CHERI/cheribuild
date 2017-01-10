@@ -34,7 +34,7 @@ import sys
 import shutil
 
 from .cheribsd import BuildCHERIBSD
-from ..project import Project, PseudoTarget, CMakeProject
+from ..project import Project, PseudoTarget, CMakeProject, SimpleProject
 from ..utils import *
 
 from pathlib import Path
@@ -220,13 +220,13 @@ class BuildCheriBsdSysroot(Project):
                 runCmd("ar", "rc", lib)
 
 
-class InstallCmakeToolchainFiles(CMakeProject):
-    target = "cheri-buildsystem-wrappers"
+class InstallCheriBuildsystemWrappers(CMakeProject):
+    projectName = "cheri-buildsystem-wrappers"
     dependencies = ["freestanding-sdk", "cheribsd-sysroot"]
     repository = "https://github.com/RichardsonAlex/cheri-buildsystem-wrappers.git"
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, appendCheriBitsToBuildDir=True, projectName="cheri-buildsystem-wrappers",
+        super().__init__(config, appendCheriBitsToBuildDir=True,
                          installDir=config.sdkDir)
         self.configureArgs.append("-DCHERI_SDK_BINDIR=" + str(self.config.sdkDir / "bin"))
         self.configureArgs.append("-DCHERIBSD_SYSROOT=" + str(self.config.sdkDir / "sysroot"))
@@ -238,7 +238,7 @@ class BuildBinutils(PseudoTarget):
     dependencies = ["gnu-binutils", "elftoolchain-binutils"] if not IS_FREEBSD else []
 
 
-class StartCheriSDKShell(Project):
+class StartCheriSDKShell(SimpleProject):
     target = "sdk-shell"
 
     def process(self):
