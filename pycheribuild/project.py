@@ -322,6 +322,8 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         if self.config.createCompilationDB and self.compileDBRequiresBear:
             allArgs = [self.config.otherToolsDir / "bin/bear", "--cdb", self.buildDir / compilationDbName,
                        "--append"] + allArgs
+        if not self.config.makeWithoutNice:
+            allArgs = ["nice"] + allArgs
         starttime = time.time()
         self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=self._makeStdoutFilter, cwd=cwd, env=env,
                             appendToLogfile=appendToLogfile)

@@ -102,6 +102,7 @@ class CheriConfig(object):
                                                           "(requires Bear for non-CMake projects")
     qemuUseTelnet = ConfigLoader.addBoolOption("qemu-monitor-telnet",
                                                help="Use telnet to connect to QEMU monitor instead of CTRL+A,C")
+    makeWithoutNice = ConfigLoader.addBoolOption("make-without-nice", help="Run make/ninja without nice(1)")
 
     # configurable paths
     sourceRoot = ConfigLoader.addPathOption("source-root", default=Path(os.path.expanduser("~/cheri")),
