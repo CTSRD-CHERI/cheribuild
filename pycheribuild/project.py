@@ -403,6 +403,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
 
 class Project(SimpleProject):
     repository = ""
+    gitRevision = None
     compileDBRequiresBear = True
     doNotAddToTargets = True
 
@@ -460,11 +461,14 @@ class Project(SimpleProject):
         cls.sourceDirOverride = cls.addPathOption("source-directory")
         cls.buildDirOverride = cls.addPathOption("build-directory")
         cls.installDirOverride = cls.addPathOption("install-directory", help=installDirectoryHelp)
+        if cls.repository:
+            cls.gitRevision = cls.addConfigOption("git-revision", kind=str, help="The git revision to checkout prior to"
+                                                  " building. Useful if HEAD is broken for one project but you still"
+                                                  " want to update the other projects.")
         # TODO: add the gitRevision option
 
-    def __init__(self, config: CheriConfig, gitRevision=None):
+    def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.gitRevision = gitRevision
         self.gitBranch = ""
         # set up the install/build/source directories (allowing overrides from config file)
 
@@ -650,8 +654,8 @@ class CMakeProject(Project):
         cls.cmakeOptions = cls.addConfigOption("cmake-options", default=[], kind=list, metavar="OPTIONS",
                                                help="Additional command line options to pass to CMake")
 
-    def __init__(self, config, generator=Generator.Ninja, **kwargs):
-        super().__init__(config, **kwargs)
+    def __init__(self, config, generator=Generator.Ninja):
+        super().__init__(config)
         self.configureCommand = "cmake"
         self._addRequiredSystemTool("cmake", installInstructions=self.cmakeInstallInstructions)
         self.generator = generator
@@ -698,8 +702,8 @@ class AutotoolsProject(Project):
     Like Project but automatically sets up the defaults for autotools like projects
     Sets configure command to ./configure, adds --prefix=installdir
     """
-    def __init__(self, config, configureScript="configure", **kwargs):
-        super().__init__(config, **kwargs)
+    def __init__(self, config, configureScript="configure"):
+        super().__init__(config)
         self.configureCommand = self.sourceDir / configureScript
         self.configureArgs.append("--prefix=" + str(self.installDir))
         self.makeCommand = "make"

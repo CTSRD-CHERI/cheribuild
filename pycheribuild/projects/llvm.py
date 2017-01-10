@@ -39,6 +39,17 @@ class BuildLLVM(CMakeProject):
     defaultInstallDir = CMakeProject._installToSDK
     appendCheriBitsToBuildDir = True
 
+    @classmethod
+    def setupConfigOptions(cls, includeClangRevision=True, includeLldbRevision=False):
+        super().setupConfigOptions()
+        cls.llvmGitRevision = cls.addConfigOption("llvm-git-revision", kind=str, help="The git revision for llvm")
+        if includeClangRevision:
+            cls.clangGitRevision = cls.addConfigOption("clang-git-revision", kind=str,
+                                                       help="The git revision for tools/clang")
+        if includeLldbRevision:  # not built yet
+            cls.lldbGitRevision = cls.addConfigOption("lldb-git-revision", kind=str,
+                                                      help="The git revision for tools/lldb")
+
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.cCompiler = config.clangPath
@@ -93,11 +104,12 @@ class BuildLLVM(CMakeProject):
 
     def update(self):
         self._updateGitRepo(self.sourceDir, "https://github.com/CTSRD-CHERI/llvm.git",
-                            revision=self.config.llvmRevision)
+                            revision=self.llvmGitRevision)
         self._updateGitRepo(self.sourceDir / "tools/clang", "https://github.com/CTSRD-CHERI/clang.git",
-                            revision=self.config.clangRevision)
-        self._updateGitRepo(self.sourceDir / "tools/lldb", "https://github.com/CTSRD-CHERI/lldb.git",
-                            revision=self.config.lldbRevision, initialBranch="master")
+                            revision=self.clangGitRevision)
+        if False:  # Not yet usable
+            self._updateGitRepo(self.sourceDir / "tools/lldb", "https://github.com/CTSRD-CHERI/lldb.git",
+                                revision=self.lldbGitRevision, initialBranch="master")
 
     def install(self):
         super().install()
@@ -122,14 +134,20 @@ class BuildLLD(BuildLLVM):
     target = "lld"
     projectName = "lld-llvm"
 
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(includeClangRevision=False)
+        cls.lldGitRevision = cls.addConfigOption("lld-git-revision", kind=str,
+                                                 help="The git revision for tools/lld")
+
     def __init__(self, config: CheriConfig,):
         super().__init__(config)
         self.configureArgs.append("-DLLVM_TOOL_LLD_BUILD=ON")
 
     def update(self):
-        self._updateGitRepo(self.sourceDir, "https://github.com/llvm-mirror/llvm.git")
+        self._updateGitRepo(self.sourceDir, "https://github.com/llvm-mirror/llvm.git", revision=self.llvmGitRevision)
         self._updateGitRepo(self.sourceDir / "tools/lld", "https://github.com/RichardsonAlex/lld.git",
-                            initialBranch="cheri")
+                            initialBranch="cheri", revision=self.lldGitRevision)
 
     def compile(self):
         self.runMake(["lld", self.config.makeJFlag])

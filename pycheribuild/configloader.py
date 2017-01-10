@@ -60,8 +60,6 @@ class ConfigLoader(object):
     _JSON = {}  # type: dict
     values = OrderedDict()
     # argument groups:
-    revisionGroup = _parser.add_argument_group("Specifying git revisions", "Useful if the current HEAD of a repository "
-                                               "does not work but an older one did.")
     remoteBuilderGroup = _parser.add_argument_group("Specifying a remote FreeBSD build server",
                                                     "Useful if you want to create a CHERI SDK on a Linux or OS X host"
                                                     " to allow cross compilation to a CHERI target.")

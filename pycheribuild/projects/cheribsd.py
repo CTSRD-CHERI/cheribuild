@@ -90,7 +90,7 @@ class BuildCHERIBSD(Project):
         return cls.getInstallDir(config)
 
     def __init__(self, config: CheriConfig, *, projectName="cheribsd"):
-        super().__init__(config, gitRevision=config.cheriBsdRevision)
+        super().__init__(config)
         self.binutilsDir = self.config.sdkDir / "mips64/bin"
         self.cheriCC = self.config.sdkDir / "bin/clang"
         self.cheriCXX = self.config.sdkDir / "bin/clang++"

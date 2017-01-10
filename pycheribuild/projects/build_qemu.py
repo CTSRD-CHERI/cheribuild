@@ -37,7 +37,7 @@ class BuildQEMU(AutotoolsProject):
     appendCheriBitsToBuildDir = True
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, gitRevision=config.qemuRevision)
+        super().__init__(config)
         self.gitBranch = "qemu-cheri"
 
         self._addRequiredSystemTool("pkg-config")

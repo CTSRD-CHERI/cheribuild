@@ -131,23 +131,6 @@ class CheriConfig(object):
                                                help="The port to use on localhost to forward the QEMU ssh port. "
                                                     "You can then use `ssh root@localhost -p $PORT` connect to the VM",
                                                metavar="PORT")  # type: int
-    # allow overriding the git revisions in case there is a regression
-    cheriBsdRevision = ConfigLoader.addOption("cheribsd-revision", type=str, metavar="GIT_COMMIT_ID",
-                                              help="The git revision or branch of CHERIBSD to check out",
-                                              group=ConfigLoader.revisionGroup)  # type: str
-    llvmRevision = ConfigLoader.addOption("llvm-revision", type=str, metavar="GIT_COMMIT_ID",
-                                          help="The git revision or branch of LLVM to check out",
-                                          group=ConfigLoader.revisionGroup)  # type: str
-    clangRevision = ConfigLoader.addOption("clang-revision", type=str, metavar="GIT_COMMIT_ID",
-                                           help="The git revision or branch of clang to check out",
-                                           group=ConfigLoader.revisionGroup)  # type: str
-    lldbRevision = ConfigLoader.addOption("lldb-revision", type=str, metavar="GIT_COMMIT_ID",
-                                          help="The git revision or branch of clang to check out",
-                                          group=ConfigLoader.revisionGroup)  # type: str
-    qemuRevision = ConfigLoader.addOption("qemu-revision", type=str, metavar="GIT_COMMIT_ID",
-                                          help="The git revision or branch of QEMU to check out",
-                                          group=ConfigLoader.revisionGroup)  # type: str
-
     # To allow building CHERI software on non-FreeBSD systems
     freeBsdBuildMachine = ConfigLoader.addOption("freebsd-builder-hostname", type=str, metavar="SSH_HOSTNAME",
                                                  help="This string will be passed to ssh and be something like "
