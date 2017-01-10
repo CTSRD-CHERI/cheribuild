@@ -126,21 +126,21 @@ class BuildCHERIBSD(Project):
             # By default we only want to print the status updates -> use make -s so we have to do less filtering
             self.commonMakeArgs.append("-s")
 
-    @staticmethod
-    def _makeStdoutFilter(line: bytes):
+    def _stdoutFilter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
-            sys.stdout.buffer.write(Project.clearLineSequence)
+            if self._lastStdoutLineCanBeOverwritten:
+                sys.stdout.buffer.write(Project.clearLineSequence)
             sys.stdout.buffer.write(line)
-        elif line.startswith(b"===> "):  # new subdirectory
-            # clear the old line to have a continuously updating progress
-            sys.stdout.buffer.write(Project.clearLineSequence)
-            sys.stdout.buffer.write(line[:-1])  # remove the newline at the end
-            sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
             sys.stdout.buffer.flush()
-        elif line.startswith(b"-----------"):
-            pass  # useless separator
+            self._lastStdoutLineCanBeOverwritten = False
+        elif line.startswith(b"===> "):  # new subdirectory
+            self._lineNotImportantStdoutFilter(line)
+        elif line == b"--------------------------------------------------------------":
+            return  # ignore separator around status updates
+        elif line == b"\n":
+            return  # ignore empty lines when filtering
         else:
-            sys.stdout.buffer.write(line)
+            self._showLineStdoutFilter(line)
 
     def _removeSchgFlag(self, *paths: "typing.Iterable[str]"):
         for i in paths:

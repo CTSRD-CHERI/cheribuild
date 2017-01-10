@@ -36,6 +36,8 @@ import subprocess
 import sys
 import threading
 import time
+from sys import stdout
+
 from .utils import *
 from .targets import Target, targetManager
 from .configloader import ConfigLoader
@@ -165,6 +167,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         self._preventAssign = True
         if self.config.createCompilationDB and self.compileDBRequiresBear:
             self._addRequiredSystemTool("bear", installInstructions="Run `cheribuild.py bear`")
+        self._lastStdoutLineCanBeOverwritten = False
 
     # Make sure that API is used properly
     def __setattr__(self, name, value):
@@ -308,24 +311,40 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         shutil.copy(str(src), str(dest), follow_symlinks=False)
 
     @staticmethod
-    def _makeStdoutFilter(line: bytes):
+    def _handleStdErr(outfile, stream, fileLock, project: "Project"):
+        for errLine in stream:
+            with fileLock:
+                if project._lastStdoutLineCanBeOverwritten:
+                    sys.stdout.buffer.write(b"\n")
+                    sys.stdout.buffer.flush()
+                    project._lastStdoutLineCanBeOverwritten = False
+                sys.stderr.buffer.write(errLine)
+                sys.stderr.buffer.flush()
+                if not project.config.noLogfile:
+                    outfile.write(errLine)
+
+    def _lineNotImportantStdoutFilter(self, line: bytes):
         # by default we don't keep any line persistent, just have updating output
-        sys.stdout.buffer.write(Project.clearLineSequence)
+        if self._lastStdoutLineCanBeOverwritten:
+            sys.stdout.buffer.write(Project.clearLineSequence)
         sys.stdout.buffer.write(line[:-1])  # remove the newline at the end
         sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
         sys.stdout.buffer.flush()
+        self._lastStdoutLineCanBeOverwritten = True
 
-    @staticmethod
-    def _handleStdErr(outfile, stream, fileLock, noLogfile):
-        for errLine in stream:
-            with fileLock:
-                sys.stderr.buffer.write(errLine)
-                sys.stderr.buffer.flush()
-                if not noLogfile:
-                    outfile.write(errLine)
+    def _showLineStdoutFilter(self, line: bytes):
+        if self._lastStdoutLineCanBeOverwritten:
+            sys.stdout.buffer.write(b"\n")
+        sys.stdout.buffer.write(line)
+        sys.stdout.buffer.flush()
+        self._lastStdoutLineCanBeOverwritten = False
+
+    def _stdoutFilter(self, line: bytes):
+        self._lineNotImportantStdoutFilter(line)
 
     def runMake(self, args: "typing.List[str]", makeTarget="", *, makeCommand: str=None, logfileName: str=None,
-                cwd: Path=None, env=None, appendToLogfile=False, compilationDbName="compile_commands.json") -> None:
+                cwd: Path=None, env=None, appendToLogfile=False, compilationDbName="compile_commands.json",
+                stdoutFilter="__default_filter__") -> None:
         if not makeCommand:
             makeCommand = self.makeCommand
         if not cwd:
@@ -346,10 +365,13 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         if not self.config.makeWithoutNice:
             allArgs = ["nice"] + allArgs
         starttime = time.time()
-        if self.makeCommand == "ninja" and makeTarget != "install":
-            stdoutFilter = None  # ninja already filters the make output, no need for an extra filter
-        else:
-            stdoutFilter = self._makeStdoutFilter
+        if self.config.noLogfile and stdoutFilter == "__default_filter__":
+            # if output isatty() (i.e. no logfile) ninja already filters the output -> don't slow this down by
+            # adding a redundant filter in python
+            if self.makeCommand == "ninja" and makeTarget != "install":
+                stdoutFilter = None
+        if stdoutFilter == "__default_filter__":
+            stdoutFilter = self._stdoutFilter
         self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=stdoutFilter, cwd=cwd, env=env,
                             appendToLogfile=appendToLogfile)
         # add a newline at the end in case it ended with a filtered line (no final newline)
@@ -420,8 +442,7 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
         logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
         if logfile:
             # use a thread to print stderr output and write it to logfile (not using a thread would block)
-            stderrThread = threading.Thread(target=self._handleStdErr,
-                                            args=(logfile, proc.stderr, logfileLock, self.config.noLogfile))
+            stderrThread = threading.Thread(target=self._handleStdErr, args=(logfile, proc.stderr, logfileLock, self))
             stderrThread.start()
         for line in proc.stdout:
             with logfileLock:  # make sure we don't interleave stdout and stderr lines
@@ -585,16 +606,18 @@ class CMakeProject(Project):
             self.configureArgs.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
         # Don't add the user provided options here, add them in configure() so that they are put last
 
-    def configure(self):
-        self.configureArgs.extend(self.cmakeOptions)
-        super().configure()
-
-    @staticmethod
-    def _makeStdoutFilter(line: bytes):
+    def _cmakeInstallStdoutFilter(self, line: bytes):
         # don't show the up-to date install lines
         if line.startswith(b"-- Up-to-date:"):
             return
-        Project._makeStdoutFilter(line)
+        self._showLineStdoutFilter(line)
+
+    def install(self):
+        self.runMake(self.commonMakeArgs, "install", stdoutFilter=self._cmakeInstallStdoutFilter)
+
+    def configure(self):
+        self.configureArgs.extend(self.cmakeOptions)
+        super().configure()
 
     @staticmethod
     def findPackage(name: str) -> bool:
