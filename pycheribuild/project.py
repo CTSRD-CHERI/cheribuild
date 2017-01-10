@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import argparse
+import io
 import os
 import shutil
 import shlex
@@ -355,16 +356,26 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
             logfilePath = Path(os.devnull)
         else:
             logfilePath = self.buildDir / (logfileName + ".log")
-        print("Saving build log to", logfilePath)
+            print("Saving build log to", logfilePath)
         if self.config.pretend:
             return
         if self.config.verbose:
             stdoutFilter = None
 
-        if logfilePath.is_file() and not appendToLogfile:
+        if not self.config.noLogfile and logfilePath.is_file() and not appendToLogfile:
             logfilePath.unlink()  # remove old logfile
         args = list(map(str, args))  # make sure all arguments are strings
         cmdStr = " ".join([shlex.quote(s) for s in args])
+
+        if self.config.noLogfile:
+            if stdoutFilter is None:
+                # just run the process connected to the current stdout/stdin
+                subprocess.check_call(args, cwd=str(cwd), env=newEnv)
+            else:
+                make = subprocess.Popen(args, cwd=str(cwd), stdout=subprocess.PIPE, env=newEnv)
+                self.__runProcessWithFilteredOutput(make, None, stdoutFilter, cmdStr)
+            return
+
         # open file in append mode
         with logfilePath.open("ab") as logfile:
             # print the command and then the logfile
@@ -378,34 +389,40 @@ class Project(object, metaclass=ProjectSubclassDefinitionHook):
                 subprocess.check_call(args, cwd=str(cwd), stdout=logfile, stderr=logfile, env=newEnv)
                 return
             make = subprocess.Popen(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=newEnv)
+            self.__runProcessWithFilteredOutput(make, logfile, stdoutFilter, cmdStr)
+
+    def __runProcessWithFilteredOutput(self, proc: subprocess.Popen, logfile: "typing.Optional[io.FileIO]",
+                                       stdoutFilter, cmdStr: str):
+        logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
+        if logfile:
             # use a thread to print stderr output and write it to logfile (not using a thread would block)
-            logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
             stderrThread = threading.Thread(target=self._handleStdErr,
-                                            args=(logfile, make.stderr, logfileLock, self.config.noLogfile))
+                                            args=(logfile, proc.stderr, logfileLock, self.config.noLogfile))
             stderrThread.start()
-            for line in make.stdout:
-                with logfileLock:  # make sure we don't interleave stdout and stderr lines
-                    if not self.config.noLogfile:
-                        # will be /dev/null with noLogfile anyway but saves a syscall per line
-                        logfile.write(line)
-                    if stdoutFilter:
-                        stdoutFilter(line)
-                    else:
-                        sys.stdout.buffer.write(line)
-                        sys.stdout.buffer.flush()
-            retcode = make.wait()
-            remainingErr, remainingOut = make.communicate()
-            sys.stderr.buffer.write(remainingErr)
-            logfile.write(remainingErr)
-            sys.stdout.buffer.write(remainingOut)
-            logfile.write(remainingOut)
-            if stdoutFilter:
-                # add the final new line after the filtering
-                sys.stdout.buffer.write(b"\n")
+        for line in proc.stdout:
+            with logfileLock:  # make sure we don't interleave stdout and stderr lines
+                if logfile:
+                    logfile.write(line)
+                if stdoutFilter:
+                    stdoutFilter(line)
+                else:
+                    sys.stdout.buffer.write(line)
+                    sys.stdout.buffer.flush()
+        retcode = proc.wait()
+        if logfile:
             stderrThread.join()
-            if retcode:
-                raise SystemExit("Command \"%s\" failed with exit code %d.\nSee %s for details." %
-                                 (cmdStr, retcode, logfile.name))
+        # Not sure if the remaining call is needed
+        remainingErr, remainingOut = proc.communicate()
+        sys.stderr.buffer.write(remainingErr)
+        logfile.write(remainingErr)
+        sys.stdout.buffer.write(remainingOut)
+        logfile.write(remainingOut)
+        if stdoutFilter:
+            # add the final new line after the filtering
+            sys.stdout.buffer.write(b"\n")
+        if retcode:
+            raise SystemExit("Command \"%s\" failed with exit code %d.\nSee %s for details." %
+                             (cmdStr, retcode, logfile.name))
 
     def createBuildtoolTargetSymlinks(self, tool: Path, toolName: str=None, createUnprefixedLink: bool=False,
                                       cwd: str=None):
