@@ -87,6 +87,9 @@ class BuildCHERIBSD(Project):
         cls.keepOldRootfs = cls.addBoolOption("keep-old-rootfs", help="Don't remove the whole old rootfs directory. "
                                               " This can speed up installing but may cause strange errors so is off "
                                               "by default")
+        cls.subdirOverride = cls.addConfigOption("subdir", kind=str, metavar="DIR",
+                                                 help="Only build subdir DIR instead of the full tree. "
+                                                      "Useful for quickly rebuilding an individual program/library")
 
     @classmethod
     def rootfsDir(cls, config):
@@ -124,6 +127,9 @@ class BuildCHERIBSD(Project):
         if not (self.config.verbose or self.config.quiet):
             # By default we only want to print the status updates -> use make -s so we have to do less filtering
             self.commonMakeArgs.append("-s")
+
+        if self.subdirOverride:
+            self.commonMakeArgs.append("SUBDIR_OVERRIDE=" + self.subdirOverride)
 
     def _stdoutFilter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
