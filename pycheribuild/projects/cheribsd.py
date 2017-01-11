@@ -49,7 +49,6 @@ class BuildCHERIBSD(Project):
     appendCheriBitsToBuildDir = True
     defaultBuildDir = lambda cls, config: config.buildRoot / ("cheribsd-obj-" + config.cheriBitsStr)
 
-
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(installDirectoryHelp="Install directory for CheriBSD root file system (default: "
@@ -71,13 +70,14 @@ class BuildCHERIBSD(Project):
         cls.makeOptions = cls.addConfigOption("build-options", default=defaultExtraMakeOptions, kind=list,
                                               metavar="OPTIONS", shortname="-cheribsd-make-options",  # compatibility
                                               help="Additional make options to be passed to make when building "
-                                                   "CHERIBSD. See `man src.conf` for more info.")
+                                                   "CHERIBSD. See `man src.conf` for more info.",
+                                              showHelp=True)
         # TODO: separate options for kernel/install?
         cls.kernelConfig = cls.addConfigOption("kernel-cofig", default=defaultKernelConfig, kind=str,
-                                               metavar="CONFIG", shortname="-kernconf",
+                                               metavar="CONFIG", shortname="-kernconf", showHelp=True,
                                                help="The kernel configuration to use for `make buildkernel` (default: "
                                                     "CHERI_MALTA64 or CHERI128_MALTA64 depending on --cheri-bits)")
-        cls.skipBuildworld = cls.addBoolOption("only-build-kernel", shortname="-skip-buildworld",
+        cls.skipBuildworld = cls.addBoolOption("only-build-kernel", shortname="-skip-buildworld", showHelp=True,
                                                help="Skip the buildworld step -> only build and install the kernel")
 
         cls.forceClang = cls.addBoolOption("force-clang", help="Use clang for building everything")
@@ -87,7 +87,7 @@ class BuildCHERIBSD(Project):
         cls.keepOldRootfs = cls.addBoolOption("keep-old-rootfs", help="Don't remove the whole old rootfs directory. "
                                               " This can speed up installing but may cause strange errors so is off "
                                               "by default")
-        cls.subdirOverride = cls.addConfigOption("subdir", kind=str, metavar="DIR",
+        cls.subdirOverride = cls.addConfigOption("subdir", kind=str, metavar="DIR", showHelp=True,
                                                  help="Only build subdir DIR instead of the full tree. "
                                                       "Useful for quickly rebuilding an individual program/library")
 

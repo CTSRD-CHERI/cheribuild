@@ -107,9 +107,10 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def addConfigOption(cls, name: str, default=None, kind: "typing.Callable[[str], Type_T]"=str, *,
-                        shortname=None, **kwargs) -> "Type_T":
+                        showHelp=False, shortname=None, **kwargs) -> "Type_T":
         assert cls.target, "target not set for " + cls.__name__
-        if not ConfigLoader.showAllHelp:
+        # Hide stuff like --foo/install-directory from --help
+        if not showHelp and not ConfigLoader.showAllHelp:
             kwargs["help"] = argparse.SUPPRESS
         if not cls.__commandLineOptionGroup:
             # noinspection PyProtectedMember
