@@ -122,6 +122,10 @@ class BuildDiskImage(SimpleProject):
         # If they do not exist in the extra-files directory yet we generate a default one and use that
         # Additionally all other files in the extra-files directory will be added to the disk image
         for root, dirnames, filenames in os.walk(str(self.config.extraFiles)):
+            if '.svn' in dirnames:
+                dirnames.remove('.svn')
+            if '.git' in dirnames:
+                dirnames.remove('.git')
             for filename in filenames:
                 self.extraFiles.append(Path(root, filename))
 
