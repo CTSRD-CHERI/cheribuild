@@ -193,9 +193,12 @@ class BuildCHERIBSD(Project):
                 if (sdkBinDir / l).exists():
                     runCmd("mv", "-f", l, l + ".backup", cwd=sdkBinDir)
         try:
+            # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
+            # so just omit the flag here if the user passes -j1 on the command line
+            jflag = [self.config.makeJFlag] if self.config.makeJobs > 1 else []
             if not self.skipBuildworld:
-                self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildworld", cwd=self.sourceDir)
-            self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "buildkernel", cwd=self.sourceDir,
+                self.runMake(self.commonMakeArgs + jflag, "buildworld", cwd=self.sourceDir)
+            self.runMake(self.commonMakeArgs + jflag, "buildkernel", cwd=self.sourceDir,
                          compilationDbName="compile_commands_" + self.kernelConfig + ".json")
         finally:
             # restore the linkers
