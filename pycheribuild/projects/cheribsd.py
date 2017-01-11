@@ -84,12 +84,15 @@ class BuildCHERIBSD(Project):
         cls.forceSDKLinker = cls.addBoolOption("force-sdk-linker", help="Let clang use the linker from the installed "
                                                "SDK instead of the one built in the bootstrap process. WARNING: May "
                                                "cause unexpected linker errors!")
+        cls.keepOldRootfs = cls.addBoolOption("keep-old-rootfs", help="Don't remove the whole old rootfs directory. "
+                                              " This can speed up installing but may cause strange errors so is off "
+                                              "by default")
 
     @classmethod
     def rootfsDir(cls, config):
         return cls.getInstallDir(config)
 
-    def __init__(self, config: CheriConfig, *, projectName="cheribsd"):
+    def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.binutilsDir = self.config.sdkDir / "mips64/bin"
         self.cheriCC = self.config.sdkDir / "bin/clang"
@@ -153,6 +156,8 @@ class BuildCHERIBSD(Project):
             fatalError("CHERI CXX does not exist: ", self.cheriCXX)
         # if not (self.binutilsDir / "as").is_file():
         #     fatalError("CHERI MIPS binutils are missing. Run 'cheribuild.py binutils'?")
+
+    def __removeOldRootfs(self):
         if not self.skipBuildworld:
             if self.installAsRoot:
                 # we need to remove the schg flag as otherwise rm -rf will fail to remove these files
@@ -200,6 +205,9 @@ class BuildCHERIBSD(Project):
                         runCmd("mv", "-f", l + ".backup", l, cwd=sdkBinDir)
 
     def install(self):
+        # keeping the old rootfs directory prior to install can sometimes cause the build to fail so delete by default
+        if not self.keepOldRootfs:
+            self.__removeOldRootfs()
         # don't use multiple jobs here
         installArgs = self.commonMakeArgs + ["DESTDIR=" + str(self.installDir)]
         self.runMake(installArgs, "installkernel", cwd=self.sourceDir)
