@@ -56,6 +56,7 @@ class BuildDiskImage(SimpleProject):
         self._addRequiredSystemTool("ssh-keygen")
         self._addRequiredSystemTool("makefs")
         self.rootfsDir = BuildCHERIBSD.rootfsDir(self.config)
+        self.dirsAddedToManifest = [Path(".")]  # Path().parents always includes a "." entry
 
     def addFileToImage(self, file: Path, targetDir: str, user="root", group="wheel", mode="0644"):
         assert not targetDir.startswith("/")
@@ -76,8 +77,20 @@ class BuildDiskImage(SimpleProject):
         # cleaned before running disk-image. We get errors like this:
         #   makefs: ./root/.ssh: missing directory in specification
         #   makefs: failed at line 27169 of the specification
-        # Having the directory in the spec multiple times is fine, so we just do that instead
-        runCmd(["install", "-d"] + commonArgs + [str(parentDir)], printVerboseOnly=True)
+
+        # Add all the parent directories to METALOG
+        # we have to reverse the Path().parents as we need to add usr before usr/share
+        # also remove the last entry from parents as that is always Path(".")
+        dirsToCheck = [Path(targetDir)]
+        dirsToCheck.extend(Path(targetDir).parents)
+        for parent in reversed(dirsToCheck[:-1]):
+            if parent in self.dirsAddedToManifest:
+                # print("Dir", parent, "is already in METALOG")
+                continue
+            # print("Adding", str(self.rootfsDir / parent))
+            runCmd(["install", "-d"] + commonArgs + [str(self.rootfsDir / parent)], printVerboseOnly=True)
+            self.dirsAddedToManifest.append(parent)
+
         # need to pass target file and destination dir so that METALOG can be filled correctly
         runCmd(["install"] + commonArgs + [str(file), str(parentDir)], printVerboseOnly=True)
         if file in self.extraFiles:
