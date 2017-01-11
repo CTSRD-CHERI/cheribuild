@@ -337,11 +337,17 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             stderrThread.join()
         # Not sure if the remaining call is needed
         remainingErr, remainingOut = proc.communicate()
-        sys.stderr.buffer.write(remainingErr)
-        logfile.write(remainingErr)
-        sys.stdout.buffer.write(remainingOut)
-        logfile.write(remainingOut)
-        if stdoutFilter:
+        if remainingErr:
+            print("Process had remaining stderr:", remainingErr)
+            sys.stderr.buffer.write(remainingErr)
+            if logfile:
+                logfile.write(remainingOut)
+        if remainingOut:
+            print("Process had remaining stdout:", remainingOut)
+            sys.stdout.buffer.write(remainingOut)
+            if logfile:
+                logfile.write(remainingErr)
+        if stdoutFilter and self._lastStdoutLineCanBeOverwritten:
             # add the final new line after the filtering
             sys.stdout.buffer.write(b"\n")
         if retcode:
