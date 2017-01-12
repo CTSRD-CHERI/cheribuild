@@ -709,6 +709,13 @@ class CMakeProject(Project):
 
 class AutotoolsProject(Project):
     doNotAddToTargets = True
+
+    @classmethod
+    def setupConfigOptions(cls):
+        super().setupConfigOptions()
+        cls.extraConfigureFlags = cls.addConfigOption("configure-options", default=[], kind=list, metavar="OPTIONS",
+                                                      help="Additional command line options to pass to configure")
+
     """
     Like Project but automatically sets up the defaults for autotools like projects
     Sets configure command to ./configure, adds --prefix=installdir
@@ -718,7 +725,8 @@ class AutotoolsProject(Project):
         self.configureCommand = self.sourceDir / configureScript
         self.configureArgs.append("--prefix=" + str(self.installDir))
         self.makeCommand = "make"
-
+        if self.extraConfigureFlags:
+            self.configureArgs.extend(self.extraConfigureFlags)
 
 # A target that does nothing (used for e.g. the "all" target)
 class PseudoTarget(SimpleProject):
