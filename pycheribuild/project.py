@@ -711,8 +711,8 @@ class AutotoolsProject(Project):
     doNotAddToTargets = True
 
     @classmethod
-    def setupConfigOptions(cls):
-        super().setupConfigOptions()
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
         cls.extraConfigureFlags = cls.addConfigOption("configure-options", default=[], kind=list, metavar="OPTIONS",
                                                       help="Additional command line options to pass to configure")
 
@@ -727,6 +727,7 @@ class AutotoolsProject(Project):
         self.makeCommand = "make"
         if self.extraConfigureFlags:
             self.configureArgs.extend(self.extraConfigureFlags)
+
 
 # A target that does nothing (used for e.g. the "all" target)
 class PseudoTarget(SimpleProject):
