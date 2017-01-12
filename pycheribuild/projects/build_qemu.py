@@ -41,6 +41,7 @@ class BuildQEMU(AutotoolsProject):
         self.gitBranch = "qemu-cheri"
 
         self._addRequiredSystemTool("pkg-config")
+        self._addRequiredSystemTool("python", installInstructions="QEMU needs Python 2 installed as the python binary")
         # QEMU will not work with BSD make, need GNU make
         if IS_FREEBSD:
             self._addRequiredSystemTool("gmake")
