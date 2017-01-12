@@ -4,6 +4,9 @@ This script automates all the steps required to build various [CHERI](http://www
 For example `cheribuild.py [options] run` will start an insanstance of [CHERIBSD](https://github.com/CTSRD-CHERI/cheribsd) on [QEMU](https://github.com/CTSRD-CHERI/qemu) and
 `cheribuild.py [options] sdk` will create a SDK that can be used to compile software for the CHERI CPU.
 
+It has been tested and should work on FreeBSD 10, 11 and 12.
+On Linux Ubuntu 16.04 and OpenSUSE Tubleweed are supported. Ubuntu 14.04 should also work but is no longer tested.
+
 **NOTE**: As this involves building CHERIBSD you will need to run this script on a FreeBSD system.
 If you want to run this script on a remote FreeBSD host you can use the `remote-cheribuild.py` script that is included in this repository:
 
