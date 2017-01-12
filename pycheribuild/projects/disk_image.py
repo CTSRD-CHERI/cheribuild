@@ -248,7 +248,7 @@ nfs_client_enable="YES"
         # -t type Specifies the type of key to create.  The possible values are "rsa1" for protocol version 1
         #  and "dsa", "ecdsa","ed25519", or "rsa" for protocol version 2.
 
-        for keyType in ("rsa1", "rsa", "dsa", "ecdsa", "ed25519"):
+        for keyType in ("rsa", "dsa", "ecdsa", "ed25519"):
             # SSH1 protocol uses just /etc/ssh/ssh_host_key without the type
             privateKeyName = "ssh_host_key" if keyType == "rsa1" else "ssh_host_" + keyType + "_key"
             privateKey = sshDir / privateKeyName
