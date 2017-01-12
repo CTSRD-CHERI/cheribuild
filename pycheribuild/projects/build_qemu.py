@@ -65,6 +65,7 @@ class BuildQEMU(AutotoolsProject):
             "--disable-bsd-user",
             "--disable-xen",
             "--disable-docs",
+            "--disable-rdma",
             "--extra-cflags=" + extraCFlags,
         ])
         if IS_LINUX:
