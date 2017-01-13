@@ -229,6 +229,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
     def _handleStdErr(outfile, stream, fileLock, project: "Project"):
         for errLine in stream:
             with fileLock:
+                # noinspection PyProtectedMember
                 if project._lastStdoutLineCanBeOverwritten:
                     sys.stdout.buffer.write(b"\n")
                     sys.stdout.buffer.flush()
@@ -318,7 +319,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             self.__runProcessWithFilteredOutput(make, logfile, stdoutFilter, cmdStr)
 
     def __runProcessWithFilteredOutput(self, proc: subprocess.Popen, logfile: "typing.Optional[io.FileIO]",
-                                       stdoutFilter, cmdStr: str):
+                                       stdoutFilter: "typing.Callable[[bytes], None]", cmdStr: str):
         logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
         if logfile:
             # use a thread to print stderr output and write it to logfile (not using a thread would block)
@@ -459,8 +460,6 @@ class Project(SimpleProject):
     defaultInstallDir = __defaultInstallDir
     """ The default installation directory (will probably be set to _installToSDK or _installToBootstrapTools) """
 
-
-
     @classmethod
     def setupConfigOptions(cls, installDirectoryHelp="", **kwargs):
         super().setupConfigOptions(**kwargs)
@@ -563,7 +562,7 @@ class Project(SimpleProject):
 
     def runMake(self, args: "typing.List[str]", makeTarget="", *, makeCommand: str=None, logfileName: str=None,
                 cwd: Path=None, env=None, appendToLogfile=False, compilationDbName="compile_commands.json",
-                stdoutFilter="__default_filter__") -> None:
+                stdoutFilter: "typing.Callable[[bytes], None]"="__default_filter__") -> None:
         if not makeCommand:
             makeCommand = self.makeCommand
         if not cwd:
@@ -658,7 +657,7 @@ class CMakeProject(Project):
     defaultCMakeBuildType = "Release"
 
     @classmethod
-    def setupConfigOptions(cls):
+    def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions()
         cls.cmakeBuildType = cls.addConfigOption("build-type", default=cls.defaultCMakeBuildType, metavar="BUILD_TYPE",
                                                  help="The CMake build type (Debug, RelWithDebInfo, Release)")
