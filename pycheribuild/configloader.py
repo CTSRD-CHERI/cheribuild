@@ -252,6 +252,5 @@ class ConfigLoader(object):
 
     def __get__(self, instance, owner):
         if self._cached is None:
-            print(self.action.option_strings, "instance:", instance, "owner:", owner, "help:", self.action.help)
             self._cached = self._loadOption(self._cheriConfig, owner)
         return self._cached
