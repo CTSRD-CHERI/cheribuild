@@ -143,6 +143,8 @@ class BuildDiskImage(SimpleProject):
         # TODO: use separate file in /etc/rc.conf.d/ ?
         rcConfContents = """hostname="qemu-cheri-{username}"
 ifconfig_le0="DHCP"  # use DHCP on the standard QEMU usermode nic
+background_dhclient="YES"  # launch dhclient in the background (hope it doesn't break sshd)
+defaultroute_delay=10  # 30 seconds default is a long time
 sshd_enable="YES"
 sendmail_enable="NONE"  # completely disable sendmail
 # disable cron, as this removes errors like: cron[600]: _secure_path: cannot stat /etc/login.conf: Permission denied
