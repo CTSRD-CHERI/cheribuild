@@ -208,8 +208,9 @@ class ConfigLoader(object):
         fromJson = self._loadFromJson(fullOptionName)
         # print(fullOptionName, "from JSON:", fromJson)
         if fromJson is not None:
-            print(coloured(AnsiColour.blue, "Overriding default value for", fullOptionName,
-                           "with value from JSON:", fromJson))
+            if config.verbose:
+                print(coloured(AnsiColour.blue, "Overriding default value for", fullOptionName,
+                               "with value from JSON:", fromJson))
             return fromJson
         # load the default value (which could be a lambda)
         if callable(self.default):
