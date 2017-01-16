@@ -207,8 +207,6 @@ def setEnv(**environ):
     >>> "PLUGINS_DIR" in os.environ
     False
 
-    :type environ: dict[str, unicode]
-    :param environ: Environment variables to set
     """
     old_environ = dict(os.environ)
     for k, v in environ.items():
