@@ -140,8 +140,6 @@ class TargetManager(object):
                 sys.exit(coloured(AnsiColour.red, "Target", targetName, "does not exist. Valid choices are",
                                   ",".join(self.targetNames)))
             explicitlyChosenTargets.append(self.targetMap[targetName])
-        if config.skipDependencies:  # FIXME: remove this soon
-            warningMessage("--skip-dependencies/-t flag is now the default behaviour and will be removed soon.")
 
         chosenTargets = []
         if not config.includeDependencies:

@@ -146,11 +146,6 @@ class CheriConfig(object):
                                                         "FreeBSD build server and don't build the SDK first.",
                                                         group=ConfigLoader.remoteBuilderGroup)
 
-    # Deprecated options:
-    skipDependencies = ConfigLoader.addBoolOption("skip-dependencies", "t", group=ConfigLoader.deprecatedOptionsGroup,
-                                                  help="This option no longer does anything and is only included to"
-                                                       "allow running existing command lines")
-
     def __init__(self, availableTargets: list):
         ConfigLoader._cheriConfig = self
         self.targets = ConfigLoader.loadTargets(availableTargets)
