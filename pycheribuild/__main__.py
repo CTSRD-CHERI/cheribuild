@@ -51,7 +51,24 @@ class MyJsonEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def main():
+def real_main():
+    # check if new commits are available
+    projectDir = str(Path(__file__).parent)
+    subprocess.call(["git", "fetch"], cwd=projectDir)
+    output = subprocess.check_output(["git", "status", "-uno"], cwd=projectDir)
+    behindIndex = output.find(b"Your branch is behind ")
+    if behindIndex > 0:
+        print(output)
+        msgEnd = output.find(b"\n  (use \"git pull\" to update your local branch)")
+        if msgEnd > 0:
+            output = output[behindIndex:msgEnd]
+        statusUpdate("Current CheriBuild checkout can be updated: ", output.decode("utf-8"))
+        if input("Would you like to update before continuing? y/[n] (Enter to skip) ").lower().startswith("y"):
+            subprocess.check_call(["git", "pull", "--rebase"], cwd=projectDir)
+            os.execv(sys.argv[0], sys.argv)
+
+    # actually run the code
+
     allTargetNames = list(sorted(targetManager.targetNames))
     targetManager.registerCommandLineOptions()
     runEverythingTarget = "__run_everything__"
@@ -65,15 +82,20 @@ def main():
             if cheriConfig.verbose:
                 printCommand("mkdir", "-p", str(d))
             os.makedirs(str(d), exist_ok=True)
+
+    if cheriConfig.listTargets:
+        print("Available targets are:\n ", "\n  ".join(allTargetNames))
+    elif cheriConfig.dumpConfig:
+        print(json.dumps(ConfigLoader.values, sort_keys=True, cls=MyJsonEncoder, indent=4))
+    else:
+        if runEverythingTarget in cheriConfig.targets:
+            cheriConfig.targets = allTargetNames
+        targetManager.run(cheriConfig)
+
+
+def main():
     try:
-        if cheriConfig.listTargets:
-            print("Available targets are:\n ", "\n  ".join(allTargetNames))
-        elif cheriConfig.dumpConfig:
-            print(json.dumps(ConfigLoader.values, sort_keys=True, cls=MyJsonEncoder, indent=4))
-        else:
-            if runEverythingTarget in cheriConfig.targets:
-                cheriConfig.targets = allTargetNames
-            targetManager.run(cheriConfig)
+        real_main()
     except KeyboardInterrupt:
         sys.exit("Exiting due to Ctrl+C")
     except subprocess.CalledProcessError as err:
@@ -83,3 +105,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

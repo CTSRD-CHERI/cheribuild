@@ -160,7 +160,7 @@ def statusUpdate(*args, sep=" ", **kwargs):
 
 def fatalError(*args, sep=" ", fixitHint=None, fatalWhenPretending=False):
     # we ignore fatal errors when simulating a run
-    if _cheriConfig.pretend:
+    if _cheriConfig and _cheriConfig.pretend:
         print(coloured(AnsiColour.red, ("Potential fatal error:",) + args, sep=sep))
         if fatalWhenPretending:
             traceback.print_stack()
