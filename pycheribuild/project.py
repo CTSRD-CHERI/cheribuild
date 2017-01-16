@@ -433,7 +433,7 @@ class Project(SimpleProject):
 
     @staticmethod  # for some reason classmethod won't work when reassigned and called from subclasses...
     def _installToBootstrapTools(project, config: CheriConfig):
-        return config.sdkDir
+        return config.otherToolsDir
 
     @classmethod
     def getInstallDir(cls, config: CheriConfig):
