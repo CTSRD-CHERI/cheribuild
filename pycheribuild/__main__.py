@@ -51,7 +51,7 @@ class MyJsonEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-def real_main():
+def updateCheck():
     # check if new commits are available
     projectDir = str(Path(__file__).parent)
     subprocess.call(["git", "fetch"], cwd=projectDir)
@@ -67,8 +67,11 @@ def real_main():
             subprocess.check_call(["git", "pull", "--rebase"], cwd=projectDir)
             os.execv(sys.argv[0], sys.argv)
 
-    # actually run the code
 
+def real_main():
+    # Don't do the update check when tab-completing (otherwise it freezes)
+    if "_ARGCOMPLETE" not in os.environ:
+        updateCheck()
     allTargetNames = list(sorted(targetManager.targetNames))
     targetManager.registerCommandLineOptions()
     runEverythingTarget = "__run_everything__"
