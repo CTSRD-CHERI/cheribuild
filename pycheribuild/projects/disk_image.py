@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import os
+import pwd
 import shutil
 import tempfile
 
@@ -138,6 +139,7 @@ class BuildDiskImage(SimpleProject):
             self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw,noatime,async 1 1\n"
                                                                    "tmpfs /tmp tmpfs rw 0 0\n")
         # enable ssh and set hostname
+        hostUsername = pwd.getpwuid(os.geteuid())[0]
         # TODO: use separate file in /etc/rc.conf.d/ ?
         rcConfContents = """hostname="qemu-cheri-{username}"
 ifconfig_le0="DHCP"  # use DHCP on the standard QEMU usermode nic
@@ -149,7 +151,7 @@ cron_enable="NO"
 # tmpmfs="YES" only creates a 20 MB ramdisk for /tmp, use /etc/fstab and tmpfs instead
 # the extra m in tmpmfs is not a typo: it means mount /tmp as a memory filesystem (MFS)
 nfs_client_enable="YES"
-""".format(username=os.getlogin())
+""".format(username=hostUsername)
         self.createFileForImage(outDir, "/etc/rc.conf", contents=rcConfContents)
 
         # make sure that the disk image always has the same SSH host keys
