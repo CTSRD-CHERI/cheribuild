@@ -128,8 +128,13 @@ class ConfigLoader(object):
 
     @classmethod
     def addOption(cls, name: str, shortname=None, default=None, type: "typing.Callable[[str], Type_T]"=str, group=None,
-                  **kwargs) -> "Type_T":
+                  helpHidden=False, **kwargs) -> "Type_T":
         # add the default string to help if it is not lambda and help != argparse.SUPPRESS
+
+        # hide obscure options unless --help-hidden/--help/all is passed
+        if helpHidden and not cls.showAllHelp:
+            kwargs["help"] = argparse.SUPPRESS
+
         if default and not callable(default) and "help" in kwargs:
             if kwargs["help"] != argparse.SUPPRESS:
                 kwargs["help"] = kwargs["help"] + " (default: \'" + str(default) + "\')"

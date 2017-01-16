@@ -110,15 +110,14 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
                         showHelp=False, shortname=None, **kwargs) -> "Type_T":
         assert cls.target, "target not set for " + cls.__name__
         # Hide stuff like --foo/install-directory from --help
-        if not showHelp and not ConfigLoader.showAllHelp:
-            kwargs["help"] = argparse.SUPPRESS
+        helpHidden = not showHelp
         if not cls.__commandLineOptionGroup:
             # noinspection PyProtectedMember
             cls.__commandLineOptionGroup = ConfigLoader._parser.add_argument_group(
                     "Options for target '" + cls.target + "'")
 
         return ConfigLoader.addOption(cls.target + "/" + name, shortname, default=default, type=kind,
-                                      group=cls.__commandLineOptionGroup, **kwargs)
+                                      group=cls.__commandLineOptionGroup, helpHidden=helpHidden, **kwargs)
 
     @classmethod
     def addBoolOption(cls, name: str, *, shortname=None, **kwargs):
