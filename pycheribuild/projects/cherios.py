@@ -40,7 +40,7 @@ class BuildCheriOS(CMakeProject):
     defaultCMakeBuildType = "Debug"
     repository = "https://github.com/CTSRD-CHERI/cherios.git"
     appendCheriBitsToBuildDir = True
-    defaultInstallDir = lambda cls, config: config.outputRoot / ("cherios" + config.cheriBitsStr)
+    defaultInstallDir = lambda config, cls: config.outputRoot / ("cherios" + config.cheriBitsStr)
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

@@ -47,7 +47,7 @@ def defaultSshForwardingPort():
     return 9999 + ((os.getuid() - 1000) % 10000)
 
 
-def defaultDiskImagePath(conf: "CheriConfig"):
+def defaultDiskImagePath(conf: "CheriConfig", cls):
     if conf.cheriBits == 128:
         return conf.outputRoot / "cheri128-disk.qcow2"
     return conf.outputRoot / "cheri256-disk.qcow2"
@@ -99,7 +99,7 @@ class CheriConfig(object):
 
     createCompilationDB = ConfigLoader.addBoolOption("compilation-db", "-cdb",
                                                      help="Create a compile_commands.json file in the build dir "
-                                                          "(requires Bear for non-CMake projects")
+                                                          "(requires Bear for non-CMake projects)")
     qemuUseTelnet = ConfigLoader.addBoolOption("qemu-monitor-telnet",
                                                help="Use telnet to connect to QEMU monitor instead of CTRL+A,C")
     makeWithoutNice = ConfigLoader.addBoolOption("make-without-nice", help="Run make/ninja without nice(1)")
@@ -107,11 +107,11 @@ class CheriConfig(object):
     # configurable paths
     sourceRoot = ConfigLoader.addPathOption("source-root", default=Path(os.path.expanduser("~/cheri")),
                                             help="The directory to store all sources")
-    outputRoot = ConfigLoader.addPathOption("output-root", default=lambda p: (p.sourceRoot / "output"),
+    outputRoot = ConfigLoader.addPathOption("output-root", default=lambda p, cls: (p.sourceRoot / "output"),
                                             help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
-    buildRoot = ConfigLoader.addPathOption("build-root", default=lambda p: (p.sourceRoot / "build"),
+    buildRoot = ConfigLoader.addPathOption("build-root", default=lambda p, cls: (p.sourceRoot / "build"),
                                            help="The directory for all the builds (default: '<SOURCE_ROOT>/build')")
-    extraFiles = ConfigLoader.addPathOption("extra-files", default=lambda p: (p.sourceRoot / "extra-files"),
+    extraFiles = ConfigLoader.addPathOption("extra-files", default=lambda p, cls: (p.sourceRoot / "extra-files"),
                                             help="A directory with additional files that will be added to the image "
                                                  "(default: '<SOURCE_ROOT>/extra-files')")
     clangPath = ConfigLoader.addPathOption("clang-path", default=defaultClangTool("clang"),

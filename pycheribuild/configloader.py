@@ -126,6 +126,18 @@ class ConfigLoader(object):
                 raise
         return cls._parsedArgs.targets
 
+    class ComputedDefaultValue(object):
+        def __init__(self, function: "typing.Callable[[CheriConfig], typing.Any]",
+                     asString: "typing.Union[str, typing.Callable[[typing.Any], str]"):
+            self.function = function
+            self.asString = asString
+
+        def __call__(self, config: "CheriConfig", cls):
+            return self.function(config, cls)
+
+        def __str__(self):
+            return self.asString
+
     @classmethod
     def addOption(cls, name: str, shortname=None, default=None, type: "typing.Callable[[str], Type_T]"=str, group=None,
                   helpHidden=False, **kwargs) -> "Type_T":
@@ -135,7 +147,8 @@ class ConfigLoader(object):
         if helpHidden and not cls.showAllHelp:
             kwargs["help"] = argparse.SUPPRESS
 
-        if default and not callable(default) and "help" in kwargs:
+        hasDefaultHelpText = isinstance(default, ConfigLoader.ComputedDefaultValue) or not callable(default)
+        if default and "help" in kwargs and hasDefaultHelpText:
             if kwargs["help"] != argparse.SUPPRESS:
                 kwargs["help"] = kwargs["help"] + " (default: \'" + str(default) + "\')"
         assert "default" not in kwargs  # Should be handled manually
@@ -167,9 +180,9 @@ class ConfigLoader(object):
         self._cached = None
         pass
 
-    def _loadOption(self, config: "CheriConfig"):
+    def _loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
         fullOptionName = self.action.option_strings[0][2:]  # strip the initial "--"
-        result = self._loadOptionImpl(fullOptionName, config)
+        result = self._loadOptionImpl(fullOptionName, config, ownerClass)
         # Now convert it to the right type
         # check for None to make sure we don't call str(None) which would result in "None"
         if result is not None:
@@ -192,7 +205,7 @@ class ConfigLoader(object):
         ConfigLoader.values[fullOptionName] = self._cached  # just for debugging
         return result
 
-    def _loadOptionImpl(self, fullOptionName: str, config: "CheriConfig"):
+    def _loadOptionImpl(self, fullOptionName: str, config: "CheriConfig", ownerClass: "typing.Type"):
         assert self._parsedArgs  # load() must have been called before using this object
         assert hasattr(self._parsedArgs, self.action.dest)
         assert self.action.option_strings[0].startswith("--")
@@ -214,7 +227,7 @@ class ConfigLoader(object):
             return fromJson
         # load the default value (which could be a lambda)
         if callable(self.default):
-            return self.default(config)
+            return self.default(config, ownerClass)
         else:
             return self.default
 
@@ -239,5 +252,6 @@ class ConfigLoader(object):
 
     def __get__(self, instance, owner):
         if self._cached is None:
-            self._cached = self._loadOption(self._cheriConfig)
+            print(self.action.option_strings, "instance:", instance, "owner:", owner, "help:", self.action.help)
+            self._cached = self._loadOption(self._cheriConfig, owner)
         return self._cached

@@ -35,7 +35,7 @@ from ..project import Project
 from ..utils import *
 
 
-def defaultKernelConfig(config: CheriConfig):
+def defaultKernelConfig(config: CheriConfig, project):
     if config.cheriBits == 128:
         # make sure we use a kernel with 128 bit CPU features selected
         return "CHERI128_MALTA64"
@@ -45,9 +45,9 @@ def defaultKernelConfig(config: CheriConfig):
 class BuildCHERIBSD(Project):
     dependencies = ["llvm"]
     repository = "https://github.com/CTSRD-CHERI/cheribsd.git"
-    defaultInstallDir = lambda cls, config: config.outputRoot / ("rootfs" + config.cheriBitsStr)
+    defaultInstallDir = lambda config, cls: config.outputRoot / ("rootfs" + config.cheriBitsStr)
     appendCheriBitsToBuildDir = True
-    defaultBuildDir = lambda cls, config: config.buildRoot / ("cheribsd-obj-" + config.cheriBitsStr)
+    defaultBuildDir = lambda config, cls: config.buildRoot / ("cheribsd-obj-" + config.cheriBitsStr)
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):

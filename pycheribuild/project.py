@@ -110,6 +110,9 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
                         showHelp=False, shortname=None, **kwargs) -> "Type_T":
         assert cls.target, "target not set for " + cls.__name__
         # Hide stuff like --foo/install-directory from --help
+        if isinstance(default, ConfigLoader.ComputedDefaultValue):
+            if callable(default.asString):
+                default.asString = default.asString(cls)
         helpHidden = not showHelp
         if not cls.__commandLineOptionGroup:
             # noinspection PyProtectedMember
@@ -408,68 +411,67 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
         raise NotImplementedError()
 
 
+def installDirNotSpecified(config: CheriConfig, project: "Project"):
+    raise RuntimeError("dummy impl must not be called: " + str(project))
+
+
+def _defaultBuildDir(config: CheriConfig, project: "Project"):
+    # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
+    buildDirSuffix = "-" + config.cheriBitsStr + "-build" if project.appendCheriBitsToBuildDir else "-build"
+    return config.buildRoot / (project.projectName.lower() + buildDirSuffix)
+
+
 class Project(SimpleProject):
     repository = ""
     gitRevision = None
     compileDBRequiresBear = True
     doNotAddToTargets = True
 
-    @staticmethod  # for some reason classmethod won't work when reassigned and called from subclasses...
-    def __defaultSourceDir(project, config: CheriConfig):
-        return Path(config.sourceRoot / project.projectName.lower())
-
-    @classmethod
-    def getSourceDir(cls, config: CheriConfig):
-        # noinspection PyUnresolvedReferences
-        return cls.sourceDirOverride if cls.sourceDirOverride else cls.defaultSourceDir(cls, config)
-
-    @staticmethod  # for some reason classmethod won't work when reassigned and called from subclasses...
-    def __defaultInstallDir(project, config: CheriConfig):
-        raise RuntimeError("dummy impl must not be called: " + str(project))
-
-    @staticmethod  # for some reason classmethod won't work when reassigned and called from subclasses...
-    def _installToSDK(project, config: CheriConfig):
-        return config.sdkDir
-
-    @staticmethod  # for some reason classmethod won't work when reassigned and called from subclasses...
-    def _installToBootstrapTools(project, config: CheriConfig):
-        return config.otherToolsDir
-
-    @classmethod
-    def getInstallDir(cls, config: CheriConfig):
-        # noinspection PyUnresolvedReferences
-        return cls.installDirOverride if cls.installDirOverride else cls.defaultInstallDir(cls, config)
+    defaultSourceDir = ConfigLoader.ComputedDefaultValue(
+            function=lambda config, project: Path(config.sourceRoot / project.projectName.lower()),
+            asString=lambda cls: "$SOURCE_ROOT/" + cls.projectName.lower())
 
     appendCheriBitsToBuildDir = False
-    """ Whether to append -128/-256 to the computed source/build directory name"""
+    """ Whether to append -128/-256 to the computed build directory name"""
+    defaultBuildDir = ConfigLoader.ComputedDefaultValue(
+            function=_defaultBuildDir, asString=lambda cls: "$BUILD_ROOT/" + cls.projectName.lower())
 
-    @staticmethod  # for some reason classmethod won't work when reassigned and called from subclasses...
-    def __defaultBuildDir(project, config: CheriConfig):
-        # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
-        buildDirSuffix = "-" + config.cheriBitsStr + "-build" if project.appendCheriBitsToBuildDir else "-build"
-        return config.buildRoot / (project.projectName.lower() + buildDirSuffix)
+
+    # TODO: remove these three
+    @classmethod
+    def getSourceDir(cls, config: CheriConfig):
+        return cls.sourceDir
 
     @classmethod
     def getBuildDir(cls, config: CheriConfig):
-        # noinspection PyUnresolvedReferences
-        return cls.buildDirOverride if cls.buildDirOverride else cls.defaultBuildDir(cls, config)
+        return cls.buildDir
 
-    defaultBuildDir = __defaultBuildDir
-    defaultSourceDir = __defaultSourceDir
-    defaultInstallDir = __defaultInstallDir
+    @classmethod
+    def getInstallDir(cls, config: CheriConfig):
+        return cls.installDir
+
+    _installToSDK = ConfigLoader.ComputedDefaultValue(
+            function=lambda config, project: config.sdkDir,
+            asString="$INSTALL_ROOT/sdk256 or $INSTALL_ROOT/sdk128 depending on CHERI bits")
+    _installToBootstrapTools = ConfigLoader.ComputedDefaultValue(
+            function=lambda config, project: config.otherToolsDir,
+            asString="$INSTALL_ROOT/bootstrap")
+
+    defaultInstallDir = installDirNotSpecified
     """ The default installation directory (will probably be set to _installToSDK or _installToBootstrapTools) """
 
     @classmethod
     def setupConfigOptions(cls, installDirectoryHelp="", **kwargs):
         super().setupConfigOptions(**kwargs)
         # statusUpdate("Setting up config options for", cls, cls.target)
-        cls.sourceDirOverride = cls.addPathOption("source-directory", metavar="DIR",
-                                                  help="Override default source directory for " + cls.projectName)
-        cls.buildDirOverride = cls.addPathOption("build-directory", metavar="DIR",
-                                                 help="Override default source directory for " + cls.projectName)
+        cls.sourceDir = cls.addPathOption("source-directory", metavar="DIR", default=cls.defaultSourceDir,
+                                          help="Override default source directory for " + cls.projectName)
+        cls.buildDir = cls.addPathOption("build-directory", metavar="DIR", default=cls.defaultBuildDir,
+                                         help="Override default source directory for " + cls.projectName)
         if not installDirectoryHelp:
             installDirectoryHelp = "Override default install directory for " + cls.projectName
-        cls.installDirOverride = cls.addPathOption("install-directory", metavar="DIR", help=installDirectoryHelp)
+        cls.installDir = cls.addPathOption("install-directory", metavar="DIR", help=installDirectoryHelp,
+                                           default=cls.defaultInstallDir)
         if cls.repository:
             cls.gitRevision = cls.addConfigOption("git-revision", kind=str, help="The git revision to checkout prior to"
                                                   " building. Useful if HEAD is broken for one project but you still"
@@ -480,14 +482,6 @@ class Project(SimpleProject):
         super().__init__(config)
         self.gitBranch = ""
         # set up the install/build/source directories (allowing overrides from config file)
-
-        if self.config.verbose and any((self.sourceDirOverride, self.buildDirOverride, self.installDirOverride)):
-            print(self.projectName, "directory overrides: source=%s, build=%s, install=%s" %
-                  (self.sourceDirOverride, self.buildDirOverride, self.installDirOverride))
-        # TODO: add @property?
-        self.sourceDir = self.getSourceDir(config)
-        self.buildDir = self.getBuildDir(config)
-        self.installDir = self.getInstallDir(config)
 
         if self.config.verbose:
             print(self.projectName, "directories: source=%s, build=%s, install=%s" %
