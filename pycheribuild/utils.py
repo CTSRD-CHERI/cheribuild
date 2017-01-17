@@ -196,7 +196,7 @@ def parseOSRelease() -> dict:
 
 
 @contextlib.contextmanager
-def setEnv(**environ):
+def setEnv(*, printVerboseOnly=True, **environ):
     """
     Temporarily set the process environment variables.
 
@@ -210,7 +210,7 @@ def setEnv(**environ):
     """
     old_environ = dict(os.environ)
     for k, v in environ.items():
-        printCommand("export", k + "=" + v, printVerboseOnly=True)
+        printCommand("export", k + "=" + v, printVerboseOnly=printVerboseOnly)
     os.environ.update(environ)
     try:
         yield

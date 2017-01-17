@@ -32,6 +32,7 @@ import sys
 from pathlib import Path
 
 from ..project import Project
+from ..configloader import ConfigLoader
 from ..utils import *
 
 
@@ -42,7 +43,123 @@ def defaultKernelConfig(config: CheriConfig, project):
     return "CHERI_MALTA64"
 
 
-class BuildCHERIBSD(Project):
+class BuildFreeBSD(Project):
+    dependencies = ["llvm"]
+    projectName = "freebsd-mips"
+    repository = "https://github.com/freebsd/freebsd.git"
+
+    defaultInstallDir = ConfigLoader.ComputedDefaultValue(
+        function=lambda config, cls: config.outputRoot / "freebsd-mips",
+        asString="$INSTALL_ROOT/freebsd-mips")
+
+    @classmethod
+    def rootfsDir(cls, config):
+        return cls.getInstallDir(config)
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        cls.subdirOverride = cls.addConfigOption("subdir", kind=str, metavar="DIR", showHelp=True,
+                                                 help="Only build subdir DIR instead of the full tree. "
+                                                      "Useful for quickly rebuilding an individual program/library")
+        cls.keepOldRootfs = cls.addBoolOption("keep-old-rootfs", help="Don't remove the whole old rootfs directory. "
+                                              " This can speed up installing but may cause strange errors so is off "
+                                              "by default")
+        # override in CheriBSD
+        cls.skipBuildworld = False
+        cls.kernelConfig = "MALTA64"
+
+    def _stdoutFilter(self, line: bytes):
+        if line.startswith(b">>> "):  # major status update
+            if self._lastStdoutLineCanBeOverwritten:
+                sys.stdout.buffer.write(Project.clearLineSequence)
+            sys.stdout.buffer.write(line)
+            sys.stdout.buffer.flush()
+            self._lastStdoutLineCanBeOverwritten = False
+        elif line.startswith(b"===> "):  # new subdirectory
+            self._lineNotImportantStdoutFilter(line)
+        elif line == b"--------------------------------------------------------------\n":
+            return  # ignore separator around status updates
+        elif line == b"\n":
+            return  # ignore empty lines when filtering
+        elif line.endswith(b"' is up to date.\n"):
+            return  # ignore these messages caused by (unnecessary?) recursive make invocations
+        else:
+            self._showLineStdoutFilter(line)
+
+    def __init__(self, config: CheriConfig,
+                 archBuildFlags=[
+                     "TARGET=mips",
+                     "TARGET_ARCH=mips64",
+                     # The following is broken: (https://github.com/CTSRD-CHERI/cheribsd/issues/102)
+                     #"CPUTYPE=mips64",  # mipsfpu for hardware float
+                     ]):
+        super().__init__(config)
+        self.commonMakeArgs.extend(archBuildFlags)
+        self.commonMakeArgs.extend([
+            "-DDB_FROM_SRC",  # don't use the system passwd file
+            "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
+            "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
+            "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
+            "KERNCONF=" + self.kernelConfig,
+        ])
+
+        if not self.config.verbose and not self.config.quiet:
+            # By default we only want to print the status updates -> use make -s so we have to do less filtering
+            self.commonMakeArgs.append("-s")
+
+        # build only part of the tree
+        if self.subdirOverride:
+            self.commonMakeArgs.append("SUBDIR_OVERRIDE=" + self.subdirOverride)
+
+    def clean(self):
+        if self.skipBuildworld:
+            # TODO: only clean the current kernel config not all of them
+            kernelBuildDir = self.buildDir / ("mips.mips64" + str(self.sourceDir) + "/sys/")
+            self._cleanDir(kernelBuildDir)
+        else:
+            super().clean()
+
+    def compile(self):
+        # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
+        # so just omit the flag here if the user passes -j1 on the command line
+        jflag = [self.config.makeJFlag] if self.config.makeJobs > 1 else []
+        if not self.skipBuildworld:
+            self.runMake(self.commonMakeArgs + jflag, "buildworld", cwd=self.sourceDir)
+        # FIXME: does buildkernel work with SUBDIR_OVERRIDE? if not self.subdirOverride
+        self.runMake(self.commonMakeArgs + jflag, "buildkernel", cwd=self.sourceDir,
+                     compilationDbName="compile_commands_" + self.kernelConfig + ".json")
+
+    def _removeOldRootfs(self):
+        assert not self.keepOldRootfs
+        if not self.skipBuildworld:
+            # make sure the old install is purged before building, otherwise we might get strange errors
+            # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
+            self._cleanDir(self.installDir, force=True)
+        else:
+            self.makedirs(self.installDir)
+
+    def install(self):
+        # keeping the old rootfs directory prior to install can sometimes cause the build to fail so delete by default
+        if not self.keepOldRootfs:
+            self._removeOldRootfs()
+        # don't use multiple jobs here
+        installArgs = self.commonMakeArgs + ["DESTDIR=" + str(self.installDir)]
+        self.runMake(installArgs, "installkernel", cwd=self.sourceDir)
+        if not self.skipBuildworld:
+            self.runMake(installArgs, "installworld", cwd=self.sourceDir)
+            self.runMake(installArgs, "distribution", cwd=self.sourceDir)
+
+    def process(self):
+        if not IS_FREEBSD:
+            statusUpdate("Can't build CHERIBSD on a non-FreeBSD host! Any targets that depend on this will need to scp",
+                         "the required files from another server (see --frebsd-build-server options)")
+            return
+        with setEnv(printVerboseOnly=False, MAKEOBJDIRPREFIX=str(self.buildDir)):
+            super().process()
+
+
+class BuildCHERIBSD(BuildFreeBSD):
     dependencies = ["llvm"]
     repository = "https://github.com/CTSRD-CHERI/cheribsd.git"
     defaultInstallDir = lambda config, cls: config.outputRoot / ("rootfs" + config.cheriBitsStr)
@@ -84,38 +201,16 @@ class BuildCHERIBSD(Project):
         cls.forceSDKLinker = cls.addBoolOption("force-sdk-linker", help="Let clang use the linker from the installed "
                                                "SDK instead of the one built in the bootstrap process. WARNING: May "
                                                "cause unexpected linker errors!")
-        cls.keepOldRootfs = cls.addBoolOption("keep-old-rootfs", help="Don't remove the whole old rootfs directory. "
-                                              " This can speed up installing but may cause strange errors so is off "
-                                              "by default")
-        cls.subdirOverride = cls.addConfigOption("subdir", kind=str, metavar="DIR", showHelp=True,
-                                                 help="Only build subdir DIR instead of the full tree. "
-                                                      "Useful for quickly rebuilding an individual program/library")
-
-    @classmethod
-    def rootfsDir(cls, config):
-        return cls.getInstallDir(config)
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config)
+        super().__init__(config, archBuildFlags=[
+            "CHERI=" + self.config.cheriBitsStr,
+            # "-dCl",  # add some debug output to trace commands properly
+            "CHERI_CC=" + str(self.cheriCC)])
+        self.installAsRoot = os.getuid() == 0
         self.binutilsDir = self.config.sdkDir / "mips64/bin"
         self.cheriCC = self.config.sdkDir / "bin/clang"
         self.cheriCXX = self.config.sdkDir / "bin/clang++"
-        self.installAsRoot = os.getuid() == 0
-        self.commonMakeArgs.extend([
-            "CHERI=" + self.config.cheriBitsStr,
-            # "-dCl",  # add some debug output to trace commands properly
-            "CHERI_CC=" + str(self.cheriCC),
-            # "CPUTYPE=mips64", # mipsfpu for hardware float
-            # (apparently no longer supported: https://github.com/CTSRD-CHERI/cheribsd/issues/102)
-            "-DDB_FROM_SRC",  # don't use the system passwd file
-            "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
-            "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
-            "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
-            # "CROSS_BINUTILS_PREFIX=" + str(self.binutilsDir),  # use the CHERI-aware binutils and not the builtin ones
-            # TODO: once clang can build the kernel:
-            #  "-DCROSS_COMPILER_PREFIX=" + str(self.config.sdkDir / "bin")
-            "KERNCONF=" + self.kernelConfig,
-        ])
 
         if self.forceClang:
             self.commonMakeArgs.append("XCC=" + str(self.config.sdkDir / "bin/cheri-unknown-freebsd-clang") + " -integrated-as")
@@ -124,30 +219,6 @@ class BuildCHERIBSD(Project):
             self.commonMakeArgs.append("XCXXLAGS=-integrated-as")
 
         self.commonMakeArgs.extend(self.makeOptions)
-        if not (self.config.verbose or self.config.quiet):
-            # By default we only want to print the status updates -> use make -s so we have to do less filtering
-            self.commonMakeArgs.append("-s")
-
-        if self.subdirOverride:
-            self.commonMakeArgs.append("SUBDIR_OVERRIDE=" + self.subdirOverride)
-
-    def _stdoutFilter(self, line: bytes):
-        if line.startswith(b">>> "):  # major status update
-            if self._lastStdoutLineCanBeOverwritten:
-                sys.stdout.buffer.write(Project.clearLineSequence)
-            sys.stdout.buffer.write(line)
-            sys.stdout.buffer.flush()
-            self._lastStdoutLineCanBeOverwritten = False
-        elif line.startswith(b"===> "):  # new subdirectory
-            self._lineNotImportantStdoutFilter(line)
-        elif line == b"--------------------------------------------------------------\n":
-            return  # ignore separator around status updates
-        elif line == b"\n":
-            return  # ignore empty lines when filtering
-        elif line.endswith(b"' is up to date.\n"):
-            return  # ignore these messages caused by (unnecessary?) recursive make invocations
-        else:
-            self._showLineStdoutFilter(line)
 
     def _removeSchgFlag(self, *paths: "typing.Iterable[str]"):
         for i in paths:
@@ -155,18 +226,10 @@ class BuildCHERIBSD(Project):
             if file.exists():
                 runCmd("chflags", "noschg", str(file))
 
-    def setupEnvironment(self):
-        if not self.cheriCC.is_file():
-            fatalError("CHERI CC does not exist: ", self.cheriCC)
-        if not self.cheriCXX.is_file():
-            fatalError("CHERI CXX does not exist: ", self.cheriCXX)
-        # if not (self.binutilsDir / "as").is_file():
-        #     fatalError("CHERI MIPS binutils are missing. Run 'cheribuild.py binutils'?")
-
-    def __removeOldRootfs(self):
+    def _removeOldRootfs(self):
         if not self.skipBuildworld:
             if self.installAsRoot:
-                # we need to remove the schg flag as otherwise rm -rf will fail to remove these files
+                # if we installed as root remove the schg flag from files before cleaning (otherwise rm will fail)
                 self._removeSchgFlag(
                     "lib/libc.so.7", "lib/libcrypt.so.5", "lib/libthr.so.3", "libexec/ld-cheri-elf.so.1",
                     "libexec/ld-elf.so.1", "sbin/init", "usr/bin/chpass", "usr/bin/chsh", "usr/bin/ypchpass",
@@ -174,23 +237,15 @@ class BuildCHERIBSD(Project):
                     "usr/bin/passwd", "usr/bin/yppasswd", "usr/bin/su", "usr/bin/crontab", "usr/lib/librt.so.1",
                     "var/empty"
                 )
-            # make sure the old install is purged before building, otherwise we might get strange errors
-            # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
-            # if we installed as root remove the schg flag from files before cleaning (otherwise rm will fail)
-            self._cleanDir(self.installDir, force=True)
-        else:
-            self.makedirs(self.installDir)
-
-    def clean(self):
-        if self.skipBuildworld:
-            # TODO: only clean the current kernel config not all of them
-            kernelBuildDir = self.buildDir / ("mips.mips64" + str(self.sourceDir) + "/sys/")
-            self._cleanDir(kernelBuildDir)
-        else:
-            super().clean()
+        super()._removeOldRootfs()
 
     def compile(self):
-        self.setupEnvironment()
+        if not self.cheriCC.is_file():
+            fatalError("CHERI CC does not exist: ", self.cheriCC)
+        if not self.cheriCXX.is_file():
+            fatalError("CHERI CXX does not exist: ", self.cheriCXX)
+        # if not (self.binutilsDir / "as").is_file():
+        #     fatalError("CHERI MIPS binutils are missing. Run 'cheribuild.py binutils'?")
         programsToMove = ["cheri-unknown-freebsd-ld", "mips4-unknown-freebsd-ld", "mips64-unknown-freebsd-ld", "ld",
                           "objcopy", "objdump"]
         sdkBinDir = self.cheriCC.parent
@@ -199,40 +254,10 @@ class BuildCHERIBSD(Project):
                 if (sdkBinDir / l).exists():
                     runCmd("mv", "-f", l, l + ".backup", cwd=sdkBinDir)
         try:
-            # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
-            # so just omit the flag here if the user passes -j1 on the command line
-            jflag = [self.config.makeJFlag] if self.config.makeJobs > 1 else []
-            if not self.skipBuildworld:
-                self.runMake(self.commonMakeArgs + jflag, "buildworld", cwd=self.sourceDir)
-            self.runMake(self.commonMakeArgs + jflag, "buildkernel", cwd=self.sourceDir,
-                         compilationDbName="compile_commands_" + self.kernelConfig + ".json")
+            super().compile()
         finally:
             # restore the linkers
             if not self.forceSDKLinker:
                 for l in programsToMove:
                     if (sdkBinDir / (l + ".backup")).exists():
                         runCmd("mv", "-f", l + ".backup", l, cwd=sdkBinDir)
-
-    def install(self):
-        # keeping the old rootfs directory prior to install can sometimes cause the build to fail so delete by default
-        if not self.keepOldRootfs:
-            self.__removeOldRootfs()
-        # don't use multiple jobs here
-        installArgs = self.commonMakeArgs + ["DESTDIR=" + str(self.installDir)]
-        self.runMake(installArgs, "installkernel", cwd=self.sourceDir)
-        if not self.skipBuildworld:
-            self.runMake(installArgs, "installworld", cwd=self.sourceDir)
-            self.runMake(installArgs, "distribution", cwd=self.sourceDir)
-
-    def process(self):
-        if not IS_FREEBSD:
-            statusUpdate("Can't build CHERIBSD on a non-FreeBSD host! Any targets that depend on this will need to scp",
-                         "the required files from another server (see --frebsd-build-server options)")
-            return
-        # make sure the new clang and other tool are picked up
-        # TODO: this shouldn't be needed, we build binutils as part of cheribsd
-        path = os.getenv("PATH")
-        if not path.startswith(str(self.config.sdkDir)):
-            path = str(self.config.sdkDir / "bin") + ":" + path
-        with setEnv(MAKEOBJDIRPREFIX=str(self.buildDir), PATH=path):
-            super().process()
