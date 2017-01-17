@@ -33,7 +33,8 @@ import socket
 
 from ..project import SimpleProject
 from ..utils import *
-from .cheribsd import BuildCHERIBSD
+from .cheribsd import BuildCHERIBSD, BuildFreeBSD
+from .disk_image import BuildCheriBSDDiskImage, BuildFreeBSDDiskImage
 from pathlib import Path
 
 
@@ -57,6 +58,8 @@ class LaunchQEMU(SimpleProject):
         super().__init__(config)
         self.qemuBinary = self.config.sdkDir / "bin/qemu-system-cheri"
         self.currentKernel = BuildCHERIBSD.rootfsDir(self.config) / "boot/kernel/kernel"
+        self.diskImage = BuildCheriBSDDiskImage.diskImagePath
+        self.sshForwardingPort = self.config.sshForwardingPort
 
     def process(self):
         if not self.qemuBinary.exists():
@@ -65,21 +68,21 @@ class LaunchQEMU(SimpleProject):
         if not self.currentKernel.exists():
             self.dependencyError("CheriBSD kernel is missing:", self.currentKernel,
                                  installInstructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
-        if not self.config.diskImage.exists():
-            self.dependencyError("CheriBSD disk image is missing:", self.config.diskImage,
+        if not self.diskImage.exists():
+            self.dependencyError("CheriBSD disk image is missing:", self.diskImage,
                                  installInstructions="Run `cheribuild.py disk-image` or `cheribuild.py run -d`.")
 
-        if not self.isPortAvailable(self.config.sshForwardingPort):
+        if not self.isPortAvailable(self.sshForwardingPort):
             print("Port usage information:")
             if IS_FREEBSD:
-                runCmd("sockstat", "-P", "tcp", "-p", str(self.config.sshForwardingPort))
+                runCmd("sockstat", "-P", "tcp", "-p", str(self.sshForwardingPort))
             elif IS_LINUX:
-                runCmd("sh", "-c", "netstat -tulpne | grep \":" + str(str(self.config.sshForwardingPort)) + "\"")
-            fatalError("SSH forwarding port", self.config.sshForwardingPort, "is already in use!")
+                runCmd("sh", "-c", "netstat -tulpne | grep \":" + str(str(self.sshForwardingPort)) + "\"")
+            fatalError("SSH forwarding port", self.sshForwardingPort, "is already in use!")
 
         monitorOptions = []
         if self.config.qemuUseTelnet:
-            monitorPort = self.config.sshForwardingPort + 1
+            monitorPort = self.sshForwardingPort + 1
             monitorOptions = ["-monitor", "telnet:127.0.0.1:" + str(monitorPort) + ",server,nowait"]
             if not self.isPortAvailable(monitorPort):
                 warningMessage("Cannot connect QEMU montitor to port", monitorPort)
@@ -89,9 +92,9 @@ class LaunchQEMU(SimpleProject):
                     fatalError("Monitor port not available and stdio is not acceptable.")
                     return
 
-        print("About to run QEMU with image", self.config.diskImage, "and kernel", self.currentKernel,
+        print("About to run QEMU with image", self.diskImage, "and kernel", self.currentKernel,
               coloured(AnsiColour.green, "\nListening for SSH connections on localhost:" +
-                       str(self.config.sshForwardingPort)))
+                       str(self.sshForwardingPort)))
         logfileOptions = []
         if self.logfile:
             logfileOptions = ["-D", self.logfile]
@@ -111,10 +114,10 @@ class LaunchQEMU(SimpleProject):
                 "-kernel", self.currentKernel,  # assume the current image matches the kernel currently build
                 "-nographic",  # no GPU
                 "-m", "2048",  # 2GB memory
-                "-hda", self.config.diskImage,
+                "-hda", self.diskImage,
                 "-net", "nic", "-net", "user",
                 # bind the qemu ssh port to the hosts port 9999
-                "-redir", "tcp:" + str(self.config.sshForwardingPort) + "::22",
+                "-redir", "tcp:" + str(self.sshForwardingPort) + "::22",
                 ] + monitorOptions + logfileOptions + self.extraOptions,
                stdout=sys.stdout)  # even with --quiet we want stdout here
 
@@ -126,3 +129,16 @@ class LaunchQEMU(SimpleProject):
                 return True
         except OSError:
             return False
+
+
+class LaunchFreeBSDMipsQEMU(LaunchQEMU):
+    target = "freebsd-mips-run"
+    projectName = "run-qemu"
+    dependencies = ["qemu", "freebsd-mips-disk-image"]
+
+    def __init__(self, config):
+        super().__init__(config)
+        # FIXME: these should be config options
+        self.currentKernel = BuildFreeBSD.rootfsDir(self.config) / "boot/kernel/kernel"
+        self.diskImage = BuildFreeBSDDiskImage.diskImagePath
+        self.sshForwardingPort = self.config.sshForwardingPort + 2
