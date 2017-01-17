@@ -47,12 +47,6 @@ def defaultSshForwardingPort():
     return 9999 + ((os.getuid() - 1000) % 10000)
 
 
-def defaultDiskImagePath(conf: "CheriConfig", cls):
-    if conf.cheriBits == 128:
-        return conf.outputRoot / "cheri128-disk.qcow2"
-    return conf.outputRoot / "cheri256-disk.qcow2"
-
-
 def defaultClangTool(basename: str):
     # try to find clang 3.7, otherwise fall back to system clang
     for version in [(4, 0), (3, 9), (3, 8), (3, 7)]:
@@ -120,10 +114,6 @@ class CheriConfig(object):
     clangPlusPlusPath = ConfigLoader.addPathOption("clang++-path", default=defaultClangTool("clang++"),
                                                    help="The Clang C++ compiler to use for compiling LLVM+Clang (must "
                                                         "be at least version 3.7)")
-    # TODO: only create a qcow2 image?
-    diskImage = ConfigLoader.addPathOption("disk-image-path", default=defaultDiskImagePath, help="The output path for"
-                                           " the QEMU disk image (default: '<OUTPUT_ROOT>/cheri256-disk.qcow2')")
-
     # other options
     makeJobs = ConfigLoader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
                                       help="Number of jobs to use for compiling")  # type: int
@@ -163,7 +153,6 @@ class CheriConfig(object):
             print("Sources will be stored in", self.sourceRoot)
             print("Build artifacts will be stored in", self.outputRoot)
             print("Extra files for disk image will be searched for in", self.extraFiles)
-            print("Disk image will saved to", self.diskImage)
 
         # now the derived config options
         self.sdkDirectoryName = "sdk" + self.cheriBitsStr

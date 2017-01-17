@@ -33,6 +33,7 @@ import shutil
 import tempfile
 
 from ..project import SimpleProject
+from ..configloader import ConfigLoader
 from ..utils import *
 from .cheribsd import BuildCHERIBSD, BuildFreeBSD
 from pathlib import Path
@@ -46,8 +47,9 @@ from pathlib import Path
 
 class BuildDiskImageBase(SimpleProject):
     doNotAddToTargets = True
+    diskImagePath = None  # type: Path
 
-    def __init__(self, config, sourceClass: type(BuildFreeBSD), diskImagePath: Path):
+    def __init__(self, config, sourceClass: type(BuildFreeBSD)):
         super().__init__(config)
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
@@ -58,7 +60,6 @@ class BuildDiskImageBase(SimpleProject):
         self.dirsAddedToManifest = [Path(".")]  # Path().parents always includes a "." entry
         self.rootfsDir = sourceClass.rootfsDir(self.config)
         self.userGroupDbDir = sourceClass.getSourceDir(self.config) / "etc"
-        self.diskImagePath = diskImagePath
 
     def addFileToImage(self, file: Path, targetDir: str, user="root", group="wheel", mode="0644"):
         assert not targetDir.startswith("/")
@@ -226,6 +227,7 @@ nfs_client_enable="YES"
             fatalError("mtree manifest", self.rootfsDir / "METALOG", "is missing")
         if not (self.userGroupDbDir / "master.passwd").is_file():
             fatalError("master.passwd does not exist in ", self.userGroupDbDir)
+        statusUpdate("Disk image will saved to", self.diskImagePath)
 
         if self.diskImagePath.is_file():
             # only show prompt if we can actually input something to stdin
@@ -266,19 +268,43 @@ nfs_client_enable="YES"
             self.addFileToImage(publicKey, "etc/ssh", mode="0644")
 
 
+def _defaultDiskImagePath(conf: "CheriConfig", cls):
+    if conf.cheriBits == 128:
+        return conf.outputRoot / "cheri128-disk.qcow2"
+    return conf.outputRoot / "cheri256-disk.qcow2"
+
+
 class BuildCheriBSDDiskImage(BuildDiskImageBase):
     target = "disk-image"
     dependencies = ["qemu", "cheribsd"]
 
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        defaultDiskImagePath = ConfigLoader.ComputedDefaultValue(
+                function=_defaultDiskImagePath, asString="$OUTPUT_ROOT/cheri256-disk.qcow2 or "
+                                                         "$OUTPUT_ROOT/cheri128-disk.qcow2 depending on --cheri-bits.")
+        cls.diskImagePath = cls.addPathOption("path", shortname="-disk-image-path", default=defaultDiskImagePath,
+                                              metavar="IMGPATH", help="The output path for the QEMU disk image",
+                                              showHelp=True)
+
     def __init__(self, config: CheriConfig):
-        super().__init__(config, sourceClass=BuildCHERIBSD, diskImagePath=config.diskImage)
+        super().__init__(config, sourceClass=BuildCHERIBSD)
 
 
 class BuildFreeBSDDiskImage(BuildDiskImageBase):
     target = "freebsd-mips-disk-image"
     dependencies = ["qemu", "freebsd-mips"]
 
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        defaultDiskImagePath = ConfigLoader.ComputedDefaultValue(
+                function=lambda config, cls: config.outputRoot / "freebsd-mips.qcow2",
+                asString="$OUTPUT_ROOT/freebsd-mips.qcow2")
+        cls.diskImagePath = cls.addPathOption("path", default=defaultDiskImagePath, showHelp=True,
+                                              metavar="IMGPATH", help="The output path for the QEMU disk image")
+
     def __init__(self, config: CheriConfig):
-        # TODO: config options for disk-image path
         # TODO: different extra-files directory
-        super().__init__(config, sourceClass=BuildFreeBSD, diskImagePath=config.outputRoot / "freebsd-mips.qcow2")
+        super().__init__(config, sourceClass=BuildFreeBSD)
