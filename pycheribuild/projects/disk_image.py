@@ -34,7 +34,7 @@ import tempfile
 
 from ..project import SimpleProject
 from ..utils import *
-from .cheribsd import BuildCHERIBSD
+from .cheribsd import BuildCHERIBSD, BuildFreeBSD
 from pathlib import Path
 
 
@@ -43,21 +43,22 @@ from pathlib import Path
 # ufstype=ufs2 is required as the Linux kernel can't automatically determine which UFS filesystem is being used
 # Same thing is possible with qemu-nbd, but needs root (might be faster)
 
-class BuildDiskImage(SimpleProject):
-    target = "disk-image"
-    dependencies = ["qemu", "cheribsd"]
 
-    def __init__(self, config):
+class BuildDiskImageBase(SimpleProject):
+    doNotAddToTargets = True
+
+    def __init__(self, config, sourceClass: type(BuildFreeBSD), diskImagePath: Path):
         super().__init__(config)
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
         self.manifestFile = None  # type: Path
-        self.userGroupDbDir = BuildCHERIBSD.getSourceDir(self.config) / "etc"
         self.extraFiles = []  # type: typing.List[Path]
         self._addRequiredSystemTool("ssh-keygen")
         self._addRequiredSystemTool("makefs")
-        self.rootfsDir = BuildCHERIBSD.rootfsDir(self.config)
         self.dirsAddedToManifest = [Path(".")]  # Path().parents always includes a "." entry
+        self.rootfsDir = sourceClass.rootfsDir(self.config)
+        self.userGroupDbDir = sourceClass.getSourceDir(self.config) / "etc"
+        self.diskImagePath = diskImagePath
 
     def addFileToImage(self, file: Path, targetDir: str, user="root", group="wheel", mode="0644"):
         assert not targetDir.startswith("/")
@@ -194,7 +195,7 @@ nfs_client_enable="YES"
             else:
                 fatalError("qemu-img command was not found!", fixitHint="Make sure to build target qemu first")
 
-        rawDiskImage = Path(str(self.config.diskImage).replace(".qcow2", ".img"))
+        rawDiskImage = Path(str(self.diskImagePath).replace(".qcow2", ".img"))
         runCmd([
             "makefs",
             "-b", "70%",  # minimum 70% free blocks
@@ -210,15 +211,15 @@ nfs_client_enable="YES"
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
         if self.config.verbose:
             runCmd(qemuImgCommand, "info", rawDiskImage)
-        runCmd("rm", "-f", self.config.diskImage, printVerboseOnly=True)
+        runCmd("rm", "-f", self.diskImagePath, printVerboseOnly=True)
         # create a qcow2 version from the raw image:
         runCmd(qemuImgCommand, "convert",
                "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
                "-O", "qcow2",  # convert to qcow2 format
                rawDiskImage,  # input file
-               self.config.diskImage)  # output file
+               self.diskImagePath)  # output file
         if self.config.verbose:
-            runCmd(qemuImgCommand, "info", self.config.diskImage)
+            runCmd(qemuImgCommand, "info", self.diskImagePath)
 
     def process(self):
         if not (self.rootfsDir / "METALOG").is_file():
@@ -226,13 +227,13 @@ nfs_client_enable="YES"
         if not (self.userGroupDbDir / "master.passwd").is_file():
             fatalError("master.passwd does not exist in ", self.userGroupDbDir)
 
-        if self.config.diskImage.is_file():
+        if self.diskImagePath.is_file():
             # only show prompt if we can actually input something to stdin
-            print("An image already exists (" + str(self.config.diskImage) + "). ", end="")
+            print("An image already exists (" + str(self.diskImagePath) + "). ", end="")
             if not self.queryYesNo("Overwrite?", defaultResult=True):
                 return  # we are done here
-            printCommand("rm", self.config.diskImage)
-            self.config.diskImage.unlink()
+            printCommand("rm", self.diskImagePath)
+            self.diskImagePath.unlink()
 
         with tempfile.TemporaryDirectory() as outDir:
             self.prepareRootfs(Path(outDir))
@@ -263,3 +264,21 @@ nfs_client_enable="YES"
                        "-f", str(privateKey))
             self.addFileToImage(privateKey, "etc/ssh", mode="0600")
             self.addFileToImage(publicKey, "etc/ssh", mode="0644")
+
+
+class BuildCheriBSDDiskImage(BuildDiskImageBase):
+    target = "disk-image"
+    dependencies = ["qemu", "cheribsd"]
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config, sourceClass=BuildCHERIBSD, diskImagePath=config.diskImage)
+
+
+class BuildFreeBSDDiskImage(BuildDiskImageBase):
+    target = "freebsd-mips-disk-image"
+    dependencies = ["qemu", "freebsd-mips"]
+
+    def __init__(self, config: CheriConfig):
+        # TODO: config options for disk-image path
+        # TODO: different extra-files directory
+        super().__init__(config, sourceClass=BuildFreeBSD, diskImagePath=config.outputRoot / "freebsd-mips.qcow2")
