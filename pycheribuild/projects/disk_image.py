@@ -60,6 +60,8 @@ class BuildDiskImageBase(SimpleProject):
         self.dirsAddedToManifest = [Path(".")]  # Path().parents always includes a "." entry
         self.rootfsDir = sourceClass.rootfsDir(self.config)
         self.userGroupDbDir = sourceClass.getSourceDir(self.config) / "etc"
+        self.disableTMPFS = self.config.disableTMPFS
+        self.minimumImageSize = "1g",  # minimum image size = 1GB
 
     def addFileToImage(self, file: Path, targetDir: str, user="root", group="wheel", mode="0644"):
         assert not targetDir.startswith("/")
@@ -135,7 +137,7 @@ class BuildDiskImageBase(SimpleProject):
         # TODO: https://www.freebsd.org/cgi/man.cgi?mount_unionfs(8) should make this easier
         # Overlay extra-files over additional stuff over cheribsd rootfs dir
 
-        if self.config.disableTMPFS:
+        if self.disableTMPFS:
             self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw,noatime,async 1 1\n")
         else:
             self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw,noatime,async 1 1\n"
@@ -201,7 +203,7 @@ nfs_client_enable="YES"
             "makefs",
             "-b", "70%",  # minimum 70% free blocks
             "-f", "30%",  # minimum 30% free inodes
-            "-M", "4g",  # minimum image size = 4GB
+            "-M", self.minimumImageSize,
             "-B", "be",  # big endian byte order
             "-F", self.manifestFile,  # use METALOG as the manifest for the disk image
             "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
@@ -290,6 +292,7 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config, sourceClass=BuildCHERIBSD)
+        self.minimumImageSize = "4g"  # minimum image size = 4GB (2GB is too small now)
 
 
 class BuildFreeBSDDiskImage(BuildDiskImageBase):
@@ -308,3 +311,5 @@ class BuildFreeBSDDiskImage(BuildDiskImageBase):
     def __init__(self, config: CheriConfig):
         # TODO: different extra-files directory
         super().__init__(config, sourceClass=BuildFreeBSD)
+        self.disableTMPFS = True  # MALTA64 doesn't include tmpfs
+        self.minimumImageSize = "256m"
