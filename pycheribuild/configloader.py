@@ -181,6 +181,7 @@ class ConfigLoader(object):
         pass
 
     def _loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
+        assert self.action.option_strings[0].startswith("--")
         fullOptionName = self.action.option_strings[0][2:]  # strip the initial "--"
         result = self._loadOptionImpl(fullOptionName, config, ownerClass)
         # Now convert it to the right type
@@ -208,7 +209,6 @@ class ConfigLoader(object):
     def _loadOptionImpl(self, fullOptionName: str, config: "CheriConfig", ownerClass: "typing.Type"):
         assert self._parsedArgs  # load() must have been called before using this object
         assert hasattr(self._parsedArgs, self.action.dest)
-        assert self.action.option_strings[0].startswith("--")
 
         # First check the value specified on the command line, then load JSON and then fallback to the default
         fromCmdLine = getattr(self._parsedArgs, self.action.dest)  # from command line
@@ -231,7 +231,7 @@ class ConfigLoader(object):
         else:
             return self.default
 
-    def _loadFromJson(self, fullOptionName: str):
+    def _lookupKeyInJson(self, fullOptionName: str):
         # if there are any / characters treat these as an object reference
         jsonPath = fullOptionName.split(sep="/")
         jsonKey = jsonPath[-1]  # last item is the key (e.g. llvm/build-type -> build-type)
@@ -240,14 +240,27 @@ class ConfigLoader(object):
         for objRef in jsonPath:
             # Return an empty dict if it is not found
             jsonObject = jsonObject.get(objRef, {})
+        return jsonObject.get(jsonKey, None)
 
-        result = jsonObject.get(jsonKey, None)
+    def _loadFromJson(self, fullOptionName: str):
+        result = self._lookupKeyInJson(fullOptionName)
+        # See if any of the other long option names is a valid key name:
+        if result is None:
+            for optionName in self.action.option_strings:
+                if optionName.startswith("--"):
+                    jsonKey = optionName[2:]
+                    result = self._lookupKeyInJson(jsonKey)
+                    if result is not None:
+                        print(coloured(AnsiColour.cyan, "Old JSON key", jsonKey, "used, please use",
+                                       fullOptionName, "instead"))
+                        break
+        # FIXME: it's about time I removed this code
         if result is None:
             # also check action.dest (as a fallback so I don't have to update all my config files right now)
             result = self._JSON.get(self.action.dest, None)
             if result is not None:
                 print(coloured(AnsiColour.cyan, "Old JSON key", self.action.dest, "used, please use",
-                               jsonKey, "instead"))
+                               fullOptionName, "instead"))
         return result
 
     def __get__(self, instance, owner):
