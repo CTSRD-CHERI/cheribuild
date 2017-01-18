@@ -168,4 +168,3 @@ class LaunchFreeBSDMipsQEMU(LaunchQEMU):
         # FIXME: these should be config options
         self.currentKernel = BuildFreeBSD.rootfsDir(self.config) / "boot/kernel/kernel"
         self.diskImage = BuildFreeBSDDiskImage.diskImagePath
-        self.sshForwardingPort = self.config.sshForwardingPort + 2

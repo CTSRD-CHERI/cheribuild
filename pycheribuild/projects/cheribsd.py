@@ -203,14 +203,14 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                "cause unexpected linker errors!")
 
     def __init__(self, config: CheriConfig):
+        self.installAsRoot = os.getuid() == 0
+        self.binutilsDir = config.sdkDir / "mips64/bin"
+        self.cheriCC = config.sdkDir / "bin/clang"
+        self.cheriCXX = config.sdkDir / "bin/clang++"
         super().__init__(config, archBuildFlags=[
-            "CHERI=" + self.config.cheriBitsStr,
+            "CHERI=" + config.cheriBitsStr,
             # "-dCl",  # add some debug output to trace commands properly
             "CHERI_CC=" + str(self.cheriCC)])
-        self.installAsRoot = os.getuid() == 0
-        self.binutilsDir = self.config.sdkDir / "mips64/bin"
-        self.cheriCC = self.config.sdkDir / "bin/clang"
-        self.cheriCXX = self.config.sdkDir / "bin/clang++"
 
         if self.forceClang:
             self.commonMakeArgs.append("XCC=" + str(self.config.sdkDir / "bin/cheri-unknown-freebsd-clang") + " -integrated-as")
