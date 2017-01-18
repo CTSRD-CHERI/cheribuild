@@ -120,7 +120,7 @@ class BuildFreestandingSdk(SimpleProject):
             runCmd("ln", "-sf", "sdk256", "sdk", cwd=self.config.outputRoot)
 
         # install tools:
-        tools = binutilsBinaries + "gcc g++ gcov crunchide".split()
+        tools = binutilsBinaries + "gcc g++ gcov".split()
         for tool in tools:
             if (CHERITOOLS_OBJ / tool).is_file():
                 self.installFile(CHERITOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
