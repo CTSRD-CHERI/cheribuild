@@ -114,13 +114,16 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             if callable(default.asString):
                 default.asString = default.asString(cls)
         helpHidden = not showHelp
-        if not cls.__commandLineOptionGroup:
+
+        # check that the group was defined in the current class not a superclass
+        if "_commandLineOptionGroup" not in cls.__dict__:
             # noinspection PyProtectedMember
-            cls.__commandLineOptionGroup = ConfigLoader._parser.add_argument_group(
+            # has to be a single underscore otherwise the name gets mangled to _Foo__commandlineOptionGroup
+            cls._commandLineOptionGroup = ConfigLoader._parser.add_argument_group(
                     "Options for target '" + cls.target + "'")
 
         return ConfigLoader.addOption(cls.target + "/" + name, shortname, default=default, type=kind,
-                                      group=cls.__commandLineOptionGroup, helpHidden=helpHidden, **kwargs)
+                                      group=cls._commandLineOptionGroup, helpHidden=helpHidden, **kwargs)
 
     @classmethod
     def addBoolOption(cls, name: str, *, shortname=None, **kwargs):
