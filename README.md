@@ -103,17 +103,16 @@ However, some targets (e.g. `all`, `sdk`) will always build their dependencies b
 ## Full list of options
 
 ```
-usage: cheribuild.py [-h] [--help-all] [--pretend] [--quiet] [--verbose] [--clean] [--force] [--skip-update]
-                     [--skip-configure] [--skip-install] [--list-targets] [--dump-configuration]
-                     [--include-dependencies] [--disable-tmpfs] [--no-logfile]
-                     [--cheri-128 | --cheri-256 | --cheri-bits {128,256}] [--compilation-db] [--qemu-monitor-telnet]
-                     [--make-without-nice] [--source-root SOURCE_ROOT] [--output-root OUTPUT_ROOT]
-                     [--build-root BUILD_ROOT] [--extra-files EXTRA_FILES] [--clang-path CLANG_PATH]
-                     [--clang++-path CLANG++_PATH] [--disk-image-path DISK_IMAGE_PATH] [--make-jobs MAKE_JOBS]
-                     [--ssh-forwarding-port PORT] [--freebsd-builder-hostname SSH_HOSTNAME]
-                     [--freebsd-builder-output-path PATH] [--freebsd-builder-copy-only] [--skip-dependencies]
-                     [--cheribsd/build-options OPTIONS] [--cheribsd/kernel-cofig CONFIG] [--cheribsd/only-build-kernel]
-                     [--cheribsd/subdir DIR] [--config-file FILE]
+usage: cheribuild.py [-h] [--help-all] [--pretend] [--quiet] [--verbose] [--clean] [--force] [--skip-update] [--skip-configure]
+                     [--skip-install] [--list-targets] [--dump-configuration] [--include-dependencies] [--disable-tmpfs] [--no-logfile]
+                     [--cheri-128 | --cheri-256 | --cheri-bits {128,256}] [--compilation-db] [--make-without-nice]
+                     [--source-root SOURCE_ROOT] [--output-root OUTPUT_ROOT] [--build-root BUILD_ROOT] [--extra-files EXTRA_FILES]
+                     [--clang-path CLANG_PATH] [--clang++-path CLANG++_PATH] [--make-jobs MAKE_JOBS]
+                     [--freebsd-builder-hostname SSH_HOSTNAME] [--freebsd-builder-output-path PATH] [--freebsd-builder-copy-only]
+                     [--freebsd-mips/subdir DIR] [--run/ssh-forwarding-port PORT] [--disk-image/path IMGPATH]
+                     [--run-freebsd-mips/ssh-forwarding-port PORT] [--cheribsd/subdir DIR] [--cheribsd/build-options OPTIONS]
+                     [--cheribsd/kernel-cofig CONFIG] [--cheribsd/only-build-kernel] [--disk-image-freebsd-mips/path IMGPATH]
+                     [--config-file FILE]
                      [TARGET [TARGET ...]]
 
 positional arguments:
@@ -132,25 +131,22 @@ optional arguments:
   --skip-configure      Skip the configure step
   --skip-install        Skip the install step (only do the build)
   --list-targets        List all available targets and exit
-  --dump-configuration  Print the current configuration as JSON. This can be saved to ~/.config/cheribuild.json to make
-                        it persistent
+  --dump-configuration  Print the current configuration as JSON. This can be saved to ~/.config/cheribuild.json to make it persistent
   --include-dependencies, -d
-                        Also build the dependencies of targets passed on the command line. Targets passed on thecommand
-                        line will be reordered and processed in an order that ensures dependencies are built before the
-                        real target. (run with --list-targets for more information)
-  --disable-tmpfs       Don't make /tmp a TMPFS mount in the CHERIBSD system image. This is a workaround in case TMPFS
-                        is not working correctly
+                        Also build the dependencies of targets passed on the command line. Targets passed on thecommand line will be
+                        reordered and processed in an order that ensures dependencies are built before the real target. (run with --list-
+                        targets for more information)
+  --disable-tmpfs       Don't make /tmp a TMPFS mount in the CHERIBSD system image. This is a workaround in case TMPFS is not working
+                        correctly
   --no-logfile          Don't write a logfile for the build steps
   --cheri-128, --128    Shortcut for --cheri-bits=128
   --cheri-256, --256    Shortcut for --cheri-bits=256
   --cheri-bits {128,256}
-                        Whether to build the whole software stack for 128 or 256 bit CHERI. The output directories will
-                        be suffixed with the number of bits to make sure the right binaries are being used. WARNING:
-                        128-bit CHERI is still very unstable. (default: '256')
+                        Whether to build the whole software stack for 128 or 256 bit CHERI. The output directories will be suffixed with
+                        the number of bits to make sure the right binaries are being used. WARNING: 128-bit CHERI is still very unstable.
+                        (default: '256')
   --compilation-db, --cdb
-                        Create a compile_commands.json file in the build dir (requires Bear for non-CMake projects
-  --qemu-monitor-telnet
-                        Use telnet to connect to QEMU monitor instead of CTRL+A,C
+                        Create a compile_commands.json file in the build dir (requires Bear for non-CMake projects)
   --make-without-nice   Run make/ninja without nice(1)
   --source-root SOURCE_ROOT
                         The directory to store all sources (default: '/home/alr48/cheri')
@@ -159,53 +155,63 @@ optional arguments:
   --build-root BUILD_ROOT
                         The directory for all the builds (default: '<SOURCE_ROOT>/build')
   --extra-files EXTRA_FILES
-                        A directory with additional files that will be added to the image (default:
-                        '<SOURCE_ROOT>/extra-files')
+                        A directory with additional files that will be added to the image (default: '<SOURCE_ROOT>/extra-files')
   --clang-path CLANG_PATH
                         The Clang C compiler to use for compiling LLVM+Clang (must be at least version 3.7) (default:
                         '/usr/bin/clang-3.8')
   --clang++-path CLANG++_PATH
                         The Clang C++ compiler to use for compiling LLVM+Clang (must be at least version 3.7) (default:
                         '/usr/bin/clang++-3.8')
-  --disk-image-path DISK_IMAGE_PATH
-                        The output path for the QEMU disk image (default: '<OUTPUT_ROOT>/cheri256-disk.qcow2')
   --make-jobs MAKE_JOBS, -j MAKE_JOBS
                         Number of jobs to use for compiling (default: '4')
-  --ssh-forwarding-port PORT, -s PORT
-                        The port to use on localhost to forward the QEMU ssh port. You can then use `ssh root@localhost
-                        -p $PORT` connect to the VM (default: '12374')
-  --config-file FILE    The config file that is used to load the default settings (default:
-                        '/home/alr48/.config/cheribuild.json')
+  --config-file FILE    The config file that is used to load the default settings (default: '/home/alr48/.config/cheribuild.json')
 
 Specifying a remote FreeBSD build server:
   Useful if you want to create a CHERI SDK on a Linux or OS X host to allow cross compilation to a CHERI target.
 
   --freebsd-builder-hostname SSH_HOSTNAME
-                        This string will be passed to ssh and be something like user@hostname of a FreeBSD system that
-                        can be used to build CHERIBSD. Can also be the name of a host in ~/.ssh/config.
+                        This string will be passed to ssh and be something like user@hostname of a FreeBSD system that can be used to
+                        build CHERIBSD. Can also be the name of a host in ~/.ssh/config.
   --freebsd-builder-output-path PATH
                         The path where the cheribuild output is stored on the FreeBSD build server.
   --freebsd-builder-copy-only
                         Only scp the SDK from theFreeBSD build server and don't build the SDK first.
 
-Old deprecated options:
-  These should not be used any more
+Options for target 'freebsd-mips':
+  --freebsd-mips/subdir DIR
+                        Only build subdir DIR instead of the full tree. Useful for quickly rebuilding an individual program/library
 
-  --skip-dependencies, -t
-                        This option no longer does anything and is only included toallow running existing command lines
+Options for target 'run':
+  --run/ssh-forwarding-port PORT, --ssh-forwarding-port PORT
+                        The port on localhost to forward to the QEMU ssh port. You can then use `ssh root@localhost -p $PORT` connect to
+                        the VM (default: '12374')
+
+Options for target 'disk-image':
+  --disk-image/path IMGPATH, --disk-image-path IMGPATH
+                        The output path for the QEMU disk image (default: '$OUTPUT_ROOT/cheri256-disk.qcow2 or
+                        $OUTPUT_ROOT/cheri128-disk.qcow2 depending on --cheri-bits.')
+
+Options for target 'run-freebsd-mips':
+  --run-freebsd-mips/ssh-forwarding-port PORT
+                        The port on localhost to forward to the QEMU ssh port. You can then use `ssh root@localhost -p $PORT` connect to
+                        the VM (default: '12376')
 
 Options for target 'cheribsd':
+  --cheribsd/subdir DIR
+                        Only build subdir DIR instead of the full tree. Useful for quickly rebuilding an individual program/library
   --cheribsd/build-options OPTIONS, --cheribsd-make-options OPTIONS
-                        Additional make options to be passed to make when building CHERIBSD. See `man src.conf` for more
-                        info. (default: '['DEBUG_FLAGS=-g', '-DWITHOUT_TESTS', '-DWITHOUT_HTML', '-DWITHOUT_SENDMAIL',
-                        '-DWITHOUT_MAIL', '-DWITHOUT_SVNLITE']')
+                        Additional make options to be passed to make when building CHERIBSD. See `man src.conf` for more info. (default:
+                        '['DEBUG_FLAGS=-g', '-DWITHOUT_TESTS', '-DWITHOUT_HTML', '-DWITHOUT_SENDMAIL', '-DWITHOUT_MAIL',
+                        '-DWITHOUT_SVNLITE']')
   --cheribsd/kernel-cofig CONFIG, --kernconf CONFIG
-                        The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64 or
-                        CHERI128_MALTA64 depending on --cheri-bits)
+                        The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64 or CHERI128_MALTA64 depending on
+                        --cheri-bits)
   --cheribsd/only-build-kernel, --skip-buildworld
                         Skip the buildworld step -> only build and install the kernel
-  --cheribsd/subdir DIR
-                        Only build subdir DIR instead of the full tree. Useful for quickly rebuilding an individual
-                        program/library
+
+Options for target 'disk-image-freebsd-mips':
+  --disk-image-freebsd-mips/path IMGPATH
+                        The output path for the QEMU disk image (default: '$OUTPUT_ROOT/freebsd-mips.qcow2')
+
 
 ```
