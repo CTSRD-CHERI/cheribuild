@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import datetime
+import os
 import sys
 import socket
 
@@ -38,14 +39,25 @@ from .disk_image import BuildCheriBSDDiskImage, BuildFreeBSDDiskImage
 from pathlib import Path
 
 
+def defaultSshForwardingPort():
+    # chose a different port for each user (hopefully it isn't in use yet)
+    return 9999 + ((os.getuid() - 1000) % 10000)
+
+
+def defaultTelnetPort():
+    # chose a different port for each user (hopefully it isn't in use yet)
+    return defaultSshForwardingPort() + 1
+
+
 class LaunchQEMU(SimpleProject):
     target = "run"
     projectName = "run-qemu"
     dependencies = ["qemu", "disk-image"]
 
     @classmethod
-    def setupConfigOptions(cls):
-        super().setupConfigOptions()
+    def setupConfigOptions(cls, sshPortShortname="-ssh-forwarding-port", defaultSshPort=defaultSshForwardingPort(),
+                           useTelnetShortName="-qemu-monitor-telnet", defaultTelnetPort=defaultTelnetPort(), **kwargs):
+        super().setupConfigOptions(**kwargs)
         cls.extraOptions = cls.addConfigOption("extra-options", default=[], kind=list, metavar="QEMU_OPTIONS",
                                                help="Additional command line flags to pass to qemu-system-cheri")
         cls.logfile = cls.addConfigOption("logfile", default=None, kind=str, metavar="LOGFILE",
@@ -53,13 +65,21 @@ class LaunchQEMU(SimpleProject):
         cls.logDir = cls.addConfigOption("log-directory", default=None, kind=str, metavar="DIR",
                                          help="If set QEMU will log to a timestamped file in this directory. Will be "
                                               "ignored if the 'logfile' option is set")
+        cls.useTelnet = cls.addConfigOption("monitor-over-telnet", shortname=useTelnetShortName, kind=int,
+                                            metavar="PORT", showHelp=True,
+                                            help="Use telnet to localhost $PORT` to connect to QEMU monitor instead of"
+                                                 " CTRL+A,C")
+        # TODO: -s will no longer work, not sure anyone uses it though
+        cls.sshForwardingPort = cls.addConfigOption("ssh-forwarding-port", shortname=sshPortShortname, kind=int,
+                                                    default=defaultSshPort, metavar="PORT", showHelp=True,
+                                                    help="The port on localhost to forward to the QEMU ssh port. "
+                                                    "You can then use `ssh root@localhost -p $PORT` connect to the VM")
 
     def __init__(self, config):
         super().__init__(config)
         self.qemuBinary = self.config.sdkDir / "bin/qemu-system-cheri"
         self.currentKernel = BuildCHERIBSD.rootfsDir(self.config) / "boot/kernel/kernel"
         self.diskImage = BuildCheriBSDDiskImage.diskImagePath
-        self.sshForwardingPort = self.config.sshForwardingPort
 
     def process(self):
         if not self.qemuBinary.exists():
@@ -81,7 +101,7 @@ class LaunchQEMU(SimpleProject):
             fatalError("SSH forwarding port", self.sshForwardingPort, "is already in use!")
 
         monitorOptions = []
-        if self.config.qemuUseTelnet:
+        if self.useTelnet:
             monitorPort = self.sshForwardingPort + 1
             monitorOptions = ["-monitor", "telnet:127.0.0.1:" + str(monitorPort) + ",server,nowait"]
             if not self.isPortAvailable(monitorPort):
@@ -132,9 +152,16 @@ class LaunchQEMU(SimpleProject):
 
 
 class LaunchFreeBSDMipsQEMU(LaunchQEMU):
-    target = "freebsd-mips-run"
+    target = "run-freebsd-mips"
     projectName = "run-qemu"
-    dependencies = ["qemu", "freebsd-mips-disk-image"]
+    dependencies = ["qemu", "disk-image-freebsd-mips"]
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
+                                   defaultSshPort=defaultSshForwardingPort() + 2,
+                                   defaultTelnetPort=defaultTelnetPort() + 2,
+                                   **kwargs)
 
     def __init__(self, config):
         super().__init__(config)

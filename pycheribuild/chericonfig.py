@@ -42,11 +42,6 @@ def defaultNumberOfMakeJobs():
     return makeJobs
 
 
-def defaultSshForwardingPort():
-    # chose a different port for each user (hopefully it isn't in use yet)
-    return 9999 + ((os.getuid() - 1000) % 10000)
-
-
 def defaultClangTool(basename: str):
     # try to find clang 3.7, otherwise fall back to system clang
     for version in [(4, 0), (3, 9), (3, 8), (3, 7)]:
@@ -94,8 +89,6 @@ class CheriConfig(object):
     createCompilationDB = ConfigLoader.addBoolOption("compilation-db", "-cdb",
                                                      help="Create a compile_commands.json file in the build dir "
                                                           "(requires Bear for non-CMake projects)")
-    qemuUseTelnet = ConfigLoader.addBoolOption("qemu-monitor-telnet",
-                                               help="Use telnet to connect to QEMU monitor instead of CTRL+A,C")
     makeWithoutNice = ConfigLoader.addBoolOption("make-without-nice", help="Run make/ninja without nice(1)")
 
     # configurable paths
@@ -115,12 +108,9 @@ class CheriConfig(object):
                                                    help="The Clang C++ compiler to use for compiling LLVM+Clang (must "
                                                         "be at least version 3.7)")
     # other options
+    # TODO: allow overriding per-project?
     makeJobs = ConfigLoader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
                                       help="Number of jobs to use for compiling")  # type: int
-    sshForwardingPort = ConfigLoader.addOption("ssh-forwarding-port", "s", type=int, default=defaultSshForwardingPort(),
-                                               help="The port to use on localhost to forward the QEMU ssh port. "
-                                                    "You can then use `ssh root@localhost -p $PORT` connect to the VM",
-                                               metavar="PORT")  # type: int
     # To allow building CHERI software on non-FreeBSD systems
     freeBsdBuildMachine = ConfigLoader.addOption("freebsd-builder-hostname", type=str, metavar="SSH_HOSTNAME",
                                                  help="This string will be passed to ssh and be something like "

@@ -296,7 +296,7 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
 
 
 class BuildFreeBSDDiskImage(BuildDiskImageBase):
-    target = "freebsd-mips-disk-image"
+    target = "disk-image-freebsd-mips"
     dependencies = ["qemu", "freebsd-mips"]
 
     @classmethod
