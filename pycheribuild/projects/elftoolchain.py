@@ -37,6 +37,7 @@ import os
 
 class BuildElftoolchainBinutils(Project):
     target = "elftoolchain-binutils"
+    projectName = "elftoolchain-binutils"
     repository = "https://github.com/RichardsonAlex/elftoolchain.git"
     defaultInstallDir = Project._installToSDK
     defaultBuildDir = Project.defaultSourceDir  # we have to build in the source directory
