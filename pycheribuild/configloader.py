@@ -127,7 +127,7 @@ class ConfigLoader(object):
         return cls._parsedArgs.targets
 
     class ComputedDefaultValue(object):
-        def __init__(self, function: "typing.Callable[[CheriConfig], typing.Any]",
+        def __init__(self, function: "typing.Callable[[CheriConfig, typing.Type], typing.Any]",
                      asString: "typing.Union[str, typing.Callable[[typing.Any], str]"):
             self.function = function
             self.asString = asString

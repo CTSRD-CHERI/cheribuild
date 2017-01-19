@@ -49,6 +49,14 @@ class BuildDiskImageBase(SimpleProject):
     doNotAddToTargets = True
     diskImagePath = None  # type: Path
 
+    @classmethod
+    def setupConfigOptions(cls, extraFilesShortname=None, **kwargs):
+        super().setupConfigOptions()
+        cls.extraFilesDir = cls.addPathOption("extra-files", shortname=extraFilesShortname, showHelp=True,
+                                              default=lambda config, project: (config.sourceRoot / "extra-files"),
+                                              help="A directory with additional files that will be added to the image "
+                                                   "(default: '$SOURCE_ROOT/extra-files')", metavar="DIR")
+
     def __init__(self, config, sourceClass: type(BuildFreeBSD)):
         super().__init__(config)
         # make use of the mtree file created by make installworld
@@ -105,7 +113,7 @@ class BuildDiskImageBase(SimpleProject):
         if pathInImage.startswith("/"):
             pathInImage = pathInImage[1:]
         assert not pathInImage.startswith("/")
-        userProvided = self.config.extraFiles / pathInImage
+        userProvided = self.extraFilesDir / pathInImage
         if userProvided.is_file():
             print("Using user provided /", pathInImage, " instead of generating default", sep="")
             self.extraFiles.remove(userProvided)
@@ -126,13 +134,14 @@ class BuildDiskImageBase(SimpleProject):
         # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
         # If they do not exist in the extra-files directory yet we generate a default one and use that
         # Additionally all other files in the extra-files directory will be added to the disk image
-        for root, dirnames, filenames in os.walk(str(self.config.extraFiles)):
-            if '.svn' in dirnames:
-                dirnames.remove('.svn')
-            if '.git' in dirnames:
-                dirnames.remove('.git')
-            for filename in filenames:
-                self.extraFiles.append(Path(root, filename))
+        if self.extraFilesDir.exists():
+            for root, dirnames, filenames in os.walk(str(self.extraFilesDir)):
+                if '.svn' in dirnames:
+                    dirnames.remove('.svn')
+                if '.git' in dirnames:
+                    dirnames.remove('.git')
+                for filename in filenames:
+                    self.extraFiles.append(Path(root, filename))
 
         # TODO: https://www.freebsd.org/cgi/man.cgi?mount_unionfs(8) should make this easier
         # Overlay extra-files over additional stuff over cheribsd rootfs dir
@@ -173,7 +182,7 @@ nfs_client_enable="YES"
                                 showContentsByDefault=False)
 
         # now try adding the right ~/.ssh/authorized_keys
-        authorizedKeys = self.config.extraFiles / "root/.ssh/authorized_keys"
+        authorizedKeys = self.extraFilesDir / "root/.ssh/authorized_keys"
         if not authorizedKeys.is_file():
             sshKeys = list(Path(os.path.expanduser("~/.ssh/")).glob("id_*.pub"))
             if len(sshKeys) > 0:
@@ -183,7 +192,8 @@ nfs_client_enable="YES"
                     for pubkey in sshKeys:
                         contents += self.readFile(pubkey)
                     self.createFileForImage(outDir, "/root/.ssh/authorized_keys", contents=contents)
-                    if self.queryYesNo("Should this authorized_keys file be used by default? (You can always change them by editing/deleting '" +
+                    if self.queryYesNo("Should this authorized_keys file be used by default? "
+                                       "(You can always change them by editing/deleting '" +
                                        str(authorizedKeys) + "')?", defaultResult=False):
                         self.installFile(outDir / "root/.ssh/authorized_keys", authorizedKeys)
 
@@ -230,7 +240,9 @@ nfs_client_enable="YES"
             fatalError("mtree manifest", self.rootfsDir / "METALOG", "is missing")
         if not (self.userGroupDbDir / "master.passwd").is_file():
             fatalError("master.passwd does not exist in ", self.userGroupDbDir)
+
         statusUpdate("Disk image will saved to", self.diskImagePath)
+        statusUpdate("Extra files for the disk image will be copied from", self.extraFilesDir)
 
         if self.diskImagePath.is_file():
             # only show prompt if we can actually input something to stdin
@@ -245,7 +257,7 @@ nfs_client_enable="YES"
             # now add all the user provided files to the image:
             # we have to make a copy as we modify self.extraFiles in self.addFileToImage()
             for p in self.extraFiles.copy():
-                pathInImage = p.relative_to(self.config.extraFiles)
+                pathInImage = p.relative_to(self.extraFilesDir)
                 print("Adding user provided file /", pathInImage, " to disk image.", sep="")
                 self.addFileToImage(p, str(pathInImage.parent))
             # finally create the disk image
@@ -253,7 +265,7 @@ nfs_client_enable="YES"
 
     def generateSshHostKeys(self):
         # do the same as "ssh-keygen -A" just with a different output directory as it does not allow customizing that
-        sshDir = self.config.extraFiles / "etc/ssh"
+        sshDir = self.extraFilesDir / "etc/ssh"
         self.makedirs(sshDir)
         # -t type Specifies the type of key to create.  The possible values are "rsa1" for protocol version 1
         #  and "dsa", "ecdsa","ed25519", or "rsa" for protocol version 2.
@@ -283,7 +295,7 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+        super().setupConfigOptions(extraFilesShortname="-extra-files", **kwargs)
         defaultDiskImagePath = ConfigLoader.ComputedDefaultValue(
                 function=_defaultDiskImagePath, asString="$OUTPUT_ROOT/cheri256-disk.qcow2 or "
                                                          "$OUTPUT_ROOT/cheri128-disk.qcow2 depending on --cheri-bits.")
@@ -304,7 +316,7 @@ class BuildFreeBSDDiskImage(BuildDiskImageBase):
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
         defaultDiskImagePath = ConfigLoader.ComputedDefaultValue(
-                function=lambda config, cls: config.outputRoot / "freebsd-mips.qcow2",
+                function=lambda config, project: config.outputRoot / "freebsd-mips.qcow2",
                 asString="$OUTPUT_ROOT/freebsd-mips.qcow2")
         cls.diskImagePath = cls.addPathOption("path", default=defaultDiskImagePath, showHelp=True,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image")

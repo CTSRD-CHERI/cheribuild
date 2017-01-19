@@ -98,9 +98,6 @@ class CheriConfig(object):
                                             help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
     buildRoot = ConfigLoader.addPathOption("build-root", default=lambda p, cls: (p.sourceRoot / "build"),
                                            help="The directory for all the builds (default: '<SOURCE_ROOT>/build')")
-    extraFiles = ConfigLoader.addPathOption("extra-files", default=lambda p, cls: (p.sourceRoot / "extra-files"),
-                                            help="A directory with additional files that will be added to the image "
-                                                 "(default: '<SOURCE_ROOT>/extra-files')")
     clangPath = ConfigLoader.addPathOption("clang-path", default=defaultClangTool("clang"),
                                            help="The Clang C compiler to use for compiling LLVM+Clang (must be at "
                                                 "least version 3.7)")
@@ -142,7 +139,6 @@ class CheriConfig(object):
         if not self.quiet:
             print("Sources will be stored in", self.sourceRoot)
             print("Build artifacts will be stored in", self.outputRoot)
-            print("Extra files for disk image will be searched for in", self.extraFiles)
 
         # now the derived config options
         self.sdkDirectoryName = "sdk" + self.cheriBitsStr

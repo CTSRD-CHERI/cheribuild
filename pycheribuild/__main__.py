@@ -78,7 +78,7 @@ def real_main():
     cheriConfig = CheriConfig(allTargetNames + [runEverythingTarget])
     setCheriConfig(cheriConfig)
     # create the required directories
-    for d in (cheriConfig.sourceRoot, cheriConfig.outputRoot, cheriConfig.buildRoot, cheriConfig.extraFiles):
+    for d in (cheriConfig.sourceRoot, cheriConfig.outputRoot, cheriConfig.buildRoot):
         if d.exists():
             continue
         if not cheriConfig.pretend:
