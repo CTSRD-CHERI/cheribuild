@@ -201,8 +201,9 @@ nfs_client_enable="YES"
         rawDiskImage = Path(str(self.diskImagePath).replace(".qcow2", ".img"))
         runCmd([
             "makefs",
-            "-b", "70%",  # minimum 70% free blocks
+            "-b", "30%",  # minimum 30% free blocks
             "-f", "30%",  # minimum 30% free inodes
+            "-R", "128m",  # round up size to the next 16m multiple
             "-M", self.minimumImageSize,
             "-B", "be",  # big endian byte order
             "-F", self.manifestFile,  # use METALOG as the manifest for the disk image
@@ -292,7 +293,7 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config, sourceClass=BuildCHERIBSD)
-        self.minimumImageSize = "4g"  # minimum image size = 4GB (2GB is too small now)
+        self.minimumImageSize = "256m"  # let's try to shrink the image size
 
 
 class BuildFreeBSDDiskImage(BuildDiskImageBase):
