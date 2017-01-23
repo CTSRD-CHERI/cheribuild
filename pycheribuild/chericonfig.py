@@ -62,6 +62,7 @@ class CheriConfig(object):
     verbose = ConfigLoader.addBoolOption("verbose", "v", help="Print all commmands that are executed")
     clean = ConfigLoader.addBoolOption("clean", "c", help="Remove the build directory before build")
     force = ConfigLoader.addBoolOption("force", "f", help="Don't prompt for user input but use the default action")
+    noLogfile = ConfigLoader.addBoolOption("no-logfile", help="Don't write a logfile for the build steps")
     skipUpdate = ConfigLoader.addBoolOption("skip-update", help="Skip the git pull step")
     skipConfigure = ConfigLoader.addBoolOption("skip-configure", help="Skip the configure step")
     skipInstall = ConfigLoader.addBoolOption("skip-install", help="Skip the install step (only do the build)")
@@ -74,7 +75,6 @@ class CheriConfig(object):
                                                      "ensures dependencies are built before the real target. (run "
                                                      " with --list-targets for more information)")
     disableTMPFS = ConfigLoader.addBoolOption("disable-tmpfs", help="Don't make /tmp a TMPFS mount in the CHERIBSD system image. This is a workaround in case TMPFS is not working correctly")
-    noLogfile = ConfigLoader.addBoolOption("no-logfile", help="Don't write a logfile for the build steps")
 
     _buildCheri128 = ConfigLoader.addBoolOption("cheri-128", "-128", group=ConfigLoader.cheriBitsGroup,
                                                 help="Shortcut for --cheri-bits=128")

@@ -55,6 +55,11 @@ class ConfigLoader(object):
                                       lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
     _parser.add_argument("--help-all", "--help-hidden", action="help", help="Show all help options, including"
                                                                             "the target-specific ones.")
+    configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+    defaultConfigPath = Path(configdir, "cheribuild.json")
+    _parser.add_argument("--config-file", metavar="FILE", type=str, default=str(defaultConfigPath),
+                         help="The config file that is used to load the default settings (default: '" +
+                              str(defaultConfigPath) + "')")
     options = []
     _parsedArgs = None
     _JSON = {}  # type: dict
@@ -77,11 +82,6 @@ class ConfigLoader(object):
         """
         targetOption = cls._parser.add_argument("targets", metavar="TARGET", type=str, nargs=argparse.ZERO_OR_MORE,
                                                 help="The targets to build", default=["all"], choices=availableTargets)
-        configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
-        defaultConfigPath = Path(configdir, "cheribuild.json")
-        cls._parser.add_argument("--config-file", metavar="FILE", type=str, default=str(defaultConfigPath),
-                                 help="The config file that is used to load the default settings (default: '" +
-                                      str(defaultConfigPath) + "')")
         if argcomplete and "_ARGCOMPLETE" in os.environ:
             # if IS_FREEBSD: # FIXME: for some reason this won't work
             excludes = ["-t", "--skip-dependencies"]
