@@ -74,7 +74,6 @@ class CheriConfig(object):
                                                      "command line will be reordered and processed in an order that "
                                                      "ensures dependencies are built before the real target. (run "
                                                      " with --list-targets for more information)")
-    disableTMPFS = ConfigLoader.addBoolOption("disable-tmpfs", help="Don't make /tmp a TMPFS mount in the CHERIBSD system image. This is a workaround in case TMPFS is not working correctly")
 
     _buildCheri128 = ConfigLoader.addBoolOption("cheri-128", "-128", group=ConfigLoader.cheriBitsGroup,
                                                 help="Shortcut for --cheri-bits=128")

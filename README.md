@@ -104,18 +104,17 @@ However, some targets (e.g. `all`, `sdk`) will always build their dependencies b
 
 ```
 usage: cheribuild.py [-h] [--help-all] [--config-file FILE] [--pretend] [--quiet] [--verbose] [--clean] [--force]
-                     [--skip-update] [--skip-configure] [--skip-install] [--list-targets] [--dump-configuration]
-                     [--include-dependencies] [--disable-tmpfs] [--no-logfile]
-                     [--cheri-128 | --cheri-256 | --cheri-bits {128,256}] [--compilation-db] [--make-without-nice]
-                     [--source-root SOURCE_ROOT] [--output-root OUTPUT_ROOT] [--build-root BUILD_ROOT]
-                     [--clang-path CLANG_PATH] [--clang++-path CLANG++_PATH] [--make-jobs MAKE_JOBS]
-                     [--freebsd-builder-hostname SSH_HOSTNAME] [--freebsd-builder-output-path PATH]
-                     [--freebsd-builder-copy-only] [--run-freebsd-mips/monitor-over-telnet PORT]
-                     [--run-freebsd-mips/ssh-forwarding-port PORT] [--disk-image-freebsd-mips/extra-files DIR]
-                     [--disk-image-freebsd-mips/path IMGPATH] [--run/monitor-over-telnet PORT]
-                     [--run/ssh-forwarding-port PORT] [--disk-image/extra-files DIR] [--disk-image/path IMGPATH]
-                     [--cheribsd/subdir DIR] [--cheribsd/build-options OPTIONS] [--cheribsd/kernel-cofig CONFIG]
-                     [--cheribsd/only-build-kernel] [--freebsd-mips/subdir DIR]
+                     [--no-logfile] [--skip-update] [--skip-configure] [--skip-install] [--list-targets]
+                     [--dump-configuration] [--include-dependencies] [--cheri-128 | --cheri-256 | --cheri-bits {128,256}]
+                     [--compilation-db] [--make-without-nice] [--source-root SOURCE_ROOT] [--output-root OUTPUT_ROOT]
+                     [--build-root BUILD_ROOT] [--clang-path CLANG_PATH] [--clang++-path CLANG++_PATH]
+                     [--make-jobs MAKE_JOBS] [--freebsd-builder-hostname SSH_HOSTNAME]
+                     [--freebsd-builder-output-path PATH] [--freebsd-builder-copy-only] [--disk-image/extra-files DIR]
+                     [--disk-image/path IMGPATH] [--disable-tmpfs] [--disk-image-freebsd-mips/extra-files DIR]
+                     [--disk-image-freebsd-mips/path IMGPATH] [--cheribsd/subdir DIR] [--cheribsd/build-options OPTIONS]
+                     [--cheribsd/kernel-cofig CONFIG] [--cheribsd/only-build-kernel]
+                     [--run-freebsd-mips/monitor-over-telnet PORT] [--run-freebsd-mips/ssh-forwarding-port PORT]
+                     [--freebsd-mips/subdir DIR] [--run/monitor-over-telnet PORT] [--run/ssh-forwarding-port PORT]
                      [TARGET [TARGET ...]]
 
 positional arguments:
@@ -132,6 +131,7 @@ optional arguments:
   --verbose, -v         Print all commmands that are executed
   --clean, -c           Remove the build directory before build
   --force, -f           Don't prompt for user input but use the default action
+  --no-logfile          Don't write a logfile for the build steps
   --skip-update         Skip the git pull step
   --skip-configure      Skip the configure step
   --skip-install        Skip the install step (only do the build)
@@ -142,9 +142,6 @@ optional arguments:
                         Also build the dependencies of targets passed on the command line. Targets passed on thecommand
                         line will be reordered and processed in an order that ensures dependencies are built before the
                         real target. (run with --list-targets for more information)
-  --disable-tmpfs       Don't make /tmp a TMPFS mount in the CHERIBSD system image. This is a workaround in case TMPFS is
-                        not working correctly
-  --no-logfile          Don't write a logfile for the build steps
   --cheri-128, --128    Shortcut for --cheri-bits=128
   --cheri-256, --256    Shortcut for --cheri-bits=256
   --cheri-bits {128,256}
@@ -168,6 +165,9 @@ optional arguments:
                         '/usr/bin/clang++-3.8')
   --make-jobs MAKE_JOBS, -j MAKE_JOBS
                         Number of jobs to use for compiling (default: '4')
+  --disable-tmpfs, --disable-tmpfs
+                        Don't make /tmp a TMPFS mount in the CHERIBSD system image. This is a workaround in case TMPFS is
+                        not working correctly
 
 Specifying a remote FreeBSD build server:
   Useful if you want to create a CHERI SDK on a Linux or OS X host to allow cross compilation to a CHERI target.
@@ -180,27 +180,6 @@ Specifying a remote FreeBSD build server:
   --freebsd-builder-copy-only
                         Only scp the SDK from theFreeBSD build server and don't build the SDK first.
 
-Options for target 'run-freebsd-mips':
-  --run-freebsd-mips/monitor-over-telnet PORT
-                        Use telnet to localhost $PORT` to connect to QEMU monitor instead of CTRL+A,C
-  --run-freebsd-mips/ssh-forwarding-port PORT
-                        The port on localhost to forward to the QEMU ssh port. You can then use `ssh root@localhost -p
-                        $PORT` connect to the VM (default: '12376')
-
-Options for target 'disk-image-freebsd-mips':
-  --disk-image-freebsd-mips/extra-files DIR
-                        A directory with additional files that will be added to the image (default: '$SOURCE_ROOT/extra-
-                        files')
-  --disk-image-freebsd-mips/path IMGPATH
-                        The output path for the QEMU disk image (default: '$OUTPUT_ROOT/freebsd-mips.qcow2')
-
-Options for target 'run':
-  --run/monitor-over-telnet PORT, --qemu-monitor-telnet PORT
-                        Use telnet to localhost $PORT` to connect to QEMU monitor instead of CTRL+A,C
-  --run/ssh-forwarding-port PORT, --ssh-forwarding-port PORT
-                        The port on localhost to forward to the QEMU ssh port. You can then use `ssh root@localhost -p
-                        $PORT` connect to the VM (default: '12374')
-
 Options for target 'disk-image':
   --disk-image/extra-files DIR, --extra-files DIR
                         A directory with additional files that will be added to the image (default: '$SOURCE_ROOT/extra-
@@ -208,6 +187,13 @@ Options for target 'disk-image':
   --disk-image/path IMGPATH, --disk-image-path IMGPATH
                         The output path for the QEMU disk image (default: '$OUTPUT_ROOT/cheri256-disk.qcow2 or
                         $OUTPUT_ROOT/cheri128-disk.qcow2 depending on --cheri-bits.')
+
+Options for target 'disk-image-freebsd-mips':
+  --disk-image-freebsd-mips/extra-files DIR
+                        A directory with additional files that will be added to the image (default: '$SOURCE_ROOT/extra-
+                        files')
+  --disk-image-freebsd-mips/path IMGPATH
+                        The output path for the QEMU disk image (default: '$OUTPUT_ROOT/freebsd-mips.qcow2')
 
 Options for target 'cheribsd':
   --cheribsd/subdir DIR
@@ -223,8 +209,22 @@ Options for target 'cheribsd':
   --cheribsd/only-build-kernel, --skip-buildworld
                         Skip the buildworld step -> only build and install the kernel
 
+Options for target 'run-freebsd-mips':
+  --run-freebsd-mips/monitor-over-telnet PORT
+                        Use telnet to localhost $PORT` to connect to QEMU monitor instead of CTRL+A,C
+  --run-freebsd-mips/ssh-forwarding-port PORT
+                        The port on localhost to forward to the QEMU ssh port. You can then use `ssh root@localhost -p
+                        $PORT` connect to the VM (default: '12376')
+
 Options for target 'freebsd-mips':
   --freebsd-mips/subdir DIR
                         Only build subdir DIR instead of the full tree. Useful for quickly rebuilding an individual
                         program/library
+
+Options for target 'run':
+  --run/monitor-over-telnet PORT, --qemu-monitor-telnet PORT
+                        Use telnet to localhost $PORT` to connect to QEMU monitor instead of CTRL+A,C
+  --run/ssh-forwarding-port PORT, --ssh-forwarding-port PORT
+                        The port on localhost to forward to the QEMU ssh port. You can then use `ssh root@localhost -p
+                        $PORT` connect to the VM (default: '12374')
 ```

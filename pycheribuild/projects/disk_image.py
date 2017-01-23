@@ -56,6 +56,7 @@ class BuildDiskImageBase(SimpleProject):
                                               default=lambda config, project: (config.sourceRoot / "extra-files"),
                                               help="A directory with additional files that will be added to the image "
                                                    "(default: '$SOURCE_ROOT/extra-files')", metavar="DIR")
+        cls.disableTMPFS = None
 
     def __init__(self, config, sourceClass: type(BuildFreeBSD)):
         super().__init__(config)
@@ -68,7 +69,6 @@ class BuildDiskImageBase(SimpleProject):
         self.dirsAddedToManifest = [Path(".")]  # Path().parents always includes a "." entry
         self.rootfsDir = sourceClass.rootfsDir(self.config)
         self.userGroupDbDir = sourceClass.getSourceDir(self.config) / "etc"
-        self.disableTMPFS = self.config.disableTMPFS
         self.minimumImageSize = "1g",  # minimum image size = 1GB
 
     def addFileToImage(self, file: Path, targetDir: str, user="root", group="wheel", mode="0644"):
@@ -302,6 +302,9 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
         cls.diskImagePath = cls.addPathOption("path", shortname="-disk-image-path", default=defaultDiskImagePath,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image",
                                               showHelp=True)
+        cls.disableTMPFS = ConfigLoader.addBoolOption("disable-tmpfs", shortname="-disable-tmpfs",
+                                                      help="Don't make /tmp a TMPFS mount in the CHERIBSD system image."
+                                                      " This is a workaround in case TMPFS is not working correctly")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config, sourceClass=BuildCHERIBSD)
@@ -320,9 +323,9 @@ class BuildFreeBSDDiskImage(BuildDiskImageBase):
                 asString="$OUTPUT_ROOT/freebsd-mips.qcow2")
         cls.diskImagePath = cls.addPathOption("path", default=defaultDiskImagePath, showHelp=True,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image")
+        cls.disableTMPFS = True  # MALTA64 doesn't include tmpfs
 
     def __init__(self, config: CheriConfig):
         # TODO: different extra-files directory
         super().__init__(config, sourceClass=BuildFreeBSD)
-        self.disableTMPFS = True  # MALTA64 doesn't include tmpfs
         self.minimumImageSize = "256m"
