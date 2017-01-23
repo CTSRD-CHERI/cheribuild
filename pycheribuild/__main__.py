@@ -58,7 +58,6 @@ def updateCheck():
     output = subprocess.check_output(["git", "status", "-uno"], cwd=projectDir)
     behindIndex = output.find(b"Your branch is behind ")
     if behindIndex > 0:
-        print(output)
         msgEnd = output.find(b"\n  (use \"git pull\" to update your local branch)")
         if msgEnd > 0:
             output = output[behindIndex:msgEnd]
