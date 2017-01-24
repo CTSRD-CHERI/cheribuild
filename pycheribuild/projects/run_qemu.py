@@ -35,6 +35,7 @@ import socket
 from ..project import SimpleProject
 from ..utils import *
 from .cheribsd import BuildCHERIBSD, BuildFreeBSD
+from .cherios import BuildCheriOS
 from .disk_image import BuildCheriBSDDiskImage, BuildFreeBSDDiskImage
 from pathlib import Path
 
@@ -54,6 +55,8 @@ class LaunchQEMU(SimpleProject):
     projectName = "run-qemu"
     dependencies = ["qemu", "disk-image"]
 
+    _forwardSSHPort = True
+
     @classmethod
     def setupConfigOptions(cls, sshPortShortname="-ssh-forwarding-port", defaultSshPort=defaultSshForwardingPort(),
                            useTelnetShortName="-qemu-monitor-telnet", defaultTelnetPort=defaultTelnetPort(), **kwargs):
@@ -67,54 +70,53 @@ class LaunchQEMU(SimpleProject):
                                               "ignored if the 'logfile' option is set")
         cls.useTelnet = cls.addConfigOption("monitor-over-telnet", shortname=useTelnetShortName, kind=int,
                                             metavar="PORT", showHelp=True,
-                                            help="Use telnet to localhost $PORT` to connect to QEMU monitor instead of"
-                                                 " CTRL+A,C")
+                                            help="If set, the QEMU monitor will be reachable by connecting to localhost"
+                                                 "at $PORT via telnet instead of using CTRL+A,C")
         # TODO: -s will no longer work, not sure anyone uses it though
-        cls.sshForwardingPort = cls.addConfigOption("ssh-forwarding-port", shortname=sshPortShortname, kind=int,
-                                                    default=defaultSshPort, metavar="PORT", showHelp=True,
-                                                    help="The port on localhost to forward to the QEMU ssh port. "
-                                                    "You can then use `ssh root@localhost -p $PORT` connect to the VM")
+        if cls._forwardSSHPort:
+            cls.sshForwardingPort = cls.addConfigOption("ssh-forwarding-port", shortname=sshPortShortname, kind=int,
+                                                        default=defaultSshPort, metavar="PORT", showHelp=True,
+                                                        help="The port on localhost to forward to the QEMU ssh port. "
+                                                             "You can then use `ssh root@localhost -p $PORT` connect "
+                                                             "to the VM")
 
     def __init__(self, config):
         super().__init__(config)
         self.qemuBinary = self.config.sdkDir / "bin/qemu-system-cheri"
         self.currentKernel = BuildCHERIBSD.rootfsDir(self.config) / "boot/kernel/kernel"
         self.diskImage = BuildCheriBSDDiskImage.diskImagePath
+        self._diskOptions = ["-hda", self.diskImage]
+        self._projectSpecificOptions = []
+        self._qemuUserNetworking = True
 
     def process(self):
         if not self.qemuBinary.exists():
             self.dependencyError("QEMU is missing:", self.qemuBinary,
                                  installInstructions="Run `cheribuild.py qemu` or `cheribuild.py run -d`.")
         if not self.currentKernel.exists():
-            self.dependencyError("CheriBSD kernel is missing:", self.currentKernel,
+            self.dependencyError("Kernel is missing:", self.currentKernel,
                                  installInstructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
         if not self.diskImage.exists():
-            self.dependencyError("CheriBSD disk image is missing:", self.diskImage,
+            self.dependencyError("Disk image is missing:", self.diskImage,
                                  installInstructions="Run `cheribuild.py disk-image` or `cheribuild.py run -d`.")
-
-        if not self.isPortAvailable(self.sshForwardingPort):
-            print("Port usage information:")
-            if IS_FREEBSD:
-                runCmd("sockstat", "-P", "tcp", "-p", str(self.sshForwardingPort))
-            elif IS_LINUX:
-                runCmd("sh", "-c", "netstat -tulpne | grep \":" + str(str(self.sshForwardingPort)) + "\"")
-            fatalError("SSH forwarding port", self.sshForwardingPort, "is already in use!")
+        if self._forwardSSHPort and not self.isPortAvailable(self.sshForwardingPort):
+            self.printPortUsage(self.sshForwardingPort)
+            fatalError("SSH forwarding port", self.sshForwardingPort, "is already in use! Make sure you don't ",
+                       "already have a QEMU instance running or change the chosen port by setting the config option",
+                       self.target + "/ssh-forwarding-port")
 
         monitorOptions = []
         if self.useTelnet:
-            monitorPort = self.sshForwardingPort + 1
+            monitorPort = self.useTelnet
             monitorOptions = ["-monitor", "telnet:127.0.0.1:" + str(monitorPort) + ",server,nowait"]
             if not self.isPortAvailable(monitorPort):
                 warningMessage("Cannot connect QEMU montitor to port", monitorPort)
-                if self.queryYesNo("Will connect the monitor to stdio instead. Continue?"):
+                self.printPortUsage(monitorPort)
+                if self.queryYesNo("Will connect the QEMU monitor to stdio instead. Continue?"):
                     monitorOptions = []
                 else:
                     fatalError("Monitor port not available and stdio is not acceptable.")
                     return
-
-        print("About to run QEMU with image", self.diskImage, "and kernel", self.currentKernel,
-              coloured(AnsiColour.green, "\nListening for SSH connections on localhost:" +
-                       str(self.sshForwardingPort)))
         logfileOptions = []
         if self.logfile:
             logfileOptions = ["-D", self.logfile]
@@ -130,16 +132,29 @@ class LaunchQEMU(SimpleProject):
                 self.createSymlink(logPath / filename, latestSymlink, relative=True, cwd=logPath)
             logfileOptions = ["-D", logPath / filename]
         # input("Press enter to continue")
-        runCmd([self.qemuBinary, "-M", "malta",  # malta cpu
-                "-kernel", self.currentKernel,  # assume the current image matches the kernel currently build
-                "-nographic",  # no GPU
-                "-m", "2048",  # 2GB memory
-                "-hda", self.diskImage,
-                "-net", "nic", "-net", "user",
-                # bind the qemu ssh port to the hosts port 9999
-                "-redir", "tcp:" + str(self.sshForwardingPort) + "::22",
-                ] + monitorOptions + logfileOptions + self.extraOptions,
-               stdout=sys.stdout)  # even with --quiet we want stdout here
+        qemuCommand = [
+            self.qemuBinary, "-M", "malta",  # malta cpu
+            "-kernel", self.currentKernel,  # assume the current image matches the kernel currently built
+            "-m", "2048",  # 2GB memory
+            "-nographic",  # no GPU
+        ] + self._projectSpecificOptions + self._diskOptions + monitorOptions + logfileOptions + self.extraOptions
+        if self._qemuUserNetworking:
+            qemuCommand += ["-net", "nic", "-net", "user"]
+        statusUpdate("About to run QEMU with image", self.diskImage, "and kernel", self.currentKernel)
+        if self._forwardSSHPort:
+            # bind the qemu ssh port to the hosts port
+            qemuCommand += ["-redir", "tcp:" + str(self.sshForwardingPort) + "::22"]
+            print(coloured(AnsiColour.green, "\nListening for SSH connections on localhost:", self.sshForwardingPort))
+
+        runCmd(qemuCommand, stdout=sys.stdout, stderr=sys.stderr)  # even with --quiet we want stdout here
+
+    @staticmethod
+    def printPortUsage(port: int):
+        print("Port", port, "usage information:")
+        if IS_FREEBSD:
+            runCmd("sockstat", "-P", "tcp", "-p", str(port))
+        elif IS_LINUX:
+            runCmd("sh", "-c", "netstat -tulpne | grep \":" + str(port) + "\"")
 
     @staticmethod
     def isPortAvailable(port: int):
@@ -153,7 +168,7 @@ class LaunchQEMU(SimpleProject):
 
 class LaunchFreeBSDMipsQEMU(LaunchQEMU):
     target = "run-freebsd-mips"
-    projectName = "run-qemu"
+    projectName = "run-freebsd-mips"
     dependencies = ["qemu", "disk-image-freebsd-mips"]
 
     @classmethod
@@ -168,3 +183,34 @@ class LaunchFreeBSDMipsQEMU(LaunchQEMU):
         # FIXME: these should be config options
         self.currentKernel = BuildFreeBSD.rootfsDir(self.config) / "boot/kernel/kernel"
         self.diskImage = BuildFreeBSDDiskImage.diskImagePath
+
+
+class LaunchCheriOSQEMU(LaunchQEMU):
+    target = "run-cherios"
+    projectName = "run-cherios"
+    dependencies = ["qemu", "cherios"]
+    _forwardSSHPort = False
+    _qemuUserNetworking = False
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
+                                   defaultSshPort=defaultSshForwardingPort() + 4,
+                                   defaultTelnetPort=defaultTelnetPort() + 4,
+                                   **kwargs)
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        # FIXME: these should be config options
+        self.currentKernel = BuildCheriOS.buildDir / "boot/cherios.elf"
+        self.diskImage = self.config.outputRoot / "cherios-disk.img"
+        self._projectSpecificOptions = ["-no-reboot"]
+        self._diskOptions = ["-drive", "if=none,file=" + str(self.diskImage) + ",id=drv,format=raw",
+                             "-device", "virtio-blk-device,drive=drv"]
+        self._qemuUserNetworking = False
+
+    def process(self):
+        if not self.diskImage.exists():
+            if self.queryYesNo("CheriOS disk image is missing. Would you like to create a zero-filled 1MB image?"):
+                runCmd("dd", "if=/dev/zero", "of=" + str(self.diskImage), "bs=1M", "count=1")
+        super().process()
