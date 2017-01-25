@@ -52,7 +52,8 @@ def defaultClangTool(basename: str):
         guess = shutil.which(basename + "-%d.%d" % version)
         if guess:
             return guess
-    return None
+    guess = shutil.which(basename)
+    return guess
 
 
 class CheriConfig(object):
