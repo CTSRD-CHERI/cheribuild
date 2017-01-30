@@ -140,6 +140,9 @@ class BuildFreeBSD(Project):
             self.makedirs(self.installDir)
 
     def install(self):
+        if self.subdirOverride:
+            statusUpdate("Skipping install step because SUBDIR_OVERRIDE was set")
+            return
         # keeping the old rootfs directory prior to install can sometimes cause the build to fail so delete by default
         if not self.keepOldRootfs:
             self._removeOldRootfs()
