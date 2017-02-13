@@ -60,6 +60,7 @@ class BuildFreestandingSdk(SimpleProject):
         super().__init__(config)
         if IS_FREEBSD:
             self._addRequiredSystemTool("ar")
+        self.cheribsdBuildRoot = None
 
     def installCMakeConfig(self):
         date = datetime.datetime.now()
@@ -89,7 +90,6 @@ class BuildFreestandingSdk(SimpleProject):
             toolsToSymlink += self.copyCrossToolsFromCheriBSD(binutilsBinaries)
             for tool in set(toolsToSymlink):
                 self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin" / tool)
-
             # For some reason CheriBSD does not build a cross ar, let's symlink the system one to the SDK bindir
             runCmd("ln", "-fsn", shutil.which("ar"), self.config.sdkDir / "bin/ar",
                    cwd=self.config.sdkDir / "bin", printVerboseOnly=True)
@@ -104,8 +104,13 @@ class BuildFreestandingSdk(SimpleProject):
         # if we pass a string starting with a slash to Path() it will reset to that absolute path
         # luckily we have to prepend mips.mips64, so it works out fine
         # expands to e.g. /home/alr48/cheri/output/cheribsd-obj/mips.mips64/home/alr48/cheri/cheribsd
-        self.cheribsdBuildRoot = Path(BuildCHERIBSD.getBuildDir(self.config),
-                                      "mips.mips64" + str(BuildCHERIBSD.getSourceDir(self.config)))
+        possibleBuildRoots = [Path(BuildCHERIBSD.buildDir, "mips.mips64" + path) for path in
+                              (str(BuildCHERIBSD.sourceDir), os.path.realpath(str(BuildCHERIBSD.sourceDir)))]
+        for directory in possibleBuildRoots:
+            if directory.exists():
+                self.cheribsdBuildRoot = directory
+        if not self.cheribsdBuildRoot:
+            fatalError("CheriBSD build directory is missing! (Tried", possibleBuildRoots, ")")
         CHERITOOLS_OBJ = self.cheribsdBuildRoot / "tmp/usr/bin/"
         CHERIBOOTSTRAPTOOLS_OBJ = self.cheribsdBuildRoot / "tmp/legacy/usr/bin/"
         CHERILIBEXEC_OBJ = self.cheribsdBuildRoot / "tmp/usr/libexec/"
