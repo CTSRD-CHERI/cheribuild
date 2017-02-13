@@ -302,9 +302,9 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
         if self.config.noLogfile:
             if stdoutFilter is None:
                 # just run the process connected to the current stdout/stdin
-                subprocess.check_call(args, cwd=str(cwd), env=newEnv)
+                check_call_handle_noexec(args, cwd=str(cwd), env=newEnv)
             else:
-                make = subprocess.Popen(args, cwd=str(cwd), stdout=subprocess.PIPE, env=newEnv)
+                make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, env=newEnv)
                 self.__runProcessWithFilteredOutput(make, None, stdoutFilter, cmdStr)
             return
 
@@ -318,9 +318,9 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             logfile.write(cmdStr.encode("utf-8") + b"\n\n")
             if self.config.quiet:
                 # a lot more efficient than filtering every line
-                subprocess.check_call(args, cwd=str(cwd), stdout=logfile, stderr=logfile, env=newEnv)
+                check_call_handle_noexec(args, cwd=str(cwd), stdout=logfile, stderr=logfile, env=newEnv)
                 return
-            make = subprocess.Popen(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=newEnv)
+            make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=newEnv)
             self.__runProcessWithFilteredOutput(make, logfile, stdoutFilter, cmdStr)
 
     def __runProcessWithFilteredOutput(self, proc: subprocess.Popen, logfile: "typing.Optional[io.FileIO]",

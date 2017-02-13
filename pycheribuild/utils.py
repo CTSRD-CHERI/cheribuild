@@ -30,6 +30,7 @@
 import contextlib
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 import traceback
@@ -51,7 +52,7 @@ else:
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "CheriConfig", "IS_LINUX", "IS_FREEBSD", "printCommand", "includeLocalFile",  # no-combine
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
-           "parseOSRelease", "warningMessage", "Type_T", "typing"]  # no-combine
+           "parseOSRelease", "warningMessage", "Type_T", "typing", "popen_handle_noexec", "check_call_handle_noexec"]  # no-combine
 
 
 if sys.version_info < (3, 4):
@@ -75,12 +76,6 @@ if sys.version_info < (3, 5):
             return "{}({})".format(type(self).__name__, ', '.join(args))
 else:
     from subprocess import CompletedProcess
-
-# type hinting for IDE
-try:
-    import typing
-except ImportError:
-    typing = None
 
 IS_LINUX = sys.platform.startswith("linux")
 IS_FREEBSD = sys.platform.startswith("freebsd")
@@ -110,18 +105,58 @@ def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remain
     print(coloured(colour, newArgs, sep=sep), flush=True, **kwargs)
 
 
+def getInterpreter(cmdline: "typing.Sequence[str]") -> "typing.List[str]":
+    """
+    :param executable: The path to check
+    :return: The interpreter command if the executable does not have execute permissions
+    """
+    executable = Path(cmdline[0])
+    print(executable, os.access(str(executable), os.X_OK), cmdline)
+    if not executable.exists():
+        executable = Path(shutil.which(str(executable)))
+    statusUpdate(executable, "is not executable, looking for shebang:", end=" ")
+    with executable.open("r", encoding="utf-8") as f:
+        firstLine = f.readline()
+        if firstLine.startswith("#!"):
+            interpreter = shlex.split(firstLine[2:])
+            statusUpdate("Will run", executable, "using", interpreter)
+            return interpreter
+        else:
+            statusUpdate("No shebang found.")
+            return None
+
+def check_call_handle_noexec(cmdline: "typing.List[str]", **kwargs):
+    try:
+        return subprocess.check_call(cmdline, **kwargs)
+    except PermissionError as e:
+        interpreter = getInterpreter(cmdline)
+        if interpreter:
+            return subprocess.check_call(interpreter + cmdline, **kwargs)
+        raise subprocess.CalledProcessError(e, cmdline)
+
+
+def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Popen:
+    try:
+        return subprocess.Popen(cmdline, **kwargs)
+    except PermissionError as e:
+        interpreter = getInterpreter(cmdline)
+        if interpreter:
+            return subprocess.Popen(interpreter + cmdline, **kwargs)
+        raise subprocess.CalledProcessError(e, cmdline)
+
+
 def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]"=None, timeout=None,
            printVerboseOnly=False, **kwargs):
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         cmdline = args[0]  # list with parameters was passed
     else:
         cmdline = args
-    cmdline = list(map(str, cmdline))  # make sure they are all strings
+    cmdline = list(map(str, cmdline))  # ensure it's all strings so that subprocess can handle it
+    # When running scripts from a noexec filesystem try to read the interpreter and run that
     printCommand(cmdline, cwd=kwargs.get("cwd"), printVerboseOnly=printVerboseOnly)
     kwargs["cwd"] = str(kwargs["cwd"]) if "cwd" in kwargs else os.getcwd()
     if _cheriConfig.pretend:
         return CompletedProcess(args=cmdline, returncode=0, stdout=b"", stderr=b"")
-
     # actually run the process now:
     if input is not None:
         assert "stdin" not in kwargs  # we need to use stdin here
@@ -136,7 +171,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
         kwargs["stderr"] = subprocess.PIPE
     elif _cheriConfig.quiet and "stdout" not in kwargs:
         kwargs["stdout"] = subprocess.DEVNULL
-    with subprocess.Popen(cmdline, **kwargs) as process:
+    with popen_handle_noexec(cmdline, **kwargs) as process:
         try:
             stdout, stderr = process.communicate(input, timeout=timeout)
         except subprocess.TimeoutExpired:
