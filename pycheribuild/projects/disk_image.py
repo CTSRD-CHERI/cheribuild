@@ -30,6 +30,7 @@
 import os
 import pwd
 import shutil
+import shlex
 import stat
 import tempfile
 
@@ -44,6 +45,31 @@ from pathlib import Path
 # Mount the filesystem of a BSD VM: guestmount -a /foo/bar.qcow2 -m /dev/sda1:/:ufstype=ufs2:ufs --ro /mnt/foo
 # ufstype=ufs2 is required as the Linux kernel can't automatically determine which UFS filesystem is being used
 # Same thing is possible with qemu-nbd, but needs root (might be faster)
+
+
+class MtreeEntry(object):
+    def __init__(self, path: Path, attributes: "typing.Dict[str, str]"):
+        self.path = path
+        self.attributes = attributes
+
+    @classmethod
+    def parse(cls, line: str) -> "MtreeEntry":
+        elements = shlex.split(line)
+        path = elements[0]
+        attrDict = dict(map(lambda s: s.split(sep="=", maxsplit=1), elements[1:]))
+        return MtreeEntry(path, attrDict)
+
+    @classmethod
+    def parseAllDirsInMtree(cls, mtreeFile: Path) -> "typing.List[MtreeEntry]":
+        with mtreeFile.open("r", encoding="utf-8") as f:
+            result = []
+            for line in f.readlines():
+                if " type=dir" in line:
+                    try:
+                        result.append(MtreeEntry.parse(line))
+                    except:
+                        warningMessage("Could not parse line", line, "in mtree file", mtreeFile)
+            return result
 
 
 class BuildDiskImageBase(SimpleProject):
@@ -71,6 +97,7 @@ class BuildDiskImageBase(SimpleProject):
         self.rootfsDir = sourceClass.rootfsDir(self.config)
         self.userGroupDbDir = sourceClass.getSourceDir(self.config) / "etc"
         self.minimumImageSize = "1g",  # minimum image size = 1GB
+        self.dirsInMtree = []
 
     @staticmethod
     def getModeString(path: Path):
@@ -114,6 +141,11 @@ class BuildDiskImageBase(SimpleProject):
             if parent in self.dirsAddedToManifest:
                 # print("Dir", parent, "is already in METALOG")
                 continue
+            nameInMtree = "./" + str(parent)
+            if any(entry.path == nameInMtree for entry in self.dirsInMtree):
+                print("Not adding mtree entry for /" + str(parent), ", it is already in original mtree")
+                self.dirsAddedToManifest.append(parent)
+                continue
             # print("Adding", str(self.rootfsDir / parent))
             runCmd(["install", "-d"] + commonArgs + modeAndFileArg(self.rootfsDir / parent), printVerboseOnly=True)
             self.dirsAddedToManifest.append(parent)
@@ -144,6 +176,7 @@ class BuildDiskImageBase(SimpleProject):
     def prepareRootfs(self, outDir: Path):
         self.manifestFile = outDir / "METALOG"
         self.installFile(self.rootfsDir / "METALOG", self.manifestFile)
+        self.dirsInMtree = MtreeEntry.parseAllDirsInMtree(self.rootfsDir / "METALOG")
 
         # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
         # If they do not exist in the extra-files directory yet we generate a default one and use that
