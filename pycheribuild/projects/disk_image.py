@@ -30,6 +30,7 @@
 import os
 import pwd
 import shutil
+import stat
 import tempfile
 
 from ..project import SimpleProject
@@ -71,8 +72,18 @@ class BuildDiskImageBase(SimpleProject):
         self.userGroupDbDir = sourceClass.getSourceDir(self.config) / "etc"
         self.minimumImageSize = "1g",  # minimum image size = 1GB
 
-    def addFileToImage(self, file: Path, targetDir: str, user="root", group="wheel", mode="0644"):
+    @staticmethod
+    def getModeString(path: Path):
+        try:
+            return "0{0:o}".format(stat.S_IMODE(path.stat().st_mode))  # format as octal with leading 0 prefix
+        except:
+            warningMessage("Failed to stat", path, "assuming mode 0644")
+            return "0644"
+
+    def addFileToImage(self, file: Path, targetDir: str, user="root", group="wheel", mode=None):
         assert not targetDir.startswith("/")
+        if mode is None:
+            mode = self.getModeString(file)
         # e.g. "install -N /home/alr48/cheri/cheribsd/etc -U -M /home/alr48/cheri/output/rootfs//METALOG
         # -D /home/alr48/cheri/output/rootfs -o root -g wheel -m 444 alarm.3.gz
         # /home/alr48/cheri/output/rootfs/usr/share/man/man3/"
@@ -93,6 +104,10 @@ class BuildDiskImageBase(SimpleProject):
         # Add all the parent directories to METALOG
         # we have to reverse the Path().parents as we need to add usr before usr/share
         # also remove the last entry from parents as that is always Path(".")
+
+        def modeAndFileArg(path):
+            return ["-m", self.getModeString(path), str(path)]
+
         dirsToCheck = [Path(targetDir)]
         dirsToCheck.extend(Path(targetDir).parents)
         for parent in reversed(dirsToCheck[:-1]):
@@ -100,7 +115,7 @@ class BuildDiskImageBase(SimpleProject):
                 # print("Dir", parent, "is already in METALOG")
                 continue
             # print("Adding", str(self.rootfsDir / parent))
-            runCmd(["install", "-d"] + commonArgs + ["-m", "0755", str(self.rootfsDir / parent)], printVerboseOnly=True)
+            runCmd(["install", "-d"] + commonArgs + modeAndFileArg(self.rootfsDir / parent), printVerboseOnly=True)
             self.dirsAddedToManifest.append(parent)
 
         # need to pass target file and destination dir so that METALOG can be filled correctly
