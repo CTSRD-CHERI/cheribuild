@@ -197,6 +197,7 @@ class ConfigLoader(object):
                           "be a list, got a string instead -> assuming the correct value is ", result, sep=""))
             if self.valueType == Path:
                 expanded = os.path.expanduser(os.path.expandvars(str(result)))
+                # print("Expanding env vars in", result, "->", expanded, os.environ)
                 result = Path(expanded).absolute()
             else:
                 result = self.valueType(result)  # make sure it has the right type (e.g. Path, int, bool, str)

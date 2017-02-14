@@ -76,6 +76,7 @@ class CheriConfig(object):
                                                      "ensures dependencies are built before the real target. (run "
                                                      " with --list-targets for more information)")
 
+    # TODO: use action="store_const" for these two options
     _buildCheri128 = ConfigLoader.addBoolOption("cheri-128", "-128", group=ConfigLoader.cheriBitsGroup,
                                                 help="Shortcut for --cheri-bits=128")
     _buildCheri256 = ConfigLoader.addBoolOption("cheri-256", "-256", group=ConfigLoader.cheriBitsGroup,
@@ -135,6 +136,8 @@ class CheriConfig(object):
         else:
             self.cheriBits = self._cheriBits
         self.cheriBitsStr = str(self.cheriBits)
+        # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
+        os.environ["CHERI_BITS"] = self.cheriBitsStr
 
         if not self.quiet:
             print("Sources will be stored in", self.sourceRoot)
