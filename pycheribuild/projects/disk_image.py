@@ -83,7 +83,6 @@ class BuildDiskImageBase(SimpleProject):
             "-M", str(self.manifestFile),  # the mtree manifest to write the entry to
             "-D", str(self.rootfsDir),  # DESTDIR (will be stripped from the start of the mtree file
             "-o", user, "-g", group,  # uid and gid
-            "-m", mode,  # access rights
         ]
         # install -d: Create directories. Missing parent directories are created as required.
         # If we only create the parent directory if it doesn't exist yet we might break the build if rootfs wasn't
@@ -101,11 +100,11 @@ class BuildDiskImageBase(SimpleProject):
                 # print("Dir", parent, "is already in METALOG")
                 continue
             # print("Adding", str(self.rootfsDir / parent))
-            runCmd(["install", "-d"] + commonArgs + [str(self.rootfsDir / parent)], printVerboseOnly=True)
+            runCmd(["install", "-d"] + commonArgs + ["-m", "0755", str(self.rootfsDir / parent)], printVerboseOnly=True)
             self.dirsAddedToManifest.append(parent)
 
         # need to pass target file and destination dir so that METALOG can be filled correctly
-        runCmd(["install"] + commonArgs + [str(file), str(parentDir)], printVerboseOnly=True)
+        runCmd(["install"] + commonArgs + ["-m", mode, str(file), str(parentDir)], printVerboseOnly=True)
         if file in self.extraFiles:
             self.extraFiles.remove(file)  # remove it from extraFiles so we don't install it twice
 
