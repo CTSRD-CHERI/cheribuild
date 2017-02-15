@@ -201,6 +201,12 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                help="Skip the buildworld step -> only build and install the kernel")
 
         cls.forceClang = cls.addBoolOption("force-clang", help="Use clang for building everything")
+        defaultCheriCC = ConfigLoader.ComputedDefaultValue(
+            function=lambda config, unused: config.sdkDir / "bin/clang",
+            asString="${SDK_DIR}/bin/clang")
+        cls.cheriCC = cls.addPathOption("cheri-cc", help="Override the compiler used to build CHERI code",
+                                        default=defaultCheriCC)
+
         cls.forceSDKLinker = cls.addBoolOption("force-sdk-linker", help="Let clang use the linker from the installed "
                                                "SDK instead of the one built in the bootstrap process. WARNING: May "
                                                "cause unexpected linker errors!")
@@ -208,8 +214,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     def __init__(self, config: CheriConfig):
         self.installAsRoot = os.getuid() == 0
         self.binutilsDir = config.sdkDir / "mips64/bin"
-        self.cheriCC = config.sdkDir / "bin/clang"
-        self.cheriCXX = config.sdkDir / "bin/clang++"
+        self.cheriCXX = self.cheriCC.parent / "clang++"
         super().__init__(config, archBuildFlags=[
             "CHERI=" + config.cheriBitsStr,
             # "-dCl",  # add some debug output to trace commands properly
