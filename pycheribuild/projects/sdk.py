@@ -77,7 +77,7 @@ class BuildFreestandingSdk(SimpleProject):
         # Compile the cheridis helper (TODO: add it to the LLVM repo instead?)
         cheridisSrc = includeLocalFile("files/cheridis.c")
         self.makedirs(self.config.sdkDir / "bin")
-        runCmd("cc", "-DLLVM_PATH=\"%s\"" % str(self.config.sdkDir / "bin"), "-x", "c", "-",
+        runCmd("cc", "-DLLVM_PATH=\"%s/\"" % str(self.config.sdkDir / "bin"), "-x", "c", "-",
                "-o", self.config.sdkDir / "bin/cheridis", input=cheridisSrc)
 
     def process(self):
