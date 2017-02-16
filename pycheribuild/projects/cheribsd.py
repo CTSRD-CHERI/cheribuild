@@ -131,7 +131,7 @@ class BuildFreeBSD(Project):
                      compilationDbName="compile_commands_" + self.kernelConfig + ".json")
 
     def _removeOldRootfs(self):
-        assert not self.keepOldRootfs
+        assert self.config.clean or not self.keepOldRootfs
         if not self.skipBuildworld:
             # make sure the old install is purged before building, otherwise we might get strange errors
             # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
