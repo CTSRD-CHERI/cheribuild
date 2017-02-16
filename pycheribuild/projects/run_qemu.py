@@ -85,7 +85,7 @@ class LaunchQEMU(SimpleProject):
         self.qemuBinary = self.config.sdkDir / "bin/qemu-system-cheri"
         self.currentKernel = BuildCHERIBSD.rootfsDir(self.config) / "boot/kernel/kernel"
         self.diskImage = BuildCheriBSDDiskImage.diskImagePath
-        self._diskOptions = ["-hda", self.diskImage]
+        self._diskOptions = None
         self._projectSpecificOptions = []
         self._qemuUserNetworking = True
 
@@ -96,14 +96,18 @@ class LaunchQEMU(SimpleProject):
         if not self.currentKernel.exists():
             self.dependencyError("Kernel is missing:", self.currentKernel,
                                  installInstructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
-        if not self.diskImage.exists():
-            self.dependencyError("Disk image is missing:", self.diskImage,
-                                 installInstructions="Run `cheribuild.py disk-image` or `cheribuild.py run -d`.")
+        if self.diskImage:
+            if self._diskOptions is None:
+                self._diskOptions = ["-hda", self.diskImage]
+            if not self.diskImage.exists():
+                self.dependencyError("Disk image is missing:", self.diskImage,
+                                     installInstructions="Run `cheribuild.py disk-image` or `cheribuild.py run -d`.")
         if self._forwardSSHPort and not self.isPortAvailable(self.sshForwardingPort):
             self.printPortUsage(self.sshForwardingPort)
             fatalError("SSH forwarding port", self.sshForwardingPort, "is already in use! Make sure you don't ",
                        "already have a QEMU instance running or change the chosen port by setting the config option",
                        self.target + "/ssh-forwarding-port")
+
 
         monitorOptions = []
         if self.useTelnet:
