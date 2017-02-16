@@ -102,19 +102,21 @@ class BuildDiskImageBase(SimpleProject):
     @staticmethod
     def getModeString(path: Path):
         try:
+            # print(path, path.stat())
             return "0{0:o}".format(stat.S_IMODE(path.stat().st_mode))  # format as octal with leading 0 prefix
-        except:
-            warningMessage("Failed to stat", path, "assuming mode 0644")
+        except Exception as e:
+            warningMessage("Failed to stat", path, "assuming mode 0644: ", e)
             return "0644"
 
-    def addFileToImage(self, file: Path, targetDir: str, user="root", group="wheel", mode=None):
-        assert not targetDir.startswith("/")
+    def addFileToImage(self, file: Path, *, baseDirectory: Path, user="root", group="wheel", mode=None):
+        pathInTarget = file.relative_to(baseDirectory)
+        assert not str(pathInTarget).startswith(".."), pathInTarget
+        statusUpdate(file, " -> /", pathInTarget, sep="")
         if mode is None:
             mode = self.getModeString(file)
         # e.g. "install -N /home/alr48/cheri/cheribsd/etc -U -M /home/alr48/cheri/output/rootfs//METALOG
         # -D /home/alr48/cheri/output/rootfs -o root -g wheel -m 444 alarm.3.gz
         # /home/alr48/cheri/output/rootfs/usr/share/man/man3/"
-        parentDir = self.rootfsDir / targetDir
         commonArgs = [
             "-N", str(self.userGroupDbDir),  # Use a custom user/group database text file
             "-U",  # Indicate that install is running unprivileged (do not change uid/gid)
@@ -132,25 +134,25 @@ class BuildDiskImageBase(SimpleProject):
         # we have to reverse the Path().parents as we need to add usr before usr/share
         # also remove the last entry from parents as that is always Path(".")
 
-        def modeAndFileArg(path):
-            return ["-m", self.getModeString(path), str(path)]
-
-        dirsToCheck = [Path(targetDir)]
-        dirsToCheck.extend(Path(targetDir).parents)
-        for parent in reversed(dirsToCheck[:-1]):
+        # remove the last entry (.) from parents
+        dirsToCheck = list(pathInTarget.parents)[:-1]
+        # print("dirs to check:", list(dirsToCheck))
+        for parent in reversed(dirsToCheck):
             if parent in self.dirsAddedToManifest:
-                # print("Dir", parent, "is already in METALOG")
+                # print("Dir", parent, "is has already been added")
                 continue
             nameInMtree = "./" + str(parent)
             if any(entry.path == nameInMtree for entry in self.dirsInMtree):
-                print("Not adding mtree entry for /" + str(parent), ", it is already in original mtree")
+                # print("Not adding mtree entry for /" + str(parent), ", it is already in original METALOG")
                 self.dirsAddedToManifest.append(parent)
                 continue
-            # print("Adding", str(self.rootfsDir / parent))
-            runCmd(["install", "-d"] + commonArgs + modeAndFileArg(self.rootfsDir / parent), printVerboseOnly=True)
+            # print("Adding dir", str(baseDirectory / parent))
+            runCmd(["install", "-d"] + commonArgs + ["-m", self.getModeString(baseDirectory / parent),
+                                                     str(self.rootfsDir / parent)], printVerboseOnly=True)
             self.dirsAddedToManifest.append(parent)
 
         # need to pass target file and destination dir so that METALOG can be filled correctly
+        parentDir = self.rootfsDir / pathInTarget.parent
         runCmd(["install"] + commonArgs + ["-m", mode, str(file), str(parentDir)], printVerboseOnly=True)
         if file in self.extraFiles:
             self.extraFiles.remove(file)  # remove it from extraFiles so we don't install it twice
@@ -171,12 +173,13 @@ class BuildDiskImageBase(SimpleProject):
                 print("Generating /", pathInImage, " with the following contents:\n",
                       coloured(AnsiColour.green, contents), sep="", end="")
             self.writeFile(targetFile, contents, noCommandPrint=True, overwrite=False)
-        self.addFileToImage(targetFile, str(Path(pathInImage).parent))
+        self.addFileToImage(targetFile, baseDirectory=outDir)
 
     def prepareRootfs(self, outDir: Path):
         self.manifestFile = outDir / "METALOG"
-        self.installFile(self.rootfsDir / "METALOG", self.manifestFile)
-        self.dirsInMtree = MtreeEntry.parseAllDirsInMtree(self.rootfsDir / "METALOG")
+        originalMetalog = self.rootfsDir / "METALOG"
+        self.installFile(originalMetalog, self.manifestFile)
+        self.dirsInMtree = MtreeEntry.parseAllDirsInMtree(originalMetalog) if originalMetalog.exists() else []
 
         # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
         # If they do not exist in the extra-files directory yet we generate a default one and use that
@@ -308,7 +311,7 @@ nfs_client_enable="YES"
             for p in self.extraFiles.copy():
                 pathInImage = p.relative_to(self.extraFilesDir)
                 print("Adding user provided file /", pathInImage, " to disk image.", sep="")
-                self.addFileToImage(p, str(pathInImage.parent))
+                self.addFileToImage(p, baseDirectory=self.extraFilesDir)
             # finally create the disk image
             self.makeImage()
 
@@ -328,8 +331,8 @@ nfs_client_enable="YES"
                 runCmd("ssh-keygen", "-t", keyType,
                        "-N", "",  # no passphrase
                        "-f", str(privateKey))
-            self.addFileToImage(privateKey, "etc/ssh", mode="0600")
-            self.addFileToImage(publicKey, "etc/ssh", mode="0644")
+            self.addFileToImage(privateKey, baseDirectory=self.extraFilesDir, mode="0600")
+            self.addFileToImage(publicKey, baseDirectory=self.extraFilesDir, mode="0644")
 
 
 def _defaultDiskImagePath(conf: "CheriConfig", cls):
