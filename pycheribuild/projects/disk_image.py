@@ -293,9 +293,11 @@ nfs_client_enable="YES"
 
         if self.diskImagePath.is_file():
             # only show prompt if we can actually input something to stdin
-            print("An image already exists (" + str(self.diskImagePath) + "). ", end="")
-            if not self.queryYesNo("Overwrite?", defaultResult=True):
-                return  # we are done here
+            if not self.config.clean:
+                # with --clean always delete the image
+                print("An image already exists (" + str(self.diskImagePath) + "). ", end="")
+                if not self.queryYesNo("Overwrite?", defaultResult=True):
+                    return  # we are done here
             printCommand("rm", self.diskImagePath)
             self.diskImagePath.unlink()
 
