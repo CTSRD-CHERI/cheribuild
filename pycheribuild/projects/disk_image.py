@@ -77,12 +77,14 @@ class BuildDiskImageBase(SimpleProject):
     diskImagePath = None  # type: Path
 
     @classmethod
-    def setupConfigOptions(cls, extraFilesShortname=None, **kwargs):
+    def setupConfigOptions(cls, *, defaultHostname, extraFilesShortname=None, **kwargs):
         super().setupConfigOptions()
         cls.extraFilesDir = cls.addPathOption("extra-files", shortname=extraFilesShortname, showHelp=True,
                                               default=lambda config, project: (config.sourceRoot / "extra-files"),
                                               help="A directory with additional files that will be added to the image "
                                                    "(default: '$SOURCE_ROOT/extra-files')", metavar="DIR")
+        cls.hostname = cls.addConfigOption("hostname", showHelp=True, default=defaultHostname, metavar="HOSTNAME",
+                                           help="The hostname to use for the QEMU image")
         cls.disableTMPFS = None
 
     def __init__(self, config, sourceClass: type(BuildFreeBSD)):
@@ -202,9 +204,8 @@ class BuildDiskImageBase(SimpleProject):
             self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw,noatime,async 1 1\n"
                                                                    "tmpfs /tmp tmpfs rw 0 0\n")
         # enable ssh and set hostname
-        hostUsername = pwd.getpwuid(os.geteuid())[0]
         # TODO: use separate file in /etc/rc.conf.d/ ?
-        rcConfContents = """hostname="qemu-cheri-{username}"
+        rcConfContents = """hostname="{hostname}"
 ifconfig_le0="DHCP"  # use DHCP on the standard QEMU usermode nic
 background_dhclient="YES"  # launch dhclient in the background (hope it doesn't break sshd)
 defaultroute_delay=10  # 30 seconds default is a long time
@@ -216,7 +217,7 @@ cron_enable="NO"
 # devd should also be safe to disable to increase boot speed... Or not ... seems like it breaks network
 # devd_enable="NO"
 nfs_client_enable="YES"
-""".format(username=hostUsername)
+""".format(hostname=self.hostname)
         self.createFileForImage(outDir, "/etc/rc.conf", contents=rcConfContents)
 
         # make sure that the disk image always has the same SSH host keys
@@ -347,7 +348,11 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(extraFilesShortname="-extra-files", **kwargs)
+        hostUsername = pwd.getpwuid(os.geteuid())[0]
+        defaultHostname = ConfigLoader.ComputedDefaultValue(
+            function=lambda conf, unused: "qemu-cheri" + conf.cheriBitsStr + "-" + hostUsername,
+            asString="qemu-cheri${CHERI_BITS}-" + hostUsername)
+        super().setupConfigOptions(extraFilesShortname="-extra-files", defaultHostname=defaultHostname, **kwargs)
         defaultDiskImagePath = ConfigLoader.ComputedDefaultValue(
                 function=_defaultDiskImagePath, asString="$OUTPUT_ROOT/cheri256-disk.qcow2 or "
                                                          "$OUTPUT_ROOT/cheri128-disk.qcow2 depending on --cheri-bits.")
@@ -369,7 +374,8 @@ class BuildFreeBSDDiskImage(BuildDiskImageBase):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+        hostUsername = pwd.getpwuid(os.geteuid())[0]
+        super().setupConfigOptions(defaultHostname="qemu-mips-" + hostUsername, **kwargs)
         defaultDiskImagePath = ConfigLoader.ComputedDefaultValue(
                 function=lambda config, project: config.outputRoot / "freebsd-mips.qcow2",
                 asString="$OUTPUT_ROOT/freebsd-mips.qcow2")
