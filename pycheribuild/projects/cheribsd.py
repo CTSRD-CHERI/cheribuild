@@ -144,7 +144,7 @@ class BuildFreeBSD(Project):
             statusUpdate("Skipping install step because SUBDIR_OVERRIDE was set")
             return
         # keeping the old rootfs directory prior to install can sometimes cause the build to fail so delete by default
-        if not self.keepOldRootfs:
+        if self.config.clean or not self.keepOldRootfs:
             self._removeOldRootfs()
         # don't use multiple jobs here
         installArgs = self.commonMakeArgs + ["DESTDIR=" + str(self.installDir)]
