@@ -62,8 +62,8 @@ class BuildLLVM(CMakeProject):
         self.configureArgs.extend([
             "-DLLVM_TOOL_LLDB_BUILD=OFF",  # disable LLDB for now
             # saves a bit of time and but might be slightly broken in current clang:
-            "-DCLANG_ENABLE_STATIC_ANALYZER=OFF",  # save some build time by skipping the static analyzer
-            "-DCLANG_ENABLE_ARCMT=OFF",  # need to disable ARCMT to disable static analyzer
+            # "-DCLANG_ENABLE_STATIC_ANALYZER=OFF",  # save some build time by skipping the static analyzer
+            # "-DCLANG_ENABLE_ARCMT=OFF",  # need to disable ARCMT to disable static analyzer
         ])
         if IS_FREEBSD:
             self.configureArgs.append("-DDEFAULT_SYSROOT=" + str(self.config.sdkSysrootDir))
