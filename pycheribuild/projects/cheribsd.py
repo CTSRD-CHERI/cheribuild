@@ -124,6 +124,8 @@ class BuildFreeBSD(Project):
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
         # so just omit the flag here if the user passes -j1 on the command line
         jflag = [self.config.makeJFlag] if self.config.makeJobs > 1 else []
+        if self.config.verbose:
+            self.runMake(self.commonMakeArgs, "showconfig", cwd=self.sourceDir)
         if not self.skipBuildworld:
             self.runMake(self.commonMakeArgs + jflag, "buildworld", cwd=self.sourceDir)
         # FIXME: does buildkernel work with SUBDIR_OVERRIDE? if not self.subdirOverride
@@ -200,7 +202,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         cls.skipBuildworld = cls.addBoolOption("only-build-kernel", shortname="-skip-buildworld", showHelp=True,
                                                help="Skip the buildworld step -> only build and install the kernel")
 
-        cls.forceClang = cls.addBoolOption("force-clang", help="Use clang for building everything")
+        cls.mipsToolchainPath = cls.addPathOption("mips-toolchain", help="Path to the mips64-unknown-freebsd-* tools")
         defaultCheriCC = ConfigLoader.ComputedDefaultValue(
             function=lambda config, unused: config.sdkDir / "bin/clang",
             asString="${SDK_DIR}/bin/clang")
@@ -220,11 +222,23 @@ class BuildCHERIBSD(BuildFreeBSD):
             # "-dCl",  # add some debug output to trace commands properly
             "CHERI_CC=" + str(self.cheriCC)])
 
-        if self.forceClang:
-            self.commonMakeArgs.append("XCC=" + str(self.config.sdkDir / "bin/cheri-unknown-freebsd-clang") + " -integrated-as")
-            self.commonMakeArgs.append("XCXX=" + str(self.config.sdkDir / "bin/cheri-unknown-freebsd-clang++") + " -integrated-as")
-            self.commonMakeArgs.append("XCFLAGS=-integrated-as")
-            self.commonMakeArgs.append("XCXXLAGS=-integrated-as")
+        if self.mipsToolchainPath:
+            cross_prefix = str(self.mipsToolchainPath / "bin/mips64-unknown-freebsd-")
+            # self.commonMakeArgs.append("CROSS_BINUTILS_PREFIX=" + cross_prefix)
+            # cross assembler
+            self.commonMakeArgs.append("XAS=" + cross_prefix + "clang -integrated-as")
+            self.commonMakeArgs.append("XCC=" + cross_prefix + "clang -integrated-as")
+            self.commonMakeArgs.append("XCXX=" + cross_prefix + "clang++")
+            self.commonMakeArgs.append("XCPP=" + cross_prefix + "clang-cpp")
+            # self.commonMakeArgs.append("XCFLAGS=-integrated-as")
+            # self.commonMakeArgs.append("XCXXLAGS=-integrated-as")
+            # don't build cross GCC and cross binutils
+            # self.commonMakeArgsappend("-DWITHOUT_CROSS_COMPILER") # This sets too much, we want elftoolchain and binutils
+            self.commonMakeArgs.append("-DWITHOUT_GCC")
+            self.commonMakeArgs.append("-DWITHOUT_GCC_BOOTSTRAP")
+            self.commonMakeArgs.append("-DWITHOUT_CLANG_BOOTSTRAP")
+            # self.commonMakeArgs.append("-DWITHOUT_BINUTILS_BOOTSTRAP")
+            # self.commonMakeArgs.append("-DWITHOUT_ELFTOOLCHAIN_BOOTSTRAP")
 
         self.commonMakeArgs.extend(self.makeOptions)
 
@@ -252,6 +266,10 @@ class BuildCHERIBSD(BuildFreeBSD):
             fatalError("CHERI CC does not exist: ", self.cheriCC)
         if not self.cheriCXX.is_file():
             fatalError("CHERI CXX does not exist: ", self.cheriCXX)
+        if self.mipsToolchainPath:
+            mipsCC = self.mipsToolchainPath / "bin/mips64-unknown-freebsd-clang"
+            if not mipsCC.is_file():
+                fatalError("MIPS toolchain specified but", mipsCC, "is missing.")
         # if not (self.binutilsDir / "as").is_file():
         #     fatalError("CHERI MIPS binutils are missing. Run 'cheribuild.py binutils'?")
         programsToMove = ["cheri-unknown-freebsd-ld", "mips4-unknown-freebsd-ld", "mips64-unknown-freebsd-ld", "ld",
