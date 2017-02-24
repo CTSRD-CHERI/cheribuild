@@ -66,9 +66,9 @@ class BuildLLVM(CMakeProject):
             # "-DCLANG_ENABLE_ARCMT=OFF",  # need to disable ARCMT to disable static analyzer
         ])
         if IS_FREEBSD:
-            self.configureArgs.append("-DDEFAULT_SYSROOT=" + str(self.config.sdkSysrootDir))
-            self.configureArgs.append("-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd")
-
+            # self.configureArgs.append("-DDEFAULT_SYSROOT=" + str(self.config.sdkSysrootDir))
+            # self.configureArgs.append("-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd")
+            pass
         if self.config.cheriBits == 128:
             self.configureArgs.append("-DLLVM_CHERI_IS_128=ON")
 
