@@ -65,6 +65,7 @@ class BuildFreeBSD(Project):
         cls.keepOldRootfs = cls.addBoolOption("keep-old-rootfs", help="Don't remove the whole old rootfs directory. "
                                               " This can speed up installing but may cause strange errors so is off "
                                               "by default")
+        cls.mipsToolchainPath = cls.addPathOption("mips-toolchain", help="Path to the mips64-unknown-freebsd-* tools")
         # override in CheriBSD
         cls.skipBuildworld = False
         cls.kernelConfig = "MALTA64"
@@ -103,6 +104,36 @@ class BuildFreeBSD(Project):
             "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
             "KERNCONF=" + self.kernelConfig,
         ])
+        self.externalToolchainArgs = []
+        if self.mipsToolchainPath:
+            cross_prefix = str(self.mipsToolchainPath / "bin/mips64-unknown-freebsd-")
+            # self.externalToolchainArgs.append("CROSS_BINUTILS_PREFIX=" + cross_prefix)
+            # cross assembler
+            # PIC code is the default so we have to add -fno-pic
+            clang_flags = " -integrated-as -mabi=n64 -fcolor-diagnostics -mxgot -fno-pic -mabicalls -D__ABICALLS__=1"
+            # self.externalToolchainArgs.append("XAS=" + cross_prefix + "clang" + clang_flags)
+            self.externalToolchainArgs.append("XCC=" + cross_prefix + "clang" + clang_flags)
+            self.externalToolchainArgs.append("XCXX=" + cross_prefix + "clang++" + clang_flags)
+            self.externalToolchainArgs.append("XCPP=" + cross_prefix + "clang-cpp" + clang_flags)
+            # self.externalToolchainArgs.append("XLD=" + cross_prefix + "ld.lld")
+            self.externalToolchainArgs.append("XLD_BFD=ld.bfd")
+            # HACK: hardcoded path from vica
+            # self.externalToolchainArgs.append("XOBJDUMP=/usr/local/bin/cheri-freebsd-objdump")
+            # self.externalToolchainArgs.append("XLD_BFD=/usr/local/bin/ld.bfd -m elf64btsmip_fbsd")
+
+            # self.externalToolchainArgs.append("XOBJDUMP=" + cross_prefix + "llvm-objdump")
+            # self.externalToolchainArgs.append("OBJDUMP_FLAGS=-d -S -s -t -r -print-imm-hex")
+            #add CSTD=gnu11?
+            # self.externalToolchainArgs.append("XCFLAGS=-integrated-as")
+            # self.externalToolchainArgs.append("XCXXLAGS=-integrated-as")
+            # don't build cross GCC and cross binutils
+            # self.externalToolchainArgs.append("-DWITHOUT_CROSS_COMPILER") # This sets too much, we want elftoolchain and binutils
+            self.externalToolchainArgs.append("-DWITHOUT_GCC")
+            self.externalToolchainArgs.append("-DWITHOUT_GCC_BOOTSTRAP")
+            self.externalToolchainArgs.append("-DWITHOUT_CLANG_BOOTSTRAP")
+            self.externalToolchainArgs.append("WERROR=-Wno-error")
+            # self.externalToolchainArgs.append("-DWITHOUT_BINUTILS_BOOTSTRAP")
+            # self.externalToolchainArgs.append("-DWITHOUT_ELFTOOLCHAIN_BOOTSTRAP")
 
         if not self.config.verbose and not self.config.quiet:
             # By default we only want to print the status updates -> use make -s so we have to do less filtering
@@ -125,12 +156,16 @@ class BuildFreeBSD(Project):
         # so just omit the flag here if the user passes -j1 on the command line
         jflag = [self.config.makeJFlag] if self.config.makeJobs > 1 else []
         if self.config.verbose:
-            self.runMake(self.commonMakeArgs, "showconfig", cwd=self.sourceDir)
+            self.runMake(self.commonMakeArgs + self.externalToolchainArgs, "showconfig", cwd=self.sourceDir)
         if not self.skipBuildworld:
-            self.runMake(self.commonMakeArgs + jflag, "buildworld", cwd=self.sourceDir)
-        # FIXME: does buildkernel work with SUBDIR_OVERRIDE? if not self.subdirOverride
-        self.runMake(self.commonMakeArgs + jflag, "buildkernel", cwd=self.sourceDir,
-                     compilationDbName="compile_commands_" + self.kernelConfig + ".json")
+            self.runMake(self.commonMakeArgs + self.externalToolchainArgs + jflag, "buildworld", cwd=self.sourceDir)
+        if not self.subdirOverride:
+            # We can't use the external mips toolchain for the kernel yet..
+            if self.externalToolchainArgs:
+                self.runMake(self.commonMakeArgs + jflag, "kernel-toolchain", cwd=self.sourceDir,
+                             compilationDbName="compile_commands_" + self.kernelConfig + ".json")
+            self.runMake(self.commonMakeArgs + jflag, "buildkernel", cwd=self.sourceDir,
+                         compilationDbName="compile_commands_" + self.kernelConfig + ".json")
 
     def _removeOldRootfs(self):
         assert self.config.clean or not self.keepOldRootfs
@@ -202,7 +237,6 @@ class BuildCHERIBSD(BuildFreeBSD):
         cls.skipBuildworld = cls.addBoolOption("only-build-kernel", shortname="-skip-buildworld", showHelp=True,
                                                help="Skip the buildworld step -> only build and install the kernel")
 
-        cls.mipsToolchainPath = cls.addPathOption("mips-toolchain", help="Path to the mips64-unknown-freebsd-* tools")
         defaultCheriCC = ConfigLoader.ComputedDefaultValue(
             function=lambda config, unused: config.sdkDir / "bin/clang",
             asString="${SDK_DIR}/bin/clang")
@@ -222,23 +256,6 @@ class BuildCHERIBSD(BuildFreeBSD):
             # "-dCl",  # add some debug output to trace commands properly
             "CHERI_CC=" + str(self.cheriCC)])
 
-        if self.mipsToolchainPath:
-            cross_prefix = str(self.mipsToolchainPath / "bin/mips64-unknown-freebsd-")
-            # self.commonMakeArgs.append("CROSS_BINUTILS_PREFIX=" + cross_prefix)
-            # cross assembler
-            self.commonMakeArgs.append("XAS=" + cross_prefix + "clang -integrated-as")
-            self.commonMakeArgs.append("XCC=" + cross_prefix + "clang -integrated-as")
-            self.commonMakeArgs.append("XCXX=" + cross_prefix + "clang++")
-            self.commonMakeArgs.append("XCPP=" + cross_prefix + "clang-cpp")
-            # self.commonMakeArgs.append("XCFLAGS=-integrated-as")
-            # self.commonMakeArgs.append("XCXXLAGS=-integrated-as")
-            # don't build cross GCC and cross binutils
-            # self.commonMakeArgsappend("-DWITHOUT_CROSS_COMPILER") # This sets too much, we want elftoolchain and binutils
-            self.commonMakeArgs.append("-DWITHOUT_GCC")
-            self.commonMakeArgs.append("-DWITHOUT_GCC_BOOTSTRAP")
-            self.commonMakeArgs.append("-DWITHOUT_CLANG_BOOTSTRAP")
-            # self.commonMakeArgs.append("-DWITHOUT_BINUTILS_BOOTSTRAP")
-            # self.commonMakeArgs.append("-DWITHOUT_ELFTOOLCHAIN_BOOTSTRAP")
 
         self.commonMakeArgs.extend(self.makeOptions)
 
