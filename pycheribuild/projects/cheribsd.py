@@ -254,7 +254,9 @@ class BuildCHERIBSD(BuildFreeBSD):
         super().__init__(config, archBuildFlags=[
             "CHERI=" + config.cheriBitsStr,
             # "-dCl",  # add some debug output to trace commands properly
-            "CHERI_CC=" + str(self.cheriCC)])
+            "CHERI_CC=" + str(self.cheriCC),
+            "CHERI_CXX=" + str(self.cheriCXX)
+        ])
 
 
         self.commonMakeArgs.extend(self.makeOptions)
