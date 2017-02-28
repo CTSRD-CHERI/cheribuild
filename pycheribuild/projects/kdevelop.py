@@ -35,7 +35,7 @@ from ..utils import *
 class BuildLibKompareDiff2(CMakeProject):
     defaultCMakeBuildType = "Debug"
     repository = "git://anongit.kde.org/libkomparediff2.git"
-    defaultInstallDir = CMakeProject._installToSDK
+    defaultInstallDir = CMakeProject._installToBootstrapTools
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -45,7 +45,7 @@ class BuildKDevplatform(CMakeProject):
     dependencies = ["libkomparediff2"]
     defaultCMakeBuildType = "Debug"
     repository = "https://github.com/RichardsonAlex/kdevplatform.git"
-    defaultInstallDir = CMakeProject._installToSDK
+    defaultInstallDir = CMakeProject._installToBootstrapTools
     appendCheriBitsToBuildDir = True
 
     def __init__(self, config: CheriConfig):
@@ -58,7 +58,7 @@ class BuildKDevelop(CMakeProject):
     dependencies = ["kdevplatform", "llvm"]
     defaultCMakeBuildType = "Debug"
     repository = "https://github.com/RichardsonAlex/kdevelop.git"
-    defaultInstallDir = CMakeProject._installToSDK
+    defaultInstallDir = CMakeProject._installToBootstrapTools
     appendCheriBitsToBuildDir = True
 
     def __init__(self, config: CheriConfig):
@@ -80,7 +80,7 @@ class StartKDevelop(SimpleProject):
         self._addRequiredSystemTool("qtpaths")
 
     def process(self):
-        kdevelopBinary = self.config.sdkDir / "bin/start-kdevelop.py"
+        kdevelopBinary = BuildKDevelop.installDir / "bin/start-kdevelop.py"
         if not kdevelopBinary.exists():
             self.dependencyError("KDevelop is missing:", kdevelopBinary,
                                  installInstructions="Run `cheribuild.py kdevelop` or `cheribuild.py " +
