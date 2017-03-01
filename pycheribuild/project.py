@@ -679,6 +679,15 @@ class CMakeProject(Project):
             self.configureArgs.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
         # Don't add the user provided options here, add them in configure() so that they are put last
 
+    def add_cmake_option(self, option: str, value):
+        if isinstance(value, bool):
+            value = "ON" if value else "OFF"
+        self.configureArgs.append("-D" + option + "=" + str(value))
+
+    def add_cmake_options(self, **kwargs):
+        for k, v in kwargs.items():
+            self.add_cmake_option(k, v)
+
     def _cmakeInstallStdoutFilter(self, line: bytes):
         # don't show the up-to date install lines
         if line.startswith(b"-- Up-to-date:"):

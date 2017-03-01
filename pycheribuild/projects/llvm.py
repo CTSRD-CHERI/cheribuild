@@ -56,21 +56,20 @@ class BuildLLVM(CMakeProject):
         self.cCompiler = config.clangPath
         self.cppCompiler = config.clangPlusPlusPath
         # this must be added after checkSystemDependencies
-        self.configureArgs.append("-DCMAKE_CXX_COMPILER=" + str(self.cppCompiler))
-        self.configureArgs.append("-DCMAKE_C_COMPILER=" + str(self.cCompiler))
-        # TODO: add another search for newer clang compilers? Probably not required as we can override it on cmdline
-        self.configureArgs.extend([
-            "-DLLVM_TOOL_LLDB_BUILD=OFF",  # disable LLDB for now
+        self.add_cmake_options(
+            CMAKE_CXX_COMPILER=self.cppCompiler,
+            CMAKE_C_COMPILER=self.cCompiler,
+            LLVM_TOOL_LLDB_BUILD=False,
             # saves a bit of time and but might be slightly broken in current clang:
-            # "-DCLANG_ENABLE_STATIC_ANALYZER=OFF",  # save some build time by skipping the static analyzer
-            # "-DCLANG_ENABLE_ARCMT=OFF",  # need to disable ARCMT to disable static analyzer
-        ])
+            # CLANG_ENABLE_STATIC_ANALYZER=False,  # save some build time by skipping the static analyzer
+            # CLANG_ENABLE_ARCMT=False",  # need to disable ARCMT to disable static analyzer
+        )
         if IS_FREEBSD:
             # self.configureArgs.append("-DDEFAULT_SYSROOT=" + str(self.config.sdkSysrootDir))
             # self.configureArgs.append("-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd")
             pass
         if self.config.cheriBits == 128:
-            self.configureArgs.append("-DLLVM_CHERI_IS_128=ON")
+            self.add_cmake_options(LLVM_CHERI_IS_128=True)
 
     def clang37InstallHint(self):
         if IS_FREEBSD:
@@ -143,7 +142,7 @@ class BuildLLD(BuildLLVM):
 
     def __init__(self, config: CheriConfig,):
         super().__init__(config)
-        self.configureArgs.append("-DLLVM_TOOL_LLD_BUILD=ON")
+        self.add_cmake_options(LLVM_TOOL_LLD_BUILD=True)
 
     def update(self):
         self._updateGitRepo(self.sourceDir, "https://github.com/llvm-mirror/llvm.git", revision=self.llvmGitRevision)

@@ -51,7 +51,7 @@ class BuildKDevplatform(CMakeProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.gitBranch = "cheri"
-        self.configureArgs.append("-DBUILD_git=OFF")
+        self.add_cmake_options(BUILD_git=False)
 
 
 class BuildKDevelop(CMakeProject):
@@ -63,10 +63,8 @@ class BuildKDevelop(CMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        # Tell kdevelop to use the CHERI clang
-        self.configureArgs.append("-DLLVM_ROOT=" + str(self.config.sdkDir))
-        # install the wrapper script that sets the right environment variables
-        self.configureArgs.append("-DINSTALL_KDEVELOP_LAUNCH_WRAPPER=ON")
+        # Tell kdevelop to use the CHERI clang and install the wrapper script that sets the right environment variables
+        self.add_cmake_options(LLVM_ROOT=self.config.sdkDir, INSTALL_KDEVELOP_LAUNCH_WRAPPER=True)
         self.gitBranch = "cheri"
 
 

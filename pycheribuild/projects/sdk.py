@@ -235,8 +235,8 @@ class InstallCheriBuildsystemWrappers(CMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.configureArgs.append("-DCHERI_SDK_BINDIR=" + str(self.config.sdkDir / "bin"))
-        self.configureArgs.append("-DCHERIBSD_SYSROOT=" + str(self.config.sdkDir / "sysroot"))
+        self.add_cmake_options(CHERI_SDK_BINDIR=self.config.sdkDir / "bin",
+                               CHERIBSD_SYSROOT=self.config.sdkDir / "sysroot")
 
 
 # Replace the old binutils target by on that builds the required tools from GNU binutils and elftoolchain
