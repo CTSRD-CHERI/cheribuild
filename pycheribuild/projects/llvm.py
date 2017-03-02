@@ -76,22 +76,22 @@ class BuildLLVM(CMakeProject):
         if self.config.cheriBits == 128:
             self.add_cmake_options(LLVM_CHERI_IS_128=True)
 
-    def clang37InstallHint(self):
+    def clang38InstallHint(self):
         if IS_FREEBSD:
-            return "Try running `pkg install clang37`"
+            return "Try running `pkg install clang38`"
         osRelease = self.readFile(Path("/etc/os-release")) if Path("/etc/os-release").is_file() else ""
         if "Ubuntu" in osRelease:
             return """Try following the instructions on http://askubuntu.com/questions/735201/installing-clang-3-8-on-ubuntu-14-04-3:
             wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
-            sudo apt-add-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.7 main"
+            sudo apt-add-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.8 main"
             sudo apt-get update
-            sudo apt-get install clang-3.7"""
-        return "Try installing clang 3.7 or newer using your system package manager"
+            sudo apt-get install clang-3.8"""
+        return "Try installing clang 3.8 or newer using your system package manager"
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
-        # make sure we have at least version 3.7
-        self.checkClangVersion(3, 7, installInstructions=self.clang37InstallHint())
+        # make sure we have at least version 3.8
+        self.checkClangVersion(3, 8, installInstructions=self.clang38InstallHint())
 
     def checkClangVersion(self, major: int, minor: int, patch=0, installInstructions=None):
         if not self.cCompiler or not self.cppCompiler:
@@ -104,8 +104,9 @@ class BuildLLVM(CMakeProject):
         versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
         if versionComponents < versionTuple:
             versionStr = ".".join(map(str, versionComponents))
-            self.dependencyError(self.cCompiler, "version", versionStr, "is too old. Version 3.7 or newer is required.",
-                                 installInstructions=self.clang37InstallHint())
+            self.dependencyError(self.cCompiler, "version", versionStr,
+                                 "is too old. Version %d.%d or newer is required." % (major, minor),
+                                 installInstructions=self.clang38InstallHint())
 
     def update(self):
         self._updateGitRepo(self.sourceDir, "https://github.com/CTSRD-CHERI/llvm.git",
