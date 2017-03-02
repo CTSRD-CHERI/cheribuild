@@ -40,13 +40,17 @@ class BuildLLVM(CMakeProject):
     appendCheriBitsToBuildDir = True
 
     @classmethod
-    def setupConfigOptions(cls, includeClangRevision=True, includeLldbRevision=False):
+    def setupConfigOptions(cls, includeClangRevision=True, includeLldbRevision=False, includeLldRevision=True):
         super().setupConfigOptions()
         cls.llvmGitRevision = cls.addConfigOption("llvm-git-revision", kind=str, help="The git revision for llvm",
                                                   metavar="REVISION")
         if includeClangRevision:
             cls.clangGitRevision = cls.addConfigOption("clang-git-revision", kind=str, metavar="REVISION",
                                                        help="The git revision for tools/clang")
+        cls.skip_lld = cls.addBoolOption("skip-lld", help="Don't build lld as part of the llvm target")
+        if includeLldRevision:
+            cls.lldGitRevision = cls.addConfigOption("lld-git-revision", kind=str, metavar="REVISION",
+                                                     help="The git revision for tools/lld")
         if includeLldbRevision:  # not built yet
             cls.lldbGitRevision = cls.addConfigOption("lldb-git-revision", kind=str, metavar="REVISION",
                                                       help="The git revision for tools/lldb")
@@ -60,6 +64,7 @@ class BuildLLVM(CMakeProject):
             CMAKE_CXX_COMPILER=self.cppCompiler,
             CMAKE_C_COMPILER=self.cCompiler,
             LLVM_TOOL_LLDB_BUILD=False,
+            LLVM_TOOL_LLD_BUILD=not self.skip_lld,
             # saves a bit of time and but might be slightly broken in current clang:
             # CLANG_ENABLE_STATIC_ANALYZER=False,  # save some build time by skipping the static analyzer
             # CLANG_ENABLE_ARCMT=False",  # need to disable ARCMT to disable static analyzer
@@ -107,6 +112,9 @@ class BuildLLVM(CMakeProject):
                             revision=self.llvmGitRevision)
         self._updateGitRepo(self.sourceDir / "tools/clang", "https://github.com/CTSRD-CHERI/clang.git",
                             revision=self.clangGitRevision)
+        if not self.skip_lld:
+            self._updateGitRepo(self.sourceDir / "tools/lld", "https://github.com/CTSRD-CHERI/lld.git",
+                                revision=self.lldGitRevision, initialBranch="cheri-lld")
         if False:  # Not yet usable
             self._updateGitRepo(self.sourceDir / "tools/lldb", "https://github.com/CTSRD-CHERI/lldb.git",
                                 revision=self.lldbGitRevision, initialBranch="master")
@@ -128,6 +136,9 @@ class BuildLLVM(CMakeProject):
         for tool in llvmBinaries:
             self.createBuildtoolTargetSymlinks(self.installDir / "bin" / tool)
 
+        if not self.skip_lld:
+            self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld")
+
 
 class BuildLLD(BuildLLVM):
     defaultCMakeBuildType = "Release"
@@ -136,9 +147,7 @@ class BuildLLD(BuildLLVM):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(includeClangRevision=False)
-        cls.lldGitRevision = cls.addConfigOption("lld-git-revision", kind=str, metavar="REVISION",
-                                                 help="The git revision for tools/lld")
+        super().setupConfigOptions(includeClangRevision=False, includeLldRevision=True)
 
     def __init__(self, config: CheriConfig,):
         super().__init__(config)
@@ -147,7 +156,7 @@ class BuildLLD(BuildLLVM):
     def update(self):
         self._updateGitRepo(self.sourceDir, "https://github.com/CTSRD-CHERI/llvm.git",
                             revision=self.llvmGitRevision, initialBranch="master")
-        self._updateGitRepo(self.sourceDir / "tools/lld", "https://github.com/RichardsonAlex/lld.git",
+        self._updateGitRepo(self.sourceDir / "tools/lld", "https://github.com/CTSRD-CHERI/lld.git",
                             initialBranch="cheri-lld", revision=self.lldGitRevision)
 
     def compile(self):
@@ -159,7 +168,7 @@ class BuildLLD(BuildLLVM):
         # TODO: once it works for building CHERIBSD use it as the default SDK linker:
         # self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld", toolName="ld", createUnprefixedLink=True)
 
-    def checkSystemDependencies(self):
-        CMakeProject.checkSystemDependencies(self)
-        # LLD needs at least clang 3.8 sure we have at least version 3.8
-        self.checkClangVersion(3, 8)
+    def process(self):
+        if self.skip_lld:
+            fatalError("skip-lld config option is set for target lld, this doesn't make any sense")
+        super().process()
