@@ -145,9 +145,10 @@ class BuildLLD(BuildLLVM):
         self.add_cmake_options(LLVM_TOOL_LLD_BUILD=True)
 
     def update(self):
-        self._updateGitRepo(self.sourceDir, "https://github.com/llvm-mirror/llvm.git", revision=self.llvmGitRevision)
+        self._updateGitRepo(self.sourceDir, "https://github.com/CTSRD-CHERI/llvm.git",
+                            revision=self.llvmGitRevision, initialBranch="master")
         self._updateGitRepo(self.sourceDir / "tools/lld", "https://github.com/RichardsonAlex/lld.git",
-                            initialBranch="cheri", revision=self.lldGitRevision)
+                            initialBranch="cheri-lld", revision=self.lldGitRevision)
 
     def compile(self):
         self.runMake(["lld", self.config.makeJFlag])
