@@ -28,30 +28,31 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import *
-from ...utils import statusUpdate
+import re
 
 
-class BuildLibCXX(CrossCompileCMakeProject):
-    repository = "https://github.com/RichardsonAlex/libcxx.git"
+class BuildPostgres(CrossCompileAutotoolsProject):
+    repository = "https://github.com/CTSRD-CHERI/postgres.git"
+    # we have to build in the source directory, out-of-source is broken
+    defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir
 
     def __init__(self, config: CheriConfig):
-        self.linkDynamic = True # Hack: we always want to use the dynamic toolchain file, build system adds -static
         super().__init__(config)
-        self.add_cmake_options(
-            LIBCXX_ENABLE_SHARED=False,  # not yet
-            LIBCXX_ENABLE_STATIC=True,
-            LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=False,  # not yet
-            LIBCXX_INCLUDE_TESTS=False,  # unit tests: not yet
-            LIBCXX_INCLUDE_BENCHMARKS=False,
-            LIBCXX_INCLUDE_DOCS=False,
-            LIBCXX_CXX_ABI="none",  # don't use a c++ abi library
-            # exceptions and rtti still missing:
-            LIBCXX_ENABLE_EXCEPTIONS=False,
-            LIBCXX_ENABLE_RTTI=False,
-            # TODO: is this needed?
-            LIBCXX_SYSROOT=config.sdkDir / "sysroot",
-
-        )
+        self.compileFlags.append("-static")
+        self.compileFlags.append("-DUSE_ASSERT_CHECKING")
+        self.compileFlags.append("-I/usr/include/edit")
+        self.linkerFlags.append("-pthread")
+        # tell postgres configure that %zu works in printf()
+        self.configureEnvironment["PRINTF_SIZE_T_SUPPORT"] = "yes"
+        self.configureArgs.extend(["--enable-debug", "--without-libxml", "--without-readline", "--without-gssapi"])
 
     def install(self):
-        statusUpdate("Not installing libc++, not ready yet")
+        super().install()
+        self.runMake(self.commonMakeArgs + ["-C", "src/test/regress", self.destdirFlag], "install-tests")
+        # install the benchmark script
+        benchmark = (self.sourceDir / "postgres-benchmark.sh").read_text(encoding="utf-8")
+        benchmark = re.sub(r'POSTGRES_ROOT=".*"', "POSTGRES_ROOT=\"" + str(self.installPrefix) + "\"", benchmark)
+        self.writeFile(self.destdir / "postgres-benchmark.sh", benchmark, overwrite=True)
+
+
+

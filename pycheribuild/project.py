@@ -607,6 +607,8 @@ class Project(SimpleProject):
 
     def configure(self):
         if self.configureCommand:
+            if self.config.verbose:
+                print("Configure enviroment:", self.configureEnvironment)
             self.runWithLogfile([self.configureCommand] + self.configureArgs,
                                 logfileName="configure", cwd=self.buildDir, env=self.configureEnvironment)
 
@@ -713,6 +715,7 @@ class CMakeProject(Project):
 
 class AutotoolsProject(Project):
     doNotAddToTargets = True
+    _customInstallPrefix = False
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -727,7 +730,8 @@ class AutotoolsProject(Project):
     def __init__(self, config, configureScript="configure"):
         super().__init__(config)
         self.configureCommand = self.sourceDir / configureScript
-        self.configureArgs.append("--prefix=" + str(self.installDir))
+        if not self._customInstallPrefix:
+            self.configureArgs.append("--prefix=" + str(self.installDir))
         self.makeCommand = "make"
         if self.extraConfigureFlags:
             self.configureArgs.extend(self.extraConfigureFlags)
