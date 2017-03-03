@@ -77,15 +77,17 @@ class CheriConfig(object):
                                                      " with --list-targets for more information)")
 
     # TODO: use action="store_const" for these two options
-    _buildCheri128 = ConfigLoader.addBoolOption("cheri-128", "-128", group=ConfigLoader.cheriBitsGroup,
-                                                help="Shortcut for --cheri-bits=128")
-    _buildCheri256 = ConfigLoader.addBoolOption("cheri-256", "-256", group=ConfigLoader.cheriBitsGroup,
-                                                help="Shortcut for --cheri-bits=256")
-    _cheriBits = ConfigLoader.addOption("cheri-bits", type=int, group=ConfigLoader.cheriBitsGroup, choices=["128", "256"],
-                                        default=256, help="Whether to build the whole software stack for 128 or 256 bit"
-                                        " CHERI. The output directories will be suffixed with the number of bits to"
-                                        " make sure the right binaries are being used."
-                                        " WARNING: 128-bit CHERI is still very unstable.")
+    _buildCheri128 = ConfigLoader.cheriBitsGroup.add_argument("--cheri-128", "--128", dest="cheri_bits",
+                                                              action="store_const", const="128",
+                                                              help="Shortcut for --cheri-bits=128")
+    _buildCheri256 = ConfigLoader.cheriBitsGroup.add_argument("--cheri-256", "--256", dest="cheri_bits",
+                                                              action="store_const", const="256",
+                                                              help="Shortcut for --cheri-bits=256")
+    cheriBits = ConfigLoader.addOption("cheri-bits", type=int, group=ConfigLoader.cheriBitsGroup, choices=["128", "256"],
+                                       default=256, help="Whether to build the whole software stack for 128 or 256 bit"
+                                       " CHERI. The output directories will be suffixed with the number of bits to"
+                                       " make sure the right binaries are being used."
+                                       " WARNING: 128-bit CHERI is still very unstable.")
 
     createCompilationDB = ConfigLoader.addBoolOption("compilation-db", "-cdb",
                                                      help="Create a compile_commands.json file in the build dir "
@@ -129,12 +131,6 @@ class CheriConfig(object):
         self.targets = ConfigLoader.loadTargets(availableTargets)
         self.makeJFlag = "-j" + str(self.makeJobs)
 
-        if self._buildCheri128:
-            self.cheriBits = 128
-        elif self._buildCheri256:
-            self.cheriBits = 256
-        else:
-            self.cheriBits = self._cheriBits
         self.cheriBitsStr = str(self.cheriBits)
         # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
         os.environ["CHERI_BITS"] = self.cheriBitsStr
@@ -151,8 +147,6 @@ class CheriConfig(object):
         self.sdkSysrootDir = self.sdkDir / "sysroot"
         self.sysrootArchiveName = "cheri-sysroot.tar.gz"
 
-        # for i in ConfigLoader.options:
-        #   i.__get__(self, CheriConfig)  # force loading of lazy value
         if self.verbose:
             # for debugging purposes print all the options
             print("cheribuild.py configuration:", dict(ConfigLoader.values))
