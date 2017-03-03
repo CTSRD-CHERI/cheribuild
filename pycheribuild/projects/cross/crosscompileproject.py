@@ -1,4 +1,4 @@
-from ...project import CMakeProject
+from ...project import CMakeProject, AutotoolsProject, Project
 from ...configloader import ConfigLoader
 from ...chericonfig import CheriConfig
 from ..cheribsd import BuildCHERIBSD
@@ -11,17 +11,28 @@ installToCheriBSDRootfs = ConfigLoader.ComputedDefaultValue(
     asString=lambda cls: "$CHERIBSD_ROOTFS/extra/" + cls.projectName.lower())
 
 
+def _setupCrossCompileConfigOptions(cls: Project):
+    cls.useLld = cls.addBoolOption("use-lld", default=True, help="Whether to use lld for linking (probably better!)")
+
+
 class CrossCompileCMakeProject(CMakeProject):
     doNotAddToTargets = True  # only used as base class
-
     defaultInstallDir = installToCheriBSDRootfs
     appendCheriBitsToBuildDir = True
     defaultCMakeBuildType = "Debug"
-    dependencies = ["cheri-buildsystem-wrappers"]
+    dependencies = ["cheribsd-sdk", "cheri-buildsystem-wrappers"]  # TODO: generate the toolchain file dynamically?
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        _setupCrossCompileConfigOptions(cls)
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.toolchain_file = config.sdkDir / "share/cmake/cheri-toolchains/CheriBSDToolchainCheriABIDynamic.cmake"
+        toolchainName = "CheriBSDToolchainCheriABIDynamic.cmake"
+        if self.useLld:
+            toolchainName = "CheriBSDToolchainCheriABIDynamicWithLLD.cmake"
+        self.toolchain_file = config.sdkDir / "share/cmake/cheri-toolchains" / toolchainName
         # This must come first:
         self.add_cmake_option("CMAKE_TOOLCHAIN_FILE", self.toolchain_file)
 

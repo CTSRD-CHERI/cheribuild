@@ -126,8 +126,8 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
                                       group=cls._commandLineOptionGroup, helpHidden=helpHidden, **kwargs)
 
     @classmethod
-    def addBoolOption(cls, name: str, *, shortname=None, **kwargs):
-        return cls.addConfigOption(name, default=False, kind=bool, shortname=shortname, action="store_true", **kwargs)
+    def addBoolOption(cls, name: str, *, shortname=None, default=False, **kwargs):
+        return cls.addConfigOption(name, default=default, kind=bool, shortname=shortname, action="store_true", **kwargs)
 
     @classmethod
     def addPathOption(cls, name: str, *, shortname=None, **kwargs):
