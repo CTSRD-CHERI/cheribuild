@@ -27,28 +27,15 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import re
-import shlex
-from pathlib import Path
-
-from ..project import CMakeProject
-from ..utils import *
+from .crosscompileproject import *
+from ...utils import statusUpdate
 
 
-class BuildLibCXX(CMakeProject):
-    # defaultInstallDir = CMakeProject._installToSDK
-    defaultInstallDir = "/tmp/libc++-cheri"
-    appendCheriBitsToBuildDir = True
-    defaultCMakeBuildType = "Debug"
+class BuildLibCXX(CrossCompileCMakeProject):
     repository = "https://github.com/RichardsonAlex/libcxx.git"
-    dependencies = ["cheri-buildsystem-wrappers"]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.toolchain_file = config.sdkDir / "share/cmake/cheri-toolchains/CheriBSDToolchainCheriABIDynamic.cmake"
-        # This must come first:
-        self.add_cmake_option("CMAKE_TOOLCHAIN_FILE", self.toolchain_file)
-        # now all other options
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
             LIBCXX_ENABLE_STATIC=True,
@@ -64,12 +51,6 @@ class BuildLibCXX(CMakeProject):
             LIBCXX_SYSROOT=config.sdkDir / "sysroot",
 
         )
-
-    def configure(self):
-        if not self.toolchain_file.exists():
-            self.dependencyError("Could not find CheriABI crooscompile cmake toolchain",
-                                 installInstructions="Run `cheribuild cheri-buildsystem-wrappers`")
-        super().configure()
 
     def install(self):
         statusUpdate("Not installing libc++, not ready yet")
