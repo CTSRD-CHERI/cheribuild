@@ -465,6 +465,10 @@ class Project(SimpleProject):
     defaultInstallDir = installDirNotSpecified
     """ The default installation directory (will probably be set to _installToSDK or _installToBootstrapTools) """
 
+    # useful for cross compile projects that use a prefix and DESTDIR
+    installPrefix = None
+    destdir = None
+
     @classmethod
     def setupConfigOptions(cls, installDirectoryHelp="", **kwargs):
         super().setupConfigOptions(**kwargs)
@@ -618,16 +622,18 @@ class Project(SimpleProject):
 
     def configure(self):
         if self.configureCommand:
-            if self.config.verbose:
-                print("Configure enviroment:", self.configureEnvironment)
             self.runWithLogfile([self.configureCommand] + self.configureArgs,
                                 logfileName="configure", cwd=self.buildDir, env=self.configureEnvironment)
 
     def compile(self):
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag])
 
+    @property
+    def makeInstallArgs(self):
+        return self.commonMakeArgs + ["DESTDIR=" + str(self.destdir)] if self.destdir else self.commonMakeArgs
+
     def install(self):
-        self.runMake(self.commonMakeArgs, "install")
+        self.runMake(self.makeInstallArgs, "install")
 
     def process(self):
         if not self.config.skipUpdate:
@@ -685,7 +691,13 @@ class CMakeProject(Project):
             self._addRequiredSystemTool("ninja")
         if self.generator == CMakeProject.Generator.Makefiles:
             self.configureArgs.append("-GUnix Makefiles")
-        self.configureArgs.append("-DCMAKE_INSTALL_PREFIX=" + str(self.installDir))
+
+        if self.installPrefix:
+            assert self.destdir, "custom install prefix requires DESTDIR being set!"
+            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installPrefix)
+        else:
+            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installDir)
+
         self.configureArgs.append("-DCMAKE_BUILD_TYPE=" + self.cmakeBuildType)
         # TODO: do it always?
         if self.config.createCompilationDB:
@@ -707,12 +719,12 @@ class CMakeProject(Project):
             return
         self._showLineStdoutFilter(line)
 
-    def install(self):
-        self.runMake(self.commonMakeArgs, "install", stdoutFilter=self._cmakeInstallStdoutFilter)
-
     def configure(self):
         self.configureArgs.extend(self.cmakeOptions)
         super().configure()
+
+    def install(self):
+        self.runMake(self.makeInstallArgs, "install", stdoutFilter=self._cmakeInstallStdoutFilter)
 
     @staticmethod
     def findPackage(name: str) -> bool:
@@ -726,7 +738,6 @@ class CMakeProject(Project):
 
 class AutotoolsProject(Project):
     doNotAddToTargets = True
-    _customInstallPrefix = False
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -741,7 +752,10 @@ class AutotoolsProject(Project):
     def __init__(self, config, configureScript="configure"):
         super().__init__(config)
         self.configureCommand = self.sourceDir / configureScript
-        if not self._customInstallPrefix:
+        if self.installPrefix:
+            assert self.destdir, "custom install prefix requires DESTDIR being set!"
+            self.configureArgs.append("--prefix=" + str(self.installPrefix))
+        else:
             self.configureArgs.append("--prefix=" + str(self.installDir))
         if self.extraConfigureFlags:
             self.configureArgs.extend(self.extraConfigureFlags)

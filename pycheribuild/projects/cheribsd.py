@@ -143,6 +143,8 @@ class BuildFreeBSD(Project):
         if self.subdirOverride:
             self.commonMakeArgs.append("SUBDIR_OVERRIDE=" + self.subdirOverride)
 
+        self.destdir = self.installDir
+
     def clean(self):
         if self.skipBuildworld:
             # TODO: only clean the current kernel config not all of them
@@ -184,7 +186,7 @@ class BuildFreeBSD(Project):
         if self.config.clean or not self.keepOldRootfs:
             self._removeOldRootfs()
         # don't use multiple jobs here
-        installArgs = self.commonMakeArgs + ["DESTDIR=" + str(self.installDir)]
+        installArgs = self.makeInstallArgs
         self.runMake(installArgs, "installkernel", cwd=self.sourceDir)
         if not self.skipBuildworld:
             self.runMake(installArgs, "installworld", cwd=self.sourceDir)
