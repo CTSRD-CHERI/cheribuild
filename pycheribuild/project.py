@@ -439,6 +439,8 @@ class Project(SimpleProject):
     defaultBuildDir = ConfigLoader.ComputedDefaultValue(
             function=_defaultBuildDir, asString=lambda cls: "$BUILD_ROOT/" + cls.projectName.lower())
 
+    requiresGNUMake = False
+    """ If true this project must be built with GNU make (gmake on FreeBSD) and not BSD make or ninja"""
 
     # TODO: remove these three
     @classmethod
@@ -490,7 +492,6 @@ class Project(SimpleProject):
             print(self.projectName, "directories: source=%s, build=%s, install=%s" %
                   (self.sourceDir, self.buildDir, self.installDir))
 
-        self.makeCommand = "make"
         self.configureCommand = ""
         # non-assignable variables:
         self.commonMakeArgs = []
@@ -500,6 +501,16 @@ class Project(SimpleProject):
             self._addRequiredSystemTool("bear", installInstructions="Run `cheribuild.py bear`")
         self._lastStdoutLineCanBeOverwritten = False
         self._preventAssign = True
+
+        if self.requiresGNUMake:
+            if IS_LINUX and not shutil.which("gmake"):
+                statusUpdate("Could not find `gmake` command, assuming `make` is GNU make")
+                self.makeCommand = "make"
+            else:
+                self._addRequiredSystemTool("gmake")
+                self.makeCommand = "gmake"
+        else:
+            self.makeCommand = "make"
 
     # Make sure that API is used properly
     def __setattr__(self, name, value):
@@ -732,7 +743,6 @@ class AutotoolsProject(Project):
         self.configureCommand = self.sourceDir / configureScript
         if not self._customInstallPrefix:
             self.configureArgs.append("--prefix=" + str(self.installDir))
-        self.makeCommand = "make"
         if self.extraConfigureFlags:
             self.configureArgs.extend(self.extraConfigureFlags)
 

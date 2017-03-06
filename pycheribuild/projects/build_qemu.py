@@ -35,19 +35,14 @@ class BuildQEMU(AutotoolsProject):
     repository = "https://github.com/CTSRD-CHERI/qemu.git"
     defaultInstallDir = AutotoolsProject._installToSDK
     appendCheriBitsToBuildDir = True
+    requiresGNUMake = True
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.gitBranch = "qemu-cheri"
-
         self._addRequiredSystemTool("pkg-config")
         self._addRequiredSystemTool("python", installInstructions="QEMU needs Python 2 installed as the python binary")
         # QEMU will not work with BSD make, need GNU make
-        if IS_FREEBSD:
-            self._addRequiredSystemTool("gmake")
-            self.makeCommand = "gmake"
-        else:
-            self.makeCommand = "make"
 
         # TODO: suggest on Ubuntu install libglib2.0-dev libpixman-1-dev libsdl2-dev libgtk2.0-dev
 
