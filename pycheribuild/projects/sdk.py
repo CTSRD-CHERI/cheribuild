@@ -86,19 +86,28 @@ class BuildFreestandingSdk(SimpleProject):
         if IS_FREEBSD:
             binutilsBinaries = "addr2line as brandelf nm objcopy objdump size strings strip".split()
             toolsToSymlink = binutilsBinaries
+            sdkBinDir = self.config.sdkDir / "bin"
             # When building on FreeBSD we also copy the MIPS GCC and related tools
-            toolsToSymlink += self.copyCrossToolsFromCheriBSD(binutilsBinaries)
+            self.copyCrossToolsFromCheriBSD(binutilsBinaries)
             for tool in set(toolsToSymlink):
-                self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin" / tool)
+                self.createBuildtoolTargetSymlinks(sdkBinDir / tool)
             # For some reason CheriBSD does not build a cross ar, let's symlink the system one to the SDK bindir
-            runCmd("ln", "-fsn", shutil.which("ar"), self.config.sdkDir / "bin/ar",
+            runCmd("ln", "-fsn", shutil.which("ar"), sdkBinDir / "ar",
                    cwd=self.config.sdkDir / "bin", printVerboseOnly=True)
-            self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin/ar")
+            self.createBuildtoolTargetSymlinks(sdkBinDir / "ar")
             # install ld as ld.bfd and add a symlink
-            self.installFile(self.cheribsdBuildRoot / "tmp/usr/bin/ld", self.config.sdkDir / "bin/ld.bfd")
-            self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin/ld.bfd")
-            self.createSymlink(self.config.sdkDir / "bin/ld.bfd", self.config.sdkDir / "bin/ld")
-            self.createBuildtoolTargetSymlinks(self.config.sdkDir / "bin/ld")
+            self.installFile(self.cheribsdBuildRoot / "tmp/usr/bin/ld", sdkBinDir / "ld.bfd")
+            self.createBuildtoolTargetSymlinks(sdkBinDir / "ld.bfd")
+            # TODO: should we really be installing this as unprefixed ld?
+            self.createSymlink(sdkBinDir / "ld.bfd", sdkBinDir / "ld")
+            self.createBuildtoolTargetSymlinks(sdkBinDir / "ld")
+            # Copy GCC and G++ for MIPS64:
+            for tool in ("gcc", "g++", "gcov"):
+                self.installFile(self.cheribsdBuildRoot / "tmp/usr/bin" / tool,
+                                 sdkBinDir / ("mips64-unknown-freebsd-" + tool), force=True)
+                # If we install these tools unprefixed we will break everything!
+                if (sdkBinDir / tool).exists():
+                    (sdkBinDir / tool).unlink()
 
     def copyCrossToolsFromCheriBSD(self, binutilsBinaries: "typing.List[str]"):
         # if we pass a string starting with a slash to Path() it will reset to that absolute path
@@ -125,8 +134,7 @@ class BuildFreestandingSdk(SimpleProject):
             runCmd("ln", "-sf", "sdk256", "sdk", cwd=self.config.outputRoot)
 
         # install tools:
-        tools = binutilsBinaries + "gcc g++ gcov".split()
-        for tool in tools:
+        for tool in binutilsBinaries:
             if (CHERITOOLS_OBJ / tool).is_file():
                 self.installFile(CHERITOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
             elif (CHERIBOOTSTRAPTOOLS_OBJ / tool).is_file():
@@ -139,7 +147,6 @@ class BuildFreestandingSdk(SimpleProject):
         # compiling to both work...
         for tool in ("cc1", "cc1plus"):
             self.installFile(CHERILIBEXEC_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
-        return tools
 
 
 class BuildCheriBsdSysroot(SimpleProject):
