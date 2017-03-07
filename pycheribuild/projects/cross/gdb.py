@@ -89,6 +89,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.configureEnvironment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
         if self.makeCommand == "gmake":
             self.configureEnvironment["MAKE"] = "gmake"
+        self.configureEnvironment["CC_FOR_BUILD"] = str(config.clangPath)
+        self.configureEnvironment["CXX_FOR_BUILD"] = str(config.clangPlusPlusPath)
 
         # TODO: do I need these:
         """(cd $obj; env INSTALL="/usr/bin/install -c "  INSTALL_DATA="install   -m 0644"  INSTALL_LIB="install    -m 444"  INSTALL_PROGRAM="install    -m 555"  INSTALL_SCRIPT="install   -m 555"   PYTHON="${PYTHON}" SHELL=/bin/sh CONFIG_SHELL=/bin/sh CONFIG_SITE=/usr/ports/Templates/config.site ../configure ${CONFIGURE_ARGS} )"""
