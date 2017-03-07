@@ -1,13 +1,15 @@
 from ...project import CMakeProject, AutotoolsProject, Project
 from ...configloader import ConfigLoader
 from ...chericonfig import CheriConfig
-from ...utils import IS_FREEBSD
+from ...utils import *
 from ...colour import *
 from ..cheribsd import BuildCHERIBSD
 from pathlib import Path
+import os
 import pprint
 
 __all__ = ["CheriConfig", "installToCheriBSDRootfs", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject"]
+
 
 installToCheriBSDRootfs = ConfigLoader.ComputedDefaultValue(
     function=lambda config, project: Path(BuildCHERIBSD.rootfsDir(config) / "extra" / project.projectName.lower()),
@@ -19,11 +21,13 @@ class CrossCompileProject(Project):
     defaultInstallDir = installToCheriBSDRootfs
     appendCheriBitsToBuildDir = True
     dependencies = ["cheribsd-sdk"]
+    targetArch = None  # build for mips64-unknown-freebsd instead of cheri-unknown-freebsd
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.installPrefix = "/extra/" + self.projectName.lower()
+        self.installPrefix = Path("/", self.installDir.relative_to(BuildCHERIBSD.rootfsDir(config)))
         self.destdir = BuildCHERIBSD.rootfsDir(config)
+        self.targetTriple = self.targetArch + "-unknown-freebsd"
 
     @classmethod
     def setupConfigOptions(cls: Project, **kwargs):
@@ -32,7 +36,9 @@ class CrossCompileProject(Project):
                                                                 " small this will probably break everything!)")
         cls.useLld = cls.addBoolOption("use-lld", default=True, help="Use lld for linking (probably better!)")
         cls.linkDynamic = cls.addBoolOption("link-dynamic", help="Try to link dynamically (probably broken)")
-
+        if cls.targetArch is None:
+            cls.targetArch = cls.addConfigOption("target", help="The target to build for (`cheri` or `mips64`)",
+                                                 default="cheri", choices=["cheri", "mips64"])
 
 class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
     doNotAddToTargets = True  # only used as base class
@@ -45,7 +51,12 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.toolchainName = "CheriBSDToolchainCheriABI"
+        if self.targetArch == "mips64":
+            self.toolchainName = "CheriBSDToolchainMIPS"
+        elif self.targetArch == "cheri":
+            self.toolchainName = "CheriBSDToolchainCheriABI"
+        else:
+            raise RuntimeError("Invalid target arch: " + self.targetArch)
         self.toolchainName += "Dynamic" if self.linkDynamic else "Static"
         self.toolchainName += "WithLLD" if self.useLld else ""
         self.toolchainName += ".cmake"
@@ -77,22 +88,31 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
         self.compileFlags = [
             "-pipe", "--sysroot=" + str(config.sdkSysrootDir),
             "-B" + str(config.sdkDir / "bin"),
-            "-target", "cheri-unknown-freebsd",
-            "-mabi=sandbox", "-msoft-float",
+            "-target", self.targetTriple,
+            "-msoft-float",
             "-integrated-as", "-G0", "-g"
         ]
+        if self.targetArch == "cheri":
+            self.compileFlags.append("-mabi=sandbox")
+
+        self.cOnlyFlags = []
         self.cPlusPlusFlags = []
         self.linkerFlags = ["-Wl,-melf64btsmip_cheri_fbsd"]
         if self.useLld:
             self.linkerFlags.append("-fuse-ld=lld")
         if not self.linkDynamic:
             self.linkerFlags.append("-static")
+
         # TODO: get --build from `clang --version | grep Target:`
-        self.configureArgs.extend([
-            "--host=cheri-unknown-freebsd",
-            "--target=cheri-unknown-freebsd",
-            "--build=x86_64-unknown-freebsd" if IS_FREEBSD else "--build=x86_64-unknown-linux-gnu",
-        ])
+        if IS_FREEBSD:
+            buildhost = "x86_64-unknown-freebsd"
+            release = os.uname().release
+            buildhost += release[:release.index(".")]
+        else:
+            buildhost = "x86_64-unknown-linux-gnu"
+
+        self.configureArgs.extend(["--host=" + self.targetTriple, "--target=" + self.targetTriple,
+                                   "--build=" + buildhost])
 
     def configure(self):
         cflags = self.compileFlags + self.warningFlags + self.optimizationFlags.split()
@@ -100,11 +120,16 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
             cflags.append("-mxgot")
         for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
             assert key not in self.configureEnvironment
-        self.configureEnvironment["CC"] = str(self.config.sdkDir / "bin/cheri-unknown-freebsd-clang")
-        self.configureEnvironment["CXX"] = str(self.config.sdkDir / "bin/cheri-unknown-freebsd-clang++")
-        self.configureEnvironment["CFLAGS"] = " ".join(cflags)
+        self.configureEnvironment["CC"] = str(self.config.sdkDir / ("bin/" + self.targetTriple + "-clang"))
+        self.configureEnvironment["CXX"] = str(self.config.sdkDir / ("bin/" + self.targetTriple + "-clang++"))
         self.configureEnvironment["CPPFLAGS"] = " ".join(cflags)
+        self.configureEnvironment["CFLAGS"] = " ".join(cflags + self.cOnlyFlags)
         self.configureEnvironment["CXXFLAGS"] = " ".join(cflags + self.cPlusPlusFlags)
         self.configureEnvironment["LDFLAGS"] = " ".join(self.linkerFlags)
         print(coloured(AnsiColour.yellow, "Cross configure environment:", pprint.pformat(self.configureEnvironment)))
         super().configure()
+
+    def process(self):
+        # We run all these commands with $PATH containing $CHERI_SDK/bin to ensure the right tools are used
+        with setEnv(PATH=str(self.config.sdkDir / "bin") + ":" + os.getenv("PATH")):
+            super().process()
