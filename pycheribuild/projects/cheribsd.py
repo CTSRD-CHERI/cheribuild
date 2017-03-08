@@ -102,6 +102,7 @@ class BuildFreeBSD(Project):
             "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
             "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
             "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
+            "-DWITHOUT_GDB",
             "KERNCONF=" + self.kernelConfig,
         ])
         self.externalToolchainArgs = []
