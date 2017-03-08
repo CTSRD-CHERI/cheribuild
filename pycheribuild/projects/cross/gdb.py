@@ -32,6 +32,10 @@ from .crosscompileproject import *
 from ..cheribsd import BuildCHERIBSD
 from ...utils import setEnv, runCmd
 
+from pathlib import Path
+import os
+import tempfile
+
 
 class BuildGDB(CrossCompileAutotoolsProject):
     defaultInstallDir = lambda config, cls: BuildCHERIBSD.rootfsDir(config) / "usr/local"
@@ -54,14 +58,18 @@ class BuildGDB(CrossCompileAutotoolsProject):
             "--enable-tui",
             "--disable-ld",
             "--enable-64-bit-bfd",
+            "--without-gnu-as",
 
             "--with-gdb-datadir=" + str(self.installPrefix / "share/gdb"),
             "--with-separate-debug-dir=/usr/lib/debug",
             "--mandir=/usr/local/man",
             "--infodir=/usr/local/info/",
 
+            # "--disable-sim",
             "--disable-werror",
             "MAKEINFO=/bin/false",
+            "CC_FOR_BUILD=" + str(config.clangPath),
+            "CXX_FOR_BUILD=" + str(config.clangPlusPlusPath),
             # TODO:
             # "--enable-build-with-cxx"
         ])
@@ -86,6 +94,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
                                   "-I/usr/local/include"])
         self.cOnlyFlags.append("-std=gnu89")
         self.linkerFlags.append("-L/usr/local/lib")
+        self.linkerFlags.append("-fuse-ld=bfd")
         self.configureEnvironment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
         if self.makeCommand == "gmake":
             self.configureEnvironment["MAKE"] = "gmake"
@@ -101,8 +110,17 @@ class BuildGDB(CrossCompileAutotoolsProject):
         # runCmd("touch", 'aoutx.stamp', 'archive.stamp', 'archures.stamp', 'bfdio.stamp', 'bfdt.stamp', 'bfdwin.stamp', 'cache.stamp', 'chew.stamp', 'coffcode.stamp', 'core.stamp', 'elf.stamp', 'elfcode.stamp', 'format.stamp', 'hash.stamp', 'init.stamp', 'libbfd.stamp', 'linker.stamp', 'mmo.stamp', 'opncls.stamp', 'reloc.stamp', 'section.stamp', 'syms.stamp', 'targets.stamp')
         buildenv = self.configureEnvironment.copy()
         # it runs configure during the build step too...
-        with setEnv(**buildenv):
-            self.runMake(self.commonMakeArgs + [self.config.makeJFlag], cwd=self.buildDir)
+        # And it only partially handles CC_FOR_BUILD..........
+        # FIXME: this should work but for some reason won't...
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # It hardcodes calling gcc which won't work... WORST BUILD SYSTEM EVER?
+            self.createSymlink(self.config.clangPath, Path(tmpdir) / "gcc", relative=False)
+            self.createSymlink(self.config.clangPlusPlusPath, Path(tmpdir) / "g++", relative=False)
+            # self.createSymlink(Path("/usr/bin/as"), Path(tmpdir) / "as", relative=False)
+            self.createSymlink(Path("/usr/bin/ld"), Path(tmpdir) / "ld", relative=False)
+            buildenv["PATH"] = tmpdir + ":" + os.environ["PATH"]
+            with setEnv(**buildenv):
+                self.runMake(self.commonMakeArgs + [self.config.makeJFlag], cwd=self.buildDir)
 
     def install(self):
         self.runMake(self.makeInstallArgs + [self.config.makeJFlag], makeTarget="install-gdb", cwd=self.buildDir)
