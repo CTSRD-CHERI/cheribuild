@@ -120,7 +120,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.createSymlink(Path("/usr/bin/ld"), Path(tmpdir) / "ld", relative=False)
             buildenv["PATH"] = tmpdir + ":" + os.environ["PATH"]
             with setEnv(**buildenv):
-                self.runMake(self.commonMakeArgs + [self.config.makeJFlag], cwd=self.buildDir)
+                self.runMake(self.commonMakeArgs + [self.config.makeJFlag], makeTarget="all-gdb", cwd=self.buildDir)
 
     def install(self):
         self.runMake(self.makeInstallArgs + [self.config.makeJFlag], makeTarget="install-gdb", cwd=self.buildDir)
