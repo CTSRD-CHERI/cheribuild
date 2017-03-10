@@ -74,7 +74,7 @@ class BuildGnuBinutils(AutotoolsProject):
             "--enable-ld",  # enable linker (is default, but just be safe)
             "--enable-libssp",  # not sure if this is needed
             "--enable-64-bit-bfd",  # Make sure we always have 64 bit support
-            # "--enable-targets=" + enabledTargets,
+            "--enable-targets=all",
             # TODO: --with-sysroot doesn't work properly so we need to tell clang not to pass the --sysroot option
             "--with-sysroot=" + str(self.config.sdkSysrootDir),  # as we pass --sysroot to clang we need this option
             "--disable-info",
