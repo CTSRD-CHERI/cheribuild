@@ -30,7 +30,7 @@
 
 from .crosscompileproject import *
 from ..cheribsd import BuildCHERIBSD
-from ...utils import setEnv, runCmd
+from ...utils import setEnv
 
 from pathlib import Path
 import os
@@ -42,10 +42,10 @@ class BuildGDB(CrossCompileAutotoolsProject):
     repository = "https://github.com/bsdjhb/gdb.git"
     requiresGNUMake = True
     targetArch = "mips64"  # don't compile as a CHERI binary!
+    defaultLinker = "bfd"  # won't work with LLD yet (MIPS binary)
 
     def __init__(self, config: CheriConfig):
         # See https://github.com/bsdjhb/kdbg/blob/master/gdb/build
-        self.useLld = False  # cheribsd mips sysroot is incompatible...
         super().__init__(config)
         self.gitBranch = "mips_cheri"
         # ./configure flags
@@ -94,7 +94,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
                                   "-I/usr/local/include"])
         self.cOnlyFlags.append("-std=gnu89")
         self.linkerFlags.append("-L/usr/local/lib")
-        self.linkerFlags.append("-fuse-ld=bfd")
         self.configureEnvironment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
         if self.makeCommand == "gmake":
             self.configureEnvironment["MAKE"] = "gmake"

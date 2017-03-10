@@ -21,6 +21,7 @@ class CrossCompileProject(Project):
     defaultInstallDir = installToCheriBSDRootfs
     appendCheriBitsToBuildDir = True
     dependencies = ["cheribsd-sdk"]
+    defaultLinker = "lld"
     targetArch = None  # build for mips64-unknown-freebsd instead of cheri-unknown-freebsd
 
     def __init__(self, config: CheriConfig):
@@ -34,11 +35,14 @@ class CrossCompileProject(Project):
         super().setupConfigOptions(**kwargs)
         cls.noUseMxgot = cls.addBoolOption("no-use-mxgot", help="Compile without -mxgot flag (Unless the program is"
                                                                 " small this will probably break everything!)")
-        cls.useLld = cls.addBoolOption("use-lld", default=True, help="Use lld for linking (probably better!)")
+        cls.linker = cls.addConfigOption("linker", default=cls.defaultLinker,
+                                         help="The linker to use (`lld` or `bfd`) (lld is  better but may"
+                                              " not work for some projects!)")
         cls.linkDynamic = cls.addBoolOption("link-dynamic", help="Try to link dynamically (probably broken)")
         if cls.targetArch is None:
             cls.targetArch = cls.addConfigOption("target", help="The target to build for (`cheri` or `mips64`)",
                                                  default="cheri", choices=["cheri", "mips64"])
+
 
 class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
     doNotAddToTargets = True  # only used as base class
@@ -58,7 +62,7 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
         else:
             raise RuntimeError("Invalid target arch: " + self.targetArch)
         self.toolchainName += "Dynamic" if self.linkDynamic else "Static"
-        self.toolchainName += "WithLLD" if self.useLld else ""
+        self.toolchainName += "WithLLD" if self.linker == "lld" else ""
         self.toolchainName += ".cmake"
         self.toolchain_file = config.sdkDir / "share/cmake/cheri-toolchains" / self.toolchainName
         # This must come first:
@@ -98,8 +102,7 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
         self.cOnlyFlags = []
         self.cPlusPlusFlags = []
         self.linkerFlags = ["-Wl,-melf64btsmip_cheri_fbsd"]
-        if self.useLld:
-            self.linkerFlags.append("-fuse-ld=lld")
+        self.linkerFlags.append("-fuse-ld=" + self.linker)
         if not self.linkDynamic:
             self.linkerFlags.append("-static")
 
