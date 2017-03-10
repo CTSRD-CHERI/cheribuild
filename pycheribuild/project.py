@@ -358,8 +358,10 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             # add the final new line after the filtering
             sys.stdout.buffer.write(b"\n")
         if retcode:
-            raise SystemExit("Command \"%s\" failed with exit code %d.\nSee %s for details." %
-                             (cmdStr, retcode, logfile.name))
+            message = "Command \"%s\" failed with exit code %d.\n" % (cmdStr, retcode)
+            if logfile:
+                message += "See " + logfile.name + " for details."
+            raise SystemExit(message)
 
     @staticmethod
     def createBuildtoolTargetSymlinks(tool: Path, toolName: str=None, createUnprefixedLink: bool=False, cwd: str=None):
