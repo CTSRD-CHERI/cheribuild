@@ -471,6 +471,22 @@ class Project(SimpleProject):
     installPrefix = None
     destdir = None
 
+    __can_use_lld_map = dict()  # type: typing.Dict[Path, bool]
+
+    @classmethod
+    def canUseLLd(cls, compiler: Path):
+        if compiler not in cls.__can_use_lld_map:
+            try:
+                result = runCmd([compiler, "-fuse-ld=lld", "-xc", "-o" "-", "-"], runInPretendMode=True,
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                input="int main() { return 0; }\n", printVerboseOnly=True)
+                statusUpdate(compiler, "supports -fuse-ld=lld, linking should be much faster!")
+                cls.__can_use_lld_map[compiler] = True
+            except subprocess.CalledProcessError:
+                statusUpdate(compiler, "does not support -fuse-ld=lld, using slower bfd instead")
+                cls.__can_use_lld_map[compiler] = False
+        return cls.__can_use_lld_map[compiler]
+
     @classmethod
     def setupConfigOptions(cls, installDirectoryHelp="", **kwargs):
         super().setupConfigOptions(**kwargs)

@@ -146,7 +146,7 @@ def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Pop
 
 
 def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]"=None, timeout=None,
-           printVerboseOnly=False, **kwargs):
+           printVerboseOnly=False, runInPretendMode=False, **kwargs):
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         cmdline = args[0]  # list with parameters was passed
     else:
@@ -155,7 +155,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
     # When running scripts from a noexec filesystem try to read the interpreter and run that
     printCommand(cmdline, cwd=kwargs.get("cwd"), printVerboseOnly=printVerboseOnly)
     kwargs["cwd"] = str(kwargs["cwd"]) if "cwd" in kwargs else os.getcwd()
-    if _cheriConfig.pretend:
+    if _cheriConfig.pretend and not runInPretendMode:
         return CompletedProcess(args=cmdline, returncode=0, stdout=b"", stderr=b"")
     # actually run the process now:
     if input is not None:

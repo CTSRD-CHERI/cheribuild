@@ -69,6 +69,8 @@ class BuildLLVM(CMakeProject):
             # CLANG_ENABLE_STATIC_ANALYZER=False,  # save some build time by skipping the static analyzer
             # CLANG_ENABLE_ARCMT=False",  # need to disable ARCMT to disable static analyzer
         )
+        if self.canUseLLd(self.cCompiler):
+            self.add_cmake_options(LLVM_ENABLE_LLD=True)
         if IS_FREEBSD:
             # self.configureArgs.append("-DDEFAULT_SYSROOT=" + str(self.config.sdkSysrootDir))
             # self.configureArgs.append("-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd")
@@ -99,8 +101,8 @@ class BuildLLVM(CMakeProject):
         versionTuple = (major, minor, patch)
         versionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         # clang prints this output to stderr
-        versionString = runCmd(self.cCompiler, "-v", captureError=True, printVerboseOnly=True).stderr
-        match = versionPattern.search(versionString)
+        versionCmd = runCmd(self.cCompiler, "-v", captureError=True, printVerboseOnly=True, runInPretendMode=True)
+        match = versionPattern.search(versionCmd.stderr)
         versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
         if versionComponents < versionTuple:
             versionStr = ".".join(map(str, versionComponents))
