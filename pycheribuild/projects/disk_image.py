@@ -260,7 +260,7 @@ nfs_client_enable="YES"
             else:
                 fatalError("qemu-img command was not found!", fixitHint="Make sure to build target qemu first")
 
-        rawDiskImage = Path(str(self.diskImagePath).replace(".qcow2", ".img"))
+        rawDiskImage = self.diskImagePath.with_suffix(".img")
         runCmd([
             "makefs",
             "-b", "30%",  # minimum 30% free blocks
@@ -292,6 +292,9 @@ nfs_client_enable="YES"
             fatalError("mtree manifest", self.rootfsDir / "METALOG", "is missing")
         if not (self.userGroupDbDir / "master.passwd").is_file():
             fatalError("master.passwd does not exist in ", self.userGroupDbDir)
+
+        if str(self.diskImagePath).endswith(".img"):
+            self.diskImagePath = self.diskImagePath.with_suffix(".qcow2")
 
         statusUpdate("Disk image will saved to", self.diskImagePath)
         statusUpdate("Extra files for the disk image will be copied from", self.extraFilesDir)
