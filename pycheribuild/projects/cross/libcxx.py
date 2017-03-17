@@ -35,13 +35,13 @@ class BuildLibCXX(CrossCompileCMakeProject):
     repository = "https://github.com/RichardsonAlex/libcxx.git"
 
     def __init__(self, config: CheriConfig):
-        self.linkDynamic = True # Hack: we always want to use the dynamic toolchain file, build system adds -static
+        self.linkDynamic = True  # Hack: we always want to use the dynamic toolchain file, build system adds -static
         super().__init__(config)
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
             LIBCXX_ENABLE_STATIC=True,
             LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=False,  # not yet
-            LIBCXX_INCLUDE_TESTS=False,  # unit tests: not yet
+            LIBCXX_INCLUDE_TESTS=True,  # unit tests: not yet
             LIBCXX_INCLUDE_BENCHMARKS=False,
             LIBCXX_INCLUDE_DOCS=False,
             LIBCXX_CXX_ABI="none",  # don't use a c++ abi library
