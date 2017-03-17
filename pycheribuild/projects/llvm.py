@@ -117,7 +117,7 @@ class BuildLLVM(CMakeProject):
                             revision=self.clangGitRevision)
         if not self.skip_lld:
             self._updateGitRepo(self.sourceDir / "tools/lld", "https://github.com/CTSRD-CHERI/lld.git",
-                                revision=self.lldGitRevision, initialBranch="cheri-lld")
+                                revision=self.lldGitRevision, initialBranch="master")
         if False:  # Not yet usable
             self._updateGitRepo(self.sourceDir / "tools/lldb", "https://github.com/CTSRD-CHERI/lldb.git",
                                 revision=self.lldbGitRevision, initialBranch="master")
