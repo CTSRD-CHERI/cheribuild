@@ -52,7 +52,8 @@ else:
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "CheriConfig", "IS_LINUX", "IS_FREEBSD", "printCommand", "includeLocalFile",  # no-combine
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
-           "parseOSRelease", "warningMessage", "Type_T", "typing", "popen_handle_noexec", "check_call_handle_noexec"]  # no-combine
+           "parseOSRelease", "warningMessage", "Type_T", "typing", "popen_handle_noexec",  # no-combine
+           "check_call_handle_noexec", "ThreadJoiner"]  # no-combine
 
 
 if sys.version_info < (3, 4):
@@ -76,6 +77,7 @@ if sys.version_info < (3, 5):
             return "{}({})".format(type(self).__name__, ', '.join(args))
 else:
     from subprocess import CompletedProcess
+import threading
 
 IS_LINUX = sys.platform.startswith("linux")
 IS_FREEBSD = sys.platform.startswith("freebsd")
@@ -252,3 +254,18 @@ def setEnv(*, printVerboseOnly=True, **environ):
     finally:
         os.environ.clear()
         os.environ.update(old_environ)
+
+
+class ThreadJoiner(object):
+    def __init__(self, thread: "typing.Optional[threading.Thread]"):
+        self.thread = thread
+
+    def __enter__(self):
+        if self.thread is not None:
+            self.thread.start()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.thread is not None:
+            if self.thread.is_alive():
+                statusUpdate("Waiting for '", self.thread.name, "' to complete", sep="")
+            self.thread.join()

@@ -146,13 +146,13 @@ class BuildFreeBSD(Project):
 
         self.destdir = self.installDir
 
-    def clean(self):
+    def clean(self) -> ThreadJoiner:
         if self.skipBuildworld:
             # TODO: only clean the current kernel config not all of them
             kernelBuildDir = self.buildDir / ("mips.mips64" + str(self.sourceDir) + "/sys/")
-            self.cleanDirectory(kernelBuildDir)
+            return self.asyncCleanDirectory(kernelBuildDir)
         else:
-            super().clean()
+            return super().clean()
 
     def compile(self):
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)

@@ -27,7 +27,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import argparse
 import io
 import os
 import shutil
@@ -162,9 +161,14 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
         return str(result).lower().startswith("y")  # anything but y will be treated as false
 
     def makedirs(self, path: Path):
-        printCommand("mkdir", "-p", path, printVerboseOnly=True)
-        if not self.config.pretend:
+        if not self.config.pretend and not path.is_dir():
+            printCommand("mkdir", "-p", path, printVerboseOnly=True)
             os.makedirs(str(path), exist_ok=True)
+
+    def _deleteDirectories(self, *dirs):
+        # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
+        # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
+        runCmd("rm", "-rf", *dirs)
 
     def cleanDirectory(self, path: Path, keepRoot=False) -> None:
         """ After calling this function path will be an empty directory
@@ -173,15 +177,59 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
         """
         if path.is_dir():
             # If the root dir is used e.g. as an NFS mount we mustn't remove it, but only the subdirectories
-            if keepRoot:
-                entries = list(map(str, path.iterdir()))
-            else:
-                entries = [str(path)]
-            # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
-            # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
-            runCmd(["rm", "-rf"] + entries)
+            entries = list(map(str, path.iterdir())) if keepRoot else [path]
+            self._deleteDirectories(*entries)
         # always make sure the path exists
         self.makedirs(path)
+
+    class DeleterThread(threading.Thread):
+        def __init__(self, project: "SimpleProject", path: Path):
+            super().__init__(name="Deleting " + str(path))
+            self.path = path
+            self.project = project
+
+        def run(self):
+            try:
+                if self.project.config.verbose:
+                    statusUpdate("Deleting", self.path, "asynchronously")
+                self.project._deleteDirectories(self.path)
+                if self.project.config.verbose:
+                    statusUpdate("Async delete of", self.path, "finished")
+            except Exception as e:
+                warningMessage("Could not remove directory", self.path, e)
+
+    def asyncCleanDirectory(self, path: Path, *, keepRoot=False) -> ThreadJoiner:
+        """
+        Delete a directory in the background (e.g. deleting the cheribsd build directory delays the build
+        with self.asyncCleanDirectory("foo")
+            # foo has been moved to foo.tmp and foo is now and empty dir:
+            do_something()
+        # now foo.tpt no longer exists
+        :param path: the directory to clean
+        :param keepRoot: currently not supported
+        :return:
+        """
+        deleterThread = None
+        tempdir = path.with_suffix(".delete-me-pls")
+        if keepRoot:
+            # TODO: mkdir tempdir, move stuff there, then rm -rf tempdir
+            warningMessage("Cannot asynchronously delete with keepRoot yet, deleting", path, "in foreground")
+            self.cleanDirectory(path, keepRoot=keepRoot)
+        elif not path.is_dir():
+            self.makedirs(path)
+        elif len(list(path.iterdir())) == 0:
+            statusUpdate("Not cleaning", path, "it is already empty")
+        else:
+            if tempdir.is_dir():
+                warningMessage("Previous async cleanup of ", path, "failed. Cleaning up now")
+                self._deleteDirectories(tempdir)
+            # rename the directory, create a new dir and then delete it in a background thread
+            runCmd("mv", path, tempdir)
+            self.makedirs(path)
+        if tempdir.is_dir() or self.config.pretend:
+            # we now have an empty directory, start background deleter and return to caller
+            deleterThread = SimpleProject.DeleterThread(self, tempdir)
+        return ThreadJoiner(deleterThread)
 
     def readFile(self, file: Path) -> str:
         # just return an empty string in pretend mode
@@ -637,7 +685,7 @@ class Project(SimpleProject):
             fatalError("Cannot update", self.projectName, "as it is missing a git URL", fatalWhenPretending=True)
         self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision, initialBranch=self.gitBranch)
 
-    def clean(self):
+    def clean(self) -> ThreadJoiner:
         assert self.config.clean
         # TODO: never use the source dir as a build dir (unfortunately GDB, postgres and elftoolchain won't work)
         # will have to check how well binutils and qemu work there
@@ -647,7 +695,8 @@ class Project(SimpleProject):
                                              "build artifacts.")
             runCmd("git", "clean", "-dfx", cwd=self.buildDir)
         else:
-            self.cleanDirectory(self.buildDir)
+            return self.asyncCleanDirectory(self.buildDir)
+        return ThreadJoiner(None)
 
     def configure(self):
         if self.configureCommand:
@@ -670,19 +719,20 @@ class Project(SimpleProject):
         if not self._systemDepsChecked:
             self.checkSystemDependencies()
         assert self._systemDepsChecked, "self._systemDepsChecked must be set by now!"
-        if self.config.clean:
-            self.clean()
-        # always make sure the build dir exists
-        if not self.buildDir.is_dir():
-            self.makedirs(self.buildDir)
-        if not self.config.skipConfigure:
-            statusUpdate("Configuring", self.projectName, "... ")
-            self.configure()
-        statusUpdate("Building", self.projectName, "... ")
-        self.compile()
-        if not self.config.skipInstall:
-            statusUpdate("Installing", self.projectName, "... ")
-            self.install()
+
+        # run the rm -rf <build dir> in the background
+        cleaningTask = self.clean() if self.config.clean else ThreadJoiner(None)
+        with cleaningTask:
+            if not self.buildDir.is_dir():
+                self.makedirs(self.buildDir)
+            if not self.config.skipConfigure:
+                statusUpdate("Configuring", self.projectName, "... ")
+                self.configure()
+            statusUpdate("Building", self.projectName, "... ")
+            self.compile()
+            if not self.config.skipInstall:
+                statusUpdate("Installing", self.projectName, "... ")
+                self.install()
 
 
 class CMakeProject(Project):
