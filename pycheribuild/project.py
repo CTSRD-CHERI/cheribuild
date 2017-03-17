@@ -166,14 +166,21 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
         if not self.config.pretend:
             os.makedirs(str(path), exist_ok=True)
 
-    # removes a directory tree if --clean is passed (or force=True parameter is passed)
-    def _cleanDir(self, path: Path, force=False):
-        if (self.config.clean or force) and path.is_dir():
+    def cleanDirectory(self, path: Path, keepRoot=False) -> None:
+        """ After calling this function path will be an empty directory
+        :param path: the directory to delete
+        :param keepRoot: Whether to keep the root directory (e.g. for NFS exported mountpoints)
+        """
+        if path.is_dir():
+            # If the root dir is used e.g. as an NFS mount we mustn't remove it, but only the subdirectories
+            if keepRoot:
+                entries = list(map(str, path.iterdir()))
+            else:
+                entries = [str(path)]
             # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
             # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
-            runCmd("rm", "-rf", str(path))
-
-        # make sure the dir is empty afterwards
+            runCmd(["rm", "-rf"] + entries)
+        # always make sure the path exists
         self.makedirs(path)
 
     def readFile(self, file: Path) -> str:
@@ -630,13 +637,16 @@ class Project(SimpleProject):
         self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision, initialBranch=self.gitBranch)
 
     def clean(self):
-        # TODO: never use the source dir as a build dir
+        assert self.config.clean
+        # TODO: never use the source dir as a build dir (unfortunately GDB, postgres and elftoolchain won't work)
         # will have to check how well binutils and qemu work there
         if (self.buildDir / ".git").is_dir():
             # just use git clean for cleanup
+            warningMessage(self.projectName, "does not support out-of-source builds, using git clean to remove"
+                                             "build artifacts.")
             runCmd("git", "clean", "-dfx", cwd=self.buildDir)
         else:
-            self._cleanDir(self.buildDir)
+            self.cleanDirectory(self.buildDir)
 
     def configure(self):
         if self.configureCommand:

@@ -197,7 +197,7 @@ class BuildCheriBsdSysroot(SimpleProject):
 
     def createSysroot(self):
         # we need to add include files and libraries to the sysroot directory
-        self._cleanDir(self.config.sdkSysrootDir, force=True)  # make sure the sysroot is cleaned
+        self.cleanDirectory(self.config.sdkSysrootDir)  # make sure the sysroot is cleaned
         self.makedirs(self.config.sdkSysrootDir / "usr")
         # use tar+untar to copy all necessary files listed in metalog to the sysroot dir
         archiveCmd = ["tar", "cf", "-", "--include=./lib/", "--include=./usr/include/",

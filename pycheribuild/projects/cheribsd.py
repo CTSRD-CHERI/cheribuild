@@ -150,7 +150,7 @@ class BuildFreeBSD(Project):
         if self.skipBuildworld:
             # TODO: only clean the current kernel config not all of them
             kernelBuildDir = self.buildDir / ("mips.mips64" + str(self.sourceDir) + "/sys/")
-            self._cleanDir(kernelBuildDir)
+            self.cleanDirectory(kernelBuildDir)
         else:
             super().clean()
 
@@ -172,12 +172,13 @@ class BuildFreeBSD(Project):
 
     def _removeOldRootfs(self):
         assert self.config.clean or not self.keepOldRootfs
-        if not self.skipBuildworld:
+        if self.skipBuildworld:
+            self.makedirs(self.installDir)
+        else:
             # make sure the old install is purged before building, otherwise we might get strange errors
             # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
-            self._cleanDir(self.installDir, force=True)
-        else:
-            self.makedirs(self.installDir)
+            # We have to keep the rootfs directory in case it has been NFS mounted
+            self.cleanDirectory(self.installDir, keepRoot=True)
 
     def install(self):
         if self.subdirOverride:
