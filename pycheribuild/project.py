@@ -333,6 +333,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
     def __runProcessWithFilteredOutput(self, proc: subprocess.Popen, logfile: "typing.Optional[io.FileIO]",
                                        stdoutFilter: "typing.Callable[[bytes], None]", cmdStr: str):
         logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
+        stderrThread = None
         if logfile:
             # use a thread to print stderr output and write it to logfile (not using a thread would block)
             stderrThread = threading.Thread(target=self._handleStdErr, args=(logfile, proc.stderr, logfileLock, self))
@@ -347,7 +348,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
                     sys.stdout.buffer.write(line)
                     sys.stdout.buffer.flush()
         retcode = proc.wait()
-        if logfile:
+        if stderrThread:
             stderrThread.join()
         # Not sure if the remaining call is needed
         remainingErr, remainingOut = proc.communicate()
