@@ -51,7 +51,6 @@ def insertLocalFile(line: str, srcFile: Path):
     match = re.search(pattern, line)
     if not match or len(match.groups()) < 1:
         sys.exit("Invalid includeLocalFile: " + line)
-        return
     relativePath = match.groups()[0]
     # print("Including file", relativePath, "from", srcFile.relative_to(scriptDir), file=sys.stderr)
     targetFile = scriptDir / relativePath

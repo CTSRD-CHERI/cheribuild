@@ -104,6 +104,7 @@ class BuildLLVM(CMakeProject):
         versionCmd = runCmd(self.cCompiler, "-v", captureError=True, printVerboseOnly=True, runInPretendMode=True)
         match = versionPattern.search(versionCmd.stderr)
         versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
+        # noinspection PyTypeChecker
         if versionComponents < versionTuple:
             versionStr = ".".join(map(str, versionComponents))
             self.dependencyError(self.cCompiler, "version", versionStr,

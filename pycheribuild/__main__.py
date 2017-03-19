@@ -33,7 +33,6 @@ import shlex
 import subprocess
 import sys
 
-from pathlib import Path
 from .utils import *
 from .targets import targetManager
 from .configloader import ConfigLoader
@@ -44,6 +43,7 @@ from .projects.cross import *  # make sure all projects are loaded so that targe
 # custom encoder to handle pathlib.Path objects
 class MyJsonEncoder(json.JSONEncoder):
     def __init__(self, *args, **kwargs):
+        # noinspection PyArgumentList
         super().__init__(*args, **kwargs)
 
     def default(self, o):
@@ -53,6 +53,7 @@ class MyJsonEncoder(json.JSONEncoder):
 
 
 def updateCheck():
+    from pathlib import Path
     # check if new commits are available
     projectDir = str(Path(__file__).parent)
     subprocess.call(["git", "fetch"], cwd=projectDir)

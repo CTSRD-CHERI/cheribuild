@@ -162,6 +162,7 @@ class ConfigLoader(object):
         assert not action.type  # we handle the type of the value manually
         result = cls(action, default, type)
         cls.options.append(result)
+        # noinspection PyTypeChecker
         return result
 
     @classmethod

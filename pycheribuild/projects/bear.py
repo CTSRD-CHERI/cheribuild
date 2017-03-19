@@ -28,8 +28,6 @@
 # SUCH DAMAGE.
 #
 from ..project import CMakeProject
-from ..utils import *
-
 
 class BuildBear(CMakeProject):
     repository = "https://github.com/rizsotto/Bear.git"

@@ -29,7 +29,6 @@
 #
 import os
 import sys
-from pathlib import Path
 
 from ..project import Project
 from ..configloader import ConfigLoader

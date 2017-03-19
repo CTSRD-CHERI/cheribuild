@@ -109,7 +109,7 @@ def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remain
 
 def getInterpreter(cmdline: "typing.Sequence[str]") -> "typing.Optional[typing.List[str]]":
     """
-    :param executable: The path to check
+    :param cmdline: The command to check
     :return: The interpreter command if the executable does not have execute permissions
     """
     executable = Path(cmdline[0])

@@ -45,10 +45,6 @@ def defaultSshForwardingPort():
     return 9999 + ((os.getuid() - 1000) % 10000)
 
 
-def defaultTelnetPort():
-    # chose a different port for each user (hopefully it isn't in use yet)
-    return defaultSshForwardingPort() + 1
-
 
 class LaunchQEMU(SimpleProject):
     target = "run"
@@ -58,8 +54,9 @@ class LaunchQEMU(SimpleProject):
     _forwardSSHPort = True
 
     @classmethod
-    def setupConfigOptions(cls, sshPortShortname="-ssh-forwarding-port", defaultSshPort=defaultSshForwardingPort(),
-                           useTelnetShortName="-qemu-monitor-telnet", defaultTelnetPort=defaultTelnetPort(), **kwargs):
+    def setupConfigOptions(cls, sshPortShortname: "typing.Optional[str]"="-ssh-forwarding-port",
+                           defaultSshPort=defaultSshForwardingPort(),
+                           useTelnetShortName: "typing.Optional[str]"="-qemu-monitor-telnet", **kwargs):
         super().setupConfigOptions(**kwargs)
         cls.extraOptions = cls.addConfigOption("extra-options", default=[], kind=list, metavar="QEMU_OPTIONS",
                                                help="Additional command line flags to pass to qemu-system-cheri")
@@ -107,7 +104,6 @@ class LaunchQEMU(SimpleProject):
             fatalError("SSH forwarding port", self.sshForwardingPort, "is already in use! Make sure you don't ",
                        "already have a QEMU instance running or change the chosen port by setting the config option",
                        self.target + "/ssh-forwarding-port")
-
 
         monitorOptions = []
         if self.useTelnet:
@@ -179,7 +175,6 @@ class LaunchFreeBSDMipsQEMU(LaunchQEMU):
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
                                    defaultSshPort=defaultSshForwardingPort() + 2,
-                                   defaultTelnetPort=defaultTelnetPort() + 2,
                                    **kwargs)
 
     def __init__(self, config):
@@ -200,7 +195,6 @@ class LaunchCheriOSQEMU(LaunchQEMU):
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
                                    defaultSshPort=defaultSshForwardingPort() + 4,
-                                   defaultTelnetPort=defaultTelnetPort() + 4,
                                    **kwargs)
 
     def __init__(self, config: CheriConfig):
