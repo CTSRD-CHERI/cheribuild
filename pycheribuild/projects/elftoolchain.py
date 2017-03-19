@@ -55,6 +55,8 @@ class BuildElftoolchainBinutils(Project):
         # TODO: build static?
         self.commonMakeArgs.append("WITH_TESTS=no")
         self.commonMakeArgs.append("WITH_DOCUMENTATION=no")
+        # HACK: we don't want the binaries to depend on libelftc.so because the build system doesn't handle rpath
+        self.commonMakeArgs.append("SHLIB_MAJOR=")  # don't build shared libraries
         if not self.config.verbose:
             self.commonMakeArgs.append("-s")
         self.programsToBuild = ["brandelf", "ar", "elfcopy", "elfdump", "strings", "nm", "readelf", "addr2line",
@@ -62,14 +64,14 @@ class BuildElftoolchainBinutils(Project):
         # some make targets install more than one tool:
         # strip, objcopy and mcs are links to elfcopy and ranlib is a link to ar
         self.extraPrograms = ["strip", "ranlib", "objcopy", "mcs"]
+        self.libTargets = ["common", "libelf", "libelftc", "libpe", "libdwarf"]
 
     def compile(self):
-        libTargets = ["common", "libelf", "libelftc", "libpe", "libdwarf"]
         # tools that we want to build:
         # build is not parallel-safe -> we can't make with all the all-foo targets and -jN
         # To speed it up run make for the individual library directories instead and then for all the binaries
         firstCall = True  # recreate logfile on first call, after that append
-        for tgt in libTargets + self.programsToBuild:
+        for tgt in self.libTargets + self.programsToBuild:
             # setting SHLIB_FULLVERSION to empty is a hack to prevent building of shared libraries
             # as we want the build tools to be statically linked but e.g. libarchive might not be available
             # as a static library (e.g. on openSUSE)
