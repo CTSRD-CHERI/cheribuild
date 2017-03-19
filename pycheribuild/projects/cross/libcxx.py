@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import *
+from ..llvm import BuildLLVM
 from ...utils import statusUpdate
 
 
@@ -50,6 +51,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LIBCXX_ENABLE_RTTI=False,
             # TODO: is this needed?
             LIBCXX_SYSROOT=config.sdkDir / "sysroot",
+            LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config"
 
         )
 
