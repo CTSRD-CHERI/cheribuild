@@ -107,7 +107,7 @@ def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remain
     print(coloured(colour, newArgs, sep=sep), flush=True, **kwargs)
 
 
-def getInterpreter(cmdline: "typing.Sequence[str]") -> "typing.List[str]":
+def getInterpreter(cmdline: "typing.Sequence[str]") -> "typing.Optional[typing.List[str]]":
     """
     :param executable: The path to check
     :return: The interpreter command if the executable does not have execute permissions
@@ -215,7 +215,7 @@ def warningMessage(*args, sep=" "):
 
 
 def includeLocalFile(path: str) -> str:
-    file = Path(__file__).parent / path
+    file = Path(__file__).parent / path  # type: Path
     if not file.is_file():
         fatalError(file, "is missing!")
     with file.open("r", encoding="utf-8") as f:
@@ -237,7 +237,7 @@ def setEnv(*, printVerboseOnly=True, **environ):
     """
     Temporarily set the process environment variables.
 
-    >>> with set_env(PLUGINS_DIR=u'test/plugins'):
+    >>> with setEnv(PLUGINS_DIR=u'test/plugins'):
     ...   "PLUGINS_DIR" in os.environ
     True
 

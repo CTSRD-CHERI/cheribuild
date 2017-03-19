@@ -74,6 +74,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
             # "--enable-build-with-cxx"
         ])
         # extra ./configure environment variables:
+        # noinspection PyArgumentList
         self.configureEnvironment.update(gl_cv_func_gettimeofday_clobber="no",
                                          lt_cv_sys_max_cmd_len="262144",
                                          # The build system run CC without any flags to detect dependency style...

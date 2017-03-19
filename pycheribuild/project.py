@@ -44,7 +44,7 @@ from enum import Enum
 
 
 class ProjectSubclassDefinitionHook(type):
-    def __init__(cls, name: str, bases: set, clsdict: dict):
+    def __init__(cls, name: str, bases, clsdict):
         super().__init__(name, bases, clsdict)
         if clsdict.get("doNotAddToTargets"):
             return  # if doNotAddToTargets is defined within the class we skip it
@@ -85,6 +85,9 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
     projectName = None
     dependencies = []  # type: typing.List[str]
     dependenciesMustBeBuilt = False
+    sourceDir = None
+    buildDir = None
+    installDir = None
 
     @classmethod
     def allDependencyNames(cls):
@@ -105,7 +108,8 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
     __commandLineOptionGroup = None
 
     @classmethod
-    def addConfigOption(cls, name: str, default=None, kind: "typing.Callable[[str], Type_T]"=str, *,
+    def addConfigOption(cls, name: str, default: "typing.Union[Type_T, typing.Callable[[], Type_T]]"=None,
+                        kind: "typing.Callable[[str], Type_T]"=str, *,
                         showHelp=False, shortname=None, **kwargs) -> "Type_T":
         assert cls.target, "target not set for " + cls.__name__
         # Hide stuff like --foo/install-directory from --help

@@ -85,7 +85,7 @@ class LaunchQEMU(SimpleProject):
         self.qemuBinary = self.config.sdkDir / "bin/qemu-system-cheri"
         self.currentKernel = BuildCHERIBSD.rootfsDir(self.config) / "boot/kernel/kernel"
         self.diskImage = BuildCheriBSDDiskImage.diskImagePath
-        self._diskOptions = None
+        self._diskOptions = []
         self._projectSpecificOptions = []
         self._qemuUserNetworking = True
 
@@ -97,7 +97,7 @@ class LaunchQEMU(SimpleProject):
             self.dependencyError("Kernel is missing:", self.currentKernel,
                                  installInstructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
         if self.diskImage:
-            if self._diskOptions is None:
+            if len(self._diskOptions) == 0:
                 self._diskOptions = ["-hda", self.diskImage]
             if not self.diskImage.exists():
                 self.dependencyError("Disk image is missing:", self.diskImage,

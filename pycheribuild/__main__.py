@@ -40,6 +40,7 @@ from .configloader import ConfigLoader
 from .projects import *  # make sure all projects are loaded so that targetManager gets populated
 from .projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
 
+
 # custom encoder to handle pathlib.Path objects
 class MyJsonEncoder(json.JSONEncoder):
     def __init__(self, *args, **kwargs):

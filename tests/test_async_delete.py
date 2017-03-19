@@ -23,6 +23,7 @@ class MockConfig(object):
         self.sleep_before_delete = False
 
 
+# noinspection PyTypeChecker
 class MockProject(Project):
     doNotAddToTargets = True
 
@@ -46,6 +47,7 @@ class TestAsyncDelete(TestCase):
         self._tempRoot = tempfile.TemporaryDirectory()
         self.tempRoot = Path(self._tempRoot.name)
         self.config = MockConfig(self.tempRoot)
+        # noinspection PyTypeChecker
         setCheriConfig(self.config)
         self.project = MockProject(self.config, "foo")
         self.assertTrue(self.project.sourceDir.exists())
