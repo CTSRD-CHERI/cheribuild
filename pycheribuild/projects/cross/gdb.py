@@ -90,11 +90,12 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.warningFlags.append("-Wno-error=format")
         self.warningFlags.append("-Wno-error=incompatible-pointer-types")
 
-        self.compileFlags.append("-static")  # seems like LDFLAGS is not enough
-        self.compileFlags.extend(["-DRL_NO_COMPAT", "-g", "-DLIBICONV_PLUG", "-fno-strict-aliasing",
+        self.COMMON_FLAGS.append("-static")  # seems like LDFLAGS is not enough
+        self.COMMON_FLAGS.extend(["-DRL_NO_COMPAT", "-g", "-DLIBICONV_PLUG", "-fno-strict-aliasing",
                                   "-I/usr/local/include"])
-        self.cOnlyFlags.append("-std=gnu89")
-        self.linkerFlags.append("-L/usr/local/lib")
+        self.CFLAGS.append("-std=gnu89")
+        self.LDFLAGS.append("-L/usr/local/lib")
+        # noinspection PyArgumentList
         self.configureEnvironment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
         if self.makeCommand == "gmake":
             self.configureEnvironment["MAKE"] = "gmake"
@@ -105,13 +106,9 @@ class BuildGDB(CrossCompileAutotoolsProject):
         """(cd $obj; env INSTALL="/usr/bin/install -c "  INSTALL_DATA="install   -m 0644"  INSTALL_LIB="install    -m 444"  INSTALL_PROGRAM="install    -m 555"  INSTALL_SCRIPT="install   -m 555"   PYTHON="${PYTHON}" SHELL=/bin/sh CONFIG_SHELL=/bin/sh CONFIG_SITE=/usr/ports/Templates/config.site ../configure ${CONFIGURE_ARGS} )"""
 
     def compile(self):
-        # # don't build the documentation by touching the timestamp files
-        # self.makedirs(self.buildDir / "bfd/doc")
-        # runCmd("touch", 'aoutx.stamp', 'archive.stamp', 'archures.stamp', 'bfdio.stamp', 'bfdt.stamp', 'bfdwin.stamp', 'cache.stamp', 'chew.stamp', 'coffcode.stamp', 'core.stamp', 'elf.stamp', 'elfcode.stamp', 'format.stamp', 'hash.stamp', 'init.stamp', 'libbfd.stamp', 'linker.stamp', 'mmo.stamp', 'opncls.stamp', 'reloc.stamp', 'section.stamp', 'syms.stamp', 'targets.stamp')
         buildenv = self.configureEnvironment.copy()
         # it runs configure during the build step too...
         # And it only partially handles CC_FOR_BUILD..........
-        # FIXME: this should work but for some reason won't...
         with tempfile.TemporaryDirectory() as tmpdir:
             # It hardcodes calling gcc which won't work... WORST BUILD SYSTEM EVER?
             self.createSymlink(self.config.clangPath, Path(tmpdir) / "gcc", relative=False)

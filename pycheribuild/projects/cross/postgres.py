@@ -39,10 +39,10 @@ class BuildPostgres(CrossCompileAutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.compileFlags.append("-static")
-        self.compileFlags.append("-DUSE_ASSERT_CHECKING")
-        self.compileFlags.append("-I/usr/include/edit")
-        self.linkerFlags.append("-pthread")
+        self.COMMON_FLAGS.append("-static")  # adding it to LDFLAGS only doesn't seem to be enough
+        self.COMMON_FLAGS.append("-DUSE_ASSERT_CHECKING")
+        self.COMMON_FLAGS.append("-I/usr/include/edit")
+        self.LDFLAGS.append("-pthread")
         # tell postgres configure that %zu works in printf()
         self.configureEnvironment["PRINTF_SIZE_T_SUPPORT"] = "yes"
         self.configureArgs.extend(["--enable-debug", "--without-libxml", "--without-readline", "--without-gssapi"])

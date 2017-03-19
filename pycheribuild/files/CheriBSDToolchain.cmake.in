@@ -1,0 +1,112 @@
+#
+# Copyright (c) 2016 Alex Richardson
+# All rights reserved.
+#
+# This software was developed by SRI International and the University of
+# Cambridge Computer Laboratory under DARPA/AFRL contract FA8750-10-C-0237
+# ("CTSRD"), as part of the DARPA CRASH research programme.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+set(CMAKE_SYSTEM_NAME "FreeBSD")
+set(CMAKE_SYSTEM_VERSION "11.0")
+# set(CMAKE_CROSSCOMPILING "TRUE")
+# set(CMAKE_SYSTEM_PROCESSOR "MIPS")
+set(CMAKE_SYSTEM_PROCESSOR "BERI (MIPS IV compatible)")
+
+if(CMAKE_VERSION VERSION_LESS "3.6")
+    message(FATAL_ERROR "This toolchain file requires CMake >= 3.6")
+endif()
+# To make sure the C compiler tests pass we need to build a static library not an executable which is the
+# default behaviour. This will fail horribly when cross compiling as we are missing the required link dependencies
+# This variable was introduces in CMake 3.6 so this is our minimum version
+# https://cmake.org/cmake/help/git-master/variable/CMAKE_TRY_COMPILE_TARGET_TYPE.html
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
+set(CHERI_SDK_BINDIR "@TOOLCHAIN_SDK_BINDIR@")
+# Allow compiler dir to be different from toolchain directory (e.g. LLVM build dir)
+set(CHERI_COMPILER_BINDIR "@TOOLCHAIN_COMPILER_BINDIR@")
+set(CHERIBSD_SYSROOT "@TOOLCHAIN_SYSROOT@")
+# add the correct --sysroot:
+# https://cmake.org/cmake/help/git-master/variable/CMAKE_SYSROOT.html
+set(CMAKE_SYSROOT ${CHERIBSD_SYSROOT})
+
+# specify the cross compiler
+set(CMAKE_C_COMPILER "@TOOLCHAIN_COMPILER_BINDIR@/clang")
+set(CMAKE_C_COMPILER_TARGET "@TOOLCHAIN_TARGET_TRIPLE@")
+
+set(CMAKE_CXX_COMPILER "@TOOLCHAIN_COMPILER_BINDIR@/clang++")
+set(CMAKE_CXX_COMPILER_TARGET "@TOOLCHAIN_TARGET_TRIPLE@")
+
+set(CMAKE_ASM_COMPILER "@TOOLCHAIN_COMPILER_BINDIR@/clang")
+set(CMAKE_ASM_COMPILER_TARGET "@TOOLCHAIN_TARGET_TRIPLE@")
+set(CMAKE_ASM_COMPILER_ID "Clang")  # for some reason CMake doesn't detect this automatically
+
+# Doesn't seem to be needed?
+if(FALSE)
+    # https://cmake.org/cmake/help/git-master/variable/CMAKE_LANG_COMPILER_EXTERNAL_TOOLCHAIN.html
+    # This seems to set the --gcc-toolchain=/home/alr48/cheri/output/sdk256/bin
+    set(CMAKE_C_COMPILER_EXTERNAL_TOOLCHAIN ${CHERI_SDK_BINDIR})
+    set(CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN ${CHERI_SDK_BINDIR})
+    set(CMAKE_ASM_COMPILER_EXTERNAL_TOOLCHAIN ${CHERI_SDK_BINDIR})
+endif()
+
+set(CHERIBSD_COMMON_FLAGS "@TOOLCHAIN_COMMON_FLAGS@")
+set(CHERIBSD_LINK_FLAGS "@TOOLCHAIN_LINKER_FLAGS@")
+# https://cmake.org/cmake/help/git-master/variable/CMAKE_TRY_COMPILE_PLATFORM_VARIABLES.html
+set(CMAKE_TRY_COMPILE_PLATFORM_VARIABLES CHERI_SDK_BINDIR CHERIBSD_SYSROOT CHERIBSD_COMMON_FLAGS CHERIBSD_LINK_FLAGS)
+
+# CMake 3.7 has new variables that we can use to correctly initialize these flags
+# https://cmake.org/cmake/help/git-master/release/3.7.html#variables
+if(CMAKE_VERSION VERSION_LESS "3.7")
+    set(CMAKE_C_FLAGS   "${CHERIBSD_COMMON_FLAGS} @TOOLCHAIN_C_FLAGS@" CACHE STRING "toolchain_cflags" FORCE)
+    set(CMAKE_ASM_FLAGS "${CHERIBSD_COMMON_FLAGS} @TOOLCHAIN_ASM_FLAGS@" CACHE STRING "toolchain_asmflags" FORCE)
+    set(CMAKE_CXX_FLAGS "${CHERIBSD_COMMON_FLAGS} @TOOLCHAIN_CXX_FLAGS@" CACHE STRING "toolchain_cxxflags" FORCE)
+    set(CMAKE_LINK_FLAGS          "${CHERIBSD_LINK_FLAGS}" CACHE STRING "toolchain_linkflags" FORCE)
+    set(CMAKE_EXE_LINKER_FLAGS    "${CHERIBSD_LINK_FLAGS}" CACHE STRING "toolchain_linkflags" FORCE)
+    set(CMAKE_SHARED_LINKER_FLAGS "${CHERIBSD_LINK_FLAGS}" CACHE STRING "toolchain_linkflags" FORCE)
+    set(CMAKE_MODULE_LINKER_FLAGS "${CHERIBSD_LINK_FLAGS}" CACHE STRING "toolchain_linkflags" FORCE)
+else()
+    # We can set the new CMake 3.7 *_INIT variables
+    set(CMAKE_EXE_LINKER_FLAGS_INIT    "${CHERIBSD_LINK_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS_INIT "${CHERIBSD_LINK_FLAGS}")
+    set(CMAKE_MODULE_LINKER_FLAGS_INIT "${CHERIBSD_LINK_FLAGS}")
+    set(CMAKE_C_FLAGS_INIT   "${CHERIBSD_COMMON_FLAGS} @TOOLCHAIN_C_FLAGS@")
+    set(CMAKE_ASM_FLAGS_INIT "${CHERIBSD_COMMON_FLAGS} @TOOLCHAIN_ASM_FLAGS@")
+    set(CMAKE_CXX_FLAGS_INIT "${CHERIBSD_COMMON_FLAGS} @TOOLCHAIN_CXX_FLAGS@")
+endif()
+
+# where is the target environment
+SET(CMAKE_FIND_ROOT_PATH ${CHERIBSD_SYSROOT})
+# search for programs in the build host directories
+SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+# for libraries and headers in the target directories
+SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+
+# For some reason ranlib doesn't like our static libraries:
+#  /build/ctsrd/sdk256/bin/mips64-unknown-freebsd-ranlib: libcmTC_1737a.a:
+#  File format is ambiguous
+#  /build/ctsrd/sdk256/bin/mips64-unknown-freebsd-ranlib: Matching formats:
+#  elf64-tradbigmips ecoff-bigmips ecoff-littlemips
+# As it is not required we can simply use : instead
+# set(CMAKE_RANLIB ":")
