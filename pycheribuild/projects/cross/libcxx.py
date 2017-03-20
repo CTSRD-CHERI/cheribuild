@@ -62,9 +62,11 @@ class BuildLibCXX(CrossCompileCMakeProject):
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
-        cls.qemu_host = cls.addConfigOption("qemu-host", help="The QEMU SSH hostname to connect to for running tests",
-                                            default=lambda c, p: "localhost:" + str(LaunchQEMU.sshForwardingPort))
-        cls.qemu_user = cls.addConfigOption("qemu-user", default="root", help="The CheriBSD used for running tests")
+        cls.qemu_host = cls.addConfigOption("ssh-host", help="The QEMU SSH hostname to connect to for running tests",
+                                            default=lambda c, p: "localhost")
+        cls.qemu_port = cls.addConfigOption("ssh-port", help="The QEMU SSH port to connect to for running tests",
+                                            kind=int, default=lambda c, p: LaunchQEMU.sshForwardingPort)
+        cls.qemu_user = cls.addConfigOption("shh-user", default="root", help="The CheriBSD used for running tests")
 
     def __init__(self, config: CheriConfig):
         self.linkDynamic = True  # Hack: we always want to use the dynamic toolchain file, build system adds -static
@@ -94,6 +96,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LIBCXX_TARGET_TRIPLE=self.targetTriple,
             LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
-            LIBCXX_EXECUTOR="SSHExecutor('{host}', username='{user}')".format(host=self.qemu_host, user=self.qemu_user),
+            LIBCXX_EXECUTOR="SSHExecutor('{host}', username='{user}', port={port})".format(
+                host=self.qemu_host, user=self.qemu_user, port=self.qemu_port),
             LIBCXX_TARGET_INFO="libcxx.test.target_info.CheriBSDRemoteTI",
         )
