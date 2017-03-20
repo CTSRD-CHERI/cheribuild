@@ -80,8 +80,8 @@ class ConfigLoader(object):
         Loads the configuration from the command line and the JSON file
         :return The targets to build
         """
-        targetOption = cls._parser.add_argument("targets", metavar="TARGET", type=str, nargs=argparse.ZERO_OR_MORE,
-                                                help="The targets to build", default=["all"], choices=availableTargets)
+        targetOption = cls._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
+                                                help="The targets to build", choices=availableTargets + [[]])
         if argcomplete and "_ARGCOMPLETE" in os.environ:
             # if IS_FREEBSD: # FIXME: for some reason this won't work
             excludes = ["-t", "--skip-dependencies"]
@@ -95,8 +95,8 @@ class ConfigLoader(object):
             targetOption.completer = targetCompleter
             # make sure we get target completion for the unparsed args too by adding another zero_or more options
             # not sure why this works but it's a nice hack
-            unparsed = cls._parser.add_argument("targets", metavar="TARGET", type=str, nargs=argparse.ZERO_OR_MORE,
-                                                help=argparse.SUPPRESS, default=["all"], choices=availableTargets)
+            unparsed = cls._parser.add_argument("targets", metavar="TARGET", type=list, nargs=argparse.ZERO_OR_MORE,
+                                                help=argparse.SUPPRESS, choices=availableTargets)
             unparsed.completer = targetCompleter
             argcomplete.autocomplete(
                 cls._parser,
@@ -140,7 +140,7 @@ class ConfigLoader(object):
 
     @classmethod
     def addOption(cls, name: str, shortname=None, default=None, type: "typing.Callable[[str], Type_T]"=str, group=None,
-                  helpHidden=False, **kwargs) -> "Type_T":
+                  helpHidden=False, _owningClass: "typing.Type"=None, **kwargs) -> "Type_T":
         # add the default string to help if it is not lambda and help != argparse.SUPPRESS
 
         # hide obscure options unless --help-hidden/--help/all is passed
@@ -160,7 +160,7 @@ class ConfigLoader(object):
         assert isinstance(action, argparse.Action)
         assert not action.default  # we handle the default value manually
         assert not action.type  # we handle the type of the value manually
-        result = cls(action, default, type)
+        result = cls(action, default, type, _owningClass)
         cls.options.append(result)
         # noinspection PyTypeChecker
         return result
@@ -174,12 +174,12 @@ class ConfigLoader(object):
         # we have to make sure we resolve this to an absolute path because otherwise steps where CWD is different fail!
         return cls.addOption(name, shortname, type=Path, **kwargs)
 
-    def __init__(self, action: argparse.Action, default, valueType):
+    def __init__(self, action: argparse.Action, default, valueType, _owningClass=None):
         self.action = action
         self.default = default
         self.valueType = valueType
         self._cached = None
-        pass
+        self._owningClass = _owningClass  # if none it means the global CheriConfig is the class containing this option
 
     def _loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
         assert self.action.option_strings[0].startswith("--")
@@ -205,7 +205,7 @@ class ConfigLoader(object):
         # print("Loaded option", self.action, "->", result)
         # import traceback
         # traceback.print_stack()
-        ConfigLoader.values[fullOptionName] = self._cached  # just for debugging
+        ConfigLoader.values[fullOptionName] = result  # just for debugging
         return result
 
     def _loadOptionImpl(self, fullOptionName: str, config: "CheriConfig", ownerClass: "typing.Type"):
@@ -266,6 +266,7 @@ class ConfigLoader(object):
         return result
 
     def __get__(self, instance, owner):
+        assert not self._owningClass or owner == self._owningClass
         if self._cached is None:
             self._cached = self._loadOption(self._cheriConfig, owner)
         return self._cached

@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import os
+import json
 import shutil
 from .configloader import ConfigLoader
 from pathlib import Path
@@ -54,6 +55,18 @@ def defaultClangTool(basename: str):
             return guess
     guess = shutil.which(basename)
     return guess
+
+
+# custom encoder to handle pathlib.Path objects
+class MyJsonEncoder(json.JSONEncoder):
+    def __init__(self, *args, **kwargs):
+        # noinspection PyArgumentList
+        super().__init__(*args, **kwargs)
+
+    def default(self, o):
+        if isinstance(o, Path):
+            return str(o)
+        return super().default(o)
 
 
 class CheriConfig(object):
@@ -126,6 +139,16 @@ class CheriConfig(object):
                                                         "FreeBSD build server and don't build the SDK first.",
                                                         group=ConfigLoader.remoteBuilderGroup)
 
+    def loadAllOptions(self):
+        for i in ConfigLoader.options:
+            # noinspection PyProtectedMember
+            owner = i._owningClass if i._owningClass else self
+            i.__get__(self, owner)  # force loading of lazy value
+
+    def dumpOptionsJSON(self):
+        self.loadAllOptions()
+        print(json.dumps(ConfigLoader.values, sort_keys=True, cls=MyJsonEncoder, indent=4))
+
     def __init__(self, availableTargets: list):
         ConfigLoader._cheriConfig = self
         self.targets = ConfigLoader.loadTargets(availableTargets)
@@ -149,4 +172,8 @@ class CheriConfig(object):
 
         if self.verbose:
             # for debugging purposes print all the options
+            self.loadAllOptions()
+            for i in ConfigLoader.options:
+                # noinspection PyProtectedMember
+                i.__get__(self, i._owningClass if i._owningClass else self)  # force loading of lazy value
             print("cheribuild.py configuration:", dict(ConfigLoader.values))

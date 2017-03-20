@@ -125,7 +125,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             cls._commandLineOptionGroup = ConfigLoader._parser.add_argument_group(
                     "Options for target '" + cls.target + "'")
 
-        return ConfigLoader.addOption(cls.target + "/" + name, shortname, default=default, type=kind,
+        return ConfigLoader.addOption(cls.target + "/" + name, shortname, default=default, type=kind, _owningClass=cls,
                                       group=cls._commandLineOptionGroup, helpHidden=helpHidden, **kwargs)
 
     @classmethod

@@ -40,18 +40,6 @@ from .projects import *  # make sure all projects are loaded so that targetManag
 from .projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
 
 
-# custom encoder to handle pathlib.Path objects
-class MyJsonEncoder(json.JSONEncoder):
-    def __init__(self, *args, **kwargs):
-        # noinspection PyArgumentList
-        super().__init__(*args, **kwargs)
-
-    def default(self, o):
-        if isinstance(o, Path):
-            return str(o)
-        return super().default(o)
-
-
 def updateCheck():
     from pathlib import Path
     # check if new commits are available
@@ -90,10 +78,12 @@ def real_main():
     if cheriConfig.listTargets:
         print("Available targets are:\n ", "\n  ".join(allTargetNames))
     elif cheriConfig.dumpConfig:
-        print(json.dumps(ConfigLoader.values, sort_keys=True, cls=MyJsonEncoder, indent=4))
+        cheriConfig.dumpOptionsJSON()
     else:
         if runEverythingTarget in cheriConfig.targets:
             cheriConfig.targets = allTargetNames
+        if not cheriConfig.targets:
+            fatalError("At least one target name is required (see --list-targets).")
         targetManager.run(cheriConfig)
 
 
