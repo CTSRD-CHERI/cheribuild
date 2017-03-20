@@ -96,6 +96,15 @@ def addFilteredFile(p: Path):
         for line in f.readlines():
             handleLine(line, p)
 
+def checkAllFilesUsed(directory: Path):
+    for p in directory.iterdir():
+        if not p.is_file():
+            continue
+        if p.name == "__init__.py" or p.name == "__main__.py":
+            continue  # only needed when building as a module
+        if p not in handledFiles:
+            print("\x1b[1;31m", p, " not added!\x1b[0m", file=sys.stderr, sep="")
+
 
 # append all the individual files in the right order
 addFilteredFile(scriptDir / "colour.py")
@@ -124,15 +133,16 @@ addFilteredFile(scriptDir / "projects/qtcreator.py")
 addFilteredFile(scriptDir / "projects/kdevelop.py")
 addFilteredFile(scriptDir / "projects/bear.py")
 
+# cross compilation targets
+addFilteredFile(scriptDir / "projects/cross/crosscompileproject.py")
+addFilteredFile(scriptDir / "projects/cross/gdb.py")
+addFilteredFile(scriptDir / "projects/cross/libcxx.py")
+addFilteredFile(scriptDir / "projects/cross/postgres.py")
 
 # now make sure that all the projects were handled
-for path in (scriptDir / "projects").iterdir():
-    if path.name == "__pycache__":
-        continue
-    if path.name == "__init__.py":
-        continue  # only needed when building as a module
-    if path not in handledFiles:
-        print("\x1b[1;31m", path, " not added!\x1b[0m", file=sys.stderr, sep="")
+checkAllFilesUsed(scriptDir)
+checkAllFilesUsed(scriptDir / "projects")
+checkAllFilesUsed(scriptDir / "projects/cross")
 
 # now add the main() function
 addFilteredFile(scriptDir / "__main__.py")
