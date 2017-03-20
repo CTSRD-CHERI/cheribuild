@@ -59,25 +59,41 @@ class BuildLibCXX(CrossCompileCMakeProject):
     defaultInstallDir = installToCXXDir
     dependencies = ["libcxxrt"]
 
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        cls.qemu_host = cls.addConfigOption("qemu-host", help="The QEMU SSH hostname to connect to for running tests",
+                                            default=lambda c, p: "localhost:" + str(LaunchQEMU.sshForwardingPort))
+        cls.qemu_user = cls.addConfigOption("qemu-user", default="root", help="The CheriBSD used for running tests")
+
     def __init__(self, config: CheriConfig):
         self.linkDynamic = True  # Hack: we always want to use the dynamic toolchain file, build system adds -static
         super().__init__(config)
+        # TODO: do I even need the toolchain file to cross compile?
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
             LIBCXX_ENABLE_STATIC=True,
             LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=False,  # not yet
-            LIBCXX_INCLUDE_TESTS=True,  # unit tests: not yet
             LIBCXX_INCLUDE_BENCHMARKS=False,
             LIBCXX_INCLUDE_DOCS=False,
-            LIBCXX_CXX_ABI="none",  # don't use a c++ abi library
             # exceptions and rtti still missing:
             LIBCXX_ENABLE_EXCEPTIONS=False,
             LIBCXX_ENABLE_RTTI=False,
-            # TODO: is this needed?
-            LIBCXX_SYSROOT=config.sdkDir / "sysroot",
-            LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config"
-
         )
-
-    def install(self):
-        statusUpdate("Not installing libc++, not ready yet")
+        # select libcxxrt as the runtime library
+        self.add_cmake_options(
+            LIBCXX_CXX_ABI="libcxxrt",
+            LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.sourceDir / "src",
+            LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.buildDir / "lib",
+            LIBCXX_ENABLE_STATIC_ABI_LIBRARY=True,
+        )
+        # add the config options required for running tests:
+        self.add_cmake_options(
+            LIBCXX_INCLUDE_TESTS=True,
+            LIBCXX_SYSROOT=config.sdkDir / "sysroot",
+            LIBCXX_TARGET_TRIPLE=self.targetTriple,
+            LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config",
+            LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
+            LIBCXX_EXECUTOR="SSHExecutor('{host}', username='{user}')".format(host=self.qemu_host, user=self.qemu_user),
+            LIBCXX_TARGET_INFO="libcxx.test.target_info.CheriBSDRemoteTI",
+        )
