@@ -83,6 +83,8 @@ class CheriConfig(object):
     listTargets = ConfigLoader.addBoolOption("list-targets", help="List all available targets and exit")
     dumpConfig = ConfigLoader.addBoolOption("dump-configuration", help="Print the current configuration as JSON."
                                             " This can be saved to ~/.config/cheribuild.json to make it persistent")
+    getConfigOption = ConfigLoader.addOption("get-config-option", type=str, metavar="KEY",
+                                             help="Print the value of config option KEY and exit")
     includeDependencies = ConfigLoader.addBoolOption("include-dependencies", "d", help="Also build the dependencies "
                                                      "of targets passed on the command line. Targets passed on the"
                                                      "command line will be reordered and processed in an order that "
@@ -140,13 +142,13 @@ class CheriConfig(object):
                                                         group=ConfigLoader.remoteBuilderGroup)
 
     def loadAllOptions(self):
-        for i in ConfigLoader.options:
+        for i in ConfigLoader.options.values():
             # noinspection PyProtectedMember
-            owner = i._owningClass if i._owningClass else self
-            i.__get__(self, owner)  # force loading of lazy value
+            i.__get__(self, i._owningClass if i._owningClass else self)  # force loading of lazy value
 
     def dumpOptionsJSON(self):
         self.loadAllOptions()
+        # TODO: remove ConfigLoader.values, this just slows down stuff
         print(json.dumps(ConfigLoader.values, sort_keys=True, cls=MyJsonEncoder, indent=4))
 
     def __init__(self, availableTargets: list):
@@ -157,10 +159,6 @@ class CheriConfig(object):
         self.cheriBitsStr = str(self.cheriBits)
         # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
         os.environ["CHERI_BITS"] = self.cheriBitsStr
-
-        if not self.quiet:
-            print("Sources will be stored in", self.sourceRoot)
-            print("Build artifacts will be stored in", self.outputRoot)
 
         # now the derived config options
         self.sdkDirectoryName = "sdk" + self.cheriBitsStr
@@ -173,7 +171,4 @@ class CheriConfig(object):
         if self.verbose:
             # for debugging purposes print all the options
             self.loadAllOptions()
-            for i in ConfigLoader.options:
-                # noinspection PyProtectedMember
-                i.__get__(self, i._owningClass if i._owningClass else self)  # force loading of lazy value
             print("cheribuild.py configuration:", dict(ConfigLoader.values))

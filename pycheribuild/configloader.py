@@ -60,7 +60,7 @@ class ConfigLoader(object):
     _parser.add_argument("--config-file", metavar="FILE", type=str, default=str(defaultConfigPath),
                          help="The config file that is used to load the default settings (default: '" +
                               str(defaultConfigPath) + "')")
-    options = []
+    options = dict()
     _parsedArgs = None
     _JSON = {}  # type: dict
     values = OrderedDict()
@@ -161,7 +161,8 @@ class ConfigLoader(object):
         assert not action.default  # we handle the default value manually
         assert not action.type  # we handle the type of the value manually
         result = cls(action, default, type, _owningClass)
-        cls.options.append(result)
+        assert name not in cls.options  # make sure we don't add duplicate options
+        cls.options[name] = result
         # noinspection PyTypeChecker
         return result
 

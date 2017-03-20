@@ -79,11 +79,20 @@ def real_main():
         print("Available targets are:\n ", "\n  ".join(allTargetNames))
     elif cheriConfig.dumpConfig:
         cheriConfig.dumpOptionsJSON()
+    elif cheriConfig.getConfigOption:
+        if cheriConfig.getConfigOption not in ConfigLoader.options:
+            fatalError("Unknown config key", cheriConfig.getConfigOption)
+        option = ConfigLoader.options[cheriConfig.getConfigOption]
+        # noinspection PyProtectedMember
+        print(option.__get__(cheriConfig, option._owningClass if option._owningClass else cheriConfig))
     else:
         if runEverythingTarget in cheriConfig.targets:
             cheriConfig.targets = allTargetNames
         if not cheriConfig.targets:
             fatalError("At least one target name is required (see --list-targets).")
+        if not cheriConfig.quiet:
+            print("Sources will be stored in", cheriConfig.sourceRoot)
+            print("Build artifacts will be stored in", cheriConfig.outputRoot)
         targetManager.run(cheriConfig)
 
 
