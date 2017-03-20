@@ -22,7 +22,7 @@ class CrossCompileProject(Project):
     appendCheriBitsToBuildDir = True
     dependencies = ["cheribsd-sdk"]
     defaultLinker = "lld"
-    targetArch = None  # build for mips64-unknown-freebsd instead of cheri-unknown-freebsd
+    targetArch = None  # can be set to mips or cheri to force an architecture
     defaultOptimizationLevel = ["-O0"]
     warningFlags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
                     "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types"]

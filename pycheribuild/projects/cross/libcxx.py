@@ -27,13 +27,37 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+
+from ..cheribsd import BuildCHERIBSD
 from .crosscompileproject import *
 from ..llvm import BuildLLVM
+from ..run_qemu import LaunchQEMU
+from ...configloader import ConfigLoader
 from ...utils import statusUpdate
+
+installToCXXDir = ConfigLoader.ComputedDefaultValue(
+    function=lambda config, project: BuildCHERIBSD.rootfsDir(config) / "extra/c++",
+    asString="$CHERIBSD_ROOTFS/extra/c++")
+
+
+class BuildLibCXXRT(CrossCompileCMakeProject):
+    repository = "https://github.com/CTSRD-CHERI/libcxxrt.git"
+    defaultInstallDir = installToCXXDir
+
+    def __init__(self, config: CheriConfig):
+        self.linkDynamic = True  # Hack: we always want to use the dynamic toolchain file, build system adds -static
+        super().__init__(config)
+        self.add_cmake_options(CHERI_PURE=True)
+
+    def install(self, **kwargs):
+        self.installFile(self.buildDir / "lib/libcxxrt.a", self.installDir / "usr/libcheri/libcxxrt.a", force=True)
+        self.installFile(self.buildDir / "lib/libcxxrt.so", self.installDir / "usr/libcheri/libcxxrt.so", force=True)
 
 
 class BuildLibCXX(CrossCompileCMakeProject):
-    repository = "https://github.com/RichardsonAlex/libcxx.git"
+    repository = "https://github.com/CTSRD-CHERI/libcxx.git"
+    defaultInstallDir = installToCXXDir
+    dependencies = ["libcxxrt"]
 
     def __init__(self, config: CheriConfig):
         self.linkDynamic = True  # Hack: we always want to use the dynamic toolchain file, build system adds -static
