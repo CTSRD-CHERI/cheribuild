@@ -90,8 +90,15 @@ def setCheriConfig(c: "CheriConfig"):
     _cheriConfig = c
 
 
+def __filterEnv(env: dict) -> dict:
+    result = dict()
+    for k, v in env.items():
+        if k not in os.environ or os.environ[k] != v:
+            result[k] = v
+    return result
+
 def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remainingArgs, outputFile=None,
-                 colour=AnsiColour.yellow, cwd=None, sep=" ", printVerboseOnly=False, **kwargs):
+                 colour=AnsiColour.yellow, cwd=None, env=None, sep=" ", printVerboseOnly=False, **kwargs):
     if _cheriConfig.quiet or (printVerboseOnly and not _cheriConfig.verbose):
         return
     # also allow passing a single string
@@ -100,6 +107,11 @@ def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remain
         arg1 = allArgs[0]
         remainingArgs = allArgs[1:]
     newArgs = ("cd", shlex.quote(str(cwd)), "&&") if cwd else tuple()
+    if env:
+        # only print the changed environment entries
+        filteredEnv = __filterEnv(env)
+        if filteredEnv:
+            newArgs += ("env",) + tuple(map(shlex.quote, (k + "=" + v for k, v in filteredEnv.items())))
     # comma in tuple is required otherwise it creates a tuple of string chars
     newArgs += (shlex.quote(str(arg1)),) + tuple(map(shlex.quote, map(str, remainingArgs)))
     if outputFile:

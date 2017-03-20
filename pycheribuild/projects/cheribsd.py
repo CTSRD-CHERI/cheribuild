@@ -179,7 +179,7 @@ class BuildFreeBSD(Project):
             # We have to keep the rootfs directory in case it has been NFS mounted
             self.cleanDirectory(self.installDir, keepRoot=True)
 
-    def install(self):
+    def install(self, **kwargs):
         if self.subdirOverride:
             statusUpdate("Skipping install step because SUBDIR_OVERRIDE was set")
             return
@@ -187,11 +187,10 @@ class BuildFreeBSD(Project):
         if self.config.clean or not self.keepOldRootfs:
             self._removeOldRootfs()
         # don't use multiple jobs here
-        installArgs = self.makeInstallArgs
-        self.runMake(installArgs, "installkernel", cwd=self.sourceDir)
+        self.runMakeInstall(target="installkernel", cwd=self.sourceDir)
         if not self.skipBuildworld:
-            self.runMake(installArgs, "installworld", cwd=self.sourceDir)
-            self.runMake(installArgs, "distribution", cwd=self.sourceDir)
+            self.runMakeInstall(target="installworld", cwd=self.sourceDir)
+            self.runMakeInstall(target="distribution", cwd=self.sourceDir)
 
     def process(self):
         if not IS_FREEBSD:

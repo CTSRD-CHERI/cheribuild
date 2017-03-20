@@ -334,7 +334,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
         :param stdoutFilter a filter to use for standard output (a function that takes a single bytes argument)
         :param env the environment to pass to make
         """
-        printCommand(args, cwd=cwd)
+        printCommand(args, cwd=cwd, env=env)
         # make sure that env is either None or a os.environ with the updated entries entries
         if env:
             newEnv = os.environ.copy()
@@ -711,11 +711,20 @@ class Project(SimpleProject):
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag])
 
     @property
-    def makeInstallArgs(self):
-        return self.commonMakeArgs + ["DESTDIR=" + str(self.destdir)] if self.destdir else self.commonMakeArgs
+    def makeInstallEnv(self):
+        if self.destdir:
+            env = os.environ.copy()
+            env["DESTDIR"] = str(self.destdir)
+            return env
+        return None
 
-    def install(self):
-        self.runMake(self.makeInstallArgs, "install")
+    def runMakeInstall(self, *, args: list=None, target="install", _stdoutFilter=None, cwd=None):
+        if args is None:
+            args = self.commonMakeArgs
+        self.runMake(args, makeTarget=target, stdoutFilter=_stdoutFilter, env=self.makeInstallEnv, cwd=cwd)
+
+    def install(self, _stdoutFilter=None):
+        self.runMakeInstall()
 
     def process(self):
         if not self.config.skipUpdate:
@@ -806,8 +815,10 @@ class CMakeProject(Project):
         self.configureArgs.extend(self.cmakeOptions)
         super().configure()
 
-    def install(self):
-        self.runMake(self.makeInstallArgs, "install", stdoutFilter=self._cmakeInstallStdoutFilter)
+    def install(self, _stdoutFilter="__DEFAULT__"):
+        if  _stdoutFilter == "__DEFAULT__":
+            _stdoutFilter = self._cmakeInstallStdoutFilter
+        super().install(_stdoutFilter=_stdoutFilter)
 
     @staticmethod
     def findPackage(name: str) -> bool:
