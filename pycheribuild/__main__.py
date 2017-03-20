@@ -58,9 +58,6 @@ def updateCheck():
 
 
 def real_main():
-    # Don't do the update check when tab-completing (otherwise it freezes)
-    if "_ARGCOMPLETE" not in os.environ:
-        updateCheck()
     allTargetNames = list(sorted(targetManager.targetNames))
     targetManager.registerCommandLineOptions()
     runEverythingTarget = "__run_everything__"
@@ -93,6 +90,9 @@ def real_main():
         if not cheriConfig.quiet:
             print("Sources will be stored in", cheriConfig.sourceRoot)
             print("Build artifacts will be stored in", cheriConfig.outputRoot)
+        # Don't do the update check when tab-completing (otherwise it freezes)
+        if "_ARGCOMPLETE" not in os.environ:
+            updateCheck()
         targetManager.run(cheriConfig)
 
 
