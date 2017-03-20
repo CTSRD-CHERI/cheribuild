@@ -65,17 +65,18 @@ class BuildLibCXX(CrossCompileCMakeProject):
         cls.qemu_host = cls.addConfigOption("ssh-host", help="The QEMU SSH hostname to connect to for running tests",
                                             default=lambda c, p: "localhost")
         cls.qemu_port = cls.addConfigOption("ssh-port", help="The QEMU SSH port to connect to for running tests",
-                                            kind=int, default=lambda c, p: LaunchQEMU.sshForwardingPort)
+                                            kind=str, default=lambda c, p: LaunchQEMU.sshForwardingPort)
         cls.qemu_user = cls.addConfigOption("shh-user", default="root", help="The CheriBSD used for running tests")
 
     def __init__(self, config: CheriConfig):
         self.linkDynamic = True  # Hack: we always want to use the dynamic toolchain file, build system adds -static
         super().__init__(config)
+        self.COMMON_FLAGS.append("-D__LP64__=1")  # HACK to get it to compile
         # TODO: do I even need the toolchain file to cross compile?
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
             LIBCXX_ENABLE_STATIC=True,
-            LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=False,  # not yet
+            LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=True,  # not yet
             LIBCXX_INCLUDE_BENCHMARKS=False,
             LIBCXX_INCLUDE_DOCS=False,
             # exceptions and rtti still missing:
@@ -85,6 +86,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         # select libcxxrt as the runtime library
         self.add_cmake_options(
             LIBCXX_CXX_ABI="libcxxrt",
+            LIBCXX_CXX_ABI_LIBNAME="libcxxrt",
             LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.sourceDir / "src",
             LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.buildDir / "lib",
             LIBCXX_ENABLE_STATIC_ABI_LIBRARY=True,
