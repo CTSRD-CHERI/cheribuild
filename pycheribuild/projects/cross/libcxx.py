@@ -62,6 +62,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
+        cls.collect_test_binaries = cls.addPathOption("collect-test-binaries", metavar="TEST_PATH",
+                                                      help="Instead of running tests copy them to $TEST_PATH")
         cls.qemu_host = cls.addConfigOption("ssh-host", help="The QEMU SSH hostname to connect to for running tests",
                                             default=lambda c, p: "localhost")
         cls.qemu_port = cls.addConfigOption("ssh-port", help="The QEMU SSH port to connect to for running tests",
@@ -91,6 +93,11 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.buildDir / "lib",
             LIBCXX_ENABLE_STATIC_ABI_LIBRARY=True,
         )
+        if self.collect_test_binaries:
+            executor = "CollectBinariesExecutor('{path}', self)".format(path=self.collect_test_binaries)
+        else:
+            executor = "SSHExecutor('{host}', username='{user}', port={port})".format(
+                host=self.qemu_host, user=self.qemu_user, port=self.qemu_port)
         # add the config options required for running tests:
         self.add_cmake_options(
             LIBCXX_INCLUDE_TESTS=True,
@@ -98,7 +105,6 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LIBCXX_TARGET_TRIPLE=self.targetTriple,
             LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
-            LIBCXX_EXECUTOR="SSHExecutor('{host}', username='{user}', port={port})".format(
-                host=self.qemu_host, user=self.qemu_user, port=self.qemu_port),
+            LIBCXX_EXECUTOR=executor,
             LIBCXX_TARGET_INFO="libcxx.test.target_info.CheriBSDRemoteTI",
         )
