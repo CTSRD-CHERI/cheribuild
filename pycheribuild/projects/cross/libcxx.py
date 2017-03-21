@@ -76,7 +76,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
             LIBCXX_ENABLE_STATIC=True,
-            LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=True,  # not yet
+            LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=False,  # not yet
             LIBCXX_INCLUDE_BENCHMARKS=False,
             LIBCXX_INCLUDE_DOCS=False,
             # exceptions and rtti still missing:
