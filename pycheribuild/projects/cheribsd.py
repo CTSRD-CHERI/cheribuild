@@ -184,10 +184,13 @@ class BuildFreeBSD(Project):
         if self.config.clean or not self.keepOldRootfs:
             self._removeOldRootfs()
         # don't use multiple jobs here
-        self.runMakeInstall(target="installkernel", cwd=self.sourceDir)
+        self.runMakeInstall(args=self.commonMakeArgs + self.externalToolchainArgs,
+                            target="installkernel", cwd=self.sourceDir)
         if not self.skipBuildworld:
-            self.runMakeInstall(target="installworld", cwd=self.sourceDir)
-            self.runMakeInstall(target="distribution", cwd=self.sourceDir)
+            self.runMakeInstall(args=self.commonMakeArgs + self.externalToolchainArgs,
+                                target="installworld", cwd=self.sourceDir)
+            self.runMakeInstall(args=self.commonMakeArgs + self.externalToolchainArgs,
+                                target="distribution", cwd=self.sourceDir)
 
     def process(self):
         if not IS_FREEBSD:
