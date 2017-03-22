@@ -563,6 +563,8 @@ class Project(SimpleProject):
             cls.gitRevision = cls.addConfigOption("git-revision", kind=str, help="The git revision to checkout prior to"
                                                   " building. Useful if HEAD is broken for one project but you still"
                                                   " want to update the other projects.", metavar="REVISION")
+            cls.repository = cls.addConfigOption("repository", kind=str, help="The URL of the git repository",
+                                                 default=cls.repository, metavar="REPOSITORY")
         # TODO: add the gitRevision option
 
     def __init__(self, config: CheriConfig):
