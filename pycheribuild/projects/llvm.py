@@ -44,18 +44,24 @@ class BuildLLVM(CMakeProject):
         super().setupConfigOptions()
         cls.llvmGitRevision = cls.addConfigOption("llvm-git-revision", kind=str, help="The git revision for llvm",
                                                   metavar="REVISION")
-        if includeClangRevision:
-            cls.clangGitRevision = cls.addConfigOption("clang-git-revision", kind=str, metavar="REVISION",
-                                                       help="The git revision for tools/clang")
+
+        def addToolOptions(name):
+            rev = cls.addConfigOption(name + "-git-revision", kind=str, metavar="REVISION",
+                                      help="The git revision for tools/" + name)
+            repo = cls.addConfigOption(name + "-repository", kind=str, metavar="REPOSITORY",
+                                       default="https://github.com/CTSRD-CHERI/" + name + ".git",
+                                       help="The git repository for tools/" + name)
+            return rev, repo
+
         cls.no_default_sysroot = cls.addBoolOption("no-default-sysroot", help="Don't set default sysroot and target. "
                                                                               "Needed for e.g. test suite")
         cls.skip_lld = cls.addBoolOption("skip-lld", help="Don't build lld as part of the llvm target")
+        if includeClangRevision:
+            cls.clangRepository, cls.clangRevision = addToolOptions("clang")
         if includeLldRevision:
-            cls.lldGitRevision = cls.addConfigOption("lld-git-revision", kind=str, metavar="REVISION",
-                                                     help="The git revision for tools/lld")
+            cls.lldRepository, cls.lldRevision = addToolOptions("lld")
         if includeLldbRevision:  # not built yet
-            cls.lldbGitRevision = cls.addConfigOption("lldb-git-revision", kind=str, metavar="REVISION",
-                                                      help="The git revision for tools/lldb")
+            cls.lldbRepository, cls.lldbRevision = addToolOptions("lldb")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -115,16 +121,15 @@ class BuildLLVM(CMakeProject):
     def update(self):
         self._updateGitRepo(self.sourceDir, "https://github.com/CTSRD-CHERI/llvm.git",
                             revision=self.llvmGitRevision)
-        self._updateGitRepo(self.sourceDir / "tools/clang", "https://github.com/CTSRD-CHERI/clang.git",
-                            revision=self.clangGitRevision)
+        self._updateGitRepo(self.sourceDir / "tools/clang", self.clangRepository, revision=self.clangRevision)
         if not self.skip_lld:
-            self._updateGitRepo(self.sourceDir / "tools/lld", "https://github.com/CTSRD-CHERI/lld.git",
-                                revision=self.lldGitRevision, initialBranch="master")
+            self._updateGitRepo(self.sourceDir / "tools/lld", self.lldRepository, revision=self.lldRevision,
+                                initialBranch="master")
         if False:  # Not yet usable
-            self._updateGitRepo(self.sourceDir / "tools/lldb", "https://github.com/CTSRD-CHERI/lldb.git",
-                                revision=self.lldbGitRevision, initialBranch="master")
+            self._updateGitRepo(self.sourceDir / "tools/lldb", self.lldbRepository, revision=self.lldbRevision,
+                                initialBranch="master")
 
-    def install(self):
+    def install(self, **kwargs):
         super().install()
         # delete the files incompatible with cheribsd
         incompatibleFiles = list(self.installDir.glob("lib/clang/*/include/std*"))
@@ -168,8 +173,8 @@ class BuildLLD(BuildLLVM):
     def update(self):
         self._updateGitRepo(self.sourceDir, "https://github.com/CTSRD-CHERI/llvm.git",
                             revision=self.llvmGitRevision, initialBranch="master")
-        self._updateGitRepo(self.sourceDir / "tools/lld", "https://github.com/CTSRD-CHERI/lld.git",
-                            initialBranch="cheri-lld", revision=self.lldGitRevision)
+        self._updateGitRepo(self.sourceDir / "tools/lld", self.lldRepository,
+                            initialBranch="cheri-lld", revision=self.lldRevision)
 
     def compile(self):
         self.runMake(["lld", self.config.makeJFlag])
