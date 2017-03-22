@@ -49,7 +49,7 @@ class BuildLLVM(CMakeProject):
             repo = cls.addConfigOption(name + "-repository", kind=str, metavar="REPOSITORY",
                                        default="https://github.com/CTSRD-CHERI/" + name + ".git",
                                        help="The git repository for tools/" + name)
-            return rev, repo
+            return repo, rev
 
         cls.no_default_sysroot = cls.addBoolOption("no-default-sysroot", help="Don't set default sysroot and target. "
                                                                               "Needed for e.g. test suite")
