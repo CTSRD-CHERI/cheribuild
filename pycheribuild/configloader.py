@@ -235,6 +235,8 @@ class ConfigLoader(object):
             return self.default
 
     def _lookupKeyInJson(self, fullOptionName: str):
+        if fullOptionName in self._JSON:
+            return self._JSON[fullOptionName]
         # if there are any / characters treat these as an object reference
         jsonPath = fullOptionName.split(sep="/")
         jsonKey = jsonPath[-1]  # last item is the key (e.g. llvm/build-type -> build-type)
