@@ -33,7 +33,6 @@ from .crosscompileproject import *
 from ..llvm import BuildLLVM
 from ..run_qemu import LaunchQEMU
 from ...configloader import ConfigLoader
-from ...utils import statusUpdate
 
 installToCXXDir = ConfigLoader.ComputedDefaultValue(
     function=lambda config, project: BuildCHERIBSD.rootfsDir(config) / "extra/c++",

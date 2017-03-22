@@ -767,7 +767,7 @@ class CMakeProject(Project):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions()
+        super().setupConfigOptions(**kwargs)
         cls.cmakeBuildType = cls.addConfigOption("build-type", default=cls.defaultCMakeBuildType, metavar="BUILD_TYPE",
                                                  help="The CMake build type (Debug, RelWithDebInfo, Release)")
         cls.cmakeOptions = cls.addConfigOption("cmake-options", default=[], kind=list, metavar="OPTIONS",
