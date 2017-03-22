@@ -110,7 +110,8 @@ class BuildFreeBSD(Project):
             # self.externalToolchainArgs.append("CROSS_BINUTILS_PREFIX=" + cross_prefix)
             # cross assembler
             # PIC code is the default so we have to add -fno-pic
-            clang_flags = " -integrated-as -mabi=n64 -fcolor-diagnostics -mxgot -fno-pic -mabicalls -D__ABICALLS__=1"
+            # clang_flags = " -integrated-as -mabi=n64 -fcolor-diagnostics -mxgot -fno-pic -mabicalls -D__ABICALLS__=1"
+            clang_flags = " -integrated-as -fcolor-diagnostics -mxgot"
             # self.externalToolchainArgs.append("XAS=" + cross_prefix + "clang" + clang_flags)
             self.externalToolchainArgs.append("XCC=" + cross_prefix + "clang" + clang_flags)
             self.externalToolchainArgs.append("XCXX=" + cross_prefix + "clang++" + clang_flags)
@@ -162,11 +163,7 @@ class BuildFreeBSD(Project):
         if not self.skipBuildworld:
             self.runMake(self.commonMakeArgs + self.externalToolchainArgs + jflag, "buildworld", cwd=self.sourceDir)
         if not self.subdirOverride:
-            # We can't use the external mips toolchain for the kernel yet..
-            if self.externalToolchainArgs:
-                self.runMake(self.commonMakeArgs + jflag, "kernel-toolchain", cwd=self.sourceDir,
-                             compilationDbName="compile_commands_" + self.kernelConfig + ".json")
-            self.runMake(self.commonMakeArgs + jflag, "buildkernel", cwd=self.sourceDir,
+            self.runMake(self.commonMakeArgs + self.externalToolchainArgs + jflag, "buildkernel", cwd=self.sourceDir,
                          compilationDbName="compile_commands_" + self.kernelConfig + ".json")
 
     def _removeOldRootfs(self):
@@ -187,10 +184,13 @@ class BuildFreeBSD(Project):
         if self.config.clean or not self.keepOldRootfs:
             self._removeOldRootfs()
         # don't use multiple jobs here
-        self.runMakeInstall(target="installkernel", cwd=self.sourceDir)
+        self.runMakeInstall(args=self.commonMakeArgs + self.externalToolchainArgs,
+                            target="installkernel", cwd=self.sourceDir)
         if not self.skipBuildworld:
-            self.runMakeInstall(target="installworld", cwd=self.sourceDir)
-            self.runMakeInstall(target="distribution", cwd=self.sourceDir)
+            self.runMakeInstall(args=self.commonMakeArgs + self.externalToolchainArgs,
+                                target="installworld", cwd=self.sourceDir)
+            self.runMakeInstall(args=self.commonMakeArgs + self.externalToolchainArgs,
+                                target="distribution", cwd=self.sourceDir)
 
     def process(self):
         if not IS_FREEBSD:
