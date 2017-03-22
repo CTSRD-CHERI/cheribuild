@@ -31,7 +31,7 @@ import re
 import shlex
 from pathlib import Path
 
-from ..project import CMakeProject
+from ..project import CMakeProject, PseudoTarget
 from ..utils import *
 
 
@@ -142,6 +142,13 @@ class BuildLLVM(CMakeProject):
 
         if not self.skip_lld:
             self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld")
+
+
+# Add an alias target clang that builds llvm
+# TODO: add a property targetAliases to project instead?
+class BuildClang(PseudoTarget):
+    target = "clang"
+    dependencies = ["llvm"]
 
 
 class BuildLLD(BuildLLVM):
