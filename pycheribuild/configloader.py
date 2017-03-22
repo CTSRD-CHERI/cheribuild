@@ -267,7 +267,7 @@ class ConfigLoader(object):
         return result
 
     def __get__(self, instance, owner):
-        assert not self._owningClass or owner == self._owningClass
+        assert not self._owningClass or issubclass(owner, self._owningClass)
         if self._cached is None:
             self._cached = self._loadOption(self._cheriConfig, owner)
         return self._cached

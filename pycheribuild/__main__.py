@@ -90,6 +90,10 @@ def real_main():
         if not cheriConfig.quiet:
             print("Sources will be stored in", cheriConfig.sourceRoot)
             print("Build artifacts will be stored in", cheriConfig.outputRoot)
+        if cheriConfig.verbose:
+            # for debugging purposes print all the options
+            cheriConfig.loadAllOptions()
+            # print("cheribuild.py configuration:", dict(ConfigLoader.values))
         # Don't do the update check when tab-completing (otherwise it freezes)
         if "_ARGCOMPLETE" not in os.environ:
             updateCheck()

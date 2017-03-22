@@ -167,8 +167,3 @@ class CheriConfig(object):
         self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
         self.sdkSysrootDir = self.sdkDir / "sysroot"
         self.sysrootArchiveName = "cheri-sysroot.tar.gz"
-
-        if self.verbose:
-            # for debugging purposes print all the options
-            self.loadAllOptions()
-            print("cheribuild.py configuration:", dict(ConfigLoader.values))

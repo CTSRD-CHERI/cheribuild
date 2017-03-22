@@ -38,6 +38,7 @@ from ..utils import *
 class BuildLLVM(CMakeProject):
     defaultInstallDir = CMakeProject._installToSDK
     appendCheriBitsToBuildDir = True
+    repository = "https://github.com/CTSRD-CHERI/llvm.git"
 
     @classmethod
     def setupConfigOptions(cls, includeClangRevision=True, includeLldbRevision=False, includeLldRevision=True):
@@ -117,7 +118,7 @@ class BuildLLVM(CMakeProject):
                                  installInstructions=self.clang38InstallHint())
 
     def update(self):
-        self._updateGitRepo(self.sourceDir, "https://github.com/CTSRD-CHERI/llvm.git", revision=self.gitRevision)
+        self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision)
         self._updateGitRepo(self.sourceDir / "tools/clang", self.clangRepository, revision=self.clangRevision)
         if not self.skip_lld:
             self._updateGitRepo(self.sourceDir / "tools/lld", self.lldRepository, revision=self.lldRevision,
@@ -159,6 +160,7 @@ class BuildLLD(BuildLLVM):
     defaultCMakeBuildType = "Release"
     target = "lld"
     projectName = "lld-llvm"
+    repository = "https://github.com/CTSRD-CHERI/llvm.git"
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -169,8 +171,7 @@ class BuildLLD(BuildLLVM):
         self.add_cmake_options(LLVM_TOOL_LLD_BUILD=True)
 
     def update(self):
-        self._updateGitRepo(self.sourceDir, "https://github.com/CTSRD-CHERI/llvm.git",
-                            revision=self.gitRevision, initialBranch="master")
+        self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision, initialBranch="master")
         self._updateGitRepo(self.sourceDir / "tools/lld", self.lldRepository,
                             initialBranch="cheri-lld", revision=self.lldRevision)
 

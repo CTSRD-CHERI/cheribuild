@@ -559,7 +559,7 @@ class Project(SimpleProject):
             installDirectoryHelp = "Override default install directory for " + cls.projectName
         cls.installDir = cls.addPathOption("install-directory", metavar="DIR", help=installDirectoryHelp,
                                            default=cls.defaultInstallDir)
-        if cls.repository:
+        if "repository" in cls.__dict__:
             cls.gitRevision = cls.addConfigOption("git-revision", kind=str, help="The git revision to checkout prior to"
                                                   " building. Useful if HEAD is broken for one project but you still"
                                                   " want to update the other projects.", metavar="REVISION")
