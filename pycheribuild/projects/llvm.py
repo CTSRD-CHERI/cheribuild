@@ -47,6 +47,8 @@ class BuildLLVM(CMakeProject):
         if includeClangRevision:
             cls.clangGitRevision = cls.addConfigOption("clang-git-revision", kind=str, metavar="REVISION",
                                                        help="The git revision for tools/clang")
+        cls.no_default_sysroot = cls.addBoolOption("no-default-sysroot", help="Don't set default sysroot and target. "
+                                                                              "Needed for e.g. test suite")
         cls.skip_lld = cls.addBoolOption("skip-lld", help="Don't build lld as part of the llvm target")
         if includeLldRevision:
             cls.lldGitRevision = cls.addConfigOption("lld-git-revision", kind=str, metavar="REVISION",
@@ -71,10 +73,9 @@ class BuildLLVM(CMakeProject):
         )
         if self.canUseLLd(self.cCompiler):
             self.add_cmake_options(LLVM_ENABLE_LLD=True)
-        if IS_FREEBSD:
-            # self.configureArgs.append("-DDEFAULT_SYSROOT=" + str(self.config.sdkSysrootDir))
-            # self.configureArgs.append("-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd")
-            pass
+        if not self.no_default_sysroot:
+            self.configureArgs.append("-DDEFAULT_SYSROOT=" + str(self.config.sdkSysrootDir))
+            self.configureArgs.append("-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd")
         if self.config.cheriBits == 128:
             self.add_cmake_options(LLVM_CHERI_IS_128=True)
 
