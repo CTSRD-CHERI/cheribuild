@@ -120,4 +120,4 @@ class BuildGDB(CrossCompileAutotoolsProject):
                 self.runMake(self.commonMakeArgs + [self.config.makeJFlag], makeTarget="all-gdb", cwd=self.buildDir)
 
     def install(self, **kwargs):
-        self.runMakeInstall(args=self.commonMakeArgs + ["-C", "src/test/regress"], target="install-gdb")
+        self.runMakeInstall(args=self.commonMakeArgs, target="install-gdb")
