@@ -34,6 +34,7 @@ from ...utils import setEnv
 
 from pathlib import Path
 import os
+import stat
 import tempfile
 
 
@@ -111,13 +112,16 @@ class BuildGDB(CrossCompileAutotoolsProject):
         # And it only partially handles CC_FOR_BUILD..........
         with tempfile.TemporaryDirectory() as tmpdir:
             # It hardcodes calling gcc which won't work... WORST BUILD SYSTEM EVER?
-            self.createSymlink(self.config.clangPath, Path(tmpdir) / "gcc", relative=False)
-            self.createSymlink(self.config.clangPlusPlusPath, Path(tmpdir) / "g++", relative=False)
+            self.writeFile(Path(tmpdir) / "gcc", contents="exec " + str(self.config.clangPath) + " \"$@\"\n", overwrite=True)
+            self.writeFile(Path(tmpdir) / "g++", contents="exec " + str(self.config.clangPlusPlusPath) + " \"$@\"\n", overwrite=True)
+            os.chmod(str(Path(tmpdir) / "gcc"), stat.S_IXUSR | stat.S_IRUSR)
+            os.chmod(str(Path(tmpdir) / "g++"), stat.S_IXUSR | stat.S_IRUSR)
             # self.createSymlink(Path("/usr/bin/as"), Path(tmpdir) / "as", relative=False)
             self.createSymlink(Path("/usr/bin/ld"), Path(tmpdir) / "ld", relative=False)
             buildenv["PATH"] = tmpdir + ":" + os.environ["PATH"]
             with setEnv(**buildenv):
                 self.runMake(self.commonMakeArgs + [self.config.makeJFlag], makeTarget="all-gdb", cwd=self.buildDir)
+
 
     def install(self, **kwargs):
         self.runMakeInstall(args=self.commonMakeArgs, target="install-gdb")
