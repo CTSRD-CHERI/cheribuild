@@ -829,7 +829,7 @@ class CMakeProject(Project):
             super().configure()
 
     def install(self, _stdoutFilter="__DEFAULT__"):
-        if  _stdoutFilter == "__DEFAULT__":
+        if _stdoutFilter == "__DEFAULT__":
             _stdoutFilter = self._cmakeInstallStdoutFilter
         super().install(_stdoutFilter=_stdoutFilter)
 
