@@ -189,9 +189,10 @@ class BuildCheriBsdSysroot(SimpleProject):
         # now copy the files
         self.makedirs(self.config.sdkSysrootDir)
         self.deleteFile(self.config.sdkDir / self.config.sysrootArchiveName, printVerboseOnly=True)
+        # TODO: use rsync to only copy if changed??
         runCmd("scp", remoteSysrootPath, self.config.sdkDir)
-        runCmd("rm", "-rf", self.config.sdkSysrootDir)
-        runCmd("tar", "xzf", self.config.sdkDir / self.config.sysrootArchiveName, cwd=self.config.sdkDir)
+        with self.asyncCleanDirectory(self.config.sdkSysrootDir):
+            runCmd("tar", "xzf", self.config.sdkDir / self.config.sysrootArchiveName, cwd=self.config.sdkDir)
 
     def createSysroot(self):
         # we need to add include files and libraries to the sysroot directory
