@@ -126,12 +126,10 @@ class BuildFreestandingSdk(SimpleProject):
         for i in (CHERIBOOTSTRAPTOOLS_OBJ, CHERITOOLS_OBJ, CHERITOOLS_OBJ, BuildCHERIBSD.rootfsDir(self.config)):
             if not i.is_dir():
                 fatalError("Directory", i, "is missing!")
-                # make sdk a link to the 256 bit sdk
-        if (self.config.outputRoot / "sdk").is_dir():
-            # remove the old sdk directory from previous versions of this script
-            runCmd("rm", "-rf", self.config.outputRoot / "sdk", printVerboseOnly=True)
-        if not self.config.pretend and not (self.config.outputRoot / "sdk").exists():
-            runCmd("ln", "-sf", "sdk256", "sdk", cwd=self.config.outputRoot)
+        # make sdk a link to the 256 bit sdk
+        # not any more, users can create their own symlink...
+        # if not self.config.pretend and not (self.config.outputRoot / "sdk").exists():
+        #    runCmd("ln", "-sf", "sdk256", "sdk", cwd=self.config.outputRoot)
 
         # install tools:
         for tool in binutilsBinaries:
