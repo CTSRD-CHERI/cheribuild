@@ -71,6 +71,7 @@ class ConfigLoader(object):
     # deprecatedOptionsGroup = _parser.add_argument_group("Old deprecated options", "These should not be used any more")
 
     cheriBitsGroup = _parser.add_mutually_exclusive_group()
+    configureGroup = _parser.add_mutually_exclusive_group()
 
     showAllHelp = any(s in sys.argv for s in ("--help-all", "--help-hidden"))
 

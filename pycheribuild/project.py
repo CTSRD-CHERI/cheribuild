@@ -821,7 +821,12 @@ class CMakeProject(Project):
 
     def configure(self):
         self.configureArgs.extend(self.cmakeOptions)
-        super().configure()
+        # CMake is smart enough to detect when it must be reconfigured -> skip configure if cache exists
+        cmakeCache = self.buildDir / "CMakeCache.txt"
+        if self.config.forceConfigure:
+            self.deleteFile(cmakeCache)
+        if not cmakeCache.exists() or (self.config.pretend and self.config.forceConfigure):
+            super().configure()
 
     def install(self, _stdoutFilter="__DEFAULT__"):
         if  _stdoutFilter == "__DEFAULT__":

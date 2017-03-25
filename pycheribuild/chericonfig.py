@@ -78,7 +78,11 @@ class CheriConfig(object):
     force = ConfigLoader.addBoolOption("force", "f", help="Don't prompt for user input but use the default action")
     noLogfile = ConfigLoader.addBoolOption("no-logfile", help="Don't write a logfile for the build steps")
     skipUpdate = ConfigLoader.addBoolOption("skip-update", help="Skip the git pull step")
-    skipConfigure = ConfigLoader.addBoolOption("skip-configure", help="Skip the configure step")
+    skipConfigure = ConfigLoader.addBoolOption("skip-configure", help="Skip the configure step",
+                                               group=ConfigLoader.configureGroup)
+    forceConfigure = ConfigLoader.addBoolOption("reconfigure", "-force-configure", group=ConfigLoader.configureGroup,
+                                                help="Always run the configure step, even for CMake projects with a "
+                                                     "valid cache.")
     skipInstall = ConfigLoader.addBoolOption("skip-install", help="Skip the install step (only do the build)")
     listTargets = ConfigLoader.addBoolOption("list-targets", help="List all available targets and exit")
     dumpConfig = ConfigLoader.addBoolOption("dump-configuration", help="Print the current configuration as JSON."
