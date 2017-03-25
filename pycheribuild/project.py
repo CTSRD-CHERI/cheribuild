@@ -235,6 +235,12 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             deleterThread = SimpleProject.DeleterThread(self, tempdir)
         return ThreadJoiner(deleterThread)
 
+    def deleteFile(self, file: Path, printVerboseOnly=False):
+        printCommand("rm", "-f", file, printVerboseOnly=printVerboseOnly)
+        if not file.is_file() or self.config.pretend:
+            return
+        file.unlink()
+
     def readFile(self, file: Path) -> str:
         # just return an empty string in pretend mode
         if self.config.pretend and not file.is_file():

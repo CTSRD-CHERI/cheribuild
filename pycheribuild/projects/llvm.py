@@ -136,9 +136,7 @@ class BuildLLVM(CMakeProject):
             fatalError("Could not find incompatible builtin includes. Build system changed?")
         print("Removing incompatible builtin includes...")
         for i in incompatibleFiles:
-            printCommand("rm", shlex.quote(str(i)), printVerboseOnly=True)
-            if not self.config.pretend:
-                i.unlink()
+            self.deleteFile(i, printVerboseOnly=True)
         # create a symlink for the target
         llvmBinaries = "clang clang++ clang-cpp llvm-mc llvm-objdump llvm-readobj llvm-size llc".split()
         for tool in llvmBinaries:

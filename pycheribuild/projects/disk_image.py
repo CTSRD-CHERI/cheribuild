@@ -277,7 +277,7 @@ nfs_client_enable="YES"
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
         if self.config.verbose:
             runCmd(qemuImgCommand, "info", rawDiskImage)
-        runCmd("rm", "-f", self.diskImagePath, printVerboseOnly=True)
+        self.deleteFile(self.diskImagePath, printVerboseOnly=True)
         # create a qcow2 version from the raw image:
         runCmd(qemuImgCommand, "convert",
                "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
@@ -306,8 +306,7 @@ nfs_client_enable="YES"
                 print("An image already exists (" + str(self.diskImagePath) + "). ", end="")
                 if not self.queryYesNo("Overwrite?", defaultResult=True):
                     return  # we are done here
-            printCommand("rm", self.diskImagePath)
-            self.diskImagePath.unlink()
+            self.deleteFile(self.diskImagePath)
 
         with tempfile.TemporaryDirectory() as outDir:
             self.prepareRootfs(Path(outDir))

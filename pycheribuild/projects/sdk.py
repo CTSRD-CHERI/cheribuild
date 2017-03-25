@@ -190,7 +190,7 @@ class BuildCheriBsdSysroot(SimpleProject):
 
         # now copy the files
         self.makedirs(self.config.sdkSysrootDir)
-        runCmd("rm", "-f", self.config.sdkDir / self.config.sysrootArchiveName, printVerboseOnly=True)
+        self.deleteFile(self.config.sdkDir / self.config.sysrootArchiveName, printVerboseOnly=True)
         runCmd("scp", remoteSysrootPath, self.config.sdkDir)
         runCmd("rm", "-rf", self.config.sdkSysrootDir)
         runCmd("tar", "xzf", self.config.sdkDir / self.config.sysrootArchiveName, cwd=self.config.sdkDir)
@@ -215,7 +215,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         print("Fixing absolute paths in symbolic links inside lib directory...")
         self.fixSymlinks()
         # create an archive to make it easier to copy the sysroot to another machine
-        runCmd("rm", "-f", self.config.sdkDir / self.config.sysrootArchiveName)
+        self.deleteFile(self.config.sdkDir / self.config.sysrootArchiveName, printVerboseOnly=True)
         runCmd("tar", "-czf", self.config.sdkDir / self.config.sysrootArchiveName, "sysroot",
                cwd=self.config.sdkDir)
         print("Successfully populated sysroot")
