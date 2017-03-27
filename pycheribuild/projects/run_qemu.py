@@ -69,8 +69,6 @@ class LaunchQEMU(SimpleProject):
                                             metavar="PORT", showHelp=True,
                                             help="If set, the QEMU monitor will be reachable by connecting to localhost"
                                                  "at $PORT via telnet instead of using CTRL+A,C")
-        cls.doReboot = cls.addBoolOption("do-reboot", help="Tell qemu to reboot instead of quitting on shutdown.")
-
         # TODO: -s will no longer work, not sure anyone uses it though
         if cls._forwardSSHPort:
             cls.sshForwardingPort = cls.addConfigOption("ssh-forwarding-port", shortname=sshPortShortname, kind=int,
@@ -148,8 +146,6 @@ class LaunchQEMU(SimpleProject):
             qemuCommand += ["-redir", "tcp:" + str(self.sshForwardingPort) + "::22"]
             print(coloured(AnsiColour.green, "\nListening for SSH connections on localhost:", self.sshForwardingPort))
 
-        if not self.doReboot:
-            qemuCommand.append("-no-reboot")
         runCmd(qemuCommand, stdout=sys.stdout, stderr=sys.stderr)  # even with --quiet we want stdout here
 
     @staticmethod
@@ -206,6 +202,7 @@ class LaunchCheriOSQEMU(LaunchQEMU):
         # FIXME: these should be config options
         self.currentKernel = BuildCheriOS.buildDir / "boot/cherios.elf"
         self.diskImage = self.config.outputRoot / "cherios-disk.img"
+        self._projectSpecificOptions = ["-no-reboot"]
         self._diskOptions = ["-drive", "if=none,file=" + str(self.diskImage) + ",id=drv,format=raw",
                              "-device", "virtio-blk-device,drive=drv"]
         self._qemuUserNetworking = False
