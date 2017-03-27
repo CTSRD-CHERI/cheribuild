@@ -38,7 +38,7 @@ class CrossCompileProject(Project):
         # compiler flags:
         self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-msoft-float", "-G0", "-g"]
         if self.targetArch == "cheri":
-            self.COMMON_FLAGS.append("-mabi=sandbox")
+            self.COMMON_FLAGS.append("-mabi=purecap")
         if not self.noUseMxgot:
             self.COMMON_FLAGS.append("-mxgot")
         self.CFLAGS = []
