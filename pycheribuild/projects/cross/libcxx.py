@@ -46,11 +46,11 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
     def __init__(self, config: CheriConfig):
         self.linkDynamic = True  # Hack: we always want to use the dynamic toolchain file, build system adds -static
         super().__init__(config)
-        self.add_cmake_options(CHERI_PURE=True, DISABLE_EXCEPTIONS_RTTI=True, NO_UNWIND_LIBRARY=True)
+        self.add_cmake_options(CHERI_PURE=True)
 
     def install(self, **kwargs):
         self.installFile(self.buildDir / "lib/libcxxrt.a", self.installDir / "usr/libcheri/libcxxrt.a", force=True)
-        self.installFile(self.buildDir / "lib/libcxxrt.so", self.installDir / "usr/libcheri/libcxxrt.so", force=True)
+        #self.installFile(self.buildDir / "lib/libcxxrt.so", self.installDir / "usr/libcheri/libcxxrt.so", force=True)
 
 
 class BuildLibCXX(CrossCompileCMakeProject):
