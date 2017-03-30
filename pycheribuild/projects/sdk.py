@@ -191,12 +191,10 @@ class BuildCheriBsdSysroot(SimpleProject):
         self.deleteFile(self.config.sdkDir / self.config.sysrootArchiveName, printVerboseOnly=True)
         # TODO: use rsync to only copy if changed??
         runCmd("scp", remoteSysrootPath, self.config.sdkDir)
-        with self.asyncCleanDirectory(self.config.sdkSysrootDir):
-            runCmd("tar", "xzf", self.config.sdkDir / self.config.sysrootArchiveName, cwd=self.config.sdkDir)
+        runCmd("tar", "xzf", self.config.sdkDir / self.config.sysrootArchiveName, cwd=self.config.sdkDir)
 
     def createSysroot(self):
         # we need to add include files and libraries to the sysroot directory
-        self.cleanDirectory(self.config.sdkSysrootDir)  # make sure the sysroot is cleaned
         self.makedirs(self.config.sdkSysrootDir / "usr")
         # use tar+untar to copy all necessary files listed in metalog to the sysroot dir
         archiveCmd = ["tar", "cf", "-", "--include=./lib/", "--include=./usr/include/",
@@ -220,16 +218,17 @@ class BuildCheriBsdSysroot(SimpleProject):
         print("Successfully populated sysroot")
 
     def process(self):
-        if IS_FREEBSD:
-            self.createSysroot()
-        else:
-            self.copySysrootFromRemoteMachine()
-        # lld expects libgcc_s and libgcc_eh to exist:
-        libgcc_s = self.config.sdkDir / "sysroot/usr/libcheri/libgcc_s.a"
-        libgcc_eh = self.config.sdkDir / "sysroot/usr/libcheri/libgcc_eh.a"
-        for lib in (libgcc_s, libgcc_eh):
-            if not lib.is_file():
-                runCmd("ar", "rc", lib)
+        with self.asyncCleanDirectory(self.config.sdkSysrootDir):
+            if IS_FREEBSD:
+                self.createSysroot()
+            else:
+                self.copySysrootFromRemoteMachine()
+            # lld expects libgcc_s and libgcc_eh to exist:
+            libgcc_s = self.config.sdkDir / "sysroot/usr/libcheri/libgcc_s.a"
+            libgcc_eh = self.config.sdkDir / "sysroot/usr/libcheri/libgcc_eh.a"
+            for lib in (libgcc_s, libgcc_eh):
+                if not lib.is_file():
+                    runCmd("ar", "rc", lib)
 
 
 class InstallCheriBuildsystemWrappers(CMakeProject):
