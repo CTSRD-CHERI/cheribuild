@@ -65,11 +65,7 @@ class ConfigLoader(object):
     _JSON = {}  # type: dict
     values = OrderedDict()
     # argument groups:
-    remoteBuilderGroup = _parser.add_argument_group("Specifying a remote FreeBSD build server",
-                                                    "Useful if you want to create a CHERI SDK on a Linux or OS X host"
-                                                    " to allow cross compilation to a CHERI target.")
     # deprecatedOptionsGroup = _parser.add_argument_group("Old deprecated options", "These should not be used any more")
-
     cheriBitsGroup = _parser.add_mutually_exclusive_group()
     configureGroup = _parser.add_mutually_exclusive_group()
 

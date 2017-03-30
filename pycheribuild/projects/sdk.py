@@ -160,37 +160,33 @@ class BuildCheriBsdSysroot(SimpleProject):
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
-        if not IS_FREEBSD and (not self.config.freeBsdBuilderOutputPath or not self.config.freeBsdBuildMachine):
-            # TODO: improve this information
-            fatalError("SDK files must be copied from a FreeBSD server but configurations is missing!"
-                       " See --help for more info")
+        if not IS_FREEBSD and not self.remotePath:
+            configOption = "'--" + self.target + "/" + "remote-sdk-path'"
+            fatalError("Path to the remote SDK is not set, option", configOption, "must be set to a path that "
+                       "scp understands (e.g. vica:~foo/cheri/output/sdk256)")
             sys.exit("Cannot continue...")
 
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        if not IS_FREEBSD:
+            cls.remotePath = cls.addConfigOption("remote-sdk-path", showHelp=True, metavar="PATH", help="The path to "
+                                                 "the CHERI SDK on the remote FreeBSD machine (e.g. "
+                                                 "vica:~foo/cheri/output/sdk256)")
+
     def copySysrootFromRemoteMachine(self):
-        remoteSysrootPath = os.path.join(self.config.freeBsdBuilderOutputPath, self.config.sdkDirectoryName,
-                                         self.config.sysrootArchiveName)
-        remoteSysrootPath = self.config.freeBsdBuildMachine + ":" + remoteSysrootPath
-        statusUpdate("Will build SDK on", self.config.freeBsdBuildMachine, "and copy the sysroot files from",
-                     remoteSysrootPath)
+        statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
+        assert self.remotePath
+        remoteSysrootArchive = self.remotePath + "/" + self.config.sysrootArchiveName
+        statusUpdate("Will copy the sysroot files from ", remoteSysrootArchive, sep="")
         if not self.queryYesNo("Continue?"):
             return
-
-        if not self.config.freeBsdBuilderCopyOnly:
-            # build the SDK on the remote machine:
-            remoteRunScript = Path(__file__).parent.resolve() / "py3-run-remote.sh"
-            if not remoteRunScript.is_file():
-                remoteRunScript = Path(__file__).parent.parent.parent.resolve() / "py3-run-remote.sh"
-            if not remoteRunScript.is_file():
-                fatalError("Could not find py3-run-remote.sh script. Should be in this directory!")
-            runCmd(remoteRunScript, self.config.freeBsdBuildMachine, __file__,
-                   "--cheri-bits", self.config.cheriBits,  # make sure we build for the right number of cheri bits
-                   "sdk")  # run target SDK with dependencies
 
         # now copy the files
         self.makedirs(self.config.sdkSysrootDir)
         self.deleteFile(self.config.sdkDir / self.config.sysrootArchiveName, printVerboseOnly=True)
         # TODO: use rsync to only copy if changed??
-        runCmd("scp", remoteSysrootPath, self.config.sdkDir)
+        runCmd("scp", remoteSysrootArchive, self.config.sdkDir / self.config.sysrootArchiveName)
         runCmd("tar", "xzf", self.config.sdkDir / self.config.sysrootArchiveName, cwd=self.config.sdkDir)
 
     def createSysroot(self):

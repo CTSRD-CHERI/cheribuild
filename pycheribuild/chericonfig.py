@@ -130,20 +130,6 @@ class CheriConfig(object):
     # TODO: allow overriding per-project?
     makeJobs = ConfigLoader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
                                       help="Number of jobs to use for compiling")  # type: int
-    # To allow building CHERI software on non-FreeBSD systems
-    freeBsdBuildMachine = ConfigLoader.addOption("freebsd-builder-hostname", type=str, metavar="SSH_HOSTNAME",
-                                                 help="This string will be passed to ssh and be something like "
-                                                      "user@hostname of a FreeBSD system that can be used to build "
-                                                      "CHERIBSD. Can also be the name of a host in  ~/.ssh/config.",
-                                                 group=ConfigLoader.remoteBuilderGroup)  # type: str
-    # TODO: query this from the remote machine instead of needed an options
-    freeBsdBuilderOutputPath = ConfigLoader.addOption("freebsd-builder-output-path", type=str, metavar="PATH",
-                                                      help="The path where the cheribuild output is stored on the"
-                                                           " FreeBSD build server.",
-                                                      group=ConfigLoader.remoteBuilderGroup)  # type: str
-    freeBsdBuilderCopyOnly = ConfigLoader.addBoolOption("freebsd-builder-copy-only", help="Only scp the SDK from the"
-                                                        "FreeBSD build server and don't build the SDK first.",
-                                                        group=ConfigLoader.remoteBuilderGroup)
 
     def loadAllOptions(self):
         for i in ConfigLoader.options.values():
