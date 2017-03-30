@@ -300,7 +300,7 @@ nfs_client_enable="YES"
         if not self.queryYesNo("Continue?"):
             return
 
-        runCmd("scp", self.remotePath, self.diskImagePath)
+        self.copyRemoteFile(self.remotePath, self.diskImagePath)
 
     def process(self):
         if str(self.diskImagePath).endswith(".img"):

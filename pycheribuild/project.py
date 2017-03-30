@@ -241,6 +241,13 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             return
         file.unlink()
 
+    def copyRemoteFile(self, remotePath: str, targetFile: Path):
+        # if we have rsync we can skip the copy if file is already up-to-date
+        if shutil.which("rsync"):
+            runCmd("rsync", "-aviu", "--progress", remotePath, targetFile)
+        else:
+            runCmd("scp", remotePath, targetFile)
+
     def readFile(self, file: Path) -> str:
         # just return an empty string in pretend mode
         if self.config.pretend and not file.is_file():
