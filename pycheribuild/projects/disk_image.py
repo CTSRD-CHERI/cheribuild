@@ -85,6 +85,9 @@ class BuildDiskImageBase(SimpleProject):
                                                    "(default: '$SOURCE_ROOT/extra-files')", metavar="DIR")
         cls.hostname = cls.addConfigOption("hostname", showHelp=True, default=defaultHostname, metavar="HOSTNAME",
                                            help="The hostname to use for the QEMU image")
+        if not IS_FREEBSD:
+            cls.remotePath = cls.addConfigOption("remote-path", showHelp=True, metavar="PATH", help="The path on the "
+                                                 "remote FreeBSD machine from where to copy the disk image")
         cls.disableTMPFS = None
 
     def __init__(self, config, sourceClass: type(BuildFreeBSD)):
@@ -287,12 +290,19 @@ nfs_client_enable="YES"
         if self.config.verbose:
             runCmd(qemuImgCommand, "info", self.diskImagePath)
 
-    def process(self):
-        if not (self.rootfsDir / "METALOG").is_file():
-            fatalError("mtree manifest", self.rootfsDir / "METALOG", "is missing")
-        if not (self.userGroupDbDir / "master.passwd").is_file():
-            fatalError("master.passwd does not exist in ", self.userGroupDbDir)
+    def copyFromRemoteHost(self):
+        statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
+        if not self.remotePath:
+            fatalError("Path to the remote disk image is not set, option '--", self.target, "/", "remote-path' must "
+                       "be set to a path that scp understands (e.g. vica:/foo/bar/disk.qcow2)", sep="")
+            return
+        statusUpdate("Will copy the disk-image from ", self.remotePath, sep="")
+        if not self.queryYesNo("Continue?"):
+            return
 
+        runCmd("scp", self.remotePath, self.diskImagePath)
+
+    def process(self):
         if str(self.diskImagePath).endswith(".img"):
             self.diskImagePath = self.diskImagePath.with_suffix(".qcow2")
 
@@ -307,6 +317,16 @@ nfs_client_enable="YES"
                 if not self.queryYesNo("Overwrite?", defaultResult=True):
                     return  # we are done here
             self.deleteFile(self.diskImagePath)
+
+        # we can only build disk images on FreeBSD, so copy the file if we aren't
+        if not IS_FREEBSD:
+            self.copyFromRemoteHost()
+            return
+
+        if not (self.rootfsDir / "METALOG").is_file():
+            fatalError("mtree manifest", self.rootfsDir / "METALOG", "is missing")
+        if not (self.userGroupDbDir / "master.passwd").is_file():
+            fatalError("master.passwd does not exist in ", self.userGroupDbDir)
 
         with tempfile.TemporaryDirectory() as outDir:
             self.prepareRootfs(Path(outDir))
