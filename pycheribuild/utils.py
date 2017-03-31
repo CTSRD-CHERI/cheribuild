@@ -29,6 +29,7 @@
 #
 import contextlib
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -36,6 +37,7 @@ import sys
 import traceback
 from .colour import coloured, AnsiColour
 from .chericonfig import CheriConfig
+from collections import namedtuple
 from pathlib import Path
 
 try:
@@ -53,7 +55,7 @@ else:
 __all__ = ["typing", "CheriConfig", "IS_LINUX", "IS_FREEBSD", "printCommand", "includeLocalFile",  # no-combine
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
            "parseOSRelease", "warningMessage", "Type_T", "typing", "popen_handle_noexec",  # no-combine
-           "check_call_handle_noexec", "ThreadJoiner"]  # no-combine
+           "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo"]  # no-combine
 
 
 if sys.version_info < (3, 4):
@@ -139,6 +141,7 @@ def getInterpreter(cmdline: "typing.Sequence[str]") -> "typing.Optional[typing.L
             statusUpdate("No shebang found.")
             return None
 
+
 def check_call_handle_noexec(cmdline: "typing.List[str]", **kwargs):
     try:
         return subprocess.check_call(cmdline, **kwargs)
@@ -201,6 +204,38 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
         if retcode:
             raise subprocess.CalledProcessError(retcode, process.args, output=stdout)
         return CompletedProcess(process.args, retcode, stdout, stderr)
+
+
+CompilerInfo = namedtuple('CompilerInfo', ['compiler', 'version', 'default_target'])
+_cached_compiler_infos = dict()
+
+
+def getCompilerInfo(compiler: Path) -> CompilerInfo:
+    if compiler not in _cached_compiler_infos:
+        clangVersionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
+        gccVersionPattern = re.compile(b"gcc version (\\d+)\\.(\\d+)\\.?(\\d+)?")
+        targetPattern = re.compile(b"Target: (.+)")
+        # clang prints this output to stderr
+        versionCmd = runCmd(compiler, "-v", captureError=True, printVerboseOnly=True, runInPretendMode=True)
+        clangVersion = clangVersionPattern.search(versionCmd.stderr)
+        gccVersion = gccVersionPattern.search(versionCmd.stderr)
+        target = targetPattern.search(versionCmd.stderr)
+        # if _cheriConfig and _cheriConfig.pretend:
+        kind = "unknown compiler"
+        version = (0, 0, 0)
+        targetString = target.group(1).decode("utf-8") if target else ""
+        if gccVersion:
+            kind = "gcc"
+            version = tuple(map(int, gccVersion.groups()))
+        elif clangVersion:
+            kind = "clang"
+            version = tuple(map(int, clangVersion.groups()))
+        else:
+            warningMessage("Could not detect compiler info for", compiler, "- output was", versionCmd.stderr)
+        if _cheriConfig and _cheriConfig.verbose:
+            print(compiler, "is", kind, "version", version, "with default target", targetString)
+        _cached_compiler_infos[compiler] = CompilerInfo(compiler=kind, version=version, default_target=targetString)
+    return _cached_compiler_infos[compiler]
 
 
 def statusUpdate(*args, sep=" ", **kwargs):

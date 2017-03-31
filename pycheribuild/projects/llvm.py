@@ -111,17 +111,12 @@ class BuildLLVM(CMakeProject):
     def checkClangVersion(self, major: int, minor: int, patch=0, installInstructions=None):
         if not self.cCompiler or not self.cppCompiler:
             self.dependencyError("Could not find clang", installInstructions=installInstructions)
-        versionTuple = (major, minor, patch)
-        versionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
-        # clang prints this output to stderr
-        versionCmd = runCmd(self.cCompiler, "-v", captureError=True, printVerboseOnly=True, runInPretendMode=True)
-        match = versionPattern.search(versionCmd.stderr)
-        versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
+        info = getCompilerInfo(self.cCompiler)
         # noinspection PyTypeChecker
-        if versionComponents < versionTuple:
-            versionStr = ".".join(map(str, versionComponents))
+        if info.compiler != "clang" or info.version < (major, minor, patch):
+            versionStr = ".".join(map(str, info.version))
             self.dependencyError(self.cCompiler, "version", versionStr,
-                                 "is too old. Version %d.%d or newer is required." % (major, minor),
+                                 "is not supported. Clang version %d.%d or newer is required." % (major, minor),
                                  installInstructions=self.clang38InstallHint())
 
     def update(self):
