@@ -30,6 +30,9 @@
 from ..project import AutotoolsProject
 from ..utils import *
 
+import os
+import shutil
+
 
 class BuildGnuBinutils(AutotoolsProject):
     target = "gnu-binutils"
@@ -82,7 +85,11 @@ class BuildGnuBinutils(AutotoolsProject):
             "MAKEINFO=missing",  # don't build docs, this will fail on recent Linux systems
         ])
         # newer compilers will default to -std=c99 which will break binutils:
-        self.configureEnvironment["CFLAGS"] = "-std=gnu89 -O2"
+        cflags = "-std=gnu89 -O2"
+        info = getCompilerInfo(os.getenv("CC", shutil.which("cc")))
+        if info.compiler == "clang" or (info.compiler == "gcc" and info.version >= (4, 6, 0)):
+            cflags += " -Wno-unused"
+        self.configureEnvironment["CFLAGS"] = cflags
 
     def update(self):
         self._ensureGitRepoIsCloned(srcDir=self.sourceDir, remoteUrl=self.repository, initialBranch=self.gitBranch)
