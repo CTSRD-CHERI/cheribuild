@@ -38,22 +38,29 @@ from ..utils import *
 class BuildLLVM(CMakeProject):
     defaultInstallDir = CMakeProject._installToSDK
     appendCheriBitsToBuildDir = True
-    repository = "https://github.com/CTSRD-CHERI/llvm.git"
+    githubBaseUrl = "https://github.com/CTSRD-CHERI/"
+    repository = githubBaseUrl + "llvm.git"
+    no_default_sysroot = None
 
     @classmethod
-    def setupConfigOptions(cls, includeClangRevision=True, includeLldbRevision=False, includeLldRevision=True):
+    def setupConfigOptions(cls, includeClangRevision=True, includeLldbRevision=False, includeLldRevision=True,
+                           useDefaultSysroot=True):
         super().setupConfigOptions()
 
         def addToolOptions(name):
             rev = cls.addConfigOption(name + "-git-revision", kind=str, metavar="REVISION",
                                       help="The git revision for tools/" + name)
             repo = cls.addConfigOption(name + "-repository", kind=str, metavar="REPOSITORY",
-                                       default="https://github.com/CTSRD-CHERI/" + name + ".git",
+                                       default=cls.githubBaseUrl + name + ".git",
                                        help="The git repository for tools/" + name)
             return repo, rev
 
-        cls.no_default_sysroot = cls.addBoolOption("no-default-sysroot", help="Don't set default sysroot and target. "
-                                                                              "Needed for e.g. test suite")
+        if useDefaultSysroot:
+            cls.no_default_sysroot = cls.addBoolOption("no-default-sysroot", help="Don't set default sysroot and "
+                                                       "target triple. Needed e.g. for the test suite")
+        else:
+            cls.no_default_sysroot = True
+
         cls.skip_lld = cls.addBoolOption("skip-lld", help="Don't build lld as part of the llvm target")
         if includeClangRevision:
             cls.clangRepository, cls.clangRevision = addToolOptions("clang")
@@ -186,3 +193,18 @@ class BuildLLD(BuildLLVM):
         if self.skip_lld:
             fatalError("skip-lld config option is set for target lld, this doesn't make any sense")
         super().process()
+
+
+class BuildUpstreamLLVM(BuildLLVM):
+    githubBaseUrl = "https://github.com/llvm-mirror/"
+    repository = githubBaseUrl + "llvm.git"
+    projectName = "upstream-llvm"
+    defaultInstallDir = CMakeProject._installToBootstrapTools
+    appendCheriBitsToBuildDir = False
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(includeClangRevision=True, includeLldRevision=True, useDefaultSysroot=False)
+
+    def install(self, **kwargs):
+        CMakeProject.install(self)
