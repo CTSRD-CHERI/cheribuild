@@ -44,6 +44,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
     requiresGNUMake = True
     targetArch = "mips64"  # don't compile as a CHERI binary!
     defaultLinker = "bfd"  # won't work with LLD yet (MIPS binary)
+    defaultOptimizationLevel = ["-O2"]
 
     def __init__(self, config: CheriConfig):
         # See https://github.com/bsdjhb/kdbg/blob/master/gdb/build
