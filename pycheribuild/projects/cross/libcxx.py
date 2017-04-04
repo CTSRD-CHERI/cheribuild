@@ -50,7 +50,7 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
 
     def install(self, **kwargs):
         self.installFile(self.buildDir / "lib/libcxxrt.a", self.installDir / "usr/libcheri/libcxxrt.a", force=True)
-        #self.installFile(self.buildDir / "lib/libcxxrt.so", self.installDir / "usr/libcheri/libcxxrt.so", force=True)
+        # self.installFile(self.buildDir / "lib/libcxxrt.so", self.installDir / "usr/libcheri/libcxxrt.so", force=True)
 
 
 class BuildLibCXX(CrossCompileCMakeProject):
@@ -63,6 +63,11 @@ class BuildLibCXX(CrossCompileCMakeProject):
         super().setupConfigOptions(**kwargs)
         cls.collect_test_binaries = cls.addPathOption("collect-test-binaries", metavar="TEST_PATH",
                                                       help="Instead of running tests copy them to $TEST_PATH")
+        cls.nfs_mounted_path = cls.addPathOption("nfs-mounted-path", metavar="PATH", help="Use a PATH as a directory"
+                                                                                          "that is NFS mounted inside QEMU instead of using scp to copy "
+                                                                                          "individual tests")
+        cls.nfs_path_in_qemu = cls.addPathOption("nfs-mounted-path-in-qemu", metavar="PATH",
+                                                 help="The path used inside QEMU to refer to nfs-mounted-path")
         cls.qemu_host = cls.addConfigOption("ssh-host", help="The QEMU SSH hostname to connect to for running tests",
                                             default=lambda c, p: "localhost")
         cls.qemu_port = cls.addConfigOption("ssh-port", help="The QEMU SSH port to connect to for running tests",
@@ -94,6 +99,12 @@ class BuildLibCXX(CrossCompileCMakeProject):
         )
         if self.collect_test_binaries:
             executor = "CollectBinariesExecutor('{path}', self)".format(path=self.collect_test_binaries)
+        elif self.nfs_mounted_path:
+            executor = "SSHExecutorWithNFSMount('{host}', nfs_dir='{nfs_dir}', path_in_target='{nfs_in_target}'," \
+                       " config=self, username='{user}', port={port})".format(host=self.qemu_host, user=self.qemu_user,
+                                                                              port=self.qemu_port,
+                                                                              nfs_dir=self.nfs_mounted_path,
+                                                                              nfs_in_target=self.nfs_path_in_qemu)
         else:
             executor = "SSHExecutor('{host}', username='{user}', port={port})".format(
                 host=self.qemu_host, user=self.qemu_user, port=self.qemu_port)
@@ -106,4 +117,5 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
             LIBCXX_EXECUTOR=executor,
             LIBCXX_TARGET_INFO="libcxx.test.target_info.CheriBSDRemoteTI",
+            LIBCXX_RUN_LONG_TESTS=False
         )
