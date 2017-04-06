@@ -155,39 +155,9 @@ class BuildClang(PseudoTarget):
     dependencies = ["llvm"]
 
 
-# TODO: remove this...
-class BuildLLD(BuildLLVM):
-    defaultCMakeBuildType = "Release"
+class BuildLLD(PseudoTarget):
     target = "lld"
-    projectName = "lld-llvm"
-    repository = "https://github.com/CTSRD-CHERI/llvm.git"
-
-    @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(includeClangRevision=False, includeLldRevision=True)
-
-    def __init__(self, config: CheriConfig,):
-        super().__init__(config)
-        self.add_cmake_options(LLVM_TOOL_LLD_BUILD=True)
-
-    def update(self):
-        self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision, initialBranch="master")
-        self._updateGitRepo(self.sourceDir / "tools/lld", self.lldRepository,
-                            initialBranch="cheri-lld", revision=self.lldRevision)
-
-    def compile(self):
-        self.runMake(["lld", self.config.makeJFlag])
-
-    def install(self):
-        self.runMake(["install-lld"])
-        self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld")
-        # TODO: once it works for building CHERIBSD use it as the default SDK linker:
-        # self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld", toolName="ld", createUnprefixedLink=True)
-
-    def process(self):
-        if self.skip_lld:
-            fatalError("skip-lld config option is set for target lld, this doesn't make any sense")
-        super().process()
+    dependencies = ["llvm"]
 
 
 class BuildUpstreamLLVM(BuildLLVM):
