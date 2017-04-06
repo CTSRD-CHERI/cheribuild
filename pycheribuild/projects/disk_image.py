@@ -96,8 +96,9 @@ class BuildDiskImageBase(SimpleProject):
         # this means we can create a disk image without root privilege
         self.manifestFile = None  # type: Path
         self.extraFiles = []  # type: typing.List[Path]
-        self._addRequiredSystemTool("ssh-keygen")
-        self._addRequiredSystemTool("makefs")
+        if IS_FREEBSD:
+            self._addRequiredSystemTool("ssh-keygen")
+            self._addRequiredSystemTool("makefs")
         self.dirsAddedToManifest = [Path(".")]  # Path().parents always includes a "." entry
         self.rootfsDir = sourceClass.rootfsDir(self.config)
         self.userGroupDbDir = sourceClass.getSourceDir(self.config) / "etc"
