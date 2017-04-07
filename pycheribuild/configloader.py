@@ -157,7 +157,7 @@ class ConfigLoader(object):
         assert isinstance(action, argparse.Action)
         assert not action.default  # we handle the default value manually
         assert not action.type  # we handle the type of the value manually
-        result = cls(action, default, type, _owningClass)
+        result = ConfigOption(action, default, type, _owningClass, _loader=cls)
         assert name not in cls.options  # make sure we don't add duplicate options
         cls.options[name] = result
         # noinspection PyTypeChecker
@@ -172,11 +172,16 @@ class ConfigLoader(object):
         # we have to make sure we resolve this to an absolute path because otherwise steps where CWD is different fail!
         return cls.addOption(name, shortname, type=Path, **kwargs)
 
-    def __init__(self, action: argparse.Action, default, valueType, _owningClass=None):
+
+# noinspection PyProtectedMember
+class ConfigOption(object):
+    def __init__(self, action: argparse.Action, default, valueType, _owningClass=None,
+                 _loader: "typing.Type[ConfigLoader]"=None):
         self.action = action
         self.default = default
         self.valueType = valueType
         self._cached = None
+        self._loader = _loader
         self._owningClass = _owningClass  # if none it means the global CheriConfig is the class containing this option
 
     def _loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
@@ -207,11 +212,11 @@ class ConfigLoader(object):
         return result
 
     def _loadOptionImpl(self, fullOptionName: str, config: "CheriConfig", ownerClass: "typing.Type"):
-        assert self._parsedArgs  # load() must have been called before using this object
-        assert hasattr(self._parsedArgs, self.action.dest)
+        assert self._loader._parsedArgs  # load() must have been called before using this object
+        assert hasattr(self._loader._parsedArgs, self.action.dest)
 
         # First check the value specified on the command line, then load JSON and then fallback to the default
-        fromCmdLine = getattr(self._parsedArgs, self.action.dest)  # from command line
+        fromCmdLine = getattr(self._loader._parsedArgs, self.action.dest)  # from command line
         # print(fullOptionName, "from cmdline:", fromCmdLine)
         if fromCmdLine is not None:
             if fromCmdLine != self.action.default:
@@ -232,13 +237,13 @@ class ConfigLoader(object):
             return self.default
 
     def _lookupKeyInJson(self, fullOptionName: str):
-        if fullOptionName in self._JSON:
-            return self._JSON[fullOptionName]
+        if fullOptionName in self._loader._JSON:
+            return self._loader._JSON[fullOptionName]
         # if there are any / characters treat these as an object reference
         jsonPath = fullOptionName.split(sep="/")
         jsonKey = jsonPath[-1]  # last item is the key (e.g. llvm/build-type -> build-type)
         jsonPath = jsonPath[:-1]  # all but the last item is the path (e.g. llvm/build-type -> llvm)
-        jsonObject = self._JSON
+        jsonObject = self._loader._JSON
         for objRef in jsonPath:
             # Return an empty dict if it is not found
             jsonObject = jsonObject.get(objRef, {})
@@ -259,7 +264,7 @@ class ConfigLoader(object):
         # FIXME: it's about time I removed this code
         if result is None:
             # also check action.dest (as a fallback so I don't have to update all my config files right now)
-            result = self._JSON.get(self.action.dest, None)
+            result = self._loader._JSON.get(self.action.dest, None)
             if result is not None:
                 print(coloured(AnsiColour.cyan, "Old JSON key", self.action.dest, "used, please use",
                                fullOptionName, "instead"))
@@ -268,5 +273,5 @@ class ConfigLoader(object):
     def __get__(self, instance, owner):
         assert not self._owningClass or issubclass(owner, self._owningClass)
         if self._cached is None:
-            self._cached = self._loadOption(self._cheriConfig, owner)
+            self._cached = self._loadOption(self._loader._cheriConfig, owner)
         return self._cached
