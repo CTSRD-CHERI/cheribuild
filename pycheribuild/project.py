@@ -717,7 +717,15 @@ class Project(SimpleProject):
             return self.asyncCleanDirectory(self.buildDir)
         return ThreadJoiner(None)
 
+    def needsConfigure(self) -> bool:
+        """
+        :return: Whether the configure command needs to be run (by default assume yes)
+        """
+        return True
+
     def configure(self):
+        if not self.needsConfigure() and not self.config.forceConfigure:
+            return
         if self.configureCommand:
             self.runWithLogfile([self.configureCommand] + self.configureArgs,
                                 logfileName="configure", cwd=self.buildDir, env=self.configureEnvironment)
@@ -826,14 +834,20 @@ class CMakeProject(Project):
             return
         self._showLineStdoutFilter(line)
 
+    def needsConfigure(self) -> bool:
+        if self.config.pretend and self.config.forceConfigure:
+            return True
+        # CMake is smart enough to detect when it must be reconfigured -> skip configure if cache exists
+        cmakeCache = self.buildDir / "CMakeCache.txt"
+        return not cmakeCache.exists()
+
     def configure(self):
         self.configureArgs.extend(self.cmakeOptions)
-        # CMake is smart enough to detect when it must be reconfigured -> skip configure if cache exists
+        # make sure we get a completely fresh cache when --reconfigure is passed:
         cmakeCache = self.buildDir / "CMakeCache.txt"
         if self.config.forceConfigure:
             self.deleteFile(cmakeCache)
-        if not cmakeCache.exists() or (self.config.pretend and self.config.forceConfigure):
-            super().configure()
+        super().configure()
 
     def install(self, _stdoutFilter="__DEFAULT__"):
         if _stdoutFilter == "__DEFAULT__":
