@@ -47,7 +47,7 @@ class CrossCompileProject(Project):
 
     @property
     def LDFLAGS(self):
-        emulation = "elf64btsmip_cheri_fbsd" if self.target == "cheri" else "elf64btsmip_fbsd"
+        emulation = "elf64btsmip_cheri_fbsd" if self.targetArch == "cheri" else "elf64btsmip_fbsd"
         result = ["-Wl,-m" + emulation,
                   "-fuse-ld=" + self.linker,
                   "--sysroot=" + str(self.sdkSysroot),
