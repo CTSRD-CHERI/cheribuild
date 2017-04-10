@@ -25,7 +25,8 @@ class CrossCompileProject(Project):
     targetArch = None  # can be set to mips or cheri to force an architecture
     defaultOptimizationLevel = ["-O0"]
     warningFlags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
-                    "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types"]
+                    "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types",
+                    "-Werror=mips-cheri-prototypes"]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
