@@ -709,10 +709,14 @@ class Project(SimpleProject):
         # TODO: never use the source dir as a build dir (unfortunately GDB, postgres and elftoolchain won't work)
         # will have to check how well binutils and qemu work there
         if (self.buildDir / ".git").is_dir():
-            # just use git clean for cleanup
-            warningMessage(self.projectName, "does not support out-of-source builds, using git clean to remove"
-                                             "build artifacts.")
-            runCmd("git", "clean", "-dfx", cwd=self.buildDir)
+            if (self.buildDir / "GNUmakefile").is_file():
+                runCmd(self.makeCommand, "distclean", cwd=self.buildDir)
+            else:
+                # just use git clean for cleanup
+                warningMessage(self.projectName, "does not support out-of-source builds, using git clean to remove"
+                                                 "build artifacts.")
+                # Try to keep project files for IDEs and other dotfiles:
+                runCmd("git", "clean", "-dfx", "--exclude=.*", "--exclude=*.kdev4", cwd=self.buildDir)
         else:
             return self.asyncCleanDirectory(self.buildDir)
         return ThreadJoiner(None)
