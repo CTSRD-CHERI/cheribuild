@@ -50,6 +50,7 @@ from .utils import *
 class ConfigLoader(object):
     # will be set later...
     _cheriConfig = None  # type: CheriConfig
+    _configPath = None  # type: typing.Optional[Path]
 
     _parser = argparse.ArgumentParser(formatter_class=
                                       lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
@@ -60,7 +61,7 @@ class ConfigLoader(object):
     _parser.add_argument("--config-file", metavar="FILE", type=str, default=str(defaultConfigPath),
                          help="The config file that is used to load the default settings (default: '" +
                               str(defaultConfigPath) + "')")
-    options = dict()
+    options = dict()  # type: typing.Dict[str, ConfigOption]
     _parsedArgs = None
     _JSON = {}  # type: dict
     values = OrderedDict()
@@ -105,7 +106,8 @@ class ConfigLoader(object):
         # print(cls._parsedArgs, trailingTargets)
         cls._parsedArgs.targets += trailingTargets
         try:
-            cls._configPath = Path(os.path.expanduser(cls._parsedArgs.config_file)).absolute()
+            if not cls._configPath:
+                cls._configPath = Path(os.path.expanduser(cls._parsedArgs.config_file)).absolute()
             if cls._configPath.exists():
                 with cls._configPath.open("r", encoding="utf-8") as f:
                     jsonLines = []
@@ -150,10 +152,22 @@ class ConfigLoader(object):
                 kwargs["help"] = kwargs["help"] + " (default: \'" + str(default) + "\')"
         assert "default" not in kwargs  # Should be handled manually
         parserObj = group if group else cls._parser
+        if type == bool and group is None:
+            parserObj = parserObj.add_mutually_exclusive_group()
+            kwargs["default"] = None
+            assert kwargs["action"] == "store_true"
         if shortname:
             action = parserObj.add_argument("--" + name, "-" + shortname, **kwargs)
         else:
             action = parserObj.add_argument("--" + name, **kwargs)
+        if type == bool:
+            slashIndex = name.rfind("/")
+            negatedName = name[:slashIndex + 1] + "no-" + name[slashIndex + 1:]
+            neg = parserObj.add_argument("--" + negatedName, dest=action.dest, default=None, action="store_false")
+            # change the default action value
+            neg.default = None
+            action.default = None
+        assert action.default == None  # we don't want argparse default values!
         assert isinstance(action, argparse.Action)
         assert not action.default  # we handle the default value manually
         assert not action.type  # we handle the type of the value manually
@@ -171,6 +185,14 @@ class ConfigLoader(object):
     def addPathOption(cls, name: str, shortname=None, **kwargs) -> Path:
         # we have to make sure we resolve this to an absolute path because otherwise steps where CWD is different fail!
         return cls.addOption(name, shortname, type=Path, **kwargs)
+
+    @classmethod
+    def reload(cls) -> None:
+        """
+        Clear all loaded values and force reloading them (useful for tests)
+        """
+        for option in cls.options.values():
+            option._cached = None
 
 
 # noinspection PyProtectedMember
