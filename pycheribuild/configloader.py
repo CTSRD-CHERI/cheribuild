@@ -163,7 +163,8 @@ class ConfigLoader(object):
         if type == bool:
             slashIndex = name.rfind("/")
             negatedName = name[:slashIndex + 1] + "no-" + name[slashIndex + 1:]
-            neg = parserObj.add_argument("--" + negatedName, dest=action.dest, default=None, action="store_false")
+            neg = parserObj.add_argument("--" + negatedName, dest=action.dest, default=None, action="store_false",
+                                         help=argparse.SUPPRESS)
             # change the default action value
             neg.default = None
             action.default = None
