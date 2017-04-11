@@ -111,6 +111,9 @@ class CheriConfig(object):
     createCompilationDB = ConfigLoader.addBoolOption("compilation-db", "-cdb",
                                                      help="Create a compile_commands.json file in the build dir "
                                                           "(requires Bear for non-CMake projects)")
+    crossCompileForMips = ConfigLoader.addBoolOption("cross-compile-for-mips", "-xmips",
+                                                     help="Make cross compile projects target MIPS hybrid ABI "
+                                                          "instead of CheriABI")
     makeWithoutNice = ConfigLoader.addBoolOption("make-without-nice", help="Run make/ninja without nice(1)")
 
     # configurable paths

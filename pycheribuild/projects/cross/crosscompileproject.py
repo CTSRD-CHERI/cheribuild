@@ -15,6 +15,10 @@ installToCheriBSDRootfs = ConfigLoader.ComputedDefaultValue(
     function=lambda config, project: Path(BuildCHERIBSD.rootfsDir(config) / "extra" / project.projectName.lower()),
     asString=lambda cls: "$CHERIBSD_ROOTFS/extra/" + cls.projectName.lower())
 
+defaultTarget = ConfigLoader.ComputedDefaultValue(
+    function=lambda config, project: "mips64" if config.crossCompileForMips else "cheri",
+    asString="'cheri' unless -xmips set")
+
 
 class CrossCompileProject(Project):
     doNotAddToTargets = True
@@ -38,8 +42,11 @@ class CrossCompileProject(Project):
         self.compilerDir = self.sdkBinDir
         # compiler flags:
         self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-msoft-float", "-G0", "-g"]
+        assert self.targetArch in ("cheri", "mips64")
         if self.targetArch == "cheri":
             self.COMMON_FLAGS.append("-mabi=purecap")
+        else:
+            self.COMMON_FLAGS.append("-mabi=n64")
         if not self.noUseMxgot:
             self.COMMON_FLAGS.append("-mxgot")
         self.CFLAGS = []
@@ -48,6 +55,7 @@ class CrossCompileProject(Project):
 
     @property
     def LDFLAGS(self):
+        assert self.targetArch in ("cheri", "mips64")
         emulation = "elf64btsmip_cheri_fbsd" if self.targetArch == "cheri" else "elf64btsmip_fbsd"
         result = ["-Wl,-m" + emulation,
                   "-fuse-ld=" + self.linker,
@@ -70,7 +78,7 @@ class CrossCompileProject(Project):
                                                     default=cls.defaultOptimizationLevel)
         if cls.targetArch is None:
             cls.targetArch = cls.addConfigOption("target", help="The target to build for (`cheri` or `mips64`)",
-                                                 default="cheri", choices=["cheri", "mips64"])
+                                                 default=defaultTarget, choices=["cheri", "mips64"])
 
 
 class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
