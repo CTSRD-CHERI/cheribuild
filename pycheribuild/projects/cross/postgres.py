@@ -40,8 +40,8 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.COMMON_FLAGS.append("-static")  # adding it to LDFLAGS only doesn't seem to be enough
-        self.COMMON_FLAGS.append("-DUSE_ASSERT_CHECKING=1")
-        self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")
+        # self.COMMON_FLAGS.append("-DUSE_ASSERT_CHECKING=1")
+        # self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")
         self.COMMON_FLAGS.append("-I/usr/include/edit")
         self.COMMON_FLAGS.extend(["-pedantic",
                                   "-Wno-gnu-statement-expression",
