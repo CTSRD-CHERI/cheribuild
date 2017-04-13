@@ -52,12 +52,19 @@ class CrossCompileProject(Project):
         self.CFLAGS = []
         self.CXXFLAGS = []
         self.ASMFLAGS = []
+        self.LDFLAGS = []
 
     @property
-    def LDFLAGS(self):
+    def default_ldflags(self):
         assert self.targetArch in ("cheri", "mips64")
-        emulation = "elf64btsmip_cheri_fbsd" if self.targetArch == "cheri" else "elf64btsmip_fbsd"
-        result = ["-Wl,-m" + emulation,
+        if self.targetArch == "cheri":
+            emulation = "elf64btsmip_cheri_fbsd"
+            abi = "purecap"
+        else:
+            emulation = "elf64btsmip_fbsd"
+            abi = "n64"
+        result = ["-mabi=" + abi,
+                  "-Wl,-m" + emulation,
                   "-fuse-ld=" + self.linker,
                   "--sysroot=" + str(self.sdkSysroot),
                   "-B" + str(self.sdkBinDir)]
@@ -105,7 +112,7 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
         assert "@" not in configuredTemplate, configuredTemplate
         self.writeFile(contents=configuredTemplate, file=self.toolchainFile, overwrite=True, noCommandPrint=True)
 
-    def configure(self):
+    def configure(self, **kwargs):
         self.COMMON_FLAGS.append("-B" + str(self.sdkBinDir))
         self._prepareToolchainFile(
             TOOLCHAIN_SDK_BINDIR=self.sdkBinDir,
@@ -114,7 +121,7 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
             TOOLCHAIN_TARGET_TRIPLE=self.targetTriple,
             TOOLCHAIN_COMMON_FLAGS=self.COMMON_FLAGS,
             TOOLCHAIN_C_FLAGS=self.CFLAGS,
-            TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS,
+            TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
             TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
             TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
         )
@@ -123,6 +130,8 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
 
 class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
     doNotAddToTargets = True  # only used as base class
+
+    add_host_target_build_config_options = True
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -134,16 +143,17 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
             buildhost += release[:release.index(".")]
         else:
             buildhost = "x86_64-unknown-linux-gnu"
-        self.configureArgs.extend(["--host=" + self.targetTriple, "--target=" + self.targetTriple,
-                                   "--build=" + buildhost])
+        if self.add_host_target_build_config_options:
+            self.configureArgs.extend(["--host=" + self.targetTriple, "--target=" + self.targetTriple,
+                                       "--build=" + buildhost])
 
-    def configure(self):
-        self.COMMON_FLAGS.extend([
-            "--sysroot=" + str(self.sdkSysroot),
-            "-B" + str(self.sdkBinDir),
-            "-target", self.targetTriple,
-        ])
-        CPPFLAGS = self.COMMON_FLAGS + self.warningFlags + self.optimizationFlags
+    @property
+    def default_compiler_flags(self):
+        return self.COMMON_FLAGS + self.warningFlags + self.optimizationFlags + [
+            "--sysroot=" + str(self.sdkSysroot), "-B" + str(self.sdkBinDir), "-target", self.targetTriple]
+
+    def configure(self, **kwargs):
+        CPPFLAGS = self.default_compiler_flags
         for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
             assert key not in self.configureEnvironment
         self.configureEnvironment["CC"] = str(self.compilerDir / (self.targetTriple + "-clang"))
@@ -151,9 +161,9 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
         self.configureEnvironment["CPPFLAGS"] = " ".join(CPPFLAGS)
         self.configureEnvironment["CFLAGS"] = " ".join(CPPFLAGS + self.CFLAGS)
         self.configureEnvironment["CXXFLAGS"] = " ".join(CPPFLAGS + self.CXXFLAGS)
-        self.configureEnvironment["LDFLAGS"] = " ".join(self.LDFLAGS)
+        self.configureEnvironment["LDFLAGS"] = " ".join(self.LDFLAGS + self.default_ldflags)
         print(coloured(AnsiColour.yellow, "Cross configure environment:", pprint.pformat(self.configureEnvironment)))
-        super().configure()
+        super().configure(**kwargs)
 
     def process(self):
         # We run all these commands with $PATH containing $CHERI_SDK/bin to ensure the right tools are used

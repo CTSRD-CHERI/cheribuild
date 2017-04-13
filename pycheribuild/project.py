@@ -727,15 +727,19 @@ class Project(SimpleProject):
         """
         return True
 
-    def configure(self):
+    def configure(self, cwd: Path=None):
+        if cwd is None:
+            cwd = self.buildDir
         if not self.needsConfigure() and not self.config.forceConfigure:
             return
         if self.configureCommand:
             self.runWithLogfile([self.configureCommand] + self.configureArgs,
-                                logfileName="configure", cwd=self.buildDir, env=self.configureEnvironment)
+                                logfileName="configure", cwd=cwd, env=self.configureEnvironment)
 
-    def compile(self):
-        self.runMake(self.commonMakeArgs + [self.config.makeJFlag])
+    def compile(self, cwd: Path=None):
+        if cwd is None:
+            cwd = self.buildDir
+        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], cwd=cwd)
 
     @property
     def makeInstallEnv(self):
