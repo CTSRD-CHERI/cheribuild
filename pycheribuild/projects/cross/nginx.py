@@ -38,6 +38,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
     requiresGNUMake = True
     add_host_target_build_config_options = False
     warningFlags = CrossCompileAutotoolsProject.warningFlags + ["-Wno-error=cheri-capability-misuse"]
+    defaultOptimizationLevel = ["-O2"]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -86,6 +87,10 @@ class BuildNginx(CrossCompileAutotoolsProject):
         self.configureEnvironment["NGX_SIZEOF_off_t"] = "8"
         self.configureEnvironment["NGX_SIZEOF_time_t"] = "8"
         self.configureEnvironment["NGX_SIZEOF_void_p"] = "32" if self.config.cheriBits == 256 else "16"
+        self.configureEnvironment["NGX_HAVE_MAP_DEVZERO"] = "yes"
+        self.configureEnvironment["NGX_HAVE_SYSVSHM"] = "yes"
+        self.configureEnvironment["NGX_HAVE_MAP_ANON"] = "yes"
+        self.configureEnvironment["NGX_HAVE_POSIX_SEM"] = "yes"
         super().configure(cwd=self.sourceDir)
 
     def compile(self, **kwargs):
