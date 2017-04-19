@@ -69,7 +69,7 @@ class TestArgumentParsing(TestCase):
             config = Path(t.name)
             config.write_bytes(b'{ "source-root": "/x"}')
             self._parse_arguments([], config_file=config)
-            self.assertEqual(BuildCheriBSDDiskImage.extraFilesDir, Path("/tmp/extra-files"))
+            self.assertEqual(BuildCheriBSDDiskImage.extraFilesDir, Path("/x/extra-files"))
 
             # check that source root can be overridden
             self._parse_arguments(["--source-root=/y"])
