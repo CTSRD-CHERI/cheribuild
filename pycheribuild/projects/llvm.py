@@ -30,8 +30,7 @@
 import re
 import shlex
 from pathlib import Path
-
-from ..project import CMakeProject, PseudoTarget
+from ..project import CMakeProject, TargetAlias
 from ..utils import *
 
 
@@ -150,12 +149,12 @@ class BuildLLVM(CMakeProject):
 
 # Add an alias target clang that builds llvm
 # TODO: add a property targetAliases to project instead?
-class BuildClang(PseudoTarget):
+class BuildClang(TargetAlias):
     target = "clang"
     dependencies = ["llvm"]
 
 
-class BuildLLD(PseudoTarget):
+class BuildLLD(TargetAlias):
     target = "lld"
     dependencies = ["llvm"]
 

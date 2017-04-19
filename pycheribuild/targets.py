@@ -146,8 +146,14 @@ class TargetManager(object):
             # The wants only the explicitly passed targets to be executed, don't do any ordering
             # we still reorder them to ensure that they are run in the right order
             for t in explicitlyChosenTargets:
-                if t.projectClass.dependenciesMustBeBuilt:
-                    chosenTargets.extend(self.targetMap[dep] for dep in t.projectClass.allDependencyNames())
+                # if a target is an alias then add it to the list of targets
+                if t.projectClass.isAlias:
+                    if t.projectClass.dependenciesMustBeBuilt:
+                        # some targets such as sdk always need their dependencies build:
+                        chosenTargets.extend(self.targetMap[dep] for dep in t.projectClass.allDependencyNames())
+                    else:
+                        # otherwise just add the direct dependencies
+                        chosenTargets.extend(self.targetMap[dep] for dep in t.projectClass.dependencies)
                 chosenTargets.append(t)
             chosenTargets = sorted(chosenTargets)
         else:

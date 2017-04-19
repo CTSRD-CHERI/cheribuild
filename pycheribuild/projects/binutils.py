@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from ..project import AutotoolsProject
+from ..project import AutotoolsProject, TargetAlias
 from ..utils import *
 
 import os
@@ -161,3 +161,9 @@ class BuildGPLv3Binutils(BuildGnuBinutils):
         self.createBuildtoolTargetSymlinks(bindir / "ld.bfd", toolName="ld", createUnprefixedLink=True)
         # self.installFile(self.buildDir / "gold/ld-new", bindir / "ld.gold", force=True)
         # self.createBuildtoolTargetSymlinks(bindir / "ld.gold")
+
+
+# Replace the old binutils target by on that builds the required tools from GNU binutils and elftoolchain
+class BuildBinutils(TargetAlias):
+    target = "binutils"
+    dependencies = ["gnu-binutils", "elftoolchain-binutils"] if not IS_FREEBSD else []

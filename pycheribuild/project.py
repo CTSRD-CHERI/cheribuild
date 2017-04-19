@@ -85,6 +85,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
     projectName = None
     dependencies = []  # type: typing.List[str]
     dependenciesMustBeBuilt = False
+    isAlias = False
     sourceDir = None
     buildDir = None
     installDir = None
@@ -897,15 +898,23 @@ class AutotoolsProject(Project):
             self.configureArgs.extend(self.extraConfigureFlags)
 
 
+# A target that is just an alias for at least one other targets but does not force building of dependencies
+class TargetAlias(SimpleProject):
+    doNotAddToTargets = True
+    dependenciesMustBeBuilt = False
+    hasSourceFiles = False
+    isAlias = True
+
+    def process(self):
+        assert len(self.dependencies) > 0
+
+
 # A target that does nothing (used for e.g. the "all" target)
-class PseudoTarget(SimpleProject):
+class TargetAliasWithDependencies(TargetAlias):
     doNotAddToTargets = True
     dependenciesMustBeBuilt = True
     hasSourceFiles = False
 
-    def process(self):
-        pass
 
-
-class BuildAll(PseudoTarget):
+class BuildAll(TargetAliasWithDependencies):
     dependencies = ["qemu", "sdk", "disk-image", "run"]

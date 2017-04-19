@@ -29,8 +29,9 @@
 #
 import os
 import sys
+import subprocess
 
-from ..project import Project
+from ..project import Project, SimpleProject, TargetAlias
 from ..configloader import ConfigLoader
 from ..utils import *
 
@@ -202,6 +203,8 @@ class BuildFreeBSD(Project):
 
 
 class BuildCHERIBSD(BuildFreeBSD):
+    projectName = "cheribsd"
+    target = "cheribsd-without-sysroot"
     dependencies = ["llvm"]
     repository = "https://github.com/CTSRD-CHERI/cheribsd.git"
     defaultInstallDir = lambda config, cls: config.outputRoot / ("rootfs" + config.cheriBitsStr)
@@ -260,7 +263,6 @@ class BuildCHERIBSD(BuildFreeBSD):
             "CHERI_CXX=" + str(self.cheriCXX)
         ])
 
-
         self.commonMakeArgs.extend(self.makeOptions)
 
     def _removeSchgFlag(self, *paths: "typing.Iterable[str]"):
@@ -308,3 +310,86 @@ class BuildCHERIBSD(BuildFreeBSD):
                 for l in programsToMove:
                     if (sdkBinDir / (l + ".backup")).exists():
                         runCmd("mv", "-f", l + ".backup", l, cwd=sdkBinDir)
+
+
+class BuildCheriBsdSysroot(SimpleProject):
+    target = "cheribsd-sysroot"
+    dependencies = ["cheribsd-without-sysroot"]
+
+    def fixSymlinks(self):
+        # copied from the build_sdk.sh script
+        # TODO: we could do this in python as well, but this method works
+        fixlinksSrc = includeLocalFile("files/fixlinks.c")
+        runCmd("cc", "-x", "c", "-", "-o", self.config.sdkDir / "bin/fixlinks", input=fixlinksSrc)
+        runCmd(self.config.sdkDir / "bin/fixlinks", cwd=self.config.sdkSysrootDir / "usr/lib")
+
+    def checkSystemDependencies(self):
+        super().checkSystemDependencies()
+        if not IS_FREEBSD and not self.remotePath:
+            configOption = "'--" + self.target + "/" + "remote-sdk-path'"
+            fatalError("Path to the remote SDK is not set, option", configOption, "must be set to a path that "
+                       "scp understands (e.g. vica:~foo/cheri/output/sdk256)")
+            sys.exit("Cannot continue...")
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        if not IS_FREEBSD:
+            cls.remotePath = cls.addConfigOption("remote-sdk-path", showHelp=True, metavar="PATH", help="The path to "
+                                                 "the CHERI SDK on the remote FreeBSD machine (e.g. "
+                                                 "vica:~foo/cheri/output/sdk256)")
+
+    def copySysrootFromRemoteMachine(self):
+        statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
+        assert self.remotePath
+        remoteSysrootArchive = self.remotePath + "/" + self.config.sysrootArchiveName
+        statusUpdate("Will copy the sysroot files from ", remoteSysrootArchive, sep="")
+        if not self.queryYesNo("Continue?"):
+            return
+
+        # now copy the files
+        self.makedirs(self.config.sdkSysrootDir)
+        self.copyRemoteFile(remoteSysrootArchive, self.config.sdkDir / self.config.sysrootArchiveName)
+        runCmd("tar", "xzf", self.config.sdkDir / self.config.sysrootArchiveName, cwd=self.config.sdkDir)
+
+    def createSysroot(self):
+        # we need to add include files and libraries to the sysroot directory
+        self.makedirs(self.config.sdkSysrootDir / "usr")
+        # use tar+untar to copy all necessary files listed in metalog to the sysroot dir
+        archiveCmd = ["tar", "cf", "-", "--include=./lib/", "--include=./usr/include/",
+                      "--include=./usr/lib/", "--include=./usr/libcheri", "--include=./usr/libdata/",
+                      # only pack those files that are mentioned in METALOG
+                      "@METALOG"]
+        printCommand(archiveCmd, cwd=BuildCHERIBSD.rootfsDir(self.config))
+        if not self.config.pretend:
+            with subprocess.Popen(archiveCmd, stdout=subprocess.PIPE, cwd=str(BuildCHERIBSD.rootfsDir(self.config))) as tar:
+                runCmd(["tar", "xf", "-"], stdin=tar.stdout, cwd=self.config.sdkSysrootDir)
+        if not (self.config.sdkSysrootDir / "lib/libc.so.7").is_file():
+            fatalError(self.config.sdkSysrootDir, "is missing the libc library, install seems to have failed!")
+
+        # fix symbolic links in the sysroot:
+        print("Fixing absolute paths in symbolic links inside lib directory...")
+        self.fixSymlinks()
+        # create an archive to make it easier to copy the sysroot to another machine
+        self.deleteFile(self.config.sdkDir / self.config.sysrootArchiveName, printVerboseOnly=True)
+        runCmd("tar", "-czf", self.config.sdkDir / self.config.sysrootArchiveName, "sysroot",
+               cwd=self.config.sdkDir)
+        print("Successfully populated sysroot")
+
+    def process(self):
+        with self.asyncCleanDirectory(self.config.sdkSysrootDir):
+            if IS_FREEBSD:
+                self.createSysroot()
+            else:
+                self.copySysrootFromRemoteMachine()
+            # lld expects libgcc_s and libgcc_eh to exist:
+            libgcc_s = self.config.sdkDir / "sysroot/usr/libcheri/libgcc_s.a"
+            libgcc_eh = self.config.sdkDir / "sysroot/usr/libcheri/libgcc_eh.a"
+            for lib in (libgcc_s, libgcc_eh):
+                if not lib.is_file():
+                    runCmd("ar", "rc", lib)
+
+
+class BuildCheriBsdAndSysroot(TargetAlias):
+    target = "cheribsd"
+    dependencies = ["cheribsd-without-sysroot", "cheribsd-sysroot"]
