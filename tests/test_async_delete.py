@@ -100,7 +100,8 @@ class TestAsyncDelete(TestCase):
         self.assertTrue(path.is_dir(), str(path) + "doesn't exist!")
         self._assertNumFiles(path, 0)
 
-    def _dump_dir_tree(self, directory: Path, message: str):
+    @staticmethod
+    def _dump_dir_tree(directory: Path, message: str):
         print("State for test", message)
         if not directory.exists():
             print("(nonexistant)", directory)

@@ -27,7 +27,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import json
 import os
 import shlex
 import subprocess
@@ -36,7 +35,9 @@ import sys
 from .utils import *
 from .targets import targetManager
 from .configloader import ConfigLoader
+# noinspection PyUnresolvedReferences
 from .projects import *  # make sure all projects are loaded so that targetManager gets populated
+# noinspection PyUnresolvedReferences
 from .projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
 
 

@@ -110,11 +110,13 @@ class BuildGDB(CrossCompileAutotoolsProject):
     def compile(self, **kwargs):
         buildenv = self.configureEnvironment.copy()
         # it runs configure during the build step too...
-        # And it only partially handles CC_FOR_BUILD..........
+        # And it only partially handles CC_FOR_BUILD....
         with tempfile.TemporaryDirectory() as tmpdir:
             # It hardcodes calling gcc which won't work... WORST BUILD SYSTEM EVER?
-            self.writeFile(Path(tmpdir) / "gcc", contents="exec " + str(self.config.clangPath) + " \"$@\"\n", overwrite=True)
-            self.writeFile(Path(tmpdir) / "g++", contents="exec " + str(self.config.clangPlusPlusPath) + " \"$@\"\n", overwrite=True)
+            self.writeFile(Path(tmpdir) / "gcc", contents="exec " + str(self.config.clangPath) + " \"$@\"\n",
+                           overwrite=True)
+            self.writeFile(Path(tmpdir) / "g++", contents="exec " + str(self.config.clangPlusPlusPath) + " \"$@\"\n",
+                           overwrite=True)
             os.chmod(str(Path(tmpdir) / "gcc"), stat.S_IXUSR | stat.S_IRUSR)
             os.chmod(str(Path(tmpdir) / "g++"), stat.S_IXUSR | stat.S_IRUSR)
             # self.createSymlink(Path("/usr/bin/as"), Path(tmpdir) / "as", relative=False)
@@ -122,7 +124,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
             buildenv["PATH"] = tmpdir + ":" + os.environ["PATH"]
             with setEnv(**buildenv):
                 self.runMake(self.commonMakeArgs + [self.config.makeJFlag], makeTarget="all-gdb", cwd=self.buildDir)
-
 
     def install(self, **kwargs):
         self.runMakeInstall(args=self.commonMakeArgs, target="install-gdb")

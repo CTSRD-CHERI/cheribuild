@@ -109,8 +109,8 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
     __commandLineOptionGroup = None
 
     @classmethod
-    def addConfigOption(cls, name: str, default: "typing.Union[Type_T, typing.Callable[[], Type_T]]"=None,
-                        kind: "typing.Callable[[str], Type_T]"=str, *,
+    def addConfigOption(cls, name: str, default: "typing.Union[Type_T, typing.Callable[[], Type_T]]" = None,
+                        kind: "typing.Callable[[str], Type_T]" = str, *,
                         showHelp=False, shortname=None, **kwargs) -> "Type_T":
         assert cls.target, "target not set for " + cls.__name__
         # Hide stuff like --foo/install-directory from --help
@@ -124,7 +124,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             # noinspection PyProtectedMember
             # has to be a single underscore otherwise the name gets mangled to _Foo__commandlineOptionGroup
             cls._commandLineOptionGroup = ConfigLoader._parser.add_argument_group(
-                    "Options for target '" + cls.target + "'")
+                "Options for target '" + cls.target + "'")
 
         return ConfigLoader.addOption(cls.target + "/" + name, shortname, default=default, type=kind, _owningClass=cls,
                                       group=cls._commandLineOptionGroup, helpHidden=helpHidden, **kwargs)
@@ -149,7 +149,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
     def _addRequiredSystemTool(self, executable: str, installInstructions=None):
         self.__requiredSystemTools[executable] = installInstructions
 
-    def queryYesNo(self, message: str="", *, defaultResult=False, forceResult=True) -> bool:
+    def queryYesNo(self, message: str = "", *, defaultResult=False, forceResult=True) -> bool:
         yesNoStr = " [Y]/n " if defaultResult else " y/[N] "
         if self.config.pretend:
             print(message + yesNoStr)
@@ -280,7 +280,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
         with file.open("w", encoding="utf-8") as f:
             f.write(contents)
 
-    def createSymlink(self, src: Path, dest: Path, *, relative=True, cwd: Path=None):
+    def createSymlink(self, src: Path, dest: Path, *, relative=True, cwd: Path = None):
         assert dest.is_absolute() or cwd is not None
         if not cwd:
             cwd = dest.parent
@@ -308,6 +308,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             self.makedirs(dest.parent)
         if dest.is_symlink():
             dest.unlink()
+        # noinspection PyArgumentList
         shutil.copy(str(src), str(dest), follow_symlinks=False)
 
     @staticmethod
@@ -344,7 +345,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
         self._lineNotImportantStdoutFilter(line)
 
     def runWithLogfile(self, args: "typing.Sequence[str]", logfileName: str, *, stdoutFilter=None, cwd: Path = None,
-                       env: dict=None, appendToLogfile=False) -> None:
+                       env: dict = None, appendToLogfile=False) -> None:
         """
         Runs make and logs the output
         config.quiet doesn't display anything, normal only status updates and config.verbose everything
@@ -445,7 +446,8 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             raise SystemExit(message)
 
     @staticmethod
-    def createBuildtoolTargetSymlinks(tool: Path, toolName: str=None, createUnprefixedLink: bool=False, cwd: str=None):
+    def createBuildtoolTargetSymlinks(tool: Path, toolName: str = None, createUnprefixedLink: bool = False,
+                                      cwd: str = None):
         """
         Create mips4-unknown-freebsd, cheri-unknown-freebsd and mips64-unknown-freebsd prefixed symlinks
         for build tools like clang, ld, etc.
@@ -475,7 +477,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
                 continue
             runCmd("ln", "-fsn", tool.name, target + toolName, cwd=cwd, printVerboseOnly=True)
 
-    def dependencyError(self, *args, installInstructions: str=None):
+    def dependencyError(self, *args, installInstructions: str = None):
         self._systemDepsChecked = True  # make sure this is always set
         fatalError(*args, fixitHint=installInstructions)
 
@@ -514,13 +516,13 @@ class Project(SimpleProject):
     doNotAddToTargets = True
 
     defaultSourceDir = ConfigLoader.ComputedDefaultValue(
-            function=lambda config, project: Path(config.sourceRoot / project.projectName.lower()),
-            asString=lambda cls: "$SOURCE_ROOT/" + cls.projectName.lower())
+        function=lambda config, project: Path(config.sourceRoot / project.projectName.lower()),
+        asString=lambda cls: "$SOURCE_ROOT/" + cls.projectName.lower())
 
     appendCheriBitsToBuildDir = False
     """ Whether to append -128/-256 to the computed build directory name"""
     defaultBuildDir = ConfigLoader.ComputedDefaultValue(
-            function=_defaultBuildDir, asString=lambda cls: "$BUILD_ROOT/" + cls.projectName.lower())
+        function=_defaultBuildDir, asString=lambda cls: "$BUILD_ROOT/" + cls.projectName.lower())
 
     requiresGNUMake = False
     """ If true this project must be built with GNU make (gmake on FreeBSD) and not BSD make or ninja"""
@@ -539,11 +541,11 @@ class Project(SimpleProject):
         return cls.installDir
 
     _installToSDK = ConfigLoader.ComputedDefaultValue(
-            function=lambda config, project: config.sdkDir,
-            asString="$INSTALL_ROOT/sdk256 or $INSTALL_ROOT/sdk128 depending on CHERI bits")
+        function=lambda config, project: config.sdkDir,
+        asString="$INSTALL_ROOT/sdk256 or $INSTALL_ROOT/sdk128 depending on CHERI bits")
     _installToBootstrapTools = ConfigLoader.ComputedDefaultValue(
-            function=lambda config, project: config.otherToolsDir,
-            asString="$INSTALL_ROOT/bootstrap")
+        function=lambda config, project: config.otherToolsDir,
+        asString="$INSTALL_ROOT/bootstrap")
 
     defaultInstallDir = installDirNotSpecified
     """ The default installation directory (will probably be set to _installToSDK or _installToBootstrapTools) """
@@ -558,9 +560,9 @@ class Project(SimpleProject):
     def canUseLLd(cls, compiler: Path):
         if compiler not in cls.__can_use_lld_map:
             try:
-                result = runCmd([compiler, "-fuse-ld=lld", "-xc", "-o" "-", "-"], runInPretendMode=True,
-                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                                input="int main() { return 0; }\n", printVerboseOnly=True)
+                runCmd([compiler, "-fuse-ld=lld", "-xc", "-o" "-", "-"], runInPretendMode=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                       input="int main() { return 0; }\n", printVerboseOnly=True)
                 statusUpdate(compiler, "supports -fuse-ld=lld, linking should be much faster!")
                 cls.__can_use_lld_map[compiler] = True
             except subprocess.CalledProcessError:
@@ -582,11 +584,12 @@ class Project(SimpleProject):
                                            default=cls.defaultInstallDir)
         if "repository" in cls.__dict__:
             cls.gitRevision = cls.addConfigOption("git-revision", kind=str, help="The git revision to checkout prior to"
-                                                  " building. Useful if HEAD is broken for one project but you still"
-                                                  " want to update the other projects.", metavar="REVISION")
+                                                                                 " building. Useful if HEAD is broken for one project but you still"
+                                                                                 " want to update the other projects.",
+                                                  metavar="REVISION")
             cls.repository = cls.addConfigOption("repository", kind=str, help="The URL of the git repository",
                                                  default=cls.repository, metavar="REPOSITORY")
-        # TODO: add the gitRevision option
+            # TODO: add the gitRevision option
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -672,9 +675,9 @@ class Project(SimpleProject):
         if revision:
             runCmd("git", "checkout", revision, cwd=srcDir, printVerboseOnly=True)
 
-    def runMake(self, args: "typing.List[str]", makeTarget="", *, makeCommand: str=None, logfileName: str=None,
-                cwd: Path=None, env=None, appendToLogfile=False, compilationDbName="compile_commands.json",
-                stdoutFilter: "typing.Callable[[bytes], None]"="__default_filter__") -> None:
+    def runMake(self, args: "typing.List[str]", makeTarget="", *, makeCommand: str = None, logfileName: str = None,
+                cwd: Path = None, env=None, appendToLogfile=False, compilationDbName="compile_commands.json",
+                stdoutFilter: "typing.Callable[[bytes], None]" = "__default_filter__") -> None:
         if not makeCommand:
             makeCommand = self.makeCommand
         if not cwd:
@@ -735,7 +738,7 @@ class Project(SimpleProject):
         """
         return True
 
-    def configure(self, cwd: Path=None):
+    def configure(self, cwd: Path = None):
         if cwd is None:
             cwd = self.buildDir
         if not self.needsConfigure() and not self.config.forceConfigure:
@@ -744,7 +747,7 @@ class Project(SimpleProject):
             self.runWithLogfile([self.configureCommand] + self.configureArgs,
                                 logfileName="configure", cwd=cwd, env=self.configureEnvironment)
 
-    def compile(self, cwd: Path=None):
+    def compile(self, cwd: Path = None):
         if cwd is None:
             cwd = self.buildDir
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], cwd=cwd)
@@ -757,7 +760,7 @@ class Project(SimpleProject):
             return env
         return None
 
-    def runMakeInstall(self, *, args: list=None, target="install", _stdoutFilter=None, cwd=None):
+    def runMakeInstall(self, *, args: list = None, target="install", _stdoutFilter=None, cwd=None):
         if args is None:
             args = self.commonMakeArgs
         self.runMake(args, makeTarget=target, stdoutFilter=_stdoutFilter, env=self.makeInstallEnv, cwd=cwd)
@@ -795,6 +798,7 @@ class CMakeProject(Project):
     Sets configure command to CMake, adds -DCMAKE_INSTALL_PREFIX=installdir
     and checks that CMake is installed
     """
+
     class Generator(Enum):
         Default = 0
         Ninja = 1
@@ -833,7 +837,7 @@ class CMakeProject(Project):
         # TODO: do it always?
         if self.config.createCompilationDB:
             self.configureArgs.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
-        # Don't add the user provided options here, add them in configure() so that they are put last
+            # Don't add the user provided options here, add them in configure() so that they are put last
 
     def add_cmake_option(self, option: str, value):
         if isinstance(value, bool):
@@ -893,6 +897,7 @@ class AutotoolsProject(Project):
     Like Project but automatically sets up the defaults for autotools like projects
     Sets configure command to ./configure, adds --prefix=installdir
     """
+
     def __init__(self, config, configureScript="configure"):
         super().__init__(config)
         self.configureCommand = self.sourceDir / configureScript

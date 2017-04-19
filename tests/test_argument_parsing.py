@@ -9,6 +9,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from pycheribuild.targets import targetManager
 from pycheribuild.configloader import ConfigLoader
 from pycheribuild.chericonfig import CheriConfig
+# noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # make sure all projects are loaded so that targetManager gets populated
 from pycheribuild.projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
 from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage
@@ -19,7 +20,8 @@ _targets_registered = False
 
 class TestArgumentParsing(TestCase):
 
-    def _parse_arguments(self, args, *, config_file=Path("/this/does/not/exist")):
+    @staticmethod
+    def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")):
         global _targets_registered
         if not _targets_registered:
             targetManager.registerCommandLineOptions()

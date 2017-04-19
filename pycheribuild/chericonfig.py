@@ -102,11 +102,10 @@ class CheriConfig(object):
     _buildCheri256 = ConfigLoader.cheriBitsGroup.add_argument("--cheri-256", "--256", dest="cheri_bits",
                                                               action="store_const", const="256",
                                                               help="Shortcut for --cheri-bits=256")
-    cheriBits = ConfigLoader.addOption("cheri-bits", type=int, group=ConfigLoader.cheriBitsGroup, choices=["128", "256"],
-                                       default=256, help="Whether to build the whole software stack for 128 or 256 bit"
+    cheriBits = ConfigLoader.addOption("cheri-bits", type=int, group=ConfigLoader.cheriBitsGroup, default=256,
+                                       help="Whether to build the whole software stack for 128 or 256 bit"
                                        " CHERI. The output directories will be suffixed with the number of bits to"
-                                       " make sure the right binaries are being used."
-                                       " WARNING: 128-bit CHERI is still very unstable.")
+                                       " make sure the right binaries are being used.", choices=["128", "256"])
 
     createCompilationDB = ConfigLoader.addBoolOption("compilation-db", "-cdb",
                                                      help="Create a compile_commands.json file in the build dir "

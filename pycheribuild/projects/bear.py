@@ -29,6 +29,7 @@
 #
 from ..project import CMakeProject
 
+
 class BuildBear(CMakeProject):
     repository = "https://github.com/rizsotto/Bear.git"
     defaultInstallDir = CMakeProject._installToBootstrapTools
