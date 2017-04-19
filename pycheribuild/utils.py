@@ -34,6 +34,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 import traceback
 from .colour import coloured, AnsiColour
 from .chericonfig import CheriConfig
@@ -171,7 +172,14 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
     cmdline = list(map(str, cmdline))  # ensure it's all strings so that subprocess can handle it
     # When running scripts from a noexec filesystem try to read the interpreter and run that
     printCommand(cmdline, cwd=kwargs.get("cwd"), printVerboseOnly=printVerboseOnly)
-    kwargs["cwd"] = str(kwargs["cwd"]) if "cwd" in kwargs else os.getcwd()
+    if "cwd" in kwargs:
+        kwargs["cwd"] = str(kwargs["cwd"])
+    else:
+        # os.getcwd() raises an exception if the cwd was deleted
+        try:
+            kwargs["cwd"] = os.getcwd()
+        except FileNotFoundError:
+            kwargs["cwd"] = tempfile.gettempdir()
     if _cheriConfig.pretend and not runInPretendMode:
         return CompletedProcess(args=cmdline, returncode=0, stdout=b"", stderr=b"")
     # actually run the process now:
