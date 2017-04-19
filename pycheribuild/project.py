@@ -216,11 +216,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
         """
         deleterThread = None
         tempdir = path.with_suffix(".delete-me-pls")
-        if keepRoot:
-            # TODO: mkdir tempdir, move stuff there, then rm -rf tempdir
-            warningMessage("Cannot asynchronously delete with keepRoot yet, deleting", path, "in foreground")
-            self.cleanDirectory(path, keepRoot=keepRoot)
-        elif not path.is_dir():
+        if not path.is_dir():
             self.makedirs(path)
         elif len(list(path.iterdir())) == 0:
             statusUpdate("Not cleaning", path, "it is already empty")
@@ -228,9 +224,20 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             if tempdir.is_dir():
                 warningMessage("Previous async cleanup of ", path, "failed. Cleaning up now")
                 self._deleteDirectories(tempdir)
-            # rename the directory, create a new dir and then delete it in a background thread
-            runCmd("mv", path, tempdir)
-            self.makedirs(path)
+            if keepRoot:
+                # Move all subdirectories/files to a temp directory and delete that
+                self.makedirs(tempdir)
+                if not self.config.pretend:
+                    assert tempdir.is_dir()
+                    assert len(list(tempdir.iterdir())) == 0, list(tempdir.iterdir())
+                runCmd(["mv"] + list(map(str, path.iterdir())) + [tempdir], printVerboseOnly=True)
+            else:
+                # rename the directory, create a new dir and then delete it in a background thread
+                runCmd("mv", path, tempdir)
+                self.makedirs(path)
+        if not self.config.pretend:
+            assert path.is_dir()
+            assert len(list(path.iterdir())) == 0, list(path.iterdir())
         if tempdir.is_dir() or self.config.pretend:
             # we now have an empty directory, start background deleter and return to caller
             deleterThread = SimpleProject.DeleterThread(self, tempdir)
