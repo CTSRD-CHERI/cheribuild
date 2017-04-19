@@ -107,7 +107,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
         # TODO: do I need these:
         """(cd $obj; env INSTALL="/usr/bin/install -c "  INSTALL_DATA="install   -m 0644"  INSTALL_LIB="install    -m 444"  INSTALL_PROGRAM="install    -m 555"  INSTALL_SCRIPT="install   -m 555"   PYTHON="${PYTHON}" SHELL=/bin/sh CONFIG_SHELL=/bin/sh CONFIG_SITE=/usr/ports/Templates/config.site ../configure ${CONFIGURE_ARGS} )"""
 
-    def compile(self):
+    def compile(self, **kwargs):
         buildenv = self.configureEnvironment.copy()
         # it runs configure during the build step too...
         # And it only partially handles CC_FOR_BUILD..........

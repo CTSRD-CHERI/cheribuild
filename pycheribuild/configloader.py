@@ -168,7 +168,7 @@ class ConfigLoader(object):
             # change the default action value
             neg.default = None
             action.default = None
-        assert action.default == None  # we don't want argparse default values!
+        assert action.default is None  # we don't want argparse default values!
         assert isinstance(action, argparse.Action)
         assert not action.default  # we handle the default value manually
         assert not action.type  # we handle the type of the value manually

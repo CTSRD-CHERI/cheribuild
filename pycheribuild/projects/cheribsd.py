@@ -155,7 +155,7 @@ class BuildFreeBSD(Project):
         else:
             return super().clean()
 
-    def compile(self):
+    def compile(self, **kwargs):
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
         # so just omit the flag here if the user passes -j1 on the command line
         jflag = [self.config.makeJFlag] if self.config.makeJobs > 1 else []

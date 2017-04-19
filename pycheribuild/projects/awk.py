@@ -40,10 +40,10 @@ class BuildAwk(Project):
         super().__init__(config)
         self.commonMakeArgs.extend(["CC=cc", "CFLAGS=-O2 -Wall", "YACC=yacc -y -d"])
 
-    def compile(self):
+    def compile(self, **kwargs):
         self.runMake(self.commonMakeArgs, "a.out", cwd=self.sourceDir / "latest")
 
-    def install(self):
+    def install(self, **kwargs):
         self.runMake(self.commonMakeArgs, "names", cwd=self.sourceDir / "latest")
         self.installFile(self.sourceDir / "latest/a.out", self.installDir / "bin/nawk")
         runCmd("ln", "-sfn", "nawk", "awk", cwd=self.installDir / "bin")

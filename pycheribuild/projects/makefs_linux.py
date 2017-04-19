@@ -50,10 +50,10 @@ class BuildMakefsOnLinux(Project):
         if not Path("/usr/include/bsd/bsd.h").is_file():
             self.dependencyError("libbsd must be installed to compile makefs on linux")
 
-    def compile(self):
+    def compile(self, **kwargs):
         self.runMake(self.commonMakeArgs)
 
-    def install(self):
+    def install(self, **kwargs):
         self.installFile(self.sourceDir / "builddir/usr.sbin/makefs/makefs", self.installDir / "bin/makefs")
 
     def process(self):

@@ -857,13 +857,13 @@ class CMakeProject(Project):
         cmakeCache = self.buildDir / "CMakeCache.txt"
         return not cmakeCache.exists()
 
-    def configure(self):
+    def configure(self, **kwargs):
         self.configureArgs.extend(self.cmakeOptions)
         # make sure we get a completely fresh cache when --reconfigure is passed:
         cmakeCache = self.buildDir / "CMakeCache.txt"
         if self.config.forceConfigure:
             self.deleteFile(cmakeCache)
-        super().configure()
+        super().configure(**kwargs)
 
     def install(self, _stdoutFilter="__DEFAULT__"):
         if _stdoutFilter == "__DEFAULT__":

@@ -66,7 +66,7 @@ class BuildElftoolchainBinutils(Project):
         self.extraPrograms = ["strip", "ranlib", "objcopy", "mcs"]
         self.libTargets = ["common", "libelf", "libelftc", "libpe", "libdwarf"]
 
-    def compile(self):
+    def compile(self, **kwargs):
         # tools that we want to build:
         # build is not parallel-safe -> we can't make with all the all-foo targets and -jN
         # To speed it up run make for the individual library directories instead and then for all the binaries
@@ -80,7 +80,7 @@ class BuildElftoolchainBinutils(Project):
                          logfileName="build", appendToLogfile=not firstCall)
             firstCall = False
 
-    def install(self):
+    def install(self, **kwargs):
         # We don't actually want to install all the files, just copy the binaries that we want
         group = grp.getgrgid(os.getegid()).gr_name
         user = pwd.getpwuid(os.geteuid()).pw_name
@@ -128,7 +128,7 @@ class BuildElfToolchain(BuildElftoolchainBinutils):
             return
         super().process()
 
-    def install(self):
+    def install(self, **kwargs):
         if IS_FREEBSD:
             statusUpdate("Not installing elftoolchain binaries as they conflict witht he ones from CheriBSD")
             return

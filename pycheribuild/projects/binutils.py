@@ -103,7 +103,7 @@ class BuildGnuBinutils(AutotoolsProject):
         self.runGitCmd("checkout", "cheribsd")
         super().update()
 
-    def install(self):
+    def install(self, **kwargs):
         bindir = self.installDir / "bin"
         if not self.fullInstall:
             # we don't want to install all programs, as the rest comes from elftoolchain
@@ -146,13 +146,13 @@ class BuildGPLv3Binutils(BuildGnuBinutils):
     def update(self):
         AutotoolsProject.update(self)
 
-    def compile(self):
+    def compile(self, **kwargs):
         # FIXME: for some reason a normal make all will fail...
         self.runMake(self.commonMakeArgs, "all-ld", logfileName="build")
         # self.runMake(self.commonMakeArgs, "all-gold", logfileName="build", appendToLogfile=True)
         pass
 
-    def install(self):
+    def install(self, **kwargs):
         bindir = self.installDir / "bin"
         self.runMake(self.commonMakeArgs, "install-ld", logfileName="install")
         # self.runMake(self.commonMakeArgs, "install-gold", logfileName="install", appendToLogfile=True)

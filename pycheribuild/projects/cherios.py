@@ -61,5 +61,5 @@ class BuildCheriOS(CMakeProject):
             self.dependencyError("CMake version", versionStr, "is too old (need at least 3.4)",
                                  installInstructions=self.cmakeInstallInstructions)
 
-    def install(self):
+    def install(self, **kwargs):
         pass  # nothing to install yet

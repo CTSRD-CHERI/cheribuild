@@ -45,5 +45,5 @@ class BuildQtCreator(Project):
         self.configureEnvironment["LLVM_INSTALL_DIR"] = self.config.sdkDir
         self.makeCommand = "make"
 
-    def install(self):
+    def install(self, **kwargs):
         self.runMake(["install", "INSTALL_ROOT=" + str(self.installDir)])

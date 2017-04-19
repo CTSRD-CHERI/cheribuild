@@ -27,8 +27,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import re
-import shlex
 from pathlib import Path
 from ..project import CMakeProject, TargetAlias
 from ..utils import *
