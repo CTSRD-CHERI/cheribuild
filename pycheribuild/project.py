@@ -270,7 +270,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
         with file.open("r", encoding="utf-8") as f:
             return f.read()
 
-    def writeFile(self, file: Path, contents: str, *, overwrite: bool, noCommandPrint=False) -> None:
+    def writeFile(self, file: Path, contents: str, *, overwrite: bool, noCommandPrint=False, mode=None) -> None:
         """
         :param file: The target path to write contents to
         :param contents: the contents of the new file
@@ -286,6 +286,8 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
         self.makedirs(file.parent)
         with file.open("w", encoding="utf-8") as f:
             f.write(contents)
+        if mode:
+            file.chmod(mode)
 
     def createSymlink(self, src: Path, dest: Path, *, relative=True, cwd: Path = None):
         assert dest.is_absolute() or cwd is not None

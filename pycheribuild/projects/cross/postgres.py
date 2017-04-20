@@ -62,10 +62,10 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         # install the benchmark script
         benchmark = self.readFile(self.sourceDir / "postgres-benchmark.sh")
         benchmark = re.sub(r'POSTGRES_ROOT=".*"', "POSTGRES_ROOT=\"" + str(self.installPrefix) + "\"", benchmark)
-        self.writeFile(self.destdir / "postgres-benchmark.sh", benchmark, overwrite=True)
+        self.writeFile(self.destdir / "postgres-benchmark.sh", benchmark, overwrite=True, mode=0o755)
         run_tests = self.readFile(self.sourceDir / "run-postgres-tests.sh")
         run_tests = re.sub(r'POSTGRES_ROOT=".*"', "POSTGRES_ROOT=\"" + str(self.installPrefix) + "\"", run_tests)
-        self.writeFile(self.destdir / "run-postgres-tests.sh", run_tests, overwrite=True)
+        self.writeFile(self.destdir / "run-postgres-tests.sh", run_tests, overwrite=True, mode=0o755)
 
     def needsConfigure(self):
         return not (self.buildDir / "GNUmakefile").exists()

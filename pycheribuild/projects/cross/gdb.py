@@ -114,9 +114,9 @@ class BuildGDB(CrossCompileAutotoolsProject):
         with tempfile.TemporaryDirectory() as tmpdir:
             # It hardcodes calling gcc which won't work... WORST BUILD SYSTEM EVER?
             self.writeFile(Path(tmpdir) / "gcc", contents="exec " + str(self.config.clangPath) + " \"$@\"\n",
-                           overwrite=True)
+                           overwrite=True, mode=0o755)
             self.writeFile(Path(tmpdir) / "g++", contents="exec " + str(self.config.clangPlusPlusPath) + " \"$@\"\n",
-                           overwrite=True)
+                           overwrite=True, mode=0o755)
             os.chmod(str(Path(tmpdir) / "gcc"), stat.S_IXUSR | stat.S_IRUSR)
             os.chmod(str(Path(tmpdir) / "g++"), stat.S_IXUSR | stat.S_IRUSR)
             # self.createSymlink(Path("/usr/bin/as"), Path(tmpdir) / "as", relative=False)
