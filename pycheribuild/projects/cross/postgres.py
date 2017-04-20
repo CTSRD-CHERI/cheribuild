@@ -36,6 +36,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     # we have to build in the source directory, out-of-source is broken
     defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir
     requiresGNUMake = True
+    defaultOptimizationLevel = ["-O2"]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
