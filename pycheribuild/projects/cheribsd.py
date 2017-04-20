@@ -313,7 +313,7 @@ class BuildCHERIBSD(BuildFreeBSD):
 
 
 class BuildCheriBsdSysroot(SimpleProject):
-    target = "cheribsd-sysroot"
+    projectName = "cheribsd-sysroot"
     dependencies = ["cheribsd-without-sysroot"]
 
     def fixSymlinks(self):

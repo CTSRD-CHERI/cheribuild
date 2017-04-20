@@ -47,8 +47,8 @@ def defaultSshForwardingPort():
 
 
 class LaunchQEMU(SimpleProject):
+    projectName = "run"
     target = "run"
-    projectName = "run-qemu"
     dependencies = ["qemu", "disk-image"]
 
     _forwardSSHPort = True

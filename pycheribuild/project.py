@@ -112,7 +112,13 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
     def addConfigOption(cls, name: str, default: "typing.Union[Type_T, typing.Callable[[], Type_T]]" = None,
                         kind: "typing.Callable[[str], Type_T]" = str, *,
                         showHelp=False, shortname=None, **kwargs) -> "Type_T":
-        assert cls.target, "target not set for " + cls.__name__
+        configOptionKey = cls.target
+        # use the old config option for cheribsd
+        if cls.target == "cheribsd-without-sysroot":
+            configOptionKey = cls.projectName.lower()
+        elif cls.target != cls.projectName.lower():
+            fatalError("Target name does not match project name:", cls.target, "vs", cls.projectName.lower())
+
         # Hide stuff like --foo/install-directory from --help
         if isinstance(default, ConfigLoader.ComputedDefaultValue):
             if callable(default.asString):
@@ -126,8 +132,9 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             cls._commandLineOptionGroup = ConfigLoader._parser.add_argument_group(
                 "Options for target '" + cls.target + "'")
 
-        return ConfigLoader.addOption(cls.target + "/" + name, shortname, default=default, type=kind, _owningClass=cls,
-                                      group=cls._commandLineOptionGroup, helpHidden=helpHidden, **kwargs)
+        return ConfigLoader.addOption(configOptionKey + "/" + name, shortname, default=default, type=kind,
+                                      _owningClass=cls, group=cls._commandLineOptionGroup, helpHidden=helpHidden,
+                                      **kwargs)
 
     @classmethod
     def addBoolOption(cls, name: str, *, shortname=None, default=False, **kwargs):

@@ -367,7 +367,7 @@ def _defaultDiskImagePath(conf: "CheriConfig", cls):
 
 
 class BuildCheriBSDDiskImage(BuildDiskImageBase):
-    target = "disk-image"
+    projectName = "disk-image"
     dependencies = ["qemu", "cheribsd"]
 
     @classmethod
@@ -393,7 +393,7 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
 
 
 class BuildFreeBSDDiskImage(BuildDiskImageBase):
-    target = "disk-image-freebsd-mips"
+    projectName = "disk-image-freebsd-mips"
     dependencies = ["qemu", "freebsd-mips"]
 
     @classmethod

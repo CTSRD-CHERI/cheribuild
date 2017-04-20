@@ -29,14 +29,18 @@
 #
 from ..project import AutotoolsProject, TargetAlias
 from ..utils import *
+from ..configloader import ConfigLoader
 
 import os
 import shutil
-
+from pathlib import Path
 
 class BuildGnuBinutils(AutotoolsProject):
-    target = "gnu-binutils"
-    projectName = "BinUtils"
+    projectName = "gnu-binutils"
+    # for compatibility with old checkouts clone into a dir called binutils
+    defaultSourceDir = ConfigLoader.ComputedDefaultValue(
+        function=lambda config, project: Path(config.sourceRoot / "binutils"),
+        asString="$SOURCE_ROOT/binutils")
     repository = "https://github.com/CTSRD-CHERI/binutils.git"
     defaultInstallDir = AutotoolsProject._installToSDK
 
