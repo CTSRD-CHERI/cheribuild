@@ -45,6 +45,8 @@ class CrossCompileProject(Project):
         assert self.targetArch in ("cheri", "mips64")
         if self.targetArch == "cheri":
             self.COMMON_FLAGS.append("-mabi=purecap")
+            if self.config.cheriBits == 128:
+                self.COMMON_FLAGS.append("-mcpu=cheri128")
         else:
             self.COMMON_FLAGS.append("-mabi=n64")
         if not self.noUseMxgot:
