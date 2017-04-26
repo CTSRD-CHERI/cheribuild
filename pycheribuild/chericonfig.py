@@ -47,7 +47,7 @@ def defaultNumberOfMakeJobs():
 
 def defaultClangTool(basename: str):
     # try to find clang 3.7, otherwise fall back to system clang
-    for version in [(4, 0), (3, 9), (3, 8), (3, 7)]:
+    for version in [(5, 0), (4, 0), (3, 9), (3, 8), (3, 7)]:
         # FreeBSD installs clang39, Linux uses clang-3.9
         guess = shutil.which(basename + "%d%d" % version)
         if guess:
