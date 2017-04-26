@@ -29,34 +29,12 @@
 #
 import os
 import json
-import shutil
 from .configloader import ConfigLoader
+from .utils import latestClangTool, defaultNumberOfMakeJobs
 from pathlib import Path
 
 
 assert ConfigLoader, "ConfigLoader must be initialized before importing chericonfig"
-
-def defaultNumberOfMakeJobs():
-    makeJobs = os.cpu_count()
-    if makeJobs > 24:
-        # don't use up all the resources on shared build systems
-        # (you can still override this with the -j command line option)
-        makeJobs = 16
-    return makeJobs
-
-
-def defaultClangTool(basename: str):
-    # try to find clang 3.7, otherwise fall back to system clang
-    for version in [(5, 0), (4, 0), (3, 9), (3, 8), (3, 7)]:
-        # FreeBSD installs clang39, Linux uses clang-3.9
-        guess = shutil.which(basename + "%d%d" % version)
-        if guess:
-            return guess
-        guess = shutil.which(basename + "-%d.%d" % version)
-        if guess:
-            return guess
-    guess = shutil.which(basename)
-    return guess
 
 
 # custom encoder to handle pathlib.Path objects
@@ -124,10 +102,10 @@ class CheriConfig(object):
                                             help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
     buildRoot = ConfigLoader.addPathOption("build-root", default=lambda p, cls: (p.sourceRoot / "build"),
                                            help="The directory for all the builds (default: '<SOURCE_ROOT>/build')")
-    clangPath = ConfigLoader.addPathOption("clang-path", default=defaultClangTool("clang"),
+    clangPath = ConfigLoader.addPathOption("clang-path", default=latestClangTool("clang"),
                                            help="The Clang C compiler to use for compiling LLVM+Clang (must be at "
                                                 "least version 3.7)")
-    clangPlusPlusPath = ConfigLoader.addPathOption("clang++-path", default=defaultClangTool("clang++"),
+    clangPlusPlusPath = ConfigLoader.addPathOption("clang++-path", default=latestClangTool("clang++"),
                                                    help="The Clang C++ compiler to use for compiling LLVM+Clang (must "
                                                         "be at least version 3.7)")
     # other options

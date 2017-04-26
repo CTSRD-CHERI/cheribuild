@@ -56,7 +56,8 @@ else:
 __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "printCommand", "includeLocalFile",  # no-combine
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
            "parseOSRelease", "warningMessage", "Type_T", "typing", "popen_handle_noexec",  # no-combine
-           "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo"]  # no-combine
+           "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latestClangTool",  # no-combine
+           "defaultNumberOfMakeJobs"]  # no-combine
 
 
 if sys.version_info < (3, 4):
@@ -243,6 +244,29 @@ def getCompilerInfo(compiler: Path) -> CompilerInfo:
             print(compiler, "is", kind, "version", version, "with default target", targetString)
         _cached_compiler_infos[compiler] = CompilerInfo(compiler=kind, version=version, default_target=targetString)
     return _cached_compiler_infos[compiler]
+
+
+def latestClangTool(basename: str):
+    # try to find clang 3.7, otherwise fall back to system clang
+    for version in [(5, 0), (4, 0), (3, 9), (3, 8), (3, 7)]:
+        # FreeBSD installs clang39, Linux uses clang-3.9
+        guess = shutil.which(basename + "%d%d" % version)
+        if guess:
+            return guess
+        guess = shutil.which(basename + "-%d.%d" % version)
+        if guess:
+            return guess
+    guess = shutil.which(basename)
+    return guess
+
+
+def defaultNumberOfMakeJobs():
+    makeJobs = os.cpu_count()
+    if makeJobs > 24:
+        # don't use up all the resources on shared build systems
+        # (you can still override this with the -j command line option)
+        makeJobs = 16
+    return makeJobs
 
 
 def fatalError(*args, sep=" ", fixitHint=None, fatalWhenPretending=False):
