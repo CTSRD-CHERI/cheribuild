@@ -28,11 +28,11 @@
 # SUCH DAMAGE.
 #
 import functools
-import time
 import sys
+import time
 
+from .config.chericonfig import CheriConfig
 from .utils import *
-from .chericonfig import CheriConfig
 
 
 class Target(object):

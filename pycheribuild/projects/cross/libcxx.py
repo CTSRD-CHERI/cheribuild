@@ -28,11 +28,11 @@
 # SUCH DAMAGE.
 #
 
-from ..cheribsd import BuildCHERIBSD
 from .crosscompileproject import *
+from ..cheribsd import BuildCHERIBSD
 from ..llvm import BuildLLVM
 from ..run_qemu import LaunchQEMU
-from ...configloader import ComputedDefaultValue
+from ...config.loader import ComputedDefaultValue
 
 installToCXXDir = ComputedDefaultValue(
     function=lambda config, project: BuildCHERIBSD.rootfsDir(config) / "extra/c++",

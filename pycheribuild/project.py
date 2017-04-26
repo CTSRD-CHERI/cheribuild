@@ -29,18 +29,19 @@
 #
 import io
 import os
-import shutil
 import shlex
+import shutil
 import subprocess
 import sys
 import threading
 import time
-
-from .utils import *
-from .targets import Target, targetManager, CheriConfig
-from .configloader import ConfigLoader, ComputedDefaultValue
-from pathlib import Path
 from enum import Enum
+from pathlib import Path
+
+from .config.loader import ConfigLoader, ComputedDefaultValue
+from .config.chericonfig import CheriConfig
+from .targets import Target, targetManager
+from .utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies", # no-combine
            "SimpleProject", "CheriConfig"]  # no-combine

@@ -29,16 +29,16 @@
 #
 import os
 import pwd
-import shutil
 import shlex
+import shutil
 import stat
 import tempfile
-
-from ..project import *
-from ..configloader import ComputedDefaultValue
-from ..utils import *
-from .cheribsd import BuildCHERIBSD, BuildFreeBSD
 from pathlib import Path
+
+from .cheribsd import BuildCHERIBSD, BuildFreeBSD
+from ..config.loader import ComputedDefaultValue
+from ..project import *
+from ..utils import *
 
 
 # Notes:

@@ -1,12 +1,11 @@
-from ...project import CMakeProject, AutotoolsProject, Project
-from ...configloader import ComputedDefaultValue
-from ...chericonfig import CheriConfig
-from ...utils import *
-from ...colour import *
-from ..cheribsd import BuildCHERIBSD
-from pathlib import Path
 import os
 import pprint
+from pathlib import Path
+
+from ...config.loader import ComputedDefaultValue
+from ..cheribsd import BuildCHERIBSD
+from ...project import *
+from ...utils import *
 
 __all__ = ["CheriConfig", "installToCheriBSDRootfs", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject"]
 

@@ -1,18 +1,18 @@
-from pathlib import Path
-import unittest
 import sys
 import tempfile
+import unittest
+from pathlib import Path
 from unittest import TestCase
 
 sys.path.append(str(Path(__file__).parent.parent))
 
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
-import pycheribuild.configloader
-pycheribuild.configloader.setConfigLoader(pycheribuild.configloader.JsonAndCommandLineConfigLoader())
+import pycheribuild.config.loader
+pycheribuild.config.loader.setConfigLoader(pycheribuild.config.loader.JsonAndCommandLineConfigLoader())
 
 from pycheribuild.targets import targetManager
-from pycheribuild.chericonfig import CheriConfig
+from pycheribuild.config.defaultconfig import CheriConfig
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # make sure all projects are loaded so that targetManager gets populated
 from pycheribuild.projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
@@ -30,8 +30,8 @@ class TestArgumentParsing(TestCase):
         if not _targets_registered:
             targetManager.registerCommandLineOptions()
             _targets_registered = True
-        pycheribuild.configloader.ConfigLoader._configPath = config_file
-        pycheribuild.configloader.ConfigLoader.reload()
+        pycheribuild.config.loader.ConfigLoader._configPath = config_file
+        pycheribuild.config.loader.ConfigLoader.reload()
         sys.argv = ["cheribuild.py"] + args
         allTargetNames = list(sorted(targetManager.targetNames)) + ["__run_everything__"]
         ret = CheriConfig(allTargetNames)

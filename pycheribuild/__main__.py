@@ -35,9 +35,10 @@ import sys
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from .configloader import ConfigLoader here because that will only update the local copy!
 # https://stackoverflow.com/questions/3536620/how-to-change-a-module-variable-from-another-module
-from . import configloader
-configloader.setConfigLoader(configloader.JsonAndCommandLineConfigLoader())
-from .chericonfig import CheriConfig
+from pycheribuild.config import loader
+
+loader.setConfigLoader(loader.JsonAndCommandLineConfigLoader())
+from .config.defaultconfig import DefaultCheriConfig
 from .utils import *
 from .targets import targetManager
 # noinspection PyUnresolvedReferences
@@ -67,7 +68,7 @@ def real_main():
     allTargetNames = list(sorted(targetManager.targetNames))
     targetManager.registerCommandLineOptions()
     runEverythingTarget = "__run_everything__"
-    cheriConfig = CheriConfig(allTargetNames + [runEverythingTarget])
+    cheriConfig = DefaultCheriConfig(allTargetNames + [runEverythingTarget])
     setCheriConfig(cheriConfig)
     # create the required directories
     for d in (cheriConfig.sourceRoot, cheriConfig.outputRoot, cheriConfig.buildRoot):
@@ -83,7 +84,7 @@ def real_main():
     elif cheriConfig.dumpConfig:
         cheriConfig.dumpOptionsJSON()
     elif cheriConfig.getConfigOption:
-        if cheriConfig.getConfigOption not in ConfigLoader.options:
+        if cheriConfig.getConfigOption not in loader.ConfigLoader.options:
             fatalError("Unknown config key", cheriConfig.getConfigOption)
         option = ConfigLoader.options[cheriConfig.getConfigOption]
         # noinspection PyProtectedMember

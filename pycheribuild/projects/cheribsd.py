@@ -28,11 +28,11 @@
 # SUCH DAMAGE.
 #
 import os
-import sys
 import subprocess
+import sys
 
+from ..config.loader import ComputedDefaultValue
 from ..project import *
-from ..configloader import ComputedDefaultValue
 from ..utils import *
 
 

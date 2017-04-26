@@ -41,7 +41,7 @@ except ImportError:
     argcomplete = None
 
 
-from .colour import *
+from ..colour import *
 from collections import OrderedDict
 from pathlib import Path
 
@@ -74,6 +74,16 @@ class ConfigLoaderBase(object):
         self.__option_cls = option_cls
         self._parser = argparse.ArgumentParser(formatter_class=
                                       lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
+
+    def addCommandLineOnlyOption(self, *args, **kwargs):
+        """
+        :return: A config option that is always loaded from the command line no matter what the default is
+        """
+        return self.addOption(*args, **kwargs, option_cls=CommandLineConfigOption)
+
+    def addCommandLineOnlyBoolOption(self, *args, **kwargs) -> bool:
+        return self.addOption(*args, **kwargs, option_cls=CommandLineConfigOption, default=False, action="store_true",
+                              type=bool)
 
     def addOption(self, name: str, shortname=None, default=None, type: "typing.Callable[[str], Type_T]"=str, group=None,
                   helpHidden=False, _owningClass: "typing.Type"=None, option_cls: "typing.Type[ConfigOptionBase]"=None,
@@ -167,6 +177,14 @@ class ConfigOptionBase(object):
             return self.default(config, ownerClass)
         else:
             return self.default
+
+
+class DefaultValueOnlyConfigOption(ConfigOptionBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
+        return self._getDefaultValue()
 
 
 class CommandLineConfigOption(ConfigOptionBase):
@@ -265,6 +283,12 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
                                fullOptionName, "instead"))
         return result
 
+    # def __get__(self, instance, owner):
+    #     ret = super().__get__(instance, owner)
+    #     print(self.fullOptionName, "=", ret, "--", type(ret))
+    #     return ret
+
+
 
 class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
     def __init__(self):
@@ -333,6 +357,17 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             if not input("Invalid config file " + str(self._configPath) + ". Continue? y/[N]").lower().startswith("y"):
                 raise
         return self._parsedArgs.targets
+
+
+class DefaultValueOnlyConfigLoader(ConfigLoaderBase):
+    """
+    A simple config loader that always returns the default value for all added options
+    """
+    def __init__(self):
+        super().__init__(DefaultValueOnlyConfigOption)
+
+    def parseArguments(self):
+        self._parsedArgs = self._parser.parse_args()
 
 
 ConfigLoader = None

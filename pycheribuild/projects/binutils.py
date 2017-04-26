@@ -27,13 +27,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from ..project import *
-from ..utils import *
-from ..configloader import ComputedDefaultValue
-
 import os
 import shutil
 from pathlib import Path
+
+from pycheribuild.config.loader import ComputedDefaultValue
+from ..project import *
+from ..utils import *
 
 
 class BuildGnuBinutils(AutotoolsProject):
