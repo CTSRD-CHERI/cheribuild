@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from ..project import Project
+from ..project import *
 from ..utils import *
 
 import pwd

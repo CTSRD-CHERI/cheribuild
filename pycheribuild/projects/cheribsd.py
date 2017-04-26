@@ -31,8 +31,8 @@ import os
 import sys
 import subprocess
 
-from ..project import Project, SimpleProject, TargetAlias
-from ..configloader import ConfigLoader
+from ..project import *
+from ..configloader import ComputedDefaultValue
 from ..utils import *
 
 
@@ -48,7 +48,7 @@ class BuildFreeBSD(Project):
     projectName = "freebsd-mips"
     repository = "https://github.com/freebsd/freebsd.git"
 
-    defaultInstallDir = ConfigLoader.ComputedDefaultValue(
+    defaultInstallDir = ComputedDefaultValue(
         function=lambda config, cls: config.outputRoot / "freebsd-mips",
         asString="$INSTALL_ROOT/freebsd-mips")
 
@@ -242,7 +242,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         cls.skipBuildworld = cls.addBoolOption("only-build-kernel", shortname="-skip-buildworld", showHelp=True,
                                                help="Skip the buildworld step -> only build and install the kernel")
 
-        defaultCheriCC = ConfigLoader.ComputedDefaultValue(
+        defaultCheriCC = ComputedDefaultValue(
             function=lambda config, unused: config.sdkDir / "bin/clang",
             asString="${SDK_DIR}/bin/clang")
         cls.cheriCC = cls.addPathOption("cheri-cc", help="Override the compiler used to build CHERI code",

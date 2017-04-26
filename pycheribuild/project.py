@@ -37,10 +37,13 @@ import threading
 import time
 
 from .utils import *
-from .targets import Target, targetManager
-from .configloader import ConfigLoader
+from .targets import Target, targetManager, CheriConfig
+from .configloader import ConfigLoader, ComputedDefaultValue
 from pathlib import Path
 from enum import Enum
+
+__all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies", # no-combine
+           "SimpleProject", "CheriConfig"]  # no-combine
 
 
 class ProjectSubclassDefinitionHook(type):
@@ -120,7 +123,7 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
             fatalError("Target name does not match project name:", cls.target, "vs", cls.projectName.lower())
 
         # Hide stuff like --foo/install-directory from --help
-        if isinstance(default, ConfigLoader.ComputedDefaultValue):
+        if isinstance(default, ComputedDefaultValue):
             if callable(default.asString):
                 default.asString = default.asString(cls)
         helpHidden = not showHelp
@@ -524,13 +527,13 @@ class Project(SimpleProject):
     compileDBRequiresBear = True
     doNotAddToTargets = True
 
-    defaultSourceDir = ConfigLoader.ComputedDefaultValue(
+    defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / project.projectName.lower()),
         asString=lambda cls: "$SOURCE_ROOT/" + cls.projectName.lower())
 
     appendCheriBitsToBuildDir = False
     """ Whether to append -128/-256 to the computed build directory name"""
-    defaultBuildDir = ConfigLoader.ComputedDefaultValue(
+    defaultBuildDir = ComputedDefaultValue(
         function=_defaultBuildDir, asString=lambda cls: "$BUILD_ROOT/" + cls.projectName.lower())
 
     requiresGNUMake = False
@@ -549,10 +552,10 @@ class Project(SimpleProject):
     def getInstallDir(cls, config: CheriConfig):
         return cls.installDir
 
-    _installToSDK = ConfigLoader.ComputedDefaultValue(
+    _installToSDK = ComputedDefaultValue(
         function=lambda config, project: config.sdkDir,
         asString="$INSTALL_ROOT/sdk256 or $INSTALL_ROOT/sdk128 depending on CHERI bits")
-    _installToBootstrapTools = ConfigLoader.ComputedDefaultValue(
+    _installToBootstrapTools = ComputedDefaultValue(
         function=lambda config, project: config.otherToolsDir,
         asString="$INSTALL_ROOT/bootstrap")
 

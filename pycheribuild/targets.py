@@ -32,6 +32,7 @@ import time
 import sys
 
 from .utils import *
+from .chericonfig import CheriConfig
 
 
 class Target(object):

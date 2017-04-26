@@ -37,6 +37,6 @@ import sys
 module_dir = Path(__file__).resolve().parent
 sys.path.append(str(module_dir))
 # noinspection PyPep8
-from pycheribuild import main  # "__main__" case
+from pycheribuild.__main__ import main  # "__main__" case
 
 main()

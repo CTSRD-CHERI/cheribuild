@@ -27,18 +27,19 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from ..project import AutotoolsProject, TargetAlias
+from ..project import *
 from ..utils import *
-from ..configloader import ConfigLoader
+from ..configloader import ComputedDefaultValue
 
 import os
 import shutil
 from pathlib import Path
 
+
 class BuildGnuBinutils(AutotoolsProject):
     projectName = "gnu-binutils"
     # for compatibility with old checkouts clone into a dir called binutils
-    defaultSourceDir = ConfigLoader.ComputedDefaultValue(
+    defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / "binutils"),
         asString="$SOURCE_ROOT/binutils")
     repository = "https://github.com/CTSRD-CHERI/binutils.git"

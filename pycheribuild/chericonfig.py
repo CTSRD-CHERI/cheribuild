@@ -34,6 +34,8 @@ from .configloader import ConfigLoader
 from pathlib import Path
 
 
+assert ConfigLoader, "ConfigLoader must be initialized before importing chericonfig"
+
 def defaultNumberOfMakeJobs():
     makeJobs = os.cpu_count()
     if makeJobs > 24:

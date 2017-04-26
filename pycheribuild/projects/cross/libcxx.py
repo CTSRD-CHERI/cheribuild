@@ -32,9 +32,9 @@ from ..cheribsd import BuildCHERIBSD
 from .crosscompileproject import *
 from ..llvm import BuildLLVM
 from ..run_qemu import LaunchQEMU
-from ...configloader import ConfigLoader
+from ...configloader import ComputedDefaultValue
 
-installToCXXDir = ConfigLoader.ComputedDefaultValue(
+installToCXXDir = ComputedDefaultValue(
     function=lambda config, project: BuildCHERIBSD.rootfsDir(config) / "extra/c++",
     asString="$CHERIBSD_ROOTFS/extra/c++")
 

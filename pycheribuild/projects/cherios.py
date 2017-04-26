@@ -29,7 +29,7 @@
 #
 import re
 
-from ..project import CMakeProject
+from ..project import *
 from ..utils import *
 
 

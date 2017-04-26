@@ -6,8 +6,12 @@ from unittest import TestCase
 
 sys.path.append(str(Path(__file__).parent.parent))
 
+# First thing we need to do is set up the config loader (before importing anything else!)
+# We can't do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
+import pycheribuild.configloader
+pycheribuild.configloader.setConfigLoader(pycheribuild.configloader.JsonAndCommandLineConfigLoader())
+
 from pycheribuild.targets import targetManager
-from pycheribuild.configloader import ConfigLoader
 from pycheribuild.chericonfig import CheriConfig
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # make sure all projects are loaded so that targetManager gets populated
@@ -26,8 +30,8 @@ class TestArgumentParsing(TestCase):
         if not _targets_registered:
             targetManager.registerCommandLineOptions()
             _targets_registered = True
-        ConfigLoader._configPath = config_file
-        ConfigLoader.reload()
+        pycheribuild.configloader.ConfigLoader._configPath = config_file
+        pycheribuild.configloader.ConfigLoader.reload()
         sys.argv = ["cheribuild.py"] + args
         allTargetNames = list(sorted(targetManager.targetNames)) + ["__run_everything__"]
         ret = CheriConfig(allTargetNames)

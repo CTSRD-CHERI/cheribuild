@@ -32,9 +32,14 @@ import shlex
 import subprocess
 import sys
 
+# First thing we need to do is set up the config loader (before importing anything else!)
+# We can't do from .configloader import ConfigLoader here because that will only update the local copy!
+# https://stackoverflow.com/questions/3536620/how-to-change-a-module-variable-from-another-module
+from . import configloader
+configloader.setConfigLoader(configloader.JsonAndCommandLineConfigLoader())
+from .chericonfig import CheriConfig
 from .utils import *
 from .targets import targetManager
-from .configloader import ConfigLoader
 # noinspection PyUnresolvedReferences
 from .projects import *  # make sure all projects are loaded so that targetManager gets populated
 # noinspection PyUnresolvedReferences

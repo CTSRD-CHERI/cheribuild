@@ -1,5 +1,5 @@
 from ...project import CMakeProject, AutotoolsProject, Project
-from ...configloader import ConfigLoader
+from ...configloader import ComputedDefaultValue
 from ...chericonfig import CheriConfig
 from ...utils import *
 from ...colour import *
@@ -11,11 +11,11 @@ import pprint
 __all__ = ["CheriConfig", "installToCheriBSDRootfs", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject"]
 
 
-installToCheriBSDRootfs = ConfigLoader.ComputedDefaultValue(
+installToCheriBSDRootfs = ComputedDefaultValue(
     function=lambda config, project: Path(BuildCHERIBSD.rootfsDir(config) / "extra" / project.projectName.lower()),
     asString=lambda cls: "$CHERIBSD_ROOTFS/extra/" + cls.projectName.lower())
 
-defaultTarget = ConfigLoader.ComputedDefaultValue(
+defaultTarget = ComputedDefaultValue(
     function=lambda config, project: "mips64" if config.crossCompileForMips else "cheri",
     asString="'cheri' unless -xmips set")
 

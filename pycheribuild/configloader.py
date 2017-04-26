@@ -41,117 +41,57 @@ except ImportError:
     argcomplete = None
 
 
+from .colour import *
 from collections import OrderedDict
 from pathlib import Path
 
-from .utils import *
+
+class ComputedDefaultValue(object):
+    def __init__(self, function: "typing.Callable[[CheriConfig, typing.Any], typing.Any]",
+                 asString: "typing.Union[str, typing.Callable[[typing.Any], str]"):
+        self.function = function
+        self.asString = asString
+
+    def __call__(self, config: "CheriConfig", cls):
+        return self.function(config, cls)
+
+    def __str__(self):
+        return self.asString
 
 
-class ConfigLoader(object):
+class ConfigLoaderBase(object):
     # will be set later...
     _cheriConfig = None  # type: CheriConfig
-    _configPath = None  # type: typing.Optional[Path]
 
-    _parser = argparse.ArgumentParser(formatter_class=
-                                      lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
-    _parser.add_argument("--help-all", "--help-hidden", action="help", help="Show all help options, including"
-                                                                            "the target-specific ones.")
-    configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
-    defaultConfigPath = Path(configdir, "cheribuild.json")
-    _parser.add_argument("--config-file", metavar="FILE", type=str, default=str(defaultConfigPath),
-                         help="The config file that is used to load the default settings (default: '" +
-                              str(defaultConfigPath) + "')")
-    options = dict()  # type: typing.Dict[str, ConfigOption]
+    options = dict()  # type: typing.Dict[str, ConfigOptionBase]
     _parsedArgs = None
     _JSON = {}  # type: dict
     values = OrderedDict()
-    # argument groups:
-    # deprecatedOptionsGroup = _parser.add_argument_group("Old deprecated options", "These should not be used any more")
-    cheriBitsGroup = _parser.add_mutually_exclusive_group()
-    configureGroup = _parser.add_mutually_exclusive_group()
 
     showAllHelp = any(s in sys.argv for s in ("--help-all", "--help-hidden"))
 
-    @classmethod
-    def loadTargets(cls, availableTargets: list) -> list:
-        """
-        Loads the configuration from the command line and the JSON file
-        :return The targets to build
-        """
-        targetOption = cls._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
-                                                help="The targets to build", choices=availableTargets + [[]])
-        if argcomplete and "_ARGCOMPLETE" in os.environ:
-            # if IS_FREEBSD: # FIXME: for some reason this won't work
-            excludes = ["-t", "--skip-dependencies"]
-            if sys.platform.startswith("freebsd"):
-                excludes += ["--freebsd-builder-copy-only", "--freebsd-builder-hostname",
-                             "--freebsd-builder-output-path"]
+    def __init__(self, option_cls):
+        self.__option_cls = option_cls
+        self._parser = argparse.ArgumentParser(formatter_class=
+                                      lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
 
-            visibleTargets = availableTargets.copy()
-            visibleTargets.remove("__run_everything__")
-            targetCompleter = argcomplete.completers.ChoicesCompleter(visibleTargets)
-            targetOption.completer = targetCompleter
-            # make sure we get target completion for the unparsed args too by adding another zero_or more options
-            # not sure why this works but it's a nice hack
-            unparsed = cls._parser.add_argument("targets", metavar="TARGET", type=list, nargs=argparse.ZERO_OR_MORE,
-                                                help=argparse.SUPPRESS, choices=availableTargets)
-            unparsed.completer = targetCompleter
-            argcomplete.autocomplete(
-                cls._parser,
-                always_complete_options=None,  # don't print -/-- by default
-                exclude=excludes,  # hide these options from the output
-                print_suppressed=True,  # also include target-specific options
-            )
-        cls._parsedArgs, trailingTargets = cls._parser.parse_known_args()
-        # print(cls._parsedArgs, trailingTargets)
-        cls._parsedArgs.targets += trailingTargets
-        try:
-            if not cls._configPath:
-                cls._configPath = Path(os.path.expanduser(cls._parsedArgs.config_file)).absolute()
-            if cls._configPath.exists():
-                with cls._configPath.open("r", encoding="utf-8") as f:
-                    jsonLines = []
-                    for line in f.readlines():
-                        stripped = line.strip()
-                        if not stripped.startswith("#") and not stripped.startswith("//"):
-                            jsonLines.append(line)
-                    # print("".join(jsonLines))
-                    cls._JSON = json.loads("".join(jsonLines), encoding="utf-8")
-            else:
-                print("Configuration file", cls._configPath, "does not exist, using only command line arguments.")
-        except Exception as e:
-            print(coloured(AnsiColour.red, "Could not load config file", cls._configPath, "-", e))
-            if not input("Invalid config file " + str(cls._configPath) + ". Continue? y/[N]").lower().startswith("y"):
-                raise
-        return cls._parsedArgs.targets
-
-    class ComputedDefaultValue(object):
-        def __init__(self, function: "typing.Callable[[CheriConfig, typing.Any], typing.Any]",
-                     asString: "typing.Union[str, typing.Callable[[typing.Any], str]"):
-            self.function = function
-            self.asString = asString
-
-        def __call__(self, config: "CheriConfig", cls):
-            return self.function(config, cls)
-
-        def __str__(self):
-            return self.asString
-
-    @classmethod
-    def addOption(cls, name: str, shortname=None, default=None, type: "typing.Callable[[str], Type_T]"=str, group=None,
-                  helpHidden=False, _owningClass: "typing.Type"=None, **kwargs) -> "Type_T":
-        # add the default string to help if it is not lambda and help != argparse.SUPPRESS
+    def addOption(self, name: str, shortname=None, default=None, type: "typing.Callable[[str], Type_T]"=str, group=None,
+                  helpHidden=False, _owningClass: "typing.Type"=None, option_cls: "typing.Type[ConfigOptionBase]"=None,
+                  **kwargs) -> "Type_T":
+        if option_cls is None:
+            option_cls = self.__option_cls
 
         # hide obscure options unless --help-hidden/--help/all is passed
-        if helpHidden and not cls.showAllHelp:
+        if helpHidden and not self.showAllHelp:
             kwargs["help"] = argparse.SUPPRESS
 
-        hasDefaultHelpText = isinstance(default, ConfigLoader.ComputedDefaultValue) or not callable(default)
+        # add the default string to help if it is not lambda and help != argparse.SUPPRESS
+        hasDefaultHelpText = isinstance(default, ComputedDefaultValue) or not callable(default)
         if default and "help" in kwargs and hasDefaultHelpText:
             if kwargs["help"] != argparse.SUPPRESS:
                 kwargs["help"] = kwargs["help"] + " (default: \'" + str(default) + "\')"
         assert "default" not in kwargs  # Should be handled manually
-        parserObj = group if group else cls._parser
+        parserObj = group if group else self._parser
         if type == bool and group is None:
             parserObj = parserObj.add_mutually_exclusive_group()
             kwargs["default"] = None
@@ -172,34 +112,30 @@ class ConfigLoader(object):
         assert isinstance(action, argparse.Action)
         assert not action.default  # we handle the default value manually
         assert not action.type  # we handle the type of the value manually
-        result = ConfigOption(action, default, type, _owningClass, _loader=cls)
-        assert name not in cls.options  # make sure we don't add duplicate options
-        cls.options[name] = result
+        result = option_cls(action, default, type, _owningClass, _loader=self)
+        assert name not in self.options  # make sure we don't add duplicate options
+        self.options[name] = result
         # noinspection PyTypeChecker
         return result
 
-    @classmethod
-    def addBoolOption(cls, name: str, shortname=None, **kwargs) -> bool:
-        return cls.addOption(name, shortname, default=False, action="store_true", type=bool, **kwargs)
+    def addBoolOption(self, name: str, shortname=None, **kwargs) -> bool:
+        return self.addOption(name, shortname, default=False, action="store_true", type=bool, **kwargs)
 
-    @classmethod
-    def addPathOption(cls, name: str, shortname=None, **kwargs) -> Path:
+    def addPathOption(self, name: str, shortname=None, **kwargs) -> Path:
         # we have to make sure we resolve this to an absolute path because otherwise steps where CWD is different fail!
-        return cls.addOption(name, shortname, type=Path, **kwargs)
+        return self.addOption(name, shortname, type=Path, **kwargs)
 
-    @classmethod
-    def reload(cls) -> None:
+    def reload(self) -> None:
         """
         Clear all loaded values and force reloading them (useful for tests)
         """
-        for option in cls.options.values():
+        for option in self.options.values():
             option._cached = None
 
 
-# noinspection PyProtectedMember
-class ConfigOption(object):
+class ConfigOptionBase(object):
     def __init__(self, action: argparse.Action, default, valueType, _owningClass=None,
-                 _loader: "typing.Type[ConfigLoader]"=None):
+                 _loader: ConfigLoaderBase=None):
         self.action = action
         self.default = default
         self.valueType = valueType
@@ -208,9 +144,55 @@ class ConfigOption(object):
         self._owningClass = _owningClass  # if none it means the global CheriConfig is the class containing this option
 
     def _loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
+        raise NotImplementedError()
+
+    @property
+    def fullOptionName(self):
         assert self.action.option_strings[0].startswith("--")
-        fullOptionName = self.action.option_strings[0][2:]  # strip the initial "--"
-        result = self._loadOptionImpl(fullOptionName, config, ownerClass)
+        return self.action.option_strings[0][2:]  # strip the initial "--"
+
+    def __get__(self, instance, owner):
+        assert not self._owningClass or issubclass(owner, self._owningClass)
+        if self._cached is None:
+            # noinspection PyProtectedMember
+            self._cached = self._loadOption(self._loader._cheriConfig, owner)
+            # print("Loaded option", self.action, "->", result)
+            # import traceback
+            # traceback.print_stack()
+            ConfigLoader.values[self.fullOptionName] = self._cached  # just for debugging
+        return self._cached
+
+    def _getDefaultValue(self, config: "CheriConfig", ownerClass: "typing.Type"):
+        if callable(self.default):
+            return self.default(config, ownerClass)
+        else:
+            return self.default
+
+
+class CommandLineConfigOption(ConfigOptionBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
+        fromCmdLine = self.loadFromCommandLine()
+        if fromCmdLine is not None:
+            return fromCmdLine
+        return self._getDefaultValue()
+
+    # noinspection PyProtectedMember
+    def loadFromCommandLine(self):
+        assert self._loader._parsedArgs  # load() must have been called before using this object
+        assert hasattr(self._loader._parsedArgs, self.action.dest)
+        return getattr(self._loader._parsedArgs, self.action.dest)  # from command line
+
+
+# noinspection PyProtectedMember
+class JsonAndCommandLineConfigOption(CommandLineConfigOption):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
+        result = self._loadOptionImpl(self.fullOptionName, config, ownerClass)
         # Now convert it to the right type
         # check for None to make sure we don't call str(None) which would result in "None"
         if result is not None:
@@ -220,26 +202,20 @@ class ConfigOption(object):
                 if isinstance(self.valueType, type) and issubclass(self.valueType, collections.abc.Sequence):
                     stringValue = result
                     result = shlex.split(stringValue)
-                    print(coloured(AnsiColour.magenta, "Config option ", fullOptionName, " (", stringValue, ") should "
-                          "be a list, got a string instead -> assuming the correct value is ", result, sep=""))
+                    print(coloured(AnsiColour.magenta, "Config option ", self.fullOptionName, " (", stringValue,
+                                   ") should be a list, got a string instead -> assuming the correct value is ",
+                                   result, sep=""))
             if self.valueType == Path:
                 expanded = os.path.expanduser(os.path.expandvars(str(result)))
                 # print("Expanding env vars in", result, "->", expanded, os.environ)
                 result = Path(expanded).absolute()
             else:
                 result = self.valueType(result)  # make sure it has the right type (e.g. Path, int, bool, str)
-        # print("Loaded option", self.action, "->", result)
-        # import traceback
-        # traceback.print_stack()
-        ConfigLoader.values[fullOptionName] = result  # just for debugging
         return result
 
     def _loadOptionImpl(self, fullOptionName: str, config: "CheriConfig", ownerClass: "typing.Type"):
-        assert self._loader._parsedArgs  # load() must have been called before using this object
-        assert hasattr(self._loader._parsedArgs, self.action.dest)
-
         # First check the value specified on the command line, then load JSON and then fallback to the default
-        fromCmdLine = getattr(self._loader._parsedArgs, self.action.dest)  # from command line
+        fromCmdLine = self.loadFromCommandLine()
         # print(fullOptionName, "from cmdline:", fromCmdLine)
         if fromCmdLine is not None:
             if fromCmdLine != self.action.default:
@@ -254,10 +230,7 @@ class ConfigOption(object):
                                "with value from JSON:", fromJson))
             return fromJson
         # load the default value (which could be a lambda)
-        if callable(self.default):
-            return self.default(config, ownerClass)
-        else:
-            return self.default
+        return self._getDefaultValue(config, ownerClass)
 
     def _lookupKeyInJson(self, fullOptionName: str):
         if fullOptionName in self._loader._JSON:
@@ -281,8 +254,7 @@ class ConfigOption(object):
                     jsonKey = optionName[2:]
                     result = self._lookupKeyInJson(jsonKey)
                     if result is not None:
-                        print(coloured(AnsiColour.cyan, "Old JSON key", jsonKey, "used, please use",
-                                       fullOptionName, "instead"))
+                        warningMessage("Old JSON key", jsonKey, "used, please use", fullOptionName, "instead")
                         break
         # FIXME: it's about time I removed this code
         if result is None:
@@ -293,8 +265,82 @@ class ConfigOption(object):
                                fullOptionName, "instead"))
         return result
 
-    def __get__(self, instance, owner):
-        assert not self._owningClass or issubclass(owner, self._owningClass)
-        if self._cached is None:
-            self._cached = self._loadOption(self._loader._cheriConfig, owner)
-        return self._cached
+
+class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
+    def __init__(self):
+        super().__init__(JsonAndCommandLineConfigOption)
+        self._configPath = None  # type: typing.Optional[Path]
+        self.configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+        self.defaultConfigPath = Path(self.configdir, "cheribuild.json")
+        self._parser.add_argument("--config-file", metavar="FILE", type=str, default=str(self.defaultConfigPath),
+                                  help="The config file that is used to load the default settings (default: '" +
+                                  str(self.defaultConfigPath) + "')")
+        self._parser.add_argument("--help-all", "--help-hidden", action="help", help="Show all help options, including"
+                                                                                     " the target-specific ones.")
+        # argument groups:
+        # self.deprecatedOptionsGroup = _parser.add_argument_group("Old deprecated options", "These should not be used any more")
+        self.cheriBitsGroup = self._parser.add_mutually_exclusive_group()
+        self.configureGroup = self._parser.add_mutually_exclusive_group()
+
+    def loadTargets(self, availableTargets: list) -> list:
+        """
+        Loads the configuration from the command line and the JSON file
+        :return The targets to build
+        """
+        targetOption = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
+                                                help="The targets to build", choices=availableTargets + [[]])
+        if argcomplete and "_ARGCOMPLETE" in os.environ:
+            # if IS_FREEBSD: # FIXME: for some reason this won't work
+            excludes = ["-t", "--skip-dependencies"]
+            if sys.platform.startswith("freebsd"):
+                excludes += ["--freebsd-builder-copy-only", "--freebsd-builder-hostname",
+                             "--freebsd-builder-output-path"]
+
+            visibleTargets = availableTargets.copy()
+            visibleTargets.remove("__run_everything__")
+            targetCompleter = argcomplete.completers.ChoicesCompleter(visibleTargets)
+            targetOption.completer = targetCompleter
+            # make sure we get target completion for the unparsed args too by adding another zero_or more options
+            # not sure why this works but it's a nice hack
+            unparsed = self._parser.add_argument("targets", metavar="TARGET", type=list, nargs=argparse.ZERO_OR_MORE,
+                                                help=argparse.SUPPRESS, choices=availableTargets)
+            unparsed.completer = targetCompleter
+            argcomplete.autocomplete(
+                self._parser,
+                always_complete_options=None,  # don't print -/-- by default
+                exclude=excludes,  # hide these options from the output
+                print_suppressed=True,  # also include target-specific options
+            )
+        self._parsedArgs, trailingTargets = self._parser.parse_known_args()
+        # print(self._parsedArgs, trailingTargets)
+        self._parsedArgs.targets += trailingTargets
+        try:
+            if not self._configPath:
+                self._configPath = Path(os.path.expanduser(self._parsedArgs.config_file)).absolute()
+            if self._configPath.exists():
+                with self._configPath.open("r", encoding="utf-8") as f:
+                    jsonLines = []
+                    for line in f.readlines():
+                        stripped = line.strip()
+                        if not stripped.startswith("#") and not stripped.startswith("//"):
+                            jsonLines.append(line)
+                    # print("".join(jsonLines))
+                    self._JSON = json.loads("".join(jsonLines), encoding="utf-8")
+            else:
+                print("Configuration file", self._configPath, "does not exist, using only command line arguments.")
+        except Exception as e:
+            print(coloured(AnsiColour.red, "Could not load config file", self._configPath, "-", e))
+            if not input("Invalid config file " + str(self._configPath) + ". Continue? y/[N]").lower().startswith("y"):
+                raise
+        return self._parsedArgs.targets
+
+
+ConfigLoader = None
+
+
+def setConfigLoader(loader):
+    global ConfigLoader
+    ConfigLoader = loader
+    # statusUpdate("Initialized configloader to", loader)
+    # import traceback
+    # traceback.print_stack()

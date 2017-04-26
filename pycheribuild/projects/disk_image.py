@@ -34,8 +34,8 @@ import shlex
 import stat
 import tempfile
 
-from ..project import SimpleProject
-from ..configloader import ConfigLoader
+from ..project import *
+from ..configloader import ComputedDefaultValue
 from ..utils import *
 from .cheribsd import BuildCHERIBSD, BuildFreeBSD
 from pathlib import Path
@@ -373,19 +373,19 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         hostUsername = pwd.getpwuid(os.geteuid())[0]
-        defaultHostname = ConfigLoader.ComputedDefaultValue(
+        defaultHostname = ComputedDefaultValue(
             function=lambda conf, unused: "qemu-cheri" + conf.cheriBitsStr + "-" + hostUsername,
             asString="qemu-cheri${CHERI_BITS}-" + hostUsername)
         super().setupConfigOptions(extraFilesShortname="-extra-files", defaultHostname=defaultHostname, **kwargs)
-        defaultDiskImagePath = ConfigLoader.ComputedDefaultValue(
+        defaultDiskImagePath = ComputedDefaultValue(
                 function=_defaultDiskImagePath, asString="$OUTPUT_ROOT/cheri256-disk.qcow2 or "
                                                          "$OUTPUT_ROOT/cheri128-disk.qcow2 depending on --cheri-bits.")
         cls.diskImagePath = cls.addPathOption("path", shortname="-disk-image-path", default=defaultDiskImagePath,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image",
                                               showHelp=True)
-        cls.disableTMPFS = ConfigLoader.addBoolOption("disable-tmpfs", shortname="-disable-tmpfs",
-                                                      help="Don't make /tmp a TMPFS mount in the CHERIBSD system image."
-                                                      " This is a workaround in case TMPFS is not working correctly")
+        cls.disableTMPFS = cls.addBoolOption("disable-tmpfs", shortname="-disable-tmpfs",
+                                             help="Don't make /tmp a TMPFS mount in the CHERIBSD system image."
+                                                  " This is a workaround in case TMPFS is not working correctly")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config, sourceClass=BuildCHERIBSD)
@@ -400,7 +400,7 @@ class BuildFreeBSDDiskImage(BuildDiskImageBase):
     def setupConfigOptions(cls, **kwargs):
         hostUsername = pwd.getpwuid(os.geteuid())[0]
         super().setupConfigOptions(defaultHostname="qemu-mips-" + hostUsername, **kwargs)
-        defaultDiskImagePath = ConfigLoader.ComputedDefaultValue(
+        defaultDiskImagePath = ComputedDefaultValue(
                 function=lambda config, project: config.outputRoot / "freebsd-mips.qcow2",
                 asString="$OUTPUT_ROOT/freebsd-mips.qcow2")
         cls.diskImagePath = cls.addPathOption("path", default=defaultDiskImagePath, showHelp=True,

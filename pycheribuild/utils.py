@@ -35,9 +35,9 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import traceback
-from .colour import coloured, AnsiColour
-from .chericonfig import CheriConfig
+from .colour import coloured, AnsiColour, statusUpdate, warningMessage
 from collections import namedtuple
 from pathlib import Path
 
@@ -53,7 +53,7 @@ else:
 
 
 # reduce the number of import statements per project  # no-combine
-__all__ = ["typing", "CheriConfig", "IS_LINUX", "IS_FREEBSD", "printCommand", "includeLocalFile",  # no-combine
+__all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "printCommand", "includeLocalFile",  # no-combine
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
            "parseOSRelease", "warningMessage", "Type_T", "typing", "popen_handle_noexec",  # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo"]  # no-combine
@@ -80,7 +80,6 @@ if sys.version_info < (3, 5):
             return "{}({})".format(type(self).__name__, ', '.join(args))
 else:
     from subprocess import CompletedProcess
-import threading
 
 IS_LINUX = sys.platform.startswith("linux")
 IS_FREEBSD = sys.platform.startswith("freebsd")
@@ -246,10 +245,6 @@ def getCompilerInfo(compiler: Path) -> CompilerInfo:
     return _cached_compiler_infos[compiler]
 
 
-def statusUpdate(*args, sep=" ", **kwargs):
-    print(coloured(AnsiColour.cyan, *args, sep=sep), **kwargs)
-
-
 def fatalError(*args, sep=" ", fixitHint=None, fatalWhenPretending=False):
     # we ignore fatal errors when simulating a run
     if _cheriConfig and _cheriConfig.pretend:
@@ -262,11 +257,6 @@ def fatalError(*args, sep=" ", fixitHint=None, fatalWhenPretending=False):
         if fixitHint:
             print(coloured(AnsiColour.blue, "Possible solution:", fixitHint))
         sys.exit(3)
-
-
-def warningMessage(*args, sep=" "):
-    # we ignore fatal errors when simulating a run
-    print(coloured(AnsiColour.magenta, ("Warning:",) + args, sep=sep))
 
 
 def includeLocalFile(path: str) -> str:

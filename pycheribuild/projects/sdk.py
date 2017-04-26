@@ -33,7 +33,7 @@ import datetime
 import shutil
 
 from .cheribsd import BuildCHERIBSD
-from ..project import Project, TargetAliasWithDependencies, CMakeProject, SimpleProject
+from ..project import *
 from ..utils import *
 
 from pathlib import Path

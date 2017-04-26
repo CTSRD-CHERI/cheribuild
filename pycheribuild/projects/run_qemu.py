@@ -32,7 +32,7 @@ import os
 import sys
 import socket
 
-from ..project import SimpleProject
+from ..project import *
 from ..utils import *
 from .cheribsd import BuildCHERIBSD, BuildFreeBSD
 from .cherios import BuildCheriOS
