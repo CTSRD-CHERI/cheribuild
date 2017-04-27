@@ -117,8 +117,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
                            overwrite=True, mode=0o755)
             self.writeFile(Path(tmpdir) / "g++", contents="exec " + str(self.config.clangPlusPlusPath) + " \"$@\"\n",
                            overwrite=True, mode=0o755)
-            os.chmod(str(Path(tmpdir) / "gcc"), stat.S_IXUSR | stat.S_IRUSR)
-            os.chmod(str(Path(tmpdir) / "g++"), stat.S_IXUSR | stat.S_IRUSR)
             # self.createSymlink(Path("/usr/bin/as"), Path(tmpdir) / "as", relative=False)
             self.createSymlink(Path("/usr/bin/ld"), Path(tmpdir) / "ld", relative=False)
             buildenv["PATH"] = tmpdir + ":" + os.environ["PATH"]
