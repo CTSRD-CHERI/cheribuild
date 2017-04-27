@@ -47,11 +47,7 @@ class MyJsonEncoder(json.JSONEncoder):
 
 
 class CheriConfig(object):
-    quiet = None
-    __frozen = False
-    _initialized = False
-
-    def __init__(self, loader: conf.ConfigLoader):
+    def __init__(self, loader: conf.ConfigLoaderBase):
         loader._cheriConfig = self
         self.loader = loader
         self.pretend = loader.addCommandLineOnlyBoolOption("pretend", "p",
@@ -62,11 +58,9 @@ class CheriConfig(object):
         self.clangPlusPlusPath = loader.addPathOption("clang++-path", default=latestClangTool("clang++"),
                                                       help="The Clang C++ compiler to use for compiling "
                                                            "LLVM+Clang (must be at least version 3.7)")
-        # TODO: allow overriding per-project?
-        self.makeJobs = loader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
-                                         help="Number of jobs to use for compiling")  # type: int
         # Attributes for code completion:
         self.verbose = None  # type: bool
+        self.quiet = None  # type: bool
         self.clean = None  # type: bool
         self.force = None  # type: bool
         self.noLogfile = None  # type: bool
@@ -75,14 +69,13 @@ class CheriConfig(object):
         self.forceConfigure = None  # type: bool
         self.skipInstall = None  # type: bool
         self.skipInstall = None  # type: bool
-        self.listTargets = None  # type: bool
-        self.dumpConfig = None  # type: bool
-        self.getConfigOption = None  # type: bool
         self.includeDependencies = None  # type: bool
-        self.cheriBits = None  # type: int
         self.createCompilationDB = None  # type: bool
         self.crossCompileForMips = None  # type: bool
         self.makeWithoutNice = None  # type: bool
+
+        self.cheriBits = None  # type: int
+        self.makeJobs = None  # type: int
 
         self.sourceRoot = None  # type: Path
         self.outputRoot = None  # type: Path
@@ -95,7 +88,9 @@ class CheriConfig(object):
 
         self.targets = None  # type: list
 
-        self.__frozen = True
+    def load(self):
+        self.loader.load()
+        self.targets = self.loader.targets
 
     @property
     def makeJFlag(self):
@@ -109,20 +104,17 @@ class CheriConfig(object):
     def sdkDirectoryName(self):
         return "sdk" + self.cheriBitsStr
 
-
-    # FIXME: This is all horrible hacky code to ensure that all subclasses set all attributes
-    def __setattr__(self, key, value):
-        if self.__frozen and not key.startswith("_") and not hasattr(self, key):
-            warningMessage("Class {} is frozen. Cannot set {} = {} {}".format(self.__class__.__name__, key, value, type(value)))
-        object.__setattr__(self, key, value)
+    def _ensureRequiredPropertiesSet(self) -> bool:
+        for key in self.__dict__.keys():
+            # don't do the descriptor stuff:
+            value = object.__getattribute__(self, key)
+            if value is None:
+                raise RuntimeError("Required property " + key + " is not set!")
+        return True
 
     # FIXME: not sure why this is needed
     def __getattribute__(self, item):
         v = object.__getattribute__(self, item)
-        if v is None and self._initialized:
-            warningMessage(item + " should be set!!!")
-            import traceback
-            traceback.print_stack()
         if hasattr(v, '__get__'):
             return v.__get__(self, self.__class__)
         return v

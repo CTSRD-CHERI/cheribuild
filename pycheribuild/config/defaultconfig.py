@@ -30,76 +30,81 @@
 import os
 from pathlib import Path
 
-from .loader import ConfigLoader
+from .loader import ConfigLoader, JsonAndCommandLineConfigLoader
 from .chericonfig import CheriConfig
-from ..utils import latestClangTool, defaultNumberOfMakeJobs
+from ..utils import defaultNumberOfMakeJobs
 
 assert ConfigLoader, "ConfigLoader must be initialized before importing defaultchericonfig"
 
 
 class DefaultCheriConfig(CheriConfig):
-    foo = ConfigLoader.addBoolOption("foo", "fff", help="Don't show stdout of the commands that are executed")
-
     def __init__(self, availableTargets: list):
         # TODO: take ConfigLoader as parameter
-        super().__init__(ConfigLoader)
+        loader = ConfigLoader
+        assert isinstance(loader, JsonAndCommandLineConfigLoader)
+        super().__init__(loader)
         # boolean flags
-        self.quiet = ConfigLoader.addBoolOption("quiet", "q", help="Don't show stdout of the commands that are executed")
-        self.verbose = ConfigLoader.addBoolOption("verbose", "v", help="Print all commmands that are executed")
-        self.clean = ConfigLoader.addBoolOption("clean", "c", help="Remove the build directory before build")
-        self.force = ConfigLoader.addBoolOption("force", "f", help="Don't prompt for user input but use the default action")
-        self.noLogfile = ConfigLoader.addBoolOption("no-logfile", help="Don't write a logfile for the build steps")
-        self.skipUpdate = ConfigLoader.addBoolOption("skip-update", help="Skip the git pull step")
-        self.skipConfigure = ConfigLoader.addBoolOption("skip-configure", help="Skip the configure step",
-                                                   group=ConfigLoader.configureGroup)
-        self.forceConfigure = ConfigLoader.addBoolOption("reconfigure", "-force-configure",
-                                                    group=ConfigLoader.configureGroup,
-                                                    help="Always run the configure step, even for CMake projects with a "
-                                                         "valid cache.")
-        self.skipInstall = ConfigLoader.addBoolOption("skip-install", help="Skip the install step (only do the build)")
-        self.listTargets = ConfigLoader.addBoolOption("list-targets", help="List all available targets and exit")
-        self.dumpConfig = ConfigLoader.addBoolOption("dump-configuration", help="Print the current configuration as JSON."
-                                                                           " This can be saved to ~/.config/cheribuild.json to make it persistent")
-        self.getConfigOption = ConfigLoader.addOption("get-config-option", type=str, metavar="KEY",
-                                                 help="Print the value of config option KEY and exit")
-        self.includeDependencies = ConfigLoader.addBoolOption("include-dependencies", "d",
-                                                         help="Also build the dependencies "
-                                                              "of targets passed on the command line. Targets passed on the"
-                                                              "command line will be reordered and processed in an order that "
-                                                              "ensures dependencies are built before the real target. (run "
-                                                              " with --list-targets for more information)")
+        self.quiet = loader.addBoolOption("quiet", "q", help="Don't show stdout of the commands that are executed")
+        self.verbose = loader.addBoolOption("verbose", "v", help="Print all commmands that are executed")
+        self.clean = loader.addBoolOption("clean", "c", help="Remove the build directory before build")
+        self.force = loader.addBoolOption("force", "f", help="Don't prompt for user input but use the default action")
+        self.noLogfile = loader.addBoolOption("no-logfile", help="Don't write a logfile for the build steps")
+        self.skipUpdate = loader.addBoolOption("skip-update", help="Skip the git pull step")
+        self.skipConfigure = loader.addBoolOption("skip-configure", help="Skip the configure step",
+                                                  group=loader.configureGroup)
+        self.forceConfigure = loader.addBoolOption("reconfigure", "-force-configure",
+                                                   group=loader.configureGroup,
+                                                   help="Always run the configure step, even for CMake projects with a "
+                                                        "valid cache.")
+        self.skipInstall = loader.addBoolOption("skip-install", help="Skip the install step (only do the build)")
+        self.listTargets = loader.addBoolOption("list-targets", help="List all available targets and exit")
+        self.dumpConfig = loader.addBoolOption("dump-configuration", help="Print the current configuration as JSON."
+                                                                          " This can be saved to ~/.config/cheribuild.json to make it persistent")
+        self.getConfigOption = loader.addOption("get-config-option", type=str, metavar="KEY",
+                                                help="Print the value of config option KEY and exit")
+        self.includeDependencies = loader.addBoolOption("include-dependencies", "d",
+                                                        help="Also build the dependencies "
+                                                             "of targets passed on the command line. Targets passed on the"
+                                                             "command line will be reordered and processed in an order that "
+                                                             "ensures dependencies are built before the real target. (run "
+                                                             " with --list-targets for more information)")
 
         # TODO: use action="store_const" for these two options
-        self._buildCheri128 = ConfigLoader.cheriBitsGroup.add_argument("--cheri-128", "--128", dest="cheri_bits",
-                                                                  action="store_const", const="128",
-                                                                  help="Shortcut for --cheri-bits=128")
-        self._buildCheri256 = ConfigLoader.cheriBitsGroup.add_argument("--cheri-256", "--256", dest="cheri_bits",
-                                                                  action="store_const", const="256",
-                                                                  help="Shortcut for --cheri-bits=256")
-        self.cheriBits = ConfigLoader.addOption("cheri-bits", type=int, group=ConfigLoader.cheriBitsGroup, default=256,
-                                           help="Whether to build the whole software stack for 128 or 256 bit"
-                                                " CHERI. The output directories will be suffixed with the number of bits to"
-                                                " make sure the right binaries are being used.", choices=["128", "256"])
+        self._buildCheri128 = loader.cheriBitsGroup.add_argument("--cheri-128", "--128", dest="cheri_bits",
+                                                                 action="store_const", const="128",
+                                                                 help="Shortcut for --cheri-bits=128")
+        self._buildCheri256 = loader.cheriBitsGroup.add_argument("--cheri-256", "--256", dest="cheri_bits",
+                                                                 action="store_const", const="256",
+                                                                 help="Shortcut for --cheri-bits=256")
+        self.cheriBits = loader.addOption("cheri-bits", type=int, group=loader.cheriBitsGroup, default=256,
+                                          help="Whether to build the whole software stack for 128 or 256 bit"
+                                               " CHERI. The output directories will be suffixed with the number of bits"
+                                               " to make sure the right binaries are being used.",
+                                          choices=["128", "256"])
 
-        self.createCompilationDB = ConfigLoader.addBoolOption("compilation-db", "-cdb",
-                                                         help="Create a compile_commands.json file in the build dir "
-                                                              "(requires Bear for non-CMake projects)")
-        self.crossCompileForMips = ConfigLoader.addBoolOption("cross-compile-for-mips", "-xmips",
-                                                         help="Make cross compile projects target MIPS hybrid ABI "
-                                                              "instead of CheriABI")
-        self.makeWithoutNice = ConfigLoader.addBoolOption("make-without-nice", help="Run make/ninja without nice(1)")
+        self.createCompilationDB = loader.addBoolOption("compilation-db", "-cdb",
+                                                        help="Create a compile_commands.json file in the build dir "
+                                                             "(requires Bear for non-CMake projects)")
+        self.crossCompileForMips = loader.addBoolOption("cross-compile-for-mips", "-xmips",
+                                                        help="Make cross compile projects target MIPS hybrid ABI "
+                                                             "instead of CheriABI")
+        self.makeWithoutNice = loader.addBoolOption("make-without-nice", help="Run make/ninja without nice(1)")
+
+        self.makeJobs = ConfigLoader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
+                                               help="Number of jobs to use for compiling")
 
         # configurable paths
-        self.sourceRoot = ConfigLoader.addPathOption("source-root", default=Path(os.path.expanduser("~/cheri")),
-                                                help="The directory to store all sources")
-        self.outputRoot = ConfigLoader.addPathOption("output-root", default=lambda p, cls: (p.sourceRoot / "output"),
-                                                help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
-        self.buildRoot = ConfigLoader.addPathOption("build-root", default=lambda p, cls: (p.sourceRoot / "build"),
-                                               help="The directory for all the builds (default: '<SOURCE_ROOT>/build')")
+        self.sourceRoot = loader.addPathOption("source-root", default=Path(os.path.expanduser("~/cheri")),
+                                               help="The directory to store all sources")
+        self.outputRoot = loader.addPathOption("output-root", default=lambda p, cls: (p.sourceRoot / "output"),
+                                               help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
+        self.buildRoot = loader.addPathOption("build-root", default=lambda p, cls: (p.sourceRoot / "build"),
+                                              help="The directory for all the builds (default: '<SOURCE_ROOT>/build')")
 
-        ConfigLoader.finalizeOptions(availableTargets)
-        ConfigLoader.load()
-        self.targets = ConfigLoader.targets
+        loader.finalizeOptions(availableTargets)
+
+    def load(self):
+        super().load()
         # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
         os.environ["CHERI_BITS"] = self.cheriBitsStr
 
@@ -109,4 +114,4 @@ class DefaultCheriConfig(CheriConfig):
         self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
         self.sdkSysrootDir = self.sdkDir / "sysroot"
         self.sysrootArchiveName = "cheri-sysroot.tar.gz"
-        self._initialized = True
+        assert self._ensureRequiredPropertiesSet()

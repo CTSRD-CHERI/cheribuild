@@ -69,6 +69,7 @@ def real_main():
     targetManager.registerCommandLineOptions()
     runEverythingTarget = "__run_everything__"
     cheriConfig = DefaultCheriConfig(allTargetNames + [runEverythingTarget])
+    cheriConfig.load()
     setCheriConfig(cheriConfig)
     # create the required directories
     for d in (cheriConfig.sourceRoot, cheriConfig.outputRoot, cheriConfig.buildRoot):
@@ -86,7 +87,7 @@ def real_main():
     elif cheriConfig.getConfigOption:
         if cheriConfig.getConfigOption not in loader.ConfigLoader.options:
             fatalError("Unknown config key", cheriConfig.getConfigOption)
-        option = ConfigLoader.options[cheriConfig.getConfigOption]
+        option = loader.ConfigLoader.options[cheriConfig.getConfigOption]
         # noinspection PyProtectedMember
         print(option.__get__(cheriConfig, option._owningClass if option._owningClass else cheriConfig))
     else:
