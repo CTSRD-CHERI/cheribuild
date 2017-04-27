@@ -167,7 +167,13 @@ class ConfigOptionBase(object):
         self._loader = _loader
         self._owningClass = _owningClass  # if none it means the global CheriConfig is the class containing this option
 
-    def _loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
+    def loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
+        result = self._loadOptionImpl(config, ownerClass)
+        # Now convert it to the right type
+        result = self._convertType(result)
+        return result
+
+    def _loadOptionImpl(self, config: "CheriConfig", ownerClass: "typing.Type"):
         raise NotImplementedError()
 
     @property
@@ -179,7 +185,7 @@ class ConfigOptionBase(object):
         assert not self._owningClass or issubclass(owner, self._owningClass)
         if self._cached is None:
             # noinspection PyProtectedMember
-            self._cached = self._loadOption(self._loader._cheriConfig, owner)
+            self._cached = self.loadOption(self._loader._cheriConfig, owner)
             # print("Loaded option", self.action, "->", result)
             # import traceback
             # traceback.print_stack()
@@ -192,12 +198,33 @@ class ConfigOptionBase(object):
         else:
             return self.default
 
+    def _convertType(self, result):
+        # check for None to make sure we don't call str(None) which would result in "None"
+        if result is None:
+            return None
+        # print("Converting", result, "to", self.valueType)
+        # if the requested type is list, tuple, etc. use shlex.split() to convert strings to lists
+        if self.valueType != str and isinstance(result, str):
+            if isinstance(self.valueType, type) and issubclass(self.valueType, collections.abc.Sequence):
+                stringValue = result
+                result = shlex.split(stringValue)
+                print(coloured(AnsiColour.magenta, "Config option ", self.fullOptionName, " (", stringValue,
+                               ") should be a list, got a string instead -> assuming the correct value is ",
+                               result, sep=""))
+        if self.valueType == Path:
+            expanded = os.path.expanduser(os.path.expandvars(str(result)))
+            # print("Expanding env vars in", result, "->", expanded, os.environ)
+            result = Path(expanded).absolute()
+        else:
+            result = self.valueType(result)  # make sure it has the right type (e.g. Path, int, bool, str)
+        return result
+
 
 class DefaultValueOnlyConfigOption(ConfigOptionBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
+    def _loadOptionImpl(self, config: "CheriConfig", ownerClass: "typing.Type"):
         return self._getDefaultValue(config, ownerClass)
 
 
@@ -205,7 +232,7 @@ class CommandLineConfigOption(ConfigOptionBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
+    def _loadOptionImpl(self, config: "CheriConfig", ownerClass: "typing.Type"):
         fromCmdLine = self.loadFromCommandLine()
         if fromCmdLine is not None:
             return fromCmdLine
@@ -223,29 +250,7 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
-        result = self._loadOptionImpl(self.fullOptionName, config, ownerClass)
-        # Now convert it to the right type
-        # check for None to make sure we don't call str(None) which would result in "None"
-        if result is not None:
-            # print("Converting", result, "to", self.valueType)
-            # if the requested type is list, tuple, etc. use shlex.split() to convert strings to lists
-            if self.valueType != str and isinstance(result, str):
-                if isinstance(self.valueType, type) and issubclass(self.valueType, collections.abc.Sequence):
-                    stringValue = result
-                    result = shlex.split(stringValue)
-                    print(coloured(AnsiColour.magenta, "Config option ", self.fullOptionName, " (", stringValue,
-                                   ") should be a list, got a string instead -> assuming the correct value is ",
-                                   result, sep=""))
-            if self.valueType == Path:
-                expanded = os.path.expanduser(os.path.expandvars(str(result)))
-                # print("Expanding env vars in", result, "->", expanded, os.environ)
-                result = Path(expanded).absolute()
-            else:
-                result = self.valueType(result)  # make sure it has the right type (e.g. Path, int, bool, str)
-        return result
-
-    def _loadOptionImpl(self, fullOptionName: str, config: "CheriConfig", ownerClass: "typing.Type"):
+    def _loadOptionImpl(self, config: "CheriConfig", ownerClass: "typing.Type"):
         # First check the value specified on the command line, then load JSON and then fallback to the default
         fromCmdLine = self.loadFromCommandLine()
         # print(fullOptionName, "from cmdline:", fromCmdLine)
@@ -254,11 +259,11 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
                 return fromCmdLine
             # print("From command line == default:", fromCmdLine, self.action.default, "-> trying JSON")
         # try loading it from the JSON file:
-        fromJson = self._loadFromJson(fullOptionName)
+        fromJson = self._loadFromJson(self.fullOptionName)
         # print(fullOptionName, "from JSON:", fromJson)
         if fromJson is not None:
             if config.verbose:
-                print(coloured(AnsiColour.blue, "Overriding default value for", fullOptionName,
+                print(coloured(AnsiColour.blue, "Overriding default value for", self.fullOptionName,
                                "with value from JSON:", fromJson))
             return fromJson
         # load the default value (which could be a lambda)
