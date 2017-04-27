@@ -35,12 +35,11 @@ import sys
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from .configloader import ConfigLoader here because that will only update the local copy!
 # https://stackoverflow.com/questions/3536620/how-to-change-a-module-variable-from-another-module
-from pycheribuild.config import loader
-
-loader.setConfigLoader(loader.JsonAndCommandLineConfigLoader())
+from .config.loader import JsonAndCommandLineConfigLoader
 from .config.defaultconfig import DefaultCheriConfig
 from .utils import *
 from .targets import targetManager
+from .project import SimpleProject
 # noinspection PyUnresolvedReferences
 from .projects import *  # make sure all projects are loaded so that targetManager gets populated
 # noinspection PyUnresolvedReferences
@@ -66,9 +65,13 @@ def updateCheck():
 
 def real_main():
     allTargetNames = list(sorted(targetManager.targetNames))
-    targetManager.registerCommandLineOptions()
     runEverythingTarget = "__run_everything__"
-    cheriConfig = DefaultCheriConfig(allTargetNames + [runEverythingTarget])
+    configLoader = JsonAndCommandLineConfigLoader()
+    # Register all command line options
+    cheriConfig = DefaultCheriConfig(configLoader, allTargetNames + [runEverythingTarget])
+    SimpleProject._configLoader = configLoader
+    targetManager.registerCommandLineOptions()
+    # load them from JSON/cmd line
     cheriConfig.load()
     setCheriConfig(cheriConfig)
     # create the required directories

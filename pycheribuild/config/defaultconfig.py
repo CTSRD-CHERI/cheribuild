@@ -30,19 +30,15 @@
 import os
 from pathlib import Path
 
-from .loader import ConfigLoader, JsonAndCommandLineConfigLoader
+from .loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader
 from .chericonfig import CheriConfig
 from ..utils import defaultNumberOfMakeJobs
 
-assert ConfigLoader, "ConfigLoader must be initialized before importing defaultchericonfig"
-
 
 class DefaultCheriConfig(CheriConfig):
-    def __init__(self, availableTargets: list):
-        # TODO: take ConfigLoader as parameter
-        loader = ConfigLoader
-        assert isinstance(loader, JsonAndCommandLineConfigLoader)
+    def __init__(self, loader: ConfigLoaderBase, availableTargets: list):
         super().__init__(loader)
+        assert isinstance(loader, JsonAndCommandLineConfigLoader)
         # boolean flags
         self.quiet = loader.addBoolOption("quiet", "q", help="Don't show stdout of the commands that are executed")
         self.verbose = loader.addBoolOption("verbose", "v", help="Print all commmands that are executed")
@@ -90,7 +86,7 @@ class DefaultCheriConfig(CheriConfig):
                                                              "instead of CheriABI")
         self.makeWithoutNice = loader.addBoolOption("make-without-nice", help="Run make/ninja without nice(1)")
 
-        self.makeJobs = ConfigLoader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
+        self.makeJobs = loader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
                                                help="Number of jobs to use for compiling")
 
         # configurable paths

@@ -38,7 +38,7 @@ import time
 from enum import Enum
 from pathlib import Path
 
-from .config.loader import ConfigLoader, ComputedDefaultValue
+from .config.loader import ConfigLoaderBase, ComputedDefaultValue
 from .config.chericonfig import CheriConfig
 from .targets import Target, targetManager
 from .utils import *
@@ -84,6 +84,8 @@ class ProjectSubclassDefinitionHook(type):
 
 
 class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
+    _configLoader = None  # type: ConfigLoaderBase
+
     # These two class variables can be defined in subclasses to customize dependency ordering of targets
     target = ""  # type: str
     projectName = None
@@ -133,12 +135,12 @@ class SimpleProject(object, metaclass=ProjectSubclassDefinitionHook):
         if "_commandLineOptionGroup" not in cls.__dict__:
             # noinspection PyProtectedMember
             # has to be a single underscore otherwise the name gets mangled to _Foo__commandlineOptionGroup
-            cls._commandLineOptionGroup = ConfigLoader._parser.add_argument_group(
+            cls._commandLineOptionGroup = cls._configLoader._parser.add_argument_group(
                 "Options for target '" + cls.target + "'")
 
-        return ConfigLoader.addOption(configOptionKey + "/" + name, shortname, default=default, type=kind,
-                                      _owningClass=cls, group=cls._commandLineOptionGroup, helpHidden=helpHidden,
-                                      **kwargs)
+        return cls._configLoader.addOption(configOptionKey + "/" + name, shortname, default=default, type=kind,
+                                           _owningClass=cls, group=cls._commandLineOptionGroup, helpHidden=helpHidden,
+                                           **kwargs)
 
     @classmethod
     def addBoolOption(cls, name: str, *, shortname=None, default=False, **kwargs):

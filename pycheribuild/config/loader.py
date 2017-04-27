@@ -183,7 +183,7 @@ class ConfigOptionBase(object):
             # print("Loaded option", self.action, "->", result)
             # import traceback
             # traceback.print_stack()
-            ConfigLoader.values[self.fullOptionName] = self._cached  # just for debugging
+            self._loader.values[self.fullOptionName] = self._cached  # just for debugging
         return self._cached
 
     def _getDefaultValue(self, config: "CheriConfig", ownerClass: "typing.Type"):
@@ -375,14 +375,3 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
     def reset(self) -> None:
         super().reset()
         self._loadJSONConfigFile()
-
-
-ConfigLoader = None  # type: ConfigLoaderBase
-
-
-def setConfigLoader(loader: ConfigLoaderBase):
-    global ConfigLoader
-    ConfigLoader = loader
-    # statusUpdate("Initialized configloader to", loader)
-    # import traceback
-    # traceback.print_stack()
