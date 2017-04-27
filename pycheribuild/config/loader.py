@@ -42,7 +42,6 @@ except ImportError:
 
 from ..colour import *
 from ..utils import typing, Type_T
-from collections import OrderedDict
 from pathlib import Path
 
 
@@ -66,7 +65,6 @@ class ConfigLoaderBase(object):
     options = dict()  # type: typing.Dict[str, ConfigOptionBase]
     _parsedArgs = None
     _JSON = {}  # type: dict
-    values = OrderedDict()
 
     showAllHelp = any(s in sys.argv for s in ("--help-all", "--help-hidden"))
 
@@ -186,10 +184,6 @@ class ConfigOptionBase(object):
         if self._cached is None:
             # noinspection PyProtectedMember
             self._cached = self.loadOption(self._loader._cheriConfig, owner)
-            # print("Loaded option", self.action, "->", result)
-            # import traceback
-            # traceback.print_stack()
-            self._loader.values[self.fullOptionName] = self._cached  # just for debugging
         return self._cached
 
     def _getDefaultValue(self, config: "CheriConfig", ownerClass: "typing.Type"):

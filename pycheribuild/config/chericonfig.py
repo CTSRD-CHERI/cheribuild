@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import json
+from collections import OrderedDict
 from pathlib import Path
 # Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
 from . import loader as conf
@@ -119,12 +120,9 @@ class CheriConfig(object):
             return v.__get__(self, self.__class__)
         return v
 
-    def loadAllOptions(self):
-        for i in self.loader.options.values():
-            # noinspection PyProtectedMember
-            i.__get__(self, i._owningClass if i._owningClass else self)  # force loading of lazy value
-
     def dumpOptionsJSON(self):
-        self.loadAllOptions()
-        # TODO: remove ConfigLoader.values, this just slows down stuff
-        print(json.dumps(self.loader.values, sort_keys=True, cls=MyJsonEncoder, indent=4))
+        jsonDict = OrderedDict()
+        for v in self.loader.options.values():
+            # noinspection PyProtectedMember
+            jsonDict[v.fullOptionName] = v.__get__(self, v._owningClass if v._owningClass else self)
+        print(json.dumps(jsonDict, sort_keys=True, cls=MyJsonEncoder, indent=4))
