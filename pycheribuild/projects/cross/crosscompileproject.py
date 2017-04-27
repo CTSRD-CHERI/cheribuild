@@ -56,6 +56,16 @@ class CrossCompileProject(Project):
         self.LDFLAGS = []
 
     @property
+    def sizeof_void_ptr(self):
+        if self.config.crossCompileForMips:
+            return 8
+        if self.config.cheriBits == 128:
+            return 16
+        else:
+            assert self.config.cheriBits == 256
+            return 32
+
+    @property
     def default_ldflags(self):
         assert self.targetArch in ("cheri", "mips64")
         if self.targetArch == "cheri":

@@ -58,8 +58,8 @@ class BuildNginx(CrossCompileAutotoolsProject):
         self.installFile(self.sourceDir / "fetchbench", self.installDir / "sbin/fetchbench")
         # install the benchmark script
         benchmark = self.readFile(self.sourceDir / "nginx-benchmark.sh")
-        benchmark = re.sub(r'NGINX=".*"', "NGINX=\"" + str(self.installPrefix / "sbin/nginx") + "\"", benchmark)
-        benchmark = re.sub(r'FETCHBENCH=".*"', "FETCHBENCH=\"" + str(self.installPrefix/ "sbin/fetchbench") + "\"",
+        benchmark = re.sub(r'NGINX=.*', "NGINX=\"" + str(self.installPrefix / "sbin/nginx") + "\"", benchmark)
+        benchmark = re.sub(r'FETCHBENCH=.*', "FETCHBENCH=\"" + str(self.installPrefix / "sbin/fetchbench") + "\"",
                            benchmark)
         self.writeFile(self.destdir / "nginx-benchmark.sh", benchmark, overwrite=True)
 
@@ -86,7 +86,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
         self.configureEnvironment["NGX_SIZEOF_size_t"] = "8"
         self.configureEnvironment["NGX_SIZEOF_off_t"] = "8"
         self.configureEnvironment["NGX_SIZEOF_time_t"] = "8"
-        self.configureEnvironment["NGX_SIZEOF_void_p"] = "32" if self.config.cheriBits == 256 else "16"
+        self.configureEnvironment["NGX_SIZEOF_void_p"] = str(self.sizeof_void_ptr)
         self.configureEnvironment["NGX_HAVE_MAP_DEVZERO"] = "yes"
         self.configureEnvironment["NGX_HAVE_SYSVSHM"] = "yes"
         self.configureEnvironment["NGX_HAVE_MAP_ANON"] = "yes"
@@ -96,4 +96,3 @@ class BuildNginx(CrossCompileAutotoolsProject):
     def compile(self, **kwargs):
         # We have to run make inside the source directory so that it invokes make -f $build/Makefile
         super().compile(cwd=self.sourceDir)
-
