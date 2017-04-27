@@ -40,8 +40,8 @@ try:
 except ImportError:
     argcomplete = None
 
-
 from ..colour import *
+from ..utils import typing, Type_T
 from collections import OrderedDict
 from pathlib import Path
 
@@ -79,11 +79,11 @@ class ConfigLoaderBase(object):
         """
         :return: A config option that is always loaded from the command line no matter what the default is
         """
-        return self.addOption(*args, **kwargs, option_cls=CommandLineConfigOption)
+        return self.addOption(*args, option_cls=CommandLineConfigOption, **kwargs)
 
     def addCommandLineOnlyBoolOption(self, *args, **kwargs) -> bool:
-        return self.addOption(*args, **kwargs, option_cls=CommandLineConfigOption, default=False, action="store_true",
-                              type=bool)
+        return self.addOption(*args, option_cls=CommandLineConfigOption, default=False, action="store_true",
+                              type=bool, **kwargs)
 
     def addOption(self, name: str, shortname=None, default=None, type: "typing.Callable[[str], Type_T]"=str, group=None,
                   helpHidden=False, _owningClass: "typing.Type"=None, option_cls: "typing.Type[ConfigOptionBase]"=None,
@@ -135,12 +135,26 @@ class ConfigLoaderBase(object):
         # we have to make sure we resolve this to an absolute path because otherwise steps where CWD is different fail!
         return self.addOption(name, shortname, type=Path, **kwargs)
 
+    def load(self):
+        raise NotImplementedError()
+
+    def finalizeOptions(self, availableTargets, **kwargs):
+        raise NotImplementedError()
+
     def reload(self) -> None:
         """
         Clear all loaded values and force reloading them (useful for tests)
         """
+        self.reset()
+        self.load()
+
+    def reset(self):
         for option in self.options.values():
             option._cached = None
+
+    @property
+    def targets(self) -> "typing.List[str]":
+        return self._parsedArgs.targets
 
 
 class ConfigOptionBase(object):
@@ -184,7 +198,7 @@ class DefaultValueOnlyConfigOption(ConfigOptionBase):
         super().__init__(*args, **kwargs)
 
     def _loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
-        return self._getDefaultValue()
+        return self._getDefaultValue(config, ownerClass)
 
 
 class CommandLineConfigOption(ConfigOptionBase):
@@ -195,7 +209,7 @@ class CommandLineConfigOption(ConfigOptionBase):
         fromCmdLine = self.loadFromCommandLine()
         if fromCmdLine is not None:
             return fromCmdLine
-        return self._getDefaultValue()
+        return self._getDefaultValue(config, ownerClass)
 
     # noinspection PyProtectedMember
     def loadFromCommandLine(self):
@@ -289,7 +303,6 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
     #     return ret
 
 
-
 class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
     def __init__(self):
         super().__init__(JsonAndCommandLineConfigOption)
@@ -306,13 +319,9 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         self.cheriBitsGroup = self._parser.add_mutually_exclusive_group()
         self.configureGroup = self._parser.add_mutually_exclusive_group()
 
-    def loadTargets(self, availableTargets: list) -> list:
-        """
-        Loads the configuration from the command line and the JSON file
-        :return The targets to build
-        """
+    def finalizeOptions(self, availableTargets: list):
         targetOption = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
-                                                help="The targets to build", choices=availableTargets + [[]])
+                                                 help="The targets to build", choices=availableTargets + [[]])
         if argcomplete and "_ARGCOMPLETE" in os.environ:
             # if IS_FREEBSD: # FIXME: for some reason this won't work
             excludes = ["-t", "--skip-dependencies"]
@@ -327,7 +336,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             # make sure we get target completion for the unparsed args too by adding another zero_or more options
             # not sure why this works but it's a nice hack
             unparsed = self._parser.add_argument("targets", metavar="TARGET", type=list, nargs=argparse.ZERO_OR_MORE,
-                                                help=argparse.SUPPRESS, choices=availableTargets)
+                                                 help=argparse.SUPPRESS, choices=availableTargets)
             unparsed.completer = targetCompleter
             argcomplete.autocomplete(
                 self._parser,
@@ -335,9 +344,9 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 exclude=excludes,  # hide these options from the output
                 print_suppressed=True,  # also include target-specific options
             )
-        self._parsedArgs, trailingTargets = self._parser.parse_known_args()
-        # print(self._parsedArgs, trailingTargets)
-        self._parsedArgs.targets += trailingTargets
+
+    def _loadJSONConfigFile(self):
+        self._JSON = {}
         try:
             if not self._configPath:
                 self._configPath = Path(os.path.expanduser(self._parsedArgs.config_file)).absolute()
@@ -356,24 +365,22 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             print(coloured(AnsiColour.red, "Could not load config file", self._configPath, "-", e))
             if not input("Invalid config file " + str(self._configPath) + ". Continue? y/[N]").lower().startswith("y"):
                 raise
-        return self._parsedArgs.targets
+
+    def load(self):
+        self._parsedArgs, trailingTargets = self._parser.parse_known_args()
+        # print(self._parsedArgs, trailingTargets)
+        self._parsedArgs.targets += trailingTargets
+        self._loadJSONConfigFile()
+
+    def reset(self) -> None:
+        super().reset()
+        self._loadJSONConfigFile()
 
 
-class DefaultValueOnlyConfigLoader(ConfigLoaderBase):
-    """
-    A simple config loader that always returns the default value for all added options
-    """
-    def __init__(self):
-        super().__init__(DefaultValueOnlyConfigOption)
-
-    def parseArguments(self):
-        self._parsedArgs = self._parser.parse_args()
+ConfigLoader = None  # type: ConfigLoaderBase
 
 
-ConfigLoader = None
-
-
-def setConfigLoader(loader):
+def setConfigLoader(loader: ConfigLoaderBase):
     global ConfigLoader
     ConfigLoader = loader
     # statusUpdate("Initialized configloader to", loader)

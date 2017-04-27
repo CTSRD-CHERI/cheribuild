@@ -12,7 +12,7 @@ import pycheribuild.config.loader
 pycheribuild.config.loader.setConfigLoader(pycheribuild.config.loader.JsonAndCommandLineConfigLoader())
 
 from pycheribuild.targets import targetManager
-from pycheribuild.config.defaultconfig import CheriConfig
+from pycheribuild.config.defaultconfig import DefaultCheriConfig
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # make sure all projects are loaded so that targetManager gets populated
 from pycheribuild.projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
@@ -20,6 +20,7 @@ from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage
 
 
 _targets_registered = False
+_cheriConfig = None
 
 
 class TestArgumentParsing(TestCase):
@@ -27,16 +28,19 @@ class TestArgumentParsing(TestCase):
     @staticmethod
     def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")):
         global _targets_registered
+        global _cheriConfig
         if not _targets_registered:
             targetManager.registerCommandLineOptions()
             _targets_registered = True
+            allTargetNames = list(sorted(targetManager.targetNames)) + ["__run_everything__"]
+            _cheriConfig = DefaultCheriConfig(allTargetNames)
         pycheribuild.config.loader.ConfigLoader._configPath = config_file
-        pycheribuild.config.loader.ConfigLoader.reload()
+        pycheribuild.config.loader.ConfigLoader.reset()
         sys.argv = ["cheribuild.py"] + args
-        allTargetNames = list(sorted(targetManager.targetNames)) + ["__run_everything__"]
-        ret = CheriConfig(allTargetNames)
+        pycheribuild.config.loader.ConfigLoader.load()
         # pprint.pprint(vars(ret))
-        return ret
+        assert _cheriConfig
+        return _cheriConfig
 
     def test_skip_update(self):
         # default is false:

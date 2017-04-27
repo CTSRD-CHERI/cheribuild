@@ -97,7 +97,9 @@ class DefaultCheriConfig(CheriConfig):
         self.buildRoot = ConfigLoader.addPathOption("build-root", default=lambda p, cls: (p.sourceRoot / "build"),
                                                help="The directory for all the builds (default: '<SOURCE_ROOT>/build')")
 
-        self.targets = ConfigLoader.loadTargets(availableTargets)
+        ConfigLoader.finalizeOptions(availableTargets)
+        ConfigLoader.load()
+        self.targets = ConfigLoader.targets
         # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
         os.environ["CHERI_BITS"] = self.cheriBitsStr
 
