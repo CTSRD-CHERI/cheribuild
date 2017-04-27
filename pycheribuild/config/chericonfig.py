@@ -97,14 +97,9 @@ class CheriConfig(object):
         self.targets = self.loader.targets
 
     def _initializeDerivedPaths(self):
-        # now set some generic derived config options
-        self.sdkDir = self.outputRoot / self.sdkDirectoryName  # qemu and binutils (and llvm/clang)
-        if self.otherToolsDir is None:
-            self.otherToolsDir = self.outputRoot / "bootstrap"
         self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
         self.sdkSysrootDir = self.sdkDir / "sysroot"
         self.sdkBinDir = self.sdkDir / "bin"
-
 
     @property
     def makeJFlag(self):

@@ -101,8 +101,12 @@ class DefaultCheriConfig(CheriConfig):
 
     def load(self):
         super().load()
-        self._initializeDerivedPaths()
         # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
         os.environ["CHERI_BITS"] = self.cheriBitsStr
         self.sysrootArchiveName = "cheri-sysroot.tar.gz"
+        # now set some generic derived config options
+        self.sdkDir = self.outputRoot / self.sdkDirectoryName  # qemu and binutils (and llvm/clang)
+        self.otherToolsDir = self.outputRoot / "bootstrap"
+        self._initializeDerivedPaths()
+
         assert self._ensureRequiredPropertiesSet()

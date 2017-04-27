@@ -641,7 +641,7 @@ class Project(SimpleProject):
         #     raise AttributeError, "MyClass does not allow assignment to .x member"
         # self.__dict__[name] = value
         if self.__dict__.get("_preventAssign"):
-            assert name not in ("sourceDir", "buildDir", "installDir")
+            # assert name not in ("sourceDir", "buildDir", "installDir")
             if name in ("configureArgs", "configureEnvironment", "commonMakeArgs"):
                 import traceback
                 traceback.print_stack()

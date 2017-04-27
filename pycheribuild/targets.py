@@ -40,7 +40,7 @@ class Target(object):
         self.name = name
         self.dependencies = set(dependencies)
         self.projectClass = projectClass
-        self.project = None
+        self.project = None  # type: pycheribuild.project.SimpleProject
         self._completed = False
 
     def checkSystemDeps(self, config: CheriConfig):
