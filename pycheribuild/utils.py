@@ -114,7 +114,7 @@ def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remain
         # only print the changed environment entries
         filteredEnv = __filterEnv(env)
         if filteredEnv:
-            newArgs += ("env",) + tuple(map(shlex.quote, (k + "=" + v for k, v in filteredEnv.items())))
+            newArgs += ("env",) + tuple(map(shlex.quote, (k + "=" + str(v) for k, v in filteredEnv.items())))
     # comma in tuple is required otherwise it creates a tuple of string chars
     newArgs += (shlex.quote(str(arg1)),) + tuple(map(shlex.quote, map(str, remainingArgs)))
     if outputFile:

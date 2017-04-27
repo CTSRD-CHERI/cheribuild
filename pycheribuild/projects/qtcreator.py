@@ -42,7 +42,7 @@ class BuildQtCreator(Project):
         self._addRequiredSystemTool("qmake")
         self.configureCommand = "qmake"
         self.configureArgs.extend(["-r", self.sourceDir / "qtcreator.pro"])
-        self.configureEnvironment["LLVM_INSTALL_DIR"] = self.config.sdkDir
+        self.configureEnvironment["LLVM_INSTALL_DIR"] = str(self.config.sdkDir)
         self.makeCommand = "make"
 
     def install(self, **kwargs):
