@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import json
+import os
 from collections import OrderedDict
 from pathlib import Path
 # Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
@@ -85,13 +86,25 @@ class CheriConfig(object):
         self.otherToolsDir = None  # type: Path
         self.dollarPathWithOtherTools = None  # type: Path
         self.sdkSysrootDir = None  # type: Path
+        self.sdkBinDir = None  # type: Path
         self.sysrootArchiveName = None  # type: Path
 
         self.targets = None  # type: list
+        self.__optionalProperties = ["sysrootArchiveName"]
 
     def load(self):
         self.loader.load()
         self.targets = self.loader.targets
+
+    def _initializeDerivedPaths(self):
+        # now set some generic derived config options
+        self.sdkDir = self.outputRoot / self.sdkDirectoryName  # qemu and binutils (and llvm/clang)
+        if self.otherToolsDir is None:
+            self.otherToolsDir = self.outputRoot / "bootstrap"
+        self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
+        self.sdkSysrootDir = self.sdkDir / "sysroot"
+        self.sdkBinDir = self.sdkDir / "bin"
+
 
     @property
     def makeJFlag(self):
@@ -107,6 +120,8 @@ class CheriConfig(object):
 
     def _ensureRequiredPropertiesSet(self) -> bool:
         for key in self.__dict__.keys():
+            if key in self.__optionalProperties:
+                continue
             # don't do the descriptor stuff:
             value = object.__getattribute__(self, key)
             if value is None:

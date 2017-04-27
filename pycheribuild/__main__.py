@@ -88,9 +88,9 @@ def real_main():
     elif cheriConfig.dumpConfig:
         cheriConfig.dumpOptionsJSON()
     elif cheriConfig.getConfigOption:
-        if cheriConfig.getConfigOption not in loader.ConfigLoader.options:
+        if cheriConfig.getConfigOption not in configLoader.options:
             fatalError("Unknown config key", cheriConfig.getConfigOption)
-        option = loader.ConfigLoader.options[cheriConfig.getConfigOption]
+        option = configLoader.options[cheriConfig.getConfigOption]
         # noinspection PyProtectedMember
         print(option.__get__(cheriConfig, option._owningClass if option._owningClass else cheriConfig))
     else:
