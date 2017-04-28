@@ -83,44 +83,14 @@ class ConfigLoaderBase(object):
         return self.addOption(*args, option_cls=CommandLineConfigOption, default=False, action="store_true",
                               type=bool, **kwargs)
 
-    def addOption(self, name: str, shortname=None, default=None, type: "typing.Callable[[str], Type_T]"=str, group=None,
-                  helpHidden=False, _owningClass: "typing.Type"=None, option_cls: "typing.Type[ConfigOptionBase]"=None,
-                  **kwargs) -> "Type_T":
+    def addOption(self, name: str, shortname=None, default=None, type: "typing.Callable[[str], Type_T]"=str,
+                  group=None, helpHidden=False, _owningClass: "typing.Type"=None,
+                  option_cls: "typing.Type[ConfigOptionBase]"=None, **kwargs) -> "Type_T":
         if option_cls is None:
             option_cls = self.__option_cls
 
-        # hide obscure options unless --help-hidden/--help/all is passed
-        if helpHidden and not self.showAllHelp:
-            kwargs["help"] = argparse.SUPPRESS
-
-        # add the default string to help if it is not lambda and help != argparse.SUPPRESS
-        hasDefaultHelpText = isinstance(default, ComputedDefaultValue) or not callable(default)
-        if default and "help" in kwargs and hasDefaultHelpText:
-            if kwargs["help"] != argparse.SUPPRESS:
-                kwargs["help"] = kwargs["help"] + " (default: \'" + str(default) + "\')"
-        assert "default" not in kwargs  # Should be handled manually
-        parserObj = group if group else self._parser
-        if type == bool and group is None:
-            parserObj = parserObj.add_mutually_exclusive_group()
-            kwargs["default"] = None
-            assert kwargs["action"] == "store_true"
-        if shortname:
-            action = parserObj.add_argument("--" + name, "-" + shortname, **kwargs)
-        else:
-            action = parserObj.add_argument("--" + name, **kwargs)
-        if type == bool:
-            slashIndex = name.rfind("/")
-            negatedName = name[:slashIndex + 1] + "no-" + name[slashIndex + 1:]
-            neg = parserObj.add_argument("--" + negatedName, dest=action.dest, default=None, action="store_false",
-                                         help=argparse.SUPPRESS)
-            # change the default action value
-            neg.default = None
-            action.default = None
-        assert action.default is None  # we don't want argparse default values!
-        assert isinstance(action, argparse.Action)
-        assert not action.default  # we handle the default value manually
-        assert not action.type  # we handle the type of the value manually
-        result = option_cls(action, default, type, _owningClass, _loader=self)
+        result = option_cls(name, shortname, default, type, _owningClass, _loader=self, group=group,
+                            helpHidden=helpHidden, **kwargs)
         assert name not in self.options  # make sure we don't add duplicate options
         self.options[name] = result
         # noinspection PyTypeChecker
@@ -156,9 +126,10 @@ class ConfigLoaderBase(object):
 
 
 class ConfigOptionBase(object):
-    def __init__(self, action: argparse.Action, default, valueType, _owningClass=None,
+    def __init__(self, name: str, shortname: str, default, valueType: "typing.Type", _owningClass=None,
                  _loader: ConfigLoaderBase=None):
-        self.action = action
+        self.name = name
+        self.shortname = shortname
         self.default = default
         self.valueType = valueType
         self._cached = None
@@ -176,8 +147,7 @@ class ConfigOptionBase(object):
 
     @property
     def fullOptionName(self):
-        assert self.action.option_strings[0].startswith("--")
-        return self.action.option_strings[0][2:]  # strip the initial "--"
+        return self.name
 
     def __get__(self, instance, owner):
         assert not self._owningClass or issubclass(owner, self._owningClass)
@@ -213,18 +183,55 @@ class ConfigOptionBase(object):
             result = self.valueType(result)  # make sure it has the right type (e.g. Path, int, bool, str)
         return result
 
+    def __repr__(self):
+        return "<{} type={} cached={}>".format(self.__class__.__name__, self.valueType, self._cached)
+
 
 class DefaultValueOnlyConfigOption(ConfigOptionBase):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *args, _loader, **kwargs):
+        super().__init__(*args, _loader=_loader)
 
     def _loadOptionImpl(self, config: "CheriConfig", ownerClass: "typing.Type"):
         return self._getDefaultValue(config, ownerClass)
 
-
 class CommandLineConfigOption(ConfigOptionBase):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, name: str, shortname: str, default, valueType: "typing.Type", _owningClass,
+                 _loader: ConfigLoaderBase, helpHidden: bool, group: argparse._ArgumentGroup, **kwargs):
+        print(kwargs)
+        super().__init__(name, shortname, default, valueType, _owningClass, _loader)
+        # hide obscure options unless --help-hidden/--help/all is passed
+        if helpHidden and not self._loader.showAllHelp:
+            kwargs["help"] = argparse.SUPPRESS
+
+        # add the default string to help if it is not lambda and help != argparse.SUPPRESS
+        hasDefaultHelpText = isinstance(self.default, ComputedDefaultValue) or not callable(self.default)
+        if self.default and "help" in kwargs and hasDefaultHelpText:
+            if kwargs["help"] != argparse.SUPPRESS:
+                kwargs["help"] = kwargs["help"] + " (default: \'" + str(self.default) + "\')"
+        assert "default" not in kwargs  # Should be handled manually
+        # noinspection PyProtectedMember
+        parserObj = group if group else self._loader._parser
+        if self.valueType == bool and group is None:
+            parserObj = parserObj.add_mutually_exclusive_group()
+            kwargs["default"] = None
+            assert kwargs["action"] == "store_true"
+        if self.shortname:
+            action = parserObj.add_argument("--" + self.name, "-" + self.shortname, **kwargs)
+        else:
+            action = parserObj.add_argument("--" + self.name, **kwargs)
+        if self.valueType == bool:
+            slashIndex = self.name.rfind("/")
+            negatedName = self.name[:slashIndex + 1] + "no-" + self.name[slashIndex + 1:]
+            neg = parserObj.add_argument("--" + negatedName, dest=action.dest, default=None, action="store_false",
+                                         help=argparse.SUPPRESS)
+            # change the default action value
+            neg.default = None
+            action.default = None
+        assert action.default is None  # we don't want argparse default values!
+        assert isinstance(action, argparse.Action)
+        assert not action.default  # we handle the default value manually
+        assert not action.type  # we handle the type of the value manually
+        self.action = action
 
     def _loadOptionImpl(self, config: "CheriConfig", ownerClass: "typing.Type"):
         fromCmdLine = self.loadFromCommandLine()
