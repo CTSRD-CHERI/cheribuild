@@ -98,8 +98,8 @@ def _jenkins_main():
     do_tarball = False
     if do_build:
         # unpack the SDK if it has not been extracted yet:
-        "tar Jxf $SDK_CPU-$ISA-jemalloc-sdk.tar.xz --strip-components 1 -C cherisdk"
         if not cheriConfig.sdkBinDir.is_dir():
+            statusUpdate("SDK not found, will try to extract", cheriConfig.sdkArchivePath)
             if not cheriConfig.sdkArchivePath.exists():
                 fatalError(cheriConfig.sdkBinDir, "does not exist and SDK archive", cheriConfig.sdkArchivePath,
                            "does not exist!")

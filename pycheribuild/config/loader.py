@@ -197,7 +197,6 @@ class DefaultValueOnlyConfigOption(ConfigOptionBase):
 class CommandLineConfigOption(ConfigOptionBase):
     def __init__(self, name: str, shortname: str, default, valueType: "typing.Type", _owningClass,
                  _loader: ConfigLoaderBase, helpHidden: bool, group: argparse._ArgumentGroup, **kwargs):
-        print(kwargs)
         super().__init__(name, shortname, default, valueType, _owningClass, _loader)
         # hide obscure options unless --help-hidden/--help/all is passed
         if helpHidden and not self._loader.showAllHelp:
