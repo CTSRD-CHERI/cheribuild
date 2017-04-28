@@ -86,7 +86,7 @@ def real_main():
     if cheriConfig.listTargets:
         print("Available targets are:\n ", "\n  ".join(allTargetNames))
     elif cheriConfig.dumpConfig:
-        cheriConfig.dumpOptionsJSON()
+        print(cheriConfig.getOptionsJSON())
     elif cheriConfig.getConfigOption:
         if cheriConfig.getConfigOption not in configLoader.options:
             fatalError("Unknown config key", cheriConfig.getConfigOption)

@@ -89,10 +89,12 @@ def _jenkins_main():
     import pprint
     pprint.pprint(configLoader.options)
     cheriConfig.load()
-    cheriConfig.dumpOptionsJSON()
-    pprint.pprint(configLoader.options)
+    if cheriConfig.verbose:
+        json = cheriConfig.getOptionsJSON()  # make sure all config options are loaded
+        pprint.pprint(configLoader.options)
     setCheriConfig(cheriConfig)
-    # cheriConfig.dumpOptionsJSON()
+
+    # TODO: add argparse options for build, create tarball
 
     do_build = True
     do_tarball = False

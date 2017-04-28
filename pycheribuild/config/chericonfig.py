@@ -132,9 +132,9 @@ class CheriConfig(object):
             return v.__get__(self, self.__class__)
         return v
 
-    def dumpOptionsJSON(self):
+    def getOptionsJSON(self):
         jsonDict = OrderedDict()
         for v in self.loader.options.values():
             # noinspection PyProtectedMember
             jsonDict[v.fullOptionName] = v.__get__(self, v._owningClass if v._owningClass else self)
-        print(json.dumps(jsonDict, sort_keys=True, cls=MyJsonEncoder, indent=4))
+        return json.dumps(jsonDict, sort_keys=True, cls=MyJsonEncoder, indent=4)
