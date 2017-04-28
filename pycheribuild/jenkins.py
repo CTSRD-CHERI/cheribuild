@@ -117,6 +117,14 @@ def _jenkins_main():
             project.destdir = cheriConfig.outputRoot
             project.installPrefix = cheriConfig.installationPrefix
             project.installDir = cheriConfig.outputRoot
+
+        statusUpdate("Configuration options for building", project.projectName)
+        for attr in dir(project):
+            if attr.startswith("_"):
+                continue
+            value = getattr(project, attr)
+            if not callable(value):
+                print("   ", attr, "=", pprint.pformat(value, width=160, indent=8, compact=True))
         # delete the install root:
         with cheriConfig.FS.asyncCleanDirectory(cheriConfig.outputRoot):
             target.execute()

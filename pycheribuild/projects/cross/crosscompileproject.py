@@ -173,7 +173,8 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
         self.configureEnvironment["CFLAGS"] = " ".join(CPPFLAGS + self.CFLAGS)
         self.configureEnvironment["CXXFLAGS"] = " ".join(CPPFLAGS + self.CXXFLAGS)
         self.configureEnvironment["LDFLAGS"] = " ".join(self.LDFLAGS + self.default_ldflags)
-        print(coloured(AnsiColour.yellow, "Cross configure environment:", pprint.pformat(self.configureEnvironment)))
+        print(coloured(AnsiColour.yellow, "Cross configure environment:",
+                       pprint.pformat(self.configureEnvironment, width=160)))
         super().configure(**kwargs)
 
     def process(self):
