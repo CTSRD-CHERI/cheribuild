@@ -95,6 +95,8 @@ class CheriConfig(object):
     def load(self):
         self.loader.load()
         self.targets = self.loader.targets
+        from ..filesystemutils import FileSystemUtils
+        self.FS = FileSystemUtils(self)
 
     def _initializeDerivedPaths(self):
         self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")

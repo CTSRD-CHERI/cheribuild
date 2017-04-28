@@ -739,6 +739,8 @@ class AutotoolsProject(Project):
     def __init__(self, config, configureScript="configure"):
         super().__init__(config)
         self.configureCommand = self.sourceDir / configureScript
+
+    def configure(self, cwd: Path=None):
         if self.installPrefix:
             assert self.destdir, "custom install prefix requires DESTDIR being set!"
             self.configureArgs.append("--prefix=" + str(self.installPrefix))
@@ -746,6 +748,7 @@ class AutotoolsProject(Project):
             self.configureArgs.append("--prefix=" + str(self.installDir))
         if self.extraConfigureFlags:
             self.configureArgs.extend(self.extraConfigureFlags)
+        super().configure(cwd=cwd)
 
 
 # A target that is just an alias for at least one other targets but does not force building of dependencies

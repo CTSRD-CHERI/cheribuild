@@ -44,6 +44,7 @@ from .projects.cross import *  # make sure all projects are loaded so that targe
 from .projects.cross.crosscompileproject import CrossCompileProject
 from .targets import targetManager
 from .utils import *
+from .filesystemutils import FileSystemUtils
 
 
 class JenkinsConfigLoader(ConfigLoaderBase):
@@ -77,6 +78,7 @@ class JenkinsConfigLoader(ConfigLoaderBase):
         self._parsedArgs = self._parser.parse_args()
 
 
+
 def _jenkins_main():
     allTargetNames = list(sorted(targetManager.targetNames))
     configLoader = JenkinsConfigLoader()
@@ -84,7 +86,11 @@ def _jenkins_main():
     cheriConfig = JenkinsConfig(configLoader, allTargetNames)
     SimpleProject._configLoader = configLoader
     targetManager.registerCommandLineOptions()
+    import pprint
+    pprint.pprint(configLoader.options)
     cheriConfig.load()
+    cheriConfig.dumpOptionsJSON()
+    pprint.pprint(configLoader.options)
     setCheriConfig(cheriConfig)
     # cheriConfig.dumpOptionsJSON()
 
@@ -97,7 +103,8 @@ def _jenkins_main():
             if not cheriConfig.sdkArchivePath.exists():
                 fatalError(cheriConfig.sdkBinDir, "does not exist and SDK archive", cheriConfig.sdkArchivePath,
                            "does not exist!")
-            runCmd("tar", "Jxf", cheriConfig.sdkArchivePath, "--strip-components", "1", "-C", cheriConfig.sdkSysrootDir)
+            cheriConfig.FS.makedirs(cheriConfig.sdkDir)
+            runCmd("tar", "Jxf", cheriConfig.sdkArchivePath, "--strip-components", "1", "-C", cheriConfig.sdkDir)
         assert len(cheriConfig.targets) == 1
         target = targetManager.targetMap[cheriConfig.targets[0]]
         target.checkSystemDeps(cheriConfig)
@@ -108,7 +115,9 @@ def _jenkins_main():
             project.destdir = cheriConfig.outputRoot
             project.installPrefix = cheriConfig.installationPrefix
             project.installDir = cheriConfig.outputRoot
-        target.execute()
+        # delete the install root:
+        with cheriConfig.FS.asyncCleanDirectory(cheriConfig.outputRoot):
+            target.execute()
     if do_tarball:
         raise NotImplementedError()
 
