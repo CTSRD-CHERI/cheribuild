@@ -106,7 +106,7 @@ def _jenkins_main():
         assert project
         if isinstance(project, CrossCompileProject):
             project.destdir = cheriConfig.outputRoot
-            project.installPrefix = Path("/usr/local")
+            project.installPrefix = cheriConfig.installationPrefix
             project.installDir = cheriConfig.outputRoot
         target.execute()
     if do_tarball:

@@ -611,10 +611,6 @@ class Project(SimpleProject):
         self.gitBranch = ""
         # set up the install/build/source directories (allowing overrides from config file)
 
-        if self.config.verbose:
-            print(self.projectName, "directories: source=%s, build=%s, install=%s" %
-                  (self.sourceDir, self.buildDir, self.installDir))
-
         self.configureCommand = ""
         # non-assignable variables:
         self.commonMakeArgs = []
@@ -784,6 +780,12 @@ class Project(SimpleProject):
         self.runMakeInstall()
 
     def process(self):
+        if self.config.verbose:
+            installDir = self.installDir
+            if self.destdir is not None:
+                installDir = str(self.destdir) + str(self.installPrefix)
+            print(self.projectName, "directories: source=%s, build=%s, install=%s" %
+                  (self.sourceDir, self.buildDir, installDir))
         if not self.config.skipUpdate:
             self.update()
         if not self._systemDepsChecked:

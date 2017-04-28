@@ -56,6 +56,10 @@ class JenkinsConfig(CheriConfig):
         self.makeJobs = loader.addCommandLineOnlyOption("make-jobs", "j", type=int,
                                                         default=defaultNumberOfMakeJobs(),
                                                         help="Number of jobs to use for compiling")
+        self.installationPrefix = loader.addCommandLineOnlyOption("install-prefix", type=Path, default="/usr/local",
+                                                              help="The install prefix for cross compiled projects"
+                                                                   " (the path where it will end up in the install"
+                                                                   " image)")  # type: Path
         self.skipUpdate = True
         self.verbose = True
         self.quiet = False
