@@ -40,9 +40,8 @@ class JenkinsConfig(CheriConfig):
     def __init__(self, loader: ConfigLoaderBase, availableTargets: list):
         super().__init__(loader)
 
-        self.cpu = loader.addCommandLineOnlyOption("cpu", default=os.getenv("SDK_CPU", os.getenv("CPU")),
-                                                   help="The target to build the software for (defaults to $CPU or"
-                                                        " $SDK_CPU).",
+        self.cpu = loader.addCommandLineOnlyOption("cpu", default=os.getenv("CPU"),
+                                                   help="The target to build the software for (defaults to $CPU).",
                                                    choices=["cheri128", "cheri256", "mips"])
         self.workspace = loader.addCommandLineOnlyOption("workspace", default=os.getenv("WORKSPACE"), type=Path,
                                                          help="The root directory for building (defaults to $WORKSPACE)")  # type: Path
@@ -82,7 +81,10 @@ class JenkinsConfig(CheriConfig):
     @property
     def sdkArchivePath(self):
         if self.sdkArchiveName is None:
-            self.sdkArchiveName = "{}-{}-jemalloc-sdk.tar.xz".format(self.cpu, os.getenv("ISA", "vanilla"))
+            sdk_cpu = os.getenv("SDK_CPU")
+            if not sdk_cpu:
+                fatalError("SDK_CPU variable not set, cannot infer the name of the SDK archive")
+            self.sdkArchiveName = "{}-{}-jemalloc-sdk.tar.xz".format(sdk_cpu, os.getenv("ISA", "vanilla"))
         assert isinstance(self.sdkArchiveName, str)
         return self.workspace / self.sdkArchiveName
 
