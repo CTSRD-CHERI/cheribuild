@@ -33,7 +33,7 @@ from pathlib import Path
 
 from .loader import ConfigLoaderBase
 from .chericonfig import CheriConfig
-from ..utils import latestClangTool, defaultNumberOfMakeJobs, fatalError
+from ..utils import defaultNumberOfMakeJobs, fatalError
 
 
 class JenkinsConfig(CheriConfig):

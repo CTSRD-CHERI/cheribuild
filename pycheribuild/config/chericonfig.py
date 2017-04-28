@@ -32,7 +32,7 @@ import os
 from collections import OrderedDict
 from pathlib import Path
 # Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
-from . import loader as conf
+from .loader import ConfigLoaderBase
 from ..utils import latestClangTool, defaultNumberOfMakeJobs, warningMessage
 
 
@@ -49,7 +49,7 @@ class MyJsonEncoder(json.JSONEncoder):
 
 
 class CheriConfig(object):
-    def __init__(self, loader: conf.ConfigLoaderBase):
+    def __init__(self, loader: ConfigLoaderBase):
         loader._cheriConfig = self
         self.loader = loader
         self.pretend = loader.addCommandLineOnlyBoolOption("pretend", "p",

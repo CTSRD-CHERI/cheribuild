@@ -39,6 +39,7 @@ imports = []
 fromImports = []
 lines = []
 handledFiles = []
+ignoredFiles = [scriptDir / "jenkins.py", scriptDir / "config/jenkinsconfig.py"]
 emptyLines = 0
 
 
@@ -102,15 +103,16 @@ def checkAllFilesUsed(directory: Path):
             continue
         if p.name == "__init__.py" or p.name == "__main__.py":
             continue  # only needed when building as a module
-        if p not in handledFiles:
+        if p not in handledFiles and p not in ignoredFiles:
             print("\x1b[1;31m", p, " not added!\x1b[0m", file=sys.stderr, sep="")
 
 
 # append all the individual files in the right order
 addFilteredFile(scriptDir / "colour.py")
 addFilteredFile(scriptDir / "utils.py")
-addFilteredFile(scriptDir / "configloader.py")
-addFilteredFile(scriptDir / "chericonfig.py")
+addFilteredFile(scriptDir / "config/loader.py")
+addFilteredFile(scriptDir / "config/chericonfig.py")
+addFilteredFile(scriptDir / "config/defaultconfig.py")
 addFilteredFile(scriptDir / "targets.py")
 addFilteredFile(scriptDir / "project.py")
 
@@ -138,10 +140,12 @@ addFilteredFile(scriptDir / "projects/cross/crosscompileproject.py")
 addFilteredFile(scriptDir / "projects/cross/gdb.py")
 addFilteredFile(scriptDir / "projects/cross/libcxx.py")
 addFilteredFile(scriptDir / "projects/cross/postgres.py")
+addFilteredFile(scriptDir / "projects/cross/nginx.py")
 
 # now make sure that all the projects were handled
 checkAllFilesUsed(scriptDir)
 checkAllFilesUsed(scriptDir / "projects")
+checkAllFilesUsed(scriptDir / "config")
 checkAllFilesUsed(scriptDir / "projects/cross")
 
 # now add the main() function
