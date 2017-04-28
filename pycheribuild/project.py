@@ -592,13 +592,13 @@ class Project(SimpleProject):
             return env
         return None
 
-    def runMakeInstall(self, *, args: list = None, target="install", _stdoutFilter=None, cwd=None):
+    def runMakeInstall(self, *, args: list = None, target="install", _stdoutFilter="__default_filter__", cwd=None):
         if args is None:
             args = self.commonMakeArgs
         self.runMake(args, makeTarget=target, stdoutFilter=_stdoutFilter, env=self.makeInstallEnv, cwd=cwd)
 
-    def install(self, _stdoutFilter=None):
-        self.runMakeInstall()
+    def install(self, _stdoutFilter="__default_filter__"):
+        self.runMakeInstall(_stdoutFilter=_stdoutFilter)
 
     def process(self):
         if self.config.verbose:
