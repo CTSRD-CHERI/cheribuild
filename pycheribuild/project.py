@@ -592,6 +592,16 @@ class Project(SimpleProject):
             return env
         return None
 
+    @property
+    def real_install_root_dir(self):
+        """
+        :return: the real install root directory (e.g. if prefix == /usr/local and desdir == /tmp/benchdir it will
+         return /tmp/benchdir/usr/local
+        """
+        if self.destdir is not None:
+            assert self.installPrefix
+            return self.destdir / self.installPrefix.relative_to(Path("/"))
+
     def runMakeInstall(self, *, args: list = None, target="install", _stdoutFilter="__default_filter__", cwd=None):
         if args is None:
             args = self.commonMakeArgs

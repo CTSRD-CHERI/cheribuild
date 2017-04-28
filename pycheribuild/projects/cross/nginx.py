@@ -55,13 +55,13 @@ class BuildNginx(CrossCompileAutotoolsProject):
     def install(self, **kwargs):
         # We have to run make inside the source directory so that it invokes make -f $build/Makefile
         self.runMakeInstall(cwd=self.sourceDir)
-        self.installFile(self.sourceDir / "fetchbench", self.installDir / "sbin/fetchbench")
+        self.installFile(self.sourceDir / "fetchbench", self.real_install_root_dir / "sbin/fetchbench")
         # install the benchmark script
         benchmark = self.readFile(self.sourceDir / "nginx-benchmark.sh")
         benchmark = re.sub(r'NGINX=.*', "NGINX=\"" + str(self.installPrefix / "sbin/nginx") + "\"", benchmark)
         benchmark = re.sub(r'FETCHBENCH=.*', "FETCHBENCH=\"" + str(self.installPrefix / "sbin/fetchbench") + "\"",
                            benchmark)
-        self.writeFile(self.destdir / "nginx-benchmark.sh", benchmark, overwrite=True)
+        self.writeFile(self.real_install_root_dir / "nginx-benchmark.sh", benchmark, overwrite=True)
 
     def needsConfigure(self):
         return not (self.buildDir / "Makefile").exists()
