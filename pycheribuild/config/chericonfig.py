@@ -103,7 +103,7 @@ class CheriConfig(object):
 
     @property
     def makeJFlag(self):
-        return str(self.makeJobs)
+        return "-j" + str(self.makeJobs)
 
     @property
     def cheriBitsStr(self):
