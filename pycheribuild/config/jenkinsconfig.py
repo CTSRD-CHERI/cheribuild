@@ -102,7 +102,6 @@ class JenkinsConfig(CheriConfig):
         self.sdkSysrootDir = self.sdkDir / "sysroot"
         self.sdkBinDir = self.sdkDir / "bin"
 
-        self.cheriBits = None
         self.crossCompileForMips = False
         if self.cpu == "cheri128":
             self.cheriBits = 128
@@ -110,6 +109,7 @@ class JenkinsConfig(CheriConfig):
             self.cheriBits = 256
         elif self.cpu == "mips":
             self.crossCompileForMips = True
+            self.cheriBits = 0
         else:
             fatalError("CPU is not set to a valid value:", self.cpu)
 
