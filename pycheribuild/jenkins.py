@@ -108,7 +108,7 @@ def _jenkins_main():
             cheriConfig.FS.makedirs(cheriConfig.sdkDir)
             runCmd("tar", "Jxf", cheriConfig.sdkArchivePath, "--strip-components", "1", "-C", cheriConfig.sdkDir)
             if not (cheriConfig.sdkDir / "bin/ar").exists():
-                cheriConfig.FS.createSymlink(Path(shutil.which("ar")), cheriConfig.sdkBinDir / "ar")
+                cheriConfig.FS.createSymlink(Path(shutil.which("ar")), cheriConfig.sdkBinDir / "ar", relative=False)
                 cheriConfig.FS.createBuildtoolTargetSymlinks(cheriConfig.sdkBinDir / "ar")
         assert len(cheriConfig.targets) == 1
         target = targetManager.targetMap[cheriConfig.targets[0]]
