@@ -143,10 +143,10 @@ class BuildLLVM(CMakeProject):
 
         if not self.skip_lld:
             self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld")
+            self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld", toolName="ld", createUnprefixedLink=True)
 
 
 # Add an alias target clang that builds llvm
-# TODO: add a property targetAliases to project instead?
 class BuildClang(TargetAlias):
     target = "clang"
     dependencies = ["llvm"]

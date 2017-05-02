@@ -131,8 +131,6 @@ class BuildGnuBinutils(AutotoolsProject):
         # create links for ld:
         self.installFile(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
         self.createBuildtoolTargetSymlinks(bindir / "ld.bfd")
-        # TODO: replace with lld once it is mature enough to compile cheribsd
-        self.createBuildtoolTargetSymlinks(bindir / "ld.bfd", toolName="ld", createUnprefixedLink=True)
 
 
 class BuildGPLv3Binutils(BuildGnuBinutils):
