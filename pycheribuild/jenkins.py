@@ -35,7 +35,7 @@ import shutil
 
 from pathlib import Path
 
-from .config.loader import ConfigLoaderBase, DefaultValueOnlyConfigOption
+from .config.loader import ConfigLoaderBase, CommandLineConfigOption
 from .config.jenkinsconfig import JenkinsConfig
 from .project import SimpleProject
 # noinspection PyUnresolvedReferences
@@ -72,7 +72,7 @@ class JenkinsConfigLoader(ConfigLoaderBase):
             )
 
     def __init__(self):
-        super().__init__(DefaultValueOnlyConfigOption)
+        super().__init__(CommandLineConfigOption)
 
     def parseArguments(self):
         self._parsedArgs = self._parser.parse_args()
