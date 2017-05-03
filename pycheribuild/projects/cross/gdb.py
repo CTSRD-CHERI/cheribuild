@@ -97,6 +97,9 @@ class BuildGDB(CrossCompileAutotoolsProject):
                                   "-I/usr/local/include"])
         self.CFLAGS.append("-std=gnu89")
         self.LDFLAGS.append("-L/usr/local/lib")
+        # Currently there are a lot of `undefined symbol 'elf_version'`, etc errors
+        # Add -lelf to the linker command line until the source is fixed
+        self.LDFLAGS.append("-lelf")
         # noinspection PyArgumentList
         self.configureEnvironment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
         if self.makeCommand == "gmake":
