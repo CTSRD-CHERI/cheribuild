@@ -60,6 +60,8 @@ class CheriConfig(object):
         self.clangPlusPlusPath = loader.addPathOption("clang++-path", default=latestClangTool("clang++"),
                                                       help="The Clang C++ compiler to use for compiling "
                                                            "LLVM+Clang (must be at least version 3.7)")
+        self.passDashKToMake = loader.addCommandLineOnlyBoolOption("pass-k-to-make", "k",
+                                                           help="Pass the -k flag to make to not abort on first error")
         # Attributes for code completion:
         self.verbose = None  # type: bool
         self.quiet = None  # type: bool

@@ -537,6 +537,8 @@ class Project(SimpleProject):
                 stdoutFilter = None
         if stdoutFilter == "__default_filter__":
             stdoutFilter = self._stdoutFilter
+        if self.config.passDashKToMake:
+            allArgs.append("-k")
         self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=stdoutFilter, cwd=cwd, env=env,
                             appendToLogfile=appendToLogfile)
         # add a newline at the end in case it ended with a filtered line (no final newline)
