@@ -117,7 +117,7 @@ class BuildFreeBSD(Project):
             self.externalToolchainArgs.append("XCC=" + cross_prefix + "clang" + clang_flags)
             self.externalToolchainArgs.append("XCXX=" + cross_prefix + "clang++" + clang_flags)
             self.externalToolchainArgs.append("XCPP=" + cross_prefix + "clang-cpp" + clang_flags)
-            # self.externalToolchainArgs.append("XLD=" + cross_prefix + "ld.lld")
+            self.externalToolchainArgs.append("XLD=" + cross_prefix + "ld.lld")
             self.externalToolchainArgs.append("XLD_BFD=ld.bfd")
             # HACK: hardcoded path from vica
             # self.externalToolchainArgs.append("XOBJDUMP=/usr/local/bin/cheri-freebsd-objdump")
@@ -131,6 +131,7 @@ class BuildFreeBSD(Project):
             # don't build cross GCC and cross binutils
             # self.externalToolchainArgs.append("-DWITHOUT_CROSS_COMPILER") # This sets too much, we want elftoolchain and binutils
             self.externalToolchainArgs.append("-DWITHOUT_GCC")
+            self.externalToolchainArgs.append("-DWITHOUT_CLANG")
             self.externalToolchainArgs.append("-DWITHOUT_GCC_BOOTSTRAP")
             self.externalToolchainArgs.append("-DWITHOUT_CLANG_BOOTSTRAP")
             self.externalToolchainArgs.append("WERROR=-Wno-error")
@@ -251,17 +252,25 @@ class BuildCHERIBSD(BuildFreeBSD):
         cls.forceSDKLinker = cls.addBoolOption("force-sdk-linker", help="Let clang use the linker from the installed "
                                                "SDK instead of the one built in the bootstrap process. WARNING: May "
                                                "cause unexpected linker errors!")
+        cls.mipsOnly = cls.addBoolOption("mips-only", showHelp=False,
+                                         help="Don't build the CHERI parts of cheribsd, only plain MIPS")
 
     def __init__(self, config: CheriConfig):
         self.installAsRoot = os.getuid() == 0
         self.binutilsDir = config.sdkDir / "mips64/bin"
         self.cheriCXX = self.cheriCC.parent / "clang++"
-        super().__init__(config, archBuildFlags=[
+        archBuildFlags = [
             "CHERI=" + config.cheriBitsStr,
-            # "-dCl",  # add some debug output to trace commands properly
             "CHERI_CC=" + str(self.cheriCC),
             "CHERI_CXX=" + str(self.cheriCXX)
-        ])
+        ]
+        if self.mipsOnly:
+            archBuildFlags = [
+                "TARGET=mips",
+                "TARGET_ARCH=mips64",
+            ]
+            self.kernelConfig = "MALTA64"
+        super().__init__(config, archBuildFlags=archBuildFlags)
 
         self.commonMakeArgs.extend(self.makeOptions)
 
