@@ -61,7 +61,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
         benchmark = re.sub(r'NGINX=.*', "NGINX=\"" + str(self.installPrefix / "sbin/nginx") + "\"", benchmark)
         benchmark = re.sub(r'FETCHBENCH=.*', "FETCHBENCH=\"" + str(self.installPrefix / "sbin/fetchbench") + "\"",
                            benchmark)
-        self.writeFile(self.real_install_root_dir / "nginx-benchmark.sh", benchmark, overwrite=True)
+        self.writeFile(self.real_install_root_dir / "nginx-benchmark.sh", benchmark, overwrite=True, mode=0o755)
 
     def needsConfigure(self):
         return not (self.buildDir / "Makefile").exists()
