@@ -281,6 +281,7 @@ class BuildCHERIBSD(BuildFreeBSD):
             archBuildFlags = [
                 "TARGET=mips",
                 "TARGET_ARCH=mips64",
+                "-DWITHOUT_LIB32"
             ]
             self.kernelConfig = "MALTA64"
         super().__init__(config, archBuildFlags=archBuildFlags)
