@@ -69,6 +69,9 @@ class BuildFreeBSD(Project):
         # override in CheriBSD
         cls.skipBuildworld = False
         cls.kernelConfig = "MALTA64"
+        cls.useExternalToolchainForKernel = cls.addBoolOption("use-external-toolchain-for-kernel", showHelp=False,
+                                                              help="Also build the kernel with the external toolchain"
+                                                                   " (probably won't work!)")
 
     def _stdoutFilter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
@@ -165,7 +168,17 @@ class BuildFreeBSD(Project):
         if not self.skipBuildworld:
             self.runMake(self.commonMakeArgs + self.externalToolchainArgs + jflag, "buildworld", cwd=self.sourceDir)
         if not self.subdirOverride:
-            self.runMake(self.commonMakeArgs + self.externalToolchainArgs + jflag, "buildkernel", cwd=self.sourceDir,
+            kernelMakeFlags = self.commonMakeArgs
+            if not self.useExternalToolchainForKernel:
+                # we need to build GCC to build the kernel:
+                toolchainOpts = kernelMakeFlags + ["-DWITHOUTLLD_BOOTSTRAP", "-DWITHOUT_CLANG_BOOTSTRAP",
+                                                   "-DWITHOUT_CLANG", "-DWITH_GCC_BOOTSTRAP"]
+                self.runMake(toolchainOpts + jflag, "kernel-toolchain", cwd=self.sourceDir)
+            else:
+                if not self.externalToolchainArgs:
+                    fatalError("Building kernel with external toolchain requires external toolchain to be set!")
+                kernelMakeFlags += self.externalToolchainArgs
+            self.runMake(kernelMakeFlags + jflag, "buildkernel", cwd=self.sourceDir,
                          compilationDbName="compile_commands_" + self.kernelConfig + ".json")
 
     def _removeOldRootfs(self):
