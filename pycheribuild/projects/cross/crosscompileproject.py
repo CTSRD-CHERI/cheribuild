@@ -79,6 +79,11 @@ class CrossCompileProject(Project):
                   "-fuse-ld=" + self.linker,
                   "--sysroot=" + str(self.sdkSysroot),
                   "-B" + str(self.sdkBinDir)]
+        if self.config.withLibstatcounters:
+            if self.linkDynamic:
+                result.append("-lstatcounters")
+            else:
+                result += ["-Wl,--whole-archive", "-lstatcounters", "-Wl,--no-whole-archive"]
         if not self.linkDynamic:
             result.append("-static")
         return result
