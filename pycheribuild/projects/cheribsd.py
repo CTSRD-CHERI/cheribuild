@@ -106,7 +106,6 @@ class BuildFreeBSD(Project):
             "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
             "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
             "-DWITHOUT_GDB",
-            "KERNCONF=" + self.kernelConfig,
         ])
         self.externalToolchainArgs = []
         if self.mipsToolchainPath:
@@ -150,6 +149,7 @@ class BuildFreeBSD(Project):
             self.commonMakeArgs.append("SUBDIR_OVERRIDE=" + self.subdirOverride)
 
         self.destdir = self.installDir
+        self.kernelToolchainAlreadyBuilt = False
 
     def clean(self) -> ThreadJoiner:
         if self.skipBuildworld:
@@ -159,27 +159,37 @@ class BuildFreeBSD(Project):
         else:
             return super().clean()
 
-    def compile(self, **kwargs):
-        # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
-        # so just omit the flag here if the user passes -j1 on the command line
-        jflag = [self.config.makeJFlag] if self.config.makeJobs > 1 else []
-        if self.config.verbose:
-            self.runMake(self.commonMakeArgs + self.externalToolchainArgs, "showconfig", cwd=self.sourceDir)
-        if not self.skipBuildworld:
-            self.runMake(self.commonMakeArgs + self.externalToolchainArgs + jflag, "buildworld", cwd=self.sourceDir)
-        if not self.subdirOverride:
-            kernelMakeFlags = self.commonMakeArgs
-            if not self.useExternalToolchainForKernel:
+    def _buildkernel(self, kernconf: str):
+        kernelMakeFlags = self.commonMakeArgs + ["KERNCONF=" + kernconf]
+        if self.useExternalToolchainForKernel:
+            if not self.externalToolchainArgs:
+                fatalError("Building kernel with external toolchain requires external toolchain to be set!")
+            kernelMakeFlags += self.externalToolchainArgs
+        else:
+            if self.externalToolchainArgs and not self.kernelToolchainAlreadyBuilt:
                 # we need to build GCC to build the kernel:
                 toolchainOpts = kernelMakeFlags + ["-DWITHOUTLLD_BOOTSTRAP", "-DWITHOUT_CLANG_BOOTSTRAP",
                                                    "-DWITHOUT_CLANG", "-DWITH_GCC_BOOTSTRAP"]
-                self.runMake(toolchainOpts + jflag, "kernel-toolchain", cwd=self.sourceDir)
-            else:
-                if not self.externalToolchainArgs:
-                    fatalError("Building kernel with external toolchain requires external toolchain to be set!")
-                kernelMakeFlags += self.externalToolchainArgs
-            self.runMake(kernelMakeFlags + jflag, "buildkernel", cwd=self.sourceDir,
-                         compilationDbName="compile_commands_" + self.kernelConfig + ".json")
+                self.runMake(toolchainOpts + self.jflag, "kernel-toolchain", cwd=self.sourceDir)
+                self.kernelToolchainAlreadyBuilt = True
+
+        self.runMake(kernelMakeFlags + self.jflag, "buildkernel", cwd=self.sourceDir,
+                     compilationDbName="compile_commands_" + self.kernelConfig + ".json")
+
+    @property
+    def jflag(self) -> list:
+        return [self.config.makeJFlag] if self.config.makeJobs > 1 else []
+
+    def compile(self, **kwargs):
+        # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
+        # so just omit the flag here if the user passes -j1 on the command line
+        if self.config.verbose:
+            self.runMake(self.commonMakeArgs + self.externalToolchainArgs, "showconfig", cwd=self.sourceDir)
+        if not self.skipBuildworld:
+            self.runMake(self.commonMakeArgs + self.externalToolchainArgs + self.jflag, "buildworld", cwd=self.sourceDir)
+        if not self.subdirOverride:
+            self._buildkernel(kernconf=self.kernelConfig)
+
 
     def _removeOldRootfs(self):
         assert self.config.clean or not self.keepOldRootfs
@@ -199,7 +209,7 @@ class BuildFreeBSD(Project):
         if self.config.clean or not self.keepOldRootfs:
             self._removeOldRootfs()
         # don't use multiple jobs here
-        self.runMakeInstall(args=self.commonMakeArgs + self.externalToolchainArgs,
+        self.runMakeInstall(args=self.commonMakeArgs + self.externalToolchainArgs + ["KERNCONF=" + self.kernelConfig],
                             target="installkernel", cwd=self.sourceDir)
         if not self.skipBuildworld:
             self.runMakeInstall(args=self.commonMakeArgs + self.externalToolchainArgs,
@@ -265,6 +275,9 @@ class BuildCHERIBSD(BuildFreeBSD):
         cls.forceSDKLinker = cls.addBoolOption("force-sdk-linker", help="Let clang use the linker from the installed "
                                                "SDK instead of the one built in the bootstrap process. WARNING: May "
                                                "cause unexpected linker errors!")
+        cls.buildFpgaKernels = cls.addBoolOption("build-fpga-kernels", help="Also build kernels for the FPGA. They will "
+                                                 "not be installed so you need to copy them from the build directory.",
+                                                  showHelp=True)
         cls.mipsOnly = cls.addBoolOption("mips-only", showHelp=False,
                                          help="Don't build the CHERI parts of cheribsd, only plain MIPS")
 
@@ -327,6 +340,10 @@ class BuildCHERIBSD(BuildFreeBSD):
                     runCmd("mv", "-f", l, l + ".backup", cwd=sdkBinDir)
         try:
             super().compile()
+            if self.buildFpgaKernels:
+                for conf in ("USBROOT", "SDROOT", "NFSROOT", "MDROOT"):
+                    prefix = "CHERI128_DE4_" if self.config.cheriBits == 128 else "CHERI_DE4_"
+                    self._buildkernel(kernconf=prefix + conf)
         finally:
             # restore the linkers
             if not self.forceSDKLinker:
