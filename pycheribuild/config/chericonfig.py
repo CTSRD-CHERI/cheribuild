@@ -115,6 +115,8 @@ class CheriConfig(object):
 
     @property
     def cheriBitsStr(self):
+        if self.cheriBits <= 0:
+            return "mips"
         return str(self.cheriBits)
 
     @property
