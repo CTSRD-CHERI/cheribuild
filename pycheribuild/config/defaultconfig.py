@@ -52,7 +52,6 @@ class DefaultCheriConfig(CheriConfig):
                                                    group=loader.configureGroup,
                                                    help="Always run the configure step, even for CMake projects with a "
                                                         "valid cache.")
-        self.skipInstall = loader.addBoolOption("skip-install", help="Skip the install step (only do the build)")
         self.listTargets = loader.addBoolOption("list-targets", help="List all available targets and exit")
         self.dumpConfig = loader.addBoolOption("dump-configuration", help="Print the current configuration as JSON."
                                                                           " This can be saved to ~/.config/cheribuild.json to make it persistent")

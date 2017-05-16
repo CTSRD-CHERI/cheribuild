@@ -67,7 +67,6 @@ class JenkinsConfig(CheriConfig):
         self.noLogfile = True  # jenkins stores the output anyway
         self.skipConfigure = False
         self.forceConfigure = True
-        self.skipInstall = False
         # self.listTargets = False
         # self.dumpConfig = False
         # self.getConfigOption = None

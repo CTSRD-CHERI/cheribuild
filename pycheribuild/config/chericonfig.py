@@ -75,8 +75,7 @@ class CheriConfig(object):
         self.skipUpdate = None  # type: bool
         self.skipConfigure = None  # type: bool
         self.forceConfigure = None  # type: bool
-        self.skipInstall = None  # type: bool
-        self.skipInstall = None  # type: bool
+        self.skipInstall = loader.addBoolOption("skip-install", help="Skip the install step (only do the build)")
         self.includeDependencies = None  # type: bool
         self.createCompilationDB = None  # type: bool
         self.crossCompileForMips = None  # type: bool
