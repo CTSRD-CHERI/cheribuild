@@ -199,8 +199,9 @@ class BuildFreeBSD(Project):
         needKernelToolchain = True  # LLD doesn't seem to work yet
         if needKernelToolchain and not self.kernelToolchainAlreadyBuilt:
             # we need to build GCC to build the kernel:
-            toolchainOpts = kernelMakeFlags + ["-DWITHOUTLLD_BOOTSTRAP", "-DWITHOUT_CLANG_BOOTSTRAP",
-                                               "-DWITHOUT_CLANG", "-DWITH_GCC_BOOTSTRAP"]
+            toolchainOpts = self.commonMakeArgs + ["-DWITHOUT_LLD_BOOTSTRAP", "-DWITHOUT_CLANG_BOOTSTRAP",
+                                                   "-DWITHOUT_CLANG"]
+            toolchainOpts.append("-DWITHOUT_GCC_BOOTSTRAP" if self.useExternalToolchainForKernel else "-DWITH_GCC_BOOTSTRAP")
             self.runMake(toolchainOpts + self.jflag, "kernel-toolchain", cwd=self.sourceDir)
             self.kernelToolchainAlreadyBuilt = True
 
