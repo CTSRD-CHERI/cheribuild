@@ -159,10 +159,10 @@ class BuildFreeBSD(Project):
 
         self.destdir = self.installDir
         self.kernelToolchainAlreadyBuilt = False
-        self.buildworldArgs = self.commonMakeArgs
+        self.buildworldArgs = self.commonMakeArgs.copy()
         if self.useExternalToolchainForWorld:
             self.buildworldArgs += self.externalToolchainArgs
-        self.commonKernelMakeArgs = self.commonMakeArgs
+        self.commonKernelMakeArgs = self.commonMakeArgs.copy()
         if self.useExternalToolchainForKernel:
             self.commonKernelMakeArgs += self.externalToolchainArgs
 
@@ -195,6 +195,9 @@ class BuildFreeBSD(Project):
         return [self.config.makeJFlag] if self.config.makeJobs > 1 else []
 
     def compile(self, **kwargs):
+        if self.useExternalToolchainForWorld and not self.externalToolchainCompiler.exists():
+            fatalError("Requested build of world with external toolchain, but", self.externalToolchainCompiler,
+                       "doesn't exist!")
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
         # so just omit the flag here if the user passes -j1 on the command line
         if self.config.verbose:
