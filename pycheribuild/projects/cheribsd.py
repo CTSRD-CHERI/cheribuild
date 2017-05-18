@@ -31,6 +31,7 @@ import os
 import subprocess
 import sys
 
+from pathlib import Path
 from ..config.loader import ComputedDefaultValue
 from ..project import *
 from ..utils import *
@@ -65,13 +66,19 @@ class BuildFreeBSD(Project):
         cls.keepOldRootfs = cls.addBoolOption("keep-old-rootfs", help="Don't remove the whole old rootfs directory. "
                                               " This can speed up installing but may cause strange errors so is off "
                                               "by default")
-        cls.mipsToolchainPath = cls.addPathOption("mips-toolchain", help="Path to the mips64-unknown-freebsd-* tools")
+        defaultExternalToolchain = ComputedDefaultValue(function=lambda config, cls: config.sdkDir,
+                                                        asString="$CHERI_SDK_DIR")
+        cls.mipsToolchainPath = cls.addPathOption("mips-toolchain", help="Path to the mips64-unknown-freebsd-* tools",
+                                                  default=defaultExternalToolchain)
         # override in CheriBSD
         cls.skipBuildworld = False
         cls.kernelConfig = "MALTA64"
-        cls.useExternalToolchainForKernel = cls.addBoolOption("use-external-toolchain-for-kernel", showHelp=False,
+        cls.useExternalToolchainForKernel = cls.addBoolOption("use-external-toolchain-for-kernel", showHelp=True,
                                                               help="Also build the kernel with the external toolchain"
                                                                    " (probably won't work!)")
+        cls.useExternalToolchainForWorld = cls.addBoolOption("use-external-toolchain-for-world", showHelp=True,
+                                                             help="Build world with the external toolchain"
+                                                                  " (probably won't work!)")
 
     def _stdoutFilter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
@@ -108,8 +115,10 @@ class BuildFreeBSD(Project):
             "-DWITHOUT_GDB",
         ])
         self.externalToolchainArgs = []
+        self.externalToolchainCompiler = Path()
         if self.mipsToolchainPath:
             cross_prefix = str(self.mipsToolchainPath / "bin/mips64-unknown-freebsd-")
+            self.externalToolchainCompiler = Path(cross_prefix + "clang")
             # self.externalToolchainArgs.append("CROSS_BINUTILS_PREFIX=" + cross_prefix)
             # cross assembler
             # PIC code is the default so we have to add -fno-pic
@@ -150,6 +159,12 @@ class BuildFreeBSD(Project):
 
         self.destdir = self.installDir
         self.kernelToolchainAlreadyBuilt = False
+        self.buildworldArgs = self.commonMakeArgs
+        if self.useExternalToolchainForWorld:
+            self.buildworldArgs += self.externalToolchainArgs
+        self.commonKernelMakeArgs = self.commonMakeArgs
+        if self.useExternalToolchainForKernel:
+            self.commonKernelMakeArgs += self.externalToolchainArgs
 
     def clean(self) -> ThreadJoiner:
         if self.skipBuildworld:
@@ -160,18 +175,17 @@ class BuildFreeBSD(Project):
             return super().clean()
 
     def _buildkernel(self, kernconf: str):
-        kernelMakeFlags = self.commonMakeArgs + ["KERNCONF=" + kernconf]
-        if self.useExternalToolchainForKernel:
-            if not self.externalToolchainArgs:
-                fatalError("Building kernel with external toolchain requires external toolchain to be set!")
-            kernelMakeFlags += self.externalToolchainArgs
-        else:
-            if self.externalToolchainArgs and not self.kernelToolchainAlreadyBuilt:
-                # we need to build GCC to build the kernel:
-                toolchainOpts = kernelMakeFlags + ["-DWITHOUTLLD_BOOTSTRAP", "-DWITHOUT_CLANG_BOOTSTRAP",
-                                                   "-DWITHOUT_CLANG", "-DWITH_GCC_BOOTSTRAP"]
-                self.runMake(toolchainOpts + self.jflag, "kernel-toolchain", cwd=self.sourceDir)
-                self.kernelToolchainAlreadyBuilt = True
+        kernelMakeFlags = self.commonKernelMakeArgs + ["KERNCONF=" + kernconf]
+        if self.useExternalToolchainForKernel and not self.externalToolchainCompiler.exists():
+            fatalError("Requested build of kernel with external toolchain, but", self.externalToolchainCompiler,
+                       "doesn't exist!")
+
+        if not self.useExternalToolchainForKernel and not self.kernelToolchainAlreadyBuilt:
+            # we need to build GCC to build the kernel:
+            toolchainOpts = kernelMakeFlags + ["-DWITHOUTLLD_BOOTSTRAP", "-DWITHOUT_CLANG_BOOTSTRAP",
+                                               "-DWITHOUT_CLANG", "-DWITH_GCC_BOOTSTRAP"]
+            self.runMake(toolchainOpts + self.jflag, "kernel-toolchain", cwd=self.sourceDir)
+            self.kernelToolchainAlreadyBuilt = True
 
         self.runMake(kernelMakeFlags + self.jflag, "buildkernel", cwd=self.sourceDir,
                      compilationDbName="compile_commands_" + self.kernelConfig + ".json")
@@ -184,9 +198,9 @@ class BuildFreeBSD(Project):
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
         # so just omit the flag here if the user passes -j1 on the command line
         if self.config.verbose:
-            self.runMake(self.commonMakeArgs + self.externalToolchainArgs, "showconfig", cwd=self.sourceDir)
+            self.runMake(self.buildworldArgs, "showconfig", cwd=self.sourceDir)
         if not self.skipBuildworld:
-            self.runMake(self.commonMakeArgs + self.externalToolchainArgs + self.jflag, "buildworld", cwd=self.sourceDir)
+            self.runMake(self.buildworldArgs + self.jflag, "buildworld", cwd=self.sourceDir)
         if not self.subdirOverride:
             self._buildkernel(kernconf=self.kernelConfig)
 
@@ -209,13 +223,11 @@ class BuildFreeBSD(Project):
         if self.config.clean or not self.keepOldRootfs:
             self._removeOldRootfs()
         # don't use multiple jobs here
-        self.runMakeInstall(args=self.commonMakeArgs + self.externalToolchainArgs + ["KERNCONF=" + self.kernelConfig],
+        self.runMakeInstall(args=self.commonKernelMakeArgs + ["KERNCONF=" + self.kernelConfig],
                             target="installkernel", cwd=self.sourceDir)
         if not self.skipBuildworld:
-            self.runMakeInstall(args=self.commonMakeArgs + self.externalToolchainArgs,
-                                target="installworld", cwd=self.sourceDir)
-            self.runMakeInstall(args=self.commonMakeArgs + self.externalToolchainArgs,
-                                target="distribution", cwd=self.sourceDir)
+            self.runMakeInstall(args=self.buildworldArgs, target="installworld", cwd=self.sourceDir)
+            self.runMakeInstall(args=self.buildworldArgs, target="distribution", cwd=self.sourceDir)
 
     def process(self):
         if not IS_FREEBSD:
@@ -283,7 +295,6 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     def __init__(self, config: CheriConfig):
         self.installAsRoot = os.getuid() == 0
-        self.binutilsDir = config.sdkDir / "mips64/bin"
         self.cheriCXX = self.cheriCC.parent / "clang++"
         archBuildFlags = [
             "CHERI=" + config.cheriBitsStr,
@@ -329,8 +340,6 @@ class BuildCHERIBSD(BuildFreeBSD):
             mipsCC = self.mipsToolchainPath / "bin/mips64-unknown-freebsd-clang"
             if not mipsCC.is_file():
                 fatalError("MIPS toolchain specified but", mipsCC, "is missing.")
-        # if not (self.binutilsDir / "as").is_file():
-        #     fatalError("CHERI MIPS binutils are missing. Run 'cheribuild.py binutils'?")
         programsToMove = ["cheri-unknown-freebsd-ld", "mips4-unknown-freebsd-ld", "mips64-unknown-freebsd-ld", "ld",
                           "objcopy", "objdump"]
         sdkBinDir = self.cheriCC.parent
