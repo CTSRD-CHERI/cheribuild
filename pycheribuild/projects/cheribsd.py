@@ -164,7 +164,9 @@ class BuildFreeBSD(Project):
             self.buildworldArgs += self.externalToolchainArgs
         self.commonKernelMakeArgs = self.commonMakeArgs.copy()
         if self.useExternalToolchainForKernel:
-            self.commonKernelMakeArgs += self.externalToolchainArgs
+            # We can't use LLD for the kernel yet
+            kernelToolChainArgs = list(filter(lambda s: not s.startswith("XLD"), self.externalToolchainArgs))
+            self.commonKernelMakeArgs += kernelToolChainArgs
 
     def clean(self) -> ThreadJoiner:
         if self.skipBuildworld:
@@ -180,7 +182,9 @@ class BuildFreeBSD(Project):
             fatalError("Requested build of kernel with external toolchain, but", self.externalToolchainCompiler,
                        "doesn't exist!")
 
-        if not self.useExternalToolchainForKernel and not self.kernelToolchainAlreadyBuilt:
+        # needKernelToolchain = not self.useExternalToolchainForKernel
+        needKernelToolchain = True  # LLD doesn't seem to work yet
+        if needKernelToolchain and not self.kernelToolchainAlreadyBuilt:
             # we need to build GCC to build the kernel:
             toolchainOpts = kernelMakeFlags + ["-DWITHOUTLLD_BOOTSTRAP", "-DWITHOUT_CLANG_BOOTSTRAP",
                                                "-DWITHOUT_CLANG", "-DWITH_GCC_BOOTSTRAP"]
