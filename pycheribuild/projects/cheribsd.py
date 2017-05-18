@@ -79,6 +79,10 @@ class BuildFreeBSD(Project):
         cls.useExternalToolchainForWorld = cls.addBoolOption("use-external-toolchain-for-world", showHelp=True,
                                                              help="Build world with the external toolchain"
                                                                   " (probably won't work!)")
+        cls.addDebugInfoFlag = cls.addBoolOption("debug-info",
+                                                 help="pass make flags for building debug info",
+                                                 default=True, showHelp=True)
+        cls.buildTests = cls.addBoolOption("build-tests", help="Build the tests too (-DWITH_TESTS)", showHelp=True)
 
     def _stdoutFilter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
@@ -148,6 +152,15 @@ class BuildFreeBSD(Project):
             self.externalToolchainArgs.append("WERROR=-Wno-error")
             # self.externalToolchainArgs.append("-DWITHOUT_BINUTILS_BOOTSTRAP")
             # self.externalToolchainArgs.append("-DWITHOUT_ELFTOOLCHAIN_BOOTSTRAP")
+
+        if self.addDebugInfoFlag:
+            self.commonMakeArgs.append("DEBUG_FLAGS=-g")
+
+        if self.buildTests:
+            self.commonMakeArgs.append("-DWITH_TESTS")
+        else:
+            # often seems to break the creation of disk-image (METALOG is invalid)
+            self.commonMakeArgs.append("-DWITHOUT_TESTS")
 
         if not self.config.verbose and not self.config.quiet:
             # By default we only want to print the status updates -> use make -s so we have to do less filtering
@@ -259,8 +272,6 @@ class BuildCHERIBSD(BuildFreeBSD):
         super().setupConfigOptions(installDirectoryHelp="Install directory for CheriBSD root file system (default: "
                                    "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)")
         defaultExtraMakeOptions = [
-            "DEBUG_FLAGS=-g",  # enable debug stuff
-            "-DWITHOUT_TESTS",  # seems to break the creation of disk-image (METALOG is invalid)
             "-DWITHOUT_HTML",  # should not be needed
             "-DWITHOUT_SENDMAIL", "-DWITHOUT_MAIL",  # no need for sendmail
             "-DWITHOUT_SVNLITE",  # no need for SVN
