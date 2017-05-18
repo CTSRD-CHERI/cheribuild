@@ -74,8 +74,8 @@ class BuildFreeBSD(Project):
         cls.skipBuildworld = False
         cls.kernelConfig = "MALTA64"
         cls.useExternalToolchainForKernel = cls.addBoolOption("use-external-toolchain-for-kernel", showHelp=True,
-                                                              help="Also build the kernel with the external toolchain"
-                                                                   " (probably won't work!)", default=True)
+                                                              help="build the kernel with the external toolchain",
+                                                              default=True)
         cls.useExternalToolchainForWorld = cls.addBoolOption("use-external-toolchain-for-world", showHelp=True,
                                                              help="Build world with the external toolchain"
                                                                   " (probably won't work!)")

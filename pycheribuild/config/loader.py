@@ -204,9 +204,6 @@ class CommandLineConfigOption(ConfigOptionBase):
 
         # add the default string to help if it is not lambda and help != argparse.SUPPRESS
         hasDefaultHelpText = isinstance(self.default, ComputedDefaultValue) or not callable(self.default)
-        if self.default and "help" in kwargs and hasDefaultHelpText:
-            if kwargs["help"] != argparse.SUPPRESS:
-                kwargs["help"] = kwargs["help"] + " (default: \'" + str(self.default) + "\')"
         assert "default" not in kwargs  # Should be handled manually
         # noinspection PyProtectedMember
         parserObj = group if group else self._loader._parser
@@ -221,11 +218,19 @@ class CommandLineConfigOption(ConfigOptionBase):
         if self.valueType == bool:
             slashIndex = self.name.rfind("/")
             negatedName = self.name[:slashIndex + 1] + "no-" + self.name[slashIndex + 1:]
+            negatedHelp = argparse.SUPPRESS
+            # if the default is true we want to show the negated option instead.
+            if default is True:
+                negatedHelp = "Do not " + kwargs["help"]
+                action.help = argparse.SUPPRESS
             neg = parserObj.add_argument("--" + negatedName, dest=action.dest, default=None, action="store_false",
-                                         help=argparse.SUPPRESS)
+                                         help=negatedHelp)
             # change the default action value
             neg.default = None
             action.default = None
+        if self.default is not None and action.help is not None and hasDefaultHelpText:
+            if action.help != argparse.SUPPRESS:
+                action.help = action.help + " (default: \'" + str(self.default) + "\')"
         assert action.default is None  # we don't want argparse default values!
         assert isinstance(action, argparse.Action)
         assert not action.default  # we handle the default value manually
