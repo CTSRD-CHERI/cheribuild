@@ -143,6 +143,12 @@ def getInterpreter(cmdline: "typing.Sequence[str]") -> "typing.Optional[typing.L
             return None
 
 
+def _make_called_process_error(retcode, args, *, stdout=None, stderr=None, cwd=None):
+    err = subprocess.CalledProcessError(retcode, args, output=stdout, stderr=stderr)
+    err.cwd = cwd
+    return err
+
+
 def check_call_handle_noexec(cmdline: "typing.List[str]", **kwargs):
     try:
         return subprocess.check_call(cmdline, **kwargs)
@@ -150,8 +156,9 @@ def check_call_handle_noexec(cmdline: "typing.List[str]", **kwargs):
         interpreter = getInterpreter(cmdline)
         if interpreter:
             return subprocess.check_call(interpreter + cmdline, **kwargs)
-        raise subprocess.CalledProcessError(e, cmdline)
-
+        raise _make_called_process_error(e, cmdline, cwd=kwargs.get("cwd", None))
+    except FileNotFoundError as e:
+        raise _make_called_process_error(e, cmdline, cwd=kwargs.get("cwd", None))
 
 def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Popen:
     try:
@@ -160,7 +167,9 @@ def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Pop
         interpreter = getInterpreter(cmdline)
         if interpreter:
             return subprocess.Popen(interpreter + cmdline, **kwargs)
-        raise subprocess.CalledProcessError(e, cmdline)
+        raise _make_called_process_error(e, cmdline, cwd=kwargs.get("cwd", None))
+    except FileNotFoundError as e:
+        raise _make_called_process_error(e, cmdline, cwd=kwargs.get("cwd", None))
 
 
 def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]"=None, timeout=None,
@@ -210,9 +219,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
             raise
         retcode = process.poll()
         if retcode:
-            err = subprocess.CalledProcessError(retcode, process.args, output=stdout)
-            err.cwd = kwargs["cwd"]
-            raise err
+            raise _make_called_process_error(retcode, process.args, stdout=stdout, cwd=kwargs["cwd"])
         return CompletedProcess(process.args, retcode, stdout, stderr)
 
 
