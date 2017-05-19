@@ -44,7 +44,8 @@ class BuildCheriOS(CMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.configureArgs.append("-DCHERI_SDK_DIR=" + str(self.config.sdkDir))
+        self.add_cmake_options(CHERI_SDK_DIR=self.config.sdkDir)
+        self.add_cmake_options(BUILD_FOR_CHERI128=self.config.cheriBits == 128)
 
     # TODO: move to CMakeProject
     def checkSystemDependencies(self):
