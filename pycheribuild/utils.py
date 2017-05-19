@@ -210,7 +210,9 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
             raise
         retcode = process.poll()
         if retcode:
-            raise subprocess.CalledProcessError(retcode, process.args, output=stdout)
+            err = subprocess.CalledProcessError(retcode, process.args, output=stdout)
+            err.cwd = kwargs["cwd"]
+            raise err
         return CompletedProcess(process.args, retcode, stdout, stderr)
 
 

@@ -113,8 +113,9 @@ def main():
     except KeyboardInterrupt:
         sys.exit("Exiting due to Ctrl+C")
     except subprocess.CalledProcessError as err:
+        cwd = "in directory" + err.cwd if hasattr(err, "cwd") else ""
         fatalError("Command ", "`" + " ".join(map(shlex.quote, err.cmd)) + "` failed with non-zero exit code",
-                   err.returncode)
+                   err.returncode, cwd)
 
 
 if __name__ == "__main__":
