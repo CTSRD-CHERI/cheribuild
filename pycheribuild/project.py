@@ -478,14 +478,14 @@ class Project(SimpleProject):
             if not self.queryYesNo(defaultResult=False):
                 fatalError("Sources for", str(srcDir), " missing!")
             if initialBranch:
-                runCmd("git", "clone", "--recurse-submodules", "--branch", initialBranch, remoteUrl, srcDir)
+                self.runGitCmd("clone", "--recurse-submodules", "--branch", initialBranch, remoteUrl, srcDir)
             else:
-                runCmd("git", "clone", "--recurse-submodules", remoteUrl, srcDir)
+                self.runGitCmd("clone", "--recurse-submodules", remoteUrl, srcDir)
 
     def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None):
         self._ensureGitRepoIsCloned(srcDir=srcDir, remoteUrl=remoteUrl, initialBranch=initialBranch)
         # make sure we run git stash if we discover any local changes
-        hasChanges = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
+        hasChanges = len(self.runGitCmd("diff", "--stat", "--ignore-submodules",
                                 captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
         if hasChanges:
             print(coloured(AnsiColour.green, "Local changes detected in", srcDir))
@@ -494,18 +494,18 @@ class Project(SimpleProject):
                 statusUpdate("Skipping update of", srcDir)
                 return
             # TODO: ask if we should continue?
-            stashResult = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
+            stashResult = self.runGitCmd("stash", "save", "Automatic stash by cheribuild.py",
                                  captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout
             # print("stashResult =", stashResult)
             if "No local changes to save" in stashResult.decode("utf-8"):
                 # print("NO REAL CHANGES")
                 hasChanges = False  # probably git diff showed something from a submodule
-        runCmd("git", "pull", "--recurse-submodules", "--rebase", cwd=srcDir, printVerboseOnly=True)
-        runCmd("git", "submodule", "update", "--recursive", cwd=srcDir, printVerboseOnly=True)
+        self.runGitCmd("pull", "--recurse-submodules", "--rebase", cwd=srcDir, printVerboseOnly=True)
+        self.runGitCmd("submodule", "update", "--recursive", cwd=srcDir, printVerboseOnly=True)
         if hasChanges:
-            runCmd("git", "stash", "pop", cwd=srcDir, printVerboseOnly=True)
+            self.runGitCmd("stash", "pop", cwd=srcDir, printVerboseOnly=True)
         if revision:
-            runCmd("git", "checkout", revision, cwd=srcDir, printVerboseOnly=True)
+            self.runGitCmd("checkout", revision, cwd=srcDir, printVerboseOnly=True)
 
     def runMake(self, args: "typing.List[str]", makeTarget="", *, makeCommand: str = None, logfileName: str = None,
                 cwd: Path = None, env=None, appendToLogfile=False, compilationDbName="compile_commands.json",
@@ -561,7 +561,7 @@ class Project(SimpleProject):
                 warningMessage(self.projectName, "does not support out-of-source builds, using git clean to remove"
                                                  "build artifacts.")
                 # Try to keep project files for IDEs and other dotfiles:
-                runCmd("git", "clean", "-dfx", "--exclude=.*", "--exclude=*.kdev4", cwd=self.buildDir)
+                self.runGitCmd("clean", "-dfx", "--exclude=.*", "--exclude=*.kdev4", cwd=self.buildDir)
         else:
             return self.asyncCleanDirectory(self.buildDir)
         return ThreadJoiner(None)
