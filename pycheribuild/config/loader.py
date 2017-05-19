@@ -41,7 +41,7 @@ except ImportError:
     argcomplete = None
 
 from ..colour import *
-from ..utils import typing, Type_T
+from ..utils import typing, Type_T, fatalError
 from pathlib import Path
 
 
@@ -384,14 +384,25 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         # Now validate the config file
         self._validateConfigFile()
 
-    def __validate(self, prefix: str, key: str, value):
+    def __validate(self, prefix: str, key: str, value) -> bool:
         fullname = prefix + key
         if isinstance(value, dict):
             for k, v in value.items():
                 self.__validate(fullname + "/", k, v)
-        else:
-            if fullname not in self.options:
-                warningMessage("Unknown config option", fullname)
+            return True
+
+        if fullname in self.options:
+            return True
+        # see if it is one of the alternate names is valid
+        for option in self.options.values():
+            # only handle alternate names that aren't one character long
+            if option.shortname and len(option.shortname) > 1:
+                alternateName = option.shortname.lstrip("-")
+                if fullname == alternateName:
+                    return True  # fine
+
+        print(coloured(AnsiColour.red, "Unknown config option '", fullname, "' in ", self._configPath, sep=""))
+        return False
 
     def _validateConfigFile(self):
         for k, v in self._JSON.items():
