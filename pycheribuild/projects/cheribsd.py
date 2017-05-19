@@ -79,6 +79,7 @@ class BuildFreeBSD(Project):
         cls.useExternalToolchainForWorld = cls.addBoolOption("use-external-toolchain-for-world", showHelp=True,
                                                              help="Build world with the external toolchain"
                                                                   " (probably won't work!)")
+        cls.linkKernelWithLLD = cls.addBoolOption("link-kernel-with-lld")
         cls.addDebugInfoFlag = cls.addBoolOption("debug-info",
                                                  help="pass make flags for building debug info",
                                                  default=True, showHelp=True)
@@ -188,8 +189,11 @@ class BuildFreeBSD(Project):
             if not self.externalToolchainCompiler.exists():
                 fatalError("Requested build of kernel with external toolchain, but", self.externalToolchainCompiler,
                            "doesn't exist!")
-            # We can't use LLD for the kernel yet
-            kernelToolChainArgs = list(filter(lambda s: not s.startswith("XLD"), self.externalToolchainArgs))
+            # We can't use LLD for the kernel yet but there is a flag to experiment with it
+            if self.linkKernelWithLLD:
+                kernelToolChainArgs = self.externalToolchainArgs
+            else:
+                kernelToolChainArgs = list(filter(lambda s: not s.startswith("XLD"), self.externalToolchainArgs))
             kernelMakeFlags.extend(kernelToolChainArgs)
         kernelMakeFlags.append("KERNCONF=" + kernconf)
         return kernelMakeFlags
@@ -205,8 +209,8 @@ class BuildFreeBSD(Project):
     def _buildkernel(self, kernconf: str):
         kernelMakeArgs = self.kernelMakeArgsForConfig(kernconf)
         # needKernelToolchain = not self.useExternalToolchainForKernel
-        needKernelToolchain = True  # LLD doesn't seem to work yet
-        if needKernelToolchain and not self.kernelToolchainAlreadyBuilt:
+        dontNeedKernelToolchain = self.useExternalToolchainForKernel and self.linkKernelWithLLD
+        if not dontNeedKernelToolchain and not self.kernelToolchainAlreadyBuilt:
             # we need to build GCC to build the kernel:
             toolchainOpts = self.commonMakeArgs + ["-DWITHOUT_LLD_BOOTSTRAP", "-DWITHOUT_CLANG_BOOTSTRAP",
                                                    "-DWITHOUT_CLANG"]
