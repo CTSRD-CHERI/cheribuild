@@ -381,6 +381,21 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         # print(self._parsedArgs, trailingTargets)
         self._parsedArgs.targets += trailingTargets
         self._loadJSONConfigFile()
+        # Now validate the config file
+        self._validateConfigFile()
+
+    def __validate(self, prefix: str, key: str, value):
+        fullname = prefix + key
+        if isinstance(value, dict):
+            for k, v in value.items():
+                self.__validate(fullname + "/", k, v)
+        else:
+            if fullname not in self.options:
+                warningMessage("Unknown config option", fullname)
+
+    def _validateConfigFile(self):
+        for k, v in self._JSON.items():
+            self.__validate("", k, v)
 
     def reset(self) -> None:
         super().reset()
