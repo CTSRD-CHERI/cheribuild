@@ -172,14 +172,27 @@ class BuildFreeBSD(Project):
 
         self.destdir = self.installDir
         self.kernelToolchainAlreadyBuilt = False
-        self.buildworldArgs = self.commonMakeArgs.copy()
+
+    @property
+    def buildworldArgs(self):
         if self.useExternalToolchainForWorld:
-            self.buildworldArgs += self.externalToolchainArgs
-        self.commonKernelMakeArgs = self.commonMakeArgs.copy()
+            if not self.externalToolchainCompiler.exists():
+                fatalError("Requested build of world with external toolchain, but", self.externalToolchainCompiler,
+                           "doesn't exist!")
+            return self.commonMakeArgs + self.externalToolchainArgs
+        return self.commonMakeArgs
+
+    def kernelMakeArgsForConfig(self, kernconf: str):
+        kernelMakeFlags = self.commonMakeArgs.copy()
         if self.useExternalToolchainForKernel:
+            if not self.externalToolchainCompiler.exists():
+                fatalError("Requested build of kernel with external toolchain, but", self.externalToolchainCompiler,
+                           "doesn't exist!")
             # We can't use LLD for the kernel yet
             kernelToolChainArgs = list(filter(lambda s: not s.startswith("XLD"), self.externalToolchainArgs))
-            self.commonKernelMakeArgs += kernelToolChainArgs
+            kernelMakeFlags.extend(kernelToolChainArgs)
+        kernelMakeFlags.append("KERNCONF=" + kernconf)
+        return kernelMakeFlags
 
     def clean(self) -> ThreadJoiner:
         if self.skipBuildworld:
@@ -190,11 +203,7 @@ class BuildFreeBSD(Project):
             return super().clean()
 
     def _buildkernel(self, kernconf: str):
-        kernelMakeFlags = self.commonKernelMakeArgs + ["KERNCONF=" + kernconf]
-        if self.useExternalToolchainForKernel and not self.externalToolchainCompiler.exists():
-            fatalError("Requested build of kernel with external toolchain, but", self.externalToolchainCompiler,
-                       "doesn't exist!")
-
+        kernelMakeArgs = self.kernelMakeArgsForConfig(kernconf)
         # needKernelToolchain = not self.useExternalToolchainForKernel
         needKernelToolchain = True  # LLD doesn't seem to work yet
         if needKernelToolchain and not self.kernelToolchainAlreadyBuilt:
@@ -205,7 +214,7 @@ class BuildFreeBSD(Project):
             self.runMake(toolchainOpts + self.jflag, "kernel-toolchain", cwd=self.sourceDir)
             self.kernelToolchainAlreadyBuilt = True
 
-        self.runMake(kernelMakeFlags + self.jflag, "buildkernel", cwd=self.sourceDir,
+        self.runMake(kernelMakeArgs + self.jflag, "buildkernel", cwd=self.sourceDir,
                      compilationDbName="compile_commands_" + self.kernelConfig + ".json")
 
     @property
@@ -213,9 +222,6 @@ class BuildFreeBSD(Project):
         return [self.config.makeJFlag] if self.config.makeJobs > 1 else []
 
     def compile(self, **kwargs):
-        if self.useExternalToolchainForWorld and not self.externalToolchainCompiler.exists():
-            fatalError("Requested build of world with external toolchain, but", self.externalToolchainCompiler,
-                       "doesn't exist!")
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
         # so just omit the flag here if the user passes -j1 on the command line
         if self.config.verbose:
@@ -224,7 +230,6 @@ class BuildFreeBSD(Project):
             self.runMake(self.buildworldArgs + self.jflag, "buildworld", cwd=self.sourceDir)
         if not self.subdirOverride:
             self._buildkernel(kernconf=self.kernelConfig)
-
 
     def _removeOldRootfs(self):
         assert self.config.clean or not self.keepOldRootfs
@@ -244,8 +249,8 @@ class BuildFreeBSD(Project):
         if self.config.clean or not self.keepOldRootfs:
             self._removeOldRootfs()
         # don't use multiple jobs here
-        self.runMakeInstall(args=self.commonKernelMakeArgs + ["KERNCONF=" + self.kernelConfig],
-                            target="installkernel", cwd=self.sourceDir)
+        self.runMakeInstall(args=self.kernelMakeArgsForConfig(self.kernelConfig), target="installkernel",
+                            cwd=self.sourceDir)
         if not self.skipBuildworld:
             self.runMakeInstall(args=self.buildworldArgs, target="installworld", cwd=self.sourceDir)
             self.runMakeInstall(args=self.buildworldArgs, target="distribution", cwd=self.sourceDir)
