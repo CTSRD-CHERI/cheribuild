@@ -256,8 +256,12 @@ class BuildFreeBSD(Project):
         self.runMakeInstall(args=self.kernelMakeArgsForConfig(self.kernelConfig), target="installkernel",
                             cwd=self.sourceDir)
         if not self.skipBuildworld:
-            self.runMakeInstall(args=self.buildworldArgs, target="installworld", cwd=self.sourceDir)
-            self.runMakeInstall(args=self.buildworldArgs, target="distribution", cwd=self.sourceDir)
+            installworldArgs = self.buildworldArgs.copy()
+            if True:
+                # https://github.com/CTSRD-CHERI/cheribsd/issues/220
+                installworldArgs.append("-DWITHOUT_LIBCPLUSPLUS")
+            self.runMakeInstall(args=installworldArgs, target="installworld", cwd=self.sourceDir)
+            self.runMakeInstall(args=installworldArgs, target="distribution", cwd=self.sourceDir)
 
     def process(self):
         if not IS_FREEBSD:
