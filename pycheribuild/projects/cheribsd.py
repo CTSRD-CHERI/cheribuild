@@ -257,9 +257,11 @@ class BuildFreeBSD(Project):
                             cwd=self.sourceDir)
         if not self.skipBuildworld:
             installworldArgs = self.buildworldArgs.copy()
-            if True:
-                # https://github.com/CTSRD-CHERI/cheribsd/issues/220
-                installworldArgs.append("-DWITHOUT_LIBCPLUSPLUS")
+            # https://github.com/CTSRD-CHERI/cheribsd/issues/220
+            # installworld reads compiler metadata which was written by kernel-toolchain which means that
+            # it will attempt to install libc++ because compiler for kernel is now clang and not GCC
+            # as a workaround force writing the compiler metadata by invoking the _compiler-metadata target
+            self.runMake(installworldArgs, "_compiler-metadata", cwd=self.sourceDir)
             self.runMakeInstall(args=installworldArgs, target="installworld", cwd=self.sourceDir)
             self.runMakeInstall(args=installworldArgs, target="distribution", cwd=self.sourceDir)
 
