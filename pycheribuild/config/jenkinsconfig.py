@@ -109,6 +109,8 @@ class JenkinsConfig(CheriConfig):
         elif self.cpu == "mips":
             self.crossCompileForMips = True
             self.cheriBits = 0
+        elif self.cpu in ("x86", "x86_64", "amd64"):
+            self.cheriBits = 256  # just to make stuff work as expected
         else:
             fatalError("CPU is not set to a valid value:", self.cpu)
 
