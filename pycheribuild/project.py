@@ -575,7 +575,7 @@ class Project(SimpleProject):
     def configure(self, cwd: Path = None):
         if cwd is None:
             cwd = self.buildDir
-        if not self.needsConfigure() and not self.config.forceConfigure:
+        if not self.needsConfigure() and not self.config.forceConfigure and not self.config.configureOnly:
             return
         if self.configureCommand:
             self.runWithLogfile([self.configureCommand] + self.configureArgs,
@@ -630,9 +630,11 @@ class Project(SimpleProject):
         with cleaningTask:
             if not self.buildDir.is_dir():
                 self.makedirs(self.buildDir)
-            if not self.config.skipConfigure:
+            if not self.config.skipConfigure or self.config.configureOnly:
                 statusUpdate("Configuring", self.projectName, "... ")
                 self.configure()
+            if self.config.configureOnly:
+                return
             statusUpdate("Building", self.projectName, "... ")
             self.compile()
             if not self.config.skipInstall:
