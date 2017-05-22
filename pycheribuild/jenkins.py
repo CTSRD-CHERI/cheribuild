@@ -32,6 +32,7 @@ import shlex
 import subprocess
 import sys
 import shutil
+import pprint
 
 from pathlib import Path
 
@@ -88,7 +89,6 @@ def _jenkins_main():
     targetManager.registerCommandLineOptions()
     cheriConfig.load()
     if cheriConfig.verbose:
-        # import pprint
         # json = cheriConfig.getOptionsJSON()  # make sure all config options are loaded
         # pprint.pprint(configLoader.options)
         pass
