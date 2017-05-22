@@ -58,7 +58,7 @@ class BuildFreeBSD(Project):
         return cls.getInstallDir(config)
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
+    def setupConfigOptions(cls, *, buildKernelWithClang: bool = False, **kwargs):
         super().setupConfigOptions(**kwargs)
         cls.subdirOverride = cls.addConfigOption("subdir", kind=str, metavar="DIR", showHelp=True,
                                                  help="Only build subdir DIR instead of the full tree. "
@@ -75,7 +75,7 @@ class BuildFreeBSD(Project):
         cls.kernelConfig = "MALTA64"
         cls.useExternalToolchainForKernel = cls.addBoolOption("use-external-toolchain-for-kernel", showHelp=True,
                                                               help="build the kernel with the external toolchain",
-                                                              default=True)
+                                                              default=buildKernelWithClang)
         cls.useExternalToolchainForWorld = cls.addBoolOption("use-external-toolchain-for-world", showHelp=True,
                                                              help="Build world with the external toolchain"
                                                                   " (probably won't work!)")
@@ -285,7 +285,9 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(installDirectoryHelp="Install directory for CheriBSD root file system (default: "
+        super().setupConfigOptions(
+            buildKernelWithClang=True,
+            installDirectoryHelp="Install directory for CheriBSD root file system (default: "
                                    "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)")
         defaultExtraMakeOptions = [
             "-DWITHOUT_HTML",  # should not be needed
