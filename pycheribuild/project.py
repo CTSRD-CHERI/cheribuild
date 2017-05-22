@@ -478,9 +478,9 @@ class Project(SimpleProject):
             if not self.queryYesNo(defaultResult=False):
                 fatalError("Sources for", str(srcDir), " missing!")
             if initialBranch:
-                self.runGitCmd("clone", "--recurse-submodules", "--branch", initialBranch, remoteUrl, srcDir)
+                self.runGitCmd("clone", "--recurse-submodules", "--branch", initialBranch, remoteUrl, srcDir, cwd="/")
             else:
-                self.runGitCmd("clone", "--recurse-submodules", remoteUrl, srcDir)
+                self.runGitCmd("clone", "--recurse-submodules", remoteUrl, srcDir, cwd="/")
 
     def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None):
         self._ensureGitRepoIsCloned(srcDir=srcDir, remoteUrl=remoteUrl, initialBranch=initialBranch)
