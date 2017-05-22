@@ -518,7 +518,7 @@ class Project(SimpleProject):
         if makeTarget:
             allArgs = args + [makeTarget]
             if not logfileName:
-                logfileName = self.makeCommand + "." + makeTarget
+                logfileName = makeCommand + "." + makeTarget
         else:
             allArgs = args
             if not logfileName:
@@ -539,6 +539,9 @@ class Project(SimpleProject):
             stdoutFilter = self._stdoutFilter
         if self.config.passDashKToMake:
             allArgs.append("-k")
+            if makeCommand == "ninja":
+                # ninja needs the maximum number of failed jobs as an argument
+                allArgs.append("50")
         self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=stdoutFilter, cwd=cwd, env=env,
                             appendToLogfile=appendToLogfile)
         # add a newline at the end in case it ended with a filtered line (no final newline)
