@@ -86,12 +86,12 @@ def _jenkins_main():
     cheriConfig = JenkinsConfig(configLoader, allTargetNames)
     SimpleProject._configLoader = configLoader
     targetManager.registerCommandLineOptions()
-    import pprint
-    pprint.pprint(configLoader.options)
     cheriConfig.load()
     if cheriConfig.verbose:
-        json = cheriConfig.getOptionsJSON()  # make sure all config options are loaded
-        pprint.pprint(configLoader.options)
+        # import pprint
+        # json = cheriConfig.getOptionsJSON()  # make sure all config options are loaded
+        # pprint.pprint(configLoader.options)
+        pass
     setCheriConfig(cheriConfig)
 
     # TODO: add argparse options for build, create tarball
