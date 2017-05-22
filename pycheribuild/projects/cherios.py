@@ -46,21 +46,7 @@ class BuildCheriOS(CMakeProject):
         super().__init__(config)
         self.add_cmake_options(CHERI_SDK_DIR=self.config.sdkDir)
         self.add_cmake_options(BUILD_FOR_CHERI128=self.config.cheriBits == 128)
-
-    # TODO: move to CMakeProject
-    def checkSystemDependencies(self):
-        super().checkSystemDependencies()
-        # try to find cmake 3.4 or newer
-        versionPattern = re.compile(b"cmake version (\\d+)\\.(\\d+)\\.?(\\d+)?")
-        # cmake prints this output to stdout
-        versionString = runCmd("cmake", "--version", captureOutput=True, printVerboseOnly=True).stdout
-        match = versionPattern.search(versionString)
-        versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
-        # noinspection PyTypeChecker
-        if versionComponents < (3, 4):
-            versionStr = ".".join(map(str, versionComponents))
-            self.dependencyError("CMake version", versionStr, "is too old (need at least 3.4)",
-                                 installInstructions=self._cmakeInstallInstructions)
+        self.set_minimum_cmake_version(3, 4)
 
     def install(self, **kwargs):
         pass  # nothing to install yet

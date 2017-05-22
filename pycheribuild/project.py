@@ -29,6 +29,7 @@
 #
 import io
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -693,6 +694,7 @@ class CMakeProject(Project):
         if self.config.createCompilationDB:
             self.configureArgs.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
             # Don't add the user provided options here, add them in configure() so that they are put last
+        self.__minimum_cmake_version = tuple()
 
     def add_cmake_option(self, option: str, value):
         if isinstance(value, bool):
@@ -702,6 +704,9 @@ class CMakeProject(Project):
     def add_cmake_options(self, **kwargs):
         for k, v in kwargs.items():
             self.add_cmake_option(k, v)
+
+    def set_minimum_cmake_version(self, major, minor):
+        self.__minimum_cmake_version = (major, minor)
 
     def _cmakeInstallStdoutFilter(self, line: bytes):
         # don't show the up-to date install lines
@@ -728,6 +733,22 @@ class CMakeProject(Project):
         if _stdoutFilter == "__DEFAULT__":
             _stdoutFilter = self._cmakeInstallStdoutFilter
         super().install(_stdoutFilter=_stdoutFilter)
+
+    def checkSystemDependencies(self):
+        super().checkSystemDependencies()
+        if self.__minimum_cmake_version:
+            # try to find cmake 3.4 or newer
+            versionPattern = re.compile(b"cmake version (\\d+)\\.(\\d+)\\.?(\\d+)?")
+            # cmake prints this output to stdout
+            versionString = runCmd("cmake", "--version", captureOutput=True, printVerboseOnly=True).stdout
+            match = versionPattern.search(versionString)
+            versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
+            # noinspection PyTypeChecker
+            if versionComponents < self.__minimum_cmake_version:
+                versionStr = ".".join(map(str, versionComponents))
+                expectedStr = ".".join(map(str, self.__minimum_cmake_version))
+                self.dependencyError("CMake version", versionStr, "is too old (need at least", expectedStr + ")",
+                                     installInstructions=self._cmakeInstallInstructions)
 
     @staticmethod
     def findPackage(name: str) -> bool:
