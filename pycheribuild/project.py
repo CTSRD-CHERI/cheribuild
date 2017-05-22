@@ -672,7 +672,7 @@ class CMakeProject(Project):
 
     def __init__(self, config, generator=Generator.Ninja):
         super().__init__(config)
-        self.configureCommand = "cmake"
+        self.configureCommand = os.getenv("CMAKE_COMMAND", "cmake")
         self._addRequiredSystemTool("cmake", installInstructions=self._cmakeInstallInstructions)
         self.generator = generator
         self.configureArgs.append(str(self.sourceDir))  # TODO: use undocumented -H and -B options?
@@ -740,7 +740,7 @@ class CMakeProject(Project):
             # try to find cmake 3.4 or newer
             versionPattern = re.compile(b"cmake version (\\d+)\\.(\\d+)\\.?(\\d+)?")
             # cmake prints this output to stdout
-            versionString = runCmd("cmake", "--version", captureOutput=True, printVerboseOnly=True).stdout
+            versionString = runCmd(self.configureCommand, "--version", captureOutput=True, printVerboseOnly=True).stdout
             match = versionPattern.search(versionString)
             versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
             # noinspection PyTypeChecker
