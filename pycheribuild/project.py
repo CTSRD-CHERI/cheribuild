@@ -683,12 +683,6 @@ class CMakeProject(Project):
         if self.generator == CMakeProject.Generator.Makefiles:
             self.configureArgs.append("-GUnix Makefiles")
 
-        if self.installPrefix:
-            assert self.destdir, "custom install prefix requires DESTDIR being set!"
-            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installPrefix)
-        else:
-            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installDir)
-
         self.configureArgs.append("-DCMAKE_BUILD_TYPE=" + self.cmakeBuildType)
         # TODO: do it always?
         if self.config.createCompilationDB:
@@ -722,6 +716,11 @@ class CMakeProject(Project):
         return not cmakeCache.exists()
 
     def configure(self, **kwargs):
+        if self.installPrefix:
+            assert self.destdir, "custom install prefix requires DESTDIR being set!"
+            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installPrefix)
+        else:
+            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installDir)
         self.configureArgs.extend(self.cmakeOptions)
         # make sure we get a completely fresh cache when --reconfigure is passed:
         cmakeCache = self.buildDir / "CMakeCache.txt"

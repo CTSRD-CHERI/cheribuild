@@ -49,7 +49,7 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
         self.add_cmake_options(CHERI_PURE=True)
 
     def install(self, **kwargs):
-        self.installFile(self.buildDir / "lib/libcxxrt.a", self.installDir / "usr/libcheri/libcxxrt.a", force=True)
+        self.installFile(self.buildDir / "lib/libcxxrt.a", self.installDir / "libcheri/libcxxrt.a", force=True)
         # self.installFile(self.buildDir / "lib/libcxxrt.so", self.installDir / "usr/libcheri/libcxxrt.so", force=True)
 
 
@@ -113,7 +113,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LIBCXX_INCLUDE_TESTS=True,
             LIBCXX_SYSROOT=config.sdkDir / "sysroot",
             LIBCXX_TARGET_TRIPLE=self.targetTriple,
-            LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config",
+            # LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config",
+            LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
             LIBCXX_EXECUTOR=executor,
             LIBCXX_TARGET_INFO="libcxx.test.target_info.CheriBSDRemoteTI",
