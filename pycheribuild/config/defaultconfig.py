@@ -31,7 +31,7 @@ import os
 from pathlib import Path
 
 from .loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader
-from .chericonfig import CheriConfig
+from .chericonfig import CheriConfig, CrossCompileTarget
 from ..utils import defaultNumberOfMakeJobs
 
 
@@ -80,13 +80,17 @@ class DefaultCheriConfig(CheriConfig):
         self.createCompilationDB = loader.addBoolOption("compilation-db", "-cdb",
                                                         help="Create a compile_commands.json file in the build dir "
                                                              "(requires Bear for non-CMake projects)")
-        self.crossCompileForMips = loader.addBoolOption("cross-compile-for-mips", "-xmips",
+        self.crossCompileForMips = loader.addBoolOption("cross-compile-for-mips", "-xmips", group=loader.crossCompileGroup,
                                                         help="Make cross compile projects target MIPS hybrid ABI "
                                                              "instead of CheriABI")
+        self.crossCompileForHost = loader.addBoolOption("cross-compile-for-host", "-xhost", group=loader.crossCompileGroup,
+                                                        help="Make cross compile projects target the host system and "
+                                                             "use cheri clang to compile (tests that we didn't break x86)")
+
         self.makeWithoutNice = loader.addBoolOption("make-without-nice", help="Run make/ninja without nice(1)")
 
         self.makeJobs = loader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
-                                               help="Number of jobs to use for compiling")
+                                         help="Number of jobs to use for compiling")
 
         # configurable paths
         self.sourceRoot = loader.addPathOption("source-root", default=Path(os.path.expanduser("~/cheri")),
@@ -100,8 +104,17 @@ class DefaultCheriConfig(CheriConfig):
 
     def load(self):
         super().load()
+        if self.crossCompileForHost:
+            assert not self.crossCompileForMips
+            self.crossCompileTarget = CrossCompileTarget.NATIVE
+        elif self.crossCompileForMips:
+            assert not self.crossCompileForHost
+            self.crossCompileTarget = CrossCompileTarget.MIPS
+        else:
+            self.crossCompileTarget = CrossCompileTarget.CHERI
+
         # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
-        os.environ["CHERI_BITS"] = self.cheriBitsStr
+        os.environ["CHERI_BITS"] = str(self.cheriBits)
         self.sysrootArchiveName = "cheri-sysroot.tar.gz"
         # now set some generic derived config options
         self.sdkDir = self.outputRoot / self.sdkDirectoryName  # qemu and binutils (and llvm/clang)

@@ -29,6 +29,7 @@
 #
 import json
 import os
+from enum import Enum
 from collections import OrderedDict
 from pathlib import Path
 # Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
@@ -46,6 +47,11 @@ class MyJsonEncoder(json.JSONEncoder):
         if isinstance(o, Path):
             return str(o)
         return super().default(o)
+
+class CrossCompileTarget(Enum):
+    NATIVE = "native"
+    MIPS = "mips"
+    CHERI = "cheri"
 
 
 class CheriConfig(object):
@@ -80,7 +86,7 @@ class CheriConfig(object):
         self.skipInstall = loader.addBoolOption("skip-install", help="Skip the install step (only do the build)")
         self.includeDependencies = None  # type: bool
         self.createCompilationDB = None  # type: bool
-        self.crossCompileForMips = None  # type: bool
+        self.crossCompileTarget = None # type: CrossCompileTarget
         self.makeWithoutNice = None  # type: bool
 
         self.cheriBits = None  # type: int
@@ -116,8 +122,6 @@ class CheriConfig(object):
 
     @property
     def cheriBitsStr(self):
-        if self.cheriBits <= 0:
-            return "mips"
         return str(self.cheriBits)
 
     @property

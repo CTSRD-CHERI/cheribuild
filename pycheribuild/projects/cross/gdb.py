@@ -42,7 +42,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
     defaultInstallDir = lambda config, cls: BuildCHERIBSD.rootfsDir(config) / "usr/local"
     repository = "https://github.com/bsdjhb/gdb.git"
     requiresGNUMake = True
-    targetArch = "mips64"  # don't compile as a CHERI binary!
+    # TODO: also allow compiling for host system
+    crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
     defaultLinker = "bfd"  # won't work with LLD yet (MIPS binary)
     defaultOptimizationLevel = ["-O2"]
 

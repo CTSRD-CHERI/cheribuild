@@ -709,7 +709,7 @@ class CMakeProject(Project):
         self._showLineStdoutFilter(line)
 
     def needsConfigure(self) -> bool:
-        if self.config.pretend and self.config.forceConfigure:
+        if self.config.pretend and (self.config.forceConfigure or self.config.clean):
             return True
         # CMake is smart enough to detect when it must be reconfigured -> skip configure if cache exists
         cmakeCache = self.buildDir / "CMakeCache.txt"

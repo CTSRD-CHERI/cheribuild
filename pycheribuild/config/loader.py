@@ -327,6 +327,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         # argument groups:
         # self.deprecatedOptionsGroup = _parser.add_argument_group("Old deprecated options", "These should not be used any more")
         self.cheriBitsGroup = self._parser.add_mutually_exclusive_group()
+        self.crossCompileGroup = self._parser.add_mutually_exclusive_group()
         self.configureGroup = self._parser.add_mutually_exclusive_group()
 
     def finalizeOptions(self, availableTargets: list):

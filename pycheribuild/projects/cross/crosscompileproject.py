@@ -3,11 +3,14 @@ import pprint
 from pathlib import Path
 
 from ...config.loader import ComputedDefaultValue
+from ...config.chericonfig import CrossCompileTarget
 from ..cheribsd import BuildCHERIBSD
+from ..llvm import BuildLLVM
 from ...project import *
 from ...utils import *
 
-__all__ = ["CheriConfig", "installToCheriBSDRootfs", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject"]
+__all__ = ["CheriConfig", "installToCheriBSDRootfs", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject",
+           "CrossCompileTarget"]
 
 
 installToCheriBSDRootfs = ComputedDefaultValue(
@@ -15,9 +18,15 @@ installToCheriBSDRootfs = ComputedDefaultValue(
     asString=lambda cls: "$CHERIBSD_ROOTFS/extra/" + cls.projectName.lower())
 
 defaultTarget = ComputedDefaultValue(
-    function=lambda config, project: "mips64" if config.crossCompileForMips else "cheri",
-    asString="'cheri' unless -xmips set")
+    function=lambda config, project: config.crossCompileTarget.value,
+    asString="'cheri' unless -xmips/-xhost is set")
 
+def _default_build_dir(config: CheriConfig, project):
+    if project.crossCompileTarget == CrossCompileTarget.CHERI:
+        build_dir_suffix = config.cheriBitsStr + "-build"
+    else:
+        build_dir_suffix = project.crossCompileTarget.value + "-build"
+    return config.buildRoot / (project.projectName.lower() + "-" + build_dir_suffix)
 
 class CrossCompileProject(Project):
     doNotAddToTargets = True
@@ -25,41 +34,65 @@ class CrossCompileProject(Project):
     appendCheriBitsToBuildDir = True
     dependencies = ["cheribsd-sdk"]
     defaultLinker = "lld"
-    targetArch = None  # can be set to mips or cheri to force an architecture
+    crossCompileTarget = None  # type: CrossCompileTarget
     defaultOptimizationLevel = ["-O0"]
     warningFlags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
                     "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types",
                     "-Werror=mips-cheri-prototypes"]
+    defaultBuildDir = ComputedDefaultValue(
+        function=_default_build_dir,
+        asString=lambda cls: "$BUILD_ROOT/" + cls.projectName.lower()  + "-$CROSS_TARGET-build")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.installPrefix = Path("/", self.installDir.relative_to(BuildCHERIBSD.rootfsDir(config)))
-        self.destdir = BuildCHERIBSD.rootfsDir(config)
-        self.targetTriple = self.targetArch + "-unknown-freebsd"
+        self.compiler_dir = BuildLLVM.buildDir / "bin" if (BuildLLVM.buildDir / "bin/clang").exists() else self.config.sdkBinDir
+
+        self.targetTriple = None
         self.sdkBinDir = self.config.sdkDir / "bin"
         self.sdkSysroot = self.config.sdkDir / "sysroot"
         self.compilerDir = self.sdkBinDir
         # compiler flags:
-        self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-msoft-float", "-G0", "-g"]
-        assert self.targetArch in ("cheri", "mips64")
-        if self.targetArch == "cheri":
-            self.COMMON_FLAGS.append("-mabi=purecap")
-            if self.config.cheriBits == 128:
-                self.COMMON_FLAGS.append("-mcpu=cheri128")
+        if self.crossCompileTarget == CrossCompileTarget.NATIVE:
+            self.COMMON_FLAGS = []
+            self.targetTriple = self.get_host_triple()
+            self.installDir = self.buildDir / "test-install-prefix"
         else:
-            self.COMMON_FLAGS.append("-mabi=n64")
-        if not self.noUseMxgot:
-            self.COMMON_FLAGS.append("-mxgot")
+            self.installPrefix = Path("/", self.installDir.relative_to(BuildCHERIBSD.rootfsDir(config)))
+            self.destdir = BuildCHERIBSD.rootfsDir(config)
+            self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-msoft-float", "-G0", "-g"]
+            if self.crossCompileTarget == CrossCompileTarget.CHERI:
+                self.targetTriple = "cheri-unknown-freebsd"
+                self.COMMON_FLAGS.append("-mabi=purecap")
+                if self.config.cheriBits == 128:
+                    self.COMMON_FLAGS.append("-mcpu=cheri128")
+            else:
+                assert self.crossCompileTarget == CrossCompileTarget.MIPS
+                self.targetTriple = "mips64-unknown-freebsd"
+                self.COMMON_FLAGS.append("-mabi=n64")
+            if not self.noUseMxgot:
+                self.COMMON_FLAGS.append("-mxgot")
         self.CFLAGS = []
         self.CXXFLAGS = ["-stdlib=libc++"]
         self.ASMFLAGS = []
         self.LDFLAGS = []
 
+    @staticmethod
+    def get_host_triple():
+        # TODO: get --build from `clang --version | grep Target:`
+        if IS_FREEBSD:
+            buildhost = "x86_64-unknown-freebsd"
+            # noinspection PyUnresolvedReferences
+            release = os.uname().release
+            buildhost += release[:release.index(".")]
+        else:
+            buildhost = "x86_64-unknown-linux-gnu"
+        return buildhost
+
     @property
     def sizeof_void_ptr(self):
-        if self.config.crossCompileForMips:
+        if self.crossCompileTarget in (CrossCompileTarget.MIPS, CrossCompileTarget.NATIVE):
             return 8
-        if self.config.cheriBits == 128:
+        elif self.config.cheriBits == 128:
             return 16
         else:
             assert self.config.cheriBits == 256
@@ -67,13 +100,17 @@ class CrossCompileProject(Project):
 
     @property
     def default_ldflags(self):
-        assert self.targetArch in ("cheri", "mips64")
-        if self.targetArch == "cheri":
+        if self.crossCompileTarget == CrossCompileTarget.NATIVE:
+            return []
+        elif self.crossCompileTarget == CrossCompileTarget.CHERI:
             emulation = "elf64btsmip_cheri_fbsd"
             abi = "purecap"
-        else:
+        elif self.crossCompileTarget == CrossCompileTarget.MIPS:
             emulation = "elf64btsmip_fbsd"
             abi = "n64"
+        else:
+            fatalError("Logic error!")
+            return []
         result = ["-mabi=" + abi,
                   "-Wl,-m" + emulation,
                   "-fuse-ld=" + self.linker,
@@ -99,9 +136,10 @@ class CrossCompileProject(Project):
         cls.linkDynamic = cls.addBoolOption("link-dynamic", help="Try to link dynamically (probably broken)")
         cls.optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
                                                     default=cls.defaultOptimizationLevel)
-        if cls.targetArch is None:
-            cls.targetArch = cls.addConfigOption("target", help="The target to build for (`cheri` or `mips64`)",
-                                                 default=defaultTarget, choices=["cheri", "mips64"])
+        if cls.crossCompileTarget is None:
+            cls.crossCompileTarget = cls.addConfigOption("target", help="The target to build for (`cheri` or `mips` or `native`)",
+                                                 default=defaultTarget, choices=["cheri", "mips", "native"],
+                                                 kind=CrossCompileTarget)
 
 
 class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
@@ -114,12 +152,23 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.cmakeTemplate = includeLocalFile("files/CheriBSDToolchain.cmake.in")
-        self.toolchainFile = self.buildDir / "CheriBSDToolchain.cmake"
         # This must come first:
-        self.add_cmake_option("CMAKE_TOOLCHAIN_FILE", self.toolchainFile)
-        # The toolchain files need at least CMake 3.6
-        self.set_minimum_cmake_version(3, 6)
+        if self.crossCompileTarget == CrossCompileTarget.NATIVE:
+            self.add_cmake_options(CMAKE_C_COMPILER=self.compiler_dir / "clang",
+                                   CMAKE_CXX_COMPILER=self.compiler_dir / "clang++",
+                                   CMAKE_ASM_COMPILER=self.compiler_dir / "clang",
+                                   # CMAKE_CXX_FLAGS="-v",
+                                   # CMAKE_CXX_FLAGS="-stdlib=libc++",
+                                   # CMAKE_EXE_LINKER_FLAGS="-lc++abi",
+                                   # CMAKE_MODULE_LINKER_FLAGS="-lc++abi",
+                                   # CMAKE_SHARED_LINKER_FLAGS="-lc++abi",
+                                   )
+        else:
+            self.cmakeTemplate = includeLocalFile("files/CheriBSDToolchain.cmake.in")
+            self.toolchainFile = self.buildDir / "CheriBSDToolchain.cmake"
+            self.add_cmake_option("CMAKE_TOOLCHAIN_FILE", self.toolchainFile)
+            # The toolchain files need at least CMake 3.6
+            self.set_minimum_cmake_version(3, 6)
 
     def _prepareToolchainFile(self, **kwargs):
         configuredTemplate = self.cmakeTemplate
@@ -132,17 +181,18 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
 
     def configure(self, **kwargs):
         self.COMMON_FLAGS.append("-B" + str(self.sdkBinDir))
-        self._prepareToolchainFile(
-            TOOLCHAIN_SDK_BINDIR=self.sdkBinDir,
-            TOOLCHAIN_SYSROOT=self.sdkSysroot,
-            TOOLCHAIN_COMPILER_BINDIR=self.compilerDir,
-            TOOLCHAIN_TARGET_TRIPLE=self.targetTriple,
-            TOOLCHAIN_COMMON_FLAGS=self.COMMON_FLAGS,
-            TOOLCHAIN_C_FLAGS=self.CFLAGS,
-            TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
-            TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
-            TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
-        )
+        if self.crossCompileTarget != CrossCompileTarget.NATIVE:
+            self._prepareToolchainFile(
+                TOOLCHAIN_SDK_BINDIR=self.sdkBinDir,
+                TOOLCHAIN_SYSROOT=self.sdkSysroot,
+                TOOLCHAIN_COMPILER_BINDIR=self.compilerDir,
+                TOOLCHAIN_TARGET_TRIPLE=self.targetTriple,
+                TOOLCHAIN_COMMON_FLAGS=self.COMMON_FLAGS,
+                TOOLCHAIN_C_FLAGS=self.CFLAGS,
+                TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
+                TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
+                TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
+            )
         super().configure()
 
 
@@ -153,14 +203,7 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        # TODO: get --build from `clang --version | grep Target:`
-        if IS_FREEBSD:
-            buildhost = "x86_64-unknown-freebsd"
-            # noinspection PyUnresolvedReferences
-            release = os.uname().release
-            buildhost += release[:release.index(".")]
-        else:
-            buildhost = "x86_64-unknown-linux-gnu"
+        buildhost = self.get_host_triple()
         if self.add_host_target_build_config_options:
             self.configureArgs.extend(["--host=" + self.targetTriple, "--target=" + self.targetTriple,
                                        "--build=" + buildhost])

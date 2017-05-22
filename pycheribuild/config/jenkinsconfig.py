@@ -32,7 +32,7 @@ import os
 from pathlib import Path
 
 from .loader import ConfigLoaderBase
-from .chericonfig import CheriConfig
+from .chericonfig import CheriConfig, CrossCompileTarget
 from ..utils import defaultNumberOfMakeJobs, fatalError
 
 
@@ -105,16 +105,19 @@ class JenkinsConfig(CheriConfig):
         self.sdkSysrootDir = self.sdkDir / "sysroot"
         self.sdkBinDir = self.sdkDir / "bin"
 
-        self.crossCompileForMips = False
+        self.crossCompileTarget = self.cpu
         if self.cpu == "cheri128":
             self.cheriBits = 128
+            self.crossCompileTarget = CrossCompileTarget.CHERI
         elif self.cpu == "cheri256":
             self.cheriBits = 256
+            self.crossCompileTarget = CrossCompileTarget.CHERI
         elif self.cpu == "mips":
-            self.crossCompileForMips = True
-            self.cheriBits = 0
-        elif self.cpu in ("x86", "x86_64", "amd64"):
-            self.cheriBits = 256  # just to make stuff work as expected
+            self.cheriBits = 9999
+            self.crossCompileTarget = CrossCompileTarget.MIPS
+        elif self.cpu in ("x86", "x86_64", "amd64", "host", "native"):
+            self.cheriBits = 9999
+            self.crossCompileTarget = CrossCompileTarget.NATIVE
         else:
             fatalError("CPU is not set to a valid value:", self.cpu)
 

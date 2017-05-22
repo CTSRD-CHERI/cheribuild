@@ -29,7 +29,6 @@
 #
 
 from .crosscompileproject import *
-from ...project import *
 from ..cheribsd import BuildCHERIBSD
 from ..llvm import BuildLLVM
 from ...config.loader import ComputedDefaultValue
@@ -41,17 +40,22 @@ installToCXXDir = ComputedDefaultValue(
     asString="$CHERIBSD_ROOTFS/extra/c++")
 
 
-class LLVMTestSuiteBase(object):
+class BuildLLVMTestSuite(CrossCompileCMakeProject):
     repository = "https://github.com/llvm-mirror/test-suite.git"
     defaultInstallDir = installToCXXDir
     dependencies = ["llvm"]
     defaultCMakeBuildType = "Debug"
+    projectName = "llvm-test-suite"
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / "llvm-test-suite"),
         asString="$SOURCE_ROOT/llvm-test-suite")
 
-    def add_test_suite_cmake_options(self):
-        llvmBinDir = self.config.sdkBinDir
+    def __init__(self, config):
+        super().__init__(config)
+        if (BuildLLVM.buildDir / "bin/clang").exists():
+            llvmBinDir = BuildLLVM.buildDir / "bin"
+        else:
+            llvmBinDir = self.config.sdkBinDir
         self.add_cmake_options(
             TEST_SUITE_LLVM_SIZE=llvmBinDir / "llvm-size",
             TEST_SUITE_LLVM_PROFDATA=llvmBinDir / "llvm-profdata",
@@ -60,25 +64,8 @@ class LLVMTestSuiteBase(object):
             CMAKE_CXX_COMPILER=llvmBinDir / "clang++",
         )
         self.add_cmake_options(TEST_SUITE_LIT=BuildLLVM.buildDir / "bin/llvm-lit")
+        if self.targetArch != CrossCompileTarget.NATIVE:
+            self.add_cmake_options(TEST_SUITE_HOST_CC="/usr/bin/cc")
 
     def install(self):
         statusUpdate("No install step for llvm-test-suite")
-        pass
-
-
-class BuildLlvmTestSuiteNative(LLVMTestSuiteBase, CMakeProject):
-    projectName = "llvm-test-suite-native"
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        # TODO: dynamic vs static
-        self.add_test_suite_cmake_options()
-
-
-class BuildLlvmTestSuiteCross(LLVMTestSuiteBase, CrossCompileCMakeProject):
-    projectName = "llvm-test-suite-cheri"
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.add_test_suite_cmake_options()
-        self.add_cmake_options(TEST_SUITE_HOST_CC="/usr/bin/cc")

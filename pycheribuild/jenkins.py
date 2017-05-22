@@ -79,7 +79,6 @@ class JenkinsConfigLoader(ConfigLoaderBase):
         self._parsedArgs = self._parser.parse_args()
 
 
-
 def _jenkins_main():
     allTargetNames = list(sorted(targetManager.targetNames))
     configLoader = JenkinsConfigLoader()

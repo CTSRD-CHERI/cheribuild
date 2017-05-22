@@ -33,20 +33,42 @@ from ..cheribsd import BuildCHERIBSD
 from ..llvm import BuildLLVM
 from ..run_qemu import LaunchQEMU
 from ...config.loader import ComputedDefaultValue
+from ...utils import IS_LINUX, parseOSRelease
+
 
 installToCXXDir = ComputedDefaultValue(
     function=lambda config, project: BuildCHERIBSD.rootfsDir(config) / "extra/c++",
     asString="$CHERIBSD_ROOTFS/extra/c++")
 
 
+class BuildLibunwind(CrossCompileCMakeProject):
+    repository = "https://github.com/CTSRD-CHERI/libunwind.git"
+    defaultInstallDir = installToCXXDir
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        self.add_cmake_options(CHERI_PURE=True)
+
+    def install(self, **kwargs):
+        self.installFile(self.buildDir / "lib/libcxxrt.a", self.installDir / "libcheri/libcxxrt.a", force=True)
+        # self.installFile(self.buildDir / "lib/libcxxrt.so", self.installDir / "usr/libcheri/libcxxrt.so", force=True)
+
 class BuildLibCXXRT(CrossCompileCMakeProject):
     repository = "https://github.com/CTSRD-CHERI/libcxxrt.git"
     defaultInstallDir = installToCXXDir
 
     def __init__(self, config: CheriConfig):
-        self.linkDynamic = True  # Hack: we always want to use the dynamic toolchain file, build system adds -static
+        self.linkDynamic = True  # Hack: we always want to use the dynamic toolchain file, cmake builds both static and dynamic
         super().__init__(config)
-        self.add_cmake_options(CHERI_PURE=True)
+        if self.crossCompileTarget == CrossCompileTarget.CHERI:
+            self.add_cmake_options(CHERI_PURE=True)
+        else:
+            self.add_cmake_options(BUILD_TESTS=True)
+            if IS_LINUX and "ubuntu" in parseOSRelease()["ID_LIKE"]:
+                # Ubuntu packagers think that static linking should not be possible....
+                # TODO: /usr/lib/x86_64-linux-gnu/libunwind.a
+                self.add_cmake_options(NO_STATIC_TEST=True)
+            self.add_cmake_options(NO_UNWIND_LIBRARY=False, LIBUNWIND_PATH="/dev/null")
 
     def install(self, **kwargs):
         self.installFile(self.buildDir / "lib/libcxxrt.a", self.installDir / "libcheri/libcxxrt.a", force=True)
@@ -75,9 +97,29 @@ class BuildLibCXX(CrossCompileCMakeProject):
         cls.qemu_user = cls.addConfigOption("shh-user", default="root", help="The CheriBSD used for running tests")
 
     def __init__(self, config: CheriConfig):
-        self.linkDynamic = True  # Hack: we always want to use the dynamic toolchain file, build system adds -static
+        self.linkDynamic = True  # Hack: we always want to use the dynamic toolchain file, cmake builds both static and dynamic
         super().__init__(config)
         self.COMMON_FLAGS.append("-D__LP64__=1")  # HACK to get it to compile
+        if self.crossCompileTarget == CrossCompileTarget.NATIVE:
+            self.add_cmake_options(LIBCXX_ENABLE_SHARED=True, LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False)
+        else:
+            self.addCrossFlags()
+        # add the common test options
+        self.add_cmake_options(
+            LIBCXX_INCLUDE_TESTS=True,
+            # LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config",
+            LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
+            LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
+        )
+        # select libcxxrt as the runtime library
+        self.add_cmake_options(
+            LIBCXX_CXX_ABI="libcxxrt",
+            LIBCXX_CXX_ABI_LIBNAME="libcxxrt",
+            LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.sourceDir / "src",
+            LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.buildDir / "lib",
+        )
+
+    def addCrossFlags(self):
         # TODO: do I even need the toolchain file to cross compile?
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
@@ -88,13 +130,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
             # exceptions and rtti still missing:
             LIBCXX_ENABLE_EXCEPTIONS=False,
             LIBCXX_ENABLE_RTTI=False,
-        )
-        # select libcxxrt as the runtime library
-        self.add_cmake_options(
-            LIBCXX_CXX_ABI="libcxxrt",
-            LIBCXX_CXX_ABI_LIBNAME="libcxxrt",
-            LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.sourceDir / "src",
-            LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.buildDir / "lib",
+            # When cross compiling we link the ABI library statically
             LIBCXX_ENABLE_STATIC_ABI_LIBRARY=True,
         )
         if self.collect_test_binaries:
@@ -110,12 +146,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
                 host=self.qemu_host, user=self.qemu_user, port=self.qemu_port)
         # add the config options required for running tests:
         self.add_cmake_options(
-            LIBCXX_INCLUDE_TESTS=True,
-            LIBCXX_SYSROOT=config.sdkDir / "sysroot",
+            LIBCXX_SYSROOT=self.config.sdkDir / "sysroot",
             LIBCXX_TARGET_TRIPLE=self.targetTriple,
-            # LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config",
-            LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
-            LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
             LIBCXX_EXECUTOR=executor,
             LIBCXX_TARGET_INFO="libcxx.test.target_info.CheriBSDRemoteTI",
             LIBCXX_RUN_LONG_TESTS=False
