@@ -60,7 +60,7 @@ class BuildCheriOS(CMakeProject):
         if versionComponents < (3, 4):
             versionStr = ".".join(map(str, versionComponents))
             self.dependencyError("CMake version", versionStr, "is too old (need at least 3.4)",
-                                 installInstructions=self.cmakeInstallInstructions)
+                                 installInstructions=self._cmakeInstallInstructions)
 
     def install(self, **kwargs):
         pass  # nothing to install yet

@@ -109,9 +109,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     doNotAddToTargets = True
 
     # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
-    clearLineSequence = b"\x1b[2K\r"
+    _clearLineSequence = b"\x1b[2K\r"
 
-    cmakeInstallInstructions = ("Use your package manager to install CMake > 3.4 or run "
+    _cmakeInstallInstructions = ("Use your package manager to install CMake > 3.4 or run "
                                 "`cheribuild.py cmake` to install the latest version locally")
     __commandLineOptionGroup = None
 
@@ -196,7 +196,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def _lineNotImportantStdoutFilter(self, line: bytes):
         # by default we don't keep any line persistent, just have updating output
         if self._lastStdoutLineCanBeOverwritten:
-            sys.stdout.buffer.write(Project.clearLineSequence)
+            sys.stdout.buffer.write(Project._clearLineSequence)
         sys.stdout.buffer.write(line[:-1])  # remove the newline at the end
         sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
         sys.stdout.buffer.flush()
@@ -669,7 +669,7 @@ class CMakeProject(Project):
     def __init__(self, config, generator=Generator.Ninja):
         super().__init__(config)
         self.configureCommand = "cmake"
-        self._addRequiredSystemTool("cmake", installInstructions=self.cmakeInstallInstructions)
+        self._addRequiredSystemTool("cmake", installInstructions=self._cmakeInstallInstructions)
         self.generator = generator
         self.configureArgs.append(str(self.sourceDir))  # TODO: use undocumented -H and -B options?
         if self.generator == CMakeProject.Generator.Ninja:

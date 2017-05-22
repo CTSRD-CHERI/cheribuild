@@ -88,7 +88,7 @@ class BuildFreeBSD(Project):
     def _stdoutFilter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
             if self._lastStdoutLineCanBeOverwritten:
-                sys.stdout.buffer.write(Project.clearLineSequence)
+                sys.stdout.buffer.write(Project._clearLineSequence)
             sys.stdout.buffer.write(line)
             sys.stdout.buffer.flush()
             self._lastStdoutLineCanBeOverwritten = False
