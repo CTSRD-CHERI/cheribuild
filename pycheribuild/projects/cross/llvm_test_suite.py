@@ -81,3 +81,4 @@ class BuildLlvmTestSuiteCross(LLVMTestSuiteBase, CrossCompileCMakeProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.add_test_suite_cmake_options()
+        self.add_cmake_options(TEST_SUITE_HOST_CC="/usr/bin/cc")
