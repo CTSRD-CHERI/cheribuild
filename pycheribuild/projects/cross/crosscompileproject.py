@@ -51,7 +51,7 @@ class CrossCompileProject(Project):
         if not self.noUseMxgot:
             self.COMMON_FLAGS.append("-mxgot")
         self.CFLAGS = []
-        self.CXXFLAGS = []
+        self.CXXFLAGS = ["-stdlib=libc++"]
         self.ASMFLAGS = []
         self.LDFLAGS = []
 
