@@ -129,7 +129,8 @@ def _jenkins_main():
             if not callable(value):
                 print("   ", attr, "=", pprint.pformat(value, width=160, indent=8, compact=True))
         # delete the install root:
-        with cheriConfig.FS.asyncCleanDirectory(cheriConfig.outputRoot):
+        cleaningTask = cheriConfig.FS.asyncCleanDirectory(cheriConfig.outputRoot) if not cheriConfig.keepInstallDir else ThreadJoiner(None)
+        with cleaningTask:
             target.execute()
     if do_tarball:
         raise NotImplementedError()

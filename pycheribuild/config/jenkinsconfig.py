@@ -47,6 +47,10 @@ class JenkinsConfig(CheriConfig):
                                                          help="The root directory for building (defaults to $WORKSPACE)")  # type: Path
         self.sdkArchiveName = loader.addCommandLineOnlyOption("sdk-archive", type=Path,
                                                               help="The name of the sdk archive")  # type: str
+        self.keepInstallDir = loader.addCommandLineOnlyBoolOption("keep-install-dir",
+                                                                  help="Don't delete the install dir prior to build")  # type: bool
+        self.force_update = loader.addCommandLineOnlyBoolOption("force-update",
+                                                                help="Do the updating (not recommended in jenkins!)")  # type: bool
         self.createCompilationDB = loader.addCommandLineOnlyBoolOption(
             "compilation-db", "-cdb", help="Create a compile_commands.json file in the build dir "
                                            "(requires Bear for non-CMake projects)")
@@ -113,6 +117,9 @@ class JenkinsConfig(CheriConfig):
             self.cheriBits = 256  # just to make stuff work as expected
         else:
             fatalError("CPU is not set to a valid value:", self.cpu)
+
+        if self.force_update:
+            self.skipUpdate = False
 
         self._initializeDerivedPaths()
 
