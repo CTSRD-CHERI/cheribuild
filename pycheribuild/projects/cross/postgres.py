@@ -40,10 +40,8 @@ class BuildPostgres(CrossCompileAutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.COMMON_FLAGS.append("-static")  # adding it to LDFLAGS only doesn't seem to be enough
         # self.COMMON_FLAGS.append("-DUSE_ASSERT_CHECKING=1")
         # self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")
-        self.COMMON_FLAGS.append("-I/usr/include/edit")
         self.COMMON_FLAGS.extend(["-pedantic",
                                   "-Wno-gnu-statement-expression",
                                   "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
@@ -51,10 +49,17 @@ class BuildPostgres(CrossCompileAutotoolsProject):
                                   "-Wno-format-pedantic",
                                   ])
         self.LDFLAGS.append("-pthread")
-        # tell postgres configure that %zu works in printf()
-        self.configureEnvironment["PRINTF_SIZE_T_SUPPORT"] = "yes"
-        self.configureEnvironment["AR"] = str(self.sdkBinDir / "cheri-unknown-freebsd-ar")
-        self.configureArgs.extend(["--enable-debug", "--without-libxml", "--without-readline", "--without-gssapi"])
+        if self.crossCompileTarget != CrossCompileTarget.NATIVE:
+            self.COMMON_FLAGS.append("-I/usr/include/edit")
+            self.configureEnvironment["AR"] = str(self.sdkBinDir / "cheri-unknown-freebsd-ar")
+            # tell postgres configure that %zu works in printf()
+            self.configureEnvironment["PRINTF_SIZE_T_SUPPORT"] = "yes"
+            if not self.linkDynamic:
+                self.COMMON_FLAGS.append("-static")  # adding it to LDFLAGS only doesn't seem to be enough
+
+        if self.debugInfo:
+            self.configureArgs.append("--enable-debug")
+        self.configureArgs.extend(["--without-libxml", "--without-readline", "--without-gssapi"])
 
     def install(self, **kwargs):
         super().install()
