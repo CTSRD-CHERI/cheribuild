@@ -69,8 +69,9 @@ class BuildNginx(CrossCompileAutotoolsProject):
         return not (self.buildDir / "Makefile").exists()
 
     def configure(self):
-        self.configureArgs.extend(["--with-debug",
-                                   "--without-pcre",
+        if self.debugInfo:
+            self.configureArgs.append("--with-debug")
+        self.configureArgs.extend(["--without-pcre",
                                    "--without-http_rewrite_module",
                                    "--builddir=" + str(self.buildDir)])
         if self.crossCompileTarget != CrossCompileTarget.NATIVE:

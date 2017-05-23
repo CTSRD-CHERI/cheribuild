@@ -58,7 +58,7 @@ class CrossCompileProject(Project):
         else:
             self.installPrefix = Path("/", self.installDir.relative_to(BuildCHERIBSD.rootfsDir(config)))
             self.destdir = BuildCHERIBSD.rootfsDir(config)
-            self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-msoft-float", "-G0", "-g"]
+            self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-msoft-float", "-G0"]
             if self.crossCompileTarget == CrossCompileTarget.CHERI:
                 self.targetTriple = "cheri-unknown-freebsd"
                 self.COMMON_FLAGS.append("-mabi=purecap")
@@ -70,6 +70,8 @@ class CrossCompileProject(Project):
                 self.COMMON_FLAGS.append("-mabi=n64")
             if not self.noUseMxgot:
                 self.COMMON_FLAGS.append("-mxgot")
+        if self.debugInfo:
+            self.COMMON_FLAGS.append("-g")
         self.CFLAGS = []
         self.CXXFLAGS = ["-stdlib=libc++"]
         self.ASMFLAGS = []
@@ -133,6 +135,7 @@ class CrossCompileProject(Project):
                                          help="The linker to use (`lld` or `bfd`) (lld is  better but may"
                                               " not work for some projects!)")
         cls.linkDynamic = cls.addBoolOption("link-dynamic", help="Try to link dynamically (probably broken)")
+        cls.debugInfo = cls.addBoolOption("debug-info", help="build with debug info", default=True)
         cls.optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
                                                     default=cls.defaultOptimizationLevel)
         if cls.crossCompileTarget is None:
