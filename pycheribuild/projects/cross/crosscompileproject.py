@@ -156,17 +156,17 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
         super().__init__(config)
         # This must come first:
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
-            self.cmakeTemplate = includeLocalFile("files/NativeToolchain.cmake.in")
+            self._cmakeTemplate = includeLocalFile("files/NativeToolchain.cmake.in")
             self.toolchainFile = self.buildDir / "NativeToolchain.cmake"
         else:
-            self.cmakeTemplate = includeLocalFile("files/CheriBSDToolchain.cmake.in")
+            self._cmakeTemplate = includeLocalFile("files/CheriBSDToolchain.cmake.in")
             self.toolchainFile = self.buildDir / "CheriBSDToolchain.cmake"
         self.add_cmake_option("CMAKE_TOOLCHAIN_FILE", self.toolchainFile)
         # The toolchain files need at least CMake 3.6
         self.set_minimum_cmake_version(3, 6)
 
     def _prepareToolchainFile(self, **kwargs):
-        configuredTemplate = self.cmakeTemplate
+        configuredTemplate = self._cmakeTemplate
         for key, value in kwargs.items():
             strval = " ".join(value) if isinstance(value, list) else str(value)
             assert "@" + key + "@" in configuredTemplate, key

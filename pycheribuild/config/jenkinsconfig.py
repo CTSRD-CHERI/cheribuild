@@ -82,12 +82,16 @@ class JenkinsConfig(CheriConfig):
         return "cherisdk"
 
     @property
+    def sdk_cpu(self):
+        sdk_cpu = os.getenv("SDK_CPU")
+        if not sdk_cpu:
+            fatalError("SDK_CPU variable not set, cannot infer the name of the SDK archive")
+        return sdk_cpu
+
+    @property
     def sdkArchivePath(self):
         if self.sdkArchiveName is None:
-            sdk_cpu = os.getenv("SDK_CPU")
-            if not sdk_cpu:
-                fatalError("SDK_CPU variable not set, cannot infer the name of the SDK archive")
-            self.sdkArchiveName = "{}-{}-jemalloc-sdk.tar.xz".format(sdk_cpu, os.getenv("ISA", "vanilla"))
+            self.sdkArchiveName = "{}-{}-jemalloc-sdk.tar.xz".format(self.sdk_cpu, os.getenv("ISA", "vanilla"))
         assert isinstance(self.sdkArchiveName, str)
         return self.workspace / self.sdkArchiveName
 

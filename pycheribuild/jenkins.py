@@ -37,7 +37,7 @@ import pprint
 from pathlib import Path
 
 from .config.loader import ConfigLoaderBase, CommandLineConfigOption
-from .config.jenkinsconfig import JenkinsConfig
+from .config.jenkinsconfig import JenkinsConfig, CrossCompileTarget
 from .project import SimpleProject, Project
 # noinspection PyUnresolvedReferences
 from .projects import *  # make sure all projects are loaded so that targetManager gets populated
@@ -100,15 +100,35 @@ def _jenkins_main():
     if do_build:
         # unpack the SDK if it has not been extracted yet:
         if not cheriConfig.sdkBinDir.is_dir():
-            statusUpdate("SDK not found, will try to extract", cheriConfig.sdkArchivePath)
-            if not cheriConfig.sdkArchivePath.exists():
-                fatalError(cheriConfig.sdkBinDir, "does not exist and SDK archive", cheriConfig.sdkArchivePath,
-                           "does not exist!")
+            sdkArchive = cheriConfig.sdkArchivePath
+            statusUpdate("SDK not found, will try to extract", )
+            if not sdkArchive.exists():
+                if cheriConfig.crossCompileTarget == CrossCompileTarget.NATIVE:
+                    # fall back to using just the clang archive:
+                    sdkArchiveName = "{}-{}-clang-llvm.tar.xz".format(cheriConfig.sdk_cpu,
+                                                                        os.getenv("LLVM_BRANCH", "master"))
+                    sdkArchive = cheriConfig.workspace / sdkArchiveName
+                    if not sdkArchive.exists():
+                        fatalError("CheriBSD SDK archive missing and Clang archive", sdkArchive, "missing too.",
+                                   "Cannot compile for host!")
+                else:
+                    fatalError(cheriConfig.sdkBinDir, "does not exist and SDK archive", sdkArchive,
+                               "does not exist! Cannot cross compile to CheriBSD")
             cheriConfig.FS.makedirs(cheriConfig.sdkDir)
-            runCmd("tar", "Jxf", cheriConfig.sdkArchivePath, "--strip-components", "1", "-C", cheriConfig.sdkDir)
+            runCmd("tar", "Jxf", sdkArchive, "--strip-components", "1", "-C", cheriConfig.sdkDir)
         if not (cheriConfig.sdkDir / "bin/ar").exists():
             cheriConfig.FS.createSymlink(Path(shutil.which("ar")), cheriConfig.sdkBinDir / "ar", relative=False)
             cheriConfig.FS.createBuildtoolTargetSymlinks(cheriConfig.sdkBinDir / "ar")
+        if cheriConfig.crossCompileTarget == CrossCompileTarget.NATIVE:
+            stddef = list(cheriConfig.sdkDir.glob("lib/clang/include/*/stddef.h"))
+            if len(stddef) == 0:
+                # we need the LLVM builtin includes:
+                llvm_includes_archive = "{}-{}-clang-include.tar.xz".format(cheriConfig.sdk_cpu,
+                                                                            os.getenv("LLVM_BRANCH", "master"))
+                includeArchive = cheriConfig.workspace / llvm_includes_archive
+                if not includeArchive.exists():
+                    fatalError("Clang builtin includes", includeArchive, "missing. Cannot compile for host!")
+                runCmd("tar", "Jxf", includeArchive, "-C", cheriConfig.sdkDir)
         assert len(cheriConfig.targets) == 1
         target = targetManager.targetMap[cheriConfig.targets[0]]
         for project in targetManager.targetMap.values():
@@ -116,7 +136,7 @@ def _jenkins_main():
             if issubclass(cls, Project):
                 cls.defaultInstallDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
                 cls.installDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
-                print(project.projectClass.projectName, project.projectClass.installDir)
+                # print(project.projectClass.projectName, project.projectClass.installDir)
         target.checkSystemDeps(cheriConfig)
         # need to set destdir after checkSystemDeps:
         project = target.project
