@@ -153,21 +153,14 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
         super().__init__(config)
         # This must come first:
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
-            self.add_cmake_options(CMAKE_C_COMPILER=self.compiler_dir / "clang",
-                                   CMAKE_CXX_COMPILER=self.compiler_dir / "clang++",
-                                   CMAKE_ASM_COMPILER=self.compiler_dir / "clang",
-                                   # CMAKE_CXX_FLAGS="-v",
-                                   # CMAKE_CXX_FLAGS="-stdlib=libc++",
-                                   # CMAKE_EXE_LINKER_FLAGS="-lc++abi",
-                                   # CMAKE_MODULE_LINKER_FLAGS="-lc++abi",
-                                   # CMAKE_SHARED_LINKER_FLAGS="-lc++abi",
-                                   )
+            self.cmakeTemplate = includeLocalFile("files/NativeToolchain.cmake.in")
+            self.toolchainFile = self.buildDir / "NativeToolchain.cmake"
         else:
             self.cmakeTemplate = includeLocalFile("files/CheriBSDToolchain.cmake.in")
             self.toolchainFile = self.buildDir / "CheriBSDToolchain.cmake"
-            self.add_cmake_option("CMAKE_TOOLCHAIN_FILE", self.toolchainFile)
-            # The toolchain files need at least CMake 3.6
-            self.set_minimum_cmake_version(3, 6)
+        self.add_cmake_option("CMAKE_TOOLCHAIN_FILE", self.toolchainFile)
+        # The toolchain files need at least CMake 3.6
+        self.set_minimum_cmake_version(3, 6)
 
     def _prepareToolchainFile(self, **kwargs):
         configuredTemplate = self.cmakeTemplate
@@ -180,18 +173,17 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
 
     def configure(self, **kwargs):
         self.COMMON_FLAGS.append("-B" + str(self.sdkBinDir))
-        if self.crossCompileTarget != CrossCompileTarget.NATIVE:
-            self._prepareToolchainFile(
-                TOOLCHAIN_SDK_BINDIR=self.sdkBinDir,
-                TOOLCHAIN_SYSROOT=self.sdkSysroot,
-                TOOLCHAIN_COMPILER_BINDIR=self.compiler_dir,
-                TOOLCHAIN_TARGET_TRIPLE=self.targetTriple,
-                TOOLCHAIN_COMMON_FLAGS=self.COMMON_FLAGS,
-                TOOLCHAIN_C_FLAGS=self.CFLAGS,
-                TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
-                TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
-                TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
-            )
+        self._prepareToolchainFile(
+            TOOLCHAIN_SDK_BINDIR=self.sdkBinDir,
+            TOOLCHAIN_SYSROOT=self.sdkSysroot,
+            TOOLCHAIN_COMPILER_BINDIR=self.compiler_dir,
+            TOOLCHAIN_TARGET_TRIPLE=self.targetTriple,
+            TOOLCHAIN_COMMON_FLAGS=self.COMMON_FLAGS,
+            TOOLCHAIN_C_FLAGS=self.CFLAGS,
+            TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
+            TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
+            TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
+        )
         super().configure()
 
 
