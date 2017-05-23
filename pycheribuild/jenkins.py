@@ -38,7 +38,7 @@ from pathlib import Path
 
 from .config.loader import ConfigLoaderBase, CommandLineConfigOption
 from .config.jenkinsconfig import JenkinsConfig
-from .project import SimpleProject
+from .project import SimpleProject, Project
 # noinspection PyUnresolvedReferences
 from .projects import *  # make sure all projects are loaded so that targetManager gets populated
 # noinspection PyUnresolvedReferences
@@ -111,6 +111,12 @@ def _jenkins_main():
             cheriConfig.FS.createBuildtoolTargetSymlinks(cheriConfig.sdkBinDir / "ar")
         assert len(cheriConfig.targets) == 1
         target = targetManager.targetMap[cheriConfig.targets[0]]
+        for project in targetManager.targetMap.values():
+            cls = project.projectClass
+            if issubclass(cls, Project):
+                cls.defaultInstallDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
+                cls.installDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
+                print(project.projectClass.projectName, project.projectClass.installDir)
         target.checkSystemDeps(cheriConfig)
         # need to set destdir after checkSystemDeps:
         project = target.project
@@ -119,7 +125,6 @@ def _jenkins_main():
             project.destdir = cheriConfig.outputRoot
             project.installPrefix = cheriConfig.installationPrefix
             project.installDir = cheriConfig.outputRoot
-
         statusUpdate("Configuration options for building", project.projectName)
         for attr in dir(project):
             if attr.startswith("_"):

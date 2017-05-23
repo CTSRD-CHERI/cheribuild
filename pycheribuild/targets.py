@@ -97,7 +97,7 @@ class TargetManager(object):
         return self._allTargets.keys()
 
     @property
-    def targetMap(self):
+    def targetMap(self) -> "typing.Dict[str, Target]":
         return self._allTargets.copy()
 
     def topologicalSort(self, targets: "typing.List[Target]") -> "typing.Iterable[typing.List[Target]]":
