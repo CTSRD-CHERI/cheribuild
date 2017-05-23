@@ -49,9 +49,6 @@ class BuildLibunwind(CrossCompileCMakeProject):
         super().__init__(config)
         self.add_cmake_options(CHERI_PURE=True)
 
-    def install(self, **kwargs):
-        self.installFile(self.buildDir / "lib/libcxxrt.a", self.installDir / "libcheri/libcxxrt.a", force=True)
-        # self.installFile(self.buildDir / "lib/libcxxrt.so", self.installDir / "usr/libcheri/libcxxrt.so", force=True)
 
 class BuildLibCXXRT(CrossCompileCMakeProject):
     repository = "https://github.com/CTSRD-CHERI/libcxxrt.git"
