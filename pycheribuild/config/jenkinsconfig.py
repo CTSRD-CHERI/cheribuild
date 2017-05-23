@@ -42,7 +42,7 @@ class JenkinsConfig(CheriConfig):
 
         self.cpu = loader.addCommandLineOnlyOption("cpu", default=os.getenv("CPU"),
                                                    help="The target to build the software for (defaults to $CPU).",
-                                                   choices=["cheri128", "cheri256", "mips"])
+                                                   choices=["cheri128", "cheri256", "mips", "native", "x86", "amd64"])
         self.workspace = loader.addCommandLineOnlyOption("workspace", default=os.getenv("WORKSPACE"), type=Path,
                                                          help="The root directory for building (defaults to $WORKSPACE)")  # type: Path
         self.sdkArchiveName = loader.addCommandLineOnlyOption("sdk-archive", type=Path,

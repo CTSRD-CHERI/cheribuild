@@ -42,15 +42,16 @@ class BuildNginx(CrossCompileAutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.COMMON_FLAGS.append("-static")  # adding it to LDFLAGS only doesn't seem to be enough
-        self.COMMON_FLAGS.extend(["-pedantic",
-                                  "-Wno-gnu-statement-expression",
-                                  "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
-                                  "-Wno-extended-offsetof",
-                                  "-Wno-format-pedantic",
-                                  ])
-        self.configureEnvironment["AR"] = str(self.sdkBinDir / "cheri-unknown-freebsd-ar")
         self.configureCommand = self.sourceDir / "auto/configure"
+        if self.crossCompileTarget != CrossCompileTarget.NATIVE:
+            self.COMMON_FLAGS.append("-static")  # adding it to LDFLAGS only doesn't seem to be enough
+            self.COMMON_FLAGS.extend(["-pedantic",
+                                      "-Wno-gnu-statement-expression",
+                                      "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
+                                      "-Wno-extended-offsetof",
+                                      "-Wno-format-pedantic",
+                                      ])
+            self.configureEnvironment["AR"] = str(self.sdkBinDir / "cheri-unknown-freebsd-ar")
 
     def install(self, **kwargs):
         # We have to run make inside the source directory so that it invokes make -f $build/Makefile
@@ -58,39 +59,41 @@ class BuildNginx(CrossCompileAutotoolsProject):
         self.installFile(self.sourceDir / "fetchbench", self.real_install_root_dir / "sbin/fetchbench")
         # install the benchmark script
         benchmark = self.readFile(self.sourceDir / "nginx-benchmark.sh")
-        benchmark = re.sub(r'NGINX=.*', "NGINX=\"" + str(self.installPrefix / "sbin/nginx") + "\"", benchmark)
-        benchmark = re.sub(r'FETCHBENCH=.*', "FETCHBENCH=\"" + str(self.installPrefix / "sbin/fetchbench") + "\"",
-                           benchmark)
+        if self.crossCompileTarget != CrossCompileTarget.NATIVE:
+            benchmark = re.sub(r'NGINX=.*', "NGINX=\"" + str(self.installPrefix / "sbin/nginx") + "\"", benchmark)
+            benchmark = re.sub(r'FETCHBENCH=.*', "FETCHBENCH=\"" + str(self.installPrefix / "sbin/fetchbench") + "\"",
+                               benchmark)
         self.writeFile(self.real_install_root_dir / "nginx-benchmark.sh", benchmark, overwrite=True, mode=0o755)
 
     def needsConfigure(self):
         return not (self.buildDir / "Makefile").exists()
 
     def configure(self):
-        self.LDFLAGS.append("-v")
         self.configureArgs.extend(["--with-debug",
                                    "--without-pcre",
                                    "--without-http_rewrite_module",
-                                   "--crossbuild=FreeBSD:12.0-CURRENT:mips",
-                                   "--builddir=" + str(self.buildDir),
-                                   "--with-cc-opt=" + " ".join(self.default_compiler_flags),
-                                   "--with-ld-opt=" + " ".join(self.default_ldflags),
-                                   "--sysroot=" + str(self.sdkSysroot),
-                                   ])
-        self.configureEnvironment["CC_TEST_FLAGS"] = " ".join(self.default_compiler_flags)
-        self.configureEnvironment["NGX_TEST_LD_OPT"] = " ".join(self.default_ldflags)
-        self.configureEnvironment["NGX_SIZEOF_int"] = "4"
-        self.configureEnvironment["NGX_SIZEOF_sig_atomic_t"] = "4"  # on mips it is an int
-        self.configureEnvironment["NGX_SIZEOF_long"] = "8"
-        self.configureEnvironment["NGX_SIZEOF_long_long"] = "8"
-        self.configureEnvironment["NGX_SIZEOF_size_t"] = "8"
-        self.configureEnvironment["NGX_SIZEOF_off_t"] = "8"
-        self.configureEnvironment["NGX_SIZEOF_time_t"] = "8"
-        self.configureEnvironment["NGX_SIZEOF_void_p"] = str(self.sizeof_void_ptr)
-        self.configureEnvironment["NGX_HAVE_MAP_DEVZERO"] = "yes"
-        self.configureEnvironment["NGX_HAVE_SYSVSHM"] = "yes"
-        self.configureEnvironment["NGX_HAVE_MAP_ANON"] = "yes"
-        self.configureEnvironment["NGX_HAVE_POSIX_SEM"] = "yes"
+                                   "--builddir=" + str(self.buildDir)])
+        if self.crossCompileTarget != CrossCompileTarget.NATIVE:
+            self.LDFLAGS.append("-v")
+            self.configureArgs.extend(["--crossbuild=FreeBSD:12.0-CURRENT:mips",
+                                       "--with-cc-opt=" + " ".join(self.default_compiler_flags),
+                                       "--with-ld-opt=" + " ".join(self.default_ldflags),
+                                       "--sysroot=" + str(self.sdkSysroot),
+                                       ])
+            self.configureEnvironment["CC_TEST_FLAGS"] = " ".join(self.default_compiler_flags)
+            self.configureEnvironment["NGX_TEST_LD_OPT"] = " ".join(self.default_ldflags)
+            self.configureEnvironment["NGX_SIZEOF_int"] = "4"
+            self.configureEnvironment["NGX_SIZEOF_sig_atomic_t"] = "4"  # on mips it is an int
+            self.configureEnvironment["NGX_SIZEOF_long"] = "8"
+            self.configureEnvironment["NGX_SIZEOF_long_long"] = "8"
+            self.configureEnvironment["NGX_SIZEOF_size_t"] = "8"
+            self.configureEnvironment["NGX_SIZEOF_off_t"] = "8"
+            self.configureEnvironment["NGX_SIZEOF_time_t"] = "8"
+            self.configureEnvironment["NGX_SIZEOF_void_p"] = str(self.sizeof_void_ptr)
+            self.configureEnvironment["NGX_HAVE_MAP_DEVZERO"] = "yes"
+            self.configureEnvironment["NGX_HAVE_SYSVSHM"] = "yes"
+            self.configureEnvironment["NGX_HAVE_MAP_ANON"] = "yes"
+            self.configureEnvironment["NGX_HAVE_POSIX_SEM"] = "yes"
         super().configure(cwd=self.sourceDir)
 
     def compile(self, **kwargs):

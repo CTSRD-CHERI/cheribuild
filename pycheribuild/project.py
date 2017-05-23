@@ -607,6 +607,7 @@ class Project(SimpleProject):
         if self.destdir is not None:
             assert self.installPrefix
             return self.destdir / self.installPrefix.relative_to(Path("/"))
+        return self.installDir
 
     def runMakeInstall(self, *, args: list = None, target="install", _stdoutFilter="__default_filter__", cwd=None):
         if args is None:

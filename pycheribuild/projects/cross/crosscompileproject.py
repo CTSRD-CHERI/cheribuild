@@ -50,7 +50,6 @@ class CrossCompileProject(Project):
         self.targetTriple = None
         self.sdkBinDir = self.config.sdkDir / "bin"
         self.sdkSysroot = self.config.sdkDir / "sysroot"
-        self.compilerDir = self.sdkBinDir
         # compiler flags:
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
             self.COMMON_FLAGS = []
@@ -185,7 +184,7 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
             self._prepareToolchainFile(
                 TOOLCHAIN_SDK_BINDIR=self.sdkBinDir,
                 TOOLCHAIN_SYSROOT=self.sdkSysroot,
-                TOOLCHAIN_COMPILER_BINDIR=self.compilerDir,
+                TOOLCHAIN_COMPILER_BINDIR=self.compiler_dir,
                 TOOLCHAIN_TARGET_TRIPLE=self.targetTriple,
                 TOOLCHAIN_COMMON_FLAGS=self.COMMON_FLAGS,
                 TOOLCHAIN_C_FLAGS=self.CFLAGS,
@@ -204,21 +203,28 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         buildhost = self.get_host_triple()
-        if self.add_host_target_build_config_options:
+        if self.crossCompileTarget != CrossCompileTarget.NATIVE and self.add_host_target_build_config_options:
             self.configureArgs.extend(["--host=" + self.targetTriple, "--target=" + self.targetTriple,
                                        "--build=" + buildhost])
 
     @property
     def default_compiler_flags(self):
-        return self.COMMON_FLAGS + self.warningFlags + self.optimizationFlags + [
-            "--sysroot=" + str(self.sdkSysroot), "-B" + str(self.sdkBinDir), "-target", self.targetTriple]
+        result = self.COMMON_FLAGS + self.warningFlags + self.optimizationFlags + ["-target", self.targetTriple,
+                                                                                   "-B" + str(self.sdkBinDir)]
+        if self.crossCompileTarget != CrossCompileTarget.NATIVE:
+            result += ["--sysroot=" + str(self.sdkSysroot)]
+        return result
 
     def configure(self, **kwargs):
         CPPFLAGS = self.default_compiler_flags
         for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
             assert key not in self.configureEnvironment
-        self.configureEnvironment["CC"] = str(self.compilerDir / (self.targetTriple + "-clang"))
-        self.configureEnvironment["CXX"] = str(self.compilerDir / (self.targetTriple + "-clang++"))
+        compiler_prefix = self.targetTriple + "-"
+        if self.crossCompileTarget == CrossCompileTarget.NATIVE:
+            compiler_prefix = ""
+
+        self.configureEnvironment["CC"] = str(self.compiler_dir / (compiler_prefix + "clang"))
+        self.configureEnvironment["CXX"] = str(self.compiler_dir / (compiler_prefix + "-clang++"))
         self.configureEnvironment["CPPFLAGS"] = " ".join(CPPFLAGS)
         self.configureEnvironment["CFLAGS"] = " ".join(CPPFLAGS + self.CFLAGS)
         self.configureEnvironment["CXXFLAGS"] = " ".join(CPPFLAGS + self.CXXFLAGS)
