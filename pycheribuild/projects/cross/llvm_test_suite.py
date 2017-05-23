@@ -64,8 +64,8 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
             CMAKE_CXX_COMPILER=llvmBinDir / "clang++",
         )
         self.add_cmake_options(TEST_SUITE_LIT=BuildLLVM.buildDir / "bin/llvm-lit")
-        if self.targetArch != CrossCompileTarget.NATIVE:
+        if self.crossCompileTarget != CrossCompileTarget.NATIVE:
             self.add_cmake_options(TEST_SUITE_HOST_CC="/usr/bin/cc")
 
-    def install(self):
+    def install(self, **kwargs):
         statusUpdate("No install step for llvm-test-suite")
