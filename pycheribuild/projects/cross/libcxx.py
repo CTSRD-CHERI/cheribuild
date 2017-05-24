@@ -46,8 +46,14 @@ class BuildLibunwind(CrossCompileCMakeProject):
     defaultInstallDir = installToCXXDir
 
     def __init__(self, config: CheriConfig):
+        self.linkDynamic = True   # Hack: we always want to use the dynamic toolchain file, cmake builds both static and dynamic
         super().__init__(config)
-        self.add_cmake_options(CHERI_PURE=True)
+        # Adding -ldl won't work: no libdl in /usr/libcheri
+        self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)
+        # TODO: this breaks the build: LLVM_LIBDIR_SUFFIX="cheri"
+        self.COMMON_FLAGS.append("-isystem")
+        self.COMMON_FLAGS.append(str(BuildLibCXX.sourceDir / "include"))
+        self._forceLibCXX = False
 
 
 class BuildLibCXXRT(CrossCompileCMakeProject):
@@ -59,7 +65,8 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
         super().__init__(config)
         self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.buildDir / "lib")
         if self.crossCompileTarget == CrossCompileTarget.CHERI:
-            self.add_cmake_options(NO_SHARED=True)
+            # TODO: __sync_fetch_and_add in exceptions code
+            self.add_cmake_options(NO_SHARED=True, DISABLE_EXCEPTIONS_RTTI=True, NO_UNWIND_LIBRARY=True)
         else:
             self.add_cmake_options(BUILD_TESTS=True)
             if IS_LINUX and "ubuntu" in parseOSRelease()["ID_LIKE"]:
