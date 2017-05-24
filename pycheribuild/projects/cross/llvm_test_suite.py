@@ -51,6 +51,7 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
         asString="$SOURCE_ROOT/llvm-test-suite")
 
     def __init__(self, config):
+        self._forceLibCXX = False
         super().__init__(config)
         if (BuildLLVM.buildDir / "bin/clang").exists():
             llvmBinDir = BuildLLVM.buildDir / "bin"

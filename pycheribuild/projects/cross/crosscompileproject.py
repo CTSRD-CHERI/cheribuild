@@ -34,6 +34,7 @@ class CrossCompileProject(Project):
     appendCheriBitsToBuildDir = True
     dependencies = ["cheribsd-sdk"]
     defaultLinker = "lld"
+    _forceLibCXX = True
     crossCompileTarget = None  # type: CrossCompileTarget
     defaultOptimizationLevel = ["-O0"]
     warningFlags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
@@ -45,7 +46,11 @@ class CrossCompileProject(Project):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.compiler_dir = BuildLLVM.buildDir / "bin" if (BuildLLVM.buildDir / "bin/clang").exists() else self.config.sdkBinDir
+        self.compiler_dir = self.config.sdkBinDir
+        # Use the compiler from the build directory for native builds to get stddef.h (which will be deleted)
+        if self.crossCompileTarget == CrossCompileTarget.NATIVE:
+            if (BuildLLVM.buildDir / "bin/clang").exists():
+                self.compiler_dir = BuildLLVM.buildDir / "bin"
 
         self.targetTriple = None
         self.sdkBinDir = self.config.sdkDir / "bin"
@@ -73,7 +78,9 @@ class CrossCompileProject(Project):
         if self.debugInfo:
             self.COMMON_FLAGS.append("-g")
         self.CFLAGS = []
-        self.CXXFLAGS = ["-stdlib=libc++"]
+        self.CXXFLAGS = []
+        if self._forceLibCXX:
+            self.CXXFLAGS = ["-stdlib=libc++"]
         self.ASMFLAGS = []
         self.LDFLAGS = []
 
