@@ -31,8 +31,7 @@ from .crosscompileproject import *
 from ...utils import runCmd
 
 class BuildSQLite(CrossCompileAutotoolsProject):
-    # repository = "https://github.com/CTSRD-CHERI/sqlite.git"
-    repository = "https://github.com/mackyle/sqlite.git"
+    repository = "https://github.com/CTSRD-CHERI/sqlite.git"
     defaultOptimizationLevel = ["-O2"]
 
     def __init__(self, config: CheriConfig):
