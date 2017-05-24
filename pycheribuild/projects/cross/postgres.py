@@ -40,6 +40,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+        self.gitBranch = "96-cheri"
         # self.COMMON_FLAGS.append("-DUSE_ASSERT_CHECKING=1")
         # self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")
         self.COMMON_FLAGS.extend(["-pedantic",
