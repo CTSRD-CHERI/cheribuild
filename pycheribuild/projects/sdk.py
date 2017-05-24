@@ -41,7 +41,7 @@ from pathlib import Path
 
 class BuildCheriBSDSdk(TargetAliasWithDependencies):
     target = "cheribsd-sdk"
-    dependencies = ["freestanding-sdk", "cheribsd-sysroot", "cheri-buildsystem-wrappers"]
+    dependencies = ["freestanding-sdk", "cheribsd-sysroot"]
     if IS_LINUX:
         dependencies.append("awk")  # also add BSD compatible AWK to the SDK
 
@@ -144,18 +144,6 @@ class BuildFreestandingSdk(SimpleProject):
         # compiling to both work...
         for tool in ("cc1", "cc1plus"):
             self.installFile(CHERILIBEXEC_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
-
-class InstallCheriBuildsystemWrappers(CMakeProject):
-    projectName = "cheri-buildsystem-wrappers"
-    dependencies = ["freestanding-sdk", "cheribsd-sysroot"]
-    repository = "https://github.com/RichardsonAlex/cheri-buildsystem-wrappers.git"
-    defaultInstallDir = Project._installToSDK
-    appendCheriBitsToBuildDir = True
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.add_cmake_options(CHERI_SDK_BINDIR=self.config.sdkDir / "bin",
-                               CHERIBSD_SYSROOT=self.config.sdkDir / "sysroot")
 
 
 class StartCheriSDKShell(SimpleProject):
