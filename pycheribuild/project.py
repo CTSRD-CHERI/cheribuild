@@ -538,6 +538,9 @@ class Project(SimpleProject):
                 stdoutFilter = None
         if stdoutFilter == "__default_filter__":
             stdoutFilter = self._stdoutFilter
+        # TODO: this should be a super-verbose flag instead
+        if self.config.verbose and makeCommand == "ninja":
+            allArgs.append("-v")
         if self.config.passDashKToMake:
             allArgs.append("-k")
             if makeCommand == "ninja":
