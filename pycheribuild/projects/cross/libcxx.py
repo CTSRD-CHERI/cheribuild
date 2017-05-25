@@ -106,6 +106,9 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.COMMON_FLAGS.append("-D__LP64__=1")  # HACK to get it to compile
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=True, LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False)
+            if IS_LINUX and "ubuntu" in parseOSRelease()["ID_LIKE"]:
+                # Ubuntu packagers think that static linking should not be possible....
+                self.add_cmake_options(LIBCXX_ENABLE_STATIC=False)
         else:
             self.addCrossFlags()
         # add the common test options
