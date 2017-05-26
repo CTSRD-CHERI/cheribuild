@@ -120,8 +120,10 @@ class FileSystemUtils(object):
         return ThreadJoiner(deleterThread)
 
     def deleteFile(self, file: Path, printVerboseOnly=False):
+        if not file.is_file():
+            return
         printCommand("rm", "-f", file, printVerboseOnly=printVerboseOnly)
-        if not file.is_file() or self.config.pretend:
+        if self.config.pretend:
             return
         file.unlink()
 

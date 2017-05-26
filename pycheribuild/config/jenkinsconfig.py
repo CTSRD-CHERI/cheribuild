@@ -117,7 +117,7 @@ class JenkinsConfig(CheriConfig):
             self.cheriBits = 256
             self.crossCompileTarget = CrossCompileTarget.CHERI
         elif self.cpu == "mips":
-            self.cheriBits = 9999
+            self.cheriBits = 9998
             self.crossCompileTarget = CrossCompileTarget.MIPS
         elif self.cpu in ("x86", "x86_64", "amd64", "host", "native"):
             self.cheriBits = 9999

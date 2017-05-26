@@ -50,21 +50,19 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
         function=lambda config, project: Path(config.sourceRoot / "llvm-test-suite"),
         asString="$SOURCE_ROOT/llvm-test-suite")
 
+    def _find_in_sdk_or_llvm_build_dir(self, name) -> Path:
+        if (BuildLLVM.buildDir / "bin" / name).exists():
+            return BuildLLVM.buildDir / "bin" / name
+        return self.config.sdkBinDir / name
+
     def __init__(self, config):
         self._forceLibCXX = False
         super().__init__(config)
-        if (BuildLLVM.buildDir / "bin/clang").exists():
-            llvmBinDir = BuildLLVM.buildDir / "bin"
-        else:
-            llvmBinDir = self.config.sdkBinDir
         self.add_cmake_options(
-            TEST_SUITE_LLVM_SIZE=llvmBinDir / "llvm-size",
-            TEST_SUITE_LLVM_PROFDATA=llvmBinDir / "llvm-profdata",
-            CMAKE_C_COMPILER=llvmBinDir / "clang",
-            CMAKE_ASM_COMPILER=llvmBinDir / "clang",
-            CMAKE_CXX_COMPILER=llvmBinDir / "clang++",
+            TEST_SUITE_LLVM_SIZE=self._find_in_sdk_or_llvm_build_dir("llvm-size"),
+            TEST_SUITE_LLVM_PROFDATA=self._find_in_sdk_or_llvm_build_dir("llvm-profdata"),
+            TEST_SUITE_LIT=self._find_in_sdk_or_llvm_build_dir("llvm-lit")
         )
-        self.add_cmake_options(TEST_SUITE_LIT=BuildLLVM.buildDir / "bin/llvm-lit")
         if self.crossCompileTarget != CrossCompileTarget.NATIVE:
             self.add_cmake_options(TEST_SUITE_HOST_CC="/usr/bin/cc")
 

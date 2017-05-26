@@ -40,7 +40,7 @@ from enum import Enum
 from pathlib import Path
 
 from .config.loader import ConfigLoaderBase, ComputedDefaultValue
-from .config.chericonfig import CheriConfig
+from .config.chericonfig import CheriConfig, CrossCompileTarget
 from .targets import Target, targetManager
 from .filesystemutils import FileSystemUtils
 from .utils import *
@@ -342,7 +342,12 @@ def installDirNotSpecified(config: CheriConfig, project: "Project"):
 
 def _defaultBuildDir(config: CheriConfig, project: "Project"):
     # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
-    buildDirSuffix = "-" + config.cheriBitsStr + "-build" if project.appendCheriBitsToBuildDir else "-build"
+    if config.crossCompileTarget == CrossCompileTarget.NATIVE:
+        buildDirSuffix = "-build"
+    elif config.crossCompileTarget == CrossCompileTarget.MIPS:
+        buildDirSuffix = "-mips-build"
+    else:
+        buildDirSuffix = "-" + config.cheriBitsStr + "-build"
     return config.buildRoot / (project.projectName.lower() + buildDirSuffix)
 
 
