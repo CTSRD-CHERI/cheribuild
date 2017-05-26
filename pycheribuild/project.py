@@ -699,14 +699,11 @@ class CMakeProject(Project):
             # Don't add the user provided options here, add them in configure() so that they are put last
         self.__minimum_cmake_version = tuple()
 
-    def add_cmake_option(self, option: str, value):
-        if isinstance(value, bool):
-            value = "ON" if value else "OFF"
-        self.configureArgs.append("-D" + option + "=" + str(value))
-
     def add_cmake_options(self, **kwargs):
-        for k, v in kwargs.items():
-            self.add_cmake_option(k, v)
+        for option, value in kwargs.items():
+            if isinstance(value, bool):
+                value = "ON" if value else "OFF"
+            self.configureArgs.append("-D" + option + "=" + str(value))
 
     def set_minimum_cmake_version(self, major, minor):
         self.__minimum_cmake_version = (major, minor)
