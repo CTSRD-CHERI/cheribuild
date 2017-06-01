@@ -122,6 +122,7 @@ class CrossCompileProject(Project):
         result = ["-mabi=" + abi,
                   "-Wl,-m" + emulation,
                   "-fuse-ld=" + self.linker,
+                  "-Wl,-z,notext",  # needed so that LLD allows text relocations
                   "--sysroot=" + str(self.sdkSysroot),
                   "-B" + str(self.sdkBinDir)]
         if self.config.withLibstatcounters:
