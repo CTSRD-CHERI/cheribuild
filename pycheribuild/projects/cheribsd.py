@@ -427,6 +427,7 @@ class BuildCheriBsdSysroot(SimpleProject):
     def copySysrootFromRemoteMachine(self):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
         assert self.remotePath
+        self.remotePath = os.path.expandvars(self.remotePath)
         remoteSysrootArchive = self.remotePath + "/" + self.config.sysrootArchiveName
         statusUpdate("Will copy the sysroot files from ", remoteSysrootArchive, sep="")
         if not self.queryYesNo("Continue?"):
