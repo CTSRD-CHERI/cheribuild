@@ -31,6 +31,7 @@
 import os
 import threading
 import shutil
+import subprocess
 
 from pathlib import Path
 from .config.chericonfig import CheriConfig
@@ -130,7 +131,14 @@ class FileSystemUtils(object):
     def copyRemoteFile(self, remotePath: str, targetFile: Path):
         # if we have rsync we can skip the copy if file is already up-to-date
         if shutil.which("rsync"):
-            runCmd("rsync", "-aviu", "--progress", remotePath, targetFile)
+            try:
+                runCmd("rsync", "-aviu", "--progress", remotePath, targetFile)
+            except subprocess.CalledProcessError as err:
+                if err.returncode == 127:
+                    warningMessage("rysnc doesn't seem to be installed on remote machine, trying scp")
+                    runCmd("scp", remotePath, targetFile)
+                else:
+                    raise err
         else:
             runCmd("scp", remotePath, targetFile)
 
