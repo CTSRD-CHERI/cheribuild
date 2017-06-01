@@ -141,6 +141,10 @@ class BuildLLVM(CMakeProject):
         for tool in llvmBinaries:
             self.createBuildtoolTargetSymlinks(self.installDir / "bin" / tool)
 
+        # create cc and c++ symlinks (expected by some build systems)
+        self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang", toolName="cc", createUnprefixedLink=False)
+        self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang", toolName="c++", createUnprefixedLink=False)
+
         if not self.skip_lld:
             self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld")
             self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld", toolName="ld", createUnprefixedLink=True)
