@@ -10,7 +10,7 @@ from ...project import *
 from ...utils import *
 
 __all__ = ["CheriConfig", "installToCheriBSDRootfs", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject",
-           "CrossCompileTarget"]
+           "CrossCompileTarget", "CrossCompileProject"]
 
 
 installToCheriBSDRootfs = ComputedDefaultValue(

@@ -57,7 +57,7 @@ __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "printCommand", "includeLocalFile
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
            "parseOSRelease", "warningMessage", "Type_T", "typing", "popen_handle_noexec",  # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latestClangTool",  # no-combine
-           "defaultNumberOfMakeJobs"]  # no-combine
+           "defaultNumberOfMakeJobs", "commandline_to_str"]  # no-combine
 
 
 if sys.version_info < (3, 4):
@@ -222,6 +222,9 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
             raise _make_called_process_error(retcode, process.args, stdout=stdout, cwd=kwargs["cwd"])
         return CompletedProcess(process.args, retcode, stdout, stderr)
 
+
+def commandline_to_str(args: list) -> str:
+    return " ".join(map(shlex.quote, args))
 
 CompilerInfo = namedtuple('CompilerInfo', ['compiler', 'version', 'default_target'])
 _cached_compiler_infos = dict()
