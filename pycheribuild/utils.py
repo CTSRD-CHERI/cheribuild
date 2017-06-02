@@ -223,7 +223,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
         return CompletedProcess(process.args, retcode, stdout, stderr)
 
 
-def commandline_to_str(args: list) -> str:
+def commandline_to_str(args: "typing.Iterable[str]") -> str:
     return " ".join(map(shlex.quote, args))
 
 CompilerInfo = namedtuple('CompilerInfo', ['compiler', 'version', 'default_target'])

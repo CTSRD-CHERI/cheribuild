@@ -30,11 +30,10 @@
 from .crosscompileproject import *
 from ...utils import commandline_to_str, runCmd
 
-class BuildQt5(CrossCompileProject):
-    repository = "https://github.com/qt/qt5"
-    gitBranch = "5.9"
-    skipGitSubmodules = True  # init-repository does it for us
-    requiresGNUMake = True
+# This class is used to build qtbase and all of qt5
+class BuildQtWithConfigureScript(CrossCompileProject):
+    doNotAddToTargets = True
+    # requiresGNUMake = True
     defaultOptimizationLevel = ["-O2"]
     add_host_target_build_config_options = False
 
@@ -43,52 +42,51 @@ class BuildQt5(CrossCompileProject):
         self.configureCommand = self.sourceDir / "configure"
         self.linkDynamic = True  # Build system adds -static automatically
 
-    def update(self):
-        super().update()
-        runCmd("perl", "init-repository", "-f", cwd=self.sourceDir)
-
     def configure(self, **kwargs):
         if not self.needsConfigure() and not self.config.forceConfigure:
             return
         if self.crossCompileTarget != CrossCompileTarget.NATIVE:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
-            compiler_flags = commandline_to_str(self.COMMON_FLAGS + ["-target", self.targetTriple + "12"])
-            linker_flags = commandline_to_str(self.default_ldflags + ["-target", self.targetTriple + "12",
-                                                                      # on cheri we need __atomic_store, etc.
-                                                                      "-lcompiler_rt", "-v"])
+            compiler_flags = self.COMMON_FLAGS + ["-target", self.targetTriple + "12"]
+            linker_flags = self.default_ldflags + ["-target", self.targetTriple + "12", "-v"]
+
+            if self.crossCompileTarget == CrossCompileTarget.CHERI:
+                linker_flags += ["-static"]  # dynamically linked C++ doesn't work yet
+                self.configureArgs.append("QMAKE_LIBDIR=" + str(self.config.sdkSysrootDir / "usr/libcheri"))
             # self.configureArgs.append("QMAKE_CXXFLAGS+=-stdlib=libc++")
+
+            # The build system already passes these:
+            linker_flags = filter(lambda s: not s.startswith("--sysroot"), linker_flags)
+            compiler_flags = filter(lambda s: not s.startswith("--sysroot"), compiler_flags)
+
             self.configureArgs.extend([
                 "-device", "freebsd-generic-clang",
                 "-device-option", "CROSS_COMPILE={}/{}-".format(self.config.sdkBinDir, self.targetTriple),
-                "-device-option", "COMPILER_FLAGS=" + compiler_flags,
-                "-device-option", "LINKER_FLAGS=" + linker_flags,
+                "-device-option", "COMPILER_FLAGS=" + commandline_to_str(compiler_flags),
+                "-device-option", "LINKER_FLAGS=" + commandline_to_str(linker_flags),
                 "-sysroot", self.config.sdkSysrootDir,
                 "-static"
             ])
-        if self.crossCompileTarget == CrossCompileTarget.CHERI:
-            self.configureArgs.append("QMAKE_LIBDIR=" + str(self.config.sdkSysrootDir / "usr/libcheri"))
+
+        self.configureArgs.extend([
+            "-nomake", "examples",
+            # TODO: build the tests and run them them
+            "-nomake", "tests",  # "-developer-build",
+            # To ensure the host and cross-compiled version is the same also disable opengl and dbus there
+            "-no-opengl", "-no-dbus",
+            # Missing configure check for evdev means it will fail to compile for CHERI
+            "-no-evdev"
+        ])
+        # currently causes build failures:
+        # Seems like I need to define PNG_READ_GAMMA_SUPPORTED
+        self.configureArgs.append("-qt-libpng")
 
         if self.debugInfo:
             self.configureArgs.append("-debug")
         else:
             self.configureArgs.append("-optimize-size")
 
-        self.configureArgs.extend([
-            "-nomake", "examples",
-            # To ensure the host and cross-compiled version is the same also disable opengl and dbus there
-            "-no-opengl", "-no-dbus",
-            # TODO: build the tests and run them them
-            # "-developer-build"
-            "-nomake", "tests",
-            # QtGamepad assumes evdev is available on !WINDOWS !OSX
-            "-skip", "qtgamepad",
-        ])
-
         self.configureArgs.extend(["-opensource", "-confirm-license"])
-
-        # currently causes build failures:
-        # Seems like I need to define PNG_READ_GAMMA_SUPPORTED
-        self.configureArgs.append("-qt-libpng")
 
         self.deleteFile(self.buildDir / "config.cache")
         self.deleteFile(self.buildDir / "config.opt")
@@ -98,3 +96,33 @@ class BuildQt5(CrossCompileProject):
     def needsConfigure(self):
         return not (self.buildDir / "Makefile").exists()
 
+
+class BuildQt5(BuildQtWithConfigureScript):
+    repository = "https://github.com/RichardsonAlex/qt5"
+    gitBranch = "5.9"
+    skipGitSubmodules = True  # init-repository does it for us
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        cls.allModules = cls.addBoolOption("all-modules", showHelp=True,
+                                          help="Build all modules (even those that don't make sense for CHERI)")
+
+    def configure(self, **kwargs):
+        if not self.allModules:
+            modules_to_skip = "qtgamepad qtlocation".split()
+            # TODO: skip modules that just increase compile time
+        super().configure(**kwargs)
+
+    def update(self):
+        super().update()
+        runCmd("perl", "init-repository", "-f", "--branch", cwd=self.sourceDir)
+
+
+class BuildQtBase(BuildQtWithConfigureScript):
+    repository = "https://github.com/RichardsonAlex/qtbase"
+    gitBranch = "5.9"
+
+    def __init__(self, config: CheriConfig):
+        self.sourceDir = config.sourceRoot / "qt5/qtbase"
+        super().__init__(config)
