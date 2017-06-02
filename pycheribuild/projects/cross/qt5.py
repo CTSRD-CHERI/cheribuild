@@ -32,6 +32,7 @@ from ...utils import commandline_to_str, runCmd
 
 class BuildQt5(CrossCompileProject):
     repository = "https://github.com/qt/qt5"
+    skipGitSubmodules = True  # init-repository does it for us
     requiresGNUMake = True
     defaultOptimizationLevel = ["-O2"]
     add_host_target_build_config_options = False

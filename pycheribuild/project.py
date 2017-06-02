@@ -354,6 +354,7 @@ def _defaultBuildDir(config: CheriConfig, project: "Project"):
 class Project(SimpleProject):
     repository = ""
     gitRevision = None
+    skipGitSubmodules = False
     compileDBRequiresBear = True
     doNotAddToTargets = True
 
@@ -477,21 +478,23 @@ class Project(SimpleProject):
             cwd = self.sourceDir
         return runCmd("git", *args, cwd=cwd, **kwargs)
 
-    def _ensureGitRepoIsCloned(self, *, srcDir: Path, remoteUrl, initialBranch=None):
+    def _ensureGitRepoIsCloned(self, *, srcDir: Path, remoteUrl, initialBranch=None, skipSubmodules=False):
         # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
         if not (srcDir / ".git").exists():
             print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?", end="")
             if not self.queryYesNo(defaultResult=False):
                 fatalError("Sources for", str(srcDir), " missing!")
+            cloneCmd = ["git", "clone"]
+            if not skipSubmodules:
+                cloneCmd.append("--recurse-submodules")
             if initialBranch:
-                self.runGitCmd("clone", "--recurse-submodules", "--branch", initialBranch, remoteUrl, srcDir, cwd="/")
-            else:
-                self.runGitCmd("clone", "--recurse-submodules", remoteUrl, srcDir, cwd="/")
+                cloneCmd += ["--branch", initialBranch]
+            runCmd(cloneCmd + [remoteUrl, srcDir], cwd="/")
 
-    def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None):
+    def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None, skipSubmodules=False):
         self._ensureGitRepoIsCloned(srcDir=srcDir, remoteUrl=remoteUrl, initialBranch=initialBranch)
         # make sure we run git stash if we discover any local changes
-        hasChanges = len(self.runGitCmd("diff", "--stat", "--ignore-submodules",
+        hasChanges = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
                                 captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
         if hasChanges:
             print(coloured(AnsiColour.green, "Local changes detected in", srcDir))
@@ -500,18 +503,22 @@ class Project(SimpleProject):
                 statusUpdate("Skipping update of", srcDir)
                 return
             # TODO: ask if we should continue?
-            stashResult = self.runGitCmd("stash", "save", "Automatic stash by cheribuild.py",
+            stashResult = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
                                  captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout
             # print("stashResult =", stashResult)
             if "No local changes to save" in stashResult.decode("utf-8"):
                 # print("NO REAL CHANGES")
                 hasChanges = False  # probably git diff showed something from a submodule
-        self.runGitCmd("pull", "--recurse-submodules", "--rebase", cwd=srcDir, printVerboseOnly=True)
-        self.runGitCmd("submodule", "update", "--recursive", cwd=srcDir, printVerboseOnly=True)
+        pullCmd = ["git", "pull"]
+        if not skipSubmodules:
+            pullCmd.append("--recurse-submodules")
+        runCmd(pullCmd + ["--rebase"], cwd=srcDir, printVerboseOnly=True)
+        if not skipSubmodules:
+            runCmd("git", "submodule", "update", "--recursive", cwd=srcDir, printVerboseOnly=True)
         if hasChanges:
-            self.runGitCmd("stash", "pop", cwd=srcDir, printVerboseOnly=True)
+            runCmd("git", "stash", "pop", cwd=srcDir, printVerboseOnly=True)
         if revision:
-            self.runGitCmd("checkout", revision, cwd=srcDir, printVerboseOnly=True)
+            runCmd("git", "checkout", revision, cwd=srcDir, printVerboseOnly=True)
 
     def runMake(self, args: "typing.List[str]", makeTarget="", *, makeCommand: str = None, logfileName: str = None,
                 cwd: Path = None, env=None, appendToLogfile=False, compilationDbName="compile_commands.json",
@@ -559,7 +566,8 @@ class Project(SimpleProject):
     def update(self):
         if not self.repository:
             fatalError("Cannot update", self.projectName, "as it is missing a git URL", fatalWhenPretending=True)
-        self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision, initialBranch=self.gitBranch)
+        self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision, initialBranch=self.gitBranch,
+                            skipSubmodules=self.skipGitSubmodules)
 
     def clean(self) -> ThreadJoiner:
         assert self.config.clean
