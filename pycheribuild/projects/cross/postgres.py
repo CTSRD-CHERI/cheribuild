@@ -33,6 +33,7 @@ import re
 
 class BuildPostgres(CrossCompileAutotoolsProject):
     repository = "https://github.com/CTSRD-CHERI/postgres.git"
+    gitBranch = "96-cheri"
     # we have to build in the source directory, out-of-source is broken
     defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir
     requiresGNUMake = True
@@ -40,7 +41,6 @@ class BuildPostgres(CrossCompileAutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.gitBranch = "96-cheri"
         # self.COMMON_FLAGS.append("-DUSE_ASSERT_CHECKING=1")
         # self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")
         self.COMMON_FLAGS.extend(["-pedantic",

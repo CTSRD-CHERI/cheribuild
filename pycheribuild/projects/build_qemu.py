@@ -33,13 +33,13 @@ from ..utils import *
 
 class BuildQEMU(AutotoolsProject):
     repository = "https://github.com/CTSRD-CHERI/qemu.git"
+    gitBranch = "qemu-cheri"
     defaultInstallDir = AutotoolsProject._installToSDK
     appendCheriBitsToBuildDir = True
     requiresGNUMake = True
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.gitBranch = "qemu-cheri"
         self._addRequiredSystemTool("pkg-config")
         self._addRequiredSystemTool("python", installInstructions="QEMU needs Python 2 installed as the python binary")
         # QEMU will not work with BSD make, need GNU make

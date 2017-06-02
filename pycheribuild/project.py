@@ -354,6 +354,7 @@ def _defaultBuildDir(config: CheriConfig, project: "Project"):
 class Project(SimpleProject):
     repository = ""
     gitRevision = None
+    gitBranch = ""
     skipGitSubmodules = False
     compileDBRequiresBear = True
     doNotAddToTargets = True
@@ -436,7 +437,6 @@ class Project(SimpleProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.gitBranch = ""
         # set up the install/build/source directories (allowing overrides from config file)
 
         self.configureCommand = ""
@@ -472,11 +472,6 @@ class Project(SimpleProject):
                 fatalError("Project." + name + " mustn't be set, only modification is allowed.", "Called from",
                            self.__class__.__name__)
         self.__dict__[name] = value
-
-    def runGitCmd(self, *args, cwd=None, **kwargs):
-        if not cwd:
-            cwd = self.sourceDir
-        return runCmd("git", *args, cwd=cwd, **kwargs)
 
     def _ensureGitRepoIsCloned(self, *, srcDir: Path, remoteUrl, initialBranch=None, skipSubmodules=False):
         # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
@@ -581,7 +576,7 @@ class Project(SimpleProject):
                 warningMessage(self.projectName, "does not support out-of-source builds, using git clean to remove"
                                                  "build artifacts.")
                 # Try to keep project files for IDEs and other dotfiles:
-                self.runGitCmd("clean", "-dfx", "--exclude=.*", "--exclude=*.kdev4", cwd=self.buildDir)
+                runCmd("git", "clean", "-dfx", "--exclude=.*", "--exclude=*.kdev4", cwd=self.buildDir)
         else:
             return self.asyncCleanDirectory(self.buildDir)
         return ThreadJoiner(None)

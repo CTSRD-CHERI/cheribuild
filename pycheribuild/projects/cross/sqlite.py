@@ -32,11 +32,11 @@ from ...utils import runCmd
 
 class BuildSQLite(CrossCompileAutotoolsProject):
     repository = "https://github.com/CTSRD-CHERI/sqlite.git"
+    gitBranch = "branch-3.19"
     defaultOptimizationLevel = ["-O2"]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.gitBranch = "branch-3.19"
         if self.crossCompileTarget != CrossCompileTarget.NATIVE:
             self.configureEnvironment["BUILD_CC"] = self.config.clangPath
             self.configureEnvironment["BUILD_CFLAGS"] = "-integrated-as"

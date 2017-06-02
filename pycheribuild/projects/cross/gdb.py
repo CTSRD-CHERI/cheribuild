@@ -41,6 +41,7 @@ import tempfile
 class BuildGDB(CrossCompileAutotoolsProject):
     defaultInstallDir = lambda config, cls: BuildCHERIBSD.rootfsDir(config) / "usr/local"
     repository = "https://github.com/bsdjhb/gdb.git"
+    gitBranch = "mips_cheri"
     requiresGNUMake = True
     # TODO: also allow compiling for host system
     crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
@@ -50,7 +51,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
     def __init__(self, config: CheriConfig):
         # See https://github.com/bsdjhb/kdbg/blob/master/gdb/build
         super().__init__(config)
-        self.gitBranch = "mips_cheri"
         # ./configure flags
         self.configureArgs.extend([
             "--enable-targets=mips64-unknown-freebsd",

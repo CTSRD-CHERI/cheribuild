@@ -43,6 +43,7 @@ class BuildGnuBinutils(AutotoolsProject):
         function=lambda config, project: Path(config.sourceRoot / "binutils"),
         asString="$SOURCE_ROOT/binutils")
     repository = "https://github.com/CTSRD-CHERI/binutils.git"
+    gitBranch = "cheribsd"  # the default branch "cheri" won't work for cross-compiling
     defaultInstallDir = AutotoolsProject._installToSDK
 
     @classmethod
@@ -54,7 +55,6 @@ class BuildGnuBinutils(AutotoolsProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # http://marcelog.github.io/articles/cross_freebsd_compiler_in_linux.html
-        self.gitBranch = "cheribsd"  # the default branch "cheri" won't work for cross-compiling
 
         # If we don't use a patched binutils version on linux we get an ld binary that is
         # only able to handle 32 bit mips:
@@ -99,13 +99,13 @@ class BuildGnuBinutils(AutotoolsProject):
     def update(self):
         self._ensureGitRepoIsCloned(srcDir=self.sourceDir, remoteUrl=self.repository, initialBranch=self.gitBranch)
         # Make sure we have the version that can compile FreeBSD binaries
-        status = self.runGitCmd("status", "-b", "-s", "--porcelain", "-u", "no",
-                                captureOutput=True, printVerboseOnly=True)
+        status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
+                        captureOutput=True, printVerboseOnly=True, cwd=self.sourceDir)
         if not status.stdout.startswith(b"## cheribsd"):
-            branches = self.runGitCmd("branch", "--list", captureOutput=True, printVerboseOnly=True).stdout
+            branches = runCmd("git", "branch", "--list", captureOutput=True, printVerboseOnly=True).stdout
             if b" cheribsd" not in branches:
-                self.runGitCmd("checkout", "-b", "cheribsd", "--track", "origin/cheribsd")
-        self.runGitCmd("checkout", "cheribsd")
+                runCmd("git", "checkout", "-b", "cheribsd", "--track", "origin/cheribsd")
+        runCmd("git", "checkout", "cheribsd")
         super().update()
 
     def install(self, **kwargs):
@@ -138,11 +138,11 @@ class BuildGPLv3Binutils(BuildGnuBinutils):
     projectName = "GPLv3-BinUtils"
     # This is much faster to clone than the official repo
     repository = "https://github.com/RichardsonAlex/binutils-gdb.git"
+    gitBranch = "cheribsd"
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.projectName = ""
-        self.gitBranch = "cheribsd"
         # self.configureArgs.append("--enable-gold")
         del self.configureEnvironment["CFLAGS"]
 
