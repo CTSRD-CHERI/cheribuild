@@ -52,8 +52,9 @@ class BuildLibunwind(CrossCompileCMakeProject):
         self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)
         self.add_cmake_options(LLVM_CONFIG_PATH=self.compiler_dir / "llvm-config")
         # TODO: this breaks the build: LLVM_LIBDIR_SUFFIX="cheri"
-        self.COMMON_FLAGS.append("-isystem")
-        self.COMMON_FLAGS.append(str(BuildLibCXX.sourceDir / "include"))
+        # Now that cheribsd includes libc++ we no longer need this:
+        # self.COMMON_FLAGS.append("-isystem")
+        # self.COMMON_FLAGS.append(str(BuildLibCXX.sourceDir / "include"))
         self._forceLibCXX = False
 
 
