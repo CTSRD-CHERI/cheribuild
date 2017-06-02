@@ -32,6 +32,7 @@ from ...utils import commandline_to_str, runCmd
 
 class BuildQt5(CrossCompileProject):
     repository = "https://github.com/qt/qt5"
+    gitBranch = "5.9"
     skipGitSubmodules = True  # init-repository does it for us
     requiresGNUMake = True
     defaultOptimizationLevel = ["-O2"]
@@ -39,7 +40,6 @@ class BuildQt5(CrossCompileProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.gitBranch = "5.9"
         self.configureCommand = self.sourceDir / "configure"
         self.linkDynamic = True  # Build system adds -static automatically
 
@@ -53,7 +53,9 @@ class BuildQt5(CrossCompileProject):
         if self.crossCompileTarget != CrossCompileTarget.NATIVE:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
             compiler_flags = commandline_to_str(self.COMMON_FLAGS + ["-target", self.targetTriple + "12"])
-            linker_flags = commandline_to_str(self.default_ldflags + ["-target", self.targetTriple + "12"])
+            linker_flags = commandline_to_str(self.default_ldflags + ["-target", self.targetTriple + "12",
+                                                                      # on cheri we need __atomic_store, etc.
+                                                                      "-lcompiler_rt", "-v"])
             # self.configureArgs.append("QMAKE_CXXFLAGS+=-stdlib=libc++")
             self.configureArgs.extend([
                 "-device", "freebsd-generic-clang",
@@ -63,6 +65,8 @@ class BuildQt5(CrossCompileProject):
                 "-sysroot", self.config.sdkSysrootDir,
                 "-static"
             ])
+        if self.crossCompileTarget == CrossCompileTarget.CHERI:
+            self.configureArgs.append("QMAKE_LIBDIR=" + str(self.config.sdkSysrootDir / "usr/libcheri"))
 
         if self.debugInfo:
             self.configureArgs.append("-debug")
@@ -75,14 +79,16 @@ class BuildQt5(CrossCompileProject):
             "-no-opengl", "-no-dbus",
             # TODO: build the tests and run them them
             # "-developer-build"
-            "-nomake", "tests"
+            "-nomake", "tests",
+            # QtGamepad assumes evdev is available on !WINDOWS !OSX
+            "-skip", "qtgamepad",
         ])
 
         self.configureArgs.extend(["-opensource", "-confirm-license"])
 
         # currently causes build failures:
         # Seems like I need to define PNG_READ_GAMMA_SUPPORTED
-        self.configureArgs.append("-no-libpng")
+        self.configureArgs.append("-qt-libpng")
 
         self.deleteFile(self.buildDir / "config.cache")
         self.deleteFile(self.buildDir / "config.opt")
