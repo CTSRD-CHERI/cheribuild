@@ -45,18 +45,13 @@ def defaultSshForwardingPort():
     return 9999 + ((os.getuid() - 1000) % 10000)
 
 
-
-class LaunchQEMU(SimpleProject):
-    projectName = "run"
-    target = "run"
-    dependencies = ["qemu", "disk-image"]
-
+class LaunchQEMUBase(SimpleProject):
+    doNotAddToTargets = True
     _forwardSSHPort = True
+    sshForwardingPort = None  # type: int
 
     @classmethod
-    def setupConfigOptions(cls, sshPortShortname: "typing.Optional[str]"="-ssh-forwarding-port",
-                           defaultSshPort=defaultSshForwardingPort(),
-                           useTelnetShortName: "typing.Optional[str]"="-qemu-monitor-telnet", **kwargs):
+    def setupConfigOptions(cls, sshPortShortname: "typing.Optional[str]", defaultSshPort: int=None, **kwargs):
         super().setupConfigOptions(**kwargs)
         cls.extraOptions = cls.addConfigOption("extra-options", default=[], kind=list, metavar="QEMU_OPTIONS",
                                                help="Additional command line flags to pass to qemu-system-cheri")
@@ -65,8 +60,7 @@ class LaunchQEMU(SimpleProject):
         cls.logDir = cls.addConfigOption("log-directory", default=None, kind=str, metavar="DIR",
                                          help="If set QEMU will log to a timestamped file in this directory. Will be "
                                               "ignored if the 'logfile' option is set")
-        cls.useTelnet = cls.addConfigOption("monitor-over-telnet", shortname=useTelnetShortName, kind=int,
-                                            metavar="PORT", showHelp=True,
+        cls.useTelnet = cls.addConfigOption("monitor-over-telnet", kind=int, metavar="PORT", showHelp=True,
                                             help="If set, the QEMU monitor will be reachable by connecting to localhost"
                                                  "at $PORT via telnet instead of using CTRL+A,C")
         # TODO: -s will no longer work, not sure anyone uses it though
@@ -80,8 +74,8 @@ class LaunchQEMU(SimpleProject):
     def __init__(self, config):
         super().__init__(config)
         self.qemuBinary = self.config.sdkDir / "bin/qemu-system-cheri"
-        self.currentKernel = BuildCHERIBSD.rootfsDir(self.config) / "boot/kernel/kernel"
-        self.diskImage = BuildCheriBSDDiskImage.diskImagePath
+        self.currentKernel = None  # type: Path
+        self.diskImage = None  # type: Path
         self._diskOptions = []
         self._projectSpecificOptions = []
         self._qemuUserNetworking = True
@@ -166,8 +160,51 @@ class LaunchQEMU(SimpleProject):
             return False
 
 
-class LaunchFreeBSDMipsQEMU(LaunchQEMU):
-    target = "run-freebsd-mips"
+class AbstractLaunchFreeBSD(LaunchQEMUBase):
+    doNotAddToTargets = True
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        if not IS_FREEBSD:
+            cls.remoteKernelPath = cls.addConfigOption("remote-kernel-path", showHelp=True,
+                                                       help="Path to the FreeBSD kernel image on a remote host. "
+                                                            "Needed because FreeBSD cannot be cross-compiled.")
+
+    def _copyKernelImageFromRemoteHost(self):
+        statusUpdate("Copying kernel image from FreeBSD build machine")
+        if not self.remoteKernelPath:
+            fatalError("Path to the remote disk image is not set, option '--", self.target, "/",
+                       "remote-kernel-path' must be set to a path that scp understands",
+                       " (e.g. vica:/foo/bar/kernel)", sep="")
+            return
+        scpPath = os.path.expandvars(self.remoteKernelPath)
+        self.makedirs(self.currentKernel.parent)
+        self.copyRemoteFile(scpPath, self.currentKernel)
+
+    def process(self):
+        if not IS_FREEBSD:
+            self._copyKernelImageFromRemoteHost()
+        super().process()
+
+
+class LaunchCheriBSD(AbstractLaunchFreeBSD):
+    projectName = "run"
+    dependencies = ["qemu", "disk-image"]
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(sshPortShortname="-ssh-forwarding-port",
+                                   defaultSshPort=defaultSshForwardingPort(),
+                                   **kwargs)
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.currentKernel = BuildCHERIBSD.rootfsDir(self.config) / "boot/kernel/kernel"
+        self.diskImage = BuildCheriBSDDiskImage.diskImagePath
+
+
+class LaunchFreeBSDMips(AbstractLaunchFreeBSD):
     projectName = "run-freebsd-mips"
     dependencies = ["qemu", "disk-image-freebsd-mips"]
 
@@ -184,7 +221,7 @@ class LaunchFreeBSDMipsQEMU(LaunchQEMU):
         self.diskImage = BuildFreeBSDDiskImage.diskImagePath
 
 
-class LaunchCheriOSQEMU(LaunchQEMU):
+class LaunchCheriOSQEMU(LaunchQEMUBase):
     target = "run-cherios"
     projectName = "run-cherios"
     dependencies = ["qemu", "cherios"]

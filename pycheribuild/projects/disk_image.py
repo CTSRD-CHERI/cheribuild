@@ -293,11 +293,12 @@ nfs_client_enable="YES"
 
     def copyFromRemoteHost(self):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
-        self.remotePath = os.path.expandvars(self.remotePath)
         if not self.remotePath:
             fatalError("Path to the remote disk image is not set, option '--", self.target, "/", "remote-path' must "
                        "be set to a path that scp understands (e.g. vica:/foo/bar/disk.qcow2)", sep="")
             return
+        # noinspection PyAttributeOutsideInit
+        self.remotePath = os.path.expandvars(self.remotePath)
         statusUpdate("Will copy the disk-image from ", self.remotePath, sep="")
         if not self.queryYesNo("Continue?"):
             return

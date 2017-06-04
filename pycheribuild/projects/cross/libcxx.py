@@ -30,8 +30,8 @@
 
 from .crosscompileproject import *
 from ..cheribsd import BuildCHERIBSD
-from ..llvm import BuildLLVM
-from ..run_qemu import LaunchQEMU
+# from ..llvm import BuildLLVM
+from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
 from ...utils import IS_LINUX, parseOSRelease
 
@@ -99,7 +99,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         cls.qemu_host = cls.addConfigOption("ssh-host", help="The QEMU SSH hostname to connect to for running tests",
                                             default=lambda c, p: "localhost")
         cls.qemu_port = cls.addConfigOption("ssh-port", help="The QEMU SSH port to connect to for running tests",
-                                            kind=str, default=lambda c, p: LaunchQEMU.sshForwardingPort)
+                                            kind=str, default=lambda c, p: LaunchCheriBSD.sshForwardingPort)
         cls.qemu_user = cls.addConfigOption("shh-user", default="root", help="The CheriBSD used for running tests")
 
     def __init__(self, config: CheriConfig):
