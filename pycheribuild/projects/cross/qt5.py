@@ -116,7 +116,8 @@ class BuildQt5(BuildQtWithConfigureScript):
 
     def update(self):
         super().update()
-        runCmd("perl", "init-repository", "-f", "--branch", cwd=self.sourceDir)
+        # qtlocation breaks for some reason if qt5 is forked on github
+        runCmd("perl", "init-repository", "--module-subset=default,-qtlocation", "-f", "--branch", cwd=self.sourceDir)
 
 
 class BuildQtBase(BuildQtWithConfigureScript):
