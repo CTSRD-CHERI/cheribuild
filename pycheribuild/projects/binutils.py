@@ -105,7 +105,7 @@ class BuildGnuBinutils(AutotoolsProject):
             branches = runCmd("git", "branch", "--list", captureOutput=True, printVerboseOnly=True).stdout
             if b" cheribsd" not in branches:
                 runCmd("git", "checkout", "-b", "cheribsd", "--track", "origin/cheribsd")
-        runCmd("git", "checkout", "cheribsd")
+        runCmd("git", "checkout", "cheribsd", cwd=self.sourceDir)
         super().update()
 
     def install(self, **kwargs):
