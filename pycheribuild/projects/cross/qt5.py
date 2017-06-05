@@ -111,7 +111,9 @@ class BuildQt5(BuildQtWithConfigureScript):
     def configure(self, **kwargs):
         if not self.allModules:
             modules_to_skip = "qtgamepad qtlocation".split()
-            # TODO: skip modules that just increase compile time
+            for i in modules_to_skip:
+                self.configureArgs.extend(["-skip", i])
+            # TODO: skip modules that just increase compile time and are useless
         super().configure(**kwargs)
 
     def update(self):
