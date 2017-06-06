@@ -110,6 +110,9 @@ class JenkinsConfig(CheriConfig):
         self.sdkDir = self.workspace / self.sdkDirectoryName
         self.sdkSysrootDir = self.sdkDir / "sysroot"
         self.sdkBinDir = self.sdkDir / "bin"
+        # always use the CHERI clang built by jenkins to ensure we don't x86 compilation
+        self.clangPath = self.sdkBinDir / "clang"
+        self.clangPlusPlusPath = self.sdkBinDir / "clang++"
 
         self.crossCompileTarget = self.cpu
         if self.cpu == "cheri128":
