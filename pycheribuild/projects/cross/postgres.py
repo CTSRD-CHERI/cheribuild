@@ -55,8 +55,9 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             self.configureEnvironment["AR"] = str(self.sdkBinDir / "cheri-unknown-freebsd-ar")
             # tell postgres configure that %zu works in printf()
             self.configureEnvironment["PRINTF_SIZE_T_SUPPORT"] = "yes"
-            if not self.linkDynamic:
-                self.COMMON_FLAGS.append("-static")  # adding it to LDFLAGS only doesn't seem to be enough
+            # currently we can only build static:
+            self.LDFLAGS.append("-static")
+            self.COMMON_FLAGS.append("-static")  # adding it to LDFLAGS only doesn't seem to be enough
 
         if self.debugInfo:
             self.configureArgs.append("--enable-debug")

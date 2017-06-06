@@ -44,6 +44,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
         super().__init__(config)
         self.configureCommand = self.sourceDir / "auto/configure"
         if self.crossCompileTarget != CrossCompileTarget.NATIVE:
+            self.LDFLAGS.append("-static")
             self.COMMON_FLAGS.append("-static")  # adding it to LDFLAGS only doesn't seem to be enough
             self.COMMON_FLAGS.extend(["-pedantic",
                                       "-Wno-gnu-statement-expression",

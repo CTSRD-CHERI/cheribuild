@@ -158,12 +158,10 @@ class CrossCompileProject(Project):
             # TODO: check that we are using LLD and not BFD
             result += ["-no-capsizefix", "-Wl,-process-cap-relocs", "-Wl,-verbose"]
         if self.config.withLibstatcounters:
-            if self.linkDynamic:
-                result.append("-lstatcounters")
-            else:
-                result += ["-Wl,--whole-archive", "-lstatcounters", "-Wl,--no-whole-archive"]
-        if not self.linkDynamic:
-            result.append("-static")
+            #if self.linkDynamic:
+            #    result.append("-lstatcounters")
+            #else:
+            result += ["-Wl,--whole-archive", "-lstatcounters", "-Wl,--no-whole-archive"]
         return result
 
     @classmethod
@@ -174,7 +172,6 @@ class CrossCompileProject(Project):
         cls.linker = cls.addConfigOption("linker", default=cls.defaultLinker,
                                          help="The linker to use (`lld` or `bfd`) (lld is  better but may"
                                               " not work for some projects!)")
-        cls.linkDynamic = cls.addBoolOption("link-dynamic", help="Try to link dynamically (probably broken)")
         cls.debugInfo = cls.addBoolOption("debug-info", help="build with debug info", default=True)
         cls.optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
                                                     default=cls.defaultOptimizationLevel)
@@ -256,7 +253,7 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         buildhost = self.get_host_triple()
-        if self.crossCompileTarget != CrossCompileTarget.NATIVE and self.add_host_target_build_config_options:
+        if not self.compiling_for_host() and self.add_host_target_build_config_options:
             self.configureArgs.extend(["--host=" + self.targetTriple, "--target=" + self.targetTriple,
                                        "--build=" + buildhost])
 
