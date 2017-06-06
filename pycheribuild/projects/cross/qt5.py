@@ -41,7 +41,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.configureCommand = self.sourceDir / "configure"
-        self.linkDynamic = True  # Build system adds -static automatically
 
     def configure(self, **kwargs):
         if not self.needsConfigure() and not self.config.forceConfigure:
@@ -49,7 +48,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         if self.crossCompileTarget != CrossCompileTarget.NATIVE:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
             compiler_flags = self.COMMON_FLAGS + ["-target", self.targetTriple + "12"]
-            linker_flags = self.default_ldflags + ["-target", self.targetTriple + "12", "-v"]
+            linker_flags = self.default_ldflags + ["-target", self.targetTriple + "12"]
 
             if self.crossCompileTarget == CrossCompileTarget.CHERI:
                 linker_flags += ["-static"]  # dynamically linked C++ doesn't work yet
@@ -66,7 +65,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-device-option", "COMPILER_FLAGS=" + commandline_to_str(compiler_flags),
                 "-device-option", "LINKER_FLAGS=" + commandline_to_str(linker_flags),
                 "-sysroot", self.config.sdkSysrootDir,
-                "-static"
+                "-static",
+                "-prefix", "/usr/local/Qt-" + self.crossCompileTarget.value
             ])
 
         self.configureArgs.extend([
@@ -76,7 +76,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # To ensure the host and cross-compiled version is the same also disable opengl and dbus there
             "-no-opengl", "-no-dbus",
             # Missing configure check for evdev means it will fail to compile for CHERI
-            "-no-evdev"
+            "-no-evdev",
+            # Needed for webkit:
+            # "-icu",
         ])
         # currently causes build failures:
         # Seems like I need to define PNG_READ_GAMMA_SUPPORTED
@@ -120,7 +122,8 @@ class BuildQt5(BuildQtWithConfigureScript):
     def update(self):
         super().update()
         # qtlocation breaks for some reason if qt5 is forked on github
-        runCmd("perl", "init-repository", "--module-subset=default,-qtlocation", "-f", "--branch", cwd=self.sourceDir)
+        # TODO: qtwebkit, but that won't cross-compile with QMAKE
+        runCmd("perl", "init-repository", "--module-subset=essential", "-f", "--branch", cwd=self.sourceDir)
 
 
 class BuildQtBase(BuildQtWithConfigureScript):
