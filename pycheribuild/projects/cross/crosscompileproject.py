@@ -273,12 +273,18 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
             compiler_prefix = ""
 
-        self.configureEnvironment["CC"] = str(self.compiler_dir / (compiler_prefix + "clang"))
-        self.configureEnvironment["CXX"] = str(self.compiler_dir / (compiler_prefix + "clang++"))
+        cc = self.config.clangPath if self.compiling_for_host() else self.compiler_dir / (compiler_prefix + "clang")
+        self.configureEnvironment["CC"] = str(cc)
+        cxx = self.config.clangPlusPlusPath if self.compiling_for_host() else self.compiler_dir / (compiler_prefix + "clang++")
+        self.configureEnvironment["CXX"] = str(cxx)
         self.configureEnvironment["CPPFLAGS"] = " ".join(CPPFLAGS)
         self.configureEnvironment["CFLAGS"] = " ".join(CPPFLAGS + self.CFLAGS)
         self.configureEnvironment["CXXFLAGS"] = " ".join(CPPFLAGS + self.CXXFLAGS)
         self.configureEnvironment["LDFLAGS"] = " ".join(self.LDFLAGS + self.default_ldflags)
+        # remove all empty items:
+        env = {k: v for k, v in self.configureEnvironment.items() if v}
+        self.configureEnvironment.clear()
+        self.configureEnvironment.update(env)
         print(coloured(AnsiColour.yellow, "Cross configure environment:",
                        pprint.pformat(self.configureEnvironment, width=160)))
         super().configure(**kwargs)
