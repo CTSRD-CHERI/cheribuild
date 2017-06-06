@@ -46,7 +46,15 @@ from .filesystemutils import FileSystemUtils
 from .utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies", # no-combine
-           "SimpleProject", "CheriConfig"]  # no-combine
+           "SimpleProject", "CheriConfig", "flushStdio"]  # no-combine
+
+
+def flushStdio(stream):
+    try:
+        # for some reason this can cause an error on vica
+        stream.flush()
+    except BlockingIOError:
+        warningMessage("Got BlockingIOError for some reason, ignoring...")
 
 
 class ProjectSubclassDefinitionHook(type):
@@ -187,10 +195,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 # noinspection PyProtectedMember
                 if project._lastStdoutLineCanBeOverwritten:
                     sys.stdout.buffer.write(b"\n")
-                    sys.stdout.buffer.flush()
+                    flushStdio(sys.stdout)
                     project._lastStdoutLineCanBeOverwritten = False
                 sys.stderr.buffer.write(errLine)
-                sys.stderr.buffer.flush()
+                flushStdio(sys.stderr)
                 if not project.config.noLogfile:
                     outfile.write(errLine)
 
@@ -200,14 +208,14 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             sys.stdout.buffer.write(Project._clearLineSequence)
         sys.stdout.buffer.write(line[:-1])  # remove the newline at the end
         sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
-        sys.stdout.buffer.flush()
+        flushStdio(sys.stdout)
         self._lastStdoutLineCanBeOverwritten = True
 
     def _showLineStdoutFilter(self, line: bytes):
         if self._lastStdoutLineCanBeOverwritten:
             sys.stdout.buffer.write(b"\n")
         sys.stdout.buffer.write(line)
-        sys.stdout.buffer.flush()
+        flushStdio(sys.stdout)
         self._lastStdoutLineCanBeOverwritten = False
 
     def _stdoutFilter(self, line: bytes):
@@ -289,11 +297,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                     stdoutFilter(line)
                 else:
                     sys.stdout.buffer.write(line)
-                    try:
-                        # for some reason this can cause an error on vica
-                        sys.stdout.buffer.flush()
-                    except BlockingIOError:
-                        warningMessage("Got BlockingIOError for some reason, ignoring...")
+                    flushStdio(sys.stdout)
         retcode = proc.wait()
         if stderrThread:
             stderrThread.join()
