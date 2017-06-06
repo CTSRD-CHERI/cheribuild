@@ -289,7 +289,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                     stdoutFilter(line)
                 else:
                     sys.stdout.buffer.write(line)
-                    sys.stdout.buffer.flush()
+                    try:
+                        # for some reason this can cause an error on vica
+                        sys.stdout.buffer.flush()
+                    except BlockingIOError:
+                        warningMessage("Got BlockingIOError for some reason, ignoring...")
         retcode = proc.wait()
         if stderrThread:
             stderrThread.join()
