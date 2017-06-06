@@ -591,8 +591,9 @@ class Project(SimpleProject):
     def configure(self, cwd: Path = None):
         if cwd is None:
             cwd = self.buildDir
-        if not self.needsConfigure() and not self.config.forceConfigure and not self.config.configureOnly:
-            return
+        if not self.needsConfigure() and not self.config.configureOnly:
+            if not (self.config.pretend and (self.config.forceConfigure or self.config.clean)):
+                return
         if self.configureCommand:
             self.runWithLogfile([self.configureCommand] + self.configureArgs,
                                 logfileName="configure", cwd=cwd, env=self.configureEnvironment)
@@ -723,7 +724,8 @@ class CMakeProject(Project):
             return True
         # CMake is smart enough to detect when it must be reconfigured -> skip configure if cache exists
         cmakeCache = self.buildDir / "CMakeCache.txt"
-        return not cmakeCache.exists()
+        buildFile = "build.ninja" if self.generator == CMakeProject.Generator.Ninja else "Makefile"
+        return not cmakeCache.exists() or not (self.buildDir / buildFile).exists()
 
     def configure(self, **kwargs):
         if self.installPrefix:
