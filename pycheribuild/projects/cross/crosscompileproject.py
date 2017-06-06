@@ -227,7 +227,7 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
             compiler_prefix = ""
 
         self.configureEnvironment["CC"] = str(self.compiler_dir / (compiler_prefix + "clang"))
-        self.configureEnvironment["CXX"] = str(self.compiler_dir / (compiler_prefix + "-clang++"))
+        self.configureEnvironment["CXX"] = str(self.compiler_dir / (compiler_prefix + "clang++"))
         self.configureEnvironment["CPPFLAGS"] = " ".join(CPPFLAGS)
         self.configureEnvironment["CFLAGS"] = " ".join(CPPFLAGS + self.CFLAGS)
         self.configureEnvironment["CXXFLAGS"] = " ".join(CPPFLAGS + self.CXXFLAGS)
