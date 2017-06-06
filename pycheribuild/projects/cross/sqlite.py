@@ -33,7 +33,9 @@ from ...utils import runCmd
 class BuildSQLite(CrossCompileAutotoolsProject):
     repository = "https://github.com/CTSRD-CHERI/sqlite.git"
     gitBranch = "branch-3.19"
+    crossInstallDir = CrossInstallDir.SDK
     defaultOptimizationLevel = ["-O2"]
+    warningFlags = ["-Wno-error=cheri-capability-misuse"]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

@@ -32,6 +32,7 @@ from ...utils import commandline_to_str, runCmd
 
 # This class is used to build qtbase and all of qt5
 class BuildQtWithConfigureScript(CrossCompileProject):
+    crossInstallDir = CrossInstallDir.SDK
     doNotAddToTargets = True
     # requiresGNUMake = True
     defaultOptimizationLevel = ["-O2"]

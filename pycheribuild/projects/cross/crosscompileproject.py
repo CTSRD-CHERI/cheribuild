@@ -1,6 +1,8 @@
 import os
 import pprint
+from enum import Enum
 from pathlib import Path
+
 
 from ...config.loader import ComputedDefaultValue
 from ...config.chericonfig import CrossCompileTarget
@@ -9,28 +11,42 @@ from ..llvm import BuildLLVM
 from ...project import *
 from ...utils import *
 
-__all__ = ["CheriConfig", "installToCheriBSDRootfs", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject",
-           "CrossCompileTarget", "CrossCompileProject"]
+__all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget",
+           "CrossCompileProject", "CrossInstallDir"]
 
-
-installToCheriBSDRootfs = ComputedDefaultValue(
-    function=lambda config, project: Path(BuildCHERIBSD.rootfsDir(config) / "extra" / project.projectName.lower()),
-    asString=lambda cls: "$CHERIBSD_ROOTFS/extra/" + cls.projectName.lower())
+class CrossInstallDir(Enum):
+    NONE = 0
+    CHERIBSD_ROOTFS = 1
+    SDK = 2
 
 defaultTarget = ComputedDefaultValue(
     function=lambda config, project: config.crossCompileTarget.value,
     asString="'cheri' unless -xmips/-xhost is set")
 
 def _default_build_dir(config: CheriConfig, project):
-    if project.crossCompileTarget == CrossCompileTarget.CHERI:
-        build_dir_suffix = config.cheriBitsStr + "-build"
-    else:
-        build_dir_suffix = project.crossCompileTarget.value + "-build"
-    return config.buildRoot / (project.projectName.lower() + "-" + build_dir_suffix)
+    return project.buildDirForTarget(config, project.crossCompileTarget)
+
+def _installDir(config: CheriConfig, project: "CrossCompileProject"):
+    if project.crossCompileTarget == CrossCompileTarget.NATIVE:
+        return config.sdkDir
+    if project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
+        return Path(BuildCHERIBSD.rootfsDir(config) / "extra" / project.projectName.lower())
+    elif project.crossInstallDir == CrossInstallDir.SDK:
+        return config.sdkSysrootDir
+    fatalError("Unknown install dir for", project.projectName)
+
+def _installDirMessage(project: "CrossCompileProject"):
+    if project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
+        return "$CHERIBSD_ROOTFS/extra/" + project.projectName.lower() + " or $CHERI_SDK for --xhost build"
+    elif project.crossInstallDir == CrossInstallDir.SDK:
+        return "$CHERI_SDK/sysroot for cross builds or $CHERI_SDK for --xhost build"
+    return "UNKNOWN"
+
 
 class CrossCompileProject(Project):
     doNotAddToTargets = True
-    defaultInstallDir = installToCheriBSDRootfs
+    crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+    defaultInstallDir = ComputedDefaultValue(function=_installDir, asString=_installDirMessage)
     appendCheriBitsToBuildDir = True
     dependencies = ["cheribsd-sdk"]
     defaultLinker = "lld"
@@ -61,8 +77,14 @@ class CrossCompileProject(Project):
             self.targetTriple = self.get_host_triple()
             self.installDir = self.buildDir / "test-install-prefix"
         else:
-            self.installPrefix = Path("/", self.installDir.relative_to(BuildCHERIBSD.rootfsDir(config)))
-            self.destdir = BuildCHERIBSD.rootfsDir(config)
+            if self.crossInstallDir == CrossInstallDir.SDK:
+                self.installPrefix = "/usr/local"
+                self.destdir = config.sdkSysrootDir
+            elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
+                self.installPrefix = Path("/", self.installDir.relative_to(BuildCHERIBSD.rootfsDir(config)))
+                self.destdir = BuildCHERIBSD.rootfsDir(config)
+            else:
+                assert self.installPrefix and self.destdir, "Must be set!"
             self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-msoft-float", "-G0"]
             if self.crossCompileTarget == CrossCompileTarget.CHERI:
                 self.targetTriple = "cheri-unknown-freebsd"
@@ -125,6 +147,9 @@ class CrossCompileProject(Project):
                   "-Wl,-z,notext",  # needed so that LLD allows text relocations
                   "--sysroot=" + str(self.sdkSysroot),
                   "-B" + str(self.sdkBinDir)]
+        if self.compiling_for_cheri() and self.newCapRelocs:
+            # TODO: check that we are using LLD and not BFD
+            result += ["-no-capsizefix", "-Wl,-process-cap-relocs", "-Wl,-verbose"]
         if self.config.withLibstatcounters:
             if self.linkDynamic:
                 result.append("-lstatcounters")
@@ -146,11 +171,29 @@ class CrossCompileProject(Project):
         cls.debugInfo = cls.addBoolOption("debug-info", help="build with debug info", default=True)
         cls.optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
                                                     default=cls.defaultOptimizationLevel)
+        # TODO: check if LLD supports it and if yes default to true?
+        cls.newCapRelocs = cls.addBoolOption("new-cap-relocs", help="Use the new __cap_relocs processing in LLD", default=False)
         if cls.crossCompileTarget is None:
             cls.crossCompileTarget = cls.addConfigOption("target", help="The target to build for (`cheri` or `mips` or `native`)",
                                                  default=defaultTarget, choices=["cheri", "mips", "native"],
                                                  kind=CrossCompileTarget)
 
+    @classmethod
+    def buildDirForTarget(cls, config: CheriConfig, target: CrossCompileTarget):
+        if target == CrossCompileTarget.CHERI:
+            build_dir_suffix = config.cheriBitsStr + "-build"
+        else:
+            build_dir_suffix = target.value + "-build"
+        return config.buildRoot / (cls.projectName.lower() + "-" + build_dir_suffix)
+
+    def compiling_for_mips(self):
+        return self.crossCompileTarget == CrossCompileTarget.MIPS
+
+    def compiling_for_cheri(self):
+        return self.crossCompileTarget == CrossCompileTarget.CHERI
+
+    def compiling_for_host(self):
+        return self.crossCompileTarget == CrossCompileTarget.NATIVE
 
 class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
     doNotAddToTargets = True  # only used as base class
