@@ -86,6 +86,7 @@ class CrossCompileProject(Project):
             else:
                 assert self.installPrefix and self.destdir, "Must be set!"
             self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-msoft-float", "-G0"]
+            # use *-*-freebsd12 to default to libc++
             if self.crossCompileTarget == CrossCompileTarget.CHERI:
                 self.targetTriple = "cheri-unknown-freebsd"
                 self.COMMON_FLAGS.append("-mabi=purecap")
@@ -101,10 +102,19 @@ class CrossCompileProject(Project):
             self.COMMON_FLAGS.append("-g")
         self.CFLAGS = []
         self.CXXFLAGS = []
-        if self._forceLibCXX:
+        if self._forceLibCXX and not self.compiling_for_host():
             self.CXXFLAGS = ["-stdlib=libc++"]
         self.ASMFLAGS = []
         self.LDFLAGS = []
+
+    @property
+    def targetTripleWithVersion(self):
+        # we need to append the FreeBSD version to pick up the correct C++ standard library
+        if self.compiling_for_host():
+            return self.targetTriple
+        else:
+            # anything over 10 should use libc++ by default
+            return self.targetTriple + "12"
 
     @staticmethod
     def get_host_triple():
@@ -231,7 +241,7 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
             TOOLCHAIN_SDK_BINDIR=self.sdkBinDir,
             TOOLCHAIN_SYSROOT=self.sdkSysroot,
             TOOLCHAIN_COMPILER_BINDIR=self.compiler_dir,
-            TOOLCHAIN_TARGET_TRIPLE=self.targetTriple,
+            TOOLCHAIN_TARGET_TRIPLE=self.targetTripleWithVersion,
             TOOLCHAIN_COMMON_FLAGS=self.COMMON_FLAGS,
             TOOLCHAIN_C_FLAGS=self.CFLAGS,
             TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
@@ -255,16 +265,16 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
 
     @property
     def default_compiler_flags(self):
-        result = self.COMMON_FLAGS + self.warningFlags + self.optimizationFlags + ["-target", self.targetTriple,
-                                                                                   "-B" + str(self.sdkBinDir)]
+        result = self.COMMON_FLAGS + self.optimizationFlags + ["-target", self.targetTripleWithVersion]
         if self.crossCompileTarget != CrossCompileTarget.NATIVE:
-            result += ["--sysroot=" + str(self.sdkSysroot)]
+            result += ["--sysroot=" + str(self.sdkSysroot), "-B" + str(self.sdkBinDir)] + self.warningFlags
         return result
 
     def configure(self, **kwargs):
         CPPFLAGS = self.default_compiler_flags
         for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
             assert key not in self.configureEnvironment
+        # target triple contains a number suffix -> remove it when computing the compiler name
         compiler_prefix = self.targetTriple + "-"
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
             compiler_prefix = ""
