@@ -95,7 +95,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
         self.LDFLAGS.append("-static")
         self.COMMON_FLAGS.append("-static")  # seems like LDFLAGS is not enough
-        self.COMMON_FLAGS.extend(["-DRL_NO_COMPAT", "-g", "-DLIBICONV_PLUG", "-fno-strict-aliasing",
+        self.COMMON_FLAGS.extend(["-DRL_NO_COMPAT", "-DLIBICONV_PLUG", "-fno-strict-aliasing",
                                   "-I/usr/local/include"])
         self.CFLAGS.append("-std=gnu89")
         self.LDFLAGS.append("-L/usr/local/lib")
