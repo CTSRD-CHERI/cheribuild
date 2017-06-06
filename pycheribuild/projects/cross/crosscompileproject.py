@@ -51,7 +51,7 @@ class CrossCompileProject(Project):
     dependencies = ["cheribsd-sdk"]
     defaultLinker = "lld"
     crossCompileTarget = None  # type: CrossCompileTarget
-    defaultOptimizationLevel = ["-O0"]
+    defaultOptimizationLevel = ["-O2"]
     warningFlags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
                     "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types",
                     "-Werror=mips-cheri-prototypes"]
