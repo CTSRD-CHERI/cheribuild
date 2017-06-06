@@ -133,3 +133,26 @@ class BuildQtBase(BuildQtWithConfigureScript):
     def __init__(self, config: CheriConfig):
         self.sourceDir = config.sourceRoot / "qt5/qtbase"
         super().__init__(config)
+
+
+# Webkit needs ICU (and recommended for QtBase too:
+class BuildICU4C(CrossCompileAutotoolsProject):
+    repository = "https://github.com/RichardsonAlex/icu4c.git"
+    crossInstallDir = CrossInstallDir.SDK
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.configureCommand = self.sourceDir / "source/configure"
+        self.configureArgs.extend(["--enable-static", "--disable-shared"])
+        self.nativeBuildDir = self.buildDirForTarget(self.config, CrossCompileTarget.NATIVE)
+        print(self.nativeBuildDir)
+        if not self.compiling_for_host():
+            self.configureArgs.append("--with-cross-build=" + str(self.nativeBuildDir))
+
+    def checkSystemDependencies(self):
+        super().checkSystemDependencies()
+        if not self.compiling_for_host() and not self.nativeBuildDir.exists():
+            self.dependencyError("Missing host build directory", self.nativeBuildDir, " (needed for cross-compiling)",
+                                 installInstructions="Run `cheribuild.py " + self.target + " --xhost`")
+
+
