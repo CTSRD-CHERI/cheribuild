@@ -56,7 +56,6 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
         return self.config.sdkBinDir / name
 
     def __init__(self, config):
-        self._forceLibCXX = False
         super().__init__(config)
         self.add_cmake_options(
             TEST_SUITE_LLVM_SIZE=self._find_in_sdk_or_llvm_build_dir("llvm-size"),

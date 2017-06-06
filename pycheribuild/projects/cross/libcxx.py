@@ -46,7 +46,6 @@ class BuildLibunwind(CrossCompileCMakeProject):
     defaultInstallDir = installToCXXDir
 
     def __init__(self, config: CheriConfig):
-        self.linkDynamic = True   # Hack: we always want to use the dynamic toolchain file, cmake builds both static and dynamic
         super().__init__(config)
         # Adding -ldl won't work: no libdl in /usr/libcheri
         self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)
@@ -55,7 +54,6 @@ class BuildLibunwind(CrossCompileCMakeProject):
         # Now that cheribsd includes libc++ we no longer need this:
         # self.COMMON_FLAGS.append("-isystem")
         # self.COMMON_FLAGS.append(str(BuildLibCXX.sourceDir / "include"))
-        self._forceLibCXX = False
 
 
 class BuildLibCXXRT(CrossCompileCMakeProject):
@@ -63,7 +61,6 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
     defaultInstallDir = installToCXXDir
 
     def __init__(self, config: CheriConfig):
-        self.linkDynamic = True  # Hack: we always want to use the dynamic toolchain file, cmake builds both static and dynamic
         super().__init__(config)
         self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.buildDir / "lib")
         if self.crossCompileTarget == CrossCompileTarget.CHERI:
@@ -103,7 +100,6 @@ class BuildLibCXX(CrossCompileCMakeProject):
         cls.qemu_user = cls.addConfigOption("shh-user", default="root", help="The CheriBSD used for running tests")
 
     def __init__(self, config: CheriConfig):
-        self.linkDynamic = True  # Hack: we always want to use the dynamic toolchain file, cmake builds both static and dynamic
         super().__init__(config)
         self.COMMON_FLAGS.append("-D__LP64__=1")  # HACK to get it to compile
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:

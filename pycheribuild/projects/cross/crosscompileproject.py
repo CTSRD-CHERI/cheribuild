@@ -50,7 +50,6 @@ class CrossCompileProject(Project):
     appendCheriBitsToBuildDir = True
     dependencies = ["cheribsd-sdk"]
     defaultLinker = "lld"
-    _forceLibCXX = True
     crossCompileTarget = None  # type: CrossCompileTarget
     defaultOptimizationLevel = ["-O0"]
     warningFlags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
@@ -102,8 +101,6 @@ class CrossCompileProject(Project):
             self.COMMON_FLAGS.append("-g")
         self.CFLAGS = []
         self.CXXFLAGS = []
-        if self._forceLibCXX and not self.compiling_for_host():
-            self.CXXFLAGS = ["-stdlib=libc++"]
         self.ASMFLAGS = []
         self.LDFLAGS = []
 
