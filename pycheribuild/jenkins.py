@@ -79,6 +79,26 @@ class JenkinsConfigLoader(ConfigLoaderBase):
         self._parsedArgs = self._parser.parse_args()
 
 
+def extract_sdk_archive(cheriConfig, archive):
+    if not cheriConfig.sdkBinDir.is_dir():
+        statusUpdate("SDK not found, will try to extract", archive)
+        cheriConfig.FS.makedirs(cheriConfig.sdkDir)
+        runCmd("tar", "Jxf", archive, "--strip-components", "1", "-C", cheriConfig.sdkDir)
+    if not (cheriConfig.sdkDir / "bin/ar").exists():
+        cheriConfig.FS.createSymlink(Path(shutil.which("ar")), cheriConfig.sdkBinDir / "ar", relative=False)
+        cheriConfig.FS.createBuildtoolTargetSymlinks(cheriConfig.sdkBinDir / "ar")
+    if cheriConfig.crossCompileTarget == CrossCompileTarget.NATIVE:
+        stddef = list(cheriConfig.sdkDir.glob("lib/clang/include/*/stddef.h"))
+        if len(stddef) == 0:
+            # we need the LLVM builtin includes:
+            llvm_includes_archive = "{}-{}-clang-include.tar.xz".format(cheriConfig.sdk_cpu,
+                                                                        os.getenv("LLVM_BRANCH", "master"))
+            includeArchive = cheriConfig.workspace / llvm_includes_archive
+            if not includeArchive.exists():
+                fatalError("Clang builtin includes", includeArchive, "missing. Cannot compile for host!")
+            runCmd("tar", "Jxf", includeArchive, "-C", cheriConfig.sdkDir)
+
+
 def _jenkins_main():
     allTargetNames = list(sorted(targetManager.targetNames))
     configLoader = JenkinsConfigLoader()
@@ -98,37 +118,29 @@ def _jenkins_main():
     do_build = True
     do_tarball = False
     if do_build:
+        archive_path = cheriConfig.sdkArchivePath
+        # for native builds we don't need the sysroot, just clang is enough
+        if not archive_path.exists() and cheriConfig.crossCompileTarget == CrossCompileTarget.NATIVE:
+            # fall back to using just the clang archive:
+            archive_name = "{}-{}-clang-llvm.tar.xz".format(cheriConfig.sdk_cpu, os.getenv("LLVM_BRANCH", "master"))
+            archive_path = cheriConfig.workspace / archive_name
+
+        if not cheriConfig.sdkBinDir.exists() and not archive_path.exists():
+            fatalError(cheriConfig.sdkBinDir, "does not exist and SDK archive", archive_path,
+                       "does not exist! Cannot cross compile to CheriBSD")
+
+        # If the archive is newer, delete the existing sdk unless --keep-sdk is passed install root:
+        possiblyDeleteSdkJob = ThreadJoiner(None)
+        if cheriConfig.sdkDir.exists() and archive_path.exists():
+            if cheriConfig.sdkDir.stat().st_ctime < archive_path.stat().st_ctime:
+                warningMessage("SDK archive is newer than the existing archive directory")
+                if not cheriConfig.keepSdkDir:
+                    statusUpdate("Deleting old SDK and extracting archive")
+                    possiblyDeleteSdkJob = cheriConfig.FS.asyncCleanDirectory(cheriConfig.sdkDir)
         # unpack the SDK if it has not been extracted yet:
-        if not cheriConfig.sdkBinDir.is_dir():
-            sdkArchive = cheriConfig.sdkArchivePath
-            statusUpdate("SDK not found, will try to extract", )
-            if not sdkArchive.exists():
-                if cheriConfig.crossCompileTarget == CrossCompileTarget.NATIVE:
-                    # fall back to using just the clang archive:
-                    sdkArchiveName = "{}-{}-clang-llvm.tar.xz".format(cheriConfig.sdk_cpu,
-                                                                        os.getenv("LLVM_BRANCH", "master"))
-                    sdkArchive = cheriConfig.workspace / sdkArchiveName
-                    if not sdkArchive.exists():
-                        fatalError("CheriBSD SDK archive missing and Clang archive", sdkArchive, "missing too.",
-                                   "Cannot compile for host!")
-                else:
-                    fatalError(cheriConfig.sdkBinDir, "does not exist and SDK archive", sdkArchive,
-                               "does not exist! Cannot cross compile to CheriBSD")
-            cheriConfig.FS.makedirs(cheriConfig.sdkDir)
-            runCmd("tar", "Jxf", sdkArchive, "--strip-components", "1", "-C", cheriConfig.sdkDir)
-        if not (cheriConfig.sdkDir / "bin/ar").exists():
-            cheriConfig.FS.createSymlink(Path(shutil.which("ar")), cheriConfig.sdkBinDir / "ar", relative=False)
-            cheriConfig.FS.createBuildtoolTargetSymlinks(cheriConfig.sdkBinDir / "ar")
-        if cheriConfig.crossCompileTarget == CrossCompileTarget.NATIVE:
-            stddef = list(cheriConfig.sdkDir.glob("lib/clang/include/*/stddef.h"))
-            if len(stddef) == 0:
-                # we need the LLVM builtin includes:
-                llvm_includes_archive = "{}-{}-clang-include.tar.xz".format(cheriConfig.sdk_cpu,
-                                                                            os.getenv("LLVM_BRANCH", "master"))
-                includeArchive = cheriConfig.workspace / llvm_includes_archive
-                if not includeArchive.exists():
-                    fatalError("Clang builtin includes", includeArchive, "missing. Cannot compile for host!")
-                runCmd("tar", "Jxf", includeArchive, "-C", cheriConfig.sdkDir)
+        with possiblyDeleteSdkJob:
+            extract_sdk_archive(cheriConfig, archive_path)
+
         assert len(cheriConfig.targets) == 1
         target = targetManager.targetMap[cheriConfig.targets[0]]
         for project in targetManager.targetMap.values():

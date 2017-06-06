@@ -49,6 +49,8 @@ class JenkinsConfig(CheriConfig):
                                                               help="The name of the sdk archive")  # type: str
         self.keepInstallDir = loader.addCommandLineOnlyBoolOption("keep-install-dir",
                                                                   help="Don't delete the install dir prior to build")  # type: bool
+        self.keepSdkDir = loader.addCommandLineOnlyBoolOption("keep-sdk-dir", help="Don't delete existing SDK dir even"
+                                                                                   " if there is a newer archive")  # type: bool
         self.force_update = loader.addCommandLineOnlyBoolOption("force-update",
                                                                 help="Do the updating (not recommended in jenkins!)")  # type: bool
         self.createCompilationDB = loader.addCommandLineOnlyBoolOption(
