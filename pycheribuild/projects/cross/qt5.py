@@ -139,15 +139,26 @@ class BuildQtBase(BuildQtWithConfigureScript):
 class BuildICU4C(CrossCompileAutotoolsProject):
     repository = "https://github.com/RichardsonAlex/icu4c.git"
     crossInstallDir = CrossInstallDir.SDK
+    warningFlags = []  # FIXME: build with capability -Werror
 
     def __init__(self, config):
         super().__init__(config)
         self.configureCommand = self.sourceDir / "source/configure"
-        self.configureArgs.extend(["--enable-static", "--disable-shared"])
+        self.configureArgs.extend(["--enable-static", "--disable-shared", "--disable-plugins", "--disable-dyload",
+                                   # TODO: not quite sure what to do with the data
+                                   "--with-data-packaging=static",
+                                   "--disable-tests",
+                                   "--disable-samples",
+                                   "--disable-draft",
+                                   # error: undefined symbol: uconvmsg_dat
+                                   "--disable-extras",
+                                   ])
         self.nativeBuildDir = self.buildDirForTarget(self.config, CrossCompileTarget.NATIVE)
         print(self.nativeBuildDir)
         if not self.compiling_for_host():
             self.configureArgs.append("--with-cross-build=" + str(self.nativeBuildDir))
+            # can't build them yet
+            self.configureArgs.append("--disable-tools")
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
