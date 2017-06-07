@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import *
-from ...utils import runCmd
+from ...utils import runCmd, IS_FREEBSD
 
 class BuildSQLite(CrossCompileAutotoolsProject):
     repository = "https://github.com/CTSRD-CHERI/sqlite.git"
@@ -42,6 +42,18 @@ class BuildSQLite(CrossCompileAutotoolsProject):
         if self.crossCompileTarget != CrossCompileTarget.NATIVE:
             self.configureEnvironment["BUILD_CC"] = self.config.clangPath
             self.configureEnvironment["BUILD_CFLAGS"] = "-integrated-as"
+            self.LDFLAGS.append("-static")
+            self.configureArgs.extend([
+                "--enable-static", "--disable-shared",
+                "--disable-amalgamation",  # don't concatenate sources
+                "--disable-tcl",
+                "--disable-load-extension",
+            ])
+
+        if not self.compiling_for_host() or IS_FREEBSD:
+            self.configureArgs.append("--disable-editline")
+            # not sure if needed:
+            self.configureArgs.append("--disable-readline")
 
     def compile(self, **kwargs):
         # create the required metadata
