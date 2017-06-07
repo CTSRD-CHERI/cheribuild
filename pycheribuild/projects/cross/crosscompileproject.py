@@ -235,7 +235,7 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
             TOOLCHAIN_SDK_BINDIR=self.sdkBinDir,
             TOOLCHAIN_SYSROOT=self.sdkSysroot,
             TOOLCHAIN_COMPILER_BINDIR=self.compiler_dir,
-            TOOLCHAIN_TARGET_TRIPLE=self.targetTripleWithVersion,
+            TOOLCHAIN_TARGET_TRIPLE=self.targetTriple,
             TOOLCHAIN_COMMON_FLAGS=self.COMMON_FLAGS,
             TOOLCHAIN_C_FLAGS=self.CFLAGS,
             TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
@@ -272,11 +272,17 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
         compiler_prefix = self.targetTriple + "-"
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
             compiler_prefix = ""
+        elif self.compiling_for_cheri():
+            # make sure that we install to the right directory
+            # TODO: can we use relative paths?
+            self.configureArgs.append("--libdir=" + str(self.installPrefix) + "/libcheri")
 
         cc = self.config.clangPath if self.compiling_for_host() else self.compiler_dir / (compiler_prefix + "clang")
         self.configureEnvironment["CC"] = str(cc)
         cxx = self.config.clangPlusPlusPath if self.compiling_for_host() else self.compiler_dir / (compiler_prefix + "clang++")
         self.configureEnvironment["CXX"] = str(cxx)
+        if not self.compiling_for_host():
+            self.configureEnvironment["CPP"] = self.compiler_dir / (compiler_prefix + "clang-cpp")
         self.configureEnvironment["CPPFLAGS"] = " ".join(CPPFLAGS)
         self.configureEnvironment["CFLAGS"] = " ".join(CPPFLAGS + self.CFLAGS)
         self.configureEnvironment["CXXFLAGS"] = " ".join(CPPFLAGS + self.CXXFLAGS)
