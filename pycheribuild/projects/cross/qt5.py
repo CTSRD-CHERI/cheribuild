@@ -156,3 +156,21 @@ class BuildICU4C(CrossCompileAutotoolsProject):
                                  installInstructions="Run `cheribuild.py " + self.target + " --xhost`")
 
 
+# it also needs libxml2
+class BuildLibXml2(CrossCompileAutotoolsProject):
+    repository = "https://github.com/RichardsonAlex/libxml2"
+    crossInstallDir = CrossInstallDir.SDK
+    warningFlags = []  # FIXME: build with capability -Werror
+
+    def __init__(self, config):
+        super().__init__(config)
+        if (self.sourceDir / "configure").exists():
+            self.configureCommand = self.sourceDir / "configure"
+        else:
+            self.configureCommand = self.sourceDir / "autogen.sh"
+        self.configureArgs.extend([
+            "--disable-shared", "--enable-static", "--without-python",
+            "--without-modules",
+        ])
+
+
