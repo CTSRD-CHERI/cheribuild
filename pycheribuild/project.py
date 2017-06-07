@@ -599,8 +599,8 @@ class Project(SimpleProject):
     def configure(self, cwd: Path = None):
         if cwd is None:
             cwd = self.buildDir
-        if not self.needsConfigure() and not self.config.configureOnly:
-            if not (self.config.pretend and (self.config.forceConfigure or self.config.clean)):
+        if not self.needsConfigure() and not self.config.configureOnly and not self.config.forceConfigure:
+            if not self.config.pretend and not self.config.clean:
                 return
         if self.configureCommand:
             self.runWithLogfile([self.configureCommand] + self.configureArgs,
@@ -807,6 +807,8 @@ class AutotoolsProject(Project):
             self.configureArgs.extend(self.extraConfigureFlags)
         super().configure(cwd=cwd)
 
+    def needsConfigure(self):
+        return not (self.buildDir / "Makefile").exists()
 
 # A target that is just an alias for at least one other targets but does not force building of dependencies
 class TargetAlias(SimpleProject):
