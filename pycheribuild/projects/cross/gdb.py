@@ -106,8 +106,10 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.configureEnvironment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
         if self.makeCommand == "gmake":
             self.configureEnvironment["MAKE"] = "gmake"
-        self.configureEnvironment["CC_FOR_BUILD"] = str(config.clangPath)
-        self.configureEnvironment["CXX_FOR_BUILD"] = str(config.clangPlusPlusPath)
+        self.hostCC = os.getenv("HOST_CC", str(config.clangPath))
+        self.hostCXX = os.getenv("HOST_CXX", str(config.clangPlusPlusPath))
+        self.configureEnvironment["CC_FOR_BUILD"] = self.hostCC
+        self.configureEnvironment["CXX_FOR_BUILD"] = self.hostCXX
 
         # TODO: do I need these:
         """(cd $obj; env INSTALL="/usr/bin/install -c "  INSTALL_DATA="install   -m 0644"  INSTALL_LIB="install    -m 444"  INSTALL_PROGRAM="install    -m 555"  INSTALL_SCRIPT="install   -m 555"   PYTHON="${PYTHON}" SHELL=/bin/sh CONFIG_SHELL=/bin/sh CONFIG_SITE=/usr/ports/Templates/config.site ../configure ${CONFIGURE_ARGS} )"""
@@ -118,9 +120,9 @@ class BuildGDB(CrossCompileAutotoolsProject):
         # And it only partially handles CC_FOR_BUILD....
         with tempfile.TemporaryDirectory() as tmpdir:
             # It hardcodes calling gcc which won't work... WORST BUILD SYSTEM EVER?
-            self.writeFile(Path(tmpdir) / "gcc", contents="exec " + str(self.config.clangPath) + " \"$@\"\n",
+            self.writeFile(Path(tmpdir) / "gcc", contents="exec " + str(self.hostCC) + " \"$@\"\n",
                            overwrite=True, mode=0o755)
-            self.writeFile(Path(tmpdir) / "g++", contents="exec " + str(self.config.clangPlusPlusPath) + " \"$@\"\n",
+            self.writeFile(Path(tmpdir) / "g++", contents="exec " + str(self.hostCXX) + " \"$@\"\n",
                            overwrite=True, mode=0o755)
             # self.createSymlink(Path("/usr/bin/as"), Path(tmpdir) / "as", relative=False)
             self.createSymlink(Path("/usr/bin/ld"), Path(tmpdir) / "ld", relative=False)
