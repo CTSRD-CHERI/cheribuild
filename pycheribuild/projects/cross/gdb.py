@@ -71,8 +71,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
             # "--disable-sim",
             "--disable-werror",
             "MAKEINFO=/bin/false",
-            "CC_FOR_BUILD=" + str(config.clangPath),
-            "CXX_FOR_BUILD=" + str(config.clangPlusPlusPath),
             # TODO:
             # "--enable-build-with-cxx"
         ])
