@@ -231,12 +231,17 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
 
     def configure(self, **kwargs):
         self.COMMON_FLAGS.append("-B" + str(self.sdkBinDir))
+
+        if self.compiling_for_host():
+            common_flags = self.COMMON_FLAGS
+        else:
+            common_flags = self.COMMON_FLAGS + self.warningFlags + ["-target", self.targetTripleWithVersion]
         self._prepareToolchainFile(
             TOOLCHAIN_SDK_BINDIR=self.sdkBinDir,
             TOOLCHAIN_SYSROOT=self.sdkSysroot,
             TOOLCHAIN_COMPILER_BINDIR=self.compiler_dir,
             TOOLCHAIN_TARGET_TRIPLE=self.targetTriple,
-            TOOLCHAIN_COMMON_FLAGS=self.COMMON_FLAGS,
+            TOOLCHAIN_COMMON_FLAGS=common_flags,
             TOOLCHAIN_C_FLAGS=self.CFLAGS,
             TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
             TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
