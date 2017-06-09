@@ -184,3 +184,34 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
         ])
 
 
+class BuildQtWebkit(CrossCompileCMakeProject):
+    repository = "https://github.com/RichardsonAlex/qtwebkit"
+    gitBranch = "dev"
+    dependencies = ["qtbase", "icu4c", "libxml2", "sqlite"]
+    crossInstallDir = CrossInstallDir.SDK
+
+    def __init__(self, config: CheriConfig):
+        self.sourceDir = config.sourceRoot / "qt5/qtwebkit"
+        super().__init__(config)
+        self.add_cmake_options(PORT="Qt", ENABLE_X11_TARGET=False,
+                               ENABLE_OPENGL=False,
+                               USE_LIBHYPHEN=False,  # we don't have libhyphen
+                               ENABLE_TEST_SUPPORT=False,
+                               ENABLE_VIDEO=False,  # probably depends on lots of stuff
+                               ENABLE_XSLT=False,  # 1 less library to build
+                               USE_GSTREAMER=False,  # needs all the glib+gtk crap
+                               USE_LD_GOLD=False,  # Webkit wants to use gold by default...
+                               USE_SYSTEM_MALLOC=True,  # we want bounds
+                               )
+        # TODO: when we use the full build of Qt enable these:
+        self.add_cmake_options(ENABLE_GEOLOCATION=False,  # needs QtPositioning
+                               ENABLE_PRINT_SUPPORT=False,  # needs QtPrintSupport
+                               ENABLE_DEVICE_ORIENTATION=False,  # needs QtSensors
+                               ENABLE_WEBKIT2=False,  # needs QtQuick
+                               )
+        if not self.compiling_for_host():
+            # we need to find the installed Qt
+            self.add_cmake_options(ENABLE_JIT=False)  # Not supported on MIPS
+            self.add_cmake_options(Qt5_DIR=self.config.sdkSysrootDir / ("usr/local/Qt-" + self.crossCompileTarget.value) / "lib/cmake/Qt5")
+        self._addRequiredSystemTool("gperf")
+
