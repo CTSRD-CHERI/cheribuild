@@ -327,9 +327,11 @@ def setEnv(*, printVerboseOnly=True, **environ):
 
     """
     old_environ = dict(os.environ)
-    for k, v in environ.items():
+    # make sure all environment variables are converted to string
+    str_environ = dict((str(k),str(v)) for k,v in environ.items())
+    for k, v in str_environ.items():
         printCommand("export", k + "=" + v, printVerboseOnly=printVerboseOnly)
-    os.environ.update(environ)
+    os.environ.update(str_environ)
     try:
         yield
     finally:
