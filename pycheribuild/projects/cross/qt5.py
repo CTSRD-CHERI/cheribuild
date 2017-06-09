@@ -148,17 +148,16 @@ class BuildICU4C(CrossCompileAutotoolsProject):
                                    # TODO: not quite sure what to do with the data
                                    "--with-data-packaging=static",
                                    "--disable-tests",
-                                   "--disable-samples",
-                                   "--disable-draft",
-                                   # error: undefined symbol: uconvmsg_dat
-                                   "--disable-extras",
-                                   ])
+                                   "--disable-samples"])
         self.nativeBuildDir = self.buildDirForTarget(self.config, CrossCompileTarget.NATIVE)
         print(self.nativeBuildDir)
         if not self.compiling_for_host():
             self.configureArgs.append("--with-cross-build=" + str(self.nativeBuildDir))
             # can't build them yet
+            # error: undefined symbol: uconvmsg_dat
             self.configureArgs.append("--disable-tools")
+            # self.configureArgs.append("--disable-draft")
+            self.configureArgs.append("--disable-extras")  # can't add this to host build, it will fail otherwise
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
