@@ -100,13 +100,15 @@ class BuildFreestandingSdk(SimpleProject):
             # TODO: should we really be installing this as unprefixed ld?
             self.createSymlink(sdkBinDir / "ld.bfd", sdkBinDir / "ld")
             self.createBuildtoolTargetSymlinks(sdkBinDir / "ld")
+            # we should no longer need GCC:
+            return
             # Copy GCC and G++ for MIPS64:
-            for tool in ("gcc", "g++", "gcov"):
-                self.installFile(self.cheribsdBuildRoot / "tmp/usr/bin" / tool,
-                                 sdkBinDir / ("mips64-unknown-freebsd-" + tool), force=True)
-                # If we install these tools unprefixed we will break everything!
-                if (sdkBinDir / tool).exists():
-                    (sdkBinDir / tool).unlink()
+            # for tool in ("gcc", "g++", "gcov"):
+            #     self.installFile(self.cheribsdBuildRoot / "tmp/usr/bin" / tool,
+            #                      sdkBinDir / ("mips64-unknown-freebsd-" + tool), force=True)
+            #     # If we install these tools unprefixed we will break everything!
+            #     if (sdkBinDir / tool).exists():
+            #         (sdkBinDir / tool).unlink()
 
     def copyCrossToolsFromCheriBSD(self, binutilsBinaries: "typing.List[str]"):
         # if we pass a string starting with a slash to Path() it will reset to that absolute path
@@ -139,11 +141,13 @@ class BuildFreestandingSdk(SimpleProject):
             else:
                 fatalError("Required tool", tool, "is missing!")
 
+        # We should no longer need GCC:
+        return
         # GCC wants the cc1 and cc1plus tools to be in the directory specified by -B.
         # We must make this the same directory that contains ld for linking and
         # compiling to both work...
-        for tool in ("cc1", "cc1plus"):
-            self.installFile(CHERILIBEXEC_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
+        # for tool in ("cc1", "cc1plus"):
+        #    self.installFile(CHERILIBEXEC_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
 
 
 class StartCheriSDKShell(SimpleProject):
