@@ -287,7 +287,7 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
         cxx = self.config.clangPlusPlusPath if self.compiling_for_host() else self.compiler_dir / (compiler_prefix + "clang++")
         self.configureEnvironment["CXX"] = str(cxx)
         if not self.compiling_for_host():
-            self.configureEnvironment["CPP"] = self.compiler_dir / (compiler_prefix + "clang-cpp")
+            self.configureEnvironment["CPP"] = str(self.compiler_dir / (compiler_prefix + "clang-cpp"))
         self.configureEnvironment["CPPFLAGS"] = " ".join(CPPFLAGS)
         self.configureEnvironment["CFLAGS"] = " ".join(CPPFLAGS + self.CFLAGS)
         self.configureEnvironment["CXXFLAGS"] = " ".join(CPPFLAGS + self.CXXFLAGS)
