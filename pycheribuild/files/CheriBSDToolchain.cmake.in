@@ -61,6 +61,16 @@ set(CMAKE_ASM_COMPILER "@TOOLCHAIN_COMPILER_BINDIR@/clang")
 set(CMAKE_ASM_COMPILER_TARGET "@TOOLCHAIN_TARGET_TRIPLE@")
 set(CMAKE_ASM_COMPILER_ID "Clang")  # for some reason CMake doesn't detect this automatically
 
+# FIXME: this doesn't work :(
+# strip the version number from the triple to find the binutils
+# if ("@TOOLCHAIN_TARGET_TRIPLE@" MATCHES "^(.+-freebsd)[0-9]*$")
+#    # These variables are used to find the binutils: (See CMakeFindBinUtils.cmake)
+#    set(_CMAKE_TOOLCHAIN_PREFIX "${CMAKE_MATCH_1}" CACHE INTERNAL "")
+#    message(WARNING _CMAKE_TOOLCHAIN_PREFIX=${_CMAKE_TOOLCHAIN_PREFIX})
+#    #set(_CMAKE_TOOLCHAIN_SUFFIX "${CMAKE_MATCH_2}")
+#endif()
+#include(CMakeFindBinUtils)
+
 # Doesn't seem to be needed?
 if(FALSE)
     # https://cmake.org/cmake/help/git-master/variable/CMAKE_LANG_COMPILER_EXTERNAL_TOOLCHAIN.html
