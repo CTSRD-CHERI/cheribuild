@@ -288,6 +288,8 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
         self.configureEnvironment["CXX"] = str(cxx)
         if not self.compiling_for_host():
             self.configureEnvironment["CPP"] = str(self.compiler_dir / (compiler_prefix + "clang-cpp"))
+            if "lld" in self.linker and (self.compiler_dir / "ld.lld").exists():
+                self.configureEnvironment["LD"] = str(self.compiler_dir / "ld.lld")
         self.configureEnvironment["CPPFLAGS"] = " ".join(CPPFLAGS)
         self.configureEnvironment["CFLAGS"] = " ".join(CPPFLAGS + self.CFLAGS)
         self.configureEnvironment["CXXFLAGS"] = " ".join(CPPFLAGS + self.CXXFLAGS)
