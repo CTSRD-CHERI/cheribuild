@@ -42,6 +42,13 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         super().__init__(config)
         self.configureCommand = self.sourceDir / "configure"
 
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        cls.build_tests = cls.addBoolOption("build-tests", showHelp=True, help="build the Qt unit tests")
+        cls.build_examples = cls.addBoolOption("build-examples", showHelp=True, help="build the Qt examples")
+
+
     def configure(self, **kwargs):
         if not self.needsConfigure() and not self.config.forceConfigure:
             return
@@ -74,9 +81,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             ])
 
         self.configureArgs.extend([
-            "-nomake", "examples",
-            # TODO: build the tests and run them them
-            "-nomake", "tests",  # "-developer-build",
             # To ensure the host and cross-compiled version is the same also disable opengl and dbus there
             "-no-opengl", "-no-dbus",
             # Missing configure check for evdev means it will fail to compile for CHERI
@@ -84,6 +88,13 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # Needed for webkit:
             # "-icu",
         ])
+        if self.build_tests:
+            self.configureArgs.append("-developer-build")
+        else:
+            self.configureArgs.extend(["-nomake", "tests"])
+
+        if not self.build_examples:
+            self.configureArgs.extend(["-nomake", "examples"])
         # currently causes build failures:
         # Seems like I need to define PNG_READ_GAMMA_SUPPORTED
         self.configureArgs.append("-qt-libpng")
