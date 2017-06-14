@@ -45,7 +45,11 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     def configure(self, **kwargs):
         if not self.needsConfigure() and not self.config.forceConfigure:
             return
-        if self.crossCompileTarget != CrossCompileTarget.NATIVE:
+        if self.compiling_for_host():
+            self.configureArgs.extend([
+                "-prefix", str(self.installDir)
+            ])
+        else:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
             compiler_flags = self.COMMON_FLAGS + ["-target", self.targetTriple + "12"]
             linker_flags = self.default_ldflags + ["-target", self.targetTriple + "12"]

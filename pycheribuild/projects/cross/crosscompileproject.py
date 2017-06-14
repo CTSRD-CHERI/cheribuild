@@ -74,7 +74,12 @@ class CrossCompileProject(Project):
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
             self.COMMON_FLAGS = []
             self.targetTriple = self.get_host_triple()
-            self.installDir = self.buildDir / "test-install-prefix"
+            if self.crossInstallDir == CrossInstallDir.SDK:
+                self.installDir = self.config.sdkDir
+            elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
+                self.installDir = self.buildDir / "test-install-prefix"
+            else:
+                assert self.installDir, "must be set"
         else:
             if self.crossInstallDir == CrossInstallDir.SDK:
                 self.installPrefix = "/usr/local"
