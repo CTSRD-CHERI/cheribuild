@@ -207,6 +207,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
 
     def __init__(self, config: CheriConfig):
         self.sourceDir = config.sourceRoot / "qt5/qtwebkit"
+        self.noUseMxgot = True  # crashes compiler
         super().__init__(config)
         self.add_cmake_options(PORT="Qt", ENABLE_X11_TARGET=False,
                                ENABLE_OPENGL=False,
@@ -217,6 +218,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                                USE_GSTREAMER=False,  # needs all the glib+gtk crap
                                USE_LD_GOLD=False,  # Webkit wants to use gold by default...
                                USE_SYSTEM_MALLOC=True,  # we want bounds
+                               ENABLE_API_TESTS=False,
                                )
         # TODO: when we use the full build of Qt enable these:
         self.add_cmake_options(ENABLE_GEOLOCATION=False,  # needs QtPositioning
@@ -226,7 +228,10 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                                )
         if not self.compiling_for_host():
             # we need to find the installed Qt
-            self.add_cmake_options(ENABLE_JIT=False)  # Not supported on MIPS
+            self.add_cmake_options(ENABLE_JIT=False,  # Not supported on MIPS
+                                   QT_STATIC_BUILD=True,  # we always build qt static for now
+                                   )
             self.add_cmake_options(Qt5_DIR=self.config.sdkSysrootDir / ("usr/local/Qt-" + self.crossCompileTarget.value) / "lib/cmake/Qt5")
+
         self._addRequiredSystemTool("gperf")
 
