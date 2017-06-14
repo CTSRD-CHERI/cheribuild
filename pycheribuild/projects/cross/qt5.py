@@ -53,9 +53,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         if not self.needsConfigure() and not self.config.forceConfigure:
             return
         if self.compiling_for_host():
-            self.configureArgs.extend([
-                "-prefix", str(self.installDir)
-            ])
+            self.configureArgs.extend(["-prefix", str(self.installDir)])
+            self.configureArgs.append("QMAKE_CC=" + str(self.config.clangPath))
+            self.configureArgs.append("QMAKE_CXX=" + str(self.config.clangPlusPlusPath))
         else:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
             compiler_flags = self.COMMON_FLAGS + ["-target", self.targetTriple + "12"]
@@ -77,7 +77,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-device-option", "LINKER_FLAGS=" + commandline_to_str(linker_flags),
                 "-sysroot", self.config.sdkSysrootDir,
                 "-static",
-                "-prefix", "/usr/local/Qt-" + self.crossCompileTarget.value
+                "-prefix", "/usr/local/Qt-" + self.crossCompileTarget.value,
             ])
 
         self.configureArgs.extend([
@@ -87,6 +87,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             "-no-evdev",
             # Needed for webkit:
             # "-icu",
+
+            "-no-Werror",
         ])
         if self.build_tests:
             self.configureArgs.append("-developer-build")
