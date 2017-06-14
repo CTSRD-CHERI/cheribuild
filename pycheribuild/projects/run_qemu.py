@@ -170,6 +170,8 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             cls.remoteKernelPath = cls.addConfigOption("remote-kernel-path", showHelp=True,
                                                        help="Path to the FreeBSD kernel image on a remote host. "
                                                             "Needed because FreeBSD cannot be cross-compiled.")
+            cls.skipKernelUpdate = cls.addBoolOption("skip-kernel-update", showHelp=True,
+                                                     help="Don't update the kernel from the remote host")
 
     def _copyKernelImageFromRemoteHost(self):
         statusUpdate("Copying kernel image from FreeBSD build machine")
@@ -183,7 +185,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
         self.copyRemoteFile(scpPath, self.currentKernel)
 
     def process(self):
-        if not IS_FREEBSD:
+        if not IS_FREEBSD and not self.skipKernelUpdate and not self.config.skipUpdate:
             self._copyKernelImageFromRemoteHost()
         super().process()
 
