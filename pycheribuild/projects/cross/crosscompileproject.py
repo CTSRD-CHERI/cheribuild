@@ -241,6 +241,9 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
             common_flags = self.COMMON_FLAGS
         else:
             common_flags = self.COMMON_FLAGS + self.warningFlags + ["-target", self.targetTripleWithVersion]
+
+        clang = self.config.clangPath if self.compiling_for_host() else self.compiler_dir / "clang"
+        clangxx = self.config.clangPlusPlusPath if self.compiling_for_host() else self.compiler_dir / "clang++"
         self._prepareToolchainFile(
             TOOLCHAIN_SDK_BINDIR=self.sdkBinDir,
             TOOLCHAIN_SYSROOT=self.sdkSysroot,
@@ -251,6 +254,8 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
             TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
             TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
             TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
+            TOOLCHAIN_C_COMPILER=clang,
+            TOOLCHAIN_CXX_COMPILER=clangxx,
         )
         super().configure()
 

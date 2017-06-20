@@ -206,6 +206,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     gitBranch = "dev"
     dependencies = ["qtbase", "icu4c", "libxml2", "sqlite"]
     crossInstallDir = CrossInstallDir.SDK
+    warningFlags = []  # FIXME: build with capability -Werror
 
     def __init__(self, config: CheriConfig):
         self.sourceDir = config.sourceRoot / "qt5/qtwebkit"
