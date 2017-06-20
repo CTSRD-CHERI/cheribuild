@@ -79,27 +79,78 @@ class JenkinsConfigLoader(ConfigLoaderBase):
         self._parsedArgs = self._parser.parse_args()
 
 
-def extract_sdk_archive(cheriConfig, archive):
-    if not cheriConfig.sdkBinDir.is_dir():
-        statusUpdate("SDK not found, will try to extract", archive)
-        cheriConfig.FS.makedirs(cheriConfig.sdkDir)
-        runCmd("tar", "Jxf", archive, "--strip-components", "1", "-C", cheriConfig.sdkDir)
+class SdkArchive(object):
+    def __init__(self, cheriConfig: JenkinsConfig, name, *, required_globs: list=None, extra_args:list=None):
+        self.cheriConfig = cheriConfig
+        self.archive = cheriConfig.workspace / name  # type: Path
+        self.required_globs = [] if required_globs is None else required_globs  # type: list
+        self.extra_args = [] if extra_args is None else extra_args  # type: list
+
+    def extract(self):
+        assert self.archive.exists()
+        runCmd(["tar", "Jxf", self.archive, "-C", self.cheriConfig.sdkDir] + self.extra_args)
+        self.check_required_files()
+
+    def check_required_files(self, fatal=True) -> bool:
+        for glob in self.required_globs:
+            found = list(self.cheriConfig.sdkDir.glob(glob))
+            # print("Matched files:", found)
+            if len(found) == 0:
+                if fatal:
+                    fatalError("required files", glob, "missing. Source archive =", self.archive)
+                else:
+                    statusUpdate("required files", glob, "missing. Source archive was", self.archive)
+                    return False
+        return True
+
+    def __repr__(self):
+        return str(self.archive)
+
+def get_sdk_archives(cheriConfig) -> "typing.List[SdkArchive]":
+    # Try the full SDK archive first:
+    if cheriConfig.sdkArchivePath.exists():
+        statusUpdate("SDK not found, will try to extract", cheriConfig.sdkArchivePath)
+        return [SdkArchive(cheriConfig, cheriConfig.sdkArchivePath.name, extra_args=["--strip-components", "1"],
+                           required_globs=["bin/clang", "sysroot/usr/include"])]
+
+    clang_archive_name = "{}-{}-clang-llvm.tar.xz".format(cheriConfig.sdk_cpu, os.getenv("LLVM_BRANCH", "master"))
+    clang_archive = SdkArchive(cheriConfig, clang_archive_name, required_globs=["bin/clang"],
+                               extra_args=["--strip-components", "1"])
+    if not clang_archive.archive.exists():
+        warningMessage("Neither full SDK archive", cheriConfig.sdkArchiveName, " nor clang archive", clang_archive_name,
+                       "exists, will use only existing $WORKSPACE/cherisdk")
+        return []
+    if cheriConfig.crossCompileTarget == CrossCompileTarget.NATIVE:
+        # we need the LLVM builtin includes:
+        llvm_includes_name = "{}-{}-clang-include.tar.xz".format(cheriConfig.sdk_cpu, os.getenv("LLVM_BRANCH", "master"))
+        includes_archive = SdkArchive(cheriConfig, llvm_includes_name, required_globs=["lib/clang/*/include/stddef.h"])
+        return [clang_archive, includes_archive]
+    else:
+        # if we only extracted the compiler, extract the sysroot now
+        cheri_sysroot_archive_name = "{}-vanilla-jemalloc-cheribsd-world.tar.xz".format(cheriConfig.sdk_cpu)
+        extra_args = ["--strip-components", "1"]
+        # Don't extract FreeBSD binaries on a linux host:
+        if not IS_FREEBSD:
+            extra_args += ["--exclude", "bin/*"]
+        sysroot_archive = SdkArchive(cheriConfig, cheri_sysroot_archive_name, required_globs=["sysroot/usr/include"],
+                                     extra_args=extra_args)
+        return [clang_archive, sysroot_archive]
+
+def extract_sdk_archives(cheriConfig, archives: "typing.List[SdkArchive]"):
+    if cheriConfig.sdkBinDir.is_dir():
+        statusUpdate(cheriConfig.sdkBinDir, "already exists, not extracting SDK archives")
+        return
+
+    cheriConfig.FS.makedirs(cheriConfig.sdkDir)
+    for archive in archives:
+        archive.extract()
+
+    if not cheriConfig.sdkBinDir.exists():
+        fatalError("SDK bin dir does not exist after extracting sysroot archives!")
+
     if not (cheriConfig.sdkDir / "bin/ar").exists():
         cheriConfig.FS.createSymlink(Path(shutil.which("ar")), cheriConfig.sdkBinDir / "ar", relative=False)
         cheriConfig.FS.createBuildtoolTargetSymlinks(cheriConfig.sdkBinDir / "ar")
-    if cheriConfig.crossCompileTarget == CrossCompileTarget.NATIVE:
-        stddef = list(cheriConfig.sdkDir.glob("lib/clang/include/*/stddef.h"))
-        if len(stddef) == 0:
-            # we need the LLVM builtin includes:
-            llvm_includes_archive = "{}-{}-clang-include.tar.xz".format(cheriConfig.sdk_cpu,
-                                                                        os.getenv("LLVM_BRANCH", "master"))
-            includeArchive = cheriConfig.workspace / llvm_includes_archive
-            if not includeArchive.exists():
-                fatalError("Clang builtin includes", includeArchive, "missing. Cannot compile for host!")
-            runCmd("tar", "Jxf", includeArchive, "-C", cheriConfig.sdkDir)
-    else:
-        if not (cheriConfig.sdkSysrootDir / "usr/include").exists():
-            fatalError("SDK sysroot is missing!")
 
 
 def _jenkins_main():
@@ -121,28 +172,23 @@ def _jenkins_main():
     do_build = True
     do_tarball = False
     if do_build:
-        archive_path = cheriConfig.sdkArchivePath
-        # for native builds we don't need the sysroot, just clang is enough
-        if not archive_path.exists() and cheriConfig.crossCompileTarget == CrossCompileTarget.NATIVE:
-            # fall back to using just the clang archive:
-            archive_name = "{}-{}-clang-llvm.tar.xz".format(cheriConfig.sdk_cpu, os.getenv("LLVM_BRANCH", "master"))
-            archive_path = cheriConfig.workspace / archive_name
-
-        if not cheriConfig.sdkBinDir.exists() and not archive_path.exists():
-            fatalError(cheriConfig.sdkBinDir, "does not exist and SDK archive", archive_path,
-                       "does not exist! Cannot cross compile to CheriBSD")
-
         # If the archive is newer, delete the existing sdk unless --keep-sdk is passed install root:
         possiblyDeleteSdkJob = ThreadJoiner(None)
-        if cheriConfig.sdkDir.exists() and archive_path.exists():
-            if cheriConfig.sdkDir.stat().st_ctime < archive_path.stat().st_ctime:
-                warningMessage("SDK archive is newer than the existing archive directory")
+        archives = get_sdk_archives(cheriConfig)
+        statusUpdate("Will use the following SDK archives:", archives)
+        if any(not a.check_required_files(fatal=False) for a in archives):
+            # if any of the required files is missing clean up and extract
+            statusUpdate("Required files missing -> recreating SDK")
+            possiblyDeleteSdkJob = cheriConfig.FS.asyncCleanDirectory(cheriConfig.sdkDir)
+        elif cheriConfig.sdkDir.exists() and all(a.archive.exists() for a in archives):
+            if any(cheriConfig.sdkDir.stat().st_ctime < a.archive.stat().st_ctime for a in archives):
+                warningMessage("A SDK archive is newer than the existing archive directory")
                 if not cheriConfig.keepSdkDir:
                     statusUpdate("Deleting old SDK and extracting archive")
                     possiblyDeleteSdkJob = cheriConfig.FS.asyncCleanDirectory(cheriConfig.sdkDir)
         # unpack the SDK if it has not been extracted yet:
         with possiblyDeleteSdkJob:
-            extract_sdk_archive(cheriConfig, archive_path)
+            extract_sdk_archives(cheriConfig, archives)
 
         assert len(cheriConfig.targets) == 1
         target = targetManager.targetMap[cheriConfig.targets[0]]
