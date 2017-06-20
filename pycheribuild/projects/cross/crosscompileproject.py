@@ -206,7 +206,7 @@ class CrossCompileProject(Project):
 
 class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
     doNotAddToTargets = True  # only used as base class
-    defaultCMakeBuildType = "Debug"
+    defaultCMakeBuildType = "RelWithDebInfo"  # default to O2
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
