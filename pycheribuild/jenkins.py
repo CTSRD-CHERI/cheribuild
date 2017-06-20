@@ -97,6 +97,9 @@ def extract_sdk_archive(cheriConfig, archive):
             if not includeArchive.exists():
                 fatalError("Clang builtin includes", includeArchive, "missing. Cannot compile for host!")
             runCmd("tar", "Jxf", includeArchive, "-C", cheriConfig.sdkDir)
+    else:
+        if not (cheriConfig.sdkSysrootDir / "usr/include").exists():
+            fatalError("SDK sysroot is missing!")
 
 
 def _jenkins_main():
