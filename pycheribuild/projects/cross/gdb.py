@@ -30,7 +30,7 @@
 
 from .crosscompileproject import *
 from ..cheribsd import BuildCHERIBSD
-from ...utils import setEnv
+from ...utils import runCmd
 
 from pathlib import Path
 import os
@@ -108,12 +108,24 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.hostCXX = os.getenv("HOST_CXX", str(config.clangPlusPlusPath))
         self.configureEnvironment["CC_FOR_BUILD"] = self.hostCC
         self.configureEnvironment["CXX_FOR_BUILD"] = self.hostCXX
+        self.configureEnvironment["CFLAGS_FOR_BUILD"] = "-g"
+        self.configureEnvironment["CXXFLAGS_FOR_BUILD"] = "-g"
 
         # TODO: do I need these:
         """(cd $obj; env INSTALL="/usr/bin/install -c "  INSTALL_DATA="install   -m 0644"  INSTALL_LIB="install    -m 444"  INSTALL_PROGRAM="install    -m 555"  INSTALL_SCRIPT="install   -m 555"   PYTHON="${PYTHON}" SHELL=/bin/sh CONFIG_SHELL=/bin/sh CONFIG_SITE=/usr/ports/Templates/config.site ../configure ${CONFIGURE_ARGS} )"""
 
     def compile(self, **kwargs):
-        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], makeTarget="all-gdb", cwd=self.buildDir)
+        programsToMove = ["as", "ld", "objcopy", "objdump"]
+        for l in programsToMove:
+            if (self.sdkBinDir / l).exists():
+                runCmd("mv", "-f", l, l + ".backup", cwd=self.sdkBinDir)
+        try:
+            self.runMake(self.commonMakeArgs + [self.config.makeJFlag], makeTarget="all-gdb", cwd=self.buildDir)
+        finally:
+            # restore the files that GCC doesn't like
+            for l in programsToMove:
+                if (self.sdkBinDir / (l + ".backup")).exists() or self.config.pretend:
+                    runCmd("mv", "-f", l + ".backup", l, cwd=self.sdkBinDir)
 
     def install(self, **kwargs):
         self.runMakeInstall(args=self.commonMakeArgs, target="install-gdb")

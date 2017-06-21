@@ -313,6 +313,20 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
             result += ["--sysroot=" + str(self.sdkSysroot), "-B" + str(self.sdkBinDir)] + self.warningFlags
         return result
 
+    def add_configure_env_arg(self, arg: str, value: str):
+        if not value:
+            return
+        self.configureEnvironment[arg] = value
+        self.configureArgs.append(arg + "=" + value)
+
+    def set_prog_with_args(self, prog: str, path: Path, args: list):
+        fullpath = str(path)
+        if args:
+            fullpath += " " + " ".join(args)
+        self.configureEnvironment[prog] = fullpath
+        self.configureArgs.append(prog + "=" + fullpath)
+
+
     def configure(self, **kwargs):
         CPPFLAGS = self.default_compiler_flags
         for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
@@ -327,18 +341,23 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
             self.configureArgs.append("--libdir=" + str(self.installPrefix) + "/libcheri")
 
         cc = self.config.clangPath if self.compiling_for_host() else self.compiler_dir / (compiler_prefix + "clang")
-        self.configureEnvironment["CC"] = str(cc)
         cxx = self.config.clangPlusPlusPath if self.compiling_for_host() else self.compiler_dir / (compiler_prefix + "clang++")
-        self.configureEnvironment["CXX"] = str(cxx)
+        # autotools overrides CFLAGS -> use CC and CXX vars here
+        self.set_prog_with_args("CC", cc, CPPFLAGS + self.CFLAGS)
+        self.set_prog_with_args("CXX", cxx, CPPFLAGS + self.CXXFLAGS)
+        # self.add_configure_env_arg("CPPFLAGS", " ".join(CPPFLAGS))
+        # self.add_configure_env_arg("CFLAGS", " ".join(CPPFLAGS + self.CFLAGS))
+        # self.add_configure_env_arg("CXXFLAGS", " ".join(CPPFLAGS + self.CXXFLAGS))
+        # this one seems to work:
+        self.add_configure_env_arg("LDFLAGS", " ".join(self.LDFLAGS + self.default_ldflags))
+
+
         if not self.compiling_for_host():
-            self.configureEnvironment["CPP"] = str(self.compiler_dir / (compiler_prefix + "clang-cpp"))
+            self.set_prog_with_args("CPP", self.compiler_dir / (compiler_prefix + "clang-cpp"), CPPFLAGS)
             if "lld" in self.linker and (self.compiler_dir / "ld.lld").exists():
-                self.configureEnvironment["LD"] = str(self.compiler_dir / "ld.lld")
-        self.configureEnvironment["CPPFLAGS"] = " ".join(CPPFLAGS)
-        self.configureEnvironment["CFLAGS"] = " ".join(CPPFLAGS + self.CFLAGS)
-        self.configureEnvironment["CXXFLAGS"] = " ".join(CPPFLAGS + self.CXXFLAGS)
-        self.configureEnvironment["LDFLAGS"] = " ".join(self.LDFLAGS + self.default_ldflags)
-        # remove all empty items:
+                self.add_configure_env_arg("LD", str(self.compiler_dir / "ld.lld"))
+
+        # remove all empty items from environment:
         env = {k: v for k, v in self.configureEnvironment.items() if v}
         self.configureEnvironment.clear()
         self.configureEnvironment.update(env)
