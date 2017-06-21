@@ -67,6 +67,8 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
             self.add_cmake_options(BUILD_TESTS=True)
             if IS_LINUX and "ubuntu" in parseOSRelease()["ID_LIKE"]:
                 self.add_cmake_options(COMPARE_TEST_OUTPUT_TO_SYSTEM_OUTPUT=False)
+                # Seems to be needed for at least jenkins (it says relink with -pie)
+                self.add_cmake_options(CMAKE_POSITION_INDEPENDENT_CODE=True)
             self.add_cmake_options(NO_UNWIND_LIBRARY=False, TEST_LIBUNWIND=True)
         else:
             # TODO: __sync_fetch_and_add in exceptions code
