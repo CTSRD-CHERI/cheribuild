@@ -76,7 +76,6 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
             self.add_cmake_options(COMPARE_TEST_OUTPUT_TO_SYSTEM_OUTPUT=False)
             self.add_cmake_options(BUILD_TESTS=True)
 
-
     def install(self, **kwargs):
         self.installFile(self.buildDir / "lib/libcxxrt.a", self.installDir / "libcheri/libcxxrt.a", force=True)
         # self.installFile(self.buildDir / "lib/libcxxrt.so", self.installDir / "usr/libcheri/libcxxrt.so", force=True)
