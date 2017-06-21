@@ -37,8 +37,11 @@ class BuildNginx(CrossCompileAutotoolsProject):
     # defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir
     requiresGNUMake = True
     add_host_target_build_config_options = False
-    warningFlags = CrossCompileAutotoolsProject.warningFlags + ["-Wno-error=cheri-capability-misuse"]
+    warningFlags = CrossCompileAutotoolsProject.warningFlags + ["-Wno-error=cheri-capability-misuse", "-Wno-error=sign-compare"]
     defaultOptimizationLevel = ["-O2"]
+    # custom configure script -> no --libdir
+    _configure_supports_libdir = False
+    _configure_supports_variables_on_cmdline = False
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

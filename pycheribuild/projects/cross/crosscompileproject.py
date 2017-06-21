@@ -298,6 +298,8 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
     doNotAddToTargets = True  # only used as base class
 
     add_host_target_build_config_options = True
+    _configure_supports_libdir = True  # override in nginx
+    _configure_supports_variables_on_cmdline = True  # override in nginx
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -317,15 +319,16 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
         if not value:
             return
         self.configureEnvironment[arg] = value
-        self.configureArgs.append(arg + "=" + value)
+        if self._configure_supports_variables_on_cmdline:
+            self.configureArgs.append(arg + "=" + value)
 
     def set_prog_with_args(self, prog: str, path: Path, args: list):
         fullpath = str(path)
         if args:
             fullpath += " " + " ".join(args)
         self.configureEnvironment[prog] = fullpath
-        self.configureArgs.append(prog + "=" + fullpath)
-
+        if self._configure_supports_variables_on_cmdline:
+            self.configureArgs.append(prog + "=" + fullpath)
 
     def configure(self, **kwargs):
         CPPFLAGS = self.default_compiler_flags
@@ -335,7 +338,8 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
         compiler_prefix = self.targetTriple + "-"
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
             compiler_prefix = ""
-        elif self.compiling_for_cheri():
+        elif self.compiling_for_cheri() and self._configure_supports_libdir:
+            # nginx configure script doesn't understand --libdir
             # make sure that we install to the right directory
             # TODO: can we use relative paths?
             self.configureArgs.append("--libdir=" + str(self.installPrefix) + "/libcheri")
