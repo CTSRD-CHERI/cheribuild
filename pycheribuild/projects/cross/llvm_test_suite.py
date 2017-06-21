@@ -41,13 +41,13 @@ installToCXXDir = ComputedDefaultValue(
 
 
 class BuildLLVMTestSuite(CrossCompileCMakeProject):
-    repository = "https://github.com/llvm-mirror/test-suite.git"
+    repository = "https://github.com/CTSRD-CHERI/llvm-test-suite.git"
     defaultInstallDir = installToCXXDir
     dependencies = ["llvm"]
     defaultCMakeBuildType = "Debug"
     projectName = "llvm-test-suite"
     # TODO: fix these issues
-    warningFlags = ["-Wno-error=format"]
+    warningFlags = ["-Wno-error=format", "-Wmips-cheri-prototypes"]
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / "llvm-test-suite"),
         asString="$SOURCE_ROOT/llvm-test-suite")
@@ -66,6 +66,8 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
         )
         if self.crossCompileTarget != CrossCompileTarget.NATIVE:
             self.add_cmake_options(TEST_SUITE_HOST_CC="/usr/bin/cc")
+            # we want to link against libc++ not libstdc++ (and for some reason we need to specify libgcc_eh too
+            self.add_cmake_options(TEST_SUITE_CXX_LIBRARY="-lc++;-lgcc_eh")
 
     def install(self, **kwargs):
         statusUpdate("No install step for llvm-test-suite")

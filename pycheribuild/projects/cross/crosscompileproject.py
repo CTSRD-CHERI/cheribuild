@@ -268,10 +268,13 @@ else()
 endif()
 set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
 """
+            processor = "CHERI (MIPS IV compatible)"
         elif self.compiling_for_mips():
             add_lib_suffix = "# no lib suffix for mips libraries"
+            processor = "BERI (MIPS IV compatible)"
         else:
             add_lib_suffix = None
+            processor = None
         self._prepareToolchainFile(
             TOOLCHAIN_SDK_BINDIR=self.sdkBinDir,
             TOOLCHAIN_COMPILER_BINDIR=self.compiler_dir,
@@ -285,7 +288,9 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
             TOOLCHAIN_CXX_COMPILER=clangxx,
             TOOLCHAIN_SYSROOT=self.sdkSysroot if not self.compiling_for_host() else None,
             ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
+            TOOLCHAIN_SYSTEM_PROCESSOR=processor,
         )
+        # TODO: BUILD_SHARED_LIBS=OFF?
         super().configure()
 
 
