@@ -753,15 +753,18 @@ class CMakeProject(Project):
             _stdoutFilter = self._cmakeInstallStdoutFilter
         super().install(_stdoutFilter=_stdoutFilter)
 
+    def _get_cmake_version(self):
+        versionPattern = re.compile(b"cmake version (\\d+)\\.(\\d+)\\.?(\\d+)?")
+        # cmake prints this output to stdout
+        versionString = runCmd(self.configureCommand, "--version", captureOutput=True, printVerboseOnly=True).stdout
+        match = versionPattern.search(versionString)
+        return tuple(map(int, match.groups())) if match else (0, 0, 0)
+
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
         if self.__minimum_cmake_version:
             # try to find cmake 3.4 or newer
-            versionPattern = re.compile(b"cmake version (\\d+)\\.(\\d+)\\.?(\\d+)?")
-            # cmake prints this output to stdout
-            versionString = runCmd(self.configureCommand, "--version", captureOutput=True, printVerboseOnly=True).stdout
-            match = versionPattern.search(versionString)
-            versionComponents = tuple(map(int, match.groups())) if match else (0, 0, 0)
+            versionComponents = self._get_cmake_version()
             # noinspection PyTypeChecker
             if versionComponents < self.__minimum_cmake_version:
                 versionStr = ".".join(map(str, versionComponents))

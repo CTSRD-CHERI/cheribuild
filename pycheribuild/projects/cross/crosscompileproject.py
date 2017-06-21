@@ -228,6 +228,8 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
     def _prepareToolchainFile(self, **kwargs):
         configuredTemplate = self._cmakeTemplate
         for key, value in kwargs.items():
+            if value is None:
+                continue
             strval = " ".join(value) if isinstance(value, list) else str(value)
             assert "@" + key + "@" in configuredTemplate, key
             configuredTemplate = configuredTemplate.replace("@" + key + "@", strval)
@@ -240,13 +242,38 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
         if self.compiling_for_host():
             common_flags = self.COMMON_FLAGS
         else:
+            if self._get_cmake_version() < (3, 9, 0) and not (self.sdkSysroot / "usr/local/lib/cheri").exists():
+                warningMessage("Workaround for missing custom lib suffix in CMake < 3.9")
+                # create a /usr/lib/cheri -> /usr/libcheri symlink so that cmake can find the right libraries
+                self.createSymlink(Path("../libcheri"), self.sdkSysroot / "usr/lib/cheri", relative=True,
+                                   cwd=self.sdkSysroot / "usr/lib")
+                self.makedirs(self.sdkSysroot / "usr/local/lib")
+                self.makedirs(self.sdkSysroot / "usr/local/libcheri")
+                self.createSymlink(Path("../libcheri"), self.sdkSysroot / "usr/local/lib/cheri",
+                                   relative=True, cwd=self.sdkSysroot / "usr/local/lib")
             common_flags = self.COMMON_FLAGS + self.warningFlags + ["-target", self.targetTripleWithVersion]
 
         clang = self.config.clangPath if self.compiling_for_host() else self.compiler_dir / "clang"
         clangxx = self.config.clangPlusPlusPath if self.compiling_for_host() else self.compiler_dir / "clang++"
+        if self.compiling_for_cheri():
+            add_lib_suffix = """
+# cheri libraries are found in /usr/libcheri:
+if("${CMAKE_VERSION}" VERSION_LESS 3.9)
+  # message(STATUS "CMAKE < 3.9 HACK to find libcheri libraries")
+  # need to create a <sysroot>/usr/lib/cheri -> <sysroot>/usr/libcheri symlink 
+  set(CMAKE_LIBRARY_ARCHITECTURE "cheri")
+  set(CMAKE_SYSTEM_LIBRARY_PATH "${CMAKE_FIND_ROOT_PATH}/usr/libcheri;${CMAKE_FIND_ROOT_PATH}/usr/local/libcheri")
+else()
+    set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
+endif()
+set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
+"""
+        elif self.compiling_for_mips():
+            add_lib_suffix = "# no lib suffix for mips libraries"
+        else:
+            add_lib_suffix = None
         self._prepareToolchainFile(
             TOOLCHAIN_SDK_BINDIR=self.sdkBinDir,
-            TOOLCHAIN_SYSROOT=self.sdkSysroot,
             TOOLCHAIN_COMPILER_BINDIR=self.compiler_dir,
             TOOLCHAIN_TARGET_TRIPLE=self.targetTriple,
             TOOLCHAIN_COMMON_FLAGS=common_flags,
@@ -256,6 +283,8 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
             TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
             TOOLCHAIN_C_COMPILER=clang,
             TOOLCHAIN_CXX_COMPILER=clangxx,
+            TOOLCHAIN_SYSROOT=self.sdkSysroot if not self.compiling_for_host() else None,
+            ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
         )
         super().configure()
 
