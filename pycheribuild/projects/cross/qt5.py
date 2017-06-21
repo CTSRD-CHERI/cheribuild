@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import *
+from ...config.loader import ComputedDefaultValue
 from ...utils import commandline_to_str, runCmd
 
 # This class is used to build qtbase and all of qt5
@@ -47,7 +48,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         super().setupConfigOptions(**kwargs)
         cls.build_tests = cls.addBoolOption("build-tests", showHelp=True, help="build the Qt unit tests")
         cls.build_examples = cls.addBoolOption("build-examples", showHelp=True, help="build the Qt examples")
-
 
     def configure(self, **kwargs):
         if not self.needsConfigure() and not self.config.forceConfigure:
@@ -146,10 +146,9 @@ class BuildQt5(BuildQtWithConfigureScript):
 class BuildQtBase(BuildQtWithConfigureScript):
     repository = "https://github.com/RichardsonAlex/qtbase"
     gitBranch = "5.9"
-
-    def __init__(self, config: CheriConfig):
-        self.sourceDir = config.sourceRoot / "qt5/qtbase"
-        super().__init__(config)
+    defaultSourceDir = ComputedDefaultValue(
+        function=lambda config, project: BuildQt5.getSourceDir(config) / "qtbase",
+        asString=lambda cls: "$SOURCE_ROOT/qt5" + cls.projectName.lower())
 
 
 # Webkit needs ICU (and recommended for QtBase too:
@@ -207,9 +206,11 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     dependencies = ["qtbase", "icu4c", "libxml2", "sqlite"]
     crossInstallDir = CrossInstallDir.SDK
     warningFlags = []  # FIXME: build with capability -Werror
+    defaultSourceDir = ComputedDefaultValue(
+        function=lambda config, project: BuildQt5.getSourceDir(config) / "qtwebkit",
+        asString=lambda cls: "$SOURCE_ROOT/qt5" + cls.projectName.lower())
 
     def __init__(self, config: CheriConfig):
-        self.sourceDir = config.sourceRoot / "qt5/qtwebkit"
         self.noUseMxgot = True  # crashes compiler
         super().__init__(config)
         self.add_cmake_options(PORT="Qt", ENABLE_X11_TARGET=False,
