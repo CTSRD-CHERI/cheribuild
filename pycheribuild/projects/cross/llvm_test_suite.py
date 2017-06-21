@@ -46,6 +46,8 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
     dependencies = ["llvm"]
     defaultCMakeBuildType = "Debug"
     projectName = "llvm-test-suite"
+    # TODO: fix these issues
+    warningFlags = ["-Wno-error=format"]
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / "llvm-test-suite"),
         asString="$SOURCE_ROOT/llvm-test-suite")

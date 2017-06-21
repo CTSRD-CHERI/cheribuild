@@ -63,15 +63,15 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.buildDir / "lib")
-        if self.crossCompileTarget == CrossCompileTarget.CHERI:
-            # TODO: __sync_fetch_and_add in exceptions code
-            self.add_cmake_options(NO_SHARED=True, DISABLE_EXCEPTIONS_RTTI=True, NO_UNWIND_LIBRARY=True)
-        else:
+        self.add_cmake_options(HAVE_STATIC_GCC_S=False)
+        if self.compiling_for_host():
             self.add_cmake_options(BUILD_TESTS=True)
             if IS_LINUX and "ubuntu" in parseOSRelease()["ID_LIKE"]:
-                # Ubuntu packagers think that static linking should not be possible....
-                self.add_cmake_options(HAVE_STATIC_GCC_S=False, COMPARE_TEST_OUTPUT_TO_SYSTEM_OUTPUT=False)
+                self.add_cmake_options(COMPARE_TEST_OUTPUT_TO_SYSTEM_OUTPUT=False)
             self.add_cmake_options(NO_UNWIND_LIBRARY=False, TEST_LIBUNWIND=True)
+        else:
+            # TODO: __sync_fetch_and_add in exceptions code
+            self.add_cmake_options(NO_SHARED=True, DISABLE_EXCEPTIONS_RTTI=True, NO_UNWIND_LIBRARY=True)
 
     def install(self, **kwargs):
         self.installFile(self.buildDir / "lib/libcxxrt.a", self.installDir / "libcheri/libcxxrt.a", force=True)
