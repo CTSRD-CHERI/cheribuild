@@ -30,31 +30,48 @@
 
 from .crosscompileproject import *
 from ..cheribsd import BuildCHERIBSD
-from ...utils import runCmd
+from ...utils import runCmd, statusUpdate
 
-from pathlib import Path
 import os
-import stat
-import tempfile
 
+
+class TemporarilyRemoveProgramsFromSdk(object):
+    def __init__(self, programs: "typing.List[str]", config: CheriConfig):
+        self.programs = programs
+        self.config = config
+
+    def __enter__(self):
+        statusUpdate('Temporarily moving', self.programs, "from", self.config.sdkBinDir)
+        for l in self.programs:
+            if (self.config.sdkBinDir / l).exists():
+                runCmd("mv", "-f", l, l + ".backup", cwd=self.config.sdkBinDir, printVerboseOnly=True)
+        return self
+
+    def __exit__(self, *exc):
+        statusUpdate('Restoring', self.programs, "in", self.config.sdkBinDir)
+        for l in self.programs:
+            if (self.config.sdkBinDir / (l + ".backup")).exists() or self.config.pretend:
+                runCmd("mv", "-f", l + ".backup", l, cwd=self.config.sdkBinDir, printVerboseOnly=True)
+        return False
 
 class BuildGDB(CrossCompileAutotoolsProject):
     defaultInstallDir = lambda config, cls: BuildCHERIBSD.rootfsDir(config) / "usr/local"
     repository = "https://github.com/bsdjhb/gdb.git"
     gitBranch = "mips_cheri"
     requiresGNUMake = True
-    # TODO: also allow compiling for host system
-    crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
     defaultLinker = "lld"
     defaultOptimizationLevel = ["-O2"]
 
     def __init__(self, config: CheriConfig):
+        if self.crossCompileTarget == CrossCompileTarget.CHERI:
+            statusUpdate("Cannot compile GDB for CHERI yet, targetting MIPS instead")
+            self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
+        if self.compiling_for_host():
+            self.crossInstallDir = CrossInstallDir.SDK
         # See https://github.com/bsdjhb/kdbg/blob/master/gdb/build
         super().__init__(config)
         # ./configure flags
         self.configureArgs.extend([
-            "--enable-targets=mips64-unknown-freebsd",
-            "--without-python",
             "--without-expat",
             "--disable-nls",
             "--without-libunwind-ia64",
@@ -62,8 +79,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
             "--disable-ld",
             "--enable-64-bit-bfd",
             "--without-gnu-as",
-
-            "--with-gdb-datadir=" + str(self.installPrefix / "share/gdb"),
             "--with-separate-debug-dir=/usr/lib/debug",
             "--mandir=/usr/local/man",
             "--infodir=/usr/local/info/",
@@ -75,7 +90,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
             # "--enable-build-with-cxx"
         ])
         # extra ./configure environment variables:
-        # noinspection PyArgumentList
         self.configureEnvironment.update(gl_cv_func_gettimeofday_clobber="no",
                                          lt_cv_sys_max_cmd_len="262144",
                                          # The build system run CC without any flags to detect dependency style...
@@ -91,15 +105,19 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.warningFlags.append("-Wno-error=format")
         self.warningFlags.append("-Wno-error=incompatible-pointer-types")
 
-        self.LDFLAGS.append("-static")
-        self.COMMON_FLAGS.append("-static")  # seems like LDFLAGS is not enough
-        self.COMMON_FLAGS.extend(["-DRL_NO_COMPAT", "-DLIBICONV_PLUG", "-fno-strict-aliasing"])
+        if self.compiling_for_host():
+            self.LDFLAGS.append("-L/usr/local/lib")
+            self.configureArgs.append("--enable-targets=all")
+        else:
+            self.configureArgs.extend(["--without-python", "--enable-targets=mips64-unknown-freebsd",
+                                      "--with-gdb-datadir=" + str(self.installPrefix / "share/gdb")])
+            self.LDFLAGS.append("-static")
+            self.COMMON_FLAGS.append("-static")  # seems like LDFLAGS is not enough
+            self.COMMON_FLAGS.extend(["-DRL_NO_COMPAT", "-DLIBICONV_PLUG", "-fno-strict-aliasing"])
+            # Currently there are a lot of `undefined symbol 'elf_version'`, etc errors
+            # Add -lelf to the linker command line until the source is fixed
+            self.LDFLAGS.append("-lelf")
         self.CFLAGS.append("-std=gnu89")
-        self.LDFLAGS.append("-L/usr/local/lib")
-        # Currently there are a lot of `undefined symbol 'elf_version'`, etc errors
-        # Add -lelf to the linker command line until the source is fixed
-        self.LDFLAGS.append("-lelf")
-        # noinspection PyArgumentList
         self.configureEnvironment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
         if self.makeCommand == "gmake":
             self.configureEnvironment["MAKE"] = "gmake"
@@ -109,22 +127,12 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.configureEnvironment["CXX_FOR_BUILD"] = self.hostCXX
         self.configureEnvironment["CFLAGS_FOR_BUILD"] = "-g"
         self.configureEnvironment["CXXFLAGS_FOR_BUILD"] = "-g"
-
         # TODO: do I need these:
         """(cd $obj; env INSTALL="/usr/bin/install -c "  INSTALL_DATA="install   -m 0644"  INSTALL_LIB="install    -m 444"  INSTALL_PROGRAM="install    -m 555"  INSTALL_SCRIPT="install   -m 555"   PYTHON="${PYTHON}" SHELL=/bin/sh CONFIG_SHELL=/bin/sh CONFIG_SITE=/usr/ports/Templates/config.site ../configure ${CONFIGURE_ARGS} )"""
 
     def compile(self, **kwargs):
-        programsToMove = ["as", "ld", "objcopy", "objdump"]
-        for l in programsToMove:
-            if (self.sdkBinDir / l).exists():
-                runCmd("mv", "-f", l, l + ".backup", cwd=self.sdkBinDir)
-        try:
+        with TemporarilyRemoveProgramsFromSdk(["as", "ld", "objcopy", "objdump"], self.config):
             self.runMake(self.commonMakeArgs + [self.config.makeJFlag], makeTarget="all-gdb", cwd=self.buildDir)
-        finally:
-            # restore the files that GCC doesn't like
-            for l in programsToMove:
-                if (self.sdkBinDir / (l + ".backup")).exists() or self.config.pretend:
-                    runCmd("mv", "-f", l + ".backup", l, cwd=self.sdkBinDir)
 
     def install(self, **kwargs):
         self.runMakeInstall(args=self.commonMakeArgs, target="install-gdb")
