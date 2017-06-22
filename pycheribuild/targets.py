@@ -70,12 +70,18 @@ class Target(object):
         otherDeps = other.projectClass.allDependencyNames()
         if self.name in otherDeps:
             return True
-        ownDeps = self.projectClass.allDependencyNames()
-        if len(ownDeps) < len(otherDeps):
-            return True
-        if len(ownDeps) > len(otherDeps):
-            return False
-        return self.name < other.name  # not a dep and number of deps is the same -> compare name
+        # otherwise just keep everything in order
+        return False
+        # This was previously done
+        # ownDeps = self.projectClass.allDependencyNames()
+        # if len(ownDeps) < len(otherDeps):
+        #     return True
+        # if len(ownDeps) > len(otherDeps):
+        #     return False
+        # return self.name < other.name  # not a dep and number of deps is the same -> compare name
+
+    def __repr__(self):
+        return "<Target " + self.name + ">"
 
 
 class TargetManager(object):
@@ -155,7 +161,9 @@ class TargetManager(object):
                     else:
                         # otherwise just add the direct dependencies
                         chosenTargets.extend(self.targetMap[dep] for dep in t.projectClass.dependencies)
-                chosenTargets.append(t)
+                else:
+                    chosenTargets.append(t)
+            # stable sort in dependency order
             chosenTargets = sorted(chosenTargets)
         else:
             # Otherwise run all targets in dependency order
