@@ -76,6 +76,8 @@ def handleLine(line: str, srcFile: Path):
         if not line.startswith("from ."):
             fromImports.append(line)
         return
+    elif line.lstrip().startswith("from ."):
+        return  # skip relative imports inside functions
     if len(line.strip()) == 0:
         emptyLines += 1
         if emptyLines > 2:
@@ -114,6 +116,7 @@ addFilteredFile(scriptDir / "config/loader.py")
 addFilteredFile(scriptDir / "config/chericonfig.py")
 addFilteredFile(scriptDir / "config/defaultconfig.py")
 addFilteredFile(scriptDir / "targets.py")
+addFilteredFile(scriptDir / "filesystemutils.py")
 addFilteredFile(scriptDir / "project.py")
 
 # for now keep the original order
@@ -141,6 +144,9 @@ addFilteredFile(scriptDir / "projects/cross/gdb.py")
 addFilteredFile(scriptDir / "projects/cross/libcxx.py")
 addFilteredFile(scriptDir / "projects/cross/postgres.py")
 addFilteredFile(scriptDir / "projects/cross/nginx.py")
+addFilteredFile(scriptDir / "projects/cross/llvm_test_suite.py")
+addFilteredFile(scriptDir / "projects/cross/sqlite.py")
+addFilteredFile(scriptDir / "projects/cross/qt5.py")
 
 # now make sure that all the projects were handled
 checkAllFilesUsed(scriptDir)

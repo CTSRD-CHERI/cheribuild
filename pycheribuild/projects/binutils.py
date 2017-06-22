@@ -31,7 +31,7 @@ import os
 import shutil
 from pathlib import Path
 
-from pycheribuild.config.loader import ComputedDefaultValue
+from ..config.loader import ComputedDefaultValue
 from ..project import *
 from ..utils import *
 
