@@ -155,6 +155,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
 class BuildICU4C(CrossCompileAutotoolsProject):
     repository = "https://github.com/RichardsonAlex/icu4c.git"
     crossInstallDir = CrossInstallDir.SDK
+    requiresGNUMake = True
     warningFlags = []  # FIXME: build with capability -Werror
 
     def __init__(self, config):
