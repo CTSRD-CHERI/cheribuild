@@ -245,9 +245,11 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             self.add_cmake_options(ENABLE_JIT=False,  # Not supported on MIPS
                                    QT_STATIC_BUILD=True,  # we always build qt static for now
                                    QT_BUNDLED_PNG=True,  # use libpng from Qt
-                                   QT_BUNDLED_JPEG=True,  # use libjpeg from Qt
+                                   # QT_BUNDLED_JPEG=True,  # use libjpeg from Qt
                                    )
             self.add_cmake_options(Qt5_DIR=self.config.sdkSysrootDir / ("usr/local/Qt-" + self.crossCompileTarget.value) / "lib/cmake/Qt5")
+            self.add_cmake_options(PNG_LIBRARIES="libqtlibpng.a")
+            self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.getSourceDir(config) / "src/3rdparty/libpng")
 
         self._addRequiredSystemTool("gperf")
 
