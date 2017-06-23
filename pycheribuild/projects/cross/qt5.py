@@ -190,6 +190,7 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
     repository = "https://github.com/RichardsonAlex/libxml2"
     crossInstallDir = CrossInstallDir.SDK
     warningFlags = []  # FIXME: build with capability -Werror
+    requiresGNUMake = True
 
     def __init__(self, config):
         super().__init__(config)
