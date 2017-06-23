@@ -40,7 +40,11 @@ class BuildSQLite(CrossCompileAutotoolsProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         if self.crossCompileTarget != CrossCompileTarget.NATIVE:
-            self.configureEnvironment["BUILD_CC"] = self.config.clangPath
+            if IS_FREEBSD:
+                # For some reason using clang39/clang40 to crossbuild is broken on FreeBSD 11
+                self.configureEnvironment["BUILD_CC"] = "/usr/bin/cc"
+            else:
+                self.configureEnvironment["BUILD_CC"] = self.config.clangPath
             self.configureEnvironment["BUILD_CFLAGS"] = "-integrated-as"
             self.LDFLAGS.append("-static")
             self.configureArgs.extend([
