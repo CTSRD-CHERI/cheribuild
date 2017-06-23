@@ -227,8 +227,8 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, config: CheriConfig, generator: CMakeProject.Generator=CMakeProject.Generator.Ninja):
+        super().__init__(config, generator)
         # This must come first:
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
             self._cmakeTemplate = includeLocalFile("files/NativeToolchain.cmake.in")
