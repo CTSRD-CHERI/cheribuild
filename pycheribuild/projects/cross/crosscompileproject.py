@@ -205,6 +205,20 @@ class CrossCompileProject(Project):
     def compiling_for_host(self):
         return self.crossCompileTarget == CrossCompileTarget.NATIVE
 
+    @property
+    def pkgconfig_dirs(self):
+        if self.compiling_for_mips():
+            return str(self.sdkSysroot / "usr/lib/pkgconfig") + ":" + str(self.sdkSysroot / "usr/local/lib/pkgconfig")
+        if self.compiling_for_cheri():
+            return str(self.sdkSysroot / "usr/libcheri/pkgconfig") + ":" + str(self.sdkSysroot / "usr/local/libcheri/pkgconfig")
+        return None
+
+    def configure(self, **kwargs):
+        if self.compiling_for_host():
+            super().configure(**kwargs)
+        with setEnv(PKG_CONFIG_LIBDIR=self.pkgconfig_dirs, PKG_CONFIG_SYSROOT_DIR=self.config.sdkSysrootDir):
+            super().configure(**kwargs)
+
 class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
     doNotAddToTargets = True  # only used as base class
     defaultCMakeBuildType = "RelWithDebInfo"  # default to O2
@@ -290,6 +304,7 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
             TOOLCHAIN_SYSROOT=self.sdkSysroot if not self.compiling_for_host() else None,
             ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
             TOOLCHAIN_SYSTEM_PROCESSOR=processor,
+            TOOLCHAIN_PKGCONFIG_DIRS=self.pkgconfig_dirs
         )
         # TODO: BUILD_SHARED_LIBS=OFF?
         super().configure()
