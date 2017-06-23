@@ -238,6 +238,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             # we need to find the installed Qt
             self.add_cmake_options(ENABLE_JIT=False,  # Not supported on MIPS
                                    QT_STATIC_BUILD=True,  # we always build qt static for now
+                                   QT_BUNDLED_PNG=True,  # use libpng from Qt
+                                   QT_BUNDLED_JPEG=True,  # use libjpeg from Qt
                                    )
             self.add_cmake_options(Qt5_DIR=self.config.sdkSysrootDir / ("usr/local/Qt-" + self.crossCompileTarget.value) / "lib/cmake/Qt5")
 
