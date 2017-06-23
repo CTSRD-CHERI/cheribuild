@@ -61,7 +61,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             compiler_flags = self.COMMON_FLAGS + ["-target", self.targetTriple + "12"]
             linker_flags = self.default_ldflags + ["-target", self.targetTriple + "12"]
 
-            if self.crossCompileTarget == CrossCompileTarget.CHERI:
+            if self.compiling_for_cheri() or self.compiling_for_mips():
+                # force static linking for now (MIPS dynamic seems broken)
                 linker_flags += ["-static"]  # dynamically linked C++ doesn't work yet
                 self.configureArgs.append("QMAKE_LIBDIR=" + str(self.config.sdkSysrootDir / "usr/libcheri"))
             # self.configureArgs.append("QMAKE_CXXFLAGS+=-stdlib=libc++")
@@ -102,9 +103,13 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         self.configureArgs.append("-qt-libpng")
 
         if self.debugInfo:
-            self.configureArgs.append("-debug")
+            # Build a release build with debug info for now
+            self.configureArgs.append("-release")
+            self.configureArgs.append("-optimize-size")  # Use -Os, otherwise it will use -O3
+            self.configureArgs.append("-force-debug-info")
+            # self.configureArgs.append("-debug")
         else:
-            self.configureArgs.append("-optimize-size")
+            self.configureArgs.append("-release")
 
         self.configureArgs.extend(["-opensource", "-confirm-license"])
 
@@ -225,7 +230,6 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         # There is a bug in the cmake ninja generator that makes it use a response file for linking
         # WebCore but not actually generating it
         super().__init__(config, generator=BuildQtWebkit.Generator.Makefiles)
-        super().__init__(config)
         self.add_cmake_options(PORT="Qt", ENABLE_X11_TARGET=False,
                                ENABLE_OPENGL=False,
                                USE_LIBHYPHEN=False,  # we don't have libhyphen
