@@ -29,7 +29,7 @@
 #
 from .crosscompileproject import *
 from ...config.loader import ComputedDefaultValue
-from ...utils import commandline_to_str, runCmd
+from ...utils import commandline_to_str, runCmd, IS_FREEBSD
 
 # This class is used to build qtbase and all of qt5
 class BuildQtWithConfigureScript(CrossCompileProject):
@@ -157,6 +157,8 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     crossInstallDir = CrossInstallDir.SDK
     requiresGNUMake = True
     warningFlags = []  # FIXME: build with capability -Werror
+    if IS_FREEBSD:
+        forceDefaultCC = True  # for some reason crashes on FreeBSD 11 if using clang40/ clang39
 
     def __init__(self, config):
         super().__init__(config)

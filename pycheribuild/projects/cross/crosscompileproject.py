@@ -301,6 +301,7 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
     add_host_target_build_config_options = True
     _configure_supports_libdir = True  # override in nginx
     _configure_supports_variables_on_cmdline = True  # override in nginx
+    forceDefaultCC = False  # for some reason ICU binaries build during build crash -> fall back to /usr/bin/cc there
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -311,9 +312,10 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
 
     @property
     def default_compiler_flags(self):
+        if self.compiling_for_host():
+            return self.COMMON_FLAGS.copy()
         result = self.COMMON_FLAGS + self.optimizationFlags + ["-target", self.targetTripleWithVersion]
-        if self.crossCompileTarget != CrossCompileTarget.NATIVE:
-            result += ["--sysroot=" + str(self.sdkSysroot), "-B" + str(self.sdkBinDir)] + self.warningFlags
+        result += ["--sysroot=" + str(self.sdkSysroot), "-B" + str(self.sdkBinDir)] + self.warningFlags
         return result
 
     def add_configure_env_arg(self, arg: str, value: str):
@@ -331,34 +333,40 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
         if self._configure_supports_variables_on_cmdline:
             self.configureArgs.append(prog + "=" + fullpath)
 
+    @property
+    def CC(self):
+        if self.compiling_for_host():
+            return self.config.clangPath if not self.forceDefaultCC else Path("cc")
+        return self.compiler_dir / (self.targetTriple + "-clang")
+
+    @property
+    def CXX(self):
+        if self.compiling_for_host():
+            return self.config.clangPlusPlusPath if not self.forceDefaultCC else Path("c++")
+        return self.compiler_dir / (self.targetTriple + "-clang++")
+
     def configure(self, **kwargs):
         CPPFLAGS = self.default_compiler_flags
         for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
             assert key not in self.configureEnvironment
         # target triple contains a number suffix -> remove it when computing the compiler name
-        compiler_prefix = self.targetTriple + "-"
-        if self.crossCompileTarget == CrossCompileTarget.NATIVE:
-            compiler_prefix = ""
-        elif self.compiling_for_cheri() and self._configure_supports_libdir:
+        if self.compiling_for_cheri() and self._configure_supports_libdir:
             # nginx configure script doesn't understand --libdir
             # make sure that we install to the right directory
             # TODO: can we use relative paths?
             self.configureArgs.append("--libdir=" + str(self.installPrefix) + "/libcheri")
 
-        cc = self.config.clangPath if self.compiling_for_host() else self.compiler_dir / (compiler_prefix + "clang")
-        cxx = self.config.clangPlusPlusPath if self.compiling_for_host() else self.compiler_dir / (compiler_prefix + "clang++")
         # autotools overrides CFLAGS -> use CC and CXX vars here
-        self.set_prog_with_args("CC", cc, CPPFLAGS + self.CFLAGS)
-        self.set_prog_with_args("CXX", cxx, CPPFLAGS + self.CXXFLAGS)
+        self.set_prog_with_args("CC", self.CC, CPPFLAGS + self.CFLAGS)
+        self.set_prog_with_args("CXX", self.CXX, CPPFLAGS + self.CXXFLAGS)
         # self.add_configure_env_arg("CPPFLAGS", " ".join(CPPFLAGS))
         # self.add_configure_env_arg("CFLAGS", " ".join(CPPFLAGS + self.CFLAGS))
         # self.add_configure_env_arg("CXXFLAGS", " ".join(CPPFLAGS + self.CXXFLAGS))
         # this one seems to work:
         self.add_configure_env_arg("LDFLAGS", " ".join(self.LDFLAGS + self.default_ldflags))
 
-
         if not self.compiling_for_host():
-            self.set_prog_with_args("CPP", self.compiler_dir / (compiler_prefix + "clang-cpp"), CPPFLAGS)
+            self.set_prog_with_args("CPP", self.compiler_dir / (self.targetTriple + "-clang-cpp"), CPPFLAGS)
             if "lld" in self.linker and (self.compiler_dir / "ld.lld").exists():
                 self.add_configure_env_arg("LD", str(self.compiler_dir / "ld.lld"))
 
