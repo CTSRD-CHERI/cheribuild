@@ -221,6 +221,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     repository = "https://github.com/RichardsonAlex/qtwebkit"
     gitBranch = "dev"
     dependencies = ["qtbase", "icu4c", "libxml2", "sqlite"]
+    # webkit is massive if we include debug info
+    defaultCMakeBuildType = "MinSizeRel"
     crossInstallDir = CrossInstallDir.SDK
     warningFlags = []  # FIXME: build with capability -Werror
     defaultSourceDir = ComputedDefaultValue(
