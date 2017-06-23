@@ -61,10 +61,12 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             compiler_flags = self.COMMON_FLAGS + ["-target", self.targetTriple + "12"]
             linker_flags = self.default_ldflags + ["-target", self.targetTriple + "12"]
 
-            if self.compiling_for_cheri() or self.compiling_for_mips():
+            if self.compiling_for_cheri():
                 # force static linking for now (MIPS dynamic seems broken)
                 linker_flags += ["-static"]  # dynamically linked C++ doesn't work yet
                 self.configureArgs.append("QMAKE_LIBDIR=" + str(self.config.sdkSysrootDir / "usr/libcheri"))
+            elif self.compiling_for_mips():
+                linker_flags += ["-static"]  # also link statically to compare with static CHERI
             # self.configureArgs.append("QMAKE_CXXFLAGS+=-stdlib=libc++")
 
             # The build system already passes these:
