@@ -57,7 +57,7 @@ class BuildSQLite(CrossCompileAutotoolsProject):
 
     def compile(self, **kwargs):
         # create the required metadata
-        runCmd("create-fossil-manifest", cwd=self.sourceDir)
+        runCmd(self.sourceDir / "create-fossil-manifest", cwd=self.sourceDir)
         super().compile()
 
     def install(self, **kwargs):
