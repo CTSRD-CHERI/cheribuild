@@ -143,7 +143,8 @@ class CrossCompileProject(Project):
     @property
     def default_ldflags(self):
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
-            return ["-fuse-ld=" + self.linker]
+            # return ["-fuse-ld=" + self.linker]
+            return []
         elif self.crossCompileTarget == CrossCompileTarget.CHERI:
             emulation = "elf64btsmip_cheri_fbsd"
             abi = "purecap"
