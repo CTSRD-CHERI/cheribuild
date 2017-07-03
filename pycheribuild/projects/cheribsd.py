@@ -477,12 +477,11 @@ class BuildCheriBsdSysroot(SimpleProject):
                 self.createSysroot()
             else:
                 self.copySysrootFromRemoteMachine()
-            # lld expects libgcc_s and libgcc_eh to exist:
-            libgcc_s = self.config.sdkDir / "sysroot/usr/libcheri/libgcc_s.a"
+            # clang++ expects libgcc_eh to exist:
             libgcc_eh = self.config.sdkDir / "sysroot/usr/libcheri/libgcc_eh.a"
-            for lib in (libgcc_s, libgcc_eh):
-                if not lib.is_file():
-                    runCmd("ar", "rc", lib)
+            if not libgcc_eh.is_file():
+                warningMessage("CHERI libgcc_eh missing! You should probably update CheriBSD")
+                runCmd("ar", "rc", libgcc_eh)
 
 
 class BuildCheriBsdAndSysroot(TargetAlias):
