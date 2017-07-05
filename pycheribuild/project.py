@@ -784,6 +784,7 @@ class CMakeProject(Project):
 
 class AutotoolsProject(Project):
     doNotAddToTargets = True
+    _configure_supports_prefix = True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -801,11 +802,12 @@ class AutotoolsProject(Project):
         self.configureCommand = self.sourceDir / configureScript
 
     def configure(self, cwd: Path=None):
-        if self.installPrefix:
-            assert self.destdir, "custom install prefix requires DESTDIR being set!"
-            self.configureArgs.append("--prefix=" + str(self.installPrefix))
-        else:
-            self.configureArgs.append("--prefix=" + str(self.installDir))
+        if self._configure_supports_prefix:
+            if self.installPrefix:
+                assert self.destdir, "custom install prefix requires DESTDIR being set!"
+                self.configureArgs.append("--prefix=" + str(self.installPrefix))
+            else:
+                self.configureArgs.append("--prefix=" + str(self.installDir))
         if self.extraConfigureFlags:
             self.configureArgs.extend(self.extraConfigureFlags)
         super().configure(cwd=cwd)

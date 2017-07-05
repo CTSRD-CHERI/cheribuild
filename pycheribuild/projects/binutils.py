@@ -169,4 +169,4 @@ class BuildGPLv3Binutils(BuildGnuBinutils):
 # Replace the old binutils target by on that builds the required tools from GNU binutils and elftoolchain
 class BuildBinutils(TargetAlias):
     target = "binutils"
-    dependencies = ["gnu-binutils", "elftoolchain-binutils"] if not IS_FREEBSD else []
+    dependencies = ["gnu-binutils", "elftoolchain"] if not IS_FREEBSD else []

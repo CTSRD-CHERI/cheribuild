@@ -29,16 +29,18 @@
 #
 from ..project import *
 from ..utils import *
+from pathlib import Path
 
 import pwd
 import grp
 import os
 
 
-class BuildElftoolchainBinutils(Project):
-    target = "elftoolchain-binutils"
-    projectName = "elftoolchain-binutils"
-    repository = "https://github.com/RichardsonAlex/elftoolchain.git"
+class BuildElftoolchain(Project):
+    target = "elftoolchain"
+    projectName = "elftoolchain"
+    gitBranch = "master"
+    repository = "https://github.com/emaste/elftoolchain.git"
     defaultInstallDir = Project._installToSDK
     defaultBuildDir = Project.defaultSourceDir  # we have to build in the source directory
 
@@ -59,7 +61,7 @@ class BuildElftoolchainBinutils(Project):
         self.commonMakeArgs.append("SHLIB_MAJOR=")  # don't build shared libraries
         if not self.config.verbose:
             self.commonMakeArgs.append("-s")
-        self.programsToBuild = ["brandelf", "ar", "elfcopy", "elfdump", "strings", "nm", "readelf", "addr2line",
+        self.programsToBuild = ["brandelf", "elfcopy", "elfdump", "strings", "nm", "readelf", "addr2line",
                                 "size", "findtextrel"]
         # some make targets install more than one tool:
         # strip, objcopy and mcs are links to elfcopy and ranlib is a link to ar
@@ -112,37 +114,5 @@ class BuildElftoolchainBinutils(Project):
         allInstalledTools = self.programsToBuild + self.extraPrograms
         for prog in allInstalledTools:
             self.createBuildtoolTargetSymlinks(self.installDir / "bin" / prog)
-
-
-class BuildElfToolchain(BuildElftoolchainBinutils):
-    repository = "https://github.com/emaste/elftoolchain.git"
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.programsToBuild = ["brandelf"]
-
-    def process(self):
-        warningMessage("Building target 'elftoolchain' is deprecated, you should build 'cheri-binutils' instead.")
-        if not self.queryYesNo("Are you sure you want to build this target", forceResult=False):
-            statusUpdate("Skipping deprecated target 'elftoolchain'")
-            return
-        super().process()
-
-    def install(self, **kwargs):
-        if IS_FREEBSD:
-            statusUpdate("Not installing elftoolchain binaries as they conflict witht he ones from CheriBSD")
-            return
-        # self.runMake([self.makeCommand, self.config.makeJFlag, "DESTDIR=" + str(self.installDir)] + self.makeArgs,
-        #              "install", cwd=self.sourceDir)
-        # make install requires root, just build binaries statically and copy them
-        self.installFile(self.sourceDir / "brandelf/brandelf", self.installDir / "bin/brandelf", force=True)
-
-
-# TODO: remove this target and make it an alias for elftoolchain-binutils
-class BuildBrandelf(BuildElftoolchainBinutils):
-    repository = "https://github.com/emaste/elftoolchain.git"
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.programsToBuild = ["brandelf"]
-        self.extraPrograms = []
+        self.createSymlink(Path("/usr/bin/ar"), self.installDir / "bin/ar", relative=False)
+        self.createBuildtoolTargetSymlinks(self.installDir / "bin/ar")
