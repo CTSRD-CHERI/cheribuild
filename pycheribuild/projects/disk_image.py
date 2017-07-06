@@ -221,6 +221,8 @@ cron_enable="NO"
 # devd should also be safe to disable to increase boot speed... Or not ... seems like it breaks network
 # devd_enable="NO"
 nfs_client_enable="YES"
+fsck_y_enable="YES"
+fsck_y_flags="-T ffs:-R -T ufs:-R"
 """.format(hostname=self.hostname)
         self.createFileForImage(outDir, "/etc/rc.conf", contents=rcConfContents)
 
