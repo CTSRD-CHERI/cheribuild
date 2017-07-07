@@ -46,7 +46,7 @@ class BuildElftoolchain(Project):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        if IS_LINUX:
+        if not IS_FREEBSD:
             self._addRequiredSystemTool("bmake")
             self.makeCommand = "bmake"
         else:
@@ -67,6 +67,10 @@ class BuildElftoolchain(Project):
         # strip, objcopy and mcs are links to elfcopy and ranlib is a link to ar
         self.extraPrograms = ["strip", "ranlib", "objcopy", "mcs"]
         self.libTargets = ["common", "libelf", "libelftc", "libpe", "libdwarf"]
+
+    def checkSystemDependencies(self):
+        if IS_MAC and not Path("/usr/local/opt/libarchive/lib").exists():
+            self.dependencyError("libarchive is missing", installInstructions="Run `brew install libarchive`")
 
     def compile(self, **kwargs):
         # tools that we want to build:

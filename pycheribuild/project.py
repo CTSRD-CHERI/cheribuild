@@ -458,12 +458,12 @@ class Project(SimpleProject):
         self._preventAssign = True
 
         if self.requiresGNUMake:
-            if IS_LINUX and not shutil.which("gmake"):
-                statusUpdate("Could not find `gmake` command, assuming `make` is GNU make")
-                self.makeCommand = "make"
-            else:
+            if IS_FREEBSD:
                 self._addRequiredSystemTool("gmake")
                 self.makeCommand = "gmake"
+            elif not shutil.which("gmake"):
+                statusUpdate("Could not find `gmake` command, assuming `make` is GNU make")
+                self.makeCommand = "make"
         else:
             self.makeCommand = "make"
 

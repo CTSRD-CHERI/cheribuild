@@ -110,8 +110,10 @@ class BuildLLVM(CMakeProject):
             self.dependencyError("Could not find clang", installInstructions=installInstructions)
         info = getCompilerInfo(self.cCompiler)
         # noinspection PyTypeChecker
-        if info.compiler != "clang" or info.version < (major, minor, patch):
-            versionStr = ".".join(map(str, info.version))
+        versionStr = ".".join(map(str, info.version))
+        if info.compiler == "apple-clang":
+            print("Compiler is apple clang", versionStr, " -- assuming it matches required version", "%d.%d" % (major, minor))
+        elif info.compiler != "clang" or info.version < (major, minor, patch):
             self.dependencyError(self.cCompiler, "version", versionStr,
                                  "is not supported. Clang version %d.%d or newer is required." % (major, minor),
                                  installInstructions=self.clang38InstallHint())

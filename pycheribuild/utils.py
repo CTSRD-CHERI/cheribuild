@@ -53,7 +53,7 @@ else:
 
 
 # reduce the number of import statements per project  # no-combine
-__all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "printCommand", "includeLocalFile",  # no-combine
+__all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includeLocalFile",  # no-combine
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
            "parseOSRelease", "warningMessage", "Type_T", "typing", "popen_handle_noexec",  # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latestClangTool",  # no-combine
@@ -84,6 +84,7 @@ else:
 
 IS_LINUX = sys.platform.startswith("linux")
 IS_FREEBSD = sys.platform.startswith("freebsd")
+IS_MAC = sys.platform.startswith("darwin")
 _cheriConfig = None  # type: CheriConfig
 
 
@@ -234,10 +235,12 @@ def getCompilerInfo(compiler: Path) -> CompilerInfo:
     if compiler not in _cached_compiler_infos:
         clangVersionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         gccVersionPattern = re.compile(b"gcc version (\\d+)\\.(\\d+)\\.?(\\d+)?")
+        appleLlvmVersionPattern = re.compile(b"Apple LLVM version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         targetPattern = re.compile(b"Target: (.+)")
         # clang prints this output to stderr
         versionCmd = runCmd(compiler, "-v", captureError=True, printVerboseOnly=True, runInPretendMode=True)
         clangVersion = clangVersionPattern.search(versionCmd.stderr)
+        appleLlvmVersion = appleLlvmVersionPattern.search(versionCmd.stderr)
         gccVersion = gccVersionPattern.search(versionCmd.stderr)
         target = targetPattern.search(versionCmd.stderr)
         # if _cheriConfig and _cheriConfig.pretend:
@@ -250,6 +253,10 @@ def getCompilerInfo(compiler: Path) -> CompilerInfo:
         elif clangVersion:
             kind = "clang"
             version = tuple(map(int, clangVersion.groups()))
+        elif appleLlvmVersion:
+            kind = "apple-clang"
+            # TODO: parse #define __VERSION__ "4.2.1 Compatible Apple LLVM 8.1.0 (clang-802.0.42)"
+            version = tuple(map(int, appleLlvmVersion.groups()))
         else:
             warningMessage("Could not detect compiler info for", compiler, "- output was", versionCmd.stderr)
         if _cheriConfig and _cheriConfig.verbose:
