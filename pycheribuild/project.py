@@ -169,8 +169,13 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         self.__requiredSystemTools = {}  # type: typing.Dict[str, typing.Any]
         self._systemDepsChecked = False
 
-    def _addRequiredSystemTool(self, executable: str, installInstructions=None):
-        self.__requiredSystemTools[executable] = installInstructions
+    def _addRequiredSystemTool(self, executable: str, installInstructions=None, homebrewPackage=None):
+        if IS_MAC and not installInstructions:
+            if not homebrewPackage:
+                homebrewPackage = executable
+            self.__requiredSystemTools[executable] = "Run `brew install " + homebrewPackage + "`"
+        else:
+            self.__requiredSystemTools[executable] = installInstructions
 
     def queryYesNo(self, message: str = "", *, defaultResult=False, forceResult=True) -> bool:
         yesNoStr = " [Y]/n " if defaultResult else " y/[N] "
@@ -578,7 +583,7 @@ class Project(SimpleProject):
         # TODO: never use the source dir as a build dir (unfortunately GDB, postgres and elftoolchain won't work)
         # will have to check how well binutils and qemu work there
         if (self.buildDir / ".git").is_dir():
-            if (self.buildDir / "GNUmakefile").is_file():
+            if (self.buildDir / "GNUmakefile").is_file() and self.makeCommand != "bmake":
                 runCmd(self.makeCommand, "distclean", cwd=self.buildDir)
             else:
                 # just use git clean for cleanup

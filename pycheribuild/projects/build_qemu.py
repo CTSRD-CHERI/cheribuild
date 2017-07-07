@@ -37,10 +37,14 @@ class BuildQEMU(AutotoolsProject):
     defaultInstallDir = AutotoolsProject._installToSDK
     appendCheriBitsToBuildDir = True
     requiresGNUMake = True
+    skipGitSubmodules = True  # we don't need these
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self._addRequiredSystemTool("pkg-config")
+        self._addRequiredSystemTool("glibtool" if IS_MAC else "libtool", homebrewPackage="libtool")
+        self._addRequiredSystemTool("autoreconf", homebrewPackage="autoconf")
+        self._addRequiredSystemTool("aclocal", homebrewPackage="automake")
         self._addRequiredSystemTool("python", installInstructions="QEMU needs Python 2 installed as the python binary")
         # QEMU will not work with BSD make, need GNU make
 
@@ -77,4 +81,6 @@ class BuildQEMU(AutotoolsProject):
         # this is better than git reset --hard as we don't lose any other changes
         if (self.sourceDir / "po").is_dir():
             runCmd("git", "checkout", "HEAD", "po/", cwd=self.sourceDir, printVerboseOnly=True)
+        if (self.sourceDir / "pixman").exists():
+            warningMessage("QEMU might build the broken pixman submodule, run `git submodule deinit -f pixman` to clean")
         super().update()
