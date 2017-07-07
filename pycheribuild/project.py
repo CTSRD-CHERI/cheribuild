@@ -324,7 +324,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def dependencyError(self, *args, installInstructions: str = None):
         self._systemDepsChecked = True  # make sure this is always set
-        fatalError(*args, fixitHint=installInstructions)
+        fatalError("Dependency for", self.target, "missing:", *args, fixitHint=installInstructions)
 
     def checkSystemDependencies(self) -> None:
         """
