@@ -57,6 +57,7 @@ class BuildElftoolchain(Project):
         # TODO: build static?
         self.commonMakeArgs.append("WITH_TESTS=no")
         self.commonMakeArgs.append("WITH_DOCUMENTATION=no")
+        self.commonMakeArgs.append("WITH_PE=no")
         # HACK: we don't want the binaries to depend on libelftc.so because the build system doesn't handle rpath
         self.commonMakeArgs.append("SHLIB_MAJOR=")  # don't build shared libraries
         if not self.config.verbose:
@@ -65,10 +66,11 @@ class BuildElftoolchain(Project):
                                 "size", "findtextrel"]
         # some make targets install more than one tool:
         # strip, objcopy and mcs are links to elfcopy and ranlib is a link to ar
-        self.extraPrograms = ["strip", "ranlib", "objcopy", "mcs"]
+        self.extraPrograms = ["strip", "objcopy", "mcs"]
         self.libTargets = ["common", "libelf", "libelftc", "libpe", "libdwarf"]
 
     def checkSystemDependencies(self):
+        super().checkSystemDependencies()
         if IS_MAC and not Path("/usr/local/opt/libarchive/lib").exists():
             self.dependencyError("libarchive is missing", installInstructions="Run `brew install libarchive`")
 
@@ -81,7 +83,8 @@ class BuildElftoolchain(Project):
             # setting SHLIB_FULLVERSION to empty is a hack to prevent building of shared libraries
             # as we want the build tools to be statically linked but e.g. libarchive might not be available
             # as a static library (e.g. on openSUSE)
-            makeArgs = self.commonMakeArgs + ["SHLIB_FULLVERSION=", self.config.makeJFlag]
+            makeArgs = self.commonMakeArgs + ["SHLIB_FULLVERSION=", self.config.makeJFlag,
+                                              "CC=" + str(self.config.clangPath)]
             self.runMake(makeArgs, makeTarget="all", cwd=self.sourceDir / tgt,
                          logfileName="build", appendToLogfile=not firstCall)
             firstCall = False
