@@ -150,6 +150,13 @@ class BuildFreestandingSdk(SimpleProject):
         #    self.installFile(CHERILIBEXEC_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
 
 
+
+# Replace the old binutils target by on that builds the required tools from GNU binutils and elftoolchain
+class BuildBinutils(TargetAlias):
+    target = "binutils"
+    # LLD should be usable for all cases now, now longer install the ancient gnu ld
+    dependencies = ["elftoolchain"] if not IS_FREEBSD else []
+
 class StartCheriSDKShell(SimpleProject):
     target = "sdk-shell"
 

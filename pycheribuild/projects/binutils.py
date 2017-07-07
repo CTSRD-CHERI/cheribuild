@@ -164,9 +164,3 @@ class BuildGPLv3Binutils(BuildGnuBinutils):
         self.createBuildtoolTargetSymlinks(bindir / "ld.bfd", toolName="ld", createUnprefixedLink=True)
         # self.installFile(self.buildDir / "gold/ld-new", bindir / "ld.gold", force=True)
         # self.createBuildtoolTargetSymlinks(bindir / "ld.gold")
-
-
-# Replace the old binutils target by on that builds the required tools from GNU binutils and elftoolchain
-class BuildBinutils(TargetAlias):
-    target = "binutils"
-    dependencies = ["gnu-binutils", "elftoolchain"] if not IS_FREEBSD else []
