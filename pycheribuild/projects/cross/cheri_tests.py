@@ -36,7 +36,7 @@ from ...utils import statusUpdate
 from pathlib import Path
 
 class BuildCheriTests(CrossCompileCMakeProject):
-    repository = "https://github.com/CTSRD-CHERI/llvm-test-suite.git"
+    repository = "https://github.com/RichardsonAlex/cheri-tests.git"
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     defaultCMakeBuildType = "RelWithDebInfo"
     projectName = "cheri-tests"
