@@ -68,6 +68,14 @@ class BuildElftoolchain(Project):
         # strip, objcopy and mcs are links to elfcopy and ranlib is a link to ar
         self.extraPrograms = ["strip", "objcopy", "mcs"]
         self.libTargets = ["common", "libelf", "libelftc", "libpe", "libdwarf"]
+        if self.build_ar:
+            self.programsToBuild.append("ar")
+            self.extraPrograms.append("ranlib")
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        cls.build_ar = cls.addBoolOption("build-ar", default=True, help="build the ar/ranlib programs")
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
@@ -121,5 +129,9 @@ class BuildElftoolchain(Project):
         allInstalledTools = self.programsToBuild + self.extraPrograms
         for prog in allInstalledTools:
             self.createBuildtoolTargetSymlinks(self.installDir / "bin" / prog)
-        self.createSymlink(Path("/usr/bin/ar"), self.installDir / "bin/ar", relative=False)
-        self.createBuildtoolTargetSymlinks(self.installDir / "bin/ar")
+        # if we didn't build ar/ranlib add symlinks to the versions in /usr/bin
+        if not self.build_ar:
+            self.createSymlink(Path("/usr/bin/ar"), self.installDir / "bin/ar", relative=False)
+            self.createBuildtoolTargetSymlinks(self.installDir / "bin/ar")
+            self.createSymlink(Path("/usr/bin/ranlib"), self.installDir / "bin/ranlib", relative=False)
+            self.createBuildtoolTargetSymlinks(self.installDir / "bin/ranlib")
