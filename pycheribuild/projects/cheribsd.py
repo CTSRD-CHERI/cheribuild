@@ -171,6 +171,10 @@ class BuildFreeBSD(Project):
         if self.subdirOverride:
             self.commonMakeArgs.append("SUBDIR_OVERRIDE=" + self.subdirOverride)
 
+        # If WITH_LD_IS_LLD is set (e.g. by reading src.conf) the symlink ld -> ld.bfd in $BUILD_DIR/tmp/ won't be
+        # created and the build system will then fall back to using /usr/bin/ld which won't work!
+        self.commonMakeArgs.append("-DWITHOUT_LLD_IS_LD")
+
         self.destdir = self.installDir
         self.kernelToolchainAlreadyBuilt = False
 
