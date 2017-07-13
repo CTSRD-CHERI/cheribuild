@@ -84,6 +84,8 @@ class BuildFreeBSD(Project):
                                                  help="pass make flags for building debug info",
                                                  default=True, showHelp=True)
         cls.buildTests = cls.addBoolOption("build-tests", help="Build the tests too (-DWITH_TESTS)", showHelp=True)
+        cls.fastRebuild = cls.addBoolOption("fast", showHelp=True,
+                                            help="Skip some (usually) unnecessary build steps to spped up rebuilds")
 
     def _stdoutFilter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
@@ -235,7 +237,8 @@ class BuildFreeBSD(Project):
         if self.config.verbose:
             self.runMake(self.buildworldArgs, "showconfig", cwd=self.sourceDir)
         if not self.skipBuildworld:
-            self.runMake(self.buildworldArgs + self.jflag, "buildworld", cwd=self.sourceDir)
+            fastArgs = ["-DWORLDFAST"] if self.fastRebuild else []
+            self.runMake(self.buildworldArgs + fastArgs + self.jflag, "buildworld", cwd=self.sourceDir)
         if not self.subdirOverride:
             self._buildkernel(kernconf=self.kernelConfig)
 
