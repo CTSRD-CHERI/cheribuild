@@ -188,7 +188,7 @@ class FileSystemUtils(object):
             printCommand("cp", src, dest, printVerboseOnly=True)
         if self.config.pretend:
             return
-        if dest.exists() and force:
+        if (dest.is_symlink() or dest.exists()) and force:
             dest.unlink()
         if not src.exists():
             fatalError("Required file", src, "does not exist")
