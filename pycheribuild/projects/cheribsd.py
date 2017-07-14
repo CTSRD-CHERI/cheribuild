@@ -47,9 +47,7 @@ def defaultKernelConfig(config: CheriConfig, project):
 
 class FreeBSDCrossTools(CMakeProject):
     repository = "https://github.com/RichardsonAlex/freebsd-crossbuild.git"
-    defaultInstallDir = ComputedDefaultValue(
-        function=lambda config, project: config.outputRoot / "freebsd-cross",
-        asString="$INSTALL_ROOT/bootstrap")
+    defaultInstallDir = CMakeProject._installToBootstrapTools
     projectName = "freebsd-crossbuild"
 
 
@@ -383,7 +381,16 @@ class BuildFreeBSD(Project):
 
 
     def prepareFreeBSDCrossEnv(self):
-        self.makedirs(self.crossBinDir)
+        self.cleanDirectory(self.crossBinDir)
+
+        # create symlinks for the tools installed by freebsd-crosstools
+        crossTools = "awk cap_mkdb cat compile_et config file2c install makefs mtree pwd_mkdb rpcgen sed " \
+                     "services_mkdb yacc".split()
+        for tool in crossTools:
+            fullpath = Path(self.config.otherToolsDir, "bin/freebsd-" + tool)
+            if not fullpath.is_file():
+                fatalError(tool, "binary is missing!")
+            self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
 
         # From Makefile.inc1:
         # ITOOLS=	[ awk cap_mkdb cat chflags chmod chown cmp cp \
