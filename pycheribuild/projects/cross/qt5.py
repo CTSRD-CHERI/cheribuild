@@ -233,7 +233,10 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         self.noUseMxgot = True  # crashes compiler
         # There is a bug in the cmake ninja generator that makes it use a response file for linking
         # WebCore but not actually generating it
-        super().__init__(config, generator=BuildQtWebkit.Generator.Makefiles)
+        super().__init__(config,
+                         # generator=BuildQtWebkit.Generator.Makefiles
+                         generator=BuildQtWebkit.Generator.Ninja
+                         )
         self.add_cmake_options(PORT="Qt", ENABLE_X11_TARGET=False,
                                ENABLE_OPENGL=False,
                                USE_LIBHYPHEN=False,  # we don't have libhyphen
