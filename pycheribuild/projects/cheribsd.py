@@ -135,7 +135,6 @@ class BuildFreeBSD(Project):
         ])
         if self.crossbuild:
             self.addCrossBuildOptions()
-            self.linkKernelWithLLD = True
 
         self.externalToolchainArgs = []
         self.externalToolchainCompiler = Path()
@@ -148,13 +147,14 @@ class BuildFreeBSD(Project):
             # clang_flags = " -integrated-as -mabi=n64 -fcolor-diagnostics -mxgot -fno-pic -mabicalls -D__ABICALLS__=1"
             # clang_flags = " -integrated-as -fcolor-diagnostics -mxgot"
             cpp_flags = " -integrated-as -fcolor-diagnostics -mxgot"
-            clang_flags = cpp_flags + " -fuse-ld=lld -Wl,-z,notext"
+            clang_flags = cpp_flags
             # self.externalToolchainArgs.append("XAS=" + cross_prefix + "clang" + clang_flags)
             self.externalToolchainArgs.append("XCC=" + cross_prefix + "clang" + clang_flags)
             self.externalToolchainArgs.append("XCXX=" + cross_prefix + "clang++" + clang_flags)
             self.externalToolchainArgs.append("XCPP=" + cross_prefix + "clang-cpp" + cpp_flags)
             self.externalToolchainArgs.append("XLD=" + cross_prefix + "ld.lld")
             self.externalToolchainArgs.append("XLD_BFD=ld.bfd")
+            self.externalToolchainArgs.append("XLDFLAGS=-fuse-ld=lld -Wl,-z,notext")
             # for some reason this is not inferred....
             self.externalToolchainArgs.append("XOBJCOPY=" + cross_prefix + "objcopy")
             # For some reason STRINGS is not set
@@ -248,6 +248,8 @@ class BuildFreeBSD(Project):
         kernelMakeArgs = self.kernelMakeArgsForConfig(kernconf)
         # needKernelToolchain = not self.useExternalToolchainForKernel
         dontNeedKernelToolchain = self.useExternalToolchainForKernel and self.linkKernelWithLLD
+        if self.crossbuild:
+            dontNeedKernelToolchain = True
         if not dontNeedKernelToolchain and not self.kernelToolchainAlreadyBuilt:
             # we need to build GCC to build the kernel:
             toolchainOpts = self.commonMakeArgs + ["-DWITHOUT_LLD_BOOTSTRAP", "-DWITHOUT_CLANG_BOOTSTRAP",
@@ -333,7 +335,6 @@ class BuildFreeBSD(Project):
 
         self.commonMakeArgs.extend([
             "-DWITHOUT_SYSCONS",  # bootstrap tool won't build
-            "-DWITHOUT_FILE",  # bootstrap tool won't build
             "-DWITHOUT_GCC",  # needs lots of bootstrap tools
             # "-DNO_SHARE"
             "-DWITHOUT_CDDL",  # lots of bootstrap tools issues
@@ -360,6 +361,8 @@ class BuildFreeBSD(Project):
         without_opts = []
         # localedef is incompatible
         without_opts.append("LOCALES")
+        # bootstrap tool won't build
+        without_opts.append("FILE")
         # bootloader is broken:
         without_opts.append("BOOT")
         # needs lint binary
@@ -373,6 +376,9 @@ class BuildFreeBSD(Project):
         # "zic", "tzsetup"
         without_opts.append("ZONEINFO")
 
+        # won't work with CHERI
+        without_opts.append("DIALOG")
+
         # won't work on a case-insensitive file system and is also really slow
         without_opts.append("MAN")
         if IS_MAC:
@@ -384,8 +390,6 @@ class BuildFreeBSD(Project):
 
         for opt in without_opts:
             self.commonMakeArgs.append("-DWITHOUT_" + opt)
-
-
 
     def prepareFreeBSDCrossEnv(self):
         self.cleanDirectory(self.crossBinDir)
@@ -411,7 +415,7 @@ class BuildFreeBSD(Project):
         tools = [
             # basic commands
             "basename", "chflags", "chmod", "chown", "cmp", "cp", "date", "dirname", "echo", "egrep", "env",
-            "find", "fgrep", "grep", "id", "install", "ln", "mkdir", "mktemp", "mv", "rm", "sh", "sort", "test",
+            "find", "fgrep", "grep", "id", "ln", "mkdir", "mktemp", "mv", "rm", "sh", "sort", "test",
             "tr", "true", "uname", "wc", "xargs",
             "hostname", "patch", "expr", "which", "[", "sysctl",
             # compiler and make
@@ -420,6 +424,8 @@ class BuildFreeBSD(Project):
             "mandoc", "gencat",  # manpages
             "bmake", "nice",  # calling make
             "gzip",  # needed to generate some stuff
+            "git",  # to check for updates
+            "touch", "realpath", "head",  # used by kernel build scripts
         ]
         if IS_MAC:
             tools += ["gobjdump", "gobjcopy", "bsdwhatis"]
@@ -430,8 +436,6 @@ class BuildFreeBSD(Project):
             if not fullpath:
                 fatalError("Missing", tool, "binary")
             self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
-        # CMake can't install a file called install?
-        self.createSymlink(self.crossBinDir / "xinstall", self.crossBinDir / "install", relative=True)
         # make installworld expects make as bmake
         self.createSymlink(self.crossBinDir / "bmake", self.crossBinDir / "make", relative=True)
         if IS_MAC:
@@ -640,6 +644,9 @@ class BuildCheriBsdSysroot(SimpleProject):
         print("Successfully populated sysroot")
 
     def process(self):
+        if BuildCHERIBSD.skipBuildworld:
+            statusUpdate("Not building sysroot because --skip-buildworld was passed")
+            return
         with self.asyncCleanDirectory(self.config.sdkSysrootDir):
             if IS_FREEBSD or BuildCHERIBSD.crossbuild:
                 self.createSysroot()
