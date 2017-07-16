@@ -97,6 +97,8 @@ class BuildFreeBSD(Project):
                                             help="Skip some (usually) unnecessary build steps to spped up rebuilds")
         if not IS_FREEBSD:
             cls.crossbuild = cls.addBoolOption("crossbuild", help="Try to compile FreeBSD on non-FreeBSD machines")
+        else:
+            cls.crossbuild = False
 
     def _stdoutFilter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
