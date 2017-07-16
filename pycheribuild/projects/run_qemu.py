@@ -173,6 +173,20 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             cls.skipKernelUpdate = cls.addBoolOption("skip-kernel-update", showHelp=True,
                                                      help="Don't update the kernel from the remote host")
 
+    def __init__(self, config: CheriConfig, sourceClass: type(BuildFreeBSD),
+                 diskImageClass: type(BuildFreeBSDDiskImage)):
+        super().__init__(config)
+        self.sourceClass = sourceClass
+        self.currentKernel = sourceClass.rootfsDir(self.config) / "boot/kernel/kernel"
+        self.diskImage = diskImageClass.diskImagePath
+        self.needsRemoteKernelCopy = True
+        # no need to copy from remote host if we were crossbuilding
+        if IS_FREEBSD or sourceClass.crossbuild:
+            self.needsRemoteKernelCopy = False
+        # same if skip-update was passed
+        if self.skipKernelUpdate or self.config.skipUpdate:
+            self.needsRemoteKernelCopy = False
+
     def _copyKernelImageFromRemoteHost(self):
         statusUpdate("Copying kernel image from FreeBSD build machine")
         if not self.remoteKernelPath:
@@ -185,7 +199,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
         self.copyRemoteFile(scpPath, self.currentKernel)
 
     def process(self):
-        if not IS_FREEBSD and not self.skipKernelUpdate and not self.config.skipUpdate:
+        if self.needsRemoteKernelCopy:
             self._copyKernelImageFromRemoteHost()
         super().process()
 
@@ -201,9 +215,7 @@ class LaunchCheriBSD(AbstractLaunchFreeBSD):
                                    **kwargs)
 
     def __init__(self, config):
-        super().__init__(config)
-        self.currentKernel = BuildCHERIBSD.rootfsDir(self.config) / "boot/kernel/kernel"
-        self.diskImage = BuildCheriBSDDiskImage.diskImagePath
+        super().__init__(config, BuildCHERIBSD, BuildCheriBSDDiskImage)
 
 
 class LaunchFreeBSDMips(AbstractLaunchFreeBSD):
@@ -217,10 +229,9 @@ class LaunchFreeBSDMips(AbstractLaunchFreeBSD):
                                    **kwargs)
 
     def __init__(self, config):
-        super().__init__(config)
+        super().__init__(config, BuildFreeBSD, BuildFreeBSDDiskImage)
         # FIXME: these should be config options
-        self.currentKernel = BuildFreeBSD.rootfsDir(self.config) / "boot/kernel/kernel"
-        self.diskImage = BuildFreeBSDDiskImage.diskImagePath
+
 
 
 class LaunchCheriOSQEMU(LaunchQEMUBase):

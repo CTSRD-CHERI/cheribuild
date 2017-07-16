@@ -37,11 +37,8 @@ from ..utils import *
 
 
 class BuildGnuBinutils(AutotoolsProject):
+    target = "gnu-binutils"
     projectName = "gnu-binutils"
-    # for compatibility with old checkouts clone into a dir called binutils
-    defaultSourceDir = ComputedDefaultValue(
-        function=lambda config, project: Path(config.sourceRoot / "binutils"),
-        asString="$SOURCE_ROOT/binutils")
     repository = "https://github.com/CTSRD-CHERI/binutils.git"
     gitBranch = "cheribsd"  # the default branch "cheri" won't work for cross-compiling
     defaultInstallDir = AutotoolsProject._installToSDK
@@ -83,6 +80,8 @@ class BuildGnuBinutils(AutotoolsProject):
             "--enable-libssp",  # not sure if this is needed
             "--enable-64-bit-bfd",  # Make sure we always have 64 bit support
             "--enable-targets=all",
+            "--disable-gprof",
+            "--disable-gold",
             # TODO: --with-sysroot doesn't work properly so we need to tell clang not to pass the --sysroot option
             "--with-sysroot=" + str(self.config.sdkSysrootDir),  # as we pass --sysroot to clang we need this option
             "--disable-info",
@@ -108,15 +107,25 @@ class BuildGnuBinutils(AutotoolsProject):
         runCmd("git", "checkout", "cheribsd", cwd=self.sourceDir)
         super().update()
 
+    def compile(self, **kwargs):
+        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "all-ld", logfileName="build")
+        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "all-gas", logfileName="build")
+        if not IS_MAC:
+            self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "all-binutils", logfileName="build")
+        # self.runMake(self.commonMakeArgs, "all-gas", logfileName="build", appendToLogfile=True)
+
     def install(self, **kwargs):
         bindir = self.installDir / "bin"
         if not self.fullInstall:
             # we don't want to install all programs, as the rest comes from elftoolchain
-            self.runMake(self.commonMakeArgs, "install-ld", logfileName="install")
+            # self.runMake(self.commonMakeArgs, "install-ld", logfileName="install") # this installs to the wrong file
+            self.installFile(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
             self.runMake(self.commonMakeArgs, "install-gas", logfileName="install", appendToLogfile=True)
-            # copy objdump from the build dir
-            self.installFile(self.buildDir / "binutils/objdump", bindir / "mips64-unknown-freebsd-objdump")
-            installedTools = ["as", "objdump"]
+            installedTools = ["as"]
+            if not IS_MAC:
+                 # copy objdump from the build dir
+                self.installFile(self.buildDir / "binutils/objdump", bindir / "mips64-unknown-freebsd-objdump")
+                installedTools.append("objdump")
         else:
             super().install()
             installedTools = "addr2line ranlib strip ar nm readelf as objcopy size c++filt objdump strings".split()
@@ -129,7 +138,6 @@ class BuildGnuBinutils(AutotoolsProject):
             # Also symlink cheri-unknown-freebsd-ld -> ld (and the other targets)
             self.createBuildtoolTargetSymlinks(bindir / prefixedName, toolName=tool, createUnprefixedLink=True)
         # create links for ld:
-        self.installFile(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
         self.createBuildtoolTargetSymlinks(bindir / "ld.bfd")
 
 
@@ -149,18 +157,18 @@ class BuildGPLv3Binutils(BuildGnuBinutils):
     def update(self):
         AutotoolsProject.update(self)
 
-    def compile(self, **kwargs):
-        # FIXME: for some reason a normal make all will fail...
-        self.runMake(self.commonMakeArgs, "all-ld", logfileName="build")
-        # self.runMake(self.commonMakeArgs, "all-gold", logfileName="build", appendToLogfile=True)
-        pass
-
-    def install(self, **kwargs):
-        bindir = self.installDir / "bin"
-        self.runMake(self.commonMakeArgs, "install-ld", logfileName="install")
-        # self.runMake(self.commonMakeArgs, "install-gold", logfileName="install", appendToLogfile=True)
-        self.installFile(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
-        self.createBuildtoolTargetSymlinks(bindir / "ld.bfd")
-        self.createBuildtoolTargetSymlinks(bindir / "ld.bfd", toolName="ld", createUnprefixedLink=True)
-        # self.installFile(self.buildDir / "gold/ld-new", bindir / "ld.gold", force=True)
-        # self.createBuildtoolTargetSymlinks(bindir / "ld.gold")
+    # def compile(self, **kwargs):
+    #     # FIXME: for some reason a normal make all will fail...
+    #     self.runMake(self.commonMakeArgs, "all-ld", logfileName="build")
+    #     # self.runMake(self.commonMakeArgs, "all-gold", logfileName="build", appendToLogfile=True)
+    #     pass
+    #
+    # def install(self, **kwargs):
+    #     bindir = self.installDir / "bin"
+    #     self.runMake(self.commonMakeArgs, "install-ld", logfileName="install")
+    #     # self.runMake(self.commonMakeArgs, "install-gold", logfileName="install", appendToLogfile=True)
+    #     self.installFile(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
+    #     self.createBuildtoolTargetSymlinks(bindir / "ld.bfd")
+    #     self.createBuildtoolTargetSymlinks(bindir / "ld.bfd", toolName="ld", createUnprefixedLink=True)
+    #     # self.installFile(self.buildDir / "gold/ld-new", bindir / "ld.gold", force=True)
+    #     # self.createBuildtoolTargetSymlinks(bindir / "ld.gold")

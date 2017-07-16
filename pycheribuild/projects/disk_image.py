@@ -102,6 +102,7 @@ class BuildDiskImageBase(SimpleProject):
         self.dirsAddedToManifest = [Path(".")]  # Path().parents always includes a "." entry
         self.rootfsDir = sourceClass.rootfsDir(self.config)
         self.userGroupDbDir = sourceClass.getSourceDir(self.config) / "etc"
+        self.crossBuildImage = sourceClass.crossbuild
         self.minimumImageSize = "1g",  # minimum image size = 1GB
         self.dirsInMtree = []
 
@@ -308,6 +309,13 @@ fsck_y_flags="-T ffs:-R -T ufs:-R"
         self.copyRemoteFile(self.remotePath, self.diskImagePath)
 
     def process(self):
+        if not IS_FREEBSD and self.crossBuildImage:
+            with setEnv(PATH=str(self.config.outputRoot / "freebsd-cross/bin") + ":" + os.getenv("PATH")):
+                self.__process()
+        else:
+            self.__process()
+
+    def __process(self):
         if str(self.diskImagePath).endswith(".img"):
             self.diskImagePath = self.diskImagePath.with_suffix(".qcow2")
 
@@ -324,7 +332,7 @@ fsck_y_flags="-T ffs:-R -T ufs:-R"
             self.deleteFile(self.diskImagePath)
 
         # we can only build disk images on FreeBSD, so copy the file if we aren't
-        if not IS_FREEBSD:
+        if not IS_FREEBSD and not self.crossBuildImage:
             self.copyFromRemoteHost()
             return
 
