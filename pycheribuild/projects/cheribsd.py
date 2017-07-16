@@ -324,7 +324,7 @@ class BuildFreeBSD(Project):
         self.changedPathEnv = str(self.config.sdkBinDir) + ":" + str(self.crossBinDir)
         self.commonMakeArgs.append("PATH=" + str(self.changedPathEnv))
         # kerberos still needs some changes:
-        self.commonMakeArgs.append("-DWITHOUT_KERBEROS")
+        # self.commonMakeArgs.append("-DWITHOUT_KERBEROS")
         # building without an external toolchain won't work:
         self.mipsToolchainPath = self.config.sdkDir
         self.commonMakeArgs.append("-DWITHOUT_BINUTILS_BOOTSTRAP")
@@ -487,7 +487,7 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                    "CHERIBSD. See `man src.conf` for more info.",
                                               showHelp=True)
         # TODO: separate options for kernel/install?
-        cls.kernelConfig = cls.addConfigOption("kernel-cofig", default=defaultKernelConfig, kind=str,
+        cls.kernelConfig = cls.addConfigOption("kernel-config", default=defaultKernelConfig, kind=str,
                                                metavar="CONFIG", shortname="-kernconf", showHelp=True,
                                                help="The kernel configuration to use for `make buildkernel` (default: "
                                                     "CHERI_MALTA64 or CHERI128_MALTA64 depending on --cheri-bits)")
