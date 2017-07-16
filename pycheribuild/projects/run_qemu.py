@@ -184,7 +184,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
         if IS_FREEBSD or sourceClass.crossbuild:
             self.needsRemoteKernelCopy = False
         # same if skip-update was passed
-        if self.skipKernelUpdate or self.config.skipUpdate:
+        elif self.skipKernelUpdate or self.config.skipUpdate:
             self.needsRemoteKernelCopy = False
 
     def _copyKernelImageFromRemoteHost(self):
@@ -231,7 +231,6 @@ class LaunchFreeBSDMips(AbstractLaunchFreeBSD):
     def __init__(self, config):
         super().__init__(config, BuildFreeBSD, BuildFreeBSDDiskImage)
         # FIXME: these should be config options
-
 
 
 class LaunchCheriOSQEMU(LaunchQEMUBase):
