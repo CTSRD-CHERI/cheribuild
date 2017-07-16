@@ -112,7 +112,7 @@ usage: cheribuild.py [-h] [--help-all] [--config-file FILE] [--pretend] [--quiet
                      [--freebsd-builder-output-path PATH] [--freebsd-builder-copy-only] [--disk-image/extra-files DIR]
                      [--disk-image/path IMGPATH] [--disable-tmpfs] [--disk-image-freebsd-mips/extra-files DIR]
                      [--disk-image-freebsd-mips/path IMGPATH] [--cheribsd/subdir DIR] [--cheribsd/build-options OPTIONS]
-                     [--cheribsd/kernel-cofig CONFIG] [--cheribsd/only-build-kernel]
+                     [--cheribsd/kernel-config CONFIG] [--cheribsd/only-build-kernel]
                      [--run-freebsd-mips/monitor-over-telnet PORT] [--run-freebsd-mips/ssh-forwarding-port PORT]
                      [--freebsd-mips/subdir DIR] [--run/monitor-over-telnet PORT] [--run/ssh-forwarding-port PORT]
                      [TARGET [TARGET ...]]
@@ -203,7 +203,7 @@ Options for target 'cheribsd':
                         Additional make options to be passed to make when building CHERIBSD. See `man src.conf` for more
                         info. (default: '['DEBUG_FLAGS=-g', '-DWITHOUT_TESTS', '-DWITHOUT_HTML', '-DWITHOUT_SENDMAIL',
                         '-DWITHOUT_MAIL', '-DWITHOUT_SVNLITE']')
-  --cheribsd/kernel-cofig CONFIG, --kernconf CONFIG
+  --cheribsd/kernel-config CONFIG, --kernconf CONFIG
                         The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64 or CHERI128_MALTA64
                         depending on --cheri-bits)
   --cheribsd/only-build-kernel, --skip-buildworld
