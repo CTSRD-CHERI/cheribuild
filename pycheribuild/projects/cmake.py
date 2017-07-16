@@ -35,7 +35,7 @@ from ..utils import *
 class BuildCMake(AutotoolsProject):
     # repository = "https://cmake.org/cmake.git"
     repository = "https://github.com/Kitware/CMake"  # a lot faster than the official repo
-    gitBranch = "maint"  # track the stable release branch - which is not "release" (see CMake wiki))
+    gitBranch = "release"  # track the stable release branch
     defaultInstallDir = AutotoolsProject._installToBootstrapTools
 
     def __init__(self, config: CheriConfig):
