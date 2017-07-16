@@ -456,6 +456,8 @@ class BuildFreeBSD(Project):
             if self.changedPathEnv:
                 with setEnv(printVerboseOnly=False, PATH=self.changedPathEnv):
                     super().process()
+            else:
+                super().process()
 
 class BuildCHERIBSD(BuildFreeBSD):
     projectName = "cheribsd"
