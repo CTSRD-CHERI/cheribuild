@@ -156,13 +156,13 @@ class BuildFreeBSD(Project):
             self.externalToolchainArgs.append("XCPP=" + cross_prefix + "clang-cpp" + cpp_flags)
             self.externalToolchainArgs.append("XLD=" + cross_prefix + "ld.lld")
             self.externalToolchainArgs.append("XLD_BFD=ld.bfd")
-            self.externalToolchainArgs.append("XLDFLAGS=-fuse-ld=lld -Wl,-z,notext")
             # for some reason this is not inferred....
-            self.externalToolchainArgs.append("XOBJCOPY=" + cross_prefix + "objcopy")
-            # For some reason STRINGS is not set
-            self.externalToolchainArgs.append("STRINGS=strings")
-            self.externalToolchainArgs.append("XAS=false")
-            self.externalToolchainArgs.append("XOBJDUMP=echo NO DUMP")
+            if self.crossbuild:
+                self.externalToolchainArgs.append("XOBJCOPY=" + cross_prefix + "objcopy")
+                # For some reason STRINGS is not set
+                self.externalToolchainArgs.append("STRINGS=strings")
+                self.externalToolchainArgs.append("XAS=false")
+                self.externalToolchainArgs.append("XOBJDUMP=echo NO DUMP")
             # HACK: hardcoded path from vica
             # self.externalToolchainArgs.append("XOBJDUMP=/usr/local/bin/cheri-freebsd-objdump")
             # self.externalToolchainArgs.append("XLD_BFD=/usr/local/bin/ld.bfd -m elf64btsmip_fbsd")
