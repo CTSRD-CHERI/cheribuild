@@ -232,8 +232,6 @@ class BuildFreeBSD(Project):
                 # kernelToolChainArgs.append("LD=" + str(self.config.sdkBinDir / "mips64-unknown-freebsd-ld.bfd"))
                 # kernelToolChainArgs.append("XLD=" + str(self.config.sdkBinDir / "mips64-unknown-freebsd-ld.bfd"))
                 kernelToolChainArgs.append("LD=ld.bfd")
-                kernelToolChainArgs.append("LDFLAGS=-fuse-ld=bfd")
-                kernelToolChainArgs.append("XLDFLAGS=-fuse-ld=bfd")
                 kernelToolChainArgs.append("DEBUG=-g")
             kernelMakeFlags.extend(kernelToolChainArgs)
         kernelMakeFlags.append("KERNCONF=" + kernconf)
