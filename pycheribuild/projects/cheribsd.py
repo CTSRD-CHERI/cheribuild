@@ -229,8 +229,9 @@ class BuildFreeBSD(Project):
                 kernelToolChainArgs = list(filter(lambda s: not s.startswith("XLD"), self.externalToolchainArgs))
                 kernelToolChainArgs = list(filter(lambda s: not s.startswith("LD"), self.externalToolchainArgs))
                 # kernelToolChainArgs += ["XLD=ld.bfd", "XLDFLAGS=-fuse-ld=bfd"]
-                kernelToolChainArgs.append("LD=" + str(self.config.sdkBinDir / "mips64-unknown-freebsd-ld.bfd"))
-                kernelToolChainArgs.append("XLD=" + str(self.config.sdkBinDir / "mips64-unknown-freebsd-ld.bfd"))
+                # kernelToolChainArgs.append("LD=" + str(self.config.sdkBinDir / "mips64-unknown-freebsd-ld.bfd"))
+                # kernelToolChainArgs.append("XLD=" + str(self.config.sdkBinDir / "mips64-unknown-freebsd-ld.bfd"))
+                kernelToolChainArgs.append("LD=ld.bfd")
                 kernelToolChainArgs.append("LDFLAGS=-fuse-ld=bfd")
                 kernelToolChainArgs.append("XLDFLAGS=-fuse-ld=bfd")
                 kernelToolChainArgs.append("DEBUG=-g")
