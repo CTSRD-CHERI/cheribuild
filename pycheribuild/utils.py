@@ -269,9 +269,9 @@ def latestClangTool(basename: str):
     # try to find clang 3.7, otherwise fall back to system clang
     for version in [(5, 0), (4, 0), (3, 9), (3, 8), (3, 7)]:
         # FreeBSD installs clang39, Linux uses clang-3.9
-        if IS_FREEBSD and version == (4, 0):
-            # clang40 from packages seems to be broken right now?
-            continue
+        # if IS_FREEBSD and version == (4, 0):
+        #    # clang40 from packages seems to be broken right now?
+        #    continue
         guess = shutil.which(basename + "%d%d" % version)
         if guess:
             return guess
