@@ -268,8 +268,9 @@ fsck_y_flags="-T ffs:-R -T ufs:-R"
                 fatalError("qemu-img command was not found!", fixitHint="Make sure to build target qemu first")
 
         rawDiskImage = self.diskImagePath.with_suffix(".img")
+        makefs = shutil.which("makefs")
         runCmd([
-            "makefs",
+            makefs,
             "-b", "30%",  # minimum 30% free blocks
             "-f", "30%",  # minimum 30% free inodes
             "-R", "128m",  # round up size to the next 16m multiple
