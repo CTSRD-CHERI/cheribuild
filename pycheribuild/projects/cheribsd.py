@@ -114,7 +114,9 @@ class BuildFreeBSD(Project):
         elif line == b"\n":
             return  # ignore empty lines when filtering
         elif line.endswith(b"' is up to date.\n"):
-            return  # ignore these messages caused by (unnecessary?) recursive make invocations
+            return  # ignore these messages caused by (unnecessary?) recursive make invocations|
+        elif line.endswith(b"missing (created)\n"):
+            return  # ignore these from installworld
         else:
             self._showLineStdoutFilter(line)
 
