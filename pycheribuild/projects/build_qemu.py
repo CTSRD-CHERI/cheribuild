@@ -42,7 +42,7 @@ class BuildQEMU(AutotoolsProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self._addRequiredSystemTool("pkg-config")
-        self._addRequiredSystemTool("glibtool" if IS_MAC else "libtool", homebrewPackage="libtool")
+        self._addRequiredSystemTool("glibtoolize" if IS_MAC else "libtoolize", homebrewPackage="libtool")
         self._addRequiredSystemTool("autoreconf", homebrewPackage="autoconf")
         self._addRequiredSystemTool("aclocal", homebrewPackage="automake")
         self._addRequiredSystemTool("python", installInstructions="QEMU needs Python 2 installed as the python binary")
