@@ -140,6 +140,7 @@ addFilteredFile(scriptDir / "projects/bear.py")
 
 # cross compilation targets
 addFilteredFile(scriptDir / "projects/cross/crosscompileproject.py")
+addFilteredFile(scriptDir / "projects/cross/cheri_tests.py")
 addFilteredFile(scriptDir / "projects/cross/gdb.py")
 addFilteredFile(scriptDir / "projects/cross/libcxx.py")
 addFilteredFile(scriptDir / "projects/cross/postgres.py")
