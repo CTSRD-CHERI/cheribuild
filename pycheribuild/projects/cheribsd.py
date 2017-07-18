@@ -641,6 +641,13 @@ class BuildCHERIBSD(BuildFreeBSD):
                     if (sdkBinDir / (l + ".backup")).exists():
                         runCmd("mv", "-f", l + ".backup", l, cwd=sdkBinDir)
 
+    def update(self):
+        super().update()
+        if not (self.sourceDir / "contrib/cheri-libc++/src").exists():
+            runCmd("git", "submodule", "init", cwd=self.sourceDir)
+            runCmd("git", "submodule", "update", cwd=self.sourceDir)
+
+
 
 class BuildCheriBsdSysroot(SimpleProject):
     projectName = "cheribsd-sysroot"
