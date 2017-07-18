@@ -55,6 +55,8 @@ class BuildElftoolchain(Project):
         self.gitBranch = "master"
         # self.makeArgs = ["WITH_TESTS=no", "-DNO_ROOT"]
         # TODO: build static?
+        if self.build_static:
+            self.commonMakeArgs.append("LDSTATIC=-static")
         self.commonMakeArgs.append("WITH_TESTS=no")
         self.commonMakeArgs.append("WITH_DOCUMENTATION=no")
         self.commonMakeArgs.append("WITH_PE=no")
@@ -76,7 +78,8 @@ class BuildElftoolchain(Project):
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
         cls.build_ar = cls.addBoolOption("build-ar", default=True, help="build the ar/ranlib programs")
-
+        cls.build_static = cls.addBoolOption("build-static", help="Try to link elftoolchain statically "
+                                                                  "(needs patches on Linux)")
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
         if IS_MAC and not Path("/usr/local/opt/libarchive/lib").exists():
