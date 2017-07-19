@@ -155,6 +155,7 @@ class BuildFreeBSD(Project):
             "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
             "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
             "-DWITHOUT_GDB",
+            "-DCHERI_CC_COLOR_DIAGNOSTICS",  # force -fcolor-diagnostics
         ])
         if self.crossbuild:
             self._addRequiredSystemTool("unifdef")
@@ -433,11 +434,15 @@ class BuildFreeBSD(Project):
 
         # won't work on a case-insensitive file system and is also really slow (and missing tools on linux)
         without_opts.append("MAN")
-        if IS_MAC:
-            # links from /usr/bin/mail to /usr/bin/Mail won't work on case-insensitve fs
-            without_opts.append("MAIL")
+        # links from /usr/bin/mail to /usr/bin/Mail won't work on case-insensitve fs
+        without_opts.append("MAIL")
+        without_opts.append("SENDMAIL")  # libexec somehow won't compile
+
+        without_opts.append("AMD")  # for some reason nfd_prot.h is missing (probably wrong bootstrap tool)
 
         without_opts.append("RESCUE")  # needs crunchgen
+
+        without_opts.append("AT")  # needs static_pam
 
         # TODO: remove this
         self.commonMakeArgs.append("-DNO_SHARE")
@@ -480,12 +485,18 @@ class BuildFreeBSD(Project):
             tools += ["chflags"]  # missing on linux
             tools += ["gobjdump", "gobjcopy", "bsdwhatis"]
         else:
-            tools += ["objcopy"]
+            tools += ["objcopy", "objdump"]
             # create a fake chflags for linux
             self.writeFile(self.crossBinDir / "chflags", """#!/usr/bin/env python3
 import sys
 print("NOOP chflags:", sys.argv, file=sys.stderr)
 """, mode=0o755, overwrite=True)
+
+            # create a fake chflags for linux
+            self.writeFile(self.crossBinDir / "chflags", """#!/usr/bin/env python3
+        import sys
+        print("NOOP chflags:", sys.argv, file=sys.stderr)
+        """, mode=0o755, overwrite=True)
 
         # TODO: build lex from freebsd
         for tool in tools:
@@ -495,13 +506,10 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
             self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
         # make installworld expects make as bmake
         self.createSymlink(self.crossBinDir / "bmake", self.crossBinDir / "make", relative=True)
-        if IS_MAC:
-            self.createSymlink(self.crossBinDir / "bsdwhatis", self.crossBinDir / "makewhatis", relative=True)
-
         # create symlinks for the tools installed by freebsd-crosstools
         crossTools = "awk cat compile_et config file2c install makefs mtree rpcgen sed yacc".split()
         crossTools += "mktemp tsort expr gencat mandoc gencat pwd_mkdb services_mkdb cap_mkdb".split()
-        crossTools += "test [ sh sysctl".split()
+        crossTools += "test [ sh sysctl makewhatis".split()
         for tool in crossTools:
             fullpath = Path(self.config.otherToolsDir, "bin/freebsd-" + tool)
             if not fullpath.is_file():
@@ -694,8 +702,10 @@ class BuildCheriBsdSysroot(SimpleProject):
     def createSysroot(self):
         # we need to add include files and libraries to the sysroot directory
         self.makedirs(self.config.sdkSysrootDir / "usr")
+        # GNU tar doesn't accept --include
+        tar_cmd = "bsdtar" if IS_LINUX else "tar"
         # use tar+untar to copy all necessary files listed in metalog to the sysroot dir
-        archiveCmd = ["tar", "cf", "-", "--include=./lib/", "--include=./usr/include/",
+        archiveCmd = [tar_cmd, "cf", "-", "--include=./lib/", "--include=./usr/include/",
                       "--include=./usr/lib/", "--include=./usr/libcheri", "--include=./usr/libdata/",
                       # only pack those files that are mentioned in METALOG
                       "@METALOG"]
