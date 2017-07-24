@@ -36,6 +36,7 @@ import subprocess
 import sys
 import threading
 import time
+import errno
 from enum import Enum
 from pathlib import Path
 
@@ -50,11 +51,16 @@ __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "Target
 
 
 def flushStdio(stream):
-    try:
-        # for some reason this can cause an error on vica
-        stream.flush()
-    except BlockingIOError:
-        warningMessage("Got BlockingIOError for some reason, ignoring...")
+    while True:
+        try:
+            # can lead to EWOULDBLOCK if stream cannot be flushed immediately
+            stream.flush()
+            break
+        except BlockingIOError as e:
+            if e.errno != errno.EWOULDBLOCK:
+                raise
+            else:
+                time.sleep(0.1)
 
 
 class ProjectSubclassDefinitionHook(type):
