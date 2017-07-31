@@ -470,8 +470,8 @@ class BuildFreeBSD(Project):
         # Add links for the ones not installed by freebsd-crossbuild:
         tools = [
             # basic commands
-            "basename", "chmod", "chown", "cmp", "cp", "date", "dirname", "echo", "egrep", "env",
-            "find", "fgrep", "grep", "id", "ln", "mkdir", "mv", "rm", "sh", "sort",
+            "basename", "chmod", "chown", "cmp", "cp", "date", "dirname", "echo", "env",
+            "find", "id", "ln", "mkdir", "mv", "rm", "sort",
             "tr", "true", "uname", "wc", "xargs",
             "hostname", "patch", "expr", "which",
             # compiler and make
@@ -481,12 +481,14 @@ class BuildFreeBSD(Project):
             "gzip",  # needed to generate some stuff
             "git",  # to check for updates
             "touch", "realpath", "head",  # used by kernel build scripts
-            "python3"  # for the fake sysctl wrapper
+            "python3",  # for the fake sysctl wrapper
+            "asn1_compile",  # kerberos stuff
         ]
-        tools += ["asn1_compile"]
+        searchpath = os.getenv("PATH")
         if IS_MAC:
             tools += ["chflags"]  # missing on linux
             tools += ["gobjdump", "gobjcopy", "bsdwhatis"]
+            searchpath = "/usr/local/opt/heimdal/libexec/heimdal/" + os.pathsep + searchpath
         else:
             tools += ["objcopy", "objdump"]
             # create a fake chflags for linux
@@ -503,7 +505,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
 
         # TODO: build lex from freebsd
         for tool in tools:
-            fullpath = shutil.which(tool)
+            fullpath = shutil.which(tool, path=searchpath)
             if not fullpath:
                 fatalError("Missing", tool, "binary")
             self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
@@ -513,6 +515,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         crossTools = "awk cat compile_et config file2c install makefs mtree rpcgen sed yacc".split()
         crossTools += "mktemp tsort expr gencat mandoc gencat pwd_mkdb services_mkdb cap_mkdb".split()
         crossTools += "test [ sh sysctl makewhatis".split()
+        crossTools += "grep egrep fgrep rgrep zgrep zegrep zfgrep".split()
         for tool in crossTools:
             fullpath = Path(self.config.otherToolsDir, "bin/freebsd-" + tool)
             if not fullpath.is_file():
@@ -529,6 +532,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                 self.prepareFreeBSDCrossEnv()
 
         super().process()
+
 
 class BuildCHERIBSD(BuildFreeBSD):
     projectName = "cheribsd"
