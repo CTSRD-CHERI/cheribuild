@@ -204,6 +204,9 @@ class BuildFreeBSD(Project):
             self.externalToolchainMap["WITHOUT_GCC_BOOTSTRAP"] = None
             self.externalToolchainMap["WITHOUT_CLANG_BOOTSTRAP"] = None
             self.externalToolchainMap["WITHOUT_LLD_BOOTSTRAP"] = None
+            self.externalToolchainMap["WITHOUT_GNUCXX"] = None
+            self.externalToolchainMap["WITHOUT_RESCUE"] = None
+            self.externalToolchainMap["WITHOUT_STATIC_LIBPAM"] = None
             self.externalToolchainMap["WERROR"] = "-Wno-error"
             # self.externalToolchainArgs.append("-DWITHOUT_BINUTILS_BOOTSTRAP")
             # self.externalToolchainArgs.append("-DWITHOUT_ELFTOOLCHAIN_BOOTSTRAP")
