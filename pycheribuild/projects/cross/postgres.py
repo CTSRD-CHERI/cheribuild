@@ -42,8 +42,9 @@ class BuildPostgres(CrossCompileAutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        # self.COMMON_FLAGS.append("-DUSE_ASSERT_CHECKING=1")
-        # self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")
+        if self.enable_assertions:
+            self.COMMON_FLAGS.append("-DUSE_ASSERT_CHECKING=1")
+            self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")
         self.COMMON_FLAGS.extend(["-pedantic",
                                   "-Wno-gnu-statement-expression",
                                   "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
@@ -94,3 +95,8 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         if not self.config.pretend:
             last_target_file.write_text(current_target_arch)
         super().process()
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions()
+        cls.enable_assertions = cls.addBoolOption("assertions", default=True, help="Build with assertions enabled")
