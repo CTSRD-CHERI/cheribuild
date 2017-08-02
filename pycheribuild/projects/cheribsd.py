@@ -67,12 +67,25 @@ class BuildFreeBSD(Project):
         function=lambda config, cls: config.outputRoot / "freebsd-mips",
         asString="$INSTALL_ROOT/freebsd-mips")
 
+    defaultExtraMakeOptions = [
+        "-DWITHOUT_HTML",  # should not be needed
+        "-DWITHOUT_SENDMAIL", "-DWITHOUT_MAIL",  # no need for sendmail
+        "-DWITHOUT_SVNLITE",  # no need for SVN
+        # "-DWITHOUT_GAMES",  # not needed
+        # "-DWITHOUT_MAN",  # seems to be a majority of the install time
+        # "-DWITH_FAST_DEPEND",  # no separate make depend step, do it while compiling
+        # "-DWITH_INSTALL_AS_USER", should be enforced by -DNO_ROOT
+        # "-DWITH_DIRDEPS_BUILD", "-DWITH_DIRDEPS_CACHE",  # experimental fast build options
+        # "-DWITH_LIBCHERI_JEMALLOC"  # use jemalloc instead of -lmalloc_simple
+    ]
+
     @classmethod
     def rootfsDir(cls, config):
         return cls.getInstallDir(config)
 
     @classmethod
-    def setupConfigOptions(cls, *, buildKernelWithClang: bool = False, **kwargs):
+    def setupConfigOptions(cls, buildKernelWithClang: bool = False, makeOptionsShortname=None,
+                           skipBuildworldShortname=None, **kwargs):
         super().setupConfigOptions(**kwargs)
         cls.subdirOverride = cls.addConfigOption("subdir", kind=str, metavar="DIR", showHelp=True,
                                                  help="Only build subdir DIR instead of the full tree. "
@@ -84,8 +97,15 @@ class BuildFreeBSD(Project):
                                                         asString="$CHERI_SDK_DIR")
         cls.mipsToolchainPath = cls.addPathOption("mips-toolchain", help="Path to the mips64-unknown-freebsd-* tools",
                                                   default=defaultExternalToolchain)
+        # For compatibility we still accept --cheribsd-make-options here
+        cls.makeOptions = cls.addConfigOption("build-options", default=cls.defaultExtraMakeOptions, kind=list,
+                                              metavar="OPTIONS", shortname=makeOptionsShortname,  # compatibility
+                                              help="Additional make options to be passed to make when building "
+                                                   "CHERIBSD. See `man src.conf` for more info.",
+                                              showHelp=True)
         # override in CheriBSD
-        cls.skipBuildworld = False
+        cls.skipBuildworld = cls.addBoolOption("only-build-kernel", shortname=skipBuildworldShortname, showHelp=True,
+                                               help="Skip the buildworld step -> only build and install the kernel")
         cls.kernelConfig = "MALTA64"
         cls.useExternalToolchainForKernel = cls.addBoolOption("use-external-toolchain-for-kernel", showHelp=True,
                                                               help="build the kernel with the external toolchain",
@@ -236,6 +256,7 @@ class BuildFreeBSD(Project):
 
         self.destdir = self.installDir
         self.kernelToolchainAlreadyBuilt = False
+        self.commonMakeArgs.extend(self.makeOptions)
 
     @property
     def buildworldArgs(self):
@@ -551,32 +572,15 @@ class BuildCHERIBSD(BuildFreeBSD):
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(
             buildKernelWithClang=True,
+            makeOptionsShortName="-cheribsd-make-options",
+            skipBuildworldShortname="-skip-buildworld",
             installDirectoryHelp="Install directory for CheriBSD root file system (default: "
                                    "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)")
-        defaultExtraMakeOptions = [
-            "-DWITHOUT_HTML",  # should not be needed
-            "-DWITHOUT_SENDMAIL", "-DWITHOUT_MAIL",  # no need for sendmail
-            "-DWITHOUT_SVNLITE",  # no need for SVN
-            # "-DWITHOUT_GAMES",  # not needed
-            # "-DWITHOUT_MAN",  # seems to be a majority of the install time
-            # "-DWITH_FAST_DEPEND",  # no separate make depend step, do it while compiling
-            # "-DWITH_INSTALL_AS_USER", should be enforced by -DNO_ROOT
-            # "-DWITH_DIRDEPS_BUILD", "-DWITH_DIRDEPS_CACHE",  # experimental fast build options
-            # "-DWITH_LIBCHERI_JEMALLOC"  # use jemalloc instead of -lmalloc_simple
-        ]
-        # For compatibility we still accept --cheribsd-make-options here
-        cls.makeOptions = cls.addConfigOption("build-options", default=defaultExtraMakeOptions, kind=list,
-                                              metavar="OPTIONS", shortname="-cheribsd-make-options",  # compatibility
-                                              help="Additional make options to be passed to make when building "
-                                                   "CHERIBSD. See `man src.conf` for more info.",
-                                              showHelp=True)
         # TODO: separate options for kernel/install?
         cls.kernelConfig = cls.addConfigOption("kernel-config", default=defaultKernelConfig, kind=str,
                                                metavar="CONFIG", shortname="-kernconf", showHelp=True,
                                                help="The kernel configuration to use for `make buildkernel` (default: "
                                                     "CHERI_MALTA64 or CHERI128_MALTA64 depending on --cheri-bits)")
-        cls.skipBuildworld = cls.addBoolOption("only-build-kernel", shortname="-skip-buildworld", showHelp=True,
-                                               help="Skip the buildworld step -> only build and install the kernel")
 
         defaultCheriCC = ComputedDefaultValue(
             function=lambda config, unused: config.sdkDir / "bin/clang",
@@ -610,8 +614,6 @@ class BuildCHERIBSD(BuildFreeBSD):
             # keep building a cheri kernel even with a mips userspace (mips may be broken...)
             # self.kernelConfig = "MALTA64"
         super().__init__(config, archBuildFlags=archBuildFlags)
-
-        self.commonMakeArgs.extend(self.makeOptions)
 
     def _removeSchgFlag(self, *paths: "typing.Iterable[str]"):
         for i in paths:
