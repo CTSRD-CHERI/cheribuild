@@ -487,6 +487,7 @@ class BuildFreeBSD(Project):
             "touch", "realpath", "head",  # used by kernel build scripts
             "python3",  # for the fake sysctl wrapper
             "asn1_compile",  # kerberos stuff
+            "fmt",  # needed by latest freebsd
         ]
         searchpath = os.getenv("PATH")
         if IS_MAC:
@@ -518,7 +519,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         # create symlinks for the tools installed by freebsd-crosstools
         crossTools = "awk cat compile_et config file2c install makefs mtree rpcgen sed yacc".split()
         crossTools += "mktemp tsort expr gencat mandoc gencat pwd_mkdb services_mkdb cap_mkdb".split()
-        crossTools += "test [ sh sysctl makewhatis".split()
+        crossTools += "test [ sh sysctl makewhatis rmdir".split()
         crossTools += "grep egrep fgrep rgrep zgrep zegrep zfgrep".split()
         for tool in crossTools:
             fullpath = Path(self.config.otherToolsDir, "bin/freebsd-" + tool)
