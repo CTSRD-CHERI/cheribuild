@@ -94,12 +94,13 @@ class BuildFreeBSD(Project):
                                                              help="Build world with the external toolchain"
                                                                   " (probably won't work!)")
         cls.linkKernelWithLLD = cls.addBoolOption("link-kernel-with-lld")
+        cls.forceBFD = cls.addBoolOption("force-bfd")
         cls.addDebugInfoFlag = cls.addBoolOption("debug-info",
                                                  help="pass make flags for building debug info",
                                                  default=True, showHelp=True)
         cls.buildTests = cls.addBoolOption("build-tests", help="Build the tests too (-DWITH_TESTS)", showHelp=True)
         cls.fastRebuild = cls.addBoolOption("fast", showHelp=True,
-                                            help="Skip some (usually) unnecessary build steps to spped up rebuilds")
+                                            help="Skip some (usually) unnecessary build steps to speed up rebuilds")
         if not IS_FREEBSD:
             cls.crossbuild = cls.addBoolOption("crossbuild", help="Try to compile FreeBSD on non-FreeBSD machines")
         else:
@@ -180,7 +181,8 @@ class BuildFreeBSD(Project):
             self.externalToolchainMap["XCC"] = cross_prefix + "clang" + clang_flags
             self.externalToolchainMap["XCXX"] = cross_prefix + "clang++" + clang_flags
             self.externalToolchainMap["XCPP"] = cross_prefix + "clang-cpp" + cpp_flags
-            self.externalToolchainMap["XLD"] = cross_prefix + "ld.lld"
+            self.crossLD = cross_prefix + "ld.bfd" if self.forceBFD else cross_prefix + "ld.lld"
+            self.externalToolchainMap["XLD"] = self.crossLD
             self.externalToolchainMap["XLD_BFD"] = "ld.bfd"
             # for some reason this is not inferred....
             if self.crossbuild:
@@ -392,8 +394,10 @@ class BuildFreeBSD(Project):
             "-DWITHOUT_USB",  # bootstrap issues
             "-DWITHOUT_GAMES",  # boostrap
             # "-DWITHOUT_GPL_DTC",  # same
-            "-DMIPS_LINK_WITH_LLD"
         ])
+        if not self.forceBFD:
+            self.commonMakeArgs.append("-DMIPS_LINK_WITH_LLD")
+
         if IS_MAC:
             # For some reason on a mac bmake can't execute elftoolchain objcopy -> use gnu version
             self._addRequiredSystemTool("gobjcopy", homebrewPackage="binutils")
