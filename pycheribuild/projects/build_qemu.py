@@ -39,6 +39,11 @@ class BuildQEMU(AutotoolsProject):
     requiresGNUMake = True
     skipGitSubmodules = True  # we don't need these
 
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions()
+        cls.magic128 = cls.addBoolOption("magic-128")
+
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self._addRequiredSystemTool("pkg-config")
@@ -57,7 +62,7 @@ class BuildQEMU(AutotoolsProject):
         if config.cheriBits == 128:
             # enable QEMU 128 bit capabilities
             # https://github.com/CTSRD-CHERI/qemu/commit/40a7fc2823e2356fa5ffe1ee1d672f1d5ec39a12
-            extraCFlags += " -DCHERI_128=1"
+            extraCFlags += " -DCHERI_128=1" if not self.magic128 else " -DCHERI_MAGIC128=1"
         self.configureArgs.extend([
             "--target-list=cheri-softmmu",
             "--disable-linux-user",
