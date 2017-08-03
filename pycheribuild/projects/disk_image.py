@@ -231,15 +231,17 @@ fsck_y_flags="-T ffs:-R -T ufs:-R"
         # If they don't exist the system will generate one on first boot and we have to accept them every time
         self.generateSshHostKeys()
 
-        print("Adding 'PermitRootLogin without-password\nUseDNS no' to /etc/ssh/sshd_config")
-        # make sure we can login as root with pubkey auth:
         sshdConfig = self.rootfsDir / "etc/ssh/sshd_config"
-        newSshdConfigContents = self.readFile(sshdConfig)
-        newSshdConfigContents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
-        newSshdConfigContents += "\n# Major speedup to SSH performance:\n UseDNS no\n"
-        self.createFileForImage(outDir, "/etc/ssh/sshd_config", contents=newSshdConfigContents,
-                                showContentsByDefault=False)
-
+        if not sshdConfig.exists():
+            print("SSHD not installed")
+        else:
+            print("Adding 'PermitRootLogin without-password\nUseDNS no' to /etc/ssh/sshd_config")
+            # make sure we can login as root with pubkey auth:
+            newSshdConfigContents = self.readFile(sshdConfig)
+            newSshdConfigContents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
+            newSshdConfigContents += "\n# Major speedup to SSH performance:\n UseDNS no\n"
+            self.createFileForImage(outDir, "/etc/ssh/sshd_config", contents=newSshdConfigContents,
+                                    showContentsByDefault=False)
         # now try adding the right ~/.ssh/authorized_keys
         authorizedKeys = self.extraFilesDir / "root/.ssh/authorized_keys"
         if not authorizedKeys.is_file():
