@@ -230,7 +230,6 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         asString=lambda cls: "$SOURCE_ROOT/qt5" + cls.projectName.lower())
 
     def __init__(self, config: CheriConfig):
-        self.noUseMxgot = True  # crashes compiler
         # There is a bug in the cmake ninja generator that makes it use a response file for linking
         # WebCore but not actually generating it
         super().__init__(config,

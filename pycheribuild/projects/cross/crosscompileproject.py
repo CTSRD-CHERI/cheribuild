@@ -101,7 +101,7 @@ class CrossCompileProject(Project):
                 self.targetTriple = "mips64-unknown-freebsd"
                 self.COMMON_FLAGS.append("-mabi=n64")
                 self.COMMON_FLAGS.append("-mcpu=mips4")
-            if not self.noUseMxgot:
+            if self.useMxgot:
                 self.COMMON_FLAGS.append("-mxgot")
         if self.debugInfo:
             self.COMMON_FLAGS.append("-g")
@@ -174,8 +174,7 @@ class CrossCompileProject(Project):
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
-        cls.noUseMxgot = cls.addBoolOption("no-use-mxgot", help="Compile without -mxgot flag (Unless the program is"
-                                                                " small this will probably break everything!)")
+        cls.useMxgot = cls.addBoolOption("use-mxgot", help="Compile without -mxgot flag (should not be needed when using lld)")
         cls.linker = cls.addConfigOption("linker", default=cls.defaultLinker,
                                          help="The linker to use (`lld` or `bfd`) (lld is  better but may"
                                               " not work for some projects!)")
