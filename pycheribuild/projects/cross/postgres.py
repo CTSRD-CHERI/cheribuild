@@ -92,7 +92,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             if last_target_arch != current_target_arch:
                 fatalError("Last postgres compile targeted", last_target_arch, " but current target is",
                            current_target_arch, "-- this will cause runtime errors! Rerun cheribuild with --clean.")
-        if not self.config.pretend:
+        if not self.config.pretend and last_target_file.parent.exists():
             last_target_file.write_text(current_target_arch)
         super().process()
 
