@@ -100,6 +100,7 @@ class CrossCompileProject(Project):
                 assert self.crossCompileTarget == CrossCompileTarget.MIPS
                 self.targetTriple = "mips64-unknown-freebsd"
                 self.COMMON_FLAGS.append("-mabi=n64")
+                self.COMMON_FLAGS.append("-mcpu=mips4")
             if not self.noUseMxgot:
                 self.COMMON_FLAGS.append("-mxgot")
         if self.debugInfo:
