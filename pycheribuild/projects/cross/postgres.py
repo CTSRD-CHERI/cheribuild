@@ -36,7 +36,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     repository = "https://github.com/CTSRD-CHERI/postgres.git"
     gitBranch = "96-cheri"
     # we have to build in the source directory, out-of-source is broken
-    defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir
+    # defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir
     requiresGNUMake = True
     defaultOptimizationLevel = ["-O2"]
 
@@ -78,23 +78,6 @@ class BuildPostgres(CrossCompileAutotoolsProject):
 
     def needsConfigure(self):
         return not (self.buildDir / "GNUmakefile").exists()
-
-    def process(self):
-        # Postgres needs to build in the source directory and mixing 128/256/mips causes issues
-        # save the last target in a file and make it an error if it doesn't match
-        last_target_file = self.buildDir / "LAST_TARGET"
-        current_target_arch = self.crossCompileTarget.value
-        if self.compiling_for_cheri():
-            current_target_arch += self.config.cheriBitsStr
-        last_target_arch = "unknown" if not last_target_file.exists() else self.readFile(last_target_file)
-        if (self.buildDir / "GNUMakefile").exists() and not self.config.clean:
-            # print("Last target =", last_target_arch, "current target =", current_target_arch)
-            if last_target_arch != current_target_arch:
-                fatalError("Last postgres compile targeted", last_target_arch, " but current target is",
-                           current_target_arch, "-- this will cause runtime errors! Rerun cheribuild with --clean.")
-        if not self.config.pretend and last_target_file.parent.exists():
-            last_target_file.write_text(current_target_arch)
-        super().process()
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
