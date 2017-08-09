@@ -90,6 +90,9 @@ class CrossCompileProject(Project):
             else:
                 assert self.installPrefix and self.destdir, "Must be set!"
             self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-msoft-float", "-G0"]
+            # clang currently gets the TLS model wrong:
+            # https://github.com/CTSRD-CHERI/cheribsd/commit/f863a7defd1bdc797712096b6778940cfa30d901
+            self.COMMON_FLAGS.append("-ftls-model=initial-exec")
             # use *-*-freebsd12 to default to libc++
             if self.crossCompileTarget == CrossCompileTarget.CHERI:
                 self.targetTriple = "cheri-unknown-freebsd"
