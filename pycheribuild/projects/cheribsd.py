@@ -444,8 +444,9 @@ class BuildFreeBSD(Project):
         without_opts.append("FILE")
         # bootloader is broken:
         without_opts.append("BOOT")
-        # needs lint binary
-        without_opts.append("TOOLCHAIN")
+        # needs lint binary but will also set MK_INCLUDES:=no which we need (see src.opts.mk)
+        # without_opts.append("TOOLCHAIN")
+        without_opts += ["BINUTILS", "CLANG", "GCC", "GDB", "LLD", "LLDB"]
         # requires magic...
         without_opts.append("SVNLITE")
         without_opts.append("SVN")
