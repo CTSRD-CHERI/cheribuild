@@ -86,6 +86,6 @@ class BuildQEMU(AutotoolsProject):
         # this is better than git reset --hard as we don't lose any other changes
         if (self.sourceDir / "po").is_dir():
             runCmd("git", "checkout", "HEAD", "po/", cwd=self.sourceDir, printVerboseOnly=True)
-        if (self.sourceDir / "pixman").exists():
+        if (self.sourceDir / "pixman/pixman").exists():
             warningMessage("QEMU might build the broken pixman submodule, run `git submodule deinit -f pixman` to clean")
         super().update()
