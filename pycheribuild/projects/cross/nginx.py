@@ -54,8 +54,13 @@ class BuildNginx(CrossCompileAutotoolsProject):
                                       "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
                                       "-Wno-extended-offsetof",
                                       "-Wno-format-pedantic",
+                                      "-ftls-model=initial-exec", # XXX aj443: I added this here to try and get this flag in the jenkins jobs. Do move if there is a more appropriate place for it to be.
                                       ])
             self.configureEnvironment["AR"] = str(self.sdkBinDir / "cheri-unknown-freebsd-ar")
+        # XXX aj443: I added this here to try and get this flag in the jenkins jobs. Do move if there is a more appropriate place for it to be.
+        self.COMMON_FLAGS.extend([
+                                  "-ftls-model=initial-exec",
+                                  ])
 
     def install(self, **kwargs):
         # We have to run make inside the source directory so that it invokes make -f $build/Makefile

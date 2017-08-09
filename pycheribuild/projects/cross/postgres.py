@@ -50,6 +50,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
                                   "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
                                   "-Wno-extended-offsetof",
                                   "-Wno-format-pedantic",
+                                  "-ftls-model=initial-exec", # XXX aj443: I added this here to try and get this flag in the jenkins jobs. Do move if there is a more appropriate place for it to be.
                                   ])
         self.LDFLAGS.append("-pthread")
         if self.crossCompileTarget != CrossCompileTarget.NATIVE:
