@@ -87,8 +87,8 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         current_target_arch = self.crossCompileTarget.value
         if self.compiling_for_cheri():
             current_target_arch += self.config.cheriBitsStr
-        if not self.config.clean and (self.buildDir / "config.log").exists():
-            last_target_arch = "unknown" if not last_target_file.exists() else self.readFile(last_target_file)
+        last_target_arch = "unknown" if not last_target_file.exists() else self.readFile(last_target_file)
+        if (self.buildDir / "GNUMakefile").exists() and not self.config.clean:
             # print("Last target =", last_target_arch, "current target =", current_target_arch)
             if last_target_arch != current_target_arch:
                 fatalError("Last postgres compile targeted", last_target_arch, " but current target is",
