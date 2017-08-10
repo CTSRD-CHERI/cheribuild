@@ -210,21 +210,7 @@ class BuildDiskImageBase(SimpleProject):
                                                                    "tmpfs /tmp tmpfs rw 0 0\n")
         # enable ssh and set hostname
         # TODO: use separate file in /etc/rc.conf.d/ ?
-        rcConfContents = """hostname="{hostname}"
-ifconfig_le0="DHCP"  # use DHCP on the standard QEMU usermode nic
-background_dhclient="YES"  # launch dhclient in the background (hope it doesn't break sshd)
-defaultroute_delay=10  # 30 seconds default is a long time
-sshd_enable="YES"
-sendmail_enable="NONE"  # completely disable sendmail
-# disable cron, as this removes errors like: cron[600]: _secure_path: cannot stat /etc/login.conf: Permission denied
-# it should also speed up boot a bit
-cron_enable="NO"
-# devd should also be safe to disable to increase boot speed... Or not ... seems like it breaks network
-# devd_enable="NO"
-nfs_client_enable="YES"
-fsck_y_enable="YES"
-fsck_y_flags="-T ffs:-R -T ufs:-R"
-""".format(hostname=self.hostname)
+        rcConfContents = includeLocalFile("files/cheribsd/rc.conf.in").format(hostname=self.hostname)
         self.createFileForImage(outDir, "/etc/rc.conf", contents=rcConfContents)
 
         # make sure that the disk image always has the same SSH host keys
