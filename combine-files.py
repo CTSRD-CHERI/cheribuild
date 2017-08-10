@@ -59,9 +59,9 @@ def insertLocalFile(line: str, srcFile: Path):
     # print("New line is '", newLine, "'", sep="", file=sys.stderr)
     lines.append(newLine)
     with targetFile.open() as f:
-        for line in f.readlines():
-            lines.append(line)
-    lines.append("\"\"\"\n")
+        for includedline in f.readlines():
+            lines.append(includedline)
+    lines.append("\"\"\"" + line[match.end():])
 
 
 def handleLine(line: str, srcFile: Path):

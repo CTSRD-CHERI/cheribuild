@@ -1,0 +1,16 @@
+# $FreeBSD$
+#
+# System-wide .cshrc file for csh(1).
+
+bindkey "\e[1~" beginning-of-line  # Home
+bindkey "\e[7~" beginning-of-line  # Home rxvt
+bindkey "\e[2~" overwrite-mode     # Ins
+bindkey "\e[3~" delete-char        # Delete
+bindkey "\e[4~" end-of-line        # End
+bindkey "\e[8~" end-of-line        # End rxvt
+
+
+alias cd..	cd ..
+alias mount-sources	"mkdir -p {SRCPATH} && mount -o ro 10.0.2.2:{SRCPATH} {SRCPATH}"
+alias mount-rootfs	"mkdir -p /rootfs && mount 10.0.2.2:{ROOTFS_DIR} /rootfs/"
+alias do-reroot "kenv vfs.root.mountfrom=nfs:10.0.2.2:{ROOTFS_DIR} && reboot -r"

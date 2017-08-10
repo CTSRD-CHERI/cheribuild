@@ -173,14 +173,16 @@ class BuildDiskImageBase(SimpleProject):
             print("Using user provided /", pathInImage, " instead of generating default", sep="")
             self.extraFiles.remove(userProvided)
             targetFile = userProvided
+            baseDir = self.extraFilesDir
         else:
             assert userProvided not in self.extraFiles
             targetFile = outDir / pathInImage
+            baseDir = outDir
             if self.config.verbose or (showContentsByDefault and not self.config.quiet):
                 print("Generating /", pathInImage, " with the following contents:\n",
                       coloured(AnsiColour.green, contents), sep="", end="")
             self.writeFile(targetFile, contents, noCommandPrint=True, overwrite=False)
-        self.addFileToImage(targetFile, baseDirectory=outDir)
+        self.addFileToImage(targetFile, baseDirectory=baseDir)
 
     def prepareRootfs(self, outDir: Path):
         self.manifestFile = outDir / "METALOG"
@@ -212,6 +214,10 @@ class BuildDiskImageBase(SimpleProject):
         # TODO: use separate file in /etc/rc.conf.d/ ?
         rcConfContents = includeLocalFile("files/cheribsd/rc.conf.in").format(hostname=self.hostname)
         self.createFileForImage(outDir, "/etc/rc.conf", contents=rcConfContents)
+
+        cshrcContents = includeLocalFile("files/cheribsd/csh.cshrc.in").format(
+            SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
+        self.createFileForImage(outDir, "/etc/csh.cshrc", contents=cshrcContents)
 
         # make sure that the disk image always has the same SSH host keys
         # If they don't exist the system will generate one on first boot and we have to accept them every time
