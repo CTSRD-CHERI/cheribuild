@@ -172,7 +172,7 @@ class BuildFreeBSD(Project):
         self.buildenv = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
         self.commonMakeArgs.extend([
             "-DDB_FROM_SRC",  # don't use the system passwd file
-            "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
+            # "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
             "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
             "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
             "-DWITHOUT_GDB",
