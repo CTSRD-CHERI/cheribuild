@@ -195,7 +195,7 @@ class BuildFreeBSD(Project):
             # PIC code is the default so we have to add -fno-pic
             # clang_flags = " -integrated-as -mabi=n64 -fcolor-diagnostics -mxgot -fno-pic -mabicalls -D__ABICALLS__=1"
             # clang_flags = " -integrated-as -fcolor-diagnostics -mxgot"
-            cpp_flags = " -integrated-as -fcolor-diagnostics"
+            cpp_flags = " -integrated-as -fcolor-diagnostics -mcpu=mips4"
             clang_flags = cpp_flags
             # self.externalToolchainArgs.append("XAS=" + cross_prefix + "clang" + clang_flags)
             self.externalToolchainMap["XCC"] = cross_prefix + "clang" + clang_flags
