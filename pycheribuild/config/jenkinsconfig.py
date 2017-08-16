@@ -109,7 +109,7 @@ class JenkinsConfig(CheriConfig):
         self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
         # check for ctsrd/cheri-sdk-{cheri256,cheri128,mips} docker image
         if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
-            self.sdkDir = Path("/cheri-sdk/bin")
+            self.sdkDir = Path("/cheri-sdk")
         else:
             self.sdkDir = self.workspace / self.sdkDirectoryName
         self.crossCompileTarget = self.cpu
