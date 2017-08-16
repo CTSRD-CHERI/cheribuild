@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import getpass
 import json
 import os
 from enum import Enum
@@ -151,3 +152,14 @@ class CheriConfig(object):
             # noinspection PyProtectedMember
             jsonDict[v.fullOptionName] = v.__get__(self, v._owningClass if v._owningClass else self)
         return json.dumps(jsonDict, sort_keys=True, cls=MyJsonEncoder, indent=4)
+
+    @classmethod
+    def get_user_name(cls):
+        try:
+            return getpass.getuser()
+        except KeyError:
+            # Jenkins runs docker slaves with the jenkins UID which will not have a mapping:
+            if os.getenv("JENKINS_NODE_COOKIE"):
+                return "jenkins"
+            else:
+                raise

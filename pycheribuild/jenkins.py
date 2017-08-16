@@ -189,7 +189,7 @@ def _jenkins_main():
     # TODO: add argparse options for build, create tarball
 
     do_build = True
-    do_tarball = False
+    do_tarball = False  # tar --owner=0 --group=0 (LINUX) --uid=0 --gid=0 (FREEBSD/MAC)
     if do_build:
         if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
             assert cheriConfig.sdkDir == Path("/cheri-sdk")
