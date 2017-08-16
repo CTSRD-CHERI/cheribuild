@@ -469,7 +469,7 @@ class Project(SimpleProject):
         self._preventAssign = True
 
         if self.requiresGNUMake:
-            if not IS_LINUX and not shutil.which("gmake"):
+            if IS_LINUX and not shutil.which("gmake"):
                 statusUpdate("Could not find `gmake` command, assuming `make` is GNU make")
                 self.makeCommand = "make"
             else:
