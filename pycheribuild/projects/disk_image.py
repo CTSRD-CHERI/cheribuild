@@ -379,7 +379,7 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        hostUsername = pwd.getpwuid(os.geteuid())[0]
+        hostUsername = pwd.getpwuid(os.getuid()).pw_name
         defaultHostname = ComputedDefaultValue(
             function=lambda conf, unused: "qemu-cheri" + conf.cheriBitsStr + "-" + hostUsername,
             asString="qemu-cheri${CHERI_BITS}-" + hostUsername)
@@ -405,7 +405,7 @@ class BuildFreeBSDDiskImage(BuildDiskImageBase):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        hostUsername = pwd.getpwuid(os.geteuid())[0]
+        hostUsername = pwd.getpwuid(os.getuid()).pw_name
         super().setupConfigOptions(defaultHostname="qemu-mips-" + hostUsername, **kwargs)
         defaultDiskImagePath = ComputedDefaultValue(
                 function=lambda config, project: config.outputRoot / "freebsd-mips.qcow2",

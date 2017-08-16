@@ -102,8 +102,8 @@ class BuildElftoolchain(Project):
 
     def install(self, **kwargs):
         # We don't actually want to install all the files, just copy the binaries that we want
-        group = grp.getgrgid(os.getegid()).gr_name
-        user = pwd.getpwuid(os.geteuid()).pw_name
+        group = grp.getgrgid(os.getgid()).gr_name
+        user = pwd.getpwuid(os.getuid()).pw_name
         ownerFlags = [
             # elftoolchain tries to install as root -> override *GRP and *OWN flags
             "BINGRP=" + group, "BINOWN=" + user,
