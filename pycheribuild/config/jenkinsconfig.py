@@ -112,10 +112,6 @@ class JenkinsConfig(CheriConfig):
             self.sdkDir = Path("/cheri-sdk/bin")
         else:
             self.sdkDir = self.workspace / self.sdkDirectoryName
-        # always use the CHERI clang built by jenkins to ensure we don't x86 compilation
-        self.clangPath = self.sdkBinDir / "clang"
-        self.clangPlusPlusPath = self.sdkBinDir / "clang++"
-
         self.crossCompileTarget = self.cpu
         if self.cpu == "cheri128":
             self.cheriBits = 128
@@ -136,6 +132,10 @@ class JenkinsConfig(CheriConfig):
             self.skipUpdate = False
 
         self._initializeDerivedPaths()
+
+        # always use the CHERI clang built by jenkins to ensure we don't do x86 compilation
+        self.clangPath = self.sdkBinDir / "clang"
+        self.clangPlusPlusPath = self.sdkBinDir / "clang++"
 
         assert self._ensureRequiredPropertiesSet()
         if os.getenv("DEBUG") is not None:
