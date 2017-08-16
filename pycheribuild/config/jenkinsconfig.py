@@ -107,9 +107,11 @@ class JenkinsConfig(CheriConfig):
         self.outputRoot = self.workspace / "tarball"
         self.otherToolsDir = self.workspace / "bootstrap"
         self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
-        self.sdkDir = self.workspace / self.sdkDirectoryName
-        self.sdkSysrootDir = self.sdkDir / "sysroot"
-        self.sdkBinDir = self.sdkDir / "bin"
+        # check for ctsrd/cheri-sdk-{cheri256,cheri128,mips} docker image
+        if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
+            self.sdkDir = Path("/cheri-sdk/bin")
+        else:
+            self.sdkDir = self.workspace / self.sdkDirectoryName
         # always use the CHERI clang built by jenkins to ensure we don't x86 compilation
         self.clangPath = self.sdkBinDir / "clang"
         self.clangPlusPlusPath = self.sdkBinDir / "clang++"
