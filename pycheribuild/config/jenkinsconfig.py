@@ -42,7 +42,9 @@ class JenkinsConfig(CheriConfig):
 
         self.cpu = loader.addCommandLineOnlyOption("cpu", default=os.getenv("CPU"),
                                                    help="The target to build the software for (defaults to $CPU).",
-                                                   choices=["cheri128", "cheri256", "mips", "native", "x86", "amd64"])
+                                                   choices=["cheri128", "cheri256",
+                                                            "mips", "hybrid-cheri128", "hybrid-cheri256",
+                                                            "native", "x86", "amd64"])  # type: str
         self.workspace = loader.addCommandLineOnlyOption("workspace", default=os.getenv("WORKSPACE"), type=Path,
                                                          help="The root directory for building (defaults to $WORKSPACE)")  # type: Path
         self.sdkArchiveName = loader.addCommandLineOnlyOption("sdk-archive", type=Path,
@@ -93,10 +95,17 @@ class JenkinsConfig(CheriConfig):
         return "cherisdk"
 
     @property
-    def sdk_cpu(self):
+    def sdk_cpu(self) -> str:
         sdk_cpu = os.getenv("SDK_CPU")
         if not sdk_cpu:
-            fatalError("SDK_CPU variable not set, cannot infer the name of the SDK archive")
+            if self.cpu in ("cheri128", "cheri256", "mips"):
+                return self.cpu
+            if self.cpu == "hybrid-cheri128":
+                return "cheri128"
+            if self.cpu == "hybrid-cheri256":
+                return "cheri256"
+            else:
+                fatalError("SDK_CPU variable not set, cannot infer the name of the SDK archive")
         return sdk_cpu
 
     @property
@@ -128,7 +137,7 @@ class JenkinsConfig(CheriConfig):
         elif self.cpu == "cheri256":
             self.cheriBits = 256
             self.crossCompileTarget = CrossCompileTarget.CHERI
-        elif self.cpu == "mips":
+        elif self.cpu in ("mips", "hybrid-cheri128", "hybrid-cheri256"): # MIPS with CHERI memcpy
             self.cheriBits = 9998
             self.crossCompileTarget = CrossCompileTarget.MIPS
         elif self.cpu in ("x86", "x86_64", "amd64", "host", "native"):
