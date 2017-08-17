@@ -79,8 +79,8 @@ class ConfigLoaderBase(object):
         """
         return self.addOption(*args, option_cls=CommandLineConfigOption, **kwargs)
 
-    def addCommandLineOnlyBoolOption(self, *args, **kwargs) -> bool:
-        return self.addOption(*args, option_cls=CommandLineConfigOption, default=False, action="store_true",
+    def addCommandLineOnlyBoolOption(self, *args, default=False, **kwargs) -> bool:
+        return self.addOption(*args, option_cls=CommandLineConfigOption, default=default, action="store_true",
                               type=bool, **kwargs)
 
     def addOption(self, name: str, shortname=None, default=None, type: "typing.Callable[[str], Type_T]"=str,

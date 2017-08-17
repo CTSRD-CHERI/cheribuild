@@ -65,6 +65,15 @@ class JenkinsConfig(CheriConfig):
                                                               help="The install prefix for cross compiled projects"
                                                                    " (the path where it will end up in the install"
                                                                    " image)")  # type: Path
+        self.do_build = loader.addCommandLineOnlyBoolOption("build", default=True,
+                                                            help="Build and install the project")
+        self.do_tarball = loader.addCommandLineOnlyBoolOption("create-tarball", shortname="-tarball",
+                                                              help="Create an archive of the installed files")
+        self.tarball_name = loader.addCommandLineOnlyOption("tarball-name",
+            default=lambda conf, cls: conf.targets[0] + "-" + conf.cpu + ".tar.xz")
+
+        # self.strip_install_prefix_from_archive = loader.addCommandLineOnlyBoolOption("strip-install-prefix-from-archive",
+        #    help="Only put the files inside the install prefix into the tarball (stripping the leading directories)")  # type: bool
         self.skipUpdate = True
         self.verbose = True
         self.quiet = False
@@ -100,7 +109,7 @@ class JenkinsConfig(CheriConfig):
     def load(self):
         super().load()
 
-        if not self.workspace.is_dir():
+        if not self.workspace or not self.workspace.is_dir():
             fatalError("WORKSPACE is not set to a valid directory:", self.workspace)
         self.sourceRoot = self.workspace
         self.buildRoot = self.workspace

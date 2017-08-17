@@ -223,8 +223,13 @@ def _jenkins_main():
         cleaningTask = cheriConfig.FS.asyncCleanDirectory(cheriConfig.outputRoot) if not cheriConfig.keepInstallDir else ThreadJoiner(None)
         with cleaningTask:
             target.execute()
-    if do_tarball:
-        raise NotImplementedError()
+    if cheriConfig.do_tarball:
+        if IS_LINUX:
+            owner_flags = ["--owner=0", "--group=0", "--numeric-owner"]
+        else:
+            owner_flags = ["--uid=0", "--gid=0", "--numeric-owner"]
+        statusUpdate("Creating tarball", cheriConfig.tarball_name)
+        runCmd(["tar", "--create", "--xz"] + owner_flags + ["-f", cheriConfig.tarball_name, "-C", "tarball", "."])
 
 
 def jenkins_main():
