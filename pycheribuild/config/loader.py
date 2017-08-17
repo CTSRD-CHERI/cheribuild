@@ -221,7 +221,11 @@ class CommandLineConfigOption(ConfigOptionBase):
             negatedHelp = argparse.SUPPRESS
             # if the default is true we want to show the negated option instead.
             if default is True:
-                negatedHelp = "Do not " + kwargs["help"] if kwargs["help"] != argparse.SUPPRESS else argparse.SUPPRESS
+                negatedHelp = kwargs["help"]
+                if negatedHelp != argparse.SUPPRESS:
+                    if negatedHelp[0].isupper():
+                        negatedHelp = negatedHelp[0].lower() + negatedHelp[1:]
+                    negatedHelp = "Do not " + negatedHelp
                 action.help = argparse.SUPPRESS
             neg = parserObj.add_argument("--" + negatedName, dest=action.dest, default=None, action="store_false",
                                          help=negatedHelp)
