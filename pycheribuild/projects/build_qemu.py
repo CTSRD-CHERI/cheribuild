@@ -29,6 +29,7 @@
 #
 from ..project import *
 from ..utils import *
+import shutil
 
 
 class BuildQEMU(AutotoolsProject):
@@ -58,6 +59,10 @@ class BuildQEMU(AutotoolsProject):
         # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
         # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
         extraCFlags = "-g -Wno-error"
+        if shutil.which("pkg-config"):
+            glibIncludes = runCmd("pkg-config", "--cflags-only-I", "glib-2.0", captureOutput=True,
+                                  printVerboseOnly=True, runInPretendMode=True).stdout.decode("utf-8").strip()
+            extraCFlags += " " + glibIncludes
 
         if config.cheriBits == 128:
             # enable QEMU 128 bit capabilities
