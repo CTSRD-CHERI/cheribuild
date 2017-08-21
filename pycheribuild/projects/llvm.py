@@ -91,8 +91,7 @@ class BuildLLVM(CMakeProject):
     def clang38InstallHint(self):
         if IS_FREEBSD:
             return "Try running `pkg install clang38`"
-        osRelease = self.readFile(Path("/etc/os-release")) if Path("/etc/os-release").is_file() else ""
-        if "Ubuntu" in osRelease:
+        if OSInfo.isUbuntu():
             return """Try following the instructions on http://askubuntu.com/questions/735201/installing-clang-3-8-on-ubuntu-14-04-3:
             wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
             sudo apt-add-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.8 main"

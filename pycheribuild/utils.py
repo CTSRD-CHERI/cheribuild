@@ -55,9 +55,9 @@ else:
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includeLocalFile",  # no-combine
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
-           "parseOSRelease", "warningMessage", "Type_T", "typing", "popen_handle_noexec",  # no-combine
+           "warningMessage", "Type_T", "typing", "popen_handle_noexec",  # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latestClangTool",  # no-combine
-           "defaultNumberOfMakeJobs", "commandline_to_str"]  # no-combine
+           "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo"]  # no-combine
 
 
 if sys.version_info < (3, 4):
@@ -313,14 +313,35 @@ def includeLocalFile(path: str) -> str:
         return f.read()
 
 
-def parseOSRelease() -> dict:
-    with Path("/etc/os-release").open(encoding="utf-8") as f:
-        d = {}
-        for line in f:
-            k, v = line.rstrip().split("=", maxsplit=1)
-            # .strip('"') will remove if there or else do nothing
-            d[k] = v.strip('"')
-    return d
+class OSInfo(object):
+    IS_LINUX = sys.platform.startswith("linux")
+    IS_FREEBSD = sys.platform.startswith("freebsd")
+    IS_MAC = sys.platform.startswith("darwin")
+    __os_release_cache = None
+
+    def isUbuntu():
+        if not IS_LINUX:
+            return False
+        return "ubuntu" in OSInfo.etc_os_release().get("ID_LIKE", [])
+
+    @staticmethod
+    def etc_os_release() -> dict:
+        if OSInfo.__os_release_cache is None:
+            OSInfo.__os_release_cache = OSInfo.__parse_etc_os_release()
+        return OSInfo.__os_release_cache
+
+    @staticmethod
+    def __parse_etc_os_release() -> dict:
+        if not Path("/etc/os-release").exists():
+            return {}
+        with Path("/etc/os-release").open(encoding="utf-8") as f:
+            d = {}
+            for line in f:
+                k, v = line.rstrip().split("=", maxsplit=1)
+                # .strip('"') will remove if there or else do nothing
+                d[k] = v.strip('"')
+        return d
+
 
 
 @contextlib.contextmanager

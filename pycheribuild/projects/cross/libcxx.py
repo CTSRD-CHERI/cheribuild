@@ -33,7 +33,7 @@ from ..cheribsd import BuildCHERIBSD
 # from ..llvm import BuildLLVM
 from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
-from ...utils import IS_LINUX, parseOSRelease
+from ...utils import OSInfo
 
 
 installToCXXDir = ComputedDefaultValue(
@@ -65,7 +65,7 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
         self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.buildDir / "lib")
         if self.compiling_for_host():
             self.add_cmake_options(BUILD_TESTS=True)
-            if IS_LINUX and "ubuntu" in parseOSRelease()["ID_LIKE"]:
+            if OSInfo.isUbuntu():
                 self.add_cmake_options(COMPARE_TEST_OUTPUT_TO_SYSTEM_OUTPUT=False)
                 # Seems to be needed for at least jenkins (it says relink with -pie)
                 self.add_cmake_options(CMAKE_POSITION_INDEPENDENT_CODE=True)
@@ -107,7 +107,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.COMMON_FLAGS.append("-D__LP64__=1")  # HACK to get it to compile
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=True, LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False)
-            if IS_LINUX and "ubuntu" in parseOSRelease()["ID_LIKE"]:
+            if OSInfo.isUbuntu():
                 # Ubuntu packagers think that static linking should not be possible....
                 self.add_cmake_options(LIBCXX_ENABLE_STATIC=False)
         else:
