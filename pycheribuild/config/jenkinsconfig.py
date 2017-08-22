@@ -63,10 +63,11 @@ class JenkinsConfig(CheriConfig):
         self.makeJobs = loader.addCommandLineOnlyOption("make-jobs", "j", type=int,
                                                         default=defaultNumberOfMakeJobs(),
                                                         help="Number of jobs to use for compiling")
-        self.installationPrefix = loader.addCommandLineOnlyOption("install-prefix", type=Path, default="/usr/local",
-                                                              help="The install prefix for cross compiled projects"
-                                                                   " (the path where it will end up in the install"
-                                                                   " image)")  # type: Path
+        self.installationPrefix = loader.addCommandLineOnlyOption("install-prefix", type=Path,
+                                                                  default=lambda conf, cls: "/opt/" + conf.cpu,
+                                                                  help="The install prefix for cross compiled projects"
+                                                                       " (the path where it will end up in the install"
+                                                                       " image)")  # type: Path
         self.do_build = loader.addCommandLineOnlyBoolOption("build", default=True,
                                                             help="Build and install the project")
         self.do_tarball = loader.addCommandLineOnlyBoolOption("create-tarball", shortname="-tarball",
