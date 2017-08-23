@@ -99,8 +99,6 @@ class CheriConfig(object):
         self.sdkDir = None  # type: Path
         self.otherToolsDir = None  # type: Path
         self.dollarPathWithOtherTools = None  # type: Path
-        self.sdkSysrootDir = None  # type: Path
-        self.sdkBinDir = None  # type: Path
         self.sysrootArchiveName = None  # type: Path
 
         self.targets = None  # type: list
@@ -114,8 +112,6 @@ class CheriConfig(object):
 
     def _initializeDerivedPaths(self):
         self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
-        self.sdkSysrootDir = self.sdkDir / "sysroot"
-        self.sdkBinDir = self.sdkDir / "bin"
 
     @property
     def makeJFlag(self):
@@ -128,6 +124,14 @@ class CheriConfig(object):
     @property
     def sdkDirectoryName(self):
         return "sdk" + self.cheriBitsStr
+
+    @property
+    def sdkBinDir(self):
+        return self.sdkDir / "bin"
+
+    @property
+    def sdkSysrootDir(self):
+        return self.sdkDir / "sysroot"
 
     def _ensureRequiredPropertiesSet(self) -> bool:
         for key in self.__dict__.keys():
