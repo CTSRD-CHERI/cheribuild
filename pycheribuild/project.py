@@ -589,7 +589,7 @@ class Project(SimpleProject):
         # TODO: never use the source dir as a build dir (unfortunately GDB, postgres and elftoolchain won't work)
         # will have to check how well binutils and qemu work there
         if (self.buildDir / ".git").is_dir():
-            if (self.buildDir / "GNUmakefile").is_file() and self.makeCommand != "bmake":
+            if (self.buildDir / "GNUmakefile").is_file() and self.makeCommand != "bmake" and self.target != "elftoolchain":
                 runCmd(self.makeCommand, "distclean", cwd=self.buildDir)
             else:
                 # just use git clean for cleanup
