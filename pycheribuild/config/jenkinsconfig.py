@@ -36,6 +36,11 @@ from .chericonfig import CheriConfig, CrossCompileTarget
 from ..utils import defaultNumberOfMakeJobs, fatalError
 
 
+def default_install_prefix(conf: "JenkinsConfig", unused):
+    if conf.crossCompileTarget == CrossCompileTarget.NATIVE:
+        return "/opt/" + conf.targets[0]
+    return "/opt/" + conf.cpu
+
 class JenkinsConfig(CheriConfig):
     def __init__(self, loader: ConfigLoaderBase, availableTargets: list):
         super().__init__(loader)
@@ -64,7 +69,7 @@ class JenkinsConfig(CheriConfig):
                                                         default=defaultNumberOfMakeJobs(),
                                                         help="Number of jobs to use for compiling")
         self.installationPrefix = loader.addCommandLineOnlyOption("install-prefix", type=Path,
-                                                                  default=lambda conf, cls: "/opt/" + conf.cpu,
+                                                                  default=default_install_prefix,
                                                                   help="The install prefix for cross compiled projects"
                                                                        " (the path where it will end up in the install"
                                                                        " image)")  # type: Path

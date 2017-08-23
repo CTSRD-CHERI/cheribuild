@@ -186,11 +186,7 @@ def _jenkins_main():
         pass
     setCheriConfig(cheriConfig)
 
-    # TODO: add argparse options for build, create tarball
-
-    do_build = True
-    do_tarball = False  # tar --owner=0 --group=0 (LINUX) --uid=0 --gid=0 (FREEBSD/MAC)
-    if do_build:
+    if cheriConfig.do_build:
         if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
             assert cheriConfig.sdkDir == Path("/cheri-sdk"), cheriConfig.sdkDir
         else:
@@ -223,6 +219,7 @@ def _jenkins_main():
         cleaningTask = cheriConfig.FS.asyncCleanDirectory(cheriConfig.outputRoot) if not cheriConfig.keepInstallDir else ThreadJoiner(None)
         with cleaningTask:
             target.execute()
+
     if cheriConfig.do_tarball:
         if IS_LINUX:
             owner_flags = ["--owner=0", "--group=0", "--numeric-owner"]
