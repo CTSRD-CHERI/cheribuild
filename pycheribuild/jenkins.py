@@ -189,6 +189,9 @@ def _jenkins_main():
     if cheriConfig.do_build:
         if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
             assert cheriConfig.sdkDir == Path("/cheri-sdk"), cheriConfig.sdkDir
+        elif cheriConfig.without_sdk:
+            statusUpdate("Not using CHERI SDK, only files from /usr")
+            cheriConfig.sdkDir = "/usr"
         else:
             create_sdk_from_archives(cheriConfig)
 

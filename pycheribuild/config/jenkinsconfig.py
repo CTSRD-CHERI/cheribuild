@@ -63,7 +63,7 @@ class JenkinsConfig(CheriConfig):
         self.createCompilationDB = loader.addCommandLineOnlyBoolOption(
             "compilation-db", "-cdb", help="Create a compile_commands.json file in the build dir "
                                            "(requires Bear for non-CMake projects)")
-        self.makeWithoutNice = True
+        self.makeWithoutNice = False
 
         self.makeJobs = loader.addCommandLineOnlyOption("make-jobs", "j", type=int,
                                                         default=defaultNumberOfMakeJobs(),
@@ -77,6 +77,8 @@ class JenkinsConfig(CheriConfig):
                                                             help="Build and install the project")
         self.do_tarball = loader.addCommandLineOnlyBoolOption("create-tarball", shortname="-tarball",
                                                               help="Create an archive of the installed files")
+        self.without_sdk = loader.addCommandLineOnlyBoolOption("without-sdk",
+                                                              help="Don't use the CHERI SDK -> only /usr (for native builds)")
         self.tarball_name = loader.addCommandLineOnlyOption("tarball-name",
             default=lambda conf, cls: conf.targets[0] + "-" + conf.cpu + ".tar.xz")
 
