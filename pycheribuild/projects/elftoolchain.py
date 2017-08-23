@@ -101,6 +101,7 @@ class BuildElftoolchain(Project):
             firstCall = False
 
     def install(self, **kwargs):
+        self.makedirs(self.installDir / "bin")
         # We don't actually want to install all the files, just copy the binaries that we want
         group = grp.getgrgid(os.getgid()).gr_name
         user = pwd.getpwuid(os.getuid()).pw_name
