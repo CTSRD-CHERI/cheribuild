@@ -45,6 +45,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         if self.enable_assertions:
             self.COMMON_FLAGS.append("-DUSE_ASSERT_CHECKING=1")
             self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")
+            self.configureArgs.append("--enable-cassert")
         self.COMMON_FLAGS.extend(["-pedantic",
                                   "-Wno-gnu-statement-expression",
                                   "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
@@ -63,6 +64,8 @@ class BuildPostgres(CrossCompileAutotoolsProject):
 
         if self.debugInfo:
             self.configureArgs.append("--enable-debug")
+        else:
+            self.configureArgs.append("--disable-debug")
         self.configureArgs.extend(["--without-libxml", "--without-readline", "--without-gssapi"])
 
     def install(self, **kwargs):
