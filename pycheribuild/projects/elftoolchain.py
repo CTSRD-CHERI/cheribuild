@@ -132,7 +132,12 @@ class BuildElftoolchain(Project):
 
         allInstalledTools = self.programsToBuild + self.extraPrograms
         for prog in allInstalledTools:
-            self.createBuildtoolTargetSymlinks(self.installDir / "bin" / prog)
+            if prog == "strip":
+                self.deleteFile(self.installDir / "bin" / ("cheri-unknown-freebsd-" + prog))
+                self.deleteFile(self.installDir / "bin" / ("mips64-unknown-freebsd-" + prog))
+                self.deleteFile(self.installDir / "bin" / ("mips4-unknown-freebsd-" + prog))
+            else:
+                self.createBuildtoolTargetSymlinks(self.installDir / "bin" / prog)
         # if we didn't build ar/ranlib add symlinks to the versions in /usr/bin
         if not self.build_ar:
             self.createSymlink(Path("/usr/bin/ar"), self.installDir / "bin/ar", relative=False)
