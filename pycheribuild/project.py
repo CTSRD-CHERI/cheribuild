@@ -553,7 +553,7 @@ class Project(SimpleProject):
                 logfileName = makeCommand
         allArgs = [makeCommand] + allArgs
         if self.config.createCompilationDB and self.compileDBRequiresBear:
-            allArgs = [self.config.otherToolsDir / "bin/bear", "--cdb", self.buildDir / compilationDbName,
+            allArgs = [shutil.which("bear"), "--cdb", self.buildDir / compilationDbName,
                        "--append"] + allArgs
         if not self.config.makeWithoutNice:
             allArgs = ["nice"] + allArgs
