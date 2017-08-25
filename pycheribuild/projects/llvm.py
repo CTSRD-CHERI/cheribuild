@@ -112,6 +112,9 @@ class BuildLLVM(CMakeProject):
         versionStr = ".".join(map(str, info.version))
         if info.compiler == "apple-clang":
             print("Compiler is apple clang", versionStr, " -- assuming it matches required version", "%d.%d" % (major, minor))
+        elif info.compiler == "gcc":
+            if info.version < (5, 0, 0):
+                warningMessage("GCC older than 5.0.0 will probably not work for compiling clang!")
         elif info.compiler != "clang" or info.version < (major, minor, patch):
             self.dependencyError(self.cCompiler, "version", versionStr,
                                  "is not supported. Clang version %d.%d or newer is required." % (major, minor),
