@@ -30,7 +30,12 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
     if project.crossCompileTarget == CrossCompileTarget.NATIVE:
         return config.sdkDir
     if project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
-        return Path(BuildCHERIBSD.rootfsDir(config) / "extra" / project.projectName.lower())
+        if project.crossCompileTarget == CrossCompileTarget.CHERI:
+            targetName = "cheri" + config.cheriBitsStr
+        else:
+            assert project.crossCompileTarget == CrossCompileTarget.MIPS
+            targetName = "mips"
+        return Path(BuildCHERIBSD.rootfsDir(config) / "opt" / targetName / project.projectName.lower())
     elif project.crossInstallDir == CrossInstallDir.SDK:
         return config.sdkSysrootDir
     fatalError("Unknown install dir for", project.projectName)
