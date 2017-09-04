@@ -35,6 +35,7 @@ import sys
 
 from pathlib import Path
 from ..config.loader import ComputedDefaultValue
+from ..config.chericonfig import CrossCompileTarget
 from ..project import *
 from ..utils import *
 
@@ -524,12 +525,6 @@ import sys
 print("NOOP chflags:", sys.argv, file=sys.stderr)
 """, mode=0o755, overwrite=True)
 
-            # create a fake chflags for linux
-            self.writeFile(self.crossBinDir / "chflags", """#!/usr/bin/env python3
-        import sys
-        print("NOOP chflags:", sys.argv, file=sys.stderr)
-        """, mode=0o755, overwrite=True)
-
         # TODO: build lex from freebsd
         for tool in tools:
             fullpath = shutil.which(tool, path=searchpath)
@@ -669,7 +664,6 @@ class BuildCHERIBSD(BuildFreeBSD):
         if not (self.sourceDir / "contrib/cheri-libc++/src").exists():
             runCmd("git", "submodule", "init", cwd=self.sourceDir)
             runCmd("git", "submodule", "update", cwd=self.sourceDir)
-
 
 
 class BuildCheriBsdSysroot(SimpleProject):

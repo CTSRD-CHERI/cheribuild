@@ -35,7 +35,7 @@ from collections import OrderedDict
 from pathlib import Path
 # Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
 from .loader import ConfigLoaderBase
-from ..utils import latestClangTool, defaultNumberOfMakeJobs, warningMessage
+from ..utils import latestClangTool
 
 
 # custom encoder to handle pathlib.Path objects
@@ -48,6 +48,7 @@ class MyJsonEncoder(json.JSONEncoder):
         if isinstance(o, Path):
             return str(o)
         return super().default(o)
+
 
 class CrossCompileTarget(Enum):
     NATIVE = "native"
@@ -87,7 +88,7 @@ class CheriConfig(object):
         self.skipInstall = loader.addBoolOption("skip-install", help="Skip the install step (only do the build)")
         self.includeDependencies = None  # type: bool
         self.createCompilationDB = None  # type: bool
-        self.crossCompileTarget = None # type: CrossCompileTarget
+        self.crossCompileTarget = None  # type: CrossCompileTarget
         self.makeWithoutNice = None  # type: bool
 
         self.cheriBits = None  # type: int
