@@ -197,7 +197,6 @@ class BuildFreeBSD(Project):
         self.common_options = FreeBSDMakeOptions()
         self.commonMakeArgs.extend(archBuildFlags)
         self.common_options.env_vars = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
-        self.common_options.add(MAKEOBJDIRPREFIX=str(self.buildDir))
         self.commonMakeArgs.extend([
             "-DDB_FROM_SRC",  # don't use the system passwd file
             # "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning
