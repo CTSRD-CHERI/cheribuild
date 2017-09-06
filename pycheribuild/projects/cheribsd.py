@@ -52,8 +52,15 @@ class FreeBSDCrossTools(CMakeProject):
     defaultInstallDir = CMakeProject._installToBootstrapTools
     projectName = "freebsd-crossbuild"
 
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        cls.freebsd_source_dir = cls.addPathOption("freebsd-source-directory",
+                                                   help="The path to the FreeBSD source tree used for building the"
+                                                        " cross tools. Defaults to the CheriBSD source directory")
+
     def configure(self, **kwargs):
-        self.add_cmake_options(CHERIBSD_DIR=BuildCHERIBSD.sourceDir, CMAKE_C_COMPILER=self.config.clangPath)
+        freebsd_dir = self.freebsd_source_dir if self.freebsd_source_dir else BuildCHERIBSD.sourceDir
+        self.add_cmake_options(CHERIBSD_DIR=freebsd_dir, CMAKE_C_COMPILER=self.config.clangPath)
         super().configure()
 
 
@@ -61,12 +68,11 @@ class BuildFreeBSD(Project):
     dependencies = ["llvm"]
     if not IS_FREEBSD:
         dependencies.append("freebsd-crossbuild")
-    projectName = "freebsd-mips"
     repository = "https://github.com/freebsd/freebsd.git"
-
-    defaultInstallDir = ComputedDefaultValue(
-        function=lambda config, cls: config.outputRoot / "freebsd-mips",
-        asString="$INSTALL_ROOT/freebsd-mips")
+    doNotAddToTargets = True
+    target_arch = None  # type: CrossCompileTarget
+    kernelConfig = None  # type: str
+    crossbuild = False
 
     defaultExtraMakeOptions = [
         "-DWITHOUT_HTML",  # should not be needed
@@ -107,7 +113,6 @@ class BuildFreeBSD(Project):
         # override in CheriBSD
         cls.skipBuildworld = cls.addBoolOption("only-build-kernel", shortname=skipBuildworldShortname, showHelp=True,
                                                help="Skip the buildworld step -> only build and install the kernel")
-        cls.kernelConfig = "MALTA64"
         cls.useExternalToolchainForKernel = cls.addBoolOption("use-external-toolchain-for-kernel", showHelp=True,
                                                               help="build the kernel with the external toolchain",
                                                               default=buildKernelWithClang)
@@ -161,13 +166,14 @@ class BuildFreeBSD(Project):
                 result.append(k + "=" + str(v))
         return result
 
-    def __init__(self, config: CheriConfig,
-                 archBuildFlags=[
-                     "TARGET=mips",
-                     "TARGET_ARCH=mips64",
-                     # The following is broken: (https://github.com/CTSRD-CHERI/cheribsd/issues/102)
-                     #"CPUTYPE=mips64",  # mipsfpu for hardware float
-                     ]):
+    def __init__(self, config: CheriConfig, archBuildFlags: list=None):
+        if archBuildFlags is None:
+            if self.target_arch == CrossCompileTarget.MIPS:
+                # The following is broken: (https://github.com/CTSRD-CHERI/cheribsd/issues/102)
+                # "CPUTYPE=mips64",  # mipsfpu for hardware float
+                archBuildFlags = ["TARGET=mips", "TARGET_ARCH=mips64"]
+            elif self.target_arch == CrossCompileTarget.NATIVE:
+                archBuildFlags = ["TARGET=amd64"]
         super().__init__(config)
         self.commonMakeArgs.extend(archBuildFlags)
         self.buildenv = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
@@ -177,7 +183,7 @@ class BuildFreeBSD(Project):
             "-DNO_CLEAN",  # don't clean, we have the --clean flag for that
             "-DNO_ROOT",  # use this even if current user is root, as without it the METALOG file is not created
             "-DWITHOUT_GDB",
-            "-DCHERI_CC_COLOR_DIAGNOSTICS",  # force -fcolor-diagnostics
+            # '"-DCHERI_CC_COLOR_DIAGNOSTICS",  # force -fcolor-diagnostics
         ])
         if self.crossbuild:
             self._addRequiredSystemTool("unifdef")
@@ -188,7 +194,26 @@ class BuildFreeBSD(Project):
 
         self.externalToolchainMap = {}
         self.externalToolchainCompiler = Path()
-        if self.mipsToolchainPath:
+        if self.target_arch == CrossCompileTarget.NATIVE:
+            # target_flags = " -target x86_64-unknown-freebsd12"
+            target_flags = " -fuse-ld=lld -Wno-error=unused-command-line-argument -Wno-unused-command-line-argument"
+            self.externalToolchainCompiler = self.config.sdkBinDir / "clang"
+            self.externalToolchainMap["XCC"] = str(self.config.sdkBinDir / "clang") + target_flags
+            self.externalToolchainMap["XCXX"] = str(self.config.sdkBinDir / "clang++") + target_flags
+            self.externalToolchainMap["XCPP"] = str(self.config.sdkBinDir / "clang-cpp")
+            self.externalToolchainMap["XLD"] = str(self.config.sdkBinDir / "ld.lld")
+            self.useExternalToolchainForWorld = True
+            self.useExternalToolchainForKernel = True
+            self.linkKernelWithLLD = True
+            # These just take forever and are not needed:
+            self.externalToolchainMap["WITHOUT_GCC"] = None
+            self.externalToolchainMap["WITHOUT_CLANG"] = None
+            self.externalToolchainMap["WITHOUT_GNUCXX"] = None
+            # This is broken with CHERI clang + CHERI lld
+            self.externalToolchainMap["WITHOUT_BOOT"] = None
+            # no need for i386 support
+            self.externalToolchainMap["WITHOUT_LIB32"] = None
+        elif self.mipsToolchainPath:
             cross_prefix = str(self.mipsToolchainPath / "bin/mips64-unknown-freebsd-")
             self.externalToolchainCompiler = Path(cross_prefix + "clang")
             # self.externalToolchainArgs.append("CROSS_BINUTILS_PREFIX=" + cross_prefix)
@@ -218,6 +243,7 @@ class BuildFreeBSD(Project):
             # self.externalToolchainArgs.append("XOBJDUMP=" + cross_prefix + "llvm-objdump")
             # self.externalToolchainArgs.append("OBJDUMP_FLAGS=-d -S -s -t -r -print-imm-hex")
             #add CSTD=gnu11?
+            # setting these on the command line doesn't work as it will override all other assignments
             # self.externalToolchainArgs.append("XCFLAGS=-integrated-as")
             # self.externalToolchainArgs.append("XCXXLAGS=-integrated-as")
             # don't build cross GCC and cross binutils
@@ -275,13 +301,20 @@ class BuildFreeBSD(Project):
                 fatalError("Requested build of kernel with external toolchain, but", self.externalToolchainCompiler,
                            "doesn't exist!")
             # We can't use LLD for the kernel yet but there is a flag to experiment with it
-            cross_prefix = str(self.mipsToolchainPath / "bin/mips64-unknown-freebsd-")
+            if self.target_arch == CrossCompileTarget.NATIVE:
+                cross_prefix = str(self.config.sdkBinDir) + "/"
+            else:
+                cross_prefix = str(self.mipsToolchainPath / "bin/mips64-unknown-freebsd-")
+
             kernelToolChainMap = self.externalToolchainMap.copy()
 
             if self.linkKernelWithLLD:
                 kernelToolChainMap["LD"] = cross_prefix + "ld.lld"
                 kernelToolChainMap["XLD"] = cross_prefix + "ld.lld"
-                fuse_ld_flag = "-fuse-ld=lld"
+                if self.target_arch == CrossCompileTarget.NATIVE:
+                    fuse_ld_flag = ""  # [-Werror,-Wunused-command-line-argument]
+                else:
+                    fuse_ld_flag = "-fuse-ld=lld"
             else:
                 fuse_ld_flag = "-fuse-ld=bfd"
                 kernelToolChainMap["XLD"] = cross_prefix + "ld.bfd" if self.crossbuild else "ld.bfd"
@@ -389,10 +422,19 @@ class BuildFreeBSD(Project):
             self.runMakeInstall(args=installworldArgs, target="installworld", cwd=self.sourceDir)
             self.runMakeInstall(args=installworldArgs, target="distribution", cwd=self.sourceDir)
 
+    def add_mips_crossbuildOptions(self):
+        self.commonMakeArgs.append("CROSS_BINUTILS_PREFIX=" + str(self.config.sdkBinDir) + "/mips64-unknown-freebsd-")
+        if not self.forceBFD:
+            self.commonMakeArgs.append("-DMIPS_LINK_WITH_LLD")
+
+    def add_x86_crossbuildOptions(self):
+        self.commonMakeArgs.append("CROSS_BINUTILS_PREFIX=" + str(self.config.sdkBinDir) + "/")
+
     def addCrossBuildOptions(self):
         self.crossBinDir = self.config.outputRoot / "freebsd-cross/bin"
         # when cross compiling we need to specify the path to the bsd makefiles (-m src/share/mk)
         self.makeCommand = "bmake"  # make is usually gnu make
+        # TODO: is this needed?
         self.commonMakeArgs.extend(["-m", str(self.sourceDir / "share/mk")])
         # we also need to ensure that our SDK build tools are being picked up first
         build_path = str(self.config.sdkBinDir) + ":" + str(self.crossBinDir)
@@ -404,21 +446,8 @@ class BuildFreeBSD(Project):
         self.mipsToolchainPath = self.config.sdkDir
         self.commonMakeArgs.append("-DWITHOUT_BINUTILS_BOOTSTRAP")
         self.commonMakeArgs.append("-DWITHOUT_ELFTOOLCHAIN_BOOTSTRAP")
-        self.commonMakeArgs.append("CROSS_BINUTILS_PREFIX=" + str(self.config.sdkBinDir) + "/mips64-unknown-freebsd-")
         # TODO: not sure this is needed
         # self.commonMakeArgs.append("AWK=" + str(self.config.sdkBinDir / "nawk"))
-
-        self.commonMakeArgs.extend([
-            "-DWITHOUT_SYSCONS",  # bootstrap tool won't build
-            "-DWITHOUT_GCC",  # needs lots of bootstrap tools
-            # "-DNO_SHARE"
-            "-DWITHOUT_CDDL",  # lots of bootstrap tools issues
-            "-DWITHOUT_USB",  # bootstrap issues
-            "-DWITHOUT_GAMES",  # boostrap
-            # "-DWITHOUT_GPL_DTC",  # same
-        ])
-        if not self.forceBFD:
-            self.commonMakeArgs.append("-DMIPS_LINK_WITH_LLD")
 
         if IS_MAC:
             # For some reason on a mac bmake can't execute elftoolchain objcopy -> use gnu version
@@ -439,7 +468,12 @@ class BuildFreeBSD(Project):
         self.commonMakeArgs.append("OSRELDATE=4204345")
 
         without_opts = []
-        # localedef is incompatible
+        without_opts.append("SYSCONS"),  # bootstrap tool won't build
+        without_opts.append("CDDL")  # lots of bootstrap tools issues
+        without_opts.append("USB")  # bootstrap issues
+        without_opts.append("GAMES")  # boostrap
+        without_opts.append("GPL_DTC")  # same
+        # localedef binary is incompatible
         without_opts.append("LOCALES")
         # bootstrap tool won't build
         without_opts.append("FILE")
@@ -482,6 +516,11 @@ class BuildFreeBSD(Project):
 
         for opt in without_opts:
             self.commonMakeArgs.append("-DWITHOUT_" + opt)
+
+        if self.target_arch == CrossCompileTarget.NATIVE:
+            self.add_x86_crossbuildOptions()
+        else:
+            self.add_mips_crossbuildOptions()
 
     def prepareFreeBSDCrossEnv(self):
         self.cleanDirectory(self.crossBinDir)
@@ -556,6 +595,24 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         super().process()
 
 
+class BuildFreeBSDForMIPS(BuildFreeBSD):
+    projectName = "freebsd-mips"
+    target_arch = CrossCompileTarget.MIPS
+    kernelConfig = "MALTA64"
+    defaultInstallDir = ComputedDefaultValue(
+        function=lambda config, cls: config.outputRoot / "freebsd-mips",
+        asString="$INSTALL_ROOT/freebsd-mips")
+
+
+class BuildFreeBSDForX86(BuildFreeBSD):
+    projectName = "freebsd-x86"
+    target_arch = CrossCompileTarget.NATIVE
+    defaultInstallDir = ComputedDefaultValue(
+        function=lambda config, cls: config.outputRoot / "freebsd-x86",
+        asString="$INSTALL_ROOT/freebsd-x86")
+    kernelConfig = "GENERIC"
+
+
 class BuildCHERIBSD(BuildFreeBSD):
     projectName = "cheribsd"
     target = "cheribsd-without-sysroot"
@@ -563,6 +620,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     defaultInstallDir = lambda config, cls: config.outputRoot / ("rootfs" + config.cheriBitsStr)
     appendCheriBitsToBuildDir = True
     defaultBuildDir = lambda config, cls: config.buildRoot / ("cheribsd-obj-" + config.cheriBitsStr)
+    target_arch = CrossCompileTarget.CHERI
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
