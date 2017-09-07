@@ -64,7 +64,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         if self.crossCompileTarget == CrossCompileTarget.CHERI:
-            statusUpdate("Cannot compile GDB for CHERI yet, targetting MIPS instead")
+            statusUpdate("Cannot compile GDB as a CHERIABI binary building as MIPS instead (it can still be used to "
+                         "debug CHERIABI processes)")
             self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
         if self.compiling_for_host():
             self.crossInstallDir = CrossInstallDir.SDK
