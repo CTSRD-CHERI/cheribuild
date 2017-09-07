@@ -420,8 +420,9 @@ class BuildFreeBSD(Project):
                     warningMessage("Failed to run either target _compiler-metadata or "
                                    "_build_metadata, build system has changed!")
 
-            self.runMakeInstall(args=installworldArgs, target="installworld", cwd=self.sourceDir)
-            self.runMakeInstall(args=installworldArgs, target="distribution", cwd=self.sourceDir)
+            installworldWithJflag = installworldArgs + [self.config.makeJFlag]
+            self.runMakeInstall(args=installworldWithJflag, target="installworld", cwd=self.sourceDir)
+            self.runMakeInstall(args=installworldWithJflag , target="distribution", cwd=self.sourceDir)
 
     def add_mips_crossbuildOptions(self):
         self.common_options.add(CROSS_BINUTILS_PREFIX=str(self.config.sdkBinDir) + "/mips64-unknown-freebsd-")
