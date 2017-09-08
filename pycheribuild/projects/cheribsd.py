@@ -43,11 +43,12 @@ from ..utils import *
 
 # noinspection PyUnusedLocal
 def defaultKernelConfig(config: CheriConfig, project):
-    if config.cheriBits == 128:
-        # make sure we use a kernel with 128 bit CPU features selected
-        return "CHERI128_MALTA64"
-    return "CHERI_MALTA64"
-
+    # make sure we use a kernel with 128 bit CPU features selected
+    # or a purecap kernel is selected
+    kernconf_name = "CHERI{bits}{pure}_MALTA64"
+    cheri_bits = "128" if config.cheriBits == 128 else ""
+    cheri_pure = "_PURECAP" if project.purecapKernel else ""
+    return kernconf_name.format(bits=cheri_bits, pure=cheri_pure)
 
 class FreeBSDCrossTools(CMakeProject):
     repository = "https://github.com/RichardsonAlex/freebsd-crossbuild.git"
@@ -644,6 +645,8 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                       " you need to copy them from the build directory.")
         cls.mipsOnly = cls.addBoolOption("mips-only", showHelp=False,
                                          help="Don't build the CHERI parts of cheribsd, only plain MIPS")
+        cls.purecapKernel = cls.addBoolOption("pure-cap-kernel", showHelp=True,
+                                              help="Build kernel with pure capability ABI (probably won't work!)")
 
     def __init__(self, config: CheriConfig):
         self.installAsRoot = os.getuid() == 0
