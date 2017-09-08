@@ -57,6 +57,7 @@ class FreeBSDCrossTools(CMakeProject):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
         cls.freebsd_source_dir = cls.addPathOption("freebsd-source-directory",
                                                    help="The path to the FreeBSD source tree used for building the"
                                                         " cross tools. Defaults to the CheriBSD source directory")
@@ -207,7 +208,6 @@ class BuildFreeBSD(Project):
             # '"-DCHERI_CC_COLOR_DIAGNOSTICS",  # force -fcolor-diagnostics
         ])
         if self.crossbuild:
-            self._addRequiredSystemTool("unifdef")
             self.crossBinDir = self.config.outputRoot / "freebsd-cross/bin"
             self.addCrossBuildOptions()
             self.mipsToolchainPath = self.config.sdkDir
@@ -536,7 +536,7 @@ class BuildFreeBSD(Project):
             "tr", "true", "uname", "wc", "xargs",
             "hostname", "patch", "expr", "which",
             # compiler and make
-            "cc", "cpp", "c++", "gperf", "lex", "m4", "unifdef",  # compiler tools
+            "cc", "cpp", "c++", "gperf", "lex", "m4",  # compiler tools
             "lorder", "join",  # linking libraries
             "bmake", "nice",  # calling make
             "gzip",  # needed to generate some stuff
@@ -570,7 +570,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         # create symlinks for the tools installed by freebsd-crosstools
         crossTools = "awk cat compile_et config file2c install makefs mtree rpcgen sed yacc".split()
         crossTools += "mktemp tsort expr gencat mandoc gencat pwd_mkdb services_mkdb cap_mkdb".split()
-        crossTools += "test [ sh sysctl makewhatis rmdir".split()
+        crossTools += "test [ sh sysctl makewhatis rmdir unifdef".split()
         crossTools += "grep egrep fgrep rgrep zgrep zegrep zfgrep".split()
         for tool in crossTools:
             fullpath = Path(self.config.otherToolsDir, "bin/freebsd-" + tool)
