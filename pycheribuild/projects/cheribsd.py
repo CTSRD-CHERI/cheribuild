@@ -568,7 +568,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         # make installworld expects make as bmake
         self.createSymlink(self.crossBinDir / "bmake", self.crossBinDir / "make", relative=True)
         # create symlinks for the tools installed by freebsd-crosstools
-        crossTools = "awk cat compile_et config file2c install makefs mtree rpcgen sed yacc".split()
+        crossTools = "awk cat compile_et config file2c find install makefs mtree rpcgen sed yacc".split()
         crossTools += "mktemp tsort expr gencat mandoc gencat pwd_mkdb services_mkdb cap_mkdb".split()
         crossTools += "test [ sh sysctl makewhatis rmdir unifdef".split()
         crossTools += "grep egrep fgrep rgrep zgrep zegrep zfgrep".split()
