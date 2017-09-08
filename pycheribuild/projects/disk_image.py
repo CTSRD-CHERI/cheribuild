@@ -85,6 +85,7 @@ class BuildDiskImageBase(SimpleProject):
                                                    "(default: '$SOURCE_ROOT/extra-files')", metavar="DIR")
         cls.hostname = cls.addConfigOption("hostname", showHelp=True, default=defaultHostname, metavar="HOSTNAME",
                                            help="The hostname to use for the QEMU image")
+        cls.useQCOW2 = cls.addBoolOption("use-qcow2", help="Convert the disk image to QCOW2 format instead of raw")
         if not IS_FREEBSD:
             cls.remotePath = cls.addConfigOption("remote-path", showHelp=True, metavar="PATH", help="The path on the "
                                                  "remote FreeBSD machine from where to copy the disk image")
@@ -261,7 +262,6 @@ class BuildDiskImageBase(SimpleProject):
             else:
                 fatalError("qemu-img command was not found!", fixitHint="Make sure to build target qemu first")
 
-        rawDiskImage = self.diskImagePath.with_suffix(".img")
         makefs = shutil.which("makefs")
         runCmd([
             makefs,
@@ -273,27 +273,30 @@ class BuildDiskImageBase(SimpleProject):
             "-F", self.manifestFile,  # use METALOG as the manifest for the disk image
             "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
             # which makes sure that the numeric UID values are correct
-            rawDiskImage,  # output file
+            self.diskImagePath,  # output file
             self.rootfsDir  # directory tree to use for the image
         ])
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
         if self.config.verbose:
-            runCmd(qemuImgCommand, "info", rawDiskImage)
-        self.deleteFile(self.diskImagePath, printVerboseOnly=True)
-        # create a qcow2 version from the raw image:
-        runCmd(qemuImgCommand, "convert",
-               "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
-               "-O", "qcow2",  # convert to qcow2 format
-               rawDiskImage,  # input file
-               self.diskImagePath)  # output file
-        if self.config.verbose:
             runCmd(qemuImgCommand, "info", self.diskImagePath)
+        if self.useQCOW2:
+            # create a qcow2 version from the raw image:
+            rawImg = self.diskImagePath.with_suffix(".raw")
+            runCmd("mv", "-f", self.diskImagePath, rawImg)
+            runCmd(qemuImgCommand, "convert",
+                   "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
+                   "-O", "qcow2",  # convert to qcow2 format
+                   rawImg,  # input file
+                   self.diskImagePath)  # output file
+            self.deleteFile(rawImg, printVerboseOnly=True)
+            if self.config.verbose:
+                runCmd(qemuImgCommand, "info", self.diskImagePath)
 
     def copyFromRemoteHost(self):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
         if not self.remotePath:
             fatalError("Path to the remote disk image is not set, option '--", self.target, "/", "remote-path' must "
-                       "be set to a path that scp understands (e.g. vica:/foo/bar/disk.qcow2)", sep="")
+                       "be set to a path that scp understands (e.g. vica:/foo/bar/disk.img)", sep="")
             return
         # noinspection PyAttributeOutsideInit
         self.remotePath = os.path.expandvars(self.remotePath)
@@ -311,9 +314,6 @@ class BuildDiskImageBase(SimpleProject):
             self.__process()
 
     def __process(self):
-        if str(self.diskImagePath).endswith(".img"):
-            self.diskImagePath = self.diskImagePath.with_suffix(".qcow2")
-
         statusUpdate("Disk image will saved to", self.diskImagePath)
         statusUpdate("Extra files for the disk image will be copied from", self.extraFilesDir)
 
@@ -369,8 +369,8 @@ class BuildDiskImageBase(SimpleProject):
 
 def _defaultDiskImagePath(conf: "CheriConfig", cls):
     if conf.cheriBits == 128:
-        return conf.outputRoot / "cheri128-disk.qcow2"
-    return conf.outputRoot / "cheri256-disk.qcow2"
+        return conf.outputRoot / "cheri128-disk.img"
+    return conf.outputRoot / "cheri256-disk.img"
 
 
 class BuildCheriBSDDiskImage(BuildDiskImageBase):
@@ -385,8 +385,8 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
             asString="qemu-cheri${CHERI_BITS}-" + hostUsername)
         super().setupConfigOptions(extraFilesShortname="-extra-files", defaultHostname=defaultHostname, **kwargs)
         defaultDiskImagePath = ComputedDefaultValue(
-                function=_defaultDiskImagePath, asString="$OUTPUT_ROOT/cheri256-disk.qcow2 or "
-                                                         "$OUTPUT_ROOT/cheri128-disk.qcow2 depending on --cheri-bits.")
+                function=_defaultDiskImagePath, asString="$OUTPUT_ROOT/cheri256-disk.img or "
+                                                         "$OUTPUT_ROOT/cheri128-disk.img depending on --cheri-bits.")
         cls.diskImagePath = cls.addPathOption("path", shortname="-disk-image-path", default=defaultDiskImagePath,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image",
                                               showHelp=True)
@@ -408,8 +408,8 @@ class BuildFreeBSDDiskImage(BuildDiskImageBase):
         hostUsername = CheriConfig.get_user_name()
         super().setupConfigOptions(defaultHostname="qemu-mips-" + hostUsername, **kwargs)
         defaultDiskImagePath = ComputedDefaultValue(
-                function=lambda config, project: config.outputRoot / "freebsd-mips.qcow2",
-                asString="$OUTPUT_ROOT/freebsd-mips.qcow2")
+                function=lambda config, project: config.outputRoot / "freebsd-mips.img",
+                asString="$OUTPUT_ROOT/freebsd-mips.img")
         cls.diskImagePath = cls.addPathOption("path", default=defaultDiskImagePath, showHelp=True,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image")
         cls.disableTMPFS = True  # MALTA64 doesn't include tmpfs
