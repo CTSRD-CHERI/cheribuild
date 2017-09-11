@@ -127,6 +127,7 @@ addFilteredFile(scriptDir / "projects/cheribsd.py")
 # disk-image, sdk and run_qemu must come after cheribsd as they use CheriBSD.rootfsDir
 addFilteredFile(scriptDir / "projects/disk_image.py")
 addFilteredFile(scriptDir / "projects/awk.py")
+addFilteredFile(scriptDir / "projects/bmake.py")
 addFilteredFile(scriptDir / "projects/cmake.py")
 addFilteredFile(scriptDir / "projects/cherios.py")
 addFilteredFile(scriptDir / "projects/elftoolchain.py")
