@@ -1,3 +1,6 @@
+/* asprintf() prototype needs _GNU_SOURCE on Linux */
+#define _GNU_SOURCE
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -50,7 +53,7 @@ int main(int argc, char **argv)
     closedir(dir);
 
     if (links == 0)
-        errx(EX_USAGE, "no symbolic links in %s", getwd(NULL));
+        errx(EX_USAGE, "no symbolic links in %s", getcwd(NULL, 0));
 
     printf("fixed %d/%d symbolic links\n", fixed, links);
 }
