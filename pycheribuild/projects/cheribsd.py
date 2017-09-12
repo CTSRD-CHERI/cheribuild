@@ -441,6 +441,9 @@ class BuildFreeBSD(Project):
         # we also need to ensure that our SDK build tools are being picked up first
         build_path = str(self.config.sdkBinDir) + ":" + str(self.crossBinDir)
         self.common_options.env_vars["PATH"] = build_path
+        # Tell glibc functions to be POSIX compatible
+        # Would be ideal, but it seems like there is too much that depends on non-posix flags
+        # self.common_options.env_vars["POSIXLY_CORRECT"] = "1"
         self.common_options.add(PATH=build_path)
         # kerberos still needs some changes:
         # self.commonMakeArgs.append("-DWITHOUT_KERBEROS")
@@ -529,38 +532,37 @@ class BuildFreeBSD(Project):
         # TODO: pwd_mkdb, cap_mkdb, services,
         # strip? sysctl?
         # Add links for the ones not installed by freebsd-crossbuild:
-        tools = [
+        host_tools = [
             # basic commands
             "basename", "chmod", "chown", "cmp", "cp", "date", "dirname", "echo", "env",
-            "find", "id", "ln", "mkdir", "mv", "rm", "sort",
+            "id", "ln", "mkdir", "mv", "rm",
             "tr", "true", "uname", "wc", "xargs",
-            "hostname", "patch", "expr", "which",
+            "hostname", "patch", "which",
             # compiler and make
-            "cc", "cpp", "c++", "gperf", "lex", "m4",  # compiler tools
+            "cc", "cpp", "c++", "gperf", "m4",  # compiler tools
             "lorder", "join",  # linking libraries
             "bmake", "nice",  # calling make
             "gzip",  # needed to generate some stuff
             "git",  # to check for updates
             "touch", "realpath", "head",  # used by kernel build scripts
             "python3",  # for the fake sysctl wrapper
-            "asn1_compile",  # kerberos stuff
+            # "asn1_compile",  # kerberos stuff
             "fmt",  # needed by latest freebsd
         ]
         searchpath = os.getenv("PATH")
         if IS_MAC:
-            tools += ["chflags"]  # missing on linux
-            tools += ["gobjdump", "gobjcopy", "bsdwhatis"]
+            host_tools += ["chflags"]  # missing on linux
+            host_tools += ["gobjdump", "gobjcopy", "bsdwhatis"]
             searchpath = "/usr/local/opt/heimdal/libexec/heimdal/" + os.pathsep + searchpath
         else:
-            tools += ["objcopy", "objdump"]
+            host_tools += ["objcopy", "objdump"]
             # create a fake chflags for linux
             self.writeFile(self.crossBinDir / "chflags", """#!/usr/bin/env python3
 import sys
 print("NOOP chflags:", sys.argv, file=sys.stderr)
 """, mode=0o755, overwrite=True)
 
-        # TODO: build lex from freebsd
-        for tool in tools:
+        for tool in host_tools:
             fullpath = shutil.which(tool, path=searchpath)
             if not fullpath:
                 fatalError("Missing", tool, "binary")
@@ -568,11 +570,12 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         # make installworld expects make as bmake
         self.createSymlink(self.crossBinDir / "bmake", self.crossBinDir / "make", relative=True)
         # create symlinks for the tools installed by freebsd-crosstools
-        crossTools = "awk cat compile_et config file2c find install makefs mtree rpcgen sed yacc".split()
+        crossTools = "awk cat compile_et config file2c find install makefs mtree rpcgen sed lex yacc".split()
         crossTools += "mktemp tsort expr gencat mandoc gencat pwd_mkdb services_mkdb cap_mkdb".split()
         crossTools += "test [ sh sysctl makewhatis rmdir unifdef".split()
-        crossTools += "grep egrep fgrep rgrep zgrep zegrep zfgrep".split()
+        crossTools += "sort grep egrep fgrep rgrep zgrep zegrep zfgrep".split()
         for tool in crossTools:
+            assert not tool in host_tools, tool + " should not be linked from host"
             fullpath = Path(self.config.otherToolsDir, "bin/freebsd-" + tool)
             if not fullpath.is_file():
                 fatalError(tool, "binary is missing!")
