@@ -34,6 +34,10 @@ class BuildBmake(AutotoolsProject):
     repository = "https://github.com/RichardsonAlex/bmake.git"
     defaultInstallDir = AutotoolsProject._installToBootstrapTools
 
+    def configure(self, **kwargs):
+        self.configureArgs.append("--with-default-sys-path=" + str(self.installDir / "share/mk"))
+        super().configure()
+
     def compile(self, **kwargs):
         # for some reason it won't work with [self.config.makeJFlag]
         self.runMake(self.commonMakeArgs, cwd=self.buildDir)
