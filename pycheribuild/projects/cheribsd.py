@@ -437,7 +437,7 @@ class BuildFreeBSD(Project):
         # when cross compiling we need to specify the path to the bsd makefiles (-m src/share/mk)
         self.makeCommand = "bmake"  # make is usually gnu make
         # TODO: is this needed?
-        self.commonMakeArgs.extend(["-m", str(self.sourceDir / "share/mk")])
+        # self.commonMakeArgs.extend(["-m", str(self.sourceDir / "share/mk")])
         # we also need to ensure that our SDK build tools are being picked up first
         build_path = str(self.config.sdkBinDir) + ":" + str(self.crossBinDir)
         self.common_options.env_vars["PATH"] = build_path
