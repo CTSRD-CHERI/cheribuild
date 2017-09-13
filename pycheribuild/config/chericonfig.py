@@ -74,6 +74,8 @@ class CheriConfig(object):
         self.withLibstatcounters = loader.addBoolOption("with-libstatcounters",
                                                         help="Link cross compiled CHERI project with libstatcounters. "
                                                              "This is only useful when targetting FPGA")
+        self.skipBuildworld = loader.addBoolOption("skip-buildworld", help="Skip the buildworld step when building"
+                                                                           "FreeBSD or CheriBSD")
         # Attributes for code completion:
         self.verbose = None  # type: bool
         self.quiet = None  # type: bool

@@ -125,8 +125,7 @@ class BuildFreeBSD(Project):
         return cls.getInstallDir(config)
 
     @classmethod
-    def setupConfigOptions(cls, buildKernelWithClang: bool = False, makeOptionsShortname=None,
-                           skipBuildworldShortname=None, **kwargs):
+    def setupConfigOptions(cls, buildKernelWithClang: bool = False, makeOptionsShortname=None, **kwargs):
         super().setupConfigOptions(**kwargs)
         cls.subdirOverride = cls.addConfigOption("subdir", kind=str, metavar="DIR", showHelp=True,
                                                  help="Only build subdir DIR instead of the full tree. "
@@ -145,8 +144,6 @@ class BuildFreeBSD(Project):
                                                    "CHERIBSD. See `man src.conf` for more info.",
                                               showHelp=True)
         # override in CheriBSD
-        cls.skipBuildworld = cls.addBoolOption("only-build-kernel", shortname=skipBuildworldShortname, showHelp=True,
-                                               help="Skip the buildworld step -> only build and install the kernel")
         cls.useExternalToolchainForKernel = cls.addBoolOption("use-external-toolchain-for-kernel", showHelp=True,
                                                               help="build the kernel with the external toolchain",
                                                               default=buildKernelWithClang)
@@ -334,7 +331,7 @@ class BuildFreeBSD(Project):
         return kernelMakeFlags
 
     def clean(self) -> ThreadJoiner:
-        if self.skipBuildworld:
+        if self.config.skipBuildworld:
             # TODO: only clean the current kernel config not all of them
             kernelBuildDir = self.buildDir / ("mips.mips64" + str(self.sourceDir) + "/sys/")
             return self.asyncCleanDirectory(kernelBuildDir)
@@ -372,7 +369,7 @@ class BuildFreeBSD(Project):
         # so just omit the flag here if the user passes -j1 on the command line
         if self.config.verbose:
             self.runMake(self.buildworldArgs, "showconfig", cwd=self.sourceDir)
-        if not self.skipBuildworld:
+        if not self.config.skipBuildworld:
             fastArgs = ["-DWORLDFAST"] if self.fastRebuild else []
             self.runMake(self.buildworldArgs + fastArgs + self.jflag, "buildworld", cwd=self.sourceDir)
         if not self.subdirOverride:
@@ -380,7 +377,7 @@ class BuildFreeBSD(Project):
 
     def _removeOldRootfs(self):
         assert self.config.clean or not self.keepOldRootfs
-        if self.skipBuildworld:
+        if self.config.skipBuildworld:
             self.makedirs(self.installDir)
         else:
             # make sure the old install is purged before building, otherwise we might get strange errors
@@ -404,7 +401,7 @@ class BuildFreeBSD(Project):
         # don't use multiple jobs here
         self.runMakeInstall(args=self.kernelMakeArgsForConfig(self.kernelConfig), target="installkernel",
                             cwd=self.sourceDir)
-        if not self.skipBuildworld:
+        if not self.config.skipBuildworld:
             installworldArgs = self.buildworldArgs.copy()
             # https://github.com/CTSRD-CHERI/cheribsd/issues/220
             # installworld reads compiler metadata which was written by kernel-toolchain which means that
@@ -625,7 +622,6 @@ class BuildCHERIBSD(BuildFreeBSD):
         super().setupConfigOptions(
             buildKernelWithClang=True,
             makeOptionsShortName="-cheribsd-make-options",
-            skipBuildworldShortname="-skip-buildworld",
             installDirectoryHelp="Install directory for CheriBSD root file system (default: "
                                  "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)")
         # TODO: separate options for kernel/install?
@@ -676,7 +672,7 @@ class BuildCHERIBSD(BuildFreeBSD):
                 runCmd("chflags", "noschg", str(file))
 
     def _removeOldRootfs(self):
-        if not self.skipBuildworld:
+        if not self.config.skipBuildworld:
             if self.installAsRoot:
                 # if we installed as root remove the schg flag from files before cleaning (otherwise rm will fail)
                 self._removeSchgFlag(
@@ -794,7 +790,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         print("Successfully populated sysroot")
 
     def process(self):
-        if BuildCHERIBSD.skipBuildworld:
+        if self.config.skipBuildworld:
             statusUpdate("Not building sysroot because --skip-buildworld was passed")
             return
         with self.asyncCleanDirectory(self.config.sdkSysrootDir):
