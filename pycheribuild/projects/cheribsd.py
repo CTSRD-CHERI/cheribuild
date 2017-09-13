@@ -429,6 +429,8 @@ class _BuildFreeBSD(Project):
         if not self.forceBFD:
             self.common_options.add(MIPS_LINK_WITH_LLD=None)
         self.common_options.add(BOOT=False)
+        self.common_options.env_vars["XLDFLAGS"] = "-fuse-ld=bfd"
+        self.common_options.env_vars["XCFLAGS"] = "-fuse-ld=bfd"
 
     def add_x86_crossbuildOptions(self):
         self.common_options.add(CROSS_BINUTILS_PREFIX=str(self.config.sdkBinDir) + "/")
