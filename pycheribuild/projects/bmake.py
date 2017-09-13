@@ -36,8 +36,10 @@ class BuildBmake(AutotoolsProject):
 
     def configure(self, **kwargs):
         self.configureArgs.append("--with-default-sys-path=" + str(self.installDir / "share/mk"))
+        self.configureArgs.append("--with-machine=amd64")
+        # self.configureArgs.append("--with-force-machine=amd64")
+        # self.configureArgs.append("--with-machine_arch=amd64")
         super().configure()
 
     def compile(self, **kwargs):
-        # for some reason it won't work with [self.config.makeJFlag]
-        self.runMake(self.commonMakeArgs, cwd=self.buildDir)
+        self.runWithLogfile(["sh", self.buildDir / "make-bootstrap.sh"], cwd=self.buildDir, logfileName="build.log")
