@@ -27,15 +27,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import os
-import pwd
 import shlex
-import shutil
 import stat
 import tempfile
 from pathlib import Path
 
-from .cheribsd import BuildCHERIBSD, BuildFreeBSD
+from .cheribsd import _BuildFreeBSD
+from .cheribsd import *
 from ..config.loader import ComputedDefaultValue
 from ..project import *
 from ..utils import *
@@ -72,7 +70,7 @@ class MtreeEntry(object):
             return result
 
 
-class BuildDiskImageBase(SimpleProject):
+class _BuildDiskImageBase(SimpleProject):
     doNotAddToTargets = True
     diskImagePath = None  # type: Path
 
@@ -91,7 +89,7 @@ class BuildDiskImageBase(SimpleProject):
                                                  "remote FreeBSD machine from where to copy the disk image")
         cls.disableTMPFS = None
 
-    def __init__(self, config, sourceClass: type(BuildFreeBSD)):
+    def __init__(self, config, sourceClass: type(_BuildFreeBSD)):
         super().__init__(config)
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
@@ -102,6 +100,7 @@ class BuildDiskImageBase(SimpleProject):
             self._addRequiredSystemTool("makefs")
         self.dirsAddedToManifest = [Path(".")]  # Path().parents always includes a "." entry
         self.rootfsDir = sourceClass.rootfsDir(self.config)
+        assert self.rootfsDir is not None
         self.userGroupDbDir = sourceClass.getSourceDir(self.config) / "etc"
         self.crossBuildImage = sourceClass.crossbuild
         self.minimumImageSize = "1g",  # minimum image size = 1GB
@@ -373,7 +372,7 @@ def _defaultDiskImagePath(conf: "CheriConfig", cls):
     return conf.outputRoot / "cheri256-disk.img"
 
 
-class BuildCheriBSDDiskImage(BuildDiskImageBase):
+class BuildCheriBSDDiskImage(_BuildDiskImageBase):
     projectName = "disk-image"
     dependencies = ["qemu", "cheribsd"]
 
@@ -399,22 +398,37 @@ class BuildCheriBSDDiskImage(BuildDiskImageBase):
         self.minimumImageSize = "256m"  # let's try to shrink the image size
 
 
-class BuildFreeBSDDiskImage(BuildDiskImageBase):
-    projectName = "disk-image-freebsd-mips"
-    dependencies = ["qemu", "freebsd-mips"]
+class _BuildFreeBSDImageBase(_BuildDiskImageBase):
+    doNotAddToTargets = True
+    _freebsd_suffix = None
+    _freebsd_build_class = None
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         hostUsername = CheriConfig.get_user_name()
-        super().setupConfigOptions(defaultHostname="qemu-mips-" + hostUsername, **kwargs)
+        super().setupConfigOptions(defaultHostname="qemu-" + cls._freebsd_suffix + "-" + hostUsername, **kwargs)
         defaultDiskImagePath = ComputedDefaultValue(
-                function=lambda config, project: config.outputRoot / "freebsd-mips.img",
-                asString="$OUTPUT_ROOT/freebsd-mips.img")
+                function=lambda config, project: config.outputRoot / ("freebsd-" + cls._freebsd_suffix + ".img"),
+                asString="$OUTPUT_ROOT/freebsd-" + cls._freebsd_suffix + " .img")
         cls.diskImagePath = cls.addPathOption("path", default=defaultDiskImagePath, showHelp=True,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image")
-        cls.disableTMPFS = True  # MALTA64 doesn't include tmpfs
+        cls.disableTMPFS = cls._freebsd_suffix == "mips"  # MALTA64 doesn't include tmpfs
 
     def __init__(self, config: CheriConfig):
         # TODO: different extra-files directory
-        super().__init__(config, sourceClass=BuildFreeBSD)
+        super().__init__(config, sourceClass=self._freebsd_build_class)
         self.minimumImageSize = "256m"
+
+
+class BuildFreeBSDDiskImageMIPS(_BuildFreeBSDImageBase):
+    projectName = "disk-image-freebsd-mips"
+    dependencies = ["qemu", "freebsd-mips"]
+    _freebsd_build_class = BuildFreeBSDForMIPS
+    _freebsd_suffix = "mips"
+
+
+class BuildFreeBSDDiskImageX86(_BuildFreeBSDImageBase):
+    projectName = "disk-image-freebsd-x86"
+    dependencies = ["qemu", "freebsd-x86"]
+    _freebsd_build_class = BuildFreeBSDForX86
+    _freebsd_suffix = "x86"

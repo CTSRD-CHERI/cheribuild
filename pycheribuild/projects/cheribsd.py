@@ -97,7 +97,7 @@ class FreeBSDMakeOptions(object):
         return result
 
 
-class BuildFreeBSD(Project):
+class _BuildFreeBSD(Project):
     dependencies = ["llvm"]
     if not IS_FREEBSD:
         dependencies.append("freebsd-crossbuild")
@@ -247,7 +247,6 @@ class BuildFreeBSD(Project):
             GCC=False, CLANG=False, GNUCXX=False,  # Take a long time and not needed
             GCC_BOOTSTRAP=False, CLANG_BOOTSTRAP=False,  # not needed as we have a compiler
             LLD_BOOTSTRAP=False,  # and also a linker
-            BOOT=False,  # bootloaders won't link with LLD yet
             LIB32=False,  # takes a long time and not needed
         )
         # self.cross_toolchain_config.add(CROSS_COMPILER=Falses) # This sets too much, we want elftoolchain and binutils
@@ -259,6 +258,8 @@ class BuildFreeBSD(Project):
             self.useExternalToolchainForWorld = True
             self.useExternalToolchainForKernel = True
             self.linkKernelWithLLD = True
+            self.cross_toolchain_config.add(XAS="/usr/bin/as")  # TODO: would be nice if we could compile the asm with clang
+
         elif self.mipsToolchainPath:
             cross_prefix = str(self.mipsToolchainPath / "bin/mips64-unknown-freebsd-")
             target_flags = " -integrated-as -fcolor-diagnostics -mcpu=mips4"
@@ -275,6 +276,8 @@ class BuildFreeBSD(Project):
             # self.cross_toolchain_config.add(WERROR="-Wno-error")
             # Won't compile with CHERI clang yet
             self.cross_toolchain_config.add(RESCUE=False)
+            self.cross_toolchain_config.add(BOOT=False)  # bootloaders won't link with LLD yet
+            self.cross_toolchain_config.add(XAS=cross_prefix + "clang " + target_flags)
         else:
             fatalError("Invalid state, should have a cross env")
             sys.exit(1)
@@ -285,7 +288,6 @@ class BuildFreeBSD(Project):
             XCXX=cross_prefix + "clang++" + target_flags,
             XCPP=cross_prefix + "clang-cpp" + target_flags,
             XLD=self.crossLD,
-            XAS="/usr/bin/false"  # we want integrated-as
         )
 
     @property
@@ -323,7 +325,7 @@ class BuildFreeBSD(Project):
             kernelMakeFlags.extend(kernel_options.commandline_flags)
         if self.crossbuild:
             kernelMakeFlags.append("-DWITHOUT_KERNEL_TRAMPOLINE")
-            kernelMakeFlags.append("OBJCOPY=false")
+            # kernelMakeFlags.append("OBJCOPY=false")
             # Debug won't work yet (bad objcopy)
             kernelMakeFlags = list(filter(lambda s: not s.startswith("DEBUG"), kernelMakeFlags))
             kernelMakeFlags.append("-DINSTALL_NODEBUG")
@@ -426,13 +428,19 @@ class BuildFreeBSD(Project):
         self.common_options.add(CROSS_BINUTILS_PREFIX=str(self.config.sdkBinDir) + "/mips64-unknown-freebsd-")
         if not self.forceBFD:
             self.common_options.add(MIPS_LINK_WITH_LLD=None)
+        self.common_options.add(BOOT=False)
 
     def add_x86_crossbuildOptions(self):
         self.common_options.add(CROSS_BINUTILS_PREFIX=str(self.config.sdkBinDir) + "/")
+        # seems to be missing some include paths which appears to work on freebsd
+        self.common_options.add(BHYVE=False)
+        self.common_options.add(CTF=False)  # can't crossbuild ctfconvert yet
+        self.common_options.add(BOOT=True)
+
 
     def addCrossBuildOptions(self):
         # when cross compiling we need to specify the path to the bsd makefiles (-m src/share/mk)
-        self.makeCommand = "bmake"  # make is usually gnu make
+        self.makeCommand = shutil.which("bmake", path=self.config.dollarPathWithOtherTools) # make is usually gnu make
         # TODO: is this needed?
         # self.commonMakeArgs.extend(["-m", str(self.sourceDir / "share/mk")])
         # we also need to ensure that our SDK build tools are being picked up first
@@ -453,6 +461,9 @@ class BuildFreeBSD(Project):
         # use clang for the build tools:
         self.common_options.env_vars["CC"] = str(self.config.clangPath)
         self.common_options.env_vars["CXX"] = str(self.config.clangPlusPlusPath)
+        # TODO: also set these? (I guess not as we always want to force crossbuilding and x86_64 is not recognized)
+        # self.common_options.env_vars["MACHINE"] = "amd64"
+        # self.common_options.env_vars["MACHINE_ARCH"] = "amd64"
 
         if IS_MAC:
             # For some reason on a mac bmake can't execute elftoolchain objcopy -> use gnu version
@@ -475,8 +486,6 @@ class BuildFreeBSD(Project):
         self.common_options.add(LOCALES=False)
         # bootstrap tool won't build
         self.common_options.add(FILE=False)
-        # bootloader is broken:
-        self.common_options.add(BOOT=False)
         # needs lint binary but will also set MK_INCLUDES:=no which we need (see src.opts.mk)
         # self.common_options.add(TOOLCHAIN=False)
         self.common_options.add(BINUTILS=False, CLANG=False, GCC=False, GDB=False, LLD=False, LLDB=False)
@@ -532,8 +541,8 @@ class BuildFreeBSD(Project):
         host_tools = [
             # basic commands
             "basename", "chmod", "chown", "cmp", "cp", "date", "dirname", "echo", "env",
-            "id", "ln", "mkdir", "mv", "rm",
-            "tr", "true", "uname", "wc", "xargs",
+            "id", "ln", "mkdir", "mv", "rm", "ls", "lesspipe", "dircolors", "tee",
+            "tr", "true", "uname", "wc",
             "hostname", "patch", "which",
             # compiler and make
             "cc", "cpp", "c++", "gperf", "m4",  # compiler tools
@@ -545,8 +554,9 @@ class BuildFreeBSD(Project):
             "python3",  # for the fake sysctl wrapper
             # "asn1_compile",  # kerberos stuff
             "fmt",  # needed by latest freebsd
+            "bzip2", "dd",  # needed by bootloader
         ]
-        searchpath = os.getenv("PATH")
+        searchpath = self.config.dollarPathWithOtherTools
         if IS_MAC:
             host_tools += ["chflags"]  # missing on linux
             host_tools += ["gobjdump", "gobjcopy", "bsdwhatis"]
@@ -570,13 +580,16 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         crossTools = "awk cat compile_et config file2c find install makefs mtree rpcgen sed lex yacc".split()
         crossTools += "mktemp tsort expr gencat mandoc gencat pwd_mkdb services_mkdb cap_mkdb".split()
         crossTools += "test [ sh sysctl makewhatis rmdir unifdef".split()
-        crossTools += "sort grep egrep fgrep rgrep zgrep zegrep zfgrep".split()
+        crossTools += "sort grep egrep fgrep rgrep zgrep zegrep zfgrep xargs".split()
+        crossTools += ["uuencode", "uudecode"]  # needed by x86 kernel
         for tool in crossTools:
             assert not tool in host_tools, tool + " should not be linked from host"
             fullpath = Path(self.config.otherToolsDir, "bin/freebsd-" + tool)
             if not fullpath.is_file():
                 fatalError(tool, "binary is missing!")
             self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
+
+        self.common_options.env_vars["AWK"] = self.crossBinDir / "awk"
 
     def process(self):
         if not IS_FREEBSD:
@@ -590,7 +603,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         super().process()
 
 
-class BuildFreeBSDForMIPS(BuildFreeBSD):
+class BuildFreeBSDForMIPS(_BuildFreeBSD):
     projectName = "freebsd-mips"
     target_arch = CrossCompileTarget.MIPS
     kernelConfig = "MALTA64"
@@ -599,7 +612,7 @@ class BuildFreeBSDForMIPS(BuildFreeBSD):
         asString="$INSTALL_ROOT/freebsd-mips")
 
 
-class BuildFreeBSDForX86(BuildFreeBSD):
+class BuildFreeBSDForX86(_BuildFreeBSD):
     projectName = "freebsd-x86"
     target_arch = CrossCompileTarget.NATIVE
     defaultInstallDir = ComputedDefaultValue(
@@ -608,7 +621,7 @@ class BuildFreeBSDForX86(BuildFreeBSD):
     kernelConfig = "GENERIC"
 
 
-class BuildCHERIBSD(BuildFreeBSD):
+class BuildCHERIBSD(_BuildFreeBSD):
     projectName = "cheribsd"
     target = "cheribsd-without-sysroot"
     repository = "https://github.com/CTSRD-CHERI/cheribsd.git"

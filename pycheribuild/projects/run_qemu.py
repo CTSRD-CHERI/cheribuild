@@ -28,15 +28,12 @@
 # SUCH DAMAGE.
 #
 import datetime
-import os
-import sys
 import socket
 
-from ..project import *
-from ..utils import *
-from .cheribsd import BuildCHERIBSD, BuildFreeBSD
+from .cheribsd import _BuildFreeBSD
 from .cherios import BuildCheriOS
-from .disk_image import BuildCheriBSDDiskImage, BuildFreeBSDDiskImage
+from .disk_image import _BuildFreeBSDImageBase
+from .disk_image import *
 from pathlib import Path
 
 
@@ -78,13 +75,14 @@ class LaunchQEMUBase(SimpleProject):
         self.diskImage = None  # type: Path
         self._diskOptions = []
         self._projectSpecificOptions = []
+        self.machineFlags = ["-M", "malta"]  # malta cpu
         self._qemuUserNetworking = True
 
     def process(self):
         if not self.qemuBinary.exists():
             self.dependencyError("QEMU is missing:", self.qemuBinary,
                                  installInstructions="Run `cheribuild.py qemu` or `cheribuild.py run -d`.")
-        if not self.currentKernel.exists():
+        if self.currentKernel is not None and not self.currentKernel.exists():
             self.dependencyError("Kernel is missing:", self.currentKernel,
                                  installInstructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
         if self.diskImage:
@@ -126,9 +124,8 @@ class LaunchQEMUBase(SimpleProject):
                 self.createSymlink(logPath / filename, latestSymlink, relative=True, cwd=logPath)
             logfileOptions = ["-D", logPath / filename]
         # input("Press enter to continue")
-        qemuCommand = [
-            self.qemuBinary, "-M", "malta",  # malta cpu
-            "-kernel", self.currentKernel,  # assume the current image matches the kernel currently built
+        kernelFlags = ["-kernel", self.currentKernel] if self.currentKernel else []
+        qemuCommand = [self.qemuBinary] + self.machineFlags + kernelFlags + [
             "-m", "2048",  # 2GB memory
             "-nographic",  # no GPU
         ] + self._projectSpecificOptions + self._diskOptions + monitorOptions + logfileOptions + self.extraOptions
@@ -173,8 +170,8 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             cls.skipKernelUpdate = cls.addBoolOption("skip-kernel-update", showHelp=True,
                                                      help="Don't update the kernel from the remote host")
 
-    def __init__(self, config: CheriConfig, sourceClass: type(BuildFreeBSD),
-                 diskImageClass: type(BuildFreeBSDDiskImage)):
+    def __init__(self, config: CheriConfig, sourceClass: type(_BuildFreeBSD),
+                 diskImageClass: type(_BuildFreeBSDImageBase)):
         super().__init__(config)
         self.sourceClass = sourceClass
         self.currentKernel = sourceClass.rootfsDir(self.config) / "boot/kernel/kernel"
@@ -229,8 +226,7 @@ class LaunchFreeBSDMips(AbstractLaunchFreeBSD):
                                    **kwargs)
 
     def __init__(self, config):
-        super().__init__(config, BuildFreeBSD, BuildFreeBSDDiskImage)
-        # FIXME: these should be config options
+        super().__init__(config, BuildFreeBSDForMIPS, BuildFreeBSDDiskImageMIPS)
 
 
 class LaunchCheriOSQEMU(LaunchQEMUBase):
@@ -261,3 +257,22 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
             if self.queryYesNo("CheriOS disk image is missing. Would you like to create a zero-filled 1MB image?"):
                 runCmd("dd", "if=/dev/zero", "of=" + str(self.diskImage), "bs=1M", "count=1")
         super().process()
+
+
+class LaunchFreeBSDX86(AbstractLaunchFreeBSD):
+    projectName = "run-freebsd-x86"
+    dependencies = ["disk-image-freebsd-x86"]
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
+                                   defaultSshPort=defaultSshForwardingPort() + 6,
+                                   **kwargs)
+
+    def __init__(self, config):
+        super().__init__(config, BuildFreeBSDForX86, BuildFreeBSDDiskImageX86)
+        self._addRequiredSystemTool("qemu-system-x86_64")
+        self.qemuBinary = Path(shutil.which("qemu-system-x86_64"))
+        self.machineFlags = [] # default cpu
+        self.currentKernel = None  # needs the bootloader
+
