@@ -409,7 +409,7 @@ class BuildFreeBSD(Project):
             # as a workaround force writing the compiler metadata by invoking the _compiler-metadata target
 
             try:
-                self.runMake(installworldArgs + ["_build-metadata"], cwd=self.sourceDir, env=self.makeInstallEnv)
+                self.runMake(installworldArgs, "_build-metadata", cwd=self.sourceDir, env=self.makeInstallEnv)
             except subprocess.CalledProcessError:
                 try:
                     # support building old versions of cheribsd before _compiler-metadata was renamed to _build-metadata

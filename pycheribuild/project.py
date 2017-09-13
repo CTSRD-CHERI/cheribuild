@@ -546,11 +546,11 @@ class Project(SimpleProject):
         if makeTarget:
             allArgs = args + [makeTarget]
             if not logfileName:
-                logfileName = makeCommand + "." + makeTarget
+                logfileName = Path(makeCommand).name + "." + makeTarget
         else:
             allArgs = args
             if not logfileName:
-                logfileName = makeCommand
+                logfileName = Path(makeCommand).name
         allArgs = [makeCommand] + allArgs
         if self.config.createCompilationDB and self.compileDBRequiresBear:
             allArgs = [shutil.which("bear"), "--cdb", self.buildDir / compilationDbName,
