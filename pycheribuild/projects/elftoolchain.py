@@ -144,3 +144,8 @@ class BuildElftoolchain(Project):
             self.createBuildtoolTargetSymlinks(self.installDir / "bin/ar")
             self.createSymlink(Path("/usr/bin/ranlib"), self.installDir / "bin/ranlib", relative=False)
             self.createBuildtoolTargetSymlinks(self.installDir / "bin/ranlib")
+
+    def process(self):
+        # work around bug in latest bmake that assumes metamode support
+        with setEnv(META_NOECHO="echo"):
+            super().process()
