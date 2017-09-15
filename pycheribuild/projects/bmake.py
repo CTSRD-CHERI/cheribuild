@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 from ..project import *
+from ..utils import IS_FREEBSD
 
 
 class BuildBmake(AutotoolsProject):
@@ -39,6 +40,9 @@ class BuildBmake(AutotoolsProject):
         self.configureArgs.append("--with-machine=amd64")
         # self.configureArgs.append("--with-force-machine=amd64")
         # self.configureArgs.append("--with-machine_arch=amd64")
+        if not IS_FREEBSD:
+            self.configureArgs.append("--without-meta")
+            self.configureArgs.append("--without-filemon")
         super().configure()
 
     def compile(self, **kwargs):
