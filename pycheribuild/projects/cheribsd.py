@@ -504,21 +504,18 @@ class _BuildFreeBSD(Project):
         # don't build all the bootstrap tools (just pretend we are running freebsd 42):
         self.common_options.env_vars["OSRELDATE"] = "4204345"
 
+        # localedef is really hard to crosscompile -> skip this for now
+        self.common_options.add(LOCALES=False)
+
+
         # bootstrap tool won't build
         self.common_options.add(SYSCONS=False, USB=False, GPL_DTC=False, GAMES=False)
         self.common_options.add(CDDL=False)  # lots of bootstrap tools issues
-        # localedef binary is incompatible
-        self.common_options.add(LOCALES=False)
-        # bootstrap tool won't build
-        self.common_options.add(FILE=False)
+
         # needs lint binary but will also set MK_INCLUDES:=no which we need (see src.opts.mk)
         # self.common_options.add(TOOLCHAIN=False)
         self.common_options.add(BINUTILS=False, CLANG=False, GCC=False, GDB=False, LLD=False, LLDB=False)
-        # requires magic...
-        self.common_options.add(SVNLITE=False)
-        self.common_options.add(SVN=False)
-        # needs a bootstrap binary
-        self.common_options.add(BSNMP=False)
+
         # TODO: build these for zoneinfo setup
         # "zic", "tzsetup"
         self.common_options.add(ZONEINFO=False)
@@ -534,11 +531,11 @@ class _BuildFreeBSD(Project):
         self.common_options.add(MAIL=False)
         self.common_options.add(SENDMAIL=False)  # libexec somehow won't compile
 
-        self.common_options.add(AMD=False)  # for some reason nfd_prot.h is missing (probably wrong bootstrap tool)
+        # self.common_options.add(AMD=False)  # for some reason nfd_prot.h is missing (probably wrong bootstrap tool)
 
         self.common_options.add(RESCUE=False)  # needs crunchgen
 
-        self.common_options.add(AT=False)  # needs static_pam
+        # self.common_options.add(AT=False)  # needs static_pam
 
         # TODO: remove this
         self.common_options.add(NO_SHARE=None)
@@ -567,7 +564,7 @@ class _BuildFreeBSD(Project):
             # basic commands
             "basename", "chmod", "chown", "cmp", "cp", "date", "dirname", "echo", "env",
             "id", "ln", "mkdir", "mv", "rm", "ls", "tee",
-            "tr", "true", "uname", "wc",
+            "tr", "true", "uname", "wc", "sleep",
             "hostname", "patch", "which",
             # compiler and make
             "cc", "cpp", "c++", "gperf", "m4",  # compiler tools
@@ -606,15 +603,20 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         # create symlinks for the tools installed by freebsd-crosstools
         crossTools = "awk cat compile_et config file2c find install makefs mtree rpcgen sed lex yacc".split()
         crossTools += "mktemp tsort expr gencat mandoc gencat pwd_mkdb services_mkdb cap_mkdb".split()
-        crossTools += "test [ sh sysctl makewhatis rmdir unifdef".split()
+        crossTools += "test [ sysctl makewhatis rmdir unifdef gensnmptree".split()
         crossTools += "sort grep egrep fgrep rgrep zgrep zegrep zfgrep xargs".split()
         crossTools += ["uuencode", "uudecode"]  # needed by x86 kernel
+        # TODO: freebsd version of sh?
         for tool in crossTools:
             assert not tool in host_tools, tool + " should not be linked from host"
             fullpath = Path(self.config.otherToolsDir, "bin/freebsd-" + tool)
             if not fullpath.is_file():
                 fatalError(tool, "binary is missing!")
             self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
+
+        # Use bash as sh (should be quicker with the builtins)
+        shell = "bash"
+        self.createSymlink(Path(shutil.which(shell)), self.crossBinDir / "sh", relative=False)
 
         self.common_options.env_vars["AWK"] = self.crossBinDir / "awk"
 
