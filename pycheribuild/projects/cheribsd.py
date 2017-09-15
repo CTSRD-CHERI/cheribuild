@@ -430,7 +430,7 @@ class _BuildFreeBSD(Project):
             self.common_options.add(MIPS_LINK_WITH_LLD=None)
         self.common_options.add(BOOT=False)
         self.common_options.env_vars["XLDFLAGS"] = "-fuse-ld=bfd"
-        self.common_options.env_vars["XCFLAGS"] = "-fuse-ld=bfd"
+        # self.common_options.env_vars["XCFLAGS"] = "-fuse-ld=bfd"
 
     def add_x86_crossbuildOptions(self):
         self.common_options.add(CROSS_BINUTILS_PREFIX=str(self.config.sdkBinDir) + "/")
@@ -469,8 +469,10 @@ class _BuildFreeBSD(Project):
 
         if IS_MAC:
             # For some reason on a mac bmake can't execute elftoolchain objcopy -> use gnu version
-            self._addRequiredSystemTool("gobjcopy", homebrewPackage="binutils")
-            self.common_options.add(OBJDUMP="gobjdump", OBJCOPY="gobjcopy")
+            # self._addRequiredSystemTool("gobjcopy", homebrewPackage="binutils")
+            # self.common_options.add(OBJDUMP="gobjdump", OBJCOPY="gobjcopy")
+            self.common_options.add(OBJDUMP=str(self.config.sdkBinDir / "objdump"),
+                                    OBJCOPY=str(self.config.sdkBinDir / "objcopy"))
             # DEBUG files are too big, can't use objcopy for serparate debug files
             self.common_options.add(DEBUG_FILES=False)
             self.common_options.add(CROSSBUILD="mac")  # TODO: infer in makefile
@@ -479,7 +481,7 @@ class _BuildFreeBSD(Project):
             self.common_options.add(CROSSBUILD="linux")  # TODO: infer in makefile
 
         # don't build all the bootstrap tools (just pretend we are running freebsd 42):
-        self.commonMakeArgs.append("OSRELDATE=4204345")
+        self.common_options.env_vars["OSRELDATE"] = "4204345"
 
         # bootstrap tool won't build
         self.common_options.add(SYSCONS=False, USB=False, GPL_DTC=False, GAMES=False)
@@ -543,7 +545,7 @@ class _BuildFreeBSD(Project):
         host_tools = [
             # basic commands
             "basename", "chmod", "chown", "cmp", "cp", "date", "dirname", "echo", "env",
-            "id", "ln", "mkdir", "mv", "rm", "ls", "lesspipe", "dircolors", "tee",
+            "id", "ln", "mkdir", "mv", "rm", "ls", "tee",
             "tr", "true", "uname", "wc",
             "hostname", "patch", "which",
             # compiler and make
@@ -558,13 +560,15 @@ class _BuildFreeBSD(Project):
             "fmt",  # needed by latest freebsd
             "bzip2", "dd",  # needed by bootloader
         ]
+
         searchpath = self.config.dollarPathWithOtherTools
         if IS_MAC:
             host_tools += ["chflags"]  # missing on linux
             host_tools += ["gobjdump", "gobjcopy", "bsdwhatis"]
-            searchpath = "/usr/local/opt/heimdal/libexec/heimdal/" + os.pathsep + searchpath
+            searchpath = "/usr/local/opt/heimdal/libexec/heimdal/:/usr/local/opt/m4/bin" + os.pathsep + searchpath
         else:
             host_tools += ["objcopy", "objdump"]
+            host_tools += ["lesspipe", "dircolors"]
             # create a fake chflags for linux
             self.writeFile(self.crossBinDir / "chflags", """#!/usr/bin/env python3
 import sys
@@ -601,7 +605,11 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                 return
             else:
                 self.prepareFreeBSDCrossEnv()
-
+        # remove any environment variables that could interfere with bmake running
+        for k, v in os.environ.copy().items():
+            if k in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL", "MAKE_TERMERR", "MAKE_TERMOUT"):
+                os.unsetenv(k)
+                del os.environ[k]
         super().process()
 
 
