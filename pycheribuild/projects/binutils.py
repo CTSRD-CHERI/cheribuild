@@ -88,6 +88,7 @@ class BuildGnuBinutils(AutotoolsProject):
             #  "--program-prefix=cheri-unknown-freebsd-",
             "MAKEINFO=missing",  # don't build docs, this will fail on recent Linux systems
         ])
+        self.configureArgs.append("--disable-shared")
         # newer compilers will default to -std=c99 which will break binutils:
         cflags = "-std=gnu89 -O2"
         info = getCompilerInfo(os.getenv("CC", shutil.which("cc")))
@@ -110,8 +111,7 @@ class BuildGnuBinutils(AutotoolsProject):
     def compile(self, **kwargs):
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "all-ld", logfileName="build")
         self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "all-gas", logfileName="build")
-        if not IS_MAC:
-            self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "all-binutils", logfileName="build")
+        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "all-binutils", logfileName="build")
         # self.runMake(self.commonMakeArgs, "all-gas", logfileName="build", appendToLogfile=True)
 
     def install(self, **kwargs):
@@ -122,10 +122,9 @@ class BuildGnuBinutils(AutotoolsProject):
             self.installFile(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
             self.runMake(self.commonMakeArgs, "install-gas", logfileName="install", appendToLogfile=True)
             installedTools = ["as"]
-            if not IS_MAC:
-                 # copy objdump from the build dir
-                self.installFile(self.buildDir / "binutils/objdump", bindir / "mips64-unknown-freebsd-objdump")
-                installedTools.append("objdump")
+            # copy objdump from the build dir
+            self.installFile(self.buildDir / "binutils/objdump", bindir / "mips64-unknown-freebsd-objdump")
+            installedTools.append("objdump")
         else:
             super().install()
             installedTools = "addr2line ranlib strip ar nm readelf as objcopy size c++filt objdump strings".split()
