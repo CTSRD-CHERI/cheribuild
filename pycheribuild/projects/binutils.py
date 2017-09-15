@@ -82,6 +82,7 @@ class BuildGnuBinutils(AutotoolsProject):
             "--enable-targets=all",
             "--disable-gprof",
             "--disable-gold",
+            "--disable-nls",
             # TODO: --with-sysroot doesn't work properly so we need to tell clang not to pass the --sysroot option
             "--with-sysroot=" + str(self.config.sdkSysrootDir),  # as we pass --sysroot to clang we need this option
             "--disable-info",
