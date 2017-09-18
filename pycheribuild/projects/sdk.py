@@ -53,7 +53,7 @@ class BuildSdk(TargetAliasWithDependencies):
 
 class BuildFreestandingSdk(SimpleProject):
     target = "freestanding-sdk"
-    dependencies = ["llvm", "cheribsd", "qemu"] if IS_FREEBSD else ["binutils", "llvm", "qemu"]
+    dependencies = ["binutils", "llvm", "qemu"]  # TODO: should we add ld.bfd?
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -82,7 +82,7 @@ class BuildFreestandingSdk(SimpleProject):
     def process(self):
         self.installCMakeConfig()
         self.buildCheridis()
-        if IS_FREEBSD:
+        if False and IS_FREEBSD:
             binutilsBinaries = "addr2line as brandelf nm objcopy objdump size strings strip".split()
             toolsToSymlink = binutilsBinaries
             sdkBinDir = self.config.sdkDir / "bin"
@@ -150,12 +150,11 @@ class BuildFreestandingSdk(SimpleProject):
         #    self.installFile(CHERILIBEXEC_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
 
 
-
 # Replace the old binutils target by on that builds the required tools from GNU binutils and elftoolchain
 class BuildBinutils(TargetAlias):
     target = "binutils"
     # LLD should be usable for all cases now, now longer install the ancient gnu ld
-    dependencies = ["elftoolchain"] if not IS_FREEBSD else []
+    dependencies = ["elftoolchain"]
 
 class StartCheriSDKShell(SimpleProject):
     target = "sdk-shell"
