@@ -261,7 +261,7 @@ class _BuildFreeBSD(Project):
             self.cross_toolchain_config.add(XAS="/usr/bin/as")  # TODO: would be nice if we could compile the asm with clang
 
         elif self.mipsToolchainPath:
-            cross_prefix = str(self.mipsToolchainPath / "bin/mips64-unknown-freebsd-")
+            cross_prefix = str(self.mipsToolchainPath / "bin") + "/"
             target_flags = " -integrated-as -fcolor-diagnostics -mcpu=mips4"
             self.crossLD = cross_prefix + "ld.lld"
             # for some reason this is not inferred....
@@ -713,7 +713,7 @@ class BuildCHERIBSD(_BuildFreeBSD):
         if not self.cheriCXX.is_file():
             fatalError("CHERI CXX does not exist: ", self.cheriCXX)
         if self.mipsToolchainPath:
-            mipsCC = self.mipsToolchainPath / "bin/mips64-unknown-freebsd-clang"
+            mipsCC = self.mipsToolchainPath / "bin/clang"
             if not mipsCC.is_file():
                 fatalError("MIPS toolchain specified but", mipsCC, "is missing.")
         programsToMove = ["cheri-unknown-freebsd-ld", "mips4-unknown-freebsd-ld", "mips64-unknown-freebsd-ld", "ld",
