@@ -109,6 +109,8 @@ class CrossCompileProject(Project):
                 self.targetTriple = "mips64-unknown-freebsd"
                 self.COMMON_FLAGS.append("-mabi=n64")
                 self.COMMON_FLAGS.append("-mcpu=mips4")
+                self.COMMON_FLAGS.append("-stdlib=libc++")
+                self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
             if self.useMxgot:
                 self.COMMON_FLAGS.append("-mxgot")
         if self.debugInfo:
