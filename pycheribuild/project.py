@@ -598,7 +598,7 @@ class Project(SimpleProject):
                 # Try to keep project files for IDEs and other dotfiles:
                 runCmd("git", "clean", "-dfx", "--exclude=.*", "--exclude=*.kdev4", cwd=self.buildDir)
         else:
-            return self.asyncCleanDirectory(self.buildDir)
+            return self.asyncCleanDirectory(self.buildDir, keepRoot=True)
         return ThreadJoiner(None)
 
     def needsConfigure(self) -> bool:
