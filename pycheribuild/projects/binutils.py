@@ -119,17 +119,22 @@ class BuildGnuBinutils(AutotoolsProject):
         bindir = self.installDir / "bin"
         if not self.fullInstall:
             # we don't want to install all programs, as the rest comes from elftoolchain
-            # self.runMake(self.commonMakeArgs, "install-ld", logfileName="install") # this installs to the wrong file
-            self.installFile(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
             self.runMake(self.commonMakeArgs, "install-gas", logfileName="install", appendToLogfile=True)
-            installedTools = ["as"]
+
+            self.deleteFile(bindir / "mips64-unknown-freebsd-ld")
+            self.runMake(self.commonMakeArgs, "install-ld", logfileName="install")
+            # we also need the linker scripts so this is not enough:
+            # self.installFile(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
+            self.moveFile(bindir / "mips64-unknown-freebsd-ld", bindir / "mips64-unknown-freebsd-ld.bfd")
+            installedTools = ["as", "ld.bfd"]
             # copy objdump from the build dir
             self.installFile(self.buildDir / "binutils/objdump", bindir / "mips64-unknown-freebsd-objdump")
             installedTools.append("objdump")
         else:
             super().install()
             installedTools = "addr2line ranlib strip ar nm readelf as objcopy size c++filt objdump strings".split()
-
+            # create links for ld:
+            self.createBuildtoolTargetSymlinks(bindir / "ld.bfd")
         for tool in installedTools:
             prefixedName = "mips64-unknown-freebsd-" + tool
             if not (bindir / prefixedName).is_file():
@@ -137,8 +142,7 @@ class BuildGnuBinutils(AutotoolsProject):
             # create the right symlinks to the tool (ld -> mips64-unknown-elf-ld, etc)
             # Also symlink cheri-unknown-freebsd-ld -> ld (and the other targets)
             self.createBuildtoolTargetSymlinks(bindir / prefixedName, toolName=tool, createUnprefixedLink=True)
-        # create links for ld:
-        self.createBuildtoolTargetSymlinks(bindir / "ld.bfd")
+
 
 
 class BuildGPLv3Binutils(BuildGnuBinutils):

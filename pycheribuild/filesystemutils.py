@@ -181,6 +181,14 @@ class FileSystemUtils(object):
         else:
             runCmd("ln", "-fsn", src, dest, cwd=cwd, printVerboseOnly=True)
 
+    def moveFile(self, src: Path, dest: Path, force=False, createDirs=True):
+        if not src.exists():
+            fatalError(src, "doesn't exist")
+        cmd = ["mv", "-f"] if force else ["mv"]
+        if createDirs and not dest.parent.exists():
+            self.makedirs(dest.parent)
+        runCmd(cmd + [src, dest])
+
     def installFile(self, src: Path, dest: Path, *, force=False, createDirs=True):
         if force:
             printCommand("cp", "-f", src, dest, printVerboseOnly=True)
