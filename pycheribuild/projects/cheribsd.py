@@ -268,9 +268,6 @@ class _BuildFreeBSD(Project):
             if self.crossbuild:
                 # For some reason STRINGS is not set
                 self.cross_toolchain_config.add(STRINGS="strings")
-                self.cross_toolchain_config.add(XOBJDUMP="echo NO DUMP")
-                # self.externalToolchainArgs.append("XOBJDUMP=" + cross_prefix + "llvm-objdump")
-                # self.externalToolchainArgs.append("OBJDUMP_FLAGS=-d -S -s -t -r -print-imm-hex")
             # add CSTD=gnu11?
             self.cross_toolchain_config.add(STATIC_LIBPAM=False)  # broken for MIPS
             # self.cross_toolchain_config.add(WERROR="-Wno-error")
@@ -287,6 +284,8 @@ class _BuildFreeBSD(Project):
             XCC=cross_prefix + "clang" + target_flags,
             XCXX=cross_prefix + "clang++" + target_flags,
             XCPP=cross_prefix + "clang-cpp" + target_flags,
+            XOBJDUMP=cross_prefix + "llvm-objdump",
+            OBJDUMP=cross_prefix + "llvm-objdump",
             XLD=self.crossLD,
         )
 
@@ -471,7 +470,7 @@ class _BuildFreeBSD(Project):
             # For some reason on a mac bmake can't execute elftoolchain objcopy -> use gnu version
             # self._addRequiredSystemTool("gobjcopy", homebrewPackage="binutils")
             # self.common_options.add(OBJDUMP="gobjdump", OBJCOPY="gobjcopy")
-            self.common_options.add(OBJDUMP=str(self.config.sdkBinDir / "objdump"),
+            self.common_options.add(OBJDUMP=str(self.config.sdkBinDir / "llvm-objdump"),
                                     OBJCOPY=str(self.config.sdkBinDir / "objcopy"))
             # DEBUG files are too big, can't use objcopy for serparate debug files
             self.common_options.add(DEBUG_FILES=False)
