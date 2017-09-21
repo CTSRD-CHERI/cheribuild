@@ -156,6 +156,9 @@ class _BuildFreeBSD(Project):
                                                  help="pass make flags for building debug info",
                                                  default=True, showHelp=True)
         cls.buildTests = cls.addBoolOption("build-tests", help="Build the tests too (-DWITH_TESTS)", showHelp=True)
+        cls.auto_obj = cls.addBoolOption("auto-obj", help="Use -DWITH_AUTO_OBJ (experimental)", showHelp=True)
+        cls.minimal = cls.addBoolOption("minimal", help="Don't build all of FreeBSD, just what is needed for running"
+                                                        " most CHERI tests/benchmarks", showHelp=True)
         cls.fastRebuild = cls.addBoolOption("fast", showHelp=True,
                                             help="Skip some (usually) unnecessary build steps to speed up rebuilds")
         if not IS_FREEBSD:
@@ -221,6 +224,15 @@ class _BuildFreeBSD(Project):
         # tests off by default because they take a long time and often seems to break
         # the creation of disk-image (METALOG is invalid)
         self.common_options.add(TESTS=self.buildTests)
+
+        if self.minimal:
+            self.common_options.add(MAN=False, KERBEROS=False, SVN=False, SVNLITE=False, MAIL=False, SENDMAIL=False,
+                                    EXAMPLES=False, LOCALES=False, NLS=False, CDDL=False)
+
+        # doesn't appear to work for buildkernel
+        # if self.auto_obj:
+        #     # seems like it should speed up the build significantly
+        #     self.common_options.add(AUTO_OBJ=True)
 
         if not self.config.verbose and not self.config.quiet:
             # By default we only want to print the status updates -> use make -s so we have to do less filtering
@@ -292,6 +304,9 @@ class _BuildFreeBSD(Project):
     @property
     def buildworldArgs(self) -> list:
         result = self.make_cmdline_flags
+        # FIXME: once it works for buildkernel remove here
+        if self.auto_obj:
+            result.append("-DWITH_AUTO_OBJ")
         if self.useExternalToolchainForWorld:
             if not self.externalToolchainCompiler.exists():
                 fatalError("Requested build of world with external toolchain, but", self.externalToolchainCompiler,
@@ -301,6 +316,8 @@ class _BuildFreeBSD(Project):
 
     def kernelMakeArgsForConfig(self, kernconf: str) -> list:
         kernelMakeFlags = self.make_cmdline_flags
+        if "-DWITH_AUTO_OBJ" in kernelMakeFlags:
+            kernelMakeFlags.remove("-DWITH_AUTO_OBJ")
         if self.useExternalToolchainForKernel:
             if not self.externalToolchainCompiler.exists():
                 fatalError("Requested build of kernel with external toolchain, but", self.externalToolchainCompiler,
@@ -355,6 +372,9 @@ class _BuildFreeBSD(Project):
             kernel_toolchain_opts = FreeBSDMakeOptions(LLD_BOOTSTRAP=False, CLANG=False, CLANG_BOOTSTRAP=False)
             kernel_toolchain_opts.add(GCC_BOOTSTRAP=self.useExternalToolchainForKernel)
             toolchainOpts = self.make_cmdline_flags + kernel_toolchain_opts.commandline_flags
+            # FIXME: once it works for buildkernel remove here
+            if self.auto_obj:
+                toolchainOpts.append("-DWITH_AUTO_OBJ")
             self.runMake(toolchainOpts + self.jflag, "kernel-toolchain", cwd=self.sourceDir)
             self.kernelToolchainAlreadyBuilt = True
 
