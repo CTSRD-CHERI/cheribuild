@@ -281,7 +281,7 @@ class _BuildFreeBSD(Project):
                 # For some reason STRINGS is not set
                 self.cross_toolchain_config.add(STRINGS="strings")
             # add CSTD=gnu11?
-            self.cross_toolchain_config.add(STATIC_LIBPAM=False)  # broken for MIPS
+            # self.cross_toolchain_config.add(STATIC_LIBPAM=False)  # broken for MIPS
             # self.cross_toolchain_config.add(WERROR="-Wno-error")
             # Won't compile with CHERI clang yet
             self.cross_toolchain_config.add(RESCUE=False)
@@ -448,7 +448,10 @@ class _BuildFreeBSD(Project):
         if not self.forceBFD:
             self.common_options.add(MIPS_LINK_WITH_LLD=None)
         self.common_options.add(BOOT=False)
-        self.common_options.env_vars["XLDFLAGS"] = "-fuse-ld=bfd"
+        if self.forceBFD:
+            self.common_options.env_vars["XLDFLAGS"] = "-fuse-ld=bfd"
+        else:
+            self.common_options.env_vars["XLDFLAGS"] = "-fuse-ld=lld"
         # self.common_options.env_vars["XCFLAGS"] = "-fuse-ld=bfd"
 
     def add_x86_crossbuildOptions(self):
