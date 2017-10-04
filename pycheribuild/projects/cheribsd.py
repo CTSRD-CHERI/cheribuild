@@ -458,7 +458,6 @@ class _BuildFreeBSD(Project):
         self.common_options.add(CTF=False)  # can't crossbuild ctfconvert yet
         self.common_options.add(BOOT=True)
 
-
     def addCrossBuildOptions(self):
         # when cross compiling we need to specify the path to the bsd makefiles (-m src/share/mk)
         self.makeCommand = shutil.which("bmake", path=self.config.dollarPathWithOtherTools) # make is usually gnu make
@@ -629,7 +628,11 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
             if k in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL", "MAKE_TERMERR", "MAKE_TERMOUT"):
                 os.unsetenv(k)
                 del os.environ[k]
-        super().process()
+        if self.config.buildenv:
+            runCmd([self.makeCommand] + self.buildworldArgs + ["buildenv"], env=self.common_options.env_vars,
+                   cwd=self.sourceDir)
+        else:
+            super().process()
 
 
 class BuildFreeBSDForMIPS(_BuildFreeBSD):

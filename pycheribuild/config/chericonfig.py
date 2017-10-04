@@ -76,6 +76,9 @@ class CheriConfig(object):
                                                              "This is only useful when targetting FPGA")
         self.skipBuildworld = loader.addBoolOption("skip-buildworld", help="Skip the buildworld step when building"
                                                                            "FreeBSD or CheriBSD")
+        self.buildenv = loader.addCommandLineOnlyBoolOption("buildenv", help="Open a shell with the right environment"
+                                                                             "for building the project. Currently only"
+                                                                             "works for FreeBSD/CheriBSD")
         # Attributes for code completion:
         self.verbose = None  # type: bool
         self.quiet = None  # type: bool
