@@ -62,7 +62,7 @@ class CrossCompileProject(Project):
                     "-Werror=mips-cheri-prototypes"]
     defaultBuildDir = ComputedDefaultValue(
         function=_default_build_dir,
-        asString=lambda cls: "$BUILD_ROOT/" + cls.projectName.lower()  + "-$CROSS_TARGET-build")
+        asString=lambda cls: "$BUILD_ROOT/" + cls.projectName.lower() + "-$CROSS_TARGET-build")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -129,17 +129,9 @@ class CrossCompileProject(Project):
             # anything over 10 should use libc++ by default
             return self.targetTriple + "12"
 
-    @staticmethod
-    def get_host_triple():
-        # TODO: get --build from `clang --version | grep Target:`
-        if IS_FREEBSD:
-            buildhost = "x86_64-unknown-freebsd"
-            # noinspection PyUnresolvedReferences
-            release = os.uname().release
-            buildhost += release[:release.index(".")]
-        else:
-            buildhost = "x86_64-unknown-linux-gnu"
-        return buildhost
+    def get_host_triple(self):
+        compiler = getCompilerInfo(self.config.clangPath)
+        return compiler.default_target
 
     @property
     def sizeof_void_ptr(self):
@@ -262,11 +254,10 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
         self.writeFile(contents=configuredTemplate, file=self.toolchainFile, overwrite=True, noCommandPrint=True)
 
     def configure(self, **kwargs):
-        self.COMMON_FLAGS.append("-B" + str(self.sdkBinDir))
-
         if self.compiling_for_host():
             common_flags = self.COMMON_FLAGS
         else:
+            self.COMMON_FLAGS.append("-B" + str(self.sdkBinDir))
             if self._get_cmake_version() < (3, 9, 0) and not (self.sdkSysroot / "usr/local/lib/cheri").exists():
                 warningMessage("Workaround for missing custom lib suffix in CMake < 3.9")
                 # create a /usr/lib/cheri -> /usr/libcheri symlink so that cmake can find the right libraries
