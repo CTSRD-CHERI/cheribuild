@@ -203,15 +203,21 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def _handleStdErr(outfile, stream, fileLock, project: "Project"):
         for errLine in stream:
             with fileLock:
-                # noinspection PyProtectedMember
-                if project._lastStdoutLineCanBeOverwritten:
-                    sys.stdout.buffer.write(b"\n")
-                    flushStdio(sys.stdout)
-                    project._lastStdoutLineCanBeOverwritten = False
-                sys.stderr.buffer.write(errLine)
-                flushStdio(sys.stderr)
-                if not project.config.noLogfile:
-                    outfile.write(errLine)
+                try:
+                    # noinspection PyProtectedMember
+                    if project._lastStdoutLineCanBeOverwritten:
+                        sys.stdout.buffer.write(b"\n")
+                        flushStdio(sys.stdout)
+                        project._lastStdoutLineCanBeOverwritten = False
+                    sys.stderr.buffer.write(errLine)
+                    flushStdio(sys.stderr)
+                    if not project.config.noLogfile:
+                        outfile.write(errLine)
+                except ValueError:
+                    # Don't print a backtrace on ctrl+C (since that will exit the main thread and close the file)
+                    # ValueError: write to closed file
+                    continue
+
 
     def _lineNotImportantStdoutFilter(self, line: bytes):
         # by default we don't keep any line persistent, just have updating output
