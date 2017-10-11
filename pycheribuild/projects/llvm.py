@@ -153,6 +153,7 @@ class BuildLLVM(CMakeProject):
         if not self.skip_lld:
             self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld")
             if IS_MAC:
+                self.deleteFile(self.installDir / "bin/ld", printVerboseOnly=True)
                 # lld will call the mach-o linker when invoked as ld -> need to create a shell script instead
                 script = "#!/bin/sh\nexec " + str(self.installDir / "bin/ld.lld") + " \"$@\"\n"
                 self.writeFile(self.installDir / "bin/ld", script, overwrite=True, mode=0o755)
