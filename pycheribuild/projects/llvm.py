@@ -83,8 +83,10 @@ class BuildLLVM(CMakeProject):
         if self.canUseLLd(self.cCompiler):
             self.add_cmake_options(LLVM_ENABLE_LLD=True)
         if not self.no_default_sysroot:
-            self.configureArgs.append("-DDEFAULT_SYSROOT=" + str(self.config.sdkSysrootDir))
-            self.configureArgs.append("-DLLVM_DEFAULT_TARGET_TRIPLE=cheri-unknown-freebsd")
+            self.add_cmake_options(DEFAULT_SYSROOT=self.config.sdkSysrootDir,
+                                   LLVM_DEFAULT_TARGET_TRIPLE="cheri-unknown-freebsd")
+        # when making a debug or asserts build speed it up by building a release tablegen
+        self.add_cmake_options(LLVM_OPTIMIZED_TABLEGEN=True)
         if self.config.cheriBits == 128:
             self.add_cmake_options(LLVM_CHERI_IS_128=True)
 
