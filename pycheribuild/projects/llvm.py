@@ -58,6 +58,7 @@ class BuildLLVM(CMakeProject):
         else:
             cls.no_default_sysroot = True
 
+        cls.enable_assertions = cls.addBoolOption("assertions", help="build with assertions enabled", default=True)
         cls.skip_lld = cls.addBoolOption("skip-lld", help="Don't build lld as part of the llvm target")
         if includeClangRevision:
             cls.clangRepository, cls.clangRevision = addToolOptions("clang")
@@ -87,6 +88,9 @@ class BuildLLVM(CMakeProject):
                                    LLVM_DEFAULT_TARGET_TRIPLE="cheri-unknown-freebsd")
         # when making a debug or asserts build speed it up by building a release tablegen
         self.add_cmake_options(LLVM_OPTIMIZED_TABLEGEN=True)
+        # don't set LLVM_ENABLE_ASSERTIONS if it is defined in cmake-options
+        if "LLVM_ENABLE_ASSERTIONS" not in "".join(self.cmakeOptions):
+            self.add_cmake_options(LLVM_ENABLE_ASSERTIONS=self.enable_assertions)
         if self.config.cheriBits == 128:
             self.add_cmake_options(LLVM_CHERI_IS_128=True)
 
