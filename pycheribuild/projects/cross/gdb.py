@@ -71,33 +71,25 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.crossInstallDir = CrossInstallDir.SDK
         # See https://github.com/bsdjhb/kdbg/blob/master/gdb/build
         super().__init__(config)
+        installRoot = self.installDir if self.compiling_for_host() else self.installPrefix
         # ./configure flags
         self.configureArgs.extend([
-            "--without-expat",
             "--disable-nls",
-            "--without-libunwind-ia64",
             "--enable-tui",
             "--disable-ld",
             "--enable-64-bit-bfd",
             "--without-gnu-as",
             "--with-separate-debug-dir=/usr/lib/debug",
-            "--mandir=/usr/local/man",
-            "--infodir=/usr/local/info/",
-
+            "--mandir=" + str(installRoot / "man"),
+            "--infodir=" + str(installRoot / "info"),
             # "--disable-sim",
             "--disable-werror",
             "MAKEINFO=/bin/false",
+            "--with-gdb-datadir=" + str(installRoot / "share/gdb"),
             # TODO:
             # "--enable-build-with-cxx"
         ])
         # extra ./configure environment variables:
-        self.configureEnvironment.update(gl_cv_func_gettimeofday_clobber="no",
-                                         lt_cv_sys_max_cmd_len="262144",
-                                         # The build system run CC without any flags to detect dependency style...
-                                         # (ZW_PROG_COMPILER_DEPENDENCIES([CC])) -> for gcc3 mode which seems correct
-                                         am_cv_CC_dependencies_compiler_type="gcc3",
-                                         MAKEINFO="/bin/false"
-                                         )
         # compile flags
         self.warningFlags.extend(["-Wno-absolute-value", "-Wno-parentheses-equality", "-Wno-unknown-warning-option",
                                   "-Wno-unused-function", "-Wno-unused-variable"])
@@ -109,17 +101,26 @@ class BuildGDB(CrossCompileAutotoolsProject):
         if self.compiling_for_host():
             self.LDFLAGS.append("-L/usr/local/lib")
             self.configureArgs.append("--enable-targets=all")
+            self.configureArgs.append("--with-expat")
         else:
             self.configureArgs.extend(["--without-python", "--enable-targets=mips64-unknown-freebsd",
-                                      "--with-gdb-datadir=" + str(self.installPrefix / "share/gdb")])
+
+                                       "--without-expat", "--without-libunwind-ia64",])
+            self.configureEnvironment.update(gl_cv_func_gettimeofday_clobber="no",
+                                             lt_cv_sys_max_cmd_len="262144",
+                                             # The build system run CC without any flags to detect dependency style...
+                                             # (ZW_PROG_COMPILER_DEPENDENCIES([CC])) -> for gcc3 mode which seems correct
+                                             am_cv_CC_dependencies_compiler_type="gcc3",
+                                             MAKEINFO="/bin/false"
+                                             )
             self.LDFLAGS.append("-static")
             self.COMMON_FLAGS.append("-static")  # seems like LDFLAGS is not enough
             self.COMMON_FLAGS.extend(["-DRL_NO_COMPAT", "-DLIBICONV_PLUG", "-fno-strict-aliasing"])
             # Currently there are a lot of `undefined symbol 'elf_version'`, etc errors
             # Add -lelf to the linker command line until the source is fixed
             self.LDFLAGS.append("-lelf")
-        self.CFLAGS.append("-std=gnu89")
-        self.configureEnvironment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
+            self.CFLAGS.append("-std=gnu89")
+            self.configureEnvironment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
         if self.makeCommand == "gmake":
             self.configureEnvironment["MAKE"] = "gmake"
         self.hostCC = os.getenv("HOST_CC", str(config.clangPath))
