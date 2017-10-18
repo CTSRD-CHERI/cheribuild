@@ -55,6 +55,7 @@ class CrossCompileProject(Project):
     appendCheriBitsToBuildDir = True
     dependencies = ["cheribsd-sdk"]
     defaultLinker = "lld"
+    baremetal = False
     crossCompileTarget = None  # type: CrossCompileTarget
     defaultOptimizationLevel = ["-O2"]
     warningFlags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
@@ -100,13 +101,13 @@ class CrossCompileProject(Project):
             self.COMMON_FLAGS.append("-ftls-model=initial-exec")
             # use *-*-freebsd12 to default to libc++
             if self.crossCompileTarget == CrossCompileTarget.CHERI:
-                self.targetTriple = "cheri-unknown-freebsd"
+                self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "cheri-qemu-elf"
                 self.COMMON_FLAGS.append("-mabi=purecap")
                 if self.config.cheriBits == 128:
                     self.COMMON_FLAGS.append("-mcpu=cheri128")
             else:
                 assert self.crossCompileTarget == CrossCompileTarget.MIPS
-                self.targetTriple = "mips64-unknown-freebsd"
+                self.targetTriple = "mips64-unknown-freebsd" if not self.baremetal else "mips64-qemu-elf"
                 self.COMMON_FLAGS.append("-mabi=n64")
                 self.COMMON_FLAGS.append("-mcpu=mips4")
                 self.COMMON_FLAGS.append("-stdlib=libc++")
@@ -123,7 +124,7 @@ class CrossCompileProject(Project):
     @property
     def targetTripleWithVersion(self):
         # we need to append the FreeBSD version to pick up the correct C++ standard library
-        if self.compiling_for_host():
+        if self.compiling_for_host() or self.baremetal:
             return self.targetTriple
         else:
             # anything over 10 should use libc++ by default
@@ -149,10 +150,10 @@ class CrossCompileProject(Project):
             # return ["-fuse-ld=" + self.linker]
             return []
         elif self.crossCompileTarget == CrossCompileTarget.CHERI:
-            emulation = "elf64btsmip_cheri_fbsd"
+            emulation = "elf64btsmip_cheri_fbsd" if not self.baremetal else "elf64btsmip_cheri"
             abi = "purecap"
         elif self.crossCompileTarget == CrossCompileTarget.MIPS:
-            emulation = "elf64btsmip_fbsd"
+            emulation = "elf64btsmip_fbsd" if not self.baremetal else "elf64btsmip"
             abi = "n64"
         else:
             fatalError("Logic error!")
@@ -161,8 +162,9 @@ class CrossCompileProject(Project):
                   "-Wl,-m" + emulation,
                   "-fuse-ld=" + self.linker,
                   "-Wl,-z,notext",  # needed so that LLD allows text relocations
-                  "--sysroot=" + str(self.sdkSysroot),
                   "-B" + str(self.sdkBinDir)]
+        if not self.baremetal:
+            result.append("--sysroot=" + str(self.sdkSysroot))
         if self.compiling_for_cheri() and self.newCapRelocs:
             # TODO: check that we are using LLD and not BFD
             result += ["-no-capsizefix", "-Wl,-process-cap-relocs", "-Wl,-verbose"]
@@ -330,8 +332,11 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
     def default_compiler_flags(self):
         if self.compiling_for_host():
             return self.COMMON_FLAGS.copy()
-        result = self.COMMON_FLAGS + self.optimizationFlags + ["-target", self.targetTripleWithVersion]
-        result += ["--sysroot=" + str(self.sdkSysroot), "-B" + str(self.sdkBinDir)] + self.warningFlags
+        result = ["-target", self.targetTripleWithVersion] + self.COMMON_FLAGS + self.optimizationFlags
+        if not self.baremetal:
+            result.append("--sysroot=" + str(self.sdkSysroot))
+        result += ["-B" + str(self.sdkBinDir)] + self.warningFlags
+
         return result
 
     def add_configure_env_arg(self, arg: str, value: str):
