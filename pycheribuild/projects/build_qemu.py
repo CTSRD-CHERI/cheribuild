@@ -29,6 +29,7 @@
 #
 from ..project import *
 from ..utils import *
+import os
 import shutil
 
 
@@ -64,6 +65,10 @@ class BuildQEMU(AutotoolsProject):
                                   printVerboseOnly=True, runInPretendMode=True).stdout.decode("utf-8").strip()
             extraCFlags += " " + glibIncludes
 
+        ccinfo = getCompilerInfo(os.getenv("CC", shutil.which("cc")))
+        if ccinfo.compiler == "clang":
+            # silence this warning that comes lots of times (it's fine on x86)
+            extraCFlags += " -Wno-address-of-packed-member"
         if config.cheriBits == 128:
             # enable QEMU 128 bit capabilities
             # https://github.com/CTSRD-CHERI/qemu/commit/40a7fc2823e2356fa5ffe1ee1d672f1d5ec39a12
