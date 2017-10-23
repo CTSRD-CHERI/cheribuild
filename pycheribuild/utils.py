@@ -290,7 +290,7 @@ def latestClangTool(basename: str):
         info = getCompilerInfo(guess)
         # print("default clang is ", info, "found clang is", found_versioned_clang[1])
         return guess if info.version > found_versioned_clang[1] else found_versioned_clang[0]
-    return None
+    return found_versioned_clang[0]
 
 
 def defaultNumberOfMakeJobs():
