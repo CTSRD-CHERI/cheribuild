@@ -66,7 +66,7 @@ class BuildQEMU(AutotoolsProject):
             extraCFlags += " " + glibIncludes
 
         ccinfo = getCompilerInfo(os.getenv("CC", shutil.which("cc")))
-        if ccinfo.compiler == "clang":
+        if ccinfo.compiler.endswith("clang"):
             # silence this warning that comes lots of times (it's fine on x86)
             extraCFlags += " -Wno-address-of-packed-member"
         if config.cheriBits == 128:

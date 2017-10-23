@@ -103,7 +103,7 @@ def __filterEnv(env: dict) -> dict:
 
 def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remainingArgs, outputFile=None,
                  colour=AnsiColour.yellow, cwd=None, env=None, sep=" ", printVerboseOnly=False, **kwargs):
-    if _cheriConfig.quiet or (printVerboseOnly and not _cheriConfig.verbose):
+    if not _cheriConfig or (_cheriConfig.quiet or (printVerboseOnly and not _cheriConfig.verbose)):
         return
     # also allow passing a single string
     if not type(arg1) is str:
@@ -190,7 +190,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
             kwargs["cwd"] = os.getcwd()
         except FileNotFoundError:
             kwargs["cwd"] = tempfile.gettempdir()
-    if _cheriConfig.pretend and not runInPretendMode:
+    if not runInPretendMode and _cheriConfig.pretend:
         return CompletedProcess(args=cmdline, returncode=0, stdout=b"", stderr=b"")
     # actually run the process now:
     if input is not None:
@@ -266,20 +266,31 @@ def getCompilerInfo(compiler: Path) -> CompilerInfo:
 
 
 def latestClangTool(basename: str):
-    # try to find clang 3.7, otherwise fall back to system clang
-    for version in [(5, 0), (4, 0), (3, 9), (3, 8), (3, 7)]:
+    # try to find at least clang 3.7, otherwise fall back to system clang
+    found_versioned_clang = (None, None)
+    versions = [(i, 0) for i in range(9, 3, -1)] + [(3, 9), (3, 8), (3, 7)]
+    for version in versions:
         # FreeBSD installs clang39, Linux uses clang-3.9
         # if IS_FREEBSD and version == (4, 0):
         #    # clang40 from packages seems to be broken right now?
         #    continue
         guess = shutil.which(basename + "%d%d" % version)
         if guess:
-            return guess
+            found_versioned_clang = (guess, version)
+            break
         guess = shutil.which(basename + "-%d.%d" % version)
         if guess:
-            return guess
+            found_versioned_clang = (guess, version)
+            break
     guess = shutil.which(basename)
-    return guess
+    if guess:
+        if not found_versioned_clang:
+            return guess
+        # Otherwise check if the versioned clang install is newer than the unsuffixed one:
+        info = getCompilerInfo(guess)
+        # print("default clang is ", info, "found clang is", found_versioned_clang[1])
+        return guess if info.version > found_versioned_clang[1] else found_versioned_clang[0]
+    return None
 
 
 def defaultNumberOfMakeJobs():
