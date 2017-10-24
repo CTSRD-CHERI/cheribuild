@@ -156,7 +156,7 @@ class _BuildFreeBSD(Project):
                                                  help="pass make flags for building debug info",
                                                  default=True, showHelp=True)
         cls.buildTests = cls.addBoolOption("build-tests", help="Build the tests too (-DWITH_TESTS)", showHelp=True)
-        cls.auto_obj = cls.addBoolOption("auto-obj", help="Use -DWITH_AUTO_OBJ (experimental)", showHelp=True)
+        cls.auto_obj = cls.addBoolOption("auto-obj", help="Use -DWITH_AUTO_OBJ (experimental)", showHelp=True, default=True)
         cls.minimal = cls.addBoolOption("minimal", help="Don't build all of FreeBSD, just what is needed for running"
                                                         " most CHERI tests/benchmarks", showHelp=True)
         cls.fastRebuild = cls.addBoolOption("fast", showHelp=True,
