@@ -85,6 +85,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
         self.configureEnvironment["AS"] = str(self.sdkBinDir / "clang") + " -integrated-as -target " + self.targetTripleWithVersion
         self.configureEnvironment["NM"] = self.sdkBinDir / "nm"
         self.configureArgs.append("--build=" + self.triple)
+        self.add_configure_env_arg("newlib_cv_ldbl_eq_dbl", "yes")
         super().configure()
 
     # def compile(self, **kwargs):
