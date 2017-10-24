@@ -284,7 +284,7 @@ def latestClangTool(basename: str):
             break
     guess = shutil.which(basename)
     if guess:
-        if not found_versioned_clang:
+        if found_versioned_clang[0] is None:
             return guess
         # Otherwise check if the versioned clang install is newer than the unsuffixed one:
         info = getCompilerInfo(guess)
