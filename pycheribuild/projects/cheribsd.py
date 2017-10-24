@@ -183,6 +183,8 @@ class _BuildFreeBSD(Project):
             return  # ignore these messages caused by (unnecessary?) recursive make invocations|
         elif line.endswith(b"missing (created)\n"):
             return  # ignore these from installworld
+        elif line.startswith(b"[Creating objdir"):
+            return  # ignore the WITH_AUTO_OBJ messages
         else:
             self._showLineStdoutFilter(line)
 
