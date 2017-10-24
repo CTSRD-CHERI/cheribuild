@@ -77,6 +77,7 @@ class BuildLLVM(CMakeProject):
             CMAKE_C_COMPILER=self.cCompiler,
             LLVM_TOOL_LLDB_BUILD=False,
             LLVM_TOOL_LLD_BUILD=not self.skip_lld,
+            LLVM_PARALLEL_LINK_JOBS=4,  # anything more causes too much I/O
             # saves a bit of time and but might be slightly broken in current clang:
             # CLANG_ENABLE_STATIC_ANALYZER=False,  # save some build time by skipping the static analyzer
             # CLANG_ENABLE_ARCMT=False",  # need to disable ARCMT to disable static analyzer
