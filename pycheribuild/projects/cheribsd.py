@@ -300,7 +300,8 @@ class _BuildFreeBSD(Project):
             XCPP=cross_prefix + "clang-cpp" + target_flags,
             XOBJDUMP=cross_prefix + "llvm-objdump",
             OBJDUMP=cross_prefix + "llvm-objdump",
-            XLD=self.crossLD,
+            # FIXME: LLD doesn't quite work yet, it needs some extra flags to be passed
+            # XLD=self.crossLD,
         )
 
     @property
