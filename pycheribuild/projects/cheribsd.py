@@ -290,7 +290,7 @@ class _BuildFreeBSD(Project):
             self.cross_toolchain_config.add(RESCUE=False)
             self.cross_toolchain_config.add(BOOT=False)  # bootloaders won't link with LLD yet
             # DONT SET XAS!!! It prevents bfd from being built
-            self.cross_toolchain_config.add(XAS=cross_prefix + "clang " + target_flags)
+            # self.cross_toolchain_config.add(XAS=cross_prefix + "clang " + target_flags)
         else:
             fatalError("Invalid state, should have a cross env")
             sys.exit(1)
