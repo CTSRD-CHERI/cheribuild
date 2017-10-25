@@ -272,7 +272,8 @@ class _BuildFreeBSD(Project):
             self.useExternalToolchainForWorld = True
             self.useExternalToolchainForKernel = True
             self.linkKernelWithLLD = True
-            self.cross_toolchain_config.add(XAS="/usr/bin/as")  # TODO: would be nice if we could compile the asm with clang
+            # DONT SET XAS!!! It prevents bfd from being built
+            # self.cross_toolchain_config.add(XAS="/usr/bin/as")  # TODO: would be nice if we could compile the asm with clang
 
         elif self.mipsToolchainPath:
             cross_prefix = str(self.mipsToolchainPath / "bin") + "/"
@@ -288,6 +289,7 @@ class _BuildFreeBSD(Project):
             # Won't compile with CHERI clang yet
             self.cross_toolchain_config.add(RESCUE=False)
             self.cross_toolchain_config.add(BOOT=False)  # bootloaders won't link with LLD yet
+            # DONT SET XAS!!! It prevents bfd from being built
             self.cross_toolchain_config.add(XAS=cross_prefix + "clang " + target_flags)
         else:
             fatalError("Invalid state, should have a cross env")
