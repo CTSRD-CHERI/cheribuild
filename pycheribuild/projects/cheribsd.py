@@ -300,6 +300,7 @@ class _BuildFreeBSD(Project):
             XCC=cross_prefix + "clang" + target_flags,
             XCXX=cross_prefix + "clang++" + target_flags,
             XCPP=cross_prefix + "clang-cpp" + target_flags,
+            X_COMPILER_TYPE="clang",
             XOBJDUMP=cross_prefix + "llvm-objdump",
             OBJDUMP=cross_prefix + "llvm-objdump",
             # FIXME: LLD doesn't quite work yet, it needs some extra flags to be passed
