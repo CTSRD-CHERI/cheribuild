@@ -191,7 +191,8 @@ def _jenkins_main():
             assert cheriConfig.sdkDir == Path("/cheri-sdk"), cheriConfig.sdkDir
         elif cheriConfig.without_sdk:
             statusUpdate("Not using CHERI SDK, only files from /usr")
-            cheriConfig.sdkDir = Path("/usr")
+            assert cheriConfig.clangPath.exists(), cheriConfig.clangPath
+            assert cheriConfig.clangPlusPlusPath.exists(), cheriConfig.clangPlusPlusPath
         else:
             create_sdk_from_archives(cheriConfig)
 

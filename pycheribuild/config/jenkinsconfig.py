@@ -33,7 +33,7 @@ from pathlib import Path
 
 from .loader import ConfigLoaderBase
 from .chericonfig import CheriConfig, CrossCompileTarget
-from ..utils import defaultNumberOfMakeJobs, fatalError
+from ..utils import defaultNumberOfMakeJobs, fatalError, latestClangTool
 
 
 def default_install_prefix(conf: "JenkinsConfig", unused):
@@ -158,11 +158,22 @@ class JenkinsConfig(CheriConfig):
         if self.force_update:
             self.skipUpdate = False
 
-        self._initializeDerivedPaths()
+        if self.without_sdk:
+            if not self.crossCompileTarget == CrossCompileTarget.NATIVE:
+                fatalError("The --without-sdk flag only works when building host binaries")
+            self.sdkDir = Path("/this/path/is/invalid")
+            self.clangPath = Path(os.getenv("HOST_CC", latestClangTool("clang")))
+            self.clangPlusPlusPath = Path(os.getenv("HOST_CXX", latestClangTool("clang++")))
+            if not self.clangPath:
+                fatalError("Could not find clang or $HOST_CC")
+            if not self.clangPlusPlusPath:
+                fatalError("Could not find clang++ or $HOST_CXX")
+        else:
+            # always use the CHERI clang built by jenkins to ensure we don't do x86 compilation
+            self.clangPath = self.sdkBinDir / "clang"
+            self.clangPlusPlusPath = self.sdkBinDir / "clang++"
 
-        # always use the CHERI clang built by jenkins to ensure we don't do x86 compilation
-        self.clangPath = self.sdkBinDir / "clang"
-        self.clangPlusPlusPath = self.sdkBinDir / "clang++"
+        self._initializeDerivedPaths()
 
         assert self._ensureRequiredPropertiesSet()
         if os.getenv("DEBUG") is not None:
