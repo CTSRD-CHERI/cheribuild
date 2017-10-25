@@ -191,7 +191,7 @@ def _jenkins_main():
             assert cheriConfig.sdkDir == Path("/cheri-sdk"), cheriConfig.sdkDir
         elif cheriConfig.without_sdk:
             statusUpdate("Not using CHERI SDK, only files from /usr")
-            cheriConfig.sdkDir = "/usr"
+            cheriConfig.sdkDir = Path("/usr")
         else:
             create_sdk_from_archives(cheriConfig)
 
