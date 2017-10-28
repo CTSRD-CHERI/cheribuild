@@ -708,7 +708,7 @@ class BuildCHERIBSD(_BuildFreeBSD):
         archBuildFlags = [
             "CHERI=" + config.cheriBitsStr,
             "CHERI_CC=" + str(self.cheriCC),
-            "CHERI_CXX=" + str(self.cheriCXX)
+            "CHERI_CXX=" + str(self.cheriCXX),
             "CHERI_LD=" + str(self.config.sdkBinDir / "ld.lld")
         ]
         if self.mipsOnly:
