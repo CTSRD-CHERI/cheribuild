@@ -277,7 +277,7 @@ class _BuildFreeBSD(Project):
         elif self.mipsToolchainPath:
             cross_prefix = str(self.mipsToolchainPath / "bin") + "/"
             target_flags = " -integrated-as -fcolor-diagnostics -mcpu=mips4"
-            self.crossLD = cross_prefix + "ld.lld"
+            self.crossLD = cross_prefix + "ld.bfd" if self.forceBFD else cross_prefix + "ld.lld"
             # for some reason this is not inferred....
             if self.crossbuild:
                 # For some reason STRINGS is not set
@@ -709,6 +709,7 @@ class BuildCHERIBSD(_BuildFreeBSD):
             "CHERI=" + config.cheriBitsStr,
             "CHERI_CC=" + str(self.cheriCC),
             "CHERI_CXX=" + str(self.cheriCXX)
+            "CHERI_LD=" + str(self.config.sdkBinDir / "ld.lld")
         ]
         if self.mipsOnly:
             archBuildFlags = [
