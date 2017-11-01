@@ -34,7 +34,7 @@ from ..llvm import BuildLLVM
 from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
 from ...utils import OSInfo
-
+import os
 
 installToCXXDir = ComputedDefaultValue(
     function=lambda config, project: BuildCHERIBSD.rootfsDir(config) / "extra/c++",
@@ -121,6 +121,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
             LLVM_EXTERNAL_LIT=BuildLLVM.buildDir / "bin/llvm-lit",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
+            LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
+                          "/lit-test-results.xml --max-time 3600 --timeout 120 ${JFLAG}"
         )
         # select libcxxrt as the runtime library
         self.add_cmake_options(
