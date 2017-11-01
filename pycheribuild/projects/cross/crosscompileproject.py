@@ -23,9 +23,6 @@ defaultTarget = ComputedDefaultValue(
     function=lambda config, project: config.crossCompileTarget.value,
     asString="'cheri' unless -xmips/-xhost is set")
 
-def _default_build_dir(config: CheriConfig, project):
-    return project.buildDirForTarget(config, project.crossCompileTarget)
-
 def _installDir(config: CheriConfig, project: "CrossCompileProject"):
     if project.crossCompileTarget == CrossCompileTarget.NATIVE:
         return config.sdkDir
@@ -61,9 +58,6 @@ class CrossCompileProject(Project):
     warningFlags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
                     "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types",
                     "-Werror=mips-cheri-prototypes"]
-    defaultBuildDir = ComputedDefaultValue(
-        function=_default_build_dir,
-        asString=lambda cls: "$BUILD_ROOT/" + cls.projectName.lower() + "-$CROSS_TARGET-build")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -191,14 +185,6 @@ class CrossCompileProject(Project):
             cls.crossCompileTarget = cls.addConfigOption("target", help="The target to build for (`cheri` or `mips` or `native`)",
                                                  default=defaultTarget, choices=["cheri", "mips", "native"],
                                                  kind=CrossCompileTarget)
-
-    @classmethod
-    def buildDirForTarget(cls, config: CheriConfig, target: CrossCompileTarget):
-        if target == CrossCompileTarget.CHERI:
-            build_dir_suffix = config.cheriBitsStr + "-build"
-        else:
-            build_dir_suffix = target.value + "-build"
-        return config.buildRoot / (cls.projectName.lower() + "-" + build_dir_suffix)
 
     def compiling_for_mips(self):
         return self.crossCompileTarget == CrossCompileTarget.MIPS

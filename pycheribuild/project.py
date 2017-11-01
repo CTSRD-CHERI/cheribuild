@@ -367,13 +367,8 @@ def installDirNotSpecified(config: CheriConfig, project: "Project"):
 
 def _defaultBuildDir(config: CheriConfig, project: "Project"):
     # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
-    if config.crossCompileTarget == CrossCompileTarget.NATIVE:
-        buildDirSuffix = "-build"
-    elif config.crossCompileTarget == CrossCompileTarget.MIPS:
-        buildDirSuffix = "-mips-build"
-    else:
-        buildDirSuffix = "-" + config.cheriBitsStr + "-build"
-    return config.buildRoot / (project.projectName.lower() + buildDirSuffix)
+    target = project.crossCompileTarget if hasattr(project, "crossCompileTarget") else None
+    return config.buildRoot / (project.projectName.lower() + project.buildDirSuffix(config, target))
 
 
 class Project(SimpleProject):
@@ -391,7 +386,7 @@ class Project(SimpleProject):
     appendCheriBitsToBuildDir = False
     """ Whether to append -128/-256 to the computed build directory name"""
     defaultBuildDir = ComputedDefaultValue(
-        function=_defaultBuildDir, asString=lambda cls: "$BUILD_ROOT/" + cls.projectName.lower())
+        function=_defaultBuildDir, asString=lambda cls: "$BUILD_ROOT/" + cls.projectName.lower() + "$TARGET-build")
 
     requiresGNUMake = False
     """ If true this project must be built with GNU make (gmake on FreeBSD) and not BSD make or ninja"""
@@ -408,6 +403,19 @@ class Project(SimpleProject):
     @classmethod
     def getInstallDir(cls, config: CheriConfig):
         return cls.installDir
+
+    @classmethod
+    def buildDirSuffix(cls, config: CheriConfig, target: CrossCompileTarget):
+        if target is None:
+            return "-" + config.cheriBitsStr + "-build" if cls.appendCheriBitsToBuildDir else "-build"
+        elif target == CrossCompileTarget.CHERI:
+            return "-" + config.cheriBitsStr + "-build"
+        else:
+            return "-" + target.value + "-build"
+
+    @classmethod
+    def buildDirForTarget(cls, config: CheriConfig, target: CrossCompileTarget):
+        return config.buildRoot / (cls.projectName.lower() + "-" + cls.buildDirSuffix(config, target))
 
     _installToSDK = ComputedDefaultValue(
         function=lambda config, project: config.sdkDir,
