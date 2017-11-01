@@ -30,7 +30,7 @@
 
 from .crosscompileproject import *
 from ..cheribsd import BuildCHERIBSD
-# from ..llvm import BuildLLVM
+from ..llvm import BuildLLVM
 from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
 from ...utils import OSInfo
@@ -117,6 +117,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LIBCXX_INCLUDE_TESTS=True,
             # LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config",
             LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
+            LLVM_EXTERNAL_LIT=BuildLLVM.buildDir / "bin/llvm-lit",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
         )
         # select libcxxrt as the runtime library
