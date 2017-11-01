@@ -204,8 +204,6 @@ class CrossCompileProject(Project):
         return None
 
     def configure(self, **kwargs):
-        if self.compiling_for_host():
-            super().configure(**kwargs)
         with setEnv(PKG_CONFIG_LIBDIR=self.pkgconfig_dirs, PKG_CONFIG_SYSROOT_DIR=self.config.sdkSysrootDir):
             super().configure(**kwargs)
 
