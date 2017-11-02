@@ -88,6 +88,10 @@ class CheriConfig(object):
         self.skipUpdate = None  # type: bool
         self.skipConfigure = None  # type: bool
         self.forceConfigure = None  # type: bool
+        self.use_sdk_clang_for_native_xbuild = loader.addBoolOption("use-sdk-clang-for-native-xbuild",
+                                                                    help="Compile cross-compile project with CHERI "
+                                                                         "clang from the SDK instead of host compiler")
+
         self.configureOnly = loader.addBoolOption("configure-only",
                                                   help="Only run the configure step (skip build and install)")
         self.skipInstall = loader.addBoolOption("skip-install", help="Skip the install step (only do the build)")

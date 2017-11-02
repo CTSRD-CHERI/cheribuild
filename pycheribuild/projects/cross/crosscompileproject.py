@@ -169,6 +169,20 @@ class CrossCompileProject(Project):
             result += ["-Wl,--whole-archive", "-lstatcounters", "-Wl,--no-whole-archive"]
         return result
 
+    @property
+    def CC(self):
+        if self.compiling_for_host() and not self.config.use_sdk_clang_for_native_xbuild:
+            return self.config.clangPath if not self.forceDefaultCC else Path("cc")
+        compiler_name = self.targetTriple + "-clang" if not self.compiling_for_host() else "clang"
+        return self.compiler_dir / compiler_name
+
+    @property
+    def CXX(self):
+        if self.compiling_for_host() and not self.config.use_sdk_clang_for_native_xbuild:
+            return self.config.clangPlusPlusPath if not self.forceDefaultCC else Path("c++")
+        compiler_name = self.targetTriple + "-clang++" if not self.compiling_for_host() else "clang++"
+        return self.compiler_dir / compiler_name
+
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
@@ -237,7 +251,7 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
             assert "@" + key + "@" in configuredTemplate, key
             configuredTemplate = configuredTemplate.replace("@" + key + "@", strval)
         assert "@" not in configuredTemplate, configuredTemplate
-        self.writeFile(contents=configuredTemplate, file=self.toolchainFile, overwrite=True, noCommandPrint=True)
+        self.writeFile(contents=configuredTemplate, file=self.toolchainFile, overwrite=True)
 
     def configure(self, **kwargs):
         if self.compiling_for_host():
@@ -255,8 +269,6 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
                                    relative=True, cwd=self.sdkSysroot / "usr/local/lib")
             common_flags = self.COMMON_FLAGS + self.warningFlags + ["-target", self.targetTripleWithVersion]
 
-        clang = self.config.clangPath if self.compiling_for_host() else self.compiler_dir / "clang"
-        clangxx = self.config.clangPlusPlusPath if self.compiling_for_host() else self.compiler_dir / "clang++"
         if self.compiling_for_cheri():
             add_lib_suffix = """
 # cheri libraries are found in /usr/libcheri:
@@ -286,8 +298,8 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
             TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
             TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
             TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
-            TOOLCHAIN_C_COMPILER=clang,
-            TOOLCHAIN_CXX_COMPILER=clangxx,
+            TOOLCHAIN_C_COMPILER=self.CC,
+            TOOLCHAIN_CXX_COMPILER=self.CXX,
             TOOLCHAIN_SYSROOT=self.sdkSysroot if not self.compiling_for_host() else None,
             ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
             TOOLCHAIN_SYSTEM_PROCESSOR=processor,
@@ -337,18 +349,6 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
         self.configureEnvironment[prog] = fullpath
         if self._configure_supports_variables_on_cmdline:
             self.configureArgs.append(prog + "=" + fullpath)
-
-    @property
-    def CC(self):
-        if self.compiling_for_host():
-            return self.config.clangPath if not self.forceDefaultCC else Path("cc")
-        return self.compiler_dir / (self.targetTriple + "-clang")
-
-    @property
-    def CXX(self):
-        if self.compiling_for_host():
-            return self.config.clangPlusPlusPath if not self.forceDefaultCC else Path("c++")
-        return self.compiler_dir / (self.targetTriple + "-clang++")
 
     def configure(self, **kwargs):
         CPPFLAGS = self.default_compiler_flags

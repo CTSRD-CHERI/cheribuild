@@ -90,6 +90,7 @@ class BuildLLVM(CMakeProject):
         # when making a debug or asserts build speed it up by building a release tablegen
         # Actually it seems like the time spent in CMake is longer than that spent running tablegen, disable for now
         self.add_cmake_options(LLVM_OPTIMIZED_TABLEGEN=False)
+        # self.add_cmake_options(LLVM_APPEND_VC_REV=False)
         # don't set LLVM_ENABLE_ASSERTIONS if it is defined in cmake-options
         if "LLVM_ENABLE_ASSERTIONS" not in "".join(self.cmakeOptions):
             self.add_cmake_options(LLVM_ENABLE_ASSERTIONS=self.enable_assertions)
