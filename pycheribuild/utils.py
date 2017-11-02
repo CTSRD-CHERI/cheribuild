@@ -206,6 +206,9 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
         kwargs["stderr"] = subprocess.PIPE
     elif _cheriConfig.quiet and "stdout" not in kwargs:
         kwargs["stdout"] = subprocess.DEVNULL
+
+    if "env" in kwargs:
+        kwargs["env"] = dict((k, str(v)) for k, v in kwargs["env"].items())
     with popen_handle_noexec(cmdline, **kwargs) as process:
         try:
             stdout, stderr = process.communicate(input, timeout=timeout)
