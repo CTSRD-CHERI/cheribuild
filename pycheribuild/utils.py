@@ -333,10 +333,11 @@ class OSInfo(object):
     IS_MAC = sys.platform.startswith("darwin")
     __os_release_cache = None
 
-    def isUbuntu():
+    @classmethod
+    def isUbuntu(cls):
         if not IS_LINUX:
             return False
-        return "ubuntu" in OSInfo.etc_os_release().get("ID_LIKE", [])
+        return "ubuntu" in cls.etc_os_release().get("ID", "") or "ubuntu" in cls.etc_os_release().get("ID_LIKE", "")
 
     @staticmethod
     def etc_os_release() -> dict:
