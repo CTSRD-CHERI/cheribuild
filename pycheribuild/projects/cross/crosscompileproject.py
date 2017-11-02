@@ -306,6 +306,11 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
             TOOLCHAIN_SYSTEM_PROCESSOR=processor,
             TOOLCHAIN_PKGCONFIG_DIRS=self.pkgconfig_dirs
         )
+
+        if self.generator == CMakeProject.Generator.Ninja:
+            # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
+            # TODO: remove once it has been fixed
+            self.add_cmake_options(CMAKE_BUILD_WITH_INSTALL_RPATH=True)
         # TODO: BUILD_SHARED_LIBS=OFF?
         super().configure()
 
