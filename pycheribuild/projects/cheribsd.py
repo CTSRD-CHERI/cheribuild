@@ -200,6 +200,8 @@ class _BuildFreeBSD(Project):
         self.common_options = FreeBSDMakeOptions()
         self.commonMakeArgs.extend(archBuildFlags)
         self.common_options.env_vars = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
+        # TODO: once we have merged the latest upstream changes use MAKEOBJDIR instead to get a more sane hierarchy
+        # self.common_options.env_vars = {"MAKEOBJDIR": str(self.buildDir)}
         self.commonMakeArgs.extend([
             "-DDB_FROM_SRC",  # don't use the system passwd file
             # "-DNO_WERROR",  # make sure we don't fail if clang introduces a new warning

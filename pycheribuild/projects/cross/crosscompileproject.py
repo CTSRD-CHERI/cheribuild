@@ -53,6 +53,7 @@ class CrossCompileProject(Project):
     dependencies = ["cheribsd-sdk"]
     defaultLinker = "lld"
     baremetal = False
+    forceDefaultCC = False  # for some reason ICU binaries build during build crash -> fall back to /usr/bin/cc there
     crossCompileTarget = None  # type: CrossCompileTarget
     defaultOptimizationLevel = ["-O2"]
     warningFlags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
@@ -315,7 +316,6 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
     add_host_target_build_config_options = True
     _configure_supports_libdir = True  # override in nginx
     _configure_supports_variables_on_cmdline = True  # override in nginx
-    forceDefaultCC = False  # for some reason ICU binaries build during build crash -> fall back to /usr/bin/cc there
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
