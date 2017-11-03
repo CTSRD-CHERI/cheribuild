@@ -514,7 +514,10 @@ class _BuildFreeBSD(Project):
 
 
         # bootstrap tool won't build
-        self.common_options.add(SYSCONS=False, USB=False, GPL_DTC=False, GAMES=False)
+        self.common_options.add(SYSCONS=False,
+                                USB=False,
+                                GPL_DTC=False,
+                                )
         self.common_options.add(CDDL=False)  # lots of bootstrap tools issues
 
         # needs lint binary but will also set MK_INCLUDES:=no which we need (see src.opts.mk)
@@ -528,7 +531,7 @@ class _BuildFreeBSD(Project):
         self.common_options.add(KERBEROS=False)  # needs some more work with bootstrap tools
 
         # won't work with CHERI
-        self.common_options.add(DIALOG=False)
+        # self.common_options.add(DIALOG=False)
 
         # won't work on a case-insensitive file system and is also really slow (and missing tools on linux)
         self.common_options.add(MAN=False)
@@ -540,10 +543,10 @@ class _BuildFreeBSD(Project):
 
         # self.common_options.add(RESCUE=False)  # needs crunchgen
 
-        # self.common_options.add(AT=False)  # needs static_pam
+        self.common_options.add(VT=False)
 
         # TODO: remove this
-        self.common_options.add(NO_SHARE=None)
+        # self.common_options.add(NO_SHARE=None)
 
         # We don't want separate .debug for now
         self.common_options.add(DEBUG_FILES=False)
@@ -608,7 +611,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         # create symlinks for the tools installed by freebsd-crosstools
         crossTools = "awk cat compile_et config file2c find install makefs mtree rpcgen sed lex yacc".split()
         crossTools += "mktemp tsort expr gencat mandoc gencat pwd_mkdb services_mkdb cap_mkdb".split()
-        crossTools += "test [ sysctl makewhatis rmdir unifdef gensnmptree".split()
+        crossTools += "test [ sysctl makewhatis rmdir unifdef gensnmptree strfile".split()
         crossTools += "sort grep egrep fgrep rgrep zgrep zegrep zfgrep xargs".split()
         crossTools += ["uuencode", "uudecode"]  # needed by x86 kernel
         # TODO: freebsd version of sh?
