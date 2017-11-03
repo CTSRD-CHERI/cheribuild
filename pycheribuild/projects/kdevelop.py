@@ -44,7 +44,7 @@ class BuildLibKompareDiff2(CMakeProject):
 class BuildKDevplatform(CMakeProject):
     dependencies = ["libkomparediff2"]
     defaultCMakeBuildType = "Debug"
-    repository = "https://github.com/RichardsonAlex/kdevplatform.git"
+    repository = "https://github.com/arichardson/kdevplatform.git"
     defaultInstallDir = CMakeProject._installToBootstrapTools
     appendCheriBitsToBuildDir = True
 
@@ -57,7 +57,7 @@ class BuildKDevplatform(CMakeProject):
 class BuildKDevelop(CMakeProject):
     dependencies = ["kdevplatform", "llvm"]
     defaultCMakeBuildType = "Debug"
-    repository = "https://github.com/RichardsonAlex/kdevelop.git"
+    repository = "https://github.com/arichardson/kdevelop.git"
     defaultInstallDir = CMakeProject._installToBootstrapTools
     appendCheriBitsToBuildDir = True
 

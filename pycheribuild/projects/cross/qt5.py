@@ -125,7 +125,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
 
 class BuildQt5(BuildQtWithConfigureScript):
-    repository = "https://github.com/RichardsonAlex/qt5"
+    repository = "https://github.com/arichardson/qt5"
     gitBranch = "5.9"
     skipGitSubmodules = True  # init-repository does it for us
 
@@ -151,7 +151,7 @@ class BuildQt5(BuildQtWithConfigureScript):
 
 
 class BuildQtBase(BuildQtWithConfigureScript):
-    repository = "https://github.com/RichardsonAlex/qtbase"
+    repository = "https://github.com/arichardson/qtbase"
     gitBranch = "5.9"
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.getSourceDir(config) / "qtbase",
@@ -160,7 +160,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
 
 # Webkit needs ICU (and recommended for QtBase too:
 class BuildICU4C(CrossCompileAutotoolsProject):
-    repository = "https://github.com/RichardsonAlex/icu4c.git"
+    repository = "https://github.com/arichardson/icu4c.git"
     crossInstallDir = CrossInstallDir.SDK
     requiresGNUMake = True
     warningFlags = []  # FIXME: build with capability -Werror
@@ -200,7 +200,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 
 # it also needs libxml2
 class BuildLibXml2(CrossCompileAutotoolsProject):
-    repository = "https://github.com/RichardsonAlex/libxml2"
+    repository = "https://github.com/arichardson/libxml2"
     crossInstallDir = CrossInstallDir.SDK
     warningFlags = []  # FIXME: build with capability -Werror
     requiresGNUMake = True
@@ -218,7 +218,7 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
 
 
 class BuildQtWebkit(CrossCompileCMakeProject):
-    repository = "https://github.com/RichardsonAlex/qtwebkit"
+    repository = "https://github.com/arichardson/qtwebkit"
     gitBranch = "dev"
     dependencies = ["qtbase", "icu4c", "libxml2", "sqlite"]
     # webkit is massive if we include debug info

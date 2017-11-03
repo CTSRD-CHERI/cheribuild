@@ -149,7 +149,7 @@ class BuildGPLv3Binutils(BuildGnuBinutils):
     target = "gplv3-binutils"
     projectName = "GPLv3-BinUtils"
     # This is much faster to clone than the official repo
-    repository = "https://github.com/RichardsonAlex/binutils-gdb.git"
+    repository = "https://github.com/arichardson/binutils-gdb.git"
     gitBranch = "cheribsd"
 
     def __init__(self, config: CheriConfig):

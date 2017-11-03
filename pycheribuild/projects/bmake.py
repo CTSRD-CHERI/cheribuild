@@ -32,7 +32,7 @@ from ..utils import IS_FREEBSD
 
 
 class BuildBmake(AutotoolsProject):
-    repository = "https://github.com/RichardsonAlex/bmake.git"
+    repository = "https://github.com/arichardson/bmake.git"
     defaultInstallDir = AutotoolsProject._installToBootstrapTools
 
     def configure(self, **kwargs):
