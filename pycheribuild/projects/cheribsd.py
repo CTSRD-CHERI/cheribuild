@@ -51,7 +51,7 @@ def defaultKernelConfig(config: CheriConfig, project):
     return kernconf_name.format(bits=cheri_bits, pure=cheri_pure)
 
 class FreeBSDCrossTools(CMakeProject):
-    repository = "https://github.com/RichardsonAlex/freebsd-crossbuild.git"
+    repository = "https://github.com/arichardson/freebsd-crossbuild.git"
     defaultInstallDir = CMakeProject._installToBootstrapTools
     projectName = "freebsd-crossbuild"
 
@@ -503,10 +503,8 @@ class _BuildFreeBSD(Project):
                                     OBJCOPY=str(self.config.sdkBinDir / "objcopy"))
             # DEBUG files are too big, can't use objcopy for serparate debug files
             self.common_options.add(DEBUG_FILES=False)
-            self.common_options.add(CROSSBUILD="mac")  # TODO: infer in makefile
         else:
             assert IS_LINUX, sys.platform
-            self.common_options.add(CROSSBUILD="linux")  # TODO: infer in makefile
 
         # don't build all the bootstrap tools (just pretend we are running freebsd 42):
         self.common_options.env_vars["OSRELDATE"] = "4204345"
@@ -521,7 +519,7 @@ class _BuildFreeBSD(Project):
 
         # needs lint binary but will also set MK_INCLUDES:=no which we need (see src.opts.mk)
         # self.common_options.add(TOOLCHAIN=False)
-        self.common_options.add(BINUTILS=False, CLANG=False, GCC=False, GDB=False, LLD=False, LLDB=False)
+        self.common_options.add(BINUTILS=True, CLANG=False, GCC=False, GDB=False, LLD=False, LLDB=False)
 
         # TODO: build these for zoneinfo setup
         # "zic", "tzsetup"
@@ -540,7 +538,7 @@ class _BuildFreeBSD(Project):
 
         # self.common_options.add(AMD=False)  # for some reason nfd_prot.h is missing (probably wrong bootstrap tool)
 
-        self.common_options.add(RESCUE=False)  # needs crunchgen
+        # self.common_options.add(RESCUE=False)  # needs crunchgen
 
         # self.common_options.add(AT=False)  # needs static_pam
 
