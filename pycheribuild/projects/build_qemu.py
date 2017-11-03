@@ -59,7 +59,7 @@ class BuildQEMU(AutotoolsProject):
 
         # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
         # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
-        extraCFlags = "-g -Wno-error"
+        extraCFlags = "-O3 -Wno-error"
         if shutil.which("pkg-config"):
             glibIncludes = runCmd("pkg-config", "--cflags-only-I", "glib-2.0", captureOutput=True,
                                   printVerboseOnly=True, runInPretendMode=True).stdout.decode("utf-8").strip()
