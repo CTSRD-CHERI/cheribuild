@@ -62,7 +62,8 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.buildDir / "lib")
+        self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.installDir / "lib",
+                               CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
         if self.compiling_for_host():
             self.add_cmake_options(BUILD_TESTS=True)
             if OSInfo.isUbuntu():
@@ -116,6 +117,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
             self.addCrossFlags()
         # add the common test options
         self.add_cmake_options(
+            CMAKE_INSTALL_RPATH_USE_LINK_PATH=True,  # Fix finding libunwind.so
             LIBCXX_INCLUDE_TESTS=True,
             # LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config",
             LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
