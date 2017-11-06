@@ -356,12 +356,14 @@ class _BuildFreeBSD(Project):
         return kernelMakeFlags
 
     def clean(self) -> ThreadJoiner:
+        builddir = self.objdir
         if self.config.skipBuildworld:
-            # TODO: only clean the current kernel config not all of them
-            kernelBuildDir = self.buildDir / ("mips.mips64" + str(self.sourceDir) + "/sys/")
-            return self.asyncCleanDirectory(kernelBuildDir)
-        else:
-            return super().clean()
+            if self.target_arch == CrossCompileTarget.MIPS or self.target_arch == CrossCompileTarget.CHERI:
+                # TODO: only clean the current kernel config not all of them
+                builddir = builddir / "mips.mips64/sys"
+            else:
+                warningMessage("Do not know the full path to the kernel build directory, will clean the whole tree!")
+        return self.asyncCleanDirectory(builddir)
 
     def runMake(self, *args, env: dict=None, **kwargs):
         if env is None:
@@ -419,6 +421,13 @@ class _BuildFreeBSD(Project):
         result.update(self.common_options.env_vars)
         return result
 
+    @property
+    def objdir(self):
+        # TODO use https://github.com/pydanny/cached-property ?
+        # TODO: somehow get objdir for subdirs (it doesn't work if I just run make in a subdirectory)
+        return Path(runCmd([self.makeCommand] + self.buildworldArgs + ["-V", ".OBJDIR"], env=self.common_options.env_vars,
+                           cwd=self.sourceDir, runInPretendMode=True, captureOutput=True).stdout.decode("utf-8").strip())
+
     def install(self, **kwargs):
         if self.subdirOverride:
             statusUpdate("Skipping install step because SUBDIR_OVERRIDE was set")
@@ -448,7 +457,7 @@ class _BuildFreeBSD(Project):
 
             installworldWithJflag = installworldArgs + [self.config.makeJFlag]
             self.runMakeInstall(args=installworldWithJflag, target="installworld", cwd=self.sourceDir)
-            self.runMakeInstall(args=installworldWithJflag , target="distribution", cwd=self.sourceDir)
+            self.runMakeInstall(args=installworldWithJflag, target="distribution", cwd=self.sourceDir)
 
     def add_mips_crossbuildOptions(self):
         self.common_options.add(CROSS_BINUTILS_PREFIX=str(self.config.sdkBinDir) + "/mips64-unknown-freebsd-")
