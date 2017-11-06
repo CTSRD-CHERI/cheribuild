@@ -46,6 +46,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             self.COMMON_FLAGS.append("-DUSE_ASSERT_CHECKING=1")
             self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")
             self.configureArgs.append("--enable-cassert")
+
         self.COMMON_FLAGS.extend(["-pedantic",
                                   "-Wno-gnu-statement-expression",
                                   "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
@@ -54,6 +55,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
                                   ])
         self.LDFLAGS.append("-pthread")
         if not self.compiling_for_host():
+            self.COMMON_FLAGS.append("-DDISABLE_LOADABLE_MODULES=1")
             self.COMMON_FLAGS.append("-I/usr/include/edit")
             self.configureEnvironment["AR"] = str(self.sdkBinDir / "cheri-unknown-freebsd-ar")
             # tell postgres configure that %zu works in printf()
@@ -61,19 +63,27 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             # currently we can only build static:
             self.LDFLAGS.append("-static")
             self.COMMON_FLAGS.append("-static")  # adding it to LDFLAGS only doesn't seem to be enough
+            self.configureArgs.extend(["--without-libxml", "--without-readline", "--without-gssapi"])
+            self.add_configure_env_arg("LDFLAGS_EX", "-static")
+        else:
+            self.configureArgs.extend(["--with-libxml", "--with-readline", "--without-gssapi"])
+
 
         if self.debugInfo:
             self.configureArgs.append("--enable-debug")
         else:
             self.configureArgs.append("--disable-debug")
-        self.configureArgs.extend(["--without-libxml", "--without-readline", "--without-gssapi"])
 
     def install(self, **kwargs):
         super().install()
         self.runMakeInstall(args=self.commonMakeArgs + ["-C", "src/test/regress"], target="install-tests")
         # install the benchmark script
         benchmark = self.readFile(self.sourceDir / "postgres-benchmark.sh")
-        benchmark = re.sub(r'POSTGRES_ROOT=".*"', "POSTGRES_ROOT=\"" + str(self.installPrefix) + "\"", benchmark)
+        if self.installPrefix:
+            pg_root = str(self.installPrefix)
+        else:
+            pg_root = str(self.installDir)
+        benchmark = re.sub(r'POSTGRES_ROOT=".*"', "POSTGRES_ROOT=\"" + pg_root + "\"", benchmark)
         self.writeFile(self.real_install_root_dir / "postgres-benchmark.sh", benchmark, overwrite=True, mode=0o755)
         self.installFile(self.sourceDir / "run-postgres-tests.sh", self.real_install_root_dir / "run-postgres-tests.sh")
 
