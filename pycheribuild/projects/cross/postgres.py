@@ -53,7 +53,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
                                   "-Wno-format-pedantic",
                                   ])
         self.LDFLAGS.append("-pthread")
-        if self.crossCompileTarget != CrossCompileTarget.NATIVE:
+        if not self.compiling_for_host():
             self.COMMON_FLAGS.append("-I/usr/include/edit")
             self.configureEnvironment["AR"] = str(self.sdkBinDir / "cheri-unknown-freebsd-ar")
             # tell postgres configure that %zu works in printf()

@@ -52,7 +52,7 @@ class JenkinsConfig(CheriConfig):
                                                             "native", "x86", "amd64"])  # type: str
         self.workspace = loader.addCommandLineOnlyOption("workspace", default=os.getenv("WORKSPACE"), type=Path,
                                                          help="The root directory for building (defaults to $WORKSPACE)")  # type: Path
-        self.sdkArchiveName = loader.addCommandLineOnlyOption("sdk-archive", type=Path,
+        self.sdkArchiveName = loader.addCommandLineOnlyOption("sdk-archive", type=Path, default=os.getenv("SDK_ARCHIVE"),
                                                               help="The name of the sdk archive")  # type: str
         self.keepInstallDir = loader.addCommandLineOnlyBoolOption("keep-install-dir",
                                                                   help="Don't delete the install dir prior to build")  # type: bool
