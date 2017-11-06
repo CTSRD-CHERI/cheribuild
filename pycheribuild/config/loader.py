@@ -322,7 +322,15 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         super().__init__(JsonAndCommandLineConfigOption)
         self._configPath = None  # type: typing.Optional[Path]
         self.configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
-        self.defaultConfigPath = Path(self.configdir, "cheribuild.json")
+        # Choose the default config file based on argv[0]
+        # This allows me to have symlinks for e.g. stable-cheribuild.py release-cheribuild.py debug-cheribuild.py
+        # that pick up the right config file in ~/.config
+        config_prefix = ""
+        program = Path(sys.argv[0]).name
+        if program.endswith("cheribuild.py"):
+            config_prefix = program[0:-len("cheribuild.py")]
+        # print("Name is:", program, "prefix:", config_prefix)
+        self.defaultConfigPath = Path(self.configdir, config_prefix + "cheribuild.json")
         self._parser.add_argument("--config-file", metavar="FILE", type=str, default=str(self.defaultConfigPath),
                                   help="The config file that is used to load the default settings (default: '" +
                                   str(self.defaultConfigPath) + "')")
