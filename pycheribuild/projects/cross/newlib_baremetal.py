@@ -55,7 +55,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
         self.triple = "mips64-qemu-elf"
 
     def install(self, **kwargs):
-        # self.runMakeInstall()
+        # super().install()
         pass
 
     def needsConfigure(self):

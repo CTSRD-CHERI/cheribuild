@@ -75,7 +75,9 @@ class BuildPostgres(CrossCompileAutotoolsProject):
 
     def install(self, **kwargs):
         super().install()
-        self.runMakeInstall(args=self.make_args.all_commandline_args + ["-C", "src/test/regress"], target="install-tests")
+        install_tests_args = self.make_args.copy()
+        install_tests_args.add_flags("-C", "src/test/regress")
+        self.runMakeInstall(target="install-tests", options=install_tests_args)
         # install the benchmark script
         benchmark = self.readFile(self.sourceDir / "postgres-benchmark.sh")
         if self.installPrefix:

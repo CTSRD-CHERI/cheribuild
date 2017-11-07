@@ -640,22 +640,22 @@ class Project(SimpleProject):
         if revision:
             runCmd("git", "checkout", revision, cwd=srcDir, printVerboseOnly=True)
 
-    def runMake(self, makeTarget="", *, makeCommand: str = None, args: "typing.List[str]"=None, logfileName: str = None,
-                cwd: Path = None, env=None, appendToLogfile=False, compilationDbName="compile_commands.json",
+    def runMake(self, makeTarget="", *, makeCommand: str = None, options: MakeOptions=None, logfileName: str = None,
+                cwd: Path = None, appendToLogfile=False, compilationDbName="compile_commands.json",
                 parallel: bool=True, stdoutFilter: "typing.Callable[[bytes], None]" = "__default_filter__") -> None:
         if not makeCommand:
             makeCommand = self.makeCommand
-        if not args:
-            args = self.make_args.all_commandline_args
+        if not options:
+            options = self.make_args
         if not cwd:
             cwd = self.buildDir
 
         if makeTarget:
-            allArgs = args + [makeTarget]
+            allArgs = options.all_commandline_args + [makeTarget]
             if not logfileName:
                 logfileName = Path(makeCommand).name + "." + makeTarget
         else:
-            allArgs = args
+            allArgs = options.all_commandline_args
             if not logfileName:
                 logfileName = Path(makeCommand).name
         if parallel:
@@ -683,6 +683,7 @@ class Project(SimpleProject):
             if makeCommand == "ninja":
                 # ninja needs the maximum number of failed jobs as an argument
                 allArgs.append("50")
+        env = options.env_vars
         self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=stdoutFilter, cwd=cwd, env=env,
                             appendToLogfile=appendToLogfile)
         # add a newline at the end in case it ended with a filtered line (no final newline)
@@ -730,7 +731,7 @@ class Project(SimpleProject):
     def compile(self, cwd: Path = None):
         if cwd is None:
             cwd = self.buildDir
-        self.runMake("all", cwd=cwd, env=self.make_args.env_vars)
+        self.runMake("all", cwd=cwd)
 
     @property
     def makeInstallEnv(self):
@@ -751,9 +752,14 @@ class Project(SimpleProject):
             return self.destdir / self.installPrefix.relative_to(Path("/"))
         return self.installDir
 
-    def runMakeInstall(self, *, args: list = None, target="install", _stdoutFilter="__default_filter__", cwd=None,
+    def runMakeInstall(self, *, options: MakeOptions=None, target="install", _stdoutFilter="__default_filter__", cwd=None,
                        **kwargs):
-        self.runMake(makeTarget=target, args=args, stdoutFilter=_stdoutFilter, env=self.makeInstallEnv, cwd=cwd, **kwargs)
+        if options is None:
+            options = self.make_args.copy()
+        else:
+            options = options.copy()
+        options.env_vars.update(self.makeInstallEnv)
+        self.runMake(makeTarget=target, options=options, stdoutFilter=_stdoutFilter, cwd=cwd, **kwargs)
 
     def install(self, _stdoutFilter="__default_filter__"):
         self.runMakeInstall(_stdoutFilter=_stdoutFilter)

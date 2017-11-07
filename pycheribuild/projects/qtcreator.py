@@ -44,6 +44,4 @@ class BuildQtCreator(Project):
         self.configureArgs.extend(["-r", self.sourceDir / "qtcreator.pro"])
         self.configureEnvironment["LLVM_INSTALL_DIR"] = str(self.config.sdkDir)
         self.makeCommand = "make"
-
-    def install(self, **kwargs):
-        self.runMake(["install", "INSTALL_ROOT=" + str(self.installDir)])
+        self.make_args.set(INSTALL_ROOT=str(self.installDir))

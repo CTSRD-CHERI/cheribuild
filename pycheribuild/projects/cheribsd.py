@@ -323,6 +323,9 @@ class _BuildFreeBSD(Project):
         kernel_options.set(KERNCONF=kernconf)
         return kernel_options
 
+    def runMake(self, makeTarget="", *, options: MakeOptions=None, **kwargs):
+        super().runMake(makeTarget, options=options, cwd=self.sourceDir, **kwargs)
+
     def clean(self) -> ThreadJoiner:
         builddir = self.objdir
         if self.config.skipBuildworld:
@@ -337,9 +340,6 @@ class _BuildFreeBSD(Project):
                 warningMessage("Do not know the full path to the kernel build directory, will clean the whole tree!")
         return self.asyncCleanDirectory(builddir)
 
-    def invoke_make(self, target: str, options: MakeOptions, **kwargs):
-        super().runMake(target, args=options.all_commandline_args, env=options.env_vars, cwd=self.sourceDir, **kwargs)
-
     def _buildkernel(self, kernconf: str):
         kernelMakeArgs = self.kernelMakeArgsForConfig(kernconf)
         # needKernelToolchain = not self.useExternalToolchainForKernel
@@ -353,10 +353,10 @@ class _BuildFreeBSD(Project):
             kernel_toolchain_opts.set_with_options(GCC_BOOTSTRAP=self.useExternalToolchainForKernel)
             if self.auto_obj:
                 kernel_toolchain_opts.set_with_options(AUTO_OBJ=True)
-            self.invoke_make("kernel-toolchain", kernel_toolchain_opts)
+            self.runMake("kernel-toolchain", options=kernel_toolchain_opts)
             self.kernelToolchainAlreadyBuilt = True
-        self.invoke_make("buildkernel", kernelMakeArgs,
-                         compilationDbName="compile_commands_" + self.kernelConfig + ".json")
+        self.runMake("buildkernel", options=kernelMakeArgs,
+                     compilationDbName="compile_commands_" + self.kernelConfig + ".json")
 
     @property
     def jflag(self) -> list:
@@ -365,13 +365,13 @@ class _BuildFreeBSD(Project):
     def compile(self, **kwargs):
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
         # so just omit the flag here if the user passes -j1 on the command line
+        build_args = self.buildworldArgs
         if self.config.verbose:
-            self.invoke_make("showconfig", self.buildworldArgs)
+            self.runMake("showconfig", options=build_args)
         if not self.config.skipBuildworld:
-            build_args = self.buildworldArgs
             if self.fastRebuild:
                 build_args.set(WORLDFAST=True)
-            self.invoke_make("buildworld", build_args)
+            self.runMake("buildworld", options=build_args)
         if not self.subdirOverride:
             self._buildkernel(kernconf=self.kernelConfig)
 
@@ -403,7 +403,7 @@ class _BuildFreeBSD(Project):
         # don't use multiple jobs here
         install_kernel_args = self.kernelMakeArgsForConfig(self.kernelConfig)
         install_kernel_args.env_vars.update(self.makeInstallEnv)
-        self.invoke_make("installkernel", install_kernel_args, parallel=False)
+        self.runMake("installkernel", options=install_kernel_args, parallel=False)
 
         if not self.config.skipBuildworld:
             install_world_args = self.buildworldArgs
@@ -414,16 +414,16 @@ class _BuildFreeBSD(Project):
             # as a workaround force writing the compiler metadata by invoking the _compiler-metadata target
 
             try:
-                self.invoke_make("_build-metadata", install_world_args)
+                self.runMake("_build-metadata", options=install_world_args)
             except subprocess.CalledProcessError:
                 try:
                     # support building old versions of cheribsd before _compiler-metadata was renamed to _build-metadata
-                    self.invoke_make("_compiler-metadata", install_world_args)
+                    self.runMake("_compiler-metadata", options=install_world_args)
                 except subprocess.CalledProcessError:
                     warningMessage("Failed to run either target _compiler-metadata or "
                                    "_build_metadata, build system has changed!")
-            self.invoke_make("installworld", install_world_args)
-            self.invoke_make("distribution", install_world_args)
+            self.runMake("installworld", options=install_world_args)
+            self.runMake("distribution", options=install_world_args)
 
     def addCrossBuildOptions(self):
         # when cross compiling we need to specify the path to the bsd makefiles (-m src/share/mk)
@@ -658,18 +658,14 @@ class BuildCHERIBSD(_BuildFreeBSD):
     def __init__(self, config: CheriConfig):
         self.installAsRoot = os.getuid() == 0
         self.cheriCXX = self.cheriCC.parent / "clang++"
-        archBuildFlags = [
-            "CHERI=" + config.cheriBitsStr,
-            "CHERI_CC=" + str(self.cheriCC),
-            "CHERI_CXX=" + str(self.cheriCXX),
-            "CHERI_LD=" + str(config.sdkBinDir / "ld.lld")
-        ]
+        archBuildFlags = {
+            "CHERI":config.cheriBitsStr,
+            "CHERI_CC":str(self.cheriCC),
+            "CHERI_CXX":str(self.cheriCXX),
+            "CHERI_LD":str(config.sdkBinDir / "ld.lld")
+        }
         if self.mipsOnly:
-            archBuildFlags = [
-                "TARGET=mips",
-                "TARGET_ARCH=mips64",
-                "-DWITHOUT_LIB32"
-            ]
+            archBuildFlags = {"TARGET":"mips", "TARGET_ARCH":"mips64", "WITHOUT_LIB32":True}
             # keep building a cheri kernel even with a mips userspace (mips may be broken...)
             # self.kernelConfig = "MALTA64"
         super().__init__(config, archBuildFlags=archBuildFlags)
