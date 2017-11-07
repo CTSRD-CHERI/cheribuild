@@ -357,10 +357,14 @@ class _BuildFreeBSD(Project):
     def clean(self) -> ThreadJoiner:
         builddir = self.objdir
         if self.config.skipBuildworld:
-            if self.target_arch == CrossCompileTarget.MIPS or self.target_arch == CrossCompileTarget.CHERI:
+            root_builddir = builddir
+            if (builddir / "sys").exists():
+                builddir = builddir / "sys"
+            elif self.target_arch == CrossCompileTarget.MIPS or self.target_arch == CrossCompileTarget.CHERI:
                 # TODO: only clean the current kernel config not all of them
-                builddir = builddir / "mips.mips64/sys"
-            else:
+                if (builddir / "mips.mips64/sys").exists():
+                    builddir = builddir / "mips.mips64/sys"
+            if builddir == root_builddir:
                 warningMessage("Do not know the full path to the kernel build directory, will clean the whole tree!")
         return self.asyncCleanDirectory(builddir)
 
