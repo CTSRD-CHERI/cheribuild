@@ -68,7 +68,6 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         else:
             self.configureArgs.extend(["--with-libxml", "--with-readline", "--without-gssapi"])
 
-
         if self.debugInfo:
             self.configureArgs.append("--enable-debug")
         else:
@@ -76,7 +75,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
 
     def install(self, **kwargs):
         super().install()
-        self.runMakeInstall(args=self.commonMakeArgs + ["-C", "src/test/regress"], target="install-tests")
+        self.runMakeInstall(args=self.make_args.all_commandline_args + ["-C", "src/test/regress"], target="install-tests")
         # install the benchmark script
         benchmark = self.readFile(self.sourceDir / "postgres-benchmark.sh")
         if self.installPrefix:

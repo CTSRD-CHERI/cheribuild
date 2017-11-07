@@ -134,7 +134,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
     def compile(self, **kwargs):
         with TemporarilyRemoveProgramsFromSdk(["as", "ld", "objcopy", "objdump"], self.config):
-            self.runMake(self.commonMakeArgs + [self.config.makeJFlag], makeTarget="all-gdb", cwd=self.buildDir)
+            self.runMake(makeTarget="all-gdb", cwd=self.buildDir)
 
     def install(self, **kwargs):
-        self.runMakeInstall(args=self.commonMakeArgs, target="install-gdb")
+        self.runMakeInstall(target="install-gdb")

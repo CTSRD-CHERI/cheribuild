@@ -66,14 +66,6 @@ class BuildSQLite(CrossCompileAutotoolsProject):
 
     def install(self, **kwargs):
         super().install()
-        # self.runMakeInstall(args=self.commonMakeArgs + ["-C", "src/test/regress"], target="install-tests")
-        # # install the benchmark script
-        # benchmark = self.readFile(self.sourceDir / "postgres-benchmark.sh")
-        # benchmark = re.sub(r'POSTGRES_ROOT=".*"', "POSTGRES_ROOT=\"" + str(self.installPrefix) + "\"", benchmark)
-        # self.writeFile(self.real_install_root_dir / "postgres-benchmark.sh", benchmark, overwrite=True, mode=0o755)
-        # run_tests = self.readFile(self.sourceDir / "run-postgres-tests.sh")
-        # run_tests = re.sub(r'POSTGRES_ROOT=".*"', "POSTGRES_ROOT=\"" + str(self.installPrefix) + "\"", run_tests)
-        # self.writeFile(self.real_install_root_dir / "run-postgres-tests.sh", run_tests, overwrite=True, mode=0o755)
 
     def needsConfigure(self):
         return not (self.buildDir / "Makefile").exists()

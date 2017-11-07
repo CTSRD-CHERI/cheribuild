@@ -37,8 +37,10 @@ import sys
 import threading
 import time
 import errno
+from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
+from copy import deepcopy
 
 from .config.loader import ConfigLoaderBase, ComputedDefaultValue
 from .config.chericonfig import CheriConfig, CrossCompileTarget
@@ -47,7 +49,7 @@ from .filesystemutils import FileSystemUtils
 from .utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies", # no-combine
-           "SimpleProject", "CheriConfig", "flushStdio"]  # no-combine
+           "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions"]  # no-combine
 
 
 def flushStdio(stream):
@@ -371,6 +373,95 @@ def _defaultBuildDir(config: CheriConfig, project: "Project"):
     return config.buildRoot / (project.projectName.lower() + project.buildDirSuffix(config, target))
 
 
+class MakeOptions(object):
+    class Kind(Enum):
+        GnuMake = 1
+        BsdMake = 2
+        Ninja = 3
+
+    def __init__(self, **kwargs):
+        self._vars = OrderedDict()
+        # Used by e.g. FreeBSD:
+        self._with_options = OrderedDict()
+        self._flags = list()
+        self.env_vars = {}
+        self.set(**kwargs)
+        self.kind = MakeOptions.Kind.GnuMake
+
+    def set(self, **kwargs):
+        for k, v in kwargs.items():
+            if isinstance(v, bool):
+                self._vars[k] = "1" if v else "0"
+            else:
+                self._vars[k] = str(v)
+
+    def set_with_options(self, **kwargs):
+        """
+        For every argument in kwargs sets a WITH_FOO if FOO=True or a WITHOUT_FOO if FOO=False
+        Used by the FreeBSD build sysmtem: e.g. make -DWITH_MAN / -DWITHOUT_MAN
+        :return: dict of VAR=True/False
+        """
+        for k, v in kwargs.items():
+            assert isinstance(v, bool)
+            self._with_options[k] = v
+
+    def add_flags(self, *args) -> None:
+        """
+        :param args: the flags to add (e.g. -j 16, etc.)
+        """
+        self._flags.extend(args)
+
+    def _get_defined_var(self, name) -> str:
+        # BSD make supports a -DVAR syntax but GNU doesn't
+        if self.kind == MakeOptions.Kind.BsdMake:
+            return "-D" + name
+        else:
+            assert self.kind != MakeOptions.Kind.Ninja  # should not be used!
+            return name + "=1"
+
+    @property
+    def all_commandline_args(self) -> list:
+        assert self.kind
+        result = []
+        # First all the variables
+        for k, v in self._vars.items():
+            assert isinstance(v, str)
+            if v == "1":
+                result.append(self._get_defined_var(k))
+            else:
+                result.append(k + "=" + v)
+        # then the WITH/WITHOUT variables
+        for k, v in self._with_options.items():
+            result.append(self._get_defined_var("WITH_" if v else "WITHOUT_") + k)
+        # and finally the command line flags like -k
+        result.extend(self._flags)
+        return result
+
+    def remove(self, variable):
+        if variable in self._vars:
+            del self._vars[variable]
+        if variable in self._with_options:
+            del self._with_options[variable]
+        for flag in self._flags.copy():
+            if flag.strip() == "-D" + variable or flag.startswith(variable + "="):
+                self._flags.remove(flag)
+
+    def remove_all(self, predicate: "typing.Callable[bool, [str]]"):
+        keys = list(self._vars.keys())
+        for k in keys:
+            if predicate(k):
+                del self._vars[k]
+
+    def copy(self):
+        return deepcopy(self)
+
+    def update(self, other: "MakeOptions"):
+        self._vars.update(other._vars)
+        self._with_options.update(other._with_options)
+        self._flags.extend(other._flags)
+        self.env_vars.update(other.env_vars)
+
+
 class Project(SimpleProject):
     repository = ""
     gitRevision = None
@@ -474,7 +565,7 @@ class Project(SimpleProject):
 
         self.configureCommand = ""
         # non-assignable variables:
-        self.commonMakeArgs = []
+        self.make_args = MakeOptions()
         self.configureArgs = []  # type: typing.List[str]
         self.configureEnvironment = {}  # type: typing.Dict[str,str]
         if self.config.createCompilationDB and self.compileDBRequiresBear:
@@ -499,7 +590,7 @@ class Project(SimpleProject):
         # self.__dict__[name] = value
         if self.__dict__.get("_preventAssign"):
             # assert name not in ("sourceDir", "buildDir", "installDir")
-            if name in ("configureArgs", "configureEnvironment", "commonMakeArgs"):
+            if name in ("configureArgs", "configureEnvironment", "make_args"):
                 import traceback
                 traceback.print_stack()
                 fatalError("Project." + name + " mustn't be set, only modification is allowed.", "Called from",
@@ -549,11 +640,13 @@ class Project(SimpleProject):
         if revision:
             runCmd("git", "checkout", revision, cwd=srcDir, printVerboseOnly=True)
 
-    def runMake(self, args: "typing.List[str]", makeTarget="", *, makeCommand: str = None, logfileName: str = None,
+    def runMake(self, makeTarget="", *, makeCommand: str = None, args: "typing.List[str]"=None, logfileName: str = None,
                 cwd: Path = None, env=None, appendToLogfile=False, compilationDbName="compile_commands.json",
-                stdoutFilter: "typing.Callable[[bytes], None]" = "__default_filter__") -> None:
+                parallel: bool=True, stdoutFilter: "typing.Callable[[bytes], None]" = "__default_filter__") -> None:
         if not makeCommand:
             makeCommand = self.makeCommand
+        if not args:
+            args = self.make_args.all_commandline_args
         if not cwd:
             cwd = self.buildDir
 
@@ -565,6 +658,9 @@ class Project(SimpleProject):
             allArgs = args
             if not logfileName:
                 logfileName = Path(makeCommand).name
+        if parallel:
+            allArgs.append(self.config.makeJFlag)
+
         allArgs = [makeCommand] + allArgs
         if self.config.createCompilationDB and self.compileDBRequiresBear:
             allArgs = [shutil.which("bear"), "--cdb", self.buildDir / compilationDbName,
@@ -634,15 +730,15 @@ class Project(SimpleProject):
     def compile(self, cwd: Path = None):
         if cwd is None:
             cwd = self.buildDir
-        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], cwd=cwd)
+        self.runMake("all", cwd=cwd, env=self.make_args.env_vars)
 
     @property
     def makeInstallEnv(self):
         if self.destdir:
-            env = os.environ.copy()
+            env = self.make_args.env_vars.copy()
             env["DESTDIR"] = str(self.destdir)
             return env
-        return None
+        return self.make_args.env_vars
 
     @property
     def real_install_root_dir(self):
@@ -655,10 +751,9 @@ class Project(SimpleProject):
             return self.destdir / self.installPrefix.relative_to(Path("/"))
         return self.installDir
 
-    def runMakeInstall(self, *, args: list = None, target="install", _stdoutFilter="__default_filter__", cwd=None):
-        if args is None:
-            args = self.commonMakeArgs
-        self.runMake(args, makeTarget=target, stdoutFilter=_stdoutFilter, env=self.makeInstallEnv, cwd=cwd)
+    def runMakeInstall(self, *, args: list = None, target="install", _stdoutFilter="__default_filter__", cwd=None,
+                       **kwargs):
+        self.runMake(makeTarget=target, args=args, stdoutFilter=_stdoutFilter, env=self.makeInstallEnv, cwd=cwd, **kwargs)
 
     def install(self, _stdoutFilter="__default_filter__"):
         self.runMakeInstall(_stdoutFilter=_stdoutFilter)

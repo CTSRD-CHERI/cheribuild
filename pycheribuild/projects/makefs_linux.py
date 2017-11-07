@@ -51,7 +51,8 @@ class BuildMakefsOnLinux(Project):
             self.dependencyError("libbsd must be installed to compile makefs on linux")
 
     def compile(self, **kwargs):
-        self.runMake(self.commonMakeArgs)
+        # Doesn't have an all target
+        self.runMake(makeTarget="")
 
     def install(self, **kwargs):
         self.installFile(self.sourceDir / "builddir/usr.sbin/makefs/makefs", self.installDir / "bin/makefs")

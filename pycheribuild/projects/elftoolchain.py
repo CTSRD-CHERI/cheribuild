@@ -46,24 +46,28 @@ class BuildElftoolchain(Project):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+        # TODO: move this to project
         if not IS_FREEBSD:
             self._addRequiredSystemTool("bmake")
             self.makeCommand = "bmake"
         else:
             self.makeCommand = "make"
+        self.make_args.kind = self.make_args.Kind.BsdMake
 
         self.gitBranch = "master"
         # self.makeArgs = ["WITH_TESTS=no", "-DNO_ROOT"]
         # TODO: build static?
         if self.build_static:
-            self.commonMakeArgs.append("LDSTATIC=-static")
-        self.commonMakeArgs.append("WITH_TESTS=no")
-        self.commonMakeArgs.append("WITH_DOCUMENTATION=no")
-        self.commonMakeArgs.append("WITH_PE=no")
+            self.make_args.set(LDSTATIC="-static")
+        self.make_args.set_with_options(TESTS=False, PE=False, DOCUMENTATION=False)
         # HACK: we don't want the binaries to depend on libelftc.so because the build system doesn't handle rpath
-        self.commonMakeArgs.append("SHLIB_MAJOR=")  # don't build shared libraries
+        # setting SHLIB_FULLVERSION to empty is a hack to prevent building of shared libraries
+        # as we want the build tools to be statically linked but e.g. libarchive might not be available
+        # as a static library (e.g. on openSUSE)
+        self.make_args.set(SHLIB_MAJOR="", SHLIB_FULLVERSION="",  # don't build shared libraries
+                           CC=str(self.config.clangPath))
         if not self.config.verbose:
-            self.commonMakeArgs.append("-s")
+            self.make_args.add_flags("-s")
         self.programsToBuild = ["brandelf", "elfcopy", "elfdump", "strings", "nm", "readelf", "addr2line",
                                 "size", "findtextrel"]
         # some make targets install more than one tool:
@@ -91,13 +95,7 @@ class BuildElftoolchain(Project):
         # To speed it up run make for the individual library directories instead and then for all the binaries
         firstCall = True  # recreate logfile on first call, after that append
         for tgt in self.libTargets + self.programsToBuild:
-            # setting SHLIB_FULLVERSION to empty is a hack to prevent building of shared libraries
-            # as we want the build tools to be statically linked but e.g. libarchive might not be available
-            # as a static library (e.g. on openSUSE)
-            makeArgs = self.commonMakeArgs + ["SHLIB_FULLVERSION=", self.config.makeJFlag,
-                                              "CC=" + str(self.config.clangPath)]
-            self.runMake(makeArgs, makeTarget="all", cwd=self.sourceDir / tgt,
-                         logfileName="build", appendToLogfile=not firstCall)
+            self.runMake("all", cwd=self.sourceDir / tgt, logfileName="build", appendToLogfile=not firstCall)
             firstCall = False
 
     def install(self, **kwargs):
@@ -105,29 +103,27 @@ class BuildElftoolchain(Project):
         # We don't actually want to install all the files, just copy the binaries that we want
         group = grp.getgrgid(os.getgid()).gr_name
         user = pwd.getpwuid(os.getuid()).pw_name
-        ownerFlags = [
+        self.make_args.set(
             # elftoolchain tries to install as root -> override *GRP and *OWN flags
-            "BINGRP=" + group, "BINOWN=" + user,
-            "MANGRP=" + group, "MANOWN=" + user,
-            "INFOGRP=" + group, "INFOOWN=" + user,
-            "LIBGRP=" + group, "LIBOWN=" + user,
-            "FILESGRP=" + group, "FILESOWN=" + user,
+            BINGRP=group, BINOWN=user,
+            MANGRP=group, MANOWN=user,
+            INFOGRP=group, INFOOWN=user,
+            LIBGRP=group, LIBOWN=user,
+            FILESGRP=group, FILESOWN=user,
             # override the install paths:
-            "BINDIR=/bin", "LIBDIR=/lib", "INCSDIR=/include", "SHAREDIR=/share"
-        ]
+            BINDIR="/bin", LIBDIR="/lib", INCSDIR="/include", SHAREDIR="/share",
+        )
         if IS_LINUX:
             # $INSTALL is not set to create leading directories on Ubuntu
-            ownerFlags.append("INSTALL=install -D")
             # on Linux MANDIR is not relative to SHAREDIR so we need to set it manually
-            ownerFlags.append("MANDIR=/share/man")
+            self.make_args.set(INSTALL="install -D", MANDIR="/share/man")
 
         # some directories are not being created correctly:
         for i in ("share/man/man1", "share/man/man3", "share/man/man5"):
             self.makedirs(self.installDir / i)
         firstCall = True  # recreate logfile on first call, after that append
         for tgt in self.programsToBuild:
-            self.runMake(self.commonMakeArgs + ownerFlags + ["DESTDIR=" + str(self.installDir)], makeTarget="install",
-                         cwd=self.sourceDir / tgt, logfileName="install", appendToLogfile=not firstCall)
+            self.runMakeInstall(cwd=self.sourceDir / tgt, logfileName="install", appendToLogfile=not firstCall)
             firstCall = False
 
         allInstalledTools = self.programsToBuild + self.extraPrograms

@@ -110,19 +110,17 @@ class BuildGnuBinutils(AutotoolsProject):
         super().update()
 
     def compile(self, **kwargs):
-        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "all-ld", logfileName="build")
-        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "all-gas", logfileName="build")
-        self.runMake(self.commonMakeArgs + [self.config.makeJFlag], "all-binutils", logfileName="build")
-        # self.runMake(self.commonMakeArgs, "all-gas", logfileName="build", appendToLogfile=True)
+        self.runMake("all-ld", logfileName="build")
+        self.runMake("all-gas", logfileName="build")
+        self.runMake("all-binutils", logfileName="build")
 
     def install(self, **kwargs):
         bindir = self.installDir / "bin"
         if not self.fullInstall:
             # we don't want to install all programs, as the rest comes from elftoolchain
-            self.runMake(self.commonMakeArgs, "install-gas", logfileName="install", appendToLogfile=True)
-
+            self.runMake("install-gas", logfileName="install", appendToLogfile=True, parallel=False)
             self.deleteFile(bindir / "mips64-unknown-freebsd-ld")
-            self.runMake(self.commonMakeArgs, "install-ld", logfileName="install")
+            self.runMake("install-ld", logfileName="install", appendToLogfile=True, parallel=False)
             # we also need the linker scripts so this is not enough:
             # self.installFile(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
             self.moveFile(bindir / "mips64-unknown-freebsd-ld", bindir / "mips64-unknown-freebsd-ld.bfd")
@@ -160,19 +158,3 @@ class BuildGPLv3Binutils(BuildGnuBinutils):
 
     def update(self):
         AutotoolsProject.update(self)
-
-    # def compile(self, **kwargs):
-    #     # FIXME: for some reason a normal make all will fail...
-    #     self.runMake(self.commonMakeArgs, "all-ld", logfileName="build")
-    #     # self.runMake(self.commonMakeArgs, "all-gold", logfileName="build", appendToLogfile=True)
-    #     pass
-    #
-    # def install(self, **kwargs):
-    #     bindir = self.installDir / "bin"
-    #     self.runMake(self.commonMakeArgs, "install-ld", logfileName="install")
-    #     # self.runMake(self.commonMakeArgs, "install-gold", logfileName="install", appendToLogfile=True)
-    #     self.installFile(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
-    #     self.createBuildtoolTargetSymlinks(bindir / "ld.bfd")
-    #     self.createBuildtoolTargetSymlinks(bindir / "ld.bfd", toolName="ld", createUnprefixedLink=True)
-    #     # self.installFile(self.buildDir / "gold/ld-new", bindir / "ld.gold", force=True)
-    #     # self.createBuildtoolTargetSymlinks(bindir / "ld.gold")
