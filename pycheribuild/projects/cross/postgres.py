@@ -61,8 +61,8 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             # tell postgres configure that %zu works in printf()
             self.configureEnvironment["PRINTF_SIZE_T_SUPPORT"] = "yes"
             # currently we can only build static:
-            self.LDFLAGS.append("-static")
-            self.COMMON_FLAGS.append("-static")  # adding it to LDFLAGS only doesn't seem to be enough
+            # self.LDFLAGS.append("-static")
+            # self.COMMON_FLAGS.append("-static")  # adding it to LDFLAGS only doesn't seem to be enough
             self.configureArgs.extend(["--without-libxml", "--without-readline", "--without-gssapi"])
             self.add_configure_env_arg("LDFLAGS_EX", "-static")
         else:
