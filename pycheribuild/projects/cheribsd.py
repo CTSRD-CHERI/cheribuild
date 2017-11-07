@@ -213,7 +213,6 @@ class _BuildFreeBSD(Project):
         if self.crossbuild:
             self.crossBinDir = self.config.outputRoot / "freebsd-cross/bin"
             self.addCrossBuildOptions()
-            self.mipsToolchainPath = self.config.sdkDir
             self.useExternalToolchainForWorld = True
             self.useExternalToolchainForKernel = True
 
@@ -631,8 +630,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                 fatalError(tool, "binary is missing!")
             self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
 
-        # Use bash as sh (should be quicker with the builtins)
-        shell = "bash"
+        shell = "sh"
         self.createSymlink(Path(shutil.which(shell)), self.crossBinDir / "sh", relative=False)
 
         self.common_options.env_vars["AWK"] = self.crossBinDir / "awk"
