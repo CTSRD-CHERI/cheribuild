@@ -149,8 +149,10 @@ class _BuildFreeBSD(Project):
                                                               default=buildKernelWithClang)
         cls.useExternalToolchainForWorld = cls.addBoolOption("use-external-toolchain-for-world", showHelp=True,
                                                              help="build world with the external toolchain", default=True)
-        cls.linkKernelWithLLD = cls.addBoolOption("link-kernel-with-lld")
-        cls.forceBFD = cls.addBoolOption("force-bfd")
+        cls.linker_for_world = cls.addConfigOption("linker-for-world", default="bfd", choices=["bfd", "lld"],
+                                                   help="The linker to use for world")
+        cls.linker_for_kernel = cls.addConfigOption("linker-for-kernel", default="bfd", choices=["bfd", "lld"],
+                                                    help="The linker to use for the kernel")
         cls.addDebugInfoFlag = cls.addBoolOption("debug-info",
                                                  help="pass make flags for building debug info",
                                                  default=True, showHelp=True)
@@ -267,18 +269,18 @@ class _BuildFreeBSD(Project):
 
         if self.target_arch == CrossCompileTarget.NATIVE:
             cross_prefix = str(self.config.sdkBinDir) + "/"  # needs to end with / for concatenation
-            target_flags = " -fuse-ld=lld -Wno-error=unused-command-line-argument -Wno-unused-command-line-argument"
-            self.crossLD = cross_prefix + "ld.bfd" if self.forceBFD else cross_prefix + "ld.lld"
+            # target_flags = " -fuse-ld=lld -Wno-error=unused-command-line-argument -Wno-unused-command-line-argument"
+            target_flags = ""
             self.useExternalToolchainForWorld = True
             self.useExternalToolchainForKernel = True
-            self.linkKernelWithLLD = True
+            self.linker_for_kernel = "lld" # bfd won't work here
+            self.linker_for_world = "lld"
             # DONT SET XAS!!! It prevents bfd from being built
             # self.cross_toolchain_config.add(XAS="/usr/bin/as")  # TODO: would be nice if we could compile the asm with clang
 
         elif self.mipsToolchainPath:
             cross_prefix = str(self.mipsToolchainPath / "bin") + "/"
             target_flags = " -integrated-as -fcolor-diagnostics -mcpu=mips4"
-            self.crossLD = cross_prefix + "ld.bfd" if self.forceBFD else cross_prefix + "ld.lld"
             # for some reason this is not inferred....
             if self.crossbuild:
                 # For some reason STRINGS is not set
@@ -303,8 +305,7 @@ class _BuildFreeBSD(Project):
             X_COMPILER_TYPE="clang",
             XOBJDUMP=cross_prefix + "llvm-objdump",
             OBJDUMP=cross_prefix + "llvm-objdump",
-            # FIXME: LLD doesn't quite work yet, it needs some extra flags to be passed
-            # XLD=self.crossLD,
+            XLD=cross_prefix + "ld." + self.linker_for_world,
         )
 
     @property
@@ -336,12 +337,8 @@ class _BuildFreeBSD(Project):
 
             kernel_options = copy.deepcopy(self.cross_toolchain_config)
 
-            if self.linkKernelWithLLD:
-                linker = cross_prefix + "ld.lld"
-                fuse_ld_flag = "-fuse-ld=lld"
-            else:
-                fuse_ld_flag = "-fuse-ld=bfd"
-                linker = cross_prefix + "ld.bfd" if self.crossbuild else "ld.bfd"
+            fuse_ld_flag = "-fuse-ld=" + self.linker_for_kernel
+            linker = cross_prefix + "ld." + self.linker_for_kernel
             kernel_options.add(LD=linker, XLD=linker,
                                LDFLAGS=fuse_ld_flag, HACK_LDFLAGS=fuse_ld_flag, TRAMP_LDFLAGS=fuse_ld_flag)
             kernelMakeFlags.extend(kernel_options.commandline_flags)
@@ -376,7 +373,7 @@ class _BuildFreeBSD(Project):
     def _buildkernel(self, kernconf: str):
         kernelMakeArgs = self.kernelMakeArgsForConfig(kernconf)
         # needKernelToolchain = not self.useExternalToolchainForKernel
-        dontNeedKernelToolchain = self.useExternalToolchainForKernel and self.linkKernelWithLLD
+        dontNeedKernelToolchain = self.useExternalToolchainForKernel and self.linker_for_world == "lld"
         if self.crossbuild:
             dontNeedKernelToolchain = True
         if not dontNeedKernelToolchain and not self.kernelToolchainAlreadyBuilt:
@@ -464,14 +461,12 @@ class _BuildFreeBSD(Project):
 
     def add_mips_crossbuildOptions(self):
         self.common_options.add(CROSS_BINUTILS_PREFIX=str(self.config.sdkBinDir) + "/mips64-unknown-freebsd-")
-        if not self.forceBFD:
-            self.common_options.add(MIPS_LINK_WITH_LLD=None)
         self.common_options.add(BOOT=False)
-        if self.forceBFD:
+        if self.linker_for_world == "bfd":
             self.common_options.env_vars["XLDFLAGS"] = "-fuse-ld=bfd"
         else:
-            self.common_options.env_vars["XLDFLAGS"] = "-fuse-ld=lld"
-        # self.common_options.env_vars["XCFLAGS"] = "-fuse-ld=bfd"
+            assert self.linker_for_world == "lld"
+            self.common_options.env_vars["XLDFLAGS"] = "-fuse-ld=lld -Wl,--no-rosegment -Wl,-z,notext"
 
     def add_x86_crossbuildOptions(self):
         self.common_options.add(CROSS_BINUTILS_PREFIX=str(self.config.sdkBinDir) + "/")
@@ -523,7 +518,6 @@ class _BuildFreeBSD(Project):
 
         # localedef is really hard to crosscompile -> skip this for now
         self.common_options.add(LOCALES=False)
-
 
         # bootstrap tool won't build
         self.common_options.add(SYSCONS=False,
@@ -634,7 +628,9 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                 fatalError(tool, "binary is missing!")
             self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
 
-        shell = "sh"
+        # /bin/sh on Ubuntu doesn't like shift without any arguments, let's use bash as bin/sh instead...
+        # This is a problem when running ncurses MKfallback.sh
+        shell = "bash"
         self.createSymlink(Path(shutil.which(shell)), self.crossBinDir / "sh", relative=False)
 
         self.common_options.env_vars["AWK"] = self.crossBinDir / "awk"
