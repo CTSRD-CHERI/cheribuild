@@ -109,11 +109,18 @@ class _BuildDiskImageBase(SimpleProject):
     @staticmethod
     def getModeString(path: Path):
         try:
-            # print(path, path.stat())
-            return "0{0:o}".format(stat.S_IMODE(path.stat().st_mode))  # format as octal with leading 0 prefix
+            print(path, path.stat())
+            result = "0{0:o}".format(stat.S_IMODE(path.stat().st_mode))  # format as octal with leading 0 prefix
         except Exception as e:
             warningMessage("Failed to stat", path, "assuming mode 0644: ", e)
-            return "0644"
+            result = "0644"
+        # make sure that the .ssh config files are installed with the right permissions
+        if path.name == ".ssh" and result != "0700":
+            warningMessage("Wrong file mode", result, "for", path, " --  it should be 0700, fixing it for image")
+            return "0700"
+        if path.parent.name == ".ssh" and not path.name.endswith(".pub") and result != "0600" :
+            warningMessage("Wrong file mode", result, "for", path, " --  it should be 0600, fixing it for image")
+        return result
 
     def addFileToImage(self, file: Path, *, baseDirectory: Path, user="root", group="wheel", mode=None):
         pathInTarget = file.relative_to(baseDirectory)
@@ -164,7 +171,8 @@ class _BuildDiskImageBase(SimpleProject):
         if file in self.extraFiles:
             self.extraFiles.remove(file)  # remove it from extraFiles so we don't install it twice
 
-    def createFileForImage(self, outDir: Path, pathInImage: str, *, contents: str="\n", showContentsByDefault=True):
+    def createFileForImage(self, outDir: Path, pathInImage: str, *, contents: str="\n", showContentsByDefault=True,
+                           mode=None):
         if pathInImage.startswith("/"):
             pathInImage = pathInImage[1:]
         assert not pathInImage.startswith("/")
@@ -181,7 +189,7 @@ class _BuildDiskImageBase(SimpleProject):
             if self.config.verbose or (showContentsByDefault and not self.config.quiet):
                 print("Generating /", pathInImage, " with the following contents:\n",
                       coloured(AnsiColour.green, contents), sep="", end="")
-            self.writeFile(targetFile, contents, noCommandPrint=True, overwrite=False)
+            self.writeFile(targetFile, contents, noCommandPrint=True, overwrite=False, mode=mode)
         self.addFileToImage(targetFile, baseDirectory=baseDir)
 
     def prepareRootfs(self, outDir: Path):
@@ -244,11 +252,13 @@ class _BuildDiskImageBase(SimpleProject):
                     contents = ""
                     for pubkey in sshKeys:
                         contents += self.readFile(pubkey)
-                    self.createFileForImage(outDir, "/root/.ssh/authorized_keys", contents=contents)
+                    self.createFileForImage(outDir, "/root/.ssh/authorized_keys", contents=contents, mode=0o600)
                     if self.queryYesNo("Should this authorized_keys file be used by default? "
                                        "(You can always change them by editing/deleting '" +
                                        str(authorizedKeys) + "')?", defaultResult=False):
                         self.installFile(outDir / "root/.ssh/authorized_keys", authorizedKeys)
+                        runCmd("chmod", "0700", authorizedKeys.parent)
+                        runCmd("chmod", "0600", authorizedKeys)
 
     def makeImage(self):
         # check that qemu-img exists before starting the potentially long-running makefs command
