@@ -124,7 +124,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LLVM_EXTERNAL_LIT=BuildLLVM.buildDir / "bin/llvm-lit",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
             LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
-                          "/lit-test-results.xml --max-time 3600 --timeout 120 ${JFLAG}"
+                          "/lit-test-results.xml --max-time 3600 --timeout 120 -s -vv"
         )
         # select libcxxrt as the runtime library
         self.add_cmake_options(
