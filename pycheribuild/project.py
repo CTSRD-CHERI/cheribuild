@@ -753,13 +753,14 @@ class Project(SimpleProject):
         return self.installDir
 
     def runMakeInstall(self, *, options: MakeOptions=None, target="install", _stdoutFilter="__default_filter__", cwd=None,
-                       **kwargs):
+                       parallel=False, **kwargs):
         if options is None:
             options = self.make_args.copy()
         else:
             options = options.copy()
         options.env_vars.update(self.makeInstallEnv)
-        self.runMake(makeTarget=target, options=options, stdoutFilter=_stdoutFilter, cwd=cwd, **kwargs)
+        self.runMake(makeTarget=target, options=options, stdoutFilter=_stdoutFilter, cwd=cwd,
+                     parallel=parallel, **kwargs)
 
     def install(self, _stdoutFilter="__default_filter__"):
         self.runMakeInstall(_stdoutFilter=_stdoutFilter)
