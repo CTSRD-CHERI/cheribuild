@@ -181,7 +181,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
         cmdline = args
     cmdline = list(map(str, cmdline))  # ensure it's all strings so that subprocess can handle it
     # When running scripts from a noexec filesystem try to read the interpreter and run that
-    printCommand(cmdline, cwd=kwargs.get("cwd"), printVerboseOnly=printVerboseOnly)
+    printCommand(cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), printVerboseOnly=printVerboseOnly)
     if "cwd" in kwargs:
         kwargs["cwd"] = str(kwargs["cwd"])
     else:
