@@ -312,7 +312,8 @@ class _BuildFreeBSD(Project):
             fuse_ld_flag = "-fuse-ld=" + self.linker_for_kernel
             linker = cross_prefix + "ld." + self.linker_for_kernel
             kernel_options.remove("LDFLAGS")
-            kernel_options.set(LD=linker, XLD=linker, HACK_LDFLAGS=fuse_ld_flag, TRAMP_LDFLAGS=fuse_ld_flag)
+            kernel_options.set(LD=linker, XLD=linker, HACK_EXTRA_FLAGS="-shared " + fuse_ld_flag,
+                               TRAMP_LDFLAGS=fuse_ld_flag)
             kernel_options.env_vars["LDFLAGS"] = fuse_ld_flag
             kernel_options.env_vars["XLDFLAGS"] = fuse_ld_flag
         if self.crossbuild:
