@@ -440,7 +440,6 @@ class _BuildFreeBSD(Project):
             self.runMake("distribution", options=install_world_args)
 
     def addCrossBuildOptions(self):
-        # when cross compiling we need to specify the path to the bsd makefiles (-m src/share/mk)
         self.makeCommand = shutil.which("bmake", path=self.config.dollarPathWithOtherTools) # make is usually gnu make
         # we also need to ensure that our SDK build tools are being picked up first
         build_path = str(self.config.sdkBinDir) + ":" + str(self.crossBinDir)
@@ -460,12 +459,15 @@ class _BuildFreeBSD(Project):
         # self.common_options.env_vars["MACHINE"] = "amd64"
         # self.common_options.env_vars["MACHINE_ARCH"] = "amd64"
 
+        # we don't build elftoolchain during buildworld so for the kernel we need to set these variables
+        self.make_args.env_vars["OBJDUMP"] = self.config.sdkBinDir / "llvm-objdump"
+        # TODO: use llvm-objcopy?
+        self.make_args.env_vars["OBJCOPY"] = self.config.sdkBinDir / "objcopy"
+        self.make_args.env_vars["STRIP"] = self.config.sdkBinDir / "strip"
         if IS_MAC:
             # For some reason on a mac bmake can't execute elftoolchain objcopy -> use gnu version
             # self._addRequiredSystemTool("gobjcopy", homebrewPackage="binutils")
             # self.common_options.add(OBJDUMP="gobjdump", OBJCOPY="gobjcopy")
-            self.make_args.set(OBJDUMP=str(self.config.sdkBinDir / "llvm-objdump"),
-                               OBJCOPY=str(self.config.sdkBinDir / "objcopy"))
             # DEBUG files are too big, can't use objcopy for serparate debug files
             self.make_args.set_with_options(DEBUG_FILES=False)
         else:
@@ -552,10 +554,9 @@ class _BuildFreeBSD(Project):
         searchpath = self.config.dollarPathWithOtherTools
         if IS_MAC:
             host_tools += ["chflags"]  # missing on linux
-            host_tools += ["gobjdump", "gobjcopy", "bsdwhatis"]
+            host_tools += ["bsdwhatis"]
             searchpath = "/usr/local/opt/heimdal/libexec/heimdal/:/usr/local/opt/m4/bin" + os.pathsep + searchpath
         else:
-            host_tools += ["objcopy", "objdump"]
             host_tools += ["lesspipe", "dircolors"]
             # create a fake chflags for linux
             self.writeFile(self.crossBinDir / "chflags", """#!/usr/bin/env python3
@@ -568,6 +569,11 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
             if not fullpath:
                 fatalError("Missing", tool, "binary")
             self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
+
+        self.createSymlink(self.config.sdkBinDir / "objcopy", self.crossBinDir / "objcopy", relative=False)
+        self.createSymlink(self.config.sdkBinDir / "llvm-objdump", self.crossBinDir / "objdump", relative=False)
+        self.createSymlink(self.config.sdkBinDir / "strip", self.crossBinDir / "strip", relative=False)
+
         # make installworld expects make as bmake
         self.createSymlink(self.crossBinDir / "bmake", self.crossBinDir / "make", relative=True)
         # create symlinks for the tools installed by freebsd-crosstools
