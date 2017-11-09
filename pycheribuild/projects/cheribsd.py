@@ -658,9 +658,9 @@ class BuildCHERIBSD(_BuildFreeBSD):
         cls.cheriCC = cls.addPathOption("cheri-cc", help="Override the compiler used to build CHERI code",
                                         default=defaultCheriCC)
 
-        cls.forceSDKLinker = cls.addBoolOption("force-sdk-linker", help="Let clang use the linker from the installed "
-                                               "SDK instead of the one built in the bootstrap process. WARNING: May "
-                                               "cause unexpected linker errors!")
+        cls.remove_sdk_binutils = cls.addBoolOption("remove-sdk-binutils", help="Remove the binutils from the SDK while"
+                                                    " building CheriBSD to ensure that the ones built from CheriBSD"
+                                                    " are used (probably no longer useful).", default=False)
         cls.buildFpgaKernels = cls.addBoolOption("build-fpga-kernels", showHelp=True,
                                                  help="Also build kernels for the FPGA. They will not be installed so"
                                                       " you need to copy them from the build directory.")
@@ -717,7 +717,7 @@ class BuildCHERIBSD(_BuildFreeBSD):
         programsToMove = ["cheri-unknown-freebsd-ld", "mips4-unknown-freebsd-ld", "mips64-unknown-freebsd-ld", "ld",
                           "objcopy", "objdump"]
         sdkBinDir = self.cheriCC.parent
-        if not self.forceSDKLinker:
+        if self.remove_sdk_binutils:
             for l in programsToMove:
                 if (sdkBinDir / l).exists():
                     runCmd("mv", "-f", l, l + ".backup", cwd=sdkBinDir)
@@ -729,7 +729,7 @@ class BuildCHERIBSD(_BuildFreeBSD):
                     self._buildkernel(kernconf=prefix + conf)
         finally:
             # restore the linkers
-            if not self.forceSDKLinker:
+            if self.remove_sdk_binutils:
                 for l in programsToMove:
                     if (sdkBinDir / (l + ".backup")).exists():
                         runCmd("mv", "-f", l + ".backup", l, cwd=sdkBinDir)
