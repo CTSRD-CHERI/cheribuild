@@ -327,17 +327,18 @@ class _BuildFreeBSD(Project):
         super().runMake(makeTarget, options=options, cwd=self.sourceDir, **kwargs)
 
     def clean(self) -> ThreadJoiner:
-        builddir = self.objdir
+        root_builddir = self.objdir
         if self.config.skipBuildworld:
-            root_builddir = builddir
-            if (builddir / "sys").exists():
-                builddir = builddir / "sys"
-            elif self.target_arch == CrossCompileTarget.MIPS or self.target_arch == CrossCompileTarget.CHERI:
-                # TODO: only clean the current kernel config not all of them
-                if (builddir / "mips.mips64/sys").exists():
-                    builddir = builddir / "mips.mips64/sys"
-            if builddir == root_builddir:
+            kernel_dir = self.kernel_objdir(self.kernelConfig)
+            print(kernel_dir)
+            if kernel_dir and kernel_dir.parent.exists():
+                builddir = kernel_dir
+            else:
                 warningMessage("Do not know the full path to the kernel build directory, will clean the whole tree!")
+                builddir = root_builddir
+        else:
+            builddir = root_builddir
+        assert not str(builddir.relative_to(self.buildDir)).startswith("."), builddir
         return self.asyncCleanDirectory(builddir)
 
     def _buildkernel(self, kernconf: str):
@@ -392,6 +393,18 @@ class _BuildFreeBSD(Project):
         args = self.buildworldArgs
         return Path(runCmd([self.makeCommand] + args.all_commandline_args + ["-V", ".OBJDIR"], env=args.env_vars,
                            cwd=self.sourceDir, runInPretendMode=True, captureOutput=True).stdout.decode("utf-8").strip())
+
+    def kernel_objdir(self, config):
+        args = self.kernelMakeArgsForConfig(config)
+        args.add_flags("-m", str(self.sourceDir / "share/mk"), "-f", "Makefile.inc1")
+        try:
+            result = runCmd([self.makeCommand] + args.all_commandline_args + ["-V", "KRNLOBJDIR"], env=args.env_vars,
+                        cwd=self.sourceDir, runInPretendMode=True, captureOutput=True).stdout.decode("utf-8").strip()
+            if result:
+                return Path(result) / config
+        except subprocess.CalledProcessError as e:
+            warningMessage("Could not infer kernel build dir: ", e)
+        return None
 
     def install(self, **kwargs):
         if self.subdirOverride:
@@ -662,10 +675,12 @@ class BuildCHERIBSD(_BuildFreeBSD):
             "CHERI":config.cheriBitsStr,
             "CHERI_CC":str(self.cheriCC),
             "CHERI_CXX":str(self.cheriCXX),
-            "CHERI_LD":str(config.sdkBinDir / "ld.lld")
+            "CHERI_LD":str(config.sdkBinDir / "ld.lld"),
+            "TARGET": "mips",
+            "TARGET_ARCH": "mips64"
         }
         if self.mipsOnly:
-            archBuildFlags = {"TARGET":"mips", "TARGET_ARCH":"mips64", "WITHOUT_LIB32":True}
+            archBuildFlags = {"TARGET":"mips", "TARGET_ARCH":"mips64", "WITHOUT_LIB32": True}
             # keep building a cheri kernel even with a mips userspace (mips may be broken...)
             # self.kernelConfig = "MALTA64"
         super().__init__(config, archBuildFlags=archBuildFlags)
