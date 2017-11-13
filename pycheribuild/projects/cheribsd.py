@@ -392,8 +392,17 @@ class _BuildFreeBSD(Project):
         # TODO use https://github.com/pydanny/cached-property ?
         # TODO: somehow get objdir for subdirs (it doesn't work if I just run make in a subdirectory)
         args = self.buildworldArgs
-        return Path(runCmd([self.makeCommand] + args.all_commandline_args + ["-V", ".OBJDIR"], env=args.env_vars,
-                           cwd=self.sourceDir, runInPretendMode=True, captureOutput=True).stdout.decode("utf-8").strip())
+        try:
+            bw_flags = args.all_commandline_args + ["-m", str(self.sourceDir / "share/mk"), "-f", "Makefile.inc1"]
+            output = runCmd([self.makeCommand] + bw_flags + ["-V", "BW_CANONICALOBJDIR"], env=args.env_vars,
+                            cwd=self.sourceDir, runInPretendMode=True, captureOutput=True).stdout
+        except subprocess.CalledProcessError as e:
+            warningMessage("Could not infer buildworld root objdir: ", e)
+            output = runCmd([self.makeCommand] + args.all_commandline_args + ["-V", ".OBJDIR"], env=args.env_vars,
+                            cwd=self.sourceDir, runInPretendMode=True, captureOutput=True).stdout
+        result = Path(output.decode("utf-8").strip())
+        assert result != Path()
+        return result
 
     def kernel_objdir(self, config):
         args = self.kernelMakeArgsForConfig(config)
