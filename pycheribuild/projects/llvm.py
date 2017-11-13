@@ -34,7 +34,7 @@ from ..utils import *
 
 class BuildLLVM(CMakeProject):
     defaultInstallDir = CMakeProject._installToSDK
-    appendCheriBitsToBuildDir = True
+    appendCheriBitsToBuildDir = None
     githubBaseUrl = "https://github.com/CTSRD-CHERI/"
     repository = githubBaseUrl + "llvm.git"
     no_default_sysroot = None
@@ -60,6 +60,10 @@ class BuildLLVM(CMakeProject):
 
         cls.enable_assertions = cls.addBoolOption("assertions", help="build with assertions enabled", default=True)
         cls.skip_lld = cls.addBoolOption("skip-lld", help="Don't build lld as part of the llvm target")
+        if cls.appendCheriBitsToBuildDir is None:
+            cls.appendCheriBitsToBuildDir = cls.addBoolOption("separate-128-and-256-build-dirs", default=True,
+                                                              help="Use separate build directories for the 128 and 256"
+                                                                   "build dirs (needed until multicapsize is merged!)")
         if includeClangRevision:
             cls.clangRepository, cls.clangRevision = addToolOptions("clang")
         if includeLldRevision:
