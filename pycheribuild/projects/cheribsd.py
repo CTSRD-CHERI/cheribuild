@@ -324,8 +324,11 @@ class _BuildFreeBSD(Project):
         kernel_options.set(KERNCONF=kernconf)
         return kernel_options
 
-    def runMake(self, makeTarget="", *, options: MakeOptions=None, **kwargs):
-        super().runMake(makeTarget, options=options, cwd=self.sourceDir, **kwargs)
+    def runMake(self, makeTarget="", *, options: MakeOptions=None, parallel=True, **kwargs):
+        # make behaves differently with -j1 and not j flags -> remove the j flag if j1 is requested
+        if parallel and self.config.makeJobs == 1:
+            parallel = False
+        super().runMake(makeTarget, options=options, cwd=self.sourceDir, parallel=parallel, **kwargs)
 
     def clean(self) -> ThreadJoiner:
         root_builddir = self.objdir
