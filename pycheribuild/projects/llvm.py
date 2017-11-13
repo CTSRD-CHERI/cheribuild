@@ -145,14 +145,15 @@ class BuildLLVM(CMakeProject):
 
     def install(self, **kwargs):
         super().install()
-        # delete the files incompatible with cheribsd
-        incompatibleFiles = list(self.installDir.glob("lib/clang/*/include/std*"))
-        incompatibleFiles += self.installDir.glob("lib/clang/*/include/limits.h")
-        if len(incompatibleFiles) == 0:
-            fatalError("Could not find incompatible builtin includes. Build system changed?")
-        # print("Removing incompatible builtin includes...")
-        # for i in incompatibleFiles:
-        #     self.deleteFile(i, printVerboseOnly=True)
+        if False:  # No longer needed
+            # delete the files incompatible with cheribsd
+            incompatibleFiles = list(self.installDir.glob("lib/clang/*/include/std*"))
+            incompatibleFiles += self.installDir.glob("lib/clang/*/include/limits.h")
+            if len(incompatibleFiles) == 0:
+                fatalError("Could not find incompatible builtin includes. Build system changed?")
+            print("Removing incompatible builtin includes...")
+            for i in incompatibleFiles:
+                self.deleteFile(i, printVerboseOnly=True)
         # create a symlink for the target
         llvmBinaries = "clang clang++ clang-cpp llvm-mc llvm-objdump llvm-readobj llvm-size llc".split()
         for tool in llvmBinaries:
