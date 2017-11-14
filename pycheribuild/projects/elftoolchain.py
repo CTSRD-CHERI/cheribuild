@@ -66,6 +66,8 @@ class BuildElftoolchain(Project):
         # as a static library (e.g. on openSUSE)
         self.make_args.set(SHLIB_MAJOR="", SHLIB_FULLVERSION="",  # don't build shared libraries
                            CC=str(self.config.clangPath))
+
+        self.make_args.set(DESTDIR=self.installDir)
         if not self.config.verbose:
             self.make_args.add_flags("-s")
         self.programsToBuild = ["brandelf", "elfcopy", "elfdump", "strings", "nm", "readelf", "addr2line",
@@ -111,20 +113,24 @@ class BuildElftoolchain(Project):
             LIBGRP=group, LIBOWN=user,
             FILESGRP=group, FILESOWN=user,
         )
+
+        self.make_args.set(
+            BINDIR="/bin",
+            LIBDIR="/lib",
+            INCSDIR="/include",
+            SHAREDIR="/share",
+            )
+
         if IS_LINUX:
             # $INSTALL is not set to create leading directories on Ubuntu
-            # on Linux MANDIR is not relative to SHAREDIR so we need to set it manually
-            # override the install paths:
-            self.make_args.set(
-                INSTALL="install -D",
-                BINDIR=str(self.installDir / "bin"),
-                LIBDIR=str(self.installDir / "bin"),
-                INCSDIR=str(self.installDir / "bin"),
-                SHAREDIR=str(self.installDir / "share"),
-                MANDIR=str(self.installDir / "share/man"))
+            self.make_args.set(MANDIR="/share/man", INSTALL="install -D")
+            mandirs = "share/man/man1", "share/man/man3", "share/man/man5"
+        else:
+            mandirs = "share/man1", "share/man3", "share/man5"
 
-        # some directories are not being created correctly:
-        for i in ("share/man/man1", "share/man/man3", "share/man/man5"):
+        # The build system assumes all install directories already exist;
+
+        for i in ("bin", "lib", "include", "share") + mandirs:
             self.makedirs(self.installDir / i)
         firstCall = True  # recreate logfile on first call, after that append
         for tgt in self.programsToBuild:
