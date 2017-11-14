@@ -124,12 +124,9 @@ class BuildElftoolchain(Project):
         if IS_LINUX:
             # $INSTALL is not set to create leading directories on Ubuntu
             self.make_args.set(MANDIR="/share/man", INSTALL="install -D")
-            mandirs = "share/man/man1", "share/man/man3", "share/man/man5"
-        else:
-            mandirs = "share/man1", "share/man3", "share/man5"
 
+        mandirs = ("share/man/man1", "share/man/man3", "share/man/man5", "share/man1", "share/man3", "share/man5")
         # The build system assumes all install directories already exist;
-
         for i in ("bin", "lib", "include", "share") + mandirs:
             self.makedirs(self.installDir / i)
         firstCall = True  # recreate logfile on first call, after that append
