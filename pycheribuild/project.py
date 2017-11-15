@@ -437,7 +437,7 @@ class MakeOptions(object):
         result.extend(self._flags)
         return result
 
-    def remove(self, variable):
+    def remove_var(self, variable):
         if variable in self._vars:
             del self._vars[variable]
         if variable in self._with_options:
@@ -445,6 +445,10 @@ class MakeOptions(object):
         for flag in self._flags.copy():
             if flag.strip() == "-D" + variable or flag.startswith(variable + "="):
                 self._flags.remove(flag)
+
+    def remove_flag(self, flag: str):
+        if flag in self._flags:
+            self._flags.remove(flag)
 
     def remove_all(self, predicate: "typing.Callable[bool, [str]]"):
         keys = list(self._vars.keys())

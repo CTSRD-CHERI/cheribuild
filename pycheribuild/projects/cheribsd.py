@@ -311,14 +311,14 @@ class _BuildFreeBSD(Project):
             kernel_options.update(self.cross_toolchain_config)
             fuse_ld_flag = "-fuse-ld=" + self.linker_for_kernel
             linker = cross_prefix + "ld." + self.linker_for_kernel
-            kernel_options.remove("LDFLAGS")
+            kernel_options.remove_var("LDFLAGS")
             kernel_options.set(LD=linker, XLD=linker, HACK_EXTRA_FLAGS="-shared " + fuse_ld_flag,
                                TRAMP_LDFLAGS=fuse_ld_flag)
             kernel_options.env_vars["LDFLAGS"] = fuse_ld_flag
             kernel_options.env_vars["XLDFLAGS"] = fuse_ld_flag
         if self.crossbuild:
             kernel_options.set_with_options(KERNEL_TRAMPOLINE=False)
-            kernel_options.remove("DEBUG")
+            kernel_options.remove_var("DEBUG")
             kernel_options.remove_all(lambda s: s.startswith("DEBUG"))
             kernel_options.set(INSTALL_NODEBUG=True)
         kernel_options.set(KERNCONF=kernconf)
@@ -624,6 +624,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                 del os.environ[k]
         if self.config.buildenv:
             args = self.buildworldArgs
+            args.remove_flag("-s")  # buildenv should not be silent
             runCmd([self.makeCommand] + args.all_commandline_args + ["buildenv"], env=args.env_vars,
                    cwd=self.sourceDir)
         else:
