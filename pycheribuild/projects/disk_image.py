@@ -245,7 +245,7 @@ class _BuildDiskImageBase(SimpleProject):
         # now try adding the right ~/.ssh/authorized_keys
         authorizedKeys = self.extraFilesDir / "root/.ssh/authorized_keys"
         if not authorizedKeys.is_file():
-            sshKeys = list(Path(os.path.expanduser("~/.ssh/")).glob("id_*.pub"))
+            sshKeys = list(Path(os.path.expanduser("~/.ssh/")).glob("*.pub"))
             if len(sshKeys) > 0:
                 print("Found the following ssh keys:", list(map(str, sshKeys)))
                 if self.queryYesNo("Should they be added to /root/.ssh/authorized_keys?", defaultResult=True):
