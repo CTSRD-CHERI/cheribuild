@@ -137,10 +137,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                         kind: "typing.Callable[[str], Type_T]" = str, *,
                         showHelp=False, shortname=None, **kwargs) -> "Type_T":
         configOptionKey = cls.target
-        # use the old config option for cheribsd
-        if cls.target == "cheribsd-without-sysroot":
-            configOptionKey = cls.projectName.lower()
-        elif cls.target != cls.projectName.lower():
+        if cls.target != cls.projectName.lower():
             fatalError("Target name does not match project name:", cls.target, "vs", cls.projectName.lower())
 
         # Hide stuff like --foo/install-directory from --help

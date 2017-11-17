@@ -651,7 +651,7 @@ class BuildFreeBSDForX86(_BuildFreeBSD):
 
 class BuildCHERIBSD(_BuildFreeBSD):
     projectName = "cheribsd"
-    target = "cheribsd-without-sysroot"
+    target = "cheribsd"
     repository = "https://github.com/CTSRD-CHERI/cheribsd.git"
     defaultInstallDir = lambda config, cls: config.outputRoot / ("rootfs" + config.cheriBitsStr)
     appendCheriBitsToBuildDir = True
@@ -762,7 +762,7 @@ class BuildCHERIBSD(_BuildFreeBSD):
 
 class BuildCheriBsdSysroot(SimpleProject):
     projectName = "cheribsd-sysroot"
-    dependencies = ["cheribsd-without-sysroot"]
+    dependencies = ["cheribsd"]
 
     def fixSymlinks(self):
         # copied from the build_sdk.sh script
@@ -847,5 +847,5 @@ class BuildCheriBsdSysroot(SimpleProject):
 
 
 class BuildCheriBsdAndSysroot(TargetAlias):
-    target = "cheribsd"
-    dependencies = ["cheribsd-without-sysroot", "cheribsd-sysroot"]
+    target = "cheribsd-with-sysroot"
+    dependencies = ["cheribsd", "cheribsd-sysroot"]
