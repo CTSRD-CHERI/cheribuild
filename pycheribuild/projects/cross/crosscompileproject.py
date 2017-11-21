@@ -343,9 +343,13 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
     def add_configure_env_arg(self, arg: str, value: str):
         if not value:
             return
-        self.configureEnvironment[arg] = value
+        self.configureEnvironment[arg] = str(value)
         if self._configure_supports_variables_on_cmdline:
-            self.configureArgs.append(arg + "=" + value)
+            self.configureArgs.append(arg + "=" + str(value))
+
+    def add_configure_vars(self, **kwargs):
+        for k, v in kwargs.items():
+            self.add_configure_env_arg(k, v)
 
     def set_prog_with_args(self, prog: str, path: Path, args: list):
         fullpath = str(path)
