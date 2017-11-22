@@ -183,18 +183,10 @@ class BuildLibCXXBaremetal(BuildLibCXX):
     repository = "https://github.com/CTSRD-CHERI/libcxx.git"
     # dependencies = ["libcxxrt-baremetal"]
     projectName = "libcxx-baremetal"
-     # target = "libcxx-baremetal"
+    # target = "libcxx-baremetal"
     baremetal = True
     crossInstallDir = CrossInstallDir.SDK
-    defaultInstallDir = ComputedDefaultValue(function=lambda c, p: c.sdkSysrootDir / "baremetal/mips64-qemu-elf",
-                                             asString="$SDK/sysroot/baremetal")
-
     use_libcxxrt = False  # TODO: for now no runtime library
-
-
-    @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
 
     def __init__(self, config: CheriConfig):
         if self.crossCompileTarget == CrossCompileTarget.CHERI:
@@ -202,10 +194,7 @@ class BuildLibCXXBaremetal(BuildLibCXX):
             self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
         super().__init__(config)
 
-
-        self.COMMON_FLAGS.append("-D__ELF__=1")  # FIXME: why doesn't clang set this..
-        self.COMMON_FLAGS.append("-D_GNU_SOURCE=1")  # needed for the locale functions
-        self.COMMON_FLAGS.append("-D_POSIX_MONOTONIC_CLOCK=1")  # pretend that we have a monotonic clock
-        self.COMMON_FLAGS.append("-D_POSIX_TIMERS=1")  # pretend that we have a monotonic clock
-        self.COMMON_FLAGS.append("-v")
+        # self.COMMON_FLAGS.append("-v")
+        # Seems to be necessary :(
+        self.COMMON_FLAGS.extend(["-mxgot", "-mllvm", "-mxmxgot"])
         self.add_cmake_options(CMAKE_EXE_LINKER_FLAGS="-Wl,-T,qemu-malta.ld")
