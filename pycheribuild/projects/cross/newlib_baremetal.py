@@ -28,14 +28,16 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import *
-from ...utils import statusUpdate
+from ...utils import statusUpdate, IS_MAC
 from ...config.loader import ComputedDefaultValue
+from pathlib import Path
 
 
 class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     repository = "git://sourceware.org/git/newlib-cygwin.git"
     projectName = "newlib-baremetal"
     requiresGNUMake = True
+    baremetal = True
     add_host_target_build_config_options = False
     defaultOptimizationLevel = ["-O2"]
     _configure_supports_libdir = False
@@ -48,21 +50,24 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     def __init__(self, config: CheriConfig):
         if self.crossCompileTarget == CrossCompileTarget.CHERI:
             statusUpdate("Cannot compile newlib in purecap mode, building mips instead")
-            # self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
-        self.crossCompileTarget = CrossCompileTarget.NATIVE  # HACK
+            self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
+        self.installPrefix = config.sdkSysrootDir / "baremetal"
+        self.destdir = Path("/")
         super().__init__(config)
         self.configureCommand = self.sourceDir / "configure"
         # self.COMMON_FLAGS = ['-integrated-as', '-G0', '-mabi=n64', '-mcpu=mips4']
         # self.COMMON_FLAGS = ['-integrated-as', '-mabi=n64', '-mcpu=mips4']
-        self.COMMON_FLAGS = []
-        self.triple = "mips64-qemu-elf"
+        print(self.COMMON_FLAGS)
         # FIXME: how can I force it to run a full configure step (this is needed because it runs the newlib configure
         # step during make all rather than during ./configure
-        self.target_cflags = " -target " + self.targetTripleWithVersion + " -integrated-as -mabi=n64 -mcpu=mips4 -g"
+        # ensure that we don't fall back to system headers (but do use stddef.h from clang...)
+        self.COMMON_FLAGS.extend(["-v", "--sysroot", "/this/path/does/not/exist"])
+        self.target_cflags = " -target " + self.targetTripleWithVersion + " ".join(self.COMMON_FLAGS)
+
         self.add_configure_vars(
-            AS_FOR_TARGET=str(self.sdkBinDir / "clang"), # + target_cflags,
-            CC_FOR_TARGET=str(self.sdkBinDir / "clang"), # + target_cflags,
-            CXX_FOR_TARGET=str(self.sdkBinDir / "clang++"), # + target_cflags,
+            AS_FOR_TARGET=str(self.sdkBinDir / "clang"),  # + target_cflags,
+            CC_FOR_TARGET=str(self.sdkBinDir / "clang"),  # + target_cflags,
+            CXX_FOR_TARGET=str(self.sdkBinDir / "clang++"),  # + target_cflags,
             LD_FOR_TARGET=str(self.sdkBinDir / "ld.bfd"), LDFLAGS_FOR_TARGET="-fuse-ld=bfd",
             AR=self.sdkBinDir / "ar", STRIP=self.sdkBinDir / "strip",
             AR_FOR_TARGET=self.sdkBinDir / "ar", STRIP_FOR_TARGET=self.sdkBinDir / "strip",
@@ -82,6 +87,8 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
             CCASFLAGS_FOR_TARGET=self.target_cflags,
             FLAGS_FOR_TARGET=self.target_cflags,
         )
+        if IS_MAC:
+            self.add_configure_vars(LDFLAGS="-fuse-ld=/usr/bin/ld")
 
     def install(self, **kwargs):
         super().install()
@@ -122,7 +129,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
         ])
 
         # self.configureArgs.append("--host=" + self.triple)
-        self.configureArgs.append("--target=" + self.triple)
+        self.configureArgs.append("--target=" + self.targetTriple)
         self.configureArgs.append("--disable-multilib")
         self.configureArgs.append("--with-newlib")
         super().configure()

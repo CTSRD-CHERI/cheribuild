@@ -90,7 +90,9 @@ class CrossCompileProject(Project):
                 self.destdir = BuildCHERIBSD.rootfsDir(config)
             else:
                 assert self.installPrefix and self.destdir, "Must be set!"
-            self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-msoft-float", "-G0"]
+            self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-G0"]
+            if not self.baremetal:
+                self.COMMON_FLAGS.append("-msoft-float")
             # clang currently gets the TLS model wrong:
             # https://github.com/CTSRD-CHERI/cheribsd/commit/f863a7defd1bdc797712096b6778940cfa30d901
             self.COMMON_FLAGS.append("-ftls-model=initial-exec")
@@ -103,9 +105,11 @@ class CrossCompileProject(Project):
             else:
                 assert self.crossCompileTarget == CrossCompileTarget.MIPS
                 self.targetTriple = "mips64-unknown-freebsd" if not self.baremetal else "mips64-qemu-elf"
+                self.COMMON_FLAGS.append("-integrated-as")
                 self.COMMON_FLAGS.append("-mabi=n64")
                 self.COMMON_FLAGS.append("-mcpu=mips4")
-                self.COMMON_FLAGS.append("-stdlib=libc++")
+                if not self.baremetal:
+                    self.COMMON_FLAGS.append("-stdlib=libc++")
                 self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
             if self.useMxgot:
                 self.COMMON_FLAGS.append("-mxgot")
@@ -360,9 +364,6 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
             self.configureArgs.append(prog + "=" + fullpath)
 
     def configure(self, **kwargs):
-        CPPFLAGS = self.default_compiler_flags
-        for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
-            assert key not in self.configureEnvironment
         # target triple contains a number suffix -> remove it when computing the compiler name
         if self.compiling_for_cheri() and self._configure_supports_libdir:
             # nginx configure script doesn't understand --libdir
@@ -370,19 +371,23 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
             # TODO: can we use relative paths?
             self.configureArgs.append("--libdir=" + str(self.installPrefix) + "/libcheri")
 
-        # autotools overrides CFLAGS -> use CC and CXX vars here
-        self.set_prog_with_args("CC", self.CC, CPPFLAGS + self.CFLAGS)
-        self.set_prog_with_args("CXX", self.CXX, CPPFLAGS + self.CXXFLAGS)
-        # self.add_configure_env_arg("CPPFLAGS", " ".join(CPPFLAGS))
-        # self.add_configure_env_arg("CFLAGS", " ".join(CPPFLAGS + self.CFLAGS))
-        # self.add_configure_env_arg("CXXFLAGS", " ".join(CPPFLAGS + self.CXXFLAGS))
-        # this one seems to work:
-        self.add_configure_env_arg("LDFLAGS", " ".join(self.LDFLAGS + self.default_ldflags))
+        if not self.baremetal:
+            CPPFLAGS = self.default_compiler_flags
+            for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
+                assert key not in self.configureEnvironment
+            # autotools overrides CFLAGS -> use CC and CXX vars here
+            self.set_prog_with_args("CC", self.CC, CPPFLAGS + self.CFLAGS)
+            self.set_prog_with_args("CXX", self.CXX, CPPFLAGS + self.CXXFLAGS)
+            # self.add_configure_env_arg("CPPFLAGS", " ".join(CPPFLAGS))
+            # self.add_configure_env_arg("CFLAGS", " ".join(CPPFLAGS + self.CFLAGS))
+            # self.add_configure_env_arg("CXXFLAGS", " ".join(CPPFLAGS + self.CXXFLAGS))
+            # this one seems to work:
+            self.add_configure_env_arg("LDFLAGS", " ".join(self.LDFLAGS + self.default_ldflags))
 
-        if not self.compiling_for_host():
-            self.set_prog_with_args("CPP", self.compiler_dir / (self.targetTriple + "-clang-cpp"), CPPFLAGS)
-            if "lld" in self.linker and (self.compiler_dir / "ld.lld").exists():
-                self.add_configure_env_arg("LD", str(self.compiler_dir / "ld.lld"))
+            if not self.compiling_for_host():
+                self.set_prog_with_args("CPP", self.compiler_dir / (self.targetTriple + "-clang-cpp"), CPPFLAGS)
+                if "lld" in self.linker and (self.compiler_dir / "ld.lld").exists():
+                    self.add_configure_env_arg("LD", str(self.compiler_dir / "ld.lld"))
 
         # remove all empty items from environment:
         env = {k: v for k, v in self.configureEnvironment.items() if v}
