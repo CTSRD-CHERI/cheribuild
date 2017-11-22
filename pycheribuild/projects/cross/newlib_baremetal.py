@@ -58,7 +58,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
         self.triple = "mips64-qemu-elf"
         # FIXME: how can I force it to run a full configure step (this is needed because it runs the newlib configure
         # step during make all rather than during ./configure
-        self.target_cflags = " -target " + self.targetTripleWithVersion + " -integrated-as -mabi=n64 -mcpu=mips4"
+        self.target_cflags = " -target " + self.targetTripleWithVersion + " -integrated-as -mabi=n64 -mcpu=mips4 -g"
         self.add_configure_vars(
             AS_FOR_TARGET=str(self.sdkBinDir / "clang"), # + target_cflags,
             CC_FOR_TARGET=str(self.sdkBinDir / "clang"), # + target_cflags,
