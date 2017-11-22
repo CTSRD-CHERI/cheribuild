@@ -42,26 +42,23 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     defaultOptimizationLevel = ["-O2"]
     _configure_supports_libdir = False
     _configure_supports_variables_on_cmdline = True
-    crossInstallDir = CrossInstallDir.NONE
-    defaultInstallDir = ComputedDefaultValue(function=lambda c, p: c.sdkSysrootDir / "baremetal", asString="$SDK/sysroot/baremetal")
-
+    crossInstallDir = CrossInstallDir.SDK
     # defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir  # we have to build in the source directory
 
     def __init__(self, config: CheriConfig):
         if self.crossCompileTarget == CrossCompileTarget.CHERI:
             statusUpdate("Cannot compile newlib in purecap mode, building mips instead")
             self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
-        self.installPrefix = config.sdkSysrootDir / "baremetal"
-        self.destdir = Path("/")
         super().__init__(config)
+        self.installDir = self.installDir.parent  # newlib install already appends the triple
         self.configureCommand = self.sourceDir / "configure"
         # self.COMMON_FLAGS = ['-integrated-as', '-G0', '-mabi=n64', '-mcpu=mips4']
         # self.COMMON_FLAGS = ['-integrated-as', '-mabi=n64', '-mcpu=mips4']
-        print(self.COMMON_FLAGS)
+        # print(self.COMMON_FLAGS)
         # FIXME: how can I force it to run a full configure step (this is needed because it runs the newlib configure
         # step during make all rather than during ./configure
         # ensure that we don't fall back to system headers (but do use stddef.h from clang...)
-        self.COMMON_FLAGS.extend(["-v", "--sysroot", "/this/path/does/not/exist"])
+        self.COMMON_FLAGS.extend(["--sysroot", "/this/path/does/not/exist"])
         self.target_cflags = " -target " + self.targetTripleWithVersion + " ".join(self.COMMON_FLAGS)
 
         self.add_configure_vars(

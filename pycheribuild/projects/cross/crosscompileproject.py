@@ -70,7 +70,6 @@ class CrossCompileProject(Project):
 
         self.targetTriple = None
         self.sdkBinDir = self.config.sdkDir / "bin"
-        self.sdkSysroot = self.config.sdkDir / "sysroot"
         # compiler flags:
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
             self.COMMON_FLAGS = []
@@ -82,17 +81,10 @@ class CrossCompileProject(Project):
             else:
                 assert self.installDir, "must be set"
         else:
-            if self.crossInstallDir == CrossInstallDir.SDK:
-                self.installPrefix = "/usr/local"
-                self.destdir = config.sdkSysrootDir
-            elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
-                self.installPrefix = Path("/", self.installDir.relative_to(BuildCHERIBSD.rootfsDir(config)))
-                self.destdir = BuildCHERIBSD.rootfsDir(config)
-            else:
-                assert self.installPrefix and self.destdir, "Must be set!"
             self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-G0"]
             if not self.baremetal:
                 self.COMMON_FLAGS.append("-msoft-float")
+
             # clang currently gets the TLS model wrong:
             # https://github.com/CTSRD-CHERI/cheribsd/commit/f863a7defd1bdc797712096b6778940cfa30d901
             self.COMMON_FLAGS.append("-ftls-model=initial-exec")
@@ -113,6 +105,24 @@ class CrossCompileProject(Project):
                 self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
             if self.useMxgot:
                 self.COMMON_FLAGS.append("-mxgot")
+
+            self.sdkSysroot = self.config.sdkDir / "sysroot"
+            if self.baremetal:
+                self.sdkSysroot = self.sdkSysroot / "baremetal" / self.targetTriple
+
+            if self.crossInstallDir == CrossInstallDir.SDK:
+                if self.baremetal:
+                    self.installDir = self.sdkSysroot
+                    # self.destdir = Path("/")
+                else:
+                    self.installPrefix = "/usr/local"
+                    self.destdir = config.sdkSysrootDir
+            elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
+                self.installPrefix = Path("/", self.installDir.relative_to(BuildCHERIBSD.rootfsDir(config)))
+                self.destdir = BuildCHERIBSD.rootfsDir(config)
+            else:
+                assert self.installPrefix and self.destdir, "both must be set!"
+
         if self.debugInfo:
             self.COMMON_FLAGS.append("-g")
         self.CFLAGS = []
