@@ -275,7 +275,7 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
             common_flags = self.COMMON_FLAGS
         else:
             self.COMMON_FLAGS.append("-B" + str(self.sdkBinDir))
-            if self._get_cmake_version() < (3, 9, 0) and not (self.sdkSysroot / "usr/local/lib/cheri").exists():
+            if not self.baremetal and self._get_cmake_version() < (3, 9, 0) and not (self.sdkSysroot / "usr/local/lib/cheri").exists():
                 warningMessage("Workaround for missing custom lib suffix in CMake < 3.9")
                 # create a /usr/lib/cheri -> /usr/libcheri symlink so that cmake can find the right libraries
                 self.createSymlink(Path("../libcheri"), self.sdkSysroot / "usr/lib/cheri", relative=True,
