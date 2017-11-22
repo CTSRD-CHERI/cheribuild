@@ -150,6 +150,9 @@ class ConfigOptionBase(object):
         return self.name
 
     def __get__(self, instance, owner):
+        # TODO: would be nice if this was possible (but too much depends on accessing values without instances)
+        # if instance is None:
+        #     return self
         assert not self._owningClass or issubclass(owner, self._owningClass)
         if self._cached is None:
             # noinspection PyProtectedMember

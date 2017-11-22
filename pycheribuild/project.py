@@ -366,6 +366,7 @@ def installDirNotSpecified(config: CheriConfig, project: "Project"):
 
 def _defaultBuildDir(config: CheriConfig, project: "Project"):
     # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
+    # HACK To access the descriptor without an instance:
     target = project.crossCompileTarget if hasattr(project, "crossCompileTarget") else None
     return config.buildRoot / (project.projectName.lower() + project.buildDirSuffix(config, target))
 

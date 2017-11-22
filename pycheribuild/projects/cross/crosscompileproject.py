@@ -1,4 +1,5 @@
 import os
+import inspect
 import pprint
 from enum import Enum
 from pathlib import Path
@@ -188,14 +189,16 @@ class CrossCompileProject(Project):
     def CC(self):
         if self.compiling_for_host() and not self.config.use_sdk_clang_for_native_xbuild:
             return self.config.clangPath if not self.forceDefaultCC else Path("cc")
-        compiler_name = self.targetTriple + "-clang" if not self.compiling_for_host() else "clang"
+        use_prefixed_cc = not self.compiling_for_host() and not self.baremetal
+        compiler_name = self.targetTriple + "-clang" if use_prefixed_cc else "clang"
         return self.compiler_dir / compiler_name
 
     @property
     def CXX(self):
         if self.compiling_for_host() and not self.config.use_sdk_clang_for_native_xbuild:
             return self.config.clangPlusPlusPath if not self.forceDefaultCC else Path("c++")
-        compiler_name = self.targetTriple + "-clang++" if not self.compiling_for_host() else "clang++"
+        use_prefixed_cxx = not self.compiling_for_host() and not self.baremetal
+        compiler_name = self.targetTriple + "-clang++" if use_prefixed_cxx else "clang++"
         return self.compiler_dir / compiler_name
 
     @classmethod
@@ -210,7 +213,7 @@ class CrossCompileProject(Project):
                                                     default=cls.defaultOptimizationLevel)
         # TODO: check if LLD supports it and if yes default to true?
         cls.newCapRelocs = cls.addBoolOption("new-cap-relocs", help="Use the new __cap_relocs processing in LLD", default=False)
-        if cls.crossCompileTarget is None:
+        if inspect.getattr_static(cls, "crossCompileTarget") is None:
             cls.crossCompileTarget = cls.addConfigOption("target", help="The target to build for (`cheri` or `mips` or `native`)",
                                                  default=defaultTarget, choices=["cheri", "mips", "native"],
                                                  kind=CrossCompileTarget)
@@ -315,9 +318,10 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
             TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
             TOOLCHAIN_C_COMPILER=self.CC,
             TOOLCHAIN_CXX_COMPILER=self.CXX,
-            TOOLCHAIN_SYSROOT=self.sdkSysroot if not self.compiling_for_host() else None,
+            TOOLCHAIN_SYSROOT=self.sdkSysroot,
             ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
             TOOLCHAIN_SYSTEM_PROCESSOR=processor,
+            TOOLCHAIN_SYSTEM_NAME="Generic" if self.baremetal else "FreeBSD",
             TOOLCHAIN_PKGCONFIG_DIRS=self.pkgconfig_dirs
         )
 

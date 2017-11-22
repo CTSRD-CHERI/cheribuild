@@ -33,8 +33,9 @@ from ..cheribsd import BuildCHERIBSD
 from ..llvm import BuildLLVM
 from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
-from ...utils import OSInfo
+from ...utils import OSInfo, statusUpdate
 import os
+from pathlib import Path
 
 installToCXXDir = ComputedDefaultValue(
     function=lambda config, project: BuildCHERIBSD.rootfsDir(config) / "extra/c++",
@@ -89,6 +90,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
     defaultInstallDir = installToCXXDir
     dependencies = ["libcxxrt"]
 
+    use_libcxxrt = True
+
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
@@ -126,16 +129,24 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
                           "/lit-test-results.xml --max-time 3600 --timeout 120 -s -vv"
         )
-        # select libcxxrt as the runtime library
-        self.add_cmake_options(
-            LIBCXX_CXX_ABI="libcxxrt",
-            LIBCXX_CXX_ABI_LIBNAME="libcxxrt",
-            LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.sourceDir / "src",
-            LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.buildDir / "lib",
-        )
+        if self.use_libcxxrt:
+            # select libcxxrt as the runtime library
+            self.add_cmake_options(
+                LIBCXX_CXX_ABI="libcxxrt",
+                LIBCXX_CXX_ABI_LIBNAME="libcxxrt",
+                LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.sourceDir / "src",
+                LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.buildDir / "lib",
+
+            )
+        else:
+            self.add_cmake_options(LIBCXX_CXX_ABI="none")  # currently not built..
 
     def addCrossFlags(self):
         # TODO: do I even need the toolchain file to cross compile?
+
+        self.add_cmake_options(LIBCXX_TARGET_TRIPLE=self.targetTriple,
+                               LIBCXX_SYSROOT=self.sdkSysroot)
+
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
             LIBCXX_ENABLE_STATIC=True,
@@ -145,8 +156,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
             # exceptions and rtti still missing:
             LIBCXX_ENABLE_EXCEPTIONS=False,
             LIBCXX_ENABLE_RTTI=False,
-            # When cross compiling we link the ABI library statically
-            LIBCXX_ENABLE_STATIC_ABI_LIBRARY=True,
+            # When cross compiling we link the ABI library statically (except baremetal since that doens;t have it yet)
+            LIBCXX_ENABLE_STATIC_ABI_LIBRARY=not self.baremetal,
         )
         if self.collect_test_binaries:
             executor = "CollectBinariesExecutor('{path}', self)".format(path=self.collect_test_binaries)
@@ -160,10 +171,41 @@ class BuildLibCXX(CrossCompileCMakeProject):
             executor = "SSHExecutor('{host}', username='{user}', port={port})".format(
                 host=self.qemu_host, user=self.qemu_user, port=self.qemu_port)
         # add the config options required for running tests:
-        self.add_cmake_options(
-            LIBCXX_SYSROOT=self.config.sdkDir / "sysroot",
-            LIBCXX_TARGET_TRIPLE=self.targetTriple,
-            LIBCXX_EXECUTOR=executor,
-            LIBCXX_TARGET_INFO="libcxx.test.target_info.CheriBSDRemoteTI",
-            LIBCXX_RUN_LONG_TESTS=False
-        )
+        if not self.baremetal:
+            self.add_cmake_options(
+                LIBCXX_EXECUTOR=executor,
+                LIBCXX_TARGET_INFO="libcxx.test.target_info.CheriBSDRemoteTI",
+                LIBCXX_RUN_LONG_TESTS=False
+            )
+
+
+class BuildLibCXXBaremetal(BuildLibCXX):
+    repository = "https://github.com/CTSRD-CHERI/libcxx.git"
+    # dependencies = ["libcxxrt-baremetal"]
+    projectName = "libcxx-baremetal"
+     # target = "libcxx-baremetal"
+    baremetal = True
+    crossInstallDir = CrossInstallDir.SDK
+    defaultInstallDir = ComputedDefaultValue(function=lambda c, p: c.sdkSysrootDir / "baremetal/mips64-qemu-elf",
+                                             asString="$SDK/sysroot/baremetal")
+
+    use_libcxxrt = False  # TODO: for now no runtime library
+
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+
+    def __init__(self, config: CheriConfig):
+        if self.crossCompileTarget == CrossCompileTarget.CHERI:
+            statusUpdate("Cannot compile newlib in purecap mode, building mips instead")
+            self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
+        super().__init__(config)
+
+
+        self.COMMON_FLAGS.append("-D__ELF__=1")  # FIXME: why doesn't clang set this..
+        self.COMMON_FLAGS.append("-D_GNU_SOURCE=1")  # needed for the locale functions
+        self.COMMON_FLAGS.append("-D_POSIX_MONOTONIC_CLOCK=1")  # pretend that we have a monotonic clock
+        self.COMMON_FLAGS.append("-D_POSIX_TIMERS=1")  # pretend that we have a monotonic clock
+        self.COMMON_FLAGS.append("-v")
+        self.add_cmake_options(CMAKE_EXE_LINKER_FLAGS="-Wl,-T,qemu-malta.ld")
