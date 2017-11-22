@@ -181,6 +181,45 @@ class BuildLibCXX(CrossCompileCMakeProject):
                 LIBCXX_RUN_LONG_TESTS=False
             )
 
+class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
+    repository = "https://github.com/llvm-mirror/compiler-rt.git"
+    projectName = "compiler-rt-baremetal"
+    crossInstallDir = CrossInstallDir.SDK
+    baremetal = True
+
+    def __init__(self, config: CheriConfig):
+        if self.crossCompileTarget == CrossCompileTarget.CHERI:
+            statusUpdate("Cannot compile newlib in purecap mode, building mips instead")
+            self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
+        super().__init__(config)
+
+        self.COMMON_FLAGS.append("-v")
+        self.COMMON_FLAGS.append("-ffreestanding")
+        self.add_cmake_options(
+            # LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config",
+            LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
+            LLVM_EXTERNAL_LIT=BuildLLVM.buildDir / "bin/llvm-lit",
+            COMPILER_RT_BUILD_BUILTINS=True,
+            COMPILER_RT_BUILD_SANITIZERS=False,
+            COMPILER_RT_BUILD_XRAY=False,
+            COMPILER_RT_BUILD_LIBFUZZER=False,
+            COMPILER_RT_BUILD_PROFILE=False,
+            COMPILER_RT_BAREMETAL_BUILD=self.baremetal,
+            # COMPILER_RT_DEFAULT_TARGET_TRIPLE=self.targetTriple,
+            COMPILER_RT_DEFAULT_TARGET_ONLY=True,
+            # BUILTIN_SUPPORTED_ARCH="mips64",
+            TARGET_TRIPLE=self.targetTriple,
+        )
+
+    def configure(self, **kwargs):
+        self.configureArgs[0] = str(self.sourceDir / "lib/builtins")
+        super().configure()
+
+    def install(self, **kwargs):
+        super().install(**kwargs)
+        libname = "libclang_rt.builtins-mips64.a"
+        self.moveFile(self.installDir / "lib/generic" / libname, self.installDir / "lib" / libname)
+
 
 class BuildLibCXXBaremetal(BuildLibCXX):
     repository = "https://github.com/CTSRD-CHERI/libcxx.git"
