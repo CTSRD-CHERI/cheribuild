@@ -78,10 +78,13 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
             # TODO: __sync_fetch_and_add in exceptions code
             self.add_cmake_options(NO_SHARED=True, DISABLE_EXCEPTIONS_RTTI=True, NO_UNWIND_LIBRARY=True)
             self.add_cmake_options(COMPARE_TEST_OUTPUT_TO_SYSTEM_OUTPUT=False)
-            self.add_cmake_options(BUILD_TESTS=True)
+            if not self.baremetal:
+                self.add_cmake_options(BUILD_TESTS=True)
 
     def install(self, **kwargs):
-        self.installFile(self.buildDir / "lib/libcxxrt.a", self.installDir / "libcheri/libcxxrt.a", force=True)
+        libdir = self.installDir / "libcheri" if self.compiling_for_cheri() else self.installDir / "lib"
+        self.installFile(self.buildDir / "lib/libcxxrt.a", libdir / "libcxxrt.a", force=True)
+        # self.installFile(self.buildDir / "lib/libcxxrt.a", libdir / "libcxxrt.so", force=True)
         # self.installFile(self.buildDir / "lib/libcxxrt.so", self.installDir / "usr/libcheri/libcxxrt.so", force=True)
 
 
@@ -198,3 +201,18 @@ class BuildLibCXXBaremetal(BuildLibCXX):
         # Seems to be necessary :(
         self.COMMON_FLAGS.extend(["-mxgot", "-mllvm", "-mxmxgot"])
         self.add_cmake_options(CMAKE_EXE_LINKER_FLAGS="-Wl,-T,qemu-malta.ld")
+
+
+class BuildLibCXXRTBaremetal(BuildLibCXXRT):
+    repository = "https://github.com/CTSRD-CHERI/libcxxrt.git"
+    projectName = "libcxxrt-baremetal"
+    crossInstallDir = CrossInstallDir.SDK
+    baremetal = True
+
+    def __init__(self, config: CheriConfig):
+        if self.crossCompileTarget == CrossCompileTarget.CHERI:
+            statusUpdate("Cannot compile newlib in purecap mode, building mips instead")
+            self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
+        super().__init__(config)
+        # self.COMMON_FLAGS.append("-v")
+        self.COMMON_FLAGS.append("-Dsched_yield=abort")  # UNIPROCESSOR, should never happen
