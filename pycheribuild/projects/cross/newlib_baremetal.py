@@ -51,6 +51,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
             self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
         super().__init__(config)
         self.installDir = self.installDir.parent  # newlib install already appends the triple
+        #self.configureCommand = Path("/this/path/does/not/exist")
         self.configureCommand = self.sourceDir / "configure"
         # self.COMMON_FLAGS = ['-integrated-as', '-G0', '-mabi=n64', '-mcpu=mips4']
         # self.COMMON_FLAGS = ['-integrated-as', '-mabi=n64', '-mcpu=mips4']
@@ -59,36 +60,41 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
         # step during make all rather than during ./configure
         # ensure that we don't fall back to system headers (but do use stddef.h from clang...)
         self.COMMON_FLAGS.extend(["--sysroot", "/this/path/does/not/exist"])
-        self.target_cflags = " -target " + self.targetTripleWithVersion + " ".join(self.COMMON_FLAGS)
+        self.COMMON_FLAGS.append("-D_LDBL_EQ_DBL")
+        self.target_cflags = "-target " + self.targetTripleWithVersion + " ".join(self.COMMON_FLAGS)
 
         self.add_configure_vars(
             AS_FOR_TARGET=str(self.sdkBinDir / "clang"),  # + target_cflags,
             CC_FOR_TARGET=str(self.sdkBinDir / "clang"),  # + target_cflags,
             CXX_FOR_TARGET=str(self.sdkBinDir / "clang++"),  # + target_cflags,
-            LD_FOR_TARGET=str(self.sdkBinDir / "ld.bfd"), LDFLAGS_FOR_TARGET="-fuse-ld=bfd",
-            AR=self.sdkBinDir / "ar", STRIP=self.sdkBinDir / "strip",
             AR_FOR_TARGET=self.sdkBinDir / "ar", STRIP_FOR_TARGET=self.sdkBinDir / "strip",
-            OBJCOPY=self.sdkBinDir / "objcopy", RANLIB=self.sdkBinDir / "ranlib",
             OBJCOPY_FOR_TARGET=self.sdkBinDir / "objcopy", RANLIB_FOR_TARGET=self.sdkBinDir / "ranlib",
             OBJDUMP_FOR_TARGET=self.sdkBinDir / "llvm-objdump",
-            READELF=self.sdkBinDir / "readelf", NM=self.sdkBinDir / "nm",
             READELF_FOR_TARGET=self.sdkBinDir / "readelf", NM_FOR_TARGET=self.sdkBinDir / "nm",
+            # Set all the flags:
+            CFLAGS_FOR_TARGET=self.target_cflags,
+            CCASFLAGS_FOR_TARGET=self.target_cflags + " -mabicalls",
+            FLAGS_FOR_TARGET=self.target_cflags,
             # Some build tools are needed:
             CC_FOR_BUILD=self.config.clangPath,
             CXX_FOR_BUILD=self.config.clangPlusPlusPath,
-            CC=self.config.clangPath,
-            CXX=self.config.clangPlusPlusPath,
             # long double is the same as double
             newlib_cv_ldbl_eq_dbl="yes",
-            CFLAGS_FOR_TARGET=self.target_cflags,
-            CCASFLAGS_FOR_TARGET=self.target_cflags,
-            FLAGS_FOR_TARGET=self.target_cflags,
+
+            LD_FOR_TARGET=str(self.sdkBinDir / "ld.lld"), LDFLAGS_FOR_TARGET="-fuse-ld=lld",
+
         )
         if IS_MAC:
             self.add_configure_vars(LDFLAGS="-fuse-ld=/usr/bin/ld")
 
-    def install(self, **kwargs):
-        super().install()
+    # def install(self, **kwargs):
+    #     # self.runMakeInstall(cwd=self.buildDir / "newlib")
+    #     self.runMakeInstall(cwd=self.buildDir / "libgloss")
+
+    # def compile(self, **kwargs):
+    #     # super().compile(cwd=self.buildDir / "newlib")
+    #     self.make_args.env_vars["MULTILIB"] = self.target_cflags + " -mabicalls"
+    #     super().compile(cwd=self.buildDir / "libgloss")
 
     def needsConfigure(self):
         return not (self.buildDir / "Makefile").exists()
@@ -100,9 +106,13 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     def add_configure_vars(self, **kwargs):
         # newlib is annoying, we need to pass all these arguments to make as well because it won't run all
         # the configure steps...
-        super().add_configure_vars(**kwargs)
         for k, v in kwargs.items():
-            self.make_args.env_vars[k] = str(v)
+            self.add_configure_env_arg(k, v)
+            # self.make_args.env_vars[k] = str(v)
+            if k.endswith("_FOR_BUILD"):
+                k2 = k[0:-len("_FOR_BUILD")]
+                self.add_configure_env_arg(k2, v)
+                # self.make_args.env_vars[k2] = str(v)
 
     def configure(self):
         self.configureArgs.extend([
@@ -125,7 +135,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
             "--enable-serial-host-configure",
         ])
 
-        # self.configureArgs.append("--host=" + self.triple)
+        # self.configureArgs.append("--host=" + self.targetTriple)
         self.configureArgs.append("--target=" + self.targetTriple)
         self.configureArgs.append("--disable-multilib")
         self.configureArgs.append("--with-newlib")

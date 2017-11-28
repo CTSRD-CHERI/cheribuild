@@ -720,14 +720,18 @@ class Project(SimpleProject):
         """
         return True
 
-    def configure(self, cwd: Path = None):
+    def configure(self, cwd: Path = None, configure_path: Path=None):
         if cwd is None:
             cwd = self.buildDir
         if not self.needsConfigure() and not self.config.configureOnly and not self.config.forceConfigure:
             if not self.config.pretend and not self.config.clean:
                 return
-        if self.configureCommand:
-            self.runWithLogfile([self.configureCommand] + self.configureArgs,
+
+        _configure_path = self.configureCommand
+        if configure_path:
+            _configure_path = configure_path
+        if _configure_path:
+            self.runWithLogfile([_configure_path] + self.configureArgs,
                                 logfileName="configure", cwd=cwd, env=self.configureEnvironment)
 
     def compile(self, cwd: Path = None):
@@ -930,7 +934,7 @@ class AutotoolsProject(Project):
         super().__init__(config)
         self.configureCommand = self.sourceDir / configureScript
 
-    def configure(self, cwd: Path=None):
+    def configure(self, **kwargs):
         if self._configure_supports_prefix:
             if self.installPrefix:
                 assert self.destdir, "custom install prefix requires DESTDIR being set!"
@@ -939,7 +943,7 @@ class AutotoolsProject(Project):
                 self.configureArgs.append("--prefix=" + str(self.installDir))
         if self.extraConfigureFlags:
             self.configureArgs.extend(self.extraConfigureFlags)
-        super().configure(cwd=cwd)
+        super().configure(**kwargs)
 
     def needsConfigure(self):
         return not (self.buildDir / "Makefile").exists()
