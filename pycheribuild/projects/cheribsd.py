@@ -96,7 +96,7 @@ class _BuildFreeBSD(Project):
         return cls.getInstallDir(config)
 
     @classmethod
-    def setupConfigOptions(cls, buildKernelWithClang: bool = False, makeOptionsShortname=None, **kwargs):
+    def setupConfigOptions(cls, buildKernelWithClang: bool=True, makeOptionsShortname=None, **kwargs):
         super().setupConfigOptions(**kwargs)
         cls.subdirOverride = cls.addConfigOption("subdir", kind=str, metavar="DIR", showHelp=True,
                                                  help="Only build subdir DIR instead of the full tree. "
@@ -348,7 +348,7 @@ class _BuildFreeBSD(Project):
     def _buildkernel(self, kernconf: str):
         kernelMakeArgs = self.kernelMakeArgsForConfig(kernconf)
         # needKernelToolchain = not self.useExternalToolchainForKernel
-        dontNeedKernelToolchain = self.useExternalToolchainForKernel and self.linker_for_world == "lld"
+        dontNeedKernelToolchain = self.useExternalToolchainForKernel and self.linker_for_kernel == "lld"
         if self.crossbuild:
             dontNeedKernelToolchain = True
         if not dontNeedKernelToolchain and not self.kernelToolchainAlreadyBuilt:
