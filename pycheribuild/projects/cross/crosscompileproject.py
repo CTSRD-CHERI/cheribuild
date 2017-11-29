@@ -92,9 +92,8 @@ class CrossCompileProject(Project):
             # use *-*-freebsd12 to default to libc++
             if self.crossCompileTarget == CrossCompileTarget.CHERI:
                 self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "cheri-qemu-elf"
-                self.COMMON_FLAGS.append("-mabi=purecap")
-                if self.config.cheriBits == 128:
-                    self.COMMON_FLAGS.append("-mcpu=cheri128")
+                # TODO: should we use -mcpu=cheri128/256?
+                self.COMMON_FLAGS.extend(["-mabi=purecap", "-mcpu=mips4", "-cheri=" + self.config.cheriBitsStr])
             else:
                 assert self.crossCompileTarget == CrossCompileTarget.MIPS
                 self.targetTriple = "mips64-unknown-freebsd" if not self.baremetal else "mips64-qemu-elf"
