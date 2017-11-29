@@ -147,7 +147,7 @@ addFilteredFile(scriptDir / "projects/cross/libcxx.py")
 addFilteredFile(scriptDir / "projects/cross/postgres.py")
 addFilteredFile(scriptDir / "projects/cross/nginx.py")
 addFilteredFile(scriptDir / "projects/cross/llvm_test_suite.py")
-addFilteredFile(scriptDir / "projects/cross/newlib-baremetal.py")
+addFilteredFile(scriptDir / "projects/cross/newlib_baremetal.py")
 addFilteredFile(scriptDir / "projects/cross/sqlite.py")
 addFilteredFile(scriptDir / "projects/cross/qt5.py")
 
