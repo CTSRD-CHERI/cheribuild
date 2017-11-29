@@ -52,11 +52,11 @@ class LaunchQEMUBase(SimpleProject):
         super().setupConfigOptions(**kwargs)
         cls.extraOptions = cls.addConfigOption("extra-options", default=[], kind=list, metavar="QEMU_OPTIONS",
                                                help="Additional command line flags to pass to qemu-system-cheri")
-        cls.logfile = cls.addConfigOption("logfile", default=None, kind=str, metavar="LOGFILE",
-                                          help="The logfile that QEMU should use.")
-        cls.logDir = cls.addConfigOption("log-directory", default=None, kind=str, metavar="DIR",
-                                         help="If set QEMU will log to a timestamped file in this directory. Will be "
-                                              "ignored if the 'logfile' option is set")
+        cls.logfile = cls.addPathOption("logfile", default=None, metavar="LOGFILE",
+                                        help="The logfile that QEMU should use.")
+        cls.logDir = cls.addPathOption("log-directory", default=None, metavar="DIR",
+                                       help="If set QEMU will log to a timestamped file in this directory. Will be "
+                                            "ignored if the 'logfile' option is set")
         cls.useTelnet = cls.addConfigOption("monitor-over-telnet", kind=int, metavar="PORT", showHelp=True,
                                             help="If set, the QEMU monitor will be reachable by connecting to localhost"
                                                  "at $PORT via telnet instead of using CTRL+A,C")
@@ -113,16 +113,15 @@ class LaunchQEMUBase(SimpleProject):
         if self.logfile:
             logfileOptions = ["-D", self.logfile]
         elif self.logDir:
-            logPath = Path(self.logDir)
-            if not logPath.is_dir():
-                self.makedirs(logPath)
+            if not self.logDir.is_dir():
+                self.makedirs(self.logDir)
             filename = "qemu-cheri-" + datetime.datetime.now().strftime("%Y%m%d_%H-%M-%S") + ".log"
-            latestSymlink = logPath / "qemu-cheri-latest.log"
+            latestSymlink = self.logDir / "qemu-cheri-latest.log"
             if latestSymlink.is_symlink():
                 latestSymlink.unlink()
             if not latestSymlink.exists():
-                self.createSymlink(logPath / filename, latestSymlink, relative=True, cwd=logPath)
-            logfileOptions = ["-D", logPath / filename]
+                self.createSymlink(self.logDir / filename, latestSymlink, relative=True, cwd=self.logDir)
+            logfileOptions = ["-D", self.logDir / filename]
         # input("Press enter to continue")
         kernelFlags = ["-kernel", self.currentKernel] if self.currentKernel else []
         qemuCommand = [self.qemuBinary] + self.machineFlags + kernelFlags + [
