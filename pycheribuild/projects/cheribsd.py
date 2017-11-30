@@ -392,33 +392,32 @@ class _BuildFreeBSD(Project):
             # We have to keep the rootfs directory in case it has been NFS mounted
             self.cleanDirectory(self.installDir, keepRoot=True)
 
+    def _query_make_variable(self, args, var):
+        try:
+            bw_flags = args.all_commandline_args + ["-m", str(self.sourceDir / "share/mk"), "-f", "Makefile.inc1"]
+            output = runCmd([self.makeCommand] + bw_flags + ["-V", var], env=args.env_vars,
+                            cwd=self.sourceDir, runInPretendMode=True, captureOutput=True).stdout
+            return output.decode("utf-8").strip()
+        except subprocess.CalledProcessError as e:
+            warningMessage("Could not query make variable", var, "for buildworld root objdir: ", e)
+
     @property
     def objdir(self):
         # TODO use https://github.com/pydanny/cached-property ?
-        # TODO: somehow get objdir for subdirs (it doesn't work if I just run make in a subdirectory)
-        args = self.buildworldArgs
-        try:
-            bw_flags = args.all_commandline_args + ["-m", str(self.sourceDir / "share/mk"), "-f", "Makefile.inc1"]
-            output = runCmd([self.makeCommand] + bw_flags + ["-V", "BW_CANONICALOBJDIR"], env=args.env_vars,
-                            cwd=self.sourceDir, runInPretendMode=True, captureOutput=True).stdout
-        except subprocess.CalledProcessError as e:
-            warningMessage("Could not infer buildworld root objdir: ", e)
-            output = runCmd([self.makeCommand] + args.all_commandline_args + ["-V", ".OBJDIR"], env=args.env_vars,
-                            cwd=self.sourceDir, runInPretendMode=True, captureOutput=True).stdout
-        result = Path(output.decode("utf-8").strip())
-        assert result != Path()
-        return result
+        objdir = self._query_make_variable(self.buildworldArgs, "BW_CANONICALOBJDIR")
+        if not objdir:
+            objdir = self._query_make_variable(self.buildworldArgs, ".OBJDIR")
+        if not objdir:
+            # just clean the whole directory instead
+            warningMessage("Could not infer buildworld root objdir")
+            return self.buildDir
+        return Path(objdir)
 
     def kernel_objdir(self, config):
-        args = self.kernelMakeArgsForConfig(config)
-        args.add_flags("-m", str(self.sourceDir / "share/mk"), "-f", "Makefile.inc1")
-        try:
-            result = runCmd([self.makeCommand] + args.all_commandline_args + ["-V", "KRNLOBJDIR"], env=args.env_vars,
-                        cwd=self.sourceDir, runInPretendMode=True, captureOutput=True).stdout.decode("utf-8").strip()
-            if result:
-                return Path(result) / config
-        except subprocess.CalledProcessError as e:
-            warningMessage("Could not infer kernel build dir: ", e)
+        result = self._query_make_variable(self.kernelMakeArgsForConfig(config), "KRNLOBJDIR")
+        if result:
+            return Path(result) / config
+        warningMessage("Could not infer buildkernel objdir")
         return None
 
     def install(self, **kwargs):
