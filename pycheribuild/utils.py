@@ -230,8 +230,26 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
 def commandline_to_str(args: "typing.Iterable[str]") -> str:
     return " ".join(map(shlex.quote, args))
 
-CompilerInfo = namedtuple('CompilerInfo', ['compiler', 'version', 'default_target'])
-_cached_compiler_infos = dict()
+
+class CompilerInfo(object):
+    def __init__(self, path: Path, compiler, version, default_target):
+        self.path = path
+        self.compiler = compiler
+        self.version = version
+        self.default_target = default_target
+        self._resource_dir = None
+
+    def get_resource_dir(self):
+        assert self.compiler == "clang"
+        if not self._resource_dir:
+            # pretend to compile an existing source file and capture the -resource-dir output
+            cc1_cmd = runCmd(self.path, "-###", "-xc", "-c", "/usr/include/unistd.h",
+                             captureError=True, printVerboseOnly=True, runInPretendMode=True)
+            resource_dir_pat = re.compile(b'"-cc1".+"-resource-dir" "([^"]+)"')
+            self._resource_dir = Path(resource_dir_pat.search(cc1_cmd.stderr).group(1).decode("utf-8"))
+        return self._resource_dir
+
+_cached_compiler_infos = dict()  # type: typing.Dict[Path, CompilerInfo]
 
 
 def getCompilerInfo(compiler: Path) -> CompilerInfo:
@@ -264,7 +282,7 @@ def getCompilerInfo(compiler: Path) -> CompilerInfo:
             warningMessage("Could not detect compiler info for", compiler, "- output was", versionCmd.stderr)
         if _cheriConfig and _cheriConfig.verbose:
             print(compiler, "is", kind, "version", version, "with default target", targetString)
-        _cached_compiler_infos[compiler] = CompilerInfo(compiler=kind, version=version, default_target=targetString)
+        _cached_compiler_infos[compiler] = CompilerInfo(compiler, kind, version, targetString)
     return _cached_compiler_infos[compiler]
 
 
