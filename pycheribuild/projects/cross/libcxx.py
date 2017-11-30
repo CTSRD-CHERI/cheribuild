@@ -227,7 +227,7 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
         libname = "libclang_rt.builtins-mips64.a"
         self.moveFile(self.installDir / "lib/generic" / libname, self.installDir / "lib" / libname)
         # HACK: we don't really need libunwind but the toolchain pulls it in automatically
-        runCmd("ar", "rc", self.installDir / "lib/libunwind.a")
+        runCmd("ar", "rc", self.installDir / "lib/libunwind.a", "/dev/null")
 
 
 class BuildLibCXXBaremetal(BuildLibCXX):
