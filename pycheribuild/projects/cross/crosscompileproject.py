@@ -137,7 +137,7 @@ class CrossCompileProject(Project):
                 assert self.installPrefix and self.destdir, "both must be set!"
 
         if self.debugInfo:
-            self.COMMON_FLAGS.append("-g")
+            self.COMMON_FLAGS.append("-ggdb")
         self.CFLAGS = []
         self.CXXFLAGS = []
         self.ASMFLAGS = []
