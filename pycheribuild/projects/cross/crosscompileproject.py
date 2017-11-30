@@ -103,8 +103,8 @@ class CrossCompileProject(Project):
                 if not self.baremetal:
                     self.COMMON_FLAGS.append("-stdlib=libc++")
                 else:
-                    # self.COMMON_FLAGS.append("-fno-pic")
-                    # self.COMMON_FLAGS.append("-mno-abicalls")
+                    self.COMMON_FLAGS.append("-fno-pic")
+                    # self.COMMON_FLAGS.append("-mabicalls")
                     if self.projectName != "newlib-baremetal":
                         assert self.baremetal
                         # Currently we need these flags to build anything against newlib baremetal
@@ -112,6 +112,7 @@ class CrossCompileProject(Project):
                         self.COMMON_FLAGS.append("-D_GNU_SOURCE=1")  # needed for the locale functions
                         self.COMMON_FLAGS.append("-D_POSIX_MONOTONIC_CLOCK=1")  # pretend that we have a monotonic clock
                         self.COMMON_FLAGS.append("-D_POSIX_TIMERS=1")  # pretend that we have a monotonic clock
+
 
 
                 self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")

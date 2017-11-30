@@ -60,7 +60,6 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
         # step during make all rather than during ./configure
         # ensure that we don't fall back to system headers (but do use stddef.h from clang...)
         self.COMMON_FLAGS.extend(["--sysroot", "/this/path/does/not/exist"])
-        self.COMMON_FLAGS.append("-D_LDBL_EQ_DBL")
         self.target_cflags = "-target " + self.targetTripleWithVersion + " ".join(self.COMMON_FLAGS)
 
         self.add_configure_vars(
@@ -80,10 +79,9 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
             CXX_FOR_BUILD=self.config.clangPlusPlusPath,
             # long double is the same as double
             newlib_cv_ldbl_eq_dbl="yes",
-
             LD_FOR_TARGET=str(self.sdkBinDir / "ld.lld"), LDFLAGS_FOR_TARGET="-fuse-ld=lld",
-
         )
+        self.make_args.env_vars["newlib_cv_ldbl_eq_dbl"] = "yes"
         if IS_MAC:
             self.add_configure_vars(LDFLAGS="-fuse-ld=/usr/bin/ld")
 

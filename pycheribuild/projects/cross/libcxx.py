@@ -33,9 +33,8 @@ from ..cheribsd import BuildCHERIBSD
 from ..llvm import BuildLLVM
 from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
-from ...utils import OSInfo, statusUpdate
+from ...utils import OSInfo, statusUpdate, runCmd
 import os
-from pathlib import Path
 
 installToCXXDir = ComputedDefaultValue(
     function=lambda config, project: BuildCHERIBSD.rootfsDir(config) / "extra/c++",
@@ -70,6 +69,7 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
             if OSInfo.isUbuntu():
                 self.add_cmake_options(COMPARE_TEST_OUTPUT_TO_SYSTEM_OUTPUT=False)
                 # Seems to be needed for at least jenkins (it says relink with -pie)
+                assert not self.baremetal
                 self.add_cmake_options(CMAKE_POSITION_INDEPENDENT_CODE=True)
                 # The static libc.a on Ubuntu is not compiled with -fPIC so we can't link to it..
                 self.add_cmake_options(NO_STATIC_TEST=True)
@@ -139,7 +139,6 @@ class BuildLibCXX(CrossCompileCMakeProject):
                 LIBCXX_CXX_ABI_LIBNAME="libcxxrt",
                 LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.sourceDir / "src",
                 LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.buildDir / "lib",
-
             )
         else:
             self.add_cmake_options(LIBCXX_CXX_ABI="none")  # currently not built..
@@ -153,6 +152,11 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
             LIBCXX_ENABLE_STATIC=True,
+
+            # baremetal the -fPIC build doesn't work for some reason (runs out of CALL16 relocations)
+            # Not sure how this can happen since LLD includes multigot
+            LIBCXX_BUILD_POSITION_DEPENDENT=self.baremetal,
+
             LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=False,  # not yet
             LIBCXX_INCLUDE_BENCHMARKS=False,
             LIBCXX_INCLUDE_DOCS=False,
@@ -193,10 +197,13 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
             self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
         super().__init__(config)
 
-        self.COMMON_FLAGS.append("-v")
+        # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")
         self.add_cmake_options(
             # LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config",
+            COMPILER_RT_HAS_FPIC_FLAG=False,  # HACK: currently we build everything as -fno-pic
+
+
             LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
             LLVM_EXTERNAL_LIT=BuildLLVM.buildDir / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
@@ -219,6 +226,8 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
         super().install(**kwargs)
         libname = "libclang_rt.builtins-mips64.a"
         self.moveFile(self.installDir / "lib/generic" / libname, self.installDir / "lib" / libname)
+        # HACK: we don't really need libunwind but the toolchain pulls it in automatically
+        runCmd("ar", "rc", self.installDir / "lib/libunwind.a")
 
 
 class BuildLibCXXBaremetal(BuildLibCXX):
@@ -229,6 +238,7 @@ class BuildLibCXXBaremetal(BuildLibCXX):
     baremetal = True
     crossInstallDir = CrossInstallDir.SDK
     use_libcxxrt = False  # TODO: for now no runtime library
+    defaultCMakeBuildType = "Debug"
 
     def __init__(self, config: CheriConfig):
         if self.crossCompileTarget == CrossCompileTarget.CHERI:
@@ -238,7 +248,8 @@ class BuildLibCXXBaremetal(BuildLibCXX):
 
         # self.COMMON_FLAGS.append("-v")
         # Seems to be necessary :(
-        self.COMMON_FLAGS.extend(["-mxgot", "-mllvm", "-mxmxgot"])
+        # self.COMMON_FLAGS.extend(["-mxgot", "-mllvm", "-mxmxgot"])
+        self.COMMON_FLAGS.append("-O0")
         self.add_cmake_options(CMAKE_EXE_LINKER_FLAGS="-Wl,-T,qemu-malta.ld")
 
 
@@ -253,5 +264,4 @@ class BuildLibCXXRTBaremetal(BuildLibCXXRT):
             statusUpdate("Cannot compile newlib in purecap mode, building mips instead")
             self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
         super().__init__(config)
-        # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-Dsched_yield=abort")  # UNIPROCESSOR, should never happen
