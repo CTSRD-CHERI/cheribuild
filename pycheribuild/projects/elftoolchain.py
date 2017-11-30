@@ -67,7 +67,6 @@ class BuildElftoolchain(Project):
         self.make_args.set(SHLIB_MAJOR="", SHLIB_FULLVERSION="",  # don't build shared libraries
                            CC=str(self.config.clangPath))
 
-        self.make_args.set(DESTDIR=self.installDir)
         if not self.config.verbose:
             self.make_args.add_flags("-s")
         self.programsToBuild = ["brandelf", "elfcopy", "elfdump", "strings", "nm", "readelf", "addr2line",
@@ -105,6 +104,7 @@ class BuildElftoolchain(Project):
         # We don't actually want to install all the files, just copy the binaries that we want
         group = grp.getgrgid(os.getgid()).gr_name
         user = pwd.getpwuid(os.getuid()).pw_name
+        self.make_args.set(DESTDIR=self.installDir)
         self.make_args.set(
             # elftoolchain tries to install as root -> override *GRP and *OWN flags
             BINGRP=group, BINOWN=user,
