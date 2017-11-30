@@ -113,7 +113,8 @@ def get_sdk_archives(cheriConfig) -> "typing.List[SdkArchive]":
         return [SdkArchive(cheriConfig, cheriConfig.sdkArchivePath.name, extra_args=["--strip-components", "1"],
                            required_globs=["bin/clang", "sysroot/usr/include"])]
 
-    clang_archive_name = "{}-{}-clang-llvm.tar.xz".format(cheriConfig.sdk_cpu, os.getenv("LLVM_BRANCH", "master"))
+    llvm_cpu = os.getenv("LLVM_CPU", "cheri-multi")
+    clang_archive_name = "{}-{}-clang-llvm.tar.xz".format(llvm_cpu, os.getenv("LLVM_BRANCH", "master"))
     clang_archive = SdkArchive(cheriConfig, clang_archive_name, required_globs=["bin/clang"],
                                extra_args=["--strip-components", "1"])
     if not clang_archive.archive.exists():
@@ -122,7 +123,7 @@ def get_sdk_archives(cheriConfig) -> "typing.List[SdkArchive]":
         return []
     if cheriConfig.crossCompileTarget == CrossCompileTarget.NATIVE:
         # we need the LLVM builtin includes:
-        llvm_includes_name = "{}-{}-clang-include.tar.xz".format(cheriConfig.sdk_cpu, os.getenv("LLVM_BRANCH", "master"))
+        llvm_includes_name = "{}-{}-clang-include.tar.xz".format(llvm_cpu, os.getenv("LLVM_BRANCH", "master"))
         includes_archive = SdkArchive(cheriConfig, llvm_includes_name, required_globs=["lib/clang/*/include/stddef.h"])
         return [clang_archive, includes_archive]
     else:
@@ -135,6 +136,7 @@ def get_sdk_archives(cheriConfig) -> "typing.List[SdkArchive]":
         sysroot_archive = SdkArchive(cheriConfig, cheri_sysroot_archive_name, required_globs=["sysroot/usr/include"],
                                      extra_args=extra_args)
         return [clang_archive, sysroot_archive]
+
 
 def extract_sdk_archives(cheriConfig, archives: "typing.List[SdkArchive]"):
     if cheriConfig.sdkBinDir.is_dir():
