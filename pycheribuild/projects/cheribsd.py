@@ -825,7 +825,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         self.fixSymlinks()
         # create an archive to make it easier to copy the sysroot to another machine
         self.deleteFile(self.config.sdkDir / self.config.sysrootArchiveName, printVerboseOnly=True)
-        runCmd("tar", "-czf", self.config.sdkDir / self.config.sysrootArchiveName, "sysroot",
+        runCmd("tar", "-czf", self.config.sdkDir / self.config.sysrootArchiveName, self.config.sdkSysrootDir.name,
                cwd=self.config.sdkDir)
         print("Successfully populated sysroot")
 

@@ -106,7 +106,7 @@ class CrossCompileProject(Project):
             if self.useMxgot:
                 self.COMMON_FLAGS.append("-mxgot")
 
-            self.sdkSysroot = self.config.sdkDir / "sysroot"
+            self.sdkSysroot = self.config.sdkSysrootDir
             if self.baremetal:
                 self.sdkSysroot = self.sdkSysroot / "baremetal" / self.targetTriple
 
