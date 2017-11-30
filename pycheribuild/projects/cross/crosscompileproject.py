@@ -306,6 +306,11 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
         else:
             add_lib_suffix = None
             processor = None
+
+        if self.compiling_for_host():
+            system_name = None
+        else:
+            system_name = "Generic" if self.baremetal else "FreeBSD"
         self._prepareToolchainFile(
             TOOLCHAIN_SDK_BINDIR=self.sdkBinDir,
             TOOLCHAIN_COMPILER_BINDIR=self.compiler_dir,
@@ -317,10 +322,10 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
             TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
             TOOLCHAIN_C_COMPILER=self.CC,
             TOOLCHAIN_CXX_COMPILER=self.CXX,
-            TOOLCHAIN_SYSROOT=self.sdkSysroot,
+            TOOLCHAIN_SYSROOT=self.sdkSysroot if not self.compiling_for_host() else None,
             ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
             TOOLCHAIN_SYSTEM_PROCESSOR=processor,
-            TOOLCHAIN_SYSTEM_NAME="Generic" if self.baremetal else "FreeBSD",
+            TOOLCHAIN_SYSTEM_NAME=system_name,
             TOOLCHAIN_PKGCONFIG_DIRS=self.pkgconfig_dirs
         )
 
