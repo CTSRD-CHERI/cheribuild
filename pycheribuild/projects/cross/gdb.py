@@ -97,7 +97,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.warningFlags.append("-Wno-error=implicit-function-declaration")
         self.warningFlags.append("-Wno-error=format")
         self.warningFlags.append("-Wno-error=incompatible-pointer-types")
-
+        self.warningFlags.append("-Wno-mismatched-tags")  # really noisy
         if self.compiling_for_host():
             self.LDFLAGS.append("-L/usr/local/lib")
             self.configureArgs.append("--enable-targets=all")
