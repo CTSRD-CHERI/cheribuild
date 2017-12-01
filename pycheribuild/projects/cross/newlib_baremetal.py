@@ -61,15 +61,16 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
         # ensure that we don't fall back to system headers (but do use stddef.h from clang...)
         self.COMMON_FLAGS.extend(["--sysroot", "/this/path/does/not/exist"])
         self.target_cflags = "-target " + self.targetTripleWithVersion + " ".join(self.COMMON_FLAGS)
+        bindir = self.config.sdkBinDir
 
         self.add_configure_vars(
-            AS_FOR_TARGET=str(self.sdkBinDir / "clang"),  # + target_cflags,
-            CC_FOR_TARGET=str(self.sdkBinDir / "clang"),  # + target_cflags,
-            CXX_FOR_TARGET=str(self.sdkBinDir / "clang++"),  # + target_cflags,
-            AR_FOR_TARGET=self.sdkBinDir / "ar", STRIP_FOR_TARGET=self.sdkBinDir / "strip",
-            OBJCOPY_FOR_TARGET=self.sdkBinDir / "objcopy", RANLIB_FOR_TARGET=self.sdkBinDir / "ranlib",
-            OBJDUMP_FOR_TARGET=self.sdkBinDir / "llvm-objdump",
-            READELF_FOR_TARGET=self.sdkBinDir / "readelf", NM_FOR_TARGET=self.sdkBinDir / "nm",
+            AS_FOR_TARGET=str(bindir / "clang"),  # + target_cflags,
+            CC_FOR_TARGET=str(bindir / "clang"),  # + target_cflags,
+            CXX_FOR_TARGET=str(bindir / "clang++"),  # + target_cflags,
+            AR_FOR_TARGET=bindir / "ar", STRIP_FOR_TARGET=bindir / "strip",
+            OBJCOPY_FOR_TARGET=bindir / "objcopy", RANLIB_FOR_TARGET=bindir / "ranlib",
+            OBJDUMP_FOR_TARGET=bindir / "llvm-objdump",
+            READELF_FOR_TARGET=bindir / "readelf", NM_FOR_TARGET=bindir / "nm",
             # Set all the flags:
             CFLAGS_FOR_TARGET=self.target_cflags,
             CCASFLAGS_FOR_TARGET=self.target_cflags + " -mabicalls",
@@ -79,7 +80,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
             CXX_FOR_BUILD=self.config.clangPlusPlusPath,
             # long double is the same as double
             newlib_cv_ldbl_eq_dbl="yes",
-            LD_FOR_TARGET=str(self.sdkBinDir / "ld.lld"), LDFLAGS_FOR_TARGET="-fuse-ld=lld",
+            LD_FOR_TARGET=str(bindir / "ld.lld"), LDFLAGS_FOR_TARGET="-fuse-ld=lld",
         )
         self.make_args.env_vars["newlib_cv_ldbl_eq_dbl"] = "yes"
         if IS_MAC:

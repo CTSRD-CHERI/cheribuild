@@ -57,7 +57,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         if not self.compiling_for_host():
             self.COMMON_FLAGS.append("-DDISABLE_LOADABLE_MODULES=1")
             self.COMMON_FLAGS.append("-I/usr/include/edit")
-            self.configureEnvironment["AR"] = str(self.sdkBinDir / "cheri-unknown-freebsd-ar")
+            self.configureEnvironment["AR"] = str(self.config.sdkBinDir / "cheri-unknown-freebsd-ar")
             # tell postgres configure that %zu works in printf()
             self.configureEnvironment["PRINTF_SIZE_T_SUPPORT"] = "yes"
             # currently we can only build static:

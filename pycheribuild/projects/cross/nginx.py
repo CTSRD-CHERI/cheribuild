@@ -55,7 +55,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
                                       "-Wno-extended-offsetof",
                                       "-Wno-format-pedantic",
                                       ])
-            self.configureEnvironment["AR"] = str(self.sdkBinDir / "cheri-unknown-freebsd-ar")
+            self.configureEnvironment["AR"] = str(self.config.sdkBinDir / "cheri-unknown-freebsd-ar")
 
     def install(self, **kwargs):
         # We have to run make inside the source directory so that it invokes make -f $build/Makefile

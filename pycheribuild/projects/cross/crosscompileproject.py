@@ -70,7 +70,6 @@ class CrossCompileProject(Project):
                 self.compiler_dir = BuildLLVM.buildDir / "bin"
 
         self.targetTriple = None
-        self.sdkBinDir = self.config.sdkDir / "bin"
         # compiler flags:
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
             self.COMMON_FLAGS = []
@@ -184,7 +183,7 @@ class CrossCompileProject(Project):
                   "-Wl,-m" + emulation,
                   "-fuse-ld=" + self.linker,
                   "-Wl,-z,notext",  # needed so that LLD allows text relocations
-                  "-B" + str(self.sdkBinDir)]
+                  "-B" + str(self.config.sdkBinDir)]
         if not self.baremetal:
             result.append("--sysroot=" + str(self.sdkSysroot))
         if self.compiling_for_cheri() and self.newCapRelocs:
@@ -287,7 +286,7 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
         if self.compiling_for_host():
             common_flags = self.COMMON_FLAGS
         else:
-            self.COMMON_FLAGS.append("-B" + str(self.sdkBinDir))
+            self.COMMON_FLAGS.append("-B" + str(self.config.sdkBinDir))
             if not self.baremetal and self._get_cmake_version() < (3, 9, 0) and not (self.sdkSysroot / "usr/local/lib/cheri").exists():
                 warningMessage("Workaround for missing custom lib suffix in CMake < 3.9")
                 # create a /usr/lib/cheri -> /usr/libcheri symlink so that cmake can find the right libraries
@@ -325,7 +324,7 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
         else:
             system_name = "Generic" if self.baremetal else "FreeBSD"
         self._prepareToolchainFile(
-            TOOLCHAIN_SDK_BINDIR=self.sdkBinDir,
+            TOOLCHAIN_SDK_BINDIR=self.config.sdkBinDir,
             TOOLCHAIN_COMPILER_BINDIR=self.compiler_dir,
             TOOLCHAIN_TARGET_TRIPLE=self.targetTriple,
             TOOLCHAIN_COMMON_FLAGS=common_flags,
@@ -371,7 +370,7 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
         result = ["-target", self.targetTripleWithVersion] + self.COMMON_FLAGS + self.optimizationFlags
         if not self.baremetal:
             result.append("--sysroot=" + str(self.sdkSysroot))
-        result += ["-B" + str(self.sdkBinDir)] + self.warningFlags
+        result += ["-B" + str(self.config.sdkBinDir)] + self.warningFlags
 
         return result
 
