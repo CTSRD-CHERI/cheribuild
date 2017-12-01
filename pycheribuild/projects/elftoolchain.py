@@ -47,6 +47,10 @@ class BuildElftoolchain(Project):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # TODO: move this to project
+        # objdir = Path("/tmp/elftc") / self.sourceDir.resolve()
+        # self.makedirs(objdir)
+        # self.make_args.env_vars["MAKEOBJDIRPREFIX"] = objdir
+        # self.make_args.set(TOP=self.sourceDir)  # for some reason the build system get's this wrong
         if not IS_FREEBSD:
             self._addRequiredSystemTool("bmake")
             self.makeCommand = "bmake"
@@ -59,7 +63,7 @@ class BuildElftoolchain(Project):
         # TODO: build static?
         if self.build_static:
             self.make_args.set(LDSTATIC="-static")
-        self.make_args.set_with_options(TESTS=False, PE=False, DOCUMENTATION=False)
+        self.make_args.set(WITH_TESTS="no", WITH_PE="no", WITH_DOCUMENTATION="no")
         # HACK: we don't want the binaries to depend on libelftc.so because the build system doesn't handle rpath
         # setting SHLIB_FULLVERSION to empty is a hack to prevent building of shared libraries
         # as we want the build tools to be statically linked but e.g. libarchive might not be available
@@ -74,7 +78,7 @@ class BuildElftoolchain(Project):
         # some make targets install more than one tool:
         # strip, objcopy and mcs are links to elfcopy and ranlib is a link to ar
         self.extraPrograms = ["strip", "objcopy", "mcs"]
-        self.libTargets = ["common", "libelf", "libelftc", "libpe", "libdwarf"]
+        self.libTargets = ["common", "libelf", "libelftc", "libdwarf"]
         if self.build_ar:
             self.programsToBuild.append("ar")
             self.extraPrograms.append("ranlib")
@@ -91,6 +95,8 @@ class BuildElftoolchain(Project):
             self.dependencyError("libarchive is missing", installInstructions="Run `brew install libarchive`")
 
     def compile(self, **kwargs):
+        super().compile(**kwargs)
+        return
         # tools that we want to build:
         # build is not parallel-safe -> we can't make with all the all-foo targets and -jN
         # To speed it up run make for the individual library directories instead and then for all the binaries
