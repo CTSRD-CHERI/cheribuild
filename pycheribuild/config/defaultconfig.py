@@ -114,8 +114,8 @@ class DefaultCheriConfig(CheriConfig):
             self.crossCompileTarget = CrossCompileTarget.CHERI
 
         # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
-        os.environ["CHERI_BITS"] = str(self.cheriBits)
-        self.sysrootArchiveName = "cheri-sysroot.tar.gz"
+        os.environ["CHERI_BITS"] = self.cheriBitsStr
+        self.sysrootArchiveName = "cheri-sysroot" + self.cheriBitsStr + ".tar.gz"
         # now set some generic derived config options
         self.sdkDir = self.outputRoot / self.sdkDirectoryName  # qemu and binutils (and llvm/clang)
         self.otherToolsDir = self.outputRoot / "bootstrap"
