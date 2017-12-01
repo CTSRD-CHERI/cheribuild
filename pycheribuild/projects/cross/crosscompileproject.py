@@ -99,6 +99,7 @@ class CrossCompileProject(Project):
                 self.COMMON_FLAGS.append("-integrated-as")
                 self.COMMON_FLAGS.append("-mabi=n64")
                 self.COMMON_FLAGS.append("-mcpu=mips4")
+                self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
                 if not self.baremetal:
                     self.COMMON_FLAGS.append("-stdlib=libc++")
                 else:
@@ -111,10 +112,6 @@ class CrossCompileProject(Project):
                         self.COMMON_FLAGS.append("-D_GNU_SOURCE=1")  # needed for the locale functions
                         self.COMMON_FLAGS.append("-D_POSIX_MONOTONIC_CLOCK=1")  # pretend that we have a monotonic clock
                         self.COMMON_FLAGS.append("-D_POSIX_TIMERS=1")  # pretend that we have a monotonic clock
-
-
-
-                self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
             if self.useMxgot:
                 self.COMMON_FLAGS.append("-mxgot")
 
