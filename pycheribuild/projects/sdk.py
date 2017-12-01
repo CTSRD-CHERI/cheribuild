@@ -152,6 +152,12 @@ class BuildBinutils(TargetAlias):
     # LLD should be usable for all cases now, now longer install the ancient gnu ld
     dependencies = ["elftoolchain"]
 
+
+class BuildBaremetalSdk(TargetAliasWithDependencies):
+    target = "baremetal-sdk"
+    dependencies = ["freestanding-sdk", "libcxx-baremetal"]
+
+
 class StartCheriSDKShell(SimpleProject):
     target = "sdk-shell"
 

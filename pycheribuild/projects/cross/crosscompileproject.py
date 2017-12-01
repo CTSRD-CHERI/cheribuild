@@ -51,7 +51,7 @@ class CrossCompileProject(Project):
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     defaultInstallDir = ComputedDefaultValue(function=_installDir, asString=_installDirMessage)
     appendCheriBitsToBuildDir = True
-    dependencies = ["cheribsd-sdk"]
+    dependencies = lambda cls: ["freestanding-sdk"] if cls.baremetal else ["cheribsd-sdk"]
     defaultLinker = "lld"
     baremetal = False
     forceDefaultCC = False  # for some reason ICU binaries build during build crash -> fall back to /usr/bin/cc there
@@ -342,6 +342,8 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
             # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
             # TODO: remove once it has been fixed
             self.add_cmake_options(CMAKE_BUILD_WITH_INSTALL_RPATH=True)
+        if self.baremetal and not self.compiling_for_host():
+            self.add_cmake_options(CMAKE_EXE_LINKER_FLAGS="-Wl,-T,qemu-malta.ld")
         # TODO: BUILD_SHARED_LIBS=OFF?
         super().configure()
 

@@ -97,7 +97,10 @@ class ProjectSubclassDefinitionHook(type):
         if cls.__dict__.get("dependenciesMustBeBuilt"):
             if not cls.dependencies:
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + targetName)
-        targetManager.addTarget(Target(targetName, cls, dependencies=set(cls.dependencies)))
+        deps = cls.dependencies
+        if deps and callable(deps):
+            deps = deps(cls)
+        targetManager.addTarget(Target(targetName, cls, dependencies=set(deps)))
         # print("Adding target", targetName, "with deps:", cls.dependencies)
 
 
@@ -117,7 +120,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     @classmethod
     def allDependencyNames(cls):
         result = set()
-        for dep in cls.dependencies:
+        dependencies = cls.dependencies
+        if callable(dependencies):
+            dependencies = dependencies(cls)
+        for dep in dependencies:
+            if callable(dep):
+                dep = dep(cls)
             result.add(dep)
             result = result.union(targetManager.targetMap[dep].projectClass.allDependencyNames())
         return result

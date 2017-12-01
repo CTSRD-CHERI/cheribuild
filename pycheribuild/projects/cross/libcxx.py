@@ -189,6 +189,7 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
     repository = "https://github.com/llvm-mirror/compiler-rt.git"
     projectName = "compiler-rt-baremetal"
     crossInstallDir = CrossInstallDir.SDK
+    dependencies = ["newlib-baremetal"]
     baremetal = True
 
     def __init__(self, config: CheriConfig):
@@ -232,7 +233,7 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
 
 class BuildLibCXXBaremetal(BuildLibCXX):
     repository = "https://github.com/CTSRD-CHERI/libcxx.git"
-    # dependencies = ["libcxxrt-baremetal"]
+    dependencies = ["libcxxrt-baremetal"]
     projectName = "libcxx-baremetal"
     # target = "libcxx-baremetal"
     baremetal = True
@@ -250,12 +251,12 @@ class BuildLibCXXBaremetal(BuildLibCXX):
         # Seems to be necessary :(
         # self.COMMON_FLAGS.extend(["-mxgot", "-mllvm", "-mxmxgot"])
         self.COMMON_FLAGS.append("-O0")
-        self.add_cmake_options(CMAKE_EXE_LINKER_FLAGS="-Wl,-T,qemu-malta.ld")
 
 
 class BuildLibCXXRTBaremetal(BuildLibCXXRT):
     repository = "https://github.com/CTSRD-CHERI/libcxxrt.git"
     projectName = "libcxxrt-baremetal"
+    dependencies = ["newlib-baremetal"]
     crossInstallDir = CrossInstallDir.SDK
     baremetal = True
 
