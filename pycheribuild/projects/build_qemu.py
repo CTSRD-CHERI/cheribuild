@@ -69,12 +69,18 @@ class BuildQEMU(AutotoolsProject):
         if ccinfo.compiler.endswith("clang"):
             # silence this warning that comes lots of times (it's fine on x86)
             extraCFlags += " -Wno-address-of-packed-member"
-        if config.cheriBits == 128:
-            # enable QEMU 128 bit capabilities
-            # https://github.com/CTSRD-CHERI/qemu/commit/40a7fc2823e2356fa5ffe1ee1d672f1d5ec39a12
-            extraCFlags += " -DCHERI_128=1" if not self.magic128 else " -DCHERI_MAGIC128=1"
+        if self.config.unified_sdk:
+            targets = "cheri256-softmmu,cheri128-softmmu"
+            if self.magic128:
+                targets += ",cheri128magic-softmmu"
+        else:
+            targets = "cheri-softmmu"
+            if config.cheriBits == 128:
+                # enable QEMU 128 bit capabilities
+                # https://github.com/CTSRD-CHERI/qemu/commit/40a7fc2823e2356fa5ffe1ee1d672f1d5ec39a12
+                extraCFlags += " -DCHERI_128=1" if not self.magic128 else " -DCHERI_MAGIC128=1"
         self.configureArgs.extend([
-            "--target-list=cheri-softmmu",
+            "--target-list=" + targets,
             "--disable-linux-user",
             "--disable-bsd-user",
             "--disable-xen",

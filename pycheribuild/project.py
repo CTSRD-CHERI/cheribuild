@@ -503,7 +503,7 @@ class Project(SimpleProject):
             # HACK since I can't make the class variable in BuildLLVM dynamic
             # TODO: remove once unified SDK is stable
             append_bits = cls.appendCheriBitsToBuildDir
-            if cls.target == "llvm" and config.unified_sdk:
+            if cls.target in ("llvm", "qemu") and config.unified_sdk:
                 append_bits = False
             return "-" + config.cheriBitsStr + "-build" if append_bits else "-build"
         elif target == CrossCompileTarget.CHERI:
