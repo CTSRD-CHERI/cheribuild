@@ -120,7 +120,7 @@ class CrossCompileProject(Project):
 
             self.sdkSysroot = self.config.sdkSysrootDir
             if self.baremetal:
-                self.sdkSysroot = self.sdkSysroot / "baremetal" / self.targetTriple
+                self.sdkSysroot = self.config.sdkDir/ "baremetal" / self.targetTriple
 
             if self.crossInstallDir == CrossInstallDir.SDK:
                 if self.baremetal:
