@@ -98,6 +98,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
+        cls.only_compile_tests = cls.addBoolOption("only-compile-tests",
+                                                   help="Don't attempt to run tests, only compile them")
         cls.collect_test_binaries = cls.addPathOption("collect-test-binaries", metavar="TEST_PATH",
                                                       help="Instead of running tests copy them to $TEST_PATH")
         cls.nfs_mounted_path = cls.addPathOption("nfs-mounted-path", metavar="PATH", help="Use a PATH as a directory"
@@ -166,24 +168,25 @@ class BuildLibCXX(CrossCompileCMakeProject):
             # When cross compiling we link the ABI library statically (except baremetal since that doens;t have it yet)
             LIBCXX_ENABLE_STATIC_ABI_LIBRARY=not self.baremetal,
         )
-        if self.collect_test_binaries:
-            executor = "CollectBinariesExecutor('{path}', self)".format(path=self.collect_test_binaries)
+        if self.baremetal or self.only_compile_tests:
+            executor = "CompileOnlyExecutor()"
+        elif self.collect_test_binaries:
+            executor = "CollectBinariesExecutor(\"{path}\", self)".format(path=self.collect_test_binaries)
         elif self.nfs_mounted_path:
-            executor = "SSHExecutorWithNFSMount('{host}', nfs_dir='{nfs_dir}', path_in_target='{nfs_in_target}'," \
-                       " config=self, username='{user}', port={port})".format(host=self.qemu_host, user=self.qemu_user,
+            executor = "SSHExecutorWithNFSMount(\"{host}\", nfs_dir=\"{nfs_dir}\", path_in_target=\"{nfs_in_target}\"," \
+                       " config=self, username=\"{user}\", port={port})".format(host=self.qemu_host, user=self.qemu_user,
                                                                               port=self.qemu_port,
                                                                               nfs_dir=self.nfs_mounted_path,
                                                                               nfs_in_target=self.nfs_path_in_qemu)
         else:
             executor = "SSHExecutor('{host}', username='{user}', port={port})".format(
                 host=self.qemu_host, user=self.qemu_user, port=self.qemu_port)
+        if self.baremetal:
+            target_info = "libcxx.test.target_info.BaremetalNewlibTI"
+        else:
+            target_info = "libcxx.test.target_info.CheriBSDRemoteTI"
         # add the config options required for running tests:
-        if not self.baremetal:
-            self.add_cmake_options(
-                LIBCXX_EXECUTOR=executor,
-                LIBCXX_TARGET_INFO="libcxx.test.target_info.CheriBSDRemoteTI",
-                LIBCXX_RUN_LONG_TESTS=False
-            )
+        self.add_cmake_options(LIBCXX_EXECUTOR=executor, LIBCXX_TARGET_INFO=target_info, LIBCXX_RUN_LONG_TESTS=False)
 
 class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
     repository = "https://github.com/llvm-mirror/compiler-rt.git"
