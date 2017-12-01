@@ -473,10 +473,11 @@ class _BuildFreeBSD(Project):
         # self.common_options.env_vars["MACHINE_ARCH"] = "amd64"
 
         # we don't build elftoolchain during buildworld so for the kernel we need to set these variables
-        self.make_args.env_vars["OBJDUMP"] = self.config.sdkBinDir / "llvm-objdump"
+        self.make_args.env_vars["XOBJDUMP"] = self.config.sdkBinDir / "llvm-objdump"
         # TODO: use llvm-objcopy?
         self.make_args.env_vars["OBJCOPY"] = self.config.sdkBinDir / "objcopy"
-        self.make_args.env_vars["STRIP"] = self.config.sdkBinDir / "strip"
+        # This is not actually the path to the strip binary but rather a flag to install
+        # self.make_args.env_vars["STRIP"] = self.config.sdkBinDir / "strip"
         if IS_MAC:
             # For some reason on a mac bmake can't execute elftoolchain objcopy -> use gnu version
             # self._addRequiredSystemTool("gobjcopy", homebrewPackage="binutils")
