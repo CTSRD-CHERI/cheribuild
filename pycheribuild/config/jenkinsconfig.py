@@ -124,6 +124,11 @@ class JenkinsConfig(CheriConfig):
         assert isinstance(self.sdkArchiveName, str)
         return self.workspace / self.sdkArchiveName
 
+    @property
+    def sdkSysrootDir(self):
+        # TODO: currently we need this to be unprefixed since that is what the archives created by jenkins look like
+        return self.sdkDir / "sysroot"
+
     def load(self):
         super().load()
 
