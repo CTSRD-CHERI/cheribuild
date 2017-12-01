@@ -88,6 +88,8 @@ class CheriConfig(object):
         self.skipUpdate = None  # type: bool
         self.skipConfigure = None  # type: bool
         self.forceConfigure = None  # type: bool
+        self.unified_sdk = loader.addBoolOption("unified-sdk", help="Only build a single SDK instead of separate 128"
+                                                                    " and 256 bits ones (higly experimental!)")
         self.use_sdk_clang_for_native_xbuild = loader.addBoolOption("use-sdk-clang-for-native-xbuild",
                                                                     help="Compile cross-compile project with CHERI "
                                                                          "clang from the SDK instead of host compiler")
@@ -133,7 +135,7 @@ class CheriConfig(object):
 
     @property
     def sdkDirectoryName(self):
-        return "sdk" + self.cheriBitsStr
+        return "sdk" if self.unified_sdk else "sdk" + self.cheriBitsStr
 
     @property
     def sdkBinDir(self):
@@ -141,7 +143,7 @@ class CheriConfig(object):
 
     @property
     def sdkSysrootDir(self):
-        return self.sdkDir / "sysroot"
+        return self.sdkDir / ("sysroot" + self.cheriBitsStr)
 
     def _ensureRequiredPropertiesSet(self) -> bool:
         for key in self.__dict__.keys():
