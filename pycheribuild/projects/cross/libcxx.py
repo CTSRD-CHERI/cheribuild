@@ -93,8 +93,6 @@ class BuildLibCXX(CrossCompileCMakeProject):
     defaultInstallDir = installToCXXDir
     dependencies = ["libcxxrt"]
 
-    use_libcxxrt = True
-
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
@@ -134,16 +132,13 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
                           "/lit-test-results.xml --max-time 3600 --timeout 120 -s -vv"
         )
-        if self.use_libcxxrt:
-            # select libcxxrt as the runtime library
-            self.add_cmake_options(
-                LIBCXX_CXX_ABI="libcxxrt",
-                LIBCXX_CXX_ABI_LIBNAME="libcxxrt",
-                LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.sourceDir / "src",
-                LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.buildDir / "lib",
-            )
-        else:
-            self.add_cmake_options(LIBCXX_CXX_ABI="none")  # currently not built..
+        # select libcxxrt as the runtime library
+        self.add_cmake_options(
+            LIBCXX_CXX_ABI="libcxxrt",
+            LIBCXX_CXX_ABI_LIBNAME="libcxxrt",
+            LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.sourceDir / "src",
+            LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.buildDir / "lib",
+        )
 
     def addCrossFlags(self):
         # TODO: do I even need the toolchain file to cross compile?
@@ -151,6 +146,18 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.add_cmake_options(LIBCXX_TARGET_TRIPLE=self.targetTriple,
                                LIBCXX_SYSROOT=self.sdkSysroot)
 
+        if self.baremetal:
+            self.add_cmake_options(LIBCXX_TEST_LINKER_FLAGS="-Wl,-T,qemu-malta.ld")
+            self.add_cmake_options(LIBCXX_TEST_COMPILER_FLAGS="-fno-pic -mno-abicalls")
+            self.add_cmake_options(
+                LIBCXX_ENABLE_FILESYSTEM=False,
+                LIBCXX_USE_COMPILER_RT=True,
+                LIBCXX_ENABLE_STDIN=False,  # currently not support on baremetal QEMU
+                LIBCXX_ENABLE_GLOBAL_FILESYSTEM_NAMESPACE=False,  # no filesystem on baremetal QEMU
+                LIBCXX_ENABLE_THREADS=False,  # no threads on baremetal
+                # TODO: we should be able to implement this in QEMU
+                LIBCXX_ENABLE_MONOTONIC_CLOCK=False,  # no monotonic clock for now
+            )
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
             LIBCXX_ENABLE_STATIC=True,
@@ -241,7 +248,6 @@ class BuildLibCXXBaremetal(BuildLibCXX):
     # target = "libcxx-baremetal"
     baremetal = True
     crossInstallDir = CrossInstallDir.SDK
-    use_libcxxrt = False  # TODO: for now no runtime library
     defaultCMakeBuildType = "Debug"
 
     def __init__(self, config: CheriConfig):
