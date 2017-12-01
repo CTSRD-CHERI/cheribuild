@@ -500,7 +500,12 @@ class Project(SimpleProject):
     @classmethod
     def buildDirSuffix(cls, config: CheriConfig, target: CrossCompileTarget):
         if target is None:
-            return "-" + config.cheriBitsStr + "-build" if cls.appendCheriBitsToBuildDir else "-build"
+            # HACK since I can't make the class variable in BuildLLVM dynamic
+            # TODO: remove once unified SDK is stable
+            append_bits = cls.appendCheriBitsToBuildDir
+            if cls.target == "llvm" and config.unified_sdk:
+                append_bits = False
+            return "-" + config.cheriBitsStr + "-build" if append_bits else "-build"
         elif target == CrossCompileTarget.CHERI:
             return "-" + config.cheriBitsStr + "-build"
         else:
