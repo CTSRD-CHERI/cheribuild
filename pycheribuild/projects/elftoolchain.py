@@ -95,8 +95,8 @@ class BuildElftoolchain(Project):
             self.dependencyError("libarchive is missing", installInstructions="Run `brew install libarchive`")
 
     def compile(self, **kwargs):
-        super().compile(**kwargs)
-        return
+        # super().compile(**kwargs)
+        # return
         # tools that we want to build:
         # build is not parallel-safe -> we can't make with all the all-foo targets and -jN
         # To speed it up run make for the individual library directories instead and then for all the binaries
