@@ -32,6 +32,7 @@ import socket
 
 from .cheribsd import _BuildFreeBSD
 from .cherios import BuildCheriOS
+from .build_qemu import BuildQEMU
 from .disk_image import _BuildFreeBSDImageBase
 from .disk_image import *
 from pathlib import Path
@@ -68,9 +69,10 @@ class LaunchQEMUBase(SimpleProject):
                                                              "You can then use `ssh root@localhost -p $PORT` connect "
                                                              "to the VM")
 
-    def __init__(self, config):
+    def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.qemuBinary = self.config.sdkDir / "bin/qemu-system-cheri"
+        self.qemuBinary = BuildQEMU.qemu_binary(config)
+
         self.currentKernel = None  # type: Path
         self.diskImage = None  # type: Path
         self._diskOptions = []

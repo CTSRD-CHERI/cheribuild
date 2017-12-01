@@ -46,6 +46,15 @@ class BuildQEMU(AutotoolsProject):
         super().setupConfigOptions()
         cls.magic128 = cls.addBoolOption("magic-128")
 
+    @classmethod
+    def qemu_binary(cls, config: CheriConfig):
+        binary_name = "qemu-system-cheri"
+        if config.unified_sdk:
+            binary_name += config.cheriBitsStr
+            if config.cheriBits == 128 and cls.magic128:
+                binary_name += "magic"
+        return config.sdkBinDir / binary_name
+
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self._addRequiredSystemTool("pkg-config")
