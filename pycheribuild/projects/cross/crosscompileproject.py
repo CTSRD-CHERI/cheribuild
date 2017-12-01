@@ -108,7 +108,6 @@ class CrossCompileProject(Project):
                     if self.projectName != "newlib-baremetal":
                         assert self.baremetal
                         # Currently we need these flags to build anything against newlib baremetal
-                        self.COMMON_FLAGS.append("-D__ELF__=1")  # FIXME: why doesn't clang set this..
                         self.COMMON_FLAGS.append("-D_GNU_SOURCE=1")  # needed for the locale functions
                         self.COMMON_FLAGS.append("-D_POSIX_MONOTONIC_CLOCK=1")  # pretend that we have a monotonic clock
                         self.COMMON_FLAGS.append("-D_POSIX_TIMERS=1")  # pretend that we have a monotonic clock
