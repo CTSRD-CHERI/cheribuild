@@ -146,10 +146,12 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.add_cmake_options(LIBCXX_TARGET_TRIPLE=self.targetTriple,
                                LIBCXX_SYSROOT=self.sdkSysroot)
 
+        # We need to build with -G0 otherwise we get R_MIPS_GPREL16 out of range linker errors
+        test_compile_flags = "-G0 -mcpu=mips4"
         if self.baremetal:
-            self.add_cmake_options(LIBCXX_TEST_LINKER_FLAGS="-Wl,-T,qemu-malta.ld")
-            self.add_cmake_options(LIBCXX_TEST_COMPILER_FLAGS="-fno-pic -mno-abicalls")
+            test_compile_flags += " -fno-pic -mno-abicalls"
             self.add_cmake_options(
+                LIBCXX_TEST_LINKER_FLAGS="-Wl,-T,qemu-malta.ld",
                 LIBCXX_ENABLE_FILESYSTEM=False,
                 LIBCXX_USE_COMPILER_RT=True,
                 LIBCXX_ENABLE_STDIN=False,  # currently not support on baremetal QEMU
@@ -160,7 +162,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
             )
         else:
             if self.compiling_for_cheri():
-                self.add_cmake_options(LIBCXX_TEST_COMPILER_FLAGS="-cheri=" + self.config.cheriBitsStr + " -mabi=purecap")
+                test_compile_flags += " -cheri=" + self.config.cheriBitsStr + " -mabi=purecap"
+        self.add_cmake_options(LIBCXX_TEST_COMPILER_FLAGS=test_compile_flags)
 
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
