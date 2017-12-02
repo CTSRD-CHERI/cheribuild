@@ -272,8 +272,11 @@ class _BuildFreeBSD(Project):
             X_COMPILER_TYPE="clang",
             XOBJDUMP=cross_prefix + "llvm-objdump",
             OBJDUMP=cross_prefix + "llvm-objdump",
-            XLD=cross_prefix + "ld." + self.linker_for_world,
         )
+        if self.linker_for_world == "lld":
+            # Don't set XLD when using bfd since it will pick up ld.bfd from the build directory
+            self.cross_toolchain_config.set(XLD=cross_prefix + "ld.lld"),
+
         if target_flags:
             self.cross_toolchain_config.env_vars["XCFLAGS"] = target_flags
 
