@@ -158,6 +158,10 @@ class BuildLibCXX(CrossCompileCMakeProject):
                 # TODO: we should be able to implement this in QEMU
                 LIBCXX_ENABLE_MONOTONIC_CLOCK=False,  # no monotonic clock for now
             )
+        else:
+            if self.compiling_for_cheri():
+                self.add_cmake_options(LIBCXX_TEST_COMPILER_FLAGS="-cheri=" + self.config.cheriBitsStr + " -mabi=purecap")
+
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
             LIBCXX_ENABLE_STATIC=True,
