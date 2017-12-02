@@ -34,7 +34,7 @@ from pathlib import Path
 
 
 class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
-    repository = "git://sourceware.org/git/newlib-cygwin.git"
+    repository = "https://github.com/CTSRD-CHERI/newlib"
     projectName = "newlib-baremetal"
     requiresGNUMake = True
     baremetal = True
