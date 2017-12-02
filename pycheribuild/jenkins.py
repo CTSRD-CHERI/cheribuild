@@ -47,6 +47,7 @@ from .projects.cross.crosscompileproject import CrossCompileProject
 from .targets import targetManager
 from .utils import *
 
+EXTRACT_SDK_TARGET = "extract-sdk"
 
 class JenkinsConfigLoader(ConfigLoaderBase):
     """
@@ -57,8 +58,8 @@ class JenkinsConfigLoader(ConfigLoaderBase):
         self._parsedArgs = self._parser.parse_args()
 
     def finalizeOptions(self, availableTargets: list, **kwargs):
-        targetOption = self._parser.add_argument("targets", metavar="TARGET", nargs=1,
-                                                 help="The target to build", choices=availableTargets)
+        targetOption = self._parser.add_argument("targets", metavar="TARGET", nargs=1, help="The target to build",
+                                                 choices=availableTargets + [EXTRACT_SDK_TARGET])
         if "_ARGCOMPLETE" in os.environ:
             try:
                 import argcomplete
@@ -187,6 +188,11 @@ def _jenkins_main():
         # pprint.pprint(configLoader.options)
         pass
     setCheriConfig(cheriConfig)
+
+    # special target to extract the sdk
+    if cheriConfig.targets[0] == EXTRACT_SDK_TARGET:
+        create_sdk_from_archives(cheriConfig)
+        sys.exit()
 
     if cheriConfig.do_build:
         if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
