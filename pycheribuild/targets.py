@@ -64,12 +64,16 @@ class Target(object):
         self._completed = True
 
     def __lt__(self, other: "Target"):
-        if other.name == "run" and self != other:
+        # print(self, "__lt__", other)
+        if other.name.startswith("run") and self != other:
             return True  # run must be executed last
         # if this target is one of the dependencies order it before
         otherDeps = other.projectClass.allDependencyNames()
+        # print("other deps:", otherDeps)
         if self.name in otherDeps:
+            # print(self, "is in", other, "deps -> is less")
             return True
+        # print(self, "is not in", other, "deps -> is not less")
         # otherwise just keep everything in order
         return False
         # This was previously done
@@ -157,10 +161,11 @@ class TargetManager(object):
                 if t.projectClass.isAlias:
                     if t.projectClass.dependenciesMustBeBuilt:
                         # some targets such as sdk always need their dependencies build:
-                        chosenTargets.extend(self.targetMap[dep] for dep in t.projectClass.allDependencyNames())
+                        dep_names = sorted(t.projectClass.allDependencyNames())
                     else:
                         # otherwise just add the direct dependencies
-                        chosenTargets.extend(self.targetMap[dep] for dep in t.projectClass.dependencies)
+                        dep_names = t.projectClass.dependencies
+                    chosenTargets.extend(self.targetMap[dep] for dep in dep_names)
                 else:
                     chosenTargets.append(t)
             # stable sort in dependency order
