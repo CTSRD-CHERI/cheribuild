@@ -272,7 +272,7 @@ class BuildLibCXXBaremetal(BuildLibCXX):
 class BuildLibCXXRTBaremetal(BuildLibCXXRT):
     repository = "https://github.com/CTSRD-CHERI/libcxxrt.git"
     projectName = "libcxxrt-baremetal"
-    dependencies = ["newlib-baremetal"]
+    dependencies = ["newlib-baremetal", "compiler-rt-baremetal"]
     crossInstallDir = CrossInstallDir.SDK
     baremetal = True
 
