@@ -116,6 +116,7 @@ class BuildLLVM(CMakeProject):
     def checkClangVersion(self, major: int, minor: int, patch=0, installInstructions=None):
         if not self.cCompiler or not self.cppCompiler:
             self.dependencyError("Could not find clang", installInstructions=installInstructions)
+            return
         info = getCompilerInfo(self.cCompiler)
         # noinspection PyTypeChecker
         versionStr = ".".join(map(str, info.version))

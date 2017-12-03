@@ -456,7 +456,10 @@ class _BuildFreeBSD(Project):
             self.runMake("distribution", options=install_world_args)
 
     def addCrossBuildOptions(self):
-        self.makeCommand = shutil.which("bmake", path=self.config.dollarPathWithOtherTools) # make is usually gnu make
+        self.makeCommand = shutil.which("bmake", path=self.config.dollarPathWithOtherTools)  # make is usually gnu make
+        if not self.makeCommand:
+            fatalError("Could not find bmake binary")
+            self.makeCommand = "false"
         # we also need to ensure that our SDK build tools are being picked up first
         build_path = str(self.config.sdkBinDir) + ":" + str(self.crossBinDir)
         self.make_args.env_vars["PATH"] = build_path
@@ -585,6 +588,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
             fullpath = shutil.which(tool, path=searchpath)
             if not fullpath:
                 fatalError("Missing", tool, "binary")
+                continue
             self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
 
         self.createSymlink(self.config.sdkBinDir / "objcopy", self.crossBinDir / "objcopy", relative=False)

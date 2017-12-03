@@ -1,6 +1,7 @@
 import os
 import inspect
 import pprint
+import shutil
 from enum import Enum
 from pathlib import Path
 
@@ -148,7 +149,7 @@ class CrossCompileProject(Project):
             return self.targetTriple + "12"
 
     def get_host_triple(self):
-        compiler = getCompilerInfo(self.config.clangPath)
+        compiler = getCompilerInfo(self.config.clangPath if self.config.clangPath else shutil.which("cc"))
         return compiler.default_target
 
     @property

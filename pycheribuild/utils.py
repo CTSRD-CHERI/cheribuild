@@ -217,13 +217,18 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
             stdout, stderr = process.communicate()
             # TODO py35: pass stderr=stderr as well
             raise subprocess.TimeoutExpired(process.args, timeout, output=stdout)
-        except:
+        except Exception as e:
             process.kill()
             process.wait()
             raise
         retcode = process.poll()
-        if retcode:
+        if retcode and not _cheriConfig.pretend:
             raise _make_called_process_error(retcode, process.args, stdout=stdout, cwd=kwargs["cwd"])
+
+        if _cheriConfig.pretend:
+            cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
+            fatalError("Command ", "`" + " ".join(map(shlex.quote, process.args)) +
+                       "` failed with non-zero exit code ", retcode, *cwd, sep="")
         return CompletedProcess(process.args, retcode, stdout, stderr)
 
 
@@ -253,6 +258,7 @@ _cached_compiler_infos = dict()  # type: typing.Dict[Path, CompilerInfo]
 
 
 def getCompilerInfo(compiler: Path) -> CompilerInfo:
+    assert compiler is not None
     if compiler not in _cached_compiler_infos:
         clangVersionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         gccVersionPattern = re.compile(b"gcc version (\\d+)\\.(\\d+)\\.?(\\d+)?")
@@ -327,6 +333,8 @@ def fatalError(*args, sep=" ", fixitHint=None, fatalWhenPretending=False):
     # we ignore fatal errors when simulating a run
     if _cheriConfig and _cheriConfig.pretend:
         print(coloured(AnsiColour.red, ("Potential fatal error:",) + args, sep=sep))
+        if fixitHint:
+            print(coloured(AnsiColour.blue, "Possible solution:", fixitHint))
         if fatalWhenPretending:
             traceback.print_stack()
             sys.exit(3)

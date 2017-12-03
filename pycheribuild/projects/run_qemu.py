@@ -273,7 +273,8 @@ class LaunchFreeBSDX86(AbstractLaunchFreeBSD):
     def __init__(self, config):
         super().__init__(config, BuildFreeBSDForX86, BuildFreeBSDDiskImageX86)
         self._addRequiredSystemTool("qemu-system-x86_64")
-        self.qemuBinary = Path(shutil.which("qemu-system-x86_64"))
+        qemu_path = shutil.which("qemu-system-x86_64")
+        self.qemuBinary = Path(qemu_path if qemu_path else shutil.which("false"))
         self.machineFlags = [] # default cpu
         self.currentKernel = None  # needs the bootloader
 
