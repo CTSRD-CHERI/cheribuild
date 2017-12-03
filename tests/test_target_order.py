@@ -57,5 +57,12 @@ def test_run_comes_last():
     assert _sort_targets(["run", "disk-image"]) == ["disk-image", "run"]
 
 
+def test_disk_image_comes_second_last():
+    assert _sort_targets(["run", "disk-image"]) == ["disk-image", "run"]
+    assert _sort_targets(["run", "disk-image", "cheribsd"]) == ["cheribsd", "disk-image", "run"]
+    assert _sort_targets(["run", "gdb", "disk-image", "cheribsd"]) == ["cheribsd", "gdb", "disk-image", "run"]
+    assert _sort_targets(["run", "disk-image", "postgres", "cheribsd"]) == ["cheribsd", "postgres", "disk-image", "run"]
+
+
 def test_all_run_deps():
     assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm"] + CHERIBSD_TARGETS + ["disk-image", "run"]

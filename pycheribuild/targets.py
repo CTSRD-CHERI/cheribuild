@@ -65,14 +65,16 @@ class Target(object):
 
     def __lt__(self, other: "Target"):
         # print(self, "__lt__", other)
-        if other.name.startswith("run") and self != other:
-            return True  # run must be executed last
         # if this target is one of the dependencies order it before
         otherDeps = other.projectClass.allDependencyNames()
         # print("other deps:", otherDeps)
         if self.name in otherDeps:
             # print(self, "is in", other, "deps -> is less")
             return True
+        if other.name.startswith("run") and not self.name.startswith("run"):
+            return True  # run must be executed last
+        if other.name.startswith("disk-image") and not self.name.startswith("disk-image"):
+            return True  # disk-image should be done just before run
         # print(self, "is not in", other, "deps -> is not less")
         # otherwise just keep everything in order
         return False
@@ -139,6 +141,7 @@ class TargetManager(object):
             # find the target that orders lower than any other target in the list (see Target.__lt__)
             # This means it doesn't depend on any of the other targets
             for t in targets[1:]:
+                print(t.name, "<", lowest.name, "=", t < lowest)
                 if t < lowest:
                     lowest = t
             result.append(lowest)
