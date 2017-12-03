@@ -786,7 +786,8 @@ class BuildCheriBsdSysroot(SimpleProject):
             configOption = "'--" + self.target + "/" + "remote-sdk-path'"
             fatalError("Path to the remote SDK is not set, option", configOption, "must be set to a path that "
                        "scp understands (e.g. vica:~foo/cheri/output/sdk256)")
-            sys.exit("Cannot continue...")
+            if not self.config.pretend:
+                sys.exit("Cannot continue...")
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -798,7 +799,10 @@ class BuildCheriBsdSysroot(SimpleProject):
 
     def copySysrootFromRemoteMachine(self):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
-        assert self.remotePath
+        if not self.remotePath:
+            fatalError("Missing remote SDK path: Please set --cheribsd-sysroot/remote-sdk-path (or --cheribsd/crossbuild)")
+            if self.config.pretend:
+                self.remotePath = "someuser@somehose:this/path/does/not/exist"
         # noinspection PyAttributeOutsideInit
         self.remotePath = os.path.expandvars(self.remotePath)
         remoteSysrootArchive = self.remotePath + "/" + self.config.sysrootArchiveName

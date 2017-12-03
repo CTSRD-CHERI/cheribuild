@@ -29,6 +29,7 @@
 #
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 
@@ -48,6 +49,8 @@ from .projects.cross import *  # make sure all projects are loaded so that targe
 
 def updateCheck():
     from pathlib import Path
+    if not shutil.which("git"):
+        return
     # check if new commits are available
     projectDir = str(Path(__file__).parent)
     subprocess.call(["git", "fetch"], cwd=projectDir)
