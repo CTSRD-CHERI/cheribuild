@@ -23,8 +23,7 @@ pipeline {
         }
       }
       steps {
-          sh './cheribuild.py -p __run_everything__ --cheribsd/crossbuild'
-        }
+        sh './cheribuild.py -p __run_everything__ --cheribsd/crossbuild'
       }
     }
   }
