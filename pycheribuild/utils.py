@@ -222,13 +222,13 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
             process.wait()
             raise
         retcode = process.poll()
-        if retcode and not _cheriConfig.pretend:
-            raise _make_called_process_error(retcode, process.args, stdout=stdout, cwd=kwargs["cwd"])
-
-        if _cheriConfig.pretend:
-            cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
-            fatalError("Command ", "`" + " ".join(map(shlex.quote, process.args)) +
-                       "` failed with non-zero exit code ", retcode, *cwd, sep="")
+        if retcode:
+            if _cheriConfig and _cheriConfig.pretend:
+                cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
+                fatalError("Command ", "`" + " ".join(map(shlex.quote, process.args)) +
+                           "` failed with non-zero exit code ", retcode, *cwd, sep="")
+            else:
+                raise _make_called_process_error(retcode, process.args, stdout=stdout, cwd=kwargs["cwd"])
         return CompletedProcess(process.args, retcode, stdout, stderr)
 
 
