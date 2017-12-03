@@ -8,8 +8,8 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
-import pycheribuild.config.loader
-_loader = pycheribuild.config.loader.JsonAndCommandLineConfigLoader()
+from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader
+_loader = JsonAndCommandLineConfigLoader()
 from pycheribuild.project import SimpleProject
 SimpleProject._configLoader = _loader
 from pycheribuild.targets import targetManager
@@ -21,7 +21,6 @@ from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage
 
 
 _targets_registered = False
-_cheriConfig = None
 
 
 class TestArgumentParsing(TestCase):
@@ -31,16 +30,17 @@ class TestArgumentParsing(TestCase):
         global _targets_registered
         global _cheriConfig
         if not _targets_registered:
+            allTargetNames = list(sorted(targetManager.targetNames)) + ["__run_everything__"]
+            ConfigLoaderBase._cheriConfig = DefaultCheriConfig(_loader, allTargetNames)
+            SimpleProject._configLoader = _loader
             targetManager.registerCommandLineOptions()
             _targets_registered = True
-            allTargetNames = list(sorted(targetManager.targetNames)) + ["__run_everything__"]
-            _cheriConfig = DefaultCheriConfig(_loader, allTargetNames)
-        _loader._configPath = config_file
+        ConfigLoaderBase._cheriConfig.loader._configPath = config_file
         sys.argv = ["cheribuild.py"] + args
-        _loader.reload()
+        ConfigLoaderBase._cheriConfig.loader.reload()
         # pprint.pprint(vars(ret))
-        assert _cheriConfig
-        return _cheriConfig
+        assert ConfigLoaderBase._cheriConfig
+        return ConfigLoaderBase._cheriConfig
 
     def test_skip_update(self):
         # default is false:
