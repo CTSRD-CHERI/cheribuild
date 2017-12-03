@@ -131,6 +131,38 @@ class TargetManager(object):
                     if item not in ordered}
         assert not data, "A cyclic dependency exists amongst %r" % data
 
+    @staticmethod
+    def sort_in_dependency_order(targets: "typing.List[Target]") -> "typing.List[Target]":
+        result = []
+        while targets:
+            lowest = targets[0]
+            # find the target that orders lower than any other target in the list (see Target.__lt__)
+            # This means it doesn't depend on any of the other targets
+            for t in targets[1:]:
+                if t < lowest:
+                    lowest = t
+            result.append(lowest)
+            targets.remove(lowest)
+        return result
+
+    def get_all_targets(self, explicit_targets: "typing.List[Target]", add_dependencies: bool) -> "typing.List[Target]":
+        chosen_targets = []
+        for t in explicit_targets:
+            chosen_targets.append(t)
+            deps_to_add = []
+            if add_dependencies:
+                deps_to_add = t.projectClass.allDependencyNames()
+            elif t.projectClass.dependenciesMustBeBuilt:
+                    # some targets such as sdk always need their dependencies build:
+                    deps_to_add = t.projectClass.allDependencyNames()
+            elif t.projectClass.isAlias:
+                assert not t.projectClass.dependenciesMustBeBuilt
+                # for aliases without full dependencies just add the direct dependencies
+                deps_to_add = t.projectClass.dependencies
+            chosen_targets.extend(self.targetMap[dep] for dep in deps_to_add)
+
+        return self.sort_in_dependency_order(chosen_targets)
+
     def run(self, config: CheriConfig):
         # check that all target dependencies are correct:
         for t in self._allTargets.values():
@@ -152,32 +184,7 @@ class TargetManager(object):
                                   ",".join(self.targetNames)))
             explicitlyChosenTargets.append(self.targetMap[targetName])
 
-        chosenTargets = []
-        if not config.includeDependencies:
-            # The wants only the explicitly passed targets to be executed, don't do any ordering
-            # we still reorder them to ensure that they are run in the right order
-            for t in explicitlyChosenTargets:
-                # if a target is an alias then add it to the list of targets
-                if t.projectClass.isAlias:
-                    if t.projectClass.dependenciesMustBeBuilt:
-                        # some targets such as sdk always need their dependencies build:
-                        dep_names = sorted(t.projectClass.allDependencyNames())
-                    else:
-                        # otherwise just add the direct dependencies
-                        dep_names = t.projectClass.dependencies
-                    chosenTargets.extend(self.targetMap[dep] for dep in dep_names)
-                else:
-                    chosenTargets.append(t)
-            # stable sort in dependency order
-            chosenTargets = sorted(chosenTargets)
-        else:
-            # Otherwise run all targets in dependency order
-            chosenTargets = []
-            orderedTargets = self.topologicalSort(explicitlyChosenTargets)  # type: typing.Iterable[typing.List[Target]]
-            for dependencyLevel, targetNames in enumerate(orderedTargets):
-                # print("Level", dependencyLevel, "targets:", targetNames)
-                chosenTargets.extend(self.targetMap[t] for t in targetNames)
-
+        chosenTargets = self.get_all_targets(explicitlyChosenTargets, config.includeDependencies)
         if config.verbose:
             print("Will execute the following targets:", " ".join(t.name for t in chosenTargets))
         # now that the chosen targets have been resolved run them

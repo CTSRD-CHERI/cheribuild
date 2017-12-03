@@ -120,16 +120,21 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     installDir = None
 
     @classmethod
-    def allDependencyNames(cls):
-        result = set()
+    def allDependencyNames(cls) -> list:
         dependencies = cls.dependencies
+        result = []
         if callable(dependencies):
             dependencies = dependencies(cls)
         for dep in dependencies:
             if callable(dep):
                 dep = dep(cls)
-            result.add(dep)
-            result = result.union(targetManager.targetMap[dep].projectClass.allDependencyNames())
+            if dep not in result:
+                result.append(dep)
+            # now recursively add the other deps:
+            recursive_deps = targetManager.targetMap[dep].projectClass.allDependencyNames()
+            for r in recursive_deps:
+                if r not in result:
+                    result.append(r)
         return result
 
     # Project subclasses will automatically have a target based on their name generated unless they add this:
