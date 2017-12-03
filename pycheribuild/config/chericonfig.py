@@ -36,7 +36,7 @@ from collections import OrderedDict
 from pathlib import Path
 # Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
 from .loader import ConfigLoaderBase
-from ..utils import latestClangTool
+from ..utils import latestClangTool, warningMessage
 
 
 # custom encoder to handle pathlib.Path objects
@@ -171,7 +171,7 @@ class CheriConfig(object):
         return json.dumps(jsonDict, sort_keys=True, cls=MyJsonEncoder, indent=4)
 
     @classmethod
-    def get_user_name(cls):
+    def get_user_name(cls) -> str:
         try:
             return getpass.getuser()
         except KeyError:
@@ -179,9 +179,12 @@ class CheriConfig(object):
             if os.getenv("JENKINS_NODE_COOKIE"):
                 return "jenkins"
             else:
-                raise
+                result = str(os.getgid())
+                warningMessage("Could not get group name for GID", result)
+                return result
+
     @classmethod
-    def get_group_name(cls):
+    def get_group_name(cls) -> str:
         try:
             return grp.getgrgid(os.getgid()).gr_name
         except KeyError:
@@ -189,4 +192,6 @@ class CheriConfig(object):
             if os.getenv("JENKINS_NODE_COOKIE"):
                 return "jenkins"
             else:
-                raise
+                result = str(os.getgid())
+                warningMessage("Could not get group name for GID", result)
+                return result
