@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import getpass
+import grp
 import json
 import os
 from enum import Enum
@@ -173,6 +174,16 @@ class CheriConfig(object):
     def get_user_name(cls):
         try:
             return getpass.getuser()
+        except KeyError:
+            # Jenkins runs docker slaves with the jenkins UID which will not have a mapping:
+            if os.getenv("JENKINS_NODE_COOKIE"):
+                return "jenkins"
+            else:
+                raise
+    @classmethod
+    def get_group_name(cls):
+        try:
+            return grp.getgrgid(os.getgid()).gr_name
         except KeyError:
             # Jenkins runs docker slaves with the jenkins UID which will not have a mapping:
             if os.getenv("JENKINS_NODE_COOKIE"):
