@@ -73,8 +73,12 @@ class Target(object):
             return True
         if other.name.startswith("run") and not self.name.startswith("run"):
             return True  # run must be executed last
+        elif self.name.startswith("run"):
+            return False
         if other.name.startswith("disk-image") and not self.name.startswith("disk-image"):
             return True  # disk-image should be done just before run
+        elif self.name.startswith("disk-image"):
+            return False
         # print(self, "is not in", other, "deps -> is not less")
         # otherwise just keep everything in order
         return False

@@ -68,5 +68,10 @@ def test_all_run_deps():
     assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm"] + CHERIBSD_TARGETS + ["disk-image", "run"]
 
 
+def test_run_disk_image():
+    assert _sort_targets(["run", "disk-image", "run-freebsd-mips", "llvm", "disk-image-freebsd-x86"]) == [
+                          "llvm", "disk-image", "disk-image-freebsd-x86", "run", "run-freebsd-mips"]
+
+
 def test_remove_duplicates():
     assert _sort_targets(["binutils", "elftoolchain"], add_dependencies=True) == ["elftoolchain", "binutils"]
