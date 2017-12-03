@@ -197,6 +197,7 @@ class DefaultValueOnlyConfigOption(ConfigOptionBase):
     def _loadOptionImpl(self, config: "CheriConfig", ownerClass: "typing.Type"):
         return self._getDefaultValue(config, ownerClass)
 
+
 class CommandLineConfigOption(ConfigOptionBase):
     def __init__(self, name: str, shortname: str, default, valueType: "typing.Type", _owningClass,
                  _loader: ConfigLoaderBase, helpHidden: bool, group: argparse._ArgumentGroup, **kwargs):
@@ -319,6 +320,16 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
     #     print(self.fullOptionName, "=", ret, "--", type(ret))
     #     return ret
 
+
+class DefaultValueOnlyConfigLoader(ConfigLoaderBase):
+    def __init__(self):
+        super().__init__(DefaultValueOnlyConfigOption)
+
+    def finalizeOptions(self, availableTargets: list):
+        pass
+
+    def load(self):
+        pass
 
 class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
     def __init__(self):
