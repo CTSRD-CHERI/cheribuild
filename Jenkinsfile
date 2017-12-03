@@ -61,7 +61,7 @@ pipeline {
   }
   post {
     failure {
-      mail(to: 'alr48@cl.cam.acuk', subject: "Failed Pipeline: ${currentBuild.fullDisplayName}", body: "Something is wrong with ${env.BUILD_URL}")
+      mail(to: 'alr48@cl.cam.ac.uk', subject: "Failed Pipeline: ${currentBuild.fullDisplayName}", body: "Something is wrong with ${env.BUILD_URL}")
       
     }
     
