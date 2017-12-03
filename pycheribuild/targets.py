@@ -141,10 +141,12 @@ class TargetManager(object):
             # find the target that orders lower than any other target in the list (see Target.__lt__)
             # This means it doesn't depend on any of the other targets
             for t in targets[1:]:
-                print(t.name, "<", lowest.name, "=", t < lowest)
+                # print(t.name, "<", lowest.name, "=", t < lowest)
                 if t < lowest:
                     lowest = t
-            result.append(lowest)
+            # skip duplicates that got inserted due to dependency adding
+            if lowest not in result:
+                result.append(lowest)
             targets.remove(lowest)
         return result
 
