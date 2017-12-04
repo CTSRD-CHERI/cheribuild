@@ -63,6 +63,7 @@ pipeline {
           sh 'env | sort && ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild'
         }
         
+        junit 'ubuntu-results.xml'
       }
     }
   }
