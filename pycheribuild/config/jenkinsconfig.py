@@ -41,6 +41,7 @@ def default_install_prefix(conf: "JenkinsConfig", unused):
         return "/opt/" + conf.targets[0]
     return "/opt/" + conf.cpu
 
+
 class JenkinsConfig(CheriConfig):
     def __init__(self, loader: ConfigLoaderBase, availableTargets: list):
         super().__init__(loader)
@@ -81,6 +82,9 @@ class JenkinsConfig(CheriConfig):
                                                               help="Don't use the CHERI SDK -> only /usr (for native builds)")
         self.tarball_name = loader.addCommandLineOnlyOption("tarball-name",
             default=lambda conf, cls: conf.targets[0] + "-" + conf.cpu + ".tar.xz")
+
+        self.output_path = loader.addCommandLineOnlyBoolOption("output-path", default="tarball",
+                                                               help="Path for the output (relative to $WORKSPACE)")
 
         # self.strip_install_prefix_from_archive = loader.addCommandLineOnlyBoolOption("strip-install-prefix-from-archive",
         #    help="Only put the files inside the install prefix into the tarball (stripping the leading directories)")  # type: bool
@@ -136,7 +140,7 @@ class JenkinsConfig(CheriConfig):
             fatalError("WORKSPACE is not set to a valid directory:", self.workspace)
         self.sourceRoot = self.workspace
         self.buildRoot = self.workspace
-        self.outputRoot = self.workspace / "tarball"
+        self.outputRoot = self.workspace / self.output_path
         self.otherToolsDir = self.workspace / "bootstrap"
         self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
         # check for ctsrd/cheri-sdk-{cheri256,cheri128,mips} docker image
