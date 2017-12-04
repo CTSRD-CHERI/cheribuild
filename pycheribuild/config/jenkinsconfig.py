@@ -84,8 +84,8 @@ class JenkinsConfig(CheriConfig):
             default=lambda conf, cls: conf.targets[0] + "-" + conf.cpu + ".tar.xz")
 
         self.default_output_path = "tarball"
-        self.output_path = loader.addCommandLineOnlyBoolOption("output-path", default=self.default_output_path,
-                                                               help="Path for the output (relative to $WORKSPACE)")
+        self.output_path = loader.addCommandLineOnlyOption("output-path", default=self.default_output_path,
+                                                           help="Path for the output (relative to $WORKSPACE)")
 
         # self.strip_install_prefix_from_archive = loader.addCommandLineOnlyBoolOption("strip-install-prefix-from-archive",
         #    help="Only put the files inside the install prefix into the tarball (stripping the leading directories)")  # type: bool
