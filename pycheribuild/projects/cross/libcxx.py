@@ -187,8 +187,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
         elif self.collect_test_binaries:
             executor = "CollectBinariesExecutor(\"{path}\", self)".format(path=self.collect_test_binaries)
         elif self.nfs_mounted_path:
-            executor = "SSHExecutorWithNFSMount(\"{host}\", nfs_dir=\"{nfs_dir}\", path_in_target=\"{nfs_in_target}\"," \
-                       " config=self, username=\"{user}\", port={port})".format(host=self.qemu_host, user=self.qemu_user,
+            executor = "SSHExecutorWithNFSMount(\\\"{host}\\\", nfs_dir=\\\"{nfs_dir}\\\", path_in_target=\\\"{nfs_in_target}\\\"," \
+                       " config=self, username=\\\"{user}\\\", port={port})".format(host=self.qemu_host, user=self.qemu_user,
                                                                               port=self.qemu_port,
                                                                               nfs_dir=self.nfs_mounted_path,
                                                                               nfs_in_target=self.nfs_path_in_qemu)
