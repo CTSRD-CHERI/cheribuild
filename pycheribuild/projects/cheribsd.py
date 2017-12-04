@@ -347,7 +347,7 @@ class _BuildFreeBSD(Project):
                 builddir = root_builddir
         else:
             builddir = root_builddir
-        assert not str(builddir.relative_to(self.buildDir)).startswith("."), builddir
+        assert not str(builddir.relative_to(self.buildDir)).startswith(".."), builddir
         return self.asyncCleanDirectory(builddir)
 
     def _buildkernel(self, kernconf: str):
@@ -395,30 +395,30 @@ class _BuildFreeBSD(Project):
             # We have to keep the rootfs directory in case it has been NFS mounted
             self.cleanDirectory(self.installDir, keepRoot=True)
 
-    def _query_make_variable(self, args, var):
+    def _query_buildenv_path(self, args, var):
         try:
-            bw_flags = args.all_commandline_args + ["-m", str(self.sourceDir / "share/mk"), "-f", "Makefile.inc1"]
-            output = runCmd([self.makeCommand] + bw_flags + ["-V", var], env=args.env_vars,
+            # https://github.com/freebsd/freebsd/commit/1edb3ba87657e28b017dffbdc3d0b3a32999d933
+            bw_flags = args.all_commandline_args + ["buildenv", "BUILDENV_SHELL=make -V " + var]
+            output = runCmd([self.makeCommand] + bw_flags, env=args.env_vars,
                             cwd=self.sourceDir, runInPretendMode=True, captureOutput=True).stdout
-            return output.decode("utf-8").strip()
+            lines = output.strip().split(b"\n")
+            return Path(lines[-1].decode("utf-8").strip())
         except subprocess.CalledProcessError as e:
             warningMessage("Could not query make variable", var, "for buildworld root objdir: ", e)
 
     @property
     def objdir(self):
         # TODO use https://github.com/pydanny/cached-property ?
-        objdir = self._query_make_variable(self.buildworldArgs, "BW_CANONICALOBJDIR")
-        if not objdir:
-            objdir = self._query_make_variable(self.buildworldArgs, ".OBJDIR")
-        if not objdir:
+        objdir = self._query_buildenv_path(self.buildworldArgs, ".OBJDIR")
+        if not objdir or objdir == Path():
             # just clean the whole directory instead
             warningMessage("Could not infer buildworld root objdir")
             return self.buildDir
-        return Path(objdir)
+        return objdir
 
     def kernel_objdir(self, config):
-        result = self._query_make_variable(self.kernelMakeArgsForConfig(config), "KRNLOBJDIR")
-        if result:
+        result = self.objdir / "sys"
+        if result.exists():
             return Path(result) / config
         warningMessage("Could not infer buildkernel objdir")
         return None
