@@ -140,6 +140,10 @@ class JenkinsConfig(CheriConfig):
             fatalError("WORKSPACE is not set to a valid directory:", self.workspace)
         self.sourceRoot = self.workspace
         self.buildRoot = self.workspace
+        if self.output_path != self.default_output_path:
+            if not self.keepInstallDir:
+                print("Not cleaning non-default output path", self.workspace / self.output_path)
+            self.keepInstallDir = True
         self.outputRoot = self.workspace / self.output_path
         self.otherToolsDir = self.workspace / "bootstrap"
         self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
