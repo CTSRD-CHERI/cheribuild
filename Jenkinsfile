@@ -54,7 +54,7 @@ pipeline {
     stage('Test Ubuntu 16.04') {
       agent {
         dockerfile {
-          filename 'test/ubuntu.Dockerfile'
+          filename 'tests/ubuntu.Dockerfile'
         }
         
       }
