@@ -83,7 +83,8 @@ class JenkinsConfig(CheriConfig):
         self.tarball_name = loader.addCommandLineOnlyOption("tarball-name",
             default=lambda conf, cls: conf.targets[0] + "-" + conf.cpu + ".tar.xz")
 
-        self.output_path = loader.addCommandLineOnlyBoolOption("output-path", default="tarball",
+        self.default_output_path = "tarball"
+        self.output_path = loader.addCommandLineOnlyBoolOption("output-path", default=self.default_output_path,
                                                                help="Path for the output (relative to $WORKSPACE)")
 
         # self.strip_install_prefix_from_archive = loader.addCommandLineOnlyBoolOption("strip-install-prefix-from-archive",
