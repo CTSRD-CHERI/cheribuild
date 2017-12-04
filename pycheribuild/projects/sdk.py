@@ -42,8 +42,6 @@ from pathlib import Path
 class BuildCheriBSDSdk(TargetAliasWithDependencies):
     target = "cheribsd-sdk"
     dependencies = ["freestanding-sdk", "cheribsd-sysroot"]
-    if IS_LINUX:
-        dependencies.append("awk")  # also add BSD compatible AWK to the SDK
 
 
 class BuildSdk(TargetAliasWithDependencies):
