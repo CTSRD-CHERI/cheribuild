@@ -110,7 +110,6 @@ class SdkArchive(object):
 def get_sdk_archives(cheriConfig) -> "typing.List[SdkArchive]":
     # Try the full SDK archive first:
     if cheriConfig.sdkArchivePath.exists():
-        statusUpdate("SDK not found, will try to extract", cheriConfig.sdkArchivePath)
         return [SdkArchive(cheriConfig, cheriConfig.sdkArchivePath.name, extra_args=["--strip-components", "1"],
                            required_globs=["bin/clang", "sysroot/usr/include"])]
 
@@ -157,6 +156,7 @@ def extract_sdk_archives(cheriConfig, archives: "typing.List[SdkArchive]"):
             cheriConfig.FS.createSymlink(Path(shutil.which(tool)), cheriConfig.sdkBinDir / tool, relative=False)
             cheriConfig.FS.createBuildtoolTargetSymlinks(cheriConfig.sdkBinDir / tool)
 
+
 def create_sdk_from_archives(cheriConfig):
     # If the archive is newer, delete the existing sdk unless --keep-sdk is passed install root:
     possiblyDeleteSdkJob = ThreadJoiner(None)
@@ -167,11 +167,14 @@ def create_sdk_from_archives(cheriConfig):
         statusUpdate("Required files missing -> recreating SDK")
         possiblyDeleteSdkJob = cheriConfig.FS.asyncCleanDirectory(cheriConfig.sdkDir)
     elif cheriConfig.sdkDir.exists() and all(a.archive.exists() for a in archives):
-        if any(cheriConfig.sdkDir.stat().st_ctime < a.archive.stat().st_ctime for a in archives):
-            warningMessage("A SDK archive is newer than the existing archive directory")
-            if not cheriConfig.keepSdkDir:
-                statusUpdate("Deleting old SDK and extracting archive")
-                possiblyDeleteSdkJob = cheriConfig.FS.asyncCleanDirectory(cheriConfig.sdkDir)
+        for a in archives:
+            if cheriConfig.sdkDir.stat().st_ctime < a.archive.stat().st_ctime:
+                msgkind = statusUpdate if not cheriConfig.keepSdkDir else warningMessage
+                msgkind("SDK archive", a.archive, "is newer than the existing SDK directory")
+                if not cheriConfig.keepSdkDir:
+                    statusUpdate("Deleting old SDK and extracting archive")
+                    possiblyDeleteSdkJob = cheriConfig.FS.asyncCleanDirectory(cheriConfig.sdkDir)
+                break
     # unpack the SDK if it has not been extracted yet:
     with possiblyDeleteSdkJob:
         extract_sdk_archives(cheriConfig, archives)
