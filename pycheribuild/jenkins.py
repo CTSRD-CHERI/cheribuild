@@ -151,9 +151,11 @@ def extract_sdk_archives(cheriConfig, archives: "typing.List[SdkArchive]"):
     if not cheriConfig.sdkBinDir.exists():
         fatalError("SDK bin dir does not exist after extracting sysroot archives!")
 
-    if not (cheriConfig.sdkDir / "bin/ar").exists():
-        cheriConfig.FS.createSymlink(Path(shutil.which("ar")), cheriConfig.sdkBinDir / "ar", relative=False)
-        cheriConfig.FS.createBuildtoolTargetSymlinks(cheriConfig.sdkBinDir / "ar")
+    # Use the host ar/ranlib if they are missing
+    for tool in ("ar", "ranlib"):
+        if not (cheriConfig.sdkDir / "bin" / tool).exists():
+            cheriConfig.FS.createSymlink(Path(shutil.which(tool)), cheriConfig.sdkBinDir / tool, relative=False)
+            cheriConfig.FS.createBuildtoolTargetSymlinks(cheriConfig.sdkBinDir / tool)
 
 def create_sdk_from_archives(cheriConfig):
     # If the archive is newer, delete the existing sdk unless --keep-sdk is passed install root:
