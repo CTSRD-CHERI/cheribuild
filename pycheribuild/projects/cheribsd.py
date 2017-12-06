@@ -631,10 +631,11 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
             if k in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL", "MAKE_TERMERR", "MAKE_TERMOUT"):
                 os.unsetenv(k)
                 del os.environ[k]
-        if self.config.buildenv:
+        if self.config.buildenv or self.config.libcheri_buildenv:
+            target = "libcheribuildenv" if self.config.libcheri_buildenv else "buildenv"
             args = self.buildworldArgs
             args.remove_flag("-s")  # buildenv should not be silent
-            runCmd([self.makeCommand] + args.all_commandline_args + ["buildenv"], env=args.env_vars,
+            runCmd([self.makeCommand] + args.all_commandline_args + [target], env=args.env_vars,
                    cwd=self.sourceDir)
         else:
             super().process()

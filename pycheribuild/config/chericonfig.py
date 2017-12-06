@@ -80,6 +80,8 @@ class CheriConfig(object):
         self.buildenv = loader.addCommandLineOnlyBoolOption("buildenv", help="Open a shell with the right environment"
                                                                              "for building the project. Currently only"
                                                                              "works for FreeBSD/CheriBSD")
+        self.libcheri_buildenv = loader.addCommandLineOnlyBoolOption("libcheri-buildenv",
+             help="Open a shell with the right environment for building CHERI libraries. Currently only works for CheriBSD")
         # Attributes for code completion:
         self.verbose = None  # type: bool
         self.quiet = None  # type: bool
