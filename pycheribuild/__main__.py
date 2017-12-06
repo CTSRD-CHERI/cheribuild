@@ -100,7 +100,11 @@ def real_main():
         if runEverythingTarget in cheriConfig.targets:
             cheriConfig.targets = allTargetNames
         if not cheriConfig.targets:
-            fatalError("At least one target name is required (see --list-targets).")
+            # Make --libcheri-buildenv and --buildenv without any targets imply cheribsd
+            if cheriConfig.libcheri_buildenv or cheriConfig.buildenv:
+                cheriConfig.targets.append("cheribsd")
+            else:
+                fatalError("At least one target name is required (see --list-targets).")
         if not cheriConfig.quiet:
             print("Sources will be stored in", cheriConfig.sourceRoot)
             print("Build artifacts will be stored in", cheriConfig.outputRoot)
