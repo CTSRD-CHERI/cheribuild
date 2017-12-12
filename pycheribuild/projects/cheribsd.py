@@ -399,12 +399,17 @@ class _BuildFreeBSD(Project):
         try:
             # https://github.com/freebsd/freebsd/commit/1edb3ba87657e28b017dffbdc3d0b3a32999d933
             bw_flags = args.all_commandline_args + ["buildenv", "BUILDENV_SHELL=make -V " + var]
-            output = runCmd([self.makeCommand] + bw_flags, env=args.env_vars,
-                            cwd=self.sourceDir, runInPretendMode=True, captureOutput=True).stdout
-            lines = output.strip().split(b"\n")
-            return Path(lines[-1].decode("utf-8").strip())
+            cmd = runCmd([self.makeCommand] + bw_flags, env=args.env_vars, cwd=self.sourceDir, runInPretendMode=True,
+                         captureOutput=True)
+            lines = cmd.stdout.strip().split(b"\n")
+            last_line = lines[-1].decode("utf-8").strip()
+            if last_line.startswith("/") and cmd.returncode == 0:
+                return Path(last_line)
+            warningMessage("Failed to query", var, "-- output was:", lines)
+            return None
         except subprocess.CalledProcessError as e:
             warningMessage("Could not query make variable", var, "for buildworld root objdir: ", e)
+            return None
 
     @property
     def objdir(self):
