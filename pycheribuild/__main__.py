@@ -109,7 +109,7 @@ def real_main():
             print("Sources will be stored in", cheriConfig.sourceRoot)
             print("Build artifacts will be stored in", cheriConfig.outputRoot)
         # Don't do the update check when tab-completing (otherwise it freezes)
-        if "_ARGCOMPLETE" not in os.environ:  # no-combine
+        if "_ARGCOMPLETE" not in os.environ and not cheriConfig.skipUpdate:  # no-combine
             updateCheck()                     # no-combine
         targetManager.run(cheriConfig)
 
