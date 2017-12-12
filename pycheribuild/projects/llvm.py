@@ -217,6 +217,8 @@ class BuildUpstreamLLVMMonorepo(BuildLLVM):
 
     def configure(self, **kwargs):
         self.add_cmake_options(LLVM_ENABLE_PROJECTS=self.included_projects)
+        # CMake needs to run on the llvm subdir
+        self.configureArgs[0] = self.configureArgs[0] + "/llvm"
         super().configure(**kwargs)
 
     def install(self, **kwargs):
