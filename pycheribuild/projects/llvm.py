@@ -210,7 +210,7 @@ class BuildUpstreamLLVMMonorepo(BuildLLVM):
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(includeClangRevision=False, includeLldRevision=False, includeLldbRevision=False,
                                    useDefaultSysroot=False)
-        cls.included_projects = cls.addConfigOption("include-projects", default="clang;lld;libcxx")
+        cls.included_projects = cls.addConfigOption("include-projects", default="clang;lld")
 
     def update(self):
         self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision)
