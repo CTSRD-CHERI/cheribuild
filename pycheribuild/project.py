@@ -152,8 +152,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                         kind: "typing.Callable[[str], Type_T]" = str, *,
                         showHelp=False, shortname=None, **kwargs) -> "Type_T":
         configOptionKey = cls.target
-        if cls.target != cls.projectName.lower():
-            fatalError("Target name does not match project name:", cls.target, "vs", cls.projectName.lower())
+        # if cls.target != cls.projectName.lower():
+        #    fatalError("Target name does not match project name:", cls.target, "vs", cls.projectName.lower())
 
         # Hide stuff like --foo/install-directory from --help
         helpHidden = not showHelp

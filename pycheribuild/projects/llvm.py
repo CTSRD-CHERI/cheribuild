@@ -196,3 +196,28 @@ class BuildUpstreamLLVM(BuildLLVM):
 
     def install(self, **kwargs):
         CMakeProject.install(self)
+
+
+# TODO: make this the base class and let the other two inherit
+class BuildUpstreamLLVMMonorepo(BuildLLVM):
+    repository = "https://github.com/llvm-project/llvm-project-20170507.git"
+    projectName = "llvm-project"
+    target = "upstream-llvm-monorepo"
+    defaultInstallDir = CMakeProject._installToBootstrapTools
+    appendCheriBitsToBuildDir = False
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(includeClangRevision=False, includeLldRevision=False, includeLldbRevision=False,
+                                   useDefaultSysroot=False)
+        cls.included_projects = cls.addConfigOption("include-projects", default="clang;lld;libcxx")
+
+    def update(self):
+        self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision)
+
+    def configure(self, **kwargs):
+        self.add_cmake_options(LLVM_ENABLE_PROJECTS=self.included_projects)
+        super().configure(**kwargs)
+
+    def install(self, **kwargs):
+        CMakeProject.install(self)
