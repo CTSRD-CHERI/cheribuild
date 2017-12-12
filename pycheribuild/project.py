@@ -156,9 +156,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             fatalError("Target name does not match project name:", cls.target, "vs", cls.projectName.lower())
 
         # Hide stuff like --foo/install-directory from --help
-        if isinstance(default, ComputedDefaultValue):
-            if callable(default.asString):
-                default.asString = default.asString(cls)
         helpHidden = not showHelp
 
         # check that the group was defined in the current class not a superclass
@@ -493,8 +490,17 @@ class Project(SimpleProject):
 
     appendCheriBitsToBuildDir = False
     """ Whether to append -128/-256 to the computed build directory name"""
+
+    @classmethod
+    def projectBuildDirHelpStr(cls):
+        result = "$BUILD_ROOT/" + cls.projectName.lower()
+        if cls.appendCheriBitsToBuildDir or hasattr(cls, "crossCompileTarget"):
+            result += "-$TARGET"
+        result += "-build"
+        return result
+
     defaultBuildDir = ComputedDefaultValue(
-        function=_defaultBuildDir, asString=lambda cls: "$BUILD_ROOT/" + cls.projectName.lower() + "$TARGET-build")
+        function=_defaultBuildDir, asString=lambda cls: cls.projectBuildDirHelpStr())
 
     requiresGNUMake = False
     """ If true this project must be built with GNU make (gmake on FreeBSD) and not BSD make or ninja"""

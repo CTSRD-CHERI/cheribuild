@@ -54,8 +54,8 @@ class ComputedDefaultValue(object):
     def __call__(self, config: "CheriConfig", cls):
         return self.function(config, cls)
 
-    def __str__(self):
-        return self.asString
+    # def __str__(self):
+    #     return self.asString
 
 
 class ConfigLoaderBase(object):
@@ -131,6 +131,13 @@ class ConfigOptionBase(object):
         self.name = name
         self.shortname = shortname
         self.default = default
+        if isinstance(default, ComputedDefaultValue):
+            if callable(default.asString):
+                self.default_str = default.asString(_owningClass)
+            else:
+                self.default_str = str(default.asString)
+        else:
+            self.default_str = str(default)
         self.valueType = valueType
         self._cached = None
         self._loader = _loader
@@ -238,7 +245,7 @@ class CommandLineConfigOption(ConfigOptionBase):
             action.default = None
         if self.default is not None and action.help is not None and hasDefaultHelpText:
             if action.help != argparse.SUPPRESS:
-                action.help = action.help + " (default: \'" + str(self.default) + "\')"
+                action.help = action.help + " (default: \'" + self.default_str + "\')"
         assert action.default is None  # we don't want argparse default values!
         assert isinstance(action, argparse.Action)
         assert not action.default  # we handle the default value manually
