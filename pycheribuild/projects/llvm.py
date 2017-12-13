@@ -94,7 +94,7 @@ class BuildLLVM(CMakeProject):
         # don't set LLVM_ENABLE_ASSERTIONS if it is defined in cmake-options
         if "LLVM_ENABLE_ASSERTIONS" not in "".join(self.cmakeOptions):
             self.add_cmake_options(LLVM_ENABLE_ASSERTIONS=self.enable_assertions)
-        if self.config.cheriBits == 128 and self.appendCheriBitsToBuildDir:
+        if self.config.cheriBits == 128 and not self.config.unified_sdk:
             self.add_cmake_options(LLVM_CHERI_IS_128=True)
 
     def clang38InstallHint(self):
