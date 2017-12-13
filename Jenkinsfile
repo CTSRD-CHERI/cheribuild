@@ -3,6 +3,7 @@ pipeline {
     node {
       label 'docker'
     }
+    
   }
   stages {
         stage('Test Python 3.5.0') {
@@ -21,7 +22,6 @@ pipeline {
           ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
           pip install pytest
           pytest -v --junit-xml 3.5.0-results.xml tests || echo "Some tests failed"
-          git clean -dfx
           '''
             }
             
@@ -44,7 +44,6 @@ pipeline {
           ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
           pip install pytest
           pytest -v --junit-xml 3.6-results.xml tests || echo "Some tests failed"
-          git clean -dfx
           '''
             }
             
@@ -67,7 +66,6 @@ pipeline {
           ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
           pip install pytest
           pytest -v --junit-xml python-rc-results.xml tests || echo "Some tests failed"
-          git clean -dfx
           '''
             }
             
