@@ -5,8 +5,6 @@ pipeline {
     }
   }
   stages {
-    stage('Run tests') {
-      parallel {
         stage('Test Python 3.5.0') {
           agent {
             docker {
@@ -96,8 +94,6 @@ pipeline {
           }
         }
       }
-    }
-  }
   environment {
     PYTHONDONTWRITEBYTECODE = '1'
   }
