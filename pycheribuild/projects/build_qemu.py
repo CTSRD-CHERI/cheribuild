@@ -79,9 +79,7 @@ class BuildQEMU(AutotoolsProject):
             # silence this warning that comes lots of times (it's fine on x86)
             extraCFlags += " -Wno-address-of-packed-member"
         if self.config.unified_sdk:
-            targets = "cheri256-softmmu,cheri128-softmmu"
-            if self.magic128:
-                targets += ",cheri128magic-softmmu"
+            targets = "cheri256-softmmu,cheri128-softmmu,cheri128magic-softmmu"
         else:
             targets = "cheri-softmmu"
             if config.cheriBits == 128:
