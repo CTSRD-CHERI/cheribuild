@@ -96,8 +96,8 @@ class ConfigLoaderBase(object):
         # noinspection PyTypeChecker
         return result
 
-    def addBoolOption(self, name: str, shortname=None, **kwargs) -> bool:
-        return self.addOption(name, shortname, default=False, action="store_true", type=bool, **kwargs)
+    def addBoolOption(self, name: str, shortname=None, default=False, **kwargs) -> bool:
+        return self.addOption(name, shortname, default=default, action="store_true", type=bool, **kwargs)
 
     def addPathOption(self, name: str, shortname=None, **kwargs) -> Path:
         # we have to make sure we resolve this to an absolute path because otherwise steps where CWD is different fail!

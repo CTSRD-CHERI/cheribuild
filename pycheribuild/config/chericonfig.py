@@ -91,8 +91,8 @@ class CheriConfig(object):
         self.skipUpdate = None  # type: bool
         self.skipConfigure = None  # type: bool
         self.forceConfigure = None  # type: bool
-        self.unified_sdk = loader.addBoolOption("unified-sdk", help="Only build a single SDK instead of separate 128"
-                                                                    " and 256 bits ones (higly experimental!)")
+        self.unified_sdk = loader.addBoolOption("unified-sdk", help="Build a single SDK instead of separate 128"
+                                                " and 256 bits ones", default=True)
         self.use_sdk_clang_for_native_xbuild = loader.addBoolOption("use-sdk-clang-for-native-xbuild",
                                                                     help="Compile cross-compile project with CHERI "
                                                                          "clang from the SDK instead of host compiler")
