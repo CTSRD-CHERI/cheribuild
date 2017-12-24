@@ -30,10 +30,11 @@
 
 from .crosscompileproject import *
 from ..cheribsd import BuildCHERIBSD
+from ..build_qemu import BuildQEMU
 from ..llvm import BuildLLVM
 from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
-from ...utils import OSInfo, statusUpdate, runCmd
+from ...utils import OSInfo, statusUpdate, runCmd, warningMessage
 import os
 
 installToCXXDir = ComputedDefaultValue(
@@ -182,10 +183,19 @@ class BuildLibCXX(CrossCompileCMakeProject):
             # When cross compiling we link the ABI library statically (except baremetal since that doens;t have it yet)
             LIBCXX_ENABLE_STATIC_ABI_LIBRARY=not self.baremetal,
         )
-        if self.baremetal or self.only_compile_tests:
+        if self.only_compile_tests:
             executor = "CompileOnlyExecutor()"
         elif self.collect_test_binaries:
             executor = "CollectBinariesExecutor(\"{path}\", self)".format(path=self.collect_test_binaries)
+        elif self.baremetal:
+            run_qemu_script = self.config.sdkDir / "baremetal/mips64-qemu-elf/bin/run_with_qemu.py"
+            if not run_qemu_script.exists():
+                warningMessage("run_with_qemu.py is needed to run libcxx baremetal tests but could not find it:",
+                               run_qemu_script, "does not exist")
+            prefix = [str(run_qemu_script), "--qemu", str(BuildQEMU.qemu_binary(self.config)), "--timeout", "20"]
+            prefix_list = '[\\\"' + "\\\", \\\"".join(prefix) + "\\\"]"
+            executor = "PrefixExecutor(" + prefix_list + ", LocalExecutor())"
+            print(executor)
         elif self.nfs_mounted_path:
             executor = "SSHExecutorWithNFSMount(\\\"{host}\\\", nfs_dir=\\\"{nfs_dir}\\\", path_in_target=\\\"{nfs_in_target}\\\"," \
                        " config=self, username=\\\"{user}\\\", port={port})".format(host=self.qemu_host, user=self.qemu_user,
