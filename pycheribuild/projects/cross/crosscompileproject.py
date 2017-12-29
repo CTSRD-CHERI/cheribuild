@@ -195,7 +195,8 @@ class CrossCompileProject(Project):
 
     @property
     def CC(self):
-        if self.compiling_for_host() and not self.config.use_sdk_clang_for_native_xbuild:
+        # on MacOS compiling with the SDK clang doesn't seem to work as expected (it picks the wrong linker)
+        if self.compiling_for_host() and (not self.config.use_sdk_clang_for_native_xbuild or IS_MAC):
             return self.config.clangPath if not self.forceDefaultCC else Path("cc")
         use_prefixed_cc = not self.compiling_for_host() and not self.baremetal
         compiler_name = self.targetTriple + "-clang" if use_prefixed_cc else "clang"
@@ -244,7 +245,10 @@ class CrossCompileProject(Project):
         return None
 
     def configure(self, **kwargs):
-        with setEnv(PKG_CONFIG_LIBDIR=self.pkgconfig_dirs, PKG_CONFIG_SYSROOT_DIR=self.config.sdkSysrootDir):
+        env = dict()
+        if not self.compiling_for_host():
+            env.update(PKG_CONFIG_LIBDIR=self.pkgconfig_dirs, PKG_CONFIG_SYSROOT_DIR=self.config.sdkSysrootDir)
+        with setEnv():
             super().configure(**kwargs)
 
 class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
@@ -427,6 +431,10 @@ class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
         super().configure(**kwargs)
 
     def process(self):
-        # We run all these commands with $PATH containing $CHERI_SDK/bin to ensure the right tools are used
-        with setEnv(PATH=str(self.config.sdkDir / "bin") + ":" + os.getenv("PATH")):
+        if not self.compiling_for_host():
+            # We run all these commands with $PATH containing $CHERI_SDK/bin to ensure the right tools are used
+            with setEnv(PATH=str(self.config.sdkDir / "bin") + ":" + os.getenv("PATH")):
+                super().process()
+        else:
+            # when building the native target we just rely on the host tools in /usr/bin
             super().process()

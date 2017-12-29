@@ -30,9 +30,10 @@
 
 from .crosscompileproject import *
 from ..cheribsd import BuildCHERIBSD
-from ...utils import runCmd, statusUpdate
+from ...utils import runCmd, statusUpdate, IS_MAC
 
 import os
+import shutil
 
 
 class TemporarilyRemoveProgramsFromSdk(object):
@@ -86,8 +87,10 @@ class BuildGDB(CrossCompileAutotoolsProject):
             "--disable-werror",
             "MAKEINFO=/bin/false",
             "--with-gdb-datadir=" + str(installRoot / "share/gdb"),
+            "--disable-libstdcxx",
             # TODO:
-            # "--enable-build-with-cxx"
+            "--enable-build-with-cxx",
+            # "--enable-gdbtk",
         ])
         # extra ./configure environment variables:
         # compile flags
@@ -123,6 +126,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.configureEnvironment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
         if self.makeCommand == "gmake":
             self.configureEnvironment["MAKE"] = "gmake"
+
         self.hostCC = os.getenv("HOST_CC", str(config.clangPath))
         self.hostCXX = os.getenv("HOST_CXX", str(config.clangPlusPlusPath))
         self.configureEnvironment["CC_FOR_BUILD"] = self.hostCC
@@ -131,6 +135,26 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.configureEnvironment["CXXFLAGS_FOR_BUILD"] = "-g"
         # TODO: do I need these:
         """(cd $obj; env INSTALL="/usr/bin/install -c "  INSTALL_DATA="install   -m 0644"  INSTALL_LIB="install    -m 444"  INSTALL_PROGRAM="install    -m 555"  INSTALL_SCRIPT="install   -m 555"   PYTHON="${PYTHON}" SHELL=/bin/sh CONFIG_SHELL=/bin/sh CONFIG_SITE=/usr/ports/Templates/config.site ../configure ${CONFIGURE_ARGS} )"""
+
+    @property
+    def CC(self):
+        if IS_MAC and self.compiling_for_host():
+            return shutil.which("gcc")
+        return super().CC
+
+    @property
+    def CXX(self):
+        if IS_MAC and self.compiling_for_host():
+            return shutil.which("g++")
+        return super().CXX
+
+    def configure(self, **kwargs):
+        if IS_MAC:
+            self.configureEnvironment.clear()
+            print(self.configureArgs)
+            # self.configureArgs.clear()
+            self.baremetal = True  # HACK to avoid adding any flags to configure (seems to be needed)
+        super().configure()
 
     def compile(self, **kwargs):
         with TemporarilyRemoveProgramsFromSdk(["as", "ld", "objcopy", "objdump"], self.config):
