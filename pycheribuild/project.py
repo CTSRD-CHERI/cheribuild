@@ -811,6 +811,7 @@ class Project(SimpleProject):
 #
 cmake_minimum_required(VERSION 3.8)
 project({project} LANGUAGES NONE)
+set(CLEAR_MAKEENV env -u MAKEFLAGS -u MAKELEVEL -u MAKE -u MAKE_TERMERR -u MAKE_TERMOUT -u MFLAGS)
 add_custom_target(cheribuild ALL VERBATIM USES_TERMINAL COMMAND {command} --skip-update --skip-install {target})
 add_custom_target(cheribuild-j1 VERBATIM USES_TERMINAL COMMAND {command} --skip-update -j1 {target})
 add_custom_target(cheribuild-verbose VERBATIM USES_TERMINAL COMMAND {command} --skip-update -v {target})
@@ -818,7 +819,7 @@ add_custom_target(cheribuild-verbose-j1 VERBATIM USES_TERMINAL COMMAND {command}
 
 add_custom_target(cheribuild-with-install VERBATIM USES_TERMINAL COMMAND {command} --skip-update {target})
 add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {target})
-""".format(command=sys.argv[0], project=self.projectName, target=self.target)
+""".format(command="${CLEAR_MAKEENV} " + sys.argv[0], project=self.projectName, target=self.target)
         target_file = self.sourceDir / "CMakeLists.txt"
         create = True
         if target_file.exists():
