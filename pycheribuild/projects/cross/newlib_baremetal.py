@@ -116,16 +116,23 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     def configure(self):
         self.configureArgs.extend([
             "--enable-malloc-debugging",
-            "--enable-newlib-long-time_t",
+            "--enable-newlib-long-time_t",  # we want time_t to be long and not int!
             "--enable-newlib-io-c99-formats",
             "--enable-newlib-io-long-long",
-            "--disable-newlib-io-long-double"
+            # --enable-newlib-io-pos-args (probably not needed)
+            "--disable-newlib-io-long-double",  # we don't need this, MIPS long double == double
+            "--enable-newlib-io-float",
             # "--disable-newlib-supplied-syscalls"
-            "--disable-newlib-mb",
+            "--disable-newlib-mb",  # we don't need multibyte support (at least I don't think so)
             "--disable-libstdcxx",
-            "--disable-newlib-io-float",
 
-            "--enable-newlib-global-atexit",
+            # we don't have any multithreading support on baremetal
+            "--disable-newlib-multithread",
+
+            "--enable-newlib-global-atexit",  # TODO: is this needed?
+            # --enable-newlib-nano-malloc (should we do this?)
+            "--disable-multilib",
+
             # TODO: smaller lib? "--enable-target-optspace"
 
             # FIXME: these don't seem to work
