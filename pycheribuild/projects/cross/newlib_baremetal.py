@@ -123,8 +123,9 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
             "--disable-newlib-io-long-double",  # we don't need this, MIPS long double == double
             "--enable-newlib-io-float",
             # "--disable-newlib-supplied-syscalls"
-            "--disable-newlib-mb",  # we don't need multibyte support (at least I don't think so)
-            "--disable-libstdcxx",
+            "--enable-newlib-mb",  # needed for locale support
+
+            "--disable-libstdcxx",  # not sure if this is needed
 
             # we don't have any multithreading support on baremetal
             "--disable-newlib-multithread",
