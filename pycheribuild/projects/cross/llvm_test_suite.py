@@ -57,8 +57,8 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
             return BuildLLVM.buildDir / "bin" / name
         return self.config.sdkBinDir / name
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config, target_arch: CrossCompileTarget):
+        super().__init__(config, target_arch)
         self.add_cmake_options(
             TEST_SUITE_LLVM_SIZE=self._find_in_sdk_or_llvm_build_dir("llvm-size"),
             TEST_SUITE_LLVM_PROFDATA=self._find_in_sdk_or_llvm_build_dir("llvm-profdata"),

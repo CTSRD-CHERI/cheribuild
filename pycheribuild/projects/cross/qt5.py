@@ -39,8 +39,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     defaultOptimizationLevel = ["-O2"]
     add_host_target_build_config_options = False
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
+        super().__init__(config, target_arch)
         self.configureCommand = self.sourceDir / "configure"
 
     @classmethod
@@ -167,8 +167,8 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     if IS_FREEBSD:
         forceDefaultCC = True  # for some reason crashes on FreeBSD 11 if using clang40/ clang39
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config, target_arch: CrossCompileTarget):
+        super().__init__(config, target_arch)
         self.configureCommand = self.sourceDir / "source/configure"
         self.configureArgs.extend(["--enable-static", "--disable-shared", "--disable-plugins", "--disable-dyload",
                                    "--disable-tests",
@@ -205,8 +205,8 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
     warningFlags = []  # FIXME: build with capability -Werror
     requiresGNUMake = True
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config, target_arch: CrossCompileTarget):
+        super().__init__(config, target_arch)
         if (self.sourceDir / "configure").exists():
             self.configureCommand = self.sourceDir / "configure"
         else:
@@ -229,10 +229,10 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         function=lambda config, project: BuildQt5.getSourceDir(config) / "qtwebkit",
         asString=lambda cls: "$SOURCE_ROOT/qt5" + cls.projectName.lower())
 
-    def __init__(self, config: CheriConfig):
+    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         # There is a bug in the cmake ninja generator that makes it use a response file for linking
         # WebCore but not actually generating it
-        super().__init__(config,
+        super().__init__(config, target_arch,
                          # generator=BuildQtWebkit.Generator.Makefiles
                          generator=BuildQtWebkit.Generator.Ninja
                          )

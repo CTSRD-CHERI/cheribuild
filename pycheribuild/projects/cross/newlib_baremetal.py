@@ -45,11 +45,11 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     crossInstallDir = CrossInstallDir.SDK
     # defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir  # we have to build in the source directory
 
-    def __init__(self, config: CheriConfig):
+    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         if self.crossCompileTarget == CrossCompileTarget.CHERI:
             statusUpdate("Cannot compile newlib in purecap mode, building mips instead")
             self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
-        super().__init__(config)
+        super().__init__(config, target_arch)
         self.installDir = self.installDir.parent  # newlib install already appends the triple
         #self.configureCommand = Path("/this/path/does/not/exist")
         self.configureCommand = self.sourceDir / "configure"

@@ -43,8 +43,8 @@ class BuildNginx(CrossCompileAutotoolsProject):
     _configure_supports_libdir = False
     _configure_supports_variables_on_cmdline = False
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
+        super().__init__(config, target_arch)
         self.configureCommand = self.sourceDir / "auto/configure"
         if self.crossCompileTarget != CrossCompileTarget.NATIVE:
             self.LDFLAGS.append("-static")

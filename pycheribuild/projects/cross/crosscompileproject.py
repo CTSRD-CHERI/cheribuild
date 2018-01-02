@@ -47,7 +47,7 @@ def _installDirMessage(project: "CrossCompileProject"):
     return "UNKNOWN"
 
 
-class CrossCompileProject(Project):
+class CrossCompileMixin(object):
     doNotAddToTargets = True
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     defaultInstallDir = ComputedDefaultValue(function=_installDir, asString=_installDirMessage)
@@ -62,8 +62,10 @@ class CrossCompileProject(Project):
                     "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types",
                     "-Werror=mips-cheri-prototypes"]
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget, *args, **kwargs):
+        super().__init__(config, *args, **kwargs)
+        if target_arch:
+            self.crossCompileTarget = target_arch
         self.compiler_dir = self.config.sdkBinDir
         # Use the compiler from the build directory for native builds to get stddef.h (which will be deleted)
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
@@ -251,7 +253,12 @@ class CrossCompileProject(Project):
         with setEnv():
             super().configure(**kwargs)
 
-class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
+
+class CrossCompileProject(CrossCompileMixin, Project):
+    doNotAddToTargets = True
+
+
+class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
     doNotAddToTargets = True  # only used as base class
     defaultCMakeBuildType = "RelWithDebInfo"  # default to O2
 
@@ -259,8 +266,8 @@ class CrossCompileCMakeProject(CMakeProject, CrossCompileProject):
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
 
-    def __init__(self, config: CheriConfig, generator: CMakeProject.Generator=CMakeProject.Generator.Ninja):
-        super().__init__(config, generator)
+    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget, generator: CMakeProject.Generator=CMakeProject.Generator.Ninja):
+        super().__init__(config, target_arch, generator)
         # This must come first:
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
             self._cmakeTemplate = includeLocalFile("files/NativeToolchain.cmake.in")
@@ -352,15 +359,15 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
         super().configure()
 
 
-class CrossCompileAutotoolsProject(AutotoolsProject, CrossCompileProject):
+class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
     doNotAddToTargets = True  # only used as base class
 
     add_host_target_build_config_options = True
     _configure_supports_libdir = True  # override in nginx
     _configure_supports_variables_on_cmdline = True  # override in nginx
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
+        super().__init__(config, target_arch)
         buildhost = self.get_host_triple()
         if not self.compiling_for_host() and self.add_host_target_build_config_options:
             self.configureArgs.extend(["--host=" + self.targetTriple, "--target=" + self.targetTriple,

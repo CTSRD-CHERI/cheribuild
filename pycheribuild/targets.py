@@ -46,7 +46,11 @@ class Target(object):
     def checkSystemDeps(self, config: CheriConfig):
         if self._completed:
             return
-        self.project = self.projectClass(config)
+        from .projects.cross.crosscompileproject import CrossCompileMixin
+        if issubclass(self.projectClass, CrossCompileMixin):
+            self.project = self.project = self.projectClass(config, None)
+        else:
+            self.project = self.projectClass(config)
         with setEnv(PATH=self.project.config.dollarPathWithOtherTools):
             # make sure all system dependencies exist first
             self.project.checkSystemDependencies()

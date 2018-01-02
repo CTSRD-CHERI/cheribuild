@@ -37,8 +37,8 @@ class BuildSQLite(CrossCompileAutotoolsProject):
     defaultOptimizationLevel = ["-O2"]
     warningFlags = ["-Wno-error=cheri-capability-misuse"]
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
+        super().__init__(config, target_arch)
         if self.crossCompileTarget != CrossCompileTarget.NATIVE:
             if IS_FREEBSD:
                 # For some reason using clang39/clang40 to crossbuild is broken on FreeBSD 11

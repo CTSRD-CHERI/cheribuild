@@ -46,8 +46,8 @@ class BuildLibunwind(CrossCompileCMakeProject):
     repository = "https://github.com/CTSRD-CHERI/libunwind.git"
     defaultInstallDir = installToCXXDir
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
+        super().__init__(config, target_arch)
         # Adding -ldl won't work: no libdl in /usr/libcheri
         self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)
         self.add_cmake_options(LLVM_CONFIG_PATH=self.compiler_dir / "llvm-config")
@@ -61,8 +61,8 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
     repository = "https://github.com/CTSRD-CHERI/libcxxrt.git"
     defaultInstallDir = installToCXXDir
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
+        super().__init__(config, target_arch)
         self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.installDir / "lib",
                                CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
         if self.compiling_for_host():
@@ -112,8 +112,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
                                             kind=str, default=lambda c, p: LaunchCheriBSD.sshForwardingPort)
         cls.qemu_user = cls.addConfigOption("shh-user", default="root", help="The CheriBSD used for running tests")
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
+        super().__init__(config, target_arch)
         self.COMMON_FLAGS.append("-D__LP64__=1")  # HACK to get it to compile
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=True, LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False)
@@ -219,11 +219,11 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
     dependencies = ["newlib-baremetal"]
     baremetal = True
 
-    def __init__(self, config: CheriConfig):
+    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         if self.crossCompileTarget == CrossCompileTarget.CHERI:
             statusUpdate("Cannot compile newlib in purecap mode, building mips instead")
             self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
-        super().__init__(config)
+        super().__init__(config, target_arch)
 
         # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")
@@ -267,11 +267,11 @@ class BuildLibCXXBaremetal(BuildLibCXX):
     crossInstallDir = CrossInstallDir.SDK
     defaultCMakeBuildType = "Debug"
 
-    def __init__(self, config: CheriConfig):
+    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         if self.crossCompileTarget == CrossCompileTarget.CHERI:
             statusUpdate("Cannot compile newlib in purecap mode, building mips instead")
             self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
-        super().__init__(config)
+        super().__init__(config, target_arch)
 
         # self.COMMON_FLAGS.append("-v")
         # Seems to be necessary :(
@@ -286,9 +286,9 @@ class BuildLibCXXRTBaremetal(BuildLibCXXRT):
     crossInstallDir = CrossInstallDir.SDK
     baremetal = True
 
-    def __init__(self, config: CheriConfig):
+    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         if self.crossCompileTarget == CrossCompileTarget.CHERI:
             statusUpdate("Cannot compile newlib in purecap mode, building mips instead")
             self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
-        super().__init__(config)
+        super().__init__(config, target_arch)
         self.COMMON_FLAGS.append("-Dsched_yield=abort")  # UNIPROCESSOR, should never happen

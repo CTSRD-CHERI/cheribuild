@@ -40,8 +40,8 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     requiresGNUMake = True
     defaultOptimizationLevel = ["-O2"]
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
+        super().__init__(config, target_arch)
         if self.enable_assertions:
             self.COMMON_FLAGS.append("-DUSE_ASSERT_CHECKING=1")
             self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")
