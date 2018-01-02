@@ -31,7 +31,7 @@ import functools
 import sys
 import time
 
-from .config.chericonfig import CheriConfig
+from .config.chericonfig import CheriConfig, CrossCompileTarget
 from .utils import *
 
 
@@ -46,14 +46,13 @@ class Target(object):
     def checkSystemDeps(self, config: CheriConfig):
         if self._completed:
             return
-        from .projects.cross.crosscompileproject import CrossCompileMixin
-        if issubclass(self.projectClass, CrossCompileMixin):
-            self.project = self.project = self.projectClass(config, None)
-        else:
-            self.project = self.projectClass(config)
-        with setEnv(PATH=self.project.config.dollarPathWithOtherTools):
+        self.project = self.create_project(config)
+        with setEnv(PATH=config.dollarPathWithOtherTools):
             # make sure all system dependencies exist first
             self.project.checkSystemDependencies()
+
+    def create_project(self, config: CheriConfig) -> "SimpleProject":
+        return self.projectClass(config)
 
     def execute(self):
         if self._completed:
@@ -96,6 +95,22 @@ class Target(object):
 
     def __repr__(self):
         return "<Target " + self.name + ">"
+
+
+# XXX: can't call this CrossCompileTarget since that is already the name of the enum
+class MultiArchTarget(Target):
+    def __init__(self, name, projectClass, target_arch: CrossCompileTarget, *, dependencies: set=set()):
+        super().__init__(name, projectClass, dependencies=dependencies)
+        self.target_arch = target_arch
+
+    def create_project(self, config: CheriConfig):
+        from .projects.cross.crosscompileproject import CrossCompileMixin
+        assert issubclass(self.projectClass, CrossCompileMixin)
+        return self.projectClass(config, self.target_arch)
+
+    def __repr__(self):
+        arch = self.target_arch.name if self.target_arch else "default arch"
+        return "<Cross target (" + arch + ") " + self.name + ">"
 
 
 class TargetManager(object):

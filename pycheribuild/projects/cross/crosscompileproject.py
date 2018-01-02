@@ -50,6 +50,7 @@ def _installDirMessage(project: "CrossCompileProject"):
 class CrossCompileMixin(object):
     doNotAddToTargets = True
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+    supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS, CrossCompileTarget.CHERI]
     defaultInstallDir = ComputedDefaultValue(function=_installDir, asString=_installDirMessage)
     appendCheriBitsToBuildDir = True
     dependencies = lambda cls: ["freestanding-sdk"] if cls.baremetal else ["cheribsd-sdk"]
@@ -245,6 +246,10 @@ class CrossCompileMixin(object):
         if self.compiling_for_cheri():
             return str(self.sdkSysroot / "usr/libcheri/pkgconfig") + ":" + str(self.sdkSysroot / "usr/local/libcheri/pkgconfig")
         return None
+
+    @property
+    def display_name(self):
+        return self.projectName + " (" + self.crossCompileTarget.value + ")"
 
     def configure(self, **kwargs):
         env = dict()

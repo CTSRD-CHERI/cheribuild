@@ -46,7 +46,7 @@ from copy import deepcopy
 
 from ..config.loader import ConfigLoaderBase, ComputedDefaultValue
 from ..config.chericonfig import CheriConfig, CrossCompileTarget
-from ..targets import Target, targetManager
+from ..targets import Target, MultiArchTarget, targetManager
 from ..filesystemutils import FileSystemUtils
 from ..utils import *
 
@@ -102,7 +102,23 @@ class ProjectSubclassDefinitionHook(type):
         deps = cls.dependencies
         if deps and callable(deps):
             deps = deps(cls)
-        targetManager.addTarget(Target(targetName, cls, dependencies=set(deps)))
+        if hasattr(cls, "supported_architectures"):
+            # Add a the target for the default architecture
+            targetManager.addTarget(MultiArchTarget(targetName, cls, None, dependencies=set(deps)))
+            for arch in cls.supported_architectures:
+                assert isinstance(arch, CrossCompileTarget)
+                # create a new class to ensure different build dirs and config name strings
+                new_name = targetName + "-" + arch.value
+                new_dict = cls.__dict__.copy()
+                new_dict["crossCompileTarget"] = arch
+                new_dict["doNotAddToTargets"] = True  # We are already adding it here
+                new_dict["target"] = new_name
+                new_dict["synthetic"] = True  # We are already adding it here
+                new_type = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
+                targetManager.addTarget(MultiArchTarget(new_name, new_type, arch, dependencies=set(deps)))
+        else:
+            # Only one target is supported:
+            targetManager.addTarget(Target(targetName, cls, dependencies=set(deps)))
         # print("Adding target", targetName, "with deps:", cls.dependencies)
 
 
@@ -834,6 +850,10 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if create:
             self.writeFile(target_file, cmakelists, overwrite=True)
 
+    @property
+    def display_name(self):
+        return self.projectName
+
     def process(self):
         if self.generate_cmakelists:
             self._do_generate_cmakelists()
@@ -855,14 +875,14 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             if not self.buildDir.is_dir():
                 self.makedirs(self.buildDir)
             if not self.config.skipConfigure or self.config.configureOnly:
-                statusUpdate("Configuring", self.projectName, "... ")
+                statusUpdate("Configuring", self.display_name, "... ")
                 self.configure()
             if self.config.configureOnly:
                 return
-            statusUpdate("Building", self.projectName, "... ")
+            statusUpdate("Building", self.display_name, "... ")
             self.compile()
             if not self.config.skipInstall:
-                statusUpdate("Installing", self.projectName, "... ")
+                statusUpdate("Installing", self.display_name, "... ")
                 self.install()
 
 

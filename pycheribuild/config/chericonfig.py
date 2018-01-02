@@ -54,7 +54,7 @@ class MyJsonEncoder(json.JSONEncoder):
 class CrossCompileTarget(Enum):
     NATIVE = "native"
     MIPS = "mips"
-    CHERI = "cheri"
+    CHERI = "cheri"  # TODO: add 128 and 256
 
 
 class CheriConfig(object):

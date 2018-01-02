@@ -62,9 +62,11 @@ class BuildGDB(CrossCompileAutotoolsProject):
     requiresGNUMake = True
     defaultLinker = "lld"
     defaultOptimizationLevel = ["-O2"]
+    supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
-        if self.crossCompileTarget == CrossCompileTarget.CHERI or target_arch == CrossCompileTarget.CHERI:
+        assert target_arch != CrossCompileTarget.CHERI
+        if self.crossCompileTarget == CrossCompileTarget.CHERI:
             statusUpdate("Cannot compile GDB as a CHERIABI binary building as MIPS instead (it can still be used to "
                          "debug CHERIABI processes)")
             target_arch = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
