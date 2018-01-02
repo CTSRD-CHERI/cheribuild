@@ -40,7 +40,7 @@ from .config.loader import JsonAndCommandLineConfigLoader
 from .config.defaultconfig import DefaultCheriConfig
 from .utils import *
 from .targets import targetManager
-from .project import SimpleProject
+from .projects.project import SimpleProject
 # noinspection PyUnresolvedReferences
 from .projects import *  # make sure all projects are loaded so that targetManager gets populated
 # noinspection PyUnresolvedReferences

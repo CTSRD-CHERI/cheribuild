@@ -44,11 +44,11 @@ from enum import Enum
 from pathlib import Path
 from copy import deepcopy
 
-from .config.loader import ConfigLoaderBase, ComputedDefaultValue
-from .config.chericonfig import CheriConfig, CrossCompileTarget
-from .targets import Target, targetManager
-from .filesystemutils import FileSystemUtils
-from .utils import *
+from ..config.loader import ConfigLoaderBase, ComputedDefaultValue
+from ..config.chericonfig import CheriConfig, CrossCompileTarget
+from ..targets import Target, targetManager
+from ..filesystemutils import FileSystemUtils
+from ..utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies", # no-combine
            "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions"]  # no-combine

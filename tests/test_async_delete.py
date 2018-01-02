@@ -1,6 +1,6 @@
 from pathlib import Path
 from unittest import TestCase
-from pycheribuild.project import Project
+from pycheribuild.projects.project import Project
 from pycheribuild.utils import setCheriConfig
 import os
 import tempfile

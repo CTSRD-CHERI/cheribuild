@@ -38,7 +38,7 @@ from pathlib import Path
 
 from .config.loader import ConfigLoaderBase, CommandLineConfigOption
 from .config.jenkinsconfig import JenkinsConfig, CrossCompileTarget
-from .project import SimpleProject, Project
+from .projects.project import SimpleProject, Project
 # noinspection PyUnresolvedReferences
 from .projects import *  # make sure all projects are loaded so that targetManager gets populated
 # noinspection PyUnresolvedReferences

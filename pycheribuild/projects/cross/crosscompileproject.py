@@ -10,7 +10,7 @@ from ...config.loader import ComputedDefaultValue
 from ...config.chericonfig import CrossCompileTarget
 from ..cheribsd import BuildCHERIBSD
 from ..llvm import BuildLLVM
-from ...project import *
+from ..project import *
 from ...utils import *
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget",

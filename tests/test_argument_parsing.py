@@ -10,7 +10,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 # We can't do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
 from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader
 _loader = JsonAndCommandLineConfigLoader()
-from pycheribuild.project import SimpleProject
+from pycheribuild.projects.project import SimpleProject
 SimpleProject._configLoader = _loader
 from pycheribuild.targets import targetManager
 from pycheribuild.config.defaultconfig import DefaultCheriConfig

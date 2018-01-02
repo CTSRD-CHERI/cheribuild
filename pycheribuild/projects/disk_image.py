@@ -35,7 +35,7 @@ from pathlib import Path
 from .cheribsd import _BuildFreeBSD
 from .cheribsd import *
 from ..config.loader import ComputedDefaultValue
-from ..project import *
+from .project import *
 from ..utils import *
 
 

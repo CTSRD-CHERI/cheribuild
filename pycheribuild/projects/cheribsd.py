@@ -37,7 +37,7 @@ import sys
 from pathlib import Path
 from ..config.loader import ComputedDefaultValue
 from ..config.chericonfig import CrossCompileTarget
-from ..project import *
+from .project import *
 from ..utils import *
 
 

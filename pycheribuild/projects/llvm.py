@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 from pathlib import Path
-from ..project import *
+from .project import *
 from ..utils import *
 
 
