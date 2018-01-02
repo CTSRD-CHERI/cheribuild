@@ -53,7 +53,7 @@ def updateCheck():
         return
     # check if new commits are available
     projectDir = str(Path(__file__).parent)
-    subprocess.call(["git", "fetch"], cwd=projectDir)
+    subprocess.call(["git", "fetch"], cwd=projectDir, timeout=3)
     output = subprocess.check_output(["git", "status", "-uno"], cwd=projectDir)
     behindIndex = output.find(b"Your branch is behind ")
     if behindIndex > 0:
@@ -110,7 +110,10 @@ def real_main():
             print("Build artifacts will be stored in", cheriConfig.outputRoot)
         # Don't do the update check when tab-completing (otherwise it freezes)
         if "_ARGCOMPLETE" not in os.environ and not cheriConfig.skipUpdate:  # no-combine
-            updateCheck()                     # no-combine
+            try:                                          # no-combine
+                updateCheck()                             # no-combine
+            except Exception as e:                        # no-combine
+                print("Failed to check for updates:", e)  # no-combine
         targetManager.run(cheriConfig)
 
 
