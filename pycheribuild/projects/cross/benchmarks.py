@@ -35,7 +35,7 @@ import tempfile
 
 
 class BuildMibench(CrossCompileProject):
-    repository = "https://github.com/CTSRD-CHERI/mibench"
+    repository = "git@github.com/CTSRD-CHERI/mibench"
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     projectName = "mibench"
     # Needs bsd make to build
@@ -48,7 +48,7 @@ class BuildMibench(CrossCompileProject):
                     CHERI128_SDK=self.config.sdkDir,
                     CHERI256_SDK=self.config.sdkDir,
                     CHERI_SDK=self.config.sdkDir):
-            # We can't fall back to /usr/bin/ar here since that breaks
+            # We can't fall back to /usr/bin/ar here since that breaks on MacOS
             self.make_args.set(AR=str(self.config.sdkBinDir / "ar") + " rc")
             self.make_args.set(AR2=str(self.config.sdkBinDir / "ranlib"))
             if self.compiling_for_host():
@@ -62,6 +62,37 @@ class BuildMibench(CrossCompileProject):
                     assert self.config.cheriBits == 256
                     self.make_args.set(VERSION="cheri256", CHERI256_SYSROOT=self.config.sdkSysrootDir)
             self.runMake("bundle_dump")
+
+    def install(self, **kwargs):
+        pass  # skip install for now...
+
+
+class BuildOlden(CrossCompileProject):
+    repository = "git@github.com/CTSRD-CHERI/olden"
+    crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+    projectName = "olden"
+    # Needs bsd make to build
+    make_kind = MakeCommandKind.BsdMake
+    # and we have to build in the source directory
+    defaultBuildDir = CrossCompileProject.defaultSourceDir
+
+    def compile(self, **kwargs):
+        with setEnv(MIPS_SDK=self.config.sdkDir,
+                    CHERI128_SDK=self.config.sdkDir,
+                    CHERI256_SDK=self.config.sdkDir,
+                    CHERI_SDK=self.config.sdkDir):
+            self.make_args.set(SYSROOT_DIRNAME=self.config.sdkSysrootDir.name)
+            self.make_args.add_flags("-f", "Makefile.jenkins")
+            if self.compiling_for_host():
+                self.runMake("x86")
+            if self.compiling_for_mips():
+                self.runMake("mips")
+            if self.compiling_for_cheri():
+                if self.config.cheriBits == 128:
+                    self.runMake("cheriabi128")
+                else:
+                    assert self.config.cheriBits == 256
+                    self.runMake("cheriabi256")
 
     def install(self, **kwargs):
         pass  # skip install for now...
