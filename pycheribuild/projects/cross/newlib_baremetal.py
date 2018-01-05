@@ -36,7 +36,7 @@ from pathlib import Path
 class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     repository = "https://github.com/CTSRD-CHERI/newlib"
     projectName = "newlib-baremetal"
-    requiresGNUMake = True
+    make_kind = MakeCommandKind.GnuMake
     baremetal = True
     add_host_target_build_config_options = False
     defaultOptimizationLevel = ["-O2"]

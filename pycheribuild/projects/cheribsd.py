@@ -73,6 +73,7 @@ class _BuildFreeBSD(Project):
     if not IS_FREEBSD:
         dependencies.append("freebsd-crossbuild")
     repository = "https://github.com/freebsd/freebsd.git"
+    make_kind = MakeCommandKind.BsdMake
     doNotAddToTargets = True
     target_arch = None  # type: CrossCompileTarget
     kernelConfig = None  # type: str
@@ -169,8 +170,7 @@ class _BuildFreeBSD(Project):
                 archBuildFlags = {"TARGET":"mips", "TARGET_ARCH":"mips64"}
             elif self.target_arch == CrossCompileTarget.NATIVE:
                 archBuildFlags = {"TARGET":"amd64"}
-        self.make_args.kind = self.make_args.Kind.BsdMake
-        self.cross_toolchain_config = MakeOptions()
+        self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake)
         self.make_args.set(**archBuildFlags)
         self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
         # TODO: once we have merged the latest upstream changes use MAKEOBJDIR instead to get a more sane hierarchy
@@ -461,10 +461,6 @@ class _BuildFreeBSD(Project):
             self.runMake("distribution", options=install_world_args)
 
     def addCrossBuildOptions(self):
-        self.makeCommand = shutil.which("bmake", path=self.config.dollarPathWithOtherTools)  # make is usually gnu make
-        if not self.makeCommand:
-            fatalError("Could not find bmake binary")
-            self.makeCommand = "false"
         # we also need to ensure that our SDK build tools are being picked up first
         build_path = str(self.config.sdkBinDir) + ":" + str(self.crossBinDir)
         self.make_args.env_vars["PATH"] = build_path

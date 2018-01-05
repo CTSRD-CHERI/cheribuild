@@ -37,7 +37,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     gitBranch = "96-cheri"
     # we have to build in the source directory, out-of-source is broken
     # defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir
-    requiresGNUMake = True
+    make_kind = MakeCommandKind.GnuMake
     defaultOptimizationLevel = ["-O2"]
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):

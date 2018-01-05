@@ -51,7 +51,7 @@ from ..filesystemutils import FileSystemUtils
 from ..utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies", # no-combine
-           "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions"]  # no-combine
+           "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions", "MakeCommandKind"]  # no-combine
 
 
 def flushStdio(stream):
@@ -399,20 +399,22 @@ def _defaultBuildDir(config: CheriConfig, project: "Project"):
     return config.buildRoot / (project.projectName.lower() + project.buildDirSuffix(config, target))
 
 
-class MakeOptions(object):
-    class Kind(Enum):
-        GnuMake = 1
-        BsdMake = 2
-        Ninja = 3
+class MakeCommandKind(Enum):
+    DefaultMake = "system default make"
+    GnuMake = "GNU make"
+    BsdMake = "BSD make"
+    Ninja = "ninja"
+    CustomMakeTool = "custom make tool"
 
-    def __init__(self, **kwargs):
+class MakeOptions(object):
+    def __init__(self, kind: MakeCommandKind, **kwargs):
         self._vars = OrderedDict()
         # Used by e.g. FreeBSD:
         self._with_options = OrderedDict()
         self._flags = list()
         self.env_vars = {}
         self.set(**kwargs)
-        self.kind = MakeOptions.Kind.GnuMake
+        self.kind = kind
 
     def set(self, **kwargs):
         for k, v in kwargs.items():
@@ -439,10 +441,10 @@ class MakeOptions(object):
 
     def _get_defined_var(self, name) -> str:
         # BSD make supports a -DVAR syntax but GNU doesn't
-        if self.kind == MakeOptions.Kind.BsdMake:
+        if self.kind == MakeCommandKind.BsdMake:
             return "-D" + name
         else:
-            assert self.kind != MakeOptions.Kind.Ninja  # should not be used!
+            assert self.kind == MakeCommandKind.GnuMake
             return name + "=1"
 
     @property
@@ -518,8 +520,11 @@ class Project(SimpleProject):
     defaultBuildDir = ComputedDefaultValue(
         function=_defaultBuildDir, asString=lambda cls: cls.projectBuildDirHelpStr())
 
-    requiresGNUMake = False
-    """ If true this project must be built with GNU make (gmake on FreeBSD) and not BSD make or ninja"""
+    make_kind = MakeCommandKind.DefaultMake
+    """
+    The kind of too that is used for building and installing (defaults to using "make")
+    Set this to MakeCommandKind.GnuMake if the build system needs GNU make features or BsdMake if it needs bmake
+    """
 
     # A per-project config option to generate a CMakeLists.txt that just has a custom taget that calls cheribuild.py
     generate_cmakelists = None
@@ -615,23 +620,34 @@ class Project(SimpleProject):
 
         self.configureCommand = ""
         # non-assignable variables:
-        self.make_args = MakeOptions()
         self.configureArgs = []  # type: typing.List[str]
         self.configureEnvironment = {}  # type: typing.Dict[str,str]
         if self.config.createCompilationDB and self.compileDBRequiresBear:
             self._addRequiredSystemTool("bear", installInstructions="Run `cheribuild.py bear`")
         self._lastStdoutLineCanBeOverwritten = False
-        self._preventAssign = True
-
-        if self.requiresGNUMake:
+        self.make_args = MakeOptions(self.make_kind)
+        if self.make_kind == MakeCommandKind.DefaultMake:
+            self.makeCommand = "make"
+        elif self.make_kind == MakeCommandKind.GnuMake:
             if IS_LINUX and not shutil.which("gmake"):
                 statusUpdate("Could not find `gmake` command, assuming `make` is GNU make")
                 self.makeCommand = "make"
             else:
                 self._addRequiredSystemTool("gmake", homebrewPackage="make")
                 self.makeCommand = "gmake"
+        elif self.make_kind == MakeCommandKind.BsdMake:
+            if IS_FREEBSD:
+                self.makeCommand = "make"
+            else:
+                self.makeCommand = "bmake"
+                self._addRequiredSystemTool("bmake", homebrewPackage="bmake")
+        elif self.make_kind == MakeCommandKind.Ninja:
+            self.makeCommand = "ninja"
+            self._addRequiredSystemTool("ninja", homebrewPackage="ninja")
         else:
-            self.makeCommand = "make"
+            self.makeCommand = "make-command-not-set-this-is-probably-an-error"
+
+        self._preventAssign = True
 
     # Make sure that API is used properly
     def __setattr__(self, name, value):
@@ -750,7 +766,7 @@ class Project(SimpleProject):
         # TODO: never use the source dir as a build dir (unfortunately GDB, postgres and elftoolchain won't work)
         # will have to check how well binutils and qemu work there
         if (self.buildDir / ".git").is_dir():
-            if (self.buildDir / "GNUmakefile").is_file() and self.makeCommand != "bmake" and self.target != "elftoolchain":
+            if (self.buildDir / "GNUmakefile").is_file() and self.make_kind != MakeCommandKind.BsdMake and self.target != "elftoolchain":
                 runCmd(self.makeCommand, "distclean", cwd=self.buildDir)
             else:
                 # just use git clean for cleanup

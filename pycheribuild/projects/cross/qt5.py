@@ -35,7 +35,6 @@ from ...utils import commandline_to_str, runCmd, IS_FREEBSD
 class BuildQtWithConfigureScript(CrossCompileProject):
     crossInstallDir = CrossInstallDir.SDK
     doNotAddToTargets = True
-    # requiresGNUMake = True
     defaultOptimizationLevel = ["-O2"]
     add_host_target_build_config_options = False
 
@@ -162,7 +161,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
 class BuildICU4C(CrossCompileAutotoolsProject):
     repository = "https://github.com/arichardson/icu4c.git"
     crossInstallDir = CrossInstallDir.SDK
-    requiresGNUMake = True
+    make_kind = MakeCommandKind.GnuMake
     warningFlags = []  # FIXME: build with capability -Werror
     if IS_FREEBSD:
         forceDefaultCC = True  # for some reason crashes on FreeBSD 11 if using clang40/ clang39
@@ -203,7 +202,7 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
     repository = "https://github.com/arichardson/libxml2"
     crossInstallDir = CrossInstallDir.SDK
     warningFlags = []  # FIXME: build with capability -Werror
-    requiresGNUMake = True
+    make_kind = MakeCommandKind.GnuMake
 
     def __init__(self, config, target_arch: CrossCompileTarget):
         super().__init__(config, target_arch)

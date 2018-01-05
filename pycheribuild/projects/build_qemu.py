@@ -39,7 +39,7 @@ class BuildQEMU(AutotoolsProject):
     defaultInstallDir = AutotoolsProject._installToSDK
     appendCheriBitsToBuildDir = True
     # QEMU will not work with BSD make, need GNU make
-    requiresGNUMake = True
+    make_kind = MakeCommandKind.GnuMake
     skipGitSubmodules = True  # we don't need these
 
     @classmethod

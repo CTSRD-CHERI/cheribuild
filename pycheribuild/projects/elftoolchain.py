@@ -41,6 +41,7 @@ class BuildElftoolchain(Project):
     repository = "https://github.com/emaste/elftoolchain.git"
     defaultInstallDir = Project._installToSDK
     defaultBuildDir = Project.defaultSourceDir  # we have to build in the source directory
+    make_kind = MakeCommandKind.BsdMake
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -49,13 +50,6 @@ class BuildElftoolchain(Project):
         # self.makedirs(objdir)
         # self.make_args.env_vars["MAKEOBJDIRPREFIX"] = objdir
         # self.make_args.set(TOP=self.sourceDir)  # for some reason the build system get's this wrong
-        if not IS_FREEBSD:
-            self._addRequiredSystemTool("bmake")
-            self.makeCommand = "bmake"
-        else:
-            self.makeCommand = "make"
-        self.make_args.kind = self.make_args.Kind.BsdMake
-
         self.gitBranch = "master"
         # self.makeArgs = ["WITH_TESTS=no", "-DNO_ROOT"]
         # TODO: build static?
@@ -87,6 +81,7 @@ class BuildElftoolchain(Project):
         cls.build_ar = cls.addBoolOption("build-ar", default=True, help="build the ar/ranlib programs")
         cls.build_static = cls.addBoolOption("build-static", help="Try to link elftoolchain statically "
                                                                   "(needs patches on Linux)")
+
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
         if IS_MAC and not Path("/usr/local/opt/libarchive/lib").exists():

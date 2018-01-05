@@ -59,7 +59,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
     defaultInstallDir = lambda config, cls: BuildCHERIBSD.rootfsDir(config) / "usr/local"
     repository = "https://github.com/bsdjhb/gdb.git"
     gitBranch = "mips_cheri"
-    requiresGNUMake = True
+    make_kind = MakeCommandKind.GnuMake
     defaultLinker = "lld"
     defaultOptimizationLevel = ["-O2"]
     supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]

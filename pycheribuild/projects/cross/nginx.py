@@ -35,7 +35,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
     repository = "https://github.com/CTSRD-CHERI/nginx.git"
     # we have to build in the source directory, out-of-source is broken
     # defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir
-    requiresGNUMake = True
+    make_kind = MakeCommandKind.GnuMake
     add_host_target_build_config_options = False
     warningFlags = CrossCompileAutotoolsProject.warningFlags + ["-Wno-error=cheri-capability-misuse", "-Wno-error=sign-compare"]
     defaultOptimizationLevel = ["-O2"]

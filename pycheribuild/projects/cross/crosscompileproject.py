@@ -13,8 +13,8 @@ from ..llvm import BuildLLVM
 from ..project import *
 from ...utils import *
 
-__all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget",
-           "CrossCompileProject", "CrossInstallDir"]
+__all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget",  # no-combine
+           "CrossCompileProject", "CrossInstallDir", "MakeCommandKind"]  # no-combine
 
 class CrossInstallDir(Enum):
     NONE = 0
