@@ -157,9 +157,10 @@ def check_call_handle_noexec(cmdline: "typing.List[str]", **kwargs):
         interpreter = getInterpreter(cmdline)
         if interpreter:
             return subprocess.check_call(interpreter + cmdline, **kwargs)
-        raise _make_called_process_error(e, cmdline, cwd=kwargs.get("cwd", None))
+        raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8"))
     except FileNotFoundError as e:
-        raise _make_called_process_error(e, cmdline, cwd=kwargs.get("cwd", None))
+        raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8"))
+
 
 def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Popen:
     try:
@@ -168,9 +169,9 @@ def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Pop
         interpreter = getInterpreter(cmdline)
         if interpreter:
             return subprocess.Popen(interpreter + cmdline, **kwargs)
-        raise _make_called_process_error(e, cmdline, cwd=kwargs.get("cwd", None))
+        raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8"))
     except FileNotFoundError as e:
-        raise _make_called_process_error(e, cmdline, cwd=kwargs.get("cwd", None))
+        raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8"))
 
 
 def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]"=None, timeout=None,
@@ -265,7 +266,12 @@ def getCompilerInfo(compiler: Path) -> CompilerInfo:
         appleLlvmVersionPattern = re.compile(b"Apple LLVM version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         targetPattern = re.compile(b"Target: (.+)")
         # clang prints this output to stderr
-        versionCmd = runCmd(compiler, "-v", captureError=True, printVerboseOnly=True, runInPretendMode=True)
+        try:
+            versionCmd = runCmd(compiler, "-v", captureError=True, printVerboseOnly=True, runInPretendMode=True)
+        except subprocess.CalledProcessError as e:
+            stderr = e.stderr if e.stderr else b"FAILED: " + str(e).encode("utf-8")
+            versionCmd = subprocess.CompletedProcess(e.cmd, e.returncode, e.output, stderr)
+
         clangVersion = clangVersionPattern.search(versionCmd.stderr)
         appleLlvmVersion = appleLlvmVersionPattern.search(versionCmd.stderr)
         gccVersion = gccVersionPattern.search(versionCmd.stderr)
