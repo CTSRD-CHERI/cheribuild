@@ -75,7 +75,7 @@ class CrossCompileMixin(object):
 
         self.targetTriple = None
         # compiler flags:
-        if self.crossCompileTarget == CrossCompileTarget.NATIVE:
+        if self.compiling_for_host():
             self.COMMON_FLAGS = []
             self.targetTriple = self.get_host_triple()
             if self.crossInstallDir == CrossInstallDir.SDK:

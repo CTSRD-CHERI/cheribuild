@@ -43,7 +43,7 @@ from .projects.project import SimpleProject, Project
 from .projects import *  # make sure all projects are loaded so that targetManager gets populated
 # noinspection PyUnresolvedReferences
 from .projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
-from .projects.cross.crosscompileproject import CrossCompileProject
+from .projects.cross.crosscompileproject import CrossCompileMixin
 from .targets import targetManager
 from .utils import *
 
@@ -221,7 +221,7 @@ def _jenkins_main():
         # need to set destdir after checkSystemDeps:
         project = target.project
         assert project
-        if isinstance(project, CrossCompileProject):
+        if isinstance(project, CrossCompileMixin):
             project.destdir = cheriConfig.outputRoot
             project.installPrefix = cheriConfig.installationPrefix
             project.installDir = cheriConfig.outputRoot
