@@ -66,11 +66,11 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
         self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.installDir / "lib",
                                CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
         if self.compiling_for_host():
+            assert not self.baremetal
             self.add_cmake_options(BUILD_TESTS=True)
             if OSInfo.isUbuntu():
                 self.add_cmake_options(COMPARE_TEST_OUTPUT_TO_SYSTEM_OUTPUT=False)
                 # Seems to be needed for at least jenkins (it says relink with -pie)
-                assert not self.baremetal
                 self.add_cmake_options(CMAKE_POSITION_INDEPENDENT_CODE=True)
                 # The static libc.a on Ubuntu is not compiled with -fPIC so we can't link to it..
                 self.add_cmake_options(NO_STATIC_TEST=True)
@@ -212,12 +212,14 @@ class BuildLibCXX(CrossCompileCMakeProject):
         # add the config options required for running tests:
         self.add_cmake_options(LIBCXX_EXECUTOR=executor, LIBCXX_TARGET_INFO=target_info, LIBCXX_RUN_LONG_TESTS=False)
 
+
 class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
     repository = "https://github.com/llvm-mirror/compiler-rt.git"
     projectName = "compiler-rt-baremetal"
     crossInstallDir = CrossInstallDir.SDK
     dependencies = ["newlib-baremetal"]
     baremetal = True
+    supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         if self.crossCompileTarget == CrossCompileTarget.CHERI:
@@ -264,6 +266,7 @@ class BuildLibCXXBaremetal(BuildLibCXX):
     projectName = "libcxx-baremetal"
     # target = "libcxx-baremetal"
     baremetal = True
+    supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
     crossInstallDir = CrossInstallDir.SDK
     defaultCMakeBuildType = "Debug"
 
@@ -285,6 +288,8 @@ class BuildLibCXXRTBaremetal(BuildLibCXXRT):
     dependencies = ["newlib-baremetal", "compiler-rt-baremetal"]
     crossInstallDir = CrossInstallDir.SDK
     baremetal = True
+    supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
+
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         if self.crossCompileTarget == CrossCompileTarget.CHERI:

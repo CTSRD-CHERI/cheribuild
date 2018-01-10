@@ -50,7 +50,13 @@ def _installDirMessage(project: "CrossCompileProject"):
 class CrossCompileMixin(object):
     doNotAddToTargets = True
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
-    supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS, CrossCompileTarget.CHERI]
+
+    CAN_TARGET_ALL_TARGETS = list(CrossCompileTarget)
+    CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.MIPS]
+    # TODO: we should be able to build CHERI CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.MIPS, CrossCompileTarget.CHERI]
+    CAN_TARGET_ALL_TARGETS_EXCEPT_CHERI = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
+    CAN_TARGET_ALL_TARGETS_EXCEPT_NATIVE = [CrossCompileTarget.MIPS, CrossCompileTarget.CHERI]
+    supported_architectures = list(CrossCompileTarget)
     defaultInstallDir = ComputedDefaultValue(function=_installDir, asString=_installDirMessage)
     appendCheriBitsToBuildDir = True
     dependencies = lambda cls: ["freestanding-sdk"] if cls.baremetal else ["cheribsd-sdk"]

@@ -43,6 +43,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     _configure_supports_libdir = False
     _configure_supports_variables_on_cmdline = True
     crossInstallDir = CrossInstallDir.SDK
+    supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
     # defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir  # we have to build in the source directory
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
