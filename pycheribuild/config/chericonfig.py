@@ -123,6 +123,10 @@ class CheriConfig(object):
         self.loader.load()
         self.targets = self.loader.targets
         from ..filesystemutils import FileSystemUtils
+        if self.clangPath is None:
+            self.clangPath = Path("/c/compiler/is/missing")
+        if self.clangPlusPlusPath is None:
+            self.clangPlusPlusPath = Path("/c++/compiler/is/missing")
         self.FS = FileSystemUtils(self)
 
     def _initializeDerivedPaths(self):
