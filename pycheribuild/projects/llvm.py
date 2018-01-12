@@ -161,6 +161,11 @@ class BuildLLVM(CMakeProject):
         self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang++", toolName="c++", createUnprefixedLink=False)
         self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang-cpp", toolName="cpp", createUnprefixedLink=False)
 
+
+        # Use the LLVM versions of ranlib and ar
+        self.createBuildtoolTargetSymlinks(self.installDir / "bin/llvm-ar", toolName="ar")
+        self.createBuildtoolTargetSymlinks(self.installDir / "bin/llvm-ar", toolName="ranlib")
+
         if not self.skip_lld:
             self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld")
             if IS_MAC:
