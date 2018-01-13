@@ -444,8 +444,8 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
         env = {k: v for k, v in self.configureEnvironment.items() if v}
         self.configureEnvironment.clear()
         self.configureEnvironment.update(env)
-        print(coloured(AnsiColour.yellow, "Cross configure environment:",
-                       pprint.pformat(self.configureEnvironment, width=160)))
+        self.print(coloured(AnsiColour.yellow, "Cross configure environment:",
+                            pprint.pformat(self.configureEnvironment, width=160)))
         super().configure(**kwargs)
 
     def process(self):

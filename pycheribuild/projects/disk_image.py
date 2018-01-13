@@ -384,7 +384,7 @@ def _defaultDiskImagePath(conf: "CheriConfig", cls):
 
 class BuildCheriBSDDiskImage(_BuildDiskImageBase):
     projectName = "disk-image"
-    dependencies = ["qemu", "cheribsd"]
+    dependencies = ["qemu", "cheribsd", "gdb-mips"]
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
