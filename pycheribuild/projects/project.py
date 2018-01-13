@@ -387,6 +387,20 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def process(self):
         raise NotImplementedError()
 
+    def print(self, *args, **kwargs):
+        if not self.config.quiet:
+            print(*args, **kwargs)
+
+    def verbose_print(self, *args, **kwargs):
+        if self.config.verbose:
+            print(*args, **kwargs)
+
+    def info(self, *args, **kwargs):
+        # TODO: move all those methods here
+        statusUpdate(*args, **kwargs)
+
+    def warning(self, *args, **kwargs):
+        warningMessage(*args, **kwargs)
 
 def installDirNotSpecified(config: CheriConfig, project: "Project"):
     raise RuntimeError("dummy impl must not be called: " + str(project))

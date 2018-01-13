@@ -106,10 +106,9 @@ class _BuildDiskImageBase(SimpleProject):
         self.minimumImageSize = "1g",  # minimum image size = 1GB
         self.dirsInMtree = []
 
-    @staticmethod
-    def getModeString(path: Path):
+    def getModeString(self, path: Path):
         try:
-            print(path, path.stat())
+            self.verbose_print(path, path.stat())
             result = "0{0:o}".format(stat.S_IMODE(path.stat().st_mode))  # format as octal with leading 0 prefix
         except Exception as e:
             warningMessage("Failed to stat", path, "assuming mode 0644: ", e)
@@ -125,7 +124,8 @@ class _BuildDiskImageBase(SimpleProject):
     def addFileToImage(self, file: Path, *, baseDirectory: Path, user="root", group="wheel", mode=None):
         pathInTarget = file.relative_to(baseDirectory)
         assert not str(pathInTarget).startswith(".."), pathInTarget
-        statusUpdate(file, " -> /", pathInTarget, sep="")
+        if not self.config.quiet:
+            statusUpdate(file, " -> /", pathInTarget, sep="")
         if mode is None:
             mode = self.getModeString(file)
         # e.g. "install -N /home/alr48/cheri/cheribsd/etc -U -M /home/alr48/cheri/output/rootfs//METALOG
@@ -178,7 +178,7 @@ class _BuildDiskImageBase(SimpleProject):
         assert not pathInImage.startswith("/")
         userProvided = self.extraFilesDir / pathInImage
         if userProvided.is_file():
-            print("Using user provided /", pathInImage, " instead of generating default", sep="")
+            self.verbose_print("Using user provided /", pathInImage, " instead of generating default", sep="")
             self.extraFiles.remove(userProvided)
             targetFile = userProvided
             baseDir = self.extraFilesDir
@@ -233,9 +233,9 @@ class _BuildDiskImageBase(SimpleProject):
 
         sshdConfig = self.rootfsDir / "etc/ssh/sshd_config"
         if not sshdConfig.exists():
-            print("SSHD not installed")
+            self.info("SSHD not installed, not changing sshd_config")
         else:
-            print("Adding 'PermitRootLogin without-password\nUseDNS no' to /etc/ssh/sshd_config")
+            self.info("Adding 'PermitRootLogin without-password\nUseDNS no' to /etc/ssh/sshd_config")
             # make sure we can login as root with pubkey auth:
             newSshdConfigContents = self.readFile(sshdConfig)
             newSshdConfigContents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
@@ -351,7 +351,7 @@ class _BuildDiskImageBase(SimpleProject):
             # we have to make a copy as we modify self.extraFiles in self.addFileToImage()
             for p in self.extraFiles.copy():
                 pathInImage = p.relative_to(self.extraFilesDir)
-                print("Adding user provided file /", pathInImage, " to disk image.", sep="")
+                self.print("Adding user provided file /", pathInImage, " to disk image.", sep="")
                 self.addFileToImage(p, baseDirectory=self.extraFilesDir)
             # finally create the disk image
             self.makeImage()
