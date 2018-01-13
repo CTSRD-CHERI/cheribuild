@@ -117,7 +117,7 @@ addFilteredFile(scriptDir / "config/chericonfig.py")
 addFilteredFile(scriptDir / "config/defaultconfig.py")
 addFilteredFile(scriptDir / "targets.py")
 addFilteredFile(scriptDir / "filesystemutils.py")
-addFilteredFile(scriptDir / "project.py")
+addFilteredFile(scriptDir / "projects/project.py")
 
 # for now keep the original order
 addFilteredFile(scriptDir / "projects/build_qemu.py")
