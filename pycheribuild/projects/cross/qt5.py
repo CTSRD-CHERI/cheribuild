@@ -47,6 +47,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         super().setupConfigOptions(**kwargs)
         cls.build_tests = cls.addBoolOption("build-tests", showHelp=True, help="build the Qt unit tests")
         cls.build_examples = cls.addBoolOption("build-examples", showHelp=True, help="build the Qt examples")
+        cls.useMxgot = True  # appears to be needed for some tests
 
     def configure(self, **kwargs):
         if not self.needsConfigure() and not self.config.forceConfigure:

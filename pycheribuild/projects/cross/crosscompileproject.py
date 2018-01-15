@@ -222,7 +222,7 @@ class CrossCompileMixin(object):
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
-        cls.useMxgot = cls.addBoolOption("use-mxgot", help="Compile without -mxgot flag (should not be needed when using lld)")
+        cls.useMxgot = cls.addBoolOption("use-mxgot", help="Compile with -mxgot flag (should not be needed when using lld)")
         cls.linker = cls.addConfigOption("linker", default=cls.defaultLinker,
                                          help="The linker to use (`lld` or `bfd`) (lld is  better but may"
                                               " not work for some projects!)")
