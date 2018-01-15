@@ -99,7 +99,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             self.configureArgs.extend(["-nomake", "tests"])
 
         if not self.build_examples:
-            self.configureArgs.extend(["-nomake", "examples"])
+            # Seems to have changed
+            self.configureArgs.extend(["-nomake", "examples", "-no-compile-examples"])
         # currently causes build failures:
         # Seems like I need to define PNG_READ_GAMMA_SUPPORTED
         self.configureArgs.append("-qt-libpng")
@@ -112,6 +113,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # self.configureArgs.append("-debug")
         else:
             self.configureArgs.append("-release")
+
 
         self.configureArgs.extend(["-opensource", "-confirm-license"])
 
