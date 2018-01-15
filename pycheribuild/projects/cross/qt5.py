@@ -114,6 +114,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         else:
             self.configureArgs.append("-release")
 
+        self.configureArgs.append("-no-pch")  # slows down build but gives useful crash testcases
 
         self.configureArgs.extend(["-opensource", "-confirm-license"])
 
