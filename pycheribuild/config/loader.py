@@ -66,7 +66,7 @@ class ConfigLoaderBase(object):
     _parsedArgs = None
     _JSON = {}  # type: dict
 
-    showAllHelp = any(s in sys.argv for s in ("--help-all", "--help-hidden"))
+    showAllHelp = any(s in sys.argv for s in ("--help-all", "--help-hidden")) or "_ARGCOMPLETE" in os.environ
 
     def __init__(self, option_cls):
         self.__option_cls = option_cls
@@ -362,16 +362,17 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         self.cheriBitsGroup = self._parser.add_mutually_exclusive_group()
         self.crossCompileGroup = self._parser.add_mutually_exclusive_group()
         self.configureGroup = self._parser.add_mutually_exclusive_group()
+        self.completion_excludes = []
 
     def finalizeOptions(self, availableTargets: list):
         targetOption = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
                                                  help="The targets to build", choices=availableTargets + [[]])
         if argcomplete and "_ARGCOMPLETE" in os.environ:
             # if IS_FREEBSD: # FIXME: for some reason this won't work
-            excludes = ["-t", "--skip-dependencies"]
+            self.completion_excludes = ["-t", "--skip-dependencies"]
             if sys.platform.startswith("freebsd"):
-                excludes += ["--freebsd-builder-copy-only", "--freebsd-builder-hostname",
-                             "--freebsd-builder-output-path"]
+                self.completion_excludes += ["--freebsd-builder-copy-only", "--freebsd-builder-hostname",
+                                             "--freebsd-builder-output-path"]
 
             visibleTargets = availableTargets.copy()
             visibleTargets.remove("__run_everything__")
@@ -382,12 +383,6 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             unparsed = self._parser.add_argument("targets", metavar="TARGET", type=list, nargs=argparse.ZERO_OR_MORE,
                                                  help=argparse.SUPPRESS, choices=availableTargets)
             unparsed.completer = targetCompleter
-            argcomplete.autocomplete(
-                self._parser,
-                always_complete_options=None,  # don't print -/-- by default
-                exclude=excludes,  # hide these options from the output
-                print_suppressed=True,  # also include target-specific options
-            )
 
     def _loadJSONConfigFile(self):
         self._JSON = {}
@@ -411,6 +406,13 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 raise
 
     def load(self):
+        if argcomplete and "_ARGCOMPLETE" in os.environ:
+            argcomplete.autocomplete(
+                self._parser,
+                always_complete_options=None,  # don't print -/-- by default
+                exclude=self.completion_excludes,  # hide these options from the output
+                print_suppressed=True,  # also include target-specific options
+            )
         self._parsedArgs, trailingTargets = self._parser.parse_known_args()
         # print(self._parsedArgs, trailingTargets)
         self._parsedArgs.targets += trailingTargets
