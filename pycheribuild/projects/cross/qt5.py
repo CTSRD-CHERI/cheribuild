@@ -129,7 +129,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
 class BuildQt5(BuildQtWithConfigureScript):
     repository = "https://github.com/arichardson/qt5"
-    gitBranch = "5.10-cheri"
+    gitBranch = "5.10.0"
     skipGitSubmodules = True  # init-repository does it for us
 
     @classmethod
@@ -155,7 +155,7 @@ class BuildQt5(BuildQtWithConfigureScript):
 
 class BuildQtBase(BuildQtWithConfigureScript):
     repository = "https://github.com/arichardson/qtbase"
-    gitBranch = "5.10-cheri"
+    gitBranch = "5.10.0"
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.getSourceDir(config) / "qtbase",
         asString=lambda cls: "$SOURCE_ROOT/qt5" + cls.projectName.lower())
