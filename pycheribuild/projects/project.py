@@ -648,15 +648,15 @@ class Project(SimpleProject):
                 self.makeCommand = "make"
             else:
                 self._addRequiredSystemTool("gmake", homebrewPackage="make")
-                self.makeCommand = shutil.which("gmake")
+                self.makeCommand = shutil.which("gmake") or "gmake"
         elif self.make_kind == MakeCommandKind.BsdMake:
             if IS_FREEBSD:
-                self.makeCommand = shutil.which("make")
+                self.makeCommand = shutil.which("make") or "make"
             else:
-                self.makeCommand = shutil.which("bmake")
+                self.makeCommand = shutil.which("bmake") or "bmake"
                 self._addRequiredSystemTool("bmake", homebrewPackage="bmake")
         elif self.make_kind == MakeCommandKind.Ninja:
-            self.makeCommand = shutil.which("ninja")
+            self.makeCommand = shutil.which("ninja") or "ninja"
             self._addRequiredSystemTool("ninja", homebrewPackage="ninja")
         else:
             self.makeCommand = "make-command-not-set-this-is-probably-an-error"
