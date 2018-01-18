@@ -50,11 +50,29 @@ class BuildLibunwind(CrossCompileCMakeProject):
         super().__init__(config, target_arch)
         # Adding -ldl won't work: no libdl in /usr/libcheri
         self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)
-        self.add_cmake_options(LLVM_CONFIG_PATH=self.compiler_dir / "llvm-config")
+        self.add_cmake_options(
+            LLVM_CONFIG_PATH=self.compiler_dir / "llvm-config",
+            LLVM_EXTERNAL_LIT=BuildLLVM.buildDir / "bin/llvm-lit",
+        )
+
         # TODO: this breaks the build: LLVM_LIBDIR_SUFFIX="cheri"
         # Now that cheribsd includes libc++ we no longer need this:
         # self.COMMON_FLAGS.append("-isystem")
         # self.COMMON_FLAGS.append(str(BuildLibCXX.sourceDir / "include"))
+        if not self.compiling_for_host():
+            self.collect_test_binaries = self.buildDir / "test-output"
+            executor = "CollectBinariesExecutor(\\\"{path}\\\", self)".format(path=self.collect_test_binaries)
+            self.add_cmake_options(
+                LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
+                              "/lit-test-results.xml --max-time 3600 --timeout 120 -s -vv",
+                LIBUNWIND_TARGET_TRIPLE=self.targetTriple, LIBUNWIND_SYSROOT=self.sdkSysroot)
+
+            target_info = "libcxx.test.target_info.CheriBSDRemoteTI"
+            # add the config options required for running tests:
+            self.add_cmake_options(LIBUNWIND_EXECUTOR=executor, LIBUNWIND_TARGET_INFO=target_info,
+                                   LIBUNWIND_CXX_ABI_LIBNAME="libcxxrt")
+
+
 
 
 class BuildLibCXXRT(CrossCompileCMakeProject):
@@ -186,7 +204,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         if self.only_compile_tests:
             executor = "CompileOnlyExecutor()"
         elif self.collect_test_binaries:
-            executor = "CollectBinariesExecutor(\"{path}\", self)".format(path=self.collect_test_binaries)
+            executor = "CollectBinariesExecutor(\\\"{path}\\\", self)".format(path=self.collect_test_binaries)
         elif self.baremetal:
             run_qemu_script = self.config.sdkDir / "baremetal/mips64-qemu-elf/bin/run_with_qemu.py"
             if not run_qemu_script.exists():
