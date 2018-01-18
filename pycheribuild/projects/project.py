@@ -653,7 +653,10 @@ class Project(SimpleProject):
             if IS_FREEBSD:
                 self.makeCommand = shutil.which("make") or "make"
             else:
-                self.makeCommand = shutil.which("bmake") or "bmake"
+                if (self.config.otherToolsDir / "bin/bmake").exists():
+                    self.makeCommand = (self.config.otherToolsDir / "bin/bmake")
+                else:
+                    self.makeCommand = shutil.which("bmake") or "bmake"
                 self._addRequiredSystemTool("bmake", homebrewPackage="bmake")
         elif self.make_kind == MakeCommandKind.Ninja:
             self.makeCommand = shutil.which("ninja") or "ninja"
