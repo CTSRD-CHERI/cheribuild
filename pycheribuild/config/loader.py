@@ -166,7 +166,7 @@ class ConfigOptionBase(object):
             self._cached = self.loadOption(self._loader._cheriConfig, owner)
         return self._cached
 
-    def _getDefaultValue(self, config: "CheriConfig", ownerClass: "typing.Type"):
+    def _getDefaultValue(self, config: "CheriConfig", ownerClass: "typing.Type"=None):
         if callable(self.default):
             return self.default(config, ownerClass)
         else:
@@ -346,10 +346,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         # Choose the default config file based on argv[0]
         # This allows me to have symlinks for e.g. stable-cheribuild.py release-cheribuild.py debug-cheribuild.py
         # that pick up the right config file in ~/.config
-        config_prefix = ""
-        program = Path(sys.argv[0]).name
-        if program.endswith("cheribuild.py"):
-            config_prefix = program[0:-len("cheribuild.py")]
+        config_prefix = self.get_config_prefix()
         # print("Name is:", program, "prefix:", config_prefix)
         self.defaultConfigPath = Path(self.configdir, config_prefix + "cheribuild.json")
         self._parser.add_argument("--config-file", metavar="FILE", type=str, default=str(self.defaultConfigPath),
@@ -363,6 +360,14 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         self.crossCompileGroup = self._parser.add_mutually_exclusive_group()
         self.configureGroup = self._parser.add_mutually_exclusive_group()
         self.completion_excludes = []
+
+    @staticmethod
+    def get_config_prefix():
+        config_prefix = ""
+        program = Path(sys.argv[0]).name
+        if program.endswith("cheribuild.py"):
+            config_prefix = program[0:-len("cheribuild.py")]
+        return config_prefix
 
     def finalizeOptions(self, availableTargets: list):
         targetOption = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,

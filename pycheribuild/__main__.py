@@ -32,11 +32,12 @@ import shlex
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from .configloader import ConfigLoader here because that will only update the local copy!
 # https://stackoverflow.com/questions/3536620/how-to-change-a-module-variable-from-another-module
-from .config.loader import JsonAndCommandLineConfigLoader
+from .config.loader import JsonAndCommandLineConfigLoader, JsonAndCommandLineConfigOption
 from .config.defaultconfig import DefaultCheriConfig
 from .utils import *
 from .targets import targetManager
@@ -77,6 +78,21 @@ def real_main():
     # load them from JSON/cmd line
     cheriConfig.load()
     setCheriConfig(cheriConfig)
+
+    if cheriConfig.docker or JsonAndCommandLineConfigLoader.get_config_prefix() == "docker-":
+        # check that the docker build won't override native binaries
+        cheriConfig.docker = True
+        # get the actual descriptor
+        import inspect
+        outputOption = inspect.getattr_static(cheriConfig, "outputRoot")  # type: JsonAndCommandLineConfigOption
+        sourceOption = inspect.getattr_static(cheriConfig, "sourceRoot")  # type: JsonAndCommandLineConfigOption
+        buildOption = inspect.getattr_static(cheriConfig, "buildRoot")  # type: JsonAndCommandLineConfigOption
+        # noinspection PyProtectedMember
+        if cheriConfig.buildRoot == buildOption._getDefaultValue(cheriConfig) and \
+                cheriConfig.sourceRoot == sourceOption._getDefaultValue(cheriConfig) and \
+                cheriConfig.outputRoot == outputOption._getDefaultValue(cheriConfig):
+            fatalError("Running cheribuild in docker with the default source/output/build directories is not supported")
+
     # create the required directories
     for d in (cheriConfig.sourceRoot, cheriConfig.outputRoot, cheriConfig.buildRoot):
         if d.exists():
@@ -85,6 +101,47 @@ def real_main():
             if cheriConfig.verbose:
                 printCommand("mkdir", "-p", str(d))
             os.makedirs(str(d), exist_ok=True)
+
+    if cheriConfig.docker:
+        cheribuild_dir = str(Path(__file__).absolute().parent.parent)
+        # we can't pass all args
+        filtered_cheribuild_args = ["--source-root", "/source", "--build-root", "/build", "--output-root", "/output"]
+        skip_next = False
+        blacklisted = ("--source-root", "--build-root", "--output-root", "--docker-container")
+        for arg in sys.argv[1:]:
+            if skip_next:
+                skip_next = False
+                continue
+            if arg in blacklisted:
+                skip_next = True
+                continue
+            if any(arg.startswith(s + "=") for s in blacklisted):
+                continue
+            if arg == "--docker":
+                continue
+            filtered_cheribuild_args.append(arg)
+        try:
+            docker_args = [
+                "docker", "run",
+                # map cheribuild and the sources read-only into the container
+                "-v", cheribuild_dir + ":/cheribuild:ro",
+                "-v", str(cheriConfig.sourceRoot.absolute()) + ":/source:ro",
+                # build and output are read-write:
+                "-v", str(cheriConfig.buildRoot.absolute()) + ":/build",
+                "-v", str(cheriConfig.outputRoot.absolute()) + ":/output",
+                cheriConfig.docker_container, "/cheribuild/cheribuild.py", "--skip-update",
+            ] + filtered_cheribuild_args
+            printCommand(docker_args)
+            subprocess.check_call(docker_args)
+        except subprocess.CalledProcessError as e:
+            # if the image is missing print a helpful error message:
+            if e.returncode == 125:
+                statusUpdate("It seems like the docker image", cheriConfig.docker_container, "was not found.")
+                statusUpdate("In order to build the default docker image for cheribuild (cheribuild-test) run:")
+                print(coloured(AnsiColour.blue, "cd", cheribuild_dir + "/docker && docker build --tag cheribuild-test ."))
+                sys.exit(coloured(AnsiColour.red, "Failed to start docker!"))
+            raise
+        sys.exit()
 
     if cheriConfig.listTargets:
         print("Available targets are:\n ", "\n  ".join(allTargetNames))

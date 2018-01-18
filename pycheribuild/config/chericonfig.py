@@ -115,6 +115,9 @@ class CheriConfig(object):
         self.otherToolsDir = None  # type: Path
         self.dollarPathWithOtherTools = None  # type: Path
         self.sysrootArchiveName = None  # type: Path
+        self.docker = loader.addBoolOption("docker", help="Run the build inside a docker container")
+        self.docker_container = loader.addOption("docker-container", help="Name of the docker container to use",
+                                                 default="cheribuild-test")
 
         self.targets = None  # type: list
         self.__optionalProperties = ["sysrootArchiveName"]
