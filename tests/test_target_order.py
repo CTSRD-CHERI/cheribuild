@@ -65,7 +65,8 @@ def test_disk_image_comes_second_last():
 
 
 def test_all_run_deps():
-    assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm"] + CHERIBSD_TARGETS + ["disk-image", "run"]
+    assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm"] + CHERIBSD_TARGETS + ["elftoolchain",
+       "binutils", "freestanding-sdk", "cheribsd-sysroot", "cheribsd-sdk", "gdb-mips", "disk-image", "run"]
 
 
 def test_run_disk_image():
