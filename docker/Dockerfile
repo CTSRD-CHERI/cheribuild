@@ -4,7 +4,7 @@ LABEL maintainer="Alexander.Richardson@cl.cam.ac.uk"
 
 RUN apt-get update && apt-get install -y \
   make ninja-build \
-  gcc \
+  gcc g++ \
   git \
   python3-minimal \
   libbsd-dev
