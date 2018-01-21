@@ -424,18 +424,23 @@ class MakeOptions(object):
     def __init__(self, kind: MakeCommandKind, **kwargs):
         self._vars = OrderedDict()
         # Used by e.g. FreeBSD:
-        self._with_options = OrderedDict()
+        self._with_options = OrderedDict()  # type: typing.Dict[str, bool]
         self._flags = list()
         self.env_vars = {}
         self.set(**kwargs)
         self.kind = kind
 
-    def set(self, **kwargs):
+    def __do_set(self, target_dict: typing.Dict[str, str], **kwargs):
         for k, v in kwargs.items():
             if isinstance(v, bool):
-                self._vars[k] = "1" if v else "0"
-            else:
-                self._vars[k] = str(v)
+                v = "1" if v else "0"
+            target_dict[k] = str(v)
+
+    def set(self, **kwargs):
+        self.__do_set(self._vars, **kwargs)
+
+    def set_env(self, **kwargs):
+        self.__do_set(self.env_vars, **kwargs)
 
     def set_with_options(self, **kwargs):
         """

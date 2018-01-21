@@ -50,6 +50,7 @@ def defaultKernelConfig(config: CheriConfig, project):
     cheri_pure = "_PURECAP" if project.purecapKernel else ""
     return kernconf_name.format(bits=cheri_bits, pure=cheri_pure)
 
+
 class FreeBSDCrossTools(CMakeProject):
     repository = "https://github.com/arichardson/freebsd-crossbuild.git"
     defaultInstallDir = CMakeProject._installToBootstrapTools
@@ -70,8 +71,6 @@ class FreeBSDCrossTools(CMakeProject):
 
 class _BuildFreeBSD(Project):
     dependencies = ["llvm"]
-    if not IS_FREEBSD:
-        dependencies.append("freebsd-crossbuild")
     repository = "https://github.com/freebsd/freebsd.git"
     make_kind = MakeCommandKind.BsdMake
     doNotAddToTargets = True
@@ -244,7 +243,7 @@ class _BuildFreeBSD(Project):
             target_flags = ""
             self.useExternalToolchainForWorld = True
             self.useExternalToolchainForKernel = True
-            self.linker_for_kernel = "lld" # bfd won't work here
+            self.linker_for_kernel = "lld"  # bfd won't work here
             self.linker_for_world = "lld"
             # DONT SET XAS!!! It prevents bfd from being built
             # self.cross_toolchain_config.set(XAS="/usr/bin/as")
@@ -256,8 +255,8 @@ class _BuildFreeBSD(Project):
             if self.crossbuild:
                 # For some reason STRINGS is not set
                 self.cross_toolchain_config.set(STRINGS="strings")
-            self.cross_toolchain_config.set_with_options(RESCUE=False, # Won't compile with CHERI clang yet
-                                                         BOOT=False) # bootloaders won't link with LLD yet
+            self.cross_toolchain_config.set_with_options(RESCUE=False,  # Won't compile with CHERI clang yet
+                                                         BOOT=False)  # bootloaders won't link with LLD yet
             # DONT SET XAS!!! It prevents bfd from being built
             # self.cross_toolchain_config.set(XAS=cross_prefix + "clang " + target_flags)
         else:
@@ -265,11 +264,12 @@ class _BuildFreeBSD(Project):
             sys.exit(1)
 
         self.externalToolchainCompiler = Path(cross_prefix + "clang")
+        # TODO: should I be setting this in the environment instead?
         self.cross_toolchain_config.set(
             XCC=cross_prefix + "clang",
             XCXX=cross_prefix + "clang++",
             XCPP=cross_prefix + "clang-cpp",
-            X_COMPILER_TYPE="clang",
+            X_COMPILER_TYPE="clang",  # This is needed otherwise the build assumes it should build with $CC
             XOBJDUMP=cross_prefix + "llvm-objdump",
             OBJDUMP=cross_prefix + "llvm-objdump",
         )
@@ -278,16 +278,16 @@ class _BuildFreeBSD(Project):
             self.cross_toolchain_config.set(XLD=cross_prefix + "ld.lld"),
 
         if target_flags:
-            self.cross_toolchain_config.env_vars["XCFLAGS"] = target_flags
+            self.cross_toolchain_config.set_env(XCFLAGS=target_flags)
 
     @property
     def buildworldArgs(self) -> MakeOptions:
         result = self.make_args.copy()
         if self.linker_for_world == "bfd":
-            result.env_vars["XLDFLAGS"] = "-fuse-ld=bfd"
+            result.set_env(XLDFLAGS="-fuse-ld=bfd")
         else:
             assert self.linker_for_world == "lld"
-            result.env_vars["XLDFLAGS"] = "-fuse-ld=lld -Wl,--no-rosegment -Wl,-z,notext"
+            result.set_env(XLDFLAGS="-fuse-ld=lld -Wl,--no-rosegment -Wl,-z,notext")
         # FIXME: once it works for buildkernel remove here
         if self.auto_obj:
             result.set_with_options(AUTO_OBJ=True)
@@ -319,8 +319,7 @@ class _BuildFreeBSD(Project):
             kernel_options.remove_var("LDFLAGS")
             kernel_options.set(LD=linker, XLD=linker, HACK_EXTRA_FLAGS="-shared " + fuse_ld_flag,
                                TRAMP_LDFLAGS=fuse_ld_flag)
-            kernel_options.env_vars["LDFLAGS"] = fuse_ld_flag
-            kernel_options.env_vars["XLDFLAGS"] = fuse_ld_flag
+            kernel_options.set_env(LDFLAGS=fuse_ld_flag, XLDFLAGS=fuse_ld_flag)
         if self.crossbuild:
             kernel_options.set_with_options(KERNEL_TRAMPOLINE=False)
             kernel_options.remove_var("DEBUG")
@@ -462,49 +461,34 @@ class _BuildFreeBSD(Project):
 
     def addCrossBuildOptions(self):
         # we also need to ensure that our SDK build tools are being picked up first
-        build_path = str(self.config.sdkBinDir) + ":" + str(self.crossBinDir)
-        self.make_args.env_vars["PATH"] = build_path
+        # build_path = str(self.config.sdkBinDir) + ":" + str(self.crossBinDir)
+        # self.make_args.env_vars["PATH"] = build_path
+
         # Tell glibc functions to be POSIX compatible
         # Would be ideal, but it seems like there is too much that depends on non-posix flags
         # self.common_options.env_vars["POSIXLY_CORRECT"] = "1"
-        self.make_args.set(PATH=build_path)
+        # self.make_args.set(PATH=build_path)
         # building without an external toolchain won't work:
         self.mipsToolchainPath = self.config.sdkDir
-        self.make_args.set_with_options(BINUTILS_BOOTSTRAP=False, ELFTOOLCHAIN_BOOTSTRAP=False)
-
+        self.make_args.set_with_options(BINUTILS_BOOTSTRAP=True, ELFTOOLCHAIN_BOOTSTRAP=True)
         # use clang for the build tools:
-        self.make_args.env_vars["CC"] = str(self.config.clangPath)
-        self.make_args.env_vars["CXX"] = str(self.config.clangPlusPlusPath)
-        # TODO: also set these? (I guess not as we always want to force crossbuilding and x86_64 is not recognized)
-        # self.common_options.env_vars["MACHINE"] = "amd64"
-        # self.common_options.env_vars["MACHINE_ARCH"] = "amd64"
+        self.make_args.set_env(CC=str(self.config.clangPath), CXX=str(self.config.clangPlusPlusPath))
 
         # we don't build elftoolchain during buildworld so for the kernel we need to set these variables
-        self.make_args.env_vars["XOBJDUMP"] = self.config.sdkBinDir / "llvm-objdump"
+        self.make_args.set_env(XOBJDUMP=self.config.sdkBinDir / "llvm-objdump")
         # TODO: use llvm-objcopy?
-        self.make_args.env_vars["OBJCOPY"] = self.config.sdkBinDir / "objcopy"
+        self.make_args.set_env(OBJCOPY=self.config.sdkBinDir / "objcopy")
         # This is not actually the path to the strip binary but rather a flag to install
         # self.make_args.env_vars["STRIP"] = self.config.sdkBinDir / "strip"
-        if IS_MAC:
-            # For some reason on a mac bmake can't execute elftoolchain objcopy -> use gnu version
-            # self._addRequiredSystemTool("gobjcopy", homebrewPackage="binutils")
-            # self.common_options.add(OBJDUMP="gobjdump", OBJCOPY="gobjcopy")
-            # DEBUG files are too big, can't use objcopy for serparate debug files
-            self.make_args.set_with_options(DEBUG_FILES=False)
-        else:
-            assert IS_LINUX, sys.platform
 
         # don't build all the bootstrap tools (just pretend we are running freebsd 42):
-        self.make_args.env_vars["OSRELDATE"] = "4204345"
+        # self.make_args.env_vars["OSRELDATE"] = "4204345"
 
         # localedef is really hard to crosscompile -> skip this for now
         self.make_args.set_with_options(LOCALES=False)
 
         # bootstrap tool won't build
-        self.make_args.set_with_options(SYSCONS=False,
-                                USB=False,
-                                GPL_DTC=False,
-                                )
+        self.make_args.set_with_options(SYSCONS=False, USB=False, GPL_DTC=False)
         self.make_args.set_with_options(CDDL=False)  # lots of bootstrap tools issues
 
         # needs lint binary but will also set MK_INCLUDES:=no which we need (see src.opts.mk)
@@ -542,6 +526,7 @@ class _BuildFreeBSD(Project):
             self.make_args.set_with_options(BOOT=False)
 
     def prepareFreeBSDCrossEnv(self):
+        assert False, "This is no longer needed"
         self.cleanDirectory(self.crossBinDir)
 
         # From Makefile.inc1:
@@ -585,12 +570,21 @@ import sys
 print("NOOP chflags:", sys.argv, file=sys.stderr)
 """, mode=0o755, overwrite=True)
 
+        # We need awk, sed and grep for the initial bootstrap-tools stage, when they get replaced with real ones
+        self.temporary_crossbuild_tools = ["awk", "sed", "grep", "sort", "find", "install", "mtree"]
+        for t in self.temporary_crossbuild_tools:
+                host_tools.append(t)
+        # awk is special because it may also be nawk (e.g. on Ubuntu)
+        awk = shutil.which("nawk") or shutil.which("awk") or "awk"
+        self.createSymlink(awk, self.crossBinDir / "awk", relative=False)
+
         for tool in host_tools:
             fullpath = shutil.which(tool, path=searchpath)
             if not fullpath:
                 fatalError("Missing", tool, "binary")
                 continue
             self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
+
 
         self.createSymlink(self.config.sdkBinDir / "objcopy", self.crossBinDir / "objcopy", relative=False)
         self.createSymlink(self.config.sdkBinDir / "llvm-objdump", self.crossBinDir / "objdump", relative=False)
@@ -604,13 +598,14 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         crossTools += "test [ sysctl makewhatis rmdir unifdef gensnmptree strfile".split()
         crossTools += "sort grep egrep fgrep rgrep zgrep zegrep zfgrep xargs".split()
         crossTools += ["uuencode", "uudecode"]  # needed by x86 kernel
+
         # TODO: freebsd version of sh?
-        for tool in crossTools:
-            assert not tool in host_tools, tool + " should not be linked from host"
-            fullpath = Path(self.config.otherToolsDir, "bin/freebsd-" + tool)
-            if not fullpath.is_file():
-                fatalError(tool, "binary is missing!")
-            self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
+        # for tool in crossTools:
+        #     assert not tool in host_tools, tool + " should not be linked from host"
+        #     fullpath = Path(self.config.otherToolsDir, "bin/freebsd-" + tool)
+        #     if not fullpath.is_file():
+        #         fatalError(tool, "binary is missing!")
+        #     self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
 
         # /bin/sh on Ubuntu doesn't like shift without any arguments, let's use bash as bin/sh instead...
         # This is a problem when running ncurses MKfallback.sh
@@ -625,11 +620,10 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                 statusUpdate("Can't build CHERIBSD on a non-FreeBSD host! Any targets that depend on this will need"
                              " to scp the required files from another server (see --frebsd-build-server options)")
                 return
-            else:
-                self.prepareFreeBSDCrossEnv()
+            # self.prepareFreeBSDCrossEnv()
         # remove any environment variables that could interfere with bmake running
         for k, v in os.environ.copy().items():
-            if k in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL", "MAKE_TERMERR", "MAKE_TERMOUT"):
+            if k in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL", "MAKE_TERMERR", "MAKE_TERMOUT", "MAKE"):
                 os.unsetenv(k)
                 del os.environ[k]
         if self.config.buildenv or self.config.libcheri_buildenv:
