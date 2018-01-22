@@ -396,7 +396,7 @@ class _BuildFreeBSD(Project):
 
     def _query_buildenv_path(self, args, var):
         try:
-            bw_flags = args.all_commandline_args + ["buildenv", "BUILDENV_SHELL=" + self.makeCommand + " -V " + var]
+            bw_flags = args.all_commandline_args + ["buildenv", "BUILDENV_SHELL=" + str(self.makeCommand) + " -V " + var]
             if self.crossbuild:
                 bw_flags.append("PATH=" + os.getenv("PATH"))
             # https://github.com/freebsd/freebsd/commit/1edb3ba87657e28b017dffbdc3d0b3a32999d933
