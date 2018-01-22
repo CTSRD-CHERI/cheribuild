@@ -252,9 +252,9 @@ class _BuildFreeBSD(Project):
             cross_prefix = str(self.mipsToolchainPath / "bin") + "/"
             target_flags = " -integrated-as -fcolor-diagnostics -mcpu=mips4"
             # for some reason this is not inferred....
-            if self.crossbuild:
-                # For some reason STRINGS is not set
-                self.cross_toolchain_config.set(STRINGS="strings")
+            # if self.crossbuild:
+            #     # For some reason STRINGS is not set
+            #     self.cross_toolchain_config.set(STRINGS="strings")
             self.cross_toolchain_config.set_with_options(RESCUE=False,  # Won't compile with CHERI clang yet
                                                          BOOT=False)  # bootloaders won't link with LLD yet
             # DONT SET XAS!!! It prevents bfd from being built
@@ -265,7 +265,7 @@ class _BuildFreeBSD(Project):
 
         self.externalToolchainCompiler = Path(cross_prefix + "clang")
         # TODO: should I be setting this in the environment instead?
-        self.cross_toolchain_config.set(
+        self.cross_toolchain_config.set_env(
             XCC=cross_prefix + "clang",
             XCXX=cross_prefix + "clang++",
             XCPP=cross_prefix + "clang-cpp",
@@ -275,7 +275,7 @@ class _BuildFreeBSD(Project):
         )
         if self.linker_for_world == "lld":
             # Don't set XLD when using bfd since it will pick up ld.bfd from the build directory
-            self.cross_toolchain_config.set(XLD=cross_prefix + "ld.lld"),
+            self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.lld"),
 
         if target_flags:
             self.cross_toolchain_config.set_env(XCFLAGS=target_flags)
@@ -396,13 +396,16 @@ class _BuildFreeBSD(Project):
 
     def _query_buildenv_path(self, args, var):
         try:
+            bw_flags = args.all_commandline_args + ["buildenv", "BUILDENV_SHELL=" + self.makeCommand + " -V " + var]
+            if self.crossbuild:
+                bw_flags.append("PATH=" + os.getenv("PATH"))
             # https://github.com/freebsd/freebsd/commit/1edb3ba87657e28b017dffbdc3d0b3a32999d933
-            bw_flags = args.all_commandline_args + ["buildenv", "BUILDENV_SHELL=make -V " + var]
             cmd = runCmd([self.makeCommand] + bw_flags, env=args.env_vars, cwd=self.sourceDir, runInPretendMode=True,
                          captureOutput=True)
             lines = cmd.stdout.strip().split(b"\n")
             last_line = lines[-1].decode("utf-8").strip()
             if last_line.startswith("/") and cmd.returncode == 0:
+                self.verbose_print("BUILDENV var", var, "was", last_line)
                 return Path(last_line)
             warningMessage("Failed to query", var, "-- output was:", lines)
             return None
@@ -516,14 +519,16 @@ class _BuildFreeBSD(Project):
         self.make_args.set_with_options(DEBUG_FILES=False)
 
         if self.target_arch == CrossCompileTarget.NATIVE:
-            self.make_args.set(CROSS_BINUTILS_PREFIX=str(self.config.sdkBinDir) + "/")
+            cross_binutils_prefix = str(self.config.sdkBinDir) + "/"
             self.make_args.set_with_options(BHYVE=False,
                                             # seems to be missing some include paths which appears to work on freebsd
                                             CTF=False)  # can't crossbuild ctfconvert yet
             self.make_args.set_with_options(BOOT=True)
         else:
-            self.make_args.set(CROSS_BINUTILS_PREFIX=str(self.config.sdkBinDir) + "/mips64-unknown-freebsd-")
+            cross_binutils_prefix = str(self.config.sdkBinDir) + "/mips64-unknown-freebsd-"
             self.make_args.set_with_options(BOOT=False)
+        # This should no longer be necessary since we can bootstrap elftoolchain
+        # self.make_args.set_env(CROSS_BINUTILS_PREFIX=cross_binutils_prefix)
 
     def prepareFreeBSDCrossEnv(self):
         assert False, "This is no longer needed"
