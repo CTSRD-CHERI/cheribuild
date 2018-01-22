@@ -473,7 +473,7 @@ class _BuildFreeBSD(Project):
         # self.make_args.set(PATH=build_path)
         # building without an external toolchain won't work:
         self.mipsToolchainPath = self.config.sdkDir
-        self.make_args.set_with_options(BINUTILS_BOOTSTRAP=True, ELFTOOLCHAIN_BOOTSTRAP=True)
+        self.make_args.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
         # use clang for the build tools:
         self.make_args.set_env(CC=str(self.config.clangPath), CXX=str(self.config.clangPlusPlusPath))
 
@@ -491,11 +491,9 @@ class _BuildFreeBSD(Project):
         self.make_args.set_with_options(LOCALES=False)
 
         # bootstrap tool won't build
-        self.make_args.set_with_options(SYSCONS=False, USB=False, GPL_DTC=False)
+        # self.make_args.set_with_options(SYSCONS=False, USB=False, GPL_DTC=False)
         self.make_args.set_with_options(CDDL=False)  # lots of bootstrap tools issues
 
-        # needs lint binary but will also set MK_INCLUDES:=no which we need (see src.opts.mk)
-        # self.common_options.add(TOOLCHAIN=False)
         self.make_args.set_with_options(BINUTILS=True, CLANG=False, GCC=False, GDB=False, LLD=False, LLDB=False)
 
         # TODO: build these for zoneinfo setup
