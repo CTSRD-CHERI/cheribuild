@@ -92,8 +92,15 @@ class BuildGDB(CrossCompileAutotoolsProject):
             "--disable-libstdcxx",
             # TODO:
             "--enable-build-with-cxx",
-            # "--enable-gdbtk",
         ])
+
+        # BUILD the gui:
+        if False and self.compiling_for_host():
+            self.configureArgs.append("--enable-gdbtk")
+            # if IS_MAC:
+                # self.configureArgs.append("--with-tcl=/usr/local/opt/tcl-tk/lib")
+                # self.configureEnvironment["PKG_CONFIG_PATH"] = "/usr/local/opt/tcl-tk/lib/pkgconfig:/usr/local/lib/pkgconfig"
+
         # extra ./configure environment variables:
         # compile flags
         self.warningFlags.extend(["-Wno-absolute-value", "-Wno-parentheses-equality", "-Wno-unknown-warning-option",
@@ -141,13 +148,13 @@ class BuildGDB(CrossCompileAutotoolsProject):
     @property
     def CC(self):
         if IS_MAC and self.compiling_for_host():
-            return shutil.which("gcc")
+            return shutil.which("gcc")  # For some reason it fails when using /usr/bin/cc
         return super().CC
 
     @property
     def CXX(self):
         if IS_MAC and self.compiling_for_host():
-            return shutil.which("g++")
+            return shutil.which("g++")  # For some reason it fails when using /usr/bin/c++
         return super().CXX
 
     def configure(self, **kwargs):
