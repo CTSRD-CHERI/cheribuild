@@ -101,26 +101,28 @@ def __filterEnv(env: dict) -> dict:
             result[k] = v
     return result
 
-def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remainingArgs, outputFile=None,
+
+def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remaining_args, outputFile=None,
                  colour=AnsiColour.yellow, cwd=None, env=None, sep=" ", printVerboseOnly=False, **kwargs):
     if not _cheriConfig or (_cheriConfig.quiet or (printVerboseOnly and not _cheriConfig.verbose)):
         return
     # also allow passing a single string
     if not type(arg1) is str:
-        allArgs = arg1
-        arg1 = allArgs[0]
-        remainingArgs = allArgs[1:]
-    newArgs = ("cd", shlex.quote(str(cwd)), "&&") if cwd else tuple()
+        all_args = arg1
+        arg1 = all_args[0]
+        remaining_args = all_args[1:]
+    prefix = ("cd", shlex.quote(str(cwd)), "&&") if cwd else tuple()
     if env:
         # only print the changed environment entries
-        filteredEnv = __filterEnv(env)
-        if filteredEnv:
-            newArgs += ("env",) + tuple(map(shlex.quote, (k + "=" + str(v) for k, v in filteredEnv.items())))
+        new_env_vars = __filterEnv(env)
+        if new_env_vars:
+            envvars = coloured(AnsiColour.cyan, commandline_to_str(k + "=" + str(v) for k, v in new_env_vars.items()))
+            prefix += ("env", envvars)
     # comma in tuple is required otherwise it creates a tuple of string chars
-    newArgs += (shlex.quote(str(arg1)),) + tuple(map(shlex.quote, map(str, remainingArgs)))
+    new_args = (shlex.quote(str(arg1)),) + tuple(map(shlex.quote, map(str, remaining_args)))
     if outputFile:
-        newArgs += (">", str(outputFile))
-    print(coloured(colour, newArgs, sep=sep), flush=True, **kwargs)
+        new_args += (">", str(outputFile))
+    print(coloured(colour, prefix, sep=sep), coloured(colour, new_args, sep=sep), flush=True, **kwargs)
 
 
 def getInterpreter(cmdline: "typing.Sequence[str]") -> "typing.Optional[typing.List[str]]":
@@ -134,9 +136,9 @@ def getInterpreter(cmdline: "typing.Sequence[str]") -> "typing.Optional[typing.L
         executable = Path(shutil.which(str(executable)))
     statusUpdate(executable, "is not executable, looking for shebang:", end=" ")
     with executable.open("r", encoding="utf-8") as f:
-        firstLine = f.readline()
-        if firstLine.startswith("#!"):
-            interpreter = shlex.split(firstLine[2:])
+        first_line = f.readline()
+        if first_line.startswith("#!"):
+            interpreter = shlex.split(first_line[2:])
             statusUpdate("Will run", executable, "using", interpreter)
             return interpreter
         else:
@@ -234,7 +236,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
 
 
 def commandline_to_str(args: "typing.Iterable[str]") -> str:
-    return " ".join(map(shlex.quote, args))
+    return " ".join((shlex.quote(str(s)) for s in args))
 
 
 class CompilerInfo(object):

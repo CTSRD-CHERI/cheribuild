@@ -252,5 +252,5 @@ def jenkins_main():
     except KeyboardInterrupt:
         sys.exit("Exiting due to Ctrl+C")
     except subprocess.CalledProcessError as err:
-        fatalError("Command ", "`" + " ".join(map(shlex.quote, err.cmd)) + "` failed with non-zero exit code",
+        fatalError("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code",
                    err.returncode)
