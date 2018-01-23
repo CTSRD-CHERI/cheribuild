@@ -95,9 +95,15 @@ class _BuildDiskImageBase(SimpleProject):
         # this means we can create a disk image without root privilege
         self.manifestFile = None  # type: Path
         self.extraFiles = []  # type: typing.List[Path]
+        self._addRequiredSystemTool("ssh-keygen")
         if IS_FREEBSD:
-            self._addRequiredSystemTool("ssh-keygen")
             self._addRequiredSystemTool("makefs")
+        else:
+            self._addRequiredSystemTool("freebsd-makefs", cheribuild_target="freebsd-bootstrap-tools")
+            self._addRequiredSystemTool("freebsd-install", cheribuild_target="freebsd-bootstrap-tools")
+
+        self.makefs_cmd = None
+        self.install_cmd = None
         self.dirsAddedToManifest = [Path(".")]  # Path().parents always includes a "." entry
         self.rootfsDir = sourceClass.rootfsDir(self.config)
         assert self.rootfsDir is not None
@@ -161,13 +167,13 @@ class _BuildDiskImageBase(SimpleProject):
                 self.dirsAddedToManifest.append(parent)
                 continue
             # print("Adding dir", str(baseDirectory / parent))
-            runCmd(["install", "-d"] + commonArgs + ["-m", self.getModeString(baseDirectory / parent),
+            runCmd([self.install_cmd, "-d"] + commonArgs + ["-m", self.getModeString(baseDirectory / parent),
                                                      str(self.rootfsDir / parent)], printVerboseOnly=True)
             self.dirsAddedToManifest.append(parent)
 
         # need to pass target file and destination dir so that METALOG can be filled correctly
         parentDir = self.rootfsDir / pathInTarget.parent
-        runCmd(["install"] + commonArgs + ["-m", mode, str(file), str(parentDir)], printVerboseOnly=True)
+        runCmd([self.install_cmd] + commonArgs + ["-m", mode, str(file), str(parentDir)], printVerboseOnly=True)
         if file in self.extraFiles:
             self.extraFiles.remove(file)  # remove it from extraFiles so we don't install it twice
 
@@ -271,9 +277,8 @@ class _BuildDiskImageBase(SimpleProject):
             else:
                 fatalError("qemu-img command was not found!", fixitHint="Make sure to build target qemu first")
 
-        makefs = shutil.which("makefs")
         runCmd([
-            makefs,
+            self.makefs_cmd,
             "-b", "30%",  # minimum 30% free blocks
             "-f", "30%",  # minimum 30% free inodes
             "-R", "128m",  # round up size to the next 16m multiple
@@ -323,6 +328,16 @@ class _BuildDiskImageBase(SimpleProject):
             self.__process()
 
     def __process(self):
+        self.makefs_cmd = shutil.which("freebsd-makefs")
+        self.install_cmd = shutil.which("freebsd-install")
+        # On FreeBSD we can use /usr/bin/makefs and /usr/bin/install
+        if IS_FREEBSD:
+            if not self.install_cmd:
+                self.install_cmd = shutil.which("install")
+            if not self.makefs_cmd:
+                self.makefs_cmd = shutil.which("makefs")
+        if not self.makefs_cmd or not self.install_cmd:
+            fatalError("Missing freebsd-install or freebsd-makefs command!")
         statusUpdate("Disk image will saved to", self.diskImagePath)
         statusUpdate("Extra files for the disk image will be copied from", self.extraFilesDir)
 

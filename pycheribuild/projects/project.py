@@ -202,13 +202,15 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         self.__requiredSystemTools = {}  # type: typing.Dict[str, typing.Any]
         self._systemDepsChecked = False
 
-    def _addRequiredSystemTool(self, executable: str, installInstructions=None, homebrewPackage=None):
+    def _addRequiredSystemTool(self, executable: str, installInstructions=None, homebrewPackage=None,
+                               cheribuild_target: str=None):
+        if not installInstructions and cheribuild_target:
+            installInstructions = "Run `cheribuild.py " + cheribuild_target + "`"
         if IS_MAC and not installInstructions:
             if not homebrewPackage:
                 homebrewPackage = executable
-            self.__requiredSystemTools[executable] = "Run `brew install " + homebrewPackage + "`"
-        else:
-            self.__requiredSystemTools[executable] = installInstructions
+            installInstructions = "Run `brew install " + homebrewPackage + "`"
+        self.__requiredSystemTools[executable] = installInstructions
 
     def queryYesNo(self, message: str = "", *, defaultResult=False, forceResult=True) -> bool:
         yesNoStr = " [Y]/n " if defaultResult else " y/[N] "
