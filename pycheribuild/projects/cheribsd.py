@@ -279,7 +279,7 @@ class _BuildFreeBSD(Project):
 
         if self.linker_for_world == "bfd":
             # self.cross_toolchain_config.set_env(XLDFLAGS="-fuse-ld=bfd")
-            target_flags += " -fuse-ld=bfd"
+            target_flags += " -fuse-ld=bfd -Qunused-arguments"
         else:
             assert self.linker_for_world == "lld"
             # TODO: we should have a better way of passing linker flags than adding them to XCFLAGS
