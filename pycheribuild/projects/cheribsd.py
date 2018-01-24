@@ -277,17 +277,22 @@ class _BuildFreeBSD(Project):
             # Don't set XLD when using bfd since it will pick up ld.bfd from the build directory
             self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.lld"),
 
+        if self.linker_for_world == "bfd":
+            # self.cross_toolchain_config.set_env(XLDFLAGS="-fuse-ld=bfd")
+            target_flags += " -fuse-ld=bfd"
+        else:
+            assert self.linker_for_world == "lld"
+            # TODO: we should have a better way of passing linker flags than adding them to XCFLAGS
+            linker_flags = "-fuse-ld=lld -Wl,-z,notext -Qunused-arguments"
+            # self.cross_toolchain_config.set_env(XLDFLAGS=linker_flags)
+            target_flags += " " + linker_flags
+
         if target_flags:
             self.cross_toolchain_config.set_env(XCFLAGS=target_flags)
 
     @property
     def buildworldArgs(self) -> MakeOptions:
         result = self.make_args.copy()
-        if self.linker_for_world == "bfd":
-            result.set_env(XLDFLAGS="-fuse-ld=bfd")
-        else:
-            assert self.linker_for_world == "lld"
-            result.set_env(XLDFLAGS="-fuse-ld=lld -Wl,--no-rosegment -Wl,-z,notext")
         # FIXME: once it works for buildkernel remove here
         if self.auto_obj:
             result.set_with_options(AUTO_OBJ=True)
