@@ -46,6 +46,7 @@ class BuildQEMU(AutotoolsProject):
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions()
         cls.magic128 = cls.addBoolOption("magic-128")
+        cls.debug_info = cls.addBoolOption("debug-info")
 
     @classmethod
     def qemu_binary(cls, config: CheriConfig):
@@ -68,7 +69,7 @@ class BuildQEMU(AutotoolsProject):
 
         # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
         # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
-        extraCFlags = "-O3 -Wno-error"
+        extraCFlags = "" if self.debug_info else "-O3"
         if shutil.which("pkg-config"):
             glibIncludes = runCmd("pkg-config", "--cflags-only-I", "glib-2.0", captureOutput=True,
                                   printVerboseOnly=True, runInPretendMode=True).stdout.decode("utf-8").strip()
@@ -96,6 +97,9 @@ class BuildQEMU(AutotoolsProject):
             "--disable-werror",
             "--extra-cflags=" + extraCFlags,
         ])
+        if self.debug_info:
+            self.configureArgs.extend(["--enable-debug", "--disable-strip"])
+
         if IS_LINUX:
             # "--enable-libnfs", # version on Ubuntu 14.04 is too old? is it needed?
             # self.configureArgs += ["--enable-kvm", "--enable-linux-aio", "--enable-vte", "--enable-sdl",
