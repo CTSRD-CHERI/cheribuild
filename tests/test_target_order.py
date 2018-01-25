@@ -22,8 +22,6 @@ from pycheribuild.projects.cheribsd import BuildCHERIBSD
 
 # Init code:
 BuildCHERIBSD.crossbuild = True
-CHERIBSD_TARGETS = ["cheribsd"] if IS_FREEBSD else ["freebsd-crossbuild", "cheribsd"]
-
 
 def _sort_targets(targets: typing.List[str], add_dependencies=False) -> typing.List[str]:
     real_targets = list(targetManager.targetMap[t] for t in targets)
@@ -40,7 +38,7 @@ def test_sdk():
                                           "libcxx-baremetal", "baremetal-sdk"]
     assert _sort_targets(["baremetal-sdk"]) == baremetal_deps
     # Ensure that cheribsd is added to deps even on Linux/Mac
-    cheribsd_deps = freestanding_deps + CHERIBSD_TARGETS + ["cheribsd-sysroot", "cheribsd-sdk"]
+    cheribsd_deps = freestanding_deps + ["cheribsd", "cheribsd-sysroot", "cheribsd-sdk"]
     assert _sort_targets(["cheribsd-sdk"]) == cheribsd_deps
 
     assert _sort_targets(["sdk"]) == (cheribsd_deps if IS_FREEBSD else freestanding_deps) + ["sdk"]
@@ -65,8 +63,9 @@ def test_disk_image_comes_second_last():
 
 
 def test_all_run_deps():
-    assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm"] + CHERIBSD_TARGETS + ["elftoolchain",
-       "binutils", "freestanding-sdk", "cheribsd-sysroot", "cheribsd-sdk", "gdb-mips", "disk-image", "run"]
+    assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm", "cheribsd", "elftoolchain", "binutils",
+                                                             "freestanding-sdk", "cheribsd-sysroot", "cheribsd-sdk",
+                                                             "gdb-mips", "disk-image", "run"]
 
 
 def test_run_disk_image():
