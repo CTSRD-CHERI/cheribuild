@@ -96,9 +96,13 @@ class BuildQEMU(AutotoolsProject):
             "--disable-rdma",
             "--disable-werror",
             "--extra-cflags=" + extraCFlags,
+
         ])
         if self.debug_info:
             self.configureArgs.extend(["--enable-debug", "--disable-strip"])
+        else:
+            # Try to optimize as much as possible:
+            self.configureArgs.extend(["--disable-stack-protector"])
 
         if IS_LINUX:
             # "--enable-libnfs", # version on Ubuntu 14.04 is too old? is it needed?
