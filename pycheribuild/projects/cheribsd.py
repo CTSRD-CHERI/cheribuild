@@ -120,7 +120,7 @@ class _BuildFreeBSD(Project):
                                                               default=buildKernelWithClang)
         cls.useExternalToolchainForWorld = cls.addBoolOption("use-external-toolchain-for-world", showHelp=True,
                                                              help="build world with the external toolchain", default=True)
-        cls.linker_for_world = cls.addConfigOption("linker-for-world", default="bfd", choices=["bfd", "lld"],
+        cls.linker_for_world = cls.addConfigOption("linker-for-world", default="lld", choices=["bfd", "lld"],
                                                    help="The linker to use for world")
         cls.linker_for_kernel = cls.addConfigOption("linker-for-kernel", default="lld", choices=["bfd", "lld"],
                                                     help="The linker to use for the kernel")
