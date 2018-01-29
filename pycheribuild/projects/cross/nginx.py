@@ -52,13 +52,16 @@ class BuildNginx(CrossCompileAutotoolsProject):
             self.COMMON_FLAGS.extend(["-pedantic",
                                       "-Wno-gnu-statement-expression",
                                       "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
-                                      "-Wno-extended-offsetof",
+                                      # "-Wno-extended-offsetof",
                                       "-Wno-format-pedantic",
                                       ])
             self.configureEnvironment["AR"] = str(self.config.sdkBinDir / "cheri-unknown-freebsd-ar")
+        # The makefile expects the current working directory to be the source dir. Therefore we add -f $build/Makefile
+        # This is also in the makefile generated in the source dir but it doesn't work with multiple build dirs
+        self.make_args.add_flags("-f", self.buildDir / "Makefile")
 
     def install(self, **kwargs):
-        # We have to run make inside the source directory so that it invokes make -f $build/Makefile
+        # We have to run make inside the source directory
         self.runMakeInstall(cwd=self.sourceDir)
         self.installFile(self.sourceDir / "fetchbench", self.real_install_root_dir / "sbin/fetchbench")
         # install the benchmark script
@@ -102,5 +105,5 @@ class BuildNginx(CrossCompileAutotoolsProject):
         super().configure(cwd=self.sourceDir)
 
     def compile(self, **kwargs):
-        # We have to run make inside the source directory so that it invokes make -f $build/Makefile
-        super().compile(cwd=self.sourceDir)
+        # The cwd for make needs to be the source dir and it expects an empty target name
+        self.runMake(cwd=self.sourceDir)
