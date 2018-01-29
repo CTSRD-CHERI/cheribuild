@@ -37,6 +37,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     doNotAddToTargets = True
     defaultOptimizationLevel = ["-O2"]
     add_host_target_build_config_options = False
+    # Should not be needed, but it seems like some of the tests are broken otherwise
+    make_kind = MakeCommandKind.GnuMake
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         super().__init__(config, target_arch)
