@@ -493,7 +493,7 @@ class _BuildFreeBSD(Project):
         # self.make_args.env_vars["OSRELDATE"] = "4204345"
 
         # localedef is really hard to crosscompile -> skip this for now
-        # self.make_args.set_with_options(LOCALES=False)
+        self.make_args.set_with_options(LOCALES=False)
 
         # These all seem to work now
         # self.make_args.set_with_options(SYSCONS=False, USB=False, GPL_DTC=False)
