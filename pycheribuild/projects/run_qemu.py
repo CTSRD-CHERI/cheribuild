@@ -140,7 +140,7 @@ class LaunchQEMUBase(SimpleProject):
         if self._forwardSSHPort:
             # bind the qemu ssh port to the hosts port
             qemuCommand += ["-redir", "tcp:" + str(self.sshForwardingPort) + "::22"]
-            print(coloured(AnsiColour.green, "\nListening for SSH connections on localhost:", self.sshForwardingPort))
+            print(coloured(AnsiColour.green, "\nListening for SSH connections on localhost:", self.sshForwardingPort, sep=""))
 
         runCmd(qemuCommand, stdout=sys.stdout, stderr=sys.stderr)  # even with --quiet we want stdout here
 
