@@ -99,10 +99,12 @@ class CrossCompileMixin(object):
             # https://github.com/CTSRD-CHERI/cheribsd/commit/f863a7defd1bdc797712096b6778940cfa30d901
             self.COMMON_FLAGS.append("-ftls-model=initial-exec")
             # use *-*-freebsd12 to default to libc++
-            if self.crossCompileTarget == CrossCompileTarget.CHERI:
+            if self.compiling_for_cheri():
                 self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "cheri-qemu-elf"
                 # TODO: should we use -mcpu=cheri128/256?
                 self.COMMON_FLAGS.extend(["-mabi=purecap", "-mcpu=mips4", "-cheri=" + self.config.cheriBitsStr])
+                if self.config.cheri_cap_table:
+                    self.COMMON_FLAGS.append("-cheri-cap-table")
             else:
                 assert self.crossCompileTarget == CrossCompileTarget.MIPS
                 self.targetTriple = "mips64-unknown-freebsd" if not self.baremetal else "mips64-qemu-elf"
