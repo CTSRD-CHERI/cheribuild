@@ -96,7 +96,7 @@ class BuildLLVM(CMakeProject):
             self.add_cmake_options(LLVM_ENABLE_ASSERTIONS=self.enable_assertions)
         if self.config.cheriBits == 128 and not self.config.unified_sdk:
             self.add_cmake_options(LLVM_CHERI_IS_128=True)
-        self.add_cmake_options(LLVM_LIT_ARGS="--max-time 3600 --timeout 120 -s -vv")
+        self.add_cmake_options(LLVM_LIT_ARGS="--max-time 3600 --timeout 300 -s -vv")
 
     def clang38InstallHint(self):
         if IS_FREEBSD:
