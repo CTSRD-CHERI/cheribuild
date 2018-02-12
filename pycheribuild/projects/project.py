@@ -147,7 +147,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if dep not in result:
                 result.append(dep)
             # now recursively add the other deps:
-            recursive_deps = targetManager.targetMap[dep].projectClass.allDependencyNames()
+            recursive_deps = targetManager.get_target(dep).projectClass.allDependencyNames()
             for r in recursive_deps:
                 if r not in result:
                     result.append(r)

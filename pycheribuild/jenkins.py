@@ -210,9 +210,9 @@ def _jenkins_main():
             create_sdk_from_archives(cheriConfig)
 
         assert len(cheriConfig.targets) == 1
-        target = targetManager.targetMap[cheriConfig.targets[0]]
-        for project in targetManager.targetMap.values():
-            cls = project.projectClass
+        target = targetManager.get_target(cheriConfig.targets[0])
+        for tgt in targetManager.targets():
+            cls = tgt.projectClass
             if issubclass(cls, Project):
                 cls.defaultInstallDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
                 cls.installDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))

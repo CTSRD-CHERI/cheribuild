@@ -132,8 +132,11 @@ class TargetManager(object):
         return self._allTargets.keys()
 
     @property
-    def targetMap(self) -> "typing.Dict[str, Target]":
-        return self._allTargets.copy()
+    def targets(self) -> "typing.Iterable[Target]":
+        return self._allTargets.values()
+
+    def get_target(self, name) -> Target:
+        return self._allTargets[name]
 
     def topologicalSort(self, targets: "typing.List[Target]") -> "typing.Iterable[typing.List[Target]]":
         # based on http://rosettacode.org/wiki/Topological_sort#Python
@@ -144,7 +147,7 @@ class TargetManager(object):
         possiblyMissingDependencies = functools.reduce(set.union, allDependencyNames, set())
         for dep in possiblyMissingDependencies:
             if dep not in data:
-                data[dep] = self.targetMap[dep].dependencies
+                data[dep] = self._allTargets[dep].dependencies
 
         # do the actual sorting
         while True:
@@ -187,7 +190,7 @@ class TargetManager(object):
                 assert not t.projectClass.dependenciesMustBeBuilt
                 # for aliases without full dependencies just add the direct dependencies
                 deps_to_add = t.projectClass.dependencies
-            chosen_targets.extend(self.targetMap[dep] for dep in deps_to_add)
+            chosen_targets.extend(self.get_target(dep) for dep in deps_to_add)
 
         return self.sort_in_dependency_order(chosen_targets)
 
@@ -210,7 +213,7 @@ class TargetManager(object):
             if targetName not in self._allTargets:
                 sys.exit(coloured(AnsiColour.red, "Target", targetName, "does not exist. Valid choices are",
                                   ",".join(self.targetNames)))
-            explicitlyChosenTargets.append(self.targetMap[targetName])
+            explicitlyChosenTargets.append(self.get_target(targetName))
 
         chosenTargets = self.get_all_targets(explicitlyChosenTargets, config.includeDependencies)
         if config.verbose:
