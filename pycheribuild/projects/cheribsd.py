@@ -133,10 +133,12 @@ class _BuildFreeBSD(Project):
                                                         " most CHERI tests/benchmarks", showHelp=True)
         cls.fastRebuild = cls.addBoolOption("fast", showHelp=True,
                                             help="Skip some (usually) unnecessary build steps to speed up rebuilds")
-        if not IS_FREEBSD:
-            cls.crossbuild = cls.addBoolOption("crossbuild", help="Try to compile FreeBSD on non-FreeBSD machines")
-        else:
+        if IS_FREEBSD:
             cls.crossbuild = False
+        elif is_jenkins_build():
+            cls.crossbuild = True
+        else:
+            cls.crossbuild = cls.addBoolOption("crossbuild", help="Try to compile FreeBSD on non-FreeBSD machines")
 
     def _stdoutFilter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
@@ -220,6 +222,7 @@ class _BuildFreeBSD(Project):
         self.make_args.set_with_options(LLD_IS_LD=False)
 
         self.destdir = self.installDir
+        self.installPrefix = Path("/")
         self.kernelToolchainAlreadyBuilt = False
         for option in self.makeOptions:
             if "=" in option:

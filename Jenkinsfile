@@ -18,13 +18,14 @@ pipeline {
           steps {
             ansiColor(colorMapName: 'xterm') {
               sh '''
+          set -e
           env | sort
           ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
           pip install pytest
           pytest -v --junit-xml 3.5.0-results.xml tests || echo "Some tests failed"
+          for i in $(./cheribuild.py --list-targets | tail -n +2); do WORKSPACE=$TMPDIR ./jenkins-cheri-build.py --cpu=cheri128 -p $i; done
           '''
             }
-            
             junit '3.5.0-results.xml'
           }
         }
@@ -40,10 +41,12 @@ pipeline {
           steps {
             ansiColor(colorMapName: 'xterm') {
               sh '''
+          set -e
           env | sort
           ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
           pip install pytest
           pytest -v --junit-xml 3.6-results.xml tests || echo "Some tests failed"
+          for i in $(./cheribuild.py --list-targets | tail -n +2); do WORKSPACE=$TMPDIR ./jenkins-cheri-build.py --cpu=cheri128 -p $i; done
           '''
             }
             
@@ -62,10 +65,12 @@ pipeline {
           steps {
             ansiColor(colorMapName: 'xterm') {
               sh '''
+          set -e
           env | sort
           ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
           pip install pytest
           pytest -v --junit-xml python-rc-results.xml tests || echo "Some tests failed"
+          for i in $(./cheribuild.py --list-targets | tail -n +2); do WORKSPACE=$TMPDIR ./jenkins-cheri-build.py --cpu=cheri128 -p $i; done
           '''
             }
             
@@ -82,9 +87,11 @@ pipeline {
           steps {
             ansiColor(colorMapName: 'xterm') {
               sh '''
+          set -e
           env | sort
           ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
           py.test-3 -v --junit-xml ubuntu-results.xml tests || echo "Some tests failed"
+          for i in $(./cheribuild.py --list-targets | tail -n +2); do WORKSPACE=$TMPDIR ./jenkins-cheri-build.py --cpu=cheri128 -p $i; done
           '''
             }
             

@@ -57,7 +57,7 @@ __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includ
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
            "warningMessage", "Type_T", "typing", "popen_handle_noexec",  # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latestClangTool",  # no-combine
-           "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo"]  # no-combine
+           "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build"]  # no-combine
 
 
 if sys.version_info < (3, 4):
@@ -87,6 +87,9 @@ IS_FREEBSD = sys.platform.startswith("freebsd")
 IS_MAC = sys.platform.startswith("darwin")
 _cheriConfig = None  # type: CheriConfig
 
+
+def is_jenkins_build() -> bool:
+    return os.getenv("_CHERIBUILD_JENKINS_BUILD") is not None
 
 # To make it easier to use this as a module (probably most of these commands should be in Project)
 def setCheriConfig(c: "CheriConfig"):

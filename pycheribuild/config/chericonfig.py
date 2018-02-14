@@ -123,7 +123,7 @@ class CheriConfig(object):
                                                  default="cheribuild-test")
 
         self.targets = None  # type: list
-        self.__optionalProperties = ["sysrootArchiveName"]
+        self.__optionalProperties = []
 
     def load(self):
         self.loader.load()
@@ -137,6 +137,9 @@ class CheriConfig(object):
 
     def _initializeDerivedPaths(self):
         self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
+        # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
+        os.environ["CHERI_BITS"] = self.cheriBitsStr
+        self.sysrootArchiveName = "cheri-sysroot" + self.cheriBitsStr + ".tar.gz"
 
     @property
     def makeJFlag(self):

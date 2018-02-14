@@ -181,6 +181,7 @@ def create_sdk_from_archives(cheriConfig):
 
 
 def _jenkins_main():
+    os.environ["_CHERIBUILD_JENKINS_BUILD"] = "1"
     allTargetNames = list(sorted(targetManager.targetNames))
     configLoader = JenkinsConfigLoader()
     # Register all command line options
