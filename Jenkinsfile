@@ -23,7 +23,9 @@ env | sort
 ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
 pip install pytest
 pytest -v --junit-xml 3.5.0-results.xml tests || echo "Some tests failed"
-for i in $(./cheribuild.py --list-targets | tail -n +2); do
+targets=$(./cheribuild.py --list-targets | tail -n +2)
+echo "targets=$targets"
+for i in $targets; do
   WORKSPACE=${TMPDIR:-/tmp} ./jenkins-cheri-build.py --cpu=cheri128 -p $i;
 done
 '''
@@ -49,7 +51,9 @@ env | sort
 ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
 pip install pytest
 pytest -v --junit-xml 3.5.0-results.xml tests || echo "Some tests failed"
-for i in $(./cheribuild.py --list-targets | tail -n +2); do
+targets=$(./cheribuild.py --list-targets | tail -n +2)
+echo "targets=$targets"
+for i in $targets; do
   WORKSPACE=${TMPDIR:-/tmp} ./jenkins-cheri-build.py --cpu=cheri128 -p $i;
 done
 '''
@@ -75,7 +79,9 @@ env | sort
 ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
 pip install pytest
 pytest -v --junit-xml 3.5.0-results.xml tests || echo "Some tests failed"
-for i in $(./cheribuild.py --list-targets | tail -n +2); do
+targets=$(./cheribuild.py --list-targets | tail -n +2)
+echo "targets=$targets"
+for i in $targets; do
   WORKSPACE=${TMPDIR:-/tmp} ./jenkins-cheri-build.py --cpu=cheri128 -p $i;
 done
 '''
@@ -99,7 +105,9 @@ env | sort
 ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
 pip install pytest
 pytest -v --junit-xml 3.5.0-results.xml tests || echo "Some tests failed"
-for i in $(./cheribuild.py --list-targets | tail -n +2); do
+targets=$(./cheribuild.py --list-targets | tail -n +2)
+echo "targets=$targets"
+for i in $targets; do
   WORKSPACE=${TMPDIR:-/tmp} ./jenkins-cheri-build.py --cpu=cheri128 -p $i;
 done
 '''
