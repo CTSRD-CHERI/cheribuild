@@ -273,10 +273,6 @@ class _BuildFreeBSD(Project):
             XOBJDUMP=cross_prefix + "llvm-objdump",
             OBJDUMP=cross_prefix + "llvm-objdump",
         )
-        if self.linker_for_world == "lld":
-            # Don't set XLD when using bfd since it will pick up ld.bfd from the build directory
-            self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.lld"),
-
         if self.linker_for_world == "bfd":
             # self.cross_toolchain_config.set_env(XLDFLAGS="-fuse-ld=bfd")
             target_flags += " -fuse-ld=bfd -Qunused-arguments"
@@ -286,6 +282,11 @@ class _BuildFreeBSD(Project):
             linker_flags = "-fuse-ld=lld -Qunused-arguments"
             # self.cross_toolchain_config.set_env(XLDFLAGS=linker_flags)
             target_flags += " " + linker_flags
+            # Don't set XLD when using bfd since it will pick up ld.bfd from the build directory
+            self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.lld"),
+
+        if self.linker_for_kernel == "lld" and self.linker_for_world == "lld":
+            self.cross_toolchain_config.set_with_options(BINUTILS_BOOTSTRAP=False)
 
         if target_flags:
             self.cross_toolchain_config.set_env(XCFLAGS=target_flags)
