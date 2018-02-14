@@ -404,7 +404,8 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                     # print("".join(jsonLines))
                     self._JSON = json.loads("".join(jsonLines), encoding="utf-8")
             else:
-                print("Configuration file", self._configPath, "does not exist, using only command line arguments.")
+                print(coloured(AnsiColour.green, "Configuration file", self._configPath,
+                               "does not exist, using only command line arguments."), file=sys.stderr)
         except Exception as e:
             print(coloured(AnsiColour.red, "Could not load config file", self._configPath, "-", e))
             if not input("Invalid config file " + str(self._configPath) + ". Continue? y/[N]").lower().startswith("y"):
