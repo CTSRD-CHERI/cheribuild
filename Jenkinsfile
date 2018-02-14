@@ -26,7 +26,7 @@ pytest -v --junit-xml 3.5.0-results.xml tests || echo "Some tests failed"
 targets=$(./cheribuild.py --list-targets | grep -v Available)
 echo "targets=$targets"
 for i in $targets; do
-  WORKSPACE=${TMPDIR:-/tmp} ./jenkins-cheri-build.py --cpu=cheri128 -p $i;
+  WORKSPACE=/tmp ./jenkins-cheri-build.py --cpu=cheri128 -p $i > /dev/null;
 done
 '''
         }
@@ -50,11 +50,11 @@ set -e
 env | sort
 ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
 pip install pytest
-pytest -v --junit-xml 3.5.0-results.xml tests || echo "Some tests failed"
+pytest -v --junit-xml 3.6-results.xml tests || echo "Some tests failed"
 targets=$(./cheribuild.py --list-targets | grep -v Available)
 echo "targets=$targets"
 for i in $targets; do
-  WORKSPACE=${TMPDIR:-/tmp} ./jenkins-cheri-build.py --cpu=cheri128 -p $i;
+  WORKSPACE=/tmp ./jenkins-cheri-build.py --cpu=cheri128 -p $i > /dev/null;
 done
 '''
         }
@@ -78,11 +78,11 @@ set -e
 env | sort
 ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
 pip install pytest
-pytest -v --junit-xml 3.5.0-results.xml tests || echo "Some tests failed"
+pytest -v --junit-xml python-rc-results.xml tests || echo "Some tests failed"
 targets=$(./cheribuild.py --list-targets | grep -v Available)
 echo "targets=$targets"
 for i in $targets; do
-  WORKSPACE=${TMPDIR:-/tmp} ./jenkins-cheri-build.py --cpu=cheri128 -p $i;
+  WORKSPACE=/tmp ./jenkins-cheri-build.py --cpu=cheri128 -p $i > /dev/null;
 done
 '''
         }
@@ -103,12 +103,12 @@ done
 set -e
 env | sort
 ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
-pip install pytest
-pytest -v --junit-xml 3.5.0-results.xml tests || echo "Some tests failed"
+# pip3 install pytest
+py.test-3 -v --junit-xml 3.5.0-results.xml tests || echo "Some tests failed"
 targets=$(./cheribuild.py --list-targets | grep -v Available)
 echo "targets=$targets"
 for i in $targets; do
-  WORKSPACE=${TMPDIR:-/tmp} ./jenkins-cheri-build.py --cpu=cheri128 -p $i;
+  WORKSPACE=/tmp ./jenkins-cheri-build.py --cpu=cheri128 -p $i > /dev/null;
 done
 '''
         }

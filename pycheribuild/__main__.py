@@ -93,6 +93,20 @@ def real_main():
                 cheriConfig.outputRoot == outputOption._getDefaultValue(cheriConfig):
             fatalError("Running cheribuild in docker with the default source/output/build directories is not supported")
 
+    if cheriConfig.listTargets:
+        print("Available targets are:\n ", "\n  ".join(allTargetNames))
+        sys.exit()
+    elif cheriConfig.dumpConfig:
+        print(cheriConfig.getOptionsJSON())
+        sys.exit()
+    elif cheriConfig.getConfigOption:
+        if cheriConfig.getConfigOption not in configLoader.options:
+            fatalError("Unknown config key", cheriConfig.getConfigOption)
+        option = configLoader.options[cheriConfig.getConfigOption]
+        # noinspection PyProtectedMember
+        print(option.__get__(cheriConfig, option._owningClass if option._owningClass else cheriConfig))
+        sys.exit()
+
     # create the required directories
     for d in (cheriConfig.sourceRoot, cheriConfig.outputRoot, cheriConfig.buildRoot):
         if d.exists():
@@ -143,35 +157,24 @@ def real_main():
             raise
         sys.exit()
 
-    if cheriConfig.listTargets:
-        print("Available targets are:\n ", "\n  ".join(allTargetNames))
-    elif cheriConfig.dumpConfig:
-        print(cheriConfig.getOptionsJSON())
-    elif cheriConfig.getConfigOption:
-        if cheriConfig.getConfigOption not in configLoader.options:
-            fatalError("Unknown config key", cheriConfig.getConfigOption)
-        option = configLoader.options[cheriConfig.getConfigOption]
-        # noinspection PyProtectedMember
-        print(option.__get__(cheriConfig, option._owningClass if option._owningClass else cheriConfig))
-    else:
-        if runEverythingTarget in cheriConfig.targets:
-            cheriConfig.targets = allTargetNames
-        if not cheriConfig.targets:
-            # Make --libcheri-buildenv and --buildenv without any targets imply cheribsd
-            if cheriConfig.libcheri_buildenv or cheriConfig.buildenv:
-                cheriConfig.targets.append("cheribsd")
-            else:
-                fatalError("At least one target name is required (see --list-targets).")
-        if not cheriConfig.quiet:
-            print("Sources will be stored in", cheriConfig.sourceRoot)
-            print("Build artifacts will be stored in", cheriConfig.outputRoot)
-        # Don't do the update check when tab-completing (otherwise it freezes)
-        if "_ARGCOMPLETE" not in os.environ and not cheriConfig.skipUpdate:  # no-combine
-            try:                                          # no-combine
-                updateCheck()                             # no-combine
-            except Exception as e:                        # no-combine
-                print("Failed to check for updates:", e)  # no-combine
-        targetManager.run(cheriConfig)
+    if runEverythingTarget in cheriConfig.targets:
+        cheriConfig.targets = allTargetNames
+    if not cheriConfig.targets:
+        # Make --libcheri-buildenv and --buildenv without any targets imply cheribsd
+        if cheriConfig.libcheri_buildenv or cheriConfig.buildenv:
+            cheriConfig.targets.append("cheribsd")
+        else:
+            fatalError("At least one target name is required (see --list-targets).")
+    if not cheriConfig.quiet:
+        print("Sources will be stored in", cheriConfig.sourceRoot)
+        print("Build artifacts will be stored in", cheriConfig.outputRoot)
+    # Don't do the update check when tab-completing (otherwise it freezes)
+    if "_ARGCOMPLETE" not in os.environ and not cheriConfig.skipUpdate:  # no-combine
+        try:                                          # no-combine
+            updateCheck()                             # no-combine
+        except Exception as e:                        # no-combine
+            print("Failed to check for updates:", e)  # no-combine
+    targetManager.run(cheriConfig)
 
 
 def main():
