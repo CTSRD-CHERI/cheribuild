@@ -104,7 +104,7 @@ set -e
 env | sort
 ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
 # pip3 install pytest
-py.test-3 -v --junit-xml 3.5.0-results.xml tests || echo "Some tests failed"
+py.test-3 -v --junit-xml ubuntu-results.xml tests || echo "Some tests failed"
 targets=$(./cheribuild.py --list-targets | grep -v Available)
 echo "targets=$targets"
 for i in $targets; do
