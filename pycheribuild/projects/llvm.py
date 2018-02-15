@@ -59,7 +59,8 @@ class BuildLLVM(CMakeProject):
             cls.no_default_sysroot = True
 
         cls.enable_assertions = cls.addBoolOption("assertions", help="build with assertions enabled", default=True)
-        cls.skip_lld = cls.addBoolOption("skip-lld", help="Don't build lld as part of the llvm target")
+        cls.skip_static_analyzer = cls.addBoolOption("skip-static-analyzer",
+                                                     help="Don't build the clang static analyzer")
         if includeClangRevision:
             cls.clangRepository, cls.clangRevision = addToolOptions("clang")
         if includeLldRevision:
@@ -78,10 +79,11 @@ class BuildLLVM(CMakeProject):
             LLVM_TOOL_LLDB_BUILD=False,
             LLVM_TOOL_LLD_BUILD=not self.skip_lld,
             LLVM_PARALLEL_LINK_JOBS=4,  # anything more causes too much I/O
-            # saves a bit of time and but might be slightly broken in current clang:
-            # CLANG_ENABLE_STATIC_ANALYZER=False,  # save some build time by skipping the static analyzer
-            # CLANG_ENABLE_ARCMT=False",  # need to disable ARCMT to disable static analyzer
         )
+        if self.skip_static_analyzer:
+            # save some build time by skipping the static analyzer
+            self.add_cmake_options(CLANG_ENABLE_STATIC_ANALYZER=False,
+                                   CLANG_ENABLE_ARCMT=False)  # also need to disable ARCMT to disable static analyzer
         if self.canUseLLd(self.cCompiler):
             self.add_cmake_options(LLVM_ENABLE_LLD=True)
         if not self.no_default_sysroot:
