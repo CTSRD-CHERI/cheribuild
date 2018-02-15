@@ -59,6 +59,7 @@ class BuildLLVM(CMakeProject):
             cls.no_default_sysroot = True
 
         cls.enable_assertions = cls.addBoolOption("assertions", help="build with assertions enabled", default=True)
+        cls.skip_lld = cls.addBoolOption("skip-lld", help="Don't build lld as part of the llvm target")
         cls.skip_static_analyzer = cls.addBoolOption("skip-static-analyzer",
                                                      help="Don't build the clang static analyzer")
         if includeClangRevision:
