@@ -101,9 +101,11 @@ class _BuildFreeBSD(Project):
                                                  help="Only build subdir DIR instead of the full tree.#"
                                                       "This uses the SUBDIR_OVERRIDE mechanism so will build much more"
                                                       "than just that directory")
-        cls.one_subdir_only = cls.addConfigOption("subdir", kind=str, metavar="DIR", showHelp=True,
-                                                 help="Only build subdir DIR instead of the full tree. "
-                                                      "Useful for quickly rebuilding an individual program/library")
+
+        cls.explicit_subdirs_only = cls.addConfigOption("subdir", kind=list, metavar="SUBDIRS", showHelp=True,
+            help="Only build subdirs SUBDIRS instead of the full tree. Useful for quickly rebuilding an individual"
+                 " programs/libraries. If more than one dir is passed they will be processed in order."
+                 " Note: This will break if not all dependencies have been built.")
 
         cls.keepOldRootfs = cls.addBoolOption("keep-old-rootfs",
             help="Don't remove the whole old rootfs directory.  This can speed up installing but may cause strange"
@@ -646,20 +648,21 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                 os.unsetenv(k)
                 del os.environ[k]
 
-        if self.one_subdir_only is not None:
+        if self.explicit_subdirs_only:
             # Allow building a single FreeBSD/CheriBSD directory using the BUILDENV_SHELL trick
             target = "libcheribuildenv" if self.config.libcheri_buildenv else "buildenv"
-            args = self.installworld_args
-            # For now building a single subdir should not be silent
-            args.remove_flag("-s")
-            make_in_subdir = "make -C " + shlex.quote(self.one_subdir_only) + " "
-            build_cmd = "sh -ex -c '{clean} && {build} && {install}'".format(
-                build=make_in_subdir + "all " + " ".join(self.jflag),
-                clean=make_in_subdir + "clean" if self.config.clean else "echo \"  Skipping make clean\"",
-                install=make_in_subdir + "install" if not self.config.skipInstall else "echo \"  Skipping make install\"")
-            args.set(BUILDENV_SHELL=build_cmd)
-            runCmd([self.makeCommand] + args.all_commandline_args + [target], env=args.env_vars,
-                   cwd=self.sourceDir)
+            for subdir in self.explicit_subdirs_only:
+                args = self.installworld_args
+                # For now building a single subdir should not be silent
+                args.remove_flag("-s")
+                make_in_subdir = "make -C " + shlex.quote(subdir) + " "
+                build_cmd = "sh -ex -c '{clean} && {build} && {install}'".format(
+                    build=make_in_subdir + "all " + " ".join(self.jflag),
+                    clean=make_in_subdir + "clean" if self.config.clean else "echo \"  Skipping make clean\"",
+                    install=make_in_subdir + "install" if not self.config.skipInstall else "echo \"  Skipping make install\"")
+                args.set(BUILDENV_SHELL=build_cmd)
+                runCmd([self.makeCommand] + args.all_commandline_args + [target], env=args.env_vars,
+                       cwd=self.sourceDir)
         elif self.config.buildenv or self.config.libcheri_buildenv:
             target = "libcheribuildenv" if self.config.libcheri_buildenv else "buildenv"
             args = self.buildworldArgs
