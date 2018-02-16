@@ -105,9 +105,9 @@ class _BuildFreeBSD(Project):
                                                  help="Only build subdir DIR instead of the full tree. "
                                                       "Useful for quickly rebuilding an individual program/library")
 
-        cls.keepOldRootfs = cls.addBoolOption("keep-old-rootfs", help="Don't remove the whole old rootfs directory. "
-                                              " This can speed up installing but may cause strange errors so is off "
-                                              "by default")
+        cls.keepOldRootfs = cls.addBoolOption("keep-old-rootfs",
+            help="Don't remove the whole old rootfs directory.  This can speed up installing but may cause strange"
+                 " errors so is off by default.")
         defaultExternalToolchain = ComputedDefaultValue(function=lambda config, proj: config.sdkDir,
                                                         asString="$CHERI_SDK_DIR")
         cls.mipsToolchainPath = cls.addPathOption("mips-toolchain", help="Path to the mips64-unknown-freebsd-* tools",
@@ -120,23 +120,22 @@ class _BuildFreeBSD(Project):
                                               showHelp=True)
         # override in CheriBSD
         cls.useExternalToolchainForKernel = cls.addBoolOption("use-external-toolchain-for-kernel", showHelp=True,
-                                                              help="build the kernel with the external toolchain",
-                                                              default=buildKernelWithClang)
+            help="build the kernel with the external toolchain", default=buildKernelWithClang)
         cls.useExternalToolchainForWorld = cls.addBoolOption("use-external-toolchain-for-world", showHelp=True,
-                                                             help="build world with the external toolchain", default=True)
+            help="build world with the external toolchain", default=True)
         cls.linker_for_world = cls.addConfigOption("linker-for-world", default="lld", choices=["bfd", "lld"],
                                                    help="The linker to use for world")
         cls.linker_for_kernel = cls.addConfigOption("linker-for-kernel", default="lld", choices=["bfd", "lld"],
                                                     help="The linker to use for the kernel")
-        cls.addDebugInfoFlag = cls.addBoolOption("debug-info",
-                                                 help="pass make flags for building debug info",
-                                                 default=True, showHelp=True)
+        cls.addDebugInfoFlag = cls.addBoolOption("debug-info", default=True, showHelp=True,
+                                                 help="pass make flags for building with debug info")
         cls.buildTests = cls.addBoolOption("build-tests", help="Build the tests too (-DWITH_TESTS)", showHelp=True)
-        cls.auto_obj = cls.addBoolOption("auto-obj", help="Use -DWITH_AUTO_OBJ (experimental)", showHelp=True, default=True)
-        cls.minimal = cls.addBoolOption("minimal", help="Don't build all of FreeBSD, just what is needed for running"
-                                                        " most CHERI tests/benchmarks", showHelp=True)
+        cls.auto_obj = cls.addBoolOption("auto-obj", help="Use -DWITH_AUTO_OBJ (experimental)", showHelp=True,
+                                         default=True)
+        cls.minimal = cls.addBoolOption("minimal", showHelp=True,
+            help="Don't build all of FreeBSD, just what is needed for running most CHERI tests/benchmarks")
         cls.fastRebuild = cls.addBoolOption("fast", showHelp=True,
-                                            help="Skip some (usually) unnecessary build steps to speed up rebuilds")
+            help="Skip some (usually) unnecessary build steps to speed up rebuilds")
         if IS_FREEBSD:
             cls.crossbuild = False
         elif is_jenkins_build():
@@ -166,15 +165,15 @@ class _BuildFreeBSD(Project):
         else:
             self._showLineStdoutFilter(line)
 
-    def __init__(self, config: CheriConfig, archBuildFlags: dict=None):
+    def __init__(self, config: CheriConfig, archBuildFlags: dict = None):
         super().__init__(config)
         if archBuildFlags is None:
             if self.target_arch == CrossCompileTarget.MIPS:
                 # The following is broken: (https://github.com/CTSRD-CHERI/cheribsd/issues/102)
                 # "CPUTYPE=mips64",  # mipsfpu for hardware float
-                archBuildFlags = {"TARGET":"mips", "TARGET_ARCH":"mips64"}
+                archBuildFlags = {"TARGET": "mips", "TARGET_ARCH": "mips64"}
             elif self.target_arch == CrossCompileTarget.NATIVE:
-                archBuildFlags = {"TARGET":"amd64"}
+                archBuildFlags = {"TARGET": "amd64"}
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake)
         self.make_args.set(**archBuildFlags)
         self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
@@ -230,7 +229,7 @@ class _BuildFreeBSD(Project):
         self.kernelToolchainAlreadyBuilt = False
         for option in self.makeOptions:
             if "=" in option:
-                args = {option.split("=")[0]:option.split("=")[1]}
+                args = {option.split("=")[0]: option.split("=")[1]}
                 self.make_args.set(**args)
             else:
                 self.make_args.add_flags(option)
@@ -341,7 +340,7 @@ class _BuildFreeBSD(Project):
         kernel_options.set(KERNCONF=kernconf)
         return kernel_options
 
-    def runMake(self, makeTarget="", *, options: MakeOptions=None, parallel=True, **kwargs):
+    def runMake(self, makeTarget="", *, options: MakeOptions = None, parallel=True, **kwargs):
         # make behaves differently with -j1 and not j flags -> remove the j flag if j1 is requested
         if parallel and self.config.makeJobs == 1:
             parallel = False
@@ -409,7 +408,8 @@ class _BuildFreeBSD(Project):
 
     def _query_buildenv_path(self, args, var):
         try:
-            bw_flags = args.all_commandline_args + ["buildenv", "BUILDENV_SHELL=" + str(self.makeCommand) + " -V " + var]
+            bw_flags = args.all_commandline_args + ["buildenv",
+                                                    "BUILDENV_SHELL=" + str(self.makeCommand) + " -V " + var]
             if self.crossbuild:
                 bw_flags.append("PATH=" + os.getenv("PATH"))
             # https://github.com/freebsd/freebsd/commit/1edb3ba87657e28b017dffbdc3d0b3a32999d933
@@ -515,9 +515,9 @@ class _BuildFreeBSD(Project):
 
         # TODO: build these for zoneinfo setup
         # "zic", "tzsetup"
-        #self.make_args.set_with_options(ZONEINFO=False)
+        # self.make_args.set_with_options(ZONEINFO=False)
 
-        #self.make_args.set_with_options(KERBEROS=False)  # needs some more work with bootstrap tools
+        # self.make_args.set_with_options(KERBEROS=False)  # needs some more work with bootstrap tools
 
         # won't work with CHERI
         # self.common_options.add(DIALOG=False)
@@ -593,7 +593,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         # We need awk, sed and grep for the initial bootstrap-tools stage, when they get replaced with real ones
         self.temporary_crossbuild_tools = ["awk", "sed", "grep", "sort", "find", "install", "mtree"]
         for t in self.temporary_crossbuild_tools:
-                host_tools.append(t)
+            host_tools.append(t)
         # awk is special because it may also be nawk (e.g. on Ubuntu)
         awk = shutil.which("nawk") or shutil.which("awk") or "awk"
         self.createSymlink(awk, self.crossBinDir / "awk", relative=False)
@@ -604,7 +604,6 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                 fatalError("Missing", tool, "binary")
                 continue
             self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
-
 
         self.createSymlink(self.config.sdkBinDir / "objcopy", self.crossBinDir / "objcopy", relative=False)
         self.createSymlink(self.config.sdkBinDir / "llvm-objdump", self.crossBinDir / "objdump", relative=False)
@@ -707,9 +706,9 @@ class BuildCHERIBSD(_BuildFreeBSD):
                                  "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)")
         # TODO: separate options for kernel/install?
         cls.kernelConfig = cls.addConfigOption("kernel-config", default=defaultKernelConfig, kind=str,
-                                               metavar="CONFIG", shortname="-kernconf", showHelp=True,
-                                               help="The kernel configuration to use for `make buildkernel` (default: "
-                                                    "CHERI_MALTA64 or CHERI128_MALTA64 depending on --cheri-bits)")
+           metavar="CONFIG", shortname="-kernconf", showHelp=True,
+           help="The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64 or CHERI128_MALTA64"
+                " depending on --cheri-bits)")
 
         defaultCheriCC = ComputedDefaultValue(
             function=lambda config, unused: config.sdkDir / "bin/clang",
@@ -732,15 +731,15 @@ class BuildCHERIBSD(_BuildFreeBSD):
         self.installAsRoot = os.getuid() == 0
         self.cheriCXX = self.cheriCC.parent / "clang++"
         archBuildFlags = {
-            "CHERI":config.cheriBitsStr,
-            "CHERI_CC":str(self.cheriCC),
-            "CHERI_CXX":str(self.cheriCXX),
-            "CHERI_LD":str(config.sdkBinDir / "ld.lld"),
+            "CHERI": config.cheriBitsStr,
+            "CHERI_CC": str(self.cheriCC),
+            "CHERI_CXX": str(self.cheriCXX),
+            "CHERI_LD": str(config.sdkBinDir / "ld.lld"),
             "TARGET": "mips",
             "TARGET_ARCH": "mips64"
         }
         if self.mipsOnly:
-            archBuildFlags = {"TARGET":"mips", "TARGET_ARCH":"mips64", "WITHOUT_LIB32": True}
+            archBuildFlags = {"TARGET": "mips", "TARGET_ARCH": "mips64", "WITHOUT_LIB32": True}
             # keep building a cheri kernel even with a mips userspace (mips may be broken...)
             # self.kernelConfig = "MALTA64"
         super().__init__(config, archBuildFlags=archBuildFlags)
