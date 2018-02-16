@@ -27,9 +27,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import collections
-import copy
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -98,9 +97,14 @@ class _BuildFreeBSD(Project):
     @classmethod
     def setupConfigOptions(cls, buildKernelWithClang: bool=True, makeOptionsShortname=None, **kwargs):
         super().setupConfigOptions(**kwargs)
-        cls.subdirOverride = cls.addConfigOption("subdir", kind=str, metavar="DIR", showHelp=True,
+        cls.subdirOverride = cls.addConfigOption("subdir-with-deps", kind=str, metavar="DIR", showHelp=True,
+                                                 help="Only build subdir DIR instead of the full tree.#"
+                                                      "This uses the SUBDIR_OVERRIDE mechanism so will build much more"
+                                                      "than just that directory")
+        cls.one_subdir_only = cls.addConfigOption("subdir", kind=str, metavar="DIR", showHelp=True,
                                                  help="Only build subdir DIR instead of the full tree. "
                                                       "Useful for quickly rebuilding an individual program/library")
+
         cls.keepOldRootfs = cls.addBoolOption("keep-old-rootfs", help="Don't remove the whole old rootfs directory. "
                                               " This can speed up installing but may cause strange errors so is off "
                                               "by default")
@@ -439,6 +443,12 @@ class _BuildFreeBSD(Project):
         warningMessage("Could not infer buildkernel objdir")
         return None
 
+    @property
+    def installworld_args(self):
+        result = self.buildworldArgs
+        result.env_vars.update(self.makeInstallEnv)
+        return result
+
     def install(self, **kwargs):
         if self.subdirOverride:
             statusUpdate("Skipping install step because SUBDIR_OVERRIDE was set")
@@ -452,13 +462,11 @@ class _BuildFreeBSD(Project):
         self.runMake("installkernel", options=install_kernel_args, parallel=False)
 
         if not self.config.skipBuildworld:
-            install_world_args = self.buildworldArgs
-            install_world_args.env_vars.update(self.makeInstallEnv)
+            install_world_args = self.installworld_args
             # https://github.com/CTSRD-CHERI/cheribsd/issues/220
             # installworld reads compiler metadata which was written by kernel-toolchain which means that
             # it will attempt to install libc++ because compiler for kernel is now clang and not GCC
             # as a workaround force writing the compiler metadata by invoking the _compiler-metadata target
-
             try:
                 self.runMake("_build-metadata", options=install_world_args)
             except subprocess.CalledProcessError:
@@ -638,7 +646,22 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
             if k in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL", "MAKE_TERMERR", "MAKE_TERMOUT", "MAKE"):
                 os.unsetenv(k)
                 del os.environ[k]
-        if self.config.buildenv or self.config.libcheri_buildenv:
+
+        if self.one_subdir_only is not None:
+            # Allow building a single FreeBSD/CheriBSD directory using the BUILDENV_SHELL trick
+            target = "libcheribuildenv" if self.config.libcheri_buildenv else "buildenv"
+            args = self.installworld_args
+            # For now building a single subdir should not be silent
+            args.remove_flag("-s")
+            make_in_subdir = "make -C " + shlex.quote(self.one_subdir_only) + " "
+            build_cmd = "sh -ex -c '{clean} && {build} && {install}'".format(
+                build=make_in_subdir + "all " + " ".join(self.jflag),
+                clean=make_in_subdir + "clean" if self.config.clean else "echo \"  Skipping make clean\"",
+                install=make_in_subdir + "install" if not self.config.skipInstall else "echo \"  Skipping make install\"")
+            args.set(BUILDENV_SHELL=build_cmd)
+            runCmd([self.makeCommand] + args.all_commandline_args + [target], env=args.env_vars,
+                   cwd=self.sourceDir)
+        elif self.config.buildenv or self.config.libcheri_buildenv:
             target = "libcheribuildenv" if self.config.libcheri_buildenv else "buildenv"
             args = self.buildworldArgs
             args.remove_flag("-s")  # buildenv should not be silent
