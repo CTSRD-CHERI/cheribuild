@@ -655,14 +655,25 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                 args = self.installworld_args
                 # For now building a single subdir should not be silent
                 args.remove_flag("-s")
-                make_in_subdir = "make -C " + shlex.quote(subdir) + " "
-                build_cmd = "sh -ex -c '{clean} && {build} && {install}'".format(
+                make_in_subdir = "make -C \"" + subdir + "\" "
+                if self.config.skipInstall:
+                    install_cmd = "echo \"  Skipping make install\""
+                else:
+                    install_cmd = make_in_subdir + "install"
+                    # if we are building a library also install to the sysroot so that other targets afterwards use the
+                    # updated static lib
+                    if subdir.startswith("lib/"):
+                        # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
+                        sysroot_var = sysroot="\"$$$${SYSROOT}\""
+                        install_cmd = "if [ -n {sysroot} ]; then {make} install DESTDIR={sysroot}; fi && ".format(
+                            make=make_in_subdir, sysroot=sysroot_var) + install_cmd
+                build_cmd = "{clean} && {build} && {install} && echo \"  Done.\"".format(
                     build=make_in_subdir + "all " + " ".join(self.jflag),
                     clean=make_in_subdir + "clean" if self.config.clean else "echo \"  Skipping make clean\"",
-                    install=make_in_subdir + "install" if not self.config.skipInstall else "echo \"  Skipping make install\"")
-                args.set(BUILDENV_SHELL=build_cmd)
-                runCmd([self.makeCommand] + args.all_commandline_args + [target], env=args.env_vars,
-                       cwd=self.sourceDir)
+                    install=install_cmd)
+                args.set(BUILDENV_SHELL="sh -ex -c '" + build_cmd + "'")
+                result = runCmd([self.makeCommand] + args.all_commandline_args + [target], env=args.env_vars,
+                                 cwd=self.sourceDir)
         elif self.config.buildenv or self.config.libcheri_buildenv:
             target = "libcheribuildenv" if self.config.libcheri_buildenv else "buildenv"
             args = self.buildworldArgs
