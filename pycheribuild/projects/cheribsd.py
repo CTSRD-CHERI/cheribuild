@@ -671,7 +671,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                     build=make_in_subdir + "all " + " ".join(self.jflag),
                     clean=make_in_subdir + "clean" if self.config.clean else "echo \"  Skipping make clean\"",
                     install=install_cmd)
-                args.set(BUILDENV_SHELL="sh -ex -c '" + build_cmd + "'")
+                args.set(BUILDENV_SHELL="sh -ex -c '" + build_cmd + "' || exit 1")
                 result = runCmd([self.makeCommand] + args.all_commandline_args + [target], env=args.env_vars,
                                  cwd=self.sourceDir)
         elif self.config.buildenv or self.config.libcheri_buildenv:
