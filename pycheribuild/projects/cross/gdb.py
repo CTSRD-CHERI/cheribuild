@@ -30,7 +30,7 @@
 
 from .crosscompileproject import *
 from ..cheribsd import BuildCHERIBSD
-from ...utils import runCmd, statusUpdate, IS_MAC
+from ...utils import runCmd, statusUpdate, IS_MAC, warningMessage, fatalError
 
 import os
 import shutil
@@ -58,7 +58,7 @@ class TemporarilyRemoveProgramsFromSdk(object):
 class BuildGDB(CrossCompileAutotoolsProject):
     defaultInstallDir = lambda config, cls: BuildCHERIBSD.rootfsDir(config) / "usr/local"
     repository = "https://github.com/bsdjhb/gdb.git"
-    gitBranch = "mips_cheri"
+    gitBranch = "mips_cheri-8.0.1"
     make_kind = MakeCommandKind.GnuMake
     defaultLinker = "lld"
     defaultOptimizationLevel = ["-O2"]
@@ -144,6 +144,17 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.configureEnvironment["CXXFLAGS_FOR_BUILD"] = "-g"
         # TODO: do I need these:
         """(cd $obj; env INSTALL="/usr/bin/install -c "  INSTALL_DATA="install   -m 0644"  INSTALL_LIB="install    -m 444"  INSTALL_PROGRAM="install    -m 555"  INSTALL_SCRIPT="install   -m 555"   PYTHON="${PYTHON}" SHELL=/bin/sh CONFIG_SHELL=/bin/sh CONFIG_SITE=/usr/ports/Templates/config.site ../configure ${CONFIGURE_ARGS} )"""
+
+    def update(self):
+        super().update()
+        status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
+                        captureOutput=True, printVerboseOnly=True, cwd=self.sourceDir)
+        print("Status = ", status.stdout)
+        if status.stdout.startswith(b"## mips_cheri..."):
+            warningMessage("You are trying to build the old unsupported mips_cheri branch. You should be using",
+                           self.gitBranch)
+            if not self.queryYesNo("Are you sure you want to continue?", forceResult=False):
+                fatalError("Wrong branch!")
 
     @property
     def CC(self):
