@@ -677,11 +677,13 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                     clean=make_in_subdir + "clean" if self.config.clean else "echo \"  Skipping make clean\"",
                     install=install_cmd)
                 args.set(BUILDENV_SHELL="sh -ex -c '" + build_cmd + "' || exit 1")
+                statusUpdate("Building", subdir, "using", buildenv_target, "target")
                 runCmd([self.makeCommand] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
                        cwd=self.sourceDir)
                 # If we are building a library we want to build both the CHERI and the mips version (unless the
                 # user explicitly specified --libcheri-buildenv)
                 if self.target_arch == CrossCompileTarget.CHERI and is_lib and buildenv_target != "libcheribuildenv":
+                    statusUpdate("Building", subdir, "using libcheribuildenv target")
                     runCmd([self.makeCommand] + args.all_commandline_args + ["libcheribuildenv"], env=args.env_vars,
                            cwd=self.sourceDir)
 
