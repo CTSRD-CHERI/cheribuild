@@ -648,11 +648,16 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                 os.unsetenv(k)
                 del os.environ[k]
 
+        buildenv_target = "buildenv"
+        if self.target_arch == CrossCompileTarget.CHERI and self.config.libcheri_buildenv:
+            buildenv_target = "libcheribuildenv"
+
         if self.explicit_subdirs_only:
             # Allow building a single FreeBSD/CheriBSD directory using the BUILDENV_SHELL trick
             target = "libcheribuildenv" if self.config.libcheri_buildenv else "buildenv"
             for subdir in self.explicit_subdirs_only:
                 args = self.installworld_args
+                is_lib = subdir.startswith("lib/")
                 # For now building a single subdir should not be silent
                 args.remove_flag("-s")
                 make_in_subdir = "make -C \"" + subdir + "\" "
@@ -662,7 +667,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                     install_cmd = make_in_subdir + "install"
                     # if we are building a library also install to the sysroot so that other targets afterwards use the
                     # updated static lib
-                    if subdir.startswith("lib/"):
+                    if is_lib:
                         # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
                         sysroot_var = sysroot="\"$$$${SYSROOT}\""
                         install_cmd = "if [ -n {sysroot} ]; then {make} install DESTDIR={sysroot}; fi && ".format(
@@ -672,13 +677,18 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                     clean=make_in_subdir + "clean" if self.config.clean else "echo \"  Skipping make clean\"",
                     install=install_cmd)
                 args.set(BUILDENV_SHELL="sh -ex -c '" + build_cmd + "' || exit 1")
-                result = runCmd([self.makeCommand] + args.all_commandline_args + [target], env=args.env_vars,
-                                 cwd=self.sourceDir)
+                runCmd([self.makeCommand] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
+                       cwd=self.sourceDir)
+                # If we are building a library we want to build both the CHERI and the mips version (unless the
+                # user explicitly specified --libcheri-buildenv)
+                if self.target_arch == CrossCompileTarget.CHERI and is_lib and buildenv_target != "libcheribuildenv":
+                    runCmd([self.makeCommand] + args.all_commandline_args + ["libcheribuildenv"], env=args.env_vars,
+                           cwd=self.sourceDir)
+
         elif self.config.buildenv or self.config.libcheri_buildenv:
-            target = "libcheribuildenv" if self.config.libcheri_buildenv else "buildenv"
             args = self.buildworldArgs
             args.remove_flag("-s")  # buildenv should not be silent
-            runCmd([self.makeCommand] + args.all_commandline_args + [target], env=args.env_vars,
+            runCmd([self.makeCommand] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
                    cwd=self.sourceDir)
         else:
             super().process()
