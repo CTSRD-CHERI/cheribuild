@@ -134,6 +134,8 @@ class _BuildFreeBSD(Project):
         cls.buildTests = cls.addBoolOption("build-tests", help="Build the tests too (-DWITH_TESTS)", showHelp=True)
         cls.auto_obj = cls.addBoolOption("auto-obj", help="Use -DWITH_AUTO_OBJ (experimental)", showHelp=True,
                                          default=True)
+        cls.with_manpages = cls.addBoolOption("with-manpages", help="Also install manpages. This is off by default"
+                                                                    " since they can just be read from the host.")
         cls.minimal = cls.addBoolOption("minimal", showHelp=True,
             help="Don't build all of FreeBSD, just what is needed for running most CHERI tests/benchmarks")
         cls.fastRebuild = cls.addBoolOption("fast", showHelp=True,
@@ -204,6 +206,9 @@ class _BuildFreeBSD(Project):
         # tests off by default because they take a long time and often seems to break
         # the creation of disk-image (METALOG is invalid)
         self.make_args.set_with_options(TESTS=self.buildTests)
+
+        # only build manpages by default
+        self.make_args.set_with_options(MAN=self.with_manpages)
 
         if self.minimal:
             self.make_args.set_with_options(MAN=False, KERBEROS=False, SVN=False, SVNLITE=False, MAIL=False,
