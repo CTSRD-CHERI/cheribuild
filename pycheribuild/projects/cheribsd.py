@@ -654,12 +654,12 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
 
         if self.explicit_subdirs_only:
             # Allow building a single FreeBSD/CheriBSD directory using the BUILDENV_SHELL trick
-            target = "libcheribuildenv" if self.config.libcheri_buildenv else "buildenv"
             for subdir in self.explicit_subdirs_only:
                 args = self.installworld_args
                 is_lib = subdir.startswith("lib/")
-                # For now building a single subdir should not be silent
-                args.remove_flag("-s")
+                # For now building a single subdir should not be silent (unless --quiet is specified)
+                if not self.config.quiet:
+                    args.remove_flag("-s")
                 make_in_subdir = "make -C \"" + subdir + "\" "
                 if self.config.skipInstall:
                     install_cmd = "echo \"  Skipping make install\""
