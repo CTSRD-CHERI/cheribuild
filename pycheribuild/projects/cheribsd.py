@@ -202,6 +202,9 @@ class _BuildFreeBSD(Project):
 
         if self.addDebugInfoFlag:
             self.make_args.set(DEBUG_FLAGS="-g")
+            # Don't split the debug info from the binary, just keep it as part of the binary
+            # This means we can just scp the file over to a cheribsd instace, run gdb and get symbols and sources.
+            self.make_args.set_with_options(DEBUG_FILES=False)
 
         # tests off by default because they take a long time and often seems to break
         # the creation of disk-image (METALOG is invalid)
