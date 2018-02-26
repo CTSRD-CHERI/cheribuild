@@ -61,7 +61,10 @@ class Target(object):
             return
         # instantiate the project and run it
         starttime = time.time()
-        with setEnv(PATH=self.project.config.dollarPathWithOtherTools):
+        new_env = {"PATH":self.project.config.dollarPathWithOtherTools}
+        if self.project.config.clang_colour_diags:
+            new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
+        with setEnv(**new_env):
             self.project.process()
         statusUpdate("Built target '" + self.name + "' in", time.time() - starttime, "seconds")
         self._completed = True

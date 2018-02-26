@@ -96,6 +96,9 @@ class CheriConfig(object):
         self.forceConfigure = None  # type: bool
         self.unified_sdk = loader.addBoolOption("unified-sdk", help="Build a single SDK instead of separate 128"
                                                 " and 256 bits ones", default=True)
+
+        self.clang_colour_diags = loader.addBoolOption("clang-colour-diags", "-clang-color-diags", default=True,
+                                                       help="Force CHERI clang to emit coloured diagnostics")
         self.use_sdk_clang_for_native_xbuild = loader.addBoolOption("use-sdk-clang-for-native-xbuild",
                                                                     help="Compile cross-compile project with CHERI "
                                                                          "clang from the SDK instead of host compiler")
