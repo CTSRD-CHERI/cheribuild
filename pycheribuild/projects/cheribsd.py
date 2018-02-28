@@ -677,10 +677,11 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                         sysroot_var = sysroot="\"$$$${SYSROOT}\""
                         install_cmd = "if [ -n {sysroot} ]; then {make} install DESTDIR={sysroot}; fi && ".format(
                             make=make_in_subdir, sysroot=sysroot_var) + install_cmd
-                build_cmd = "{clean} && {build} && {install} && echo \"  Done.\"".format(
+                colour_diags = "export CLANG_FORCE_COLOR_DIAGNOSTICS=always; " if self.config.clang_colour_diags else ""
+                build_cmd = "{colour_diags} {clean} && {build} && {install} && echo \"  Done.\"".format(
                     build=make_in_subdir + "all " + " ".join(self.jflag),
                     clean=make_in_subdir + "clean" if self.config.clean else "echo \"  Skipping make clean\"",
-                    install=install_cmd)
+                    install=install_cmd, colour_diags=colour_diags)
                 args.set(BUILDENV_SHELL="sh -ex -c '" + build_cmd + "' || exit 1")
                 statusUpdate("Building", subdir, "using", buildenv_target, "target")
                 runCmd([self.makeCommand] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
