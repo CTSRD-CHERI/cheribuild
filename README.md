@@ -149,10 +149,28 @@ For example if you want cheribuild.py to behave as if you had passed
   }
 }
 ```
+### Prefixed cheribuild.py symlinks to select config file
 
 If you invoke cheribuild.py as a prefixed command (e.g. debug-cheribuild.py, stable-cheribuild.py) it will
 read the file `~/.config/{prefix}-cheribuild.json` instead. This makes it easy to build
 debug and release builds of e.g. LLVM or build CheriBSD with various different flags.
+
+### Including config files
+
+If you have many config files (e.g. cheribsd-purecap, debug, release, etc.) it is now
+possible to `#include` a base config file and only write the settings that are different.
+
+For example a `~/.config/purecap-cheribuild.json` could look like this:
+
+```json
+{
+	"build-root": "/build-purecap"
+	"#include": "cheribuild-common.json"
+	"cheribsd" : {
+		"build-options": ["-DWITH_CHERI_PURE"]
+	}
+}
+```
 
 ## Available Targets
 
