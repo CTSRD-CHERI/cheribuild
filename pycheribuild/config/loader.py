@@ -332,11 +332,23 @@ class DefaultValueOnlyConfigLoader(ConfigLoaderBase):
     def __init__(self):
         super().__init__(DefaultValueOnlyConfigOption)
 
-    def finalizeOptions(self, availableTargets: list):
+    def finalizeOptions(self, availableTargets: list, **kwargs):
         pass
 
     def load(self):
         pass
+
+
+# https://stackoverflow.com/a/14902564/894271
+def dict_raise_on_duplicates(ordered_pairs):
+    """Reject duplicate keys."""
+    d = {}
+    for k, v in ordered_pairs:
+        if k in d:
+            raise SyntaxError("duplicate key: %r" % (k,))
+        else:
+            d[k] = v
+    return d
 
 class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
     def __init__(self):
@@ -389,8 +401,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                                                  help=argparse.SUPPRESS, choices=availableTargets)
             unparsed.completer = targetCompleter
 
-    @staticmethod
-    def __load_json_with_comments(config_path: Path) -> typing.Dict[str, typing.Any]:
+    def __load_json_with_comments(self, config_path: Path) -> typing.Dict[str, typing.Any]:
         """
         Loads a JSON file ignoring any lines that start with '#' or '//'
         :param config_path: path to the json file
@@ -403,8 +414,9 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 if not stripped.startswith("#") and not stripped.startswith("//"):
                     json_lines.append(line)
             # print("".join(jsonLines))
-            result = json.loads("".join(json_lines), encoding="utf-8")
-            print("Parsed", config_path, "as", result)
+            result = json.loads("".join(json_lines), object_pairs_hook=dict_raise_on_duplicates, encoding="utf-8")
+            if self._parsedArgs and self._parsedArgs.verbose is True:
+                print("Parsed", config_path, "as", coloured(AnsiColour.cyan, json.dumps(result)))
             return result
 
     def __load_json_with_includes(self, config_path: Path):
@@ -415,7 +427,9 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             base_json = self.__load_json_with_includes(included_path)
             base_json.update(result)
             result = base_json
-            print("JSON after including", included_path, "is", result)
+            if self._parsedArgs and self._parsedArgs.verbose is True:
+                print(coloured(AnsiColour.cyan, "Included JSON config file", included_path))
+                print("New result is", coloured(AnsiColour.cyan, json.dumps(result)))
 
         return result
 

@@ -27,7 +27,7 @@ _targets_registered = False
 class TestArgumentParsing(TestCase):
 
     @staticmethod
-    def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")):
+    def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")) -> DefaultCheriConfig:
         global _targets_registered
         global _cheriConfig
         if not _targets_registered:
@@ -42,6 +42,13 @@ class TestArgumentParsing(TestCase):
         # pprint.pprint(vars(ret))
         assert ConfigLoaderBase._cheriConfig
         return ConfigLoaderBase._cheriConfig
+
+    @staticmethod
+    def _parse_config_file_and_args(config_file_contents: bytes, *args) -> DefaultCheriConfig:
+        with tempfile.NamedTemporaryFile() as t:
+            config = Path(t.name)
+            config.write_bytes(config_file_contents)
+            return TestArgumentParsing._parse_arguments(list(args), config_file=config)
 
     def test_skip_update(self):
         # default is false:
@@ -85,6 +92,10 @@ class TestArgumentParsing(TestCase):
             # check that source root can be overridden
             self._parse_arguments(["--source-root=/y"])
             self.assertEqual(BuildCheriBSDDiskImage.extraFilesDir, Path("/y/extra-files"))
+
+    def test_duplicate_key(self):
+        with self.assertRaisesRegex(SyntaxError, "duplicate key: 'cheri-bits'"):
+            self._parse_config_file_and_args(b'{ "cheri-bits": 128, "some-other-key": "abc", "cheri-bits": 256 }')
 
     def _get_config_with_include(self, tmpdir: Path, config_json: bytes, workdir: Path = None):
         if not workdir:
@@ -145,6 +156,11 @@ class TestArgumentParsing(TestCase):
             # Nonexistant paths should raise an error
             with self.assertRaisesRegex(FileNotFoundError, 'No such file or directory'):
                 self._get_config_with_include(config_dir, b'{ "#include": "bad-path.json"}')
+
+            # Currently only one #include per config file is allowed
+            # TODO: this could be supported but it might be better to accept a list instead?
+            with self.assertRaisesRegex(SyntaxError, "duplicate key: '#include"):
+                self._get_config_with_include(config_dir, b'{ "#include": "128-common.json", "foo": "bar", "#include": "256-common.json"}')
 
 
 if __name__ == '__main__':
