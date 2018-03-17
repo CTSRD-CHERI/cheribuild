@@ -368,7 +368,8 @@ class _BuildFreeBSD(Project):
                 builddir = root_builddir
         else:
             builddir = root_builddir
-        assert not str(builddir.resolve().relative_to(self.buildDir.resolve())).startswith(".."), builddir
+        if builddir.exists() and self.buildDir.exists():
+            assert not str(builddir.resolve().relative_to(self.buildDir.resolve())).startswith(".."), builddir
         return self.asyncCleanDirectory(builddir)
 
     def _buildkernel(self, kernconf: str):
