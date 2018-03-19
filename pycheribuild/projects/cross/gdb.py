@@ -79,7 +79,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.configureArgs.extend([
             "--disable-nls",
             "--enable-tui",
-            "--disable-ld",
+            "--enable-ld", # "--disable-ld",
             "--enable-64-bit-bfd",
             "--without-gnu-as",
             "--with-separate-debug-dir=/usr/lib/debug",
@@ -178,7 +178,21 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
     def compile(self, **kwargs):
         with TemporarilyRemoveProgramsFromSdk(["as", "ld", "objcopy", "objdump"], self.config):
+            # also install objdump
+            self.runMake(makeTarget="all-binutils", cwd=self.buildDir)
             self.runMake(makeTarget="all-gdb", cwd=self.buildDir)
 
     def install(self, **kwargs):
         self.runMakeInstall(target="install-gdb")
+        # Install the binutils prefixed with g (like homebrew does it on MacOS)
+        # objdump is useful for cases where CHERI llvm-objdump doesn't print sensible source lines
+        # Also install most of the other tools in case they work better than elftoolchain
+        # TODO: also build upstream ld.bfd?
+        binutils = ("objdump", "objcopy", "addr2line", "readelf", "ar", "ranlib", "size", "strings")
+        if self.compiling_for_host():
+            for util in binutils:
+                self.installFile(self.buildDir / "binutils" / util, self.config.sdkBinDir / ("g" + util))
+            # nm and c++filt have a different name in the build dir:
+            self.installFile(self.buildDir / "binutils/cxxfilt", self.config.sdkBinDir / "gc++filt")
+            self.installFile(self.buildDir / "binutils/nm-new", self.config.sdkBinDir / "gnm")
+            self.installFile(self.buildDir / "binutils/strip-new", self.config.sdkBinDir / "gstrip")
