@@ -64,7 +64,7 @@ class BuildQEMU(AutotoolsProject):
         self._addRequiredSystemTool("autoreconf", homebrewPackage="autoconf")
         self._addRequiredSystemTool("aclocal", homebrewPackage="automake")
         self._addRequiredSystemTool("python", installInstructions="QEMU needs Python 2 installed as the python binary")
-        self._addRequiredSystemTool("pixmap", homebrewPackage="pixmap")
+        self._addRequiredSystemTool("pixman", homebrewPackage="pixman")
         
         # TODO: suggest on Ubuntu install libglib2.0-dev libpixman-1-dev libsdl2-dev libgtk2.0-dev
 

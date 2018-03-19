@@ -532,6 +532,6 @@ Options for target 'qtbase':
 # Dependencies
 
 ## FreeBSD
-`pkg install gmake pkgconf libtool autotools python27 pixmap python glib`
+`pkg install gmake pkgconf libtool autotools python27 pixman python glib`
 
 
