@@ -528,3 +528,10 @@ Options for target 'qtbase':
                         build the Qt examples (default: 'False')
 
 ```
+
+# Dependencies
+
+## FreeBSD
+`pkg install gmake pkgconf libtool autotools python27 pixman python glib`
+
+
