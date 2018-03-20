@@ -1,7 +1,10 @@
 import sys
 import tempfile
 import unittest
-import typing
+try:
+    import typing
+except ImportError:
+    typing = {}
 from pathlib import Path
 from unittest import TestCase
 from pycheribuild.utils import *
