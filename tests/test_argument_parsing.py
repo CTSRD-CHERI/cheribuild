@@ -24,8 +24,12 @@ from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage
 _targets_registered = False
 
 
-class TestArgumentParsing(TestCase):
+# python 3.4 compatibility
+def write_bytes(path: Path, contents: bytes):
+    with path.open(mode='wb') as f:
+        return f.write(contents)
 
+class TestArgumentParsing(TestCase):
     @staticmethod
     def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")) -> DefaultCheriConfig:
         global _targets_registered
@@ -107,9 +111,9 @@ class TestArgumentParsing(TestCase):
     def test_config_file_include(self):
         with tempfile.TemporaryDirectory() as d:
             config_dir = Path(d)
-            (config_dir / "128-common.json").write_bytes(b'{ "cheri-bits": 128 }')
-            (config_dir / "256-common.json").write_bytes(b'{ "cheri-bits": 256 }')
-            (config_dir / "common.json").write_bytes(b'{ "source-root": "/this/is/a/unit/test" }')
+            write_bytes(config_dir / "128-common.json", b'{ "cheri-bits": 128 }')
+            write_bytes(config_dir / "256-common.json", b'{ "cheri-bits": 256 }')
+            write_bytes(config_dir / "common.json", b'{ "source-root": "/this/is/a/unit/test" }')
 
             # Check that the config file is parsed:
             result = self._get_config_with_include(config_dir, b'{ "#include": "common.json"}')
