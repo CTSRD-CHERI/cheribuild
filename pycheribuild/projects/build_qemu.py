@@ -81,7 +81,7 @@ class BuildQEMU(AutotoolsProject):
 
         compiler = os.getenv("CC", shutil.which("cc"))
         if compiler:
-            ccinfo = getCompilerInfo()
+            ccinfo = getCompilerInfo(compiler)
             if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
                 # silence this warning that comes lots of times (it's fine on x86)
                 extraCFlags += " -Wno-address-of-packed-member"
