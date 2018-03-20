@@ -51,7 +51,7 @@ class TestArgumentParsing(TestCase):
     def _parse_config_file_and_args(config_file_contents: bytes, *args) -> DefaultCheriConfig:
         with tempfile.NamedTemporaryFile() as t:
             config = Path(t.name)
-            config.write_bytes(config_file_contents)
+            write_bytes(config, config_file_contents)
             return TestArgumentParsing._parse_arguments(list(args), config_file=config)
 
     def test_skip_update(self):
@@ -63,12 +63,12 @@ class TestArgumentParsing(TestCase):
         # check config file
         with tempfile.NamedTemporaryFile() as t:
             config = Path(t.name)
-            config.write_bytes(b'{ "skip-update": true}')
+            write_bytes(config, b'{ "skip-update": true}')
             self.assertTrue(self._parse_arguments([], config_file=config).skipUpdate)
             # command line overrides config file:
             self.assertTrue(self._parse_arguments(["--skip-update"], config_file=config).skipUpdate)
             self.assertFalse(self._parse_arguments(["--no-skip-update"], config_file=config).skipUpdate)
-            config.write_bytes(b'{ "skip-update": false}')
+            write_bytes(config, b'{ "skip-update": false}')
             self.assertFalse(self._parse_arguments([], config_file=config).skipUpdate)
             # command line overrides config file:
             self.assertTrue(self._parse_arguments(["--skip-update"], config_file=config).skipUpdate)
@@ -89,7 +89,7 @@ class TestArgumentParsing(TestCase):
 
         with tempfile.NamedTemporaryFile() as t:
             config = Path(t.name)
-            config.write_bytes(b'{ "source-root": "/x"}')
+            write_bytes(config, b'{ "source-root": "/x"}')
             self._parse_arguments([], config_file=config)
             self.assertEqual(BuildCheriBSDDiskImage.extraFilesDir, Path("/x/extra-files"))
 
@@ -105,7 +105,7 @@ class TestArgumentParsing(TestCase):
         if not workdir:
             workdir = tmpdir
         config = workdir / "config.json"
-        config.write_bytes(config_json)
+        write_bytes(config, config_json)
         return self._parse_arguments([], config_file=config)
 
     def test_config_file_include(self):
@@ -131,7 +131,7 @@ class TestArgumentParsing(TestCase):
             self.assertEqual(256, result.cheriBits)
 
             # TODO: handled nested cases: the level closest to the initial file wins
-            (config_dir / "change-source-root.json").write_bytes(
+            write_bytes(config_dir / "change-source-root.json",
                 b'{ "source-root": "/source/root/override", "#include": "common.json" }')
             result = self._get_config_with_include(config_dir, b'{ "#include": "change-source-root.json"}')
             self.assertEqual("/source/root/override", str(result.sourceRoot))
