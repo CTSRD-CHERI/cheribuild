@@ -380,7 +380,7 @@ class OSInfo(object):
 
     @classmethod
     def isSuse(cls):
-        return cls.__is_linux_distribution("suse")
+        return cls.__is_linux_distribution("suse") or cls.__is_linux_distribution("opensuse")
 
     @classmethod
     def isDebian(cls):
@@ -439,10 +439,22 @@ class OSInfo(object):
             else:
                 guessed_package = True
                 install_name = "lib" + name + "-dev" if is_lib else name
-        elif cls.uses_zypper() and zypper:
+        elif cls.uses_zypper():
             if zypper:
                 install_name = zypper
             else:
+                if not is_lib and shutil.which("command-not-found"):
+                    # for programs we can use the command-not-found tool to get detailed install instructions
+                    def command_not_found():
+                        hint = subprocess.getoutput(shutil.which("command-not-found") + " " + name)
+                        print(hint)
+                        if hint and not name + ": command not found" in hint:
+                            msg_start = hint.find("The program")
+                            if msg_start:
+                                hint = hint[msg_start:]
+                            return hint
+                        return "Could not find package for program " + name + ". Maybe `zypper in " + name + "` will work."
+                    return command_not_found
                 guessed_package = True
                 install_name = "lib" + name + "-devel" if is_lib else name
         else:
@@ -450,7 +462,7 @@ class OSInfo(object):
             install_name = name
         if guessed_package:
             # not sure if the package name is correct:
-            return "Possibly running`" + cls.package_manager() + " install " + install_name + \
+            return "Possibly running `" + cls.package_manager() + " install " + install_name + \
                                   "` fixes this. Note: package name may not be correct."
         else:
             return "Run `" + cls.package_manager() + " install " + install_name + "`"

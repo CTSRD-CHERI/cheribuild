@@ -206,7 +206,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def _addRequiredSystemTool(self, executable: str, installInstructions=None, freebsd: str=None, apt: str = None,
                                zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
         if not installInstructions:
-            installInstructions = OSInfo.install_instructions(executable, True, freebsd=freebsd, zypper=zypper, apt=apt,
+            installInstructions = OSInfo.install_instructions(executable, False, freebsd=freebsd, zypper=zypper, apt=apt,
                                                                homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__requiredSystemTools[executable] = installInstructions
 
