@@ -412,16 +412,48 @@ class OSInfo(object):
 
     @classmethod
     def package_manager(cls):
-        if IS_MAC:
+        if cls.IS_MAC:
             return "brew"
-        elif IS_FREEBSD:
+        elif cls.IS_FREEBSD:
             return "pkg"
-        elif IS_LINUX:
+        elif cls.IS_LINUX:
             if cls.uses_zypper():
                 return "zypper"
             elif cls.uses_apt():
                 return "apt"
         return "<system package manager>"
+
+    @classmethod
+    def install_instructions(cls, name, is_lib, homebrew=None, apt=None, zypper=None, freebsd=None,
+                             cheribuild_target=None) -> str:
+        if cheribuild_target:
+            return "Run `cheribuild.py " + cheribuild_target + "`"
+        guessed_package = False
+        if cls.IS_MAC and homebrew:
+            install_name = homebrew
+        elif cls.IS_FREEBSD and freebsd:
+            install_name = freebsd
+        elif cls.uses_apt():
+            if apt:
+                install_name = apt
+            else:
+                guessed_package = True
+                install_name = "lib" + name + "-dev" if is_lib else name
+        elif cls.uses_zypper() and zypper:
+            if zypper:
+                install_name = zypper
+            else:
+                guessed_package = True
+                install_name = "lib" + name + "-devel" if is_lib else name
+        else:
+            guessed_package = True
+            install_name = name
+        if guessed_package:
+            # not sure if the package name is correct:
+            return "Possibly running`" + cls.package_manager() + " install " + install_name + \
+                                  "` fixes this. Note: package name may not be correct."
+        else:
+            return "Run `" + cls.package_manager() + " install " + install_name + "`"
 
     @classmethod
     def uses_apt(cls):
@@ -430,7 +462,6 @@ class OSInfo(object):
     @classmethod
     def uses_zypper(cls):
         return cls.isSuse()
-
 
 
 @contextlib.contextmanager

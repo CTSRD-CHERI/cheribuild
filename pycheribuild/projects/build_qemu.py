@@ -59,9 +59,9 @@ class BuildQEMU(AutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self._addRequiredSystemTool("glibtoolize" if IS_MAC else "libtoolize", homebrewPackage="libtool")
-        self._addRequiredSystemTool("autoreconf", homebrewPackage="autoconf")
-        self._addRequiredSystemTool("aclocal", homebrewPackage="automake")
+        self._addRequiredSystemTool("glibtoolize" if IS_MAC else "libtoolize", homebrew="libtool")
+        self._addRequiredSystemTool("autoreconf", homebrew="autoconf")
+        self._addRequiredSystemTool("aclocal", homebrew="automake")
         self._addRequiredSystemTool("python", installInstructions="QEMU needs Python 2 installed as the python binary")
 
         self._addRequiredPkgConfig("pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel", apt="libpixman-1-dev",

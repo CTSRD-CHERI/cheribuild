@@ -203,48 +203,19 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         self.__requiredPkgConfig = {}  # type: typing.Dict[str, typing.Any]
         self._systemDepsChecked = False
 
-    def _addRequiredSystemTool(self, executable: str, installInstructions=None, homebrewPackage=None,
-                               cheribuild_target: str=None):
-        if not installInstructions and cheribuild_target:
-            installInstructions = "Run `cheribuild.py " + cheribuild_target + "`"
-        if IS_MAC and not installInstructions:
-            if not homebrewPackage:
-                homebrewPackage = executable
-            installInstructions = "Run `brew install " + homebrewPackage + "`"
+    def _addRequiredSystemTool(self, executable: str, installInstructions=None, freebsd: str=None, apt: str = None,
+                               zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
+        if not installInstructions:
+            installInstructions = OSInfo.install_instructions(executable, True, freebsd=freebsd, zypper=zypper, apt=apt,
+                                                               homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__requiredSystemTools[executable] = installInstructions
 
-    def _addRequiredPkgConfig(self, package: str, install_instructions=None, freebsd: str=None, apt:str = None,
-                              zypper: str=None, homebrew:str=None, cheribuild_target: str=None):
-        self._addRequiredSystemTool("pkg-config")
-        if not install_instructions and cheribuild_target:
-            install_instructions = "Run `cheribuild.py " + cheribuild_target + "`"
+    def _addRequiredPkgConfig(self, package: str, install_instructions=None, freebsd: str=None, apt: str = None,
+                              zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
+        self._addRequiredSystemTool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config", )
         if not install_instructions:
-            guessed_package = False
-            if IS_MAC and homebrew:
-                install_name = homebrew
-            elif IS_FREEBSD and freebsd:
-                install_name = freebsd
-            elif OSInfo.uses_apt():
-                if apt:
-                    install_name = apt
-                else:
-                    guessed_package = True
-                    install_name = "lib" + package + "-dev"
-            elif OSInfo.uses_zypper() and zypper:
-                if zypper:
-                    install_name = zypper
-                else:
-                    guessed_package = True
-                    install_name = "lib" + package + "-devel"
-            else:
-                guessed_package = True
-                install_name = package
-            if guessed_package:
-                # not sure if the package name is correct:
-                install_instructions = "Possibly running`" + OSInfo.package_manager() + " install " + install_name + \
-                                      "` fixes this. Note: package name may not be correct."
-            else:
-                install_instructions = "Run `" + OSInfo.package_manager() + " install " + install_name + "`"
+            install_instructions = OSInfo.install_instructions(package, True, freebsd=freebsd, zypper=zypper, apt=apt,
+                                                               homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__requiredPkgConfig[package] = install_instructions
 
     def queryYesNo(self, message: str = "", *, defaultResult=False, forceResult=True) -> bool:
@@ -700,7 +671,7 @@ class Project(SimpleProject):
                 statusUpdate("Could not find `gmake` command, assuming `make` is GNU make")
                 self.makeCommand = "make"
             else:
-                self._addRequiredSystemTool("gmake", homebrewPackage="make")
+                self._addRequiredSystemTool("gmake", homebrew="make")
                 self.makeCommand = shutil.which("gmake") or "gmake"
         elif self.make_kind == MakeCommandKind.BsdMake:
             if IS_FREEBSD:
@@ -710,10 +681,10 @@ class Project(SimpleProject):
                     self.makeCommand = (self.config.otherToolsDir / "bin/bmake")
                 else:
                     self.makeCommand = shutil.which("bmake") or "bmake"
-                self._addRequiredSystemTool("bmake", homebrewPackage="bmake")
+                self._addRequiredSystemTool("bmake", homebrew="bmake")
         elif self.make_kind == MakeCommandKind.Ninja:
             self.makeCommand = shutil.which("ninja") or "ninja"
-            self._addRequiredSystemTool("ninja", homebrewPackage="ninja")
+            self._addRequiredSystemTool("ninja", homebrew="ninja")
         else:
             self.makeCommand = "make-command-not-set-this-is-probably-an-error"
 
