@@ -7,11 +7,11 @@ pipeline {
   }
   stages {
 
-   stage('Test Python 3.4.0') {
+   stage('Test Python 3.4') {
       agent {
         docker {
           reuseNode true
-          image 'python:3.4.0'
+          image 'python:3.4'
           args '-u 0'
         }
 
