@@ -150,7 +150,11 @@ def getInterpreter(cmdline: "typing.Sequence[str]") -> "typing.Optional[typing.L
 
 
 def _make_called_process_error(retcode, args, *, stdout=None, stderr=None, cwd=None):
-    err = subprocess.CalledProcessError(retcode, args, output=stdout, stderr=stderr)
+    if sys.version_info < (3, 5):
+        err = subprocess.CalledProcessError(retcode, args, output=stdout)
+        err.stderr = stderr
+    else:
+        err = subprocess.CalledProcessError(retcode, args, output=stdout, stderr=stderr)
     err.cwd = cwd
     return err
 
@@ -275,7 +279,7 @@ def getCompilerInfo(compiler: Path) -> CompilerInfo:
             versionCmd = runCmd(compiler, "-v", captureError=True, printVerboseOnly=True, runInPretendMode=True)
         except subprocess.CalledProcessError as e:
             stderr = e.stderr if e.stderr else b"FAILED: " + str(e).encode("utf-8")
-            versionCmd = subprocess.CompletedProcess(e.cmd, e.returncode, e.output, stderr)
+            versionCmd = CompletedProcess(e.cmd, e.returncode, e.output, stderr)
 
         clangVersion = clangVersionPattern.search(versionCmd.stderr)
         appleLlvmVersion = appleLlvmVersionPattern.search(versionCmd.stderr)

@@ -23,7 +23,8 @@ from pycheribuild.projects.cheribsd import BuildCHERIBSD
 # Init code:
 BuildCHERIBSD.crossbuild = True
 
-def _sort_targets(targets: typing.List[str], add_dependencies=False) -> typing.List[str]:
+
+def _sort_targets(targets: "typing.List[str]", add_dependencies=False) -> "typing.List[str]":
     real_targets = list(targetManager.get_target(t) for t in targets)
     # print(real_targets)
     result = list(t.name for t in targetManager.get_all_targets(real_targets, add_dependencies))

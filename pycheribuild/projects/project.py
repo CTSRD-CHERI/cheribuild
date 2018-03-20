@@ -425,8 +425,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 break
             check_cmd = ["pkg-config", "--exists", package]
             printCommand(check_cmd, printVerboseOnly=True)
-            proc = subprocess.run(check_cmd)
-            if proc.returncode != 0:
+            exit_code = subprocess.call(check_cmd)
+            if exit_code != 0:
                 if callable(instructions):
                     instructions = instructions()
                 self.dependencyError("Required library", package, "is missing!", installInstructions=instructions)
@@ -478,7 +478,7 @@ class MakeOptions(object):
         self.set(**kwargs)
         self.kind = kind
 
-    def __do_set(self, target_dict: typing.Dict[str, str], **kwargs):
+    def __do_set(self, target_dict: "typing.Dict[str, str]", **kwargs):
         for k, v in kwargs.items():
             if isinstance(v, bool):
                 v = "1" if v else "0"

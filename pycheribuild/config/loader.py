@@ -401,7 +401,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                                                  help=argparse.SUPPRESS, choices=availableTargets)
             unparsed.completer = targetCompleter
 
-    def __load_json_with_comments(self, config_path: Path) -> typing.Dict[str, typing.Any]:
+    def __load_json_with_comments(self, config_path: Path) -> "typing.Dict[str, typing.Any]":
         """
         Loads a JSON file ignoring any lines that start with '#' or '//'
         :param config_path: path to the json file

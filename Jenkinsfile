@@ -6,6 +6,36 @@ pipeline {
     
   }
   stages {
+
+   stage('Test Python 3.4.0') {
+      agent {
+        docker {
+          reuseNode true
+          image 'python:3.4.0'
+          args '-u 0'
+        }
+
+      }
+      steps {
+        ansiColor(colorMapName: 'xterm') {
+          sh '''
+set -e
+env | sort
+./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
+pip install pytest
+pytest -v --junit-xml 3.4.0-results.xml tests || echo "Some tests failed"
+targets=$(./cheribuild.py --list-targets | grep -v Available)
+echo "targets=$targets"
+for i in $targets; do
+  WORKSPACE=/tmp ./jenkins-cheri-build.py --cpu=cheri128 -p $i > /dev/null;
+done
+'''
+        }
+
+        junit '3.4.0-results.xml'
+      }
+    }
+
     stage('Test Python 3.5.0') {
       agent {
         docker {
