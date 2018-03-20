@@ -372,9 +372,21 @@ class OSInfo(object):
 
     @classmethod
     def isUbuntu(cls):
+        return cls.__is_linux_distribution("ubuntu")
+
+    @classmethod
+    def isSuse(cls):
+        return cls.__is_linux_distribution("suse")
+
+    @classmethod
+    def isDebian(cls):
+        return cls.__is_linux_distribution("debian")
+
+    @classmethod
+    def __is_linux_distribution(cls, kind):
         if not IS_LINUX:
             return False
-        return "ubuntu" in cls.etc_os_release().get("ID", "") or "ubuntu" in cls.etc_os_release().get("ID_LIKE", "")
+        return kind in cls.etc_os_release().get("ID", "") or kind in cls.etc_os_release().get("ID_LIKE", "")
 
     @staticmethod
     def etc_os_release() -> dict:
@@ -393,6 +405,27 @@ class OSInfo(object):
                 # .strip('"') will remove if there or else do nothing
                 d[k] = v.strip('"')
         return d
+
+    @classmethod
+    def package_manager(cls):
+        if IS_MAC:
+            return "brew"
+        elif IS_FREEBSD:
+            return "pkg"
+        elif IS_LINUX:
+            if cls.uses_zypper():
+                return "zypper"
+            elif cls.uses_apt():
+                return "apt"
+        return "<system package manager>"
+
+    @classmethod
+    def uses_apt(cls):
+        return cls.isDebian() or cls.isUbuntu()
+
+    @classmethod
+    def uses_zypper(cls):
+        return cls.isSuse()
 
 
 

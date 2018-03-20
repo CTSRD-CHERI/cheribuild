@@ -200,6 +200,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.__requiredSystemTools = {}  # type: typing.Dict[str, typing.Any]
+        self.__requiredPkgConfig = {}  # type: typing.Dict[str, typing.Any]
         self._systemDepsChecked = False
 
     def _addRequiredSystemTool(self, executable: str, installInstructions=None, homebrewPackage=None,
@@ -211,6 +212,40 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 homebrewPackage = executable
             installInstructions = "Run `brew install " + homebrewPackage + "`"
         self.__requiredSystemTools[executable] = installInstructions
+
+    def _addRequiredPkgConfig(self, package: str, install_instructions=None, freebsd: str=None, apt:str = None,
+                              zypper: str=None, homebrew:str=None, cheribuild_target: str=None):
+        self._addRequiredSystemTool("pkg-config")
+        if not install_instructions and cheribuild_target:
+            install_instructions = "Run `cheribuild.py " + cheribuild_target + "`"
+        if not install_instructions:
+            guessed_package = False
+            if IS_MAC and homebrew:
+                install_name = homebrew
+            elif IS_FREEBSD and freebsd:
+                install_name = freebsd
+            elif OSInfo.uses_apt():
+                if apt:
+                    install_name = apt
+                else:
+                    guessed_package = True
+                    install_name = "lib" + package + "-dev"
+            elif OSInfo.uses_zypper() and zypper:
+                if zypper:
+                    install_name = zypper
+                else:
+                    guessed_package = True
+                    install_name = "lib" + package + "-devel"
+            else:
+                guessed_package = True
+                install_name = package
+            if guessed_package:
+                # not sure if the package name is correct:
+                install_instructions = "Possibly running`" + OSInfo.package_manager() + " install " + install_name + \
+                                      "` fixes this. Note: package name may not be correct."
+            else:
+                install_instructions = "Run `" + OSInfo.package_manager() + " install " + install_name + "`"
+        self.__requiredPkgConfig[package] = install_instructions
 
     def queryYesNo(self, message: str = "", *, defaultResult=False, forceResult=True) -> bool:
         yesNoStr = " [Y]/n " if defaultResult else " y/[N] "
@@ -384,6 +419,17 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 if not installInstructions:
                     installInstructions = "Try installing `" + tool + "` using your system package manager."
                 self.dependencyError("Required program", tool, "is missing!", installInstructions=installInstructions)
+        for (package, instructions) in self.__requiredPkgConfig.items():
+            if not shutil.which("pkg-config"):
+                # error should already have printed above
+                break
+            check_cmd = ["pkg-config", "--exists", package]
+            printCommand(check_cmd, printVerboseOnly=True)
+            proc = subprocess.run(check_cmd)
+            if proc.returncode != 0:
+                if callable(instructions):
+                    instructions = instructions()
+                self.dependencyError("Required library", package, "is missing!", installInstructions=instructions)
         self._systemDepsChecked = True
 
     def process(self):

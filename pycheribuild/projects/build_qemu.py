@@ -59,13 +59,16 @@ class BuildQEMU(AutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self._addRequiredSystemTool("pkg-config")
         self._addRequiredSystemTool("glibtoolize" if IS_MAC else "libtoolize", homebrewPackage="libtool")
         self._addRequiredSystemTool("autoreconf", homebrewPackage="autoconf")
         self._addRequiredSystemTool("aclocal", homebrewPackage="automake")
         self._addRequiredSystemTool("python", installInstructions="QEMU needs Python 2 installed as the python binary")
 
-        # TODO: suggest on Ubuntu install libglib2.0-dev libpixman-1-dev libsdl2-dev libgtk2.0-dev
+        self._addRequiredPkgConfig("pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel", apt="libpixman-1-dev",
+                                   freebsd="pixman")
+        self._addRequiredPkgConfig("glib-2.0", homebrew="glib", zypper="glib2-devel", apt="libglib2.0-dev",
+                                   freebsd="glib")
+
 
         # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
         # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
@@ -74,6 +77,7 @@ class BuildQEMU(AutotoolsProject):
             glibIncludes = runCmd("pkg-config", "--cflags-only-I", "glib-2.0", captureOutput=True,
                                   printVerboseOnly=True, runInPretendMode=True).stdout.decode("utf-8").strip()
             extraCFlags += " " + glibIncludes
+
 
         ccinfo = getCompilerInfo(os.getenv("CC", shutil.which("cc")))
         if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
