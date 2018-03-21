@@ -49,6 +49,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         super().setupConfigOptions(**kwargs)
         cls.build_tests = cls.addBoolOption("build-tests", showHelp=True, help="build the Qt unit tests")
         cls.build_examples = cls.addBoolOption("build-examples", showHelp=True, help="build the Qt examples")
+        cls.minimal = cls.addBoolOption("minimal", showHelp=True, help="Don't build QtWidgets or QtGui, etc")
         cls.optimized_debug_build = cls.addBoolOption("optmized-debug-build", showHelp=True,
                                                       help="Don't build with -Os instead of -O0 for debug info builds")
         cls.useMxgot = True  # appears to be needed for some tests
@@ -113,14 +114,35 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # Build a release build with debug info for now
             if self.optimized_debug_build:
                 self.configureArgs.append("-release")
-                self.configureArgs.append("-optimize-size")  # Use -Os, otherwise it will use -O3
+                self.configureArgs.append("-optimize-debug")  # Use -Os, otherwise it will use -O3
                 self.configureArgs.append("-force-debug-info")
+                self.configureArgs.append("-force-asserts")
             else:
                 self.configureArgs.append("-debug")
+                # TODO: will this work:
+                self.configureArgs.append("-optimize-debug")
         else:
             self.configureArgs.append("-release")
 
         self.configureArgs.append("-no-pch")  # slows down build but gives useful crash testcases
+
+        #  -reduce-exports ...... Reduce amount of exported symbols [auto]
+        self.configureArgs.append("-reduce-exports")
+        # -reduce-relocations .. Reduce amount of relocations [auto] (Unix only)
+        # TODO: this needs PIE:
+        # self.configureArgs.append("-reduce-relocations")
+
+
+        if self.minimal:
+            self.configureArgs.extend([
+                "-no-widgets",
+                "-no-glib",
+                "-no-gtk",
+                "-no-opengl",
+                "-no-cups",
+                "-no-syslog",
+                "-no-gui",
+            ])
 
         self.configureArgs.extend(["-opensource", "-confirm-license"])
 
