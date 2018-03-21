@@ -49,6 +49,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         super().setupConfigOptions(**kwargs)
         cls.build_tests = cls.addBoolOption("build-tests", showHelp=True, help="build the Qt unit tests")
         cls.build_examples = cls.addBoolOption("build-examples", showHelp=True, help="build the Qt examples")
+        cls.optimized_debug_build = cls.addBoolOption("optmized-debug-build", showHelp=True,
+                                                      help="Don't build with -Os instead of -O0 for debug info builds")
         cls.useMxgot = True  # appears to be needed for some tests
 
     def configure(self, **kwargs):
@@ -109,10 +111,12 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
         if self.debugInfo:
             # Build a release build with debug info for now
-            self.configureArgs.append("-release")
-            self.configureArgs.append("-optimize-size")  # Use -Os, otherwise it will use -O3
-            self.configureArgs.append("-force-debug-info")
-            # self.configureArgs.append("-debug")
+            if self.optimized_debug_build:
+                self.configureArgs.append("-release")
+                self.configureArgs.append("-optimize-size")  # Use -Os, otherwise it will use -O3
+                self.configureArgs.append("-force-debug-info")
+            else:
+                self.configureArgs.append("-debug")
         else:
             self.configureArgs.append("-release")
 
