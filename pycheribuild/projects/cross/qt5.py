@@ -114,13 +114,13 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # Build a release build with debug info for now
             if self.optimized_debug_build:
                 self.configureArgs.append("-release")
-                self.configureArgs.append("-optimize-debug")  # Use -Os, otherwise it will use -O3
+                self.configureArgs.append("-optimize-size")  # Use -Os, otherwise it will use -O3
                 self.configureArgs.append("-force-debug-info")
                 self.configureArgs.append("-force-asserts")
             else:
                 self.configureArgs.append("-debug")
-                # TODO: will this work:
-                self.configureArgs.append("-optimize-debug")
+                # optimize-debug needs GCC
+                # self.configureArgs.append("-optimize-debug")
         else:
             self.configureArgs.append("-release")
 
