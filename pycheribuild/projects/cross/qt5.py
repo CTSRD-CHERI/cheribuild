@@ -134,7 +134,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
 
 class BuildQt5(BuildQtWithConfigureScript):
-    repository = "https://github.com/arichardson/qt5"
+    repository = "https://github.com/CTSRD-CHERI/qt5"
     gitBranch = "5.10.0"
     skipGitSubmodules = True  # init-repository does it for us
 
@@ -160,7 +160,7 @@ class BuildQt5(BuildQtWithConfigureScript):
 
 
 class BuildQtBase(BuildQtWithConfigureScript):
-    repository = "https://github.com/arichardson/qtbase"
+    repository = "https://github.com/CTSRD-CHERI/qtbase"
     gitBranch = "5.10.0"
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.getSourceDir(config) / "qtbase",
@@ -227,7 +227,7 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
 
 
 class BuildQtWebkit(CrossCompileCMakeProject):
-    repository = "https://github.com/arichardson/qtwebkit"
+    repository = "https://github.com/CTSRD-CHERI/qtwebkit"
     gitBranch = "dev"
     dependencies = ["qtbase", "icu4c", "libxml2", "sqlite"]
     # webkit is massive if we include debug info
