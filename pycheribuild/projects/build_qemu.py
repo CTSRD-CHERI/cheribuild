@@ -78,7 +78,6 @@ class BuildQEMU(AutotoolsProject):
                                   printVerboseOnly=True, runInPretendMode=True).stdout.decode("utf-8").strip()
             extraCFlags += " " + glibIncludes
 
-
         compiler = os.getenv("CC", shutil.which("cc"))
         if compiler:
             ccinfo = getCompilerInfo(compiler)
@@ -93,6 +92,9 @@ class BuildQEMU(AutotoolsProject):
                 # enable QEMU 128 bit capabilities
                 # https://github.com/CTSRD-CHERI/qemu/commit/40a7fc2823e2356fa5ffe1ee1d672f1d5ec39a12
                 extraCFlags += " -DCHERI_128=1" if not self.magic128 else " -DCHERI_MAGIC128=1"
+
+        # Turn on unaligned loads/stores by default
+        extraCFlags += " -DCHERI_UNALIGNED"
         self.configureArgs.extend([
             "--target-list=" + targets,
             "--disable-linux-user",
