@@ -116,7 +116,7 @@ class CrossCompileMixin(object):
                     self.COMMON_FLAGS.append("-stdlib=libc++")
                 else:
                     self.COMMON_FLAGS.append("-fno-pic")
-                    # self.COMMON_FLAGS.append("-mabicalls")
+                    self.COMMON_FLAGS.append("-mno-abicalls")
                     if self.projectName != "newlib-baremetal":
                         assert self.baremetal
                         # Currently we need these flags to build anything against newlib baremetal
