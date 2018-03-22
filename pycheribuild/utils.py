@@ -310,17 +310,21 @@ def getCompilerInfo(compiler: Path) -> CompilerInfo:
 def latestClangTool(basename: str):
     # try to find at least clang 3.7, otherwise fall back to system clang
     found_versioned_clang = (None, None)
-    versions = [(i, 0) for i in range(9, 3, -1)] + [(3, 9), (3, 8), (3, 7)]
+    versions = [(i, 0) for i in range(10, 3, -1)] + [(3, 9), (3, 8), (3, 7)]
     for version in versions:
-        # FreeBSD installs clang39, Linux uses clang-3.9
-        # if IS_FREEBSD and version == (4, 0):
-        #    # clang40 from packages seems to be broken right now?
-        #    continue
-        guess = shutil.which(basename + "%d%d" % version)
+        # FreeBSD installs clang39 and clang7, Linux uses clang-3.9 and clang-7
+        if version[0] >= 7:
+            # version after 7.0 don't include the minor component anymore:
+            suffix1 = str(version[0])
+            suffix2 = "-" + str(version[0])
+        else:
+            suffix1 = ("%d%d" % version)
+            suffix2 = ("-%d.%d" % version)
+        guess = shutil.which(basename + suffix1)
         if guess:
             found_versioned_clang = (guess, version)
             break
-        guess = shutil.which(basename + "-%d.%d" % version)
+        guess = shutil.which(basename + suffix2)
         if guess:
             found_versioned_clang = (guess, version)
             break
