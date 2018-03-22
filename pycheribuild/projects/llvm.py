@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 from pathlib import Path
+import shutil
 from .project import *
 from ..utils import *
 
@@ -54,11 +55,12 @@ class BuildLLVM(CMakeProject):
 
         if useDefaultSysroot:
             cls.no_default_sysroot = cls.addBoolOption("no-default-sysroot", help="Don't set default sysroot and "
-                                                       "target triple. Needed e.g. for the test suite")
+                                                       "target triple. Needed e.g. for the test suite", )
         else:
             cls.no_default_sysroot = True
 
         cls.enable_assertions = cls.addBoolOption("assertions", help="build with assertions enabled", default=True)
+        cls.enable_lto = cls.addBoolOption("enable-lto", help="build with LTO enabled (experimental)")
         cls.skip_lld = cls.addBoolOption("skip-lld", help="Don't build lld as part of the llvm target")
         cls.skip_static_analyzer = cls.addBoolOption("skip-static-analyzer",
                                                      help="Don't build the clang static analyzer")
@@ -79,7 +81,7 @@ class BuildLLVM(CMakeProject):
             CMAKE_C_COMPILER=self.cCompiler,
             LLVM_TOOL_LLDB_BUILD=False,
             LLVM_TOOL_LLD_BUILD=not self.skip_lld,
-            LLVM_PARALLEL_LINK_JOBS=4,  # anything more causes too much I/O
+            LLVM_PARALLEL_LINK_JOBS=2 if self.enable_lto else 4,  # anything more causes too much I/O
         )
         if self.skip_static_analyzer:
             # save some build time by skipping the static analyzer
@@ -100,6 +102,18 @@ class BuildLLVM(CMakeProject):
         if self.config.cheriBits == 128 and not self.config.unified_sdk:
             self.add_cmake_options(LLVM_CHERI_IS_128=True)
         self.add_cmake_options(LLVM_LIT_ARGS="--max-time 3600 --timeout 300 -s -vv")
+
+        if self.enable_lto:
+            version_suffix = ""
+            if self.cCompiler.name.startswith("clang"):
+                version_suffix = self.cCompiler.name[len("clang"):]
+            self._addRequiredSystemTool("llvm-ar" + version_suffix)
+            self._addRequiredSystemTool("llvm-ranlib" + version_suffix)
+            llvm_ar = shutil.which("llvm-ar" + version_suffix)
+            llvm_ranlib = shutil.which("llvm-ranlib" + version_suffix)
+            self.add_cmake_options(LLVM_ENABLE_LTO="Thin", CMAKE_AR=llvm_ar, CMAKE_RANLIB=llvm_ranlib)
+            if not self.canUseLLd(self.cCompiler):
+                warningMessage("LLD not found for LTO build, it may fail.")
 
     def clang38InstallHint(self):
         if IS_FREEBSD:
