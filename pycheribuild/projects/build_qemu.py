@@ -104,7 +104,6 @@ class BuildQEMU(AutotoolsProject):
             "--disable-rdma",
             "--disable-werror",
             "--extra-cflags=" + extraCFlags,
-
         ])
         if self.debug_info:
             self.configureArgs.extend(["--enable-debug", "--disable-strip"])
