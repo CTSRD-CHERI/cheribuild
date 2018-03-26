@@ -726,7 +726,7 @@ class Project(SimpleProject):
 
         pullCmd = ["git", "pull"]
         has_autostash = False
-        git_version = get_program_version(Path(shutil.which("git")))
+        git_version = get_program_version(Path(shutil.which("git"))) if shutil.which("git") else (0, 0, 0)
         # Use the autostash flag for Git >= 2.14 (https://stackoverflow.com/a/30209750/894271)
         if git_version >= (2, 14):
             has_autostash = True
