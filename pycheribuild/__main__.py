@@ -182,8 +182,6 @@ def real_main():
 
 
 def main():
-    print("git_version:", get_program_version(Path(shutil.which("git"))))
-    print("cmake :", get_program_version(Path(shutil.which("cmake"))))
     try:
         real_main()
     except KeyboardInterrupt:
@@ -192,8 +190,6 @@ def main():
         cwd = (". Working directory was ", err.cwd) if hasattr(err, "cwd") else ()
         fatalError("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code ",
                    err.returncode, *cwd, fatalWhenPretending=True, sep="")
-    finally:
-        print("Functools lru:", get_program_version.cache_info())
 
 
 if __name__ == "__main__":
