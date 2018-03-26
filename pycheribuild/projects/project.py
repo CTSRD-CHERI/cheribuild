@@ -1040,6 +1040,8 @@ class CMakeProject(Project):
         super().install(_stdoutFilter=_stdoutFilter)
 
     def _get_cmake_version(self):
+        if not Path(self.configureCommand).exists():
+            return (0, 0, 0)
         return get_program_version(self.configureCommand, program_name=b"cmake")
 
     def checkSystemDependencies(self):
