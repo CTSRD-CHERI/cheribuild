@@ -723,26 +723,36 @@ class Project(SimpleProject):
         # make sure we run git stash if we discover any local changes
         hasChanges = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
                                 captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
+
+        pullCmd = ["git", "pull"]
+        has_autostash = False
+        git_version = get_program_version(Path(shutil.which("git")))
+        # Use the autostash flag for Git >= 2.14 (https://stackoverflow.com/a/30209750/894271)
+        if git_version >= (2, 14):
+            has_autostash = True
+            pullCmd.append("--autostash")
+
         if hasChanges:
             print(coloured(AnsiColour.green, "Local changes detected in", srcDir))
             # TODO: add a config option to skip this query?
             if not self.queryYesNo("Stash the changes, update and reapply?", defaultResult=True, forceResult=True):
                 statusUpdate("Skipping update of", srcDir)
                 return
-            # TODO: ask if we should continue?
-            stashResult = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
-                                 captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout
-            # print("stashResult =", stashResult)
-            if "No local changes to save" in stashResult.decode("utf-8"):
-                # print("NO REAL CHANGES")
-                hasChanges = False  # probably git diff showed something from a submodule
-        pullCmd = ["git", "pull"]
+            if not has_autostash:
+                # TODO: ask if we should continue?
+                stashResult = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
+                                     captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout
+                # print("stashResult =", stashResult)
+                if "No local changes to save" in stashResult.decode("utf-8"):
+                    # print("NO REAL CHANGES")
+                    hasChanges = False  # probably git diff showed something from a submodule
+
         if not skipSubmodules:
             pullCmd.append("--recurse-submodules")
         runCmd(pullCmd + ["--rebase"], cwd=srcDir, printVerboseOnly=True)
         if not skipSubmodules:
             runCmd("git", "submodule", "update", "--recursive", cwd=srcDir, printVerboseOnly=True)
-        if hasChanges:
+        if hasChanges and not has_autostash:
             runCmd("git", "stash", "pop", cwd=srcDir, printVerboseOnly=True)
         if revision:
             runCmd("git", "checkout", revision, cwd=srcDir, printVerboseOnly=True)

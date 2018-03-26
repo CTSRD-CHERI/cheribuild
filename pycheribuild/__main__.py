@@ -63,7 +63,11 @@ def updateCheck():
             output = output[behindIndex:msgEnd]
         statusUpdate("Current CheriBuild checkout can be updated: ", output.decode("utf-8"))
         if input("Would you like to update before continuing? y/[n] (Enter to skip) ").lower().startswith("y"):
-            subprocess.check_call(["git", "pull", "--rebase"], cwd=projectDir)
+            git_version = get_program_version(Path(shutil.which("git")))
+            # Use the autostash flag for Git >= 2.14
+            # https://stackoverflow.com/a/30209750/894271
+            autostash_flag = ["--autostash"] if git_version >= (2, 14) else []
+            subprocess.check_call(["git", "pull", "--rebase"] + autostash_flag, cwd=projectDir)
             os.execv(sys.argv[0], sys.argv)
 
 
@@ -178,6 +182,8 @@ def real_main():
 
 
 def main():
+    print("git_version:", get_program_version(Path(shutil.which("git"))))
+    print("cmake :", get_program_version(Path(shutil.which("cmake"))))
     try:
         real_main()
     except KeyboardInterrupt:
@@ -186,6 +192,8 @@ def main():
         cwd = (". Working directory was ", err.cwd) if hasattr(err, "cwd") else ()
         fatalError("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code ",
                    err.returncode, *cwd, fatalWhenPretending=True, sep="")
+    finally:
+        print("Functools lru:", get_program_version.cache_info())
 
 
 if __name__ == "__main__":
