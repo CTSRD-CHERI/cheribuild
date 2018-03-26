@@ -29,6 +29,7 @@
 #
 import contextlib
 import os
+import functools
 import re
 import shlex
 import shutil
@@ -55,7 +56,7 @@ else:
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includeLocalFile",  # no-combine
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
-           "warningMessage", "Type_T", "typing", "popen_handle_noexec",  # no-combine
+           "warningMessage", "Type_T", "typing", "popen_handle_noexec", "extract_version", "get_program_version", # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latestClangTool",  # no-combine
            "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build"]  # no-combine
 
@@ -200,7 +201,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
             kwargs["cwd"] = os.getcwd()
         except FileNotFoundError:
             kwargs["cwd"] = tempfile.gettempdir()
-    if not runInPretendMode and _cheriConfig.pretend:
+    if not runInPretendMode and _cheriConfig and _cheriConfig.pretend:
         return CompletedProcess(args=cmdline, returncode=0, stdout=b"", stderr=b"")
     # actually run the process now:
     if input is not None:
@@ -214,7 +215,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
     if captureError:
         assert "stderr" not in kwargs  # we need to use stdout here
         kwargs["stderr"] = subprocess.PIPE
-    elif _cheriConfig.quiet and "stdout" not in kwargs:
+    elif _cheriConfig and _cheriConfig.quiet and "stdout" not in kwargs:
         kwargs["stdout"] = subprocess.DEVNULL
 
     if "env" in kwargs:
@@ -305,6 +306,31 @@ def getCompilerInfo(compiler: Path) -> CompilerInfo:
             print(compiler, "is", kind, "version", version, "with default target", targetString)
         _cached_compiler_infos[compiler] = CompilerInfo(compiler, kind, version, targetString)
     return _cached_compiler_infos[compiler]
+
+
+# Cache the versions
+@functools.lru_cache(maxsize=20)
+def get_program_version(program: Path, command_args:list=None, componentKind:"typing.Type"=int, regex=None,
+                        program_name: bytes=None):
+    if program_name is None:
+        program_name = program.name.encode("utf-8")
+    if command_args is None:
+        command_args = ["--version"]
+    prog = runCmd([program] + command_args, stderr=subprocess.STDOUT, captureOutput=True, runInPretendMode=True)
+    return extract_version(prog.stdout, componentKind, regex, program_name)
+    pass
+
+
+# extract the version component from program output such as "git version 2.7.4"
+def extract_version(output: bytes, componentKind:"typing.Type"=int, regex: "typing.Pattern"=None, program_name: bytes=b""):
+    if regex is None:
+        prefix = program_name + b" " if program_name else b""
+        regex = re.compile(prefix + b"version\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?")
+    match = regex.search(output)
+    if not match:
+        print(output)
+        raise ValueError("Expected to match regex " + str(regex))
+    return tuple(map(componentKind, match.groups()))
 
 
 def latestClangTool(basename: str):

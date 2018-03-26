@@ -290,7 +290,7 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
             self.toolchainFile = self.buildDir / "CheriBSDToolchain.cmake"
         self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self.toolchainFile)
         # The toolchain files need at least CMake 3.6
-        self.set_minimum_cmake_version(3, 6)
+        self.set_minimum_cmake_version(3, 7)
 
     def _prepareToolchainFile(self, **kwargs):
         configuredTemplate = self._cmakeTemplate

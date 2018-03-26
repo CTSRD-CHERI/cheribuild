@@ -1030,11 +1030,7 @@ class CMakeProject(Project):
         super().install(_stdoutFilter=_stdoutFilter)
 
     def _get_cmake_version(self):
-        versionPattern = re.compile(b"cmake version (\\d+)\\.(\\d+)\\.?(\\d+)?")
-        # cmake prints this output to stdout
-        versionString = runCmd(self.configureCommand, "--version", captureOutput=True, printVerboseOnly=True).stdout
-        match = versionPattern.search(versionString)
-        return tuple(map(int, match.groups())) if match else (0, 0, 0)
+        return get_program_version(self.configureCommand, program_name=b"cmake")
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
