@@ -79,7 +79,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.configureArgs.extend([
             "--disable-nls",
             "--enable-tui",
-            "--enable-ld", # "--disable-ld",
+            "--disable-ld", # "--enable-ld",
             "--enable-64-bit-bfd",
             "--without-gnu-as",
             "--with-separate-debug-dir=/usr/lib/debug",
