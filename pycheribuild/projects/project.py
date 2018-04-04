@@ -618,8 +618,8 @@ class Project(SimpleProject):
     def canUseLLd(cls, compiler: Path):
         if compiler not in cls.__can_use_lld_map:
             try:
-                runCmd([compiler, "-fuse-ld=lld", "-xc", "-o" "-", "-"], runInPretendMode=True,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                runCmd([compiler, "-fuse-ld=lld", "-xc", "-o", "/dev/null", "-"], runInPretendMode=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, raiseInPretendMode=True,
                        input="int main() { return 0; }\n", printVerboseOnly=True)
                 statusUpdate(compiler, "supports -fuse-ld=lld, linking should be much faster!")
                 cls.__can_use_lld_map[compiler] = True

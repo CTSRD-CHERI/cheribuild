@@ -185,7 +185,7 @@ def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Pop
 
 
 def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]"=None, timeout=None,
-           printVerboseOnly=False, runInPretendMode=False, **kwargs):
+           printVerboseOnly=False, runInPretendMode=False, raiseInPretendMode=False, **kwargs):
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         cmdline = args[0]  # list with parameters was passed
     else:
@@ -234,7 +234,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
             raise
         retcode = process.poll()
         if retcode:
-            if _cheriConfig and _cheriConfig.pretend:
+            if _cheriConfig and _cheriConfig.pretend and not raiseInPretendMode:
                 cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
                 fatalError("Command ", "`" + " ".join(map(shlex.quote, process.args)) +
                            "` failed with non-zero exit code ", retcode, *cwd, sep="")
