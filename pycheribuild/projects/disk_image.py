@@ -279,6 +279,8 @@ class _BuildDiskImageBase(SimpleProject):
 
         runCmd([
             self.makefs_cmd,
+            "-Z", # sparse file output
+            "-d", "0x90000", # trace POPULATE and WRITE_FILE events
             "-b", "30%",  # minimum 30% free blocks
             "-f", "30%",  # minimum 30% free inodes
             "-R", "128m",  # round up size to the next 16m multiple
