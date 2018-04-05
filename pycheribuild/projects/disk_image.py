@@ -219,11 +219,15 @@ class _BuildDiskImageBase(SimpleProject):
         # TODO: https://www.freebsd.org/cgi/man.cgi?mount_unionfs(8) should make this easier
         # Overlay extra-files over additional stuff over cheribsd rootfs dir
 
+        fstabContents = includeLocalFile("files/cheribsd/fstab.in")
+
         if self.disableTMPFS:
-            self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw,noatime,async 1 1\n")
+            fstabContents = fstabContents.format_map(SafeDict(tmpfsrem=""))
         else:
-            self.createFileForImage(outDir, "/etc/fstab", contents="/dev/ada0 / ufs rw,noatime,async 1 1\n"
-                                                                   "tmpfs /tmp tmpfs rw 0 0\n")
+            fstabContents = fstabContents.format_map(SafeDict(tmpfsrem="#"))
+
+        self.createFileForImage(outDir, "/etc/fstab", contents=fstabContents)
+
         # enable ssh and set hostname
         # TODO: use separate file in /etc/rc.conf.d/ ?
         rcConfContents = includeLocalFile("files/cheribsd/rc.conf.in").format(hostname=self.hostname)
