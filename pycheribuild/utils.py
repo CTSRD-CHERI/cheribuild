@@ -551,3 +551,10 @@ class ThreadJoiner(object):
             if self.thread.is_alive():
                 statusUpdate("Waiting for '", self.thread.name, "' to complete", sep="")
             self.thread.join()
+
+# A dictionary for string formatting (format_map) that preserves values not
+# provided for later expansion
+#
+# https://stackoverflow.com/questions/17215400/python-format-string-unused-named-arguments
+class SafeDict(dict):
+    def __missing__(self, key): return '{' + key + '}'
