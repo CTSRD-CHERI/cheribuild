@@ -343,6 +343,10 @@ class _BuildDiskImageBase(SimpleProject):
         statusUpdate("Disk image will saved to", self.diskImagePath)
         statusUpdate("Extra files for the disk image will be copied from", self.extraFilesDir)
 
+        if self.diskImagePath.is_dir():
+            # Given a directory, derive the default file name inside it
+            self.diskImagePath = _defaultDiskImagePathFn(self.config.cheriBits, self.diskImagePath)
+
         if self.diskImagePath.is_file():
             # only show prompt if we can actually input something to stdin
             if not self.config.clean:
@@ -392,12 +396,13 @@ class _BuildDiskImageBase(SimpleProject):
             self.addFileToImage(privateKey, baseDirectory=self.extraFilesDir, mode="0600")
             self.addFileToImage(publicKey, baseDirectory=self.extraFilesDir, mode="0644")
 
+def _defaultDiskImagePathFn(bits, pfx):
+    if bits == 128:
+        return pfx / "cheri128-disk.img"
+    return pfx / "cheri256-disk.img"
 
 def _defaultDiskImagePath(conf: "CheriConfig", cls):
-    if conf.cheriBits == 128:
-        return conf.outputRoot / "cheri128-disk.img"
-    return conf.outputRoot / "cheri256-disk.img"
-
+    _defaultDiskImagePathFn(conf.cheriBits, conf.outputRoot)
 
 class BuildCheriBSDDiskImage(_BuildDiskImageBase):
     projectName = "disk-image"
