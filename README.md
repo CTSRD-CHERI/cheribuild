@@ -164,9 +164,9 @@ For example a `~/.config/purecap-cheribuild.json` could look like this:
 
 ```json
 {
-	"build-root": "/build-purecap"
-	"#include": "cheribuild-common.json"
-	"cheribsd" : {
+	"build-root": "/build-purecap",
+	"#include": "cheribuild-common.json",
+	"cheribsd": {
 		"build-options": ["-DWITH_CHERI_PURE"]
 	}
 }
