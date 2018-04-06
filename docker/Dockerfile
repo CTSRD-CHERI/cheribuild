@@ -7,11 +7,20 @@ RUN apt-get update && apt-get install -y \
   gcc g++ \
   git \
   python3-minimal \
-  libbsd-dev
+  libbsd-dev \
+  lsb-release
 
 # deps to build QEMU:
 RUN apt-get update && apt-get install -y \
   libtool pkg-config python-minimal autotools-dev automake autoconf libglib2.0-dev libpixman-1-dev
+
+# INSTALL clang 6.0
+RUN apt-get install -y wget
+RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
+RUN echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main" > /etc/apt/sources.list.d/llvm.list
+# RUN echo "deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu trusty main" > /etc/apt/sources.list.d/r-toolchain.list
+# RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 1E9377A2BA9EF27F
+RUN apt-get update && apt-get install -y clang-6.0 lld-6.0
 
 RUN git config --global http.sslVerify false
 RUN cd /tmp && git clone https://github.com/arichardson/bmake && cd bmake \
@@ -23,3 +32,4 @@ COPY cheribuild.json /root/.config/cheribuild.json
 
 VOLUME ["/cheribuild", "/source", "/build", "/output"]
 ENV PATH /cheribuild:$PATH
+CMD sleep 100
