@@ -40,18 +40,15 @@ class BuildElftoolchain(Project):
     gitBranch = "master"
     repository = "https://github.com/emaste/elftoolchain.git"
     defaultInstallDir = Project._installToSDK
-    defaultBuildDir = Project.defaultSourceDir  # we have to build in the source directory
     make_kind = MakeCommandKind.BsdMake
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # TODO: move this to project
-        # objdir = Path("/tmp/elftc") / self.sourceDir.resolve()
-        # self.makedirs(objdir)
-        # self.make_args.env_vars["MAKEOBJDIRPREFIX"] = objdir
-        # self.make_args.set(TOP=self.sourceDir)  # for some reason the build system get's this wrong
+        self.makedirs(self.buildDir)
+        self.make_args.env_vars["MAKEOBJDIRPREFIX"] = self.buildDir
         self.gitBranch = "master"
-        # self.makeArgs = ["WITH_TESTS=no", "-DNO_ROOT"]
+        self.makeArgs = ["WITH_TESTS=no", "-DNO_ROOT"]
         # TODO: build static?
         if self.build_static:
             self.make_args.set(LDSTATIC="-static")
@@ -95,7 +92,8 @@ class BuildElftoolchain(Project):
         # To speed it up run make for the individual library directories instead and then for all the binaries
         firstCall = True  # recreate logfile on first call, after that append
         for tgt in self.libTargets + self.programsToBuild:
-            self.runMake("all", cwd=self.sourceDir / tgt, logfileName="build", appendToLogfile=not firstCall)
+            self.runMake("obj", cwd=self.sourceDir / tgt, logfileName="build", appendToLogfile=not firstCall)
+            self.runMake("all", cwd=self.sourceDir / tgt, logfileName="build", appendToLogfile=True)
             firstCall = False
 
     def install(self, **kwargs):
