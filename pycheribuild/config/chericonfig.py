@@ -85,6 +85,10 @@ class CheriConfig(object):
 
         self.cheri_cap_table = loader.addBoolOption("cheri-cap-table",
                                                     help="Build cross-compile projects with -cheri-cap-table")
+        self.cheri_cap_table_abi = loader.addOption("cap-table-abi", helpHidden=True,
+                                                    choices=("pcrel", "plt", "legacy", "fn-desc"),
+                                                    help="The ABI to use for cap-table mode")
+
         # Attributes for code completion:
         self.verbose = None  # type: bool
         self.quiet = None  # type: bool

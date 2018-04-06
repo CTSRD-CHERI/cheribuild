@@ -105,6 +105,9 @@ class CrossCompileMixin(object):
                 self.COMMON_FLAGS.extend(["-mabi=purecap", "-mcpu=mips4", "-cheri=" + self.config.cheriBitsStr])
                 if self.config.cheri_cap_table:
                     self.COMMON_FLAGS.append("-cheri-cap-table")
+                if self.config.cheri_cap_table_abi:
+                    self.COMMON_FLAGS.append("-mllvm")
+                    self.COMMON_FLAGS.append("-cheri-cap-table-abi=" + self.config.cheri_cap_table_abi)
             else:
                 assert self.crossCompileTarget == CrossCompileTarget.MIPS
                 self.targetTriple = "mips64-unknown-freebsd" if not self.baremetal else "mips64-qemu-elf"
@@ -194,9 +197,6 @@ class CrossCompileMixin(object):
                   "-B" + str(self.config.sdkBinDir)]
         if not self.baremetal:
             result.append("--sysroot=" + str(self.sdkSysroot))
-        if self.compiling_for_cheri() and self.newCapRelocs:
-            # TODO: check that we are using LLD and not BFD
-            result += ["-no-capsizefix", "-Wl,-process-cap-relocs", "-Wl,-verbose"]
         if self.config.withLibstatcounters:
             #if self.linkDynamic:
             #    result.append("-lstatcounters")
@@ -231,8 +231,6 @@ class CrossCompileMixin(object):
         cls.debugInfo = cls.addBoolOption("debug-info", help="build with debug info", default=True)
         cls.optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
                                                     default=cls.defaultOptimizationLevel)
-        # TODO: check if LLD supports it and if yes default to true?
-        cls.newCapRelocs = cls.addBoolOption("new-cap-relocs", help="Use the new __cap_relocs processing in LLD", default=False)
         if inspect.getattr_static(cls, "crossCompileTarget") is None:
             cls.crossCompileTarget = cls.addConfigOption("target", help="The target to build for (`cheri` or `mips` or `native`)",
                                                  default=defaultTarget, choices=["cheri", "mips", "native"],
