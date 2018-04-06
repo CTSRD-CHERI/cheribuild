@@ -124,6 +124,8 @@ class CheriConfig(object):
         self.docker = loader.addBoolOption("docker", help="Run the build inside a docker container")
         self.docker_container = loader.addOption("docker-container", help="Name of the docker container to use",
                                                  default="cheribuild-test")
+        self.docker_reuse_container = loader.addBoolOption("docker-reuse-container",
+            help="Attach to the same container again (note: docker-container option must be an id rather than a container name")
 
         self.targets = None  # type: list
         self.__optionalProperties = []

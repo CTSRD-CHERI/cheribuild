@@ -135,22 +135,33 @@ def real_main():
                 continue
             if any(arg.startswith(s + "=") for s in blacklisted):
                 continue
-            if arg == "--docker":
+            if arg == "--docker" or arg == "--docker-reuse-container":
                 continue
             filtered_cheribuild_args.append(arg)
         try:
-            docker_args = [
-                "docker", "run",
+            docker_dir_mappings = [
                 # map cheribuild and the sources read-only into the container
                 "-v", cheribuild_dir + ":/cheribuild:ro",
                 "-v", str(cheriConfig.sourceRoot.absolute()) + ":/source:ro",
                 # build and output are read-write:
                 "-v", str(cheriConfig.buildRoot.absolute()) + ":/build",
                 "-v", str(cheriConfig.outputRoot.absolute()) + ":/output",
-                cheriConfig.docker_container, "/cheribuild/cheribuild.py", "--skip-update",
-            ] + filtered_cheribuild_args
-            printCommand(docker_args)
-            subprocess.check_call(docker_args)
+            ]
+            cheribuild_args = ["/cheribuild/cheribuild.py", "--skip-update"] + filtered_cheribuild_args
+            if cheriConfig.docker_reuse_container:
+                # Use docker restart + docker exec instead of docker run
+                # FIXME: docker restart doesn't work for some reason
+                stop_cmd = ["docker", "stop", cheriConfig.docker_container]
+                printCommand(stop_cmd)
+                subprocess.check_call(stop_cmd)
+                start_cmd = ["docker", "start", cheriConfig.docker_container]
+                printCommand(start_cmd)
+                subprocess.check_call(start_cmd)
+                docker_run_cmd = ["docker", "exec", cheriConfig.docker_container] + cheribuild_args
+            else:
+                docker_run_cmd = ["docker", "run"] + docker_dir_mappings + [cheriConfig.docker_container] + cheribuild_args
+            printCommand(docker_run_cmd)
+            subprocess.check_call(docker_run_cmd)
         except subprocess.CalledProcessError as e:
             # if the image is missing print a helpful error message:
             if e.returncode == 125:
