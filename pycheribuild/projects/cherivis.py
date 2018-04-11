@@ -105,7 +105,8 @@ class BuildCheriVis(Project):
         self.make_args.set(CXX=self.config.clangPlusPlusPath,
                            CC=self.config.clangPath,
                            # GNUSTEP_MAKEFILES=self.gnustepMakefilesDir,
-                           CHERITRACE_DIR=cheritrace_rel_path,  # make it find the cheritrace library
+                           # Uncomment this to enable building with an install libchertrace
+                           # CHERITRACE_DIR=cheritrace_rel_path,  # make it find the cheritrace library
                            GNUSTEP_INSTALLATION_DOMAIN="USER",
                            GNUSTEP_NG_ARC=1,
                            messages="yes")
