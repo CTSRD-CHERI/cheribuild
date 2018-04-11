@@ -102,7 +102,7 @@ class GnuStepModule(AutotoolsProject):
             fatalError("Expected gnustep libdir", expectedLibdir, "doesn't exist")
         if not Path(gnustepLibdir).is_dir():
             fatalError("GNUSTEP_SYSTEM_LIBRARIES directory", gnustepLibdir, "doesn't exist")
-        elif Path(gnustepLibdir).resolve() != expectedLibdir.resolve():
+        if Path(gnustepLibdir).exists() and Path(gnustepLibdir).resolve() != expectedLibdir.resolve():
             fatalError("GNUSTEP_SYSTEM_LIBRARIES was", gnustepLibdir, "but expected ", expectedLibdir)
 
         # print(coloured(AnsiColour.green, "LDFLAGS=-L" + gnustepLibdir))
