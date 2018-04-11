@@ -30,7 +30,8 @@
 import os
 from pathlib import Path
 
-from ..project import Project
+from .project import *
+from .cheritrace import BuildCheriTrace
 from ..utils import *
 
 
@@ -52,10 +53,12 @@ def gnuStepInstallInstructions():
 
 
 class BuildCheriVis(Project):
-    dependencies = ["cheritrace"]
+    # dependencies = ["cheritrace"]
     repository = "https://github.com/CTSRD-CHERI/CheriVis.git"
     appendCheriBitsToBuildDir = True
     defaultInstallDir = Project._installToSDK
+    if IS_MAC:
+        defaultBuildDir = Project.defaultSourceDir
 
     # TODO: allow external cheritrace
     def __init__(self, config: CheriConfig):
@@ -65,27 +68,30 @@ class BuildCheriVis(Project):
         if IS_LINUX or IS_FREEBSD:
             self._addRequiredSystemTool("gnustep-config", installInstructions=gnuStepInstallInstructions)
         else:
-            fatalError("Build currently only supported on Linux or FreeBSD!")
+            self._addRequiredSystemTool("xcodebuild", installInstructions="Install XCode")
         self.gnustepMakefilesDir = None  # type: Path
         self.makeCommand = "make" if IS_LINUX else "gmake"
+        self.cheritrace_path = None
+        # Build Cheritrace as a subproject
+        self.cheritrace_subproject = BuildCheriTrace(config)
+        self.cheritrace_subproject.sourceDir = self.sourceDir / "cheritrace"
+        self.cheritrace_subproject.buildDir = self.sourceDir / "cheritrace/Build"
+        self.cheritrace_subproject.installDir = "/this/path/does/not/exist"
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
-        configOutput = runCmd("gnustep-config", "--variable=GNUSTEP_MAKEFILES", captureOutput=True).stdout
-        self.gnustepMakefilesDir = Path(configOutput.decode("utf-8").strip())
-        commonDotMake = self.gnustepMakefilesDir / "common.make"
-        if not commonDotMake.is_file():
-            self.dependencyError("gnustep-config binary exists, but", commonDotMake, "does not exist!",
-                                 installInstructions=gnuStepInstallInstructions())
-        # has to be a relative path for some reason....
-        # pathlib.relative_to() won't work if the prefix is not the same...
-        expectedCheritraceLib = str(self.config.sdkDir / "lib/libcheritrace.so")
-        cheritraceLib = Path(os.getenv("CHERITRACE_LIB") or expectedCheritraceLib)
-        if not cheritraceLib.exists():
-            fatalError(cheritraceLib, "does not exist", fixitHint="Try running `cheribuild.py cheritrace` and if that"
-                       " doesn't work set the environment variable CHERITRACE_LIB to point to libcheritrace.so")
-            return
-        cheritraceDirRelative = os.path.relpath(str(cheritraceLib.parent.resolve()), str(self.sourceDir.resolve()))
+        self.cheritrace_subproject.checkSystemDependencies()
+
+        # expectedCheritraceLib = str(self.config.sdkDir / "lib/libcheritrace.a")
+        # cheritraceLib = Path(os.getenv("CHERITRACE_LIB") or expectedCheritraceLib)
+        # if not cheritraceLib.exists():
+        #     fatalError(cheritraceLib, "does not exist", fixitHint="Try running `cheribuild.py cheritrace` and if that"
+        #                " doesn't work set the environment variable CHERITRACE_LIB to point to libcheritrace.so")
+        #     return
+        # self.cheritrace_path = cheritraceLib
+        if IS_MAC:
+            return  # don't need GnuStep here
+
         # TODO: set ADDITIONAL_LIB_DIRS?
         # http://www.gnustep.org/resources/documentation/Developer/Make/Manual/gnustep-make_1.html#SEC17
         # http://www.gnustep.org/resources/documentation/Developer/Make/Manual/gnustep-make_1.html#SEC29
@@ -93,25 +99,41 @@ class BuildCheriVis(Project):
         # library combos:
         # http://www.gnustep.org/resources/documentation/Developer/Make/Manual/gnustep-make_1.html#SEC35
 
-        self.commonMakeArgs.extend([
-            "CXX=clang++", "CC=clang",
-            "GNUSTEP_MAKEFILES=" + str(self.gnustepMakefilesDir),
-            "CHERITRACE_DIR=" + cheritraceDirRelative,  # make it find the cheritrace library
-            "GNUSTEP_INSTALLATION_DOMAIN=USER",
-            "GNUSTEP_NG_ARC=1",
-            "messages=yes",
-        ])
+        # has to be a relative path for some reason....
+        # pathlib.relative_to() won't work if the prefix is not the same...
+        cheritrace_rel_path = os.path.relpath(str(self.cheritrace_path.parent.resolve()), str(self.sourceDir.resolve()))
+        self.make_args.set(CXX=self.config.clangPlusPlusPath,
+                           CC=self.config.clangPath,
+                           # GNUSTEP_MAKEFILES=self.gnustepMakefilesDir,
+                           CHERITRACE_DIR=cheritrace_rel_path,  # make it find the cheritrace library
+                           GNUSTEP_INSTALLATION_DOMAIN="USER",
+                           GNUSTEP_NG_ARC=1,
+                           messages="yes")
 
     def clean(self):
         # doesn't seem to be possible to use a out of source build
-        self.runMake(self.commonMakeArgs, "clean", cwd=self.sourceDir)
+        if IS_MAC:
+            runCmd("xcodebuild", "clean", cwd=self.sourceDir)
+        else:
+            self.runMake("clean", cwd=self.sourceDir)
+        self.cleanDirectory(self.cheritrace_subproject.buildDir)
 
-    def compile(self):
-        self.runMake(self.commonMakeArgs, "print-gnustep-make-help", cwd=self.sourceDir)
-        self.runMake(self.commonMakeArgs, "all", cwd=self.sourceDir)
+    def compile(self, **kwargs):
+        # First build the bundled cheritrace
+        self.cheritrace_subproject.configure()
+        self.cheritrace_subproject.compile()
+        if IS_MAC:
+            runCmd("xcodebuild", cwd=self.sourceDir)
+        else:
+            self.runMake("print-gnustep-make-help", cwd=self.sourceDir)
+            self.runMake("all", cwd=self.sourceDir)
 
-    def install(self):
-        self.runMake(self.commonMakeArgs, "install", cwd=self.sourceDir)
+    def install(self, **kwargs):
+        if IS_MAC:
+            # TODO: xcodebuild install?
+            runCmd("cp", "-aRv", self.sourceDir / "build/Release/CheriVis.app", self.config.sdkDir)
+        else:
+            self.runMake("install", cwd=self.sourceDir)
 
 #
 # Some of these settings seem required:

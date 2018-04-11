@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from ..project import PseudoTarget, AutotoolsProject, CMakeProject
+from .project import *
 from ..utils import *
 
 import shutil
@@ -132,6 +132,6 @@ class BuildGnuStep_Back(GnuStepModule):
         self.configureArgs.append("--enable-graphics=cairo")
 
 
-class BuildGnuStep(PseudoTarget):
+class BuildGnuStep(TargetAliasWithDependencies):
     target = "gnustep"
     dependencies = ["libobjc2", "gnustep-make", "gnustep-base", "gnustep-gui", "gnustep-back"]
