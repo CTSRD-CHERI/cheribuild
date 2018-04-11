@@ -53,12 +53,16 @@ def gnuStepInstallInstructions():
 
 
 class BuildCheriVis(Project):
-    # dependencies = ["cheritrace"]
     repository = "https://github.com/CTSRD-CHERI/CheriVis.git"
     appendCheriBitsToBuildDir = True
     defaultInstallDir = Project._installToSDK
+    # dependencies = ["cheritrace"]
     if IS_MAC:
         defaultBuildDir = Project.defaultSourceDir
+        make_kind = MakeCommandKind.CustomMakeTool
+    else:
+        dependencies = ["gnustep"]
+        make_kind = MakeCommandKind.GnuMake
 
     # TODO: allow external cheritrace
     def __init__(self, config: CheriConfig):
@@ -92,6 +96,12 @@ class BuildCheriVis(Project):
         if IS_MAC:
             return  # don't need GnuStep here
 
+        configOutput = runCmd("gnustep-config", "--variable=GNUSTEP_MAKEFILES", captureOutput=True).stdout
+        self.gnustepMakefilesDir = Path(configOutput.decode("utf-8").strip())
+        commonDotMake = self.gnustepMakefilesDir / "common.make"
+        if not commonDotMake.is_file():
+            self.dependencyError("gnustep-config binary exists, but", commonDotMake, "does not exist!",
+                                 installInstructions=gnuStepInstallInstructions())
         # TODO: set ADDITIONAL_LIB_DIRS?
         # http://www.gnustep.org/resources/documentation/Developer/Make/Manual/gnustep-make_1.html#SEC17
         # http://www.gnustep.org/resources/documentation/Developer/Make/Manual/gnustep-make_1.html#SEC29
@@ -104,10 +114,11 @@ class BuildCheriVis(Project):
         # cheritrace_rel_path = os.path.relpath(str(self.cheritrace_path.parent.resolve()), str(self.sourceDir.resolve()))
         self.make_args.set(CXX=self.config.clangPlusPlusPath,
                            CC=self.config.clangPath,
-                           # GNUSTEP_MAKEFILES=self.gnustepMakefilesDir,
+                           GNUSTEP_MAKEFILES=self.gnustepMakefilesDir,
                            # Uncomment this to enable building with an install libchertrace
                            # CHERITRACE_DIR=cheritrace_rel_path,  # make it find the cheritrace library
-                           GNUSTEP_INSTALLATION_DOMAIN="USER",
+                           # GNUSTEP_INSTALLATION_DOMAIN="USER",
+                           GNUSTEP_INSTALLATION_DOMAIN="SYSTEM",
                            GNUSTEP_NG_ARC=1,
                            messages="yes")
 
@@ -118,9 +129,14 @@ class BuildCheriVis(Project):
         else:
             self.runMake("clean", cwd=self.sourceDir)
         self.cleanDirectory(self.cheritrace_subproject.buildDir)
+        return ThreadJoiner(None)   # can't be done async
 
     def compile(self, **kwargs):
         # First build the bundled cheritrace
+        assert self.cheritrace_subproject.sourceDir == self.sourceDir / "cheritrace"
+        assert self.cheritrace_subproject.buildDir == self.sourceDir / "cheritrace/Build"
+        assert self.cheritrace_subproject.installDir == "/this/path/does/not/exist"
+        self.makedirs(self.cheritrace_subproject.buildDir)
         self.cheritrace_subproject.configure()
         self.cheritrace_subproject.compile()
         if IS_MAC:

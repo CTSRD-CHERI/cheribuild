@@ -61,7 +61,7 @@ class BuildLibObjC2(CMakeProject):
 
 
 class BuildGnuStep_Make(AutotoolsProject):
-    repository = "https://github.com/gnustep/make.git"
+    repository = "https://github.com/gnustep/tools-make.git"
     defaultInstallDir = AutotoolsProject._installToBootstrapTools
 
     def __init__(self, config: CheriConfig):
@@ -70,8 +70,8 @@ class BuildGnuStep_Make(AutotoolsProject):
             "--with-layout=fhs",  # more traditional file system layout
             "--with-library-combo=ng-gnu-gnu",  # use the new libobjc2 that supports ARC
             "--enable-objc-nonfragile-abi",  # not sure if required but given in install guide
-            "CC=clang",  # TODO: find the most recent clang
-            "CXX=clang++",  # TODO: find the most recent clang++
+            "CC=" + str(self.config.clangPath),
+            "CXX=" + str(self.config.clangPlusPlusPath),
             "LDFLAGS=-Wl,-rpath," + str(self.installDir / "lib")  # add rpath, otherwise everything breaks
         ])
 
@@ -84,7 +84,11 @@ class GnuStepModule(AutotoolsProject):
 
     def __init__(self, config: CheriConfig, moduleName: str):
         super().__init__(config)
-        self.repository = "https://github.com/gnustep/" + moduleName + " .git"
+        self.repository = "https://github.com/gnustep/libs-" + moduleName + ".git"
+        self._addRequiredPkgConfig("gnutls")
+        # Ubuntu puts libtiff-4 is in libtiff5-dev...
+        self._addRequiredPkgConfig("libtiff-4", apt="libtiff5-dev")
+        self._addRequiredPkgConfig("freetype2", apt="libfreetype6-dev")
 
     def configure(self):
         if not shutil.which("gnustep-config"):

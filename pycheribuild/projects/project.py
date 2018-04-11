@@ -938,6 +938,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
 
         # run the rm -rf <build dir> in the background
         cleaningTask = self.clean() if self.config.clean else ThreadJoiner(None)
+        assert isinstance(cleaningTask, ThreadJoiner), ""
         with cleaningTask:
             if not self.buildDir.is_dir():
                 self.makedirs(self.buildDir)
