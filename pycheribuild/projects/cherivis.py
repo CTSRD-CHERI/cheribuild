@@ -101,7 +101,7 @@ class BuildCheriVis(Project):
 
         # has to be a relative path for some reason....
         # pathlib.relative_to() won't work if the prefix is not the same...
-        cheritrace_rel_path = os.path.relpath(str(self.cheritrace_path.parent.resolve()), str(self.sourceDir.resolve()))
+        # cheritrace_rel_path = os.path.relpath(str(self.cheritrace_path.parent.resolve()), str(self.sourceDir.resolve()))
         self.make_args.set(CXX=self.config.clangPlusPlusPath,
                            CC=self.config.clangPath,
                            # GNUSTEP_MAKEFILES=self.gnustepMakefilesDir,
