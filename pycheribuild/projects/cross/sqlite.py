@@ -35,7 +35,7 @@ class BuildSQLite(CrossCompileAutotoolsProject):
     gitBranch = "branch-3.19"
     crossInstallDir = CrossInstallDir.SDK
     defaultOptimizationLevel = ["-O2"]
-    warningFlags = ["-Wno-error=cheri-capability-misuse"]
+    cross_warning_flags = ["-Wno-error=cheri-capability-misuse"]
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         super().__init__(config, target_arch)

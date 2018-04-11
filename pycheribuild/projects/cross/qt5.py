@@ -196,7 +196,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     repository = "https://github.com/arichardson/icu4c.git"
     crossInstallDir = CrossInstallDir.SDK
     make_kind = MakeCommandKind.GnuMake
-    warningFlags = []  # FIXME: build with capability -Werror
+    cross_warning_flags = []  # FIXME: build with capability -Werror
     if IS_FREEBSD:
         forceDefaultCC = True  # for some reason crashes on FreeBSD 11 if using clang40/ clang39
 
@@ -235,7 +235,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 class BuildLibXml2(CrossCompileAutotoolsProject):
     repository = "https://github.com/arichardson/libxml2"
     crossInstallDir = CrossInstallDir.SDK
-    warningFlags = []  # FIXME: build with capability -Werror
+    cross_warning_flags = []  # FIXME: build with capability -Werror
     make_kind = MakeCommandKind.GnuMake
 
     def __init__(self, config, target_arch: CrossCompileTarget):
@@ -257,7 +257,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     # webkit is massive if we include debug info
     defaultCMakeBuildType = "MinSizeRel"
     crossInstallDir = CrossInstallDir.SDK
-    warningFlags = []  # FIXME: build with capability -Werror
+    cross_warning_flags = []  # FIXME: build with capability -Werror
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.getSourceDir(config) / "qtwebkit",
         asString=lambda cls: "$SOURCE_ROOT/qt5" + cls.projectName.lower())

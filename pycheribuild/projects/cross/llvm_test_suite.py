@@ -47,7 +47,7 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
     defaultCMakeBuildType = "Debug"
     projectName = "llvm-test-suite"
     # TODO: fix these issues
-    warningFlags = ["-Wno-error=format", "-Werror=mips-cheri-prototypes"]
+    cross_warning_flags = ["-Wno-error=format", "-Werror=mips-cheri-prototypes"]
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / "llvm-test-suite"),
         asString="$SOURCE_ROOT/llvm-test-suite")

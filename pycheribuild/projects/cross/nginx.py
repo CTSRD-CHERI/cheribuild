@@ -37,7 +37,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
     # defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir
     make_kind = MakeCommandKind.GnuMake
     add_host_target_build_config_options = False
-    warningFlags = CrossCompileAutotoolsProject.warningFlags + ["-Wno-error=cheri-capability-misuse", "-Wno-error=sign-compare"]
+    cross_warning_flags = CrossCompileAutotoolsProject.cross_warning_flags + ["-Wno-error=cheri-capability-misuse", "-Wno-error=sign-compare"]
     defaultOptimizationLevel = ["-O2"]
     # custom configure script -> no --libdir
     _configure_supports_libdir = False

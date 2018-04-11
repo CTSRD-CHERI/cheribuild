@@ -65,9 +65,18 @@ class CrossCompileMixin(object):
     forceDefaultCC = False  # for some reason ICU binaries build during build crash -> fall back to /usr/bin/cc there
     crossCompileTarget = None  # type: CrossCompileTarget
     defaultOptimizationLevel = ["-O2"]
-    warningFlags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
+    cross_warning_flags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
                     "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types",
                     "-Werror=mips-cheri-prototypes"]
+    host_warning_flags = []
+    common_warning_flags = []
+
+    @property
+    def compiler_warning_flags(self):
+        if self.compiling_for_host():
+            return self.common_warning_flags + self.host_warning_flags
+        else:
+            return self.common_warning_flags + self.cross_warning_flags
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
@@ -303,7 +312,7 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
 
     def configure(self, **kwargs):
         if self.compiling_for_host():
-            common_flags = self.COMMON_FLAGS
+            common_flags = self.COMMON_FLAGS + self.compiler_warning_flags
         else:
             self.COMMON_FLAGS.append("-B" + str(self.config.sdkBinDir))
             if not self.baremetal and self._get_cmake_version() < (3, 9, 0) and not (self.sdkSysroot / "usr/local/lib/cheri").exists():
@@ -315,7 +324,7 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
                 self.makedirs(self.sdkSysroot / "usr/local/libcheri")
                 self.createSymlink(Path("../libcheri"), self.sdkSysroot / "usr/local/lib/cheri",
                                    relative=True, cwd=self.sdkSysroot / "usr/local/lib")
-            common_flags = self.COMMON_FLAGS + self.warningFlags + ["-target", self.targetTripleWithVersion]
+            common_flags = self.COMMON_FLAGS + self.compiler_warning_flags + ["-target", self.targetTripleWithVersion]
 
         if self.compiling_for_cheri():
             add_lib_suffix = """
@@ -387,17 +396,17 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
     @property
     def default_compiler_flags(self):
         if self.compiling_for_host():
-            return self.COMMON_FLAGS.copy()
+            return self.COMMON_FLAGS + self.compiler_warning_flags
         result = ["-target", self.targetTripleWithVersion] + self.COMMON_FLAGS + self.optimizationFlags
         if not self.baremetal:
             result.append("--sysroot=" + str(self.sdkSysroot))
-        result += ["-B" + str(self.config.sdkBinDir)] + self.warningFlags
-
+        result += ["-B" + str(self.config.sdkBinDir)] + self.compiler_warning_flags
         return result
 
     def add_configure_env_arg(self, arg: str, value: str):
         if not value:
             return
+        assert isinstance(value, str), ("Wrong type:", type(value))
         self.configureEnvironment[arg] = str(value)
         if self._configure_supports_variables_on_cmdline:
             self.configureArgs.append(arg + "=" + str(value))

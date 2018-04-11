@@ -103,13 +103,18 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
         # extra ./configure environment variables:
         # compile flags
-        self.warningFlags.extend(["-Wno-absolute-value", "-Wno-parentheses-equality", "-Wno-unknown-warning-option",
-                                  "-Wno-unused-function", "-Wno-unused-variable"])
+        # self.cross_warning_flags.extend(["-Wno-absolute-value", "-Wno-parentheses-equality"
+        #                                   "-Wno-unused-function", "-Wno-unused-variable"])
+        # These warnings are really noisy and useless:
+        self.common_warning_flags.extend([
+            "-Wno-mismatched-tags",
+            "-Wno-unknown-warning-option",  # caused by the build passing -Wshadow=local
+        ])
+        self.CXXFLAGS.append("-Wno-mismatched-tags")
         # TODO: we should fix this:
-        self.warningFlags.append("-Wno-error=implicit-function-declaration")
-        self.warningFlags.append("-Wno-error=format")
-        self.warningFlags.append("-Wno-error=incompatible-pointer-types")
-        self.warningFlags.append("-Wno-mismatched-tags")  # really noisy
+        self.cross_warning_flags.append("-Wno-error=implicit-function-declaration")
+        self.cross_warning_flags.append("-Wno-error=format")
+        self.cross_warning_flags.append("-Wno-error=incompatible-pointer-types")
         if self.compiling_for_host():
             self.LDFLAGS.append("-L/usr/local/lib")
             self.configureArgs.append("--enable-targets=all")
@@ -142,6 +147,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.configureEnvironment["CXX_FOR_BUILD"] = self.hostCXX
         self.configureEnvironment["CFLAGS_FOR_BUILD"] = "-g"
         self.configureEnvironment["CXXFLAGS_FOR_BUILD"] = "-g"
+
         # TODO: do I need these:
         """(cd $obj; env INSTALL="/usr/bin/install -c "  INSTALL_DATA="install   -m 0644"  INSTALL_LIB="install    -m 444"  INSTALL_PROGRAM="install    -m 555"  INSTALL_SCRIPT="install   -m 555"   PYTHON="${PYTHON}" SHELL=/bin/sh CONFIG_SHELL=/bin/sh CONFIG_SITE=/usr/ports/Templates/config.site ../configure ${CONFIGURE_ARGS} )"""
 
@@ -169,11 +175,13 @@ class BuildGDB(CrossCompileAutotoolsProject):
         return super().CXX
 
     def configure(self, **kwargs):
-        if IS_MAC:
+        if self.compiling_for_host() and IS_MAC:
             self.configureEnvironment.clear()
             print(self.configureArgs)
             # self.configureArgs.clear()
             self.baremetal = True  # HACK to avoid adding any flags to configure (seems to be needed)
+            self.add_configure_env_arg("CFLAGS", " ".join(self.default_compiler_flags))
+            self.add_configure_env_arg("CXXLAGS", " ".join(self.CXXFLAGS))
         super().configure()
 
     def compile(self, **kwargs):
