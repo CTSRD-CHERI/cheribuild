@@ -93,6 +93,7 @@ class GnuStepModule(AutotoolsProject):
     def configure(self):
         if not shutil.which("gnustep-config"):
             self.dependencyError("gnustep-config should have been installed in the last build step!")
+            gnustepLibdir = Path("/invalid/path")
         else:
             gnustepLibdir = runCmd("gnustep-config", "--variable=GNUSTEP_SYSTEM_LIBRARIES",
                                    captureOutput=True, printVerboseOnly=True, runInPretendMode=True).stdout.strip().decode("utf-8")
