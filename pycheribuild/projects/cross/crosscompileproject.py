@@ -406,7 +406,8 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
     def add_configure_env_arg(self, arg: str, value: str):
         if not value:
             return
-        assert isinstance(value, str), ("Wrong type:", type(value))
+        assert not isinstance(value, list), ("Wrong type:", type(value))
+        assert not isinstance(value, tuple), ("Wrong type:", type(value))
         self.configureEnvironment[arg] = str(value)
         if self._configure_supports_variables_on_cmdline:
             self.configureArgs.append(arg + "=" + str(value))
