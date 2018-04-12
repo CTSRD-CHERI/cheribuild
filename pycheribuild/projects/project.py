@@ -160,8 +160,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
     _clearLineSequence = b"\x1b[2K\r"
 
-    _cmakeInstallInstructions = ("Use your package manager to install CMake > 3.4 or run "
-                                "`cheribuild.py cmake` to install the latest version locally")
     __commandLineOptionGroup = None
 
     @classmethod
@@ -204,7 +202,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         self.__requiredPkgConfig = {}  # type: typing.Dict[str, typing.Any]
         self._systemDepsChecked = False
 
-    def _addRequiredSystemTool(self, executable: str, installInstructions=None, freebsd: str=None, apt: str = None,
+    def _addRequiredSystemTool(self, executable: str, installInstructions=None, freebsd: str=None, apt: str=None,
                                zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
         if not installInstructions:
             installInstructions = OSInfo.install_instructions(executable, False, freebsd=freebsd, zypper=zypper, apt=apt,
@@ -1035,7 +1033,7 @@ class CMakeProject(Project):
     def __init__(self, config, generator=Generator.Ninja):
         super().__init__(config)
         self.configureCommand = os.getenv("CMAKE_COMMAND", "cmake")
-        self._addRequiredSystemTool("cmake", installInstructions=self._cmakeInstallInstructions)
+        self._addRequiredSystemTool("cmake", homebrew="cmake", zypper="cmake", apt="cmake", freebsd="cmake")
         self.generator = generator
         self.configureArgs.append(str(self.sourceDir))  # TODO: use undocumented -H and -B options?
         if self.generator == CMakeProject.Generator.Ninja:
@@ -1094,17 +1092,19 @@ class CMakeProject(Project):
         super().install(_stdoutFilter=_stdoutFilter)
 
     def _get_cmake_version(self):
-        if not Path(self.configureCommand).is_absolute():
-            abspath = shutil.which(self.configureCommand)
-            if not abspath:
-                fatalError("Could not find", self.configureCommand)
-            self.configureCommand = abspath
-        if not Path(self.configureCommand).exists():
+        cmd = Path(self.configureCommand)
+        assert self.configureCommand is not None
+        if not cmd.is_absolute() or not Path(self.configureCommand).exists():
             fatalError("Could not find cmake binary:", self.configureCommand)
             return (0, 0, 0)
-        return get_program_version(self.configureCommand, program_name=b"cmake")
+        assert cmd.is_absolute()
+        return get_program_version(cmd, program_name=b"cmake")
 
     def checkSystemDependencies(self):
+        if not Path(self.configureCommand).is_absolute():
+            abspath = shutil.which(self.configureCommand)
+            if abspath:
+                self.configureCommand = abspath
         super().checkSystemDependencies()
         if self.__minimum_cmake_version:
             # try to find cmake 3.4 or newer
@@ -1113,8 +1113,10 @@ class CMakeProject(Project):
             if versionComponents < self.__minimum_cmake_version:
                 versionStr = ".".join(map(str, versionComponents))
                 expectedStr = ".".join(map(str, self.__minimum_cmake_version))
+                instrs = "Use your package manager to install CMake > " + expectedStr + \
+                         " or run `cheribuild.py cmake` to install the latest version locally"
                 self.dependencyError("CMake version", versionStr, "is too old (need at least", expectedStr + ")",
-                                     installInstructions=self._cmakeInstallInstructions)
+                                     installInstructions=instrs)
 
     @staticmethod
     def findPackage(name: str) -> bool:
