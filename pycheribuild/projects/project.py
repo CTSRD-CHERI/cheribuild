@@ -1094,7 +1094,13 @@ class CMakeProject(Project):
         super().install(_stdoutFilter=_stdoutFilter)
 
     def _get_cmake_version(self):
+        if not Path(self.configureCommand).is_absolute():
+            abspath = shutil.which(self.configureCommand)
+            if not abspath:
+                fatalError("Could not find", self.configureCommand)
+            self.configureCommand = abspath
         if not Path(self.configureCommand).exists():
+            fatalError("Could not find cmake binary:", self.configureCommand)
             return (0, 0, 0)
         return get_program_version(self.configureCommand, program_name=b"cmake")
 
