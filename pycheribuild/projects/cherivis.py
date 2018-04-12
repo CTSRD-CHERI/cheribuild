@@ -71,10 +71,12 @@ class BuildCheriVis(Project):
         self._addRequiredSystemTool("clang++")
         if IS_LINUX or IS_FREEBSD:
             self._addRequiredSystemTool("gnustep-config", installInstructions=gnuStepInstallInstructions)
-        else:
-            self._addRequiredSystemTool("xcodebuild", installInstructions="Install XCode")
         self.gnustepMakefilesDir = None  # type: Path
-        self.makeCommand = "make" if IS_LINUX else "gmake"
+        if IS_MAC:
+            self.make_args.set_command("xcodebuild", can_pass_j_flag=False, installInstructions="Install XCode")
+            assert self.make_args.kind == MakeCommandKind.CustomMakeTool
+        print("command = ", self.make_args.command)
+
         self.cheritrace_path = None
         # Build Cheritrace as a subproject
         self.cheritrace_subproject = BuildCheriTrace(config)
@@ -124,10 +126,7 @@ class BuildCheriVis(Project):
 
     def clean(self):
         # doesn't seem to be possible to use a out of source build
-        if IS_MAC:
-            runCmd("xcodebuild", "clean", cwd=self.sourceDir)
-        else:
-            self.runMake("clean", cwd=self.sourceDir)
+        self.runMake("clean", cwd=self.sourceDir)
         self.cleanDirectory(self.cheritrace_subproject.buildDir)
         return ThreadJoiner(None)   # can't be done async
 
@@ -140,7 +139,7 @@ class BuildCheriVis(Project):
         self.cheritrace_subproject.configure()
         self.cheritrace_subproject.compile()
         if IS_MAC:
-            runCmd("xcodebuild", cwd=self.sourceDir)
+            self.runMake(cwd=self.sourceDir)
         else:
             self.runMake("print-gnustep-make-help", cwd=self.sourceDir)
             self.runMake("all", cwd=self.sourceDir)
