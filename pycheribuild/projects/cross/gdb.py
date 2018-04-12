@@ -138,7 +138,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.LDFLAGS.append("-lelf")
             self.CFLAGS.append("-std=gnu89")
             self.configureEnvironment.update(CONFIGURED_M4="m4", CONFIGURED_BISON="byacc", TMPDIR="/tmp", LIBS="")
-        if self.makeCommand == "gmake":
+        if self.make_args.command == "gmake":
             self.configureEnvironment["MAKE"] = "gmake"
 
         self.hostCC = os.getenv("HOST_CC", str(config.clangPath))

@@ -178,7 +178,7 @@ class _BuildFreeBSD(Project):
                 archBuildFlags = {"TARGET": "mips", "TARGET_ARCH": "mips64"}
             elif self.target_arch == CrossCompileTarget.NATIVE:
                 archBuildFlags = {"TARGET": "amd64"}
-        self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake)
+        self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
         self.make_args.set(**archBuildFlags)
         self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
         # TODO: once we have merged the latest upstream changes use MAKEOBJDIR instead to get a more sane hierarchy
@@ -420,12 +420,12 @@ class _BuildFreeBSD(Project):
     def _query_buildenv_path(self, args, var):
         try:
             bw_flags = args.all_commandline_args + ["buildenv",
-                                                    "BUILDENV_SHELL=" + str(self.makeCommand) + " -V " + var]
+                                                    "BUILDENV_SHELL=" + str(self.make_args.command) + " -V " + var]
             if self.crossbuild:
                 bw_flags.append("PATH=" + os.getenv("PATH"))
             # https://github.com/freebsd/freebsd/commit/1edb3ba87657e28b017dffbdc3d0b3a32999d933
-            cmd = runCmd([self.makeCommand] + bw_flags, env=args.env_vars, cwd=self.sourceDir, runInPretendMode=True,
-                         captureOutput=True)
+            cmd = runCmd([self.make_args.command] + bw_flags, env=args.env_vars, cwd=self.sourceDir,
+                         runInPretendMode=True, captureOutput=True)
             lines = cmd.stdout.strip().split(b"\n")
             last_line = lines[-1].decode("utf-8").strip()
             if last_line.startswith("/") and cmd.returncode == 0:
@@ -685,19 +685,19 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                     install=install_cmd, colour_diags=colour_diags)
                 args.set(BUILDENV_SHELL="sh -ex -c '" + build_cmd + "' || exit 1")
                 statusUpdate("Building", subdir, "using", buildenv_target, "target")
-                runCmd([self.makeCommand] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
+                runCmd([self.make_args.command] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
                        cwd=self.sourceDir)
                 # If we are building a library we want to build both the CHERI and the mips version (unless the
                 # user explicitly specified --libcheri-buildenv)
                 if self.target_arch == CrossCompileTarget.CHERI and is_lib and buildenv_target != "libcheribuildenv":
                     statusUpdate("Building", subdir, "using libcheribuildenv target")
-                    runCmd([self.makeCommand] + args.all_commandline_args + ["libcheribuildenv"], env=args.env_vars,
+                    runCmd([self.make_args.command] + args.all_commandline_args + ["libcheribuildenv"], env=args.env_vars,
                            cwd=self.sourceDir)
 
         elif self.config.buildenv or self.config.libcheri_buildenv:
             args = self.buildworldArgs
             args.remove_flag("-s")  # buildenv should not be silent
-            runCmd([self.makeCommand] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
+            runCmd([self.make_args.command] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
                    cwd=self.sourceDir)
         else:
             super().process()

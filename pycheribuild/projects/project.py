@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import copy
 import io
 import inspect
 import os
@@ -440,7 +441,8 @@ class MakeCommandKind(Enum):
     CustomMakeTool = "custom make tool"
 
 class MakeOptions(object):
-    def __init__(self, kind: MakeCommandKind, **kwargs):
+    def __init__(self, kind: MakeCommandKind, project: SimpleProject, **kwargs):
+        self.__project = project
         self._vars = OrderedDict()
         # Used by e.g. FreeBSD:
         self._with_options = OrderedDict()  # type: typing.Dict[str, bool]
@@ -448,6 +450,13 @@ class MakeOptions(object):
         self.env_vars = {}
         self.set(**kwargs)
         self.kind = kind
+        self.__can_pass_j_flag = None  # type: typing.Optional[bool]
+        self.__command = None  # type: typing.Optional[str]
+        self.install_instructions = None  # type: typing.Optional[str]
+
+    def __deepcopy__(self, memo):
+        assert False, "Should not be called!"
+        pass
 
     def __do_set(self, target_dict: "typing.Dict[str, str]", **kwargs):
         for k, v in kwargs.items():
@@ -484,6 +493,49 @@ class MakeOptions(object):
         else:
             assert self.kind == MakeCommandKind.GnuMake
             return name + "=1"
+
+    @property
+    def command(self) -> str:
+        # Don't cache this value in case the user changes the kind
+        # if self.__command is None:
+        cmd = self.__infer_command()
+        assert not Path(cmd).is_absolute()
+        return cmd
+
+    # noinspection PyProtectedMember
+    def __infer_command(self) -> str:
+        if self.kind == MakeCommandKind.DefaultMake:
+            self.__project._addRequiredSystemTool("make")
+            return "make"
+        elif self.kind == MakeCommandKind.GnuMake:
+            if IS_LINUX and not shutil.which("gmake"):
+                statusUpdate("Could not find `gmake` command, assuming `make` is GNU make")
+                self.__project._addRequiredSystemTool("make")
+                return "make"
+            else:
+                self.__project._addRequiredSystemTool("gmake", homebrew="make")
+                return "gmake"
+        elif self.kind == MakeCommandKind.BsdMake:
+            if IS_FREEBSD:
+                return "make"
+            else:
+                self.__project._addRequiredSystemTool("bmake", homebrew="bmake", cheribuild_target="bmake")
+                return "bmake"
+        elif self.kind == MakeCommandKind.Ninja:
+            self.__project._addRequiredSystemTool("ninja", homebrew="ninja", apt="ninja-build")
+            return "ninja"
+        else:
+            if self.__command is not None:
+                return self.__command
+            fatalError("Cannot infer path from CustomMakeTool. Set self.make_args.set_command(\"tool\")")
+            raise RuntimeError()
+
+    def set_command(self, value, can_pass_j_flag=True, **kwargs):
+        assert not Path(value).is_absolute(), value + " should not be absolute"
+        self.__command = value
+        # noinspection PyProtectedMember
+        self.__project._addRequiredSystemTool(value, **kwargs)
+        self.__can_pass_j_flag = can_pass_j_flag
 
     @property
     def all_commandline_args(self) -> list:
@@ -523,13 +575,26 @@ class MakeOptions(object):
                 del self._vars[k]
 
     def copy(self):
-        return deepcopy(self)
+        result = copy.copy(self)
+
+        # Make sure that the list and dict objects are different
+        result._vars = copy.deepcopy(self._vars)
+        result._with_options = copy.deepcopy(self._with_options)
+        result._flags = copy.deepcopy(self._flags)
+        result.env_vars = copy.deepcopy(self.env_vars)
+        return result
 
     def update(self, other: "MakeOptions"):
         self._vars.update(other._vars)
         self._with_options.update(other._with_options)
         self._flags.extend(other._flags)
         self.env_vars.update(other.env_vars)
+
+    @property
+    def can_pass_jflag(self):
+        if self.__can_pass_j_flag is not None:
+            return self.__can_pass_j_flag
+        return self.kind != MakeCommandKind.CustomMakeTool
 
 
 class Project(SimpleProject):
@@ -628,6 +693,12 @@ class Project(SimpleProject):
                 cls.__can_use_lld_map[compiler] = False
         return cls.__can_use_lld_map[compiler]
 
+    def checkSystemDependencies(self):
+        # Check that the make command exists (this will also add it to the required system tools)
+        if self.make_args.command is None:
+            fatalError("Make command not set!")
+        super().checkSystemDependencies()
+
     @classmethod
     def setupConfigOptions(cls, installDirectoryHelp="", **kwargs):
         super().setupConfigOptions(**kwargs)
@@ -663,31 +734,7 @@ class Project(SimpleProject):
         if self.config.createCompilationDB and self.compileDBRequiresBear:
             self._addRequiredSystemTool("bear", installInstructions="Run `cheribuild.py bear`")
         self._lastStdoutLineCanBeOverwritten = False
-        self.make_args = MakeOptions(self.make_kind)
-        if self.make_kind == MakeCommandKind.DefaultMake:
-            self.makeCommand = "make"
-        elif self.make_kind == MakeCommandKind.GnuMake:
-            if IS_LINUX and not shutil.which("gmake"):
-                statusUpdate("Could not find `gmake` command, assuming `make` is GNU make")
-                self.makeCommand = "make"
-            else:
-                self._addRequiredSystemTool("gmake", homebrew="make")
-                self.makeCommand = shutil.which("gmake") or "gmake"
-        elif self.make_kind == MakeCommandKind.BsdMake:
-            if IS_FREEBSD:
-                self.makeCommand = shutil.which("make") or "make"
-            else:
-                if (self.config.otherToolsDir / "bin/bmake").exists():
-                    self.makeCommand = (self.config.otherToolsDir / "bin/bmake")
-                else:
-                    self.makeCommand = shutil.which("bmake") or "bmake"
-                self._addRequiredSystemTool("bmake", homebrew="bmake")
-        elif self.make_kind == MakeCommandKind.Ninja:
-            self.makeCommand = shutil.which("ninja") or "ninja"
-            self._addRequiredSystemTool("ninja", homebrew="ninja")
-        else:
-            self.makeCommand = "make-command-not-set-this-is-probably-an-error"
-
+        self.make_args = MakeOptions(self.make_kind, self)
         self._preventAssign = True
 
     # Make sure that API is used properly
@@ -757,11 +804,17 @@ class Project(SimpleProject):
         if revision:
             runCmd("git", "checkout", revision, cwd=srcDir, printVerboseOnly=True)
 
+
+    @property
+    def makeCommand(self):
+        assert False, "should not be called!: "
+        return self.make_args.command
+
     def runMake(self, makeTarget="", *, makeCommand: str = None, options: MakeOptions=None, logfileName: str = None,
                 cwd: Path = None, appendToLogfile=False, compilationDbName="compile_commands.json",
                 parallel: bool=True, stdoutFilter: "typing.Callable[[bytes], None]" = "__default_filter__") -> None:
         if not makeCommand:
-            makeCommand = self.makeCommand
+            makeCommand = self.make_args.command
         if not options:
             options = self.make_args
         if not cwd:
@@ -775,7 +828,7 @@ class Project(SimpleProject):
             allArgs = options.all_commandline_args
             if not logfileName:
                 logfileName = Path(makeCommand).name
-        if parallel:
+        if parallel and options.can_pass_jflag:
             allArgs.append(self.config.makeJFlag)
 
         allArgs = [makeCommand] + allArgs
@@ -788,7 +841,7 @@ class Project(SimpleProject):
         if self.config.noLogfile and stdoutFilter == "__default_filter__":
             # if output isatty() (i.e. no logfile) ninja already filters the output -> don't slow this down by
             # adding a redundant filter in python
-            if self.makeCommand == "ninja" and makeTarget != "install":
+            if makeCommand == "ninja" and makeTarget != "install":
                 stdoutFilter = None
         if stdoutFilter == "__default_filter__":
             stdoutFilter = self._stdoutFilter
@@ -804,7 +857,7 @@ class Project(SimpleProject):
         self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=stdoutFilter, cwd=cwd, env=env,
                             appendToLogfile=appendToLogfile)
         # add a newline at the end in case it ended with a filtered line (no final newline)
-        print("Running", self.makeCommand, makeTarget, "took", time.time() - starttime, "seconds")
+        print("Running", makeCommand, makeTarget, "took", time.time() - starttime, "seconds")
 
     def update(self):
         if not self.repository:
@@ -987,10 +1040,10 @@ class CMakeProject(Project):
         self.configureArgs.append(str(self.sourceDir))  # TODO: use undocumented -H and -B options?
         if self.generator == CMakeProject.Generator.Ninja:
             self.configureArgs.append("-GNinja")
-            self.makeCommand = "ninja"
-            self._addRequiredSystemTool("ninja")
+            self.make_args.kind = MakeCommandKind.Ninja
         if self.generator == CMakeProject.Generator.Makefiles:
             self.configureArgs.append("-GUnix Makefiles")
+            self.make_args.kind = MakeCommandKind.DefaultMake
 
         self.configureArgs.append("-DCMAKE_BUILD_TYPE=" + self.cmakeBuildType)
         # TODO: do it always?
