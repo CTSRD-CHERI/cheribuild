@@ -802,17 +802,11 @@ class Project(SimpleProject):
         if revision:
             runCmd("git", "checkout", revision, cwd=srcDir, printVerboseOnly=True)
 
-
-    @property
-    def makeCommand(self):
-        assert False, "should not be called!: "
-        return self.make_args.command
-
-    def runMake(self, makeTarget="", *, makeCommand: str = None, options: MakeOptions=None, logfileName: str = None,
+    def runMake(self, makeTarget="", *, make_command: str = None, options: MakeOptions=None, logfileName: str = None,
                 cwd: Path = None, appendToLogfile=False, compilationDbName="compile_commands.json",
                 parallel: bool=True, stdoutFilter: "typing.Callable[[bytes], None]" = "__default_filter__") -> None:
-        if not makeCommand:
-            makeCommand = self.make_args.command
+        if not make_command:
+            make_command = self.make_args.command
         if not options:
             options = self.make_args
         if not cwd:
@@ -821,15 +815,15 @@ class Project(SimpleProject):
         if makeTarget:
             allArgs = options.all_commandline_args + [makeTarget]
             if not logfileName:
-                logfileName = Path(makeCommand).name + "." + makeTarget
+                logfileName = Path(make_command).name + "." + makeTarget
         else:
             allArgs = options.all_commandline_args
             if not logfileName:
-                logfileName = Path(makeCommand).name
+                logfileName = Path(make_command).name
         if parallel and options.can_pass_jflag:
             allArgs.append(self.config.makeJFlag)
 
-        allArgs = [makeCommand] + allArgs
+        allArgs = [make_command] + allArgs
         if self.config.createCompilationDB and self.compileDBRequiresBear:
             allArgs = [shutil.which("bear"), "--cdb", self.buildDir / compilationDbName,
                        "--append"] + allArgs
@@ -839,23 +833,23 @@ class Project(SimpleProject):
         if self.config.noLogfile and stdoutFilter == "__default_filter__":
             # if output isatty() (i.e. no logfile) ninja already filters the output -> don't slow this down by
             # adding a redundant filter in python
-            if makeCommand == "ninja" and makeTarget != "install":
+            if make_command == "ninja" and makeTarget != "install":
                 stdoutFilter = None
         if stdoutFilter == "__default_filter__":
             stdoutFilter = self._stdoutFilter
         # TODO: this should be a super-verbose flag instead
-        if self.config.verbose and makeCommand == "ninja":
+        if self.config.verbose and make_command == "ninja":
             allArgs.append("-v")
         if self.config.passDashKToMake:
             allArgs.append("-k")
-            if makeCommand == "ninja":
+            if make_command == "ninja":
                 # ninja needs the maximum number of failed jobs as an argument
                 allArgs.append("50")
         env = options.env_vars
         self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=stdoutFilter, cwd=cwd, env=env,
                             appendToLogfile=appendToLogfile)
         # add a newline at the end in case it ended with a filtered line (no final newline)
-        print("Running", makeCommand, makeTarget, "took", time.time() - starttime, "seconds")
+        print("Running", make_command, makeTarget, "took", time.time() - starttime, "seconds")
 
     def update(self):
         if not self.repository:
@@ -869,7 +863,7 @@ class Project(SimpleProject):
         # will have to check how well binutils and qemu work there
         if (self.buildDir / ".git").is_dir():
             if (self.buildDir / "GNUmakefile").is_file() and self.make_kind != MakeCommandKind.BsdMake and self.target != "elftoolchain":
-                runCmd(self.makeCommand, "distclean", cwd=self.buildDir)
+                runCmd(self.make_args.command, "distclean", cwd=self.buildDir)
             else:
                 # just use git clean for cleanup
                 warningMessage(self.projectName, "does not support out-of-source builds, using git clean to remove"
