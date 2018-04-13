@@ -47,6 +47,8 @@ class BuildQEMU(AutotoolsProject):
         super().setupConfigOptions()
         cls.magic128 = cls.addBoolOption("magic-128")
         cls.debug_info = cls.addBoolOption("debug-info")
+        # Turn on unaligned loads/stores by default
+        cls.unaligned = cls.addBoolOption("unaligned", showHelp=True, help="Permit un-aligned loads/stores", default=True)
 
     @classmethod
     def qemu_binary(cls, config: CheriConfig):
@@ -93,8 +95,8 @@ class BuildQEMU(AutotoolsProject):
                 # https://github.com/CTSRD-CHERI/qemu/commit/40a7fc2823e2356fa5ffe1ee1d672f1d5ec39a12
                 extraCFlags += " -DCHERI_128=1" if not self.magic128 else " -DCHERI_MAGIC128=1"
 
-        # Turn on unaligned loads/stores by default
-        extraCFlags += " -DCHERI_UNALIGNED"
+        if self.unaligned:
+            extraCFlags += " -DCHERI_UNALIGNED"
         self.configureArgs.extend([
             "--target-list=" + targets,
             "--disable-linux-user",
