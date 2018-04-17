@@ -246,7 +246,7 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
             self.configureCommand = self.sourceDir / "autogen.sh"
         self.configureArgs.extend([
             "--disable-shared", "--enable-static", "--without-python",
-            "--without-modules",
+            "--without-modules", "--without-lzma",
         ])
 
 
@@ -286,6 +286,9 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                                ENABLE_DEVICE_ORIENTATION=False,  # needs QtSensors
                                ENABLE_WEBKIT2=False,  # needs QtQuick
                                )
+        # Use llvm-{ar,ranlib} because elftoolchain's versions truncate libWebCore.a
+        self.add_cmake_options(CMAKE_AR=self.config.sdkBinDir / "llvm-ar")
+        self.add_cmake_options(CMAKE_RANLIB=self.config.sdkBinDir / "llvm-ranlib")
         if not self.compiling_for_host():
             # we need to find the installed Qt
             self.add_cmake_options(ENABLE_JIT=False,  # Not supported on MIPS
