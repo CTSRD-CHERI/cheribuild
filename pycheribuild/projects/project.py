@@ -659,7 +659,7 @@ class Project(SimpleProject):
 
     @classmethod
     def buildDirForTarget(cls, config: CheriConfig, target: CrossCompileTarget):
-        return config.buildRoot / (cls.projectName.lower() + "-" + cls.buildDirSuffix(config, target))
+        return config.buildRoot / (cls.projectName.lower() + cls.buildDirSuffix(config, target))
 
     _installToSDK = ComputedDefaultValue(
         function=lambda config, project: config.sdkDir,
