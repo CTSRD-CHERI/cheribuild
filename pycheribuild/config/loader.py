@@ -145,12 +145,22 @@ class ConfigOptionBase(object):
         self._fallback_name = _fallback_name  # for targets such as gdb-mips, etc
 
     def loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
-        result = self._loadOptionImpl(config, ownerClass)
+        result = self._loadOptionImpl(config, self.fullOptionName)
+        # fall back from --qtbase-mips/foo to --qtbase/foo
+        if result is None and self._fallback_name is not None:
+            fallback_option = self._loader.options.get(self._fallback_name)
+            result = fallback_option._loadOptionImpl(config, self.fullOptionName)
+            if result is not None and config.verbose:
+                print("Using fallback config option value", self._fallback_name, "for", self.name, "->", result)
+
+        if result is None:  # If no option is set fall back to the default
+            result = self._getDefaultValue(config, ownerClass)
         # Now convert it to the right type
         result = self._convertType(result)
         return result
 
-    def _loadOptionImpl(self, config: "CheriConfig", ownerClass: "typing.Type"):
+    def _loadOptionImpl(self, config: "CheriConfig", target_option_name) -> "typing.Optional[Any]":
+        # target_option_name may not be the same as self.fullOptionName if we are loading the fallback value
         raise NotImplementedError()
 
     @property
@@ -202,8 +212,8 @@ class DefaultValueOnlyConfigOption(ConfigOptionBase):
     def __init__(self, *args, _loader, **kwargs):
         super().__init__(*args, _loader=_loader)
 
-    def _loadOptionImpl(self, config: "CheriConfig", ownerClass: "typing.Type"):
-        return self._getDefaultValue(config, ownerClass)
+    def _loadOptionImpl(self, config: "CheriConfig", target_option_name):
+        return None  # always use the default value
 
 
 class CommandLineConfigOption(ConfigOptionBase):
@@ -254,26 +264,16 @@ class CommandLineConfigOption(ConfigOptionBase):
         assert not action.type  # we handle the type of the value manually
         self.action = action
 
-    def _loadOptionImpl(self, config: "CheriConfig", ownerClass: "typing.Type"):
-        fromCmdLine = self.loadFromCommandLine(config, allow_fallback=True)
-        if fromCmdLine is not None:
-            return fromCmdLine
-        return self._getDefaultValue(config, ownerClass)
+    def _loadOptionImpl(self, config: "CheriConfig", target_option_name: str):
+        from_cmdline = self.loadFromCommandLine()
+        return from_cmdline
 
     # noinspection PyProtectedMember
-    def loadFromCommandLine(self, config: "CheriConfig", allow_fallback: bool):
+    def loadFromCommandLine(self):
         assert self._loader._parsedArgs  # load() must have been called before using this object
         # FIXME: check the fallback name here
         assert hasattr(self._loader._parsedArgs, self.action.dest)
-        result = getattr(self._loader._parsedArgs, self.action.dest)  # from command line
-        if result is None and allow_fallback and self._fallback_name is not None:
-            # fall back from --qtbase-mips/foo to --qtbase/foo
-            fallback_option = self._loader.options.get(self._fallback_name)
-            if fallback_option and isinstance(fallback_option, CommandLineConfigOption):
-                result = fallback_option.loadFromCommandLine(config)
-            if result is not None:
-                print("Using fallback commandline result", self._fallback_name, "for", self.name, "->", result)
-        return result
+        return getattr(self._loader._parsedArgs, self.action.dest)  # from command line
 
 
 # noinspection PyProtectedMember
@@ -281,24 +281,9 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _loadOptionImpl(self, config: "CheriConfig", ownerClass: "typing.Type"):
-        result = self.__real_load_option_impl(config, self.fullOptionName)
-        if result is None and self._fallback_name is not None:
-            # fall back from --qtbase-mips/foo to --qtbase/foo
-            fallback_option = self._loader.options.get(self._fallback_name)
-            if fallback_option and isinstance(fallback_option, JsonAndCommandLineConfigOption):
-                result = fallback_option.__real_load_option_impl(config, self.fullOptionName)
-            # if result is not None:
-            #    print("Using fallback JSON result", self._fallback_name, "for", self.name, "->", result)
-        if result is None:
-            # load the default value (which could be a lambda)
-            result = self._getDefaultValue(config, ownerClass)
-        return result
-
-    def __real_load_option_impl(self, config: "CheriConfig", target_option_name: str):
-        # target_option_name may not be the same as self.fullOptionName if we are loading the fallback value
+    def _loadOptionImpl(self, config: "CheriConfig", target_option_name: str):
         # First check the value specified on the command line, then load JSON and then fallback to the default
-        fromCmdLine = self.loadFromCommandLine(config, allow_fallback=False)
+        fromCmdLine = self.loadFromCommandLine()
         # print(fullOptionName, "from cmdline:", fromCmdLine)
         if fromCmdLine is not None:
             if fromCmdLine != self.action.default:
