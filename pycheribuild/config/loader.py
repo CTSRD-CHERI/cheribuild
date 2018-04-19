@@ -65,6 +65,8 @@ class ConfigLoaderBase(object):
     options = dict()  # type: typing.Dict[str, ConfigOptionBase]
     _parsedArgs = None
     _JSON = {}  # type: dict
+    #_config_option_by_class = collections.defaultdict(dict)  # type: typing.DefaultDict[typing.Dict[str, ConfigOptionBase]]
+    _config_option_by_class = {}  # type: typing.Dict[typing.Dict[str, ConfigOptionBase]]
 
     showAllHelp = any(s in sys.argv for s in ("--help-all", "--help-hidden")) or "_ARGCOMPLETE" in os.environ
 
@@ -84,13 +86,13 @@ class ConfigLoaderBase(object):
                               type=bool, **kwargs)
 
     def addOption(self, name: str, shortname=None, default=None, type: "typing.Callable[[str], Type_T]"=str,
-                  group=None, helpHidden=False, _owningClass: "typing.Type"=None,
+                  group=None, helpHidden=False, _owningClass: "typing.Type"=None, _fallback_name: str = None,
                   option_cls: "typing.Type[ConfigOptionBase]"=None, **kwargs) -> "Type_T":
         if option_cls is None:
             option_cls = self.__option_cls
 
         result = option_cls(name, shortname, default, type, _owningClass, _loader=self, group=group,
-                            helpHidden=helpHidden, **kwargs)
+                            helpHidden=helpHidden, _fallback_name=_fallback_name, **kwargs)
         assert name not in self.options  # make sure we don't add duplicate options
         self.options[name] = result
         # noinspection PyTypeChecker
@@ -127,7 +129,7 @@ class ConfigLoaderBase(object):
 
 class ConfigOptionBase(object):
     def __init__(self, name: str, shortname: str, default, valueType: "typing.Type", _owningClass=None,
-                 _loader: ConfigLoaderBase=None):
+                 _loader: ConfigLoaderBase=None, _fallback_name: str=None):
         self.name = name
         self.shortname = shortname
         self.default = default
@@ -142,6 +144,13 @@ class ConfigOptionBase(object):
         self._cached = None
         self._loader = _loader
         self._owningClass = _owningClass  # if none it means the global CheriConfig is the class containing this option
+        self._fallback_name = _fallback_name  # for targets such as gdb-mips, etc
+        # TODO: I guess this can be dleted?
+        if self._owningClass not in self._loader._config_option_by_class:
+            # noinspection PyProtectedMember
+            self._loader._config_option_by_class[self._owningClass] = dict()
+        # noinspection PyProtectedMember
+        self._loader._config_option_by_class[self._owningClass][self.name] = self
 
     def loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
         result = self._loadOptionImpl(config, ownerClass)
@@ -194,7 +203,7 @@ class ConfigOptionBase(object):
         return result
 
     def __repr__(self):
-        return "<{} type={} cached={}>".format(self.__class__.__name__, self.valueType, self._cached)
+        return "<{}({}) type={} cached={}>".format(self.__class__.__name__, self.name, self.valueType, self._cached)
 
 
 class DefaultValueOnlyConfigOption(ConfigOptionBase):
@@ -207,8 +216,9 @@ class DefaultValueOnlyConfigOption(ConfigOptionBase):
 
 class CommandLineConfigOption(ConfigOptionBase):
     def __init__(self, name: str, shortname: str, default, valueType: "typing.Type", _owningClass,
-                 _loader: ConfigLoaderBase, helpHidden: bool, group: argparse._ArgumentGroup, **kwargs):
-        super().__init__(name, shortname, default, valueType, _owningClass, _loader)
+                 _loader: ConfigLoaderBase, helpHidden: bool, group: argparse._ArgumentGroup,
+                 _fallback_name: str=None, **kwargs):
+        super().__init__(name, shortname, default, valueType, _owningClass, _loader, _fallback_name)
         # hide obscure options unless --help-hidden/--help/all is passed
         if helpHidden and not self._loader.showAllHelp:
             kwargs["help"] = argparse.SUPPRESS
@@ -253,16 +263,25 @@ class CommandLineConfigOption(ConfigOptionBase):
         self.action = action
 
     def _loadOptionImpl(self, config: "CheriConfig", ownerClass: "typing.Type"):
-        fromCmdLine = self.loadFromCommandLine()
+        fromCmdLine = self.loadFromCommandLine(config, allow_fallback=True)
         if fromCmdLine is not None:
             return fromCmdLine
         return self._getDefaultValue(config, ownerClass)
 
     # noinspection PyProtectedMember
-    def loadFromCommandLine(self):
+    def loadFromCommandLine(self, config: "CheriConfig", allow_fallback: bool):
         assert self._loader._parsedArgs  # load() must have been called before using this object
+        # FIXME: check the fallback name here
         assert hasattr(self._loader._parsedArgs, self.action.dest)
-        return getattr(self._loader._parsedArgs, self.action.dest)  # from command line
+        result = getattr(self._loader._parsedArgs, self.action.dest)  # from command line
+        if result is None and allow_fallback and self._fallback_name is not None:
+            # fall back from --qtbase-mips/foo to --qtbase/foo
+            fallback_option = self._loader.options.get(self._fallback_name)
+            if fallback_option and isinstance(fallback_option, CommandLineConfigOption):
+                result = fallback_option.loadFromCommandLine(config)
+            if result is not None:
+                print("Using fallback commandline result", self._fallback_name, "for", self.name, "->", result)
+        return result
 
 
 # noinspection PyProtectedMember
@@ -271,8 +290,23 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
         super().__init__(*args, **kwargs)
 
     def _loadOptionImpl(self, config: "CheriConfig", ownerClass: "typing.Type"):
+        result = self.__real_load_option_impl(config, self.fullOptionName)
+        if result is None and self._fallback_name is not None:
+            # fall back from --qtbase-mips/foo to --qtbase/foo
+            fallback_option = self._loader.options.get(self._fallback_name)
+            if fallback_option and isinstance(fallback_option, JsonAndCommandLineConfigOption):
+                result = fallback_option.__real_load_option_impl(config, self.fullOptionName)
+            # if result is not None:
+            #    print("Using fallback JSON result", self._fallback_name, "for", self.name, "->", result)
+        if result is None:
+            # load the default value (which could be a lambda)
+            result = self._getDefaultValue(config, ownerClass)
+        return result
+
+    def __real_load_option_impl(self, config: "CheriConfig", target_option_name: str):
+        # target_option_name may not be the same as self.fullOptionName if we are loading the fallback value
         # First check the value specified on the command line, then load JSON and then fallback to the default
-        fromCmdLine = self.loadFromCommandLine()
+        fromCmdLine = self.loadFromCommandLine(config, allow_fallback=False)
         # print(fullOptionName, "from cmdline:", fromCmdLine)
         if fromCmdLine is not None:
             if fromCmdLine != self.action.default:
@@ -281,13 +315,12 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
         # try loading it from the JSON file:
         fromJson = self._loadFromJson(self.fullOptionName)
         # print(fullOptionName, "from JSON:", fromJson)
-        if fromJson is not None:
-            if config.verbose:
-                print(coloured(AnsiColour.blue, "Overriding default value for", self.fullOptionName,
-                               "with value from JSON:", fromJson))
-            return fromJson
-        # load the default value (which could be a lambda)
-        return self._getDefaultValue(config, ownerClass)
+        if fromJson[0] is not None:
+            if config.verbose or True:
+                print(coloured(AnsiColour.blue, "Overriding default value for", target_option_name,
+                               "with value from JSON key", fromJson[1], "->", fromJson[0]))
+            return fromJson[0]
+        return None  # not found -> fall back to default
 
     def _lookupKeyInJson(self, fullOptionName: str):
         if fullOptionName in self._loader._JSON:
@@ -302,8 +335,9 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
             jsonObject = jsonObject.get(objRef, {})
         return jsonObject.get(jsonKey, None)
 
-    def _loadFromJson(self, fullOptionName: str):
+    def _loadFromJson(self, fullOptionName: str) -> "typing.Tuple[typing.Optional[typing.Any], typing.Optional[str]]":
         result = self._lookupKeyInJson(fullOptionName)
+        used_key = None
         # See if any of the other long option names is a valid key name:
         if result is None:
             for optionName in self.action.option_strings:
@@ -312,7 +346,10 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
                     result = self._lookupKeyInJson(jsonKey)
                     if result is not None:
                         warningMessage("Old JSON key", jsonKey, "used, please use", fullOptionName, "instead")
+                        used_key = jsonKey
                         break
+        else:
+            used_key = fullOptionName
         # FIXME: it's about time I removed this code
         if result is None:
             # also check action.dest (as a fallback so I don't have to update all my config files right now)
@@ -320,7 +357,7 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
             if result is not None:
                 print(coloured(AnsiColour.cyan, "Old JSON key", self.action.dest, "used, please use",
                                fullOptionName, "instead"))
-        return result
+        return result, used_key
 
     # def __get__(self, instance, owner):
     #     ret = super().__get__(instance, owner)

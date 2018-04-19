@@ -20,8 +20,14 @@ from pycheribuild.config.defaultconfig import DefaultCheriConfig
 from pycheribuild.projects import *  # make sure all projects are loaded so that targetManager gets populated
 from pycheribuild.projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
 from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage
+from pycheribuild.projects.cross.qt5 import BuildQtBase
 
 _targets_registered = False
+
+try:
+    import typing
+except ImportError:
+    typing = {}
 
 
 # python 3.4 compatibility
@@ -77,7 +83,6 @@ class TestArgumentParsing(TestCase):
     def test_per_project_override(self):
         config = self._parse_arguments(["--skip-configure"])
         source_root = config.sourceRoot
-        print(BuildCheriBSDDiskImage.extraFilesDir)
         self.assertEqual(BuildCheriBSDDiskImage.extraFilesDir, source_root / "extra-files")
         self._parse_arguments(["--disk-image/extra-files=/foo/bar"])
         self.assertEqual(BuildCheriBSDDiskImage.extraFilesDir, Path("/foo/bar/"))
@@ -96,6 +101,98 @@ class TestArgumentParsing(TestCase):
             # check that source root can be overridden
             self._parse_arguments(["--source-root=/y"])
             self.assertEqual(BuildCheriBSDDiskImage.extraFilesDir, Path("/y/extra-files"))
+
+    def test_cross_compile_project_inherits(self):
+        # Parse args once to ensure targetManager is initialized
+        self._parse_arguments(["--skip-configure"])
+        qtbase_default = targetManager.get_target("qtbase").projectClass  # type: typing.Type[BuildQtBase]
+        qtbase_native = targetManager.get_target("qtbase-native").projectClass  # type: typing.Type[BuildQtBase]
+        qtbase_mips = targetManager.get_target("qtbase-mips").projectClass  # type: typing.Type[BuildQtBase]
+
+        # Check that project name is the same:
+        self.assertEqual(qtbase_default.projectName, qtbase_native.projectName)
+        self.assertEqual(qtbase_mips.projectName, qtbase_native.projectName)
+        # These classes were generated:
+        self.assertTrue(qtbase_native.synthetic)
+        self.assertTrue(qtbase_mips.synthetic)
+        self.assertFalse(hasattr(qtbase_default, "synthetic"))
+        self.assertEqual(qtbase_native.synthetic_base, qtbase_default)
+        self.assertEqual(qtbase_mips.synthetic_base, qtbase_default)
+        self.assertFalse(hasattr(qtbase_default, "synthetic_base"))
+
+        # Now check a property that should be inherited:
+        self._parse_arguments(["--qtbase-native/build-tests"])
+        self.assertFalse(qtbase_default.build_tests, "qtbase-default build-tests should default to false")
+        self.assertTrue(qtbase_native.build_tests, "qtbase-native build-tests should be set on cmdline")
+        self.assertFalse(qtbase_mips.build_tests, "qtbase-mips build-tests should default to false")
+        # If the base qtbase option is set but no per-target one use the basic one:
+        self._parse_arguments(["--qtbase/build-tests"])
+        self.assertTrue(qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline")
+        self.assertTrue(qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)")
+        self.assertTrue(qtbase_mips.build_tests, "qtbase-mips should inherit build-tests from qtbase(default)")
+
+        # But target-specific ones should override
+        self._parse_arguments(["--qtbase/build-tests", "--qtbase-mips/no-build-tests"])
+        self.assertTrue(qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline")
+        self.assertTrue(qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)")
+        self.assertFalse(qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests")
+
+        # Check that we hav ethe same behaviour when loading from json:
+        self._parse_config_file_and_args(b'{"qtbase-native/build-tests": true }')
+        self.assertFalse(qtbase_default.build_tests, "qtbase-default build-tests should default to false")
+        self.assertTrue(qtbase_native.build_tests, "qtbase-native build-tests should be set on cmdline")
+        self.assertFalse(qtbase_mips.build_tests, "qtbase-mips build-tests should default to false")
+        # If the base qtbase option is set but no per-target one use the basic one:
+        self._parse_config_file_and_args(b'{"qtbase/build-tests": true }')
+        self.assertTrue(qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline")
+        self.assertTrue(qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)")
+        self.assertTrue(qtbase_mips.build_tests, "qtbase-mips should inherit build-tests from qtbase(default)")
+
+        # But target-specific ones should override
+        self._parse_config_file_and_args(b'{"qtbase/build-tests": true, "qtbase-mips/build-tests": false }')
+        self.assertTrue(qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline")
+        self.assertTrue(qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)")
+        self.assertFalse(qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests")
+
+        # And that cmdline still overrides JSON:
+        self._parse_config_file_and_args(b'{"qtbase/build-tests": true }', "--qtbase-mips/no-build-tests")
+        self.assertTrue(qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline")
+        self.assertTrue(qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)")
+        self.assertFalse(qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests")
+        # But if a per-target option is set in the json that still overrides the default set on the cmdline
+        self._parse_config_file_and_args(b'{"qtbase-mips/build-tests": false }', "--qtbase/build-tests")
+        self.assertTrue(qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline")
+        self.assertTrue(qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)")
+        self.assertFalse(qtbase_mips.build_tests, "qtbase-mips should have a JSON false override for build-tests")
+
+        # However, don't inherit for buildDir since that doesn't make sense:
+        def assertBuildDirsDifferent():
+            # Default should be CHERI purecap
+            # print("Default build dir:", qtbase_default.buildDir)
+            # print("Native build dir:", qtbase_native.buildDir)
+            # print("Mips build dir:", qtbase_mips.buildDir)
+            self.assertNotEqual(qtbase_default.buildDir, qtbase_native.buildDir)
+            self.assertNotEqual(qtbase_default.buildDir, qtbase_mips.buildDir)
+            self.assertNotEqual(qtbase_mips.buildDir, qtbase_native.buildDir)
+
+        assertBuildDirsDifferent()
+        # overriding native build dir is fine:
+        self._parse_arguments(["--qtbase-native/build-directory=/foo/bar"])
+        assertBuildDirsDifferent()
+        self._parse_config_file_and_args(b'{"qtbase-native/build-directory": "/foo/bar"}')
+        assertBuildDirsDifferent()
+        # Should not inherit from the default one:
+        self._parse_arguments(["--qtbase/build-directory=/foo/bar"])
+        assertBuildDirsDifferent()
+        self._parse_config_file_and_args(b'{"qtbase/build-directory": "/foo/bar"}')
+        assertBuildDirsDifferent()
+
+        # Should not inherit from the default one:
+        self._parse_arguments(["--qtbase/build-directory=/foo/bar", "--qtbase-mips/build-directory=/bar/foo"])
+        assertBuildDirsDifferent()
+        self._parse_config_file_and_args(b'{"qtbase/build-directory": "/foo/bar",'
+                                         b' "qtbase-mips/build-directory": "/bar/foo"}')
+        assertBuildDirsDifferent()
 
     def test_duplicate_key(self):
         with self.assertRaisesRegex(SyntaxError, "duplicate key: 'cheri-bits'"):

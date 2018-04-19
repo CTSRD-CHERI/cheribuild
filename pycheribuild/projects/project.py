@@ -115,6 +115,7 @@ class ProjectSubclassDefinitionHook(type):
                 new_dict["doNotAddToTargets"] = True  # We are already adding it here
                 new_dict["target"] = new_name
                 new_dict["synthetic"] = True  # We are already adding it here
+                new_dict["synthetic_base"] = cls  # We are already adding it here
                 new_type = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
                 targetManager.addTarget(MultiArchTarget(new_name, new_type, arch, dependencies=set(deps)))
         else:
@@ -179,10 +180,19 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             # has to be a single underscore otherwise the name gets mangled to _Foo__commandlineOptionGroup
             cls._commandLineOptionGroup = cls._configLoader._parser.add_argument_group(
                 "Options for target '" + cls.target + "'")
+        # For targets such as qtbase-mips we want to fall back to checking the value of the option for qtbase
+        fallback_name = None
+        synthetic_base = getattr(cls, "synthetic_base", None)
+        if synthetic_base is not None:
+            # We don't want to inherit certain options from the non-target specific class since they should always be
+            # set directly for that target. Currently the only such option is build-directory since sharing that would
+            # break the build in most cases.
+            if name not in ["build-directory"]:
+                fallback_name = synthetic_base.target + "/" + name
 
         return cls._configLoader.addOption(configOptionKey + "/" + name, shortname, default=default, type=kind,
                                            _owningClass=cls, group=cls._commandLineOptionGroup, helpHidden=helpHidden,
-                                           **kwargs)
+                                           _fallback_name=fallback_name, **kwargs)
 
     @classmethod
     def addBoolOption(cls, name: str, *, shortname=None, default=False, **kwargs):
