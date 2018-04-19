@@ -65,8 +65,6 @@ class ConfigLoaderBase(object):
     options = dict()  # type: typing.Dict[str, ConfigOptionBase]
     _parsedArgs = None
     _JSON = {}  # type: dict
-    #_config_option_by_class = collections.defaultdict(dict)  # type: typing.DefaultDict[typing.Dict[str, ConfigOptionBase]]
-    _config_option_by_class = {}  # type: typing.Dict[typing.Dict[str, ConfigOptionBase]]
 
     showAllHelp = any(s in sys.argv for s in ("--help-all", "--help-hidden")) or "_ARGCOMPLETE" in os.environ
 
@@ -145,12 +143,6 @@ class ConfigOptionBase(object):
         self._loader = _loader
         self._owningClass = _owningClass  # if none it means the global CheriConfig is the class containing this option
         self._fallback_name = _fallback_name  # for targets such as gdb-mips, etc
-        # TODO: I guess this can be dleted?
-        if self._owningClass not in self._loader._config_option_by_class:
-            # noinspection PyProtectedMember
-            self._loader._config_option_by_class[self._owningClass] = dict()
-        # noinspection PyProtectedMember
-        self._loader._config_option_by_class[self._owningClass][self.name] = self
 
     def loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
         result = self._loadOptionImpl(config, ownerClass)
