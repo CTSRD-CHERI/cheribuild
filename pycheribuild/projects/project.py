@@ -159,7 +159,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     doNotAddToTargets = True
 
     # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
-    _clearLineSequence = b"\x1b[2K\r"
+    # However, if the output is just a plain text file don't attempt to do any line clearing
+    _clearLineSequence = b"\x1b[2K\r" if sys.__stdout__.isatty() else b"\n"
 
     __commandLineOptionGroup = None
 

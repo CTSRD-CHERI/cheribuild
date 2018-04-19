@@ -46,6 +46,7 @@ with tempfile.NamedTemporaryFile(prefix="cheribuild-", suffix=".py") as tmp:
     subprocess.check_call([sys.executable, str(combineScript)], stdout=tmp)
     print("About to run cheribuild on host '" + host + "' with the following arguments:", cheribuildArgs)
     print("Note: file that will be run is located at", tmp.name)
+    tty_option = ["-tt"] if sys.__stdin__.isatty() else []
     if "-f" not in sys.argv:
         input("Press enter to continue...")
     # the bash script:
@@ -61,4 +62,4 @@ scp "$script" "${host}:~/.remote-py3-script.py" > /dev/null && ssh -tt "$host" p
     remoteFile = "$HOME/.remote-py3-script.py"
     subprocess.check_call(["scp", tmp.name, host + ":" + remoteFile])
     # call execvp so that we get "^CExiting due to Ctrl+C" instead of a CalledProcessError
-    os.execvp("ssh", ["ssh", "-tt", host, "--", "python3", remoteFile] + cheribuildArgs)
+    os.execvp("ssh", ["ssh"] + tty_option + [host, "--", "python3", remoteFile] + cheribuildArgs)
