@@ -89,7 +89,6 @@ class CheriConfig(object):
                                                     choices=("pcrel", "plt", "legacy", "fn-desc"),
                                                     help="The ABI to use for cap-table mode")
 
-
         self.print_targets_only =  loader.addBoolOption("print-targets-only", helpHidden=True,
                                                         help="Only print the targets that would be executed instead of"
                                                              " all the commands")
@@ -141,6 +140,8 @@ class CheriConfig(object):
 
     def load(self):
         self.loader.load()
+        if self.print_targets_only:
+            self.pretend = True
         self.targets = self.loader.targets
         from ..filesystemutils import FileSystemUtils
         if self.clangPath is None:

@@ -15,14 +15,14 @@ sys.path.append(str(Path(__file__).parent.parent))
 # We can"t do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
 from pycheribuild.config.loader import DefaultValueOnlyConfigLoader, ConfigLoaderBase
 from pycheribuild.projects.project import SimpleProject
-SimpleProject._configLoader = DefaultValueOnlyConfigLoader()
 from pycheribuild.targets import targetManager
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # make sure all projects are loaded so that targetManager gets populated
 from pycheribuild.projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
 from pycheribuild.projects.cheribsd import BuildCHERIBSD
+from .setup_mock_chericonfig import setup_mock_chericonfig
 
-
+setup_mock_chericonfig(Path("/this/path/does/not/exist"))
 # Init code:
 BuildCHERIBSD.crossbuild = True
 
@@ -36,7 +36,7 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False) -> "typin
 
 
 def test_sdk():
-    freestanding_deps = ["elftoolchain", "binutils", "llvm", "qemu", "freestanding-sdk"]
+    freestanding_deps = ["elftoolchain", "binutils", "llvm", "qemu", "gdb-native", "freestanding-sdk"]
     assert _sort_targets(["freestanding-sdk"]) == freestanding_deps
     baremetal_deps = freestanding_deps + ["newlib-baremetal", "compiler-rt-baremetal", "libcxxrt-baremetal",
                                           "libcxx-baremetal", "baremetal-sdk"]
@@ -68,8 +68,8 @@ def test_disk_image_comes_second_last():
 
 def test_all_run_deps():
     assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm", "cheribsd", "elftoolchain", "binutils",
-                                                             "freestanding-sdk", "cheribsd-sysroot", "cheribsd-sdk",
-                                                             "gdb-mips", "disk-image", "run"]
+                                                             "gdb-native", "freestanding-sdk", "cheribsd-sysroot",
+                                                             "cheribsd-sdk", "gdb-mips", "disk-image", "run"]
 
 
 def test_run_disk_image():

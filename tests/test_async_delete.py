@@ -1,26 +1,13 @@
 from pathlib import Path
 from unittest import TestCase
-from pycheribuild.projects.project import Project
+from pycheribuild.projects.project import Project, CrossCompileTarget
 from pycheribuild.utils import setCheriConfig
+from .setup_mock_chericonfig import setup_mock_chericonfig, MockConfig
 import os
 import tempfile
 import time
 import unittest
 import subprocess
-
-
-class MockConfig(object):
-    def __init__(self, sourceRoot: Path):
-        self.pretend = False
-        self.clean = True
-        self.verbose = True
-        self.quiet = False
-        self.skipUpdate = True
-        self.skipInstall = True
-        self.createCompilationDB = False
-        self.sourceRoot = sourceRoot
-        # for the test:
-        self.sleep_before_delete = False
 
 
 # noinspection PyTypeChecker
@@ -46,9 +33,7 @@ class TestAsyncDelete(TestCase):
     def setUp(self):
         self._tempRoot = tempfile.TemporaryDirectory()
         self.tempRoot = Path(self._tempRoot.name)
-        self.config = MockConfig(self.tempRoot)
-        # noinspection PyTypeChecker
-        setCheriConfig(self.config)
+        self.config = setup_mock_chericonfig(self.tempRoot)
         self.project = MockProject(self.config, "foo")
         self.assertTrue(self.project.sourceDir.exists())
 
