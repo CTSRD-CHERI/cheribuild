@@ -51,7 +51,7 @@ class BuildSdk(TargetAliasWithDependencies):
 
 class BuildFreestandingSdk(SimpleProject):
     target = "freestanding-sdk"
-    dependencies = ["binutils", "llvm", "qemu"]  # TODO: should we add ld.bfd?
+    dependencies = ["binutils", "llvm", "qemu", "gdb-native"]  # TODO: should we add ld.bfd?
     dependenciesMustBeBuilt = True
 
     def __init__(self, config: CheriConfig):

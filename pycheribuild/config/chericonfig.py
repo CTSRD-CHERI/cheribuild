@@ -89,6 +89,11 @@ class CheriConfig(object):
                                                     choices=("pcrel", "plt", "legacy", "fn-desc"),
                                                     help="The ABI to use for cap-table mode")
 
+
+        self.print_targets_only =  loader.addBoolOption("print-targets-only", helpHidden=True,
+                                                        help="Only print the targets that would be executed instead of"
+                                                             " all the commands")
+
         # Attributes for code completion:
         self.verbose = None  # type: bool
         self.quiet = None  # type: bool

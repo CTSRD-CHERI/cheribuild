@@ -47,6 +47,13 @@ def _installDirMessage(project: "CrossCompileProject"):
     return "UNKNOWN"
 
 
+def crosscompile_dependencies(cls: "typing.Type[CrossCompileProject]"):
+    # TODO: can I make this take the class instance instead of the class
+    if cls.crossCompileTarget == CrossCompileTarget.NATIVE:
+        return ["freestanding-sdk"] if get_global_config().use_sdk_clang_for_native_xbuild else []
+    else:
+        return ["freestanding-sdk"] if cls.baremetal else ["cheribsd-sdk"]
+
 class CrossCompileMixin(object):
     doNotAddToTargets = True
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
@@ -59,7 +66,7 @@ class CrossCompileMixin(object):
     supported_architectures = list(CrossCompileTarget)
     defaultInstallDir = ComputedDefaultValue(function=_installDir, asString=_installDirMessage)
     appendCheriBitsToBuildDir = True
-    dependencies = lambda cls: ["freestanding-sdk"] if cls.baremetal else ["cheribsd-sdk"]
+    dependencies = crosscompile_dependencies
     defaultLinker = "lld"
     baremetal = False
     forceDefaultCC = False  # for some reason ICU binaries build during build crash -> fall back to /usr/bin/cc there

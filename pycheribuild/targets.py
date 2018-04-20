@@ -226,6 +226,10 @@ class TargetManager(object):
             target.checkSystemDeps(config)
         # all dependencies exist -> run the targets
         for target in chosenTargets:
-            target.execute()
+            if config.print_targets_only:
+                statusUpdate("Will build target", coloured(AnsiColour.yellow, target.name))
+                print("    Dependencies for", target.name, "are", target.projectClass.allDependencyNames())
+            else:
+                target.execute()
 
 targetManager = TargetManager()

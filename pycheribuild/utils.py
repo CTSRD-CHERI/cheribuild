@@ -58,7 +58,7 @@ __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includ
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
            "warningMessage", "Type_T", "typing", "popen_handle_noexec", "extract_version", "get_program_version", # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latestClangTool",  # no-combine
-           "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build"]  # no-combine
+           "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build", "get_global_config"]  # no-combine
 
 
 if sys.version_info < (3, 4):
@@ -96,6 +96,12 @@ def is_jenkins_build() -> bool:
 def setCheriConfig(c: "CheriConfig"):
     global _cheriConfig
     _cheriConfig = c
+
+
+def get_global_config() -> "CheriConfig":
+    global _cheriConfig
+    assert _cheriConfig is not None
+    return _cheriConfig
 
 
 def __filterEnv(env: dict) -> dict:
