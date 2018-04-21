@@ -64,10 +64,11 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             # self.LDFLAGS.append("-static")
             # self.COMMON_FLAGS.append("-static")  # adding it to LDFLAGS only doesn't seem to be enough
             self.configureArgs.extend(["--without-libxml", "--without-readline", "--without-gssapi"])
-            self.add_configure_env_arg("LDFLAGS_EX", "-static")
         else:
             self.configureArgs.extend(["--with-libxml", "--with-readline", "--without-gssapi"])
 
+        if self.force_static_linkage:
+            self.add_configure_env_arg("LDFLAGS_EX", "-static")
         if self.debugInfo:
             self.configureArgs.append("--enable-debug")
         else:

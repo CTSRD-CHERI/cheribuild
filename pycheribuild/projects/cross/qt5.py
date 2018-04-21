@@ -43,6 +43,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         super().__init__(config, target_arch)
         self.configureCommand = self.sourceDir / "configure"
+        if not self.compiling_for_host():
+            self.force_static_linkage = True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -57,24 +59,27 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     def configure(self, **kwargs):
         if not self.needsConfigure() and not self.config.forceConfigure:
             return
+
+        if self.force_static_linkage:
+            self.configureArgs.append("-static")
+
         if self.compiling_for_host():
             self.configureArgs.extend(["-prefix", str(self.installDir)])
             self.configureArgs.append("QMAKE_CC=" + str(self.config.clangPath))
             self.configureArgs.append("QMAKE_CXX=" + str(self.config.clangPlusPlusPath))
         else:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
-            compiler_flags = self.COMMON_FLAGS + ["-target", self.targetTriple + "12"]
+            compiler_flags = self.default_compiler_flags
             linker_flags = self.default_ldflags + ["-target", self.targetTriple + "12"]
+            assert self.force_static_linkage, "Currently only static linking is supported!"
 
             if self.compiling_for_cheri():
-                # force static linking for now (MIPS dynamic seems broken)
-                linker_flags += ["-static"]  # dynamically linked C++ doesn't work yet
                 self.configureArgs.append("QMAKE_LIBDIR=" + str(self.config.sdkSysrootDir / "usr/libcheri"))
                 if self.config.cheri_cap_table_abi or self.config.cheri_cap_table:
                     compiler_flags += ["-mllvm", "-mxcaptable"]
             elif self.compiling_for_mips():
-                linker_flags += ["-static"]  # also link statically to compare with static CHERI
-            # self.configureArgs.append("QMAKE_CXXFLAGS+=-stdlib=libc++")
+                # self.configureArgs.append("QMAKE_CXXFLAGS+=-stdlib=libc++")
+                pass
 
             # The build system already passes these:
             linker_flags = filter(lambda s: not s.startswith("--sysroot"), linker_flags)
@@ -86,7 +91,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-device-option", "COMPILER_FLAGS=" + commandline_to_str(compiler_flags),
                 "-device-option", "LINKER_FLAGS=" + commandline_to_str(linker_flags),
                 "-sysroot", self.config.sdkSysrootDir,
-                "-static",
                 "-prefix", "/usr/local/Qt-" + self.crossCompileTarget.value,
             ])
 
@@ -97,7 +101,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             "-no-evdev",
             # Needed for webkit:
             # "-icu",
-
             "-no-Werror",
         ])
         if self.build_tests:
@@ -133,7 +136,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         # -reduce-relocations .. Reduce amount of relocations [auto] (Unix only)
         # TODO: this needs PIE:
         # self.configureArgs.append("-reduce-relocations")
-
 
         if self.minimal:
             self.configureArgs.extend([
@@ -203,7 +205,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     def __init__(self, config, target_arch: CrossCompileTarget):
         super().__init__(config, target_arch)
         self.configureCommand = self.sourceDir / "source/configure"
-        self.configureArgs.extend(["--enable-static", "--disable-shared", "--disable-plugins", "--disable-dyload",
+        self.configureArgs.extend(["--disable-plugins", "--disable-dyload",
                                    "--disable-tests",
                                    "--disable-samples"])
         self.nativeBuildDir = self.buildDirForTarget(self.config, CrossCompileTarget.NATIVE)

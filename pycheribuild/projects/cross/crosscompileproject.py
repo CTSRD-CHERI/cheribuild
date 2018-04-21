@@ -194,23 +194,23 @@ class CrossCompileMixin(object):
 
     @property
     def default_ldflags(self):
+        result = [] + self.COMMON_FLAGS
+        if self.force_static_linkage:
+            result.append("-static")
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
             # return ["-fuse-ld=" + self.linker]
-            return []
+            return result
         elif self.crossCompileTarget == CrossCompileTarget.CHERI:
             emulation = "elf64btsmip_cheri_fbsd" if not self.baremetal else "elf64btsmip_cheri"
-            abi = "purecap"
         elif self.crossCompileTarget == CrossCompileTarget.MIPS:
             emulation = "elf64btsmip_fbsd" if not self.baremetal else "elf64btsmip"
-            abi = "n64"
         else:
             fatalError("Logic error!")
             return []
-        result = ["-mabi=" + abi,
-                  "-Wl,-m" + emulation,
-                  "-fuse-ld=" + self.linker,
-                  "-Wl,-z,notext",  # needed so that LLD allows text relocations
-                  "-B" + str(self.config.sdkBinDir)]
+        result += ["-Wl,-m" + emulation,
+                   "-fuse-ld=" + self.linker,
+                   "-Wl,-z,notext",  # needed so that LLD allows text relocations
+                  ]
         if not self.baremetal:
             result.append("--sysroot=" + str(self.sdkSysroot))
         if self.config.withLibstatcounters:
@@ -247,10 +247,32 @@ class CrossCompileMixin(object):
         cls.debugInfo = cls.addBoolOption("debug-info", help="build with debug info", default=True)
         cls.optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
                                                     default=cls.defaultOptimizationLevel)
+        cls.linkage = cls.addConfigOption("linkage", help="Build static or dynamic (default means for host=dynamic, MIPS/CHERI=static)",
+                                                     default="default", choices=["default", "static", "dynamic"],
+                                                     kind=str)
         if inspect.getattr_static(cls, "crossCompileTarget") is None:
             cls.crossCompileTarget = cls.addConfigOption("target", help="The target to build for (`cheri` or `mips` or `native`)",
                                                  default=defaultTarget, choices=["cheri", "mips", "native"],
                                                  kind=CrossCompileTarget)
+
+    @property
+    def force_static_linkage(self) -> bool:
+        if not self.compiling_for_host():
+            # FIXME: currently we force static for CHERI
+            return True
+        return self.linkage == "static"
+
+    @force_static_linkage.setter
+    def force_static_linkage(self, value) -> None:
+        if value is True:
+            self.linkage = "static"
+        else:
+            assert value is False
+            self.linkage = "default"
+
+    @property
+    def force_dynamic_linkage(self) -> bool:
+        return self.linkage == "dynamic"
 
     def compiling_for_mips(self):
         return self.crossCompileTarget == CrossCompileTarget.MIPS
@@ -400,14 +422,22 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             self.configureArgs.extend(["--host=" + self.targetTriple, "--target=" + self.targetTriple,
                                        "--build=" + buildhost])
 
+        if self.force_static_linkage:
+            self.configureArgs.extend(["--enable-static", "--disable-shared"])
+        elif self.force_dynamic_linkage:
+            self.configureArgs.extend(["--disable-static", "--enable-shared"])
+        else:
+            self.configureArgs.extend(["--enable-static", "--enable-shared"])
+
     @property
     def default_compiler_flags(self):
+        result = self.COMMON_FLAGS + self.compiler_warning_flags
         if self.compiling_for_host():
-            return self.COMMON_FLAGS + self.compiler_warning_flags
-        result = ["-target", self.targetTripleWithVersion] + self.COMMON_FLAGS + self.optimizationFlags
+            return result
+        result += ["-target", self.targetTripleWithVersion] + self.optimizationFlags
         if not self.baremetal:
             result.append("--sysroot=" + str(self.sdkSysroot))
-        result += ["-B" + str(self.config.sdkBinDir)] + self.compiler_warning_flags
+        result += ["-B" + str(self.config.sdkBinDir)]
         return result
 
     def add_configure_env_arg(self, arg: str, value: str):

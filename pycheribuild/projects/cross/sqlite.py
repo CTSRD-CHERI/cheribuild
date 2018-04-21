@@ -46,9 +46,7 @@ class BuildSQLite(CrossCompileAutotoolsProject):
             else:
                 self.configureEnvironment["BUILD_CC"] = self.config.clangPath
             self.configureEnvironment["BUILD_CFLAGS"] = "-integrated-as"
-            self.LDFLAGS.append("-static")
             self.configureArgs.extend([
-                "--enable-static", "--disable-shared",
                 "--disable-amalgamation",  # don't concatenate sources
                 "--disable-tcl",
                 "--disable-load-extension",

@@ -72,6 +72,9 @@ class BuildGDB(CrossCompileAutotoolsProject):
             target_arch = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
         if self.compiling_for_host():
             self.crossInstallDir = CrossInstallDir.SDK
+        else:
+            # We always want to build the MIPS binary static so we can just scp it over to QEMU
+            self.force_static_linkage = True
         # See https://github.com/bsdjhb/kdbg/blob/master/gdb/build
         super().__init__(config, target_arch)
         installRoot = self.installDir if self.compiling_for_host() else self.installPrefix
@@ -130,7 +133,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
                                              am_cv_CC_dependencies_compiler_type="gcc3",
                                              MAKEINFO="/bin/false"
                                              )
-            self.LDFLAGS.append("-static")
             self.COMMON_FLAGS.append("-static")  # seems like LDFLAGS is not enough
             self.COMMON_FLAGS.extend(["-DRL_NO_COMPAT", "-DLIBICONV_PLUG", "-fno-strict-aliasing"])
             # Currently there are a lot of `undefined symbol 'elf_version'`, etc errors
