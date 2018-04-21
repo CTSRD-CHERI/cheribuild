@@ -78,6 +78,11 @@ class CrossCompileMixin(object):
     host_warning_flags = []
     common_warning_flags = []
 
+    needs_mxcaptable_static = False     # E.g. for postgres which is just over the limit:
+    #﻿warning: added 38010 entries to .cap_table but current maximum is 32768; try recompiling non-performance critical source files with -mllvm -mxcaptable
+    # FIXME: postgres would work if I fixed captable to use the negative immediate values
+    needs_mxcaptable_dynamic = False    # This might be true for Qt/QtWebkit
+
     @property
     def compiler_warning_flags(self):
         if self.compiling_for_host():
@@ -122,7 +127,6 @@ class CrossCompileMixin(object):
                 if self.config.cheri_cap_table:
                     self.COMMON_FLAGS.append("-cheri-cap-table")
                 if self.config.cheri_cap_table_abi:
-                    self.COMMON_FLAGS.append("-mllvm")
                     self.COMMON_FLAGS.append("-cheri-cap-table-abi=" + self.config.cheri_cap_table_abi)
             else:
                 assert self.crossCompileTarget == CrossCompileTarget.MIPS
@@ -193,8 +197,25 @@ class CrossCompileMixin(object):
             return 32
 
     @property
+    def default_compiler_flags(self):
+        if self.compiling_for_host():
+            return self.COMMON_FLAGS + self.compiler_warning_flags
+        result = ["-target", self.targetTripleWithVersion] + self.optimizationFlags
+        result += self.COMMON_FLAGS + self.compiler_warning_flags
+        if not self.baremetal:
+            result.append("--sysroot=" + str(self.sdkSysroot))
+        result += ["-B" + str(self.config.sdkBinDir)]
+        # Add mxcaptable for projects that need it
+        if self.compiling_for_cheri() and (self.config.cheri_cap_table_abi or self.config.cheri_cap_table):
+            if self.force_static_linkage and self.needs_mxcaptable_static:
+                result.append("-mxcaptable")
+            if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
+                result.append("-mxcaptable")
+        return result
+
+    @property
     def default_ldflags(self):
-        result = [] + self.COMMON_FLAGS
+        result = []
         if self.force_static_linkage:
             result.append("-static")
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
@@ -428,17 +449,6 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             self.configureArgs.extend(["--disable-static", "--enable-shared"])
         else:
             self.configureArgs.extend(["--enable-static", "--enable-shared"])
-
-    @property
-    def default_compiler_flags(self):
-        result = self.COMMON_FLAGS + self.compiler_warning_flags
-        if self.compiling_for_host():
-            return result
-        result += ["-target", self.targetTripleWithVersion] + self.optimizationFlags
-        if not self.baremetal:
-            result.append("--sysroot=" + str(self.sdkSysroot))
-        result += ["-B" + str(self.config.sdkBinDir)]
-        return result
 
     def add_configure_env_arg(self, arg: str, value: str):
         if not value:

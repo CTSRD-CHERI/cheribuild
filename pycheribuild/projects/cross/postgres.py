@@ -39,6 +39,8 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     # defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir
     make_kind = MakeCommandKind.GnuMake
     defaultOptimizationLevel = ["-O2"]
+    # TODO: only use mxcaptable for some files
+    needs_mxcaptable_static = True  # Slightly over the limit
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         super().__init__(config, target_arch)
@@ -88,6 +90,15 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         benchmark = re.sub(r'POSTGRES_ROOT=".*"', "POSTGRES_ROOT=\"" + pg_root + "\"", benchmark)
         self.writeFile(self.real_install_root_dir / "postgres-benchmark.sh", benchmark, overwrite=True, mode=0o755)
         self.installFile(self.sourceDir / "run-postgres-tests.sh", self.real_install_root_dir / "run-postgres-tests.sh")
+
+    @property
+    def default_ldflags(self):
+        # HACK: we still want to build modules when forcing static we just ignore them
+        result = super().default_ldflags
+        if "-static" in result:
+            result.remove("-static")
+        return result
+
 
     def needsConfigure(self):
         return not (self.buildDir / "GNUmakefile").exists()

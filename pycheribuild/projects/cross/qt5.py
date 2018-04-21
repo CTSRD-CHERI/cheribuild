@@ -39,6 +39,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     add_host_target_build_config_options = False
     # Should not be needed, but it seems like some of the tests are broken otherwise
     make_kind = MakeCommandKind.GnuMake
+    needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         super().__init__(config, target_arch)
@@ -75,8 +76,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
             if self.compiling_for_cheri():
                 self.configureArgs.append("QMAKE_LIBDIR=" + str(self.config.sdkSysrootDir / "usr/libcheri"))
-                if self.config.cheri_cap_table_abi or self.config.cheri_cap_table:
-                    compiler_flags += ["-mllvm", "-mxcaptable"]
             elif self.compiling_for_mips():
                 # self.configureArgs.append("QMAKE_CXXFLAGS+=-stdlib=libc++")
                 pass
