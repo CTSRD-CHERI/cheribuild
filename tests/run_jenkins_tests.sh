@@ -23,9 +23,9 @@ fi
 
 set -ex
 env | sort
-./cheribuild.py -p __run_everything__ --cheribsd/crossbuild
-./cheribuild.py --help
-./cheribuild.py --help-all
+./cheribuild.py -p __run_everything__ --cheribsd/crossbuild > /dev/null
+./cheribuild.py --help > /dev/null
+./cheribuild.py --help-all > /dev/null
 if [[ "$pytest_installed" = "no" ]]; then
     pip install pytest
 fi
