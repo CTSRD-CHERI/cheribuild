@@ -63,7 +63,7 @@ pipeline {
         ansiColor(colorMapName: 'xterm') {
           sh './tests/run_jenkins_tests.sh rc'
         }
-        junit 'python-rc-results.xml'
+        junit 'rc-results.xml'
       }
     }
     stage('Test Ubuntu 16.04') {
