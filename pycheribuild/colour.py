@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 from enum import Enum
+import sys
 
 
 class AnsiColour(Enum):
@@ -58,4 +59,4 @@ def statusUpdate(*args, sep=" ", **kwargs):
 
 def warningMessage(*args, sep=" "):
     # we ignore fatal errors when simulating a run
-    print(coloured(AnsiColour.magenta, ("Warning:",) + args, sep=sep))
+    print(coloured(AnsiColour.magenta, ("Warning:",) + args, sep=sep), file=sys.stderr)
