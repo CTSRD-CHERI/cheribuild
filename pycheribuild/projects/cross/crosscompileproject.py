@@ -14,7 +14,7 @@ from ..project import *
 from ...utils import *
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget",  # no-combine
-           "CrossCompileProject", "CrossInstallDir", "MakeCommandKind"]  # no-combine
+           "CrossCompileProject", "CrossInstallDir", "MakeCommandKind", "Linkage"]  # no-combine
 
 class CrossInstallDir(Enum):
     NONE = 0
@@ -53,6 +53,11 @@ def crosscompile_dependencies(cls: "typing.Type[CrossCompileProject]"):
         return ["freestanding-sdk"] if get_global_config().use_sdk_clang_for_native_xbuild else []
     else:
         return ["freestanding-sdk"] if cls.baremetal else ["cheribsd-sdk"]
+
+class Linkage(Enum):
+    DEFAULT = "default"
+    STATIC = "static"
+    DYNAMIC = "dynamic"
 
 class CrossCompileMixin(object):
     doNotAddToTargets = True
@@ -270,7 +275,7 @@ class CrossCompileMixin(object):
                                                     default=cls.defaultOptimizationLevel)
         cls.linkage = cls.addConfigOption("linkage", help="Build static or dynamic (default means for host=dynamic, MIPS/CHERI=static)",
                                                      default="default", choices=["default", "static", "dynamic"],
-                                                     kind=str)
+                                                     kind=Linkage)
         if inspect.getattr_static(cls, "crossCompileTarget") is None:
             cls.crossCompileTarget = cls.addConfigOption("target", help="The target to build for (`cheri` or `mips` or `native`)",
                                                  default=defaultTarget, choices=["cheri", "mips", "native"],
@@ -278,22 +283,14 @@ class CrossCompileMixin(object):
 
     @property
     def force_static_linkage(self) -> bool:
-        if not self.compiling_for_host():
+        if not self.compiling_for_host() and self.linkage == Linkage.DEFAULT:
             # FIXME: currently we force static for CHERI
             return True
-        return self.linkage == "static"
-
-    @force_static_linkage.setter
-    def force_static_linkage(self, value) -> None:
-        if value is True:
-            self.linkage = "static"
-        else:
-            assert value is False
-            self.linkage = "default"
+        return self.linkage == Linkage.STATIC
 
     @property
     def force_dynamic_linkage(self) -> bool:
-        return self.linkage == "dynamic"
+        return self.linkage == Linkage.DYNAMIC
 
     def compiling_for_mips(self):
         return self.crossCompileTarget == CrossCompileTarget.MIPS
@@ -443,13 +440,6 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             self.configureArgs.extend(["--host=" + self.targetTriple, "--target=" + self.targetTriple,
                                        "--build=" + buildhost])
 
-        if self.force_static_linkage:
-            self.configureArgs.extend(["--enable-static", "--disable-shared"])
-        elif self.force_dynamic_linkage:
-            self.configureArgs.extend(["--disable-static", "--enable-shared"])
-        else:
-            self.configureArgs.extend(["--enable-static", "--enable-shared"])
-
     def add_configure_env_arg(self, arg: str, value: str):
         if not value:
             return
@@ -472,6 +462,13 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             self.configureArgs.append(prog + "=" + fullpath)
 
     def configure(self, **kwargs):
+        if self.force_static_linkage:
+            self.configureArgs.extend(["--enable-static", "--disable-shared"])
+        elif self.force_dynamic_linkage:
+            self.configureArgs.extend(["--disable-static", "--enable-shared"])
+        else:
+            self.configureArgs.extend(["--enable-static", "--enable-shared"])
+
         # target triple contains a number suffix -> remove it when computing the compiler name
         if self.compiling_for_cheri() and self._configure_supports_libdir:
             # nginx configure script doesn't understand --libdir
