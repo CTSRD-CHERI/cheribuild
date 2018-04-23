@@ -662,11 +662,14 @@ class Project(SimpleProject):
             append_bits = cls.appendCheriBitsToBuildDir
             if cls.target in ("llvm", "qemu") and config.unified_sdk:
                 append_bits = False
-            return "-" + config.cheriBitsStr + "-build" if append_bits else "-build"
+            result = "-" + config.cheriBitsStr + "-build" if append_bits else "-build"
         elif target == CrossCompileTarget.CHERI:
-            return "-" + config.cheriBitsStr + "-build"
+            result = "-" + config.cheriBitsStr + "-build"
         else:
-            return "-" + target.value + "-build"
+            result = "-" + target.value + "-build"
+        if config.cross_target_suffix:
+            result += "-" + config.cross_target_suffix
+        return result
 
     @classmethod
     def buildDirForTarget(cls, config: CheriConfig, target: CrossCompileTarget):

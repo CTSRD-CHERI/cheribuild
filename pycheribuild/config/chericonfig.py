@@ -86,6 +86,9 @@ class CheriConfig(object):
         self.cheri_cap_table_abi = loader.addOption("cap-table-abi", helpHidden=True,
                                                     choices=("pcrel", "plt", "legacy", "fn-desc"),
                                                     help="The ABI to use for cap-table mode")
+        self.cross_target_suffix = loader.addOption("cross-target-suffix", helpHidden=True, default="",
+                                                    help="Add a suffix to the cross build and install directories. "
+                                                         "With VALUE=-pcrel it will use /opt/cheriXXX-pcrel/$PROJECT")
 
         self.print_targets_only = loader.addBoolOption("print-targets-only", helpHidden=False,
            help="Don't run the build but instead only print the targets that would be executed")

@@ -34,6 +34,8 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
         else:
             assert project.crossCompileTarget == CrossCompileTarget.MIPS
             targetName = "mips"
+        if config.cross_target_suffix is not None:
+            targetName += "-" + config.cross_target_suffix
         return Path(BuildCHERIBSD.rootfsDir(config) / "opt" / targetName / project.projectName.lower())
     elif project.crossInstallDir == CrossInstallDir.SDK:
         return config.sdkSysrootDir
