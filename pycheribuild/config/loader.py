@@ -144,7 +144,7 @@ class ConfigOptionBase(object):
         self._owningClass = _owningClass  # if none it means the global CheriConfig is the class containing this option
         self._fallback_name = _fallback_name  # for targets such as gdb-mips, etc
 
-    def loadOption(self, config: "CheriConfig", ownerClass: "typing.Type"):
+    def loadOption(self, config: "CheriConfig", instance: "typing.Optional[SimpleProject]", owner: "typing.Type"):
         result = self._loadOptionImpl(config, self.fullOptionName)
         # fall back from --qtbase-mips/foo to --qtbase/foo
         if result is None and self._fallback_name is not None:
@@ -154,7 +154,7 @@ class ConfigOptionBase(object):
                 print("Using fallback config option value", self._fallback_name, "for", self.name, "->", result)
 
         if result is None:  # If no option is set fall back to the default
-            result = self._getDefaultValue(config, ownerClass)
+            result = self._getDefaultValue(config, instance)
         # Now convert it to the right type
         result = self._convertType(result)
         return result
@@ -174,12 +174,15 @@ class ConfigOptionBase(object):
         assert not self._owningClass or issubclass(owner, self._owningClass)
         if self._cached is None:
             # noinspection PyProtectedMember
-            self._cached = self.loadOption(self._loader._cheriConfig, owner)
+            # allow getting the value when used on a class as well:
+            if instance is None:
+                instance = owner
+            self._cached = self.loadOption(self._loader._cheriConfig, instance, owner)
         return self._cached
 
-    def _getDefaultValue(self, config: "CheriConfig", ownerClass: "typing.Type"=None):
+    def _getDefaultValue(self, config: "CheriConfig", instance: "typing.Optional[SimpleProject]"=None):
         if callable(self.default):
-            return self.default(config, ownerClass)
+            return self.default(config, instance)
         else:
             return self.default
 
