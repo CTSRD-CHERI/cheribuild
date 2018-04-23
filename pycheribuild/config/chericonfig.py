@@ -83,8 +83,6 @@ class CheriConfig(object):
         self.libcheri_buildenv = loader.addCommandLineOnlyBoolOption("libcheri-buildenv",
              help="Open a shell with the right environment for building CHERI libraries. Currently only works for CheriBSD")
 
-        self.cheri_cap_table = loader.addBoolOption("cheri-cap-table",
-                                                    help="Build cross-compile projects with -cheri-cap-table")
         self.cheri_cap_table_abi = loader.addOption("cap-table-abi", helpHidden=True,
                                                     choices=("pcrel", "plt", "legacy", "fn-desc"),
                                                     help="The ABI to use for cap-table mode")

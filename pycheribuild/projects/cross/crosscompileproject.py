@@ -129,8 +129,6 @@ class CrossCompileMixin(object):
                 self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "cheri-qemu-elf"
                 # TODO: should we use -mcpu=cheri128/256?
                 self.COMMON_FLAGS.extend(["-mabi=purecap", "-mcpu=mips4", "-cheri=" + self.config.cheriBitsStr])
-                if self.config.cheri_cap_table:
-                    self.COMMON_FLAGS.append("-cheri-cap-table")
                 if self.config.cheri_cap_table_abi:
                     self.COMMON_FLAGS.append("-cheri-cap-table-abi=" + self.config.cheri_cap_table_abi)
             else:
@@ -211,7 +209,7 @@ class CrossCompileMixin(object):
             result.append("--sysroot=" + str(self.sdkSysroot))
         result += ["-B" + str(self.config.sdkBinDir)]
         # Add mxcaptable for projects that need it
-        if self.compiling_for_cheri() and (self.config.cheri_cap_table_abi or self.config.cheri_cap_table):
+        if self.compiling_for_cheri() and self.config.cheri_cap_table_abi != "legacy":
             if self.force_static_linkage and self.needs_mxcaptable_static:
                 result.append("-mxcaptable")
             if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
