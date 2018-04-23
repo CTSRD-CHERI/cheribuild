@@ -40,3 +40,16 @@ class BuildCheriTests(CrossCompileCMakeProject):
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     defaultCMakeBuildType = "RelWithDebInfo"
     projectName = "cheri-tests"
+
+
+class BuildRtldTests(CrossCompileCMakeProject):
+    repository = "https://github.com/arichardson/rtld-tests.git"
+    crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+    defaultCMakeBuildType = "Debug"
+    projectName = "rtld-tests"
+
+    def __init__(self, config: CheriConfig, *args, **kwargs):
+        super().__init__(config, *args, **kwargs)
+        self.linkage = Linkage.DYNAMIC
+        assert not self.force_static_linkage
+        assert self.force_dynamic_linkage
