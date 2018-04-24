@@ -46,6 +46,8 @@ class DefaultCheriConfig(CheriConfig):
         self.force = loader.addBoolOption("force", "f", help="Don't prompt for user input but use the default action")
         self.noLogfile = loader.addBoolOption("no-logfile", help="Don't write a logfile for the build steps")
         self.skipUpdate = loader.addBoolOption("skip-update", help="Skip the git pull step")
+        self.force_update = loader.addBoolOption("force-update", help="Always update (with autostash) even if there "
+                                                                      "are uncommitted changes")
         self.skipConfigure = loader.addBoolOption("skip-configure", help="Skip the configure step",
                                                   group=loader.configureGroup)
         self.forceConfigure = loader.addBoolOption("reconfigure", "-force-configure",

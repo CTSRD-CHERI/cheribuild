@@ -794,7 +794,9 @@ class Project(SimpleProject):
         if hasChanges:
             print(coloured(AnsiColour.green, "Local changes detected in", srcDir))
             # TODO: add a config option to skip this query?
-            if not self.queryYesNo("Stash the changes, update and reapply?", defaultResult=True, forceResult=True):
+            if self.config.force_update:
+                statusUpdate("Updating", srcDir, "with autostash due to --force-update")
+            elif not self.queryYesNo("Stash the changes, update and reapply?", defaultResult=True, forceResult=True):
                 statusUpdate("Skipping update of", srcDir)
                 return
             if not has_autostash:

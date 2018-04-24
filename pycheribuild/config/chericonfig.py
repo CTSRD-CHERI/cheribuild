@@ -102,6 +102,7 @@ class CheriConfig(object):
         self.skipUpdate = None  # type: bool
         self.skipConfigure = None  # type: bool
         self.forceConfigure = None  # type: bool
+        self.force_update = None  # type: bool
         self.unified_sdk = loader.addBoolOption("unified-sdk", help="Build a single SDK instead of separate 128"
                                                 " and 256 bits ones", default=True)
 
