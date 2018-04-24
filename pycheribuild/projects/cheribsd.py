@@ -423,6 +423,9 @@ class _BuildFreeBSD(Project):
                                                     "BUILDENV_SHELL=" + str(self.make_args.command) + " -V " + var]
             if self.crossbuild:
                 bw_flags.append("PATH=" + os.getenv("PATH"))
+            if not self.sourceDir.exists():
+                assert self.config.pretend, "This should only happen when running in a test environment"
+                return None
             # https://github.com/freebsd/freebsd/commit/1edb3ba87657e28b017dffbdc3d0b3a32999d933
             cmd = runCmd([self.make_args.command] + bw_flags, env=args.env_vars, cwd=self.sourceDir,
                          runInPretendMode=True, captureOutput=True)

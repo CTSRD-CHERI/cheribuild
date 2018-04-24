@@ -113,9 +113,6 @@ class TestArgumentParsing(TestCase):
         self.assertEqual(qtbase_default.projectName, qtbase_native.projectName)
         self.assertEqual(qtbase_mips.projectName, qtbase_native.projectName)
         # These classes were generated:
-        self.assertTrue(qtbase_native.synthetic)
-        self.assertTrue(qtbase_mips.synthetic)
-        self.assertFalse(hasattr(qtbase_default, "synthetic"))
         self.assertEqual(qtbase_native.synthetic_base, qtbase_default)
         self.assertEqual(qtbase_mips.synthetic_base, qtbase_default)
         self.assertFalse(hasattr(qtbase_default, "synthetic_base"))
