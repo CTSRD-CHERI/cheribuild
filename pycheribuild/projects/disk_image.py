@@ -237,6 +237,12 @@ class _BuildDiskImageBase(SimpleProject):
             SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
         self.createFileForImage(outDir, "/etc/csh.cshrc", contents=cshrcContents)
 
+        # Add the files needed to install kyua
+        self.createFileForImage(outDir, "/etc/pkg/FreeBSD.conf", mode=0o644,
+                                contents=includeLocalFile("files/cheribsd/FreeBSD.conf"))
+        self.createFileForImage(outDir, "/bin/prepare-testsuite.sh", mode=0o755,
+                                contents=includeLocalFile("files/cheribsd/prepare-testsuite.sh"))
+
         # make sure that the disk image always has the same SSH host keys
         # If they don't exist the system will generate one on first boot and we have to accept them every time
         self.generateSshHostKeys()
