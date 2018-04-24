@@ -69,7 +69,8 @@ class LaunchQEMUBase(SimpleProject):
                                                  "at $PORT via telnet instead of using CTRL+A,C")
 
         default_smb_dir = None
-        if cls._provide_src_via_smb and Path("/usr/sbin/smbd").exists():  # for running CheriBSD + FreeBSD
+        # Only default to providing the smb mount if smbd exists
+        if cls._provide_src_via_smb and shutil.which("smbd"):  # for running CheriBSD + FreeBSD
             default_smb_dir = ComputedDefaultValue(function=lambda cfg, proj: cfg.sourceRoot,
                                                    asString="$CHERIBUILD_SOURCE_ROOT")
         cls.qemu_smb_mount = cls.addPathOption("smb-host-directory", default=default_smb_dir, metavar="DIR",
