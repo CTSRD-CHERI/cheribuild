@@ -73,6 +73,7 @@ class MtreeEntry(object):
 class _BuildDiskImageBase(SimpleProject):
     doNotAddToTargets = True
     diskImagePath = None  # type: Path
+    needs_special_pkg_repo = False  # True for CheriBSD
 
     @classmethod
     def setupConfigOptions(cls, *, defaultHostname, extraFilesShortname=None, **kwargs):
@@ -238,10 +239,11 @@ class _BuildDiskImageBase(SimpleProject):
         self.createFileForImage(outDir, "/etc/csh.cshrc", contents=cshrcContents)
 
         # Add the files needed to install kyua
-        self.createFileForImage(outDir, "/etc/pkg/FreeBSD.conf", mode=0o644,
-                                contents=includeLocalFile("files/cheribsd/FreeBSD.conf"))
-        self.createFileForImage(outDir, "/bin/prepare-testsuite.sh", mode=0o755,
-                                contents=includeLocalFile("files/cheribsd/prepare-testsuite.sh"))
+        if self.needs_special_pkg_repo:
+            self.createFileForImage(outDir, "/etc/pkg/FreeBSD.conf", mode=0o644, showContentsByDefault=False,
+                                    contents=includeLocalFile("files/cheribsd/FreeBSD.conf"))
+            self.createFileForImage(outDir, "/bin/prepare-testsuite.sh", mode=0o755, showContentsByDefault=False,
+                                    contents=includeLocalFile("files/cheribsd/prepare-testsuite.sh"))
 
         # make sure that the disk image always has the same SSH host keys
         # If they don't exist the system will generate one on first boot and we have to accept them every time
@@ -420,6 +422,7 @@ def _defaultDiskImagePath(conf: "CheriConfig", cls):
 class BuildCheriBSDDiskImage(_BuildDiskImageBase):
     projectName = "disk-image"
     dependencies = ["qemu", "cheribsd", "gdb-mips"]
+    needs_special_pkg_repo = True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
