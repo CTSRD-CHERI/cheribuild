@@ -16,12 +16,12 @@ pipeline {
       }
       steps {
         ansiColor(colorMapName: 'xterm') {
-          dir("tempsrc") {
-            // Avoid git chowning .git/index to root which will cause the next build to fail
-            deleteDir()
-            sh '../src/tests/run_jenkins_tests.sh 3.4.0'
-            deleteDir()
-          }
+          dir("tempsrc") { deleteDir() }
+          dir("tempsrc") { sh 'ls -la' }
+          // Avoid git chowning .git/index to root which will cause the next build to fail
+          // Work around old docker version in jenkins that can't change cwd:
+          sh 'cd tempsrc && ../src/tests/run_jenkins_tests.sh 3.4.0'
+          dir("tempsrc") { deleteDir() }
         }
         junit '3.4.0-results.xml'
       }
@@ -36,12 +36,12 @@ pipeline {
       }
       steps {
         ansiColor(colorMapName: 'xterm') {
-          dir("tempsrc") {
-            // Avoid git chowning .git/index to root which will cause the next build to fail
-            deleteDir()
-            sh '../src/tests/run_jenkins_tests.sh 3.5.0'
-            deleteDir()
-          }
+          dir("tempsrc") { deleteDir() }
+          dir("tempsrc") { sh 'ls -la' }
+          // Avoid git chowning .git/index to root which will cause the next build to fail
+          // Work around old docker version in jenkins that can't change cwd:
+          sh 'cd tempsrc && ../src/tests/run_jenkins_tests.sh 3.5.0'
+          dir("tempsrc") { deleteDir() }
         }
         junit '3.5.0-results.xml'
       }
@@ -56,12 +56,12 @@ pipeline {
       }
       steps {
         ansiColor(colorMapName: 'xterm') {
-          dir("tempsrc") {
-            // Avoid git chowning .git/index to root which will cause the next build to fail
-            deleteDir()
-            sh '../src/tests/run_jenkins_tests.sh 3.6'
-            deleteDir()
-          }
+          dir("tempsrc") { deleteDir() }
+          dir("tempsrc") { sh 'ls -la' }
+          // Avoid git chowning .git/index to root which will cause the next build to fail
+          // Work around old docker version in jenkins that can't change cwd:
+          sh 'cd tempsrc && ../src/tests/run_jenkins_tests.sh 3.6'
+          dir("tempsrc") { deleteDir() }
         }
         junit '3.6-results.xml'
       }
@@ -76,12 +76,12 @@ pipeline {
       }
       steps {
         ansiColor(colorMapName: 'xterm') {
-          dir("tempsrc") {
-            deleteDir()
-            // Avoid git chowning .git/index to root which will cause the next build to fail
-            sh '../src/tests/run_jenkins_tests.sh rc'
-            deleteDir()
-          }
+          dir("tempsrc") { deleteDir() }
+          dir("tempsrc") { sh 'ls -la' }
+          // Avoid git chowning .git/index to root which will cause the next build to fail
+          // Work around old docker version in jenkins that can't change cwd:
+          sh 'cd tempsrc && ../src/tests/run_jenkins_tests.sh rc'
+          dir("tempsrc") { deleteDir() }
         }
         junit 'rc-results.xml'
       }
@@ -94,12 +94,12 @@ pipeline {
       }
       steps {
         ansiColor(colorMapName: 'xterm') {
-          dir("tempsrc") {
-            deleteDir()
-            // Avoid git chowning .git/index to root which will cause the next build to fail
-            sh '../src/tests/run_jenkins_tests.sh ubuntu'
-            deleteDir()
-          }
+          dir("tempsrc") { deleteDir() }
+          dir("tempsrc") { sh 'ls -la' }
+          // Avoid git chowning .git/index to root which will cause the next build to fail
+          // Work around old docker version in jenkins that can't change cwd:
+          sh 'cd tempsrc && ../src/tests/run_jenkins_tests.sh ubuntu'
+          dir("tempsrc") { deleteDir() }
         }
         junit 'ubuntu-results.xml'
       }
