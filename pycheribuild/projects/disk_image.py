@@ -421,6 +421,7 @@ class BuildCheriBSDDiskImage(_BuildDiskImageBase):
     def __init__(self, config: CheriConfig):
         super().__init__(config, sourceClass=BuildCHERIBSD)
         self.minimumImageSize = "256m"  # let's try to shrink the image size
+        # TODO: fetch pkg from https://people.freebsd.org/~brooks/packages/cheribsd-mips-20170403-brooks-20170609/
 
 
 class _BuildFreeBSDImageBase(_BuildDiskImageBase):
