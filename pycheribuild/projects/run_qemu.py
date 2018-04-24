@@ -50,7 +50,9 @@ def defaultSshForwardingPort():
 class LaunchQEMUBase(SimpleProject):
     doNotAddToTargets = True
     _forwardSSHPort = True
+    _provide_src_via_smb = False
     sshForwardingPort = None  # type: int
+    qemu_smb_mount = None
 
     @classmethod
     def setupConfigOptions(cls, sshPortShortname: "typing.Optional[str]", defaultSshPort: int=None, **kwargs):
@@ -65,6 +67,14 @@ class LaunchQEMUBase(SimpleProject):
         cls.useTelnet = cls.addConfigOption("monitor-over-telnet", kind=int, metavar="PORT", showHelp=True,
                                             help="If set, the QEMU monitor will be reachable by connecting to localhost"
                                                  "at $PORT via telnet instead of using CTRL+A,C")
+
+        default_smb_dir = None
+        if cls._provide_src_via_smb: # CheriBSD + FreeBSD
+            default_smb_dir = ComputedDefaultValue(function=lambda cfg, proj: cfg.sourceRoot,
+                                                   asString="$CHERIBUILD_SOURCE_ROOT")
+        cls.qemu_smb_mount = cls.addPathOption("smb-host-directory", default=default_smb_dir, metavar="DIR",
+                                               help="If set QEMU will provide this directory over smb with the "
+                                                    "name //10.0.2.4/qemu for use with mount_smbfs")
         # TODO: -s will no longer work, not sure anyone uses it though
         if cls._forwardSSHPort:
             cls.sshForwardingPort = cls.addConfigOption("ssh-forwarding-port", shortname=sshPortShortname, kind=int,
@@ -83,6 +93,8 @@ class LaunchQEMUBase(SimpleProject):
         self._projectSpecificOptions = []
         self.machineFlags = ["-M", "malta"]  # malta cpu
         self._qemuUserNetworking = True
+        if self.qemu_smb_mount:
+            self._addRequiredSystemTool("smbd", apt="samba")
 
     def process(self):
         if not self.qemuBinary.exists():
@@ -134,13 +146,20 @@ class LaunchQEMUBase(SimpleProject):
             "-m", "2048",  # 2GB memory
             "-nographic",  # no GPU
         ] + self._projectSpecificOptions + self._diskOptions + monitorOptions + logfileOptions + self.extraOptions
-        if self._qemuUserNetworking:
-            qemuCommand += ["-net", "nic", "-net", "user"]
         statusUpdate("About to run QEMU with image", self.diskImage, "and kernel", self.currentKernel)
+        user_network_options = ""
+        if self.qemu_smb_mount:
+            statusUpdate("Providing", self.qemu_smb_mount, "over SMB to guest. "
+                         "Use `mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu /mnt` to mount it")
+            user_network_options += ",smb=" + str(self.qemu_smb_mount)
         if self._forwardSSHPort:
+            user_network_options += ",hostfwd=tcp::" + str(self.sshForwardingPort) + "-:22"
             # bind the qemu ssh port to the hosts port
-            qemuCommand += ["-redir", "tcp:" + str(self.sshForwardingPort) + "::22"]
+            # qemuCommand += ["-redir", "tcp:" + str(self.sshForwardingPort) + "::22"]
             print(coloured(AnsiColour.green, "\nListening for SSH connections on localhost:", self.sshForwardingPort, sep=""))
+        if self._qemuUserNetworking:
+            # qemuCommand += ["-net", "rtl8139,netdev=net0", "-net", "user,id=net0,ipv6=off" + user_network_options]
+            qemuCommand += ["-net", "nic", "-net", "user,id=net0,ipv6=off" + user_network_options]
 
         runCmd(qemuCommand, stdout=sys.stdout, stderr=sys.stderr)  # even with --quiet we want stdout here
 
@@ -164,6 +183,7 @@ class LaunchQEMUBase(SimpleProject):
 
 class AbstractLaunchFreeBSD(LaunchQEMUBase):
     doNotAddToTargets = True
+    _provide_src_via_smb = True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
