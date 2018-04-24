@@ -222,9 +222,9 @@ class _BuildDiskImageBase(SimpleProject):
         fstabContents = includeLocalFile("files/cheribsd/fstab.in")
 
         if self.disableTMPFS:
-            fstabContents = fstabContents.format_map(SafeDict(tmpfsrem=""))
+            fstabContents = fstabContents.format_map(dict(tmpfsrem="#"))
         else:
-            fstabContents = fstabContents.format_map(SafeDict(tmpfsrem="#"))
+            fstabContents = fstabContents.format_map(dict(tmpfsrem=""))
 
         self.createFileForImage(outDir, "/etc/fstab", contents=fstabContents)
 
@@ -400,13 +400,16 @@ class _BuildDiskImageBase(SimpleProject):
             self.addFileToImage(privateKey, baseDirectory=self.extraFilesDir, mode="0600")
             self.addFileToImage(publicKey, baseDirectory=self.extraFilesDir, mode="0644")
 
+
 def _defaultDiskImagePathFn(bits, pfx):
     if bits == 128:
         return pfx / "cheri128-disk.img"
     return pfx / "cheri256-disk.img"
 
+
 def _defaultDiskImagePath(conf: "CheriConfig", cls):
-    _defaultDiskImagePathFn(conf.cheriBits, conf.outputRoot)
+    return _defaultDiskImagePathFn(conf.cheriBits, conf.outputRoot)
+
 
 class BuildCheriBSDDiskImage(_BuildDiskImageBase):
     projectName = "disk-image"
