@@ -289,10 +289,11 @@ class _BuildDiskImageBase(SimpleProject):
             else:
                 fatalError("qemu-img command was not found!", fixitHint="Make sure to build target qemu first")
 
-        runCmd([
-            self.makefs_cmd,
-            "-Z", # sparse file output
-            "-d", "0x90000", # trace POPULATE and WRITE_FILE events
+        debug_options = []
+        if self.config.verbose:
+            debug_options = ["-d", "0x90000"]  # trace POPULATE and WRITE_FILE events
+        runCmd([self.makefs_cmd] + debug_options + [
+            "-Z",  # sparse file output
             "-b", "30%",  # minimum 30% free blocks
             "-f", "30%",  # minimum 30% free inodes
             "-R", "128m",  # round up size to the next 16m multiple
