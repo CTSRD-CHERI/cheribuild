@@ -114,7 +114,6 @@ class ProjectSubclassDefinitionHook(type):
                 new_dict["crossCompileTarget"] = arch
                 new_dict["doNotAddToTargets"] = True  # We are already adding it here
                 new_dict["target"] = new_name
-                new_dict["synthetic"] = True  # We are already adding it here
                 new_dict["synthetic_base"] = cls  # We are already adding it here
                 new_type = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
                 targetManager.addTarget(MultiArchTarget(new_name, new_type, arch, dependencies=set(deps)))
@@ -185,6 +184,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         fallback_name = None
         synthetic_base = getattr(cls, "synthetic_base", None)
         if synthetic_base is not None:
+            # Don't show the help options for qtbase-mips/qtbase-native/qtbase-cheri in default --help output, the
+            # base version is enough. They will still be included in --help-all
+            helpHidden = True
             # We don't want to inherit certain options from the non-target specific class since they should always be
             # set directly for that target. Currently the only such option is build-directory since sharing that would
             # break the build in most cases.
