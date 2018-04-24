@@ -54,7 +54,7 @@ def updateCheck():
         return
     # check if new commits are available
     projectDir = str(Path(__file__).parent)
-    subprocess.call(["git", "fetch"], cwd=projectDir, timeout=3)
+    subprocess.call(["git", "fetch"], cwd=projectDir, timeout=5)
     output = subprocess.check_output(["git", "status", "-uno"], cwd=projectDir)
     behindIndex = output.find(b"Your branch is behind ")
     if behindIndex > 0:
