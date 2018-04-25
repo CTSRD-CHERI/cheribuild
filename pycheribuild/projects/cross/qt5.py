@@ -192,6 +192,9 @@ class BuildQtBase(BuildQtWithConfigureScript):
         function=lambda config, project: BuildQt5.getSourceDir(config) / "qtbase",
         asString=lambda cls: "$SOURCE_ROOT/qt5" + cls.projectName.lower())
 
+    def compile(self, **kwargs):
+        self.runMake() # QtBase ignores -nomake if you run "gmake all"
+
 
 # Webkit needs ICU (and recommended for QtBase too:
 class BuildICU4C(CrossCompileAutotoolsProject):
