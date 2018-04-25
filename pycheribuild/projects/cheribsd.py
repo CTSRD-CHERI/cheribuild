@@ -246,11 +246,15 @@ class _BuildFreeBSD(Project):
 
     def _setup_cross_toolchain_config(self):
         self.cross_toolchain_config.set_with_options(
-            GCC=False, CLANG=False, GNUCXX=False,  # Take a long time and not needed
+            GCC=False, CLANG=False,  # Take a long time and not needed
             GCC_BOOTSTRAP=False, CLANG_BOOTSTRAP=False,  # not needed as we have a compiler
             LLD_BOOTSTRAP=False,  # and also a linker
             LIB32=False,  # takes a long time and not needed
         )
+        if self.target_arch != CrossCompileTarget.NATIVE:
+            # For MIPS we need libstdc++ for packages (it won't be built purecap anayway)
+            self.cross_toolchain_config.set_with_options(GNUCXX=True, LIBCPLUSPLUS=True)
+
         # self.cross_toolchain_config.add(CROSS_COMPILER=Falses) # This sets too much, we want elftoolchain and binutils
 
         if self.target_arch == CrossCompileTarget.NATIVE:
