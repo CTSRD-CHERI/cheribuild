@@ -121,6 +121,9 @@ class BuildQEMU(AutotoolsProject):
         else:
             self.configureArgs.extend(["--disable-linux-aio", "--disable-kvm"])
 
+        if IS_FREEBSD:
+            self.configureArgs.append("--smbd=/usr/local/sbin/smbd")
+
     def update(self):
         # the build sometimes modifies the po/ subdirectory
         # reset that directory by checking out the HEAD revision there
