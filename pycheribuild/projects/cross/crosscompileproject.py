@@ -432,6 +432,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
     add_host_target_build_config_options = True
     _configure_supports_libdir = True  # override in nginx
     _configure_supports_variables_on_cmdline = True  # override in nginx
+    _configure_understands_enable_static = True
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         super().__init__(config, target_arch)
@@ -462,12 +463,13 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             self.configureArgs.append(prog + "=" + fullpath)
 
     def configure(self, **kwargs):
-        if self.force_static_linkage:
-            self.configureArgs.extend(["--enable-static", "--disable-shared"])
-        elif self.force_dynamic_linkage:
-            self.configureArgs.extend(["--disable-static", "--enable-shared"])
-        else:
-            self.configureArgs.extend(["--enable-static", "--enable-shared"])
+        if self._configure_understands_enable_static:     # workaround for nginx which isn't really autotools
+            if self.force_static_linkage:
+                self.configureArgs.extend(["--enable-static", "--disable-shared"])
+            elif self.force_dynamic_linkage:
+                self.configureArgs.extend(["--disable-static", "--enable-shared"])
+            else:
+                self.configureArgs.extend(["--enable-static", "--enable-shared"])
 
         # target triple contains a number suffix -> remove it when computing the compiler name
         if self.compiling_for_cheri() and self._configure_supports_libdir:
