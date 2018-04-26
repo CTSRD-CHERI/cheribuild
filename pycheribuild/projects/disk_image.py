@@ -231,6 +231,7 @@ class _BuildDiskImageBase(SimpleProject):
 
         # enable ssh and set hostname
         # TODO: use separate file in /etc/rc.conf.d/ ?
+        self.hostname = os.path.expandvars(self.hostname)   # Expand env vars in hostname to allow $CHERI_BITS
         rcConfContents = includeLocalFile("files/cheribsd/rc.conf.in").format(hostname=self.hostname)
         self.createFileForImage(outDir, "/etc/rc.conf", contents=rcConfContents)
 
