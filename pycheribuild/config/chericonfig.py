@@ -56,6 +56,16 @@ class CrossCompileTarget(Enum):
     MIPS = "mips"
     CHERI = "cheri"  # TODO: add 128 and 256
 
+class MipsFloatAbi(Enum):
+    SOFT = ("mips64", "-msoft-float")
+    HARD = ("mips64hf", "-mhard-float")
+
+    def freebsd_target_arch(self):
+        return self.value[0]
+
+    def clang_float_flag(self):
+        return self.value[1]
+
 
 class CheriConfig(object):
     def __init__(self, loader: ConfigLoaderBase):
@@ -103,6 +113,8 @@ class CheriConfig(object):
         self.skipConfigure = None  # type: bool
         self.forceConfigure = None  # type: bool
         self.force_update = None  # type: bool
+        self.mips_float_abi = loader.addOption("mips-float-abi", default="soft", type=MipsFloatAbi,
+                                               help="The floating point ABI to use for building MIPS+CHERI programs")
         self.unified_sdk = loader.addBoolOption("unified-sdk", help="Build a single SDK instead of separate 128"
                                                 " and 256 bits ones", default=True)
 

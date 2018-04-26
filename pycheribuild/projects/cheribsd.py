@@ -175,7 +175,7 @@ class _BuildFreeBSD(Project):
             if self.target_arch == CrossCompileTarget.MIPS:
                 # The following is broken: (https://github.com/CTSRD-CHERI/cheribsd/issues/102)
                 # "CPUTYPE=mips64",  # mipsfpu for hardware float
-                archBuildFlags = {"TARGET": "mips", "TARGET_ARCH": "mips64"}
+                archBuildFlags = {"TARGET": "mips", "TARGET_ARCH": config.mips_float_abi.freebsd_target_arch()}
             elif self.target_arch == CrossCompileTarget.NATIVE:
                 archBuildFlags = {"TARGET": "amd64"}
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
@@ -773,10 +773,12 @@ class BuildCHERIBSD(_BuildFreeBSD):
             "CHERI_CXX": str(self.cheriCXX),
             "CHERI_LD": str(config.sdkBinDir / "ld.lld"),
             "TARGET": "mips",
-            "TARGET_ARCH": "mips64"
+            "TARGET_ARCH": config.mips_float_abi.freebsd_target_arch()
         }
         if self.mipsOnly:
-            archBuildFlags = {"TARGET": "mips", "TARGET_ARCH": "mips64", "WITHOUT_LIB32": True}
+            archBuildFlags = {"TARGET": "mips",
+                              "TARGET_ARCH": config.mips_float_abi.freebsd_target_arch(),
+                              "WITHOUT_LIB32": True}
             # keep building a cheri kernel even with a mips userspace (mips may be broken...)
             # self.kernelConfig = "MALTA64"
         super().__init__(config, archBuildFlags=archBuildFlags)

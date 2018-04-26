@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 from ...config.loader import ComputedDefaultValue
-from ...config.chericonfig import CrossCompileTarget
+from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi
 from ..cheribsd import BuildCHERIBSD
 from ..llvm import BuildLLVM
 from ..project import *
@@ -120,8 +120,11 @@ class CrossCompileMixin(object):
                 assert self.installDir, "must be set"
         else:
             self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-G0"]
-            if not self.baremetal:
-                self.COMMON_FLAGS.append("-msoft-float")
+            if self.baremetal:
+                # We don't have a softfloat library baremetal so always compile hard-float
+                self.COMMON_FLAGS.append(MipsFloatAbi.HARD.clang_float_flag())
+            else:
+                self.COMMON_FLAGS.append(config.mips_float_abi.clang_float_flag())
 
             # clang currently gets the TLS model wrong:
             # https://github.com/CTSRD-CHERI/cheribsd/commit/f863a7defd1bdc797712096b6778940cfa30d901
@@ -274,12 +277,10 @@ class CrossCompileMixin(object):
         cls.optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
                                                     default=cls.defaultOptimizationLevel)
         cls.linkage = cls.addConfigOption("linkage", help="Build static or dynamic (default means for host=dynamic, MIPS/CHERI=static)",
-                                                     default="default", choices=["default", "static", "dynamic"],
-                                                     kind=Linkage)
+                                                     default="default", kind=Linkage)
         if inspect.getattr_static(cls, "crossCompileTarget") is None:
             cls.crossCompileTarget = cls.addConfigOption("target", help="The target to build for (`cheri` or `mips` or `native`)",
-                                                 default=defaultTarget, choices=["cheri", "mips", "native"],
-                                                 kind=CrossCompileTarget)
+                                                 default=defaultTarget, kind=CrossCompileTarget)
 
     @property
     def force_static_linkage(self) -> bool:

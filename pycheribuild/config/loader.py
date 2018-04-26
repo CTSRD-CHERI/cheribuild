@@ -57,6 +57,30 @@ class ComputedDefaultValue(object):
     # def __str__(self):
     #     return self.asString
 
+# From https://bugs.python.org/issue25061
+class _EnumArgparseType(object):
+    """Factory for creating enum object types
+    """
+    def __init__(self, enumclass):
+        self.enums = enumclass
+        # self.action = action
+
+    def __call__(self, astring):
+        name = self.enums.__name__
+        try:
+            v = self.enums[astring.upper()]
+        except KeyError:
+            msg = ', '.join([t.name.lower() for t in self.enums])
+            msg = '%s: use one of {%s}'%(name, msg)
+            raise argparse.ArgumentTypeError(msg)
+#       else:
+#           self.action.choices = None  # hugly hack to prevent post validation from choices
+        return v
+
+    def __repr__(self):
+        astr = ', '.join([t.name.lower() for t in self.enums])
+        return '%s(%s)' % (self.enums.__name__, astr)
+
 
 class ConfigLoaderBase(object):
     # will be set later...
@@ -88,6 +112,12 @@ class ConfigLoaderBase(object):
                   option_cls: "typing.Type[ConfigOptionBase]"=None, **kwargs) -> "Type_T":
         if option_cls is None:
             option_cls = self.__option_cls
+
+        if issubclass(type, Enum):
+            assert "action" not in kwargs, "action should be none for Enum options"
+            assert "choices" not in kwargs, "for enum options choices are the enum names!"
+            kwargs["choices"] = tuple(t.name.lower() for t in type)
+            type = _EnumArgparseType(type)
 
         result = option_cls(name, shortname, default, type, _owningClass, _loader=self, group=group,
                             helpHidden=helpHidden, _fallback_name=_fallback_name, **kwargs)
