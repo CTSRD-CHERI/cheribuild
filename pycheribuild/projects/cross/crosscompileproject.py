@@ -63,6 +63,7 @@ class Linkage(Enum):
 
 class CrossCompileMixin(object):
     doNotAddToTargets = True
+    config = None  # type: CheriConfig
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
 
     CAN_TARGET_ALL_TARGETS = list(CrossCompileTarget)
@@ -132,16 +133,13 @@ class CrossCompileMixin(object):
             # use *-*-freebsd12 to default to libc++
             if self.compiling_for_cheri():
                 self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "cheri-qemu-elf"
-                # TODO: should we use -mcpu=cheri128/256?
-                self.COMMON_FLAGS.extend(["-mabi=purecap", "-mcpu=mips4", "-cheri=" + self.config.cheriBitsStr])
+                self.COMMON_FLAGS
                 if self.config.cheri_cap_table_abi:
                     self.COMMON_FLAGS.append("-cheri-cap-table-abi=" + self.config.cheri_cap_table_abi)
             else:
                 assert self.crossCompileTarget == CrossCompileTarget.MIPS
                 self.targetTriple = "mips64-unknown-freebsd" if not self.baremetal else "mips64-qemu-elf"
                 self.COMMON_FLAGS.append("-integrated-as")
-                self.COMMON_FLAGS.append("-mabi=n64")
-                self.COMMON_FLAGS.append("-mcpu=mips4")
                 self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
                 if not self.baremetal:
                     self.COMMON_FLAGS.append("-stdlib=libc++")
@@ -205,14 +203,33 @@ class CrossCompileMixin(object):
             return 32
 
     @property
-    def default_compiler_flags(self):
+    def _essential_compiler_and_linker_flags(self):
+        """
+        :return: flags such as -target + -mabi which are needed for both compiler and linker
+        """
         if self.compiling_for_host():
-            return self.COMMON_FLAGS + self.compiler_warning_flags
-        result = ["-target", self.targetTripleWithVersion] + self.optimizationFlags
-        result += self.COMMON_FLAGS + self.compiler_warning_flags
+            return []  # no special flags should be needed
+        # However, when cross compiling we need at least -target=
+        result = ["-target", self.targetTripleWithVersion]
+        if self.compiling_for_cheri():
+            # TODO: should we use -mcpu=cheri128/256?
+            result.extend(["-mabi=purecap", "-mcpu=mips4", "-cheri=" + self.config.cheriBitsStr])
+        else:
+            assert self.compiling_for_mips()
+            # TODO: should we use -mcpu=cheri128/256?
+            result.extend(["-mabi=n64", "-mcpu=mips4"])
         if not self.baremetal:
             result.append("--sysroot=" + str(self.sdkSysroot))
         result += ["-B" + str(self.config.sdkBinDir)]
+        return result
+
+
+    @property
+    def default_compiler_flags(self):
+        if self.compiling_for_host():
+            return self.COMMON_FLAGS + self.compiler_warning_flags
+        result = self._essential_compiler_and_linker_flags + self.optimizationFlags
+        result += self.COMMON_FLAGS + self.compiler_warning_flags
         # Add mxcaptable for projects that need it
         if self.compiling_for_cheri() and self.config.cheri_cap_table_abi != "legacy":
             if self.force_static_linkage and self.needs_mxcaptable_static:
@@ -236,16 +253,15 @@ class CrossCompileMixin(object):
         else:
             fatalError("Logic error!")
             return []
-        result += ["-Wl,-m" + emulation,
-                   "-fuse-ld=" + self.linker,
-                   "-Wl,-z,notext",  # needed so that LLD allows text relocations
-                  ]
-        if not self.baremetal:
-            result.append("--sysroot=" + str(self.sdkSysroot))
+        result += self._essential_compiler_and_linker_flags + [
+            "-Wl,-m" + emulation,
+            "-fuse-ld=" + self.linker,
+            # Should no longer be needed now that I added a hack for .eh_frame
+            # "-Wl,-z,notext",  # needed so that LLD allows text relocations
+        ]
         if self.config.withLibstatcounters:
-            #if self.linkDynamic:
-            #    result.append("-lstatcounters")
-            #else:
+            # We need to include the constructor even if there is no reference to libstatcounters:
+            # TODO: always include the .a file?
             result += ["-Wl,--whole-archive", "-lstatcounters", "-Wl,--no-whole-archive"]
         return result
 
