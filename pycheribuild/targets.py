@@ -40,18 +40,29 @@ class Target(object):
         self.name = name
         self.dependencies = set(dependencies)
         self.projectClass = projectClass
-        self.project = None  # type: pycheribuild.project.SimpleProject
+        self.__project = None  # type: pycheribuild.project.SimpleProject
         self._completed = False
+        self._creating_project = False  # avoid cycles
+
+    def get_or_create_project(self, config):
+        if self.__project is None:
+            self.__project = self.create_project(config)
+        return self.__project
 
     def checkSystemDeps(self, config: CheriConfig):
         if self._completed:
             return
-        self.project = self.create_project(config)
+        project = self.get_or_create_project(config)
         with setEnv(PATH=config.dollarPathWithOtherTools):
             # make sure all system dependencies exist first
-            self.project.checkSystemDependencies()
+            project.checkSystemDependencies()
 
     def create_project(self, config: CheriConfig) -> "SimpleProject":
+        assert not self._creating_project
+        self._creating_project = True
+        return self._create_project(config)
+
+    def _create_project(self, config: CheriConfig) -> "SimpleProject":
         return self.projectClass(config)
 
     def execute(self):
@@ -61,11 +72,13 @@ class Target(object):
             return
         # instantiate the project and run it
         starttime = time.time()
-        new_env = {"PATH":self.project.config.dollarPathWithOtherTools}
-        if self.project.config.clang_colour_diags:
+        assert self.__project is not None, "Should have been initialized in checkSystemDeps()"
+        project = self.__project
+        new_env = {"PATH": project.config.dollarPathWithOtherTools}
+        if project.config.clang_colour_diags:
             new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
         with setEnv(**new_env):
-            self.project.process()
+             project.process()
         statusUpdate("Built target '" + self.name + "' in", time.time() - starttime, "seconds")
         self._completed = True
 
@@ -106,7 +119,7 @@ class MultiArchTarget(Target):
         super().__init__(name, projectClass, dependencies=dependencies)
         self.target_arch = target_arch
 
-    def create_project(self, config: CheriConfig):
+    def _create_project(self, config: CheriConfig):
         from .projects.cross.crosscompileproject import CrossCompileMixin
         assert issubclass(self.projectClass, CrossCompileMixin)
         return self.projectClass(config, self.target_arch)

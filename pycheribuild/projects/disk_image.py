@@ -38,7 +38,6 @@ from ..config.loader import ComputedDefaultValue
 from .project import *
 from ..utils import *
 
-
 # Notes:
 # Mount the filesystem of a BSD VM: guestmount -a /foo/bar.qcow2 -m /dev/sda1:/:ufstype=ufs2:ufs --ro /mnt/foo
 # ufstype=ufs2 is required as the Linux kernel can't automatically determine which UFS filesystem is being used
@@ -56,6 +55,7 @@ class MtreeEntry(object):
         path = elements[0]
         attrDict = dict(map(lambda s: s.split(sep="=", maxsplit=1), elements[1:]))
         return MtreeEntry(path, attrDict)
+        # FIXME: use contents=
 
     @classmethod
     def parseAllDirsInMtree(cls, mtreeFile: Path) -> "typing.List[MtreeEntry]":
@@ -90,7 +90,7 @@ class _BuildDiskImageBase(SimpleProject):
                                                  "remote FreeBSD machine from where to copy the disk image")
         cls.disableTMPFS = None
 
-    def __init__(self, config, sourceClass: type(_BuildFreeBSD)):
+    def __init__(self, config, source_class: "typing.Type[_BuildFreeBSD]"):
         super().__init__(config)
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
@@ -106,12 +106,16 @@ class _BuildDiskImageBase(SimpleProject):
         self.makefs_cmd = None
         self.install_cmd = None
         self.dirsAddedToManifest = [Path(".")]  # Path().parents always includes a "." entry
-        self.rootfsDir = sourceClass.rootfsDir(self.config)
+        source_project = source_class.get_instance(config)
+        assert isinstance(source_project, _BuildFreeBSD)
+        self.rootfsDir = source_project.installDir
         assert self.rootfsDir is not None
-        self.userGroupDbDir = sourceClass.getSourceDir(self.config) / "etc"
-        self.crossBuildImage = sourceClass.crossbuild
+        self.userGroupDbDir = source_project.sourceDir / "etc"
+        self.crossBuildImage = source_project.crossbuild
         self.minimumImageSize = "1g",  # minimum image size = 1GB
         self.dirsInMtree = []
+        if self.needs_special_pkg_repo:
+            self._addRequiredSystemTool("wget")  # Needed to recursively fetch the pkg repo
 
     def getModeString(self, path: Path):
         try:
@@ -241,10 +245,34 @@ class _BuildDiskImageBase(SimpleProject):
 
         # Add the files needed to install kyua
         if self.needs_special_pkg_repo:
-            self.createFileForImage(outDir, "/etc/pkg/FreeBSD.conf", mode=0o644, showContentsByDefault=False,
-                                    contents=includeLocalFile("files/cheribsd/FreeBSD.conf"))
+            self.createFileForImage(outDir, "/etc/local-kyua-pkg/repos/kyua-pkg-cache.conf", mode=0o644,
+                                    showContentsByDefault=False,
+                                    contents=includeLocalFile("files/cheribsd/kyua-pkg-cache.repo.conf"))
+            self.createFileForImage(outDir, "/etc/local-kyua-pkg/config/pkg.conf", mode=0o644,
+                                    showContentsByDefault=False,
+                                    contents=includeLocalFile("files/cheribsd/kyua-pkg-cache.options.conf"))
+            # Add a script to install from these config files:
             self.createFileForImage(outDir, "/bin/prepare-testsuite.sh", mode=0o755, showContentsByDefault=False,
                                     contents=includeLocalFile("files/cheribsd/prepare-testsuite.sh"))
+            # Download all the kyua pkg files from and put them in /var/db/kyua-pkg-cache
+            pkgcache_dir = self.extraFilesDir / "var/db/kyua-pkg-cache"
+            self.makedirs(pkgcache_dir)
+            self.makedirs(pkgcache_dir)
+            runCmd("find", pkgcache_dir)
+            # https://apple.stackexchange.com/a/100573/251654
+            # https://www.gnu.org/software/wget/manual/html_node/Directory-Options.html
+            wget_cmd = ["wget", "--no-host-directories", "--cut-dirs=3",  # strip prefix
+                        "--timestamping", "-r", "--level",  "inf", "--no-parent",  # recursive but ignore parents
+                        "--convert-links", "--execute=robots = off",  # ignore robots.txt files, don't download robots.txt files"
+                        "--no-verbose",
+                        ]
+            runCmd(wget_cmd + ["--accept", "*.txz", # only download .txz files
+                               "https://people.freebsd.org/~brooks/packages/cheribsd-mips-20170403-brooks-20170609/"],
+                   cwd=pkgcache_dir)
+            # fetch old libarchive which is currently needed
+            self.makedirs(self.extraFilesDir / "usr/lib")
+            runCmd(wget_cmd + ["https://people.freebsd.org/~arichardson/cheri-files/libarchive.so.6"],
+                   cwd=self.extraFilesDir / "usr/lib")
 
         # make sure that the disk image always has the same SSH host keys
         # If they don't exist the system will generate one on first boot and we have to accept them every time
@@ -444,7 +472,7 @@ class BuildCheriBSDDiskImage(_BuildDiskImageBase):
                                                   " This is a workaround in case TMPFS is not working correctly")
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, sourceClass=BuildCHERIBSD)
+        super().__init__(config, source_class=BuildCHERIBSD)
         self.minimumImageSize = "256m"  # let's try to shrink the image size
         # TODO: fetch pkg from https://people.freebsd.org/~brooks/packages/cheribsd-mips-20170403-brooks-20170609/
 
@@ -467,7 +495,7 @@ class _BuildFreeBSDImageBase(_BuildDiskImageBase):
 
     def __init__(self, config: CheriConfig):
         # TODO: different extra-files directory
-        super().__init__(config, sourceClass=self._freebsd_build_class)
+        super().__init__(config, source_class=self._freebsd_build_class)
         self.minimumImageSize = "256m"
 
 

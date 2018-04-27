@@ -657,6 +657,13 @@ class Project(SimpleProject):
         return cls.installDir
 
     @classmethod
+    def get_instance(cls, config: CheriConfig):
+        # TODO: assert that target manager has been initialized
+        target = targetManager.get_target(cls.target)
+        result = target.get_or_create_project(config)
+        return result
+
+    @classmethod
     def buildDirSuffix(cls, config: CheriConfig, target: CrossCompileTarget):
         if target is None:
             # HACK since I can't make the class variable in BuildLLVM dynamic
