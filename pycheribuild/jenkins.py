@@ -220,7 +220,7 @@ def _jenkins_main():
                 # print(project.projectClass.projectName, project.projectClass.installDir)
         target.checkSystemDeps(cheriConfig)
         # need to set destdir after checkSystemDeps:
-        project = target.project
+        project = target.get_or_create_project(cheriConfig)
         assert project
         if isinstance(project, CrossCompileMixin):
             project.destdir = cheriConfig.outputRoot
