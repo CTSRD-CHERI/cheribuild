@@ -63,7 +63,7 @@ class FreeBSDCrossTools(CMakeProject):
                                                         " cross tools. Defaults to the CheriBSD source directory")
 
     def configure(self, **kwargs):
-        freebsd_dir = self.freebsd_source_dir if self.freebsd_source_dir else BuildCHERIBSD.sourceDir
+        freebsd_dir = self.freebsd_source_dir if self.freebsd_source_dir else BuildCHERIBSD.getSourceDir(self.config)
         self.add_cmake_options(CHERIBSD_DIR=freebsd_dir, CMAKE_C_COMPILER=self.config.clangPath)
         super().configure()
 
