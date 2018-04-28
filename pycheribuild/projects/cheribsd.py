@@ -842,7 +842,7 @@ class BuildCheriBsdSysroot(SimpleProject):
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
-        if not IS_FREEBSD and not self.remotePath and not rootfs_source_class.get_instance().crossbuild:
+        if not IS_FREEBSD and not self.remotePath and not self.rootfs_source_class.get_instance().crossbuild:
             configOption = "'--" + self.target + "/" + "remote-sdk-path'"
             fatalError("Path to the remote SDK is not set, option", configOption, "must be set to a path that "
                        "scp understands (e.g. vica:~foo/cheri/output/sdk256)")
