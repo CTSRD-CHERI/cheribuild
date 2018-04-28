@@ -30,7 +30,11 @@ BuildCHERIBSD.crossbuild = True
 def _sort_targets(targets: "typing.List[str]", add_dependencies=False) -> "typing.List[str]":
     real_targets = list(targetManager.get_target(t) for t in targets)
     # print(real_targets)
-    result = list(t.name for t in targetManager.get_all_targets(real_targets, add_dependencies))
+    config = get_global_config()
+    config.includeDependencies = add_dependencies
+    for t in real_targets:
+        t.get_dependencies(config)  # ensure they have been cached
+    result = list(t.name for t in targetManager.get_all_targets(real_targets, config))
     # print("result = ", result)
     return result
 

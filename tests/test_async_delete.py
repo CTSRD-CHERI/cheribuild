@@ -34,6 +34,11 @@ class TestAsyncDelete(TestCase):
         self._tempRoot = tempfile.TemporaryDirectory()
         self.tempRoot = Path(self._tempRoot.name)
         self.config = setup_mock_chericonfig(self.tempRoot)
+        self.config.pretend = False
+        self.config.sleep_before_delete = False
+
+        self.assertEqual(self.tempRoot, self.config.sourceRoot)
+        self.assertEqual(self.tempRoot / "build", self.config.buildRoot)
         self.project = MockProject(self.config, "foo")
         self.assertTrue(self.project.sourceDir.exists())
 
@@ -41,6 +46,7 @@ class TestAsyncDelete(TestCase):
         self._tempRoot.cleanup()
 
     def test_create_build_dir(self):
+
         self.assertFalse(self.project.buildDir.exists())
         self.project.clean()
         self.assertTrue(self.project.buildDir.exists())

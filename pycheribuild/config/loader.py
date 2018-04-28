@@ -380,6 +380,8 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
 class DefaultValueOnlyConfigLoader(ConfigLoaderBase):
     def __init__(self):
         super().__init__(DefaultValueOnlyConfigOption)
+        # Ignore options stored in other classes
+        self.options = dict()
 
     def finalizeOptions(self, availableTargets: list, **kwargs):
         pass

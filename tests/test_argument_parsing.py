@@ -49,6 +49,7 @@ class TestArgumentParsing(TestCase):
         ConfigLoaderBase._cheriConfig.loader._configPath = config_file
         sys.argv = ["cheribuild.py"] + args
         ConfigLoaderBase._cheriConfig.loader.reload()
+        ConfigLoaderBase._cheriConfig.load()
         # pprint.pprint(vars(ret))
         assert ConfigLoaderBase._cheriConfig
         return ConfigLoaderBase._cheriConfig
@@ -83,38 +84,39 @@ class TestArgumentParsing(TestCase):
     def test_per_project_override(self):
         config = self._parse_arguments(["--skip-configure"])
         source_root = config.sourceRoot
-        self.assertEqual(BuildCheriBSDDiskImage.extraFilesDir, source_root / "extra-files")
+        assert config.sdkDir is not None
+        self.assertEqual(BuildCheriBSDDiskImage.get_instance(config).extraFilesDir, source_root / "extra-files")
         self._parse_arguments(["--disk-image/extra-files=/foo/bar"])
-        self.assertEqual(BuildCheriBSDDiskImage.extraFilesDir, Path("/foo/bar/"))
+        self.assertEqual(BuildCheriBSDDiskImage.get_instance(config).extraFilesDir, Path("/foo/bar/"))
         self._parse_arguments(["--disk-image/extra-files", "/bar/foo"])
-        self.assertEqual(BuildCheriBSDDiskImage.extraFilesDir, Path("/bar/foo/"))
+        self.assertEqual(BuildCheriBSDDiskImage.get_instance(config).extraFilesDir, Path("/bar/foo/"))
         # different source root should affect the value:
         self._parse_arguments(["--source-root=/tmp"])
-        self.assertEqual(BuildCheriBSDDiskImage.extraFilesDir, Path("/tmp/extra-files"))
+        self.assertEqual(BuildCheriBSDDiskImage.get_instance(config).extraFilesDir, Path("/tmp/extra-files"))
 
         with tempfile.NamedTemporaryFile() as t:
-            config = Path(t.name)
-            write_bytes(config, b'{ "source-root": "/x"}')
-            self._parse_arguments([], config_file=config)
-            self.assertEqual(BuildCheriBSDDiskImage.extraFilesDir, Path("/x/extra-files"))
+            config_path = Path(t.name)
+            write_bytes(config_path, b'{ "source-root": "/x"}')
+            self._parse_arguments([], config_file=config_path)
+            self.assertEqual(BuildCheriBSDDiskImage.get_instance(config).extraFilesDir, Path("/x/extra-files"))
 
             # check that source root can be overridden
             self._parse_arguments(["--source-root=/y"])
-            self.assertEqual(BuildCheriBSDDiskImage.extraFilesDir, Path("/y/extra-files"))
+            self.assertEqual(BuildCheriBSDDiskImage.get_instance(config).extraFilesDir, Path("/y/extra-files"))
 
     def test_cross_compile_project_inherits(self):
         # Parse args once to ensure targetManager is initialized
-        self._parse_arguments(["--skip-configure"])
-        qtbase_default = targetManager.get_target("qtbase").projectClass  # type: typing.Type[BuildQtBase]
-        qtbase_native = targetManager.get_target("qtbase-native").projectClass  # type: typing.Type[BuildQtBase]
-        qtbase_mips = targetManager.get_target("qtbase-mips").projectClass  # type: typing.Type[BuildQtBase]
+        config = self._parse_arguments(["--skip-configure"])
+        qtbase_default = targetManager.get_target("qtbase").get_or_create_project(config)  # type: BuildQtBase
+        qtbase_native = targetManager.get_target("qtbase-native").get_or_create_project(config)  # type: BuildQtBase
+        qtbase_mips = targetManager.get_target("qtbase-mips").get_or_create_project(config)  # type: BuildQtBase
 
         # Check that project name is the same:
         self.assertEqual(qtbase_default.projectName, qtbase_native.projectName)
         self.assertEqual(qtbase_mips.projectName, qtbase_native.projectName)
         # These classes were generated:
-        self.assertEqual(qtbase_native.synthetic_base, qtbase_default)
-        self.assertEqual(qtbase_mips.synthetic_base, qtbase_default)
+        self.assertEqual(qtbase_native.synthetic_base, qtbase_default.__class__)
+        self.assertEqual(qtbase_mips.synthetic_base, qtbase_default.__class__)
         self.assertFalse(hasattr(qtbase_default, "synthetic_base"))
 
         # Now check a property that should be inherited:
