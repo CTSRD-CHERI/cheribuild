@@ -52,7 +52,7 @@ class BuildLibunwind(CrossCompileCMakeProject):
         self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)
         self.add_cmake_options(
             LLVM_CONFIG_PATH=self.compiler_dir / "llvm-config",
-            LLVM_EXTERNAL_LIT=BuildLLVM.buildDir / "bin/llvm-lit",
+            LLVM_EXTERNAL_LIT=BuildLLVM.getBuildDir(config) / "bin/llvm-lit",
         )
 
         # TODO: this breaks the build: LLVM_LIBDIR_SUFFIX="cheri"
@@ -81,7 +81,7 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         super().__init__(config, target_arch)
-        self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.installDir / "lib",
+        self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.getInstallDir(config) / "lib",
                                CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
         if self.compiling_for_host():
             assert not self.baremetal
@@ -127,7 +127,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         cls.qemu_host = cls.addConfigOption("ssh-host", help="The QEMU SSH hostname to connect to for running tests",
                                             default=lambda c, p: "localhost")
         cls.qemu_port = cls.addConfigOption("ssh-port", help="The QEMU SSH port to connect to for running tests",
-                                            kind=str, default=lambda c, p: LaunchCheriBSD.sshForwardingPort)
+                                            default=lambda c, p: LaunchCheriBSD.get_instance(c).sshForwardingPort)
         cls.qemu_user = cls.addConfigOption("shh-user", default="root", help="The CheriBSD used for running tests")
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
@@ -146,7 +146,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LIBCXX_INCLUDE_TESTS=True,
             # LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config",
             LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
-            LLVM_EXTERNAL_LIT=BuildLLVM.buildDir / "bin/llvm-lit",
+            LLVM_EXTERNAL_LIT=BuildLLVM.getBuildDir(config) / "bin/llvm-lit",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
             LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
                           "/lit-test-results.xml --max-time 3600 --timeout 120 -s -vv"
@@ -155,8 +155,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.add_cmake_options(
             LIBCXX_CXX_ABI="libcxxrt",
             LIBCXX_CXX_ABI_LIBNAME="libcxxrt",
-            LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.sourceDir / "src",
-            LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.buildDir / "lib",
+            LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.getSourceDir(config) / "src",
+            LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.getBuildDir(config) / "lib",
         )
 
     def addCrossFlags(self):
@@ -253,7 +253,7 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
 
 
             LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
-            LLVM_EXTERNAL_LIT=BuildLLVM.buildDir / "bin/llvm-lit",
+            LLVM_EXTERNAL_LIT=BuildLLVM.getBuildDir(config) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=False,
             COMPILER_RT_BUILD_XRAY=False,

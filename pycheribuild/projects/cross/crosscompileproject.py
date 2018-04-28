@@ -49,12 +49,23 @@ def _installDirMessage(project: "CrossCompileProject"):
     return "UNKNOWN"
 
 
-def crosscompile_dependencies(cls: "typing.Type[CrossCompileProject]"):
-    # TODO: can I make this take the class instance instead of the class
-    if cls.crossCompileTarget == CrossCompileTarget.NATIVE:
-        return ["freestanding-sdk"] if get_global_config().use_sdk_clang_for_native_xbuild else []
+def crosscompile_dependencies(cls: "typing.Type[CrossCompileProject]", config: CheriConfig):
+    # TODO: can I avoid instantiating all cross-compile targets here? The hack below might work
+    obj = cls.get_instance(config)
+    # assert isinstance(obj, CrossCompileMixin), type(obj)
+    target = obj.crossCompileTarget
+    # As a hack pass a dummy object as the instance
+    if target == CrossCompileTarget.NATIVE:
+        return ["freestanding-sdk"] if config.use_sdk_clang_for_native_xbuild else []
     else:
-        return ["freestanding-sdk"] if cls.baremetal else ["cheribsd-sdk"]
+        return ["freestanding-sdk"] if obj.baremetal else ["cheribsd-sdk"]
+    if False:
+        # HACK: to get the descriptor directly:
+        target = inspect.getattr_static(cls, "crossCompileTarget")
+        if not isinstance(target, CrossCompileTarget):
+            # We got the descriptor so to avoid the assertion that it is being called incorrectly pass a dummy instance
+            # since the value of crosscompiletarget should only depend on command line flags
+            target = target.__get__(object(), cls)
 
 class Linkage(Enum):
     DEFAULT = "default"
@@ -105,8 +116,9 @@ class CrossCompileMixin(object):
         self.compiler_dir = self.config.sdkBinDir
         # Use the compiler from the build directory for native builds to get stddef.h (which will be deleted)
         if self.crossCompileTarget == CrossCompileTarget.NATIVE:
-            if (BuildLLVM.buildDir / "bin/clang").exists():
-                self.compiler_dir = BuildLLVM.buildDir / "bin"
+            llvm_build_dir = BuildLLVM.get_instance(config).buildDir
+            if (llvm_build_dir / "bin/clang").exists():
+                self.compiler_dir = llvm_build_dir / "bin"
 
         self.targetTriple = None
         # compiler flags:

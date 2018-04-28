@@ -831,6 +831,8 @@ class BuildCheriBsdSysroot(SimpleProject):
     projectName = "cheribsd-sysroot"
     dependencies = ["cheribsd"]
 
+    rootfs_source_class = BuildCHERIBSD  # type: BuildCHERIBSD
+
     def fixSymlinks(self):
         # copied from the build_sdk.sh script
         # TODO: we could do this in python as well, but this method works
@@ -840,7 +842,7 @@ class BuildCheriBsdSysroot(SimpleProject):
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
-        if not IS_FREEBSD and not self.remotePath and not BuildCHERIBSD.crossbuild:
+        if not IS_FREEBSD and not self.remotePath and not rootfs_source_class.get_instance().crossbuild:
             configOption = "'--" + self.target + "/" + "remote-sdk-path'"
             fatalError("Path to the remote SDK is not set, option", configOption, "must be set to a path that "
                        "scp understands (e.g. vica:~foo/cheri/output/sdk256)")
@@ -914,7 +916,7 @@ class BuildCheriBsdSysroot(SimpleProject):
                 self.createSymlink(self.config.sdkSysrootDir, unprefixed_sysroot)
 
         with self.asyncCleanDirectory(self.config.sdkSysrootDir):
-            if IS_FREEBSD or BuildCHERIBSD.crossbuild:
+            if IS_FREEBSD or self.rootfs_source_class.get_instance(self.config).crossbuild:
                 self.createSysroot()
             else:
                 self.copySysrootFromRemoteMachine()

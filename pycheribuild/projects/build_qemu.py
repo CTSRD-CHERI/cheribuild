@@ -55,7 +55,7 @@ class BuildQEMU(AutotoolsProject):
         binary_name = "qemu-system-cheri"
         if config.unified_sdk:
             binary_name += config.cheriBitsStr
-            if config.cheriBits == 128 and cls.magic128:
+            if config.cheriBits == 128 and cls.get_instance(config).magic128:
                 binary_name += "magic"
         return config.sdkBinDir / binary_name
 

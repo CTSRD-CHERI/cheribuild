@@ -196,15 +196,15 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             cls.skipKernelUpdate = cls.addBoolOption("skip-kernel-update", showHelp=True,
                                                      help="Don't update the kernel from the remote host")
 
-    def __init__(self, config: CheriConfig, sourceClass: type(_BuildFreeBSD),
-                 diskImageClass: type(_BuildFreeBSDImageBase)):
+    def __init__(self, config: CheriConfig, source_class: type(_BuildFreeBSD),
+                 disk_image_class: type(_BuildFreeBSDImageBase)):
         super().__init__(config)
-        self.sourceClass = sourceClass
-        self.currentKernel = sourceClass.rootfsDir(self.config) / "boot/kernel/kernel"
-        self.diskImage = diskImageClass.diskImagePath
+        self.source_class = source_class
+        self.currentKernel = source_class.rootfsDir(self.config) / "boot/kernel/kernel"
+        self.diskImage = disk_image_class.get_instance(config).diskImagePath
         self.needsRemoteKernelCopy = True
         # no need to copy from remote host if we were crossbuilding
-        if IS_FREEBSD or sourceClass.crossbuild:
+        if IS_FREEBSD or source_class.get_instance(config).crossbuild:
             self.needsRemoteKernelCopy = False
         # same if skip-update was passed
         elif self.skipKernelUpdate or self.config.skipUpdate:
@@ -271,7 +271,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # FIXME: these should be config options
-        self.currentKernel = BuildCheriOS.buildDir / "boot/cherios.elf"
+        self.currentKernel = BuildCheriOS.getBuildDir(config) / "boot/cherios.elf"
         self.diskImage = self.config.outputRoot / "cherios-disk.img"
         self._projectSpecificOptions = ["-no-reboot"]
         self._diskOptions = ["-drive", "if=none,file=" + str(self.diskImage) + ",id=drv,format=raw",

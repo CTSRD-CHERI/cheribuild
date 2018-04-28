@@ -100,12 +100,9 @@ class ProjectSubclassDefinitionHook(type):
         if cls.__dict__.get("dependenciesMustBeBuilt"):
             if not cls.dependencies:
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + targetName)
-        deps = cls.dependencies
-        if deps and callable(deps):
-            deps = deps(cls)
         if hasattr(cls, "supported_architectures"):
             # Add a the target for the default architecture
-            targetManager.addTarget(MultiArchTarget(targetName, cls, None, dependencies=set(deps)))
+            targetManager.addTarget(MultiArchTarget(targetName, cls, None))
             for arch in cls.supported_architectures:
                 assert isinstance(arch, CrossCompileTarget)
                 # create a new class to ensure different build dirs and config name strings
@@ -116,10 +113,10 @@ class ProjectSubclassDefinitionHook(type):
                 new_dict["target"] = new_name
                 new_dict["synthetic_base"] = cls  # We are already adding it here
                 new_type = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
-                targetManager.addTarget(MultiArchTarget(new_name, new_type, arch, dependencies=set(deps)))
+                targetManager.addTarget(MultiArchTarget(new_name, new_type, arch))
         else:
             # Only one target is supported:
-            targetManager.addTarget(Target(targetName, cls, dependencies=set(deps)))
+            targetManager.addTarget(Target(targetName, cls))
         # print("Adding target", targetName, "with deps:", cls.dependencies)
 
 
@@ -136,22 +133,39 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     buildDir = None
     installDir = None
 
+    __cached_deps = None  # type: typing.List[str]
+
     @classmethod
-    def allDependencyNames(cls) -> list:
+    def allDependencyNames(cls, config: CheriConfig) -> list:
+        if cls.__cached_deps:
+            return cls.__cached_deps
         dependencies = cls.dependencies
         result = []
         if callable(dependencies):
-            dependencies = dependencies(cls)
+            dependencies = dependencies(cls, config)
         for dep in dependencies:
             if callable(dep):
-                dep = dep(cls)
+                dep = dep(cls, config)
             if dep not in result:
                 result.append(dep)
             # now recursively add the other deps:
-            recursive_deps = targetManager.get_target(dep).projectClass.allDependencyNames()
+            recursive_deps = targetManager.get_target(dep).projectClass.allDependencyNames(config)
             for r in recursive_deps:
                 if r not in result:
                     result.append(r)
+        cls.__cached_deps = result
+        return result
+
+    @classmethod
+    def _cached_dependencies(cls):
+        assert cls.__cached_deps is not None, "_cached_dependencies called before allDependencyNames()"
+        return cls.__cached_deps
+
+    @classmethod
+    def get_instance(cls, config: CheriConfig) -> "SimpleProject":
+        # TODO: assert that target manager has been initialized
+        target = targetManager.get_target(cls.target)
+        result = target.get_or_create_project(config)
         return result
 
     # Project subclasses will automatically have a target based on their name generated unless they add this:
@@ -646,22 +660,15 @@ class Project(SimpleProject):
     # TODO: remove these three
     @classmethod
     def getSourceDir(cls, config: CheriConfig):
-        return cls.sourceDir
+        return cls.get_instance(config).sourceDir
 
     @classmethod
     def getBuildDir(cls, config: CheriConfig):
-        return cls.buildDir
+        return cls.get_instance(config).buildDir
 
     @classmethod
     def getInstallDir(cls, config: CheriConfig):
-        return cls.installDir
-
-    @classmethod
-    def get_instance(cls, config: CheriConfig):
-        # TODO: assert that target manager has been initialized
-        target = targetManager.get_target(cls.target)
-        result = target.get_or_create_project(config)
-        return result
+        return cls.get_instance(config).installDir
 
     @classmethod
     def buildDirSuffix(cls, config: CheriConfig, target: CrossCompileTarget):

@@ -36,18 +36,20 @@ from .utils import *
 
 
 class Target(object):
-    def __init__(self, name, projectClass, *, dependencies: set=set()):
+    def __init__(self, name, projectClass):
         self.name = name
-        self.dependencies = set(dependencies)
         self.projectClass = projectClass
         self.__project = None  # type: pycheribuild.project.SimpleProject
         self._completed = False
         self._creating_project = False  # avoid cycles
 
-    def get_or_create_project(self, config):
+    def get_or_create_project(self, config) -> "SimpleProject":
         if self.__project is None:
             self.__project = self.create_project(config)
         return self.__project
+
+    def get_dependencies(self, config) -> "typing.List[str]":
+        return self.projectClass.allDependencyNames(config)
 
     def checkSystemDeps(self, config: CheriConfig):
         if self._completed:
@@ -85,7 +87,7 @@ class Target(object):
     def __lt__(self, other: "Target"):
         # print(self, "__lt__", other)
         # if this target is one of the dependencies order it before
-        otherDeps = other.projectClass.allDependencyNames()
+        otherDeps = other.projectClass._cached_dependencies()
         # print("other deps:", otherDeps)
         if self.name in otherDeps:
             # print(self, "is in", other, "deps -> is less")
@@ -115,8 +117,8 @@ class Target(object):
 
 # XXX: can't call this CrossCompileTarget since that is already the name of the enum
 class MultiArchTarget(Target):
-    def __init__(self, name, projectClass, target_arch: CrossCompileTarget, *, dependencies: set=set()):
-        super().__init__(name, projectClass, dependencies=dependencies)
+    def __init__(self, name, projectClass, target_arch: CrossCompileTarget):
+        super().__init__(name, projectClass)
         self.target_arch = target_arch
 
     def _create_project(self, config: CheriConfig):
@@ -192,16 +194,17 @@ class TargetManager(object):
             targets.remove(lowest)
         return result
 
-    def get_all_targets(self, explicit_targets: "typing.List[Target]", add_dependencies: bool) -> "typing.List[Target]":
+    def get_all_targets(self, explicit_targets: "typing.List[Target]", config: CheriConfig) -> "typing.List[Target]":
+        add_dependencies = config.includeDependencies
         chosen_targets = []
         for t in explicit_targets:
             chosen_targets.append(t)
             deps_to_add = []
             if add_dependencies:
-                deps_to_add = t.projectClass.allDependencyNames()
+                deps_to_add = t.projectClass.allDependencyNames(config)
             elif t.projectClass.dependenciesMustBeBuilt:
-                    # some targets such as sdk always need their dependencies build:
-                    deps_to_add = t.projectClass.allDependencyNames()
+                # some targets such as sdk always need their dependencies build:
+                deps_to_add = t.projectClass.allDependencyNames(config)
             elif t.projectClass.isAlias:
                 assert not t.projectClass.dependenciesMustBeBuilt
                 # for aliases without full dependencies just add the direct dependencies
@@ -213,7 +216,7 @@ class TargetManager(object):
     def run(self, config: CheriConfig):
         # check that all target dependencies are correct:
         for t in self._allTargets.values():
-            for dep in t.dependencies:
+            for dep in t.get_dependencies(config):
                 if dep not in self._allTargets:
                     sys.exit("Invalid dependency " + dep + " for " + t.projectClass.__name__)
 
@@ -231,7 +234,7 @@ class TargetManager(object):
                                   ",".join(self.targetNames)))
             explicitlyChosenTargets.append(self.get_target(targetName))
 
-        chosenTargets = self.get_all_targets(explicitlyChosenTargets, config.includeDependencies)
+        chosenTargets = self.get_all_targets(explicitlyChosenTargets, config)
         if config.verbose:
             print("Will execute the following targets:", " ".join(t.name for t in chosenTargets))
         # now that the chosen targets have been resolved run them

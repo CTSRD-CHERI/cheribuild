@@ -198,6 +198,8 @@ class ConfigOptionBase(object):
         return self.name
 
     def __get__(self, instance, owner):
+        assert instance is not None, "This attribute needs an object instance. Owner = " + str(owner)
+
         # TODO: would be nice if this was possible (but too much depends on accessing values without instances)
         # if instance is None:
         #     return self
