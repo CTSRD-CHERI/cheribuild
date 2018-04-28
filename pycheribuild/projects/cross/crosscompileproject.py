@@ -88,8 +88,8 @@ class CrossCompileMixin(object):
     crossCompileTarget = None  # type: CrossCompileTarget
     defaultOptimizationLevel = ["-O2"]
     cross_warning_flags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
-                    "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types",
-                    "-Werror=mips-cheri-prototypes"]
+                           "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types",
+                           "-Werror=mips-cheri-prototypes", "-Werror=cheri-bitwise-operations"]
     host_warning_flags = []
     common_warning_flags = []
 
