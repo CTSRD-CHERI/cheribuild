@@ -209,6 +209,38 @@ class _BuildDiskImageBase(SimpleProject):
         self.installFile(originalMetalog, self.manifestFile)
         self.dirsInMtree = MtreeEntry.parseAllDirsInMtree(originalMetalog) if originalMetalog.exists() else []
 
+        # Add the files needed to install kyua (make sure to download before calculating the list of extra files!)
+        if self.needs_special_pkg_repo:
+            self.createFileForImage(outDir, "/etc/local-kyua-pkg/repos/kyua-pkg-cache.conf", mode=0o644,
+                                    showContentsByDefault=False,
+                                    contents=includeLocalFile("files/cheribsd/kyua-pkg-cache.repo.conf"))
+            self.createFileForImage(outDir, "/etc/local-kyua-pkg/config/pkg.conf", mode=0o644,
+                                    showContentsByDefault=False,
+                                    contents=includeLocalFile("files/cheribsd/kyua-pkg-cache.options.conf"))
+            # Add a script to install from these config files:
+            self.createFileForImage(outDir, "/bin/prepare-testsuite.sh", mode=0o755, showContentsByDefault=False,
+                                    contents=includeLocalFile("files/cheribsd/prepare-testsuite.sh"))
+            # Download all the kyua pkg files from and put them in /var/db/kyua-pkg-cache
+            pkgcache_dir = self.extraFilesDir / "var/db/kyua-pkg-cache"
+            self.makedirs(pkgcache_dir)
+            self.makedirs(pkgcache_dir)
+            runCmd("find", pkgcache_dir)
+            # https://apple.stackexchange.com/a/100573/251654
+            # https://www.gnu.org/software/wget/manual/html_node/Directory-Options.html
+            wget_cmd = ["wget", "--no-host-directories", "--cut-dirs=3",  # strip prefix
+                        "--timestamping", "-r", "--level",  "inf", "--no-parent",  # recursive but ignore parents
+                        "--convert-links", "--execute=robots = off",  # ignore robots.txt files, don't download robots.txt files"
+                        "--no-verbose",
+                        ]
+            runCmd(wget_cmd + ["--accept", "*.txz", # only download .txz files
+                               "https://people.freebsd.org/~brooks/packages/cheribsd-mips-20170403-brooks-20170609/"],
+                   cwd=pkgcache_dir)
+            # fetch old libarchive which is currently needed
+            self.makedirs(self.extraFilesDir / "usr/lib")
+            runCmd(wget_cmd + ["https://people.freebsd.org/~arichardson/cheri-files/libarchive.so.6"],
+                   cwd=self.extraFilesDir / "usr/lib")
+
+
         # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
         # If they do not exist in the extra-files directory yet we generate a default one and use that
         # Additionally all other files in the extra-files directory will be added to the disk image
@@ -242,37 +274,6 @@ class _BuildDiskImageBase(SimpleProject):
         cshrcContents = includeLocalFile("files/cheribsd/csh.cshrc.in").format(
             SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
         self.createFileForImage(outDir, "/etc/csh.cshrc", contents=cshrcContents)
-
-        # Add the files needed to install kyua
-        if self.needs_special_pkg_repo:
-            self.createFileForImage(outDir, "/etc/local-kyua-pkg/repos/kyua-pkg-cache.conf", mode=0o644,
-                                    showContentsByDefault=False,
-                                    contents=includeLocalFile("files/cheribsd/kyua-pkg-cache.repo.conf"))
-            self.createFileForImage(outDir, "/etc/local-kyua-pkg/config/pkg.conf", mode=0o644,
-                                    showContentsByDefault=False,
-                                    contents=includeLocalFile("files/cheribsd/kyua-pkg-cache.options.conf"))
-            # Add a script to install from these config files:
-            self.createFileForImage(outDir, "/bin/prepare-testsuite.sh", mode=0o755, showContentsByDefault=False,
-                                    contents=includeLocalFile("files/cheribsd/prepare-testsuite.sh"))
-            # Download all the kyua pkg files from and put them in /var/db/kyua-pkg-cache
-            pkgcache_dir = self.extraFilesDir / "var/db/kyua-pkg-cache"
-            self.makedirs(pkgcache_dir)
-            self.makedirs(pkgcache_dir)
-            runCmd("find", pkgcache_dir)
-            # https://apple.stackexchange.com/a/100573/251654
-            # https://www.gnu.org/software/wget/manual/html_node/Directory-Options.html
-            wget_cmd = ["wget", "--no-host-directories", "--cut-dirs=3",  # strip prefix
-                        "--timestamping", "-r", "--level",  "inf", "--no-parent",  # recursive but ignore parents
-                        "--convert-links", "--execute=robots = off",  # ignore robots.txt files, don't download robots.txt files"
-                        "--no-verbose",
-                        ]
-            runCmd(wget_cmd + ["--accept", "*.txz", # only download .txz files
-                               "https://people.freebsd.org/~brooks/packages/cheribsd-mips-20170403-brooks-20170609/"],
-                   cwd=pkgcache_dir)
-            # fetch old libarchive which is currently needed
-            self.makedirs(self.extraFilesDir / "usr/lib")
-            runCmd(wget_cmd + ["https://people.freebsd.org/~arichardson/cheri-files/libarchive.so.6"],
-                   cwd=self.extraFilesDir / "usr/lib")
 
         # make sure that the disk image always has the same SSH host keys
         # If they don't exist the system will generate one on first boot and we have to accept them every time
