@@ -41,6 +41,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     defaultOptimizationLevel = ["-O2"]
     # TODO: only use mxcaptable for some files
     needs_mxcaptable_static = True  # Slightly over the limit
+    needs_mxcaptable_dynamic = True  # Slightly over the limit
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         super().__init__(config, target_arch)
@@ -49,12 +50,9 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")
             self.configureArgs.append("--enable-cassert")
 
-        self.COMMON_FLAGS.extend(["-pedantic",
-                                  "-Wno-gnu-statement-expression",
-                                  "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
-                                  "-Wno-extended-offsetof",
-                                  "-Wno-format-pedantic",
-                                  ])
+        self.common_warning_flags.extend(["-pedantic", "-Wno-gnu-statement-expression",
+                                          "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
+                                          "-Wno-format-pedantic"])
         self.LDFLAGS.append("-pthread")
         if not self.compiling_for_host():
             self.COMMON_FLAGS.append("-DDISABLE_LOADABLE_MODULES=1")
