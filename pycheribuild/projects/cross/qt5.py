@@ -45,7 +45,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         super().__init__(config, target_arch)
         self.configureCommand = self.sourceDir / "configure"
         if not self.compiling_for_host():
-            self.linkage = Linkage.STATIC
+            self._linkage = Linkage.STATIC
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):

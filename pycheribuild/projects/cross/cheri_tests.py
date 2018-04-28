@@ -50,6 +50,6 @@ class BuildRtldTests(CrossCompileCMakeProject):
 
     def __init__(self, config: CheriConfig, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
-        self.linkage = Linkage.DYNAMIC
+        self._linkage = Linkage.DYNAMIC
         assert not self.force_static_linkage
         assert self.force_dynamic_linkage

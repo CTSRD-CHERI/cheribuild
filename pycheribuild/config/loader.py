@@ -66,6 +66,8 @@ class _EnumArgparseType(object):
         # self.action = action
 
     def __call__(self, astring):
+        if isinstance(astring, self.enums):
+            return astring  # Allow passing an enum instance
         name = self.enums.__name__
         try:
             v = self.enums[astring.upper()]
@@ -115,8 +117,12 @@ class ConfigLoaderBase(object):
 
         if issubclass(type, Enum):
             assert "action" not in kwargs, "action should be none for Enum options"
-            assert "choices" not in kwargs, "for enum options choices are the enum names!"
-            kwargs["choices"] = tuple(t.name.lower() for t in type)
+            assert "choices" not in kwargs, "for enum options choices are the enum names (or set enum_choices)!"
+            if "enum_choices" in kwargs:
+                kwargs["choices"] = tuple(t.name.lower() for t in kwargs["enum_choices"])
+                del kwargs["enum_choices"]
+            else:
+                kwargs["choices"] = tuple(t.name.lower() for t in type)
             type = _EnumArgparseType(type)
 
         result = option_cls(name, shortname, default, type, _owningClass, _loader=self, group=group,
@@ -161,14 +167,19 @@ class ConfigOptionBase(object):
         self.name = name
         self.shortname = shortname
         self.default = default
+        self.valueType = valueType
         if isinstance(default, ComputedDefaultValue):
             if callable(default.asString):
                 self.default_str = default.asString(_owningClass)
             else:
                 self.default_str = str(default.asString)
-        else:
-            self.default_str = str(default)
-        self.valueType = valueType
+        elif default is not None:
+            if isinstance(default, Enum) or isinstance(valueType, _EnumArgparseType):
+                assert isinstance(valueType, _EnumArgparseType), "default is enum but value type isn't: " + str(valueType)
+                assert isinstance(default, Enum), "Should use enum constant for default and not " + str(default)
+                self.default_str = default.name.lower()
+            else:
+                self.default_str = str(default)
         self._cached = None
         self._loader = _loader
         self._owningClass = _owningClass  # if none it means the global CheriConfig is the class containing this option

@@ -56,6 +56,13 @@ class CrossCompileTarget(Enum):
     MIPS = "mips"
     CHERI = "cheri"  # TODO: add 128 and 256
 
+
+class Linkage(Enum):
+    DEFAULT = "default"
+    STATIC = "static"
+    DYNAMIC = "dynamic"
+
+
 class MipsFloatAbi(Enum):
     SOFT = ("mips64", "-msoft-float")
     HARD = ("mips64hf", "-mhard-float")
@@ -113,8 +120,12 @@ class CheriConfig(object):
         self.skipConfigure = None  # type: bool
         self.forceConfigure = None  # type: bool
         self.force_update = None  # type: bool
-        self.mips_float_abi = loader.addOption("mips-float-abi", default="soft", type=MipsFloatAbi,
+        self.mips_float_abi = loader.addOption("mips-float-abi", default=MipsFloatAbi.SOFT, type=MipsFloatAbi,
                                                help="The floating point ABI to use for building MIPS+CHERI programs")
+        self.crosscompile_linkage = loader.addOption("cross-compile-linkage", default=Linkage.STATIC, type=Linkage,
+                                                     enum_choices=(Linkage.DYNAMIC, Linkage.STATIC),
+                                                     help="Whether to link cross-compile projects static or dynamic by default")
+
         self.unified_sdk = loader.addBoolOption("unified-sdk", help="Build a single SDK instead of separate 128"
                                                 " and 256 bits ones", default=True)
 

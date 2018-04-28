@@ -74,7 +74,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.crossInstallDir = CrossInstallDir.SDK
         else:
             # We always want to build the MIPS binary static so we can just scp it over to QEMU
-            self.linkage = Linkage.STATIC
+            self._linkage = Linkage.STATIC
         # See https://github.com/bsdjhb/kdbg/blob/master/gdb/build
         super().__init__(config, target_arch)
         installRoot = self.installDir if self.compiling_for_host() else self.installPrefix

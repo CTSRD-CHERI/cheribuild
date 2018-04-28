@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 from ...config.loader import ComputedDefaultValue
-from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi
+from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi, Linkage
 from ..cheribsd import BuildCHERIBSD
 from ..llvm import BuildLLVM
 from ..project import *
@@ -67,10 +67,6 @@ def crosscompile_dependencies(cls: "typing.Type[CrossCompileProject]", config: C
             # since the value of crosscompiletarget should only depend on command line flags
             target = target.__get__(object(), cls)
 
-class Linkage(Enum):
-    DEFAULT = "default"
-    STATIC = "static"
-    DYNAMIC = "dynamic"
 
 class CrossCompileMixin(object):
     doNotAddToTargets = True
@@ -145,7 +141,6 @@ class CrossCompileMixin(object):
             # use *-*-freebsd12 to default to libc++
             if self.compiling_for_cheri():
                 self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "cheri-qemu-elf"
-                self.COMMON_FLAGS
                 if self.config.cheri_cap_table_abi:
                     self.COMMON_FLAGS.append("-cheri-cap-table-abi=" + self.config.cheri_cap_table_abi)
             else:
@@ -235,7 +230,6 @@ class CrossCompileMixin(object):
         result += ["-B" + str(self.config.sdkBinDir)]
         return result
 
-
     @property
     def default_compiler_flags(self):
         if self.compiling_for_host():
@@ -304,22 +298,28 @@ class CrossCompileMixin(object):
         cls.debugInfo = cls.addBoolOption("debug-info", help="build with debug info", default=True)
         cls.optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
                                                     default=cls.defaultOptimizationLevel)
-        cls.linkage = cls.addConfigOption("linkage", help="Build static or dynamic (default means for host=dynamic, MIPS/CHERI=static)",
-                                                     default="default", kind=Linkage)
+        cls._linkage = cls.addConfigOption("linkage", help="Build static or dynamic (default means for host=dynamic,"
+                                                          " CHERI/MIPS=<value of option --cross-compile-linkage>)",
+                                          default=Linkage.DEFAULT, kind=Linkage)
         if inspect.getattr_static(cls, "crossCompileTarget") is None:
             cls.crossCompileTarget = cls.addConfigOption("target", help="The target to build for (`cheri` or `mips` or `native`)",
-                                                 default=defaultTarget, kind=CrossCompileTarget)
+                                                         default=defaultTarget, kind=CrossCompileTarget)
+
+    def linkage(self):
+        if self._linkage == Linkage.DEFAULT:
+            if self.compiling_for_host():
+                return Linkage.DEFAULT  # whatever the project chooses as a default
+            else:
+                return self.config.crosscompile_linkage  # either force static or force dynamic
+        return self._linkage
 
     @property
     def force_static_linkage(self) -> bool:
-        if not self.compiling_for_host() and self.linkage == Linkage.DEFAULT:
-            # FIXME: currently we force static for CHERI
-            return True
-        return self.linkage == Linkage.STATIC
+        return self.linkage() == Linkage.STATIC
 
     @property
     def force_dynamic_linkage(self) -> bool:
-        return self.linkage == Linkage.DYNAMIC
+        return self.linkage() == Linkage.DYNAMIC
 
     def compiling_for_mips(self):
         return self.crossCompileTarget == CrossCompileTarget.MIPS
@@ -497,8 +497,9 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
                 self.configureArgs.extend(["--enable-static", "--disable-shared"])
             elif self.force_dynamic_linkage:
                 self.configureArgs.extend(["--disable-static", "--enable-shared"])
-            else:
-                self.configureArgs.extend(["--enable-static", "--enable-shared"])
+            # Otherwise just let the project decide
+            # else:
+            #    self.configureArgs.extend(["--enable-static", "--enable-shared"])
 
         # target triple contains a number suffix -> remove it when computing the compiler name
         if self.compiling_for_cheri() and self._configure_supports_libdir:
