@@ -44,10 +44,11 @@ from ..utils import *
 def defaultKernelConfig(config: CheriConfig, project):
     # make sure we use a kernel with 128 bit CPU features selected
     # or a purecap kernel is selected
-    kernconf_name = "CHERI{bits}{pure}_MALTA64"
+    kernconf_name = "CHERI{bits}{pure}_MALTA64{mfs}"
     cheri_bits = "128" if config.cheriBits == 128 else ""
     cheri_pure = "_PURECAP" if project.purecapKernel else ""
-    return kernconf_name.format(bits=cheri_bits, pure=cheri_pure)
+    mfs_root_img = "_MFS_ROOT" if project.mfs_root_image else ""
+    return kernconf_name.format(bits=cheri_bits, pure=cheri_pure, mfs=mfs_root_img)
 
 
 class FreeBSDCrossTools(CMakeProject):
@@ -376,8 +377,12 @@ class _BuildFreeBSD(Project):
             assert not os.path.relpath(str(builddir.resolve()), str(self.buildDir.resolve())).startswith(".."), builddir
         return self.asyncCleanDirectory(builddir)
 
-    def _buildkernel(self, kernconf: str):
+    def _buildkernel(self, kernconf: str, mfs_root_image: Path = None):
         kernelMakeArgs = self.kernelMakeArgsForConfig(kernconf)
+        if mfs_root_image:
+            kernelMakeArgs.set(MFS_IMAGE=mfs_root_image)
+            if "MFS_ROOT" not in kernconf:
+                warningMessage("Attempting to build an MFS_ROOT kernel but kernel config name sounds wrong")
         # needKernelToolchain = not self.useExternalToolchainForKernel
         dontNeedKernelToolchain = self.useExternalToolchainForKernel and self.linker_for_kernel == "lld"
         if self.crossbuild:
@@ -398,7 +403,7 @@ class _BuildFreeBSD(Project):
     def jflag(self) -> list:
         return [self.config.makeJFlag] if self.config.makeJobs > 1 else []
 
-    def compile(self, **kwargs):
+    def compile(self, mfs_root_image: Path=None, **kwargs):
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
         # so just omit the flag here if the user passes -j1 on the command line
         build_args = self.buildworldArgs
@@ -409,7 +414,7 @@ class _BuildFreeBSD(Project):
                 build_args.set(WORLDFAST=True)
             self.runMake("buildworld", options=build_args)
         if not self.subdirOverride:
-            self._buildkernel(kernconf=self.kernelConfig)
+            self._buildkernel(kernconf=self.kernelConfig, mfs_root_image=mfs_root_image)
 
     def _removeOldRootfs(self):
         assert self.config.clean or not self.keepOldRootfs
@@ -759,6 +764,8 @@ class BuildCHERIBSD(_BuildFreeBSD):
         cls.buildFpgaKernels = cls.addBoolOption("build-fpga-kernels", showHelp=True,
                                                  help="Also build kernels for the FPGA. They will not be installed so"
                                                       " you need to copy them from the build directory.")
+        cls.mfs_root_image = cls.addPathOption("mfs-root-image", help="Path to an MFS root image to embed in the"
+                                                                      "kernel that will be booted from")
         cls.mipsOnly = cls.addBoolOption("mips-only", showHelp=False,
                                          help="Don't build the CHERI parts of cheribsd, only plain MIPS")
         cls.purecapKernel = cls.addBoolOption("pure-cap-kernel", showHelp=True,
@@ -814,11 +821,25 @@ class BuildCHERIBSD(_BuildFreeBSD):
         programsToMove = ["cheri-unknown-freebsd-ld", "mips4-unknown-freebsd-ld", "mips64-unknown-freebsd-ld", "ld",
                           "objcopy", "objdump"]
         sdkBinDir = self.cheriCC.parent
-        super().compile()
+        self.kernelConfig += " CHERI_DE4_MDROOT"
+        super().compile(mfs_root_image=self.mfs_root_image)
         if self.buildFpgaKernels:
+            if self.mipsOnly:
+                prefix = "BERI_DE4_"
+            if self.config.cheriBits == 128:
+                prefix = "CHERI128_DE4_"
+            elif self.config.cheriBits == 256:
+                prefix = "CHERI_DE4_"
+            else:
+                prefix = "INVALID_KERNCONF_"
+                fatalError("Invalid CHERI BITS")
+            # TODO: build the benchmark kernels?
             for conf in ("USBROOT", "SDROOT", "NFSROOT", "MDROOT"):
-                prefix = "CHERI128_DE4_" if self.config.cheriBits == 128 else "CHERI_DE4_"
                 self._buildkernel(kernconf=prefix + conf)
+            if self.mfs_root_image:
+                self._buildkernel(kernconf=prefix + "MFS_ROOT", mfs_root_image=self.mfs_root_image)
+                self._buildkernel(kernconf=prefix + "MFS_ROOT_BENCHMARK", mfs_root_image=self.mfs_root_image)
+
 
     def update(self):
         super().update()
