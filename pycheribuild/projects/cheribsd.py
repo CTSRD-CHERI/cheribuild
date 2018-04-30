@@ -399,6 +399,14 @@ class _BuildFreeBSD(Project):
         self.runMake("buildkernel", options=kernelMakeArgs,
                      compilationDbName="compile_commands_" + self.kernelConfig + ".json")
 
+    def _installkernel(self, kernconf):
+        # don't use multiple jobs here
+        install_kernel_args = self.kernelMakeArgsForConfig(kernconf)
+        install_kernel_args.env_vars.update(self.makeInstallEnv)
+        # Also install all other kernels that were potentially built
+        install_kernel_args.set(NO_INSTALLEXTRAKERNELS="no")
+        self.runMake("installkernel", options=install_kernel_args, parallel=False)
+
     @property
     def jflag(self) -> list:
         return [self.config.makeJFlag] if self.config.makeJobs > 1 else []
@@ -472,17 +480,17 @@ class _BuildFreeBSD(Project):
         result.env_vars.update(self.makeInstallEnv)
         return result
 
-    def install(self, **kwargs):
+    def install(self, all_kernel_configs: str=None, **kwargs):
         if self.subdirOverride:
             statusUpdate("Skipping install step because SUBDIR_OVERRIDE was set")
             return
         # keeping the old rootfs directory prior to install can sometimes cause the build to fail so delete by default
         if self.config.clean or not self.keepOldRootfs:
             self._removeOldRootfs()
-        # don't use multiple jobs here
-        install_kernel_args = self.kernelMakeArgsForConfig(self.kernelConfig)
-        install_kernel_args.env_vars.update(self.makeInstallEnv)
-        self.runMake("installkernel", options=install_kernel_args, parallel=False)
+
+        if not all_kernel_configs:
+            all_kernel_configs = self.kernelConfig
+        self._installkernel(kernconf=all_kernel_configs)
 
         if not self.config.skipBuildworld:
             install_world_args = self.installworld_args
@@ -789,6 +797,23 @@ class BuildCHERIBSD(_BuildFreeBSD):
             # keep building a cheri kernel even with a mips userspace (mips may be broken...)
             # self.kernelConfig = "MALTA64"
         super().__init__(config, archBuildFlags=archBuildFlags)
+        self.extra_kernels = []
+        self.extra_kernels_with_mfs = []
+        if self.buildFpgaKernels:
+            if self.mipsOnly:
+                prefix = "BERI_DE4_"
+            elif self.config.cheriBits == 128:
+                prefix = "CHERI128_DE4_"
+            elif self.config.cheriBits == 256:
+                prefix = "CHERI_DE4_"
+            else:
+                prefix = "INVALID_KERNCONF_"
+                fatalError("Invalid CHERI BITS")
+            # TODO: build the benchmark kernels? TODO: remove the MDROOT option?
+            for conf in ("USBROOT", "SDROOT", "NFSROOT", "MDROOT"):
+                self.extra_kernels.append(prefix + conf)
+            if self.mfs_root_image:
+                self.extra_kernels_with_mfs.append(prefix + "MFS_ROOT")
 
     def _removeSchgFlag(self, *paths: "typing.Iterable[str]"):
         for i in paths:
@@ -809,7 +834,7 @@ class BuildCHERIBSD(_BuildFreeBSD):
                 )
         super()._removeOldRootfs()
 
-    def compile(self):
+    def compile(self, **kwargs):
         if not self.cheriCC.is_file():
             fatalError("CHERI CC does not exist: ", self.cheriCC)
         if not self.cheriCXX.is_file():
@@ -818,28 +843,20 @@ class BuildCHERIBSD(_BuildFreeBSD):
             mipsCC = self.mipsToolchainPath / "bin/clang"
             if not mipsCC.is_file():
                 fatalError("MIPS toolchain specified but", mipsCC, "is missing.")
-        programsToMove = ["cheri-unknown-freebsd-ld", "mips4-unknown-freebsd-ld", "mips64-unknown-freebsd-ld", "ld",
-                          "objcopy", "objdump"]
-        sdkBinDir = self.cheriCC.parent
-        self.kernelConfig += " CHERI_DE4_MDROOT"
-        super().compile(mfs_root_image=self.mfs_root_image)
-        if self.buildFpgaKernels:
-            if self.mipsOnly:
-                prefix = "BERI_DE4_"
-            if self.config.cheriBits == 128:
-                prefix = "CHERI128_DE4_"
-            elif self.config.cheriBits == 256:
-                prefix = "CHERI_DE4_"
-            else:
-                prefix = "INVALID_KERNCONF_"
-                fatalError("Invalid CHERI BITS")
-            # TODO: build the benchmark kernels?
-            for conf in ("USBROOT", "SDROOT", "NFSROOT", "MDROOT"):
-                self._buildkernel(kernconf=prefix + conf)
-            if self.mfs_root_image:
-                self._buildkernel(kernconf=prefix + "MFS_ROOT", mfs_root_image=self.mfs_root_image)
-                self._buildkernel(kernconf=prefix + "MFS_ROOT_BENCHMARK", mfs_root_image=self.mfs_root_image)
+        super().compile(mfs_root_image=self.mfs_root_image, **kwargs)
+        # We could also just pass multiple values in KERNCONF to build all those kernels. However, if MFS_ROOT is set
+        # that will apply to all those kernels and embed the rootfs even if not needed
+        for i in self.extra_kernels:
+            self._buildkernel(kernconf=i)
+        for i in self.extra_kernels_with_mfs:
+            self._buildkernel(kernconf=i, mfs_root_image=self.mfs_root_image)
 
+    def install(self, **kwargs):
+        all_kernel_configs = self.kernelConfig
+        # If we build the FPGA kernels also install them into boot:
+        for i in self.extra_kernels + self.extra_kernels_with_mfs:
+            all_kernel_configs += " " + i
+        super().install(all_kernel_configs=all_kernel_configs, **kwargs)
 
     def update(self):
         super().update()
