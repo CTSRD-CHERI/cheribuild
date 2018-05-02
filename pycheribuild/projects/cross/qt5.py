@@ -212,7 +212,6 @@ class BuildICU4C(CrossCompileAutotoolsProject):
                                    "--disable-tests",
                                    "--disable-samples"])
         self.nativeBuildDir = self.buildDirForTarget(self.config, CrossCompileTarget.NATIVE)
-        print(self.nativeBuildDir)
         # we can't create objects for a different endianess:
         self.COMMON_FLAGS.append("-DU_DISABLE_OBJ_CODE")
         if not self.compiling_for_host():

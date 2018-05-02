@@ -66,9 +66,10 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         assert target_arch != CrossCompileTarget.CHERI
+        self._compile_status_message = None
         if self.crossCompileTarget == CrossCompileTarget.CHERI:
-            statusUpdate("Cannot compile GDB as a CHERIABI binary building as MIPS instead (it can still be used to "
-                         "debug CHERIABI processes)")
+            self._compile_status_message = "Cannot compile GDB as a CHERIABI binary building as MIPS instead (it can " \
+                                           "still be used to debug CHERIABI processes)"
             target_arch = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
         if self.compiling_for_host():
             self.crossInstallDir = CrossInstallDir.SDK
@@ -187,6 +188,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
         super().configure()
 
     def compile(self, **kwargs):
+        if self._compile_status_message:
+            statusUpdate(self._compile_status_message)
         with TemporarilyRemoveProgramsFromSdk(["as", "ld", "objcopy", "objdump"], self.config):
             # also install objdump
             self.runMake(makeTarget="all-binutils", cwd=self.buildDir)

@@ -709,6 +709,8 @@ class Project(SimpleProject):
 
     @classmethod
     def canUseLLd(cls, compiler: Path):
+        if IS_MAC:
+            return False  # lld does not work on MacOS
         if compiler not in cls.__can_use_lld_map:
             try:
                 runCmd([compiler, "-fuse-ld=lld", "-xc", "-o", "/dev/null", "-"], runInPretendMode=True,

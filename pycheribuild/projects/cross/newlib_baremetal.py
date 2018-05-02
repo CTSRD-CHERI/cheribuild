@@ -47,8 +47,10 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     # defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir  # we have to build in the source directory
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
+        self._configure_status_message = None
         if self.crossCompileTarget == CrossCompileTarget.CHERI:
-            statusUpdate("Cannot compile newlib in purecap mode, building mips instead")
+            # Only print this if we are actually building newlib not just instantiating the class
+            self.__configure_status_message = "Cannot compile newlib in purecap mode, building mips instead"
             self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
         super().__init__(config, target_arch)
         self.installDir = self.installDir.parent  # newlib install already appends the triple
@@ -115,6 +117,8 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
                 # self.make_args.env_vars[k2] = str(v)
 
     def configure(self):
+        if self._configure_status_message:
+            statusUpdate(self._configure_status_message)
         self.configureArgs.extend([
             "--enable-malloc-debugging",
             "--enable-newlib-long-time_t",  # we want time_t to be long and not int!
