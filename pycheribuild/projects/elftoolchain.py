@@ -59,6 +59,7 @@ class BuildElftoolchain(Project):
         # as a static library (e.g. on openSUSE)
         self.make_args.set(SHLIB_MAJOR="", SHLIB_FULLVERSION="",  # don't build shared libraries
                            CC=str(self.config.clangPath))
+        self.make_args.set(NO_MAN="yes")
 
         if not self.config.verbose:
             self.make_args.add_flags("-s")
@@ -85,7 +86,8 @@ class BuildElftoolchain(Project):
             self.dependencyError("libarchive is missing", installInstructions="Run `brew install libarchive`")
 
     def compile(self, **kwargs):
-        # self.runMake("obj", cwd=self.sourceDir)
+        # Need to run make obj first on linux since otherwise it attempts to create native-elf-format.h in the source
+        self.runMake("obj", cwd=self.sourceDir)
         self.runMake("all", cwd=self.sourceDir)
 
     def install(self, **kwargs):

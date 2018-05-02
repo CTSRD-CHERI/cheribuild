@@ -10,10 +10,6 @@ RUN apt-get update && apt-get install -y \
   libbsd-dev \
   lsb-release
 
-# deps to build QEMU:
-RUN apt-get update && apt-get install -y \
-  libtool pkg-config python-minimal autotools-dev automake autoconf libglib2.0-dev libpixman-1-dev
-
 # INSTALL clang 6.0
 RUN apt-get install -y wget
 RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
@@ -29,6 +25,10 @@ RUN cd /tmp && git clone https://github.com/arichardson/bmake && cd bmake \
 
 COPY cheribuild.json /root/.config/cheribuild.json
 
+# deps to build QEMU+elftoolchain:
+RUN apt-get update && apt-get install -y \
+  libtool pkg-config python-minimal autotools-dev automake autoconf libglib2.0-dev libpixman-1-dev \
+  bison groff-base libarchive-dev flex
 
 VOLUME ["/cheribuild", "/source", "/build", "/output"]
 ENV PATH /cheribuild:$PATH
