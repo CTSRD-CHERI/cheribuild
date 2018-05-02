@@ -86,9 +86,28 @@ class BuildElftoolchain(Project):
             self.dependencyError("libarchive is missing", installInstructions="Run `brew install libarchive`")
 
     def compile(self, **kwargs):
-        # Need to run make obj first on linux since otherwise it attempts to create native-elf-format.h in the source
-        self.runMake("obj", cwd=self.sourceDir)
-        self.runMake("all", cwd=self.sourceDir)
+        is_old_broken_bmake = True
+        try:
+            version = get_program_version(Path(self.make_args.command), ("-V", "MAKE_VERSION"), regex=b"(.+)")[0]
+            # The version of bmake shipped with ubuntu doesn't handle depedencies correctly
+            if version > 20170101:
+                statusUpdate("Note: Working around old version of bmake: ", version)
+                is_old_broken_bmake = False
+        except Exception as e:
+            warningMessage("Could not determine bmake version:", e)
+        if is_old_broken_bmake:
+            # build is not parallel-safe -> we can't make with all the all-foo targets and -jN
+            # To speed it up run make for the individual library directories instead and then for all the binaries
+            first_call = True  # recreate logfile on first call, after that append
+            for tgt in self.libTargets + self.programsToBuild:
+                self.runMake("obj", cwd=self.sourceDir / tgt, logfileName="build", appendToLogfile=not first_call)
+                self.runMake("all", cwd=self.sourceDir / tgt, logfileName="build", appendToLogfile=True)
+                first_call = False
+        else:
+            # Need to run make obj first on linux since otherwise it attempts to create native-elf-format.h in the source
+            if IS_LINUX:
+                self.runMake("obj", cwd=self.sourceDir)
+            self.runMake("all", cwd=self.sourceDir)
 
     def install(self, **kwargs):
         self.makedirs(self.installDir / "bin")
