@@ -37,7 +37,6 @@ class BuildNginx(CrossCompileAutotoolsProject):
     # defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir
     make_kind = MakeCommandKind.GnuMake
     add_host_target_build_config_options = False
-    cross_warning_flags = CrossCompileAutotoolsProject.cross_warning_flags + ["-Wno-error=cheri-capability-misuse", "-Wno-error=sign-compare"]
     defaultOptimizationLevel = ["-O2"]
     # custom configure script -> no --libdir
     _configure_supports_libdir = False
@@ -60,6 +59,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
         # The makefile expects the current working directory to be the source dir. Therefore we add -f $build/Makefile
         # This is also in the makefile generated in the source dir but it doesn't work with multiple build dirs
         self.make_args.add_flags("-f", self.buildDir / "Makefile")
+        self.cross_warning_flags += ["-Wno-error=cheri-capability-misuse", "-Wno-error=sign-compare"]
 
     def install(self, **kwargs):
         # We have to run make inside the source directory

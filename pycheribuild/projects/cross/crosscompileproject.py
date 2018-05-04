@@ -86,12 +86,7 @@ class CrossCompileMixin(object):
     baremetal = False
     forceDefaultCC = False  # for some reason ICU binaries build during build crash -> fall back to /usr/bin/cc there
     crossCompileTarget = None  # type: CrossCompileTarget
-    defaultOptimizationLevel = ["-O2"]
-    cross_warning_flags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
-                           "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types",
-                           "-Werror=mips-cheri-prototypes", "-Werror=cheri-bitwise-operations"]
-    host_warning_flags = []
-    common_warning_flags = []
+    defaultOptimizationLevel = ("-O2",)
 
     needs_mxcaptable_static = False     # E.g. for postgres which is just over the limit:
     #﻿warning: added 38010 entries to .cap_table but current maximum is 32768; try recompiling non-performance critical source files with -mllvm -mxcaptable
@@ -107,6 +102,15 @@ class CrossCompileMixin(object):
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
+        # convert the tuples into mutable lists (this is needed to avoid modifying class variables)
+        # See https://github.com/CTSRD-CHERI/cheribuild/issues/33
+        self.defaultOptimizationLevel = list(self.defaultOptimizationLevel)
+        self.cross_warning_flags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
+                                    "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types",
+                                    "-Werror=mips-cheri-prototypes", "-Werror=cheri-bitwise-operations"]
+        self.host_warning_flags = []
+        self.common_warning_flags = []
+
         if target_arch:
             self.crossCompileTarget = target_arch
         self.compiler_dir = self.config.sdkBinDir

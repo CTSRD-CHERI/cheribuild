@@ -201,7 +201,6 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     repository = "https://github.com/arichardson/icu4c.git"
     crossInstallDir = CrossInstallDir.SDK
     make_kind = MakeCommandKind.GnuMake
-    cross_warning_flags = []  # FIXME: build with capability -Werror
     if IS_FREEBSD:
         forceDefaultCC = True  # for some reason crashes on FreeBSD 11 if using clang40/ clang39
 
@@ -214,6 +213,8 @@ class BuildICU4C(CrossCompileAutotoolsProject):
         self.nativeBuildDir = self.buildDirForTarget(self.config, CrossCompileTarget.NATIVE)
         # we can't create objects for a different endianess:
         self.COMMON_FLAGS.append("-DU_DISABLE_OBJ_CODE")
+        self.cross_warning_flags += ["-Wno-error"]  # FIXME: build with capability -Werror
+
         if not self.compiling_for_host():
             self.configureArgs.append("--with-cross-build=" + str(self.nativeBuildDir))
             # can't build them yet
@@ -239,7 +240,6 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 class BuildLibXml2(CrossCompileAutotoolsProject):
     repository = "https://github.com/arichardson/libxml2"
     crossInstallDir = CrossInstallDir.SDK
-    cross_warning_flags = []  # FIXME: build with capability -Werror
     make_kind = MakeCommandKind.GnuMake
 
     def __init__(self, config, target_arch: CrossCompileTarget):
@@ -252,6 +252,7 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
             "--disable-shared", "--enable-static", "--without-python",
             "--without-modules", "--without-lzma",
         ])
+        self.cross_warning_flags += ["-Wno-error"]  # FIXME: build with capability -Werror
 
 
 class BuildQtWebkit(CrossCompileCMakeProject):
@@ -261,7 +262,6 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     # webkit is massive if we include debug info
     defaultCMakeBuildType = "MinSizeRel"
     crossInstallDir = CrossInstallDir.SDK
-    cross_warning_flags = []  # FIXME: build with capability -Werror
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.getSourceDir(config) / "qtwebkit",
         asString=lambda cls: "$SOURCE_ROOT/qt5" + cls.projectName.lower())
@@ -273,6 +273,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                          # generator=BuildQtWebkit.Generator.Makefiles
                          generator=BuildQtWebkit.Generator.Ninja
                          )
+        self.cross_warning_flags += ["-Wno-error"]  # FIXME: build with capability -Werror
         self.add_cmake_options(PORT="Qt", ENABLE_X11_TARGET=False,
                                ENABLE_OPENGL=False,
                                USE_LIBHYPHEN=False,  # we don't have libhyphen

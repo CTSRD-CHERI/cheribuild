@@ -35,7 +35,6 @@ class BuildSQLite(CrossCompileAutotoolsProject):
     gitBranch = "branch-3.19"
     crossInstallDir = CrossInstallDir.SDK
     defaultOptimizationLevel = ["-O2"]
-    cross_warning_flags = ["-Wno-error=cheri-capability-misuse"]
 
     def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
         super().__init__(config, target_arch)
@@ -51,6 +50,7 @@ class BuildSQLite(CrossCompileAutotoolsProject):
                 "--disable-tcl",
                 "--disable-load-extension",
             ])
+        self.cross_warning_flags += ["-Wno-error=cheri-capability-misuse"]
 
         if not self.compiling_for_host() or IS_FREEBSD:
             self.configureArgs.append("--disable-editline")

@@ -46,8 +46,6 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
     dependencies = ["llvm"]
     defaultCMakeBuildType = "Debug"
     projectName = "llvm-test-suite"
-    # TODO: fix these issues
-    cross_warning_flags = ["-Wno-error=format", "-Werror=mips-cheri-prototypes"]
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / "llvm-test-suite"),
         asString="$SOURCE_ROOT/llvm-test-suite")
@@ -64,6 +62,8 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
             TEST_SUITE_LLVM_PROFDATA=self._find_in_sdk_or_llvm_build_dir("llvm-profdata"),
             TEST_SUITE_LIT=self._find_in_sdk_or_llvm_build_dir("llvm-lit")
         )
+        # TODO: fix these issues
+        self.cross_warning_flags += ["-Wno-error=format", "-Werror=mips-cheri-prototypes"]
         if self.crossCompileTarget != CrossCompileTarget.NATIVE:
             self.add_cmake_options(TEST_SUITE_HOST_CC="/usr/bin/cc")
             # we want to link against libc++ not libstdc++ (and for some reason we need to specify libgcc_eh too
