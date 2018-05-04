@@ -387,9 +387,7 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
         self.writeFile(contents=configuredTemplate, file=self.toolchainFile, overwrite=True)
 
     def configure(self, **kwargs):
-        if self.compiling_for_host():
-            common_flags = self.COMMON_FLAGS + self.compiler_warning_flags
-        else:
+        if not self.compiling_for_host():
             self.COMMON_FLAGS.append("-B" + str(self.config.sdkBinDir))
             if not self.baremetal and self._get_cmake_version() < (3, 9, 0) and not (self.sdkSysroot / "usr/local/lib/cheri").exists():
                 warningMessage("Workaround for missing custom lib suffix in CMake < 3.9")
@@ -400,7 +398,6 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
                 self.makedirs(self.sdkSysroot / "usr/local/libcheri")
                 self.createSymlink(Path("../libcheri"), self.sdkSysroot / "usr/local/lib/cheri",
                                    relative=True, cwd=self.sdkSysroot / "usr/local/lib")
-            common_flags = self.COMMON_FLAGS + self.compiler_warning_flags + ["-target", self.targetTripleWithVersion]
 
         if self.compiling_for_cheri():
             add_lib_suffix = """
@@ -431,7 +428,7 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
             TOOLCHAIN_SDK_BINDIR=self.config.sdkBinDir,
             TOOLCHAIN_COMPILER_BINDIR=self.compiler_dir,
             TOOLCHAIN_TARGET_TRIPLE=self.targetTriple,
-            TOOLCHAIN_COMMON_FLAGS=common_flags,
+            TOOLCHAIN_COMMON_FLAGS=self.default_compiler_flags,
             TOOLCHAIN_C_FLAGS=self.CFLAGS,
             TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
             TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
