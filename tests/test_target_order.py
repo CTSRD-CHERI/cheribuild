@@ -1,12 +1,10 @@
 import sys
-import tempfile
-import unittest
+
 try:
     import typing
 except ImportError:
     typing = {}
 from pathlib import Path
-from unittest import TestCase
 from pycheribuild.utils import *
 
 sys.path.append(str(Path(__file__).parent.parent))
@@ -19,7 +17,7 @@ from pycheribuild.targets import targetManager
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # make sure all projects are loaded so that targetManager gets populated
 from pycheribuild.projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
-from pycheribuild.projects.cheribsd import BuildCHERIBSD
+from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD
 from .setup_mock_chericonfig import setup_mock_chericonfig
 
 setup_mock_chericonfig(Path("/this/path/does/not/exist"))

@@ -32,7 +32,7 @@ import subprocess
 import datetime
 import shutil
 
-from .cheribsd import BuildCHERIBSD
+from .cross.cheribsd import BuildCHERIBSD
 from .project import *
 from ..utils import *
 

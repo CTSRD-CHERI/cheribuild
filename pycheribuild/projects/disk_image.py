@@ -27,13 +27,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import shlex
 import stat
 import tempfile
-from pathlib import Path
 
-from .cheribsd import _BuildFreeBSD
-from .cheribsd import *
+from .cross.cheribsd import _BuildFreeBSD
+from .cross.cheribsd import *
 from ..config.loader import ComputedDefaultValue
 from .project import *
 from ..utils import *

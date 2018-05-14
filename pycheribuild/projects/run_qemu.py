@@ -29,10 +29,9 @@
 #
 import datetime
 import socket
-import os
 
-from .cheribsd import _BuildFreeBSD
-from .cheribsd import *
+from .cross.cheribsd import _BuildFreeBSD
+from .cross.cheribsd import *
 from .cherios import BuildCheriOS
 from .build_qemu import BuildQEMU
 from .disk_image import _BuildFreeBSDImageBase

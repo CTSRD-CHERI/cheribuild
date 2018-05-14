@@ -34,10 +34,10 @@ import subprocess
 import sys
 
 from pathlib import Path
-from ..config.loader import ComputedDefaultValue
-from ..config.chericonfig import CrossCompileTarget
-from .project import *
-from ..utils import *
+from ..project import *
+from ...config.loader import ComputedDefaultValue
+from ...config.chericonfig import CrossCompileTarget
+from ...utils import *
 
 
 # noinspection PyUnusedLocal

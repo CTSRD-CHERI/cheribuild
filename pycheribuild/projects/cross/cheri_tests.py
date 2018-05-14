@@ -29,11 +29,7 @@
 #
 
 from .crosscompileproject import *
-from ..cheribsd import BuildCHERIBSD
-from ..llvm import BuildLLVM
-from ...config.loader import ComputedDefaultValue
-from ...utils import statusUpdate
-from pathlib import Path
+
 
 class BuildCheriTests(CrossCompileCMakeProject):
     repository = "https://github.com/arichardson/cheri-tests.git"

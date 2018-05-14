@@ -29,7 +29,7 @@
 #
 
 from .crosscompileproject import *
-from ..cheribsd import BuildCHERIBSD
+from .cheribsd import BuildCHERIBSD
 from ..llvm import BuildLLVM
 from ...config.loader import ComputedDefaultValue
 from ...utils import statusUpdate

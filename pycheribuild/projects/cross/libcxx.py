@@ -29,7 +29,7 @@
 #
 
 from .crosscompileproject import *
-from ..cheribsd import BuildCHERIBSD
+from .cheribsd import BuildCHERIBSD
 from ..build_qemu import BuildQEMU
 from ..llvm import BuildLLVM
 from ..run_qemu import LaunchCheriBSD

@@ -8,7 +8,6 @@ from pathlib import Path
 
 from ...config.loader import ComputedDefaultValue
 from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi, Linkage
-from ..cheribsd import BuildCHERIBSD
 from ..llvm import BuildLLVM
 from ..project import *
 from ...utils import *
@@ -29,6 +28,7 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
     if project.crossCompileTarget == CrossCompileTarget.NATIVE:
         return config.sdkDir
     if project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
+        from .cheribsd import BuildCHERIBSD
         if hasattr(project, "rootfs_path"):
             assert project.rootfs_path.startswith("/"), project.rootfs_path
             return BuildCHERIBSD.rootfsDir(config) / project.rootfs_path[1:]
@@ -181,6 +181,7 @@ class CrossCompileMixin(object):
                     self.installPrefix = "/usr/local"
                     self.destdir = config.sdkSysrootDir
             elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
+                from .cheribsd import BuildCHERIBSD
                 self.installPrefix = Path("/", self.installDir.relative_to(BuildCHERIBSD.rootfsDir(config)))
                 self.destdir = BuildCHERIBSD.rootfsDir(config)
             else:
