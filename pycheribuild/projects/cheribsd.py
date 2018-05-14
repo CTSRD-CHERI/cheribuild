@@ -797,6 +797,8 @@ class BuildCHERIBSD(_BuildFreeBSD):
             # keep building a cheri kernel even with a mips userspace (mips may be broken...)
             # self.kernelConfig = "MALTA64"
         super().__init__(config, archBuildFlags=archBuildFlags)
+        if self.config.cheri_cap_table_abi:
+            self.cross_toolchain_config.set(CHERI_USE_CAP_TABLE=self.config.cheri_cap_table_abi)
         self.extra_kernels = []
         self.extra_kernels_with_mfs = []
         if self.buildFpgaKernels:
