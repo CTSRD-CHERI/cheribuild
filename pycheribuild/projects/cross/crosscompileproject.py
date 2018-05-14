@@ -29,6 +29,9 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
     if project.crossCompileTarget == CrossCompileTarget.NATIVE:
         return config.sdkDir
     if project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
+        if hasattr(project, "rootfs_path"):
+            assert project.rootfs_path.startswith("/"), project.rootfs_path
+            return BuildCHERIBSD.rootfsDir(config) / project.rootfs_path[1:]
         if project.crossCompileTarget == CrossCompileTarget.CHERI:
             targetName = "cheri" + config.cheriBitsStr
         else:

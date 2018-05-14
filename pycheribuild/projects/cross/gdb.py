@@ -29,7 +29,6 @@
 #
 
 from .crosscompileproject import *
-from ..cheribsd import BuildCHERIBSD
 from ...utils import runCmd, statusUpdate, IS_MAC, warningMessage, fatalError
 
 import os
@@ -55,8 +54,10 @@ class TemporarilyRemoveProgramsFromSdk(object):
                 runCmd("mv", "-f", l + ".backup", l, cwd=self.config.sdkBinDir, printVerboseOnly=True)
         return False
 
+
 class BuildGDB(CrossCompileAutotoolsProject):
-    defaultInstallDir = lambda config, cls: BuildCHERIBSD.rootfsDir(config) / "usr/local"
+    rootfs_path = "/usr/local"  # Always install gdb as /usr/local/bin/gdb
+    crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     repository = "https://github.com/bsdjhb/gdb.git"
     gitBranch = "mips_cheri-8.0.1"
     make_kind = MakeCommandKind.GnuMake
