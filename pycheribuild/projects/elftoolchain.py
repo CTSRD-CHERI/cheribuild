@@ -105,10 +105,8 @@ class BuildElftoolchain(Project):
                 self.runMake("all", cwd=self.sourceDir / tgt, logfileName="build", appendToLogfile=True)
                 first_call = False
         else:
-            # Need to run make obj first on linux since otherwise it attempts to create native-elf-format.h in the source
-            if IS_LINUX:
-                self.runMake("obj", cwd=self.sourceDir)
-            self.runMake("all", cwd=self.sourceDir)
+            self.runMake("obj", cwd=self.sourceDir)
+            self.runMake("all", cwd=self.sourceDir, appendToLogfile=True)
 
     def install(self, **kwargs):
         self.makedirs(self.installDir / "bin")
