@@ -91,8 +91,9 @@ class BuildElftoolchain(Project):
             version = get_program_version(Path(self.make_args.command), ("-V", "MAKE_VERSION"), regex=b"(.+)")[0]
             # The version of bmake shipped with ubuntu doesn't handle depedencies correctly
             if version > 20170101:
-                statusUpdate("Note: Working around old version of bmake: ", version)
                 is_old_broken_bmake = False
+            else:
+                statusUpdate("Note: Working around old version of bmake: ", version)
         except Exception as e:
             warningMessage("Could not determine bmake version:", e)
         if is_old_broken_bmake:
