@@ -59,7 +59,7 @@ class BuildElftoolchain(Project):
         # as a static library (e.g. on openSUSE)
         self.make_args.set(SHLIB_MAJOR="", SHLIB_FULLVERSION="",  # don't build shared libraries
                            CC=str(self.config.clangPath))
-        self.make_args.set(NO_MAN="yes")
+        self.make_args.set(MK_MAN="no")
 
         if not self.config.verbose:
             self.make_args.add_flags("-s")
