@@ -767,6 +767,8 @@ class Project(SimpleProject):
         self.make_args = MakeOptions(self.make_kind, self)
         self._preventAssign = True
 
+    _no_overwrite_allowed = ("configureArgs", "configureEnvironment", "make_args")
+
     # Make sure that API is used properly
     def __setattr__(self, name, value):
         # if self.__dict__.get("_locked") and name == "x":
@@ -774,7 +776,7 @@ class Project(SimpleProject):
         # self.__dict__[name] = value
         if self.__dict__.get("_preventAssign"):
             # assert name not in ("sourceDir", "buildDir", "installDir")
-            if name in ("configureArgs", "configureEnvironment", "make_args"):
+            if name in self._no_overwrite_allowed:
                 import traceback
                 traceback.print_stack()
                 fatalError("Project." + name + " mustn't be set, only modification is allowed.", "Called from",

@@ -91,6 +91,9 @@ class CrossCompileMixin(object):
     crossCompileTarget = None  # type: CrossCompileTarget
     defaultOptimizationLevel = ("-O2",)
 
+    # noinspection PyProtectedMember
+    _no_overwrite_allowed = Project._no_overwrite_allowed + ("baremetal", )
+
     needs_mxcaptable_static = False     # E.g. for postgres which is just over the limit:
     #﻿warning: added 38010 entries to .cap_table but current maximum is 32768; try recompiling non-performance critical source files with -mllvm -mxcaptable
     # FIXME: postgres would work if I fixed captable to use the negative immediate values

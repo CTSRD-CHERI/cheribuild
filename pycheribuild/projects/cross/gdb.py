@@ -183,9 +183,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.configureEnvironment.clear()
             print(self.configureArgs)
             # self.configureArgs.clear()
-            self.baremetal = True  # HACK to avoid adding any flags to configure (seems to be needed)
-            self.add_configure_env_arg("CFLAGS", " ".join(self.default_compiler_flags))
-            self.add_configure_env_arg("CXXLAGS", " ".join(self.CXXFLAGS))
         super().configure()
 
     def compile(self, **kwargs):
