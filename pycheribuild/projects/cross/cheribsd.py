@@ -754,7 +754,7 @@ class BuildFreeBSDForX86(_BuildFreeBSD):
 def cheribsd_install_dir(config: CheriConfig, project: _BuildFreeBSD):
     if project._crossCompileTarget == CrossCompileTarget.CHERI:
         return config.outputRoot / ("rootfs" + config.cheriBitsStr)
-    elif project._crossCompileTarget == CrossCompileTarget.CHERI:
+    elif project._crossCompileTarget == CrossCompileTarget.MIPS:
         return config.outputRoot / "rootfs-mips"
     else:
         assert project._crossCompileTarget == CrossCompileTarget.NATIVE
