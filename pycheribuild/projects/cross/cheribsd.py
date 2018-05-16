@@ -41,7 +41,11 @@ from ...utils import *
 
 
 # noinspection PyUnusedLocal
-def defaultKernelConfig(config: CheriConfig, project):
+def defaultKernelConfig(config: CheriConfig, project: "BuildCHERIBSD"):
+    if project._crossCompileTarget == CrossCompileTarget.NATIVE:
+        return "GENERIC"
+    elif project._crossCompileTarget == CrossCompileTarget.MIPS:
+        return "MALTA64"
     # make sure we use a kernel with 128 bit CPU features selected
     # or a purecap kernel is selected
     kernconf_name = "CHERI{bits}{pure}_MALTA64{mfs}"
@@ -768,7 +772,7 @@ class BuildCHERIBSD(_BuildFreeBSD):
             installDirectoryHelp="Install directory for CheriBSD root file system (default: "
                                  "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)")
         # Avoid duplicate --kerneconf string for cheribsd-native vs cheribsd
-        kernconf_shortname = "-kernconf" if cls.target == "cheribsd" else None
+        kernconf_shortname = "-kernconf" if cls._crossCompileTarget == CrossCompileTarget.CHERI else None
         cls.kernelConfig = cls.addConfigOption("kernel-config", default=defaultKernelConfig, kind=str,
            metavar="CONFIG", shortname=kernconf_shortname, showHelp=True,
            help="The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64 or CHERI128_MALTA64"
