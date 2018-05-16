@@ -36,9 +36,9 @@ class BuildSQLite(CrossCompileAutotoolsProject):
     crossInstallDir = CrossInstallDir.SDK
     defaultOptimizationLevel = ["-O2"]
 
-    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
-        super().__init__(config, target_arch)
-        if self.crossCompileTarget != CrossCompileTarget.NATIVE:
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        if not self.compiling_for_host():
             if IS_FREEBSD:
                 # For some reason using clang39/clang40 to crossbuild is broken on FreeBSD 11
                 self.configureEnvironment["BUILD_CC"] = "/usr/bin/cc"

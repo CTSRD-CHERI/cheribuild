@@ -43,10 +43,10 @@ class BuildNginx(CrossCompileAutotoolsProject):
     _configure_supports_variables_on_cmdline = False
     _configure_understands_enable_static = False
 
-    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
-        super().__init__(config, target_arch)
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
         self.configureCommand = self.sourceDir / "auto/configure"
-        if self.crossCompileTarget != CrossCompileTarget.NATIVE:
+        if not self.compiling_for_host():
             self.LDFLAGS.append("-static")
             self.COMMON_FLAGS.append("-static")  # adding it to LDFLAGS only doesn't seem to be enough
             self.COMMON_FLAGS.extend(["-pedantic",
@@ -67,7 +67,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
         self.installFile(self.sourceDir / "fetchbench", self.real_install_root_dir / "sbin/fetchbench")
         # install the benchmark script
         benchmark = self.readFile(self.sourceDir / "nginx-benchmark.sh")
-        if self.crossCompileTarget != CrossCompileTarget.NATIVE:
+        if not self.compiling_for_host():
             benchmark = re.sub(r'NGINX=.*', "NGINX=\"" + str(self.installPrefix / "sbin/nginx") + "\"", benchmark)
             benchmark = re.sub(r'FETCHBENCH=.*', "FETCHBENCH=\"" + str(self.installPrefix / "sbin/fetchbench") + "\"",
                                benchmark)
@@ -82,7 +82,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
         self.configureArgs.extend(["--without-pcre",
                                    "--without-http_rewrite_module",
                                    "--builddir=" + str(self.buildDir)])
-        if self.crossCompileTarget != CrossCompileTarget.NATIVE:
+        if not self.compiling_for_host():
             self.LDFLAGS.append("-v")
             self.configureArgs.extend(["--crossbuild=FreeBSD:12.0-CURRENT:mips",
                                        "--with-cc-opt=" + " ".join(self.default_compiler_flags),

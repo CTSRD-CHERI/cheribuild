@@ -108,7 +108,7 @@ class ProjectSubclassDefinitionHook(type):
                 # create a new class to ensure different build dirs and config name strings
                 new_name = targetName + "-" + arch.value
                 new_dict = cls.__dict__.copy()
-                new_dict["crossCompileTarget"] = arch
+                new_dict["_crossCompileTarget"] = arch
                 new_dict["doNotAddToTargets"] = True  # We are already adding it here
                 new_dict["target"] = new_name
                 new_dict["synthetic_base"] = cls  # We are already adding it here
@@ -453,8 +453,7 @@ def installDirNotSpecified(config: CheriConfig, project: "Project"):
 
 def _defaultBuildDir(config: CheriConfig, project: "Project"):
     # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
-    # HACK To access the descriptor without an instance:
-    target = project.crossCompileTarget if hasattr(project, "crossCompileTarget") else None
+    target = project.get_crosscompile_target(config) if hasattr(project, "get_crosscompile_target") else None
     return config.buildRoot / (project.projectName.lower() + project.buildDirSuffix(config, target))
 
 
@@ -464,6 +463,7 @@ class MakeCommandKind(Enum):
     BsdMake = "BSD make"
     Ninja = "ninja"
     CustomMakeTool = "custom make tool"
+
 
 class MakeOptions(object):
     def __init__(self, kind: MakeCommandKind, project: SimpleProject, **kwargs):
@@ -779,8 +779,8 @@ class Project(SimpleProject):
             if name in self._no_overwrite_allowed:
                 import traceback
                 traceback.print_stack()
-                fatalError("Project." + name + " mustn't be set, only modification is allowed.", "Called from",
-                           self.__class__.__name__)
+                raise RuntimeError(self.__class__.__name__ + "." + name + " mustn't be set. Called from" +
+                                   self.__class__.__name__)
         self.__dict__[name] = value
 
     def _ensureGitRepoIsCloned(self, *, srcDir: Path, remoteUrl, initialBranch=None, skipSubmodules=False):

@@ -35,6 +35,8 @@ from .config.chericonfig import CheriConfig, CrossCompileTarget
 from .utils import *
 
 
+_instantiating_targets_should_warn = True
+
 class Target(object):
     def __init__(self, name, projectClass):
         self.name = name
@@ -61,6 +63,9 @@ class Target(object):
 
     def create_project(self, config: CheriConfig) -> "SimpleProject":
         assert not self._creating_project
+        global _instantiating_targets_should_warn
+        if _instantiating_targets_should_warn:
+            raise RuntimeError(coloured(AnsiColour.magenta, "Instantiating target", self.name, "before run()!"))
         self._creating_project = True
         return self._create_project(config)
 
@@ -124,7 +129,7 @@ class MultiArchTarget(Target):
     def _create_project(self, config: CheriConfig):
         from .projects.cross.crosscompileproject import CrossCompileMixin
         assert issubclass(self.projectClass, CrossCompileMixin)
-        return self.projectClass(config, self.target_arch)
+        return self.projectClass(config)
 
     def __repr__(self):
         arch = self.target_arch.name if self.target_arch else "default arch"
@@ -238,6 +243,9 @@ class TargetManager(object):
         if config.verbose:
             print("Will execute the following targets:", " ".join(t.name for t in chosenTargets))
         # now that the chosen targets have been resolved run them
+        global _instantiating_targets_should_warn
+        _instantiating_targets_should_warn = False  # Fine to instantiate Project() now
+
         for target in chosenTargets:
             target.checkSystemDeps(config)
         # all dependencies exist -> run the targets

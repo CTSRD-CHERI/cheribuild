@@ -41,8 +41,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     make_kind = MakeCommandKind.GnuMake
     needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
 
-    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
-        super().__init__(config, target_arch)
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
         self.configureCommand = self.sourceDir / "configure"
         if not self.compiling_for_host():
             self._linkage = Linkage.STATIC
@@ -91,7 +91,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-device-option", "COMPILER_FLAGS=" + commandline_to_str(compiler_flags),
                 "-device-option", "LINKER_FLAGS=" + commandline_to_str(linker_flags),
                 "-sysroot", self.config.sdkSysrootDir,
-                "-prefix", "/usr/local/Qt-" + self.crossCompileTarget.value,
+                "-prefix", "/usr/local/Qt-" + self._crossCompileTarget.value
             ])
 
         self.configureArgs.extend([
@@ -204,8 +204,8 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     if IS_FREEBSD:
         forceDefaultCC = True  # for some reason crashes on FreeBSD 11 if using clang40/ clang39
 
-    def __init__(self, config, target_arch: CrossCompileTarget):
-        super().__init__(config, target_arch)
+    def __init__(self, config):
+        super().__init__(config)
         self.configureCommand = self.sourceDir / "source/configure"
         self.configureArgs.extend(["--disable-plugins", "--disable-dyload",
                                    "--disable-tests",
@@ -242,8 +242,8 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
     crossInstallDir = CrossInstallDir.SDK
     make_kind = MakeCommandKind.GnuMake
 
-    def __init__(self, config, target_arch: CrossCompileTarget):
-        super().__init__(config, target_arch)
+    def __init__(self, config):
+        super().__init__(config)
         if (self.sourceDir / "configure").exists():
             self.configureCommand = self.sourceDir / "configure"
         else:
@@ -266,10 +266,10 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         function=lambda config, project: BuildQt5.getSourceDir(config) / "qtwebkit",
         asString=lambda cls: "$SOURCE_ROOT/qt5" + cls.projectName.lower())
 
-    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
+    def __init__(self, config: CheriConfig):
         # There is a bug in the cmake ninja generator that makes it use a response file for linking
         # WebCore but not actually generating it
-        super().__init__(config, target_arch,
+        super().__init__(config,
                          # generator=BuildQtWebkit.Generator.Makefiles
                          generator=BuildQtWebkit.Generator.Ninja
                          )
@@ -301,7 +301,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                                    QT_BUNDLED_PNG=True,  # use libpng from Qt
                                    # QT_BUNDLED_JPEG=True,  # use libjpeg from Qt
                                    )
-            self.add_cmake_options(Qt5_DIR=self.config.sdkSysrootDir / ("usr/local/Qt-" + self.crossCompileTarget.value) / "lib/cmake/Qt5")
+            self.add_cmake_options(Qt5_DIR=self.config.sdkSysrootDir / ("usr/local/Qt-" + self._crossCompileTarget.value) / "lib/cmake/Qt5")
             self.add_cmake_options(PNG_LIBRARIES="libqtlibpng.a")
             self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.getSourceDir(config) / "src/3rdparty/libpng")
 

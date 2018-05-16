@@ -46,8 +46,8 @@ class BuildLibunwind(CrossCompileCMakeProject):
     repository = "https://github.com/CTSRD-CHERI/libunwind.git"
     defaultInstallDir = installToCXXDir
 
-    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
-        super().__init__(config, target_arch)
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
         # Adding -ldl won't work: no libdl in /usr/libcheri
         self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)
         self.add_cmake_options(
@@ -73,14 +73,12 @@ class BuildLibunwind(CrossCompileCMakeProject):
                                    LIBUNWIND_CXX_ABI_LIBNAME="libcxxrt")
 
 
-
-
 class BuildLibCXXRT(CrossCompileCMakeProject):
     repository = "https://github.com/CTSRD-CHERI/libcxxrt.git"
     defaultInstallDir = installToCXXDir
 
-    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
-        super().__init__(config, target_arch)
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
         self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.getInstallDir(config) / "lib",
                                CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
         if self.compiling_for_host():
@@ -130,10 +128,10 @@ class BuildLibCXX(CrossCompileCMakeProject):
                                             default=lambda c, p: LaunchCheriBSD.get_instance(c).sshForwardingPort)
         cls.qemu_user = cls.addConfigOption("shh-user", default="root", help="The CheriBSD used for running tests")
 
-    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
-        super().__init__(config, target_arch)
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
         self.COMMON_FLAGS.append("-D__LP64__=1")  # HACK to get it to compile
-        if self.crossCompileTarget == CrossCompileTarget.NATIVE:
+        if self.compiling_for_host():
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=True, LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False)
             if OSInfo.isUbuntu():
                 # Ubuntu packagers think that static linking should not be possible....
@@ -239,11 +237,8 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
     baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
 
-    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
-        if self.crossCompileTarget == CrossCompileTarget.CHERI:
-            statusUpdate("Cannot compile newlib in purecap mode, building mips instead")
-            self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
-        super().__init__(config, target_arch)
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
 
         # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")
@@ -288,11 +283,8 @@ class BuildLibCXXBaremetal(BuildLibCXX):
     crossInstallDir = CrossInstallDir.SDK
     defaultCMakeBuildType = "Debug"
 
-    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
-        if self.crossCompileTarget == CrossCompileTarget.CHERI:
-            statusUpdate("Cannot compile newlib in purecap mode, building mips instead")
-            self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
-        super().__init__(config, target_arch)
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
 
         # self.COMMON_FLAGS.append("-v")
         # Seems to be necessary :(
@@ -308,10 +300,6 @@ class BuildLibCXXRTBaremetal(BuildLibCXXRT):
     baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
 
-
-    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
-        if self.crossCompileTarget == CrossCompileTarget.CHERI:
-            statusUpdate("Cannot compile newlib in purecap mode, building mips instead")
-            self.crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
-        super().__init__(config, target_arch)
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
         self.COMMON_FLAGS.append("-Dsched_yield=abort")  # UNIPROCESSOR, should never happen

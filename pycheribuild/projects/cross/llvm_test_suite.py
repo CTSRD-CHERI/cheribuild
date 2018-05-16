@@ -55,8 +55,8 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
             return BuildLLVM.getBuildDir(self.config) / "bin" / name
         return self.config.sdkBinDir / name
 
-    def __init__(self, config, target_arch: CrossCompileTarget):
-        super().__init__(config, target_arch)
+    def __init__(self, config):
+        super().__init__(config)
         self.add_cmake_options(
             TEST_SUITE_LLVM_SIZE=self._find_in_sdk_or_llvm_build_dir("llvm-size"),
             TEST_SUITE_LLVM_PROFDATA=self._find_in_sdk_or_llvm_build_dir("llvm-profdata"),
@@ -64,7 +64,7 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
         )
         # TODO: fix these issues
         self.cross_warning_flags += ["-Wno-error=format", "-Werror=mips-cheri-prototypes"]
-        if self.crossCompileTarget != CrossCompileTarget.NATIVE:
+        if not self.compiling_for_host():
             self.add_cmake_options(TEST_SUITE_HOST_CC="/usr/bin/cc")
             # we want to link against libc++ not libstdc++ (and for some reason we need to specify libgcc_eh too
             self.add_cmake_options(TEST_SUITE_CXX_LIBRARY="-lc++;-lgcc_eh")

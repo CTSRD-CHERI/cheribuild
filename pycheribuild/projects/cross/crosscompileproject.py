@@ -6,7 +6,7 @@ from enum import Enum
 from pathlib import Path
 
 
-from ...config.loader import ComputedDefaultValue
+from ...config.loader import ComputedDefaultValue, ConfigOptionBase
 from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi, Linkage
 from ..llvm import BuildLLVM
 from ..project import *
@@ -25,17 +25,18 @@ defaultTarget = ComputedDefaultValue(
     asString="'cheri' unless -xmips/-xhost is set")
 
 def _installDir(config: CheriConfig, project: "CrossCompileProject"):
-    if project.crossCompileTarget == CrossCompileTarget.NATIVE:
+    assert isinstance(project, CrossCompileMixin)
+    if project.compiling_for_host():
         return config.sdkDir
     if project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
         from .cheribsd import BuildCHERIBSD
         if hasattr(project, "rootfs_path"):
             assert project.rootfs_path.startswith("/"), project.rootfs_path
             return BuildCHERIBSD.rootfsDir(config) / project.rootfs_path[1:]
-        if project.crossCompileTarget == CrossCompileTarget.CHERI:
+        if project.compiling_for_cheri():
             targetName = "cheri" + config.cheriBitsStr
         else:
-            assert project.crossCompileTarget == CrossCompileTarget.MIPS
+            assert project.compiling_for_mips()
             targetName = "mips"
         if config.cross_target_suffix:
             targetName += "-" + config.cross_target_suffix
@@ -54,21 +55,11 @@ def _installDirMessage(project: "CrossCompileProject"):
 
 def crosscompile_dependencies(cls: "typing.Type[CrossCompileProject]", config: CheriConfig):
     # TODO: can I avoid instantiating all cross-compile targets here? The hack below might work
-    obj = cls.get_instance(config)
-    # assert isinstance(obj, CrossCompileMixin), type(obj)
-    target = obj.crossCompileTarget
-    # As a hack pass a dummy object as the instance
+    target = cls.get_crosscompile_target(config)
     if target == CrossCompileTarget.NATIVE:
         return ["freestanding-sdk"] if config.use_sdk_clang_for_native_xbuild else []
     else:
-        return ["freestanding-sdk"] if obj.baremetal else ["cheribsd-sdk"]
-    if False:
-        # HACK: to get the descriptor directly:
-        target = inspect.getattr_static(cls, "crossCompileTarget")
-        if not isinstance(target, CrossCompileTarget):
-            # We got the descriptor so to avoid the assertion that it is being called incorrectly pass a dummy instance
-            # since the value of crosscompiletarget should only depend on command line flags
-            target = target.__get__(object(), cls)
+        return ["cheribsd-sdk"] if cls.needs_cheribsd_sysroot(target) else ["freestanding-sdk"]
 
 
 class CrossCompileMixin(object):
@@ -88,16 +79,40 @@ class CrossCompileMixin(object):
     defaultLinker = "lld"
     baremetal = False
     forceDefaultCC = False  # for some reason ICU binaries build during build crash -> fall back to /usr/bin/cc there
-    crossCompileTarget = None  # type: CrossCompileTarget
+    _crossCompileTarget = None  # type: CrossCompileTarget
     defaultOptimizationLevel = ("-O2",)
 
     # noinspection PyProtectedMember
-    _no_overwrite_allowed = Project._no_overwrite_allowed + ("baremetal", )
+    _no_overwrite_allowed = Project._no_overwrite_allowed + ("baremetal", "_crossCompileTarget")
 
     needs_mxcaptable_static = False     # E.g. for postgres which is just over the limit:
     #﻿warning: added 38010 entries to .cap_table but current maximum is 32768; try recompiling non-performance critical source files with -mllvm -mxcaptable
     # FIXME: postgres would work if I fixed captable to use the negative immediate values
     needs_mxcaptable_dynamic = False    # This might be true for Qt/QtWebkit
+
+    @classmethod
+    def get_crosscompile_target(cls, config: CheriConfig) -> CrossCompileTarget:
+        target = inspect.getattr_static(cls, "_crossCompileTarget")
+        # HACK: to get the descriptor directly:
+        if not isinstance(target, CrossCompileTarget):
+            isinstance(target, ConfigOptionBase)
+            # We got the descriptor and to avoid the assertion that it is being called incorrectly pass a dummy
+            # instance instead of the real object instance. This is fine  since the value of crosscompiletarget should
+            # only depend on command line flags (to enforce this it is set in _no_overwrite_allowed)
+            target = target.__get__(object(), cls)
+        assert isinstance(target, CrossCompileTarget)
+        return target
+
+    @classmethod
+    def needs_cheribsd_sysroot(cls, target: CrossCompileTarget):
+        # Native projects never need the cheribsd sysroot
+        if target == CrossCompileTarget.NATIVE:
+            return False
+        # Baremetal projects don't need cheribsd, they need newlib instead
+        if cls.baremetal:
+            return False
+        # Otherwise we assume we are targetting CheriBSD so we need the sysroot
+        return True
 
     @property
     def compiler_warning_flags(self):
@@ -106,7 +121,7 @@ class CrossCompileMixin(object):
         else:
             return self.common_warning_flags + self.cross_warning_flags
 
-    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget, *args, **kwargs):
+    def __init__(self, config: CheriConfig, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
         # convert the tuples into mutable lists (this is needed to avoid modifying class variables)
         # See https://github.com/CTSRD-CHERI/cheribuild/issues/33
@@ -117,11 +132,30 @@ class CrossCompileMixin(object):
         self.host_warning_flags = []
         self.common_warning_flags = []
 
-        if target_arch:
-            self.crossCompileTarget = target_arch
+        target_arch = inspect.getattr_static(self, "_crossCompileTarget")
+        if isinstance(target_arch, CrossCompileTarget):
+            # Should only be set for the foo-native/foo-cheri, etc. targets
+            assert hasattr(self, "synthetic_base")
+        else:
+            # This should be configurable on the command line
+            assert isinstance(target_arch, ConfigOptionBase)
+        target_arch = self._crossCompileTarget
+        # sanity check:
+        assert target_arch is not None
+        assert self.get_crosscompile_target(config) == target_arch
+        if self.compiling_for_cheri() and CrossCompileTarget.CHERI not in self.supported_architectures:
+            # We need this workaround for newlib + gdb (so that we don't have to always pass --xhost/--xmips
+            # Only print this if we are actually building and not just instantiating the class
+            self._configure_status_message = "Cannot compile " + self.target + " in CHERI purecap mode, building MIPS binaries instead"
+            self._preventAssign = False  # Allow assigning to _crossCompileTarget
+            self._crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
+            self._preventAssign = True
+        elif target_arch not in self.supported_architectures:
+            raise RuntimeError("Cannot build " + self.target + " targetting " + str(target_arch))
+
         self.compiler_dir = self.config.sdkBinDir
         # Use the compiler from the build directory for native builds to get stddef.h (which will be deleted)
-        if self.crossCompileTarget == CrossCompileTarget.NATIVE:
+        if self._crossCompileTarget == CrossCompileTarget.NATIVE:
             llvm_build_dir = BuildLLVM.get_instance(config).buildDir
             if (llvm_build_dir / "bin/clang").exists():
                 self.compiler_dir = llvm_build_dir / "bin"
@@ -154,7 +188,7 @@ class CrossCompileMixin(object):
                 if self.config.cheri_cap_table_abi:
                     self.COMMON_FLAGS.append("-cheri-cap-table-abi=" + self.config.cheri_cap_table_abi)
             else:
-                assert self.crossCompileTarget == CrossCompileTarget.MIPS
+                assert self.compiling_for_mips()
                 self.targetTriple = "mips64-unknown-freebsd" if not self.baremetal else "mips64-qemu-elf"
                 self.COMMON_FLAGS.append("-integrated-as")
                 self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
@@ -212,7 +246,7 @@ class CrossCompileMixin(object):
 
     @property
     def sizeof_void_ptr(self):
-        if self.crossCompileTarget in (CrossCompileTarget.MIPS, CrossCompileTarget.NATIVE):
+        if self._crossCompileTarget in (CrossCompileTarget.MIPS, CrossCompileTarget.NATIVE):
             return 8
         elif self.config.cheriBits == 128:
             return 16
@@ -260,12 +294,12 @@ class CrossCompileMixin(object):
         result = []
         if self.force_static_linkage:
             result.append("-static")
-        if self.crossCompileTarget == CrossCompileTarget.NATIVE:
+        if self.compiling_for_host():
             # return ["-fuse-ld=" + self.linker]
             return result
-        elif self.crossCompileTarget == CrossCompileTarget.CHERI:
+        elif self.compiling_for_cheri():
             emulation = "elf64btsmip_cheri_fbsd" if not self.baremetal else "elf64btsmip_cheri"
-        elif self.crossCompileTarget == CrossCompileTarget.MIPS:
+        elif self.compiling_for_mips():
             emulation = "elf64btsmip_fbsd" if not self.baremetal else "elf64btsmip"
         else:
             fatalError("Logic error!")
@@ -312,9 +346,9 @@ class CrossCompileMixin(object):
         cls._linkage = cls.addConfigOption("linkage", help="Build static or dynamic (default means for host=dynamic,"
                                                           " CHERI/MIPS=<value of option --cross-compile-linkage>)",
                                           default=Linkage.DEFAULT, kind=Linkage)
-        if inspect.getattr_static(cls, "crossCompileTarget") is None:
-            cls.crossCompileTarget = cls.addConfigOption("target", help="The target to build for (`cheri` or `mips` or `native`)",
-                                                         default=defaultTarget, kind=CrossCompileTarget)
+        if inspect.getattr_static(cls, "_crossCompileTarget") is None:
+            cls._crossCompileTarget = cls.addConfigOption("target", help="The target to build for (`cheri` or `mips` or `native`)",
+                                                          default=defaultTarget, kind=CrossCompileTarget)
 
     def linkage(self):
         if self._linkage == Linkage.DEFAULT:
@@ -333,13 +367,13 @@ class CrossCompileMixin(object):
         return self.linkage() == Linkage.DYNAMIC
 
     def compiling_for_mips(self):
-        return self.crossCompileTarget == CrossCompileTarget.MIPS
+        return self._crossCompileTarget == CrossCompileTarget.MIPS
 
     def compiling_for_cheri(self):
-        return self.crossCompileTarget == CrossCompileTarget.CHERI
+        return self._crossCompileTarget == CrossCompileTarget.CHERI
 
     def compiling_for_host(self):
-        return self.crossCompileTarget == CrossCompileTarget.NATIVE
+        return self._crossCompileTarget == CrossCompileTarget.NATIVE
 
     @property
     def pkgconfig_dirs(self):
@@ -351,13 +385,15 @@ class CrossCompileMixin(object):
 
     @property
     def display_name(self):
-        return self.projectName + " (" + self.crossCompileTarget.value + ")"
+        return self.projectName + " (" + self._crossCompileTarget.value + ")"
 
     def configure(self, **kwargs):
         env = dict()
+        if hasattr(self, "_configure_status_message"):
+            statusUpdate(self._configure_status_message)
         if not self.compiling_for_host():
             env.update(PKG_CONFIG_LIBDIR=self.pkgconfig_dirs, PKG_CONFIG_SYSROOT_DIR=self.config.sdkSysrootDir)
-        with setEnv():
+        with setEnv(**env):
             super().configure(**kwargs)
 
 
@@ -373,10 +409,10 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
 
-    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget, generator: CMakeProject.Generator=CMakeProject.Generator.Ninja):
-        super().__init__(config, target_arch, generator)
+    def __init__(self, config: CheriConfig, generator: CMakeProject.Generator=CMakeProject.Generator.Ninja):
+        super().__init__(config, generator)
         # This must come first:
-        if self.crossCompileTarget == CrossCompileTarget.NATIVE:
+        if self.compiling_for_host():
             self._cmakeTemplate = includeLocalFile("files/NativeToolchain.cmake.in")
             self.toolchainFile = self.buildDir / "NativeToolchain.cmake"
         else:
@@ -471,8 +507,8 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
     _configure_supports_variables_on_cmdline = True  # override in nginx
     _configure_understands_enable_static = True
 
-    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
-        super().__init__(config, target_arch)
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
         buildhost = self.get_host_triple()
         if not self.compiling_for_host() and self.add_host_target_build_config_options:
             self.configureArgs.extend(["--host=" + self.targetTriple, "--target=" + self.targetTriple,

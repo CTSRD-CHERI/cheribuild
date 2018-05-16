@@ -42,7 +42,7 @@ class AnsiColour(Enum):
     white = 37
 
 
-def coloured(colour: AnsiColour, *args, sep=" "):
+def coloured(colour: AnsiColour, *args, sep=" ") -> str:
     startColour = "\x1b[1;" + str(colour.value) + "m"
     endColour = "\x1b[0m"  # reset
     if len(args) == 1:

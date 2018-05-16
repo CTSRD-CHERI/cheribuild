@@ -65,21 +65,17 @@ class BuildGDB(CrossCompileAutotoolsProject):
     defaultOptimizationLevel = ["-O2"]
     supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
 
-    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
-        assert target_arch != CrossCompileTarget.CHERI
+    def __init__(self, config: CheriConfig):
         self._compile_status_message = None
-        if self.crossCompileTarget == CrossCompileTarget.CHERI:
-            self._compile_status_message = "Cannot compile GDB as a CHERIABI binary building as MIPS instead (it can " \
-                                           "still be used to debug CHERIABI processes)"
-            target_arch = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
         if self.compiling_for_host():
             self.crossInstallDir = CrossInstallDir.SDK
         else:
             # We always want to build the MIPS binary static so we can just scp it over to QEMU
             self._linkage = Linkage.STATIC
-        # See https://github.com/bsdjhb/kdbg/blob/master/gdb/build
-        super().__init__(config, target_arch)
+        super().__init__(config)
+        assert not self.compiling_for_cheri(), "Should only build this as a static MIPS binary not CHERIABI"
         installRoot = self.installDir if self.compiling_for_host() else self.installPrefix
+        # See https://github.com/bsdjhb/kdbg/blob/master/gdb/build
         # ./configure flags
         self.configureArgs.extend([
             "--disable-nls",
@@ -97,14 +93,14 @@ class BuildGDB(CrossCompileAutotoolsProject):
             "--disable-libstdcxx",
             # TODO:
             "--enable-build-with-cxx",
-        ])
+            ])
 
         # BUILD the gui:
         if False and self.compiling_for_host():
             self.configureArgs.append("--enable-gdbtk")
             # if IS_MAC:
-                # self.configureArgs.append("--with-tcl=/usr/local/opt/tcl-tk/lib")
-                # self.configureEnvironment["PKG_CONFIG_PATH"] = "/usr/local/opt/tcl-tk/lib/pkgconfig:/usr/local/lib/pkgconfig"
+            # self.configureArgs.append("--with-tcl=/usr/local/opt/tcl-tk/lib")
+            # self.configureEnvironment["PKG_CONFIG_PATH"] = "/usr/local/opt/tcl-tk/lib/pkgconfig:/usr/local/lib/pkgconfig"
 
         # extra ./configure environment variables:
         # compile flags
@@ -186,8 +182,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
         super().configure()
 
     def compile(self, **kwargs):
-        if self._compile_status_message:
-            statusUpdate(self._compile_status_message)
         with TemporarilyRemoveProgramsFromSdk(["as", "ld", "objcopy", "objdump"], self.config):
             # also install objdump
             self.runMake(makeTarget="all-binutils", cwd=self.buildDir)

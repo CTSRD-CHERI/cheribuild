@@ -43,8 +43,8 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     needs_mxcaptable_static = True  # Slightly over the limit
     needs_mxcaptable_dynamic = True  # Slightly over the limit
 
-    def __init__(self, config: CheriConfig, target_arch: CrossCompileTarget):
-        super().__init__(config, target_arch)
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
         if self.enable_assertions:
             self.COMMON_FLAGS.append("-DUSE_ASSERT_CHECKING=1")
             self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")
