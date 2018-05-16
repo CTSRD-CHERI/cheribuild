@@ -128,7 +128,8 @@ class MultiArchTarget(Target):
 
     def _create_project(self, config: CheriConfig):
         from .projects.cross.crosscompileproject import CrossCompileMixin
-        assert issubclass(self.projectClass, CrossCompileMixin)
+        from .projects.cross.cheribsd import _BuildFreeBSD
+        assert issubclass(self.projectClass, CrossCompileMixin) or issubclass(self.projectClass, _BuildFreeBSD)
         return self.projectClass(config)
 
     def __repr__(self):

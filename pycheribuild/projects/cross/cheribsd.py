@@ -74,10 +74,12 @@ class _BuildFreeBSD(Project):
     repository = "https://github.com/freebsd/freebsd.git"
     make_kind = MakeCommandKind.BsdMake
     doNotAddToTargets = True
-    target_arch = None  # type: CrossCompileTarget
     kernelConfig = None  # type: str
     crossbuild = False
     skipBuildworld = False
+    baremetal = True  # We are building the full OS so we don't need a sysroot
+    # Only CheriBSD can target CHERI, upstream FreeBSD won't work
+    supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
 
     defaultExtraMakeOptions = [
         # "-DWITHOUT_HTML",  # should not be needed
@@ -97,7 +99,7 @@ class _BuildFreeBSD(Project):
 
     @classmethod
     def setupConfigOptions(cls, buildKernelWithClang: bool=True, makeOptionsShortname=None, **kwargs):
-        super().setupConfigOptions(**kwargs)
+        super().setupConfigOptions(add_common_cross_options=False, **kwargs)
         cls.subdirOverride = cls.addConfigOption("subdir-with-deps", kind=str, metavar="DIR", showHelp=True,
                                                  help="Only build subdir DIR instead of the full tree.#"
                                                       "This uses the SUBDIR_OVERRIDE mechanism so will build much more"
@@ -173,12 +175,14 @@ class _BuildFreeBSD(Project):
     def __init__(self, config: CheriConfig, archBuildFlags: dict = None):
         super().__init__(config)
         if archBuildFlags is None:
-            if self.target_arch == CrossCompileTarget.MIPS:
+            if self._crossCompileTarget == CrossCompileTarget.MIPS:
                 # The following is broken: (https://github.com/CTSRD-CHERI/cheribsd/issues/102)
                 # "CPUTYPE=mips64",  # mipsfpu for hardware float
                 archBuildFlags = {"TARGET": "mips", "TARGET_ARCH": config.mips_float_abi.freebsd_target_arch()}
-            elif self.target_arch == CrossCompileTarget.NATIVE:
+            elif self._crossCompileTarget == CrossCompileTarget.NATIVE:
                 archBuildFlags = {"TARGET": "amd64"}
+            else:
+                assert False, "This should not be reached!"
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
         self.make_args.set(**archBuildFlags)
         self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
@@ -252,13 +256,14 @@ class _BuildFreeBSD(Project):
             LLD_BOOTSTRAP=False,  # and also a linker
             LIB32=False,  # takes a long time and not needed
         )
-        if self.target_arch != CrossCompileTarget.NATIVE:
-            # For MIPS we need libstdc++ for packages (it won't be built purecap anayway)
-            self.cross_toolchain_config.set_with_options(GNUCXX=True, LIBCPLUSPLUS=True)
+        # It shold no longer be necessary to build libstdc++
+        # if self._crossCompileTarget != CrossCompileTarget.NATIVE:
+        #     # For MIPS we need libstdc++ for packages (it won't be built purecap anayway)
+        #     self.cross_toolchain_config.set_with_options(GNUCXX=True, LIBCPLUSPLUS=True)
 
         # self.cross_toolchain_config.add(CROSS_COMPILER=Falses) # This sets too much, we want elftoolchain and binutils
 
-        if self.target_arch == CrossCompileTarget.NATIVE:
+        if self._crossCompileTarget == CrossCompileTarget.NATIVE:
             cross_prefix = str(self.config.sdkBinDir) + "/"  # needs to end with / for concatenation
             # target_flags = " -fuse-ld=lld -Wno-error=unused-command-line-argument -Wno-unused-command-line-argument"
             target_flags = ""
@@ -268,7 +273,6 @@ class _BuildFreeBSD(Project):
             self.linker_for_world = "lld"
             # DONT SET XAS!!! It prevents bfd from being built
             # self.cross_toolchain_config.set(XAS="/usr/bin/as")
-
         elif self.mipsToolchainPath:
             cross_prefix = str(self.mipsToolchainPath / "bin") + "/"
             target_flags = " -integrated-as -fcolor-diagnostics -mcpu=mips4"
@@ -333,7 +337,7 @@ class _BuildFreeBSD(Project):
                 fatalError("Requested build of kernel with external toolchain, but", self.externalToolchainCompiler,
                            "doesn't exist!")
             # We can't use LLD for the kernel yet but there is a flag to experiment with it
-            if self.target_arch == CrossCompileTarget.NATIVE:
+            if self._crossCompileTarget == CrossCompileTarget.NATIVE:
                 cross_prefix = str(self.config.sdkBinDir) + "/"
             else:
                 cross_prefix = str(self.mipsToolchainPath / "bin/mips64-unknown-freebsd-")
@@ -564,7 +568,7 @@ class _BuildFreeBSD(Project):
         # We don't want separate .debug for now
         self.make_args.set_with_options(DEBUG_FILES=False)
 
-        if self.target_arch == CrossCompileTarget.NATIVE:
+        if self._crossCompileTarget == CrossCompileTarget.NATIVE:
             cross_binutils_prefix = str(self.config.sdkBinDir) + "/"
             self.make_args.set_with_options(BHYVE=False,
                                             # seems to be missing some include paths which appears to work on freebsd
@@ -678,14 +682,14 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                 del os.environ[k]
 
         buildenv_target = "buildenv"
-        if self.target_arch == CrossCompileTarget.CHERI and self.config.libcheri_buildenv:
+        if self._crossCompileTarget == CrossCompileTarget.CHERI and self.config.libcheri_buildenv:
             buildenv_target = "libcheribuildenv"
 
         if self.explicit_subdirs_only:
             # Allow building a single FreeBSD/CheriBSD directory using the BUILDENV_SHELL trick
             for subdir in self.explicit_subdirs_only:
                 args = self.installworld_args
-                is_lib = subdir.startswith("lib/")
+                is_lib = subdir.startswith("lib/") or "/lib/" in subdir or subdir.endswith("/lib")
                 make_in_subdir = "make -C \"" + subdir + "\" "
                 if self.config.skipInstall:
                     install_cmd = "echo \"  Skipping make install\""
@@ -709,7 +713,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                        cwd=self.sourceDir)
                 # If we are building a library we want to build both the CHERI and the mips version (unless the
                 # user explicitly specified --libcheri-buildenv)
-                if self.target_arch == CrossCompileTarget.CHERI and is_lib and buildenv_target != "libcheribuildenv":
+                if self._crossCompileTarget == CrossCompileTarget.CHERI and is_lib and buildenv_target != "libcheribuildenv":
                     statusUpdate("Building", subdir, "using libcheribuildenv target")
                     runCmd([self.make_args.command] + args.all_commandline_args + ["libcheribuildenv"], env=args.env_vars,
                            cwd=self.sourceDir)
@@ -723,9 +727,12 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
             super().process()
 
 
+# TODO: remove these two
 class BuildFreeBSDForMIPS(_BuildFreeBSD):
     projectName = "freebsd-mips"
-    target_arch = CrossCompileTarget.MIPS
+    target = "freebsd-mips"
+    _crossCompileTarget = CrossCompileTarget.MIPS
+    supported_architectures = []  # Don't add any other configs
     kernelConfig = "MALTA64"
     defaultInstallDir = ComputedDefaultValue(
         function=lambda config, cls: config.outputRoot / "freebsd-mips",
@@ -734,7 +741,9 @@ class BuildFreeBSDForMIPS(_BuildFreeBSD):
 
 class BuildFreeBSDForX86(_BuildFreeBSD):
     projectName = "freebsd-x86"
-    target_arch = CrossCompileTarget.NATIVE
+    target = "freebsd-x86"
+    _crossCompileTarget = CrossCompileTarget.NATIVE
+    supported_architectures = []  # Don't add any other configs
     defaultInstallDir = ComputedDefaultValue(
         function=lambda config, cls: config.outputRoot / "freebsd-x86",
         asString="$INSTALL_ROOT/freebsd-x86")
@@ -748,7 +757,8 @@ class BuildCHERIBSD(_BuildFreeBSD):
     defaultInstallDir = lambda config, cls: config.outputRoot / ("rootfs" + config.cheriBitsStr)
     appendCheriBitsToBuildDir = True
     defaultBuildDir = lambda config, cls: config.buildRoot / ("cheribsd-obj-" + config.cheriBitsStr)
-    target_arch = CrossCompileTarget.CHERI
+    _crossCompileTarget = CrossCompileTarget.CHERI
+    supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -757,9 +767,10 @@ class BuildCHERIBSD(_BuildFreeBSD):
             makeOptionsShortName="-cheribsd-make-options",
             installDirectoryHelp="Install directory for CheriBSD root file system (default: "
                                  "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)")
-        # TODO: separate options for kernel/install?
+        # Avoid duplicate --kerneconf string for cheribsd-native vs cheribsd
+        kernconf_shortname = "-kernconf" if cls.target == "cheribsd" else None
         cls.kernelConfig = cls.addConfigOption("kernel-config", default=defaultKernelConfig, kind=str,
-           metavar="CONFIG", shortname="-kernconf", showHelp=True,
+           metavar="CONFIG", shortname=kernconf_shortname, showHelp=True,
            help="The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64 or CHERI128_MALTA64"
                 " depending on --cheri-bits)")
 
@@ -774,10 +785,12 @@ class BuildCHERIBSD(_BuildFreeBSD):
                                                       " you need to copy them from the build directory.")
         cls.mfs_root_image = cls.addPathOption("mfs-root-image", help="Path to an MFS root image to embed in the"
                                                                       "kernel that will be booted from")
-        cls.mipsOnly = cls.addBoolOption("mips-only", showHelp=False,
-                                         help="Don't build the CHERI parts of cheribsd, only plain MIPS")
         cls.purecapKernel = cls.addBoolOption("pure-cap-kernel", showHelp=True,
                                               help="Build kernel with pure capability ABI (probably won't work!)")
+
+    @property
+    def mipsOnly(self) -> bool: # Compat
+        return self._crossCompileTarget == CrossCompileTarget.MIPS
 
     def __init__(self, config: CheriConfig):
         self.installAsRoot = os.getuid() == 0
