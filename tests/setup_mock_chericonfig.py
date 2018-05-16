@@ -3,7 +3,7 @@ from pycheribuild.utils import setCheriConfig
 from pycheribuild.config.chericonfig import CrossCompileTarget, MipsFloatAbi, CheriConfig
 from pycheribuild.config.loader import ConfigLoaderBase, DefaultValueOnlyConfigLoader
 from pycheribuild.projects.project import SimpleProject
-
+from pycheribuild.targets import Target
 
 class MockArgs(object):
     targets = []
@@ -47,12 +47,12 @@ class MockConfig(CheriConfig):
         assert self._ensureRequiredPropertiesSet()
 
 
-
 def setup_mock_chericonfig(source_root: Path) -> MockConfig:
     config = MockConfig(source_root)
     # noinspection PyTypeChecker
     setCheriConfig(config)
     ConfigLoaderBase._cheriConfig = config
     SimpleProject._configLoader._cheriConfig = config
+    Target.instantiating_targets_should_warn = False
     # FIXME: There should only be one singleton instance
     return config

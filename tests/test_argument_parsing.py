@@ -14,7 +14,7 @@ _loader = JsonAndCommandLineConfigLoader()
 from pycheribuild.projects.project import SimpleProject
 
 SimpleProject._configLoader = _loader
-from pycheribuild.targets import targetManager
+from pycheribuild.targets import targetManager, Target
 from pycheribuild.config.defaultconfig import DefaultCheriConfig
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # make sure all projects are loaded so that targetManager gets populated
@@ -23,6 +23,7 @@ from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 
 _targets_registered = False
+Target.instantiating_targets_should_warn = False
 
 try:
     import typing
