@@ -454,7 +454,7 @@ def installDirNotSpecified(config: CheriConfig, project: "Project"):
 def _defaultBuildDir(config: CheriConfig, project: "Project"):
     # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
     target = project.get_crosscompile_target(config) if hasattr(project, "get_crosscompile_target") else None
-    return config.buildRoot / (project.projectName.lower() + project.buildDirSuffix(config, target))
+    return project.buildDirForTarget(config, target)
 
 
 class MakeCommandKind(Enum):

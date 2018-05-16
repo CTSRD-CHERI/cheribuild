@@ -261,9 +261,9 @@ class _BuildFreeBSD(Project):
             LIB32=False,  # takes a long time and not needed
         )
         # It shold no longer be necessary to build libstdc++
-        # if self._crossCompileTarget != CrossCompileTarget.NATIVE:
-        #     # For MIPS we need libstdc++ for packages (it won't be built purecap anayway)
-        #     self.cross_toolchain_config.set_with_options(GNUCXX=True, LIBCPLUSPLUS=True)
+        if self._crossCompileTarget != CrossCompileTarget.NATIVE:
+            # For MIPS we need libstdc++ for packages (it won't be built purecap anayway)
+            self.cross_toolchain_config.set_with_options(GNUCXX=True, LIBCPLUSPLUS=True)
 
         # self.cross_toolchain_config.add(CROSS_COMPILER=Falses) # This sets too much, we want elftoolchain and binutils
 
@@ -754,13 +754,32 @@ class BuildFreeBSDForX86(_BuildFreeBSD):
     kernelConfig = "GENERIC"
 
 
+# noinspection PyProtectedMember
+def cheribsd_install_dir(config: CheriConfig, project: _BuildFreeBSD):
+    if project._crossCompileTarget == CrossCompileTarget.CHERI:
+        return config.outputRoot / ("rootfs" + config.cheriBitsStr)
+    elif project._crossCompileTarget == CrossCompileTarget.CHERI:
+        return config.outputRoot / "rootfs-mips"
+    else:
+        assert project._crossCompileTarget == CrossCompileTarget.NATIVE
+        return config.outputRoot / "rootfs-x86"
+
+
+# noinspection PyProtectedMember
+def cheribsd_build_dir(config: CheriConfig, project: _BuildFreeBSD):
+    if project._crossCompileTarget == CrossCompileTarget.CHERI:
+        # TODO: change this to be the default build dir name
+        return config.buildRoot / ("cheribsd-obj-" + config.cheriBitsStr)
+    else:
+        return project.buildDirForTarget(config, project._crossCompileTarget)
+
 class BuildCHERIBSD(_BuildFreeBSD):
     projectName = "cheribsd"
     target = "cheribsd"
     repository = "https://github.com/CTSRD-CHERI/cheribsd.git"
-    defaultInstallDir = lambda config, cls: config.outputRoot / ("rootfs" + config.cheriBitsStr)
+    defaultInstallDir = cheribsd_install_dir
     appendCheriBitsToBuildDir = True
-    defaultBuildDir = lambda config, cls: config.buildRoot / ("cheribsd-obj-" + config.cheriBitsStr)
+    defaultBuildDir = cheribsd_build_dir
     _crossCompileTarget = CrossCompileTarget.CHERI
     supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
 
@@ -902,7 +921,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         if not IS_FREEBSD and not self.remotePath and not self.rootfs_source_class.get_instance(self.config).crossbuild:
             configOption = "'--" + self.target + "/" + "remote-sdk-path'"
             fatalError("Path to the remote SDK is not set, option", configOption, "must be set to a path that "
-                       "scp understands (e.g. vica:~foo/cheri/output/sdk256)")
+                       "scp understands (e.g. vica:~foo/cheri/output/sdk)")
             if not self.config.pretend:
                 sys.exit("Cannot continue...")
 
@@ -912,7 +931,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         if not IS_FREEBSD:
             cls.remotePath = cls.addConfigOption("remote-sdk-path", showHelp=True, metavar="PATH", help="The path to "
                                                  "the CHERI SDK on the remote FreeBSD machine (e.g. "
-                                                 "vica:~foo/cheri/output/sdk256)")
+                                                 "vica:~foo/cheri/output/sdk)")
 
     def copySysrootFromRemoteMachine(self):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
