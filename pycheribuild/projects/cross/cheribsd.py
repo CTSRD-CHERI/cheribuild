@@ -247,8 +247,13 @@ class _BuildFreeBSD(Project):
         self.installPrefix = Path("/")
         self.kernelToolchainAlreadyBuilt = False
         for option in self.makeOptions:
+            if self._crossCompileTarget != CrossCompileTarget.CHERI and "CHERI_" in option:
+                warningMessage("Not adding CHERI specific make option", option, "for", self.target,
+                               " -- consider setting separate", self.target + "/make-options in the config file.")
+                continue
             if "=" in option:
-                args = {option.split("=")[0]: option.split("=")[1]}
+                key, value = option.split("=")
+                args = {key: value}
                 self.make_args.set(**args)
             else:
                 self.make_args.add_flags(option)
@@ -799,13 +804,15 @@ class BuildCHERIBSD(_BuildFreeBSD):
         cls.cheriCC = cls.addPathOption("cheri-cc", help="Override the compiler used to build CHERI code",
                                         default=defaultCheriCC)
 
-        cls.buildFpgaKernels = cls.addBoolOption("build-fpga-kernels", showHelp=True,
-                                                 help="Also build kernels for the FPGA. They will not be installed so"
-                                                      " you need to copy them from the build directory.")
-        cls.mfs_root_image = cls.addPathOption("mfs-root-image", help="Path to an MFS root image to embed in the"
-                                                                      "kernel that will be booted from")
-        cls.purecapKernel = cls.addBoolOption("pure-cap-kernel", showHelp=True,
-                                              help="Build kernel with pure capability ABI (probably won't work!)")
+        if cls._crossCompileTarget != CrossCompileTarget.NATIVE:
+            cls.buildFpgaKernels = cls.addBoolOption("build-fpga-kernels", showHelp=True,
+                                                     help="Also build kernels for the FPGA. They will not be installed so"
+                                                          " you need to copy them from the build directory.")
+            cls.mfs_root_image = cls.addPathOption("mfs-root-image", help="Path to an MFS root image to embed in the"
+                                                                          "kernel that will be booted from")
+        if cls._crossCompileTarget == CrossCompileTarget.CHERI:
+            cls.purecapKernel = cls.addBoolOption("pure-cap-kernel", showHelp=True,
+                                                  help="Build kernel with pure capability ABI (probably won't work!)")
 
     @property
     def mipsOnly(self) -> bool: # Compat
@@ -814,27 +821,28 @@ class BuildCHERIBSD(_BuildFreeBSD):
     def __init__(self, config: CheriConfig):
         self.installAsRoot = os.getuid() == 0
         self.cheriCXX = self.cheriCC.parent / "clang++"
-        archBuildFlags = {
-            "CHERI": config.cheriBitsStr,
-            "CHERI_CC": str(self.cheriCC),
-            "CHERI_CXX": str(self.cheriCXX),
-            "CHERI_LD": str(config.sdkBinDir / "ld.lld"),
-            "TARGET": "mips",
-            "TARGET_ARCH": config.mips_float_abi.freebsd_target_arch()
-        }
-        if self.mipsOnly:
-            archBuildFlags = {"TARGET": "mips",
-                              "TARGET_ARCH": config.mips_float_abi.freebsd_target_arch(),
-                              "WITHOUT_LIB32": True}
-            # keep building a cheri kernel even with a mips userspace (mips may be broken...)
-            # self.kernelConfig = "MALTA64"
+        archBuildFlags = None
+        if self._crossCompileTarget == CrossCompileTarget.CHERI:
+            archBuildFlags = {
+                "CHERI": config.cheriBitsStr,
+                "CHERI_CC": str(self.cheriCC),
+                "CHERI_CXX": str(self.cheriCXX),
+                "CHERI_LD": str(config.sdkBinDir / "ld.lld"),
+                "TARGET": "mips",
+                "TARGET_ARCH": config.mips_float_abi.freebsd_target_arch()
+            }
+
+        # TODO: shouldwe  keep building a cheri kernel even with a mips userspace?
+        # self.kernelConfig = "MALTA64"
         super().__init__(config, archBuildFlags=archBuildFlags)
-        if self.config.cheri_cap_table_abi:
-            self.cross_toolchain_config.set(CHERI_USE_CAP_TABLE=self.config.cheri_cap_table_abi)
+        if self._crossCompileTarget == CrossCompileTarget.CHERI:
+            if self.config.cheri_cap_table_abi:
+                self.cross_toolchain_config.set(CHERI_USE_CAP_TABLE=self.config.cheri_cap_table_abi)
+
         self.extra_kernels = []
         self.extra_kernels_with_mfs = []
-        if self.buildFpgaKernels:
-            if self.mipsOnly:
+        if self._crossCompileTarget != CrossCompileTarget.NATIVE and self.buildFpgaKernels:
+            if self._crossCompileTarget == CrossCompileTarget.MIPS:
                 prefix = "BERI_DE4_"
             elif self.config.cheriBits == 128:
                 prefix = "CHERI128_DE4_"
