@@ -44,7 +44,7 @@ from .projects import *  # make sure all projects are loaded so that targetManag
 # noinspection PyUnresolvedReferences
 from .projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
 from .projects.cross.crosscompileproject import CrossCompileMixin
-from .targets import targetManager
+from .targets import targetManager, Target
 from .utils import *
 
 EXTRACT_SDK_TARGET = "extract-sdk"
@@ -218,6 +218,7 @@ def _jenkins_main():
                 cls.defaultInstallDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
                 cls.installDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
                 # print(project.projectClass.projectName, project.projectClass.installDir)
+        Target.instantiating_targets_should_warn = False
         target.checkSystemDeps(cheriConfig)
         # need to set destdir after checkSystemDeps:
         project = target.get_or_create_project(cheriConfig)
