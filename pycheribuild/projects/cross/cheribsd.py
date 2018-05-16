@@ -260,10 +260,6 @@ class _BuildFreeBSD(Project):
             LLD_BOOTSTRAP=False,  # and also a linker
             LIB32=False,  # takes a long time and not needed
         )
-        # It shold no longer be necessary to build libstdc++
-        if self._crossCompileTarget != CrossCompileTarget.NATIVE:
-            # For MIPS we need libstdc++ for packages (it won't be built purecap anayway)
-            self.cross_toolchain_config.set_with_options(GNUCXX=True, LIBCPLUSPLUS=True)
 
         # self.cross_toolchain_config.add(CROSS_COMPILER=Falses) # This sets too much, we want elftoolchain and binutils
 
