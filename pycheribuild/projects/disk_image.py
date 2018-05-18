@@ -86,6 +86,9 @@ class _BuildDiskImageBase(SimpleProject):
         if not IS_FREEBSD:
             cls.remotePath = cls.addConfigOption("remote-path", showHelp=True, metavar="PATH", help="The path on the "
                                                  "remote FreeBSD machine from where to copy the disk image")
+        cls.wget_via_tmp = cls.addBoolOption("wget-via-tmp",
+                                help="Use a directory in /tmp for recursive wget operations;"
+                                      "of interest in rare cases, like extra-files on smbfs.")
         cls.disableTMPFS = None
 
     def __init__(self, config, source_class: "typing.Type[_BuildFreeBSD]"):
@@ -201,6 +204,27 @@ class _BuildDiskImageBase(SimpleProject):
             self.writeFile(targetFile, contents, noCommandPrint=True, overwrite=False, mode=mode)
         self.addFileToImage(targetFile, baseDirectory=baseDir)
 
+    def _wget_fetch(self, what, where):
+        # https://apple.stackexchange.com/a/100573/251654
+        # https://www.gnu.org/software/wget/manual/html_node/Directory-Options.html
+        wget_cmd = ["wget", "--no-host-directories", "--cut-dirs=3",  # strip prefix
+                    "--timestamping", "-r", "--level",  "inf", "--no-parent",  # recursive but ignore parents
+                    "--convert-links", "--execute=robots = off",  # ignore robots.txt files, don't download robots.txt files"
+                    "--no-verbose",
+                    ]
+        runCmd(wget_cmd + what, cwd=where)
+
+    def _wget_fetch_dir(self, what, where):
+        if self.wget_via_tmp:
+            with tempfile.TemporaryDirectory(prefix="cheribuild-wget-", dir="/tmp") as td:
+                # Speed things up by using whatever we've got locally, too
+                runCmd("rsync", "-avvP", str(where) + "/.", td + "/.")
+                self._wget_fetch(what, td)
+                runCmd("rsync", "-avvP", "--no-times", "--delete", td + "/.", str(where) + "/.")
+        else:
+            self._wget_fetch(what, where)
+
+
     def prepareRootfs(self, outDir: Path):
         self.manifestFile = outDir / "METALOG"
         originalMetalog = self.rootfsDir / "METALOG"
@@ -223,20 +247,13 @@ class _BuildDiskImageBase(SimpleProject):
             self.makedirs(pkgcache_dir)
             self.makedirs(pkgcache_dir)
             runCmd("find", pkgcache_dir)
-            # https://apple.stackexchange.com/a/100573/251654
-            # https://www.gnu.org/software/wget/manual/html_node/Directory-Options.html
-            wget_cmd = ["wget", "--no-host-directories", "--cut-dirs=3",  # strip prefix
-                        "--timestamping", "-r", "--level",  "inf", "--no-parent",  # recursive but ignore parents
-                        "--convert-links", "--execute=robots = off",  # ignore robots.txt files, don't download robots.txt files"
-                        "--no-verbose",
-                        ]
-            runCmd(wget_cmd + ["--accept", "*.txz", # only download .txz files
-                               "https://people.freebsd.org/~brooks/packages/cheribsd-mips-20170403-brooks-20170609/"],
-                   cwd=pkgcache_dir)
+            self._wget_fetch_dir(["--accept", "*.txz", # only download .txz files
+                            "https://people.freebsd.org/~brooks/packages/cheribsd-mips-20170403-brooks-20170609/"],
+                            pkgcache_dir)
             # fetch old libarchive which is currently needed
             self.makedirs(self.extraFilesDir / "usr/lib")
-            runCmd(wget_cmd + ["https://people.freebsd.org/~arichardson/cheri-files/libarchive.so.6"],
-                   cwd=self.extraFilesDir / "usr/lib")
+            self._wget_fetch(["https://people.freebsd.org/~arichardson/cheri-files/libarchive.so.6"],
+                             self.extraFilesDir / "usr/lib")
 
 
         # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
