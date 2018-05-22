@@ -117,7 +117,9 @@ def run_cheribsd_command(qemu: pexpect.spawn, cmd: str, expected_output=None):
     qemu.sendline(cmd)
     if expected_output:
         qemu.expect(expected_output)
-    qemu.expect(PROMPT)
+    i = qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=60)
+    if i == 0:
+        failure("timeout running ", cmd)
 
 
 def setup_ssh(qemu: pexpect.spawn, pubkey: Path):
@@ -141,7 +143,7 @@ def setup_ssh(qemu: pexpect.spawn, pubkey: Path):
 def set_posix_sh_prompt(child):
     success("===> setting PS1")
     # Make the prompt match PROMPT
-    child.sendline("export PS1=\"{}\"".format("root@\\\\h:~ \\\\$ "))
+    child.sendline("export PS1=\"{}\"".format("root@qemu-test:~ \\\\$ "))
     # No need to eat the echoed command since we end the prompt with \$ (expands to # or $) instead of #
     # Find the prompt
     j = child.expect([pexpect.TIMEOUT, PROMPT], timeout=60)
@@ -315,7 +317,7 @@ def main():
     success("Booting CheriBSD took: ", datetime.datetime.now() - boot_starttime)
 
     tests_okay = True
-    if test_archives:
+    if test_archives or args.test_command:
         # noinspection PyBroadException
         try:
             setup_ssh_starttime = datetime.datetime.now()
