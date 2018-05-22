@@ -48,7 +48,8 @@ STARTING_INIT = b"start_init: trying /sbin/init"
 BOOT_FAILURE = b"Enter full pathname of shell or RETURN for /bin/sh"
 SHELL_OPEN = b"exec /bin/sh"
 LOGIN = b"login:"
-PROMPT = b"root@.+:"
+PROMPT = b"root@.+:.+# "  # /bin/csh
+PROMPT_SH = b"# "  # /bin/sh
 STOPPED = b"Stopped at"
 PANIC = b"panic: trap"
 PANIC_KDB = b"KDB: enter: panic"
@@ -116,7 +117,7 @@ def run_cheribsd_command(qemu: pexpect.spawn, cmd: str, expected_output=None):
     qemu.sendline(cmd)
     if expected_output:
         qemu.expect(expected_output)
-    qemu.expect_exact("# ")
+    qemu.expect(PROMPT)
 
 
 def setup_ssh(qemu: pexpect.spawn, pubkey: Path):
@@ -132,9 +133,21 @@ def setup_ssh(qemu: pexpect.spawn, pubkey: Path):
     i = qemu.expect([pexpect.TIMEOUT, b"service: not found", b"Starting sshd."], timeout=120)
     if i == 0:
         failure("Timed out setting up SSH keys")
-    qemu.expect_exact("# ")
+    qemu.expect(PROMPT)
     time.sleep(2)  # sleep for two seconds to avoid a rejection
     success("===> SSH authorized_keys set up")
+
+
+def set_posix_sh_prompt(child):
+    success("===> setting PS1")
+    # Make the prompt match PROMPT
+    child.sendline("export PS1=\"{}\"".format("root@\\\\h:~ \\\\$ "))
+    # No need to eat the echoed command since we end the prompt with \$ (expands to # or $) instead of #
+    # Find the prompt
+    j = child.expect([pexpect.TIMEOUT, PROMPT], timeout=60)
+    if j == 0:  # timeout
+        failure("timeout after setting command prompt ", str(child))
+    success("===> successfully set PS1")
 
 
 def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: int) -> pexpect.spawn:
@@ -142,6 +155,7 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: i
                  #  ssh forwarding:
                  "-net", "nic", "-net", "user", "-redir", "tcp:" + str(ssh_port) + "::22"]
     success("Starting QEMU: ", qemu_cmd, " ".join(qemu_args))
+    qemu_starttime = datetime.datetime.now()
     child = pexpect.spawn(qemu_cmd, qemu_args, echo=False, timeout=60)
     # child.logfile=sys.stdout.buffer
     child.logfile_read = sys.stdout.buffer
@@ -153,7 +167,8 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: i
             failure("timeout before booted: ", str(child))
         elif i != 1:  # start up scripts failed
             failure("start up scripts failed to run")
-        success("===> init running")
+        userspace_starttime = datetime.datetime.now()
+        success("===> init running (kernel startup time: ", userspace_starttime - qemu_starttime, ")")
 
         i = child.expect([pexpect.TIMEOUT, LOGIN, SHELL_OPEN, BOOT_FAILURE, PANIC, STOPPED], timeout=15 * 60)
         if i == 0:  # Timeout
@@ -161,28 +176,45 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: i
         elif i == 1:
             success("===> got login prompt")
             child.sendline(b"root")
-            i = child.expect([pexpect.TIMEOUT, PROMPT], timeout=60)
-            if i == 0:  # Timeout
-                failure("timeout awaiting command prompt ", str(child))
 
-            success("===> got command prompt, starting POSIX sh")
-            # csh is weird, use the normal POSIX sh instead
-            run_cheribsd_command(child, "sh")
-        elif i == 2:
-            # shell started from /etc/rc:
-            child.expect_exact("#", timeout=30)
+            i = child.expect([pexpect.TIMEOUT, PROMPT, PROMPT_SH],
+                             timeout=3 * 60)  # give CheriABI csh 3 minutes to start
+            if i == 0:  # Timeout
+                failure("timeout awaiting command prompt ")
+            if i == 1:  # /bin/csh prompt
+                success("===> got csh command prompt, starting POSIX sh")
+                # csh is weird, use the normal POSIX sh instead
+                child.sendline("sh")
+                i = child.expect([pexpect.TIMEOUT, PROMPT, PROMPT_SH], timeout=3 * 60) # give CheriABI sh 3 minutes to start
+                if i == 0:  # Timeout
+                    failure("timeout starting /bin/sh")
+                elif i == 1:  # POSIX sh with PS1 set
+                    success("===> started POSIX sh (PS1 already set)")
+                elif i == 2:  # POSIX sh without PS1
+                    success("===> started POSIX sh (PS1 not set)")
+                    set_posix_sh_prompt(child)
+            if i == 2:  # /bin/sh prompt
+                success("===> got /sbin/sh prompt")
+                set_posix_sh_prompt(child)
+        elif i == 2:  # shell started from /etc/rc:
+            child.expect_exact(PROMPT_SH, timeout=30)
             success("===> /etc/rc completed, got command prompt")
             # set up network (bluehive image tries to use atse0)
+            success("===> Setting up QEMU networking")
             child.sendline("ifconfig le0 up && dhclient le0")
             i = child.expect([pexpect.TIMEOUT, b"DHCPACK from 10.0.2.2"], timeout=120)
             if i == 0:  # Timeout
                 failure("timeout awaiting dhclient ", str(child))
+
             i = child.expect([pexpect.TIMEOUT, b"bound to"], timeout=120)
             if i == 0:  # Timeout
                 failure("timeout awaiting dhclient ", str(child))
-            child.expect_exact("#", timeout=30)
+            success("===> le0 bound to QEMU networking")
+            child.expect_exact(PROMPT_SH, timeout=30)
+            set_posix_sh_prompt(child)
         else:
             failure("error during boot login prompt: ", str(child))
+        success("===> booted CheriBSD (userspace startup time: ", datetime.datetime.now() - userspace_starttime, ")")
     except KeyboardInterrupt:
         failure("Keyboard interrupt during boot", exit=False)
     return child
@@ -204,7 +236,7 @@ def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str,
         with tempfile.TemporaryDirectory(dir=os.getcwd(), prefix="test_files_") as tmp:
             run_host_command(["tar", "xJf", str(archive), "-C", tmp])
             scp_str = " ".join(["scp", "-B", "-r", "-P", str(ssh_port), "-o", "StrictHostKeyChecking=no",
-                      "-i", shlex.quote(private_key), ".", "root@localhost:/"])
+                                "-i", shlex.quote(private_key), ".", "root@localhost:/"])
             # use script for a fake tty to get progress output from scp
             scp_cmd = ["script", "--quiet", "--return", "--command", scp_str, "/dev/null"]
             run_host_command(["ls", "-la"], cwd=tmp)
@@ -282,7 +314,6 @@ def main():
     qemu = boot_cheribsd(args.qemu_cmd, kernel, diskimg, args.ssh_port)
     success("Booting CheriBSD took: ", datetime.datetime.now() - boot_starttime)
 
-    # TODO: run the test script here, scp files over, etc.
     tests_okay = True
     if test_archives:
         # noinspection PyBroadException
