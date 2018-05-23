@@ -159,7 +159,7 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: i
     qemu_args = ["-M", "malta", "-kernel", kernel_image, "-hda", disk_image, "-m", "2048", "-nographic",
                  #  ssh forwarding:
                  "-net", "nic", "-net", "user", "-redir", "tcp:" + str(ssh_port) + "::22"]
-    success("Starting QEMU: ", qemu_cmd, " ".join(qemu_args))
+    success("Starting QEMU: ", qemu_cmd, " ", " ".join(qemu_args))
     qemu_starttime = datetime.datetime.now()
     child = pexpect.spawn(qemu_cmd, qemu_args, echo=False, timeout=60)
     # child.logfile=sys.stdout.buffer
