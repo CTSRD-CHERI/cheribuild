@@ -482,7 +482,14 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             return result
 
     def __load_json_with_includes(self, config_path: Path):
-        result = self.__load_json_with_comments(config_path)
+        result = dict()
+        try:
+            result = self.__load_json_with_comments(config_path)
+        except Exception as e:
+            print(coloured(AnsiColour.red, "Could not load config file", config_path, "-", e), file=sys.stderr)
+            if not sys.__stdin__.isatty() or not input("Invalid config file " + str(config_path) +
+                                                       ". Continue? y/[N]").lower().startswith("y"):
+                raise
         include_value = result.get("#include")
         if include_value:
             included_path = config_path.parent / include_value
@@ -497,19 +504,13 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
 
     def _load_json_config_file(self) -> None:
         self._JSON = {}
-        try:
-            if not self._configPath:
-                self._configPath = Path(os.path.expanduser(self._parsedArgs.config_file)).absolute()
-            if self._configPath.exists():
-                self._JSON = self.__load_json_with_includes(self._configPath)
-            else:
-                print(coloured(AnsiColour.green, "Configuration file", self._configPath,
-                               "does not exist, using only command line arguments."), file=sys.stderr)
-        except Exception as e:
-            print(coloured(AnsiColour.red, "Could not load config file", self._configPath, "-", e), file=sys.stderr)
-            if not sys.__stdin__.isatty() or not input("Invalid config file " + str(self._configPath) +
-                                                       ". Continue? y/[N]").lower().startswith("y"):
-                raise
+        if not self._configPath:
+            self._configPath = Path(os.path.expanduser(self._parsedArgs.config_file)).absolute()
+        if self._configPath.exists():
+            self._JSON = self.__load_json_with_includes(self._configPath)
+        else:
+            print(coloured(AnsiColour.green, "Configuration file", self._configPath,
+                           "does not exist, using only command line arguments."), file=sys.stderr)
 
     def load(self):
         if argcomplete and "_ARGCOMPLETE" in os.environ:
