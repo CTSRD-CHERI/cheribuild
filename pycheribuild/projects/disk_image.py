@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import datetime
 import stat
 import tempfile
 
@@ -41,6 +42,15 @@ from ..mtree import MtreeFile
 # Mount the filesystem of a BSD VM: guestmount -a /foo/bar.qcow2 -m /dev/sda1:/:ufstype=ufs2:ufs --ro /mnt/foo
 # ufstype=ufs2 is required as the Linux kernel can't automatically determine which UFS filesystem is being used
 # Same thing is possible with qemu-nbd, but needs root (might be faster)
+
+
+
+PKG_REPO_URL = "https://people.freebsd.org/~brooks/packages/cheribsd-mips-20170403-brooks-20170609/"
+# old version of libarchive needed by kyua
+OLD_LIBARCHIVE_URL = "https://people.freebsd.org/~arichardson/cheri-files/libarchive.so.6"
+# Bump this to redownload all the pkg files
+PKG_REPO_NEEDS_UPDATE = datetime.datetime(day=20, month=5, year=2018)
+
 
 class _BuildDiskImageBase(SimpleProject):
     doNotAddToTargets = True
@@ -178,17 +188,30 @@ class _BuildDiskImageBase(SimpleProject):
             self.createFileForImage(outDir, "/bin/prepare-testsuite.sh", mode=0o755, showContentsByDefault=False,
                                     contents=includeLocalFile("files/cheribsd/prepare-testsuite.sh"))
             # Download all the kyua pkg files from and put them in /var/db/kyua-pkg-cache
-            pkgcache_dir = self.extraFilesDir / "var/db/kyua-pkg-cache"
-            self.makedirs(pkgcache_dir)
-            self.makedirs(pkgcache_dir)
-            runCmd("find", pkgcache_dir)
-            self._wget_fetch_dir(["--accept", "*.txz", # only download .txz files
-                            "https://people.freebsd.org/~brooks/packages/cheribsd-mips-20170403-brooks-20170609/"],
-                            pkgcache_dir)
-            # fetch old libarchive which is currently needed
-            self.makedirs(self.extraFilesDir / "usr/lib")
-            self._wget_fetch(["https://people.freebsd.org/~arichardson/cheri-files/libarchive.so.6"],
-                             self.extraFilesDir / "usr/lib")
+            # But only do that if we really need to update (since the recursive wget is slow)
+
+            download_time_path = (self.extraFilesDir / "var/db/kyua-pkg-cache/.downloaded_time")
+            needs_fresh_download = True
+            if download_time_path.exists():
+                last_downloaded = datetime.datetime.utcfromtimestamp(float(download_time_path.read_text()))
+                self.verbose_print("pkg repo was downloaded", last_downloaded)
+                if last_downloaded > PKG_REPO_NEEDS_UPDATE:
+                    needs_fresh_download = False
+                    statusUpdate("Not fetching pkg repo since download time", last_downloaded,
+                                 "is newer than oldest acceptable download time", PKG_REPO_NEEDS_UPDATE,
+                                 "\nTo force an update delete the file", str(download_time_path))
+
+            if needs_fresh_download:
+                pkgcache_dir = self.extraFilesDir / "var/db/kyua-pkg-cache"
+                self.makedirs(pkgcache_dir)
+                self.makedirs(pkgcache_dir)
+                runCmd("find", pkgcache_dir)
+                self._wget_fetch_dir(["--accept", "*.txz", # only download .txz files
+                                PKG_REPO_URL], pkgcache_dir)
+                # fetch old libarchive which is currently needed
+                self.makedirs(self.extraFilesDir / "usr/lib")
+                self._wget_fetch([OLD_LIBARCHIVE_URL], self.extraFilesDir / "usr/lib")
+                self.writeFile(download_time_path, str(datetime.datetime.utcnow().timestamp()), overwrite=True)
 
         # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
         # If they do not exist in the extra-files directory yet we generate a default one and use that
@@ -408,7 +431,6 @@ def _defaultDiskImagePath(conf: "CheriConfig", cls):
 class BuildCheriBSDDiskImage(_BuildDiskImageBase):
     projectName = "disk-image"
     dependencies = ["qemu", "cheribsd", "gdb-mips"]
-    needs_special_pkg_repo = True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -430,7 +452,10 @@ class BuildCheriBSDDiskImage(_BuildDiskImageBase):
     def __init__(self, config: CheriConfig):
         super().__init__(config, source_class=BuildCHERIBSD)
         self.minimumImageSize = "256m"  # let's try to shrink the image size
-        # TODO: fetch pkg from https://people.freebsd.org/~brooks/packages/cheribsd-mips-20170403-brooks-20170609/
+        # TODO: only fetch pkg from https://people.freebsd.org/~brooks/packages/cheribsd-mips-20170403-brooks-20170609/
+        # if we are building the cheribsd tests?
+        # self.needs_special_pkg_repo = self.source_project.buildTests
+        self.needs_special_pkg_repo = True
 
 
 class _BuildFreeBSDImageBase(_BuildDiskImageBase):
