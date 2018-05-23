@@ -38,6 +38,7 @@ import datetime
 import os
 import pexpect
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -79,24 +80,26 @@ def run_host_command(*args, **kwargs):
     subprocess.check_call(*args, **kwargs)
 
 
-def decompress(archive: Path, force_decompression: bool, *, cmd=None) -> Path:
+def decompress(archive: Path, force_decompression: bool, *, keep_archive=True, cmd=None) -> Path:
     result = archive.with_suffix("")
     if result.exists():
         if not force_decompression:
             return result
         result.unlink()
     info("Extracting", archive)
+    if keep_archive:
+        cmd = cmd + ["-k"]
     run_host_command(cmd + [str(archive)])
     return result
 
 
-def maybe_decompress(path: Path, force_decompression: bool) -> Path:
+def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True) -> Path:
     # drop the suffix and then try decompressing
     def bunzip(archive):
-        return decompress(archive, force_decompression, cmd=["bunzip2", "-k", "-v"])
+        return decompress(archive, force_decompression, cmd=["bunzip2", "-v"], keep_archive=keep_archive)
 
     def unxz(archive):
-        return decompress(archive, force_decompression, cmd=["xz", "-d", "-k", "-v"])
+        return decompress(archive, force_decompression, cmd=["xz", "-d", "-v"], keep_archive=keep_archive)
 
     if path.suffix == ".bz2":
         return bunzip(path)
@@ -231,7 +234,7 @@ def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str,
     run_cheribsd_command(qemu, "mkdir -p /opt && mount -t tmpfs -o size=500m tmpfs /opt")
     run_cheribsd_command(qemu, "mkdir -p /usr/local && mount -t tmpfs -o size=300m tmpfs /usr/local")
     run_cheribsd_command(qemu, "df -h", expected_output="/opt")
-    info("Will transfer the following archives: ", test_archives)
+    info("\nWill transfer the following archives: ", test_archives)
     # strip the .pub from the key file
     private_key = str(Path(ssh_keyfile).with_suffix(""))
     for archive in test_archives:
@@ -272,6 +275,7 @@ def main():
     parser.add_argument("--qemu-cmd", default="qemu-system-cheri")
     parser.add_argument("--kernel", default="/usr/local/share/cheribsd/cheribsd-malta64-kernel")
     parser.add_argument("--disk-image", default="/usr/local/share/cheribsd/cheribsd-full.img")
+    parser.add_argument("--extract-images-to", help="Path where the compressed images should be extracted to")
     parser.add_argument("--reuse-image", action="store_true")
     parser.add_argument("--ssh-key", default=os.path.expanduser("~/.ssh/id_ed25519.pub"))
     parser.add_argument("--ssh-port", type=int, default=12345)
@@ -309,8 +313,21 @@ def main():
             args.test_command = "false"
 
     force_decompression = not args.reuse_image  # type: bool
-    kernel = str(maybe_decompress(Path(args.kernel), force_decompression))
-    diskimg = str(maybe_decompress(Path(args.disk_image), force_decompression))
+    keep_compressed_images = True
+    if args.extract_images_to:
+        os.makedirs(args.extract_images_to, exist_ok=True)
+        new_kernel_path = os.path.join(args.extract_images_to, Path(args.kernel).name)
+        shutil.copy(args.kernel, new_kernel_path)
+        args.kernel = new_kernel_path
+
+        new_image_path = os.path.join(args.extract_images_to, Path(args.disk_image).name)
+        shutil.copy(args.disk_image, new_image_path)
+        args.disk_image = new_image_path
+
+        force_decompression = True
+        keep_compressed_images = False
+    kernel = str(maybe_decompress(Path(args.kernel), force_decompression, keep_archive=keep_compressed_images))
+    diskimg = str(maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images))
 
     boot_starttime = datetime.datetime.now()
     qemu = boot_cheribsd(args.qemu_cmd, kernel, diskimg, args.ssh_port)
