@@ -35,38 +35,12 @@ from .cross.cheribsd import *
 from ..config.loader import ComputedDefaultValue
 from .project import *
 from ..utils import *
+from ..mtree import MtreeFile
 
 # Notes:
 # Mount the filesystem of a BSD VM: guestmount -a /foo/bar.qcow2 -m /dev/sda1:/:ufstype=ufs2:ufs --ro /mnt/foo
 # ufstype=ufs2 is required as the Linux kernel can't automatically determine which UFS filesystem is being used
 # Same thing is possible with qemu-nbd, but needs root (might be faster)
-
-
-class MtreeEntry(object):
-    def __init__(self, path: Path, attributes: "typing.Dict[str, str]"):
-        self.path = path
-        self.attributes = attributes
-
-    @classmethod
-    def parse(cls, line: str) -> "MtreeEntry":
-        elements = shlex.split(line)
-        path = elements[0]
-        attrDict = dict(map(lambda s: s.split(sep="=", maxsplit=1), elements[1:]))
-        return MtreeEntry(path, attrDict)
-        # FIXME: use contents=
-
-    @classmethod
-    def parseAllDirsInMtree(cls, mtreeFile: Path) -> "typing.List[MtreeEntry]":
-        with mtreeFile.open("r", encoding="utf-8") as f:
-            result = []
-            for line in f.readlines():
-                if " type=dir" in line:
-                    try:
-                        result.append(MtreeEntry.parse(line))
-                    except:
-                        warningMessage("Could not parse line", line, "in mtree file", mtreeFile)
-            return result
-
 
 class _BuildDiskImageBase(SimpleProject):
     doNotAddToTargets = True
@@ -106,15 +80,14 @@ class _BuildDiskImageBase(SimpleProject):
 
         self.makefs_cmd = None
         self.install_cmd = None
-        self.dirsAddedToManifest = [Path(".")]  # Path().parents always includes a "." entry
-        source_project = source_class.get_instance(config)
-        assert isinstance(source_project, _BuildFreeBSD)
-        self.rootfsDir = source_project.installDir
+        self.source_project = source_class.get_instance(config)
+        assert isinstance(self.source_project, _BuildFreeBSD)
+        self.rootfsDir = self.source_project.installDir
         assert self.rootfsDir is not None
-        self.userGroupDbDir = source_project.sourceDir / "etc"
-        self.crossBuildImage = source_project.crossbuild
+        self.userGroupDbDir = self.source_project.sourceDir / "etc"
+        self.crossBuildImage = self.source_project.crossbuild
         self.minimumImageSize = "1g",  # minimum image size = 1GB
-        self.dirsInMtree = []
+        self.mtree = MtreeFile()
         if self.needs_special_pkg_repo:
             self._addRequiredSystemTool("wget")  # Needed to recursively fetch the pkg repo
 
@@ -140,46 +113,9 @@ class _BuildDiskImageBase(SimpleProject):
             statusUpdate(file, " -> /", pathInTarget, sep="")
         if mode is None:
             mode = self.getModeString(file)
-        # e.g. "install -N /home/alr48/cheri/cheribsd/etc -U -M /home/alr48/cheri/output/rootfs//METALOG
-        # -D /home/alr48/cheri/output/rootfs -o root -g wheel -m 444 alarm.3.gz
-        # /home/alr48/cheri/output/rootfs/usr/share/man/man3/"
-        commonArgs = [
-            "-N", str(self.userGroupDbDir),  # Use a custom user/group database text file
-            "-U",  # Indicate that install is running unprivileged (do not change uid/gid)
-            "-M", str(self.manifestFile),  # the mtree manifest to write the entry to
-            "-D", str(self.rootfsDir),  # DESTDIR (will be stripped from the start of the mtree file
-            "-o", user, "-g", group,  # uid and gid
-        ]
-        # install -d: Create directories. Missing parent directories are created as required.
-        # If we only create the parent directory if it doesn't exist yet we might break the build if rootfs wasn't
-        # cleaned before running disk-image. We get errors like this:
-        #   makefs: ./root/.ssh: missing directory in specification
-        #   makefs: failed at line 27169 of the specification
 
-        # Add all the parent directories to METALOG
-        # we have to reverse the Path().parents as we need to add usr before usr/share
-        # also remove the last entry from parents as that is always Path(".")
-
-        # remove the last entry (.) from parents
-        dirsToCheck = list(pathInTarget.parents)[:-1]
-        # print("dirs to check:", list(dirsToCheck))
-        for parent in reversed(dirsToCheck):
-            if parent in self.dirsAddedToManifest:
-                # print("Dir", parent, "is has already been added")
-                continue
-            nameInMtree = "./" + str(parent)
-            if any(entry.path == nameInMtree for entry in self.dirsInMtree):
-                # print("Not adding mtree entry for /" + str(parent), ", it is already in original METALOG")
-                self.dirsAddedToManifest.append(parent)
-                continue
-            # print("Adding dir", str(baseDirectory / parent))
-            runCmd([self.install_cmd, "-d"] + commonArgs + ["-m", self.getModeString(baseDirectory / parent),
-                                                     str(self.rootfsDir / parent)], printVerboseOnly=True)
-            self.dirsAddedToManifest.append(parent)
-
-        # need to pass target file and destination dir so that METALOG can be filled correctly
-        parentDir = self.rootfsDir / pathInTarget.parent
-        runCmd([self.install_cmd] + commonArgs + ["-m", mode, str(file), str(parentDir)], printVerboseOnly=True)
+        # This also adds all the parent directories to METALOG
+        self.mtree.add_file(file, pathInTarget, mode=mode, uname=user, gname=group)
         if file in self.extraFiles:
             self.extraFiles.remove(file)  # remove it from extraFiles so we don't install it twice
 
@@ -224,12 +160,11 @@ class _BuildDiskImageBase(SimpleProject):
         else:
             self._wget_fetch(what, where)
 
-
     def prepareRootfs(self, outDir: Path):
         self.manifestFile = outDir / "METALOG"
         originalMetalog = self.rootfsDir / "METALOG"
-        self.installFile(originalMetalog, self.manifestFile)
-        self.dirsInMtree = MtreeEntry.parseAllDirsInMtree(originalMetalog) if originalMetalog.exists() else []
+        if originalMetalog.exists():
+            self.mtree.load(originalMetalog)
 
         # Add the files needed to install kyua (make sure to download before calculating the list of extra files!)
         if self.needs_special_pkg_repo:
@@ -254,7 +189,6 @@ class _BuildDiskImageBase(SimpleProject):
             self.makedirs(self.extraFilesDir / "usr/lib")
             self._wget_fetch(["https://people.freebsd.org/~arichardson/cheri-files/libarchive.so.6"],
                              self.extraFilesDir / "usr/lib")
-
 
         # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
         # If they do not exist in the extra-files directory yet we generate a default one and use that
@@ -334,6 +268,10 @@ class _BuildDiskImageBase(SimpleProject):
             else:
                 fatalError("qemu-img command was not found!", fixitHint="Make sure to build target qemu first")
 
+        # write out the manifest file:
+        self.mtree.write(self.manifestFile)
+        # print(self.manifestFile.read_text())
+
         debug_options = []
         if self.config.verbose:
             debug_options = ["-d", "0x90000"]  # trace POPULATE and WRITE_FILE events
@@ -344,14 +282,16 @@ class _BuildDiskImageBase(SimpleProject):
             "-R", "128m",  # round up size to the next 16m multiple
             "-M", self.minimumImageSize,
             "-B", "be",  # big endian byte order
-            "-F", self.manifestFile,  # use METALOG as the manifest for the disk image
             "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
             # which makes sure that the numeric UID values are correct
             self.diskImagePath,  # output file
-            self.rootfsDir  # directory tree to use for the image
-        ])
+            self.manifestFile,  # use METALOG as the manifest for the disk image
+            # extra directories:
+            # self.rootfsDir  # directory tree to use for the image
+        ], cwd=self.rootfsDir)
+
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
-        if self.config.verbose:
+        if not self.config.quiet:
             runCmd(qemuImgCommand, "info", self.diskImagePath)
         if self.useQCOW2:
             # create a qcow2 version from the raw image:

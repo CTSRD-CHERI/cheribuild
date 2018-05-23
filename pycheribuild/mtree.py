@@ -1,0 +1,171 @@
+#
+# Copyright (c) 2018 Alex Richardson
+# All rights reserved.
+#
+# This software was developed by SRI International and the University of
+# Cambridge Computer Laboratory under DARPA/AFRL contract FA8750-10-C-0237
+# ("CTSRD"), as part of the DARPA CRASH research programme.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+
+from .utils import *
+from pathlib import Path
+from collections import OrderedDict
+import os
+import shlex
+import sys
+
+class MtreeEntry(object):
+    def __init__(self, path: str, attributes: "typing.Dict[str, str]"):
+        self.path = path
+        self.attributes = attributes
+
+    def is_dir(self):
+        return self.attributes.get("type") == "dir"
+
+    def is_file(self):
+        return self.attributes.get("type") == "file"
+
+    @classmethod
+    def parse(cls, line: str) -> "MtreeEntry":
+        elements = shlex.split(line)
+        path = elements[0]
+        attrDict = dict()
+        for k,v in map(lambda s: s.split(sep="=", maxsplit=1), elements[1:]):
+            # ignore some tags that makefs doesn't like
+            # sometimes there will be time with nanoseconds in the manifest, makefs can't handle that
+            # also the tags= key is not supported
+            if k in ("tags", "time"):
+                continue
+            attrDict[k] = v
+        return MtreeEntry(path, attrDict)
+        # FIXME: use contents=
+
+    @classmethod
+    def parseAllDirsInMtree(cls, mtreeFile: Path) -> "typing.List[MtreeEntry]":
+        with mtreeFile.open("r", encoding="utf-8") as f:
+            result = []
+            for line in f.readlines():
+                if " type=dir" in line:
+                    try:
+                        result.append(MtreeEntry.parse(line))
+                    except Exception:
+                        warningMessage("Could not parse line", line, "in mtree file", mtreeFile)
+            return result
+
+    def __str__(self):
+        return self.path + " " + " ".join(k + "=" + v for k, v in self.attributes.items())
+
+    def __repr__(self):
+        return "<MTREE entry: " + str(self) + ">"
+
+class MtreeFile(object):
+    def __init__(self, file: "typing.IO"=None):
+        self._mtree = OrderedDict() # type: typing.Dict[str, MtreeEntry]
+        if file:
+            self.load(file)
+
+    def load(self, file: "typing.IO"):
+        if isinstance(file, Path):
+            with file.open("r") as f:
+                self.load(f)
+                return
+        self._mtree.clear()
+        for line in file.readlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            try:
+                entry = MtreeEntry.parse(line)
+                key = str(entry.path)
+                if key in self._mtree:
+                    warningMessage("Found duplicate definition for", entry.path)
+                self._mtree[key] = entry
+            except Exception:
+                warningMessage("Could not parse line", line, "in mtree file", file)
+
+    @staticmethod
+    def _ensure_mtree_mode_fmt(mode: "typing.Union[str, int]") -> str:
+        if not isinstance(mode, str):
+            mode = "0" + oct(mode)[2:]
+        assert mode.startswith("0")
+        return mode
+
+    @staticmethod
+    def _ensure_mtree_path_fmt(path: str) -> str:
+        # The path in mtree always starts with ./
+        assert not path.endswith("/")
+        mtree_path = path
+        if mtree_path != ".":
+            mtree_path = "./" + path
+        return mtree_path
+
+    def add_file(self, file: Path, path_in_image, mode=0o755, uname="root", gname="wheel"):
+        if isinstance(path_in_image, Path):
+            path_in_image = str(path_in_image)
+        assert not path_in_image.startswith("/")
+        assert not path_in_image.startswith(".")
+        mode = self._ensure_mtree_mode_fmt(mode)
+        mtree_path = self._ensure_mtree_path_fmt(path_in_image)
+        assert mtree_path != ".", "files should not have name ."
+        self.add_dir(str(Path(path_in_image).parent), mode=mode, uname=uname, gname=gname)
+        # now add the actual entry (with contents=/path/to/file)
+        contents_path = str(file.absolute())
+        assert shlex.quote(contents_path) == contents_path, "Invalid special chars: " + contents_path
+        attribs = OrderedDict([("type", "file"), ("uname", uname), ("gname", gname), ("mode", mode),
+                               ("contents", contents_path)])
+        statusUpdate("Adding file", file, "to mtree as", mtree_path, file=sys.stderr)
+        self._mtree[mtree_path] = MtreeEntry(mtree_path, attribs)
+
+    def add_dir(self, path, mode=0o755, uname="root", gname="wheel"):
+        assert not path.startswith("/"), path
+        path = path.rstrip("/")  # remove trailing slashes
+        mtree_path = self._ensure_mtree_path_fmt(path)
+        if mtree_path in self._mtree:
+            return
+        mode = self._ensure_mtree_mode_fmt(mode)
+        # recursively add all parent dirs that don't exist yet
+        parent = str(Path(path).parent)
+        if parent != path:  # avoid recursion for path == "."
+            # print("adding parent", parent, file=sys.stderr)
+            self.add_dir(parent, mode, uname, gname)
+        # now add the actual entry
+        attribs = OrderedDict([("type", "dir"), ("uname", uname), ("gname", gname), ("mode", mode)])
+        statusUpdate("Adding dir", path, "to mtree", file=sys.stderr)
+        self._mtree[mtree_path] = MtreeEntry(mtree_path, attribs)
+
+    def __repr__(self):
+        import pprint
+        return "<MTREE: " + pprint.pformat(self._mtree) + ">"
+
+    def write(self, output: "typing.IO"):
+        if isinstance(output, Path):
+            with output.open("w") as f:
+                self.write(f)
+                return
+        output.write("#mtree 2.0\n")
+        for path in sorted(self._mtree.keys()):
+            output.write(str(self._mtree[path]))
+            output.write("\n")
+        output.write("# END\n")
+

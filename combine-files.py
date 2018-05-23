@@ -112,6 +112,7 @@ def checkAllFilesUsed(directory: Path):
 # append all the individual files in the right order
 addFilteredFile(scriptDir / "colour.py")
 addFilteredFile(scriptDir / "utils.py")
+addFilteredFile(scriptDir / "mtree.py")
 addFilteredFile(scriptDir / "config/loader.py")
 addFilteredFile(scriptDir / "config/chericonfig.py")
 addFilteredFile(scriptDir / "config/defaultconfig.py")
