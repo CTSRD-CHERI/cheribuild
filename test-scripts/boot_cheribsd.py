@@ -277,6 +277,8 @@ def main():
     parser.add_argument("--disk-image", default="/usr/local/share/cheribsd/cheribsd-full.img")
     parser.add_argument("--extract-images-to", help="Path where the compressed images should be extracted to")
     parser.add_argument("--reuse-image", action="store_true")
+    parser.add_argument("--keep-compressed-images", action="store_true", default=True, dest="keep_compressed_images")
+    parser.add_argument("--no-keep-compressed-images", action="store_false", dest="keep_compressed_images")
     parser.add_argument("--ssh-key", default=os.path.expanduser("~/.ssh/id_ed25519.pub"))
     parser.add_argument("--ssh-port", type=int, default=12345)
     parser.add_argument("--test-archive", "-t", action="append", nargs=1)
@@ -313,7 +315,7 @@ def main():
             args.test_command = "false"
 
     force_decompression = not args.reuse_image  # type: bool
-    keep_compressed_images = True
+    keep_compressed_images = args.keep_compressed_images
     if args.extract_images_to:
         os.makedirs(args.extract_images_to, exist_ok=True)
         new_kernel_path = os.path.join(args.extract_images_to, Path(args.kernel).name)
