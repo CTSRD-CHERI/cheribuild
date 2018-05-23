@@ -84,6 +84,7 @@ class _BuildFreeBSD(Project):
     baremetal = True  # We are building the full OS so we don't need a sysroot
     # Only CheriBSD can target CHERI, upstream FreeBSD won't work
     supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
+    _crossCompileTarget = None
 
     defaultExtraMakeOptions = [
         # "-DWITHOUT_HTML",  # should not be needed
@@ -337,6 +338,9 @@ class _BuildFreeBSD(Project):
     def kernelMakeArgsForConfig(self, kernconf: str) -> MakeOptions:
         kernel_options = self.make_args.copy()
         kernel_options.set_with_options(AUTO_OBJ=False)  # TODO: remove this
+        if self._crossCompileTarget != CrossCompileTarget.NATIVE:
+            # Don't build kernel modules for MIPS
+            kernel_options.set(NO_MODULES="yes")
         if self.useExternalToolchainForKernel:
             if not self.externalToolchainCompiler.exists():
                 fatalError("Requested build of kernel with external toolchain, but", self.externalToolchainCompiler,
