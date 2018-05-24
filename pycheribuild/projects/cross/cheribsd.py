@@ -856,7 +856,7 @@ class BuildCHERIBSD(_BuildFreeBSD):
                 prefix = "INVALID_KERNCONF_"
                 fatalError("Invalid CHERI BITS")
             # TODO: build the benchmark kernels? TODO: remove the MDROOT option?
-            for conf in ("USBROOT", "SDROOT", "NFSROOT", "MDROOT"):
+            for conf in ("USBROOT", "NFSROOT", "MDROOT", "USBROOT_BENCHMARK", "MDROOT_BENCHMARK"):
                 self.extra_kernels.append(prefix + conf)
             if self.mfs_root_image:
                 self.extra_kernels_with_mfs.append(prefix + "MFS_ROOT")
