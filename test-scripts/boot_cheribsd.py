@@ -45,15 +45,15 @@ import time
 import tempfile
 from pathlib import Path
 
-STARTING_INIT = b"start_init: trying /sbin/init"
-BOOT_FAILURE = b"Enter full pathname of shell or RETURN for /bin/sh"
-SHELL_OPEN = b"exec /bin/sh"
-LOGIN = b"login:"
-PROMPT = b"root@.+:.+# "  # /bin/csh
-PROMPT_SH = b"# "  # /bin/sh
-STOPPED = b"Stopped at"
-PANIC = b"panic: trap"
-PANIC_KDB = b"KDB: enter: panic"
+STARTING_INIT = "start_init: trying /sbin/init"
+BOOT_FAILURE = "Enter full pathname of shell or RETURN for /bin/sh"
+SHELL_OPEN = "exec /bin/sh"
+LOGIN = "login:"
+PROMPT = "root@.+:.+# "  # /bin/csh
+PROMPT_SH = "# "  # /bin/sh
+STOPPED = "Stopped at"
+PANIC = "panic: trap"
+PANIC_KDB = "KDB: enter: panic"
 
 
 def info(*args, **kwargs):
@@ -135,7 +135,7 @@ def setup_ssh(qemu: pexpect.spawn, pubkey: Path):
     run_cheribsd_command(qemu, "cat /root/.ssh/authorized_keys", expected_output="ssh-")
     run_cheribsd_command(qemu, "grep -n PermitRootLogin /etc/ssh/sshd_config")
     qemu.sendline("service sshd restart")
-    i = qemu.expect([pexpect.TIMEOUT, b"service: not found", b"Starting sshd."], timeout=120)
+    i = qemu.expect([pexpect.TIMEOUT, "service: not found", "Starting sshd."], timeout=120)
     if i == 0:
         failure("Timed out setting up SSH keys")
     qemu.expect(PROMPT)
@@ -155,15 +155,19 @@ def set_posix_sh_prompt(child):
     success("===> successfully set PS1")
 
 
-def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: int) -> pexpect.spawn:
+def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: int, *, smb_dir: str=None) -> pexpect.spawn:
+    user_network_args = "user,id=net0,ipv6=off"
+    if smb_dir:
+        user_network_args += ",smb=" + smb_dir
+    user_network_args += ",hostfwd=tcp::" + str(ssh_port) + "-:22"
     qemu_args = ["-M", "malta", "-kernel", kernel_image, "-hda", disk_image, "-m", "2048", "-nographic",
                  #  ssh forwarding:
-                 "-net", "nic", "-net", "user", "-redir", "tcp:" + str(ssh_port) + "::22"]
+                 "-net", "nic", "-net", user_network_args]
     success("Starting QEMU: ", qemu_cmd, " ", " ".join(qemu_args))
     qemu_starttime = datetime.datetime.now()
-    child = pexpect.spawn(qemu_cmd, qemu_args, echo=False, timeout=60)
+    child = pexpect.spawnu(qemu_cmd, qemu_args, echo=False, timeout=60)
     # child.logfile=sys.stdout.buffer
-    child.logfile_read = sys.stdout.buffer
+    child.logfile_read = sys.stdout
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
@@ -180,7 +184,7 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: i
             failure("timeout awaiting login prompt: ", str(child))
         elif i == 1:
             success("===> got login prompt")
-            child.sendline(b"root")
+            child.sendline("root")
 
             i = child.expect([pexpect.TIMEOUT, PROMPT, PROMPT_SH],
                              timeout=3 * 60)  # give CheriABI csh 3 minutes to start
@@ -207,11 +211,11 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: i
             # set up network (bluehive image tries to use atse0)
             success("===> Setting up QEMU networking")
             child.sendline("ifconfig le0 up && dhclient le0")
-            i = child.expect([pexpect.TIMEOUT, b"DHCPACK from 10.0.2.2"], timeout=120)
+            i = child.expect([pexpect.TIMEOUT, "DHCPACK from 10.0.2.2"], timeout=120)
             if i == 0:  # Timeout
                 failure("timeout awaiting dhclient ", str(child))
 
-            i = child.expect([pexpect.TIMEOUT, b"bound to"], timeout=120)
+            i = child.expect([pexpect.TIMEOUT, "bound to"], timeout=120)
             if i == 0:  # Timeout
                 failure("timeout awaiting dhclient ", str(child))
             success("===> le0 bound to QEMU networking")
@@ -240,10 +244,12 @@ def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str,
     for archive in test_archives:
         with tempfile.TemporaryDirectory(dir=os.getcwd(), prefix="test_files_") as tmp:
             run_host_command(["tar", "xJf", str(archive), "-C", tmp])
-            scp_str = " ".join(["scp", "-B", "-r", "-P", str(ssh_port), "-o", "StrictHostKeyChecking=no",
-                                "-i", shlex.quote(private_key), ".", "root@localhost:/"])
+            scp_cmd = ["scp", "-B", "-r", "-P", str(ssh_port), "-o", "StrictHostKeyChecking=no",
+                       "-o", "UserKnownHostsFile=/dev/null",
+                       "-i", shlex.quote(private_key), ".", "root@localhost:/"]
             # use script for a fake tty to get progress output from scp
-            scp_cmd = ["script", "--quiet", "--return", "--command", scp_str, "/dev/null"]
+            if sys.platform.startswith("linux"):
+                scp_cmd = ["script", "--quiet", "--return", "--command", " ".join(scp_cmd), "/dev/null"]
             run_host_command(["ls", "-la"], cwd=tmp)
             run_host_command(scp_cmd, cwd=tmp)
 
@@ -256,7 +262,7 @@ def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str,
     # Run the tests
     qemu.sendline(test_command +
                   " ;if test $? -eq 0; then echo 'TESTS' 'COMPLETED'; else echo 'TESTS' 'FAILED'; fi")
-    i = qemu.expect([pexpect.TIMEOUT, b'TESTS COMPLETED', b'TESTS FAILED', PANIC, STOPPED], timeout=timeout)
+    i = qemu.expect([pexpect.TIMEOUT, "TESTS COMPLETED", "TESTS FAILED", PANIC, STOPPED], timeout=timeout)
     testtime = datetime.datetime.now() - run_tests_starttime
     if i == 0:  # Timeout
         return failure("timeout after", testtime, "waiting for tests: ", str(qemu), exit=False)
@@ -281,6 +287,8 @@ def main():
     parser.add_argument("--no-keep-compressed-images", action="store_false", dest="keep_compressed_images")
     parser.add_argument("--ssh-key", default=os.path.expanduser("~/.ssh/id_ed25519.pub"))
     parser.add_argument("--ssh-port", type=int, default=12345)
+    parser.add_argument("--copy-archives-with-smb", action="store_true")
+    parser.add_argument("--smb-mount-directory", help="directory used for sharing data with the QEMU guest via smb")
     parser.add_argument("--test-archive", "-t", action="append", nargs=1)
     parser.add_argument("--test-command", "-c")
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60)
@@ -332,7 +340,7 @@ def main():
     diskimg = str(maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images))
 
     boot_starttime = datetime.datetime.now()
-    qemu = boot_cheribsd(args.qemu_cmd, kernel, diskimg, args.ssh_port)
+    qemu = boot_cheribsd(args.qemu_cmd, kernel, diskimg, args.ssh_port, smb_dir=args.smb_mount_directory)
     success("Booting CheriBSD took: ", datetime.datetime.now() - boot_starttime)
 
     tests_okay = True
