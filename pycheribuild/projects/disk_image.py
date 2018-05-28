@@ -225,7 +225,7 @@ class _BuildDiskImageBase(SimpleProject):
                 for filename in filenames:
                     self.extraFiles.append(Path(root, filename))
 
-        for root, dirnames, filenames in os.walk(Path(self.rootfsDir,"usr/local")):
+        for root, dirnames, filenames in os.walk(str(Path(self.rootfsDir,"usr/local"))):
             for filename in filenames:
                 fp = Path(root,filename)
                 tp = fp.relative_to(self.rootfsDir)
