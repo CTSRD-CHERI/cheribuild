@@ -387,11 +387,17 @@ class _BuildDiskImageBase(SimpleProject):
                     full_path = Path(root, filename)
                     target_path = os.path.relpath(str(full_path), rootfs_str)
                     if target_path.startswith("usr/local/") or target_path.startswith("opt/") or target_path.startswith("extra/"):
-                        self.mtree.add_file(full_path, target_path, mode=full_path.stat().st_mode,
-                                            print_status=self.config.verbose)
+                        self.mtree.add_file(full_path, target_path, print_status=self.config.verbose)
                     elif target_path not in self.mtree:
-                        unlisted_files.append((full_path, target_path))
-            print("UNLISTED FILES:", unlisted_files)
+                        if target_path != "METALOG":  # METALOG is not added to METALOG
+                            unlisted_files.append((full_path, target_path))
+            if unlisted_files:
+                print("Found the following files in the rootfs that are not listed in METALOG:")
+                for i in unlisted_files:
+                    print("\t", i[1])
+                if self.queryYesNo("Should these files also be added to the image?", defaultResult=True, forceResult=True):
+                    for i in unlisted_files:
+                        self.mtree.add_file(i[0], i[1], print_status=self.config.verbose)
 
             # finally create the disk image
             self.makeImage()
