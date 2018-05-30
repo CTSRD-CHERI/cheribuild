@@ -120,11 +120,11 @@ class MtreeFile(object):
             mtree_path = "./" + path
         return mtree_path
 
-    def add_file(self, file: Path, path_in_image, mode=0o755, uname="root", gname="wheel"):
+    def add_file(self, file: Path, path_in_image, mode=0o755, uname="root", gname="wheel", print_status=True):
         if isinstance(path_in_image, Path):
             path_in_image = str(path_in_image)
         assert not path_in_image.startswith("/")
-        assert not path_in_image.startswith(".")
+        assert not path_in_image.startswith("./") and not path_in_image.startswith("..")
         mode = self._ensure_mtree_mode_fmt(mode)
         mtree_path = self._ensure_mtree_path_fmt(path_in_image)
         assert mtree_path != ".", "files should not have name ."
@@ -134,10 +134,11 @@ class MtreeFile(object):
         assert shlex.quote(contents_path) == contents_path, "Invalid special chars: " + contents_path
         attribs = OrderedDict([("type", "file"), ("uname", uname), ("gname", gname), ("mode", mode),
                                ("contents", contents_path)])
-        statusUpdate("Adding file", file, "to mtree as", mtree_path, file=sys.stderr)
+        if print_status:
+            statusUpdate("Adding file", file, "to mtree as", mtree_path, file=sys.stderr)
         self._mtree[mtree_path] = MtreeEntry(mtree_path, attribs)
 
-    def add_dir(self, path, mode=0o755, uname="root", gname="wheel"):
+    def add_dir(self, path, mode=0o755, uname="root", gname="wheel", print_status=True):
         assert not path.startswith("/"), path
         path = path.rstrip("/")  # remove trailing slashes
         mtree_path = self._ensure_mtree_path_fmt(path)
@@ -151,8 +152,13 @@ class MtreeFile(object):
             self.add_dir(parent, mode, uname, gname)
         # now add the actual entry
         attribs = OrderedDict([("type", "dir"), ("uname", uname), ("gname", gname), ("mode", mode)])
-        statusUpdate("Adding dir", path, "to mtree", file=sys.stderr)
+        if print_status:
+            statusUpdate("Adding dir", path, "to mtree", file=sys.stderr)
         self._mtree[mtree_path] = MtreeEntry(mtree_path, attribs)
+
+    def __contains__(self, item):
+        mtree_path = self._ensure_mtree_path_fmt(str(item))
+        return mtree_path in self._mtree
 
     def __repr__(self):
         import pprint

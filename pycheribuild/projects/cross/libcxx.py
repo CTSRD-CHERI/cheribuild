@@ -38,8 +38,8 @@ from ...utils import OSInfo, statusUpdate, runCmd, warningMessage
 import os
 
 installToCXXDir = ComputedDefaultValue(
-    function=lambda config, project: BuildCHERIBSD.rootfsDir(config) / "extra/c++",
-    asString="$CHERIBSD_ROOTFS/extra/c++")
+    function=lambda config, project: BuildCHERIBSD.rootfsDir(config) / "opt/c++",
+    asString="$CHERIBSD_ROOTFS/opt/c++")
 
 
 class BuildLibunwind(CrossCompileCMakeProject):

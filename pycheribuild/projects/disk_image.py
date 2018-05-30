@@ -225,12 +225,6 @@ class _BuildDiskImageBase(SimpleProject):
                 for filename in filenames:
                     self.extraFiles.append(Path(root, filename))
 
-        for root, dirnames, filenames in os.walk(str(Path(self.rootfsDir,"usr/local"))):
-            for filename in filenames:
-                fp = Path(root,filename)
-                tp = fp.relative_to(self.rootfsDir)
-                self.mtree.add_file(fp, tp)
-
         # TODO: https://www.freebsd.org/cgi/man.cgi?mount_unionfs(8) should make this easier
         # Overlay extra-files over additional stuff over cheribsd rootfs dir
 
@@ -401,6 +395,16 @@ class _BuildDiskImageBase(SimpleProject):
                 pathInImage = p.relative_to(self.extraFilesDir)
                 self.print("Adding user provided file /", pathInImage, " to disk image.", sep="")
                 self.addFileToImage(p, baseDirectory=self.extraFilesDir)
+
+            # then walk the rootfs to see if any additional files should be added:
+            rootfs_str = str(self.rootfsDir)  # compat with python < 3.6
+            for root, dirnames, filenames in os.walk(rootfs_str):
+                for filename in filenames:
+                    fp = Path(root, filename)
+                    tp = os.path.relpath(str(fp), rootfs_str)
+                    if tp.startswith("usr/local/") or tp.startswith("opt/") or tp.startswith("extra/"):
+                        self.mtree.add_file(fp, tp, mode=fp.stat().st_mode, print_status=self.config.verbose)
+
             # finally create the disk image
             self.makeImage()
 

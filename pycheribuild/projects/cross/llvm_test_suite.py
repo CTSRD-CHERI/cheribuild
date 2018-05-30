@@ -35,14 +35,9 @@ from ...config.loader import ComputedDefaultValue
 from ...utils import statusUpdate
 from pathlib import Path
 
-installToCXXDir = ComputedDefaultValue(
-    function=lambda config, project: BuildCHERIBSD.rootfsDir(config) / "extra/c++",
-    asString="$CHERIBSD_ROOTFS/extra/c++")
-
 
 class BuildLLVMTestSuite(CrossCompileCMakeProject):
     repository = "https://github.com/CTSRD-CHERI/llvm-test-suite.git"
-    defaultInstallDir = installToCXXDir
     dependencies = ["llvm"]
     defaultCMakeBuildType = "Debug"
     projectName = "llvm-test-suite"

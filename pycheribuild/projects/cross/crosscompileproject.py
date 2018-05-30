@@ -47,7 +47,7 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
 
 def _installDirMessage(project: "CrossCompileProject"):
     if project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
-        return "$CHERIBSD_ROOTFS/extra/" + project.projectName.lower() + " or $CHERI_SDK for --xhost build"
+        return "$CHERIBSD_ROOTFS/opt/$TARGET/" + project.projectName.lower() + " or $CHERI_SDK for --xhost build"
     elif project.crossInstallDir == CrossInstallDir.SDK:
         return "$CHERI_SDK/sysroot for cross builds or $CHERI_SDK for --xhost build"
     return "UNKNOWN"
