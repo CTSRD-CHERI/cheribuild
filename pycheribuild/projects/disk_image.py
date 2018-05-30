@@ -380,13 +380,18 @@ class _BuildDiskImageBase(SimpleProject):
                 self.addFileToImage(p, baseDirectory=self.extraFilesDir)
 
             # then walk the rootfs to see if any additional files should be added:
+            unlisted_files = []
             rootfs_str = str(self.rootfsDir)  # compat with python < 3.6
             for root, dirnames, filenames in os.walk(rootfs_str):
                 for filename in filenames:
-                    fp = Path(root, filename)
-                    tp = os.path.relpath(str(fp), rootfs_str)
-                    if tp.startswith("usr/local/") or tp.startswith("opt/") or tp.startswith("extra/"):
-                        self.mtree.add_file(fp, tp, mode=fp.stat().st_mode, print_status=self.config.verbose)
+                    full_path = Path(root, filename)
+                    target_path = os.path.relpath(str(full_path), rootfs_str)
+                    if target_path.startswith("usr/local/") or target_path.startswith("opt/") or target_path.startswith("extra/"):
+                        self.mtree.add_file(full_path, target_path, mode=full_path.stat().st_mode,
+                                            print_status=self.config.verbose)
+                    elif target_path not in self.mtree:
+                        unlisted_files.append((full_path, target_path))
+            print("UNLISTED FILES:", unlisted_files)
 
             # finally create the disk image
             self.makeImage()
