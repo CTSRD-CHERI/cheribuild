@@ -131,7 +131,6 @@ class MtreeFile(object):
             warningMessage("Failed to stat", path, "assuming mode",  default, e)
             result = default
         # make sure that the .ssh config files are installed with the right permissions
-        print(path.name, path.parent.name)
         if path.name == ".ssh" and result != "0700":
             warningMessage("Wrong file mode", result, "for", path, " --  it should be 0700, fixing it for image")
             return "0700"
