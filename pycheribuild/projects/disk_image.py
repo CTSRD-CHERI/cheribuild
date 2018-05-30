@@ -101,28 +101,11 @@ class _BuildDiskImageBase(SimpleProject):
         if self.needs_special_pkg_repo:
             self._addRequiredSystemTool("wget")  # Needed to recursively fetch the pkg repo
 
-    def getModeString(self, path: Path):
-        try:
-            self.verbose_print(path, path.stat())
-            result = "0{0:o}".format(stat.S_IMODE(path.stat().st_mode))  # format as octal with leading 0 prefix
-        except Exception as e:
-            warningMessage("Failed to stat", path, "assuming mode 0644: ", e)
-            result = "0644"
-        # make sure that the .ssh config files are installed with the right permissions
-        if path.name == ".ssh" and result != "0700":
-            warningMessage("Wrong file mode", result, "for", path, " --  it should be 0700, fixing it for image")
-            return "0700"
-        if path.parent.name == ".ssh" and not path.name.endswith(".pub") and result != "0600" :
-            warningMessage("Wrong file mode", result, "for", path, " --  it should be 0600, fixing it for image")
-        return result
-
     def addFileToImage(self, file: Path, *, baseDirectory: Path, user="root", group="wheel", mode=None):
         pathInTarget = file.relative_to(baseDirectory)
         assert not str(pathInTarget).startswith(".."), pathInTarget
         if not self.config.quiet:
             statusUpdate(file, " -> /", pathInTarget, sep="")
-        if mode is None:
-            mode = self.getModeString(file)
 
         # This also adds all the parent directories to METALOG
         self.mtree.add_file(file, pathInTarget, mode=mode, uname=user, gname=group)

@@ -33,6 +33,7 @@ from pathlib import Path
 from collections import OrderedDict
 import os
 import shlex
+import stat
 import sys
 
 class MtreeEntry(object):
@@ -79,9 +80,10 @@ class MtreeEntry(object):
     def __repr__(self):
         return "<MTREE entry: " + str(self) + ">"
 
+
 class MtreeFile(object):
     def __init__(self, file: "typing.IO"=None):
-        self._mtree = OrderedDict() # type: typing.Dict[str, MtreeEntry]
+        self._mtree = OrderedDict()  # type: typing.Dict[str, MtreeEntry]
         if file:
             self.load(file)
 
@@ -120,15 +122,37 @@ class MtreeFile(object):
             mtree_path = "./" + path
         return mtree_path
 
-    def add_file(self, file: Path, path_in_image, mode=0o755, uname="root", gname="wheel", print_status=True):
+    @staticmethod
+    def infer_mode_string(path: Path, should_be_dir):
+        try:
+            result = "0{0:o}".format(stat.S_IMODE(path.lstat().st_mode))  # format as octal with leading 0 prefix
+        except IOError as e:
+            default = "0755" if should_be_dir else "0644"
+            warningMessage("Failed to stat", path, "assuming mode",  default, e)
+            result = default
+        # make sure that the .ssh config files are installed with the right permissions
+        print(path.name, path.parent.name)
+        if path.name == ".ssh" and result != "0700":
+            warningMessage("Wrong file mode", result, "for", path, " --  it should be 0700, fixing it for image")
+            return "0700"
+        if path.parent.name == ".ssh" and not path.name.endswith(".pub") and result != "0600":
+            warningMessage("Wrong file mode", result, "for", path, " --  it should be 0600, fixing it for image")
+            return "0600"
+        return result
+
+    def add_file(self, file: Path, path_in_image, mode=None, uname="root", gname="wheel", print_status=True,
+                 parent_dir_mode=None):
         if isinstance(path_in_image, Path):
             path_in_image = str(path_in_image)
         assert not path_in_image.startswith("/")
         assert not path_in_image.startswith("./") and not path_in_image.startswith("..")
+        if mode is None:
+            mode = self.infer_mode_string(file, False)
         mode = self._ensure_mtree_mode_fmt(mode)
         mtree_path = self._ensure_mtree_path_fmt(path_in_image)
         assert mtree_path != ".", "files should not have name ."
-        self.add_dir(str(Path(path_in_image).parent), mode=mode, uname=uname, gname=gname)
+        self.add_dir(str(Path(path_in_image).parent), mode=parent_dir_mode, uname=uname, gname=gname,
+                     reference_dir=file.parent)
         if file.is_symlink():
             mtree_type = "link"
             last_attrib = ("link", os.readlink(str(file)))
@@ -143,18 +167,28 @@ class MtreeFile(object):
             statusUpdate("Adding file", file, "to mtree as", mtree_path, file=sys.stderr)
         self._mtree[mtree_path] = MtreeEntry(mtree_path, attribs)
 
-    def add_dir(self, path, mode=0o755, uname="root", gname="wheel", print_status=True):
+    def add_dir(self, path, mode=None, uname="root", gname="wheel", print_status=True, reference_dir=None):
         assert not path.startswith("/"), path
         path = path.rstrip("/")  # remove trailing slashes
         mtree_path = self._ensure_mtree_path_fmt(path)
         if mtree_path in self._mtree:
             return
+        if mode is None:
+            if reference_dir is None or mtree_path == ".":
+                mode = "0755"
+            else:
+                if print_status:
+                    statusUpdate("Inferring permissions for", path, "from", reference_dir, file=sys.stderr)
+                mode = self.infer_mode_string(reference_dir, True)
         mode = self._ensure_mtree_mode_fmt(mode)
         # recursively add all parent dirs that don't exist yet
         parent = str(Path(path).parent)
         if parent != path:  # avoid recursion for path == "."
             # print("adding parent", parent, file=sys.stderr)
-            self.add_dir(parent, mode, uname, gname)
+            if reference_dir is not None:
+                self.add_dir(parent, None, uname, gname, print_status=print_status, reference_dir=reference_dir.parent)
+            else:
+                self.add_dir(parent, mode, uname, gname, print_status=print_status, reference_dir=None)
         # now add the actual entry
         attribs = OrderedDict([("type", "dir"), ("uname", uname), ("gname", gname), ("mode", mode)])
         if print_status:
