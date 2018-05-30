@@ -129,11 +129,16 @@ class MtreeFile(object):
         mtree_path = self._ensure_mtree_path_fmt(path_in_image)
         assert mtree_path != ".", "files should not have name ."
         self.add_dir(str(Path(path_in_image).parent), mode=mode, uname=uname, gname=gname)
-        # now add the actual entry (with contents=/path/to/file)
-        contents_path = str(file.absolute())
-        assert shlex.quote(contents_path) == contents_path, "Invalid special chars: " + contents_path
-        attribs = OrderedDict([("type", "file"), ("uname", uname), ("gname", gname), ("mode", mode),
-                               ("contents", contents_path)])
+        if file.is_symlink():
+            mtree_type = "link"
+            last_attrib = ("link", os.readlink(str(file)))
+        else:
+            mtree_type = "file"
+            # now add the actual entry (with contents=/path/to/file)
+            contents_path = str(file.absolute())
+            assert shlex.quote(contents_path) == contents_path, "Invalid special chars: " + contents_path
+            last_attrib = ("contents", contents_path)
+        attribs = OrderedDict([("type", mtree_type), ("uname", uname), ("gname", gname), ("mode", mode), last_attrib])
         if print_status:
             statusUpdate("Adding file", file, "to mtree as", mtree_path, file=sys.stderr)
         self._mtree[mtree_path] = MtreeEntry(mtree_path, attribs)
