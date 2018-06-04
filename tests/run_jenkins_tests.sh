@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-pytest_binary="pytest"
-pytest_installed="no"
+pytest_binary="python3 -m pytest"
+pytest_installed="yes"
 
 if [[ "$1" = "3.4.0" ]]; then
     test_prefix="3.4.0"
@@ -13,8 +13,6 @@ elif [[ "$1" = "rc" ]]; then
     test_prefix="rc"
 elif [[ "$1" = "ubuntu" ]]; then
     test_prefix="ubuntu"
-    pytest_binary="py.test-3"
-    pytest_installed="yes"
 else
     echo "INVALID TARGET $1"
     exit 1

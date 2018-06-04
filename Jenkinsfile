@@ -7,12 +7,9 @@ pipeline {
   stages {
    stage('Test Python 3.4') {
       agent {
-        docker {
-          reuseNode true
-          image 'python:3.4'
-          args '-u 0'
+        dockerfile {
+          filename 'src/tests/python-34.Dockerfile'
         }
-
       }
       steps {
         ansiColor(colorMapName: 'xterm') {
@@ -28,10 +25,8 @@ pipeline {
     }
     stage('Test Python 3.5.0') {
       agent {
-        docker {
-          reuseNode true
-          image 'python:3.5.0'
-          args '-u 0'
+        dockerfile {
+          filename 'src/tests/python-350.Dockerfile'
         }
       }
       steps {
@@ -48,10 +43,8 @@ pipeline {
     }
     stage('Test Python 3.6') {
       agent {
-        docker {
-          reuseNode true
-          image 'python:3.6'
-          args '-u 0'
+        dockerfile {
+          filename 'src/tests/python-36.Dockerfile'
         }
       }
       steps {
@@ -68,10 +61,8 @@ pipeline {
     }
     stage('Test Python RC') {
       agent {
-        docker {
-          reuseNode true
-          image 'python:rc'
-          args '-u 0'
+        dockerfile {
+          filename 'src/tests/python-rc.Dockerfile'
         }
       }
       steps {

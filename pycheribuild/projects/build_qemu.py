@@ -96,7 +96,7 @@ class BuildQEMU(AutotoolsProject):
                 extraCFlags += " -DCHERI_128=1" if not self.magic128 else " -DCHERI_MAGIC128=1"
 
         if self.unaligned:
-            extraCFlags += " -DCHERI_UNALIGNED"
+            extraCFlags += " -DCHERI_UNALIGNED -DCHERI_C0_NULL"
         self.configureArgs.extend([
             "--target-list=" + targets,
             "--disable-linux-user",
