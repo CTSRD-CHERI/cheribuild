@@ -501,10 +501,6 @@ class _BuildFreeBSD(Project):
         if self.config.clean or not self.keepOldRootfs:
             self._removeOldRootfs()
 
-        if not all_kernel_configs:
-            all_kernel_configs = self.kernelConfig
-        self._installkernel(kernconf=all_kernel_configs)
-
         if not self.config.skipBuildworld:
             install_world_args = self.installworld_args
             # https://github.com/CTSRD-CHERI/cheribsd/issues/220
@@ -522,6 +518,11 @@ class _BuildFreeBSD(Project):
                                    "_build_metadata, build system has changed!")
             self.runMake("installworld", options=install_world_args)
             self.runMake("distribution", options=install_world_args)
+        # Run installkernel after installworld since installworld deletes METALOG and therefore the files added by
+        # the installkernel step will not be included if we run it first.
+        if not all_kernel_configs:
+            all_kernel_configs = self.kernelConfig
+        self._installkernel(kernconf=all_kernel_configs)
 
     def addCrossBuildOptions(self):
         # we also need to ensure that our SDK build tools are being picked up first
