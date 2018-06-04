@@ -48,7 +48,10 @@ class BuildQEMU(AutotoolsProject):
         cls.magic128 = cls.addBoolOption("magic-128")
         cls.debug_info = cls.addBoolOption("debug-info")
         # Turn on unaligned loads/stores by default
-        cls.unaligned = cls.addBoolOption("unaligned", showHelp=True, help="Permit un-aligned loads/stores", default=True)
+        cls.unaligned = cls.addBoolOption("unaligned", showHelp=True, help="Permit un-aligned loads/stores",
+                                          default=True)
+        cls.lto = cls.addBoolOption("use-lto", showHelp=True,
+                                    help="Try to build QEMU with link-time optimization if possible", default=True)
 
     @classmethod
     def qemu_binary(cls, config: CheriConfig):
@@ -71,21 +74,26 @@ class BuildQEMU(AutotoolsProject):
         self._addRequiredPkgConfig("glib-2.0", homebrew="glib", zypper="glib2-devel", apt="libglib2.0-dev",
                                    freebsd="glib")
 
-
         # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
         # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
         extraCFlags = "" if self.debug_info else "-O3"
+        extraLDFlags = ""
+        extraCXXFlags = ""
         if shutil.which("pkg-config"):
             glibIncludes = runCmd("pkg-config", "--cflags-only-I", "glib-2.0", captureOutput=True,
                                   printVerboseOnly=True, runInPretendMode=True).stdout.decode("utf-8").strip()
             extraCFlags += " " + glibIncludes
 
-        compiler = os.getenv("CC", shutil.which("cc"))
+        compiler = self.config.clangPath
         if compiler:
             ccinfo = getCompilerInfo(compiler)
             if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
                 # silence this warning that comes lots of times (it's fine on x86)
                 extraCFlags += " -Wno-address-of-packed-member"
+            if self.lto and ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0) and self.canUseLLd(Path(compiler)):
+                extraCFlags += " -flto=thin"
+                extraCXXFlags += " -flto=thin"
+                extraLDFlags += " -fuse-ld=lld -flto=thin"
         if self.config.unified_sdk:
             targets = "cheri256-softmmu,cheri128-softmmu,cheri128magic-softmmu"
         else:
@@ -106,7 +114,13 @@ class BuildQEMU(AutotoolsProject):
             "--disable-rdma",
             "--disable-werror",
             "--extra-cflags=" + extraCFlags,
-        ])
+            "--cxx=" + str(self.config.clangPlusPlusPath),
+            "--cc=" + str(self.config.clangPath),
+            ])
+        if extraLDFlags:
+            self.configureArgs.append("--extra-ldflags=" + extraLDFlags.strip())
+        if extraCXXFlags:
+            self.configureArgs.append("--extra-cxxflags=" + extraCXXFlags.strip())
         if self.debug_info:
             self.configureArgs.extend(["--enable-debug", "--disable-strip"])
         else:
