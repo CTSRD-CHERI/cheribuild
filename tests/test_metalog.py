@@ -30,7 +30,7 @@ def _create_symlink(parent: Path, name: str, target: str, mode: int) -> Path:
 
 def _create_dir(parent: Path, name: str, mode: int) -> Path:
     p = Path(parent, name)
-    p.mkdir(exist_ok=False)
+    p.mkdir()
     p.lchmod(mode)
     return p
 
