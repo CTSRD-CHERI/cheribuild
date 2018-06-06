@@ -30,9 +30,7 @@
 from .project import *
 from ..utils import *
 from pathlib import Path
-import os
 import shutil
-
 
 
 class BuildQEMU(AutotoolsProject):
@@ -96,6 +94,7 @@ class BuildQEMU(AutotoolsProject):
                 extraCFlags += " -flto=thin"
                 extraCXXFlags += " -flto=thin"
                 extraLDFlags += " -fuse-ld=lld -flto=thin"
+                statusUpdate("Compiling with Clang and LLD -> building with LTO enabled (should result in faster QEMU)")
         if self.config.unified_sdk:
             targets = "cheri256-softmmu,cheri128-softmmu,cheri128magic-softmmu"
         else:
