@@ -90,23 +90,26 @@ class BuildQEMU(AutotoolsProject):
             if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
                 # silence this warning that comes lots of times (it's fine on x86)
                 extraCFlags += " -Wno-address-of-packed-member"
-            if self.lto and ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0) and self.canUseLLd(Path(compiler)):
+            if self.lto and self.can_use_lto(ccinfo):
                 extraCFlags += " -flto=thin"
                 extraCXXFlags += " -flto=thin"
-                extraLDFlags += " -fuse-ld=lld -flto=thin"
+                extraLDFlags += " -flto=thin"
                 statusUpdate("Compiling with Clang and LLD -> building with LTO enabled (should result in faster QEMU)")
-                version_suffix = ""
-                if compiler.name.startswith("clang"):
-                    version_suffix = compiler.name[len("clang"):]
-                self._addRequiredSystemTool("llvm-ar" + version_suffix)
-                self._addRequiredSystemTool("llvm-ranlib" + version_suffix)
-                self._addRequiredSystemTool("llvm-nm" + version_suffix)
-                llvm_ar = shutil.which("llvm-ar" + version_suffix)
-                llvm_ranlib = shutil.which("llvm-ranlib" + version_suffix)
-                llvm_nm = shutil.which("llvm-nm" + version_suffix)
-                self.configureEnvironment.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
-                # self.make_args.env_vars.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
-                self.make_args.set(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
+                if ccinfo.compiler != "apple-clang":
+                    extraLDFlags += " -fuse-ld=lld"
+                    # For non apple-clang compilers we need to use llvm binutils:
+                    version_suffix = ""
+                    if compiler.name.startswith("clang"):
+                        version_suffix = compiler.name[len("clang"):]
+                    self._addRequiredSystemTool("llvm-ar" + version_suffix)
+                    self._addRequiredSystemTool("llvm-ranlib" + version_suffix)
+                    self._addRequiredSystemTool("llvm-nm" + version_suffix)
+                    llvm_ar = shutil.which("llvm-ar" + version_suffix)
+                    llvm_ranlib = shutil.which("llvm-ranlib" + version_suffix)
+                    llvm_nm = shutil.which("llvm-nm" + version_suffix)
+                    self.configureEnvironment.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
+                    # self.make_args.env_vars.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
+                    self.make_args.set(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
         if self.config.unified_sdk:
             targets = "cheri256-softmmu,cheri128-softmmu,cheri128magic-softmmu"
         else:

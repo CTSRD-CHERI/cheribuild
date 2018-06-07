@@ -723,6 +723,15 @@ class Project(SimpleProject):
                 cls.__can_use_lld_map[compiler] = False
         return cls.__can_use_lld_map[compiler]
 
+    @staticmethod
+    def can_use_lto(ccinfo):
+        if ccinfo.compiler == "apple-clang":
+            return True
+        elif ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0) and self.canUseLLd(compiler):
+            return True
+        else:
+            return False
+
     def checkSystemDependencies(self):
         # Check that the make command exists (this will also add it to the required system tools)
         if self.make_args.command is None:
