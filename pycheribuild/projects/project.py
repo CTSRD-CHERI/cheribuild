@@ -724,10 +724,10 @@ class Project(SimpleProject):
         return cls.__can_use_lld_map[compiler]
 
     @classmethod
-    def can_use_lto(cls, ccinfo):
+    def can_use_lto(cls, ccinfo: CompilerInfo):
         if ccinfo.compiler == "apple-clang":
             return True
-        elif ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0) and cls.canUseLLd(compiler):
+        elif ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0) and cls.canUseLLd(ccinfo.path):
             return True
         else:
             return False
