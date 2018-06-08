@@ -133,6 +133,8 @@ class BuildQEMU(AutotoolsProject):
             "--cxx=" + str(self.config.clangPlusPlusPath),
             "--cc=" + str(self.config.clangPath),
             ])
+        # the capstone disassembler doesn't support CHERI instructions:
+        self.configureArgs.append("--disable-capstone")
         if extraLDFlags:
             self.configureArgs.append("--extra-ldflags=" + extraLDFlags.strip())
         if extraCXXFlags:
