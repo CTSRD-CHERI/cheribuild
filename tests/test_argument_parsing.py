@@ -4,8 +4,6 @@ import unittest
 from pathlib import Path
 from unittest import TestCase
 
-sys.path.append(str(Path(__file__).parent.parent))
-
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
 from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader

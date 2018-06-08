@@ -13,25 +13,31 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from pycheribuild.mtree import MtreeFile
 
+HAVE_LCHMOD = True
 
 def _create_file(parent: Path, name: str, mode: int) -> Path:
     p = Path(parent, name)
     p.write_bytes(b"empty")
-    p.lchmod(mode)
+    p.chmod(mode)
     return p
 
 
 def _create_symlink(parent: Path, name: str, target: str, mode: int) -> Path:
     p = Path(parent, name)
     p.symlink_to(target)
-    p.lchmod(mode)
+    try:
+        p.lchmod(mode)
+    except NotImplementedError:
+        global HAVE_LCHMOD
+        HAVE_LCHMOD = False
+        pass
     return p
 
 
 def _create_dir(parent: Path, name: str, mode: int) -> Path:
     p = Path(parent, name)
     p.mkdir()
-    p.lchmod(mode)
+    p.chmod(mode)
     return p
 
 
@@ -85,8 +91,9 @@ def test_add_file_infer_mode():
         testdir = _create_dir(parent_dir, "testdir", 0o700)
         testfile = _create_file(testdir, "file", 0o666)
         testlink = _create_symlink(testdir, name="link", target="file", mode=0o444)
+        symlink_perms = "0444" if HAVE_LCHMOD else "0777"
         assert oct(testfile.lstat().st_mode) == "0o100666"
-        assert oct(testlink.lstat().st_mode) == "0o120444"
+        assert oct(testlink.lstat().st_mode) == "0o12" + symlink_perms
         print("testlink", oct(testlink.lstat().st_mode))
         mtree.add_file(testfile, "foo/bar/file")
         mtree.add_file(testlink, "foo/bar/link")
@@ -95,9 +102,9 @@ def test_add_file_infer_mode():
 ./foo type=dir uname=root gname=wheel mode=0750
 ./foo/bar type=dir uname=root gname=wheel mode=0700
 ./foo/bar/file type=file uname=root gname=wheel mode=0666 contents={testfile}
-./foo/bar/link type=link uname=root gname=wheel mode=0444 link=file
+./foo/bar/link type=link uname=root gname=wheel mode={symlink_perms} link=file
 # END
-""".format(testfile=testfile)
+""".format(testfile=testfile, symlink_perms=symlink_perms)
         assert expected == _get_as_str(mtree)
 
 
@@ -111,11 +118,12 @@ def test_add_file_infer_ssh_mode():
         privkey = _create_file(ssh_dir, "id_foo", 0o754)
         pubkey = _create_file(ssh_dir, "id_foo.pub", 0o755)
         testlink = _create_symlink(ssh_dir, "link", target="authorized_keys", mode=0o767)
+        symlink_perms = "0767" if HAVE_LCHMOD else "0777"  # However, in the mtree it is actually 0600 due to .ssh perms
         # The input files have wrong permissions but the mtree should be correct:
         assert oct(auth_keys.lstat().st_mode) == "0o100666"
         assert oct(privkey.lstat().st_mode) == "0o100754"
         assert oct(pubkey.lstat().st_mode) == "0o100755"
-        assert oct(testlink.lstat().st_mode) == "0o120767"
+        assert oct(testlink.lstat().st_mode) == "0o12" + symlink_perms
         assert oct(ssh_dir.lstat().st_mode) == "0o40777"
         assert oct(root_dir.lstat().st_mode) == "0o40744"
         mtree.add_file(auth_keys, "root/.ssh/authorized_keys")
@@ -132,7 +140,7 @@ def test_add_file_infer_ssh_mode():
 ./root/.ssh/id_foo.pub type=file uname=root gname=wheel mode=0755 contents={pubkey}
 ./root/.ssh/link type=link uname=root gname=wheel mode=0600 link=authorized_keys
 # END
-""".format(auth_keys=auth_keys, privkey=privkey, pubkey=pubkey)
+""".format(auth_keys=auth_keys, privkey=privkey, pubkey=pubkey, symlink_perms=symlink_perms)
         assert expected == _get_as_str(mtree)
 
 
@@ -181,12 +189,13 @@ def test_symlink_infer_mode(temp_symlink):
     mtree.add_file(temp_symlink[0], "tmp/link", parent_dir_mode=0o755)
     mtree.add_file(temp_symlink[1], "tmp/testfile", parent_dir_mode=0o755)
     print(_get_as_str(mtree), file=sys.stderr)
+    symlink_perms = "0644" if HAVE_LCHMOD else "0777"
     expected = """#mtree 2.0
 . type=dir uname=root gname=wheel mode=0755
 ./tmp type=dir uname=root gname=wheel mode=0755
-./tmp/link type=link uname=root gname=wheel mode=0644 link={target}
+./tmp/link type=link uname=root gname=wheel mode={symlink_perms} link={target}
 ./tmp/testfile type=file uname=root gname=wheel mode=0700 contents={testfile}
 # END
-""".format(target=temp_symlink[2], testfile=str(temp_symlink[1]))
+""".format(target=temp_symlink[2], testfile=str(temp_symlink[1]), symlink_perms=symlink_perms)
     assert expected == _get_as_str(mtree)
 
