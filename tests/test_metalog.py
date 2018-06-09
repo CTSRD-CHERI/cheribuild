@@ -15,9 +15,12 @@ from pycheribuild.mtree import MtreeFile
 
 HAVE_LCHMOD = True
 
+
 def _create_file(parent: Path, name: str, mode: int) -> Path:
     p = Path(parent, name)
-    p.write_bytes(b"empty")
+    # Python 3.4 compat
+    with p.open("wb") as f:
+        f.write(b"empty")
     p.chmod(mode)
     return p
 
