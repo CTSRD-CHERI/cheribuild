@@ -52,7 +52,7 @@ from ..filesystemutils import FileSystemUtils
 from ..utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies", # no-combine
-           "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions", "MakeCommandKind"]  # no-combine
+           "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions", "MakeCommandKind", "Path"]  # no-combine
 
 
 def flushStdio(stream):
@@ -448,7 +448,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         warningMessage(*args, **kwargs)
 
 def installDirNotSpecified(config: CheriConfig, project: "Project"):
-    raise RuntimeError("dummy impl must not be called: " + str(project))
+    raise RuntimeError("installDirNotSpecified! dummy impl must not be called: " + str(project))
 
 
 def _defaultBuildDir(config: CheriConfig, project: "Project"):

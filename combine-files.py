@@ -141,6 +141,7 @@ addFilteredFile(scriptDir / "projects/kdevelop.py")
 addFilteredFile(scriptDir / "projects/bear.py")
 addFilteredFile(scriptDir / "projects/cherivis.py")
 addFilteredFile(scriptDir / "projects/gnustep.py")
+addFilteredFile(scriptDir / "projects/sail.py")
 
 # cross compilation targets
 addFilteredFile(scriptDir / "projects/cross/crosscompileproject.py")
