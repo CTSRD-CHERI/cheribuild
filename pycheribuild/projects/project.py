@@ -244,8 +244,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                                                homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__requiredPkgConfig[package] = install_instructions
 
-    def queryYesNo(self, message: str = "", *, defaultResult=False, forceResult=True) -> bool:
-        yesNoStr = " [Y]/n " if defaultResult else " y/[N] "
+    def queryYesNo(self, message: str = "", *, defaultResult=False, forceResult=True, yesNoStr: str=None) -> bool:
+        if yesNoStr is None:
+            yesNoStr = " [Y]/n " if defaultResult else " y/[N] "
         if self.config.pretend:
             print(message + yesNoStr)
             return forceResult  # in pretend mode we always return true

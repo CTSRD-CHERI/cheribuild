@@ -277,24 +277,30 @@ class _BuildDiskImageBase(SimpleProject):
         # write out the manifest file:
         self.mtree.write(self.manifestFile)
         # print(self.manifestFile.read_text())
-
         debug_options = []
         if self.config.verbose:
             debug_options = ["-d", "0x90000"]  # trace POPULATE and WRITE_FILE events
-        runCmd([self.makefs_cmd] + debug_options + [
-            "-Z",  # sparse file output
-            "-b", "30%",  # minimum 30% free blocks
-            "-f", "30%",  # minimum 30% free inodes
-            "-R", "128m",  # round up size to the next 16m multiple
-            "-M", self.minimumImageSize,
-            "-B", "be",  # big endian byte order
-            "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
-            # which makes sure that the numeric UID values are correct
-            self.diskImagePath,  # output file
-            self.manifestFile,  # use METALOG as the manifest for the disk image
-            # extra directories:
-            # self.rootfsDir  # directory tree to use for the image
-        ], cwd=self.rootfsDir)
+        try:
+            runCmd([self.makefs_cmd] + debug_options + [
+                "-Z",  # sparse file output
+                "-b", "30%",  # minimum 30% free blocks
+                "-f", "30%",  # minimum 30% free inodes
+                "-R", "128m",  # round up size to the next 16m multiple
+                "-M", self.minimumImageSize,
+                "-B", "be",  # big endian byte order
+                "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
+                # which makes sure that the numeric UID values are correct
+                self.diskImagePath,  # output file
+                self.manifestFile,  # use METALOG as the manifest for the disk image
+                # extra directories:
+                # self.rootfsDir  # directory tree to use for the image
+            ], cwd=self.rootfsDir)
+        except:
+            warningMessage("makefs failed, if it reports an issue with METALOG report a bug (could be either cheribuild"
+                           " or cheribsd) and attach the METALOG file.")
+            self.queryYesNo("About to delete the temporary directory. Copy any files you need before pressing enter.",
+                            yesNoStr="")
+            raise
 
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
         if not self.config.quiet:

@@ -36,6 +36,7 @@ import shlex
 import stat
 import sys
 
+
 class MtreeEntry(object):
     def __init__(self, path: str, attributes: "typing.Dict[str, str]"):
         self.path = path
@@ -51,6 +52,12 @@ class MtreeEntry(object):
     def parse(cls, line: str) -> "MtreeEntry":
         elements = shlex.split(line)
         path = elements[0]
+        # Ensure that the path is normalized:
+        if path != ".":
+            # print("Before:", path)
+            assert path[:2] == "./"
+            path = path[:2] + os.path.normpath(path[2:])
+            # print("After:", path)
         attrDict = dict()
         for k,v in map(lambda s: s.split(sep="=", maxsplit=1), elements[1:]):
             # ignore some tags that makefs doesn't like
@@ -100,11 +107,12 @@ class MtreeFile(object):
             try:
                 entry = MtreeEntry.parse(line)
                 key = str(entry.path)
+                assert key == "." or os.path.normpath(key[2:]) == key[2:]
                 if key in self._mtree:
                     warningMessage("Found duplicate definition for", entry.path)
                 self._mtree[key] = entry
-            except Exception:
-                warningMessage("Could not parse line", line, "in mtree file", file)
+            except Exception as e:
+                warningMessage("Could not parse line", line, "in mtree file", file, ":", e)
 
     @staticmethod
     def _ensure_mtree_mode_fmt(mode: "typing.Union[str, int]") -> str:
@@ -119,7 +127,8 @@ class MtreeFile(object):
         assert not path.endswith("/")
         mtree_path = path
         if mtree_path != ".":
-            mtree_path = "./" + path
+            # ensure we normalize paths to avoid conflicting duplicates:
+            mtree_path = "./" + os.path.normpath(path)
         return mtree_path
 
     @staticmethod

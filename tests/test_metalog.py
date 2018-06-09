@@ -55,7 +55,6 @@ def test_empty():
 def test_add_dir():
     mtree = MtreeFile()
     mtree.add_dir("bin")
-    print(_get_as_str(mtree), file=sys.stderr)
     expected = """#mtree 2.0
 . type=dir uname=root gname=wheel mode=0755
 ./bin type=dir uname=root gname=wheel mode=0755
@@ -65,7 +64,6 @@ def test_add_dir():
     mtree = MtreeFile()
     # same with a trailing slash
     mtree.add_dir("bin/", mode="0755")
-    print(_get_as_str(mtree), file=sys.stderr)
     assert expected == _get_as_str(mtree)
 
 
@@ -142,6 +140,53 @@ def test_add_file_infer_ssh_mode():
 # END
 """.format(auth_keys=auth_keys, privkey=privkey, pubkey=pubkey, symlink_perms=symlink_perms)
         assert expected == _get_as_str(mtree)
+
+
+normalized_usr_tests_duplicate_mtree = """#mtree 2.0
+. type=dir uname=root gname=wheel mode=0755
+./usr type=dir uname=root gname=wheel mode=0755
+./usr/lib type=dir uname=root gname=wheel mode=0755
+./usr/lib/debug type=dir uname=root gname=wheel mode=0755
+./usr/lib/debug/usr type=dir uname=root gname=wheel mode=0755
+./usr/lib/debug/usr/tests type=dir uname=root gname=wheel mode=0755
+# END
+"""
+
+
+def test_normalize_paths():
+    # The makefs for cheribsd was failing because mtree contained the following lines:
+    # ./usr/lib/debug//usr/tests and then later on
+    # ./usr/lib/debug/usr/tests
+    # One of the two was added by cheribuild because a file with the double slash was added so
+    # the mtree code assumed the file did not exist:
+    mtree = MtreeFile()
+    assert len(mtree._mtree) == 0
+    mtree.add_dir("usr/lib/debug/usr/tests")
+    assert len(mtree._mtree) == 6
+    mtree.add_dir("usr/lib/debug//usr/tests")
+    # This should not add another entry!
+    assert len(mtree._mtree) == 6
+    assert normalized_usr_tests_duplicate_mtree == _get_as_str(mtree)
+
+
+def test_normalize_paths_loaded_from_file():
+    # Same thing as above just this time loaded from a file instead of created programmatically
+    file = """
+#mtree 2.0
+. type=dir uname=root gname=wheel mode=0755
+./usr type=dir uname=root gname=wheel mode=0755
+./usr/lib type=dir uname=root gname=wheel mode=0755
+./usr/lib/debug type=dir uname=root gname=wheel mode=0755
+./usr/lib/debug//usr/tests type=dir uname=root gname=wheel mode=0755
+./usr/lib/debug/usr type=dir uname=root gname=wheel mode=0755
+./usr/lib/debug/usr/tests type=dir uname=root gname=wheel mode=0755
+# END    
+"""
+    # check that we deduplicate these:
+    mtree = MtreeFile(io.StringIO(file))
+    print(_get_as_str(mtree), file=sys.stderr)
+    assert normalized_usr_tests_duplicate_mtree == _get_as_str(mtree)
+    assert len(mtree._mtree) == 6
 
 
 def test_add_file():
