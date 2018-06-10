@@ -192,6 +192,25 @@ def test_normalize_paths_loaded_from_file():
     assert len(mtree._mtree) == 6
 
 
+def test_contents_root():
+    # When parsing the cheribsdbox mtree we want to convert relative paths to absolute ones
+    file = """#mtree 2.0
+. type=dir uname=root gname=wheel mode=0755
+./bin type=dir uname=root gname=wheel mode=0755
+./bin/cat type=file uname=root gname=wheel mode=0755 contents=./bin/cheribsdbox
+./bin/cheribsdbox type=file uname=root gname=wheel mode=0755 contents=/path/to/rootfs/bin/cheribsdbox
+# END
+"""
+    mtree = MtreeFile(io.StringIO(file), contents_root=Path("/path/to/rootfs"))
+    assert """#mtree 2.0
+. type=dir uname=root gname=wheel mode=0755
+./bin type=dir uname=root gname=wheel mode=0755
+./bin/cat type=file uname=root gname=wheel mode=0755 contents=/path/to/rootfs/bin/cheribsdbox
+./bin/cheribsdbox type=file uname=root gname=wheel mode=0755 contents=/path/to/rootfs/bin/cheribsdbox
+# END
+""" == _get_as_str(mtree)
+
+
 def test_add_file():
     mtree = MtreeFile()
     mtree.add_file(Path("/foo/bar"), "tmp/mysh", mode=0o755)

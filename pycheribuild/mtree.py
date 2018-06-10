@@ -49,7 +49,7 @@ class MtreeEntry(object):
         return self.attributes.get("type") == "file"
 
     @classmethod
-    def parse(cls, line: str) -> "MtreeEntry":
+    def parse(cls, line: str, contents_root: Path=None) -> "MtreeEntry":
         elements = shlex.split(line)
         path = elements[0]
         # Ensure that the path is normalized:
@@ -65,6 +65,10 @@ class MtreeEntry(object):
             # also the tags= key is not supported
             if k in ("tags", "time"):
                 continue
+            # convert relative contents=keys to absolute ones
+            if contents_root and k == "contents":
+                if not os.path.isabs(v):
+                    v = str(contents_root / v)
             attrDict[k] = v
         return MtreeEntry(path, attrDict)
         # FIXME: use contents=
@@ -89,12 +93,12 @@ class MtreeEntry(object):
 
 
 class MtreeFile(object):
-    def __init__(self, file: "typing.IO"=None):
+    def __init__(self, file: "typing.IO"=None, contents_root: Path=None):
         self._mtree = OrderedDict()  # type: typing.Dict[str, MtreeEntry]
         if file:
-            self.load(file)
+            self.load(file, contents_root)
 
-    def load(self, file: "typing.IO"):
+    def load(self, file: "typing.IO", contents_root: Path=None):
         if isinstance(file, Path):
             with file.open("r") as f:
                 self.load(f)
@@ -105,7 +109,7 @@ class MtreeFile(object):
             if not line or line.startswith("#"):
                 continue
             try:
-                entry = MtreeEntry.parse(line)
+                entry = MtreeEntry.parse(line, contents_root)
                 key = str(entry.path)
                 assert key == "." or os.path.normpath(key[2:]) == key[2:]
                 if key in self._mtree:
@@ -125,6 +129,7 @@ class MtreeFile(object):
     def _ensure_mtree_path_fmt(path: str) -> str:
         # The path in mtree always starts with ./
         assert not path.endswith("/")
+        assert path, "PATH WAS EMPTY?"
         mtree_path = path
         if mtree_path != ".":
             # ensure we normalize paths to avoid conflicting duplicates:
