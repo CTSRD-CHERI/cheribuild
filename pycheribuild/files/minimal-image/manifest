@@ -1,0 +1,258 @@
+#mtree 2.0
+. type=dir uname=root gname=wheel mode=0755
+./bin type=dir uname=root gname=wheel mode=0755
+./bin/csh type=file uname=root gname=wheel mode=0555 size=8668048 
+./bin/sh type=file uname=root gname=wheel mode=0555 size=8225944 
+./bin/tcsh type=file uname=root gname=wheel mode=0555 size=8668048 
+./dev type=dir uname=root gname=wheel mode=0555
+./etc type=dir uname=root gname=wheel mode=0755
+./etc/defaults type=dir uname=root gname=wheel mode=0755
+./etc/defaults/rc.conf type=file uname=root gname=wheel mode=0444 size=37721 
+./etc/devd.conf type=file uname=root gname=wheel mode=0644 size=10143
+./etc/gettytab type=file uname=root gname=wheel mode=0644 size=6132
+./etc/hosts type=file uname=root gname=wheel mode=0644 size=1031
+./etc/login.conf type=file uname=root gname=wheel mode=0644 size=6729
+./etc/login.conf.db type=file mode=0644 uname=root gname=wheel
+./etc/mtree type=dir uname=root gname=wheel mode=0755
+./etc/mtree/BSD.var.dist type=file uname=root gname=wheel mode=0444 size=2183
+./etc/netconfig type=file uname=root gname=wheel mode=0644 size=729
+./etc/network.subr type=file uname=root gname=wheel mode=0644 size=37364
+./etc/newsyslog.conf type=file uname=root gname=wheel mode=0644 size=1719
+./etc/pam.d type=dir uname=root gname=wheel mode=0755
+./etc/pam.d/login type=file uname=root gname=wheel mode=0644 size=308 
+./etc/pam.d/passwd type=file uname=root gname=wheel mode=0644 size=252 
+./etc/pam.d/sshd type=file uname=root gname=wheel mode=0644 size=684 
+./etc/pam.d/system type=file uname=root gname=wheel mode=0644 size=648 
+./etc/pccard_ether type=file uname=root gname=wheel mode=0755 size=2747
+./etc/protocols type=file uname=root gname=wheel mode=0644 size=6394
+./etc/rc.d type=dir uname=root gname=wheel mode=0755
+./etc/rc.d/DAEMON type=file uname=root gname=wheel mode=0555 size=178 
+./etc/rc.d/FILESYSTEMS type=file uname=root gname=wheel mode=0555 size=347 
+./etc/rc.d/LOGIN type=file uname=root gname=wheel mode=0555 size=342 
+./etc/rc.d/NETWORKING type=file uname=root gname=wheel mode=0555 size=299 
+./etc/rc.d/SERVERS type=file uname=root gname=wheel mode=0555 size=199 
+./etc/rc.d/cleanvar type=file uname=root gname=wheel mode=0555 size=1206 
+./etc/rc.d/defaultroute type=file uname=root gname=wheel mode=0555 size=1458 
+./etc/rc.d/devd type=file uname=root gname=wheel mode=0555 size=684 
+./etc/rc.d/dhclient type=file uname=root gname=wheel mode=0555 size=1258 
+./etc/rc.d/fsck type=file uname=root gname=wheel mode=0555 size=1535 
+./etc/rc.d/hostname type=file uname=root gname=wheel mode=0555 size=2529 
+./etc/rc.d/ldconfig type=file uname=root gname=wheel mode=0555 size=2374 
+./etc/rc.d/netif type=file uname=root gname=wheel mode=0555 size=5873 
+./etc/rc.d/newsyslog type=file uname=root gname=wheel mode=0555 size=459 
+./etc/rc.d/root type=file uname=root gname=wheel mode=0555 size=724 
+./etc/rc.d/routing type=file uname=root gname=wheel mode=0555 size=7421 
+./etc/rc.d/sshd type=file uname=root gname=wheel mode=0555 size=1536 
+./etc/rc.d/sysctl type=file uname=root gname=wheel mode=0555 size=592 
+./etc/rc.d/syslogd type=file uname=root gname=wheel mode=0555 size=1519 
+./etc/rc.d/tmp type=file uname=root gname=wheel mode=0555 size=2143 
+./etc/rc.d/var type=file uname=root gname=wheel mode=0555 size=3231 
+./etc/rc.initdiskless type=file uname=root gname=wheel mode=0644 size=12791
+./etc/rc.subr type=file uname=root gname=wheel mode=0644 size=49110
+./etc/services type=file uname=root gname=wheel mode=0644 size=86241
+./etc/ssh type=dir uname=root gname=wheel mode=0755
+./etc/ssh/moduli type=file uname=root gname=wheel mode=0644 size=553185
+./etc/syslog.conf type=file uname=root gname=wheel mode=0644 size=1397
+./etc/termcap type=link uname=root gname=wheel mode=0755 link=/usr/share/misc/termcap
+./lib type=dir uname=root gname=wheel mode=0755
+./lib/libc.so.7 type=file uname=root gname=wheel mode=0444 size=2185256 flags=schg 
+./lib/libcrypt.so.5 type=file uname=root gname=wheel mode=0444 size=62600 flags=schg 
+./lib/libcrypto.so.8 type=file uname=root gname=wheel mode=0444 size=2425944 
+./lib/libedit.so.7 type=file uname=root gname=wheel mode=0444 size=242584 
+./lib/libm.so.5 type=file uname=root gname=wheel mode=0444 size=246208 
+./lib/libncursesw.so.8 type=file uname=root gname=wheel mode=0444 size=432624 
+./lib/libthr.so.3 type=file uname=root gname=wheel mode=0444 size=177184 flags=schg 
+./lib/libutil.so.9 type=file uname=root gname=wheel mode=0444 size=86200 
+./lib/libxo.so.0 type=file uname=root gname=wheel mode=0444 size=153992 
+./lib/libz.so.6 type=file uname=root gname=wheel mode=0444 size=112632 
+./libexec type=dir uname=root gname=wheel mode=0755
+./libexec/ld-cheri-elf.so.1 type=file uname=root gname=wheel mode=0555 size=1894784 flags=schg 
+./libexec/ld-elf.so.1 type=file uname=root gname=wheel mode=0555 size=232765 flags=schg 
+./mnt type=dir uname=root gname=wheel mode=0755
+./root type=dir uname=root gname=wheel mode=0755
+./sbin type=dir uname=root gname=wheel mode=0755
+./sbin/dhclient-script type=file uname=root gname=wheel mode=0555 size=9890 
+./sbin/init type=file uname=root gname=wheel mode=0555 size=6444656 flags=schg 
+./sbin/resolvconf type=file uname=root gname=wheel mode=0555 size=21803 
+./tmp type=dir uname=root gname=wheel mode=01777
+./usr type=dir uname=root gname=wheel mode=0755
+./usr/bin type=dir uname=root gname=wheel mode=0755
+./usr/bin/bg type=file uname=root gname=wheel mode=0555 size=86 
+./usr/bin/cd type=file uname=root gname=wheel mode=0555 size=86 
+./usr/bin/clear type=file uname=root gname=wheel mode=0555 size=1647 
+./usr/bin/command type=file uname=root gname=wheel mode=0555 size=86 
+./usr/bin/fc type=file uname=root gname=wheel mode=0555 size=86 
+./usr/bin/fg type=file uname=root gname=wheel mode=0555 size=86 
+./usr/bin/getopts type=file uname=root gname=wheel mode=0555 size=86 
+./usr/bin/hash type=file uname=root gname=wheel mode=0555 size=86 
+./usr/bin/jobs type=file uname=root gname=wheel mode=0555 size=86 
+./usr/bin/read type=file uname=root gname=wheel mode=0555 size=86 
+./usr/bin/type type=file uname=root gname=wheel mode=0555 size=86 
+./usr/bin/ulimit type=file uname=root gname=wheel mode=0555 size=86 
+./usr/bin/umask type=file uname=root gname=wheel mode=0555 size=86 
+./usr/bin/unalias type=file uname=root gname=wheel mode=0555 size=86 
+./usr/bin/wait type=file uname=root gname=wheel mode=0555 size=86 
+./usr/lib type=dir uname=root gname=wheel mode=0755
+./usr/lib/libbsm.so.3 type=file uname=root gname=wheel mode=0444 size=154840 
+./usr/lib/libpam.so.6 type=file uname=root gname=wheel mode=0444 size=63416 
+./usr/lib/libssl.so.8 type=file uname=root gname=wheel mode=0444 size=575376 
+./usr/lib/libstatcounters.so.3 type=file uname=root gname=wheel mode=0444 size=15848 
+./usr/lib/pam_permit.so type=link uname=root gname=wheel mode=0755 link=pam_permit.so.6 
+./usr/lib/pam_permit.so.6 type=file uname=root gname=wheel mode=0444 size=5512 
+./usr/lib/pam_rootok.so type=link uname=root gname=wheel mode=0755 link=pam_rootok.so.6 
+./usr/lib/pam_rootok.so.6 type=file uname=root gname=wheel mode=0444 size=5528 
+./usr/libcheri type=dir uname=root gname=wheel mode=0755
+./usr/libcheri/libc.so.7 type=file uname=root gname=wheel mode=0444 size=2790576 flags=schg 
+./usr/libcheri/libcrypt.so.5 type=file uname=root gname=wheel mode=0444 size=136992 flags=schg 
+./usr/libcheri/libm.so.5 type=file uname=root gname=wheel mode=0444 size=340552 
+./usr/libcheri/libstatcounters.so.3 type=file uname=root gname=wheel mode=0444 size=133768 
+./usr/libcheri/libthr.so.3 type=file uname=root gname=wheel mode=0444 size=302864 flags=schg 
+./usr/libcheri/libz.so.6 type=file uname=root gname=wheel mode=0444 size=205728 
+./usr/share type=dir uname=root gname=wheel mode=0755
+./usr/share/misc type=dir uname=root gname=wheel mode=0755
+./var type=dir uname=root gname=wheel mode=0755
+./var/log type=dir uname=root gname=wheel mode=0755
+./var/run type=dir uname=root gname=wheel mode=0755
+./home type=dir uname=root gname=wheel mode=755
+./var/empty type=dir uname=root gname=wheel mode=755
+./var/db type=dir uname=root gname=wheel mode=755
+./etc/fstab type=file uname=root gname=wheel mode=644 contents=/Users/alex/cheri/ctsrd-svn/cheribsd-svn/bsdtools/extras/etc/fstab.jenkins-bluehive
+./etc/rc type=file uname=root gname=wheel mode=644 contents=/Users/alex/cheri/ctsrd-svn/cheribsd-svn/bsdtools/extras/etc/rc.jenkins-bluehive
+./etc/pam.d/su type=file uname=root gname=wheel mode=644 contents=/Users/alex/cheri/ctsrd-svn/cheribsd-svn/bsdtools/extras/etc/pam.d/su.jenkins-bluehive
+./etc/ssh/sshd_config type=file uname=root gname=wheel mode=644 contents=/Users/alex/cheri/ctsrd-svn/cheribsd-svn/bsdtools/extras/etc/ssh/sshd_config
+./etc/ssh/ssh_host_ecdsa_key type=file uname=root gname=wheel mode=600 contents=/Users/alex/cheri/ctsrd-svn/cheribsd-svn/bsdtools/extras/etc/ssh/ssh_host_ecdsa_key
+./etc/ssh/ssh_host_ecdsa_key.pub type=file uname=root gname=wheel mode=644 contents=/Users/alex/cheri/ctsrd-svn/cheribsd-svn/bsdtools/extras/etc/ssh/ssh_host_ecdsa_key.pub
+./etc/ssh/ssh_host_ed25519_key type=file uname=root gname=wheel mode=600 contents=/Users/alex/cheri/ctsrd-svn/cheribsd-svn/bsdtools/extras/etc/ssh/ssh_host_ed25519_key
+./etc/ssh/ssh_host_ed25519_key.pub type=file uname=root gname=wheel mode=644 contents=/Users/alex/cheri/ctsrd-svn/cheribsd-svn/bsdtools/extras/etc/ssh/ssh_host_ed25519_key.pub
+./etc/ssh/ssh_host_rsa_key type=file uname=root gname=wheel mode=600 contents=/Users/alex/cheri/ctsrd-svn/cheribsd-svn/bsdtools/extras/etc/ssh/ssh_host_rsa_key
+./etc/ssh/ssh_host_rsa_key.pub type=file uname=root gname=wheel mode=644 contents=/Users/alex/cheri/ctsrd-svn/cheribsd-svn/bsdtools/extras/etc/ssh/ssh_host_rsa_key.pub
+#mtree 2.0
+./bin/cat type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/chflags type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/chmod type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/cp type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/date type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/dd type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/df type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/echo type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/expr type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/hostname type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/kenv type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/kill type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/ln type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/ls type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/mkdir type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/mv type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/ps type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/pwd type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/realpath type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/rm type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/rmdir type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/sleep type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/stty type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/test type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/[ type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./bin/uuidgen type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/dhclient type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/dmesg type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/dumpfs type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/ifconfig type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/md5 type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/sha256 type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/mount type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/mount_msdosfs type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/mount_nfs type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/newfs type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/ping type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/ping6 type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/rcorder type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/reboot type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/route type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/rtsol type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/shutdown type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/poweroff type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/sysctl type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./sbin/umount type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/basename type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/bzip2 type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/bunzip2 type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/diff type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/dirname type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/fetch type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/find type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/grep type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/head type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/hexdump type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/hd type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/od type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/id type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/groups type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/whoami type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/jot type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/kdump type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/ktrace type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/ldd type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/less type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/more type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/limits type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/login type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/mktemp type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/nc type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/netstat type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/passwd type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/sed type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/seq type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/sockstat type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/tail type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/tar type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/bsdtar type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/tee type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/tftp type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/time type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/top type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/tput type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/tr type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/uname type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/uudecode type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/uuencode type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/vmstat type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/w type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/uptime type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/which type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/xargs type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/su type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/vi type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/chown type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/devinfo type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/diskinfo type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/iostat type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/ip6addrctl type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/mtest type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/ndp type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/newsyslog type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/pw type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/pwd_mkdb type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/syslogd type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/tcpdump type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/traceroute type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/traceroute6 type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/usbconfig type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/watch type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/mount_smbfs type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/nmtree type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/mtree type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/libexec/getty type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/sbin/sshd type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/scp type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/sftp type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/ssh type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/bin/ssh-keygen type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./usr/libexec/sftp-server type=file uname=root gname=wheel mode=0755 contents=/Users/alex/cheri/output/rootfs256/bin/cheribsdbox
+./home/ctsrd type=dir uname=ctsrd gname=ctsrd mode=755
+./etc/group type=file uname=root gname=wheel mode=0644 contents=/tmp/makeroot.qvtB6/group
+./etc/master.passwd type=file uname=root gname=wheel mode=0600 contents=/tmp/makeroot.qvtB6/master.passwd
+./etc/passwd type=file mode=0644 uname=root gname=wheel contents=/tmp/makeroot.qvtB6/passwd
+./etc/pwd.db type=file mode=0644 uname=root gname=wheel contents=/tmp/makeroot.qvtB6/pwd.db
+./etc/spwd.db type=file mode=0600 uname=root gname=wheel contents=/tmp/makeroot.qvtB6/spwd.db
+./home/ctsrd/.ssh type=dir mode=700 uname=ctsrd gname=ctsrd
+./home/ctsrd/.ssh/authorized_keys type=file mode=600 uname=ctsrd gname=ctsrd contents=/tmp/makeroot.qvtB6/authorized_keys

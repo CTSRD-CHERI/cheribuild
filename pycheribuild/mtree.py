@@ -160,7 +160,7 @@ class MtreeFile(object):
         mtree_path = self._ensure_mtree_path_fmt(path_in_image)
         assert mtree_path != ".", "files should not have name ."
         self.add_dir(str(Path(path_in_image).parent), mode=parent_dir_mode, uname=uname, gname=gname,
-                     reference_dir=file.parent)
+                     reference_dir=file.parent, print_status=print_status)
         if file.is_symlink():
             mtree_type = "link"
             last_attrib = ("link", os.readlink(str(file)))

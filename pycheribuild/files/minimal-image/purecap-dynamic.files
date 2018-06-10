@@ -1,0 +1,9 @@
+# rtld
+libexec/ld-cheri-elf.so.1
+# These are needed by postgres:
+usr/libcheri/libc.so.7
+usr/libcheri/libcrypt.so.5
+usr/libcheri/libm.so.5
+usr/libcheri/libstatcounters.so.3
+usr/libcheri/libthr.so.3
+usr/libcheri/libz.so.6

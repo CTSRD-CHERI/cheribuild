@@ -29,6 +29,7 @@
 #
 import datetime
 import stat
+import io
 import tempfile
 
 from .cross.cheribsd import _BuildFreeBSD
@@ -52,18 +53,31 @@ OLD_LIBARCHIVE_URL = "https://people.freebsd.org/~arichardson/cheri-files/libarc
 PKG_REPO_NEEDS_UPDATE = datetime.datetime(day=20, month=5, year=2018)
 
 
+# noinspection PyMethodMayBeStatic
+class _AdditionalFileTemplates(object):
+    def get_fstab_template(self):
+        return includeLocalFile("files/cheribsd/fstab.in")
+
+    def get_rc_conf_template(self):
+        return includeLocalFile("files/cheribsd/rc.conf.in")
+
+    def get_cshrc_template(self):
+        return includeLocalFile("files/cheribsd/csh.cshrc.in")
+
+
 class _BuildDiskImageBase(SimpleProject):
     doNotAddToTargets = True
     diskImagePath = None  # type: Path
     needs_special_pkg_repo = False  # True for CheriBSD
 
     @classmethod
-    def setupConfigOptions(cls, *, defaultHostname, extraFilesShortname=None, **kwargs):
+    def setupConfigOptions(cls, *, defaultHostname, extraFilesShortname=None, extraFilesSuffix="", **kwargs):
         super().setupConfigOptions()
-        cls.extraFilesDir = cls.addPathOption("extra-files", shortname=extraFilesShortname, showHelp=True,
-                                              default=lambda config, project: (config.sourceRoot / "extra-files"),
-                                              help="A directory with additional files that will be added to the image "
-                                                   "(default: '$SOURCE_ROOT/extra-files')", metavar="DIR")
+        cls.extraFilesDir = cls.addPathOption("extra-files",
+            shortname=extraFilesShortname, showHelp=True,
+            default=lambda config, project: (config.sourceRoot / ("extra-files" + extraFilesSuffix)),
+            help="A directory with additional files that will be added to the image (default: "
+                 "'$SOURCE_ROOT/extra-files" + extraFilesSuffix + "')", metavar="DIR")
         cls.hostname = cls.addConfigOption("hostname", showHelp=True, default=defaultHostname, metavar="HOSTNAME",
                                            help="The hostname to use for the QEMU image")
         cls.useQCOW2 = cls.addBoolOption("use-qcow2", help="Convert the disk image to QCOW2 format instead of raw")
@@ -98,6 +112,8 @@ class _BuildDiskImageBase(SimpleProject):
         self.crossBuildImage = self.source_project.crossbuild
         self.minimumImageSize = "1g",  # minimum image size = 1GB
         self.mtree = MtreeFile()
+        self.input_METALOG = self.rootfsDir / "METALOG"
+        self.file_templates = _AdditionalFileTemplates()
         if self.needs_special_pkg_repo:
             self._addRequiredSystemTool("wget")  # Needed to recursively fetch the pkg repo
 
@@ -108,7 +124,7 @@ class _BuildDiskImageBase(SimpleProject):
             statusUpdate(file, " -> /", pathInTarget, sep="")
 
         # This also adds all the parent directories to METALOG
-        self.mtree.add_file(file, pathInTarget, mode=mode, uname=user, gname=group)
+        self.mtree.add_file(file, pathInTarget, mode=mode, uname=user, gname=group, print_status=self.config.verbose)
         if file in self.extraFiles:
             self.extraFiles.remove(file)  # remove it from extraFiles so we don't install it twice
 
@@ -155,9 +171,8 @@ class _BuildDiskImageBase(SimpleProject):
 
     def prepareRootfs(self, outDir: Path):
         self.manifestFile = outDir / "METALOG"
-        originalMetalog = self.rootfsDir / "METALOG"
-        if originalMetalog.exists():
-            self.mtree.load(originalMetalog)
+        if self.input_METALOG.exists():
+            self.mtree.load(self.input_METALOG)
 
         # Add the files needed to install kyua (make sure to download before calculating the list of extra files!)
         if self.needs_special_pkg_repo:
@@ -211,7 +226,7 @@ class _BuildDiskImageBase(SimpleProject):
         # TODO: https://www.freebsd.org/cgi/man.cgi?mount_unionfs(8) should make this easier
         # Overlay extra-files over additional stuff over cheribsd rootfs dir
 
-        fstabContents = includeLocalFile("files/cheribsd/fstab.in")
+        fstabContents = self.file_templates.get_fstab_template()
 
         if self.disableTMPFS:
             fstabContents = fstabContents.format_map(dict(tmpfsrem="#"))
@@ -223,10 +238,10 @@ class _BuildDiskImageBase(SimpleProject):
         # enable ssh and set hostname
         # TODO: use separate file in /etc/rc.conf.d/ ?
         self.hostname = os.path.expandvars(self.hostname)   # Expand env vars in hostname to allow $CHERI_BITS
-        rcConfContents = includeLocalFile("files/cheribsd/rc.conf.in").format(hostname=self.hostname)
+        rcConfContents = self.file_templates.get_rc_conf_template().format(hostname=self.hostname)
         self.createFileForImage(outDir, "/etc/rc.conf", contents=rcConfContents)
 
-        cshrcContents = includeLocalFile("files/cheribsd/csh.cshrc.in").format(
+        cshrcContents = self.file_templates.get_cshrc_template().format(
             SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
         self.createFileForImage(outDir, "/etc/csh.cshrc", contents=cshrcContents)
 
@@ -371,8 +386,8 @@ class _BuildDiskImageBase(SimpleProject):
             self.copyFromRemoteHost()
             return
 
-        if not (self.rootfsDir / "METALOG").is_file():
-            fatalError("mtree manifest", self.rootfsDir / "METALOG", "is missing")
+        if not self.input_METALOG.is_file():
+            fatalError("mtree manifest", self.input_METALOG, "is missing")
         if not (self.userGroupDbDir / "master.passwd").is_file():
             fatalError("master.passwd does not exist in ", self.userGroupDbDir)
 
@@ -386,27 +401,31 @@ class _BuildDiskImageBase(SimpleProject):
                 self.addFileToImage(p, baseDirectory=self.extraFilesDir)
 
             # then walk the rootfs to see if any additional files should be added:
-            unlisted_files = []
-            rootfs_str = str(self.rootfsDir)  # compat with python < 3.6
-            for root, dirnames, filenames in os.walk(rootfs_str):
-                for filename in filenames:
-                    full_path = Path(root, filename)
-                    target_path = os.path.relpath(str(full_path), rootfs_str)
-                    if target_path.startswith("usr/local/") or target_path.startswith("opt/") or target_path.startswith("extra/"):
-                        self.mtree.add_file(full_path, target_path, print_status=self.config.verbose)
-                    elif target_path not in self.mtree:
-                        if target_path != "METALOG":  # METALOG is not added to METALOG
-                            unlisted_files.append((full_path, target_path))
-            if unlisted_files:
-                print("Found the following files in the rootfs that are not listed in METALOG:")
-                for i in unlisted_files:
-                    print("\t", i[1])
-                if self.queryYesNo("Should these files also be added to the image?", defaultResult=True, forceResult=True):
-                    for i in unlisted_files:
-                        self.mtree.add_file(i[0], i[1], print_status=self.config.verbose)
+            self.add_unlisted_files_to_metalog()
 
             # finally create the disk image
             self.makeImage()
+
+    def add_unlisted_files_to_metalog(self):
+        unlisted_files = []
+        rootfs_str = str(self.rootfsDir)  # compat with python < 3.6
+        for root, dirnames, filenames in os.walk(rootfs_str):
+            for filename in filenames:
+                full_path = Path(root, filename)
+                target_path = os.path.relpath(str(full_path), rootfs_str)
+                if target_path.startswith("usr/local/") or target_path.startswith("opt/") or target_path.startswith(
+                        "extra/"):
+                    self.mtree.add_file(full_path, target_path, print_status=self.config.verbose)
+                elif target_path not in self.mtree:
+                    if target_path != "METALOG":  # METALOG is not added to METALOG
+                        unlisted_files.append((full_path, target_path))
+        if unlisted_files:
+            print("Found the following files in the rootfs that are not listed in METALOG:")
+            for i in unlisted_files:
+                print("\t", i[1])
+            if self.queryYesNo("Should these files also be added to the image?", defaultResult=True, forceResult=True):
+                for i in unlisted_files:
+                    self.mtree.add_file(i[0], i[1], print_status=self.config.verbose)
 
     def generateSshHostKeys(self):
         # do the same as "ssh-keygen -A" just with a different output directory as it does not allow customizing that
@@ -428,14 +447,90 @@ class _BuildDiskImageBase(SimpleProject):
             self.addFileToImage(publicKey, baseDirectory=self.extraFilesDir, mode="0644")
 
 
-def _defaultDiskImagePathFn(bits, pfx):
+def _defaultDiskImagePath(bits, pfx, img_prefix=""):
     if bits == 128:
-        return pfx / "cheri128-disk.img"
-    return pfx / "cheri256-disk.img"
+        return pfx / (img_prefix + "cheri128-disk.img")
+    return pfx / (img_prefix + "cheri256-disk.img")
 
 
-def _defaultDiskImagePath(conf: "CheriConfig", cls):
-    return _defaultDiskImagePathFn(conf.cheriBits, conf.outputRoot)
+class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
+    projectName = "minimal-disk-image"
+    dependencies = ["qemu", "cheribsd"]  # TODO: include gdb?
+
+    class _MinimalFileTemplates(_AdditionalFileTemplates):
+        def get_fstab_template(self):
+            return includeLocalFile("files/minimal-image/etc/fstab.in")
+
+        def get_rc_conf_template(self):
+            return includeLocalFile("files/minimal-image/etc/rc.conf.in")
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        hostUsername = CheriConfig.get_user_name()
+        defaultHostname = ComputedDefaultValue(
+            function=lambda conf, unused: "qemu-cheri" + conf.cheriBitsStr + "-" + hostUsername,
+            asString="qemu-cheri${CHERI_BITS}-" + hostUsername)
+
+        def _defaultMinimalDiskImagePath(conf, cls):
+                return _defaultDiskImagePath(conf.cheriBits, conf.outputRoot, "minimal-")
+
+        super().setupConfigOptions(defaultHostname=defaultHostname, extraFilesSuffix="-minimal", **kwargs)
+        cls.diskImagePath = cls.addPathOption("path", default=ComputedDefaultValue(
+            function=_defaultMinimalDiskImagePath, asString="$OUTPUT_ROOT/minimal-cheri256-disk.img or "
+                                                            "$OUTPUT_ROOT/minimal-cheri128-disk.img depending on --cheri-bits."),
+                                              metavar="IMGPATH", help="The output path for the QEMU disk image",
+                                              showHelp=True)
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config, source_class=BuildCHERIBSD)
+        self.minimumImageSize = "20m"  # let's try to shrink the image size
+        # The base input is only cheribsdbox and all the symlinks
+        self.input_METALOG = self.rootfsDir / "cheribsdbox.mtree"
+        self.file_templates = BuildMinimalCheriBSDDiskImage._MinimalFileTemplates()
+        self.needs_special_pkg_repo = False
+
+    def process_files_list(self, files_list):
+        for line in io.StringIO(files_list).readlines():
+            line = line.strip()
+            if line.startswith("#"):
+                continue
+            assert not line.startswith("/")
+            # Otherwise find the file in the rootfs
+            file_path = self.rootfsDir / line
+            if not file_path.exists():
+                fatalError("Required file", line, "missing from rootfs")
+            if file_path.is_dir():
+                self.mtree.add_dir(line, reference_dir=file_path, print_status=self.config.verbose)
+            else:
+                self.addFileToImage(file_path, baseDirectory=self.rootfsDir)
+
+    def add_unlisted_files_to_metalog(self):
+        # Now add all the files from *.files to the image:
+        self.verbose_print("Adding files from rootfs to minimal image:")
+        files_to_add = [includeLocalFile("files/minimal-image/base.files"),
+                        includeLocalFile("files/minimal-image/etc.files")]
+        if (self.rootfsDir / "usr/libcheri/libc.so.7").exists():
+            files_to_add.append(includeLocalFile("files/minimal-image/purecap-dynamic.files"))
+
+        for files_list in files_to_add:
+            self.process_files_list(files_list)
+        # These dirs seem to be needed
+        self.mtree.add_dir("var/db", print_status=self.config.verbose)
+        self.mtree.add_dir("var/empty", print_status=self.config.verbose)
+
+        self.verbose_print("Not adding unlisted files to METALOG since we are building a minimal image")
+
+    def prepareRootfs(self, outDir: Path):
+        super().prepareRootfs(outDir)
+        # Add the additional sysctl configs
+        self.createFileForImage(outDir, "/etc/pam.d/su", showContentsByDefault=False,
+                                contents=includeLocalFile("files/minimal-image/pam.d/su"))
+        # disable coredumps (since there is almost no space on the image)
+        self.createFileForImage(outDir, "/etc/sysctl.conf", showContentsByDefault=False,
+                                contents=includeLocalFile("files/minimal-image/etc/sysctl.conf"))
+        # The actual minimal startup file:
+        self.createFileForImage(outDir, "/etc/rc", showContentsByDefault=False,
+                                contents=includeLocalFile("files/minimal-image/etc/rc"))
 
 
 class BuildCheriBSDDiskImage(_BuildDiskImageBase):
@@ -449,9 +544,13 @@ class BuildCheriBSDDiskImage(_BuildDiskImageBase):
             function=lambda conf, unused: "qemu-cheri" + conf.cheriBitsStr + "-" + hostUsername,
             asString="qemu-cheri${CHERI_BITS}-" + hostUsername)
         super().setupConfigOptions(extraFilesShortname="-extra-files", defaultHostname=defaultHostname, **kwargs)
+
+        def _defaultDiskImagePath(conf, cls):
+                return _defaultDiskImagePath(conf.cheriBits, conf.outputRoot)
+
         defaultDiskImagePath = ComputedDefaultValue(
-                function=_defaultDiskImagePath, asString="$OUTPUT_ROOT/cheri256-disk.img or "
-                                                         "$OUTPUT_ROOT/cheri128-disk.img depending on --cheri-bits.")
+            function=_defaultDiskImagePath, asString="$OUTPUT_ROOT/cheri256-disk.img or "
+                                                     "$OUTPUT_ROOT/cheri128-disk.img depending on --cheri-bits.")
         cls.diskImagePath = cls.addPathOption("path", shortname="-disk-image-path", default=defaultDiskImagePath,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image",
                                               showHelp=True)
