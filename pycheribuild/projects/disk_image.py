@@ -545,12 +545,9 @@ class BuildCheriBSDDiskImage(_BuildDiskImageBase):
             asString="qemu-cheri${CHERI_BITS}-" + hostUsername)
         super().setupConfigOptions(extraFilesShortname="-extra-files", defaultHostname=defaultHostname, **kwargs)
 
-        def _defaultDiskImagePath(conf, cls):
-                return _defaultDiskImagePath(conf.cheriBits, conf.outputRoot)
-
         defaultDiskImagePath = ComputedDefaultValue(
-            function=_defaultDiskImagePath, asString="$OUTPUT_ROOT/cheri256-disk.img or "
-                                                     "$OUTPUT_ROOT/cheri128-disk.img depending on --cheri-bits.")
+            function=lambda conf, cls: _defaultDiskImagePath(conf.cheriBits, conf.outputRoot),
+            asString="$OUTPUT_ROOT/cheri256-disk.img or $OUTPUT_ROOT/cheri128-disk.img depending on --cheri-bits.")
         cls.diskImagePath = cls.addPathOption("path", shortname="-disk-image-path", default=defaultDiskImagePath,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image",
                                               showHelp=True)
