@@ -299,6 +299,18 @@ class LaunchFreeBSDX86(AbstractLaunchFreeBSD):
         self._addRequiredSystemTool("qemu-system-x86_64")
         qemu_path = shutil.which("qemu-system-x86_64")
         self.qemuBinary = Path(qemu_path if qemu_path else shutil.which("false"))
-        self.machineFlags = [] # default cpu
+        self.machineFlags = []  # default cpu
         self.currentKernel = None  # needs the bootloader
 
+
+class LaunchCheriBSDMinimal(AbstractLaunchFreeBSD):
+    projectName = "run-minimal"
+    dependencies = ["qemu", "disk-image-minimal"]
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
+                                   defaultSshPort=defaultSshForwardingPort() + 8, **kwargs)
+
+    def __init__(self, config):
+        super().__init__(config, BuildCHERIBSD, BuildMinimalCheriBSDDiskImage)

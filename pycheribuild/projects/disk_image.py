@@ -300,7 +300,7 @@ class _BuildDiskImageBase(SimpleProject):
                 "-Z",  # sparse file output
                 "-b", "30%",  # minimum 30% free blocks
                 "-f", "30%",  # minimum 30% free inodes
-                "-R", "128m",  # round up size to the next 16m multiple
+                "-R", "16m",  # round up size to the next 16m multiple
                 "-M", self.minimumImageSize,
                 "-B", "be",  # big endian byte order
                 "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
@@ -454,7 +454,7 @@ def _defaultDiskImagePath(bits, pfx, img_prefix=""):
 
 
 class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
-    projectName = "minimal-disk-image"
+    projectName = "disk-image-minimal"
     dependencies = ["qemu", "cheribsd"]  # TODO: include gdb?
 
     class _MinimalFileTemplates(_AdditionalFileTemplates):
@@ -472,7 +472,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             asString="qemu-cheri${CHERI_BITS}-" + hostUsername)
 
         def _defaultMinimalDiskImagePath(conf, cls):
-                return _defaultDiskImagePath(conf.cheriBits, conf.outputRoot, "minimal-")
+            return _defaultDiskImagePath(conf.cheriBits, conf.outputRoot, "minimal-")
 
         super().setupConfigOptions(defaultHostname=defaultHostname, extraFilesSuffix="-minimal", **kwargs)
         cls.diskImagePath = cls.addPathOption("path", default=ComputedDefaultValue(
@@ -492,7 +492,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
     def process_files_list(self, files_list):
         for line in io.StringIO(files_list).readlines():
             line = line.strip()
-            if line.startswith("#"):
+            if line.startswith("#") or not line:
                 continue
             assert not line.startswith("/")
             # Otherwise find the file in the rootfs

@@ -49,8 +49,8 @@ if /sbin/ifconfig -l | grep atse0; then
     /sbin/dhclient atse0
 fi
 if /sbin/ifconfig -l | grep le0; then
-    echo "set le0 if to polling"
-    /sbin/ifconfig le0 polling
+    echo "set le0"
+    /sbin/ifconfig le0
 
     echo "run dhclient on le0"
     /sbin/dhclient le0
