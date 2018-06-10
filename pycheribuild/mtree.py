@@ -58,7 +58,7 @@ class MtreeEntry(object):
             assert path[:2] == "./"
             path = path[:2] + os.path.normpath(path[2:])
             # print("After:", path)
-        attrDict = dict()
+        attrDict = OrderedDict()  # keep them in insertion order
         for k,v in map(lambda s: s.split(sep="=", maxsplit=1), elements[1:]):
             # ignore some tags that makefs doesn't like
             # sometimes there will be time with nanoseconds in the manifest, makefs can't handle that
