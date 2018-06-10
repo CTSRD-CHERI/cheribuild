@@ -301,6 +301,8 @@ def main():
         pass
 
     args = parser.parse_args()
+    if shutil.which(args.qemu_cmd) is None:
+        sys.exit("ERROR: QEMU binary " + args.qemu_cmd + " doesn't exist")
 
     starttime = datetime.datetime.now()
 
