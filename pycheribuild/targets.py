@@ -97,6 +97,10 @@ class Target(object):
         if self.name in otherDeps:
             # print(self, "is in", other, "deps -> is less")
             return True
+        # and if it is the other way around we are not less
+        if other.name in self.projectClass._cached_dependencies():
+            # print(other, "is in", self, "deps -> is greater")
+            return False
         if other.name.startswith("run") and not self.name.startswith("run"):
             return True  # run must be executed last
         elif self.name.startswith("run"):
@@ -217,7 +221,8 @@ class TargetManager(object):
                 deps_to_add = t.projectClass.dependencies
             chosen_targets.extend(self.get_target(dep) for dep in deps_to_add)
 
-        return self.sort_in_dependency_order(chosen_targets)
+        sort = self.sort_in_dependency_order(chosen_targets)
+        return sort
 
     def run(self, config: CheriConfig):
         # check that all target dependencies are correct:
