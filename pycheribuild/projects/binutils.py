@@ -141,6 +141,12 @@ class BuildGnuBinutils(AutotoolsProject):
             # Also symlink cheri-unknown-freebsd-ld -> ld (and the other targets)
             self.createBuildtoolTargetSymlinks(bindir / prefixedName, toolName=tool, createUnprefixedLink=True)
 
+    def process(self):
+        self.warning("GNU binutils should only be built if you know what you are doing since the linker "
+                     "is incredibly buggy and the assembler doesn't support all features that clang does.")
+        if not self.queryYesNo("Are you sure you want to build this code?", defaultResult=False, forceResult=True):
+            return
+        super().process()
 
 class BuildGPLv3Binutils(BuildGnuBinutils):
     target = "gplv3-binutils"
