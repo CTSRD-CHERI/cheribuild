@@ -949,7 +949,8 @@ class Project(SimpleProject):
     def makeInstallEnv(self):
         if self.destdir:
             env = self.make_args.env_vars.copy()
-            env["DESTDIR"] = str(self.destdir)
+            if "DESTDIR" not in env:
+                env["DESTDIR"] = str(self.destdir)
             return env
         return self.make_args.env_vars
 

@@ -196,11 +196,12 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
                                                      help="Don't update the kernel from the remote host")
 
     def __init__(self, config: CheriConfig, source_class: type(_BuildFreeBSD),
-                 disk_image_class: type(_BuildFreeBSDImageBase)):
+                 disk_image_class: type(_BuildFreeBSDImageBase)=None, needs_disk_image=True):
         super().__init__(config)
         self.source_class = source_class
-        self.currentKernel = source_class.rootfsDir(self.config) / "boot/kernel/kernel"
-        self.diskImage = disk_image_class.get_instance(config).diskImagePath
+        self.currentKernel = source_class.get_installed_kernel_path(config)
+        if needs_disk_image:
+            self.diskImage = disk_image_class.get_instance(config).diskImagePath
         self.needsRemoteKernelCopy = True
         # no need to copy from remote host if we were crossbuilding
         if IS_FREEBSD or source_class.get_instance(config).crossbuild:
@@ -303,8 +304,21 @@ class LaunchFreeBSDX86(AbstractLaunchFreeBSD):
         self.currentKernel = None  # needs the bootloader
 
 
-class LaunchCheriBSDMinimal(AbstractLaunchFreeBSD):
+class LaunchCheriBsdMfsRoot(AbstractLaunchFreeBSD):
     projectName = "run-minimal"
+    dependencies = ["qemu", "cheribsd-mfs-root-kernel"]
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
+                                   defaultSshPort=defaultSshForwardingPort() + 8, **kwargs)
+
+    def __init__(self, config):
+        super().__init__(config, BuildCheriBsdMfsKernel, needs_disk_image=False)
+
+# Allow running cheribsd without the MFS_ROOT kernel, but with a disk image instead:
+class LaunchCheriBsdMinimal(AbstractLaunchFreeBSD):
+    projectName = "run-minimal-with-disk-image"
     dependencies = ["qemu", "disk-image-minimal"]
 
     @classmethod

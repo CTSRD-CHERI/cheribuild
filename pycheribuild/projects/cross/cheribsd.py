@@ -32,6 +32,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 
 from pathlib import Path
 from ..project import *
@@ -101,6 +102,10 @@ class _BuildFreeBSD(Project):
     @classmethod
     def rootfsDir(cls, config):
         return cls.getInstallDir(config)
+
+    @classmethod
+    def get_installed_kernel_path(cls, config):
+        return cls.rootfsDir(config) / "boot/kernel/kernel"
 
     @classmethod
     def setupConfigOptions(cls, buildKernelWithClang: bool=True, makeOptionsShortname=None, **kwargs):
@@ -412,12 +417,14 @@ class _BuildFreeBSD(Project):
         self.runMake("buildkernel", options=kernelMakeArgs,
                      compilationDbName="compile_commands_" + self.kernelConfig + ".json")
 
-    def _installkernel(self, kernconf):
+    def _installkernel(self, kernconf, destdir: str=None):
         # don't use multiple jobs here
         install_kernel_args = self.kernelMakeArgsForConfig(kernconf)
         install_kernel_args.env_vars.update(self.makeInstallEnv)
         # Also install all other kernels that were potentially built
         install_kernel_args.set(NO_INSTALLEXTRAKERNELS="no")
+        if destdir:
+            install_kernel_args.set_env(DESTDIR=destdir)
         self.runMake("installkernel", options=install_kernel_args, parallel=False)
 
     @property
@@ -910,6 +917,41 @@ class BuildCHERIBSD(_BuildFreeBSD):
         if not (self.sourceDir / "contrib/cheri-libc++/src").exists():
             runCmd("git", "submodule", "init", cwd=self.sourceDir)
             runCmd("git", "submodule", "update", cwd=self.sourceDir)
+
+
+class BuildCheriBsdMfsKernel(SimpleProject):
+    projectName = "cheribsd-mfs-root-kernel"
+    dependencies = ["disk-image-minimal"]
+
+    def process(self):
+        build_cheribsd = BuildCHERIBSD.get_instance(self.config)
+        kernconf = self.get_kernel_config(self.config)
+        if self.config.clean:
+            kernel_dir = build_cheribsd.kernel_objdir(kernconf)
+            if kernel_dir:
+                with self.asyncCleanDirectory(kernel_dir):
+                    self.verbose_print("Cleaning ", kernel_dir)
+        from ..disk_image import BuildMinimalCheriBSDDiskImage
+        image = BuildMinimalCheriBSDDiskImage.get_instance(self.config).diskImagePath
+        build_cheribsd._buildkernel(kernconf=kernconf, mfs_root_image=image)
+        # Install to a temporary directory and then copy the kernel to OUTPUT_ROOT
+        with tempfile.TemporaryDirectory() as td:
+            build_cheribsd._installkernel(kernconf=kernconf, destdir=td)
+            # runCmd("find", td)
+            self.installFile(Path(td, "boot/kernel/kernel"), self.get_installed_kernel_path(self.config))
+
+    @property
+    def crossbuild(self):
+        return BuildCHERIBSD.get_instance(self.config).crossbuild
+
+    @classmethod
+    def get_kernel_config(cls, config) -> str:
+        build_cheribsd = BuildCHERIBSD.get_instance(config)
+        return build_cheribsd.kernelConfig + "_MFS_ROOT"
+
+    @classmethod
+    def get_installed_kernel_path(cls, config):
+        return config.outputRoot / ("kernel." + cls.get_kernel_config(config))
 
 
 class BuildCheriBsdSysroot(SimpleProject):
