@@ -122,7 +122,7 @@ class Target(object):
 
 # XXX: can't call this CrossCompileTarget since that is already the name of the enum
 class MultiArchTarget(Target):
-    def __init__(self, name, projectClass, target_arch: CrossCompileTarget):
+    def __init__(self, name, projectClass, target_arch: "typing.Optional[CrossCompileTarget]"):
         super().__init__(name, projectClass)
         self.target_arch = target_arch
 

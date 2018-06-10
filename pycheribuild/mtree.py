@@ -93,12 +93,12 @@ class MtreeEntry(object):
 
 
 class MtreeFile(object):
-    def __init__(self, file: "typing.IO"=None, contents_root: Path=None):
+    def __init__(self, file: "typing.Union[io.StringIO,Path,typing.IO]"=None, contents_root: Path=None):
         self._mtree = OrderedDict()  # type: typing.Dict[str, MtreeEntry]
         if file:
             self.load(file, contents_root)
 
-    def load(self, file: "typing.IO", contents_root: Path=None):
+    def load(self, file: "typing.Union[io.StringIO,Path,typing.IO]", contents_root: Path=None):
         if isinstance(file, Path):
             with file.open("r") as f:
                 self.load(f)
@@ -216,7 +216,7 @@ class MtreeFile(object):
         import pprint
         return "<MTREE: " + pprint.pformat(self._mtree) + ">"
 
-    def write(self, output: "typing.IO"):
+    def write(self, output: "typing.Union[io.StringIO,Path,typing.IO]"):
         if isinstance(output, Path):
             with output.open("w") as f:
                 self.write(f)

@@ -179,7 +179,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def addConfigOption(cls, name: str, default: "typing.Union[Type_T, typing.Callable[[], Type_T]]" = None,
-                        kind: "typing.Callable[[str], Type_T]" = str, *,
+                        kind: "typing.Union[typing.Type[str], typing.Callable[[str], Type_T]]" = str, *,
                         showHelp=False, shortname=None, **kwargs) -> "Type_T":
         configOptionKey = cls.target
         # if cls.target != cls.projectName.lower():

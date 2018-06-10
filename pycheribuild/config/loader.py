@@ -109,7 +109,8 @@ class ConfigLoaderBase(object):
         return self.addOption(*args, option_cls=CommandLineConfigOption, default=default, action="store_true",
                               type=bool, **kwargs)
 
-    def addOption(self, name: str, shortname=None, default=None, type: "typing.Callable[[str], Type_T]"=str,
+    def addOption(self, name: str, shortname=None, default=None,
+                  type: "typing.Union[typing.Type[str], typing.Callable[[str], Type_T]]"=str,
                   group=None, helpHidden=False, _owningClass: "typing.Type"=None, _fallback_name: str = None,
                   option_cls: "typing.Type[ConfigOptionBase]"=None, **kwargs) -> "Type_T":
         if option_cls is None:
@@ -443,7 +444,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             config_prefix = program[0:-len("cheribuild.py")]
         return config_prefix
 
-    def finalizeOptions(self, availableTargets: list):
+    def finalizeOptions(self, availableTargets: list, **kwargs):
         targetOption = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
                                                  help="The targets to build", choices=availableTargets + [[]])
         if argcomplete and "_ARGCOMPLETE" in os.environ:

@@ -92,7 +92,7 @@ class BuildGnuBinutils(AutotoolsProject):
         self.configureArgs.append("--disable-shared")
         # newer compilers will default to -std=c99 which will break binutils:
         cflags = "-std=gnu89 -O2"
-        info = getCompilerInfo(os.getenv("CC", shutil.which("cc")))
+        info = getCompilerInfo(Path(os.getenv("CC", shutil.which("cc"))))
         if info.compiler == "clang" or (info.compiler == "gcc" and info.version >= (4, 6, 0)):
             cflags += " -Wno-unused"
         self.configureEnvironment["CFLAGS"] = cflags
@@ -140,7 +140,6 @@ class BuildGnuBinutils(AutotoolsProject):
             # create the right symlinks to the tool (ld -> mips64-unknown-elf-ld, etc)
             # Also symlink cheri-unknown-freebsd-ld -> ld (and the other targets)
             self.createBuildtoolTargetSymlinks(bindir / prefixedName, toolName=tool, createUnprefixedLink=True)
-
 
 
 class BuildGPLv3Binutils(BuildGnuBinutils):

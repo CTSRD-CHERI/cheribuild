@@ -48,7 +48,7 @@ except ImportError:
     typing = {}
 
 if typing:
-    Type_T = typing.TypeVar("T")
+    Type_T = typing.TypeVar("Type_T")
 else:
     Type_T = {}
 

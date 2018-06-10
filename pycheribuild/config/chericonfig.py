@@ -160,6 +160,7 @@ class CheriConfig(object):
             help="Attach to the same container again (note: docker-container option must be an id rather than a container name")
 
         self.targets = None  # type: list
+        self.FS = None  # type: FileSystemUtils
         self.__optionalProperties = []
 
     def load(self):

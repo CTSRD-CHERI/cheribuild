@@ -38,6 +38,7 @@ class TestArgumentParsing(TestCase):
     @staticmethod
     def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")) -> DefaultCheriConfig:
         global _targets_registered
+        # noinspection PyGlobalUndefined
         global _cheriConfig
         if not _targets_registered:
             allTargetNames = list(sorted(targetManager.targetNames)) + ["__run_everything__"]
