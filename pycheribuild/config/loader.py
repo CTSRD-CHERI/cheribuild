@@ -61,16 +61,31 @@ class ComputedDefaultValue(object):
 class _EnumArgparseType(object):
     """Factory for creating enum object types
     """
-    def __init__(self, enumclass):
+    def __init__(self, enumclass: "typing.Type[Enum]"):
         self.enums = enumclass
+        # Validate that all enum keys match the expected format
+        for member in enumclass:
+            # only upppercase letters, numbers and _ allowed
+            for c in member.name:
+                if c.isdigit() or c == "_":
+                    continue
+                if c.isalpha() and c.isupper():
+                    continue
+                raise RuntimeError("Invalid character '" + c + "' found in enum " + str(enumclass) +
+                                   " member " + member.name + ": must all be upper case letters or _ or digits.")
         # self.action = action
 
     def __call__(self, astring):
+        if isinstance(astring, list):
+            return [self.__call__(a) for a in astring]
         if isinstance(astring, self.enums):
             return astring  # Allow passing an enum instance
         name = self.enums.__name__
         try:
-            v = self.enums[astring.upper()]
+            # convert the passed value to the enum name
+            enum_value_name = astring.upper()  # type: str
+            enum_value_name = enum_value_name.replace("-", "_")
+            v = self.enums[enum_value_name]
         except KeyError:
             msg = ', '.join([t.name.lower() for t in self.enums])
             msg = '%s: use one of {%s}'%(name, msg)
@@ -117,7 +132,7 @@ class ConfigLoaderBase(object):
             option_cls = self.__option_cls
 
         if issubclass(type, Enum):
-            assert "action" not in kwargs, "action should be none for Enum options"
+            assert "action" not in kwargs or kwargs["action"] == "append", "action should be none or appendfor Enum options"
             assert "choices" not in kwargs, "for enum options choices are the enum names (or set enum_choices)!"
             if "enum_choices" in kwargs:
                 kwargs["choices"] = tuple(t.name.lower() for t in kwargs["enum_choices"])
@@ -176,9 +191,13 @@ class ConfigOptionBase(object):
                 self.default_str = str(default.asString)
         elif default is not None:
             if isinstance(default, Enum) or isinstance(valueType, _EnumArgparseType):
-                assert isinstance(valueType, _EnumArgparseType), "default is enum but value type isn't: " + str(valueType)
-                assert isinstance(default, Enum), "Should use enum constant for default and not " + str(default)
-                self.default_str = default.name.lower()
+                # allow append
+                if default == []:
+                    self.default_str = "[]"
+                else:
+                    assert isinstance(valueType, _EnumArgparseType), "default is enum but value type isn't: " + str(valueType)
+                    assert isinstance(default, Enum), "Should use enum constant for default and not " + str(default)
+                    self.default_str = default.name.lower()
             else:
                 self.default_str = str(default)
         self._cached = None
@@ -431,6 +450,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                                                                                      " the target-specific ones.")
         # argument groups:
         # self.deprecatedOptionsGroup = _parser.add_argument_group("Old deprecated options", "These should not be used any more")
+        self.actionGroup = self._parser.add_argument_group("Actions to be performed:")
         self.cheriBitsGroup = self._parser.add_mutually_exclusive_group()
         self.crossCompileGroup = self._parser.add_mutually_exclusive_group()
         self.configureGroup = self._parser.add_mutually_exclusive_group()

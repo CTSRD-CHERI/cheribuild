@@ -434,6 +434,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def process(self):
         raise NotImplementedError()
 
+    def run_tests(self):
+        # for the --test option
+        statusUpdate("No tests defined for target", self.target)
+        pass
+
     def print(self, *args, **kwargs):
         if not self.config.quiet:
             print(*args, **kwargs)

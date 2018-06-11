@@ -28,17 +28,51 @@
 # SUCH DAMAGE.
 #
 import os
+import itertools
+from enum import Enum
 from pathlib import Path
 
 from .loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader
 from .chericonfig import CheriConfig, CrossCompileTarget
 from ..utils import defaultNumberOfMakeJobs
 
+class CheribuildAction(Enum):
+    BUILD = ("--build", "Run (usually build+install) chosen targets (default)")
+    TEST = ("--test", "Run tests for the passed targets instead of building them", "--run-tests")
+    BUILD_AND_TEST = ("--build-and-test", "Run chosen targets and then run any tests afterwards", None,
+                      # can get the other instances yet -> use strings
+                      ["build", "test"])
+    LIST_TARGETS = ("--list-targets", "List all available targets and exit")
+    DUMP_CONFIGURATION = ("--dump-configuration", "Print the current configuration as JSON. This can be saved to "
+                                                  "~/.config/cheribuild.json to make it persistent")
+
+    def __init__(self, option_name, help_message, altname=None, actions=None):
+        self.option_name = option_name
+        self.help_message = help_message
+        self.altname = altname
+        if not actions:
+            actions = [self]
+        if actions:
+            self.actions = actions
 
 class DefaultCheriConfig(CheriConfig):
     def __init__(self, loader: ConfigLoaderBase, availableTargets: list):
         super().__init__(loader)
         assert isinstance(loader, JsonAndCommandLineConfigLoader)
+        # The run mode:
+        self.action = loader.addOption("action", default=[], action="append", type=CheribuildAction, helpHidden=True,
+                                       help="The action to perform by cheribuild")
+        self.getConfigOption = loader.addOption("get-config-option", type=str, metavar="KEY",
+                                                help="Print the value of config option KEY and exit")
+        # Add aliases (e.g. --test = --action=test):
+        for action in CheribuildAction:
+            if action.altname:
+                loader.actionGroup.add_argument(action.option_name, action.altname, help=action.help_message,
+                                                dest="action", action="append_const", const=action.actions)
+            else:
+                loader.actionGroup.add_argument(action.option_name, help=action.help_message, dest="action",
+                                                action="append_const", const=action.actions)
+
         # boolean flags
         self.quiet = loader.addBoolOption("quiet", "q", help="Don't show stdout of the commands that are executed")
         self.verbose = loader.addBoolOption("verbose", "v", help="Print all commmands that are executed")
@@ -54,11 +88,6 @@ class DefaultCheriConfig(CheriConfig):
                                                    group=loader.configureGroup,
                                                    help="Always run the configure step, even for CMake projects with a "
                                                         "valid cache.")
-        self.listTargets = loader.addBoolOption("list-targets", help="List all available targets and exit")
-        self.dumpConfig = loader.addBoolOption("dump-configuration", help="Print the current configuration as JSON."
-                                                                          " This can be saved to ~/.config/cheribuild.json to make it persistent")
-        self.getConfigOption = loader.addOption("get-config-option", type=str, metavar="KEY",
-                                                help="Print the value of config option KEY and exit")
         self.includeDependencies = loader.addBoolOption("include-dependencies", "d",
                                                         help="Also build the dependencies "
                                                              "of targets passed on the command line. Targets passed on the"
@@ -106,6 +135,12 @@ class DefaultCheriConfig(CheriConfig):
 
     def load(self):
         super().load()
+        # If no actions were passed we default to just building targets
+        if not self.action:
+            self.action = [CheribuildAction.BUILD]
+        else:
+            # otherwise unpack the potentially nested list
+            self.action = list(itertools.chain(*self.action))
         if self.crossCompileForHost:
             assert not self.crossCompileForMips
             self.crossCompileTarget = CrossCompileTarget.NATIVE

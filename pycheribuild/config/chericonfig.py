@@ -165,6 +165,8 @@ class CheriConfig(object):
 
         self.targets = None  # type: list
         self.FS = None  # type: FileSystemUtils
+        # The action(s) that should be performed by cheribuild
+        self.action = None
         self.__optionalProperties = []
 
     def load(self):

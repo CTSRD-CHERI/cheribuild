@@ -38,7 +38,7 @@ from pathlib import Path
 # We can't do from .configloader import ConfigLoader here because that will only update the local copy!
 # https://stackoverflow.com/questions/3536620/how-to-change-a-module-variable-from-another-module
 from .config.loader import JsonAndCommandLineConfigLoader, JsonAndCommandLineConfigOption
-from .config.defaultconfig import DefaultCheriConfig
+from .config.defaultconfig import DefaultCheriConfig, CheribuildAction
 from .utils import *
 from .targets import targetManager
 from .projects.project import SimpleProject
@@ -97,10 +97,11 @@ def real_main():
                 cheriConfig.outputRoot == outputOption._getDefaultValue(cheriConfig):
             fatalError("Running cheribuild in docker with the default source/output/build directories is not supported")
 
-    if cheriConfig.listTargets:
+    print(cheriConfig.action)
+    if CheribuildAction.LIST_TARGETS in cheriConfig.action:
         print("Available targets are:\n ", "\n  ".join(allTargetNames))
         sys.exit()
-    elif cheriConfig.dumpConfig:
+    elif CheribuildAction.DUMP_CONFIGURATION in cheriConfig.action:
         print(cheriConfig.getOptionsJSON())
         sys.exit()
     elif cheriConfig.getConfigOption:
@@ -110,6 +111,8 @@ def real_main():
         # noinspection PyProtectedMember
         print(option.__get__(cheriConfig, option._owningClass if option._owningClass else cheriConfig))
         sys.exit()
+
+    assert CheribuildAction.TEST in cheriConfig.action or CheribuildAction.BUILD in cheriConfig.action
 
     # create the required directories
     for d in (cheriConfig.sourceRoot, cheriConfig.outputRoot, cheriConfig.buildRoot):

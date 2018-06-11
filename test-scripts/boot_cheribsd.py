@@ -160,9 +160,11 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: i
     if smb_dir:
         user_network_args += ",smb=" + smb_dir
     user_network_args += ",hostfwd=tcp::" + str(ssh_port) + "-:22"
-    qemu_args = ["-M", "malta", "-kernel", kernel_image, "-hda", disk_image, "-m", "2048", "-nographic",
+    qemu_args = ["-M", "malta", "-kernel", kernel_image, "-m", "2048", "-nographic",
                  #  ssh forwarding:
                  "-net", "nic", "-net", user_network_args]
+    if disk_image:
+        qemu_args += ["-hda", disk_image]
     success("Starting QEMU: ", qemu_cmd, " ", " ".join(qemu_args))
     qemu_starttime = datetime.datetime.now()
     child = pexpect.spawnu(qemu_cmd, qemu_args, echo=False, timeout=60)
@@ -230,7 +232,7 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: i
 
 
 def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str,
-             ssh_keyfile: str, ssh_port: int, timeout: int) -> bool:
+             ssh_keyfile: str, ssh_port: int, timeout: int, test_function) -> bool:
     setup_tests_starttime = datetime.datetime.now()
     # disable coredumps, otherwise we get no space left on device errors
     run_cheribsd_command(qemu, "sysctl kern.coredump=0")
@@ -260,9 +262,12 @@ def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str,
     time.sleep(5)  # wait 5 seconds to make sure the disks have synced
     run_tests_starttime = datetime.datetime.now()
     # Run the tests
-    qemu.sendline(test_command +
-                  " ;if test $? -eq 0; then echo 'TESTS' 'COMPLETED'; else echo 'TESTS' 'FAILED'; fi")
-    i = qemu.expect([pexpect.TIMEOUT, "TESTS COMPLETED", "TESTS FAILED", PANIC, STOPPED], timeout=timeout)
+    if test_function:
+        test_function(qemu, ssh_keyfile=ssh_keyfile, ssh_port=ssh_port)
+    else:
+        qemu.sendline(test_command +
+                      " ;if test $? -eq 0; then echo 'TESTS' 'COMPLETED'; else echo 'TESTS' 'FAILED'; fi")
+        i = qemu.expect([pexpect.TIMEOUT, "TESTS COMPLETED", "TESTS FAILED", PANIC, STOPPED], timeout=timeout)
     testtime = datetime.datetime.now() - run_tests_starttime
     if i == 0:  # Timeout
         return failure("timeout after", testtime, "waiting for tests: ", str(qemu), exit=False)
@@ -275,12 +280,13 @@ def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str,
         return failure("error after ", testtime, "while running tests : ", str(qemu), exit=False)
 
 
-def main():
+def main(test_function=None, argparse_callback=None):
     # TODO: look at click package?
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--qemu-cmd", default="qemu-system-cheri")
     parser.add_argument("--kernel", default="/usr/local/share/cheribsd/cheribsd-malta64-kernel")
-    parser.add_argument("--disk-image", default="/usr/local/share/cheribsd/cheribsd-full.img")
+    parser.add_argument("--disk-image", default=None, # default="/usr/local/share/cheribsd/cheribsd-full.img"
+                        )
     parser.add_argument("--extract-images-to", help="Path where the compressed images should be extracted to")
     parser.add_argument("--reuse-image", action="store_true")
     parser.add_argument("--keep-compressed-images", action="store_true", default=True, dest="keep_compressed_images")
@@ -293,6 +299,8 @@ def main():
     parser.add_argument("--test-command", "-c")
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60)
     parser.add_argument("--interact", "-i", action="store_true")
+    if argparse_callback:
+        argparse_callback(parser)
     try:
         # noinspection PyUnresolvedReferences
         import argcomplete
@@ -331,22 +339,24 @@ def main():
         new_kernel_path = os.path.join(args.extract_images_to, Path(args.kernel).name)
         shutil.copy(args.kernel, new_kernel_path)
         args.kernel = new_kernel_path
-
-        new_image_path = os.path.join(args.extract_images_to, Path(args.disk_image).name)
-        shutil.copy(args.disk_image, new_image_path)
-        args.disk_image = new_image_path
+        if args.disk_image:
+            new_image_path = os.path.join(args.extract_images_to, Path(args.disk_image).name)
+            shutil.copy(args.disk_image, new_image_path)
+            args.disk_image = new_image_path
 
         force_decompression = True
         keep_compressed_images = False
     kernel = str(maybe_decompress(Path(args.kernel), force_decompression, keep_archive=keep_compressed_images))
-    diskimg = str(maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images))
+    diskimg = None
+    if args.disk_image:
+        diskimg = str(maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images))
 
     boot_starttime = datetime.datetime.now()
     qemu = boot_cheribsd(args.qemu_cmd, kernel, diskimg, args.ssh_port, smb_dir=args.smb_mount_directory)
     success("Booting CheriBSD took: ", datetime.datetime.now() - boot_starttime)
 
     tests_okay = True
-    if test_archives or args.test_command:
+    if test_archives or args.test_command or test_function:
         # noinspection PyBroadException
         try:
             setup_ssh_starttime = datetime.datetime.now()

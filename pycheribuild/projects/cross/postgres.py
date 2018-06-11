@@ -101,6 +101,9 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     def needsConfigure(self):
         return not (self.buildDir / "GNUmakefile").exists()
 
+    def run_tests(self):
+        pass
+
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions()
