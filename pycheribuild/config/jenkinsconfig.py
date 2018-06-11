@@ -62,7 +62,7 @@ class JenkinsAction(Enum):
 class JenkinsConfig(CheriConfig):
     def __init__(self, loader: ConfigLoaderBase, availableTargets: list):
         super().__init__(loader, action_class=JenkinsAction)
-        self.default_action = JenkinsAction.BUILD
+        self.default_action = ""  # error if no action set
 
         self.cpu = loader.addCommandLineOnlyOption("cpu", default=os.getenv("CPU"),
                                                    help="The target to build the software for (defaults to $CPU).",

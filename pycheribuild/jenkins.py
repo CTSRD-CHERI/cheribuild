@@ -200,6 +200,10 @@ def _jenkins_main():
         create_sdk_from_archives(cheriConfig)
         sys.exit()
 
+    if cheriConfig.action == [""]:
+        fatalError("No action specified, did you mean to pass --build?")
+        sys.exit()
+
     if JenkinsAction.BUILD in cheriConfig.action:
         if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
             assert cheriConfig.sdkDir == Path("/cheri-sdk"), cheriConfig.sdkDir
