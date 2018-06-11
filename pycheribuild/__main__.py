@@ -97,7 +97,6 @@ def real_main():
                 cheriConfig.outputRoot == outputOption._getDefaultValue(cheriConfig):
             fatalError("Running cheribuild in docker with the default source/output/build directories is not supported")
 
-    print(cheriConfig.action)
     if CheribuildAction.LIST_TARGETS in cheriConfig.action:
         print("Available targets are:\n ", "\n  ".join(allTargetNames))
         sys.exit()

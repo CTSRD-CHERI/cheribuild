@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import itertools
 import getpass
 import grp
 import json
@@ -75,11 +76,26 @@ class MipsFloatAbi(Enum):
 
 
 class CheriConfig(object):
-    def __init__(self, loader: ConfigLoaderBase):
+    def __init__(self, loader: ConfigLoaderBase, action_class):
         loader._cheriConfig = self
         self.loader = loader
         self.pretend = loader.addCommandLineOnlyBoolOption("pretend", "p",
                                                            help="Only print the commands instead of running them")
+
+        # add the actions:
+        self.action = loader.addOption("action", default=[], action="append", type=action_class, helpHidden=True,
+                                       help="The action to perform by cheribuild")
+        self.default_action = None
+        # Add aliases (e.g. --test = --action=test):
+        for action in action_class:
+            if action.altname:
+                loader.actionGroup.add_argument(action.option_name, action.altname, help=action.help_message,
+                                                dest="action", action="append_const", const=action.actions)
+            else:
+                loader.actionGroup.add_argument(action.option_name, help=action.help_message, dest="action",
+                                                action="append_const", const=action.actions)
+
+
         self.clangPath = loader.addPathOption("clang-path", default=latestClangTool("clang"),
                                               help="The Clang C compiler to use for compiling "
                                                    "LLVM+Clang (must be at least version 3.7)")
@@ -165,8 +181,6 @@ class CheriConfig(object):
 
         self.targets = None  # type: list
         self.FS = None  # type: FileSystemUtils
-        # The action(s) that should be performed by cheribuild
-        self.action = None
         self.__optionalProperties = []
 
     def load(self):
@@ -180,6 +194,13 @@ class CheriConfig(object):
         if self.clangPlusPlusPath is None:
             self.clangPlusPlusPath = Path("/c++/compiler/is/missing")
         self.FS = FileSystemUtils(self)
+
+        # flatten the potentially nested list
+        if self.action:
+            self.action = list(itertools.chain(*self.action))
+        else:
+            assert self.default_action is not None
+            self.action = [self.default_action]
 
     def _initializeDerivedPaths(self):
         self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")

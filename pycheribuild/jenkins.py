@@ -37,7 +37,7 @@ import pprint
 from pathlib import Path
 
 from .config.loader import ConfigLoaderBase, CommandLineConfigOption
-from .config.jenkinsconfig import JenkinsConfig, CrossCompileTarget
+from .config.jenkinsconfig import JenkinsConfig, CrossCompileTarget, JenkinsAction
 from .projects.project import SimpleProject, Project
 # noinspection PyUnresolvedReferences
 from .projects import *  # make sure all projects are loaded so that targetManager gets populated
@@ -196,11 +196,11 @@ def _jenkins_main():
     setCheriConfig(cheriConfig)
 
     # special target to extract the sdk
-    if cheriConfig.targets[0] == EXTRACT_SDK_TARGET:
+    if cheriConfig.targets[0] == EXTRACT_SDK_TARGET or JenkinsAction.EXTRACT_SDK in cheriConfig.action:
         create_sdk_from_archives(cheriConfig)
         sys.exit()
 
-    if cheriConfig.do_build:
+    if JenkinsAction.BUILD in cheriConfig.action:
         if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
             assert cheriConfig.sdkDir == Path("/cheri-sdk"), cheriConfig.sdkDir
         elif cheriConfig.without_sdk:
@@ -239,7 +239,7 @@ def _jenkins_main():
         with cleaningTask:
             target.execute()
 
-    if cheriConfig.do_tarball:
+    if JenkinsAction.CREATE_TARBALL in cheriConfig.action:
         if IS_LINUX:
             owner_flags = ["--owner=0", "--group=0", "--numeric-owner"]
         else:

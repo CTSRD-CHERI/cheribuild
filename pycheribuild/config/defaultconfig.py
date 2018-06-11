@@ -28,7 +28,6 @@
 # SUCH DAMAGE.
 #
 import os
-import itertools
 from enum import Enum
 from pathlib import Path
 
@@ -57,22 +56,12 @@ class CheribuildAction(Enum):
 
 class DefaultCheriConfig(CheriConfig):
     def __init__(self, loader: ConfigLoaderBase, availableTargets: list):
-        super().__init__(loader)
+        super().__init__(loader, action_class=CheribuildAction)
+        self.default_action = CheribuildAction.BUILD
         assert isinstance(loader, JsonAndCommandLineConfigLoader)
         # The run mode:
-        self.action = loader.addOption("action", default=[], action="append", type=CheribuildAction, helpHidden=True,
-                                       help="The action to perform by cheribuild")
         self.getConfigOption = loader.addOption("get-config-option", type=str, metavar="KEY",
                                                 help="Print the value of config option KEY and exit")
-        # Add aliases (e.g. --test = --action=test):
-        for action in CheribuildAction:
-            if action.altname:
-                loader.actionGroup.add_argument(action.option_name, action.altname, help=action.help_message,
-                                                dest="action", action="append_const", const=action.actions)
-            else:
-                loader.actionGroup.add_argument(action.option_name, help=action.help_message, dest="action",
-                                                action="append_const", const=action.actions)
-
         # boolean flags
         self.quiet = loader.addBoolOption("quiet", "q", help="Don't show stdout of the commands that are executed")
         self.verbose = loader.addBoolOption("verbose", "v", help="Print all commmands that are executed")
@@ -130,17 +119,10 @@ class DefaultCheriConfig(CheriConfig):
                                                help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
         self.buildRoot = loader.addPathOption("build-root", default=lambda p, cls: (p.sourceRoot / "build"),
                                               help="The directory for all the builds (default: '<SOURCE_ROOT>/build')")
-
         loader.finalizeOptions(availableTargets)
 
     def load(self):
         super().load()
-        # If no actions were passed we default to just building targets
-        if not self.action:
-            self.action = [CheribuildAction.BUILD]
-        else:
-            # otherwise unpack the potentially nested list
-            self.action = list(itertools.chain(*self.action))
         if self.crossCompileForHost:
             assert not self.crossCompileForMips
             self.crossCompileTarget = CrossCompileTarget.NATIVE

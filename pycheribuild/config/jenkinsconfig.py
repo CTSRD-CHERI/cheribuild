@@ -29,6 +29,7 @@
 #
 
 import os
+from enum import Enum
 from pathlib import Path
 
 from .loader import ConfigLoaderBase
@@ -42,9 +43,26 @@ def default_install_prefix(conf: "JenkinsConfig", unused):
     return "/opt/" + conf.cpu
 
 
+class JenkinsAction(Enum):
+    BUILD = ("--build", "Run (usually build+install) chosen targets (default)")
+    CREATE_TARBALL = ("--create-tarball", "Create an archive of the installed files", "--tarball")
+    EXTRACT_SDK = ("--extract-sdk", "Extract the SDK archive and then exit")
+    # TODO: TEST = ("--test", "Run tests for the passed targets instead of building them", "--run-tests")
+
+    def __init__(self, option_name, help_message, altname=None, actions=None):
+        self.option_name = option_name
+        self.help_message = help_message
+        self.altname = altname
+        if not actions:
+            actions = [self]
+        if actions:
+            self.actions = actions
+
+
 class JenkinsConfig(CheriConfig):
     def __init__(self, loader: ConfigLoaderBase, availableTargets: list):
-        super().__init__(loader)
+        super().__init__(loader, action_class=JenkinsAction)
+        self.default_action = JenkinsAction.BUILD
 
         self.cpu = loader.addCommandLineOnlyOption("cpu", default=os.getenv("CPU"),
                                                    help="The target to build the software for (defaults to $CPU).",
@@ -74,10 +92,6 @@ class JenkinsConfig(CheriConfig):
                                                                   help="The install prefix for cross compiled projects"
                                                                        " (the path where it will end up in the install"
                                                                        " image)")  # type: Path
-        self.do_build = loader.addCommandLineOnlyBoolOption("build", default=True,
-                                                            help="Build and install the project")
-        self.do_tarball = loader.addCommandLineOnlyBoolOption("create-tarball", shortname="-tarball",
-                                                              help="Create an archive of the installed files")
         self.without_sdk = loader.addCommandLineOnlyBoolOption("without-sdk",
                                                               help="Don't use the CHERI SDK -> only /usr (for native builds)")
         self.tarball_name = loader.addCommandLineOnlyOption("tarball-name",

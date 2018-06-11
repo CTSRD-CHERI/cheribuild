@@ -113,6 +113,7 @@ class ConfigLoaderBase(object):
         self.__option_cls = option_cls
         self._parser = argparse.ArgumentParser(formatter_class=
                                       lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
+        self.actionGroup = self._parser.add_argument_group("Actions to be performed:")
 
     def addCommandLineOnlyOption(self, *args, **kwargs):
         """
@@ -450,7 +451,6 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                                                                                      " the target-specific ones.")
         # argument groups:
         # self.deprecatedOptionsGroup = _parser.add_argument_group("Old deprecated options", "These should not be used any more")
-        self.actionGroup = self._parser.add_argument_group("Actions to be performed:")
         self.cheriBitsGroup = self._parser.add_mutually_exclusive_group()
         self.crossCompileGroup = self._parser.add_mutually_exclusive_group()
         self.configureGroup = self._parser.add_mutually_exclusive_group()
