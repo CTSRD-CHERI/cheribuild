@@ -129,6 +129,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     dependencies = []  # type: typing.List[str]
     dependenciesMustBeBuilt = False
     isAlias = False
+    is_sdk_target = False  # for --skip-sdk
     sourceDir = None
     buildDir = None
     installDir = None

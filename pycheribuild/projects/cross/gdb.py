@@ -61,6 +61,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
     repository = "https://github.com/bsdjhb/gdb.git"
     gitBranch = "mips_cheri-8.0.1"
     make_kind = MakeCommandKind.GnuMake
+    is_sdk_target = True
     defaultLinker = "lld"
     defaultOptimizationLevel = ["-O2"]
     supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]

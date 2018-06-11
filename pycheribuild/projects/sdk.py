@@ -42,17 +42,20 @@ from pathlib import Path
 class BuildCheriBSDSdk(TargetAliasWithDependencies):
     target = "cheribsd-sdk"
     dependencies = ["freestanding-sdk", "cheribsd-sysroot"]
+    is_sdk_target = True
 
 
 class BuildSdk(TargetAliasWithDependencies):
     target = "sdk"
     dependencies = ["cheribsd-sdk"] if IS_FREEBSD else ["freestanding-sdk"]
+    is_sdk_target = True
 
 
 class BuildFreestandingSdk(SimpleProject):
     target = "freestanding-sdk"
     dependencies = ["binutils", "llvm", "qemu", "gdb-native"]  # TODO: should we add ld.bfd?
     dependenciesMustBeBuilt = True
+    is_sdk_target = True
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -149,12 +152,16 @@ class BuildFreestandingSdk(SimpleProject):
 class BuildBinutils(TargetAlias):
     target = "binutils"
     # LLD should be usable for all cases now, now longer install the ancient gnu ld
+    # After the next merge we can probably also remove elftoolchain (however, for consistency
+    # with buildworld we should probably keep it?)
     dependencies = ["elftoolchain"]
+    is_sdk_target = True
 
 
 class BuildBaremetalSdk(TargetAliasWithDependencies):
     target = "baremetal-sdk"
     dependencies = ["freestanding-sdk", "libcxx-baremetal"]
+    is_sdk_target = True
 
 
 class StartCheriSDKShell(SimpleProject):

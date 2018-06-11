@@ -41,6 +41,7 @@ class BuildElftoolchain(Project):
     repository = "https://github.com/emaste/elftoolchain.git"
     defaultInstallDir = Project._installToSDK
     make_kind = MakeCommandKind.BsdMake
+    is_sdk_target = True
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

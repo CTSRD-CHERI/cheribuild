@@ -795,6 +795,7 @@ class BuildCHERIBSD(_BuildFreeBSD):
     defaultBuildDir = cheribsd_build_dir
     _crossCompileTarget = CrossCompileTarget.CHERI
     supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
+    is_sdk_target = True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -958,6 +959,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 class BuildCheriBsdSysroot(SimpleProject):
     projectName = "cheribsd-sysroot"
     dependencies = ["cheribsd"]
+    is_sdk_target = True
 
     rootfs_source_class = BuildCHERIBSD  # type: BuildCHERIBSD
 

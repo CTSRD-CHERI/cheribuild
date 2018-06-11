@@ -39,6 +39,7 @@ class BuildLLVM(CMakeProject):
     repository = githubBaseUrl + "llvm.git"
     no_default_sysroot = None
     appendCheriBitsToBuildDir = True
+    is_sdk_target = True
 
     @classmethod
     def setupConfigOptions(cls, includeClangRevision=True, includeLldbRevision=False, includeLldRevision=True,

@@ -219,7 +219,16 @@ class TargetManager(object):
                 assert not t.projectClass.dependenciesMustBeBuilt
                 # for aliases without full dependencies just add the direct dependencies
                 deps_to_add = t.projectClass.dependencies
-            chosen_targets.extend(self.get_target(dep) for dep in deps_to_add)
+            # Now add all the dependencies:
+            for dep in deps_to_add:
+                dep_target = self.get_target(dep)
+                # when --skip-sdk is passed don't include sdk dependencies
+                if config.skipSdk and dep_target.projectClass.is_sdk_target:
+                    if config.verbose:
+                        statusUpdate("Not adding ", t, "dependency", dep_target,
+                                     "since it is an SDK target and --skip-sdk was passed.")
+                    continue
+                chosen_targets.append(dep_target)
 
         sort = self.sort_in_dependency_order(chosen_targets)
         return sort
