@@ -134,7 +134,7 @@ class BuildQEMU(AutotoolsProject):
             "--cxx=" + str(self.config.clangPlusPlusPath),
             "--cc=" + str(self.config.clangPath),
             ])
-        python_path = shutil.which("python2.7") or shutil.which("python2")
+        python_path = shutil.which("python2.7") or shutil.which("python2") or ""
         # QEMU needs python 2.7 for building:
         self.configureArgs.append("--python=" + python_path)
         # the capstone disassembler doesn't support CHERI instructions:
