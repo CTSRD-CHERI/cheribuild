@@ -196,11 +196,19 @@ class CheriConfig(object):
         self.FS = FileSystemUtils(self)
 
         # flatten the potentially nested list
-        if self.action:
-            self.action = list(itertools.chain(*self.action))
-        else:
+        if not self.action:
             assert self.default_action is not None
             self.action = [self.default_action]
+        else:
+            assert isinstance(self.action, list)
+            # there doesn't seem to be a flatten() function (and itertools.chain() doesn't work properly)
+            real_action = []
+            for i in self.action:
+                if isinstance(i, list):
+                    real_action.extend(i)
+                else:
+                    real_action.append(i)
+            self.action = real_action
 
     def _initializeDerivedPaths(self):
         self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
