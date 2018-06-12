@@ -72,6 +72,18 @@ class BuildLibunwind(CrossCompileCMakeProject):
             self.add_cmake_options(LIBUNWIND_EXECUTOR=executor, LIBUNWIND_TARGET_INFO=target_info,
                                    LIBUNWIND_CXX_ABI_LIBNAME="libcxxrt")
 
+    def process(self):
+        # TODO: update libcxxrt to always build against host/cheribsd version
+        if False:
+            if self.compiling_for_host():
+                self.warning("Libunwind should be provided by the host OS, are you sure you")
+            else:
+                self.warning("Libunwind is included as part of the CheriBSD sysroot, this target only needs"
+                             " to be run if you are testing new features in libunwind.")
+            if not self.queryYesNo("Continue anyway?", defaultResult=True):
+                return
+        super().process()
+
 
 class BuildLibCXXRT(CrossCompileCMakeProject):
     repository = "https://github.com/CTSRD-CHERI/libcxxrt.git"
