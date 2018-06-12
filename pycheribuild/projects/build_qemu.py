@@ -92,25 +92,32 @@ class BuildQEMU(AutotoolsProject):
                 # silence this warning that comes lots of times (it's fine on x86)
                 extraCFlags += " -Wno-address-of-packed-member"
             if self.lto and self.can_use_lto(ccinfo):
-                extraCFlags += " -flto=thin"
-                extraCXXFlags += " -flto=thin"
-                extraLDFlags += " -flto=thin"
-                statusUpdate("Compiling with Clang and LLD -> building with LTO enabled (should result in faster QEMU)")
-                if ccinfo.compiler != "apple-clang":
-                    extraLDFlags += " -fuse-ld=lld"
-                    # For non apple-clang compilers we need to use llvm binutils:
-                    version_suffix = ""
-                    if compiler.name.startswith("clang"):
-                        version_suffix = compiler.name[len("clang"):]
-                    self._addRequiredSystemTool("llvm-ar" + version_suffix)
-                    self._addRequiredSystemTool("llvm-ranlib" + version_suffix)
-                    self._addRequiredSystemTool("llvm-nm" + version_suffix)
-                    llvm_ar = shutil.which("llvm-ar" + version_suffix)
-                    llvm_ranlib = shutil.which("llvm-ranlib" + version_suffix)
-                    llvm_nm = shutil.which("llvm-nm" + version_suffix)
-                    self.configureEnvironment.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
-                    # self.make_args.env_vars.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
-                    self.make_args.set(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
+                while True:  # add a loop so I can break early
+                    statusUpdate("Compiling with Clang and LLD -> trying to build with LTO enabled")
+                    if ccinfo.compiler != "apple-clang":
+                        extraLDFlags += " -fuse-ld=lld"
+                        # For non apple-clang compilers we need to use llvm binutils:
+                        version_suffix = ""
+                        if compiler.name.startswith("clang"):
+                            version_suffix = compiler.name[len("clang"):]
+                        llvm_ar = shutil.which("llvm-ar" + version_suffix)
+                        llvm_ranlib = shutil.which("llvm-ranlib" + version_suffix)
+                        llvm_nm = shutil.which("llvm-nm" + version_suffix)
+                        if not llvm_ar or not llvm_ranlib or not llvm_nm:
+                            self.warning("Could not find llvm-{ar,ranlib,nm}" + version_suffix,
+                                         "-> disabling LTO (qemu will be a bit slower)")
+                            break
+                        self._addRequiredSystemTool("llvm-ar" + version_suffix)
+                        self._addRequiredSystemTool("llvm-ranlib" + version_suffix)
+                        self._addRequiredSystemTool("llvm-nm" + version_suffix)
+                        self.configureEnvironment.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
+                        # self.make_args.env_vars.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
+                        self.make_args.set(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
+                    extraCFlags += " -flto=thin"
+                    extraCXXFlags += " -flto=thin"
+                    extraLDFlags += " -flto=thin"
+                    statusUpdate("Building with LTO -> QEMU should be faster")
+                    break
         if self.config.unified_sdk:
             targets = "cheri256-softmmu,cheri128-softmmu,cheri128magic-softmmu"
         else:
