@@ -104,7 +104,7 @@ class _BuildDiskImageBase(SimpleProject):
 
         self.makefs_cmd = None
         self.install_cmd = None
-        self.source_project = source_class.get_instance(config)
+        self.source_project = source_class.get_instance(self, self.config)
         assert isinstance(self.source_project, _BuildFreeBSD)
         self.rootfsDir = self.source_project.installDir
         assert self.rootfsDir is not None

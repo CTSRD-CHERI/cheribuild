@@ -46,7 +46,8 @@ class Target(object):
         self._completed = False
         self._creating_project = False  # avoid cycles
 
-    def get_or_create_project(self, config) -> "SimpleProject":
+    def get_or_create_project(self, caller: "typing.Union[Target, SimpleProject]", config) -> "SimpleProject":
+        # FIXME: use caller to select the right project
         if self.__project is None:
             self.__project = self.create_project(config)
         return self.__project
@@ -57,7 +58,7 @@ class Target(object):
     def checkSystemDeps(self, config: CheriConfig):
         if self._completed:
             return
-        project = self.get_or_create_project(config)
+        project = self.get_or_create_project(self, config)
         with setEnv(PATH=config.dollarPathWithOtherTools):
             # make sure all system dependencies exist first
             project.checkSystemDependencies()

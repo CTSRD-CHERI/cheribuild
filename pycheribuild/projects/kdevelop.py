@@ -78,7 +78,7 @@ class StartKDevelop(SimpleProject):
         self._addRequiredSystemTool("qtpaths")
 
     def process(self):
-        kdevelopBinary = BuildKDevelop.getInstallDir(self.config) / "bin/start-kdevelop.py"
+        kdevelopBinary = BuildKDevelop.getInstallDir(self, self.config) / "bin/start-kdevelop.py"
         if not kdevelopBinary.exists():
             self.dependencyError("KDevelop is missing:", kdevelopBinary,
                                  installInstructions="Run `cheribuild.py kdevelop` or `cheribuild.py " +

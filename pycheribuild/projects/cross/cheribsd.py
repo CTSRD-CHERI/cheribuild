@@ -69,7 +69,7 @@ class FreeBSDCrossTools(CMakeProject):
                                                         " cross tools. Defaults to the CheriBSD source directory")
 
     def configure(self, **kwargs):
-        freebsd_dir = self.freebsd_source_dir if self.freebsd_source_dir else BuildCHERIBSD.getSourceDir(self.config)
+        freebsd_dir = self.freebsd_source_dir if self.freebsd_source_dir else BuildCHERIBSD.getSourceDir(self, self.config)
         self.add_cmake_options(CHERIBSD_DIR=freebsd_dir, CMAKE_C_COMPILER=self.config.clangPath)
         super().configure()
 
@@ -100,12 +100,12 @@ class _BuildFreeBSD(Project):
     ]
 
     @classmethod
-    def rootfsDir(cls, config):
-        return cls.getInstallDir(config)
+    def rootfsDir(cls, caller, config):
+        return cls.getInstallDir(caller, config)
 
     @classmethod
-    def get_installed_kernel_path(cls, config):
-        return cls.rootfsDir(config) / "boot/kernel/kernel"
+    def get_installed_kernel_path(cls, caller, config):
+        return cls.rootfsDir(caller, config) / "boot/kernel/kernel"
 
     @classmethod
     def setupConfigOptions(cls, buildKernelWithClang: bool=True, makeOptionsShortname=None, **kwargs):
@@ -925,35 +925,35 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     dependencies = ["disk-image-minimal"]
 
     def process(self):
-        build_cheribsd = BuildCHERIBSD.get_instance(self.config)
-        kernconf = self.get_kernel_config(self.config)
+        build_cheribsd = BuildCHERIBSD.get_instance(self, self.config)
+        kernconf = self.get_kernel_config(self, self.config)
         if self.config.clean:
             kernel_dir = build_cheribsd.kernel_objdir(kernconf)
             if kernel_dir:
                 with self.asyncCleanDirectory(kernel_dir):
                     self.verbose_print("Cleaning ", kernel_dir)
         from ..disk_image import BuildMinimalCheriBSDDiskImage
-        image = BuildMinimalCheriBSDDiskImage.get_instance(self.config).diskImagePath
+        image = BuildMinimalCheriBSDDiskImage.get_instance(self, self.config).diskImagePath
         build_cheribsd._buildkernel(kernconf=kernconf, mfs_root_image=image)
         # Install to a temporary directory and then copy the kernel to OUTPUT_ROOT
         with tempfile.TemporaryDirectory() as td:
             build_cheribsd._installkernel(kernconf=kernconf, destdir=td)
             # runCmd("find", td)
-            self.deleteFile(self.get_installed_kernel_path(self.config))
-            self.installFile(Path(td, "boot/kernel/kernel"), self.get_installed_kernel_path(self.config), force=True)
+            self.deleteFile(self.get_installed_kernel_path(self, self.config))
+            self.installFile(Path(td, "boot/kernel/kernel"), self.get_installed_kernel_path(self, self.config), force=True)
 
     @property
     def crossbuild(self):
-        return BuildCHERIBSD.get_instance(self.config).crossbuild
+        return BuildCHERIBSD.get_instance(self, self.config).crossbuild
 
     @classmethod
-    def get_kernel_config(cls, config) -> str:
-        build_cheribsd = BuildCHERIBSD.get_instance(config)
+    def get_kernel_config(cls, caller: SimpleProject, config) -> str:
+        build_cheribsd = BuildCHERIBSD.get_instance(caller, config)
         return build_cheribsd.kernelConfig + "_MFS_ROOT"
 
     @classmethod
-    def get_installed_kernel_path(cls, config):
-        return config.outputRoot / ("kernel." + cls.get_kernel_config(config))
+    def get_installed_kernel_path(cls, caller, config):
+        return config.outputRoot / ("kernel." + cls.get_kernel_config(caller, config))
 
 
 class BuildCheriBsdSysroot(SimpleProject):
@@ -1015,9 +1015,9 @@ class BuildCheriBsdSysroot(SimpleProject):
                       "--include=./usr/lib/", "--include=./usr/libcheri", "--include=./usr/libdata/",
                       # only pack those files that are mentioned in METALOG
                       "@METALOG"]
-        printCommand(archiveCmd, cwd=BuildCHERIBSD.rootfsDir(self.config))
+        printCommand(archiveCmd, cwd=BuildCHERIBSD.rootfsDir(self, self.config))
         if not self.config.pretend:
-            tar_cwd = str(BuildCHERIBSD.rootfsDir(self.config))
+            tar_cwd = str(BuildCHERIBSD.rootfsDir(self, self.config))
             with subprocess.Popen(archiveCmd, stdout=subprocess.PIPE, cwd=tar_cwd) as tar:
                 runCmd(["tar", "xf", "-"], stdin=tar.stdout, cwd=self.config.sdkSysrootDir)
         if not (self.config.sdkSysrootDir / "lib/libc.so.7").is_file():
@@ -1046,7 +1046,7 @@ class BuildCheriBsdSysroot(SimpleProject):
                 self.createSymlink(self.config.sdkSysrootDir, unprefixed_sysroot)
 
         with self.asyncCleanDirectory(self.config.sdkSysrootDir):
-            if IS_FREEBSD or self.rootfs_source_class.get_instance(self.config).crossbuild:
+            if IS_FREEBSD or self.rootfs_source_class.get_instance(self, self.config).crossbuild:
                 self.createSysroot()
             else:
                 self.copySysrootFromRemoteMachine()

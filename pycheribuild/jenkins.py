@@ -225,7 +225,7 @@ def _jenkins_main():
         Target.instantiating_targets_should_warn = False
         target.checkSystemDeps(cheriConfig)
         # need to set destdir after checkSystemDeps:
-        project = target.get_or_create_project(cheriConfig)
+        project = target.get_or_create_project(target, cheriConfig)
         assert project
         if isinstance(project, CrossCompileMixin):
             project.destdir = cheriConfig.outputRoot

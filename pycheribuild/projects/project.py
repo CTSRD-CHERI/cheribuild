@@ -183,10 +183,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return cls.__cached_deps
 
     @classmethod
-    def get_instance(cls, config: CheriConfig) -> "SimpleProject":
+    def get_instance(cls, caller: "typing.Optional[SimpleProject]", config: CheriConfig) -> "SimpleProject":
         # TODO: assert that target manager has been initialized
         target = targetManager.get_target(cls.target)
-        result = target.get_or_create_project(config)
+        result = target.get_or_create_project(caller, config)
         return result
 
     @classmethod
@@ -690,16 +690,16 @@ class Project(SimpleProject):
 
     # TODO: remove these three
     @classmethod
-    def getSourceDir(cls, config: CheriConfig):
-        return cls.get_instance(config).sourceDir
+    def getSourceDir(cls, caller: "SimpleProject", config: CheriConfig):
+        return cls.get_instance(caller, config).sourceDir
 
     @classmethod
-    def getBuildDir(cls, config: CheriConfig):
-        return cls.get_instance(config).buildDir
+    def getBuildDir(cls, caller: "SimpleProject", config: CheriConfig):
+        return cls.get_instance(caller, config).buildDir
 
     @classmethod
-    def getInstallDir(cls, config: CheriConfig):
-        return cls.get_instance(config).installDir
+    def getInstallDir(cls, caller: "SimpleProject", config: CheriConfig):
+        return cls.get_instance(caller, config).installDir
 
     @classmethod
     def buildDirSuffix(cls, config: CheriConfig, target: CrossCompileTarget):

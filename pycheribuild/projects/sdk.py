@@ -126,7 +126,7 @@ class BuildFreestandingSdk(SimpleProject):
         CHERITOOLS_OBJ = self.cheribsdBuildRoot / "tmp/usr/bin/"
         CHERIBOOTSTRAPTOOLS_OBJ = self.cheribsdBuildRoot / "tmp/legacy/usr/bin/"
         CHERILIBEXEC_OBJ = self.cheribsdBuildRoot / "tmp/usr/libexec/"
-        for i in (CHERIBOOTSTRAPTOOLS_OBJ, CHERITOOLS_OBJ, CHERITOOLS_OBJ, BuildCHERIBSD.rootfsDir(self.config)):
+        for i in (CHERIBOOTSTRAPTOOLS_OBJ, CHERITOOLS_OBJ, CHERITOOLS_OBJ, BuildCHERIBSD.rootfsDir(self, self.config)):
             if not i.is_dir():
                 fatalError("Directory", i, "is missing!")
 

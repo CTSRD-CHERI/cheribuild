@@ -32,7 +32,7 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
         from .cheribsd import BuildCHERIBSD
         if hasattr(project, "rootfs_path"):
             assert project.rootfs_path.startswith("/"), project.rootfs_path
-            return BuildCHERIBSD.rootfsDir(config) / project.rootfs_path[1:]
+            return BuildCHERIBSD.rootfsDir(project, config) / project.rootfs_path[1:]
         if project.compiling_for_cheri():
             targetName = "cheri" + config.cheriBitsStr
         else:
@@ -40,7 +40,7 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
             targetName = "mips"
         if config.cross_target_suffix:
             targetName += "-" + config.cross_target_suffix
-        return Path(BuildCHERIBSD.rootfsDir(config) / "opt" / targetName / project.projectName.lower())
+        return Path(BuildCHERIBSD.rootfsDir(project, config) / "opt" / targetName / project.projectName.lower())
     elif project.crossInstallDir == CrossInstallDir.SDK:
         return config.sdkSysrootDir
     fatalError("Unknown install dir for", project.projectName)
@@ -125,6 +125,7 @@ class CrossCompileMixin(object):
 
     def __init__(self, config: CheriConfig, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
+        assert isinstance(self, SimpleProject)
         # convert the tuples into mutable lists (this is needed to avoid modifying class variables)
         # See https://github.com/CTSRD-CHERI/cheribuild/issues/33
         self.defaultOptimizationLevel = list(self.defaultOptimizationLevel)
@@ -158,7 +159,7 @@ class CrossCompileMixin(object):
         self.compiler_dir = self.config.sdkBinDir
         # Use the compiler from the build directory for native builds to get stddef.h (which will be deleted)
         if self._crossCompileTarget == CrossCompileTarget.NATIVE:
-            llvm_build_dir = BuildLLVM.get_instance(config).buildDir
+            llvm_build_dir = BuildLLVM.get_instance(self, config).buildDir
             if (llvm_build_dir / "bin/clang").exists():
                 self.compiler_dir = llvm_build_dir / "bin"
 
@@ -221,8 +222,8 @@ class CrossCompileMixin(object):
                     self.destdir = config.sdkSysrootDir
             elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
                 from .cheribsd import BuildCHERIBSD
-                self.installPrefix = Path("/", self.installDir.relative_to(BuildCHERIBSD.rootfsDir(config)))
-                self.destdir = BuildCHERIBSD.rootfsDir(config)
+                self.installPrefix = Path("/", self.installDir.relative_to(BuildCHERIBSD.rootfsDir(self, config)))
+                self.destdir = BuildCHERIBSD.rootfsDir(self, config)
             else:
                 assert self.installPrefix and self.destdir, "both must be set!"
 

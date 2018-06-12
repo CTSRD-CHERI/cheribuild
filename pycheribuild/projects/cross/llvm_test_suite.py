@@ -46,8 +46,8 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
         asString="$SOURCE_ROOT/llvm-test-suite")
 
     def _find_in_sdk_or_llvm_build_dir(self, name) -> Path:
-        if (BuildLLVM.getBuildDir(self.config) / "bin" / name).exists():
-            return BuildLLVM.getBuildDir(self.config) / "bin" / name
+        if (BuildLLVM.getBuildDir(self, self.config) / "bin" / name).exists():
+            return BuildLLVM.getBuildDir(self, self.config) / "bin" / name
         return self.config.sdkBinDir / name
 
     def __init__(self, config):

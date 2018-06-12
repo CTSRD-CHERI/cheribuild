@@ -189,7 +189,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
     repository = "https://github.com/CTSRD-CHERI/qtbase"
     gitBranch = "5.10.0"
     defaultSourceDir = ComputedDefaultValue(
-        function=lambda config, project: BuildQt5.getSourceDir(config) / "qtbase",
+        function=lambda config, project: BuildQt5.getSourceDir(project, config) / "qtbase",
         asString=lambda cls: "$SOURCE_ROOT/qt5" + cls.projectName.lower())
 
     def compile(self, **kwargs):
@@ -263,7 +263,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     defaultCMakeBuildType = "MinSizeRel"
     crossInstallDir = CrossInstallDir.SDK
     defaultSourceDir = ComputedDefaultValue(
-        function=lambda config, project: BuildQt5.getSourceDir(config) / "qtwebkit",
+        function=lambda config, project: BuildQt5.getSourceDir(project, config) / "qtwebkit",
         asString=lambda cls: "$SOURCE_ROOT/qt5" + cls.projectName.lower())
 
     def __init__(self, config: CheriConfig):
@@ -303,7 +303,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                                    )
             self.add_cmake_options(Qt5_DIR=self.config.sdkSysrootDir / ("usr/local/Qt-" + self._crossCompileTarget.value) / "lib/cmake/Qt5")
             self.add_cmake_options(PNG_LIBRARIES="libqtlibpng.a")
-            self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.getSourceDir(config) / "src/3rdparty/libpng")
+            self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.getSourceDir(self, config) / "src/3rdparty/libpng")
 
         self._addRequiredSystemTool("gperf")
 
