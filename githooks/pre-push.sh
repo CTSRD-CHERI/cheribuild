@@ -40,9 +40,13 @@ do
 			range="$remote_sha..$local_sha"
 		fi
 		# check that there are no obvious mistakes:
-		./cheribuild.py -p llvm
-		./cheribuild.py --help
-		WORKSPACE=/tmp CPU=mips ./jenkins-cheri-build.py --build -p llvm
+		./cheribuild.py -p llvm > /dev/null
+		./cheribuild.py --help > /dev/null
+		WORKSPACE=/tmp CPU=mips ./jenkins-cheri-build.py --tarball -p llvm >/dev/null
+		if ! env WORKSPACE=/tmp CPU=mips ./jenkins-cheri-build.py --build -p llvm 2>/dev/null >/dev/null; then
+			echo "Failed to run ./jenkins-cheri-build.py, don't push this!"
+			exit 1
+		fi
 
 		# Run python tests before pushing
 		if [ -e pytest.ini ]; then
