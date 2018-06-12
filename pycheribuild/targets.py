@@ -47,7 +47,7 @@ class Target(object):
         self._creating_project = False  # avoid cycles
 
     def get_or_create_project(self, caller: "typing.Union[Target, SimpleProject]", config) -> "SimpleProject":
-        # FIXME: use caller to select the right project
+        # Note: MultiArchTarget uses caller to select the right project (e.g. libcxxrt-native needs libunwind-native path)
         if self.__project is None:
             self.__project = self.create_project(config)
         return self.__project
@@ -89,6 +89,12 @@ class Target(object):
             project.process()
         statusUpdate("Built target '" + self.name + "' in", time.time() - starttime, "seconds")
         self._completed = True
+
+    def reset(self):
+        # For unit tests to get a fresh instance
+        self._completed = False
+        self.__project = None
+        self._creating_project = False
 
     def __lt__(self, other: "Target"):
         # print(self, "__lt__", other)
@@ -134,6 +140,18 @@ class MultiArchTarget(Target):
         self.derived_targets = []  # type: typing.List[MultiArchTarget]
         if base_target is not None:
             base_target._add_derived_target(self)
+
+    def get_or_create_project(self, caller: "typing.Union[Target, SimpleProject]", config) -> "SimpleProject":
+        # If there are any derived targets pick the right one based on the target_arch:
+        if self.derived_targets and caller is not None:  # caller is None when instantiated from targetmanager/unit tests
+            cross_target = caller.get_crosscompile_target(config)  # type: CrossCompileTarget
+            if cross_target is not None:
+                # find the correct derived project:
+                for tgt in self.derived_targets:
+                    if tgt.target_arch == cross_target:
+                        return tgt.get_or_create_project(caller, config)
+        # otherwise just call the default impl
+        return super().get_or_create_project(caller, config)
 
     def _add_derived_target(self, arg: "MultiArchTarget"):
         self.derived_targets.append(arg)
@@ -278,5 +296,9 @@ class TargetManager(object):
                 print("    Dependencies for", target.name, "are", target.projectClass.allDependencyNames())
             else:
                 target.execute()
+
+    def reset(self):
+        for i in self._allTargets.values():
+            i.reset()
 
 targetManager = TargetManager()

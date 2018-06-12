@@ -48,6 +48,7 @@ def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")) -> Defau
         SimpleProject._configLoader = _loader
         targetManager.registerCommandLineOptions()
         _targets_registered = True
+    targetManager.reset()
     ConfigLoaderBase._cheriConfig.loader._configPath = config_file
     sys.argv = ["cheribuild.py"] + args
     ConfigLoaderBase._cheriConfig.loader.reload()
@@ -265,3 +266,36 @@ def test_config_file_include():
         with pytest.raises(SyntaxError) as excinfo:
             _get_config_with_include(config_dir, b'{ "#include": "128-common.json", "foo": "bar", "#include": "256-common.json"}')
             assert re.search("duplicate key: '#include'", excinfo.value)
+
+
+def test_libcxxrt_dependency_path():
+    # Test that we pick the correct libunwind path when building libcxxrt
+    def check_libunwind_path(path, target_name):
+        tgt = targetManager.get_target(target_name).get_or_create_project(None, config)
+        for i in tgt.configureArgs:
+            if i.startswith("-DLIBUNWIND_PATH="):
+                assert ("-DLIBUNWIND_PATH=" + str(path)) == i, tgt.configureArgs
+                return
+        assert False, "Should have found -DLIBUNWIND_PATH= in " + str(tgt.configureArgs)
+
+    config = _parse_arguments(["--skip-configure",])
+    check_libunwind_path(config.buildRoot / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
+    check_libunwind_path(config.outputRoot / "rootfs256/opt/c++/lib", "libcxxrt-cheri")
+    check_libunwind_path(config.outputRoot / "rootfs-mips/opt/c++/lib", "libcxxrt-mips")
+    # Check the defaults:
+    config = _parse_arguments(["--skip-configure", "--xhost"])
+    check_libunwind_path(config.buildRoot / "libunwind-native-build/test-install-prefix/lib", "libcxxrt")
+    check_libunwind_path(config.buildRoot / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
+    config = _parse_arguments(["--skip-configure", "--xmips"])
+    check_libunwind_path(config.outputRoot / "rootfs-mips/opt/c++/lib", "libcxxrt")
+    check_libunwind_path(config.outputRoot / "rootfs-mips/opt/c++/lib", "libcxxrt-mips")
+    config = _parse_arguments(["--skip-configure", "--256"])
+    libcxxrt_default = targetManager.get_target("libcxxrt").get_or_create_project(None, config)
+    check_libunwind_path(config.outputRoot / "rootfs256/opt/c++/lib", "libcxxrt")
+    check_libunwind_path(config.outputRoot / "rootfs256/opt/c++/lib", "libcxxrt-cheri")
+    config = _parse_arguments(["--skip-configure", "--128"])
+    libcxxrt_default = targetManager.get_target("libcxxrt").get_or_create_project(None, config)
+    check_libunwind_path(config.outputRoot / "rootfs128/opt/c++/lib", "libcxxrt")
+    check_libunwind_path(config.outputRoot / "rootfs128/opt/c++/lib", "libcxxrt-cheri")
+
+
