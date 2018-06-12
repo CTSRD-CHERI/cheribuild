@@ -53,8 +53,6 @@ class BuildQEMU(AutotoolsProject):
                                           default=True)
         cls.lto = cls.addBoolOption("use-lto", showHelp=True,
                                     help="Try to build QEMU with link-time optimization if possible", default=True)
-        cls.python_path = cls.addConfigOption("python", showHelp=True,
-                                              help="Path to python2 interpreter (required to build qemu)")
 
     @classmethod
     def qemu_binary(cls, config: CheriConfig):
@@ -70,7 +68,7 @@ class BuildQEMU(AutotoolsProject):
         self._addRequiredSystemTool("glibtoolize" if IS_MAC else "libtoolize", homebrew="libtool")
         self._addRequiredSystemTool("autoreconf", homebrew="autoconf")
         self._addRequiredSystemTool("aclocal", homebrew="automake")
-        self._addRequiredSystemTool("python", installInstructions="QEMU needs Python 2 installed as the python binary")
+        self._addRequiredSystemTool("python2.7", installInstructions="QEMU needs Python 2.7 installed")
 
         self._addRequiredPkgConfig("pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel", apt="libpixman-1-dev",
                                    freebsd="pixman")
@@ -136,8 +134,9 @@ class BuildQEMU(AutotoolsProject):
             "--cxx=" + str(self.config.clangPlusPlusPath),
             "--cc=" + str(self.config.clangPath),
             ])
-        if self.python_path:
-            self.configureArgs.extend(["--python={}".format(self.python_path)])
+        python_path = shutil.which("python2.7") or shutil.which("python2")
+        # QEMU needs python 2.7 for building:
+        self.configureArgs.append("--python=" + python_path)
         # the capstone disassembler doesn't support CHERI instructions:
         self.configureArgs.append("--disable-capstone")
         if extraLDFlags:
