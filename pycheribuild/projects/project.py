@@ -102,7 +102,7 @@ class ProjectSubclassDefinitionHook(type):
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + targetName)
         if hasattr(cls, "supported_architectures"):
             # Add a the target for the default architecture
-            targetManager.addTarget(MultiArchTarget(targetName, cls, None))
+            base_target = targetManager.addTarget(MultiArchTarget(targetName, cls, None, None))
             for arch in cls.supported_architectures:
                 assert isinstance(arch, CrossCompileTarget)
                 # create a new class to ensure different build dirs and config name strings
@@ -113,7 +113,7 @@ class ProjectSubclassDefinitionHook(type):
                 new_dict["target"] = new_name
                 new_dict["synthetic_base"] = cls  # We are already adding it here
                 new_type = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
-                targetManager.addTarget(MultiArchTarget(new_name, new_type, arch))
+                targetManager.addTarget(MultiArchTarget(new_name, new_type, arch, base_target))
         else:
             # Only one target is supported:
             targetManager.addTarget(Target(targetName, cls))
@@ -136,21 +136,41 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     __cached_deps = None  # type: typing.List[str]
 
+    # TODO: this should return a list[Target] and not strings
     @classmethod
-    def allDependencyNames(cls, config: CheriConfig) -> list:
+    def allDependencyNames(cls, config: CheriConfig) -> "typing.List[str]":
         if cls.__cached_deps:
             return cls.__cached_deps
         dependencies = cls.dependencies
         result = []
+        expected_build_arch = cls.get_crosscompile_target(config)
         if callable(dependencies):
             dependencies = dependencies(cls, config)
         for dep in dependencies:
             if callable(dep):
                 dep = dep(cls, config)
+            # Handle --include-dependencies with --skip-sdk is passed
+            dep_target = targetManager.get_target(dep)
+            if config.skipSdk and dep_target.projectClass.is_sdk_target:
+                if config.verbose:
+                    statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
+                                 "since it is an SDK target and --skip-sdk was passed.")
+                continue
+            # Now find the actual crosscompile targets:
+            if isinstance(dep_target, MultiArchTarget):
+                # Find the correct dependency (e.g. libcxx-native should depend on libcxxrt-native)
+                statusUpdate("IS CROSS TARGET: ", dep_target)
+                if dep_target.target_arch != expected_build_arch:
+                    # try to find a better match:
+                    for tgt in dep_target.derived_targets:
+                        if tgt.target_arch == expected_build_arch:
+                            dep_target = tgt
+                            dep = tgt.name
+
             if dep not in result:
                 result.append(dep)
             # now recursively add the other deps:
-            recursive_deps = targetManager.get_target(dep).projectClass.allDependencyNames(config)
+            recursive_deps = dep_target.projectClass.allDependencyNames(config)
             for r in recursive_deps:
                 if r not in result:
                     result.append(r)
@@ -168,6 +188,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         target = targetManager.get_target(cls.target)
         result = target.get_or_create_project(config)
         return result
+
+    @classmethod
+    def get_crosscompile_target(cls, config: CheriConfig) -> "typing.Optional[CrossCompileTarget]":
+        return None  # XXX: does it make sense to return NATIVE instead? Will break stuff for little gain I guess
 
     # Project subclasses will automatically have a target based on their name generated unless they add this:
     doNotAddToTargets = True
@@ -460,7 +484,7 @@ def installDirNotSpecified(config: CheriConfig, project: "Project"):
 
 def _defaultBuildDir(config: CheriConfig, project: "Project"):
     # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
-    target = project.get_crosscompile_target(config) if hasattr(project, "get_crosscompile_target") else None
+    target = project.get_crosscompile_target(config)
     return project.buildDirForTarget(config, target)
 
 

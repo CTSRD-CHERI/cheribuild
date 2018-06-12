@@ -93,9 +93,11 @@ class CrossCompileMixin(object):
     @classmethod
     def get_crosscompile_target(cls, config: CheriConfig) -> CrossCompileTarget:
         target = inspect.getattr_static(cls, "_crossCompileTarget")
+        if target is None:
+            target = config.crossCompileTarget
         # HACK: to get the descriptor directly:
         if not isinstance(target, CrossCompileTarget):
-            isinstance(target, ConfigOptionBase)
+            assert isinstance(target, ConfigOptionBase)
             # We got the descriptor and to avoid the assertion that it is being called incorrectly pass a dummy
             # instance instead of the real object instance. This is fine  since the value of crosscompiletarget should
             # only depend on command line flags (to enforce this it is set in _no_overwrite_allowed)

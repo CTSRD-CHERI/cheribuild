@@ -1,4 +1,5 @@
 from pathlib import Path
+from enum import Enum
 from pycheribuild.utils import setCheriConfig
 from pycheribuild.config.chericonfig import CrossCompileTarget, MipsFloatAbi, CheriConfig
 from pycheribuild.config.loader import ConfigLoaderBase, DefaultValueOnlyConfigLoader
@@ -8,11 +9,15 @@ from pycheribuild.targets import Target
 class MockArgs(object):
     targets = []
 
+class MockActions(Enum):
+    pass
+
 class MockConfig(CheriConfig):
     def __init__(self, sourceRoot: Path):
         self.fake_loader = DefaultValueOnlyConfigLoader()
         self.fake_loader._parsedArgs = MockArgs()
-        super().__init__(self.fake_loader)
+        super().__init__(self.fake_loader, action_class=MockActions)
+        self.default_action = ""
         self.sourceRoot = sourceRoot
         self.buildRoot = sourceRoot / "build"
         self.outputRoot = sourceRoot / "output"

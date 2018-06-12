@@ -76,6 +76,7 @@ class BuildLibunwind(CrossCompileCMakeProject):
 class BuildLibCXXRT(CrossCompileCMakeProject):
     repository = "https://github.com/CTSRD-CHERI/libcxxrt.git"
     defaultInstallDir = installToCXXDir
+    dependencies = ["libunwind"]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

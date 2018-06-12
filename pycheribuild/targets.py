@@ -126,9 +126,16 @@ class Target(object):
 
 # XXX: can't call this CrossCompileTarget since that is already the name of the enum
 class MultiArchTarget(Target):
-    def __init__(self, name, projectClass, target_arch: "typing.Optional[CrossCompileTarget]"):
+    def __init__(self, name, projectClass, target_arch: "typing.Optional[CrossCompileTarget]",
+                 base_target: "typing.Optional[MultiArchTarget]"):
         super().__init__(name, projectClass)
         self.target_arch = target_arch
+        self.derived_targets = []  # type: typing.List[MultiArchTarget]
+        if base_target is not None:
+            base_target._add_derived_target(self)
+
+    def _add_derived_target(self, arg: "MultiArchTarget"):
+        self.derived_targets.append(arg)
 
     def _create_project(self, config: CheriConfig):
         from .projects.cross.crosscompileproject import CrossCompileMixin
@@ -145,8 +152,9 @@ class TargetManager(object):
     def __init__(self):
         self._allTargets = {}
 
-    def addTarget(self, target: Target):
+    def addTarget(self, target: Target) -> Target:
         self._allTargets[target.name] = target
+        return target
 
     def registerCommandLineOptions(self):
         # this cannot be done in the Project metaclass as otherwise we get

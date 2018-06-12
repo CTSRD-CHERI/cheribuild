@@ -25,11 +25,12 @@ setup_mock_chericonfig(Path("/this/path/does/not/exist"))
 BuildCHERIBSD.crossbuild = True
 
 
-def _sort_targets(targets: "typing.List[str]", add_dependencies=False) -> "typing.List[str]":
+def _sort_targets(targets: "typing.List[str]", add_dependencies=False, skip_sdk=False) -> "typing.List[str]":
     real_targets = list(targetManager.get_target(t) for t in targets)
     # print(real_targets)
     config = get_global_config()
     config.includeDependencies = add_dependencies
+    config.skipSdk = skip_sdk
     for t in real_targets:
         t.get_dependencies(config)  # ensure they have been cached
     result = list(t.name for t in targetManager.get_all_targets(real_targets, config))
@@ -82,9 +83,23 @@ def test_run_disk_image():
 def test_remove_duplicates():
     assert _sort_targets(["binutils", "elftoolchain"], add_dependencies=True) == ["elftoolchain", "binutils"]
 
+
 def test_minimal_run():
     # Check that we build the mfs root first
     assert _sort_targets(["disk-image-minimal", "cheribsd-mfs-root-kernel", "run-minimal"]) == \
                          ["disk-image-minimal", "cheribsd-mfs-root-kernel", "run-minimal"]
     assert _sort_targets(["cheribsd-mfs-root-kernel", "disk-image-minimal", "run-minimal"]) == \
                          ["disk-image-minimal", "cheribsd-mfs-root-kernel", "run-minimal"]
+
+
+# Check cross-compile targets
+def test_libcxx_deps():
+    #assert _sort_targets(["libcxx"], add_dependencies=True, skip_sdk=True) == \
+    #                     ["libunwind", "libcxxrt", "libcxx"]
+    # Now check that the cross-compile versions explicitly chose the matching target:
+    assert _sort_targets(["libcxx-native"], add_dependencies=True, skip_sdk=True) == \
+                         ["libunwind-native", "libcxxrt-native", "libcxx-native"]
+    assert _sort_targets(["libcxx-cheri"], add_dependencies=True, skip_sdk=True) == \
+                         ["libunwind-cheri", "libcxxrt-cheri", "libcxx-cheri"]
+    assert _sort_targets(["libcxx-mips"], add_dependencies=True, skip_sdk=True) == \
+                         ["libunwind-mips", "libcxxrt-mips", "libcxx-mips"]
