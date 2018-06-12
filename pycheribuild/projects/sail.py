@@ -43,7 +43,12 @@ class OcamlProject(Project):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self._addRequiredSystemTool("opam", homebrew="opam")
+        # The homebrew version of ocaml doesn't seem compatible -> suggest --without-ocaml --without-aspcud
+        # This avoids pulling in incompatible ocaml and the python@2 formula
+        # self._addRequiredSystemTool("opam", homebrew="opam --without-ocaml --without-camlp4 --without-aspcud")
+        self._addRequiredSystemTool("opam",
+            homebrew="Installing with hombrew generates a broken ocaml env, use this instead: "
+                     "`wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh -s /usr/local/bin`")
 
     def run_in_ocaml_env(self, command: str, cwd=None, printVerboseOnly=False):
         if cwd is None:
@@ -83,7 +88,7 @@ class BuildSail(OcamlProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self._addRequiredSystemTool("z3", homebrew="z3")
+        self._addRequiredSystemTool("z3", homebrew="z3 --without-python@2 --with-python")
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
