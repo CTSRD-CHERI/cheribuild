@@ -25,7 +25,7 @@ class MockProject(Project):
     def _deleteDirectories(self, *dirs):
         if self.config.sleep_before_delete:
             print("SLEEPING")
-            time.sleep(0.5)
+            time.sleep(0.05)
         super()._deleteDirectories(*dirs)
 
 
