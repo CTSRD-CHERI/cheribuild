@@ -45,5 +45,5 @@ $pytest_binary -v --junit-xml "../$test_prefix-results.xml" tests || echo "Some 
 targets=$(./cheribuild.py --list-targets | grep -v Available | grep -v $(printf "\x1b"))
 # echo "targets=$targets"
 for i in $targets; do
-  WORKSPACE=/tmp ./jenkins-cheri-build.py --cpu=cheri128 -p $i > /dev/null;
+  WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=cheri128 -p $i > /dev/null;
 done
