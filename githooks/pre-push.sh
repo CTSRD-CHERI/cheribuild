@@ -40,7 +40,7 @@ do
 			range="$remote_sha..$local_sha"
 		fi
 		# check that there are no obvious mistakes:
-		./cheribuild.py -p llvm > /dev/null
+		./cheribuild.py -p __run_everything__ --clean > /dev/null
 		./cheribuild.py --help > /dev/null
 		WORKSPACE=/tmp CPU=mips ./jenkins-cheri-build.py --tarball -p llvm >/dev/null
 		if ! env WORKSPACE=/tmp CPU=mips ./jenkins-cheri-build.py --build -p llvm 2>/dev/null >/dev/null; then

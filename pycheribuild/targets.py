@@ -46,7 +46,7 @@ class Target(object):
         self._completed = False
         self._creating_project = False  # avoid cycles
 
-    def get_or_create_project(self, caller: "typing.Union[Target, SimpleProject]", config) -> "SimpleProject":
+    def get_or_create_project(self, caller: "typing.Optional[SimpleProject]", config) -> "SimpleProject":
         # Note: MultiArchTarget uses caller to select the right project (e.g. libcxxrt-native needs libunwind-native path)
         if self.__project is None:
             self.__project = self.create_project(config)
@@ -58,7 +58,7 @@ class Target(object):
     def checkSystemDeps(self, config: CheriConfig):
         if self._completed:
             return
-        project = self.get_or_create_project(self, config)
+        project = self.get_or_create_project(None, config)
         with setEnv(PATH=config.dollarPathWithOtherTools):
             # make sure all system dependencies exist first
             project.checkSystemDependencies()
@@ -141,7 +141,7 @@ class MultiArchTarget(Target):
         if base_target is not None:
             base_target._add_derived_target(self)
 
-    def get_or_create_project(self, caller: "typing.Union[Target, SimpleProject]", config) -> "SimpleProject":
+    def get_or_create_project(self, caller: "typing.Optiona[SimpleProject]", config) -> "SimpleProject":
         # If there are any derived targets pick the right one based on the target_arch:
         if self.derived_targets and caller is not None:  # caller is None when instantiated from targetmanager/unit tests
             cross_target = caller.get_crosscompile_target(config)  # type: CrossCompileTarget
