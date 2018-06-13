@@ -126,7 +126,6 @@ class BuildQEMU(AutotoolsProject):
                 # enable QEMU 128 bit capabilities
                 # https://github.com/CTSRD-CHERI/qemu/commit/40a7fc2823e2356fa5ffe1ee1d672f1d5ec39a12
                 extraCFlags += " -DCHERI_128=1" if not self.magic128 else " -DCHERI_MAGIC128=1"
-        extraCFlags += " -DCHERI_C0_NULL"
         if self.unaligned:
             extraCFlags += " -DCHERI_UNALIGNED"
         self.configureArgs.extend([
