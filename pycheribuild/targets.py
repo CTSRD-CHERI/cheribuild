@@ -52,8 +52,8 @@ class Target(object):
             self.__project = self.create_project(config)
         return self.__project
 
-    def get_dependencies(self, config) -> "typing.List[str]":
-        return self.projectClass.allDependencyNames(config)
+    def get_dependencies(self, config) -> "typing.List[Target]":
+        return self.projectClass.allDependencies(config)
 
     def checkSystemDeps(self, config: CheriConfig):
         if self._completed:
@@ -264,8 +264,8 @@ class TargetManager(object):
         # check that all target dependencies are correct:
         for t in self._allTargets.values():
             for dep in t.get_dependencies(config):
-                if dep not in self._allTargets:
-                    sys.exit("Invalid dependency " + dep + " for " + t.projectClass.__name__)
+                if dep.name not in self._allTargets:
+                    sys.exit("Invalid dependency " + dep.name + " for " + t.projectClass.__name__)
 
         # targetsSorted = sorted(self._allTargets.values())
         # print(" ".join(t.name for t in targetsSorted))

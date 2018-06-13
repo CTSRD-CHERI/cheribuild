@@ -134,23 +134,26 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     buildDir = None
     installDir = None
 
-    __cached_deps = None  # type: typing.List[str]
+    __cached_deps = None  # type: typing.List[Target]
 
-    # TODO: this should return a list[Target] and not strings
     @classmethod
     def allDependencyNames(cls, config: CheriConfig) -> "typing.List[str]":
+        return [t.name for t in cls.allDependencies(config)]
+
+    @classmethod
+    def allDependencies(cls, config: CheriConfig) -> "typing.List[Target]":
         if cls.__cached_deps:
             return cls.__cached_deps
         dependencies = cls.dependencies
-        result = []
+        result = []  # type: typing.List[Target]
         expected_build_arch = cls.get_crosscompile_target(config)
         if callable(dependencies):
             dependencies = dependencies(cls, config)
-        for dep in dependencies:
-            if callable(dep):
-                dep = dep(cls, config)
+        for dep_name in dependencies:
+            if callable(dep_name):
+                dep_name = dep_name(cls, config)
             # Handle --include-dependencies with --skip-sdk is passed
-            dep_target = targetManager.get_target(dep)
+            dep_target = targetManager.get_target(dep_name)
             if config.skipSdk and dep_target.projectClass.is_sdk_target:
                 if config.verbose:
                     statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
@@ -159,18 +162,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             # Now find the actual crosscompile targets:
             if isinstance(dep_target, MultiArchTarget):
                 # Find the correct dependency (e.g. libcxx-native should depend on libcxxrt-native)
-                statusUpdate("IS CROSS TARGET: ", dep_target)
                 if dep_target.target_arch != expected_build_arch:
                     # try to find a better match:
                     for tgt in dep_target.derived_targets:
                         if tgt.target_arch == expected_build_arch:
                             dep_target = tgt
-                            dep = tgt.name
-
-            if dep not in result:
-                result.append(dep)
+                            # print("Overriding with", tgt.name)
+            if dep_target not in result:
+                result.append(dep_target)
             # now recursively add the other deps:
-            recursive_deps = dep_target.projectClass.allDependencyNames(config)
+            recursive_deps = dep_target.projectClass.allDependencies(config)
             for r in recursive_deps:
                 if r not in result:
                     result.append(r)
