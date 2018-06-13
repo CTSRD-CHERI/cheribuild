@@ -67,6 +67,9 @@ def flushStdio(stream):
             else:
                 time.sleep(0.1)
 
+def _default_stdout_filter(arg: bytes):
+    raise NotImplementedError("Should never be called, this is a dummy")
+
 
 class ProjectSubclassDefinitionHook(type):
     def __init__(cls, name: str, bases, clsdict):
@@ -138,14 +141,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def allDependencyNames(cls, config: CheriConfig) -> "typing.List[str]":
-        return [t.name for t in cls.allDependencies(config)]
+        return [t.name for t in cls.recursive_dependencies(config)]
 
     @classmethod
-    def allDependencies(cls, config: CheriConfig) -> "typing.List[Target]":
-        if cls.__cached_deps:
-            return cls.__cached_deps
+    def direct_dependencies(cls, config: CheriConfig) -> "typing.Generator[Target]":
         dependencies = cls.dependencies
-        result = []  # type: typing.List[Target]
         expected_build_arch = cls.get_crosscompile_target(config)
         if callable(dependencies):
             dependencies = dependencies(cls, config)
@@ -168,10 +168,19 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                         if tgt.target_arch == expected_build_arch:
                             dep_target = tgt
                             # print("Overriding with", tgt.name)
-            if dep_target not in result:
-                result.append(dep_target)
+            yield dep_target
+
+
+    @classmethod
+    def recursive_dependencies(cls, config: CheriConfig) -> "typing.List[Target]":
+        if cls.__cached_deps:
+            return cls.__cached_deps
+        result = []  # type: typing.List[Target]
+        for target in cls.direct_dependencies(config):
+            if target not in result:
+                result.append(target)
             # now recursively add the other deps:
-            recursive_deps = dep_target.projectClass.allDependencies(config)
+            recursive_deps = target.projectClass.recursive_dependencies(config)
             for r in recursive_deps:
                 if r not in result:
                     result.append(r)
@@ -239,6 +248,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def addBoolOption(cls, name: str, *, shortname=None, default=False, **kwargs):
+        # noinspection PyTypeChecker
         return cls.addConfigOption(name, default=default, kind=bool, shortname=shortname, action="store_true", **kwargs)
 
     @classmethod
@@ -386,7 +396,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=newEnv)
             self.__runProcessWithFilteredOutput(make, logfile, stdoutFilter, cmdStr)
 
-    def __runProcessWithFilteredOutput(self, proc: subprocess.Popen, logfile: "typing.Optional[io.FileIO]",
+    def __runProcessWithFilteredOutput(self, proc: subprocess.Popen, logfile: "typing.Optional[typing.IO]",
                                        stdoutFilter: "typing.Callable[[bytes], None]", cmdStr: str):
         logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
         stderrThread = None
@@ -881,7 +891,7 @@ class Project(SimpleProject):
 
     def runMake(self, makeTarget="", *, make_command: str = None, options: MakeOptions=None, logfileName: str = None,
                 cwd: Path = None, appendToLogfile=False, compilationDbName="compile_commands.json",
-                parallel: bool=True, stdoutFilter: "typing.Callable[[bytes], None]" = "__default_filter__") -> None:
+                parallel: bool=True, stdoutFilter: "typing.Callable[[bytes], None]" = _default_stdout_filter) -> None:
         if not make_command:
             make_command = self.make_args.command
         if not options:
@@ -907,12 +917,12 @@ class Project(SimpleProject):
         if not self.config.makeWithoutNice:
             allArgs = ["nice"] + allArgs
         starttime = time.time()
-        if self.config.noLogfile and stdoutFilter == "__default_filter__":
+        if self.config.noLogfile and stdoutFilter == _default_stdout_filter:
             # if output isatty() (i.e. no logfile) ninja already filters the output -> don't slow this down by
             # adding a redundant filter in python
             if make_command == "ninja" and makeTarget != "install":
                 stdoutFilter = None
-        if stdoutFilter == "__default_filter__":
+        if stdoutFilter is _default_stdout_filter:
             stdoutFilter = self._stdoutFilter
         # TODO: this should be a super-verbose flag instead
         if self.config.verbose and make_command == "ninja":
@@ -996,7 +1006,7 @@ class Project(SimpleProject):
             return self.destdir / self.installPrefix.relative_to(Path("/"))
         return self.installDir
 
-    def runMakeInstall(self, *, options: MakeOptions=None, target="install", _stdoutFilter="__default_filter__", cwd=None,
+    def runMakeInstall(self, *, options: MakeOptions=None, target="install", _stdoutFilter=_default_stdout_filter, cwd=None,
                        parallel=False, **kwargs):
         if options is None:
             options = self.make_args.copy()
@@ -1006,7 +1016,7 @@ class Project(SimpleProject):
         self.runMake(makeTarget=target, options=options, stdoutFilter=_stdoutFilter, cwd=cwd,
                      parallel=parallel, **kwargs)
 
-    def install(self, _stdoutFilter="__default_filter__"):
+    def install(self, _stdoutFilter=_default_stdout_filter):
         self.runMakeInstall(_stdoutFilter=_stdoutFilter)
 
     def _do_generate_cmakelists(self):
@@ -1168,7 +1178,7 @@ class CMakeProject(Project):
         assert self.configureCommand is not None
         if not cmd.is_absolute() or not Path(self.configureCommand).exists():
             fatalError("Could not find cmake binary:", self.configureCommand)
-            return (0, 0, 0)
+            return 0, 0, 0
         assert cmd.is_absolute()
         return get_program_version(cmd, program_name=b"cmake")
 

@@ -122,6 +122,7 @@ class ConfigLoaderBase(object):
         return self.addOption(*args, option_cls=CommandLineConfigOption, **kwargs)
 
     def addCommandLineOnlyBoolOption(self, *args, default=False, **kwargs) -> bool:
+        # noinspection PyTypeChecker
         return self.addOption(*args, option_cls=CommandLineConfigOption, default=default, action="store_true",
                               type=bool, **kwargs)
 
@@ -150,6 +151,7 @@ class ConfigLoaderBase(object):
         return result
 
     def addBoolOption(self, name: str, shortname=None, default=False, **kwargs) -> bool:
+        # noinspection PyTypeChecker
         return self.addOption(name, shortname, default=default, action="store_true", type=bool, **kwargs)
 
     def addPathOption(self, name: str, shortname=None, **kwargs) -> Path:

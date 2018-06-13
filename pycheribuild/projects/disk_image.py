@@ -149,7 +149,8 @@ class _BuildDiskImageBase(SimpleProject):
             self.writeFile(targetFile, contents, noCommandPrint=True, overwrite=False, mode=mode)
         self.addFileToImage(targetFile, baseDirectory=baseDir)
 
-    def _wget_fetch(self, what, where):
+    @staticmethod
+    def _wget_fetch(what, where):
         # https://apple.stackexchange.com/a/100573/251654
         # https://www.gnu.org/software/wget/manual/html_node/Directory-Options.html
         wget_cmd = ["wget", "--no-host-directories", "--cut-dirs=3",  # strip prefix
@@ -471,7 +472,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             function=lambda conf, unused: "qemu-cheri" + conf.cheriBitsStr + "-" + hostUsername,
             asString="qemu-cheri${CHERI_BITS}-" + hostUsername)
 
-        def _defaultMinimalDiskImagePath(conf, cls):
+        def _defaultMinimalDiskImagePath(conf, proj):
             return _defaultDiskImagePath(conf.cheriBits, conf.outputRoot, "minimal-")
 
         super().setupConfigOptions(defaultHostname=defaultHostname, extraFilesSuffix="-minimal", **kwargs)
@@ -546,7 +547,7 @@ class BuildCheriBSDDiskImage(_BuildDiskImageBase):
         super().setupConfigOptions(extraFilesShortname="-extra-files", defaultHostname=defaultHostname, **kwargs)
 
         defaultDiskImagePath = ComputedDefaultValue(
-            function=lambda conf, cls: _defaultDiskImagePath(conf.cheriBits, conf.outputRoot),
+            function=lambda conf, proj: _defaultDiskImagePath(conf.cheriBits, conf.outputRoot),
             asString="$OUTPUT_ROOT/cheri256-disk.img or $OUTPUT_ROOT/cheri128-disk.img depending on --cheri-bits.")
         cls.diskImagePath = cls.addPathOption("path", shortname="-disk-image-path", default=defaultDiskImagePath,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image",

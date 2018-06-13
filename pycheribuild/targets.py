@@ -54,7 +54,7 @@ class Target(object):
         return self.__project
 
     def get_dependencies(self, config) -> "typing.List[Target]":
-        return self.projectClass.allDependencies(config)
+        return self.projectClass.recursive_dependencies(config)
 
     def checkSystemDeps(self, config: CheriConfig):
         if self._completed:
@@ -208,12 +208,12 @@ class TargetManager(object):
     def targets(self) -> "typing.Iterable[Target]":
         return self._allTargets.values()
 
-    def get_target(self, name) -> Target:
+    def get_target(self, name: str) -> Target:
         return self._allTargets[name]
 
     def topologicalSort(self, targets: "typing.List[Target]") -> "typing.Iterable[typing.List[Target]]":
         # based on http://rosettacode.org/wiki/Topological_sort#Python
-        data = dict((t.name, set(t.dependencies)) for t in targets)
+        data = dict((t.name, set(t.get_dependencies(None))) for t in targets)
 
         # add all the targets that aren't included yet
         allDependencyNames = [t.projectClass.allDependencyNames() for t in targets]
@@ -251,22 +251,21 @@ class TargetManager(object):
 
     def get_all_targets(self, explicit_targets: "typing.List[Target]", config: CheriConfig) -> "typing.List[Target]":
         add_dependencies = config.includeDependencies
-        chosen_targets = []
+        chosen_targets = []  # type: typing.List[Target]
         for t in explicit_targets:
             chosen_targets.append(t)
             deps_to_add = []
             if add_dependencies:
-                deps_to_add = t.projectClass.allDependencyNames(config)
+                deps_to_add = t.projectClass.recursive_dependencies(config)
             elif t.projectClass.dependenciesMustBeBuilt:
                 # some targets such as sdk always need their dependencies build:
-                deps_to_add = t.projectClass.allDependencyNames(config)
+                deps_to_add = t.projectClass.recursive_dependencies(config)
             elif t.projectClass.isAlias:
                 assert not t.projectClass.dependenciesMustBeBuilt
                 # for aliases without full dependencies just add the direct dependencies
-                deps_to_add = t.projectClass.dependencies
+                deps_to_add = t.projectClass.direct_dependencies(config)
             # Now add all the dependencies:
-            for dep in deps_to_add:
-                dep_target = self.get_target(dep)
+            for dep_target in deps_to_add:
                 # when --skip-sdk is passed don't include sdk dependencies
                 if config.skipSdk and dep_target.projectClass.is_sdk_target:
                     if config.verbose:

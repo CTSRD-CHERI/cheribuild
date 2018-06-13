@@ -153,6 +153,7 @@ class FileSystemUtils(object):
         """
         :param file: The target path to write contents to
         :param contents: the contents of the new file
+        :param mode: The file mode for the resulting file (octal number or string)
         :param overwrite: If true the file will be overwritten, otherwise it will cause an error if the file exists
         :param noCommandPrint: don't ever print the echo commmand (even in verbose)
         """

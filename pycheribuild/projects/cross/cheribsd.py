@@ -716,7 +716,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                     # updated static lib
                     if is_lib:
                         # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
-                        sysroot_var = sysroot="\"$$$${SYSROOT}\""
+                        sysroot_var = "\"$$$${SYSROOT}\""
                         install_cmd = "if [ -n {sysroot} ]; then {make} install DESTDIR={sysroot}; fi && ".format(
                             make=make_in_subdir, sysroot=sysroot_var) + install_cmd
                 colour_diags = "export CLANG_FORCE_COLOR_DIAGNOSTICS=always; " if self.config.clang_colour_diags else ""

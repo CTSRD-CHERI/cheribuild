@@ -274,7 +274,7 @@ class CompilerInfo(object):
 _cached_compiler_infos = dict()  # type: typing.Dict[Path, CompilerInfo]
 
 
-def getCompilerInfo(compiler: Path) -> CompilerInfo:
+def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
     assert compiler is not None
     if compiler not in _cached_compiler_infos:
         clangVersionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
@@ -463,7 +463,7 @@ class OSInfo(object):
 
     @classmethod
     def install_instructions(cls, name, is_lib, homebrew=None, apt=None, zypper=None, freebsd=None,
-                             cheribuild_target=None) -> str:
+                             cheribuild_target=None) -> "typing.Union[str, typing.Callable[str, []]":
         if cheribuild_target:
             return "Run `cheribuild.py " + cheribuild_target + "`"
         guessed_package = False
