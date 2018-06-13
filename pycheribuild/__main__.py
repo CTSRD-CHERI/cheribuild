@@ -191,7 +191,12 @@ def real_main():
             updateCheck()                             # no-combine
         except Exception as e:                        # no-combine
             print("Failed to check for updates:", e)  # no-combine
-    targetManager.run(cheriConfig)
+    print(cheriConfig.action)
+    if CheribuildAction.BUILD in cheriConfig.action:
+        targetManager.run(cheriConfig)
+    if CheribuildAction.TEST in cheriConfig.action:
+        for target in targetManager.get_all_chosen_targets(cheriConfig):
+            target.run_tests(cheriConfig)
 
 
 def main():

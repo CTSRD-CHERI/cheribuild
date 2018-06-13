@@ -221,7 +221,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
             if not run_qemu_script.exists():
                 warningMessage("run_with_qemu.py is needed to run libcxx baremetal tests but could not find it:",
                                run_qemu_script, "does not exist")
-            prefix = [str(run_qemu_script), "--qemu", str(BuildQEMU.qemu_binary(self, self.config)), "--timeout", "20"]
+            prefix = [str(run_qemu_script), "--qemu", str(BuildQEMU.qemu_binary(self)), "--timeout", "20"]
             prefix_list = '[\\\"' + "\\\", \\\"".join(prefix) + "\\\"]"
             executor = "PrefixExecutor(" + prefix_list + ", LocalExecutor())"
             print(executor)

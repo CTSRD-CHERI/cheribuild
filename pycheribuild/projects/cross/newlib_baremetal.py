@@ -28,9 +28,10 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import *
-from ...utils import statusUpdate, IS_MAC
+from ...utils import statusUpdate, IS_MAC, runCmd
 from ...config.loader import ComputedDefaultValue
 from pathlib import Path
+import tempfile
 
 
 class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
@@ -146,3 +147,21 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
         self.configureArgs.append("--with-newlib")
         super().configure()
 
+
+    def run_tests(self):
+        with tempfile.TemporaryDirectory() as td:
+            self.writeFile(Path(td, "main.c"), contents="""
+#include <stdio.h>
+int main(int argc, char** argv) {
+  for (int i = 0; i < argc; i++) {
+    printf("argv[%d] = '%s'\\n", i, argv[i]);
+  }
+}
+""", overwrite=True)
+            test_exe = Path(td, "test.exe")
+            runCmd(self.config.sdkBinDir / "clang", "-target", "mips64-qemu-elf", "main.c", "-o", test_exe,
+                   "-mno-abicalls", "-fno-pic", "-Wl,-T,qemu-malta.ld", "--sysroot=" + str(self.sdkSysroot), cwd=td)
+            runCmd(self.config.sdkBinDir / "llvm-readobj", "-h", test_exe)
+            from ..build_qemu import BuildQEMU
+            runCmd(self.sdkSysroot / "bin/run_with_qemu.py", "--qemu", BuildQEMU.qemu_binary(self),
+                   "--timeout", "20", test_exe, "HELLO", "WORLD")

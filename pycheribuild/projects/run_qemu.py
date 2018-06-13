@@ -85,7 +85,7 @@ class LaunchQEMUBase(SimpleProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.qemuBinary = BuildQEMU.qemu_binary(self, config)
+        self.qemuBinary = BuildQEMU.qemu_binary(self)
 
         self.currentKernel = None  # type: Path
         self.diskImage = None  # type: Path

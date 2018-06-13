@@ -44,6 +44,7 @@ class Target(object):
         self.projectClass = projectClass
         self.__project = None  # type: pycheribuild.project.SimpleProject
         self._completed = False
+        self._tests_have_run = False
         self._creating_project = False  # avoid cycles
 
     def get_or_create_project(self, caller: "typing.Optional[SimpleProject]", config) -> "SimpleProject":
@@ -90,9 +91,26 @@ class Target(object):
         statusUpdate("Built target '" + self.name + "' in", time.time() - starttime, "seconds")
         self._completed = True
 
+    def run_tests(self, config: "CheriConfig"):
+        if self._tests_have_run:
+            # TODO: make this an error once I have a clean solution for the pseudo targets
+            warningMessage(self.name, "has already been executed!")
+            return
+        # instantiate the project and run it
+        starttime = time.time()
+        project = self.get_or_create_project(None, config)
+        new_env = {"PATH": project.config.dollarPathWithOtherTools}
+        if project.config.clang_colour_diags:
+            new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
+        with setEnv(**new_env):
+            project.run_tests()
+        statusUpdate("Ran tests for target '" + self.name + "' in", time.time() - starttime, "seconds")
+        self._tests_have_run = True
+
     def reset(self):
         # For unit tests to get a fresh instance
         self._completed = False
+        self._tests_have_run = False
         self.__project = None
         self._creating_project = False
 
@@ -261,31 +279,7 @@ class TargetManager(object):
         return sort
 
     def run(self, config: CheriConfig):
-        # check that all target dependencies are correct:
-        for t in self._allTargets.values():
-            for dep in t.get_dependencies(config):
-                if dep.name not in self._allTargets:
-                    sys.exit("Invalid dependency " + dep.name + " for " + t.projectClass.__name__)
-
-        # targetsSorted = sorted(self._allTargets.values())
-        # print(" ".join(t.name for t in targetsSorted))
-        # assert self._allTargets["llvm"] < self._allTargets["cheribsd"]
-        # assert self._allTargets["llvm"] < self._allTargets["all"]
-        # assert self._allTargets["disk-image"] > self._allTargets["qemu"]
-        # assert self._allTargets["sdk"] > self._allTargets["sdk-sysroot"]
-
-        explicitlyChosenTargets = []  # type: typing.List[Target]
-        for targetName in config.targets:
-            if targetName not in self._allTargets:
-                sys.exit(coloured(AnsiColour.red, "Target", targetName, "does not exist. Valid choices are",
-                                  ",".join(self.targetNames)))
-            explicitlyChosenTargets.append(self.get_target(targetName))
-
-        chosenTargets = self.get_all_targets(explicitlyChosenTargets, config)
-        if config.verbose:
-            print("Will execute the following targets:", " ".join(t.name for t in chosenTargets))
-        # now that the chosen targets have been resolved run them
-        Target.instantiating_targets_should_warn = False  # Fine to instantiate Project() now
+        chosenTargets = self.get_all_chosen_targets(config)
 
         for target in chosenTargets:
             target.checkSystemDeps(config)
@@ -296,6 +290,31 @@ class TargetManager(object):
                 print("    Dependencies for", target.name, "are", target.projectClass.allDependencyNames())
             else:
                 target.execute()
+
+    def get_all_chosen_targets(self, config) -> "typing.Iterable[Target]":
+        # check that all target dependencies are correct:
+        for t in self._allTargets.values():
+            for dep in t.get_dependencies(config):
+                if dep.name not in self._allTargets:
+                    sys.exit("Invalid dependency " + dep.name + " for " + t.projectClass.__name__)
+        # targetsSorted = sorted(self._allTargets.values())
+        # print(" ".join(t.name for t in targetsSorted))
+        # assert self._allTargets["llvm"] < self._allTargets["cheribsd"]
+        # assert self._allTargets["llvm"] < self._allTargets["all"]
+        # assert self._allTargets["disk-image"] > self._allTargets["qemu"]
+        # assert self._allTargets["sdk"] > self._allTargets["sdk-sysroot"]
+        explicitlyChosenTargets = []  # type: typing.List[Target]
+        for targetName in config.targets:
+            if targetName not in self._allTargets:
+                sys.exit(coloured(AnsiColour.red, "Target", targetName, "does not exist. Valid choices are",
+                                  ",".join(self.targetNames)))
+            explicitlyChosenTargets.append(self.get_target(targetName))
+        chosenTargets = self.get_all_targets(explicitlyChosenTargets, config)
+        if config.verbose:
+            print("Will execute the following targets:", " ".join(t.name for t in chosenTargets))
+        # now that the chosen targets have been resolved run them
+        Target.instantiating_targets_should_warn = False  # Fine to instantiate Project() now
+        return chosenTargets
 
     def reset(self):
         for i in self._allTargets.values():

@@ -55,13 +55,13 @@ class BuildQEMU(AutotoolsProject):
                                     help="Try to build QEMU with link-time optimization if possible", default=True)
 
     @classmethod
-    def qemu_binary(cls, caller: SimpleProject, config: CheriConfig):
+    def qemu_binary(cls, caller: SimpleProject):
         binary_name = "qemu-system-cheri"
-        if config.unified_sdk:
-            binary_name += config.cheriBitsStr
-            if config.cheriBits == 128 and cls.get_instance(caller, config).magic128:
+        if caller.config.unified_sdk:
+            binary_name += caller.config.cheriBitsStr
+            if caller.config.cheriBits == 128 and cls.get_instance(caller, caller.config).magic128:
                 binary_name += "magic"
-        return config.sdkBinDir / binary_name
+        return caller.config.sdkBinDir / binary_name
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
