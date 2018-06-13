@@ -188,7 +188,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return result
 
     @classmethod
-    def _cached_dependencies(cls):
+    def _cached_dependencies(cls) -> "typing.List[Target]":
         assert cls.__cached_deps is not None, "_cached_dependencies called before allDependencyNames()"
         return cls.__cached_deps
 

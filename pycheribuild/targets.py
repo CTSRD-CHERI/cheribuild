@@ -31,6 +31,7 @@ import functools
 import sys
 import time
 
+from collections import OrderedDict
 from .config.chericonfig import CheriConfig, CrossCompileTarget
 from .utils import *
 
@@ -119,11 +120,11 @@ class Target(object):
         # if this target is one of the dependencies order it before
         otherDeps = other.projectClass._cached_dependencies()
         # print("other deps:", otherDeps)
-        if self.name in otherDeps:
+        if self in otherDeps:
             # print(self, "is in", other, "deps -> is less")
             return True
         # and if it is the other way around we are not less
-        if other.name in self.projectClass._cached_dependencies():
+        if other in self.projectClass._cached_dependencies():
             # print(other, "is in", self, "deps -> is greater")
             return False
         if other.name.startswith("run") and not self.name.startswith("run"):
@@ -234,20 +235,10 @@ class TargetManager(object):
 
     @staticmethod
     def sort_in_dependency_order(targets: "typing.List[Target]") -> "typing.List[Target]":
-        result = []
-        while targets:
-            lowest = targets[0]
-            # find the target that orders lower than any other target in the list (see Target.__lt__)
-            # This means it doesn't depend on any of the other targets
-            for t in targets[1:]:
-                # print(t.name, "<", lowest.name, "=", t < lowest)
-                if t < lowest:
-                    lowest = t
-            # skip duplicates that got inserted due to dependency adding
-            if lowest not in result:
-                result.append(lowest)
-            targets.remove(lowest)
-        return result
+        # pythons sorted() is guaranteed to be stable:
+        sorted_targets = list(sorted(targets))
+        # remove duplicates (insert into an orderdict to keep order
+        return list(OrderedDict((x, True) for x in sorted_targets).keys())
 
     def get_all_targets(self, explicit_targets: "typing.List[Target]", config: CheriConfig) -> "typing.List[Target]":
         add_dependencies = config.includeDependencies
