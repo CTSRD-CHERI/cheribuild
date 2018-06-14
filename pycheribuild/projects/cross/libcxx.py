@@ -284,7 +284,7 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
         self.moveFile(self.installDir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
         if self.compiling_for_cheri():
             self.createSymlink(self.real_install_root_dir / "lib" / libname,
-                               self.real_install_root_dir / "lib" /  "libclang_rt.builtins-cheri.a")
+                               self.real_install_root_dir / "lib" / "libclang_rt.builtins-cheri.a")
         # HACK: we don't really need libunwind but the toolchain pulls it in automatically
         runCmd("ar", "rc", self.installDir / "lib/libunwind.a", "/dev/null")
 

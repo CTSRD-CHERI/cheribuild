@@ -148,6 +148,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
             root_dir = self.installDir / self.targetTriple
             self.makedirs(root_dir / "usr")
             self.createSymlink(root_dir / "lib", root_dir / "usr/libcheri")
+            self.createSymlink(root_dir / "lib", root_dir / "libcheri")
 
     def run_tests(self):
         with tempfile.TemporaryDirectory() as td:
@@ -161,8 +162,10 @@ int main(int argc, char** argv) {
 """, overwrite=True)
             test_exe = Path(td, "test.exe")
             # FIXME: CHERI helloworld
-            runCmd(self.config.sdkBinDir / "clang", "-target", "mips64-qemu-elf", "main.c", "-o", test_exe,
-                   "-mno-abicalls", "-fno-pic", "-Wl,-T,qemu-malta.ld", "--sysroot=" + str(self.sdkSysroot), cwd=td)
+            compiler_flags = self._essential_compiler_and_linker_flags + self.COMMON_FLAGS + [
+                "-Wl,-T,qemu-malta.ld", "-Wl,-verbose", "--sysroot=" + str(self.sdkSysroot)]
+            runCmd([self.config.sdkBinDir / "clang", "main.c", "-o", test_exe] + compiler_flags + ["-###"], cwd=td)
+            runCmd([self.config.sdkBinDir / "clang", "main.c", "-o", test_exe] + compiler_flags, cwd=td)
             runCmd(self.config.sdkBinDir / "llvm-readobj", "-h", test_exe)
             from ..build_qemu import BuildQEMU
             runCmd(self.sdkSysroot / "bin/run_with_qemu.py", "--qemu", BuildQEMU.qemu_binary(self),

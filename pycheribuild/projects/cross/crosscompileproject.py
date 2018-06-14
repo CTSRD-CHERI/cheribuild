@@ -239,9 +239,9 @@ class CrossCompileMixin(MultiArchBaseMixin):
     def extra_c_compat_flags(self):
         # Build with virtual address interpretation, data-dependent provenance and pcrelative captable ABI
         return ["-cheri-uintcap=addr", "-Xclang", "-cheri-data-dependent-provenance",
-                # "-cheri-cap-table-abi=pcrel"
-                "-cheri-cap-table-abi=legacy" # for now
-               ]
+                "-cheri-cap-table-abi=pcrel"
+                # "-cheri-cap-table-abi=legacy" # for now
+                ]
 
     @property
     def targetTripleWithVersion(self):
