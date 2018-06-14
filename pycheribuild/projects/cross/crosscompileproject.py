@@ -176,7 +176,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
             self.COMMON_FLAGS.append("-ftls-model=initial-exec")
             # use *-*-freebsd12 to default to libc++
             if self.compiling_for_cheri():
-                self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "cheri-qemu-elf"
+                self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "cheri-qemu-elf-cheri" + self.config.cheriBitsStr
                 if self.should_use_extra_c_compat_flags():
                     self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
                 elif self.config.cheri_cap_table_abi:
