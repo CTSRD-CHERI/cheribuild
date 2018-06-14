@@ -264,13 +264,17 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def addPathOption(cls, name: str, *, shortname=None, **kwargs):
         return cls.addConfigOption(name, kind=Path, shortname=shortname, **kwargs)
 
+    __configOptionsSet = dict()  # typing.Dict[Type, bool]
+
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        pass
+        assert cls not in cls.__configOptionsSet, "Setup called twice?"
+        cls.__configOptionsSet[cls] = True
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
+        assert self.__class__ in self.__configOptionsSet, "Forgot to call super().setupConfigOptions()? " + str(self.__class__)
         self.__requiredSystemTools = {}  # type: typing.Dict[str, typing.Any]
         self.__requiredPkgConfig = {}  # type: typing.Dict[str, typing.Any]
         self._systemDepsChecked = False

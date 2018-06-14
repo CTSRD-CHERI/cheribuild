@@ -213,6 +213,7 @@ class ConfigOptionBase(object):
         # fall back from --qtbase-mips/foo to --qtbase/foo
         if result is None and self._fallback_name is not None:
             fallback_option = self._loader.options.get(self._fallback_name)
+            assert fallback_option is not None, "Could not find option " + self._fallback_name
             result = fallback_option._loadOptionImpl(config, self.fullOptionName)
             if result is not None and config.verbose:
                 print("Using fallback config option value", self._fallback_name, "for", self.name, "->", result)

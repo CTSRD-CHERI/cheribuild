@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 pytest_binary="python3 -m pytest"
-pytest_installed="yes"
 
 if [[ "$1" = "3.4.0" ]]; then
     test_prefix="3.4.0"
@@ -37,9 +36,6 @@ fi
 ./cheribuild.py -p __run_everything__ --cheribsd/crossbuild > /dev/null
 ./cheribuild.py --help > /dev/null
 ./cheribuild.py --help-all > /dev/null
-if [[ "$pytest_installed" = "no" ]]; then
-    pip install pytest
-fi
 $pytest_binary -v --junit-xml "../$test_prefix-results.xml" tests || echo "Some tests failed"
 # Remove all debug messages (contains ansi escape sequences and the Available targets message:)
 targets=$(./cheribuild.py --list-targets | grep -v Available | grep -v $(printf "\x1b"))
