@@ -238,10 +238,16 @@ class TargetManager(object):
         # return the actual target without resolving MultiArchTargetAlias
         return self._allTargets[name]
 
-    def get_target(self, name: str, arch: CrossCompileTarget, config: CheriConfig) -> Target:
+    def get_target(self, name: str, arch: "typing.Optional[CrossCompileTarget]", config: CheriConfig) -> Target:
         target = self.get_target_raw(name)
+        # print("get_target", name, arch, end="")
         if isinstance(target, MultiArchTargetAlias):
+            # Pick the default architecture if no arch was passed
+            # print(" raw_target:", target, " default arch = ", target.projectClass.default_architecture, end="")
+            if arch is None and target.projectClass.default_architecture is not None:
+                arch = target.projectClass.default_architecture
             target = target.get_real_target(arch, config)
+        # print(" ->", target)
         return target
 
     def topologicalSort(self, targets: "typing.List[Target]") -> "typing.Iterable[typing.List[Target]]":
@@ -309,7 +315,7 @@ class TargetManager(object):
         for target in chosenTargets:
             if config.print_targets_only:
                 statusUpdate("Will build target", coloured(AnsiColour.yellow, target.name))
-                print("    Dependencies for", target.name, "are", target.projectClass.allDependencyNames())
+                print("    Dependencies for", target.name, "are", target.projectClass.allDependencyNames(config))
             else:
                 target.execute(config)
 

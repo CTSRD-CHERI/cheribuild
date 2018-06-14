@@ -298,3 +298,17 @@ def test_libcxxrt_dependency_path():
     check_libunwind_path(config.outputRoot / "rootfs128/opt/c++/lib", "libcxxrt-cheri")
 
 
+@pytest.mark.parametrize("base_name,expected", [
+    pytest.param("cheribsd", "cheribsd-cheri"),
+    pytest.param("freebsd", "freebsd-native"),
+    pytest.param("newlib-baremetal", "newlib-baremetal-mips"),
+    pytest.param("libcxxrt-baremetal", "libcxxrt-baremetal-mips"),
+    pytest.param("compiler-rt-baremetal", "compiler-rt-baremetal-mips"),
+])
+def test_default_arch(base_name, expected):
+    # The default target should be selected regardless of --xmips/--xhost/--128/--256 flags
+    # Parse args once to ensure targetManager is initialized
+    for default_flag in ("--xhost", "--xmips", "--256", "--128"):
+        config = _parse_arguments(["--skip-configure", default_flag])
+        target = targetManager.get_target(base_name, None, config)
+        assert expected == target.name, "Failed for " + default_flag

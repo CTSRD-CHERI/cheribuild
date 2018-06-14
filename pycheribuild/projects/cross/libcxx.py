@@ -249,6 +249,7 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
     dependencies = ["newlib-baremetal"]
     baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
+    default_architecture = CrossCompileTarget.MIPS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -294,6 +295,7 @@ class BuildLibCXXBaremetal(BuildLibCXX):
     baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
     crossInstallDir = CrossInstallDir.SDK
+    default_architecture = CrossCompileTarget.MIPS
     defaultCMakeBuildType = "Debug"
 
     def __init__(self, config: CheriConfig):
