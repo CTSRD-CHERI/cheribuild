@@ -330,7 +330,7 @@ class TargetManager(object):
             if targetName not in self._allTargets:
                 sys.exit(coloured(AnsiColour.red, "Target", targetName, "does not exist. Valid choices are",
                                   ",".join(self.targetNames)))
-            explicitlyChosenTargets.append(self.get_target(targetName, None, None))
+            explicitlyChosenTargets.append(self.get_target(targetName, None, config))
         chosenTargets = self.get_all_targets(explicitlyChosenTargets, config)
         if config.verbose:
             print("Will execute the following targets:", " ".join(t.name for t in chosenTargets))
