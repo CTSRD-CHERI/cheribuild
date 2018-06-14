@@ -312,6 +312,7 @@ class BuildLibCXXRTBaremetal(BuildLibCXXRT):
     crossInstallDir = CrossInstallDir.SDK
     baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
+    default_architecture = CrossCompileTarget.MIPS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

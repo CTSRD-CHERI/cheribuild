@@ -95,6 +95,7 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
     baremetal = True  # We are building the full OS so we don't need a sysroot
     # Only CheriBSD can target CHERI, upstream FreeBSD won't work
     supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
+    default_architecture = CrossCompileTarget.NATIVE
 
     defaultInstallDir = ComputedDefaultValue(function=freebsd_install_dir,
                                              asString="$INSTALL_ROOT/freebsd-{mips/x86}")
