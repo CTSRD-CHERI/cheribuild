@@ -159,8 +159,8 @@ class BuildBinutils(TargetAlias):
 
 
 class BuildBaremetalSdk(TargetAliasWithDependencies):
-    target = "baremetal-sdk"
-    dependencies = ["freestanding-sdk", "libcxx-baremetal"]
+    target = "baremetal-sdk"  # FIXME: this should be a multi-arch target (or just build both probably)
+    dependencies = ["freestanding-sdk", "libcxx-baremetal-mips"]  # TODO: add libcxx-baremetal-cheri
     is_sdk_target = True
 
 

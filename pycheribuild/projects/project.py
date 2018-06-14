@@ -173,6 +173,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                     if tgt.target_arch == expected_build_arch:
                         dep_target = tgt
                         # print("Overriding with", tgt.name)
+            assert not isinstance(dep_target, MultiArchTargetAlias), "All targets should be fully resolved: " + cls.__name__
             yield dep_target
 
 
