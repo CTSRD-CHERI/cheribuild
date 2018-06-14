@@ -176,7 +176,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
             self.COMMON_FLAGS.append("-ftls-model=initial-exec")
             # use *-*-freebsd12 to default to libc++
             if self.compiling_for_cheri():
-                self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "cheri-qemu-elf-cheri" + self.config.cheriBitsStr
+                self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "mips64-qemu-elf-cheri" + self.config.cheriBitsStr
+                # This break e.g. compiler_rt: self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "cheri-qemu-elf-cheri" + self.config.cheriBitsStr
                 if self.should_use_extra_c_compat_flags():
                     self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
                 elif self.config.cheri_cap_table_abi:
@@ -443,6 +444,7 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
         if self.compiling_for_cheri():
             if self._get_cmake_version() < (3, 9, 0) and not (self.sdkSysroot / "usr/local/lib/cheri").exists():
                 warningMessage("Workaround for missing custom lib suffix in CMake < 3.9")
+                self.makedirs(self.sdkSysroot / "usr/lib")
                 # create a /usr/lib/cheri -> /usr/libcheri symlink so that cmake can find the right libraries
                 self.createSymlink(Path("../libcheri"), self.sdkSysroot / "usr/lib/cheri", relative=True,
                                    cwd=self.sdkSysroot / "usr/lib")

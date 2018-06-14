@@ -269,7 +269,6 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
             COMPILER_RT_BUILD_LIBFUZZER=False,
             COMPILER_RT_BUILD_PROFILE=False,
             COMPILER_RT_BAREMETAL_BUILD=self.baremetal,
-            # COMPILER_RT_DEFAULT_TARGET_TRIPLE=self.targetTriple,
             COMPILER_RT_DEFAULT_TARGET_ONLY=True,
             # BUILTIN_SUPPORTED_ARCH="mips64",
             TARGET_TRIPLE=self.targetTriple,
@@ -281,8 +280,11 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
 
     def install(self, **kwargs):
         super().install(**kwargs)
-        libname = "libclang_rt.builtins-" + ("cheri.a" if self.compiling_for_cheri() else "mips64.a")
+        libname = "libclang_rt.builtins-mips64.a"
         self.moveFile(self.installDir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
+        if self.compiling_for_cheri():
+            self.createSymlink(self.real_install_root_dir / "lib" / libname,
+                               self.real_install_root_dir / "lib" /  "libclang_rt.builtins-cheri.a")
         # HACK: we don't really need libunwind but the toolchain pulls it in automatically
         runCmd("ar", "rc", self.installDir / "lib/libunwind.a", "/dev/null")
 
