@@ -53,6 +53,8 @@ class BuildQEMU(AutotoolsProject):
                                           default=True)
         cls.lto = cls.addBoolOption("use-lto", showHelp=True,
                                     help="Try to build QEMU with link-time optimization if possible", default=True)
+        cls.legacy_registers = cls.addBoolOption("legacy-registers", showHelp=False,
+                                    help="Build QEMU with the special registers mapped into the GPRs", default=False)
 
     @classmethod
     def qemu_binary(cls, caller: SimpleProject):
@@ -91,6 +93,8 @@ class BuildQEMU(AutotoolsProject):
             if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
                 # Turn implicit function declaration into an error -Wimplicit-function-declaration
                 extraCFlags += " -Werror=implicit-function-declaration"
+                # Also make discarding const an error:
+                extraCFlags += " -Werror=incompatible-pointer-types-discards-qualifiers"
                 # silence this warning that comes lots of times (it's fine on x86)
                 extraCFlags += " -Wno-address-of-packed-member"
             if self.lto and self.can_use_lto(ccinfo):
@@ -130,6 +134,8 @@ class BuildQEMU(AutotoolsProject):
                 extraCFlags += " -DCHERI_128=1" if not self.magic128 else " -DCHERI_MAGIC128=1"
         if self.unaligned:
             extraCFlags += " -DCHERI_UNALIGNED"
+        if self.legacy_registers:
+            extraCFlags += " -DCHERI_C0_NULL=0"
         self.configureArgs.extend([
             "--target-list=" + targets,
             "--disable-linux-user",
