@@ -258,7 +258,7 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
         # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")
         if self.compiling_for_mips():
-            COMPILER_RT_HAS_FPIC_FLAG=False,  # HACK: currently we build everything as -fno-pic
+            self.add_cmake_options(COMPILER_RT_HAS_FPIC_FLAG=False)  # HACK: currently we build everything as -fno-pic
         self.add_cmake_options(
             # LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config",
             LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
