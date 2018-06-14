@@ -826,7 +826,7 @@ class Project(SimpleProject):
         # non-assignable variables:
         self.configureArgs = []  # type: typing.List[str]
         self.configureEnvironment = {}  # type: typing.Dict[str,str]
-        if self.config.createCompilationDB and self.compileDBRequiresBear:
+        if self.config.create_compilation_db and self.compileDBRequiresBear:
             self._addRequiredSystemTool("bear", installInstructions="Run `cheribuild.py bear`")
         self._lastStdoutLineCanBeOverwritten = False
         self.make_args = MakeOptions(self.make_kind, self)
@@ -925,7 +925,8 @@ class Project(SimpleProject):
             allArgs.append(self.config.makeJFlag)
 
         allArgs = [make_command] + allArgs
-        if self.config.createCompilationDB and self.compileDBRequiresBear:
+        # TODO: use compdb instead for GNU make projects?
+        if self.config.create_compilation_db and self.compileDBRequiresBear:
             allArgs = [shutil.which("bear"), "--cdb", self.buildDir / compilationDbName,
                        "--append"] + allArgs
         if not self.config.makeWithoutNice:
@@ -949,6 +950,9 @@ class Project(SimpleProject):
         env = options.env_vars
         self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=stdoutFilter, cwd=cwd, env=env,
                             appendToLogfile=appendToLogfile)
+        # if we create a compilation db, copy it to the source dir:
+        if self.config.copy_compilation_db_to_source_dir and (self.buildDir / compilationDbName).exists():
+            self.installFile(self.buildDir / compilationDbName, self.sourceDir / compilationDbName, force=True)
         # add a newline at the end in case it ended with a filtered line (no final newline)
         print("Running", make_command, makeTarget, "took", time.time() - starttime, "seconds")
 
@@ -1141,7 +1145,7 @@ class CMakeProject(Project):
 
         self.configureArgs.append("-DCMAKE_BUILD_TYPE=" + self.cmakeBuildType)
         # TODO: do it always?
-        if self.config.createCompilationDB:
+        if self.config.create_compilation_db:
             self.configureArgs.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
             # Don't add the user provided options here, add them in configure() so that they are put last
         self.__minimum_cmake_version = tuple()
@@ -1181,6 +1185,8 @@ class CMakeProject(Project):
         if self.config.forceConfigure:
             self.deleteFile(cmakeCache)
         super().configure(**kwargs)
+        if self.config.copy_compilation_db_to_source_dir and (self.buildDir / "compile_commands.json").exists():
+            self.installFile(self.buildDir / "compile_commands.json", self.sourceDir / "compile_commands.json", force=True)
 
     def install(self, _stdoutFilter="__DEFAULT__"):
         if _stdoutFilter == "__DEFAULT__":

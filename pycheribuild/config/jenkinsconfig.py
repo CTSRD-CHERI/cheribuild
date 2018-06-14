@@ -79,9 +79,7 @@ class JenkinsConfig(CheriConfig):
                                                                                    " if there is a newer archive")  # type: bool
         self.force_update = loader.addCommandLineOnlyBoolOption("force-update",
                                                                 help="Do the updating (not recommended in jenkins!)")  # type: bool
-        self.createCompilationDB = loader.addCommandLineOnlyBoolOption(
-            "compilation-db", "-cdb", help="Create a compile_commands.json file in the build dir "
-                                           "(requires Bear for non-CMake projects)")
+        self.copy_compilation_db_to_source_dir = False
         self.makeWithoutNice = False
 
         self.makeJobs = loader.addCommandLineOnlyOption("make-jobs", "j", type=int,

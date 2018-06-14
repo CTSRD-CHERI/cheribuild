@@ -98,9 +98,9 @@ class DefaultCheriConfig(CheriConfig):
                                                " to make sure the right binaries are being used.",
                                           choices=["128", "256"])
 
-        self.createCompilationDB = loader.addBoolOption("compilation-db", "-cdb",
-                                                        help="Create a compile_commands.json file in the build dir "
-                                                             "(requires Bear for non-CMake projects)")
+        self.copy_compilation_db_to_source_dir = loader.addCommandLineOnlyBoolOption("compilation-db-in-source-dir",
+            help="Generate a compile_commands.json and also copy it to the source directory")
+
         self.crossCompileForMips = loader.addBoolOption("cross-compile-for-mips", "-xmips", group=loader.crossCompileGroup,
                                                         help="Make cross compile projects target MIPS hybrid ABI "
                                                              "instead of CheriABI")

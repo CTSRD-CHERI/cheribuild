@@ -159,7 +159,6 @@ class CheriConfig(object):
                                                              "building libc++, etc. with dependencies but the sdk "
                                                              "is already up-to-date")
         self.includeDependencies = None  # type: bool
-        self.createCompilationDB = None  # type: bool
         self.crossCompileTarget = None  # type: CrossCompileTarget
         self.makeWithoutNice = None  # type: bool
 
@@ -179,6 +178,12 @@ class CheriConfig(object):
         self.docker_reuse_container = loader.addBoolOption("docker-reuse-container",
             help="Attach to the same container again (note: docker-container option must be an id rather than a container name")
 
+        # compilation db options:
+        self.create_compilation_db = loader.addCommandLineOnlyBoolOption(
+            "compilation-db", "-cdb", help="Create a compile_commands.json file in the build dir "
+                                           "(requires Bear for non-CMake projects)")
+        self.copy_compilation_db_to_source_dir = None  # False for jenkins, an option for cheribuild
+
         self.targets = None  # type: list
         self.FS = None  # type: FileSystemUtils
         self.__optionalProperties = []
@@ -194,6 +199,10 @@ class CheriConfig(object):
         if self.clangPlusPlusPath is None:
             self.clangPlusPlusPath = Path("/c++/compiler/is/missing")
         self.FS = FileSystemUtils(self)
+
+        # if we are creating a compilation db in the source that implies creating one in the first place:
+        if self.copy_compilation_db_to_source_dir:
+            self.create_compilation_db = True
 
         # flatten the potentially nested list
         if not self.action:
