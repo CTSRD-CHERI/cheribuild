@@ -1,7 +1,7 @@
 from pathlib import Path
 from unittest import TestCase
 from pycheribuild.projects.project import Project, CrossCompileTarget
-from pycheribuild.utils import setCheriConfig
+from pycheribuild.utils import setCheriConfig, IS_LINUX
 from .setup_mock_chericonfig import setup_mock_chericonfig, MockConfig
 import os
 import tempfile
@@ -13,6 +13,8 @@ import subprocess
 # noinspection PyTypeChecker
 class MockProject(Project):
     doNotAddToTargets = True
+    projectName = "FAKE"
+    target = "FAKE"
 
     def __init__(self, config: MockConfig, name: str):
         self.projectName = name
@@ -30,6 +32,11 @@ class MockProject(Project):
 
 
 class TestAsyncDelete(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.config = setup_mock_chericonfig(Path("/invalid/path"))
+        MockProject.setupConfigOptions()
+
     def setUp(self):
         self._tempRoot = tempfile.TemporaryDirectory()
         self.tempRoot = Path(self._tempRoot.name)

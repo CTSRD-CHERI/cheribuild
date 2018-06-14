@@ -268,7 +268,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        assert cls not in cls.__configOptionsSet, "Setup called twice?"
+        # assert cls not in cls.__configOptionsSet, "Setup called twice?"
         cls.__configOptionsSet[cls] = True
 
     def __init__(self, config: CheriConfig):
