@@ -42,6 +42,7 @@ class CheribuildAction(Enum):
                       # can get the other instances yet -> use strings
                       ["build", "test"])
     LIST_TARGETS = ("--list-targets", "List all available targets and exit")
+    PRINT_CHOSEN_TARGETS = ("--print-chosen-targets", "List all the targets that would be built")
     DUMP_CONFIGURATION = ("--dump-configuration", "Print the current configuration as JSON. This can be saved to "
                                                   "~/.config/cheribuild.json to make it persistent")
 
