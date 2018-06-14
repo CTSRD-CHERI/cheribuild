@@ -25,9 +25,17 @@ url="$2"
 z40=0000000000000000000000000000000000000000
 
 try_run() {
-    if ! $@ 2>/dev/null >/dev/null; then
-        echo "Failed to run $@, don't push this!"
-        exit 1
+    if [ -n "$VERBOSE" ]; then
+        set -x
+        if ! $@ ; then
+            echo "Failed to run $@, don't push this!"
+            exit 1
+        fi
+    else
+        if ! $@ 2>/dev/null >/dev/null; then
+            echo "Failed to run $@, don't push this!"
+            exit 1
+        fi
     fi
 }
 

@@ -30,7 +30,8 @@ class MockConfig(CheriConfig):
         self.skipConfigure = True
         self.forceConfigure = False
         self.includeDependencies = False
-        self.createCompilationDB = False
+        self.create_compilation_db = False
+        self.copy_compilation_db_to_source_dir = False
         self.crossCompileTarget = CrossCompileTarget.CHERI
         self.cheriBits = 256
         self.makeJobs = 2
