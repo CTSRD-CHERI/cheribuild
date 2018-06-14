@@ -24,6 +24,14 @@ url="$2"
 
 z40=0000000000000000000000000000000000000000
 
+try_run() {
+    if ! $@ 2>/dev/null >/dev/null; then
+        echo "Failed to run $@, don't push this!"
+        exit 1
+    fi
+}
+
+
 while read local_ref local_sha remote_ref remote_sha
 do
 	if [ "$local_sha" = $z40 ]
@@ -40,16 +48,12 @@ do
 			range="$remote_sha..$local_sha"
 		fi
 		# check that there are no obvious mistakes:
-		if ! ./cheribuild.py -p __run_everything__ --clean 2>/dev/null >/dev/null; then
-			echo "Failed to run ./cheribuild.py -p __run_everything__, don't push this!"
-			exit 1
-		fi
-		./cheribuild.py --help > /dev/null
-		WORKSPACE=/tmp CPU=mips ./jenkins-cheri-build.py --tarball -p llvm >/dev/null
-		if ! env WORKSPACE=/tmp CPU=mips ./jenkins-cheri-build.py --build -p llvm 2>/dev/null >/dev/null; then
-			echo "Failed to run ./jenkins-cheri-build.py, don't push this!"
-			exit 1
-		fi
+		try_run ./cheribuild.py -p __run_everything__ --clean
+		try_run ./cheribuild.py --help
+		try_run ./jenkins-cheri-build.py --help
+		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=cheri128 -p libcxx
+		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=cheri128 -p llvm
+		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --tarball --cpu=cheri128 -p llvm
 
 		# Run python tests before pushing
 		if [ -e pytest.ini ]; then

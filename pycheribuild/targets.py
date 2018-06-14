@@ -200,13 +200,13 @@ class MultiArchTargetAlias(Target):
         return self.projectClass(config)
 
     def execute(self, config):
-        return self._get_real_target(None, config).execute(config)
+        return self.get_real_target(None, config).execute(config)
 
     def run_tests(self, config: "CheriConfig"):
-        return self._get_real_target(None, config).run_tests(config)
+        return self.get_real_target(None, config).run_tests(config)
 
     def checkSystemDeps(self, config: CheriConfig):
-        return self._get_real_target(None, config).checkSystemDeps(config)
+        return self.get_real_target(None, config).checkSystemDeps(config)
 
     def __repr__(self):
         return "<Cross target alias " + self.name + ">"
