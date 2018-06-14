@@ -53,36 +53,11 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
         self.installDir = self.installDir.parent  # newlib install already appends the triple
         #self.configureCommand = Path("/this/path/does/not/exist")
         self.configureCommand = self.sourceDir / "configure"
-        # self.COMMON_FLAGS = ['-integrated-as', '-G0', '-mabi=n64', '-mcpu=mips4']
-        # self.COMMON_FLAGS = ['-integrated-as', '-mabi=n64', '-mcpu=mips4']
-        # print(self.COMMON_FLAGS)
         # FIXME: how can I force it to run a full configure step (this is needed because it runs the newlib configure
         # step during make all rather than during ./configure
+        self.make_args.env_vars["newlib_cv_ldbl_eq_dbl"] = "yes"
         # ensure that we don't fall back to system headers (but do use stddef.h from clang...)
         self.COMMON_FLAGS.extend(["--sysroot", "/this/path/does/not/exist"])
-        self.target_cflags = "-target " + self.targetTripleWithVersion + " ".join(self.COMMON_FLAGS)
-        bindir = self.config.sdkBinDir
-
-        self.add_configure_vars(
-            AS_FOR_TARGET=str(bindir / "clang"),  # + target_cflags,
-            CC_FOR_TARGET=str(bindir / "clang"),  # + target_cflags,
-            CXX_FOR_TARGET=str(bindir / "clang++"),  # + target_cflags,
-            AR_FOR_TARGET=bindir / "ar", STRIP_FOR_TARGET=bindir / "strip",
-            OBJCOPY_FOR_TARGET=bindir / "objcopy", RANLIB_FOR_TARGET=bindir / "ranlib",
-            OBJDUMP_FOR_TARGET=bindir / "llvm-objdump",
-            READELF_FOR_TARGET=bindir / "readelf", NM_FOR_TARGET=bindir / "nm",
-            # Set all the flags:
-            CFLAGS_FOR_TARGET=self.target_cflags,
-            CCASFLAGS_FOR_TARGET=self.target_cflags + " -mabicalls",
-            FLAGS_FOR_TARGET=self.target_cflags,
-            # Some build tools are needed:
-            CC_FOR_BUILD=self.config.clangPath,
-            CXX_FOR_BUILD=self.config.clangPlusPlusPath,
-            # long double is the same as double
-            newlib_cv_ldbl_eq_dbl="yes",
-            LD_FOR_TARGET=str(bindir / "ld.lld"), LDFLAGS_FOR_TARGET="-fuse-ld=lld",
-        )
-        self.make_args.env_vars["newlib_cv_ldbl_eq_dbl"] = "yes"
         if IS_MAC:
             self.add_configure_vars(LDFLAGS="-fuse-ld=/usr/bin/ld")
 
@@ -98,10 +73,6 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     def needsConfigure(self):
         return not (self.buildDir / "Makefile").exists()
 
-    @property
-    def targetTripleWithVersion(self):
-        return "mips64-unknown-elf"
-
     def add_configure_vars(self, **kwargs):
         # newlib is annoying, we need to pass all these arguments to make as well because it won't run all
         # the configure steps...
@@ -114,6 +85,28 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
                 # self.make_args.env_vars[k2] = str(v)
 
     def configure(self):
+        target_cflags = " ".join(self._essential_compiler_and_linker_flags + self.COMMON_FLAGS)
+        bindir = self.config.sdkBinDir
+
+        self.add_configure_vars(
+            AS_FOR_TARGET=str(bindir / "clang"),  # + target_cflags,
+            CC_FOR_TARGET=str(bindir / "clang"),  # + target_cflags,
+            CXX_FOR_TARGET=str(bindir / "clang++"),  # + target_cflags,
+            AR_FOR_TARGET=bindir / "ar", STRIP_FOR_TARGET=bindir / "strip",
+            OBJCOPY_FOR_TARGET=bindir / "objcopy", RANLIB_FOR_TARGET=bindir / "ranlib",
+            OBJDUMP_FOR_TARGET=bindir / "llvm-objdump",
+            READELF_FOR_TARGET=bindir / "readelf", NM_FOR_TARGET=bindir / "nm",
+            # Set all the flags:
+            CFLAGS_FOR_TARGET=target_cflags,
+            CCASFLAGS_FOR_TARGET=target_cflags,
+            FLAGS_FOR_TARGET=target_cflags,
+            # Some build tools are needed:
+            CC_FOR_BUILD=self.config.clangPath,
+            CXX_FOR_BUILD=self.config.clangPlusPlusPath,
+            # long double is the same as double
+            newlib_cv_ldbl_eq_dbl="yes",
+            LD_FOR_TARGET=str(bindir / "ld.lld"), LDFLAGS_FOR_TARGET="-fuse-ld=lld",
+        )
         self.configureArgs.extend([
             "--enable-malloc-debugging",
             "--enable-newlib-long-time_t",  # we want time_t to be long and not int!
@@ -148,7 +141,6 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
         self.configureArgs.append("--with-newlib")
         super().configure()
 
-
     def run_tests(self):
         with tempfile.TemporaryDirectory() as td:
             self.writeFile(Path(td, "main.c"), contents="""
@@ -160,6 +152,7 @@ int main(int argc, char** argv) {
 }
 """, overwrite=True)
             test_exe = Path(td, "test.exe")
+            # FIXME: CHERI helloworld
             runCmd(self.config.sdkBinDir / "clang", "-target", "mips64-qemu-elf", "main.c", "-o", test_exe,
                    "-mno-abicalls", "-fno-pic", "-Wl,-T,qemu-malta.ld", "--sysroot=" + str(self.sdkSysroot), cwd=td)
             runCmd(self.config.sdkBinDir / "llvm-readobj", "-h", test_exe)

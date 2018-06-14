@@ -171,19 +171,15 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 assert self.installDir, "must be set"
         else:
             self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-G0"]
-            if self.baremetal:
-                # We don't have a softfloat library baremetal so always compile hard-float
-                self.COMMON_FLAGS.append(MipsFloatAbi.HARD.clang_float_flag())
-            else:
-                self.COMMON_FLAGS.append(config.mips_float_abi.clang_float_flag())
-
             # clang currently gets the TLS model wrong:
             # https://github.com/CTSRD-CHERI/cheribsd/commit/f863a7defd1bdc797712096b6778940cfa30d901
             self.COMMON_FLAGS.append("-ftls-model=initial-exec")
             # use *-*-freebsd12 to default to libc++
             if self.compiling_for_cheri():
                 self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "cheri-qemu-elf"
-                if self.config.cheri_cap_table_abi:
+                if self.should_use_extra_c_compat_flags():
+                    self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
+                elif self.config.cheri_cap_table_abi:
                     self.COMMON_FLAGS.append("-cheri-cap-table-abi=" + self.config.cheri_cap_table_abi)
             else:
                 assert self.compiling_for_mips()
@@ -195,18 +191,19 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 else:
                     self.COMMON_FLAGS.append("-fno-pic")
                     self.COMMON_FLAGS.append("-mno-abicalls")
-                    if self.projectName != "newlib-baremetal":
-                        assert self.baremetal
-                        # Currently we need these flags to build anything against newlib baremetal
-                        self.COMMON_FLAGS.append("-D_GNU_SOURCE=1")  # needed for the locale functions
-                        self.COMMON_FLAGS.append("-D_POSIX_MONOTONIC_CLOCK=1")  # pretend that we have a monotonic clock
-                        self.COMMON_FLAGS.append("-D_POSIX_TIMERS=1")  # pretend that we have a monotonic clock
             if self.useMxgot:
                 self.COMMON_FLAGS.append("-mxgot")
 
+            if self.links_against_newlib_baremetal():
+                assert self.baremetal
+                # Currently we need these flags to build anything against newlib baremetal
+                self.COMMON_FLAGS.append("-D_GNU_SOURCE=1")  # needed for the locale functions
+                self.COMMON_FLAGS.append("-D_POSIX_MONOTONIC_CLOCK=1")  # pretend that we have a monotonic clock
+                self.COMMON_FLAGS.append("-D_POSIX_TIMERS=1")  # pretend that we have a monotonic clock
+
             self.sdkSysroot = self.config.sdkSysrootDir
             if self.baremetal:
-                self.sdkSysroot = self.config.sdkDir/ "baremetal" / self.targetTriple
+                self.sdkSysroot = self.config.sdkDir / "baremetal" / self.targetTriple
 
             if self.crossInstallDir == CrossInstallDir.SDK:
                 if self.baremetal:
@@ -228,6 +225,22 @@ class CrossCompileMixin(MultiArchBaseMixin):
         self.CXXFLAGS = []
         self.ASMFLAGS = []
         self.LDFLAGS = []
+
+    def links_against_newlib_baremetal(self):
+        # This needs to be fixed once we have RTEMS
+        return self.baremetal and self.projectName != "newlib-baremetal"
+
+    def should_use_extra_c_compat_flags(self):
+        # TODO: add a command-line option and default to true for
+        return self.compiling_for_cheri() and self.baremetal
+
+    @property
+    def extra_c_compat_flags(self):
+        # Build with virtual address interpretation, data-dependent provenance and pcrelative captable ABI
+        return ["-cheri-uintcap=addr", "-Xclang", "-cheri-data-dependent-provenance",
+                # "-cheri-cap-table-abi=pcrel"
+                "-cheri-cap-table-abi=legacy" # for now
+               ]
 
     @property
     def targetTripleWithVersion(self):
@@ -257,6 +270,18 @@ class CrossCompileMixin(MultiArchBaseMixin):
             return []  # no special flags should be needed
         # However, when cross compiling we need at least -target=
         result = ["-target", self.targetTripleWithVersion]
+        if self.baremetal:
+            # Also the baremetal driver doesn't add -fPIC for CHERI
+            if self.compiling_for_cheri():
+                result.append("-fPIC")
+                # For now use soft-float to avoid compiler crashes
+                result.append(MipsFloatAbi.SOFT.clang_float_flag())
+            else:
+                # We don't have a softfloat library baremetal so always compile hard-float
+                result.append(MipsFloatAbi.HARD.clang_float_flag())
+        else:
+            result.append(self.config.mips_float_abi.clang_float_flag())
+
         if self.compiling_for_cheri():
             # TODO: should we use -mcpu=cheri128/256?
             result.extend(["-mabi=purecap", "-mcpu=mips4", "-cheri=" + self.config.cheriBitsStr])
@@ -414,7 +439,9 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
     def configure(self, **kwargs):
         if not self.compiling_for_host():
             self.COMMON_FLAGS.append("-B" + str(self.config.sdkBinDir))
-            if not self.baremetal and self._get_cmake_version() < (3, 9, 0) and not (self.sdkSysroot / "usr/local/lib/cheri").exists():
+
+        if self.compiling_for_cheri():
+            if self._get_cmake_version() < (3, 9, 0) and not (self.sdkSysroot / "usr/local/lib/cheri").exists():
                 warningMessage("Workaround for missing custom lib suffix in CMake < 3.9")
                 # create a /usr/lib/cheri -> /usr/libcheri symlink so that cmake can find the right libraries
                 self.createSymlink(Path("../libcheri"), self.sdkSysroot / "usr/lib/cheri", relative=True,
@@ -423,8 +450,6 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
                 self.makedirs(self.sdkSysroot / "usr/local/libcheri")
                 self.createSymlink(Path("../libcheri"), self.sdkSysroot / "usr/local/lib/cheri",
                                    relative=True, cwd=self.sdkSysroot / "usr/local/lib")
-
-        if self.compiling_for_cheri():
             add_lib_suffix = """
 # cheri libraries are found in /usr/libcheri:
 if("${CMAKE_VERSION}" VERSION_LESS 3.9)

@@ -179,7 +179,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
         # We need to build with -G0 otherwise we get R_MIPS_GPREL16 out of range linker errors
         test_compile_flags = "-G0 -mcpu=mips4"
         if self.baremetal:
-            test_compile_flags += " -fno-pic -mno-abicalls"
+            if self.compiling_for_mips():
+                test_compile_flags += " -fno-pic -mno-abicalls"
             self.add_cmake_options(
                 LIBCXX_TEST_LINKER_FLAGS="-Wl,-T,qemu-malta.ld",
                 LIBCXX_ENABLE_FILESYSTEM=False,
@@ -256,11 +257,10 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
 
         # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")
+        if self.compiling_for_mips():
+            COMPILER_RT_HAS_FPIC_FLAG=False,  # HACK: currently we build everything as -fno-pic
         self.add_cmake_options(
             # LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config",
-            COMPILER_RT_HAS_FPIC_FLAG=False,  # HACK: currently we build everything as -fno-pic
-
-
             LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
             LLVM_EXTERNAL_LIT=BuildLLVM.getBuildDir(self, config) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
