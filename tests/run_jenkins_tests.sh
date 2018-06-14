@@ -2,9 +2,7 @@
 
 pytest_binary="python3 -m pytest"
 
-if [[ "$1" = "3.4.0" ]]; then
-    test_prefix="3.4.0"
-elif [[ "$1" = "3.5.0" ]]; then
+if [[ "$1" = "3.5.0" ]]; then
     test_prefix="3.5.0"
 elif [[ "$1" = "3.6" ]]; then
     test_prefix="3.6"

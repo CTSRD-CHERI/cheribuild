@@ -61,27 +61,9 @@ __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includ
            "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build", "get_global_config"]  # no-combine
 
 
-if sys.version_info < (3, 4):
-    sys.exit("This script requires at least Python 3.4")
 if sys.version_info < (3, 5):
-    # copy of python 3.5 subprocess.CompletedProcess
-    class CompletedProcess(object):
-        def __init__(self, args, returncode: int, stdout: bytes=None, stderr: bytes=None):
-            self.args = args
-            self.returncode = returncode
-            self.stdout = stdout
-            self.stderr = stderr
-
-        def __repr__(self):
-            args = ['args={!r}'.format(self.args),
-                    'returncode={!r}'.format(self.returncode)]
-            if self.stdout is not None:
-                args.append('stdout={!r}'.format(self.stdout))
-            if self.stderr is not None:
-                args.append('stderr={!r}'.format(self.stderr))
-            return "{}({})".format(type(self).__name__, ', '.join(args))
-else:
-    from subprocess import CompletedProcess
+    sys.exit("This script requires at least Python 3.5")
+from subprocess import CompletedProcess
 
 IS_LINUX = sys.platform.startswith("linux")
 IS_FREEBSD = sys.platform.startswith("freebsd")

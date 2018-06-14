@@ -5,24 +5,6 @@ pipeline {
     }
   }
   stages {
-   stage('Test Python 3.4') {
-      agent {
-        dockerfile {
-          filename 'src/tests/python-34.Dockerfile'
-        }
-      }
-      steps {
-        ansiColor(colorMapName: 'xterm') {
-          dir("tempsrc") { deleteDir() }
-          dir("tempsrc") { sh 'ls -la' }
-          // Avoid git chowning .git/index to root which will cause the next build to fail
-          // Work around old docker version in jenkins that can't change cwd:
-          sh 'cd tempsrc && ../src/tests/run_jenkins_tests.sh 3.4.0'
-          dir("tempsrc") { deleteDir() }
-        }
-        junit '3.4.0-results.xml'
-      }
-    }
     stage('Test Python 3.5.0') {
       agent {
         dockerfile {
