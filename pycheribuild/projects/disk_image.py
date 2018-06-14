@@ -32,7 +32,7 @@ import stat
 import io
 import tempfile
 
-from .cross.cheribsd import _BuildFreeBSD
+from .cross.cheribsd import BuildFreeBSD
 from .cross.cheribsd import *
 from ..config.loader import ComputedDefaultValue
 from .project import *
@@ -68,6 +68,7 @@ class _AdditionalFileTemplates(object):
 class _BuildDiskImageBase(SimpleProject):
     doNotAddToTargets = True
     diskImagePath = None  # type: Path
+    _freebsd_build_class = None
     needs_special_pkg_repo = False  # True for CheriBSD
 
     @classmethod
@@ -89,7 +90,7 @@ class _BuildDiskImageBase(SimpleProject):
                                       "of interest in rare cases, like extra-files on smbfs.")
         cls.disableTMPFS = None
 
-    def __init__(self, config, source_class: "typing.Type[_BuildFreeBSD]"):
+    def __init__(self, config, source_class: "typing.Type[BuildFreeBSD]"):
         super().__init__(config)
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
@@ -105,7 +106,7 @@ class _BuildDiskImageBase(SimpleProject):
         self.makefs_cmd = None
         self.install_cmd = None
         self.source_project = source_class.get_instance(self, self.config)
-        assert isinstance(self.source_project, _BuildFreeBSD)
+        assert isinstance(self.source_project, BuildFreeBSD)
         self.rootfsDir = self.source_project.installDir
         assert self.rootfsDir is not None
         self.userGroupDbDir = self.source_project.sourceDir / "etc"
@@ -456,7 +457,7 @@ def _defaultDiskImagePath(bits, pfx, img_prefix=""):
 
 class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
     projectName = "disk-image-minimal"
-    dependencies = ["qemu", "cheribsd"]  # TODO: include gdb?
+    dependencies = ["qemu", "cheribsd-cheri"]  # TODO: include gdb?
 
     class _MinimalFileTemplates(_AdditionalFileTemplates):
         def get_fstab_template(self):
@@ -536,7 +537,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
 
 class BuildCheriBSDDiskImage(_BuildDiskImageBase):
     projectName = "disk-image"
-    dependencies = ["qemu", "cheribsd", "gdb-mips"]
+    dependencies = ["qemu", "cheribsd-cheri", "gdb-mips"]
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -557,7 +558,7 @@ class BuildCheriBSDDiskImage(_BuildDiskImageBase):
                                                   " This is a workaround in case TMPFS is not working correctly")
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, source_class=BuildCHERIBSD)
+        super().__init__(config, source_class=BuildCHERIBSD.get_class_for_target(CrossCompileTarget.CHERI))
         self.minimumImageSize = "256m"  # let's try to shrink the image size
         # TODO: only fetch pkg from https://people.freebsd.org/~brooks/packages/cheribsd-mips-20170403-brooks-20170609/
         # if we are building the cheribsd tests?
@@ -565,10 +566,9 @@ class BuildCheriBSDDiskImage(_BuildDiskImageBase):
         self.needs_special_pkg_repo = True
 
 
-class _BuildFreeBSDImageBase(_BuildDiskImageBase):
+class BuildFreeBSDImageBase(_BuildDiskImageBase):
     doNotAddToTargets = True
     _freebsd_suffix = None
-    _freebsd_build_class = None
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -587,15 +587,15 @@ class _BuildFreeBSDImageBase(_BuildDiskImageBase):
         self.minimumImageSize = "256m"
 
 
-class BuildFreeBSDDiskImageMIPS(_BuildFreeBSDImageBase):
+class BuildFreeBSDDiskImageMIPS(BuildFreeBSDImageBase):
     projectName = "disk-image-freebsd-mips"
     dependencies = ["qemu", "freebsd-mips"]
-    _freebsd_build_class = BuildFreeBSDForMIPS
+    _freebsd_build_class = BuildFreeBSD.get_class_for_target(CrossCompileTarget.MIPS)
     _freebsd_suffix = "mips"
 
 
-class BuildFreeBSDDiskImageX86(_BuildFreeBSDImageBase):
+class BuildFreeBSDDiskImageX86(BuildFreeBSDImageBase):
     projectName = "disk-image-freebsd-x86"
-    dependencies = ["qemu", "freebsd-x86"]
-    _freebsd_build_class = BuildFreeBSDForX86
+    dependencies = ["qemu", "freebsd-native"]
+    _freebsd_build_class = BuildFreeBSD.get_class_for_target(CrossCompileTarget.NATIVE)
     _freebsd_suffix = "x86"

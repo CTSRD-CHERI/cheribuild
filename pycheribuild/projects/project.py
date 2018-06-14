@@ -47,7 +47,7 @@ from copy import deepcopy
 
 from ..config.loader import ConfigLoaderBase, ComputedDefaultValue
 from ..config.chericonfig import CheriConfig, CrossCompileTarget
-from ..targets import Target, MultiArchTarget, targetManager
+from ..targets import Target, MultiArchTarget, MultiArchTargetAlias, targetManager
 from ..filesystemutils import FileSystemUtils
 from ..utils import *
 
@@ -105,13 +105,18 @@ class ProjectSubclassDefinitionHook(type):
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + targetName)
         if hasattr(cls, "supported_architectures"):
             # Add a the target for the default architecture
-            base_target = targetManager.addTarget(MultiArchTarget(targetName, cls, None, None))
+            base_target = MultiArchTargetAlias(targetName, cls)
+            targetManager.addTarget(base_target)
+            # TODO: make this hold with CheriBSD
+            # assert cls._crossCompileTarget is None, "Should not be set!"
+            # assert cls._should_not_be_instantiated, "multiarch base classes should not be instantiated"
             for arch in cls.supported_architectures:
                 assert isinstance(arch, CrossCompileTarget)
                 # create a new class to ensure different build dirs and config name strings
                 new_name = targetName + "-" + arch.value
                 new_dict = cls.__dict__.copy()
                 new_dict["_crossCompileTarget"] = arch
+                new_dict["_should_not_be_instantiated"] = False  # unlike the subclass we can instantiate these
                 new_dict["doNotAddToTargets"] = True  # We are already adding it here
                 new_dict["target"] = new_name
                 new_dict["synthetic_base"] = cls  # We are already adding it here
@@ -136,7 +141,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     sourceDir = None
     buildDir = None
     installDir = None
-
+    # To check that we don't create an crosscompile targets without a fixed target
+    _should_not_be_instantiated = False
     __cached_deps = None  # type: typing.List[Target]
 
     @classmethod
@@ -153,21 +159,20 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if callable(dep_name):
                 dep_name = dep_name(cls, config)
             # Handle --include-dependencies with --skip-sdk is passed
-            dep_target = targetManager.get_target(dep_name)
+            dep_target = targetManager.get_target_raw(dep_name)
             if config.skipSdk and dep_target.projectClass.is_sdk_target:
                 if config.verbose:
                     statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
                                  "since it is an SDK target and --skip-sdk was passed.")
                 continue
-            # Now find the actual crosscompile targets:
-            if isinstance(dep_target, MultiArchTarget):
+            # Now find the actual crosscompile targets for target aliases:
+            if isinstance(dep_target, MultiArchTargetAlias):
                 # Find the correct dependency (e.g. libcxx-native should depend on libcxxrt-native)
-                if dep_target.target_arch != expected_build_arch:
-                    # try to find a better match:
-                    for tgt in dep_target.derived_targets:
-                        if tgt.target_arch == expected_build_arch:
-                            dep_target = tgt
-                            # print("Overriding with", tgt.name)
+                # try to find a better match:
+                for tgt in dep_target.derived_targets:
+                    if tgt.target_arch == expected_build_arch:
+                        dep_target = tgt
+                        # print("Overriding with", tgt.name)
             yield dep_target
 
 
@@ -193,10 +198,13 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return cls.__cached_deps
 
     @classmethod
-    def get_instance(cls, caller: "typing.Optional[SimpleProject]", config: CheriConfig) -> "SimpleProject":
+    def get_instance(cls: "typing.Type[Type_T]", caller: "typing.Optional[SimpleProject]", config: CheriConfig) -> "Type_T":
         # TODO: assert that target manager has been initialized
-        target = targetManager.get_target(cls.target)
-        result = target.get_or_create_project(caller, config)
+        cross_target = None
+        if caller is not None:
+            cross_target = caller.get_crosscompile_target(config)
+        target = targetManager.get_target(cls.target, cross_target, config)
+        result = target.get_or_create_project(cross_target, config)
         return result
 
     @classmethod
@@ -261,6 +269,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+        assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
         self.__requiredSystemTools = {}  # type: typing.Dict[str, typing.Any]
         self.__requiredPkgConfig = {}  # type: typing.Dict[str, typing.Any]
         self._systemDepsChecked = False

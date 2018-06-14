@@ -30,11 +30,11 @@
 import datetime
 import socket
 
-from .cross.cheribsd import _BuildFreeBSD
+from .cross.cheribsd import BuildFreeBSD
 from .cross.cheribsd import *
 from .cherios import BuildCheriOS
 from .build_qemu import BuildQEMU
-from .disk_image import _BuildFreeBSDImageBase
+from .disk_image import BuildFreeBSDImageBase
 from .disk_image import *
 from .project import *
 from pathlib import Path
@@ -195,9 +195,12 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             cls.skipKernelUpdate = cls.addBoolOption("skip-kernel-update", showHelp=True,
                                                      help="Don't update the kernel from the remote host")
 
-    def __init__(self, config: CheriConfig, source_class: type(_BuildFreeBSD),
-                 disk_image_class: type(_BuildFreeBSDImageBase)=None, needs_disk_image=True):
+    def __init__(self, config: CheriConfig, source_class: type(BuildFreeBSD)=None,
+                 disk_image_class: type(BuildFreeBSDImageBase)=None, needs_disk_image=True):
         super().__init__(config)
+        if source_class is None and disk_image_class is not None:
+            # noinspection PyProtectedMember
+            source_class = disk_image_class.get_instance(self, config).source_project
         self.source_class = source_class
         self.currentKernel = source_class.get_installed_kernel_path(self, config)
         if needs_disk_image:
@@ -238,7 +241,7 @@ class LaunchCheriBSD(AbstractLaunchFreeBSD):
                                    **kwargs)
 
     def __init__(self, config):
-        super().__init__(config, BuildCHERIBSD, BuildCheriBSDDiskImage)
+        super().__init__(config, disk_image_class=BuildCheriBSDDiskImage)
 
 
 class LaunchFreeBSDMips(AbstractLaunchFreeBSD):
@@ -252,7 +255,7 @@ class LaunchFreeBSDMips(AbstractLaunchFreeBSD):
                                    **kwargs)
 
     def __init__(self, config):
-        super().__init__(config, BuildFreeBSDForMIPS, BuildFreeBSDDiskImageMIPS)
+        super().__init__(config, disk_image_class=BuildFreeBSDDiskImageMIPS)
 
 
 class LaunchCheriOSQEMU(LaunchQEMUBase):
@@ -296,7 +299,7 @@ class LaunchFreeBSDX86(AbstractLaunchFreeBSD):
                                    **kwargs)
 
     def __init__(self, config):
-        super().__init__(config, BuildFreeBSDForX86, BuildFreeBSDDiskImageX86)
+        super().__init__(config, disk_image_class=BuildFreeBSDDiskImageX86)
         self._addRequiredSystemTool("qemu-system-x86_64")
         qemu_path = shutil.which("qemu-system-x86_64")
         self.qemuBinary = Path(qemu_path if qemu_path else shutil.which("false"))
@@ -314,7 +317,7 @@ class LaunchCheriBsdMfsRoot(AbstractLaunchFreeBSD):
                                    defaultSshPort=defaultSshForwardingPort() + 8, **kwargs)
 
     def __init__(self, config):
-        super().__init__(config, BuildCheriBsdMfsKernel, needs_disk_image=False)
+        super().__init__(config, source_class=BuildCheriBsdMfsKernel, needs_disk_image=False)
 
 # Allow running cheribsd without the MFS_ROOT kernel, but with a disk image instead:
 class LaunchCheriBsdMinimal(AbstractLaunchFreeBSD):
@@ -327,4 +330,4 @@ class LaunchCheriBsdMinimal(AbstractLaunchFreeBSD):
                                    defaultSshPort=defaultSshForwardingPort() + 8, **kwargs)
 
     def __init__(self, config):
-        super().__init__(config, BuildCHERIBSD, BuildMinimalCheriBSDDiskImage)
+        super().__init__(config, source_class=BuildCHERIBSD, disk_image_class=BuildMinimalCheriBSDDiskImage)

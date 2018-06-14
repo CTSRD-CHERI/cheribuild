@@ -215,7 +215,7 @@ def _jenkins_main():
             create_sdk_from_archives(cheriConfig)
 
         assert len(cheriConfig.targets) == 1
-        target = targetManager.get_target(cheriConfig.targets[0])
+        target = targetManager.get_target_raw(cheriConfig.targets[0])
         for tgt in targetManager.targets:
             cls = tgt.projectClass
             if issubclass(cls, Project):
@@ -241,7 +241,7 @@ def _jenkins_main():
         # delete the install root:
         cleaningTask = cheriConfig.FS.asyncCleanDirectory(cheriConfig.outputRoot) if not cheriConfig.keepInstallDir else ThreadJoiner(None)
         with cleaningTask:
-            target.execute()
+            target.execute(cheriConfig)
 
     if JenkinsAction.CREATE_TARBALL in cheriConfig.action:
         if IS_LINUX:

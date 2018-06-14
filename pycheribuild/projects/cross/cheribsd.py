@@ -35,6 +35,7 @@ import sys
 import tempfile
 
 from pathlib import Path
+from .multiarchmixin import MultiArchBaseMixin
 from ..project import *
 from ...config.loader import ComputedDefaultValue
 from ...config.chericonfig import CrossCompileTarget
@@ -74,18 +75,29 @@ class FreeBSDCrossTools(CMakeProject):
         super().configure()
 
 
-class _BuildFreeBSD(Project):
+
+def freebsd_install_dir(config: CheriConfig, project: "typing.Type[BuildFreeBSD]"):
+    if project._crossCompileTarget == CrossCompileTarget.MIPS:
+        return config.outputRoot / "freebsd-mips"
+    elif project._crossCompileTarget == CrossCompileTarget.NATIVE:
+        return config.outputRoot / "freebsd-x86"
+    else:
+        assert False, "should not be reached"
+
+class BuildFreeBSD(MultiArchBaseMixin, Project):
     dependencies = ["llvm"]
+    target = "freebsd"
     repository = "https://github.com/freebsd/freebsd.git"
     make_kind = MakeCommandKind.BsdMake
-    doNotAddToTargets = True
     kernelConfig = None  # type: str
     crossbuild = False
     skipBuildworld = False
     baremetal = True  # We are building the full OS so we don't need a sysroot
     # Only CheriBSD can target CHERI, upstream FreeBSD won't work
     supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
-    _crossCompileTarget = None
+
+    defaultInstallDir = ComputedDefaultValue(function=freebsd_install_dir,
+                                             asString="$INSTALL_ROOT/freebsd-{mips/x86}")
 
     defaultExtraMakeOptions = [
         # "-DWITHOUT_HTML",  # should not be needed
@@ -193,6 +205,13 @@ class _BuildFreeBSD(Project):
                 archBuildFlags = {"TARGET": "amd64"}
             else:
                 assert False, "This should not be reached!"
+        if self.kernelConfig is None:
+            if self.compiling_for_mips():
+                self.kernelConfig = "MALTA64"
+            elif self.compiling_for_host():
+                self.kernelConfig = "GENERIC"
+            else:
+                assert False, "should be unreachable"
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
         self.make_args.set(**archBuildFlags)
         self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
@@ -743,32 +762,14 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         else:
             super().process()
 
-
-# TODO: remove these two
-class BuildFreeBSDForMIPS(_BuildFreeBSD):
-    projectName = "freebsd-mips"
-    target = "freebsd-mips"
-    _crossCompileTarget = CrossCompileTarget.MIPS
-    supported_architectures = []  # Don't add any other configs
-    kernelConfig = "MALTA64"
-    defaultInstallDir = ComputedDefaultValue(
-        function=lambda config, cls: config.outputRoot / "freebsd-mips",
-        asString="$INSTALL_ROOT/freebsd-mips")
-
-
-class BuildFreeBSDForX86(_BuildFreeBSD):
-    projectName = "freebsd-x86"
+# Keep the old name
+class BuildFreeBSDX86AliasBinutils(TargetAlias):
     target = "freebsd-x86"
-    _crossCompileTarget = CrossCompileTarget.NATIVE
-    supported_architectures = []  # Don't add any other configs
-    defaultInstallDir = ComputedDefaultValue(
-        function=lambda config, cls: config.outputRoot / "freebsd-x86",
-        asString="$INSTALL_ROOT/freebsd-x86")
-    kernelConfig = "GENERIC"
+    dependencies = ["freebsd-native"]
 
 
 # noinspection PyProtectedMember
-def cheribsd_install_dir(config: CheriConfig, project: _BuildFreeBSD):
+def cheribsd_install_dir(config: CheriConfig, project: "typing.Type[BuildCHERIBSD"):
     if project._crossCompileTarget == CrossCompileTarget.CHERI:
         return config.outputRoot / ("rootfs" + config.cheriBitsStr)
     elif project._crossCompileTarget == CrossCompileTarget.MIPS:
@@ -779,22 +780,22 @@ def cheribsd_install_dir(config: CheriConfig, project: _BuildFreeBSD):
 
 
 # noinspection PyProtectedMember
-def cheribsd_build_dir(config: CheriConfig, project: _BuildFreeBSD):
+def cheribsd_build_dir(config: CheriConfig, project: BuildFreeBSD):
     if project._crossCompileTarget == CrossCompileTarget.CHERI:
         # TODO: change this to be the default build dir name
         return config.buildRoot / ("cheribsd-obj-" + config.cheriBitsStr)
     else:
         return project.buildDirForTarget(config, project._crossCompileTarget)
 
-class BuildCHERIBSD(_BuildFreeBSD):
+class BuildCHERIBSD(BuildFreeBSD):
     projectName = "cheribsd"
     target = "cheribsd"
     repository = "https://github.com/CTSRD-CHERI/cheribsd.git"
     defaultInstallDir = cheribsd_install_dir
     appendCheriBitsToBuildDir = True
     defaultBuildDir = cheribsd_build_dir
-    _crossCompileTarget = CrossCompileTarget.CHERI
-    supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
+    supported_architectures = [CrossCompileTarget.CHERI, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
+    default_architecture = CrossCompileTarget.CHERI
     is_sdk_target = True
 
     @classmethod
@@ -823,7 +824,8 @@ class BuildCHERIBSD(_BuildFreeBSD):
                                                           " you need to copy them from the build directory.")
             cls.mfs_root_image = cls.addPathOption("mfs-root-image", help="Path to an MFS root image to embed in the"
                                                                           "kernel that will be booted from")
-        if cls._crossCompileTarget == CrossCompileTarget.CHERI:
+        # We also want to add this config option to the fake "cheribsd" target (to keep the config file manageable)
+        if cls._crossCompileTarget in (CrossCompileTarget.CHERI, None):
             cls.purecapKernel = cls.addBoolOption("pure-cap-kernel", showHelp=True,
                                                   help="Build kernel with pure capability ABI (probably won't work!)")
 
@@ -958,7 +960,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 
 class BuildCheriBsdSysroot(SimpleProject):
     projectName = "cheribsd-sysroot"
-    dependencies = ["cheribsd"]
+    dependencies = ["cheribsd-cheri"]
     is_sdk_target = True
 
     rootfs_source_class = BuildCHERIBSD  # type: BuildCHERIBSD
@@ -1060,7 +1062,7 @@ class BuildCheriBsdSysroot(SimpleProject):
 
 class BuildCheriBsdAndSysroot(TargetAlias):
     target = "cheribsd-with-sysroot"
-    dependencies = ["cheribsd", "cheribsd-sysroot"]
+    dependencies = ["cheribsd-cheri", "cheribsd-sysroot"]
 
 
 class BuildFreeBSDBootstrapTools(Project):
@@ -1071,7 +1073,7 @@ class BuildFreeBSDBootstrapTools(Project):
     make_kind = MakeCommandKind.BsdMake
     defaultInstallDir = Project._installToBootstrapTools
 
-    _stdoutFilter = _BuildFreeBSD._stdoutFilter
+    _stdoutFilter = BuildFreeBSD._stdoutFilter
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

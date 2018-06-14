@@ -109,17 +109,18 @@ def test_per_project_override():
 def test_cross_compile_project_inherits():
     # Parse args once to ensure targetManager is initialized
     config = _parse_arguments(["--skip-configure"])
-    qtbase_default = targetManager.get_target("qtbase").get_or_create_project(None, config)  # type: BuildQtBase
-    qtbase_native = targetManager.get_target("qtbase-native").get_or_create_project(None, config)  # type: BuildQtBase
-    qtbase_mips = targetManager.get_target("qtbase-mips").get_or_create_project(None, config)  # type: BuildQtBase
+    qtbase_class = targetManager.get_target_raw("qtbase").projectClass
+    qtbase_default = targetManager.get_target_raw("qtbase").get_or_create_project(None, config)  # type: BuildQtBase
+    qtbase_native = targetManager.get_target_raw("qtbase-native").get_or_create_project(None, config)  # type: BuildQtBase
+    qtbase_mips = targetManager.get_target_raw("qtbase-mips").get_or_create_project(None, config)  # type: BuildQtBase
 
     # Check that project name is the same:
     assert qtbase_default.projectName == qtbase_native.projectName
     assert qtbase_mips.projectName == qtbase_native.projectName
     # These classes were generated:
-    assert qtbase_native.synthetic_base == qtbase_default.__class__
-    assert qtbase_mips.synthetic_base == qtbase_default.__class__
-    assert not hasattr(qtbase_default, "synthetic_base")
+    assert qtbase_native.synthetic_base == qtbase_class
+    assert qtbase_mips.synthetic_base == qtbase_class
+    assert not hasattr(qtbase_class, "synthetic_base")
 
     # Now check a property that should be inherited:
     _parse_arguments(["--qtbase-native/build-tests"])
@@ -271,7 +272,7 @@ def test_config_file_include():
 def test_libcxxrt_dependency_path():
     # Test that we pick the correct libunwind path when building libcxxrt
     def check_libunwind_path(path, target_name):
-        tgt = targetManager.get_target(target_name).get_or_create_project(None, config)
+        tgt = targetManager.get_target_raw(target_name).get_or_create_project(None, config)
         for i in tgt.configureArgs:
             if i.startswith("-DLIBUNWIND_PATH="):
                 assert ("-DLIBUNWIND_PATH=" + str(path)) == i, tgt.configureArgs
@@ -290,11 +291,9 @@ def test_libcxxrt_dependency_path():
     check_libunwind_path(config.outputRoot / "rootfs-mips/opt/c++/lib", "libcxxrt")
     check_libunwind_path(config.outputRoot / "rootfs-mips/opt/c++/lib", "libcxxrt-mips")
     config = _parse_arguments(["--skip-configure", "--256"])
-    libcxxrt_default = targetManager.get_target("libcxxrt").get_or_create_project(None, config)
     check_libunwind_path(config.outputRoot / "rootfs256/opt/c++/lib", "libcxxrt")
     check_libunwind_path(config.outputRoot / "rootfs256/opt/c++/lib", "libcxxrt-cheri")
     config = _parse_arguments(["--skip-configure", "--128"])
-    libcxxrt_default = targetManager.get_target("libcxxrt").get_or_create_project(None, config)
     check_libunwind_path(config.outputRoot / "rootfs128/opt/c++/lib", "libcxxrt")
     check_libunwind_path(config.outputRoot / "rootfs128/opt/c++/lib", "libcxxrt-cheri")
 

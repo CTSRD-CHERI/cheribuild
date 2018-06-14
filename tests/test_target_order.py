@@ -4,6 +4,7 @@ try:
     import typing
 except ImportError:
     typing = {}
+import pytest
 from pathlib import Path
 from pycheribuild.utils import *
 
@@ -27,9 +28,9 @@ BuildCHERIBSD.crossbuild = True
 
 def _sort_targets(targets: "typing.List[str]", add_dependencies=False, skip_sdk=False) -> "typing.List[str]":
     targetManager.reset()
-    real_targets = list(targetManager.get_target(t) for t in targets)
     # print(real_targets)
     config = get_global_config()
+    real_targets = list(targetManager.get_target(t, None, config) for t in targets)
     config.includeDependencies = add_dependencies
     config.skipSdk = skip_sdk
     for t in real_targets:
@@ -38,25 +39,40 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, skip_sdk=
     # print("result = ", result)
     return result
 
+freestanding_deps = ["elftoolchain", "binutils", "llvm", "qemu", "gdb-native", "freestanding-sdk"]
+baremetal_deps = freestanding_deps + ["newlib-baremetal-mips", "compiler-rt-baremetal-mips", "libcxxrt-baremetal-mips",
+                                      "libcxx-baremetal-mips", "baremetal-sdk"]
+cheribsd_sdk_deps = freestanding_deps + ["cheribsd-cheri", "cheribsd-sysroot", "cheribsd-sdk"]
 
-def test_sdk():
-    freestanding_deps = ["elftoolchain", "binutils", "llvm", "qemu", "gdb-native", "freestanding-sdk"]
-    assert _sort_targets(["freestanding-sdk"]) == freestanding_deps
-    baremetal_deps = freestanding_deps + ["newlib-baremetal", "compiler-rt-baremetal", "libcxxrt-baremetal",
-                                          "libcxx-baremetal", "baremetal-sdk"]
-    assert _sort_targets(["baremetal-sdk"]) == baremetal_deps
+@pytest.mark.parametrize("target_name,expected_list", [
+    pytest.param("freestanding-sdk", freestanding_deps, id="freestanding-sdk"),
+    pytest.param("baremetal-sdk", baremetal_deps, id="baremetal-sdk"),
     # Ensure that cheribsd is added to deps even on Linux/Mac
-    cheribsd_deps = freestanding_deps + ["cheribsd", "cheribsd-sysroot", "cheribsd-sdk"]
-    assert _sort_targets(["cheribsd-sdk"]) == cheribsd_deps
+    pytest.param("cheribsd-sdk", cheribsd_sdk_deps, id="cheribsd-sdk"),
+    pytest.param("sdk", (cheribsd_deps if IS_FREEBSD else freestanding_deps) + ["sdk"], id="sdk"),
+])
+def test_sdk(target_name, expected_list):
+    assert expected_list == _sort_targets([target_name])
 
-    assert _sort_targets(["sdk"]) == (cheribsd_deps if IS_FREEBSD else freestanding_deps) + ["sdk"]
+
+@pytest.mark.parametrize("target_name,expected_name", [
+    pytest.param("cheribsd", "cheribsd-cheri"),
+    pytest.param("freebsd", "freebsd-native"),
+    pytest.param("gdb", "gdb-native"),
+    pytest.param("libcxx", "libcxx-cheri"),
+    pytest.param("libcxx-baremetal", "libcxx-baremetal-mips"),
+    pytest.param("libcxxrt-baremetal", "libcxxrt-baremetal-mips"),
+])
+def test_alias_resolving(target_name, expected_name):
+    # test that we select the default target for multi projects:
+    assert _sort_targets([target_name]) == [expected_name]
 
 
 def test_reordering():
     # GDB is a cross compiled project so cheribsd should be built first
-    assert _sort_targets(["cheribsd", "gdb"]) == ["cheribsd", "gdb"]
-    assert _sort_targets(["gdb", "cheribsd"]) == ["cheribsd", "gdb"]
-    assert _sort_targets(["gdb", "cheribsd-sysroot"]) == ["cheribsd-sysroot", "gdb"]
+    assert _sort_targets(["cheribsd", "gdb-mips"]) == ["cheribsd-cheri", "gdb-mips"]
+    assert _sort_targets(["gdb-mips", "cheribsd"]) == ["cheribsd-cheri", "gdb-mips"]
+    assert _sort_targets(["gdb-mips", "cheribsd-sysroot"]) == ["cheribsd-sysroot", "gdb-mips"]
 
 
 def test_run_comes_last():
@@ -65,13 +81,13 @@ def test_run_comes_last():
 
 def test_disk_image_comes_second_last():
     assert _sort_targets(["run", "disk-image"]) == ["disk-image", "run"]
-    assert _sort_targets(["run", "disk-image", "cheribsd"]) == ["cheribsd", "disk-image", "run"]
-    assert _sort_targets(["run", "gdb", "disk-image", "cheribsd"]) == ["cheribsd", "gdb", "disk-image", "run"]
-    assert _sort_targets(["run", "disk-image", "postgres", "cheribsd"]) == ["cheribsd", "postgres", "disk-image", "run"]
+    assert _sort_targets(["run", "disk-image", "cheribsd"]) == ["cheribsd-cheri", "disk-image", "run"]
+    assert _sort_targets(["run", "gdb-mips", "disk-image", "cheribsd"]) == ["cheribsd-cheri", "gdb-mips", "disk-image", "run"]
+    assert _sort_targets(["run", "disk-image", "postgres", "cheribsd"]) == ["cheribsd-cheri", "postgres-cheri", "disk-image", "run"]
 
 
 def test_all_run_deps():
-    assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm", "cheribsd", "elftoolchain", "binutils",
+    assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm", "cheribsd-cheri", "elftoolchain", "binutils",
                                                              "gdb-native", "freestanding-sdk", "cheribsd-sysroot",
                                                              "cheribsd-sdk", "gdb-mips", "disk-image", "run"]
 
@@ -93,15 +109,17 @@ def test_minimal_run():
                          ["disk-image-minimal", "cheribsd-mfs-root-kernel", "run-minimal"]
 
 
-# Check cross-compile targets
-def test_libcxx_deps():
+# Check that libcxx deps with skip sdk pick the matching -native/-mips versions
+# Also the libcxx target should resolve to libcxx-cheri:
+@pytest.mark.parametrize("suffix,expected_suffix", [
+    pytest.param("-native", "-native", id="native"),
+    pytest.param("-mips", "-mips", id="mips"),
+    pytest.param("-cheri", "-cheri", id="cheri"),
+    # no suffix should resolve to the -cheri targets:
+    pytest.param("", "-cheri", id="no suffix"),
+])
+def test_libcxx_deps(suffix, expected_suffix):
+    expected = ["libunwind" + expected_suffix, "libcxxrt" + expected_suffix, "libcxx" + expected_suffix]
     # Now check that the cross-compile versions explicitly chose the matching target:
-    assert ["libunwind-native", "libcxxrt-native", "libcxx-native"] == \
-           _sort_targets(["libcxx-native"], add_dependencies=True, skip_sdk=True)
-    assert ["libunwind-cheri", "libcxxrt-cheri", "libcxx-cheri"] == \
-           _sort_targets(["libcxx-cheri"], add_dependencies=True, skip_sdk=True)
-    assert ["libunwind-mips", "libcxxrt-mips", "libcxx-mips"] == \
-           _sort_targets(["libcxx-mips"], add_dependencies=True, skip_sdk=True)
+    assert expected == _sort_targets(["libcxx" + suffix], add_dependencies=True, skip_sdk=True)
 
-    assert ["libunwind-cheri", "libcxxrt-cheri", "libcxx"] == \
-           _sort_targets(["libcxx"], add_dependencies=True, skip_sdk=True)

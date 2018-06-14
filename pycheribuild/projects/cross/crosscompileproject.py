@@ -1,3 +1,33 @@
+#
+# Copyright (c) 2017 Alex Richardson
+# All rights reserved.
+#
+# This software was developed by SRI International and the University of
+# Cambridge Computer Laboratory under DARPA/AFRL contract FA8750-10-C-0237
+# ("CTSRD"), as part of the DARPA CRASH research programme.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+
 import os
 import inspect
 import pprint
@@ -8,6 +38,7 @@ from pathlib import Path
 
 from ...config.loader import ComputedDefaultValue, ConfigOptionBase
 from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi, Linkage
+from .multiarchmixin import MultiArchBaseMixin
 from ..llvm import BuildLLVM
 from ..project import *
 from ...utils import *
@@ -19,10 +50,6 @@ class CrossInstallDir(Enum):
     NONE = 0
     CHERIBSD_ROOTFS = 1
     SDK = 2
-
-defaultTarget = ComputedDefaultValue(
-    function=lambda config, project: config.crossCompileTarget.value,
-    asString="'cheri' unless -xmips/-xhost is set")
 
 def _installDir(config: CheriConfig, project: "CrossCompileProject"):
     assert isinstance(project, CrossCompileMixin)
@@ -62,48 +89,27 @@ def crosscompile_dependencies(cls: "typing.Type[CrossCompileProject]", config: C
         return ["cheribsd-sdk"] if cls.needs_cheribsd_sysroot(target) else ["freestanding-sdk"]
 
 
-class CrossCompileMixin(object):
+class CrossCompileMixin(MultiArchBaseMixin):
     doNotAddToTargets = True
     config = None  # type: CheriConfig
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
 
-    CAN_TARGET_ALL_TARGETS = list(CrossCompileTarget)
-    CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.MIPS]
-    # TODO: we should be able to build CHERI CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.MIPS, CrossCompileTarget.CHERI]
-    CAN_TARGET_ALL_TARGETS_EXCEPT_CHERI = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
-    CAN_TARGET_ALL_TARGETS_EXCEPT_NATIVE = [CrossCompileTarget.MIPS, CrossCompileTarget.CHERI]
-    supported_architectures = list(CrossCompileTarget)
     defaultInstallDir = ComputedDefaultValue(function=_installDir, asString=_installDirMessage)
-    appendCheriBitsToBuildDir = True
     dependencies = crosscompile_dependencies
     defaultLinker = "lld"
     baremetal = False
     forceDefaultCC = False  # for some reason ICU binaries build during build crash -> fall back to /usr/bin/cc there
-    _crossCompileTarget = None  # type: CrossCompileTarget
+    # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
+    _should_not_be_instantiated = True
     defaultOptimizationLevel = ("-O2",)
 
     # noinspection PyProtectedMember
-    _no_overwrite_allowed = Project._no_overwrite_allowed + ("baremetal", "_crossCompileTarget")
+    _no_overwrite_allowed = MultiArchBaseMixin._no_overwrite_allowed + ("baremetal",)  # type: typing.Tuple[str]
 
     needs_mxcaptable_static = False     # E.g. for postgres which is just over the limit:
     #﻿warning: added 38010 entries to .cap_table but current maximum is 32768; try recompiling non-performance critical source files with -mllvm -mxcaptable
     # FIXME: postgres would work if I fixed captable to use the negative immediate values
     needs_mxcaptable_dynamic = False    # This might be true for Qt/QtWebkit
-
-    @classmethod
-    def get_crosscompile_target(cls, config: CheriConfig) -> CrossCompileTarget:
-        target = inspect.getattr_static(cls, "_crossCompileTarget")
-        if target is None:
-            target = config.crossCompileTarget
-        # HACK: to get the descriptor directly:
-        if not isinstance(target, CrossCompileTarget):
-            assert isinstance(target, ConfigOptionBase)
-            # We got the descriptor and to avoid the assertion that it is being called incorrectly pass a dummy
-            # instance instead of the real object instance. This is fine  since the value of crosscompiletarget should
-            # only depend on command line flags (to enforce this it is set in _no_overwrite_allowed)
-            target = target.__get__(object(), cls)
-        assert isinstance(target, CrossCompileTarget)
-        return target
 
     @classmethod
     def needs_cheribsd_sysroot(cls, target: CrossCompileTarget):
@@ -125,7 +131,6 @@ class CrossCompileMixin(object):
 
     def __init__(self, config: CheriConfig, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
-        assert isinstance(self, SimpleProject)
         # convert the tuples into mutable lists (this is needed to avoid modifying class variables)
         # See https://github.com/CTSRD-CHERI/cheribuild/issues/33
         self.defaultOptimizationLevel = list(self.defaultOptimizationLevel)
@@ -146,16 +151,6 @@ class CrossCompileMixin(object):
         # sanity check:
         assert target_arch is not None
         assert self.get_crosscompile_target(config) == target_arch
-        if self.compiling_for_cheri() and CrossCompileTarget.CHERI not in self.supported_architectures:
-            # We need this workaround for newlib + gdb (so that we don't have to always pass --xhost/--xmips
-            # Only print this if we are actually building and not just instantiating the class
-            self._configure_status_message = "Cannot compile " + self.target + " in CHERI purecap mode, building MIPS binaries instead"
-            self._preventAssign = False  # Allow assigning to _crossCompileTarget
-            self._crossCompileTarget = CrossCompileTarget.MIPS  # won't compile as a CHERI binary!
-            self._preventAssign = True
-        elif target_arch not in self.supported_architectures:
-            raise RuntimeError("Cannot build " + self.target + " targetting " + str(target_arch))
-
         self.compiler_dir = self.config.sdkBinDir
         # Use the compiler from the build directory for native builds to get stddef.h (which will be deleted)
         if self._crossCompileTarget == CrossCompileTarget.NATIVE:
@@ -242,10 +237,6 @@ class CrossCompileMixin(object):
         else:
             # anything over 10 should use libc++ by default
             return self.targetTriple + "12"
-
-    def get_host_triple(self):
-        compiler = getCompilerInfo(self.config.clangPath if self.config.clangPath else shutil.which("cc"))
-        return compiler.default_target
 
     @property
     def sizeof_void_ptr(self):
@@ -348,10 +339,7 @@ class CrossCompileMixin(object):
                                                     default=cls.defaultOptimizationLevel)
         cls._linkage = cls.addConfigOption("linkage", help="Build static or dynamic (default means for host=dynamic,"
                                                           " CHERI/MIPS=<value of option --cross-compile-linkage>)",
-                                          default=Linkage.DEFAULT, kind=Linkage)
-        if inspect.getattr_static(cls, "_crossCompileTarget") is None:
-            cls._crossCompileTarget = cls.addConfigOption("target", help="The target to build for (`cheri` or `mips` or `native`)",
-                                                          default=defaultTarget, kind=CrossCompileTarget)
+                                           default=Linkage.DEFAULT, kind=Linkage)
 
     def linkage(self):
         if self._linkage == Linkage.DEFAULT:
@@ -369,15 +357,6 @@ class CrossCompileMixin(object):
     def force_dynamic_linkage(self) -> bool:
         return self.linkage() == Linkage.DYNAMIC
 
-    def compiling_for_mips(self):
-        return self._crossCompileTarget == CrossCompileTarget.MIPS
-
-    def compiling_for_cheri(self):
-        return self._crossCompileTarget == CrossCompileTarget.CHERI
-
-    def compiling_for_host(self):
-        return self._crossCompileTarget == CrossCompileTarget.NATIVE
-
     @property
     def pkgconfig_dirs(self):
         if self.compiling_for_mips():
@@ -385,10 +364,6 @@ class CrossCompileMixin(object):
         if self.compiling_for_cheri():
             return str(self.sdkSysroot / "usr/libcheri/pkgconfig") + ":" + str(self.sdkSysroot / "usr/local/libcheri/pkgconfig")
         return None
-
-    @property
-    def display_name(self):
-        return self.projectName + " (" + self._crossCompileTarget.value + ")"
 
     def configure(self, **kwargs):
         env = dict()

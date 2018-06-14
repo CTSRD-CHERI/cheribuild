@@ -40,7 +40,7 @@ from .utils import *
 class Target(object):
     instantiating_targets_should_warn = True
 
-    def __init__(self, name, projectClass):
+    def __init__(self, name, projectClass: "typing.Type[SimpleProject]"):
         self.name = name
         self.projectClass = projectClass
         self.__project = None  # type: pycheribuild.project.SimpleProject
@@ -48,10 +48,11 @@ class Target(object):
         self._tests_have_run = False
         self._creating_project = False  # avoid cycles
 
-    def get_or_create_project(self, caller: "typing.Optional[SimpleProject]", config) -> "SimpleProject":
+    def get_or_create_project(self, target_arch: "typing.Optional[CrossCompileTarget]", config) -> "SimpleProject":
         # Note: MultiArchTarget uses caller to select the right project (e.g. libcxxrt-native needs libunwind-native path)
         if self.__project is None:
             self.__project = self.create_project(config)
+        assert self.__project is not None
         return self.__project
 
     def get_dependencies(self, config) -> "typing.List[Target]":
@@ -75,7 +76,7 @@ class Target(object):
     def _create_project(self, config: CheriConfig) -> "SimpleProject":
         return self.projectClass(config)
 
-    def execute(self):
+    def execute(self, config: CheriConfig):
         if self._completed:
             # TODO: make this an error once I have a clean solution for the pseudo targets
             warningMessage(self.name, "has already been executed!")
@@ -153,46 +154,70 @@ class Target(object):
 # XXX: can't call this CrossCompileTarget since that is already the name of the enum
 class MultiArchTarget(Target):
     def __init__(self, name, projectClass, target_arch: "typing.Optional[CrossCompileTarget]",
-                 base_target: "typing.Optional[MultiArchTarget]"):
+                 base_target: "MultiArchTargetAlias"):
         super().__init__(name, projectClass)
         self.target_arch = target_arch
-        self.derived_targets = []  # type: typing.List[MultiArchTarget]
-        if base_target is not None:
-            base_target._add_derived_target(self)
-
-    def get_or_create_project(self, caller: "typing.Optiona[SimpleProject]", config) -> "SimpleProject":
-        # If there are any derived targets pick the right one based on the target_arch:
-        if self.derived_targets and caller is not None:  # caller is None when instantiated from targetmanager/unit tests
-            cross_target = caller.get_crosscompile_target(config)  # type: CrossCompileTarget
-            if cross_target is not None:
-                # find the correct derived project:
-                for tgt in self.derived_targets:
-                    if tgt.target_arch == cross_target:
-                        return tgt.get_or_create_project(caller, config)
-        # otherwise just call the default impl
-        return super().get_or_create_project(caller, config)
-
-    def _add_derived_target(self, arg: "MultiArchTarget"):
-        self.derived_targets.append(arg)
+        base_target.derived_targets.append(self)
 
     def _create_project(self, config: CheriConfig):
         from .projects.cross.crosscompileproject import CrossCompileMixin
-        from .projects.cross.cheribsd import _BuildFreeBSD
-        assert issubclass(self.projectClass, CrossCompileMixin) or issubclass(self.projectClass, _BuildFreeBSD)
+        from .projects.cross.cheribsd import BuildFreeBSD
+        assert issubclass(self.projectClass, CrossCompileMixin) or issubclass(self.projectClass, BuildFreeBSD)
         return self.projectClass(config)
 
     def __repr__(self):
-        arch = self.target_arch.name if self.target_arch else "default arch"
-        return "<Cross target (" + arch + ") " + self.name + ">"
+        return "<Cross target (" + self.target_arch.name + ") " + self.name + ">"
+
+
+# This is used for targets like "libcxx", etc and resolves to "libcxx-cheri/libcxx-native/libcxx-mips"
+# at runtime
+class MultiArchTargetAlias(Target):
+    def __init__(self, name, projectClass):
+        super().__init__(name, projectClass)
+        self.derived_targets = []  # type: typing.List[MultiArchTarget]
+
+
+    def get_real_target(self, cross_target: "typing.Optional[CrossCompileTarget]", config) -> MultiArchTarget:
+        if cross_target is None:
+            # Use the default target:
+            cross_target = self.projectClass.get_crosscompile_target(config)
+        assert cross_target is not None
+        # find the correct derived project:
+        for tgt in self.derived_targets:
+            if tgt.target_arch == cross_target:
+                return tgt
+        raise LookupError("Could not find target for " + str(cross_target))
+
+    def get_or_create_project(self, cross_target: "typing.Optional[CrossCompileTarget]", config) -> "SimpleProject":
+        # If there are any derived targets pick the right one based on the target_arch:
+        assert self.derived_targets, "derived targets must not be empty"
+        return self.get_real_target(cross_target, config).get_or_create_project(cross_target, config)
+
+    def _create_project(self, config: CheriConfig):
+        from .projects.cross.crosscompileproject import CrossCompileMixin
+        from .projects.cross.cheribsd import BuildFreeBSD
+        assert issubclass(self.projectClass, CrossCompileMixin) or issubclass(self.projectClass, BuildFreeBSD)
+        return self.projectClass(config)
+
+    def execute(self, config):
+        return self._get_real_target(None, config).execute(config)
+
+    def run_tests(self, config: "CheriConfig"):
+        return self._get_real_target(None, config).run_tests(config)
+
+    def checkSystemDeps(self, config: CheriConfig):
+        return self._get_real_target(None, config).checkSystemDeps(config)
+
+    def __repr__(self):
+        return "<Cross target alias " + self.name + ">"
 
 
 class TargetManager(object):
     def __init__(self):
         self._allTargets = {}
 
-    def addTarget(self, target: Target) -> Target:
+    def addTarget(self, target: Target) -> None:
         self._allTargets[target.name] = target
-        return target
 
     def registerCommandLineOptions(self):
         # this cannot be done in the Project metaclass as otherwise we get
@@ -209,8 +234,15 @@ class TargetManager(object):
     def targets(self) -> "typing.Iterable[Target]":
         return self._allTargets.values()
 
-    def get_target(self, name: str) -> Target:
+    def get_target_raw(self, name: str):
+        # return the actual target without resolving MultiArchTargetAlias
         return self._allTargets[name]
+
+    def get_target(self, name: str, arch: CrossCompileTarget, config: CheriConfig) -> Target:
+        target = self.get_target_raw(name)
+        if isinstance(target, MultiArchTargetAlias):
+            target = target.get_real_target(arch, config)
+        return target
 
     def topologicalSort(self, targets: "typing.List[Target]") -> "typing.Iterable[typing.List[Target]]":
         # based on http://rosettacode.org/wiki/Topological_sort#Python
@@ -279,7 +311,7 @@ class TargetManager(object):
                 statusUpdate("Will build target", coloured(AnsiColour.yellow, target.name))
                 print("    Dependencies for", target.name, "are", target.projectClass.allDependencyNames())
             else:
-                target.execute()
+                target.execute(config)
 
     def get_all_chosen_targets(self, config) -> "typing.Iterable[Target]":
         # check that all target dependencies are correct:
@@ -298,7 +330,7 @@ class TargetManager(object):
             if targetName not in self._allTargets:
                 sys.exit(coloured(AnsiColour.red, "Target", targetName, "does not exist. Valid choices are",
                                   ",".join(self.targetNames)))
-            explicitlyChosenTargets.append(self.get_target(targetName))
+            explicitlyChosenTargets.append(self.get_target(targetName, None, None))
         chosenTargets = self.get_all_targets(explicitlyChosenTargets, config)
         if config.verbose:
             print("Will execute the following targets:", " ".join(t.name for t in chosenTargets))
