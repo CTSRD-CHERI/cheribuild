@@ -182,10 +182,10 @@ class BuildLLVM(CMakeProject):
         self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang++", toolName="c++", createUnprefixedLink=False)
         self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang-cpp", toolName="cpp", createUnprefixedLink=False)
 
-
-        # Use the LLVM versions of ranlib and ar
-        self.createBuildtoolTargetSymlinks(self.installDir / "bin/llvm-ar", toolName="ar")
-        self.createBuildtoolTargetSymlinks(self.installDir / "bin/llvm-ar", toolName="ranlib")
+        # Use the LLVM versions of ranlib and ar and nm
+        for tool in ("ar", "ranlib", "nm"):
+            # TODO: also for objcopy soon so we don't need elftoolchain at all
+            self.createBuildtoolTargetSymlinks(self.installDir / ("bin/llvm-" + tool), toolName=tool, createUnprefixedLink=True)
 
         if not self.skip_lld:
             self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld")
