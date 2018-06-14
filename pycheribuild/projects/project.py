@@ -45,7 +45,7 @@ from enum import Enum
 from pathlib import Path
 from copy import deepcopy
 
-from ..config.loader import ConfigLoaderBase, ComputedDefaultValue
+from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase
 from ..config.chericonfig import CheriConfig, CrossCompileTarget
 from ..targets import Target, MultiArchTarget, MultiArchTargetAlias, targetManager
 from ..filesystemutils import FileSystemUtils
@@ -813,10 +813,18 @@ class Project(SimpleProject):
                                                   metavar="REVISION")
             cls.repository = cls.addConfigOption("repository", kind=str, help="The URL of the git repository",
                                                  default=cls.repository, metavar="REPOSITORY")
-        if inspect.getattr_static(cls, "generate_cmakelists") is None:
-            cls.generate_cmakelists = cls.addBoolOption("generate-cmakelists",
+        if "generate_cmakelists" not in cls.__dict__:
+            # Make sure not to dereference a parent class descriptor here -> use getattr_static
+            option = inspect.getattr_static(cls, "generate_cmakelists")
+            # If option is not a fixed bool then we need a command line option:
+            if not isinstance(option, bool):
+                assert option is None or isinstance(option, ConfigOptionBase)
+                assert not issubclass(cls, CMakeProject), "generate_cmakelists option needed -> should not be a CMakeProject"
+                cls.generate_cmakelists = cls.addBoolOption("generate-cmakelists",
                                                         help="Generate a CMakeLists.txt that just calls cheribuild. "
                                                              "Useful for IDEs that only support CMake")
+            else:
+                assert issubclass(cls, CMakeProject), "Should be a CMakeProject: " + cls.__name__
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
