@@ -141,6 +141,14 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
         self.configureArgs.append("--with-newlib")
         super().configure()
 
+    def install(self, **kwargs):
+        super().install(**kwargs)
+        if self.compiling_for_cheri():
+            # create some symlinks to make the current CMakeProject infrastructure happy
+            root_dir = self.installDir / self.targetTriple
+            self.makedirs(root_dir / "usr")
+            self.createSymlink(root_dir / "lib", root_dir / "usr/libcheri")
+
     def run_tests(self):
         with tempfile.TemporaryDirectory() as td:
             self.writeFile(Path(td, "main.c"), contents="""

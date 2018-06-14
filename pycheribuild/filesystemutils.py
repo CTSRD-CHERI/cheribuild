@@ -175,7 +175,7 @@ class FileSystemUtils(object):
             cwd = dest.parent
         if relative:
             if src.is_absolute():
-                src = src.relative_to(dest.parent if dest.is_absolute() else cwd)
+                src = os.path.relpath(str(src), str(dest.parent if dest.is_absolute() else cwd))
             if cwd is not None and cwd.is_dir():
                 dest = dest.relative_to(cwd)
             runCmd("ln", "-fsn", src, dest, cwd=cwd, printVerboseOnly=True)
