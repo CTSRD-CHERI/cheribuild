@@ -592,6 +592,7 @@ class BuildFreeBSDDiskImageMIPS(BuildFreeBSDImageBase):
     dependencies = ["qemu", "freebsd-mips"]
     _freebsd_build_class = BuildFreeBSD.get_class_for_target(CrossCompileTarget.MIPS)
     _freebsd_suffix = "mips"
+    hide_options_from_help = True
 
 
 class BuildFreeBSDDiskImageX86(BuildFreeBSDImageBase):
@@ -599,3 +600,4 @@ class BuildFreeBSDDiskImageX86(BuildFreeBSDImageBase):
     dependencies = ["qemu", "freebsd-native"]
     _freebsd_build_class = BuildFreeBSD.get_class_for_target(CrossCompileTarget.NATIVE)
     _freebsd_suffix = "x86"
+    hide_options_from_help = True

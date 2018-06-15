@@ -99,6 +99,7 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
 
     defaultInstallDir = ComputedDefaultValue(function=freebsd_install_dir,
                                              asString="$INSTALL_ROOT/freebsd-{mips/x86}")
+    hide_options_from_help = True  # hide this for now (only show cheribsd)
 
     defaultExtraMakeOptions = [
         # "-DWITHOUT_HTML",  # should not be needed
@@ -123,8 +124,8 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
     @classmethod
     def setupConfigOptions(cls, buildKernelWithClang: bool=True, makeOptionsShortname=None, **kwargs):
         super().setupConfigOptions(add_common_cross_options=False, **kwargs)
-        cls.subdirOverride = cls.addConfigOption("subdir-with-deps", kind=str, metavar="DIR", showHelp=True,
-                                                 help="Only build subdir DIR instead of the full tree.#"
+        cls.subdirOverride = cls.addConfigOption("subdir-with-deps", kind=str, metavar="DIR", showHelp=False,
+                                                 help="Only build subdir DIR instead of the full tree. "
                                                       "This uses the SUBDIR_OVERRIDE mechanism so will build much more"
                                                       "than just that directory")
 
@@ -164,8 +165,8 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
                                                                     " since they can just be read from the host.")
         cls.minimal = cls.addBoolOption("minimal", showHelp=True,
             help="Don't build all of FreeBSD, just what is needed for running most CHERI tests/benchmarks")
-        cls.fastRebuild = cls.addBoolOption("fast", showHelp=True,
-            help="Skip some (usually) unnecessary build steps to speed up rebuilds")
+        cls.fastRebuild = cls.addBoolOption("fast",
+                                            help="Skip some (usually) unnecessary build steps to speed up rebuilds")
         if IS_FREEBSD:
             cls.crossbuild = False
         elif is_jenkins_build():
@@ -798,6 +799,8 @@ class BuildCHERIBSD(BuildFreeBSD):
     supported_architectures = [CrossCompileTarget.CHERI, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
     default_architecture = CrossCompileTarget.CHERI
     is_sdk_target = True
+    hide_options_from_help = False  # FreeBSD options are hidden, but this one should be visible
+
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -821,8 +824,7 @@ class BuildCHERIBSD(BuildFreeBSD):
 
         if cls._crossCompileTarget != CrossCompileTarget.NATIVE:
             cls.buildFpgaKernels = cls.addBoolOption("build-fpga-kernels", showHelp=True,
-                                                     help="Also build kernels for the FPGA. They will not be installed so"
-                                                          " you need to copy them from the build directory.")
+                                                     help="Also build kernels for the FPGA.")
             cls.mfs_root_image = cls.addPathOption("mfs-root-image", help="Path to an MFS root image to embed in the"
                                                                           "kernel that will be booted from")
         # We also want to add this config option to the fake "cheribsd" target (to keep the config file manageable)

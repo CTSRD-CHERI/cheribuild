@@ -141,6 +141,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     sourceDir = None
     buildDir = None
     installDir = None
+    # Whether to hide the options from the default --help output (only add to --help-hidden)
+    hide_options_from_help = False
     # To check that we don't create an crosscompile targets without a fixed target
     _should_not_be_instantiated = False
     __cached_deps = None  # type: typing.List[Target]
@@ -241,6 +243,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # For targets such as qtbase-mips we want to fall back to checking the value of the option for qtbase
         fallback_name = None
         synthetic_base = getattr(cls, "synthetic_base", None)
+        if cls.hide_options_from_help:
+            helpHidden = True
         if synthetic_base is not None:
             # Don't show the help options for qtbase-mips/qtbase-native/qtbase-cheri in default --help output, the
             # base version is enough. They will still be included in --help-all

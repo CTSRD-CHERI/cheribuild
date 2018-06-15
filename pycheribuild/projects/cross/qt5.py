@@ -40,6 +40,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     # Should not be needed, but it seems like some of the tests are broken otherwise
     make_kind = MakeCommandKind.GnuMake
     needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
+    hide_options_from_help = True  # hide this for now
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -53,7 +54,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         cls.build_tests = cls.addBoolOption("build-tests", showHelp=True, help="build the Qt unit tests")
         cls.build_examples = cls.addBoolOption("build-examples", showHelp=True, help="build the Qt examples")
         cls.minimal = cls.addBoolOption("minimal", showHelp=True, help="Don't build QtWidgets or QtGui, etc")
-        cls.optimized_debug_build = cls.addBoolOption("optimized-debug-build", showHelp=True,
+        cls.optimized_debug_build = cls.addBoolOption("optimized-debug-build",
                                                       help="Don't build with -Os instead of -O0 for debug info builds")
         cls.useMxgot = True  # appears to be needed for some tests
 

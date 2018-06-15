@@ -247,7 +247,7 @@ class LaunchCheriBSD(AbstractLaunchFreeBSD):
 class LaunchFreeBSDMips(AbstractLaunchFreeBSD):
     projectName = "run-freebsd-mips"
     dependencies = ["qemu", "disk-image-freebsd-mips"]
-
+    hide_options_from_help = True
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
@@ -264,6 +264,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
     dependencies = ["qemu", "cherios"]
     _forwardSSHPort = False
     _qemuUserNetworking = False
+    hide_options_from_help = True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -291,6 +292,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
 class LaunchFreeBSDX86(AbstractLaunchFreeBSD):
     projectName = "run-freebsd-x86"
     dependencies = ["disk-image-freebsd-x86"]
+    hide_options_from_help = True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -323,6 +325,7 @@ class LaunchCheriBsdMfsRoot(AbstractLaunchFreeBSD):
 class LaunchCheriBsdMinimal(AbstractLaunchFreeBSD):
     projectName = "run-minimal-with-disk-image"
     dependencies = ["qemu", "disk-image-minimal"]
+    hide_options_from_help = True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
