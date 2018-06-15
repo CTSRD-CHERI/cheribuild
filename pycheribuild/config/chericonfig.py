@@ -108,15 +108,15 @@ class CheriConfig(object):
         self.passDashKToMake = loader.addCommandLineOnlyBoolOption("pass-k-to-make", "k",
                                                                    help="Pass the -k flag to make to continue after"
                                                                         " the first error")
-        self.withLibstatcounters = loader.addBoolOption("with-libstatcounters",
+        self.withLibstatcounters = loader.addBoolOption("with-libstatcounters", group=loader.crossCompileOptionsGroup,
                                                         help="Link cross compiled CHERI project with libstatcounters. "
                                                              "This is only useful when targetting FPGA")
-        self.skipBuildworld = loader.addBoolOption("skip-buildworld", help="Skip the buildworld step when building"
-                                                                           "FreeBSD or CheriBSD")
-        self.buildenv = loader.addCommandLineOnlyBoolOption("buildenv", help="Open a shell with the right environment"
-                                                                             "for building the project. Currently only"
-                                                                             "works for FreeBSD/CheriBSD")
-        self.libcheri_buildenv = loader.addCommandLineOnlyBoolOption("libcheri-buildenv",
+        self.skipBuildworld = loader.addBoolOption("skip-buildworld", group=loader.freebsdGroup,
+                                                   help="Skip the buildworld step when building FreeBSD or CheriBSD")
+        self.buildenv = loader.addCommandLineOnlyBoolOption("buildenv", group=loader.freebsdGroup,
+                                                            help="Open a shell with the right environment for building"
+                                                                 " the project. Currently only works for FreeBSD/CheriBSD")
+        self.libcheri_buildenv = loader.addCommandLineOnlyBoolOption("libcheri-buildenv", group=loader.freebsdGroup,
              help="Open a shell with the right environment for building CHERI libraries. Currently only works for CheriBSD")
 
         self.cheri_cap_table_abi = loader.addOption("cap-table-abi", helpHidden=True,
@@ -137,8 +137,10 @@ class CheriConfig(object):
         self.forceConfigure = None  # type: bool
         self.force_update = None  # type: bool
         self.mips_float_abi = loader.addOption("mips-float-abi", default=MipsFloatAbi.SOFT, type=MipsFloatAbi,
+                                               group=loader.crossCompileOptionsGroup,
                                                help="The floating point ABI to use for building MIPS+CHERI programs")
         self.crosscompile_linkage = loader.addOption("cross-compile-linkage", default=Linkage.STATIC, type=Linkage,
+                                                     group=loader.crossCompileOptionsGroup,
                                                      enum_choices=(Linkage.DYNAMIC, Linkage.STATIC),
                                                      help="Whether to link cross-compile projects static or dynamic by default")
 
@@ -148,6 +150,7 @@ class CheriConfig(object):
         self.clang_colour_diags = loader.addBoolOption("clang-colour-diags", "-clang-color-diags", default=True,
                                                        help="Force CHERI clang to emit coloured diagnostics")
         self.use_sdk_clang_for_native_xbuild = loader.addBoolOption("use-sdk-clang-for-native-xbuild",
+                                                                    group=loader.crossCompileOptionsGroup,
                                                                     help="Compile cross-compile project with CHERI "
                                                                          "clang from the SDK instead of host compiler")
 
@@ -172,10 +175,11 @@ class CheriConfig(object):
         self.otherToolsDir = None  # type: Path
         self.dollarPathWithOtherTools = None  # type: Path
         self.sysrootArchiveName = None  # type: Path
-        self.docker = loader.addBoolOption("docker", help="Run the build inside a docker container")
+        self.docker = loader.addBoolOption("docker", help="Run the build inside a docker container",
+                                           group=loader.dockerGroup)
         self.docker_container = loader.addOption("docker-container", help="Name of the docker container to use",
-                                                 default="cheribuild-test")
-        self.docker_reuse_container = loader.addBoolOption("docker-reuse-container",
+                                                 default="cheribuild-test", group=loader.dockerGroup)
+        self.docker_reuse_container = loader.addBoolOption("docker-reuse-container", group=loader.dockerGroup,
             help="Attach to the same container again (note: docker-container option must be an id rather than a container name")
 
         # compilation db options:

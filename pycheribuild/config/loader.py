@@ -116,7 +116,11 @@ class ConfigLoaderBase(object):
         self.actionGroup = self._parser.add_argument_group("Actions to be performed")
         self.pathGroup = self._parser.add_argument_group("Configuration of default paths")
         self.crossCompileOptionsGroup = self._parser.add_argument_group("Adjust flags used when compiling MIPS/CHERI projects")
-        self.pathGroup = self._parser.add_argument_group("Configuration of default paths")
+
+        # put this one right at the end since it is not that useful
+        self.freebsdGroup = self._parser.add_argument_group("FreeBSD and CheriBSD build configuration")
+        self.dockerGroup = self._parser.add_argument_group("Options controlling the use of docker for building")
+
 
     def addCommandLineOnlyOption(self, *args, **kwargs):
         """
