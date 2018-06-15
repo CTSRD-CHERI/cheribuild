@@ -84,7 +84,7 @@ class CheriConfig(object):
 
         # add the actions:
         self.action = loader.addOption("action", default=[], action="append", type=action_class, helpHidden=True,
-                                       help="The action to perform by cheribuild")
+                                       help="The action to perform by cheribuild", group=loader.actionGroup)
         self.default_action = None
         # Add aliases (e.g. --test = --action=test):
         for action in action_class:
@@ -94,14 +94,17 @@ class CheriConfig(object):
             else:
                 loader.actionGroup.add_argument(action.option_name, help=action.help_message, dest="action",
                                                 action="append_const", const=action.actions)
+        self.print_targets_only = loader.addBoolOption("print-targets-only", helpHidden=False, group=loader.actionGroup,
+            help="Don't run the build but instead only print the targets that would be executed")
 
 
-        self.clangPath = loader.addPathOption("clang-path", default=latestClangTool("clang"),
-                                              help="The Clang C compiler to use for compiling "
-                                                   "LLVM+Clang (must be at least version 3.7)")
-        self.clangPlusPlusPath = loader.addPathOption("clang++-path", default=latestClangTool("clang++"),
-                                                      help="The Clang C++ compiler to use for compiling "
-                                                           "LLVM+Clang (must be at least version 3.7)")
+        self.clangPath = loader.addPathOption("clang-path",
+              default=latestClangTool("clang"), group=loader.pathGroup,
+              help="The Clang C compiler to use for compiling LLVM+Clang (must be at least version 3.7)")
+        self.clangPlusPlusPath = loader.addPathOption("clang++-path",
+              default=latestClangTool("clang++"), group=loader.pathGroup,
+              help="The Clang C++ compiler to use for compiling LLVM+Clang (must be at least version 3.7)")
+
         self.passDashKToMake = loader.addCommandLineOnlyBoolOption("pass-k-to-make", "k",
                                                                    help="Pass the -k flag to make to continue after"
                                                                         " the first error")
@@ -122,9 +125,6 @@ class CheriConfig(object):
         self.cross_target_suffix = loader.addOption("cross-target-suffix", helpHidden=True, default="",
                                                     help="Add a suffix to the cross build and install directories. "
                                                          "With VALUE=-pcrel it will use /opt/cheriXXX-pcrel/$PROJECT")
-
-        self.print_targets_only = loader.addBoolOption("print-targets-only", helpHidden=False,
-           help="Don't run the build but instead only print the targets that would be executed")
 
         # Attributes for code completion:
         self.verbose = None  # type: bool

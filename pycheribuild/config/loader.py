@@ -113,7 +113,10 @@ class ConfigLoaderBase(object):
         self.__option_cls = option_cls
         self._parser = argparse.ArgumentParser(formatter_class=
                                       lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
-        self.actionGroup = self._parser.add_argument_group("Actions to be performed:")
+        self.actionGroup = self._parser.add_argument_group("Actions to be performed")
+        self.pathGroup = self._parser.add_argument_group("Configuration of default paths")
+        self.crossCompileOptionsGroup = self._parser.add_argument_group("Adjust flags used when compiling MIPS/CHERI projects")
+        self.pathGroup = self._parser.add_argument_group("Configuration of default paths")
 
     def addCommandLineOnlyOption(self, *args, **kwargs):
         """
@@ -447,7 +450,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         config_prefix = self.get_config_prefix()
         # print("Name is:", program, "prefix:", config_prefix)
         self.defaultConfigPath = Path(self.configdir, config_prefix + "cheribuild.json")
-        self._parser.add_argument("--config-file", metavar="FILE", type=str, default=str(self.defaultConfigPath),
+        self.pathGroup.add_argument("--config-file", metavar="FILE", type=str, default=str(self.defaultConfigPath),
                                   help="The config file that is used to load the default settings (default: '" +
                                   str(self.defaultConfigPath) + "')")
         self._parser.add_argument("--help-all", "--help-hidden", action="help", help="Show all help options, including"

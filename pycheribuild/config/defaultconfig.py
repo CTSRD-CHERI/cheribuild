@@ -61,7 +61,7 @@ class DefaultCheriConfig(CheriConfig):
         self.default_action = CheribuildAction.BUILD
         assert isinstance(loader, JsonAndCommandLineConfigLoader)
         # The run mode:
-        self.getConfigOption = loader.addOption("get-config-option", type=str, metavar="KEY",
+        self.getConfigOption = loader.addOption("get-config-option", type=str, metavar="KEY", group=loader.actionGroup,
                                                 help="Print the value of config option KEY and exit")
         # boolean flags
         self.quiet = loader.addBoolOption("quiet", "q", help="Don't show stdout of the commands that are executed")
@@ -114,12 +114,15 @@ class DefaultCheriConfig(CheriConfig):
                                          help="Number of jobs to use for compiling")
 
         # configurable paths
-        self.sourceRoot = loader.addPathOption("source-root", default=Path(os.path.expanduser("~/cheri")),
-                                               help="The directory to store all sources")
-        self.outputRoot = loader.addPathOption("output-root", default=lambda p, cls: (p.sourceRoot / "output"),
-                                               help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
-        self.buildRoot = loader.addPathOption("build-root", default=lambda p, cls: (p.sourceRoot / "build"),
-                                              help="The directory for all the builds (default: '<SOURCE_ROOT>/build')")
+        self.sourceRoot = loader.addPathOption("source-root",
+            default=Path(os.path.expanduser("~/cheri")), group=loader.pathGroup,
+            help="The directory to store all sources")
+        self.outputRoot = loader.addPathOption("output-root",
+            default=lambda p, cls: (p.sourceRoot / "output"), group=loader.pathGroup,
+            help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
+        self.buildRoot = loader.addPathOption("build-root",
+            default=lambda p, cls: (p.sourceRoot / "build"), group=loader.pathGroup,
+            help="The directory for all the builds (default: '<SOURCE_ROOT>/build')")
         loader.finalizeOptions(availableTargets)
 
     def load(self):
