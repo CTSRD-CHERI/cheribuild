@@ -55,10 +55,10 @@ class BuildLLVM(CMakeProject):
             return repo, rev
 
         if useDefaultSysroot:
-            cls.no_default_sysroot = cls.addBoolOption("no-default-sysroot", help="Don't set default sysroot and "
-                                                       "target triple. Needed e.g. for the test suite", )
+            cls.add_default_sysroot = cls.addBoolOption("add-default-sysroot", help="Set default sysroot and "
+                                                        "target triple to include cheribsd paths", )
         else:
-            cls.no_default_sysroot = True
+            cls.add_default_sysroot = False
 
         cls.enable_assertions = cls.addBoolOption("assertions", help="build with assertions enabled", default=True)
         cls.enable_lto = cls.addBoolOption("enable-lto", help="build with LTO enabled (experimental)")
@@ -90,7 +90,7 @@ class BuildLLVM(CMakeProject):
                                    CLANG_ENABLE_ARCMT=False)  # also need to disable ARCMT to disable static analyzer
         if self.canUseLLd(self.cCompiler):
             self.add_cmake_options(LLVM_ENABLE_LLD=True)
-        if not self.no_default_sysroot:
+        if self.add_default_sysroot:
             self.add_cmake_options(DEFAULT_SYSROOT=self.config.sdkSysrootDir,
                                    LLVM_DEFAULT_TARGET_TRIPLE="cheri-unknown-freebsd")
         # when making a debug or asserts build speed it up by building a release tablegen
