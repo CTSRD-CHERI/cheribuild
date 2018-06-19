@@ -79,7 +79,7 @@ class BuildQEMU(AutotoolsProject):
 
         # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
         # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
-        extraCFlags = "" if self.debug_info else "-O3"
+        extraCFlags = "-DCONFIG_DEBUG_TCG=1" if self.debug_info else "-O3"
         extraLDFlags = ""
         extraCXXFlags = ""
         if shutil.which("pkg-config"):
@@ -144,6 +144,7 @@ class BuildQEMU(AutotoolsProject):
             "--disable-docs",
             "--disable-rdma",
             "--disable-werror",
+            "--disable-pie",  # no need to build as PIE (this just slows down QEMU)
             "--extra-cflags=" + extraCFlags,
             "--cxx=" + str(self.config.clangPlusPlusPath),
             "--cc=" + str(self.config.clangPath),
@@ -158,7 +159,8 @@ class BuildQEMU(AutotoolsProject):
         if extraCXXFlags:
             self.configureArgs.append("--extra-cxxflags=" + extraCXXFlags.strip())
         if self.debug_info:
-            self.configureArgs.extend(["--enable-debug", "--disable-strip"])
+            self.configureArgs.extend(["--enable-debug", "--disable-strip",
+                                       "--enable-sanitizers", "--enable-debug-tcg"])
         else:
             # Try to optimize as much as possible:
             self.configureArgs.extend(["--disable-stack-protector"])
