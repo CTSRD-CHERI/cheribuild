@@ -329,6 +329,9 @@ class CrossCompileMixin(MultiArchBaseMixin):
             # Should no longer be needed now that I added a hack for .eh_frame
             # "-Wl,-z,notext",  # needed so that LLD allows text relocations
         ]
+        if self.debugInfo:
+            # Add a gdb_index to massively speed up running GDB on CHERIBSD:
+            result.append("-Wl,--gdb-index")
         if self.config.withLibstatcounters:
             # We need to include the constructor even if there is no reference to libstatcounters:
             # TODO: always include the .a file?
