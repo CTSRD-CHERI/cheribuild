@@ -107,7 +107,7 @@ class SdkArchive(object):
     def __repr__(self):
         return str(self.archive)
 
-def get_sdk_archives(cheriConfig) -> "typing.List[SdkArchive]":
+def get_sdk_archives(cheriConfig, needs_cheribsd_sysroot: bool) -> "typing.List[SdkArchive]":
     # Try the full SDK archive first:
     if cheriConfig.sdkArchivePath.exists():
         return [SdkArchive(cheriConfig, cheriConfig.sdkArchivePath.name, extra_args=["--strip-components", "1"],
@@ -127,6 +127,8 @@ def get_sdk_archives(cheriConfig) -> "typing.List[SdkArchive]":
         includes_archive = SdkArchive(cheriConfig, llvm_includes_name, required_globs=["lib/clang/*/include/stddef.h"])
         return [clang_archive, includes_archive]
     else:
+        if not needs_cheribsd_sysroot:
+            return [clang_archive]  # only need the clang archive
         # if we only extracted the compiler, extract the sysroot now
         cheri_sysroot_archive_name = "{}-vanilla-jemalloc-cheribsd-world.tar.xz".format(cheriConfig.sdk_cpu)
         extra_args = ["--strip-components", "1"]
@@ -157,10 +159,10 @@ def extract_sdk_archives(cheriConfig, archives: "typing.List[SdkArchive]"):
             cheriConfig.FS.createBuildtoolTargetSymlinks(cheriConfig.sdkBinDir / tool)
 
 
-def create_sdk_from_archives(cheriConfig):
+def create_sdk_from_archives(cheriConfig, needs_cheribsd_sysroot=True):
     # If the archive is newer, delete the existing sdk unless --keep-sdk is passed install root:
     possiblyDeleteSdkJob = ThreadJoiner(None)
-    archives = get_sdk_archives(cheriConfig)
+    archives = get_sdk_archives(cheriConfig, needs_cheribsd_sysroot=needs_cheribsd_sysroot)
     statusUpdate("Will use the following SDK archives:", archives)
     if any(not a.check_required_files(fatal=False) for a in archives):
         # if any of the required files is missing clean up and extract
@@ -205,15 +207,6 @@ def _jenkins_main():
         sys.exit()
 
     if JenkinsAction.BUILD in cheriConfig.action:
-        if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
-            assert cheriConfig.sdkDir == Path("/cheri-sdk"), cheriConfig.sdkDir
-        elif cheriConfig.without_sdk:
-            statusUpdate("Not using CHERI SDK, only files from /usr")
-            assert cheriConfig.clangPath.exists(), cheriConfig.clangPath
-            assert cheriConfig.clangPlusPlusPath.exists(), cheriConfig.clangPlusPlusPath
-        else:
-            create_sdk_from_archives(cheriConfig)
-
         assert len(cheriConfig.targets) == 1
         target = targetManager.get_target_raw(cheriConfig.targets[0])
         for tgt in targetManager.targets:
@@ -227,17 +220,26 @@ def _jenkins_main():
         # need to set destdir after checkSystemDeps:
         project = target.get_or_create_project(None, cheriConfig)
         assert project
+        if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
+            assert cheriConfig.sdkDir == Path("/cheri-sdk"), cheriConfig.sdkDir
+        elif cheriConfig.without_sdk:
+            statusUpdate("Not using CHERI SDK, only files from /usr")
+            assert cheriConfig.clangPath.exists(), cheriConfig.clangPath
+            assert cheriConfig.clangPlusPlusPath.exists(), cheriConfig.clangPlusPlusPath
+        else:
+            create_sdk_from_archives(cheriConfig, needs_cheribsd_sysroot=project.needs_cheribsd_sysroot(cheriConfig.crossCompileTarget))
+
         if isinstance(project, CrossCompileMixin):
             project.destdir = cheriConfig.outputRoot
             project.installPrefix = cheriConfig.installationPrefix
             project.installDir = cheriConfig.outputRoot
-        statusUpdate("Configuration options for building", project.projectName)
+        statusUpdate("Configuration options for building", project.projectName, file=sys.stderr)
         for attr in dir(project):
             if attr.startswith("_"):
                 continue
             value = getattr(project, attr)
             if not callable(value):
-                print("   ", attr, "=", pprint.pformat(value, width=160, indent=8, compact=True))
+                print("   ", attr, "=", pprint.pformat(value, width=160, indent=8, compact=True), file=sys.stderr)
         # delete the install root:
         cleaningTask = cheriConfig.FS.asyncCleanDirectory(cheriConfig.outputRoot) if not cheriConfig.keepInstallDir else ThreadJoiner(None)
         with cleaningTask:

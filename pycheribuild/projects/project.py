@@ -152,6 +152,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return [t.name for t in cls.recursive_dependencies(config)]
 
     @classmethod
+    def needs_cheribsd_sysroot(cls, target: CrossCompileTarget):
+        # Only CrossCompileProjects will need the sysroot
+        return False
+
+    @classmethod
     def direct_dependencies(cls, config: CheriConfig) -> "typing.Generator[Target]":
         dependencies = cls.dependencies
         expected_build_arch = cls.get_crosscompile_target(config)
