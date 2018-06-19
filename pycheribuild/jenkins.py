@@ -88,7 +88,7 @@ class SdkArchive(object):
         self.extra_args = [] if extra_args is None else extra_args  # type: list
 
     def extract(self):
-        assert self.archive.exists()
+        assert self.archive.exists(), str(self.archive)
         runCmd(["tar", "Jxf", self.archive, "-C", self.cheriConfig.sdkDir] + self.extra_args)
         self.check_required_files()
 
@@ -140,6 +140,11 @@ def get_sdk_archives(cheriConfig, needs_cheribsd_sysroot: bool) -> "typing.List[
             extra_args += ["--exclude", "bin/*"]
         sysroot_archive = SdkArchive(cheriConfig, cheri_sysroot_archive_name, required_globs=["sysroot/usr/include"],
                                      extra_args=extra_args)
+        if not sysroot_archive.archive.exists():
+            warningMessage("Project needs a full SDK archive but only clang archive was found and",
+                           sysroot_archive.archive, "is missing. Will attempt to build anyway but build "
+                                                    "will most likely fail.")
+            return [clang_archive]
         return [clang_archive, sysroot_archive]
 
 
