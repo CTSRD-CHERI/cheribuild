@@ -229,11 +229,6 @@ def _jenkins_main():
                 cls.defaultInstallDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
                 cls.installDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
                 # print(project.projectClass.projectName, project.projectClass.installDir)
-        Target.instantiating_targets_should_warn = False
-        target.checkSystemDeps(cheriConfig)
-        # need to set destdir after checkSystemDeps:
-        project = target.get_or_create_project(None, cheriConfig)
-        assert project
         if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
             assert cheriConfig.sdkDir == Path("/cheri-sdk"), cheriConfig.sdkDir
         elif cheriConfig.without_sdk:
@@ -241,8 +236,13 @@ def _jenkins_main():
             assert cheriConfig.clangPath.exists(), cheriConfig.clangPath
             assert cheriConfig.clangPlusPlusPath.exists(), cheriConfig.clangPlusPlusPath
         else:
-            create_sdk_from_archives(cheriConfig, needs_cheribsd_sysroot=project.needs_cheribsd_sysroot(cheriConfig.crossCompileTarget))
+            create_sdk_from_archives(cheriConfig, needs_cheribsd_sysroot=target.projectClass.needs_cheribsd_sysroot(cheriConfig.crossCompileTarget))
 
+        Target.instantiating_targets_should_warn = False
+        target.checkSystemDeps(cheriConfig)
+        # need to set destdir after checkSystemDeps:
+        project = target.get_or_create_project(None, cheriConfig)
+        assert project
         if isinstance(project, CrossCompileMixin):
             project.destdir = cheriConfig.outputRoot
             project.installPrefix = cheriConfig.installationPrefix
