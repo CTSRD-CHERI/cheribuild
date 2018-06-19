@@ -124,16 +124,12 @@ addFilteredFile(scriptDir / "projects/project.py")
 addFilteredFile(scriptDir / "projects/build_qemu.py")
 addFilteredFile(scriptDir / "projects/binutils.py")
 addFilteredFile(scriptDir / "projects/llvm.py")
-addFilteredFile(scriptDir / "projects/cross/cheribsd.py")
-# disk-image, sdk and run_qemu must come after cheribsd as they use CheriBSD.rootfsDir
-addFilteredFile(scriptDir / "projects/disk_image.py")
+
 addFilteredFile(scriptDir / "projects/awk.py")
 addFilteredFile(scriptDir / "projects/bmake.py")
 addFilteredFile(scriptDir / "projects/cmake.py")
 addFilteredFile(scriptDir / "projects/cherios.py")
 addFilteredFile(scriptDir / "projects/elftoolchain.py")
-addFilteredFile(scriptDir / "projects/sdk.py")
-addFilteredFile(scriptDir / "projects/run_qemu.py")
 addFilteredFile(scriptDir / "projects/cheritrace.py")
 addFilteredFile(scriptDir / "projects/makefs_linux.py")
 addFilteredFile(scriptDir / "projects/qtcreator.py")
@@ -144,6 +140,8 @@ addFilteredFile(scriptDir / "projects/gnustep.py")
 addFilteredFile(scriptDir / "projects/sail.py")
 
 # cross compilation targets
+addFilteredFile(scriptDir / "projects/cross/multiarchmixin.py")
+addFilteredFile(scriptDir / "projects/cross/cheribsd.py")
 addFilteredFile(scriptDir / "projects/cross/crosscompileproject.py")
 addFilteredFile(scriptDir / "projects/cross/benchmarks.py")
 addFilteredFile(scriptDir / "projects/cross/cheri_tests.py")
@@ -155,6 +153,12 @@ addFilteredFile(scriptDir / "projects/cross/llvm_test_suite.py")
 addFilteredFile(scriptDir / "projects/cross/newlib_baremetal.py")
 addFilteredFile(scriptDir / "projects/cross/sqlite.py")
 addFilteredFile(scriptDir / "projects/cross/qt5.py")
+
+# disk-image, sdk and run_qemu must come after cheribsd as they use CheriBSD.rootfsDir
+addFilteredFile(scriptDir / "projects/disk_image.py")
+addFilteredFile(scriptDir / "projects/sdk.py")
+addFilteredFile(scriptDir / "projects/run_qemu.py")
+
 
 # now make sure that all the projects were handled
 checkAllFilesUsed(scriptDir)

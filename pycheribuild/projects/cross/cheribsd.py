@@ -452,12 +452,16 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
     def jflag(self) -> list:
         return [self.config.makeJFlag] if self.config.makeJobs > 1 else []
 
-    def compile(self, mfs_root_image: Path=None, **kwargs):
+    def compile(self, mfs_root_image: Path=None, sysroot_only=False, **kwargs):
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
         # so just omit the flag here if the user passes -j1 on the command line
         build_args = self.buildworldArgs
         if self.config.verbose:
             self.runMake("showconfig", options=build_args)
+        if sysroot_only:
+            self.runMake("buildsysroot", options=build_args)
+            return  # We are done after building the sysroot
+
         if not self.config.skipBuildworld:
             if self.fastRebuild:
                 build_args.set(WORLDFAST=True)
@@ -521,7 +525,7 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         result.env_vars.update(self.makeInstallEnv)
         return result
 
-    def install(self, all_kernel_configs: str=None, **kwargs):
+    def install(self, all_kernel_configs: str=None, sysroot_only=False, **kwargs):
         if self.subdirOverride:
             statusUpdate("Skipping install step because SUBDIR_OVERRIDE was set")
             return
@@ -529,7 +533,7 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         if self.config.clean or not self.keepOldRootfs:
             self._removeOldRootfs()
 
-        if not self.config.skipBuildworld:
+        if not self.config.skipBuildworld or sysroot_only:
             install_world_args = self.installworld_args
             # https://github.com/CTSRD-CHERI/cheribsd/issues/220
             # installworld reads compiler metadata which was written by kernel-toolchain which means that
@@ -544,8 +548,15 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
                 except subprocess.CalledProcessError:
                     warningMessage("Failed to run either target _compiler-metadata or "
                                    "_build_metadata, build system has changed!")
-            self.runMake("installworld", options=install_world_args)
-            self.runMake("distribution", options=install_world_args)
+            if sysroot_only:
+                self.runMake("installsysroot", options=install_world_args)
+                # Don't try to install the kernel if we are only building a sysroot
+                return
+            else:
+                self.runMake("installworld", options=install_world_args)
+                self.runMake("distribution", options=install_world_args)
+
+        assert not sysroot_only, "Should not end up here"
         # Run installkernel after installworld since installworld deletes METALOG and therefore the files added by
         # the installkernel step will not be included if we run it first.
         if not all_kernel_configs:
@@ -822,6 +833,10 @@ class BuildCHERIBSD(BuildFreeBSD):
         cls.cheriCC = cls.addPathOption("cheri-cc", help="Override the compiler used to build CHERI code",
                                         default=defaultCheriCC)
 
+        cls.sysroot_only = cls.addBoolOption("sysroot-only", showHelp=True,
+                                             help="Only build a sysroot instead of the full system. This will only "
+                                                  "build the libraries and skip all binaries")
+
         if cls._crossCompileTarget != CrossCompileTarget.NATIVE:
             cls.buildFpgaKernels = cls.addBoolOption("build-fpga-kernels", showHelp=True,
                                                      help="Also build kernels for the FPGA.")
@@ -903,7 +918,10 @@ class BuildCHERIBSD(BuildFreeBSD):
             mipsCC = self.mipsToolchainPath / "bin/clang"
             if not mipsCC.is_file():
                 fatalError("MIPS toolchain specified but", mipsCC, "is missing.")
-        super().compile(mfs_root_image=self.mfs_root_image, **kwargs)
+        super().compile(mfs_root_image=self.mfs_root_image, sysroot_only=self.sysroot_only, **kwargs)
+        if self.sysroot_only:
+            return  # Don't attempt to build extra kernels if we are only building a sysroot
+
         # We could also just pass multiple values in KERNCONF to build all those kernels. However, if MFS_ROOT is set
         # that will apply to all those kernels and embed the rootfs even if not needed
         for i in self.extra_kernels:
@@ -916,7 +934,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         # If we build the FPGA kernels also install them into boot:
         for i in self.extra_kernels + self.extra_kernels_with_mfs:
             all_kernel_configs += " " + i
-        super().install(all_kernel_configs=all_kernel_configs, **kwargs)
+        super().install(all_kernel_configs=all_kernel_configs, sysroot_only=self.sysroot_only, **kwargs)
 
     def update(self):
         super().update()
@@ -962,6 +980,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 
 
 class BuildCheriBsdSysroot(SimpleProject):
+    # TODO: could use this to build only cheribsd sysroot by extending build-cheribsd
     projectName = "cheribsd-sysroot"
     dependencies = ["cheribsd-cheri"]
     is_sdk_target = True
