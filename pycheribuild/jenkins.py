@@ -152,10 +152,16 @@ def extract_sdk_archives(cheriConfig, archives: "typing.List[SdkArchive]"):
     if not cheriConfig.sdkBinDir.exists():
         fatalError("SDK bin dir does not exist after extracting sysroot archives!")
 
-    # Use the host ar/ranlib if they are missing
-    for tool in ("ar", "ranlib"):
-        if not (cheriConfig.sdkDir / "bin" / tool).exists():
-            cheriConfig.FS.createSymlink(Path(shutil.which(tool)), cheriConfig.sdkBinDir / tool, relative=False)
+    # Use llvm-ar/llvm-ranlib or the host ar/ranlib if they ar/ranlib are missing from archive
+    for tool in ("ar", "ranlib", "nm"):
+        if not (cheriConfig.sdkBinDir / tool).exists():
+            # If llvm-ar/ranlib/nm exists use that
+            if (cheriConfig.sdkBinDir / ("llvm-" + tool)).exists():
+                cheriConfig.FS.createSymlink(cheriConfig.sdkBinDir / ("llvm-" + tool),
+                                             cheriConfig.sdkBinDir / tool, relative=True)
+            else:
+                # otherwise fall back to the /usr/bin version
+                cheriConfig.FS.createSymlink(Path(shutil.which(tool)), cheriConfig.sdkBinDir / tool, relative=False)
             cheriConfig.FS.createBuildtoolTargetSymlinks(cheriConfig.sdkBinDir / tool)
 
 
