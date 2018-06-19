@@ -96,7 +96,6 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
     defaultInstallDir = ComputedDefaultValue(function=_installDir, asString=_installDirMessage)
     dependencies = crosscompile_dependencies
-    defaultLinker = "lld"
     baremetal = False
     forceDefaultCC = False  # for some reason ICU binaries build during build crash -> fall back to /usr/bin/cc there
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
@@ -326,7 +325,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
             return []
         result += self._essential_compiler_and_linker_flags + [
             "-Wl,-m" + emulation,
-            "-fuse-ld=" + self.linker,
+            "-fuse-ld=lld",  # TODO: use absolute path?
             # Should no longer be needed now that I added a hack for .eh_frame
             # "-Wl,-z,notext",  # needed so that LLD allows text relocations
         ]
@@ -357,9 +356,6 @@ class CrossCompileMixin(MultiArchBaseMixin):
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
         cls.useMxgot = cls.addBoolOption("use-mxgot", help="Compile with -mxgot flag (should not be needed when using lld)")
-        cls.linker = cls.addConfigOption("linker", default=cls.defaultLinker,
-                                         help="The linker to use (`lld` or `bfd`) (lld is  better but may"
-                                              " not work for some projects!)")
         cls.debugInfo = cls.addBoolOption("debug-info", help="build with debug info", default=True)
         cls.optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
                                                     default=cls.defaultOptimizationLevel)
@@ -572,8 +568,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
 
             if not self.compiling_for_host():
                 self.set_prog_with_args("CPP", self.compiler_dir / (self.targetTriple + "-clang-cpp"), CPPFLAGS)
-                if "lld" in self.linker and (self.compiler_dir / "ld.lld").exists():
-                    self.add_configure_env_arg("LD", str(self.compiler_dir / "ld.lld"))
+                self.add_configure_env_arg("LD", str(self.compiler_dir / "ld.lld"))
 
         # remove all empty items from environment:
         env = {k: v for k, v in self.configureEnvironment.items() if v}
