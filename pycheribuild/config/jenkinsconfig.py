@@ -59,6 +59,15 @@ class JenkinsAction(Enum):
             self.actions = actions
 
 
+def absolute_path_only(p: str) -> Path:
+    expanded = os.path.expanduser(os.path.expandvars(str(p)))
+    # print("Expanding env vars in", result, "->", expanded, os.environ)
+    result = Path(expanded)
+    if not result.is_absolute():
+        raise ValueError("Must be an absolute path but was: " + repr(result))
+    return result
+
+
 class JenkinsConfig(CheriConfig):
     def __init__(self, loader: ConfigLoaderBase, availableTargets: list):
         super().__init__(loader, action_class=JenkinsAction)
@@ -85,7 +94,7 @@ class JenkinsConfig(CheriConfig):
         self.makeJobs = loader.addCommandLineOnlyOption("make-jobs", "j", type=int,
                                                         default=defaultNumberOfMakeJobs(),
                                                         help="Number of jobs to use for compiling")
-        self.installationPrefix = loader.addCommandLineOnlyOption("install-prefix", type=Path,
+        self.installationPrefix = loader.addCommandLineOnlyOption("install-prefix", type=absolute_path_only,
                                                                   default=default_install_prefix,
                                                                   help="The install prefix for cross compiled projects"
                                                                        " (the path where it will end up in the install"

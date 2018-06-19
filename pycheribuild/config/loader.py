@@ -133,6 +133,10 @@ class ConfigLoaderBase(object):
         return self.addOption(*args, option_cls=CommandLineConfigOption, default=default, action="store_true",
                               type=bool, **kwargs)
 
+    @staticmethod
+    def __is_enum_type(value_type):
+        return isinstance(value_type, type) and issubclass(value_type, Enum)
+
     def addOption(self, name: str, shortname=None, default=None,
                   type: "typing.Union[typing.Type[str], typing.Callable[[str], Type_T]]"=str,
                   group=None, helpHidden=False, _owningClass: "typing.Type"=None, _fallback_name: str = None,
@@ -140,7 +144,7 @@ class ConfigLoaderBase(object):
         if option_cls is None:
             option_cls = self.__option_cls
 
-        if issubclass(type, Enum):
+        if self.__is_enum_type(type):
             assert "action" not in kwargs or kwargs["action"] == "append", "action should be none or appendfor Enum options"
             assert "choices" not in kwargs, "for enum options choices are the enum names (or set enum_choices)!"
             if "enum_choices" in kwargs:
@@ -228,7 +232,12 @@ class ConfigOptionBase(object):
         if result is None:  # If no option is set fall back to the default
             result = self._getDefaultValue(config, instance)
         # Now convert it to the right type
-        result = self._convertType(result)
+        try:
+            result = self._convertType(result)
+        except ValueError as e:
+            fatalError("Invalid value for option '", self.fullOptionName,
+                       "': could not convert '", result, "': ", str(e), sep="")
+            sys.exit()
         return result
 
     def _loadOptionImpl(self, config: "CheriConfig", target_option_name) -> "typing.Optional[Any]":
