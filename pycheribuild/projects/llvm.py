@@ -90,6 +90,10 @@ class BuildLLVM(CMakeProject):
                                    CLANG_ENABLE_ARCMT=False)  # also need to disable ARCMT to disable static analyzer
         if self.canUseLLd(self.cCompiler):
             self.add_cmake_options(LLVM_ENABLE_LLD=True)
+            # Add GDB index to speed up debugging
+            if self.cmakeBuildType.lower()== "debug" or self.cmakeBuildType.lower()== "relwithdebinfo":
+                self.add_cmake_options(CMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld -Wl,--gdb-index",
+                                       CMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Wl,--gdb-index")
         if self.add_default_sysroot:
             self.add_cmake_options(DEFAULT_SYSROOT=self.config.sdkSysrootDir,
                                    LLVM_DEFAULT_TARGET_TRIPLE="cheri-unknown-freebsd")
