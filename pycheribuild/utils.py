@@ -47,7 +47,7 @@ try:
 except ImportError:
     typing = {}
 
-if typing:
+if typing and hasattr(typing, "TypeVar"):
     Type_T = typing.TypeVar("Type_T")
 else:
     Type_T = {}
