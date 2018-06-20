@@ -430,7 +430,12 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
         for key, value in kwargs.items():
             if value is None:
                 continue
-            strval = " ".join(value) if isinstance(value, list) else str(value)
+            if isinstance(value, bool):
+                strval = "1" if value else "0"
+            elif isinstance(value, list):
+                strval = " ".join(value)
+            else:
+                strval = str(value)
             assert "@" + key + "@" in configuredTemplate, key
             configuredTemplate = configuredTemplate.replace("@" + key + "@", strval)
         assert "@" not in configuredTemplate, configuredTemplate
@@ -490,7 +495,8 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
             ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
             TOOLCHAIN_SYSTEM_PROCESSOR=processor,
             TOOLCHAIN_SYSTEM_NAME=system_name,
-            TOOLCHAIN_PKGCONFIG_DIRS=self.pkgconfig_dirs
+            TOOLCHAIN_PKGCONFIG_DIRS=self.pkgconfig_dirs,
+            TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
         )
 
         if self.generator == CMakeProject.Generator.Ninja:
