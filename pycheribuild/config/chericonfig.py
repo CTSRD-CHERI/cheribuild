@@ -119,7 +119,7 @@ class CheriConfig(object):
         self.libcheri_buildenv = loader.addCommandLineOnlyBoolOption("libcheri-buildenv", group=loader.freebsdGroup,
              help="Open a shell with the right environment for building CHERI libraries. Currently only works for CheriBSD")
 
-        self.cheri_cap_table_abi = loader.addOption("cap-table-abi", helpHidden=True,
+        self.cheri_cap_table_abi = loader.addOption("cap-table-abi", helpHidden=True, default="pcrel",
                                                     choices=("pcrel", "plt", "legacy", "fn-desc"),
                                                     help="The ABI to use for cap-table mode")
         self.cross_target_suffix = loader.addOption("cross-target-suffix", helpHidden=True, default="",
