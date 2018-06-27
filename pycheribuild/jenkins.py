@@ -133,7 +133,7 @@ def get_sdk_archives(cheriConfig, needs_cheribsd_sysroot: bool) -> "typing.List[
         if not needs_cheribsd_sysroot:
             return [clang_archive]  # only need the clang archive
         # if we only extracted the compiler, extract the sysroot now
-        cheri_sysroot_archive_name = "{}-vanilla-jemalloc-cheribsd-world.tar.xz".format(cheriConfig.sdk_cpu)
+        cheri_sysroot_archive_name = "{}-{}-cheribsd-world.tar.xz".format(cheriConfig.sdk_cpu, cheriConfig.cheri_sdk_isa_name)
         extra_args = ["--strip-components", "1"]
         # Don't extract FreeBSD binaries on a linux host:
         if not IS_FREEBSD:

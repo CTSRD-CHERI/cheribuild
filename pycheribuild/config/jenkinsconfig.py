@@ -146,9 +146,16 @@ class JenkinsConfig(CheriConfig):
     @property
     def sdkArchivePath(self):
         if self.sdkArchiveName is None:
-            self.sdkArchiveName = "{}-{}-jemalloc-sdk.tar.xz".format(self.sdk_cpu, os.getenv("ISA", "vanilla"))
+            self.sdkArchiveName = "{}-{}-sdk.tar.xz".format(self.sdk_cpu, self.cheri_sdk_isa_name)
         assert isinstance(self.sdkArchiveName, str)
         return self.workspace / self.sdkArchiveName
+
+    @property
+    def cheri_sdk_isa_name(self):
+        guessed_abi_suffix = "cap-table-" + self.cheri_cap_table_abi
+        if self.cheri_cap_table_abi == "legacy":
+            guessed_abi_suffix = "legacy"
+        return os.getenv("ISA", guessed_abi_suffix)
 
     @property
     def sdkSysrootDir(self):
