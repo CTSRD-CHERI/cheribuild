@@ -103,7 +103,7 @@ class ProjectSubclassDefinitionHook(type):
         if cls.__dict__.get("dependenciesMustBeBuilt"):
             if not cls.dependencies:
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + targetName)
-        if hasattr(cls, "supported_architectures"):
+        if hasattr(cls, "supported_architectures") and cls.supported_architectures is not None:
             # Add a the target for the default architecture
             base_target = MultiArchTargetAlias(targetName, cls)
             targetManager.addTarget(base_target)

@@ -84,6 +84,32 @@ def freebsd_install_dir(config: CheriConfig, project: "typing.Type[BuildFreeBSD]
     else:
         assert False, "should not be reached"
 
+# noinspection PyProtectedMember
+def cheribsd_install_dir(config: CheriConfig, project: "typing.Type[BuildCHERIBSD]"):
+    if project._crossCompileTarget == CrossCompileTarget.CHERI:
+        return config.outputRoot / ("rootfs" + config.cheriBitsStr)
+    elif project._crossCompileTarget == CrossCompileTarget.MIPS:
+        return config.outputRoot / "rootfs-mips"
+    else:
+        assert project._crossCompileTarget == CrossCompileTarget.NATIVE
+        return config.outputRoot / "rootfs-x86"
+
+
+def cheribsd_purecap_install_dir(config: CheriConfig, project: "typing.Type[BuildCHERIBSD]"):
+    assert project._crossCompileTarget == CrossCompileTarget.CHERI
+    return config.outputRoot / ("rootfs-purecap" + config.cheriBitsStr)
+
+
+# noinspection PyProtectedMember
+def cheribsd_build_dir(config: CheriConfig, project: "BuildFreeBSD"):
+    if project._crossCompileTarget == CrossCompileTarget.CHERI:
+        # TODO: change this to be the default build dir name
+        return config.buildRoot / ("cheribsd-obj-" + config.cheriBitsStr)
+    else:
+        return project.buildDirForTarget(config, project._crossCompileTarget)
+
+
+
 class BuildFreeBSD(MultiArchBaseMixin, Project):
     dependencies = ["llvm"]
     target = "freebsd"
@@ -122,7 +148,7 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         return cls.rootfsDir(caller, config) / "boot/kernel/kernel"
 
     @classmethod
-    def setupConfigOptions(cls, buildKernelWithClang: bool=True, makeOptionsShortname=None, **kwargs):
+    def setupConfigOptions(cls, buildKernelWithClang: bool=True, **kwargs):
         super().setupConfigOptions(add_common_cross_options=False, **kwargs)
         cls.subdirOverride = cls.addConfigOption("subdir-with-deps", kind=str, metavar="DIR", showHelp=False,
                                                  help="Only build subdir DIR instead of the full tree. "
@@ -143,7 +169,7 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
                                                   default=defaultExternalToolchain)
         # For compatibility we still accept --cheribsd-make-options here
         cls.makeOptions = cls.addConfigOption("build-options", default=cls.defaultExtraMakeOptions, kind=list,
-                                              metavar="OPTIONS", shortname=makeOptionsShortname,  # compatibility
+                                              metavar="OPTIONS",
                                               help="Additional make options to be passed to make when building "
                                                    "CHERIBSD. See `man src.conf` for more info.",
                                               showHelp=True)
@@ -782,25 +808,6 @@ class BuildFreeBSDX86AliasBinutils(TargetAlias):
     dependencies = ["freebsd-native"]
 
 
-# noinspection PyProtectedMember
-def cheribsd_install_dir(config: CheriConfig, project: "typing.Type[BuildCHERIBSD"):
-    if project._crossCompileTarget == CrossCompileTarget.CHERI:
-        return config.outputRoot / ("rootfs" + config.cheriBitsStr)
-    elif project._crossCompileTarget == CrossCompileTarget.MIPS:
-        return config.outputRoot / "rootfs-mips"
-    else:
-        assert project._crossCompileTarget == CrossCompileTarget.NATIVE
-        return config.outputRoot / "rootfs-x86"
-
-
-# noinspection PyProtectedMember
-def cheribsd_build_dir(config: CheriConfig, project: BuildFreeBSD):
-    if project._crossCompileTarget == CrossCompileTarget.CHERI:
-        # TODO: change this to be the default build dir name
-        return config.buildRoot / ("cheribsd-obj-" + config.cheriBitsStr)
-    else:
-        return project.buildDirForTarget(config, project._crossCompileTarget)
-
 class BuildCHERIBSD(BuildFreeBSD):
     projectName = "cheribsd"
     target = "cheribsd"
@@ -815,14 +822,15 @@ class BuildCHERIBSD(BuildFreeBSD):
 
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(
-            buildKernelWithClang=True,
-            makeOptionsShortName="-cheribsd-make-options",
-            installDirectoryHelp="Install directory for CheriBSD root file system (default: "
-                                 "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)")
+    def setupConfigOptions(cls, installDirectoryHelp=None, use_kernconf_shortname=True, **kwargs):
+        if installDirectoryHelp is None:
+            installDirectoryHelp = "Install directory for CheriBSD root file system (default: " \
+                                   "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)"
+        super().setupConfigOptions(buildKernelWithClang=True, installDirectoryHelp=installDirectoryHelp)
         # Avoid duplicate --kerneconf string for cheribsd-native vs cheribsd
-        kernconf_shortname = "-kernconf" if cls._crossCompileTarget == CrossCompileTarget.CHERI else None
+        kernconf_shortname = None
+        if use_kernconf_shortname and cls._crossCompileTarget == CrossCompileTarget.CHERI:
+            kernconf_shortname = "-kernconf"
         cls.kernelConfig = cls.addConfigOption("kernel-config", default=defaultKernelConfig, kind=str,
            metavar="CONFIG", shortname=kernconf_shortname, showHelp=True,
            help="The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64 or CHERI128_MALTA64"
@@ -978,6 +986,36 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     @classmethod
     def get_installed_kernel_path(cls, caller, config):
         return config.outputRoot / ("kernel." + cls.get_kernel_config(caller, config))
+
+
+class BuildCHERIBSDPurecap(BuildCHERIBSD):
+    projectName = "cheribsd"   # reuse the same source dir
+    target = "cheribsd-purecap"
+
+    # Set these variables to override the multi target magic and only support CHERI
+    supported_architectures = None # Only Cheri is supported
+    _crossCompileTarget = CrossCompileTarget.CHERI
+    _should_not_be_instantiated = False
+
+    # use cheribsd-purecap-256-build
+    defaultBuildDir = BuildFreeBSD.defaultBuildDir
+
+    @classmethod
+    def buildDirSuffix(cls, config: CheriConfig, target: CrossCompileTarget):
+        return "-purecap" + super().buildDirSuffix(config, target)
+
+    defaultInstallDir = ComputedDefaultValue(function=cheribsd_purecap_install_dir,
+                                             asString="$INSTALL_ROOT/rootfs-purecap{128/256}")
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(use_kernconf_shortname=False)
+        cls.build_static = cls.addConfigOption("build-static",
+                                               help="Build all binaries as static instead of dynamically linked")
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.make_args.set_with_options(CHERI_PURE=True, CHERI_SHARED_PROG=not self.build_static)
 
 
 class BuildCheriBsdSysroot(SimpleProject):
