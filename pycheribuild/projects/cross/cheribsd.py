@@ -438,7 +438,11 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
                 warningMessage("Do not know the full path to the kernel build directory, will clean the whole tree!")
                 builddir = root_builddir
         else:
-            builddir = root_builddir
+            # builddir = root_builddir
+            # Clean up pre-MAKEOBJDIR change directories for now
+            # The only advantage of only deleting .OBJDIR is that it doesn't confuse a shell in that
+            # directory but I doubt that is a compelling usecase
+            builddir = self.buildDir
         if builddir.exists() and self.buildDir.exists():
             assert not os.path.relpath(str(builddir.resolve()), str(self.buildDir.resolve())).startswith(".."), builddir
         return self.asyncCleanDirectory(builddir)
