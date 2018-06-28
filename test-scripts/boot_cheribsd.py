@@ -43,6 +43,7 @@ import subprocess
 import sys
 import time
 import tempfile
+import typing
 from pathlib import Path
 
 STARTING_INIT = "start_init: trying /sbin/init"
@@ -232,7 +233,8 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: i
 
 
 def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str,
-             ssh_keyfile: str, ssh_port: int, timeout: int, test_function) -> bool:
+             ssh_keyfile: str, ssh_port: int, timeout: int,
+             test_function: "typing.Callable[[pexpect.spawn, ...], bool]"=None) -> bool:
     setup_tests_starttime = datetime.datetime.now()
     # disable coredumps, otherwise we get no space left on device errors
     run_cheribsd_command(qemu, "sysctl kern.coredump=0")
@@ -261,13 +263,13 @@ def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str,
     success("Preparing test enviroment took ", datetime.datetime.now() - setup_tests_starttime)
     time.sleep(5)  # wait 5 seconds to make sure the disks have synced
     run_tests_starttime = datetime.datetime.now()
-    # Run the tests
+    # Run the tests (allowing custom test functions)
     if test_function:
-        test_function(qemu, ssh_keyfile=ssh_keyfile, ssh_port=ssh_port)
-    else:
-        qemu.sendline(test_command +
-                      " ;if test $? -eq 0; then echo 'TESTS' 'COMPLETED'; else echo 'TESTS' 'FAILED'; fi")
-        i = qemu.expect([pexpect.TIMEOUT, "TESTS COMPLETED", "TESTS FAILED", PANIC, STOPPED], timeout=timeout)
+        return test_function(qemu, ssh_keyfile=ssh_keyfile, ssh_port=ssh_port)
+
+    qemu.sendline(test_command +
+                  " ;if test $? -eq 0; then echo 'TESTS' 'COMPLETED'; else echo 'TESTS' 'FAILED'; fi")
+    i = qemu.expect([pexpect.TIMEOUT, "TESTS COMPLETED", "TESTS FAILED", PANIC, STOPPED], timeout=timeout)
     testtime = datetime.datetime.now() - run_tests_starttime
     if i == 0:  # Timeout
         return failure("timeout after", testtime, "waiting for tests: ", str(qemu), exit=False)
@@ -280,7 +282,7 @@ def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str,
         return failure("error after ", testtime, "while running tests : ", str(qemu), exit=False)
 
 
-def main(test_function=None, argparse_callback=None):
+def main(test_function=None, argparse_callback: "typing.Callable[[argparse.ArgumentParser], None]"=None):
     # TODO: look at click package?
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--qemu-cmd", default="qemu-system-cheri")

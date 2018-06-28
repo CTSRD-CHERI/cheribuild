@@ -261,6 +261,7 @@ class LaunchFreeBSDMips(AbstractLaunchFreeBSD):
     projectName = "run-freebsd-mips"
     dependencies = ["qemu", "disk-image-freebsd-mips"]
     hide_options_from_help = True
+
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
