@@ -244,6 +244,19 @@ class LaunchCheriBSD(AbstractLaunchFreeBSD):
         super().__init__(config, disk_image_class=BuildCheriBSDDiskImage)
 
 
+class LaunchCheriBSDPurecap(AbstractLaunchFreeBSD):
+    projectName = "run-purecap"
+    dependencies = ["qemu", "disk-image-purecap"]
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(defaultSshPort=defaultSshForwardingPort() + 1, sshPortShortname=None,
+                                   useTelnetShortName=None, **kwargs)
+
+    def __init__(self, config):
+        super().__init__(config, disk_image_class=BuildCheriBSDPurecapDiskImage)
+
+
 class LaunchFreeBSDMips(AbstractLaunchFreeBSD):
     projectName = "run-freebsd-mips"
     dependencies = ["qemu", "disk-image-freebsd-mips"]

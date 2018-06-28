@@ -560,8 +560,35 @@ class BuildCheriBSDDiskImage(_BuildDiskImageBase):
     def __init__(self, config: CheriConfig):
         super().__init__(config, source_class=BuildCHERIBSD.get_class_for_target(CrossCompileTarget.CHERI))
         self.minimumImageSize = "256m"  # let's try to shrink the image size
-        # TODO: only fetch pkg from https://people.freebsd.org/~brooks/packages/cheribsd-mips-20170403-brooks-20170609/
-        # if we are building the cheribsd tests?
+        # self.needs_special_pkg_repo = self.source_project.buildTests
+        self.needs_special_pkg_repo = True
+
+
+class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
+    projectName = "disk-image-purecap"
+    dependencies = ["qemu", "cheribsd-purecap", "gdb-mips"]
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        hostUsername = CheriConfig.get_user_name()
+        defaultHostname = ComputedDefaultValue(
+            function=lambda conf, unused: "qemu-purecap" + conf.cheriBitsStr + "-" + hostUsername,
+            asString="qemu-purecap${CHERI_BITS}-" + hostUsername)
+        super().setupConfigOptions(defaultHostname=defaultHostname, **kwargs)
+
+        defaultDiskImagePath = ComputedDefaultValue(
+            function=lambda conf, proj: _defaultDiskImagePath(conf.cheriBits, conf.outputRoot, "purecap-"),
+            asString="$OUTPUT_ROOT/purecap-cheri256-disk.img or $OUTPUT_ROOT/purecap-cheri128-disk.img depending on --cheri-bits.")
+        cls.diskImagePath = cls.addPathOption("path", default=defaultDiskImagePath,
+                                              metavar="IMGPATH", help="The output path for the QEMU disk image",
+                                              showHelp=True)
+        cls.disableTMPFS = cls.addBoolOption("disable-tmpfs",
+                                             help="Don't make /tmp a TMPFS mount in the CHERIBSD system image."
+                                                  " This is a workaround in case TMPFS is not working correctly")
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config, source_class=BuildCHERIBSDPurecap)
+        self.minimumImageSize = "256m"  # let's try to shrink the image size
         # self.needs_special_pkg_repo = self.source_project.buildTests
         self.needs_special_pkg_repo = True
 
