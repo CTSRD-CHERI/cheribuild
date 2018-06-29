@@ -35,9 +35,8 @@ boot_cheribsd = __import__("boot_cheribsd")
 
 def run_qtbase_tests(qemu: pexpect.spawn, **kwargs):
     print("Running qtbase tests")
-    boot_cheribsd.run_cheribsd_command(qemu, "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu /mnt")
-    boot_cheribsd.run_cheribsd_command(qemu, "mount_foo -I 10.0.2.4 -N //10.0.2.4/qemu /mnt")
-
+    boot_cheribsd.run_cheribsd_command(qemu, "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu /mnt",
+                                       error_output="mount_smbfs: unable to open connection:")
 
 
 def add_cmdline_args(parser: argparse.ArgumentParser):

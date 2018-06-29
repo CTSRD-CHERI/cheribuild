@@ -69,6 +69,7 @@ def success(*args, **kwargs):
 def failure(*args, exit=True, **kwargs):
     print("\n\033[0;31m", *args, "\033[0m", sep="", file=sys.stderr, flush=True, **kwargs)
     if exit:
+        time.sleep(1)  # to get the remaining output
         sys.exit(1)
     return False
 
@@ -117,15 +118,23 @@ def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True) -
     return path
 
 
-def run_cheribsd_command(qemu: pexpect.spawn, cmd: str, expected_output=None):
+def run_cheribsd_command(qemu: pexpect.spawn, cmd: str, expected_output=None, error_output=None, timeout=60):
     qemu.sendline(cmd)
     if expected_output:
         qemu.expect(expected_output)
-    i = qemu.expect([pexpect.TIMEOUT, PROMPT, "/bin/sh: [\\w\\d_-]+: not found"], timeout=60)
+    results = [pexpect.TIMEOUT, PROMPT, "/bin/sh: [\\w\\d_-]+: not found"]
+    if error_output:
+        results.append(error_output)
+    i = qemu.expect(results, timeout=timeout)
     if i == 0:
         failure("timeout running ", cmd)
-    if i == 2:
+    elif i == 2:
         failure("Command not found!")
+    elif i == 3:
+        # wait up to 5 seconds for a prompt to ensure the full output has been printed
+        qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=5)
+        qemu.flush()
+        failure("Matched error output ", error_output)
 
 
 def setup_ssh(qemu: pexpect.spawn, pubkey: Path):
