@@ -121,9 +121,11 @@ def run_cheribsd_command(qemu: pexpect.spawn, cmd: str, expected_output=None):
     qemu.sendline(cmd)
     if expected_output:
         qemu.expect(expected_output)
-    i = qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=60)
+    i = qemu.expect([pexpect.TIMEOUT, PROMPT, "/bin/sh: [\\w\\d_-]+: not found"], timeout=60)
     if i == 0:
         failure("timeout running ", cmd)
+    if i == 2:
+        failure("Command not found!")
 
 
 def setup_ssh(qemu: pexpect.spawn, pubkey: Path):
@@ -156,11 +158,12 @@ def set_posix_sh_prompt(child):
     success("===> successfully set PS1")
 
 
-def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: int, *, smb_dir: str=None) -> pexpect.spawn:
+def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *, smb_dir: str=None) -> pexpect.spawn:
     user_network_args = "user,id=net0,ipv6=off"
     if smb_dir:
         user_network_args += ",smb=" + smb_dir
-    user_network_args += ",hostfwd=tcp::" + str(ssh_port) + "-:22"
+    if ssh_port is not None:
+        user_network_args += ",hostfwd=tcp::" + str(ssh_port) + "-:22"
     qemu_args = ["-M", "malta", "-kernel", kernel_image, "-m", "2048", "-nographic",
                  #  ssh forwarding:
                  "-net", "nic", "-net", user_network_args]
@@ -214,13 +217,13 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: i
             # set up network (bluehive image tries to use atse0)
             success("===> Setting up QEMU networking")
             child.sendline("ifconfig le0 up && dhclient le0")
-            i = child.expect([pexpect.TIMEOUT, "DHCPACK from 10.0.2.2"], timeout=120)
+            i = child.expect([pexpect.TIMEOUT, "DHCPACK from 10.0.2.2", "dhclient already running"], timeout=120)
             if i == 0:  # Timeout
                 failure("timeout awaiting dhclient ", str(child))
-
-            i = child.expect([pexpect.TIMEOUT, "bound to"], timeout=120)
-            if i == 0:  # Timeout
-                failure("timeout awaiting dhclient ", str(child))
+            if i == 1:
+                i = child.expect([pexpect.TIMEOUT, "bound to"], timeout=120)
+                if i == 0:  # Timeout
+                   failure("timeout awaiting dhclient ", str(child))
             success("===> le0 bound to QEMU networking")
             child.expect_exact(PROMPT_SH, timeout=30)
             set_posix_sh_prompt(child)
@@ -232,36 +235,41 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: i
     return child
 
 
-def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str,
-             ssh_keyfile: str, ssh_port: int, timeout: int,
+def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str, smb_dir: typing.Optional[Path],
+             ssh_keyfile: typing.Optional[str], ssh_port: typing.Optional[int], timeout: int,
              test_function: "typing.Callable[[pexpect.spawn, ...], bool]"=None) -> bool:
     setup_tests_starttime = datetime.datetime.now()
     # disable coredumps, otherwise we get no space left on device errors
     run_cheribsd_command(qemu, "sysctl kern.coredump=0")
     # create tmpfs on opt
     run_cheribsd_command(qemu, "mkdir -p /opt && mount -t tmpfs -o size=500m tmpfs /opt")
+    # ensure that /usr/local exists and if not create it as a tmpfs (happens in the minimal image)
     run_cheribsd_command(qemu, "mkdir -p /usr/local && mount -t tmpfs -o size=300m tmpfs /usr/local")
     run_cheribsd_command(qemu, "df -h", expected_output="/opt")
     info("\nWill transfer the following archives: ", test_archives)
     # strip the .pub from the key file
-    private_key = str(Path(ssh_keyfile).with_suffix(""))
     for archive in test_archives:
-        with tempfile.TemporaryDirectory(dir=os.getcwd(), prefix="test_files_") as tmp:
-            run_host_command(["tar", "xJf", str(archive), "-C", tmp])
-            scp_cmd = ["scp", "-B", "-r", "-P", str(ssh_port), "-o", "StrictHostKeyChecking=no",
-                       "-o", "UserKnownHostsFile=/dev/null",
-                       "-i", shlex.quote(private_key), ".", "root@localhost:/"]
-            # use script for a fake tty to get progress output from scp
-            if sys.platform.startswith("linux"):
-                scp_cmd = ["script", "--quiet", "--return", "--command", " ".join(scp_cmd), "/dev/null"]
-            run_host_command(["ls", "-la"], cwd=tmp)
-            run_host_command(scp_cmd, cwd=tmp)
-
+        if smb_dir:
+            run_host_command(["tar", "xJf", str(archive), "-C", str(smb_dir)])
+        else:
+            # Extract to temporary directory and scp over
+            with tempfile.TemporaryDirectory(dir=os.getcwd(), prefix="test_files_") as tmp:
+                run_host_command(["tar", "xJf", str(archive), "-C", tmp])
+                private_key = str(Path(ssh_keyfile).with_suffix(""))
+                scp_cmd = ["scp", "-B", "-r", "-P", str(ssh_port), "-o", "StrictHostKeyChecking=no",
+                           "-o", "UserKnownHostsFile=/dev/null",
+                           "-i", shlex.quote(private_key), ".", "root@localhost:/"]
+                # use script for a fake tty to get progress output from scp
+                if sys.platform.startswith("linux"):
+                    scp_cmd = ["script", "--quiet", "--return", "--command", " ".join(scp_cmd), "/dev/null"]
+                run_host_command(["ls", "-la"], cwd=tmp)
+                run_host_command(scp_cmd, cwd=tmp)
+    if test_archives:
+        time.sleep(5)  # wait 5 seconds to make sure the disks have synced
     # See how much space we have after running scp
     run_cheribsd_command(qemu, "df -h", expected_output="/opt")
-
     success("Preparing test enviroment took ", datetime.datetime.now() - setup_tests_starttime)
-    time.sleep(5)  # wait 5 seconds to make sure the disks have synced
+
     run_tests_starttime = datetime.datetime.now()
     # Run the tests (allowing custom test functions)
     if test_function:
@@ -282,7 +290,8 @@ def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str,
         return failure("error after ", testtime, "while running tests : ", str(qemu), exit=False)
 
 
-def main(test_function=None, argparse_callback: "typing.Callable[[argparse.ArgumentParser], None]"=None):
+def main(test_function=None, argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]"=None,
+         argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]"=None):
     # TODO: look at click package?
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--qemu-cmd", default="qemu-system-cheri")
@@ -295,14 +304,14 @@ def main(test_function=None, argparse_callback: "typing.Callable[[argparse.Argum
     parser.add_argument("--no-keep-compressed-images", action="store_false", dest="keep_compressed_images")
     parser.add_argument("--ssh-key", default=os.path.expanduser("~/.ssh/id_ed25519.pub"))
     parser.add_argument("--ssh-port", type=int, default=12345)
-    parser.add_argument("--copy-archives-with-smb", action="store_true")
+    parser.add_argument("--use-smb-instead-of-ssh", action="store_true")
     parser.add_argument("--smb-mount-directory", help="directory used for sharing data with the QEMU guest via smb")
     parser.add_argument("--test-archive", "-t", action="append", nargs=1)
     parser.add_argument("--test-command", "-c")
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60)
     parser.add_argument("--interact", "-i", action="store_true")
-    if argparse_callback:
-        argparse_callback(parser)
+    if argparse_setup_callback:
+        argparse_setup_callback(parser)
     try:
         # noinspection PyUnresolvedReferences
         import argcomplete
@@ -311,16 +320,25 @@ def main(test_function=None, argparse_callback: "typing.Callable[[argparse.Argum
         pass
 
     args = parser.parse_args()
+    if argparse_adjust_args_callback:
+        argparse_adjust_args_callback(args)
     if shutil.which(args.qemu_cmd) is None:
         sys.exit("ERROR: QEMU binary " + args.qemu_cmd + " doesn't exist")
 
     starttime = datetime.datetime.now()
 
+    # Skip all ssh setup if we are using smb instead:
+    if args.use_smb_instead_of_ssh:
+        args.ssh_key = None
+        args.ssh_port = None
+
     # validate args:
     test_archives = []  # type: list
     if args.test_archive:
+        if args.use_smb_instead_of_ssh and not args.smb_mount_directory:
+            failure("--smb-mount-directory is required if ssh is disabled")
         info("Using the following test archives:", args.test_archive)
-        if not Path(args.ssh_key).exists():
+        if not args.use_smb_instead_of_ssh and not Path(args.ssh_key).exists():
             failure("SSH key missing: ", args.ssh_key)
         for test_archive in args.test_archive:
             if isinstance(test_archive, list):
@@ -361,11 +379,13 @@ def main(test_function=None, argparse_callback: "typing.Callable[[argparse.Argum
     if test_archives or args.test_command or test_function:
         # noinspection PyBroadException
         try:
-            setup_ssh_starttime = datetime.datetime.now()
-            setup_ssh(qemu, Path(args.ssh_key))
-            info("Setting up SSH took: ", datetime.datetime.now() - setup_ssh_starttime)
+            if not args.use_smb_instead_of_ssh:
+                setup_ssh_starttime = datetime.datetime.now()
+                setup_ssh(qemu, Path(args.ssh_key))
+                info("Setting up SSH took: ", datetime.datetime.now() - setup_ssh_starttime)
             tests_okay = runtests(qemu, test_archives=test_archives, test_command=args.test_command,
-                                  ssh_keyfile=args.ssh_key, ssh_port=args.ssh_port, timeout=args.test_timeout)
+                                  ssh_keyfile=args.ssh_key, ssh_port=args.ssh_port, timeout=args.test_timeout,
+                                  smb_dir=args.smb_mount_directory, test_function=test_function)
         except Exception:
             import traceback
             traceback.print_exc(file=sys.stderr)

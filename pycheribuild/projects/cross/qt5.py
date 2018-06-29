@@ -30,6 +30,7 @@
 from .crosscompileproject import *
 from ...config.loader import ComputedDefaultValue
 from ...utils import commandline_to_str, runCmd, IS_FREEBSD
+from pathlib import Path
 
 # This class is used to build qtbase and all of qt5
 class BuildQtWithConfigureScript(CrossCompileProject):
@@ -195,6 +196,15 @@ class BuildQtBase(BuildQtWithConfigureScript):
 
     def compile(self, **kwargs):
         self.runMake() # QtBase ignores -nomake if you run "gmake all"
+
+    def run_tests(self):
+        # TODO: add a rootdir property
+        from .cheribsd import BuildCheriBsdMfsKernel
+        from ..build_qemu import BuildQEMU
+        runCmd(Path(__file__).parent.parent.parent.parent / "test-scripts/run_qtbase_tests.py",
+               "--kernel", BuildCheriBsdMfsKernel.get_installed_kernel_path(self, self.config),
+               "--qemu-cmd", BuildQEMU.qemu_binary(self),
+               "--smb-mount-directory", self.buildDir)
 
 
 # Webkit needs ICU (and recommended for QtBase too:
