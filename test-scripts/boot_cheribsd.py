@@ -55,6 +55,7 @@ PROMPT_SH = "# "  # /bin/sh
 STOPPED = "Stopped at"
 PANIC = "panic: trap"
 PANIC_KDB = "KDB: enter: panic"
+CHERI_TRAP = "USER_CHERI_EXCEPTION: pid \\d+ tid \\d+ \(.+\)"
 
 
 def info(*args, **kwargs):
@@ -122,7 +123,7 @@ def run_cheribsd_command(qemu: pexpect.spawn, cmd: str, expected_output=None, er
     qemu.sendline(cmd)
     if expected_output:
         qemu.expect(expected_output)
-    results = [pexpect.TIMEOUT, PROMPT, "/bin/sh: [\\w\\d_-]+: not found"]
+    results = [pexpect.TIMEOUT, PROMPT, "/bin/sh: [\\w\\d_-]+: not found", CHERI_TRAP]
     if error_output:
         results.append(error_output)
     i = qemu.expect(results, timeout=timeout)
@@ -131,10 +132,29 @@ def run_cheribsd_command(qemu: pexpect.spawn, cmd: str, expected_output=None, er
     elif i == 2:
         failure("Command not found!")
     elif i == 3:
+        # wait up to 20 seconds for a prompt to ensure the dump output has been printed
+        qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
+        qemu.flush()
+        failure("Got CHERI TRAP!")
+    elif i == 4:
         # wait up to 5 seconds for a prompt to ensure the full output has been printed
         qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=5)
         qemu.flush()
         failure("Matched error output ", error_output)
+
+def run_cheribsd_command_or_die(qemu: pexpect.spawn, cmd: str, timeout=600):
+    qemu.sendline(test_command +
+                  " ;if test $? -eq 0; then echo 'COMMAND' 'SUCCESSFUL'; else echo 'COMMAND' 'FAILED'; fi")
+    i = qemu.expect([pexpect.TIMEOUT, "COMMAND SUCCESSFUL", "COMMAND FAILED", PANIC, CHERI_TRAP, STOPPED], timeout=timeout)
+    testtime = datetime.datetime.now() - run_tests_starttime
+    if i == 0:  # Timeout
+        return failure("timeout after", testtime, "waiting for tests: ", str(qemu), exit=False)
+    elif i == 1:
+        success("===> Tests completed!")
+        success("Running tests took ", testtime)
+        return True
+    else:
+        return failure("error after ", testtime, "while running tests : ", str(qemu), exit=False)
 
 
 def setup_ssh(qemu: pexpect.spawn, pubkey: Path):
@@ -186,7 +206,7 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
-        i = child.expect([pexpect.TIMEOUT, STARTING_INIT, BOOT_FAILURE, PANIC_KDB, PANIC, STOPPED], timeout=5 * 60)
+        i = child.expect([pexpect.TIMEOUT, STARTING_INIT, BOOT_FAILURE, PANIC_KDB, PANIC, CHERI_TRAP, STOPPED], timeout=5 * 60)
         if i == 0:  # Timeout
             failure("timeout before booted: ", str(child))
         elif i != 1:  # start up scripts failed
@@ -194,7 +214,7 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
         userspace_starttime = datetime.datetime.now()
         success("===> init running (kernel startup time: ", userspace_starttime - qemu_starttime, ")")
 
-        i = child.expect([pexpect.TIMEOUT, LOGIN, SHELL_OPEN, BOOT_FAILURE, PANIC, STOPPED], timeout=15 * 60)
+        i = child.expect([pexpect.TIMEOUT, LOGIN, SHELL_OPEN, BOOT_FAILURE, PANIC, CHERI_TRAP, STOPPED], timeout=15 * 60)
         if i == 0:  # Timeout
             failure("timeout awaiting login prompt: ", str(child))
         elif i == 1:

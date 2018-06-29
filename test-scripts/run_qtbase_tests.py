@@ -37,6 +37,8 @@ def run_qtbase_tests(qemu: pexpect.spawn, **kwargs):
     print("Running qtbase tests")
     boot_cheribsd.run_cheribsd_command(qemu, "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu /mnt",
                                        error_output="mount_smbfs: unable to open connection:")
+    boot_cheribsd.run_cheribsd_command(qemu, "/mnt/tests/auto/corelib/global/qtendian/tst_qtendian")
+    return True
 
 
 def add_cmdline_args(parser: argparse.ArgumentParser):

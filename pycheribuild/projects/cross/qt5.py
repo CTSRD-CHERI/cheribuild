@@ -194,8 +194,21 @@ class BuildQtBase(BuildQtWithConfigureScript):
         function=lambda config, project: BuildQt5.getSourceDir(project, config) / "qtbase",
         asString=lambda cls: "$SOURCE_ROOT/qt5" + cls.projectName.lower())
 
+    def __init__(self, config):
+        super().__init__(config)
+        self.COMMON_FLAGS.extend(self.extra_c_compat_flags)
+
     def compile(self, **kwargs):
-        self.runMake() # QtBase ignores -nomake if you run "gmake all"
+        if self.minimal:
+            self.runMake("sub-src")
+            if self.build_tests:
+                # only build the tests for corelib:
+                if not (self.buildDir / "tests/auto/corelib").exists():
+                    # generate the makefiles
+                    self.runMake("sub-tests-make_first")
+                self.runMake("sub-corelib", cwd=self.buildDir / "tests/auto")
+        else:
+            self.runMake() # QtBase ignores -nomake if you run "gmake all"
 
     def run_tests(self):
         # TODO: add a rootdir property
