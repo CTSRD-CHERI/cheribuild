@@ -175,6 +175,16 @@ class BuildQEMU(AutotoolsProject):
 
         if IS_FREEBSD:
             self.configureArgs.append("--smbd=/usr/local/sbin/smbd")
+        elif IS_MAC:
+            # QEMU user networking expects a smbd that accepts the same flags and config files as the samba.org
+            # sources but the macos /usr/sbin/smbd is incompatible with that:
+            valid_smbd = self.config.otherToolsDir / "sbin/smbd"
+            if not valid_smbd.exists():
+                warningMessage("QEMU usermode samba shares require the samba.org smbd. You will need to build it from "
+                               "source since the /usr/sbin/smbd shipped by MacOS is incompatible with QEMU")
+            self._addRequiredSystemTool(valid_smbd, cheribuild_target="samba")
+            self.configureArgs.append("--smbd=" + str(valid_smbd))
+
 
     def update(self):
         # the build sometimes modifies the po/ subdirectory

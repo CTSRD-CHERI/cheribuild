@@ -159,6 +159,9 @@ addFilteredFile(scriptDir / "projects/disk_image.py")
 addFilteredFile(scriptDir / "projects/sdk.py")
 addFilteredFile(scriptDir / "projects/run_qemu.py")
 
+# this one should not be needed
+addFilteredFile(scriptDir / "projects/samba.py")
+
 
 # now make sure that all the projects were handled
 checkAllFilesUsed(scriptDir)
