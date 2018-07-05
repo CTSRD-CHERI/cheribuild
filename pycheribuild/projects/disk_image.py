@@ -572,6 +572,9 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             if not self.config.pretend:
                 self.deleteFile(dummy_hardlink)
                 os.link(cheribsdbox_path, dummy_hardlink)
+                if Path(cheribsdbox_path).stat().st_nlink < 2:
+                    fatalError("Need at least one hardlink to cheribsdbox so that makefs can detect deduplicate. "
+                               "This should have been created by cheribuild but something must have gone wrong")
             print("Relocating mtree path ./bin/cheribsdbox to use", cheribsdbox_path)
             for i in self.mtree._mtree.values():
                 if i.attributes.get("contents", None) == "./bin/cheribsdbox":
