@@ -561,8 +561,25 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
 
 
     def makeImage(self):
+        # update cheribsdbox link in case we stripped it:
+        cheribsdbox_entry = self.mtree._mtree.get("./bin/cheribsdbox")
+        if not cheribsdbox_entry:
+            fatalError("Could not find cheribsdbox entry in mtree file!")
+        else:
+            cheribsdbox_path = cheribsdbox_entry.attributes["contents"]
+            # create at least one hardlink to cheribsdbox so that mtree can detect that the files are all the same
+            dummy_hardlink = Path(cheribsdbox_path).with_suffix(".dummy_hardlink")
+            if not self.config.pretend:
+                self.deleteFile(dummy_hardlink)
+                os.link(cheribsdbox_path, dummy_hardlink)
+            print("Relocating mtree path ./bin/cheribsdbox to use", cheribsdbox_path)
+            for i in self.mtree._mtree.values():
+                if i.attributes.get("contents", None) == "./bin/cheribsdbox":
+                    i.attributes["contents"] = cheribsdbox_path
+
         # runCmd(["sh", "-c", "du -ah " + shlex.quote(str(self.tmpdir)) + " | sort -h"])
         if self.config.verbose:
+            self.mtree.write(sys.stderr)
             runCmd("du", "-ah", self.tmpdir)
         super().makeImage()
 
