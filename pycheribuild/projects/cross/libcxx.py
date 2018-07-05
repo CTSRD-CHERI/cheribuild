@@ -64,7 +64,7 @@ class BuildLibunwind(CrossCompileCMakeProject):
             executor = "CollectBinariesExecutor(\\\"{path}\\\", self)".format(path=self.collect_test_binaries)
             self.add_cmake_options(
                 LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
-                              "/lit-test-results.xml --max-time 3600 --timeout 120 -s -vv",
+                              "/lit-test-results.xml --max-time 3600 --timeout 120 -s -vv -j1",
                 LIBUNWIND_TARGET_TRIPLE=self.targetTriple, LIBUNWIND_SYSROOT=self.sdkSysroot)
 
             target_info = "libcxx.test.target_info.CheriBSDRemoteTI"
@@ -139,10 +139,13 @@ class BuildLibCXX(CrossCompileCMakeProject):
                                             default=lambda c, p: "localhost")
         cls.qemu_port = cls.addConfigOption("ssh-port", help="The QEMU SSH port to connect to for running tests",
                                             default=lambda c, p: LaunchCheriBSD.get_instance(cls, c).sshForwardingPort)
-        cls.qemu_user = cls.addConfigOption("shh-user", default="root", help="The CheriBSD used for running tests")
+        cls.qemu_user = cls.addConfigOption("ssh-user", default="root", help="The CheriBSD used for running tests")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+        if self.qemu_host:
+            self.qemu_host = os.path.expandvars(self.qemu_host)
+        self.libcxx_lit_jobs = ""
         self.COMMON_FLAGS.append("-D__LP64__=1")  # HACK to get it to compile
         if self.compiling_for_host():
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=True, LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False)
@@ -160,7 +163,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LLVM_EXTERNAL_LIT=BuildLLVM.getBuildDir(self, config) / "bin/llvm-lit",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
             LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
-                          "/lit-test-results.xml --max-time 3600 --timeout 120 -s -vv"
+                          "/lit-test-results.xml --max-time 3600 --timeout 120 -s -vv" + self.libcxx_lit_jobs
         )
         # select libcxxrt as the runtime library
         self.add_cmake_options(
@@ -177,7 +180,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
                                LIBCXX_SYSROOT=self.sdkSysroot)
 
         # We need to build with -G0 otherwise we get R_MIPS_GPREL16 out of range linker errors
-        test_compile_flags = "-G0 -mcpu=mips4"
+        test_compile_flags = " ".join(self.default_compiler_flags)
         if self.baremetal:
             if self.compiling_for_mips():
                 test_compile_flags += " -fno-pic -mno-abicalls"
@@ -187,7 +190,6 @@ class BuildLibCXX(CrossCompileCMakeProject):
                 LIBCXX_USE_COMPILER_RT=True,
                 LIBCXX_ENABLE_STDIN=False,  # currently not support on baremetal QEMU
                 LIBCXX_ENABLE_GLOBAL_FILESYSTEM_NAMESPACE=False,  # no filesystem on baremetal QEMU
-                LIBCXX_ENABLE_THREADS=False,  # no threads on baremetal
                 # TODO: we should be able to implement this in QEMU
                 LIBCXX_ENABLE_MONOTONIC_CLOCK=False,  # no monotonic clock for now
             )
@@ -199,7 +201,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
             LIBCXX_ENABLE_STATIC=True,
-
+            LIBCXX_ENABLE_THREADS=not self.baremetal,  # no threads on baremetal newlib
             # baremetal the -fPIC build doesn't work for some reason (runs out of CALL16 relocations)
             # Not sure how this can happen since LLD includes multigot
             LIBCXX_BUILD_POSITION_DEPENDENT=self.baremetal,
@@ -227,12 +229,14 @@ class BuildLibCXX(CrossCompileCMakeProject):
             executor = "PrefixExecutor(" + prefix_list + ", LocalExecutor())"
             print(executor)
         elif self.nfs_mounted_path:
+            self.libcxx_lit_jobs = " -j1" # We can only run one job here since we are using scp
             executor = "SSHExecutorWithNFSMount(\\\"{host}\\\", nfs_dir=\\\"{nfs_dir}\\\", path_in_target=\\\"{nfs_in_target}\\\"," \
                        " config=self, username=\\\"{user}\\\", port={port})".format(host=self.qemu_host, user=self.qemu_user,
                                                                               port=self.qemu_port,
                                                                               nfs_dir=self.nfs_mounted_path,
                                                                               nfs_in_target=self.nfs_path_in_qemu)
         else:
+            self.libcxx_lit_jobs = " -j1" # We can only run one job here since we are using scp
             executor = "SSHExecutor('{host}', username='{user}', port={port})".format(
                 host=self.qemu_host, user=self.qemu_user, port=self.qemu_port)
         if self.baremetal:
@@ -241,6 +245,9 @@ class BuildLibCXX(CrossCompileCMakeProject):
             target_info = "libcxx.test.target_info.CheriBSDRemoteTI"
         # add the config options required for running tests:
         self.add_cmake_options(LIBCXX_EXECUTOR=executor, LIBCXX_TARGET_INFO=target_info, LIBCXX_RUN_LONG_TESTS=False)
+
+    def run_tests(self):
+        runCmd("ninja", "check-cxx", "-v", cwd=self.buildDir)
 
 
 class BuildCompilerRtBaremetal(CrossCompileCMakeProject):

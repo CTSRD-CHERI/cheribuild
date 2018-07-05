@@ -65,6 +65,7 @@ class BuildSamba(Project):
             "--without-ad-dc", "--without-acl-support",
             # "--without-json-audit", "--without-ldb-lmdb", (only needed in master not 4.8 stable)
             "--without-libarchive",
+            "--disable-cups",
             "--disable-python",
             "--disable-gnutls",
             "--without-ldap", "--disable-iprint",
@@ -73,6 +74,9 @@ class BuildSamba(Project):
             "--without-syslog", "--without-regedit",
             "--disable-glusterfs", "--disable-cephfs",
             "--without-ntvfs-fileserver",
+            # Avoid depending on libraries from the build tree:
+            "--bundled-libraries=talloc,tdb,pytdb,ldb,pyldb,tevent,pytevent",
+            "--with-static-modules=ALL",
             "--prefix=" + str(self.installDir),
         ])
         if SMB_OUT_OF_SOURCE_BUILD_WORKS and IS_MAC:
