@@ -116,6 +116,7 @@ class _BuildDiskImageBase(SimpleProject):
         self.minimumImageSize = "1g",  # minimum image size = 1GB
         self.mtree = MtreeFile()
         self.input_METALOG = self.rootfsDir / "METALOG"
+        self.input_METALOG_required = True
         # used during process to generated files
         self.tmpdir = None  # type: Path
         self.file_templates = _AdditionalFileTemplates()
@@ -134,6 +135,7 @@ class _BuildDiskImageBase(SimpleProject):
                     stripped_path = self.tmpdir / pathInTarget
                     self.makedirs(stripped_path.parent)
                     runCmd(self.config.sdkBinDir / "llvm-strip", file, "-o", stripped_path)
+                    # runCmd("file", stripped_path)
                     file = stripped_path
 
         if not self.config.quiet:
@@ -190,6 +192,8 @@ class _BuildDiskImageBase(SimpleProject):
         assert self.manifestFile is not None
         if self.input_METALOG.exists():
             self.mtree.load(self.input_METALOG)
+        elif self.input_METALOG_required:
+            fatalError("Could not find required input mtree file", self.input_METALOG)
 
         # Add the files needed to install kyua (make sure to download before calculating the list of extra files!)
         if self.needs_special_pkg_repo:
@@ -544,6 +548,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         self.verbose_print("Not adding unlisted files to METALOG since we are building a minimal image")
 
     def prepareRootfs(self):
+        super().prepareRootfs()
         # Add the additional sysctl configs
         self.createFileForImage("/etc/pam.d/su", showContentsByDefault=False,
                                 contents=includeLocalFile("files/minimal-image/pam.d/su"))
