@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import datetime
+import shlex
 import stat
 import io
 import tempfile
@@ -115,7 +116,8 @@ class _BuildDiskImageBase(SimpleProject):
         self.minimumImageSize = "1g",  # minimum image size = 1GB
         self.mtree = MtreeFile()
         self.input_METALOG = self.rootfsDir / "METALOG"
-        self.tmpdir = None  # used during process to generated files
+        # used during process to generated files
+        self.tmpdir = None  # type: Path
         self.file_templates = _AdditionalFileTemplates()
         if self.needs_special_pkg_repo:
             self._addRequiredSystemTool("wget")  # Needed to recursively fetch the pkg repo
@@ -551,6 +553,13 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         # The actual minimal startup file:
         self.createFileForImage("/etc/rc", showContentsByDefault=False,
                                 contents=includeLocalFile("files/minimal-image/etc/rc"))
+
+
+    def makeImage(self):
+        # runCmd(["sh", "-c", "du -ah " + shlex.quote(str(self.tmpdir)) + " | sort -h"])
+        if self.config.verbose:
+            runCmd("du", "-ah", self.tmpdir)
+        super().makeImage()
 
 
 class BuildCheriBSDDiskImage(_BuildDiskImageBase):
