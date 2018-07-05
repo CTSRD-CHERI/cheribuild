@@ -190,11 +190,11 @@ class FileSystemUtils(object):
             self.makedirs(dest.parent)
         runCmd(cmd + [src, dest])
 
-    def installFile(self, src: Path, dest: Path, *, force=False, createDirs=True):
+    def installFile(self, src: Path, dest: Path, *, force=False, createDirs=True, printVerboseOnly=True):
         if force:
-            printCommand("cp", "-f", src, dest, printVerboseOnly=True)
+            printCommand("cp", "-f", src, dest, printVerboseOnly=printVerboseOnly)
         else:
-            printCommand("cp", src, dest, printVerboseOnly=True)
+            printCommand("cp", src, dest, printVerboseOnly=printVerboseOnly)
         if self.config.pretend:
             return
         if (dest.is_symlink() or dest.exists()) and force:

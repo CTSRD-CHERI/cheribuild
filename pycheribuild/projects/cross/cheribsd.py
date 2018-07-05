@@ -976,7 +976,8 @@ class BuildCheriBsdMfsKernel(SimpleProject):
             build_cheribsd._installkernel(kernconf=kernconf, destdir=td)
             # runCmd("find", td)
             self.deleteFile(self.get_installed_kernel_path(self, self.config))
-            self.installFile(Path(td, "boot/kernel/kernel"), self.get_installed_kernel_path(self, self.config), force=True)
+            self.installFile(Path(td, "boot/kernel/kernel"), self.get_installed_kernel_path(self, self.config),
+                             force=True, printVerboseOnly=False)
 
     @property
     def crossbuild(self):
