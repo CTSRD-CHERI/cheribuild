@@ -30,13 +30,14 @@
 # SUCH DAMAGE.
 #
 
-echo "Setting polling user_frac to 99"
-/sbin/sysctl kern.polling.user_frac=99
+echo "Setting up sysctls"
+/sbin/sysctl -f /etc/sysctl.conf
+# echo "Setting polling user_frac to 99"
 
 echo "mount / rw"
 /sbin/mount -o rw /
 
-MDSZ=300m
+MDSZ=500m
 echo "create $MDSZ TMPFS at /tmp"
 mkdir -p /tmp
 mount -t tmpfs -o size=$MDSZ tmpfs /tmp
@@ -74,9 +75,6 @@ done
 
 echo "start sshd"
 /usr/sbin/sshd
-
-echo "Turn off CHERI unaligned access logging"
-/sbin/sysctl machdep.unaligned_log_pps_limit=0
 
 echo "exec /bin/sh"
 exec /bin/sh
