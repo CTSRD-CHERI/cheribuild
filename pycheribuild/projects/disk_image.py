@@ -315,7 +315,7 @@ class _BuildDiskImageBase(SimpleProject):
                 "-Z",  # sparse file output
                 "-b", "30%",  # minimum 30% free blocks
                 "-f", "30%",  # minimum 30% free inodes
-                "-R", "16m",  # round up size to the next 16m multiple
+                "-R", "4m",  # round up size to the next 1m multiple
                 "-M", self.minimumImageSize,
                 "-B", "be",  # big endian byte order
                 "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
