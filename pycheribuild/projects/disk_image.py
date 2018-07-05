@@ -70,6 +70,7 @@ class _BuildDiskImageBase(SimpleProject):
     diskImagePath = None  # type: Path
     _freebsd_build_class = None
     needs_special_pkg_repo = False  # True for CheriBSD
+    strip_binaries = False  # True by default for minimal disk-image
 
     @classmethod
     def setupConfigOptions(cls, *, defaultHostname, extraFilesShortname=None, extraFilesSuffix="", **kwargs):
@@ -114,6 +115,7 @@ class _BuildDiskImageBase(SimpleProject):
         self.minimumImageSize = "1g",  # minimum image size = 1GB
         self.mtree = MtreeFile()
         self.input_METALOG = self.rootfsDir / "METALOG"
+        self.tmpdir = None  # used during process to generated files
         self.file_templates = _AdditionalFileTemplates()
         if self.needs_special_pkg_repo:
             self._addRequiredSystemTool("wget")  # Needed to recursively fetch the pkg repo
@@ -121,6 +123,17 @@ class _BuildDiskImageBase(SimpleProject):
     def addFileToImage(self, file: Path, *, baseDirectory: Path, user="root", group="wheel", mode=None):
         pathInTarget = file.relative_to(baseDirectory)
         assert not str(pathInTarget).startswith(".."), pathInTarget
+
+        if self.strip_binaries and file.exists():
+            # Try to shrink the size by stripping all elf binaries
+            with file.open("rb") as f:
+                if f.read(4) == b"\x7fELF":
+                    self.verbose_print("Stripping ELF binary", file)
+                    stripped_path = self.tmpdir / pathInTarget
+                    self.makedirs(stripped_path.parent)
+                    runCmd(self.config.sdkBinDir / "llvm-strip", file, "-o", stripped_path)
+                    file = stripped_path
+
         if not self.config.quiet:
             statusUpdate(file, " -> /", pathInTarget, sep="")
 
@@ -129,8 +142,7 @@ class _BuildDiskImageBase(SimpleProject):
         if file in self.extraFiles:
             self.extraFiles.remove(file)  # remove it from extraFiles so we don't install it twice
 
-    def createFileForImage(self, outDir: Path, pathInImage: str, *, contents: str="\n", showContentsByDefault=True,
-                           mode=None):
+    def createFileForImage(self, pathInImage: str, *, contents: str="\n", showContentsByDefault=True, mode=None):
         if pathInImage.startswith("/"):
             pathInImage = pathInImage[1:]
         assert not pathInImage.startswith("/")
@@ -142,8 +154,8 @@ class _BuildDiskImageBase(SimpleProject):
             baseDir = self.extraFilesDir
         else:
             assert userProvided not in self.extraFiles
-            targetFile = outDir / pathInImage
-            baseDir = outDir
+            targetFile = self.tmpdir / pathInImage
+            baseDir = self.tmpdir
             if self.config.verbose or (showContentsByDefault and not self.config.quiet):
                 print("Generating /", pathInImage, " with the following contents:\n",
                       coloured(AnsiColour.green, contents), sep="", end="")
@@ -171,21 +183,22 @@ class _BuildDiskImageBase(SimpleProject):
         else:
             self._wget_fetch(what, where)
 
-    def prepareRootfs(self, outDir: Path):
-        self.manifestFile = outDir / "METALOG"
+    def prepareRootfs(self):
+        assert self.tmpdir is not None
+        assert self.manifestFile is not None
         if self.input_METALOG.exists():
             self.mtree.load(self.input_METALOG)
 
         # Add the files needed to install kyua (make sure to download before calculating the list of extra files!)
         if self.needs_special_pkg_repo:
-            self.createFileForImage(outDir, "/etc/local-kyua-pkg/repos/kyua-pkg-cache.conf", mode=0o644,
+            self.createFileForImage("/etc/local-kyua-pkg/repos/kyua-pkg-cache.conf", mode=0o644,
                                     showContentsByDefault=False,
                                     contents=includeLocalFile("files/cheribsd/kyua-pkg-cache.repo.conf"))
-            self.createFileForImage(outDir, "/etc/local-kyua-pkg/config/pkg.conf", mode=0o644,
+            self.createFileForImage("/etc/local-kyua-pkg/config/pkg.conf", mode=0o644,
                                     showContentsByDefault=False,
                                     contents=includeLocalFile("files/cheribsd/kyua-pkg-cache.options.conf"))
             # Add a script to install from these config files:
-            self.createFileForImage(outDir, "/bin/prepare-testsuite.sh", mode=0o755, showContentsByDefault=False,
+            self.createFileForImage("/bin/prepare-testsuite.sh", mode=0o755, showContentsByDefault=False,
                                     contents=includeLocalFile("files/cheribsd/prepare-testsuite.sh"))
             # Download all the kyua pkg files from and put them in /var/db/kyua-pkg-cache
             # But only do that if we really need to update (since the recursive wget is slow)
@@ -235,17 +248,17 @@ class _BuildDiskImageBase(SimpleProject):
         else:
             fstabContents = fstabContents.format_map(dict(tmpfsrem=""))
 
-        self.createFileForImage(outDir, "/etc/fstab", contents=fstabContents)
+        self.createFileForImage("/etc/fstab", contents=fstabContents)
 
         # enable ssh and set hostname
         # TODO: use separate file in /etc/rc.conf.d/ ?
         self.hostname = os.path.expandvars(self.hostname)   # Expand env vars in hostname to allow $CHERI_BITS
         rcConfContents = self.file_templates.get_rc_conf_template().format(hostname=self.hostname)
-        self.createFileForImage(outDir, "/etc/rc.conf", contents=rcConfContents)
+        self.createFileForImage("/etc/rc.conf", contents=rcConfContents)
 
         cshrcContents = self.file_templates.get_cshrc_template().format(
             SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
-        self.createFileForImage(outDir, "/etc/csh.cshrc", contents=cshrcContents)
+        self.createFileForImage("/etc/csh.cshrc", contents=cshrcContents)
 
         # make sure that the disk image always has the same SSH host keys
         # If they don't exist the system will generate one on first boot and we have to accept them every time
@@ -260,7 +273,7 @@ class _BuildDiskImageBase(SimpleProject):
             newSshdConfigContents = self.readFile(sshdConfig)
             newSshdConfigContents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
             newSshdConfigContents += "\n# Major speedup to SSH performance:\n UseDNS no\n"
-            self.createFileForImage(outDir, "/etc/ssh/sshd_config", contents=newSshdConfigContents,
+            self.createFileForImage("/etc/ssh/sshd_config", contents=newSshdConfigContents,
                                     showContentsByDefault=False)
         # now try adding the right ~/.ssh/authorized_keys
         authorizedKeys = self.extraFilesDir / "root/.ssh/authorized_keys"
@@ -272,11 +285,11 @@ class _BuildDiskImageBase(SimpleProject):
                     contents = ""
                     for pubkey in sshKeys:
                         contents += self.readFile(pubkey)
-                    self.createFileForImage(outDir, "/root/.ssh/authorized_keys", contents=contents, mode=0o600)
+                    self.createFileForImage("/root/.ssh/authorized_keys", contents=contents, mode=0o600)
                     if self.queryYesNo("Should this authorized_keys file be used by default? "
                                        "(You can always change them by editing/deleting '" +
                                        str(authorizedKeys) + "')?", defaultResult=False):
-                        self.installFile(outDir / "root/.ssh/authorized_keys", authorizedKeys)
+                        self.installFile(self.tmpdir / "root/.ssh/authorized_keys", authorizedKeys)
                         runCmd("chmod", "0700", authorizedKeys.parent)
                         runCmd("chmod", "0600", authorizedKeys)
 
@@ -393,8 +406,10 @@ class _BuildDiskImageBase(SimpleProject):
         if not (self.userGroupDbDir / "master.passwd").is_file():
             fatalError("master.passwd does not exist in ", self.userGroupDbDir)
 
-        with tempfile.TemporaryDirectory() as outDir:
-            self.prepareRootfs(Path(outDir))
+        with tempfile.TemporaryDirectory() as tmp:
+            self.tmpdir = Path(tmp)
+            self.manifestFile = self.tmpdir / "METALOG"
+            self.prepareRootfs()
             # now add all the user provided files to the image:
             # we have to make a copy as we modify self.extraFiles in self.addFileToImage()
             for p in self.extraFiles.copy():
@@ -407,6 +422,8 @@ class _BuildDiskImageBase(SimpleProject):
 
             # finally create the disk image
             self.makeImage()
+        self.tmpdir = None
+        self.manifestFile = None
 
     def add_unlisted_files_to_metalog(self):
         unlisted_files = []
@@ -482,6 +499,8 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                                                             "$OUTPUT_ROOT/minimal-cheri128-disk.img depending on --cheri-bits."),
                                               metavar="IMGPATH", help="The output path for the QEMU disk image",
                                               showHelp=True)
+        cls.strip_binaries = cls.addBoolOption("strip", default=True,
+                                               help="strip ELF files to reduce size of generated image")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config, source_class=BuildCHERIBSD)
@@ -498,7 +517,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                 continue
             assert not line.startswith("/")
             # Otherwise find the file in the rootfs
-            file_path = self.rootfsDir / line
+            file_path = self.rootfsDir / line  # type: Path
             if not file_path.exists():
                 fatalError("Required file", line, "missing from rootfs")
             if file_path.is_dir():
@@ -522,16 +541,15 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
 
         self.verbose_print("Not adding unlisted files to METALOG since we are building a minimal image")
 
-    def prepareRootfs(self, outDir: Path):
-        super().prepareRootfs(outDir)
+    def prepareRootfs(self):
         # Add the additional sysctl configs
-        self.createFileForImage(outDir, "/etc/pam.d/su", showContentsByDefault=False,
+        self.createFileForImage("/etc/pam.d/su", showContentsByDefault=False,
                                 contents=includeLocalFile("files/minimal-image/pam.d/su"))
         # disable coredumps (since there is almost no space on the image)
-        self.createFileForImage(outDir, "/etc/sysctl.conf", showContentsByDefault=False,
+        self.createFileForImage("/etc/sysctl.conf", showContentsByDefault=False,
                                 contents=includeLocalFile("files/minimal-image/etc/sysctl.conf"))
         # The actual minimal startup file:
-        self.createFileForImage(outDir, "/etc/rc", showContentsByDefault=False,
+        self.createFileForImage("/etc/rc", showContentsByDefault=False,
                                 contents=includeLocalFile("files/minimal-image/etc/rc"))
 
 

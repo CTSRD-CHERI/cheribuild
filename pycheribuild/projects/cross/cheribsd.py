@@ -982,6 +982,11 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     def crossbuild(self):
         return BuildCHERIBSD.get_instance(self, self.config).crossbuild
 
+    def update(self):
+        if not self.config.skipUpdate:
+            statusUpdate("Not updating cheribsd repo when building mfs-root-kernel to avoid unwanted changes")
+        pass
+
     @classmethod
     def get_kernel_config(cls, caller: SimpleProject, config) -> str:
         build_cheribsd = BuildCHERIBSD.get_instance(caller, config)
