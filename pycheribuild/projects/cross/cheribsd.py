@@ -314,9 +314,10 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
 
     def _setup_cross_toolchain_config(self):
         self.cross_toolchain_config.set_with_options(
-            GCC=False, CLANG=False,  # Take a long time and not needed
-            GCC_BOOTSTRAP=False, CLANG_BOOTSTRAP=False,  # not needed as we have a compiler
-            LLD_BOOTSTRAP=False,  # and also a linker
+            # TODO: should we have an option to include a compiler in the target system?
+            GCC=False, CLANG=False, LLD=False, # Take a long time and not needed in the target system
+            # Bootstrap compiler/ linker are not needed:
+            GCC_BOOTSTRAP=False, CLANG_BOOTSTRAP=False, LLD_BOOTSTRAP=False,
             LIB32=False,  # takes a long time and not needed
         )
 
