@@ -51,6 +51,9 @@ class BuildQEMU(AutotoolsProject):
         # Turn on unaligned loads/stores by default
         cls.unaligned = cls.addBoolOption("unaligned", showHelp=True, help="Permit un-aligned loads/stores",
                                           default=True)
+
+        cls.statistics = cls.addBoolOption("statistics", showHelp=True, default=False,
+                                           help="Collect statistics on out-of-bounds capability creation.")
         cls.lto = cls.addBoolOption("use-lto", showHelp=True,
                                     help="Try to build QEMU with link-time optimization if possible", default=True)
         cls.legacy_registers = cls.addBoolOption("legacy-registers", showHelp=False,
@@ -136,6 +139,8 @@ class BuildQEMU(AutotoolsProject):
             extraCFlags += " -DCHERI_UNALIGNED"
         if self.legacy_registers:
             extraCFlags += " -DCHERI_C0_NULL=0"
+        if self.statistics:
+            extraCFlags += " -DDO_CHERI_STATISTICS=1"
         self.configureArgs.extend([
             "--target-list=" + targets,
             "--disable-linux-user",
