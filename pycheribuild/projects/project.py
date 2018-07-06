@@ -470,7 +470,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         :return: Throws an error if dependencies are missing
         """
         for (tool, installInstructions) in self.__requiredSystemTools.items():
-            if not shutil.which(tool):
+            if not shutil.which(str(tool)):
                 if callable(installInstructions):
                     installInstructions = installInstructions()
                 if not installInstructions:
