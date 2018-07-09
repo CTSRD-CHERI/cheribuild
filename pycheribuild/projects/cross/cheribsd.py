@@ -407,8 +407,6 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
 
             kernel_options.update(self.cross_toolchain_config)
             fuse_ld_flag = "-fuse-ld=" + self.linker_for_kernel
-            if self.linker_for_kernel == "lld":
-                fuse_ld_flag += " -Wl,--process-cap-relocs"
             linker = cross_prefix + "ld." + self.linker_for_kernel
             kernel_options.remove_var("LDFLAGS")
             kernel_options.set(LD=linker, XLD=linker, HACK_EXTRA_FLAGS="-shared " + fuse_ld_flag,
