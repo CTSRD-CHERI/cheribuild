@@ -289,6 +289,9 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
             # By default we only want to print the status updates -> use make -s so we have to do less filtering
             self.make_args.add_flags("-s")
 
+        # print detailed information about the failed target (including the command that was executed)
+        self.make_args.add_flags("-de")
+
         # build only part of the tree
         if self.subdirOverride:
             self.make_args.set(SUBDIR_OVERRIDE=self.subdirOverride)
