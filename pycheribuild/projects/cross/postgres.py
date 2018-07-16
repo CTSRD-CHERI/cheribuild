@@ -55,7 +55,6 @@ class BuildPostgres(CrossCompileAutotoolsProject):
                                           "-Wno-format-pedantic"])
         self.LDFLAGS.append("-pthread")
         if not self.compiling_for_host():
-            self.COMMON_FLAGS.append("-DDISABLE_LOADABLE_MODULES=1")
             self.COMMON_FLAGS.append("-I/usr/include/edit")
             self.configureEnvironment["AR"] = str(self.config.sdkBinDir / "cheri-unknown-freebsd-ar")
             # tell postgres configure that %zu works in printf()
@@ -69,6 +68,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
 
         if self.force_static_linkage:
             self.add_configure_env_arg("LDFLAGS_EX", "-static")
+            self.COMMON_FLAGS.append("-DDISABLE_LOADABLE_MODULES=1")
         if self.debugInfo:
             self.configureArgs.append("--enable-debug")
         else:
