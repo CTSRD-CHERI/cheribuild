@@ -306,12 +306,15 @@ def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str, smb_di
 
     qemu.sendline(test_command +
                   " ;if test $? -eq 0; then echo 'TESTS' 'COMPLETED'; else echo 'TESTS' 'FAILED'; fi")
-    i = qemu.expect([pexpect.TIMEOUT, "TESTS COMPLETED", "TESTS FAILED", PANIC, STOPPED], timeout=timeout)
+    i = qemu.expect([pexpect.TIMEOUT, "TESTS COMPLETED", "TESTS UNSTABLE", "TESTS FAILED", PANIC, STOPPED], timeout=timeout)
     testtime = datetime.datetime.now() - run_tests_starttime
     if i == 0:  # Timeout
         return failure("timeout after", testtime, "waiting for tests: ", str(qemu), exit=False)
-    elif i == 1:
-        success("===> Tests completed!")
+    elif i == 1 or i == 2:
+        if i == 2:
+            success("===> Tests completed (but with FAILURES)!")
+        else:
+            success("===> Tests completed!")
         success("Running tests took ", testtime)
         run_cheribsd_command(qemu, "df -h", expected_output="/opt")  # see how much space we have now
         return True
