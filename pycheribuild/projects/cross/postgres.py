@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import *
-from ...utils import fatalError
+from ...utils import fatalError, runCmd, IS_FREEBSD
 import re
 
 
@@ -54,8 +54,10 @@ class BuildPostgres(CrossCompileAutotoolsProject):
                                           "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
                                           "-Wno-format-pedantic"])
         self.LDFLAGS.append("-pthread")
-        if not self.compiling_for_host():
+        if IS_FREEBSD or not self.compiling_for_host():
+            # postgres can't find readline on FreeBSD:
             self.COMMON_FLAGS.append("-I/usr/include/edit")
+        if not self.compiling_for_host():
             self.configureEnvironment["AR"] = str(self.config.sdkBinDir / "cheri-unknown-freebsd-ar")
             # tell postgres configure that %zu works in printf()
             self.configureEnvironment["PRINTF_SIZE_T_SUPPORT"] = "yes"
@@ -102,6 +104,9 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         return not (self.buildDir / "GNUmakefile").exists()
 
     def run_tests(self):
+        if self.compiling_for_host():
+            self.runMake("check", cwd=self.buildDir / "src/test/regress")
+            self.runMake("check", cwd=self.buildDir / "src/interfaces/ecpg/test")
         pass
 
     @classmethod
