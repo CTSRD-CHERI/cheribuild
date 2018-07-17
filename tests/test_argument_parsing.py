@@ -19,6 +19,7 @@ from pycheribuild.projects import *  # make sure all projects are loaded so that
 from pycheribuild.projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
 from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage
 from pycheribuild.projects.cross.qt5 import BuildQtBase
+from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD
 import pytest
 import re
 
@@ -195,6 +196,98 @@ def test_cross_compile_project_inherits():
     _parse_config_file_and_args(b'{"qtbase/build-directory": "/foo/bar",'
                                      b' "qtbase-mips/build-directory": "/bar/foo"}')
     assertBuildDirsDifferent()
+
+def test_cheribsd_purecap_inherits_config_from_cheribsd():
+    # Parse args once to ensure targetManager is initialized
+    config = _parse_arguments(["--skip-configure"])
+    cheribsd_class = targetManager.get_target_raw("cheribsd").projectClass
+    cheribsd_default_tgt = targetManager.get_target_raw("cheribsd").get_or_create_project(None, config)  # type: BuildCHERIBSD
+    assert cheribsd_default_tgt.target == "cheribsd-cheri"
+    cheribsd_mips = targetManager.get_target_raw("cheribsd-mips").get_or_create_project(None, config)  # type: BuildCHERIBSD
+    cheribsd_cheri = targetManager.get_target_raw("cheribsd-cheri").get_or_create_project(None, config)  # type: BuildCHERIBSD
+    cheribsd_purecap = targetManager.get_target_raw("cheribsd-purecap").get_or_create_project(None, config)  # type: BuildCHERIBSD
+
+    # Check that project name is the same:
+    assert cheribsd_mips.projectName == cheribsd_cheri.projectName
+    assert cheribsd_cheri.projectName == cheribsd_purecap.projectName
+
+    # cheribsd-cheri is a synthetic class, but cheribsd-purecap inst:
+    assert cheribsd_cheri.synthetic_base == cheribsd_class
+    assert not hasattr(cheribsd_purecap, "synthetic_base")
+
+
+    _parse_arguments(["--cheribsd-mips/build-tests"])
+    assert not cheribsd_purecap.build_tests, "cheribsd-purecap build-tests should default to false"
+    assert not cheribsd_cheri.build_tests, "cheribsd-cheri build-tests should default to false"
+    _parse_arguments(["--cheribsd-purecap/build-tests"])
+    assert cheribsd_purecap.build_tests, "cheribsd-purecap build-tests should be set on cmdline"
+    assert not cheribsd_cheri.build_tests, "cheribsd-cheri build-tests should default to false"
+    _parse_arguments(["--cheribsd-cheri/build-tests"])
+    assert not cheribsd_purecap.build_tests, "cheribsd-purecap build-tests should default to false"
+    assert cheribsd_cheri.build_tests, "cheribsd-cheri build-tests should be set on cmdline"
+
+    # If the base cheribsd option is set but no per-target one use both cheribsd-cheri and cheribsd-purecap should inherit basic one:
+    _parse_arguments(["--cheribsd/build-tests"])
+    assert cheribsd_cheri.build_tests, "cheribsd-cheri should inherit build-tests from cheribsd(default)"
+    assert cheribsd_purecap.build_tests, "cheribsd-purecap should inherit build-tests from cheribsd(default)"
+
+    # But target-specific ones should override
+    _parse_arguments(["--cheribsd/build-tests", "--cheribsd-purecap/no-build-tests"])
+    assert cheribsd_cheri.build_tests, "cheribsd-cheri should inherit build-tests from cheribsd(default)"
+    assert not cheribsd_purecap.build_tests, "cheribsd-purecap should have a false override for build-tests"
+
+    _parse_arguments(["--cheribsd/build-tests", "--cheribsd-cheri/no-build-tests"])
+    assert cheribsd_purecap.build_tests, "cheribsd-purecap should inherit build-tests from cheribsd(default)"
+    assert not cheribsd_cheri.build_tests, "cheribsd-cheri should have a false override for build-tests"
+
+    # Check that we hav ethe same behaviour when loading from json:
+    _parse_config_file_and_args(b'{"cheribsd/build-tests": true }')
+    assert cheribsd_purecap.build_tests, "cheribsd-purecap should inherit build-tests from cheribsd(default)"
+    assert cheribsd_cheri.build_tests, "cheribsd-cheri should inherit build-tests from cheribsd(default)"
+    assert cheribsd_mips.build_tests, "cheribsd-mips should inherit build-tests from cheribsd(default)"
+
+    # But target-specific ones should override
+    _parse_config_file_and_args(b'{"cheribsd/build-tests": true, "cheribsd-cheri/build-tests": false }')
+    assert cheribsd_mips.build_tests, "cheribsd-mips build-tests should be inherited on cmdline"
+    assert cheribsd_purecap.build_tests, "cheribsd-purecap should inherit build-tests from cheribsd(default)"
+    assert not cheribsd_cheri.build_tests, "cheribsd-cheri should have a false override for build-tests"
+
+    # And that cmdline still overrides JSON:
+    _parse_config_file_and_args(b'{"cheribsd/build-tests": true }', "--cheribsd-cheri/no-build-tests")
+    assert cheribsd_purecap.build_tests, "cheribsd-purecap should inherit build-tests from cheribsd(default)"
+    assert cheribsd_mips.build_tests, "cheribsd-mips build-tests should be inherited from cheribsd(default)"
+    assert not cheribsd_cheri.build_tests, "cheribsd-cheri should have a false override for build-tests"
+    # But if a per-target option is set in the json that still overrides the default set on the cmdline
+    _parse_config_file_and_args(b'{"cheribsd-cheri/build-tests": false }', "--cheribsd/build-tests")
+    assert cheribsd_purecap.build_tests, "cheribsd-purecap should inherit build-tests from cheribsd(default)"
+    assert cheribsd_mips.build_tests, "cheribsd-mips build-tests should be inherited from cheribsd(default)"
+    assert not cheribsd_cheri.build_tests, "cheribsd-cheri should have a JSON false override for build-tests"
+
+    # However, don't inherit for buildDir since that doesn't make sense:
+    def assertBuildDirsDifferent():
+        assert cheribsd_cheri.buildDir != cheribsd_purecap.buildDir
+        assert cheribsd_cheri.buildDir != cheribsd_mips.buildDir
+        assert cheribsd_cheri.buildDir == cheribsd_default_tgt.buildDir
+
+    assertBuildDirsDifferent()
+    # overriding native build dir is fine:
+    _parse_arguments(["--cheribsd-purecap/build-directory=/foo/bar"])
+    assertBuildDirsDifferent()
+    _parse_config_file_and_args(b'{"cheribsd-purecap/build-directory": "/foo/bar"}')
+    assertBuildDirsDifferent()
+    # Should not inherit from the default one:
+    _parse_arguments(["--cheribsd/build-directory=/foo/bar"])
+    assertBuildDirsDifferent()
+    _parse_config_file_and_args(b'{"cheribsd/build-directory": "/foo/bar"}')
+    assertBuildDirsDifferent()
+
+    # Should not inherit from the default one:
+    _parse_arguments(["--cheribsd/build-directory=/foo/bar", "--cheribsd-cheri/build-directory=/bar/foo"])
+    assertBuildDirsDifferent()
+    _parse_config_file_and_args(b'{"cheribsd/build-directory": "/foo/bar",'
+                                     b' "cheribsd-cheri/build-directory": "/bar/foo"}')
+    assertBuildDirsDifferent()
+
 
 def test_duplicate_key():
     with pytest.raises(SyntaxError) as excinfo:

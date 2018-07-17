@@ -231,7 +231,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     @classmethod
     def addConfigOption(cls, name: str, default: "typing.Union[Type_T, typing.Callable[[], Type_T]]" = None,
                         kind: "typing.Union[typing.Type[str], typing.Callable[[str], Type_T]]" = str, *,
-                        showHelp=False, shortname=None, **kwargs) -> "Type_T":
+                        showHelp=False, shortname=None, _no_fallback_config_name: bool=False,
+                        fallback_config_name: str=None, **kwargs) -> "Type_T":
         configOptionKey = cls.target
         # if cls.target != cls.projectName.lower():
         #    fatalError("Target name does not match project name:", cls.target, "vs", cls.projectName.lower())
@@ -246,7 +247,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             cls._commandLineOptionGroup = cls._configLoader._parser.add_argument_group(
                 "Options for target '" + cls.target + "'")
         # For targets such as qtbase-mips we want to fall back to checking the value of the option for qtbase
-        fallback_name = None
+        fallback_name_base = getattr(cls, "_config_inherits_from", None)
         synthetic_base = getattr(cls, "synthetic_base", None)
         if cls.hide_options_from_help:
             helpHidden = True
@@ -254,15 +255,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             # Don't show the help options for qtbase-mips/qtbase-native/qtbase-cheri in default --help output, the
             # base version is enough. They will still be included in --help-all
             helpHidden = True
-            # We don't want to inherit certain options from the non-target specific class since they should always be
-            # set directly for that target. Currently the only such option is build-directory since sharing that would
-            # break the build in most cases.
-            if name not in ["build-directory"]:
-                fallback_name = synthetic_base.target + "/" + name
+            fallback_name_base = synthetic_base.target
 
+        # We don't want to inherit certain options from the non-target specific class since they should always be
+        # set directly for that target. Currently the only such option is build-directory since sharing that would
+        # break the build in most cases.
+        if not _no_fallback_config_name and fallback_name_base and name not in ["build-directory"]:
+            fallback_config_name = fallback_name_base + "/" + name
         return cls._configLoader.addOption(configOptionKey + "/" + name, shortname, default=default, type=kind,
                                            _owningClass=cls, group=cls._commandLineOptionGroup, helpHidden=helpHidden,
-                                           _fallback_name=fallback_name, **kwargs)
+                                           _fallback_name=fallback_config_name, **kwargs)
 
     @classmethod
     def addBoolOption(cls, name: str, *, shortname=None, default=False, **kwargs):

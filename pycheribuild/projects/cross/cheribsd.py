@@ -184,7 +184,7 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
                                                     help="The linker to use for the kernel")
         cls.addDebugInfoFlag = cls.addBoolOption("debug-info", default=True, showHelp=True,
                                                  help="pass make flags for building with debug info")
-        cls.buildTests = cls.addBoolOption("build-tests", help="Build the tests too (-DWITH_TESTS)", showHelp=True)
+        cls.build_tests = cls.addBoolOption("build-tests", help="Build the tests too (-DWITH_TESTS)", showHelp=True)
         cls.auto_obj = cls.addBoolOption("auto-obj", help="Use -DWITH_AUTO_OBJ (experimental)", showHelp=True,
                                          default=True)
         cls.with_manpages = cls.addBoolOption("with-manpages", help="Also install manpages. This is off by default"
@@ -271,7 +271,7 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
 
         # tests off by default because they take a long time and often seems to break
         # the creation of disk-image (METALOG is invalid)
-        self.make_args.set_with_options(TESTS=self.buildTests)
+        self.make_args.set_with_options(TESTS=self.build_tests)
 
         # only build manpages by default
         self.make_args.set_with_options(MAN=self.with_manpages)
@@ -1003,6 +1003,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 class BuildCHERIBSDPurecap(BuildCHERIBSD):
     projectName = "cheribsd"   # reuse the same source dir
     target = "cheribsd-purecap"
+    _config_inherits_from = "cheribsd"  # we want the CheriBSD config options as well
 
     # Set these variables to override the multi target magic and only support CHERI
     supported_architectures = None # Only Cheri is supported
@@ -1022,7 +1023,9 @@ class BuildCHERIBSDPurecap(BuildCHERIBSD):
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(use_kernconf_shortname=False)
-        cls.build_static = cls.addConfigOption("build-static",
+        # Since we explcicitly set _config_inherits_from, we need to avoid setting "cheribsd/foo" as
+        # the fallback name for new options that we add here since those will not exist:
+        cls.build_static = cls.addConfigOption("build-static", _no_fallback_config_name=True,
                                                help="Build all binaries as static instead of dynamically linked")
 
     def __init__(self, config):
