@@ -40,6 +40,7 @@ from pathlib import Path
 from .config.loader import JsonAndCommandLineConfigLoader, JsonAndCommandLineConfigOption
 from .config.defaultconfig import DefaultCheriConfig, CheribuildAction
 from .utils import *
+from .utils import have_working_internet_connection
 from .targets import targetManager
 from .projects.project import SimpleProject
 # noinspection PyUnresolvedReferences
@@ -51,6 +52,9 @@ from .projects.cross import *  # make sure all projects are loaded so that targe
 def updateCheck():
     from pathlib import Path
     if not shutil.which("git"):
+        return
+    # Avoid update check if we don't have an internet connection
+    if not have_working_internet_connection():
         return
     # check if new commits are available
     projectDir = str(Path(__file__).parent)

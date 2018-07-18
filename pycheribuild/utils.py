@@ -29,6 +29,7 @@
 #
 import contextlib
 import os
+import socket
 import functools
 import re
 import shlex
@@ -405,6 +406,24 @@ def includeLocalFile(path: str) -> str:
     with file.open("r", encoding="utf-8") as f:
         return f.read()
 
+
+def have_working_internet_connection():
+    # Try to connect to google DNS server at 8.8.8.8 to check if we have a working internet connection
+    # Don't make a DNS request since that could be broken for other reasons!
+    # From https://stackoverflow.com/questions/3764291/checking-network-connection/33117579#33117579
+    host = "8.8.8.8"
+    port = 53
+    timeout = 3
+    try:
+        x = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        x.settimeout(timeout)
+        x.connect((host, port))
+        return True
+    except OSError:
+        return False
+    except Exception as ex:
+        fatalError("Something went wrong  while checking for internet connection", ex)
+        return False
 
 class OSInfo(object):
     IS_LINUX = sys.platform.startswith("linux")

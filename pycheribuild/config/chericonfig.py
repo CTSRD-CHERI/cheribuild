@@ -37,7 +37,7 @@ from collections import OrderedDict
 from pathlib import Path
 # Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
 from .loader import ConfigLoaderBase
-from ..utils import latestClangTool, warningMessage
+from ..utils import latestClangTool, warningMessage, have_working_internet_connection
 
 
 # custom encoder to handle pathlib.Path objects
@@ -222,6 +222,11 @@ class CheriConfig(object):
                 else:
                     real_action.append(i)
             self.action = real_action
+
+        # turn on skip-update if we don't have a working internet connection to avoid errors in git pull
+        if not self.skipUpdate and not have_working_internet_connection():
+            warningMessage("No internet connection detected, will skip git updates!")
+            self.skipUpdate = True
 
     def _initializeDerivedPaths(self):
         self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
