@@ -570,8 +570,8 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             self.set_prog_with_args("CC", self.CC, CPPFLAGS + self.CFLAGS)
             self.set_prog_with_args("CXX", self.CXX, CPPFLAGS + self.CXXFLAGS)
             # self.add_configure_env_arg("CPPFLAGS", " ".join(CPPFLAGS))
-            # self.add_configure_env_arg("CFLAGS", " ".join(CPPFLAGS + self.CFLAGS))
-            # self.add_configure_env_arg("CXXFLAGS", " ".join(CPPFLAGS + self.CXXFLAGS))
+            self.add_configure_env_arg("CFLAGS", " ".join(self.optimizationFlags + self.compiler_warning_flags))
+            self.add_configure_env_arg("CXXFLAGS", " ".join(self.optimizationFlags + self.compiler_warning_flags))
             # this one seems to work:
             self.add_configure_env_arg("LDFLAGS", " ".join(self.LDFLAGS + self.default_ldflags))
 
