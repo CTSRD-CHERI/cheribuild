@@ -39,12 +39,14 @@ import os
 import pexpect
 import shlex
 import shutil
+import socket
 import subprocess
 import sys
 import time
 import tempfile
 import typing
 from pathlib import Path
+from contextlib import closing
 
 STARTING_INIT = "start_init: trying /sbin/init"
 BOOT_FAILURE = "Enter full pathname of shell or RETURN for /bin/sh"
@@ -56,6 +58,12 @@ STOPPED = "Stopped at"
 PANIC = "panic: trap"
 PANIC_KDB = "KDB: enter: panic"
 CHERI_TRAP = "USER_CHERI_EXCEPTION: pid \\d+ tid \\d+ \(.+\)"
+
+
+def find_free_port():
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(('', 0))
+        return s.getsockname()[1]
 
 
 def info(*args, **kwargs):
@@ -340,7 +348,7 @@ def main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...]
     parser.add_argument("--keep-compressed-images", action="store_true", default=True, dest="keep_compressed_images")
     parser.add_argument("--no-keep-compressed-images", action="store_false", dest="keep_compressed_images")
     parser.add_argument("--ssh-key", default=os.path.expanduser("~/.ssh/id_ed25519.pub"))
-    parser.add_argument("--ssh-port", type=int, default=12345)
+    parser.add_argument("--ssh-port", type=int, default=find_free_port())
     parser.add_argument("--use-smb-instead-of-ssh", action="store_true")
     parser.add_argument("--smb-mount-directory", help="directory used for sharing data with the QEMU guest via smb")
     parser.add_argument("--test-archive", "-t", action="append", nargs=1)
