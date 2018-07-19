@@ -383,8 +383,13 @@ def main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...]
         if args.use_smb_instead_of_ssh and not args.smb_mount_directory:
             failure("--smb-mount-directory is required if ssh is disabled")
         info("Using the following test archives:", args.test_archive)
-        if not args.use_smb_instead_of_ssh and not Path(args.ssh_key).exists():
-            failure("SSH key missing: ", args.ssh_key)
+        if not args.use_smb_instead_of_ssh:
+            if Path(args.ssh_key).suffix != ".pub":
+                failure("--ssh-key should point to the public key and not ", args.ssh_key)
+            if not Path(args.ssh_key).exists():
+                failure("SSH key missing: ", args.ssh_key)
+
+
         for test_archive in args.test_archive:
             if isinstance(test_archive, list):
                 test_archive = test_archive[0]

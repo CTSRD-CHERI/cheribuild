@@ -190,7 +190,7 @@ class CheriConfig(object):
 
 
         # Test options:
-        self.test_ssh_key = loader.addPathOption("test-ssh-key", default=os.path.expanduser("~/.ssh/id_ed25519"),
+        self.test_ssh_key = loader.addPathOption("test-ssh-key", default=os.path.expanduser("~/.ssh/id_ed25519.pub"),
                                                  help="The SSH key to used to connect to the QEMU instance when running"
                                                       " tests on CheriBSD", group=loader.testsGroup)
 
