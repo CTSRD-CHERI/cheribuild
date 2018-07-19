@@ -188,6 +188,12 @@ class CheriConfig(object):
                                            "(requires Bear for non-CMake projects)")
         self.copy_compilation_db_to_source_dir = None  # False for jenkins, an option for cheribuild
 
+
+        # Test options:
+        self.test_ssh_key = loader.addPathOption("test-ssh-key", default=os.path.expanduser("~/.ssh/id_ed25519"),
+                                                 help="The SSH key to used to connect to the QEMU instance when running"
+                                                      " tests on CheriBSD", group=loader.testsGroup)
+
         self.targets = None  # type: list
         self.FS = None  # type: FileSystemUtils
         self.__optionalProperties = []

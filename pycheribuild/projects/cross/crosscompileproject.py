@@ -399,6 +399,19 @@ class CrossCompileMixin(MultiArchBaseMixin):
         with setEnv(**env):
             super().configure(**kwargs)
 
+    def run_cheribsd_test_script(self, script_name, *script_args):
+        from .cheribsd import BuildCheriBsdMfsKernel
+        from ..build_qemu import BuildQEMU
+        script_dir = Path("/this/will/not/work/when/using/remote-cheribuild.py")
+        # generate a sensible error when using remote-cheribuild.py by omitting this line:
+        script_dir = Path(__file__).parent.parent.parent.parent / "test-scripts"   # no-combine
+        script = script_dir / script_name
+        if not script.exists():
+            fatalError("Could not find test script", script)
+        runCmd(script, "--kernel", BuildCheriBsdMfsKernel.get_installed_kernel_path(self, self.config),
+               "--qemu-cmd", BuildQEMU.qemu_binary(self),
+               "--ssh-key", self.config.test_ssh_key, *script_args)
+
 
 class CrossCompileProject(CrossCompileMixin, Project):
     doNotAddToTargets = True

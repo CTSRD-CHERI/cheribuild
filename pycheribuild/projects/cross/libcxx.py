@@ -250,13 +250,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         if self.compiling_for_host():
             runCmd("ninja", "check-cxx", "-v", cwd=self.buildDir)
         else:
-            # TODO: add a rootdir property
-            from .cheribsd import BuildCheriBsdMfsKernel
-            from ..build_qemu import BuildQEMU
-            runCmd(Path(__file__).parent.parent.parent.parent / "test-scripts/run_libcxx_tests.py",
-                       "--kernel", BuildCheriBsdMfsKernel.get_installed_kernel_path(self, self.config),
-                       "--qemu-cmd", BuildQEMU.qemu_binary(self),
-                       "--libcxx-build-dir", self.buildDir)
+            self.run_cheribsd_test_script("run_libcxx_tests.py", "--libcxx-build-dir", self.buildDir, "--lit-debug-output")
 
 
 class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
