@@ -32,6 +32,7 @@ import os
 import inspect
 import pprint
 import shutil
+from builtins import issubclass
 from enum import Enum
 from pathlib import Path
 
@@ -357,11 +358,13 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
+        default_opt_level = list(cls.defaultOptimizationLevel)
+        assert issubclass(cls, SimpleProject)
         super().setupConfigOptions(**kwargs)
         cls.useMxgot = cls.addBoolOption("use-mxgot", help="Compile with -mxgot flag (should not be needed when using lld)")
         cls.debugInfo = cls.addBoolOption("debug-info", help="build with debug info", default=True)
         cls.optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
-                                                    default=cls.defaultOptimizationLevel)
+                                                    default=default_opt_level)
         cls._linkage = cls.addConfigOption("linkage", help="Build static or dynamic (default means for host=dynamic,"
                                                           " CHERI/MIPS=<value of option --cross-compile-linkage>)",
                                            default=Linkage.DEFAULT, kind=Linkage)

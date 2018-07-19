@@ -48,6 +48,12 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     default_architecture = CrossCompileTarget.MIPS
     # defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir  # we have to build in the source directory
 
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        cls.locale_support = cls.addBoolOption("locale-support", showHelp=False, help="Build with locale support")
+
+
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.installDir = self.installDir.parent  # newlib install already appends the triple
@@ -116,8 +122,6 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
             "--disable-newlib-io-long-double",  # we don't need this, MIPS long double == double
             "--enable-newlib-io-float",
             # "--disable-newlib-supplied-syscalls"
-            "--enable-newlib-mb",  # needed for locale support
-
             "--disable-libstdcxx",  # not sure if this is needed
 
             # we don't have any multithreading support on baremetal
@@ -134,6 +138,14 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
             "--enable-serial-target-configure",
             "--enable-serial-host-configure",
         ])
+
+        if self.locale_support:
+            # needed for locale support
+            self.configureArgs.append("--enable-newlib-mb")
+            self.configureArgs.append("--enable-newlib-iconv")
+        else:
+            self.configureArgs.append("--disable-newlib-mb")
+            self.configureArgs.append("--disable-newlib-iconv")
 
         # self.configureArgs.append("--host=" + self.targetTriple)
         self.configureArgs.append("--target=" + self.targetTriple)
