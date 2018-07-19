@@ -514,8 +514,9 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
 
     def _query_buildenv_path(self, args, var):
         try:
-            bw_flags = args.all_commandline_args + ["buildenv",
-                                                    "BUILDENV_SHELL=" + str(self.make_args.command) + " -V " + var]
+            make_cmd = shutil.which(self.make_args.command) or self.make_args.command
+            buildenv_cmd = make_cmd + " -V " + var
+            bw_flags = args.all_commandline_args + ["buildenv", "BUILDENV_SHELL=" + buildenv_cmd]
             if self.crossbuild:
                 bw_flags.append("PATH=" + os.getenv("PATH"))
             if not self.sourceDir.exists():
