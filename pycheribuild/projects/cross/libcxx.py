@@ -237,7 +237,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
                                                                               nfs_in_target=self.nfs_path_in_qemu)
         else:
             self.libcxx_lit_jobs = " -j1" # We can only run one job here since we are using scp
-            executor = "SSHExecutor('{host}', username='{user}', port={port})".format(
+            executor = "SSHExecutor('{host}', username='{user}', port={port}, config=self)".format(
                 host=self.qemu_host, user=self.qemu_user, port=self.qemu_port)
         if self.baremetal:
             target_info = "libcxx.test.target_info.BaremetalNewlibTI"
@@ -247,7 +247,16 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.add_cmake_options(LIBCXX_EXECUTOR=executor, LIBCXX_TARGET_INFO=target_info, LIBCXX_RUN_LONG_TESTS=False)
 
     def run_tests(self):
-        runCmd("ninja", "check-cxx", "-v", cwd=self.buildDir)
+        if self.compiling_for_host():
+            runCmd("ninja", "check-cxx", "-v", cwd=self.buildDir)
+        else:
+            # TODO: add a rootdir property
+            from .cheribsd import BuildCheriBsdMfsKernel
+            from ..build_qemu import BuildQEMU
+            runCmd(Path(__file__).parent.parent.parent.parent / "test-scripts/run_libcxx_tests.py",
+                       "--kernel", BuildCheriBsdMfsKernel.get_installed_kernel_path(self, self.config),
+                       "--qemu-cmd", BuildQEMU.qemu_binary(self),
+                       "--libcxx-build-dir", self.buildDir)
 
 
 class BuildCompilerRtBaremetal(CrossCompileCMakeProject):

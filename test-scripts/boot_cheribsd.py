@@ -264,9 +264,13 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
     return child
 
 
-def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str, smb_dir: typing.Optional[Path],
-             ssh_keyfile: typing.Optional[str], ssh_port: typing.Optional[int], timeout: int,
-             test_function: "typing.Callable[[pexpect.spawn, ...], bool]"=None) -> bool:
+def runtests(qemu: pexpect.spawn, args: argparse.Namespace, test_archives: list,
+             test_function: "typing.Callable[[pexpect.spawn, argparse.Namespace, ...], bool]"=None) -> bool:
+    test_command = args.test_command
+    ssh_keyfile = args.ssh_key
+    ssh_port = args.ssh_port
+    timeout = args.test_timeout
+    smb_dir = args.smb_mount_directory
     setup_tests_starttime = datetime.datetime.now()
     # disable coredumps, otherwise we get no space left on device errors
     run_cheribsd_command(qemu, "sysctl kern.coredump=0")
@@ -302,7 +306,7 @@ def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str, smb_di
     run_tests_starttime = datetime.datetime.now()
     # Run the tests (allowing custom test functions)
     if test_function:
-        return test_function(qemu, ssh_keyfile=ssh_keyfile, ssh_port=ssh_port)
+        return test_function(qemu, args)
 
     qemu.sendline(test_command +
                   " ;if test $? -eq 0; then echo 'TESTS' 'COMPLETED'; else echo 'TESTS' 'FAILED'; fi")
@@ -322,11 +326,12 @@ def runtests(qemu: pexpect.spawn, test_archives: list, test_command: str, smb_di
         return failure("error after ", testtime, "while running tests : ", str(qemu), exit=False)
 
 
-def main(test_function=None, argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]"=None,
+def main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...], bool]"=None,
+         argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]"=None,
          argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]"=None):
     # TODO: look at click package?
     parser = argparse.ArgumentParser(allow_abbrev=False)
-    parser.add_argument("--qemu-cmd", default="qemu-system-cheri")
+    parser.add_argument("--qemu-cmd", "--qemu", default="qemu-system-cheri")
     parser.add_argument("--kernel", default="/usr/local/share/cheribsd/cheribsd-malta64-kernel")
     parser.add_argument("--disk-image", default=None, # default="/usr/local/share/cheribsd/cheribsd-full.img"
                         )
@@ -415,9 +420,7 @@ def main(test_function=None, argparse_setup_callback: "typing.Callable[[argparse
                 setup_ssh_starttime = datetime.datetime.now()
                 setup_ssh(qemu, Path(args.ssh_key))
                 info("Setting up SSH took: ", datetime.datetime.now() - setup_ssh_starttime)
-            tests_okay = runtests(qemu, test_archives=test_archives, test_command=args.test_command,
-                                  ssh_keyfile=args.ssh_key, ssh_port=args.ssh_port, timeout=args.test_timeout,
-                                  smb_dir=args.smb_mount_directory, test_function=test_function)
+            tests_okay = runtests(qemu, args, test_archives=test_archives, test_function=test_function)
         except Exception:
             import traceback
             traceback.print_exc(file=sys.stderr)
