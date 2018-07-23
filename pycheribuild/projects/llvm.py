@@ -63,8 +63,9 @@ class BuildLLVM(CMakeProject):
         cls.enable_assertions = cls.addBoolOption("assertions", help="build with assertions enabled", default=True)
         cls.enable_lto = cls.addBoolOption("enable-lto", help="build with LTO enabled (experimental)")
         cls.skip_lld = cls.addBoolOption("skip-lld", help="Don't build lld as part of the llvm target")
-        cls.skip_static_analyzer = cls.addBoolOption("skip-static-analyzer",
-                                                     help="Don't build the clang static analyzer")
+        cls.skip_static_analyzer = cls.addBoolOption("skip-static-analyzer", help="Don't build the clang static analyzer")
+        cls.build_everything = cls.addBoolOption("build-everything", default=False,
+                                                 help="Also build documentation,examples and bindings")
         if includeClangRevision:
             cls.clangRepository, cls.clangRevision = addToolOptions("clang")
         if includeLldRevision:
@@ -84,6 +85,15 @@ class BuildLLVM(CMakeProject):
             LLVM_TOOL_LLD_BUILD=not self.skip_lld,
             LLVM_PARALLEL_LINK_JOBS=2 if self.enable_lto else 4,  # anything more causes too much I/O
         )
+        if not self.build_everything:
+            self.add_cmake_options(
+                LLVM_ENABLE_OCAMLDOC=False,
+                LLVM_ENABLE_BINDINGS=False,
+                # Skip CMake targets for examples and docs to save a tiny bit of time and shrink
+                # the list of available targets in CLion
+                LLVM_INCLUDE_EXAMPLES=False,
+                LLVM_INCLUDE_DOCS=False,
+            )
         if self.skip_static_analyzer:
             # save some build time by skipping the static analyzer
             self.add_cmake_options(CLANG_ENABLE_STATIC_ANALYZER=False,
