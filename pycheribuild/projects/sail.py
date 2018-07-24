@@ -102,9 +102,9 @@ class BuildSail(OcamlProject):
     def compile(self, cwd: Path = None):
         self.run_in_ocaml_env("""
 make
-make -C mips mips
-make -C cheri cheri
-make -C cheri cheri128""")
+make -C mips mips mips_c
+make -C cheri cheri cheri_c
+make -C cheri cheri128 cheri128_c""")
 
     def process(self):
         lemdir = BuildLem.getSourceDir(self, self.config)
