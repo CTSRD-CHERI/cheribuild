@@ -858,6 +858,9 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                      help="Also build kernels for the FPGA.")
             cls.mfs_root_image = cls.addPathOption("mfs-root-image", help="Path to an MFS root image to embed in the"
                                                                           "kernel that will be booted from")
+
+        cls.build_static = cls.addConfigOption("build-static", help="Build all CHERI binaries as static instead of dynamically linked")
+
         # We also want to add this config option to the fake "cheribsd" target (to keep the config file manageable)
         if cls._crossCompileTarget in (CrossCompileTarget.CHERI, None):
             cls.purecapKernel = cls.addBoolOption("pure-cap-kernel", showHelp=True,
@@ -887,6 +890,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         if self._crossCompileTarget == CrossCompileTarget.CHERI:
             if self.config.cheri_cap_table_abi:
                 self.cross_toolchain_config.set(CHERI_USE_CAP_TABLE=self.config.cheri_cap_table_abi)
+            self.make_args.set_with_options(CHERI_SHARED_PROG=not self.build_static)
 
         self.extra_kernels = []
         self.extra_kernels_with_mfs = []
@@ -1024,14 +1028,10 @@ class BuildCHERIBSDPurecap(BuildCHERIBSD):
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(use_kernconf_shortname=False)
-        # Since we explcicitly set _config_inherits_from, we need to avoid setting "cheribsd/foo" as
-        # the fallback name for new options that we add here since those will not exist:
-        cls.build_static = cls.addConfigOption("build-static", _no_fallback_config_name=True,
-                                               help="Build all binaries as static instead of dynamically linked")
 
     def __init__(self, config):
         super().__init__(config)
-        self.make_args.set_with_options(CHERI_PURE=True, CHERI_SHARED_PROG=not self.build_static)
+        self.make_args.set_with_options(CHERI_PURE=True)
 
 
 class BuildCheriBsdSysroot(SimpleProject):
