@@ -507,6 +507,8 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                                               showHelp=True)
         cls.strip_binaries = cls.addBoolOption("strip", default=True,
                                                help="strip ELF files to reduce size of generated image")
+        cls.include_cheritest = cls.addBoolOption("include-cheritest", default=True,
+                                                  help="Also add cheritest/cheriabitest to the disk image")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config, source_class=BuildCHERIBSD)
@@ -541,6 +543,12 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
 
         for files_list in files_to_add:
             self.process_files_list(files_list)
+
+        if self.include_cheritest:
+            for i in ("cheritest", "cheriabitest"):
+                test_binary = self.rootfsDir / "bin" / i  # type: Path
+                if test_binary.exists():
+                    self.addFileToImage(test_binary, baseDirectory=self.rootfsDir)
         # These dirs seem to be needed
         self.mtree.add_dir("var/db", print_status=self.config.verbose)
         self.mtree.add_dir("var/empty", print_status=self.config.verbose)
