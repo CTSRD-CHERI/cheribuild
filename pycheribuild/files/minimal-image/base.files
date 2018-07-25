@@ -1,9 +1,4 @@
 bin/cheribsdbox
-# These are not included in cheribsdbox for now (since it breaks su which
-# likes to execute them with a wrong argv[0]
-bin/csh
-bin/tcsh
-bin/sh
 
 # bin/wr
 dev
