@@ -47,7 +47,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         super().__init__(config)
         if self.enable_assertions:
             self.COMMON_FLAGS.append("-DUSE_ASSERT_CHECKING=1")
-            self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")
+            # self.COMMON_FLAGS.append("-DLOCK_DEBUG=1")
             self.configureArgs.append("--enable-cassert")
 
         self.common_warning_flags.extend(["-pedantic", "-Wno-gnu-statement-expression",
@@ -115,8 +115,8 @@ class BuildPostgres(CrossCompileAutotoolsProject):
 
     def run_tests(self):
         if self.compiling_for_host():
-            self.runMake("check", cwd=self.buildDir / "src/test/regress")
-            self.runMake("check", cwd=self.buildDir / "src/interfaces/ecpg/test")
+            self.runMake("check", cwd=self.buildDir / "src/test/regress", stdoutFilter=None)
+            # self.runMake("check", cwd=self.buildDir / "src/interfaces/ecpg/test", stdoutFilter=None)
         pass
 
     @classmethod
