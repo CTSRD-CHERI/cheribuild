@@ -51,6 +51,13 @@ class BuildSdk(TargetAliasWithDependencies):
     is_sdk_target = True
 
 
+class BuildCheriCompressedCaps(CMakeProject):
+    target = "cheri-compressed-cap"
+    projectName = "cheri-compressed-cap"
+    repository = "https://github.com/CTSRD-CHERI/cheri-compressed-cap.git"
+    defaultInstallDir = CMakeProject._installToSDK
+
+
 class BuildFreestandingSdk(SimpleProject):
     target = "freestanding-sdk"
     dependencies = ["binutils", "llvm", "qemu", "gdb-native"]  # TODO: should we add ld.bfd?
