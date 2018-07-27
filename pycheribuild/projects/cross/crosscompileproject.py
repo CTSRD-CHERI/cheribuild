@@ -237,6 +237,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
     @property
     def extra_c_compat_flags(self):
+        if not self.compiling_for_cheri():
+            return []
         # Build with virtual address interpretation, data-dependent provenance and pcrelative captable ABI
         return ["-cheri-uintcap=addr", "-Xclang", "-cheri-data-dependent-provenance",
                 "-cheri-cap-table-abi=pcrel"

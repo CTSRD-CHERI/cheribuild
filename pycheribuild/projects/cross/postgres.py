@@ -109,6 +109,8 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             result.remove("-static")
         return result
 
+    def should_use_extra_c_compat_flags(self):
+        return True
 
     def needsConfigure(self):
         return not (self.buildDir / "GNUmakefile").exists()
