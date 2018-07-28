@@ -774,6 +774,8 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                 args = self.installworld_args
                 is_lib = subdir.startswith("lib/") or "/lib/" in subdir or subdir.endswith("/lib")
                 make_in_subdir = "make -C \"" + subdir + "\" "
+                if self.config.passDashKToMake:
+                    make_in_subdir += "-k "
                 if self.config.skipInstall:
                     install_cmd = "echo \"  Skipping make install\""
                 else:
