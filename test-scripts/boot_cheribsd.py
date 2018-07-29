@@ -279,6 +279,7 @@ def runtests(qemu: pexpect.spawn, args: argparse.Namespace, test_archives: list,
     ssh_port = args.ssh_port
     timeout = args.test_timeout
     smb_dir = args.smb_mount_directory
+    smb_dir_in_cheribsd = args.smb_dir_in_cheribsd
     setup_tests_starttime = datetime.datetime.now()
     # disable coredumps, otherwise we get no space left on device errors
     run_cheribsd_command(qemu, "sysctl kern.coredump=0")
@@ -305,10 +306,16 @@ def runtests(qemu: pexpect.spawn, args: argparse.Namespace, test_archives: list,
                     scp_cmd = ["script", "--quiet", "--return", "--command", " ".join(scp_cmd), "/dev/null"]
                 run_host_command(["ls", "-la"], cwd=tmp)
                 run_host_command(scp_cmd, cwd=tmp)
+    if smb_dir:
+        run_cheribsd_command(qemu, "mkdir -p '{}'".format(smb_dir_in_cheribsd))
+        run_cheribsd_command(qemu, "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu '{}'".format(smb_dir_in_cheribsd),
+                             error_output="mount_smbfs: unable to open connection:")
     if test_archives:
         time.sleep(5)  # wait 5 seconds to make sure the disks have synced
     # See how much space we have after running scp
     run_cheribsd_command(qemu, "df -h", expected_output="/opt")
+    # ensure that /tmp is world-writable
+    run_cheribsd_command(qemu, "chmod 777 /tmp")
     success("Preparing test enviroment took ", datetime.datetime.now() - setup_tests_starttime)
 
     run_tests_starttime = datetime.datetime.now()
@@ -351,6 +358,8 @@ def main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...]
     parser.add_argument("--ssh-port", type=int, default=find_free_port())
     parser.add_argument("--use-smb-instead-of-ssh", action="store_true")
     parser.add_argument("--smb-mount-directory", help="directory used for sharing data with the QEMU guest via smb")
+    parser.add_argument("--smb-dir-in-cheribsd", default="/mnt",
+                        help="The path where the smb shared directory is mounted in CheriBSD (default: /mnt)")
     parser.add_argument("--test-archive", "-t", action="append", nargs=1)
     parser.add_argument("--test-command", "-c")
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60)
@@ -369,6 +378,9 @@ def main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...]
         argparse_adjust_args_callback(args)
     if shutil.which(args.qemu_cmd) is None:
         sys.exit("ERROR: QEMU binary " + args.qemu_cmd + " doesn't exist")
+
+    if args.smb_mount_directory:
+        args.smb_mount_directory = str(Path(args.smb_mount_directory).absolute())
 
     starttime = datetime.datetime.now()
 
