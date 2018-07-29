@@ -59,6 +59,8 @@ PANIC = "panic: trap"
 PANIC_KDB = "KDB: enter: panic"
 CHERI_TRAP = "USER_CHERI_EXCEPTION: pid \\d+ tid \\d+ \(.+\)"
 
+PRETEND = False
+
 
 def find_free_port():
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
@@ -88,6 +90,8 @@ def run_host_command(*args, **kwargs):
         info("\033[0;33mRunning", *args, "with", kwargs.copy(), "\033[0m")
     else:
         info("\033[0;33mRunning", *args, "\033[0m")
+    if PRETEND:
+        return
     subprocess.check_call(*args, **kwargs)
 
 
@@ -194,6 +198,14 @@ def set_posix_sh_prompt(child):
         failure("timeout after setting command prompt ", str(child))
     success("===> successfully set PS1")
 
+class FakeSpawn(object):
+    def expect(self, *args, **kwargs):
+        # print("Expecting", args)
+        return 1 if len(*args) > 1 else 0
+
+    def sendline(self, msg):
+        print("RUNNING '", msg, "'", sep="")
+
 
 def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *, smb_dir: str=None) -> pexpect.spawn:
     user_network_args = "user,id=net0,ipv6=off"
@@ -208,7 +220,10 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
         qemu_args += ["-hda", disk_image]
     success("Starting QEMU: ", qemu_cmd, " ", " ".join(qemu_args))
     qemu_starttime = datetime.datetime.now()
-    child = pexpect.spawnu(qemu_cmd, qemu_args, echo=False, timeout=60)
+    if PRETEND:
+        child = FakeSpawn()
+    else:
+        child = pexpect.spawnu(qemu_cmd, qemu_args, echo=False, timeout=60)
     # child.logfile=sys.stdout.buffer
     child.logfile_read = sys.stdout
     # ignore SIGINT for the python code, the child should still receive it
@@ -363,6 +378,7 @@ def main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...]
     parser.add_argument("--test-archive", "-t", action="append", nargs=1)
     parser.add_argument("--test-command", "-c")
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60)
+    parser.add_argument("--pretend", "-p", action="store_true", default="Don't actually boot CheriBSD just print what would happen")
     parser.add_argument("--interact", "-i", action="store_true")
     if argparse_setup_callback:
         argparse_setup_callback(parser)
@@ -381,6 +397,9 @@ def main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...]
 
     if args.smb_mount_directory:
         args.smb_mount_directory = str(Path(args.smb_mount_directory).absolute())
+
+    global PRETEND
+    PRETEND = args.pretend
 
     starttime = datetime.datetime.now()
 
