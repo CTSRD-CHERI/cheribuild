@@ -378,7 +378,7 @@ def main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...]
     parser.add_argument("--test-archive", "-t", action="append", nargs=1)
     parser.add_argument("--test-command", "-c")
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60)
-    parser.add_argument("--pretend", "-p", action="store_true", default="Don't actually boot CheriBSD just print what would happen")
+    parser.add_argument("--pretend", "-p", action="store_true", help="Don't actually boot CheriBSD just print what would happen")
     parser.add_argument("--interact", "-i", action="store_true")
     if argparse_setup_callback:
         argparse_setup_callback(parser)
@@ -399,7 +399,8 @@ def main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...]
         args.smb_mount_directory = str(Path(args.smb_mount_directory).absolute())
 
     global PRETEND
-    PRETEND = args.pretend
+    if args.pretend:
+        PRETEND = True
 
     starttime = datetime.datetime.now()
 

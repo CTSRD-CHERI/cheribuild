@@ -34,6 +34,7 @@ import pexpect
 
 def run_qtbase_tests(qemu: pexpect.spawn, args: argparse.Namespace):
     print("Running qtbase tests")
+    import boot_cheribsd
     boot_cheribsd.run_cheribsd_command(qemu, "/mnt/tests/auto/corelib/global/qtendian/tst_qtendian")
     return True
 
