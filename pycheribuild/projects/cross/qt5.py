@@ -214,7 +214,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
         if self.compiling_for_host():
             runCmd("make", "check", cwd=self.buildDir)
         else:
-            self.run_cheribsd_test_script("run_qtbase_tests.py", "--smb-mount-directory", self.buildDir)
+            self.run_cheribsd_test_script("run_qtbase_tests.py")
 
 
 # Webkit needs ICU (and recommended for QtBase too:

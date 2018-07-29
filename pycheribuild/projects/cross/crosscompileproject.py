@@ -414,6 +414,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
         if not script.exists():
             fatalError("Could not find test script", script)
         runCmd(script, "--kernel", BuildCheriBsdMfsKernel.get_installed_kernel_path(self, self.config),
+               "--build-dir", self.buildDir,
                "--qemu-cmd", BuildQEMU.qemu_binary(self),
                "--ssh-key", self.config.test_ssh_key, *script_args)
 

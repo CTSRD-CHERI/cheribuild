@@ -250,7 +250,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         if self.compiling_for_host():
             runCmd("ninja", "check-cxx", "-v", cwd=self.buildDir)
         else:
-            self.run_cheribsd_test_script("run_libcxx_tests.py", "--libcxx-build-dir", self.buildDir, "--lit-debug-output")
+            self.run_cheribsd_test_script("run_libcxx_tests.py", "--lit-debug-output")
 
 
 class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
