@@ -764,14 +764,10 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                 os.unsetenv(k)
                 del os.environ[k]
 
-        buildenv_target = "buildenv"
-        if self._crossCompileTarget == CrossCompileTarget.CHERI and self.config.libcheri_buildenv:
-            buildenv_target = "libcheribuildenv"
-
         if self.explicit_subdirs_only:
             # Allow building a single FreeBSD/CheriBSD directory using the BUILDENV_SHELL trick
+            args = self.installworld_args
             for subdir in self.explicit_subdirs_only:
-                args = self.installworld_args
                 is_lib = subdir.startswith("lib/") or "/lib/" in subdir or subdir.endswith("/lib")
                 make_in_subdir = "make -C \"" + subdir + "\" "
                 if self.config.passDashKToMake:
@@ -787,18 +783,29 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
                         sysroot_var = "\"$$$${SYSROOT}\""
                         install_cmd = "if [ -n {sysroot} ]; then {make} install DESTDIR={sysroot}; fi && ".format(
                             make=make_in_subdir, sysroot=sysroot_var) + install_cmd
+                if self.compiling_for_cheri() and not is_lib:
+                    # for non-library targets we need to set WANT_CHERI=pure in the environment to get the binary
+                    # to build as a CHERI binary
+                    if any("WITH_CHERI_PURE" in x for x in args.all_commandline_args):
+                        statusUpdate("WITH_CHERI_PURE found in build args -> set WANT_CHERI?=pure for non-library", subdir)
+                        args.set_env(WANT_CHERI="pure")
                 colour_diags = "export CLANG_FORCE_COLOR_DIAGNOSTICS=always; " if self.config.clang_colour_diags else ""
                 build_cmd = "{colour_diags} {clean} && {build} && {install} && echo \"  Done.\"".format(
                     build=make_in_subdir + "all " + " ".join(self.jflag),
                     clean=make_in_subdir + "clean" if self.config.clean else "echo \"  Skipping make clean\"",
                     install=install_cmd, colour_diags=colour_diags)
                 args.set(BUILDENV_SHELL="sh -ex -c '" + build_cmd + "' || exit 1")
-                statusUpdate("Building", subdir, "using", buildenv_target, "target")
-                runCmd([self.make_args.command] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
-                       cwd=self.sourceDir)
+                # If --libcheri-buildenv was passed skip the MIPS lib
+                is_cheri_lib = self.compiling_for_cheri() and is_lib
+                if is_cheri_lib and self.config.libcheri_buildenv:
+                    statusUpdate("Skipping MIPS build of", subdir, "since --libcheri-buildenv was passed.")
+                else:
+                    statusUpdate("Building", subdir, "using buildenv target")
+                    runCmd([self.make_args.command] + args.all_commandline_args + ["buildenv"], env=args.env_vars,
+                             cwd=self.sourceDir)
                 # If we are building a library we want to build both the CHERI and the mips version (unless the
                 # user explicitly specified --libcheri-buildenv)
-                if self._crossCompileTarget == CrossCompileTarget.CHERI and is_lib and buildenv_target != "libcheribuildenv":
+                if is_cheri_lib:
                     statusUpdate("Building", subdir, "using libcheribuildenv target")
                     runCmd([self.make_args.command] + args.all_commandline_args + ["libcheribuildenv"], env=args.env_vars,
                            cwd=self.sourceDir)
@@ -806,6 +813,9 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         elif self.config.buildenv or self.config.libcheri_buildenv:
             args = self.buildworldArgs
             args.remove_flag("-s")  # buildenv should not be silent
+            buildenv_target = "buildenv"
+            if self._crossCompileTarget == CrossCompileTarget.CHERI and self.config.libcheri_buildenv:
+                buildenv_target = "libcheribuildenv"
             runCmd([self.make_args.command] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
                    cwd=self.sourceDir)
         else:
