@@ -373,7 +373,8 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
             # Don't set XLD when using bfd since it will pick up ld.bfd from the build directory
             self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.lld"),
 
-        if self.linker_for_kernel == "lld" and self.linker_for_world == "lld":
+        if self.linker_for_kernel == "lld" and self.linker_for_world == "lld" and not self.compiling_for_host():
+            # When building freebsd x86 we need to build the as binary
             self.cross_toolchain_config.set_with_options(BINUTILS_BOOTSTRAP=False)
 
         if target_flags:
