@@ -33,21 +33,24 @@ import pexpect
 import argparse
 import os
 import subprocess
+import tempfile
 from pathlib import Path
-boot_cheribsd = __import__("boot_cheribsd")
-
+import boot_cheribsd
 
 def run_libcxx_tests(qemu: pexpect.spawn, args: argparse.Namespace):
-    boot_cheribsd.run_cheribsd_command(qemu, "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu /mnt",
-                                       error_output="mount_smbfs: unable to open connection:")
     port = args.ssh_port
     user = "root"  # TODO: run these tests as non-root!
-    libcxx_dir = Path(args.libcxx_build_dir)
+    libcxx_dir = Path(args.build_dir)
     (libcxx_dir / "tmp").mkdir(exist_ok=True)
 
     if False:
         # slow executor using scp:
         executor = 'SSHExecutor("localhost", username="{user}", port={port})'.format(user=user, port=port)
+
+
+    with tempfile/
+
+
     executor = 'SSHExecutorWithNFSMount("localhost", username="{user}", port={port}, nfs_dir="{host_dir}", path_in_target="/mnt/tmp")'.format(
         user=user, port=port, host_dir=str(libcxx_dir / "tmp"))
     print("Running libcxx_tests with executor", executor)
@@ -62,17 +65,13 @@ def run_libcxx_tests(qemu: pexpect.spawn, args: argparse.Namespace):
     # TODO: --num-shards = 16
     # --run-shard = N
     print("Will run ", " ".join(lit_cmd))
-    subprocess.check_call(lit_cmd, cwd=str(libcxx_dir))
+    boot_cheribsd.run_host_command(lit_cmd, cwd=str(libcxx_dir))
 
 def add_cmdline_args(parser: argparse.ArgumentParser):
-    parser.add_argument("--libcxx-build-dir", required=True)
     parser.add_argument("--lit-debug-output", action="store_true")
     parser.add_argument("--xunit-output", default="libcxx-tests.xml")
 
-def setup_args(args: argparse.Namespace):
-    args.libcxx_build_dir = os.path.expandvars(os.path.expanduser(args.libcxx_build_dir))
-    args.use_smb_instead_of_ssh = False  # we need ssh running to execute the tests
-    args.smb_mount_directory = args.libcxx_build_dir
-
 if __name__ == '__main__':
-    boot_cheribsd.main(test_function=run_libcxx_tests, argparse_setup_callback=add_cmdline_args, argparse_adjust_args_callback=setup_args)
+    from run_tests_common import run_tests_main
+    run_tests_main(test_function=run_libcxx_tests, need_ssh=True, # we need ssh running to execute the tests
+                   argparse_setup_callback=add_cmdline_args)

@@ -29,14 +29,34 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import argparse
 import pexpect
+import argparse
+import os
+import subprocess
+import sys
+from pathlib import Path
 
-def run_qtbase_tests(qemu: pexpect.spawn, args: argparse.Namespace):
-    print("Running qtbase tests")
-    boot_cheribsd.run_cheribsd_command(qemu, "/mnt/tests/auto/corelib/global/qtendian/tst_qtendian")
-    return True
+def run_tests_main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...], bool]"=None, need_ssh=False,
+         argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]"=None,
+         argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]"=None):
+    def default_add_cmdline_args(parser: argparse.ArgumentParser):
+        parser.add_argument("--build-dir", required=True)
+        if argparse_setup_callback:
+            argparse_setup_callback(parser)
 
-if __name__ == '__main__':
-    from run_tests_common import run_tests_main
-    run_tests_main(test_function=run_qtbase_tests, need_ssh=False) # we don't need ssh running to execute the tests
+    def default_setup_args(args: argparse.Namespace):
+        args.build_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.build_dir)))
+        if need_ssh:
+            args.use_smb_instead_of_ssh = False  # we need ssh running to execute the tests
+        else:
+            args.use_smb_instead_of_ssh = True  # skip the ssh setup
+        args.smb_mount_directory = args.build_dir
+        args.smb_dir_in_cheribsd = "/mnt"
+        if argparse_adjust_args_callback:
+            argparse_adjust_args_callback(args)
+
+    import boot_cheribsd
+    assert sys.path[0] == str(Path(__file__).parent.absolute()), sys.path
+    boot_cheribsd.main(test_function=test_function, argparse_setup_callback=default_add_cmdline_args,
+                       argparse_adjust_args_callback=default_setup_args)
+
