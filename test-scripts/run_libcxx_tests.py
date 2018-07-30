@@ -37,22 +37,35 @@ import tempfile
 from pathlib import Path
 import boot_cheribsd
 
-def run_libcxx_tests(qemu: pexpect.spawn, args: argparse.Namespace):
+
+def run_tests_impl(qemu: pexpect.spawn, args: argparse.Namespace, tempdir: str):
     port = args.ssh_port
     user = "root"  # TODO: run these tests as non-root!
     libcxx_dir = Path(args.build_dir)
     (libcxx_dir / "tmp").mkdir(exist_ok=True)
+    # TODO: move this to boot_cheribsd.py
+    config_contents = """
+Host cheribsd-test-instance
+        User {user}
+        HostName localhost
+        Port {port}
+        IdentityFile {ssh_key}
+        # avoid errors due to changed host key:
+        UserKnownHostsFile /dev/null
+        StrictHostKeyChecking no
+        # faster connection by reusing the existing one:
+        ControlPath {home}/controlmasters/%r@%h:%p
+        ControlMaster auto
+""".format(user=user, port=port, ssh_key=args.ssh_key, home=Path.home())
+    print("Writing ssh config: ", config_contents)
+    with Path(tempdir, "config").open("w") as c:
+        c.write(config_contents)
+    Path(Path.home(), "controlmasters").mkdir()
+    boot_cheribsd.run_host_command(["cat", str(Path(tempdir, "config"))])
 
-    if False:
-        # slow executor using scp:
-        executor = 'SSHExecutor("localhost", username="{user}", port={port})'.format(user=user, port=port)
-
-
-    with tempfile/
-
-
-    executor = 'SSHExecutorWithNFSMount("localhost", username="{user}", port={port}, nfs_dir="{host_dir}", path_in_target="/mnt/tmp")'.format(
-        user=user, port=port, host_dir=str(libcxx_dir / "tmp"))
+    executor = 'SSHExecutorWithNFSMount("cheribsd-test-instance", username="{user}", port={port}, nfs_dir="{host_dir}", ' \
+               'path_in_target="/mnt/tmp", extra_ssh_flags=["-F", "{tempdir}/config"], ' \
+               'extra_scp_flags=["-F", "{tempdir}/config"])'.format(user=user, port=port, host_dir=str(libcxx_dir / "tmp"), tempdir=tempdir)
     print("Running libcxx_tests with executor", executor)
     # TODO: sharding + xunit output
     # have to use -j1 since otherwise CheriBSD might wedge
@@ -66,6 +79,15 @@ def run_libcxx_tests(qemu: pexpect.spawn, args: argparse.Namespace):
     # --run-shard = N
     print("Will run ", " ".join(lit_cmd))
     boot_cheribsd.run_host_command(lit_cmd, cwd=str(libcxx_dir))
+
+    if False:
+        # slow executor using scp:
+        executor = 'SSHExecutor("localhost", username="{user}", port={port})'.format(user=user, port=port)
+
+def run_libcxx_tests(qemu: pexpect.spawn, args: argparse.Namespace):
+    with tempfile.TemporaryDirectory() as tempdir:
+        run_tests_impl(qemu, args, tempdir)
+
 
 def add_cmdline_args(parser: argparse.ArgumentParser):
     parser.add_argument("--lit-debug-output", action="store_true")

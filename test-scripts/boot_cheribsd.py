@@ -283,7 +283,7 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
             failure("error during boot login prompt: ", str(child))
         success("===> booted CheriBSD (userspace startup time: ", datetime.datetime.now() - userspace_starttime, ")")
     except KeyboardInterrupt:
-        failure("Keyboard interrupt during boot", exit=False)
+        failure("Keyboard interrupt during boot", exit=True)
     return child
 
 
