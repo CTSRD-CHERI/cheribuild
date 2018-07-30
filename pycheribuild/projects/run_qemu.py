@@ -161,8 +161,6 @@ class LaunchQEMUBase(SimpleProject):
             # qemuCommand += ["-net", "rtl8139,netdev=net0", "-net", "user,id=net0,ipv6=off" + user_network_options]
             qemuCommand += ["-net", "nic", "-net", "user,id=net0,ipv6=off" + user_network_options]
 
-        # Add a virtio RNG to speed up random number generation
-        qemuCommand += ["-device", "virtio-rng-pci"]
         runCmd(qemuCommand, stdout=sys.stdout, stderr=sys.stderr)  # even with --quiet we want stdout here
 
     @staticmethod
