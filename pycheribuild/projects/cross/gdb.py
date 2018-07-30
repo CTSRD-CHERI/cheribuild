@@ -91,6 +91,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
             "MAKEINFO=/bin/false",
             "--with-gdb-datadir=" + str(installRoot / "share/gdb"),
             "--disable-libstdcxx",
+            "--with-guile=no",
             # TODO:
             "--enable-build-with-cxx",
             ])
