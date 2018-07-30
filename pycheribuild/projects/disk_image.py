@@ -299,6 +299,19 @@ class _BuildDiskImageBase(SimpleProject):
                         runCmd("chmod", "0700", authorizedKeys.parent)
                         runCmd("chmod", "0600", authorizedKeys)
 
+        # Avoid long boot time on first start due to missing entropy:
+        # for i in ("boot/entropy", "entropy"):
+        # We need at least three 4KB entropy files for dhclient to not block on the first arc4random():
+        var_db_entrop_files = ["var/db/entropy/entropy." + str(i) for i in range(2)]
+        for i in ["boot/entropy"] + var_db_entrop_files:
+            # "dd if=/dev/random of="$i" bs=4096 count=1"
+            entropy_file = self.tmpdir / i
+            self.makedirs(entropy_file.parent)
+            with entropy_file.open("wb") as f:
+                random_data = os.urandom(4096)
+                f.write(random_data)
+            self.addFileToImage(entropy_file, baseDirectory=self.tmpdir)
+
     def makeImage(self):
         # check that qemu-img exists before starting the potentially long-running makefs command
         qemuImgCommand = self.config.sdkDir / "bin/qemu-img"
