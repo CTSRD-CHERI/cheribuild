@@ -307,9 +307,10 @@ class _BuildDiskImageBase(SimpleProject):
             # "dd if=/dev/random of="$i" bs=4096 count=1"
             entropy_file = self.tmpdir / i
             self.makedirs(entropy_file.parent)
-            with entropy_file.open("wb") as f:
-                random_data = os.urandom(4096)
-                f.write(random_data)
+            if not self.config.pretend:
+                with entropy_file.open("wb") as f:
+                    random_data = os.urandom(4096)
+                    f.write(random_data)
             self.addFileToImage(entropy_file, baseDirectory=self.tmpdir)
 
     def makeImage(self):
