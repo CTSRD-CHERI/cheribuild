@@ -141,6 +141,10 @@ class BuildLibCXX(CrossCompileCMakeProject):
                                             default=lambda c, p: LaunchCheriBSD.get_instance(cls, c).sshForwardingPort)
         cls.qemu_user = cls.addConfigOption("ssh-user", default="root", help="The CheriBSD used for running tests")
 
+        cls.test_jobs = cls.addConfigOption("parallel-test-jobs", help="Number of QEMU instances spawned to run tests "
+                                                                       "(default: number of build jobs (-j flag) / 2)",
+                                            default=lambda c, p: c.makeJobs / 2, kind=int)
+
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         if self.qemu_host:
@@ -250,7 +254,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         if self.compiling_for_host():
             runCmd("ninja", "check-cxx", "-v", cwd=self.buildDir)
         else:
-            self.run_cheribsd_test_script("run_libcxx_tests.py", "--lit-debug-output")
+            self.run_cheribsd_test_script("run_libcxx_tests.py", "--lit-debug-output", "--parallel-jobs", self.test_jobs)
 
 
 class BuildCompilerRtBaremetal(CrossCompileCMakeProject):

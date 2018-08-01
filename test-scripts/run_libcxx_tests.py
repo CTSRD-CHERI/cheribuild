@@ -39,7 +39,7 @@ import time
 import datetime
 import signal
 import sys
-from multiprocessing import Process, Semaphore
+from multiprocessing import Process, Semaphore, Queue
 from pathlib import Path
 import boot_cheribsd
 
@@ -79,8 +79,8 @@ Host cheribsd-test-instance
     lit_cmd = [str(libcxx_dir / "bin/llvm-lit"), "-j1", "-vv", "-Dexecutor=" + executor, "test"]
     if args.lit_debug_output:
         lit_cmd.append("--debug")
-    #lit_cmd.append("--timeout=600")  # 10 minutes max per test (in case there is an infinite loop)
-    lit_cmd.append("--timeout=5")
+    # This does not work since it doesn't handle running ssh commands....
+    lit_cmd.append("--timeout=120")  # 2 minutes max per test (in case there is an infinite loop)
     if args.xunit_output:
         lit_cmd.append("--xunit-xml-output")
         xunit_file = Path(args.xunit_output).absolute()
@@ -95,7 +95,13 @@ Host cheribsd-test-instance
     # --run-shard = N
     print("Will run ", " ".join(lit_cmd))
     # Fixme starting lit at the same time does not work!
-    boot_cheribsd.run_host_command(lit_cmd, cwd=str(libcxx_dir))
+    try:
+        boot_cheribsd.run_host_command(lit_cmd, cwd=str(libcxx_dir))
+    except subprocess.CalledProcessError as e:
+        if e.returncode == 1:
+            boot_cheribsd.failure("Some tests failed", exit=False)
+            return False
+        raise e  # somethign else went wrong raise an exception
 
     if False:
         # slow executor using scp:
@@ -114,16 +120,25 @@ def add_cmdline_args(parser: argparse.ArgumentParser):
     parser.add_argument("--internal-num-shards", type=int, help=argparse.SUPPRESS)
     parser.add_argument("--internal-shard", type=int, help=argparse.SUPPRESS)
 
+
+
+_MP_QUEUE = None  # type: Queue
+
+
 def set_cmdline_args(args: argparse.Namespace):
     print(args)
+    global _MP_QUEUE
+    if _MP_QUEUE:
+        _MP_QUEUE.put(args.ssh_port)  # check that we don't get a conflict
     if args.interact and (args.internal_shard or args.internal_num_shards or args.parallel_jobs):
         boot_cheribsd.failure("Cannot use --interact with ")
         sys.exit()
 
 
-def run_shard(sem: Semaphore, num, total):
-    #sys.argv.append("--internal-num-shards=" + str(total))
-    sys.argv.append("--internal-num-shards=800")
+def run_shard(q: Queue, sem: Semaphore, num, total):
+    global _MP_QUEUE
+    _MP_QUEUE = q
+    sys.argv.append("--internal-num-shards=" + str(total))
     sys.argv.append("--internal-shard=" + str(num))
     # sys.argv.append("--pretend")
     print("shard", num, sys.argv)
@@ -147,14 +162,18 @@ if __name__ == '__main__':
     args, remainder = parser.parse_known_args(filter(lambda x: x != "-h" and x != "--help", sys.argv))
     # If parallel is set spawn N processes and use the lit --num-shards + --run-shard flags to split the work
     # Since a full run takes about 16 hours this should massively reduce the amount of time needed.
-    if args.parallel_jobs:
+
+    if args.parallel_jobs and args.parallel_jobs != 1:
+        if args.parallel_jobs < 1:
+            boot_cheribsd.failure("Invalid number of parallel jobs: ", args.parallel_jobs, exit=True)
         starttime = datetime.datetime.now()
         boot_cheribsd.success("Running ", args.parallel_jobs, " parallel jobs")
         sem = Semaphore(value=0) # ensure that we block immediately
+        mp_q = Queue()
         processes = []
         for i in range(args.parallel_jobs):
             shard_num = i + 1
-            p = Process(target=run_shard, args=(sem, shard_num, args.parallel_jobs))
+            p = Process(target=run_shard, args=(mp_q, sem, shard_num, args.parallel_jobs))
             p.daemon = True     # kill process on parent exit
             p.name = "<LIBCXX test shard " + str(shard_num) + ">"
             p.start()
@@ -162,6 +181,15 @@ if __name__ == '__main__':
             atexit.register(p.terminate)
         print(processes)
         timed_out = False
+
+        ssh_ports = []  # check that we don't have multiple parallel jobs trying to use the same port
+        for i, p in enumerate(processes):
+            ssh_port = mp_q.get()
+            print("SSH port for ", p.name, "is", ssh_port)
+            if ssh_port in ssh_ports:
+                timed_out = True  # kill all child processes
+                boot_cheribsd.failure("ERROR: reusing the same SSH port in multiple jobs: ", ssh_port, exit=False)
+
         for i, p in enumerate(processes):
             # wait for completion
             max_time = 60 * 60 * 4
@@ -186,7 +214,8 @@ if __name__ == '__main__':
             if p.is_alive():
                 boot_cheribsd.failure("ERROR: Could not kill child process ", p.name, ", pid=", p.pid, exit=False)
         if timed_out:
-            boot_cheribsd.failure("Timeout running the test jobs!")
+            time.sleep(0.2)
+            boot_cheribsd.failure("Error running the test jobs!", exit=True)
         else:
             boot_cheribsd.success("All parallel jobs completed!")
         boot_cheribsd.success("Total execution time for parallel libcxx tests: ", datetime.datetime.now() - starttime)
