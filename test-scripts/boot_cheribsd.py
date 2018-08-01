@@ -60,12 +60,16 @@ PANIC_KDB = "KDB: enter: panic"
 CHERI_TRAP = "USER_CHERI_EXCEPTION: pid \\d+ tid \\d+ \(.+\)"
 
 PRETEND = False
+# To keep the port available until we start QEMU
+_SSH_SOCKET_PLACEHOLDER = None  # type: socket.socket
 
 
-def find_free_port():
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(('', 0))
-        return s.getsockname()[1]
+def find_free_port() -> int:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('', 0))
+    global _SSH_SOCKET_PLACEHOLDER
+    _SSH_SOCKET_PLACEHOLDER = s  # don't let other parallel jobs grab the same socket name
+    return s.getsockname()[1]
 
 
 def info(*args, **kwargs):
@@ -86,10 +90,11 @@ def failure(*args, exit=True, **kwargs):
 
 
 def run_host_command(*args, **kwargs):
+    args_str = " ".join((shlex.quote(i) for i in list(*args)))
     if kwargs:
-        info("\033[0;33mRunning", *args, "with", kwargs.copy(), "\033[0m")
+        info("\033[0;33mRunning", args_str, "with", kwargs.copy(), "\033[0m")
     else:
-        info("\033[0;33mRunning", *args, "\033[0m")
+        info("\033[0;33mRunning", args_str, "\033[0m")
     if PRETEND:
         return
     subprocess.check_call(*args, **kwargs)
@@ -222,6 +227,9 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
         qemu_args += ["-hda", disk_image]
     success("Starting QEMU: ", qemu_cmd, " ", " ".join(qemu_args))
     qemu_starttime = datetime.datetime.now()
+    global _SSH_SOCKET_PLACEHOLDER  # type: socket.socket
+    if _SSH_SOCKET_PLACEHOLDER is not None:
+        _SSH_SOCKET_PLACEHOLDER.close()
     if PRETEND:
         child = FakeSpawn()
     else:
@@ -372,7 +380,7 @@ def main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...]
     parser.add_argument("--keep-compressed-images", action="store_true", default=True, dest="keep_compressed_images")
     parser.add_argument("--no-keep-compressed-images", action="store_false", dest="keep_compressed_images")
     parser.add_argument("--ssh-key", default=os.path.expanduser("~/.ssh/id_ed25519.pub"))
-    parser.add_argument("--ssh-port", type=int, default=find_free_port())
+    parser.add_argument("--ssh-port", type=int, default=None)
     parser.add_argument("--use-smb-instead-of-ssh", action="store_true")
     parser.add_argument("--smb-mount-directory", help="directory used for sharing data with the QEMU guest via smb")
     parser.add_argument("--smb-dir-in-cheribsd", default="/mnt",
@@ -392,6 +400,8 @@ def main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...]
         pass
 
     args = parser.parse_args()
+    if args.ssh_port is None:
+        args.ssh_port = find_free_port()
     if argparse_adjust_args_callback:
         argparse_adjust_args_callback(args)
     if shutil.which(args.qemu_cmd) is None:
