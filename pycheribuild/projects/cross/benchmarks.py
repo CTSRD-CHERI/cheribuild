@@ -35,7 +35,7 @@ import tempfile
 
 
 class BuildMibench(CrossCompileProject):
-    repository = "git@github.com/CTSRD-CHERI/mibench"
+    repository = "git@github.com:CTSRD-CHERI/mibench"
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     projectName = "mibench"
     # Needs bsd make to build
@@ -51,6 +51,7 @@ class BuildMibench(CrossCompileProject):
             # We can't fall back to /usr/bin/ar here since that breaks on MacOS
             self.make_args.set(AR=str(self.config.sdkBinDir / "ar") + " rc")
             self.make_args.set(AR2=str(self.config.sdkBinDir / "ranlib"))
+            self.make_args.set(ADDITIONAL_CFLAGS=" ".join(self.default_compiler_flags))
             if self.compiling_for_host():
                 self.make_args.set(VERSION="x86")
             if self.compiling_for_mips():
@@ -68,7 +69,7 @@ class BuildMibench(CrossCompileProject):
 
 
 class BuildOlden(CrossCompileProject):
-    repository = "git@github.com/CTSRD-CHERI/olden"
+    repository = "git@github.com:CTSRD-CHERI/olden"
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     projectName = "olden"
     # Needs bsd make to build
@@ -83,6 +84,7 @@ class BuildOlden(CrossCompileProject):
                     CHERI_SDK=self.config.sdkDir):
             self.make_args.set(SYSROOT_DIRNAME=self.config.sdkSysrootDir.name)
             self.make_args.add_flags("-f", "Makefile.jenkins")
+            self.make_args.set(ADDITIONAL_CFLAGS=" ".join(self.default_compiler_flags))
             if self.compiling_for_host():
                 self.runMake("x86")
             if self.compiling_for_mips():
