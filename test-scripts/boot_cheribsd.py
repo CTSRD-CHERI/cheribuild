@@ -199,6 +199,7 @@ def set_posix_sh_prompt(child):
     success("===> successfully set PS1")
 
 class FakeSpawn(object):
+    pid = -1
     def expect(self, *args, **kwargs):
         # print("Expecting", args)
         return 1 if len(*args) > 1 else 0
@@ -214,6 +215,7 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
     if ssh_port is not None:
         user_network_args += ",hostfwd=tcp::" + str(ssh_port) + "-:22"
     qemu_args = ["-M", "malta", "-kernel", kernel_image, "-m", "2048", "-nographic",
+                 "-device", "virtio-rng-pci",  # faster entrop gathering
                  #  ssh forwarding:
                  "-net", "nic", "-net", user_network_args]
     if disk_image:
@@ -492,7 +494,7 @@ def main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...]
     success("===> DONE")
     info("Total execution time:", datetime.datetime.now() - starttime)
     if not tests_okay:
-        exit(1)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
