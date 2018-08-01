@@ -69,14 +69,16 @@ Host cheribsd-test-instance
         c.write(config_contents)
     Path(Path.home(), "controlmasters").mkdir(exist_ok=True)
     boot_cheribsd.run_host_command(["cat", str(Path(tempdir, "config"))])
+    # Check that the config file works:
+    boot_cheribsd.run_host_command(["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance", "-p", str(port), "--", "echo", "connection successful"], cwd=str(libcxx_dir))
 
     executor = 'SSHExecutorWithNFSMount("cheribsd-test-instance", username="{user}", port={port}, nfs_dir="{host_dir}", ' \
                'path_in_target="/mnt/tmp", extra_ssh_flags=["-F", "{tempdir}/config"], ' \
                'extra_scp_flags=["-F", "{tempdir}/config"])'.format(user=user, port=port, host_dir=str(libcxx_dir / "tmp"), tempdir=tempdir)
     print("Running libcxx_tests with executor", executor)
     # TODO: sharding + xunit output
-    # have to use -j1 since otherwise CheriBSD might wedge
-    lit_cmd = [str(libcxx_dir / "bin/llvm-lit"), "-j1", "-vv", "-Dexecutor=" + executor, "test"]
+    # have to use -j1 + --single-process since otherwise CheriBSD might wedge
+    lit_cmd = [str(libcxx_dir / "bin/llvm-lit"), "-j1", "-vv", "--single-process", "-Dexecutor=" + executor, "test"]
     if args.lit_debug_output:
         lit_cmd.append("--debug")
     # This does not work since it doesn't handle running ssh commands....
