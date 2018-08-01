@@ -111,6 +111,7 @@ class JenkinsConfig(CheriConfig):
         # self.strip_install_prefix_from_archive = loader.addCommandLineOnlyBoolOption("strip-install-prefix-from-archive",
         #    help="Only put the files inside the install prefix into the tarball (stripping the leading directories)")  # type: bool
         self.skipUpdate = True
+        self.skipClone = True
         self.verbose = True
         self.quiet = False
         self.clean = loader.addCommandLineOnlyBoolOption("clean", default=True,
@@ -199,6 +200,7 @@ class JenkinsConfig(CheriConfig):
 
         if self.force_update:
             self.skipUpdate = False
+            self.skipClone = False
 
         if self.without_sdk:
             if not self.crossCompileTarget == CrossCompileTarget.NATIVE:

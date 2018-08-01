@@ -133,6 +133,7 @@ class CheriConfig(object):
         self.force = None  # type: bool
         self.noLogfile = None  # type: bool
         self.skipUpdate = None  # type: bool
+        self.skipClone = None  # type: bool
         self.skipConfigure = None  # type: bool
         self.forceConfigure = None  # type: bool
         self.force_update = None  # type: bool

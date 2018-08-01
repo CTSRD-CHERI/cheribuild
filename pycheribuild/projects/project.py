@@ -870,6 +870,8 @@ class Project(SimpleProject):
     def _ensureGitRepoIsCloned(self, *, srcDir: Path, remoteUrl, initialBranch=None, skipSubmodules=False):
         # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
         if not (srcDir / ".git").exists():
+            if self.config.skipClone:
+                fatalError("Sources for", str(srcDir), " missing!")
             print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?", end="")
             if not self.queryYesNo(defaultResult=False):
                 fatalError("Sources for", str(srcDir), " missing!")
@@ -883,6 +885,8 @@ class Project(SimpleProject):
     def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None, skipSubmodules=False):
         self._ensureGitRepoIsCloned(srcDir=srcDir, remoteUrl=remoteUrl, initialBranch=initialBranch,
                                     skipSubmodules=skipSubmodules)
+        if self.config.skipUpdate:
+            return
         # make sure we run git stash if we discover any local changes
         hasChanges = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
                                 captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
@@ -1100,8 +1104,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 installDir = str(self.destdir) + str(self.installPrefix)
             print(self.projectName, "directories: source=%s, build=%s, install=%s" %
                   (self.sourceDir, self.buildDir, installDir))
-        if not self.config.skipUpdate:
-            self.update()
+        self.update()
         if not self._systemDepsChecked:
             self.checkSystemDependencies()
         assert self._systemDepsChecked, "self._systemDepsChecked must be set by now!"
