@@ -62,7 +62,9 @@ Host cheribsd-test-instance
         StrictHostKeyChecking no
         # faster connection by reusing the existing one:
         ControlPath {home}/.ssh/controlmasters/%r@%h:%p
-        ControlMaster no
+        ConnectTimeout 20
+        ConnectionAttempts 1
+        ControlMaster auto
 """.format(user=user, port=port, ssh_key=Path(args.ssh_key).with_suffix(""), home=Path.home())
     # print("Writing ssh config: ", config_contents)
     with Path(tempdir, "config").open("w") as c:
