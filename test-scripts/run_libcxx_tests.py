@@ -75,7 +75,7 @@ Host cheribsd-test-instance
     boot_cheribsd.run_host_command(["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance", "-p", str(port), "--", "echo", "connection successful"], cwd=str(libcxx_dir))
 
     executor = 'SSHExecutorWithNFSMount("cheribsd-test-instance", username="{user}", port={port}, nfs_dir="{host_dir}", ' \
-               'path_in_target="/mnt/tmp", extra_ssh_flags=["-F", "{tempdir}/config"], ' \
+               'path_in_target="/mnt/tmp", extra_ssh_flags=["-F", "{tempdir}/config", "-n", "-4", "-t", "-t"], ' \
                'extra_scp_flags=["-F", "{tempdir}/config"])'.format(user=user, port=port, host_dir=str(libcxx_dir / "tmp"), tempdir=tempdir)
     print("Running libcxx_tests with executor", executor)
     # TODO: sharding + xunit output
