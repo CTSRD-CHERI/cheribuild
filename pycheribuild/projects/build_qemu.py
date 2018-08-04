@@ -178,17 +178,26 @@ class BuildQEMU(AutotoolsProject):
         else:
             self.configureArgs.extend(["--disable-linux-aio", "--disable-kvm"])
 
+        smbd_path = "/usr/sbin/smbd"
         if IS_FREEBSD:
-            self.configureArgs.append("--smbd=/usr/local/sbin/smbd")
+            smbd_path = "/usr/local/sbin/smbd"
         elif IS_MAC:
-            # QEMU user networking expects a smbd that accepts the same flags and config files as the samba.org
-            # sources but the macos /usr/sbin/smbd is incompatible with that:
-            valid_smbd = self.config.otherToolsDir / "sbin/smbd"
-            if not valid_smbd.exists():
+            smbd_path = "/the/smbd/shipped/by/macos/is/not/compatible/with/qemu"
+        if Path(smbd_path).exists():
+            self.configureArgs.append("--smbd=" + smbd_path)
+        else:
+            bootstrap_smbd = self.config.otherToolsDir / "sbin/smbd"
+            if bootstrap_smbd.exists():
+                self.configureArgs.append("--smbd=" + str(bootstrap_smbd))
+            elif IS_MAC:
+                # QEMU user networking expects a smbd that accepts the same flags and config files as the samba.org
+                # sources but the macos /usr/sbin/smbd is incompatible with that:
                 warningMessage("QEMU usermode samba shares require the samba.org smbd. You will need to build it from "
-                               "source since the /usr/sbin/smbd shipped by MacOS is incompatible with QEMU")
-            self._addRequiredSystemTool(valid_smbd, cheribuild_target="samba")
-            self.configureArgs.append("--smbd=" + str(valid_smbd))
+                               "source (using `cheribuild.py samba`) since the /usr/sbin/smbd shipped by MacOS is "
+                               "incompatible with QEMU")
+                # self._addRequiredSystemTool(valid_smbd, cheribuild_target="samba", apt="samba")
+            else:
+                warningMessage("Could not find smbd -> QEMU SMB shares networking will not work")
 
 
     def update(self):
