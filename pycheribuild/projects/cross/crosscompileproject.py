@@ -226,6 +226,10 @@ class CrossCompileMixin(MultiArchBaseMixin):
         self.CXXFLAGS = []
         self.ASMFLAGS = []
         self.LDFLAGS = []
+        # Don't build CHERI with ASAN since that doesn't work or make much sense
+        if self.use_asan and not self.compiling_for_cheri():
+            self.COMMON_FLAGS.append("-fsanitize=address")
+            self.LDFLAGS.append("-fsanitize=address")
 
     def links_against_newlib_baremetal(self):
         # This needs to be fixed once we have RTEMS
@@ -367,6 +371,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
         cls.debugInfo = cls.addBoolOption("debug-info", help="build with debug info", default=True)
         cls.optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
                                                     default=default_opt_level)
+        cls.use_asan = cls.addBoolOption("use-asan", default=False, help="Build with AddressSanitizer enabled")
         cls._linkage = cls.addConfigOption("linkage", help="Build static or dynamic (default means for host=dynamic,"
                                                           " CHERI/MIPS=<value of option --cross-compile-linkage>)",
                                            default=Linkage.DEFAULT, kind=Linkage)
