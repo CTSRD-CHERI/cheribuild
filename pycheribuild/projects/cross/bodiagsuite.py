@@ -32,13 +32,15 @@ from .crosscompileproject import *
 
 class BuildBODiagSuite(CrossCompileCMakeProject):
     projectName = "bodiagsuite"
+    repository = "https://github.com/nwf/bodiagsuite"
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     appendCheriBitsToBuildDir = True
     supported_architectures = [CrossCompileTarget.CHERI, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
-    default_architecture = CrossCompileTarget.CHERI
     defaultOptimizationLevel = ["-O0"]
 
     def __init__(self, config: CheriConfig, *args, **kwargs):
+        if self.compiling_for_host():
+            self.use_asan = True  # must set this before calling the superclass constructor
         super().__init__(config, *args, **kwargs)
         self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
 
