@@ -39,10 +39,31 @@ import time
 import datetime
 import signal
 import sys
+import threading
 from multiprocessing import Process, Semaphore, Queue
 from pathlib import Path
 import boot_cheribsd
 
+KERNEL_PANIC = False
+
+
+def flush_thread(f, qemu: pexpect.spawn):
+    while True:
+        if f:
+            f.flush()
+        i = qemu.expect([pexpect.TIMEOUT, "KDB: enter:"], timeout=30)
+        if i == 1:
+            boot_cheribsd.failure("GOT KERNEL PANIC!", exit=False)
+            print(qemu)
+            # wait up to 10 seconds for a db prompt
+            qemu.expect([pexpect.TIMEOUT, "db> "], timeout=10)
+            if i == 1:
+                qemu.sendline("bt")
+            # wait for the backtrace
+            qemu.expect([pexpect.TIMEOUT, "db> "], timeout=30)
+            global KERNEL_PANIC
+            KERNEL_PANIC = True
+            # TODO: tell lit to abort now....
 
 def run_tests_impl(qemu: pexpect.spawn, args: argparse.Namespace, tempdir: str):
     print("PID of QEMU:", qemu.pid)
@@ -62,9 +83,9 @@ Host cheribsd-test-instance
         StrictHostKeyChecking no
         # faster connection by reusing the existing one:
         ControlPath {home}/.ssh/controlmasters/%r@%h:%p
-        ConnectTimeout 20
-        ConnectionAttempts 1
-        ControlMaster auto
+        # ConnectTimeout 30
+        # ConnectionAttempts 3
+        ControlMaster no
 """.format(user=user, port=port, ssh_key=Path(args.ssh_key).with_suffix(""), home=Path.home())
     # print("Writing ssh config: ", config_contents)
     with Path(tempdir, "config").open("w") as c:
@@ -85,27 +106,55 @@ Host cheribsd-test-instance
         lit_cmd.append("--debug")
     # This does not work since it doesn't handle running ssh commands....
     lit_cmd.append("--timeout=120")  # 2 minutes max per test (in case there is an infinite loop)
+    xunit_file = None  # type: Path
     if args.xunit_output:
         lit_cmd.append("--xunit-xml-output")
         xunit_file = Path(args.xunit_output).absolute()
         if args.internal_shard:
             xunit_file = xunit_file.with_name("shard-" + str(args.internal_shard) + "-" + xunit_file.name)
         lit_cmd.append(str(xunit_file))
+    qemu_logfile = None
     if args.internal_shard:
         assert args.internal_num_shards, "Invalid call!"
         lit_cmd.append("--num-shards=" + str(args.internal_num_shards))
         lit_cmd.append("--run-shard=" + str(args.internal_shard))
-    # TODO: --num-shards = 16
-    # --run-shard = N
-    print("Will run ", " ".join(lit_cmd))
+        if xunit_file:
+            qemu_log_path = xunit_file.with_suffix(".output").absolute()
+            boot_cheribsd.success("Writing QEMU output to ", qemu_log_path)
+            qemu_logfile = qemu_log_path.open("w")
+            qemu.logfile_read = qemu_logfile
+            boot_cheribsd.run_cheribsd_command(qemu, "echo HELLO LOGFILE")
     # Fixme starting lit at the same time does not work!
+    # TODO: add the polling to the main thread instead of having another thread?
+    # start the qemu output flushing thread so that we can see the kernel panic
+    t = threading.Thread(target=flush_thread, args=(qemu_logfile, qemu))
+    t.daemon = True
+    t.start()
+    shard_prefix = "SHARD" + str(args.internal_shard) + ": " if args.internal_shard else ""
     try:
+        boot_cheribsd.success("Starting llvm-lit: cd ", libcxx_dir, " && ", " ".join(lit_cmd))
         boot_cheribsd.run_host_command(lit_cmd, cwd=str(libcxx_dir))
-    except subprocess.CalledProcessError as e:
-        if e.returncode == 1:
-            boot_cheribsd.failure("Some tests failed", exit=False)
-            return False
-        raise e  # somethign else went wrong raise an exception
+        # lit_proc = pexpect.spawnu(lit_cmd[0], lit_cmd[1:], echo=True, timeout=60, cwd=str(libcxx_dir))
+        # TODO: get stderr!!
+        # while lit_proc.isalive():
+        while False:
+            line = lit_proc.readline()
+            if shard_prefix:
+                line =  shard_prefix + line
+            print(line)
+            global KERNEL_PANIC
+            # Abort once we detect a kernel panic
+            if KERNEL_PANIC:
+                lit_proc.sendintr()
+            print(shard_prefix + lit_proc.read())
+        print("Lit finished.")
+        if lit_proc.exitstatus == 1:
+            boot_cheribsd.failure(shard_prefix + "SOME TESTS FAILED", exit=False)
+    except:
+        raise
+    finally:
+        if qemu_logfile:
+            qemu_logfile.flush()
 
     if False:
         # slow executor using scp:
@@ -156,8 +205,12 @@ def run_shard(q: Queue, sem: Semaphore, num, total):
 
 def libcxx_main():
     from run_tests_common import run_tests_main
-    run_tests_main(test_function=run_libcxx_tests, need_ssh=True, # we need ssh running to execute the tests
-                   argparse_setup_callback=add_cmdline_args, argparse_adjust_args_callback=set_cmdline_args)
+    try:
+        run_tests_main(test_function=run_libcxx_tests, need_ssh=True, # we need ssh running to execute the tests
+                       argparse_setup_callback=add_cmdline_args, argparse_adjust_args_callback=set_cmdline_args)
+    finally:
+        print("Finished running ", " ".join(sys.argv))
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
