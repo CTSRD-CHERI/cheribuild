@@ -409,6 +409,23 @@ class CrossCompileMixin(MultiArchBaseMixin):
         with setEnv(**env):
             super().configure(**kwargs)
 
+    def process(self):
+        if self.use_asan and self.compiling_for_mips():
+            # copy the ASAN lib into the right directory:
+            resource_dir = getCompilerInfo(self.CC).get_resource_dir()
+            statusUpdate("Copying ASAN libs to", resource_dir)
+            expected_path = resource_dir / "lib/freebsd/"
+            asan_libs = self.sdkSysroot / "usr/lib/clang/6.0.0/lib/freebsd/"
+            libname = "libclang_rt.asan-mips64.a"
+            if not (asan_libs / libname).exists():
+                fatalError("Cannot find", libname, "library in sysroot dir", asan_libs, "-- Compilation will fail!")
+            self.makedirs(expected_path)
+            runCmd("cp", "-av", asan_libs, expected_path.parent)
+            if not (expected_path / libname).exists():
+                fatalError("Cannot find", libname, "library in compiler dir", expected_path, "-- Compilation will fail!")
+
+        super().process()
+
     def run_cheribsd_test_script(self, script_name, *script_args):
         from .cheribsd import BuildCheriBsdMfsKernel
         from ..build_qemu import BuildQEMU
