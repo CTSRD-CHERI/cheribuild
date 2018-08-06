@@ -52,7 +52,9 @@ def flush_thread(f, qemu: pexpect.spawn):
         if f:
             f.flush()
         i = qemu.expect([pexpect.TIMEOUT, "KDB: enter:"], timeout=30)
-        if i == 1:
+        if boot_cheribsd.PRETEND:
+            time.sleep(1)
+        elif i == 1:
             boot_cheribsd.failure("GOT KERNEL PANIC!", exit=False)
             print(qemu)
             # wait up to 10 seconds for a db prompt
@@ -85,7 +87,7 @@ Host cheribsd-test-instance
         ControlPath {home}/.ssh/controlmasters/%r@%h:%p
         # ConnectTimeout 30
         # ConnectionAttempts 3
-        ControlMaster no
+        ControlMaster auto
 """.format(user=user, port=port, ssh_key=Path(args.ssh_key).with_suffix(""), home=Path.home())
     # print("Writing ssh config: ", config_contents)
     with Path(tempdir, "config").open("w") as c:
@@ -98,6 +100,12 @@ Host cheribsd-test-instance
     executor = 'SSHExecutorWithNFSMount("cheribsd-test-instance", username="{user}", port={port}, nfs_dir="{host_dir}", ' \
                'path_in_target="/mnt/tmp", extra_ssh_flags=["-F", "{tempdir}/config", "-n", "-4", "-t", "-t"], ' \
                'extra_scp_flags=["-F", "{tempdir}/config"])'.format(user=user, port=port, host_dir=str(libcxx_dir / "tmp"), tempdir=tempdir)
+    # FIXME: due to https://github.com/CTSRD-CHERI/cheribsd/issues/275 can't use smb for now
+    # This is much slower but at least we can run multiple threads so it's 4 days / num shards
+    executor = 'SSHExecutor("cheribsd-test-instance", username="{user}", port={port}, ' \
+               'extra_ssh_flags=["-F", "{tempdir}/config", "-n", "-4", "-t", "-t"], ' \
+               'extra_scp_flags=["-F", "{tempdir}/config"])'.format(user=user, port=port, tempdir=tempdir)
+
     print("Running libcxx_tests with executor", executor)
     # TODO: sharding + xunit output
     # have to use -j1 + --single-process since otherwise CheriBSD might wedge
@@ -137,6 +145,7 @@ Host cheribsd-test-instance
         # lit_proc = pexpect.spawnu(lit_cmd[0], lit_cmd[1:], echo=True, timeout=60, cwd=str(libcxx_dir))
         # TODO: get stderr!!
         # while lit_proc.isalive():
+        lit_proc = None
         while False:
             line = lit_proc.readline()
             if shard_prefix:
@@ -148,7 +157,7 @@ Host cheribsd-test-instance
                 lit_proc.sendintr()
             print(shard_prefix + lit_proc.read())
         print("Lit finished.")
-        if lit_proc.exitstatus == 1:
+        if lit_proc and lit_proc.exitstatus == 1:
             boot_cheribsd.failure(shard_prefix + "SOME TESTS FAILED", exit=False)
     except:
         raise
