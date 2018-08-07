@@ -40,8 +40,12 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     make_kind = MakeCommandKind.GnuMake
     defaultOptimizationLevel = ["-O2"]
     # TODO: only use mxcaptable for some files
-    needs_mxcaptable_static = True  # Slightly over the limit
-    needs_mxcaptable_dynamic = True  # Slightly over the limit
+    needs_mxcaptable_static = True  # both are slightly over the limit
+    # warning: added 31332 entries to .cap_table but current maximum is 16384; try recompiling non-performance critical source files with -mxcaptable
+
+    @property
+    def needs_mxcaptable_dynamic(self):
+        return self.compiling_for_cheri() and self.config.cheriBits == 256
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
