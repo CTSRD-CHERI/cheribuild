@@ -100,14 +100,8 @@ Host cheribsd-test-instance
     executor = 'SSHExecutorWithNFSMount("cheribsd-test-instance", username="{user}", port={port}, nfs_dir="{host_dir}", ' \
                'path_in_target="/mnt/tmp", extra_ssh_flags=["-F", "{tempdir}/config", "-n", "-4", "-t", "-t"], ' \
                'extra_scp_flags=["-F", "{tempdir}/config"])'.format(user=user, port=port, host_dir=str(libcxx_dir / "tmp"), tempdir=tempdir)
-    # FIXME: due to https://github.com/CTSRD-CHERI/cheribsd/issues/275 can't use smb for now
-    # This is much slower but at least we can run multiple threads so it's 4 days / num shards
-    executor = 'SSHExecutor("cheribsd-test-instance", username="{user}", port={port}, ' \
-               'extra_ssh_flags=["-F", "{tempdir}/config", "-n", "-4", "-t", "-t"], ' \
-               'extra_scp_flags=["-F", "{tempdir}/config"])'.format(user=user, port=port, tempdir=tempdir)
 
     print("Running libcxx_tests with executor", executor)
-    # TODO: sharding + xunit output
     # have to use -j1 + --single-process since otherwise CheriBSD might wedge
     lit_cmd = [str(libcxx_dir / "bin/llvm-lit"), "-j1", "-vv", "--single-process", "-Dexecutor=" + executor, "test"]
     if args.lit_debug_output:
