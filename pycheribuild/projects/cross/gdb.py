@@ -58,7 +58,7 @@ class TemporarilyRemoveProgramsFromSdk(object):
 class BuildGDB(CrossCompileAutotoolsProject):
     rootfs_path = "/usr/local"  # Always install gdb as /usr/local/bin/gdb
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
-    repository = "https://github.com/bsdjhb/gdb.git"
+    repository = "https://github.com/CTSRD-CHERI/gdb.git"
     gitBranch = "mips_cheri-8.0.1"
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
@@ -92,8 +92,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
             "--with-gdb-datadir=" + str(installRoot / "share/gdb"),
             "--disable-libstdcxx",
             "--with-guile=no",
-            # TODO:
-            "--enable-build-with-cxx",
             ])
 
         # BUILD the gui:
