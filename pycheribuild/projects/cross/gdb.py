@@ -151,10 +151,16 @@ class BuildGDB(CrossCompileAutotoolsProject):
         """(cd $obj; env INSTALL="/usr/bin/install -c "  INSTALL_DATA="install   -m 0644"  INSTALL_LIB="install    -m 444"  INSTALL_PROGRAM="install    -m 555"  INSTALL_SCRIPT="install   -m 555"   PYTHON="${PYTHON}" SHELL=/bin/sh CONFIG_SHELL=/bin/sh CONFIG_SITE=/usr/ports/Templates/config.site ../configure ${CONFIGURE_ARGS} )"""
 
     def update(self):
+        # Update from the old url:
+        remote_url = runCmd("git", "remote", "get-url", "origin", captureOutput=True, cwd=self.sourceDir).stdout.strip()
+        if remote_url == b'https://github.com/bsdjhb/gdb.git':
+            warningMessage("GDB still points to old repository", remote_url)
+            if self.queryYesNo("Update to correct URL?"):
+                runCmd("git", "remote", "set-url", "origin", "https://github.com/CTSRD-CHERI/gdb.git",
+                       runInPretendMode=True, cwd=self.sourceDir)
         super().update()
         status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
                         captureOutput=True, printVerboseOnly=True, cwd=self.sourceDir)
-        print("Status = ", status.stdout)
         if status.stdout.startswith(b"## mips_cheri..."):
             warningMessage("You are trying to build the old unsupported mips_cheri branch. You should be using",
                            self.gitBranch)
