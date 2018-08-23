@@ -517,7 +517,8 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         try:
             make_cmd = shutil.which(self.make_args.command) or self.make_args.command
             buildenv_cmd = make_cmd + " -V " + var
-            bw_flags = args.all_commandline_args + ["buildenv", "BUILDENV_SHELL=" + buildenv_cmd]
+            bw_flags = args.all_commandline_args + ["BUILD_WITH_STRICT_TMPPATH=0", "buildenv",
+                                                    "BUILDENV_SHELL=" + buildenv_cmd]
             if self.crossbuild:
                 bw_flags.append("PATH=" + os.getenv("PATH"))
             if not self.sourceDir.exists():
@@ -814,6 +815,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         elif self.config.buildenv or self.config.libcheri_buildenv:
             args = self.buildworldArgs
             args.remove_flag("-s")  # buildenv should not be silent
+            args.set(BUILDENV_SHELL="/bin/sh")
             buildenv_target = "buildenv"
             if self._crossCompileTarget == CrossCompileTarget.CHERI and self.config.libcheri_buildenv:
                 buildenv_target = "libcheribuildenv"
