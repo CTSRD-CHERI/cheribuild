@@ -815,7 +815,11 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         elif self.config.buildenv or self.config.libcheri_buildenv:
             args = self.buildworldArgs
             args.remove_flag("-s")  # buildenv should not be silent
-            args.set(BUILDENV_SHELL="/bin/sh")
+            if "bash" in os.getenv("SHELL", ""):
+                args.set(BUILDENV_SHELL="env -u PROMPT_COMMAND 'PS1=" + self.target + "-buildenv:\\w> ' " +
+                                        shutil.which("bash") + " --norc --noprofile")
+            else:
+                args.set(BUILDENV_SHELL="/bin/sh")
             buildenv_target = "buildenv"
             if self._crossCompileTarget == CrossCompileTarget.CHERI and self.config.libcheri_buildenv:
                 buildenv_target = "libcheribuildenv"
