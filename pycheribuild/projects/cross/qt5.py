@@ -29,7 +29,7 @@
 #
 from .crosscompileproject import *
 from ...config.loader import ComputedDefaultValue
-from ...utils import commandline_to_str, runCmd, IS_FREEBSD
+from ...utils import commandline_to_str, runCmd, IS_FREEBSD, IS_MAC
 from pathlib import Path
 
 # This class is used to build qtbase and all of qt5
@@ -107,6 +107,11 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         ])
         if self.build_tests:
             self.configureArgs.append("-developer-build")
+            if IS_MAC:
+                # Otherwise we get "ERROR: debug-only framework builds are not supported. Configure with -no-framework
+                # if you want a pure debug build."
+                self.configureArgs.append("-no-framework")
+
         else:
             self.configureArgs.extend(["-nomake", "tests"])
 
