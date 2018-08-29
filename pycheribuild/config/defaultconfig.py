@@ -93,7 +93,7 @@ class DefaultCheriConfig(CheriConfig):
         self._buildCheri256 = loader.cheriBitsGroup.add_argument("--cheri-256", "--256", dest="cheri_bits",
                                                                  action="store_const", const="256",
                                                                  help="Shortcut for --cheri-bits=256")
-        self.cheriBits = loader.addOption("cheri-bits", type=int, group=loader.cheriBitsGroup, default=256,
+        self.cheriBits = loader.addOption("cheri-bits", type=int, group=loader.cheriBitsGroup, default=128,
                                           help="Whether to build the whole software stack for 128 or 256 bit"
                                                " CHERI. The output directories will be suffixed with the number of bits"
                                                " to make sure the right binaries are being used.",
