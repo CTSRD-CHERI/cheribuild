@@ -205,7 +205,7 @@ class JenkinsConfig(CheriConfig):
         if self.without_sdk:
             if not self.crossCompileTarget == CrossCompileTarget.NATIVE:
                 fatalError("The --without-sdk flag only works when building host binaries")
-            self.sdkDir = Path("/this/path/is/invalid")
+            self.sdkDir = self.outputRoot / str(self.installationPrefix).strip('/')
             self.clangPath = Path(os.getenv("HOST_CC", latestClangTool("clang")))
             self.clangPlusPlusPath = Path(os.getenv("HOST_CXX", latestClangTool("clang++")))
             if not self.clangPath:
