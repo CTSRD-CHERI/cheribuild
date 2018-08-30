@@ -522,6 +522,27 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 print("Parsed", config_path, "as", coloured(AnsiColour.cyan, json.dumps(result)))
             return result
 
+    # Based on https://stackoverflow.com/a/7205107/894271
+    def merge_dict_recursive(self, a: dict, b: dict, included_file: Path, base_file: Path, path=None) -> dict:
+        "merges b into a"
+        if path is None:
+            path = []
+        for key in b:
+            if key == "#include":
+                continue
+            if key in a:
+                if isinstance(a[key], dict) and isinstance(b[key], dict):
+                    self.merge_dict_recursive(a[key], b[key], included_file, base_file, path + [str(key)])
+                elif a[key] != b[key]:
+                    if self._parsedArgs and self._parsedArgs.verbose is True:
+                        print("Overriding '" + '.'.join(path + [str(key)]) + "' value", b[key]," from", included_file,
+                              "with value ", a[key], "from", base_file)
+                else:
+                    pass  # same leaf value
+            else:
+                a[key] = b[key]
+        return a
+
     def __load_json_with_includes(self, config_path: Path):
         result = dict()
         try:
@@ -534,9 +555,8 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         include_value = result.get("#include")
         if include_value:
             included_path = config_path.parent / include_value
-            base_json = self.__load_json_with_includes(included_path)
-            base_json.update(result)
-            result = base_json
+            included_json = self.__load_json_with_includes(included_path)
+            result = self.merge_dict_recursive(result, included_json, included_path, config_path)
             if self._parsedArgs and self._parsedArgs.verbose is True:
                 print(coloured(AnsiColour.cyan, "Included JSON config file", included_path))
                 print("New result is", coloured(AnsiColour.cyan, json.dumps(result)))

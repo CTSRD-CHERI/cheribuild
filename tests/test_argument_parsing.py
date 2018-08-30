@@ -337,6 +337,16 @@ def test_config_file_include():
                                                b'{ "#include": "change-source-root.json", "source-root": "/override/again"}')
         assert "/override/again" == str(result.sourceRoot)
 
+
+        # Test merging of objects:
+        write_bytes(config_dir / "change-smb-dir.json",
+            b'{ "run": { "smb-host-directory": "/some/path" }, "#include": "common.json" }')
+        result = _get_config_with_include(config_dir, b'{ "run": { "ssh-forwarding-port": 12345 }, "#include": "change-smb-dir.json" }')
+        run_project = targetManager.get_target_raw("run").get_or_create_project(None, result)
+        assert run_project.qemu_smb_mount == Path("/some/path")
+        assert run_project.sshForwardingPort == 12345
+
+
         with tempfile.TemporaryDirectory() as d2:
             # Check that relative paths work
             relpath = b"../" + str(Path(d).relative_to(Path(d2).parent)).encode("utf-8")
