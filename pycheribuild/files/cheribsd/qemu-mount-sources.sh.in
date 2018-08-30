@@ -1,0 +1,3 @@
+#!/bin/sh
+set -xe
+mkdir -p {SRCPATH} && mount -o ro 10.0.2.2:{SRCPATH} {SRCPATH}

@@ -1,0 +1,21 @@
+#!/bin/sh
+set -xe
+cat /etc/fstab
+qemu-mount-rootfs.sh
+if [ ! -e /nfsroot/etc/fstab ]; then
+    echo "No fstab found on nfsroot"
+    echo "tmpfs /tmp tmpfs rw,failok 0 0" >> /nfsroot/etc/fstab
+fi
+# check that /etc/fstab does not contain anything wrong
+# Ensure we have a tmpfs in the fstab:
+grep /tmp /nfsroot/etc/fstab | grep tmpfs
+if grep /dev/ada0 /nfsroot/etc/fstab; then
+    echo "Should not have /dev/ada0 in nfsroot fstab"
+    cat /nfsroot/etc/fstab
+    exit 1
+fi
+# TODO: create some directories that might not exist (this won't happen automatically for some reason)
+
+umount /nfsroot
+echo "Rerooting from nfs:10.0.2.2:{ROOTFS_DIR}"
+kenv vfs.root.mountfrom=nfs:10.0.2.2:{ROOTFS_DIR} && reboot -r

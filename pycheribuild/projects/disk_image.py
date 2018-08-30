@@ -266,6 +266,18 @@ class _BuildDiskImageBase(SimpleProject):
             SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
         self.createFileForImage("/etc/csh.cshrc", contents=cshrcContents)
 
+        # Add the mount-source/mount-rootfs/do-reroot scripts (even in the minimal image)
+        # TODO: should we omit this from the minimal image?
+        mount_rootfs_script = includeLocalFile("files/cheribsd/qemu-mount-rootfs.sh.in").format(
+            SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
+        self.createFileForImage("/sbin/qemu-mount-rootfs.sh", contents=mount_rootfs_script, showContentsByDefault=False)
+        mount_sources_script = includeLocalFile("files/cheribsd/qemu-mount-sources.sh.in").format(
+            SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
+        self.createFileForImage("/sbin/qemu-mount-sources.sh", contents=mount_sources_script, showContentsByDefault=False)
+        do_reroot_script = includeLocalFile("files/cheribsd/qemu-do-reroot.sh.in").format(
+            SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
+        self.createFileForImage("/sbin/qemu-do-reroot.sh", contents=do_reroot_script, showContentsByDefault=False)
+
         # make sure that the disk image always has the same SSH host keys
         # If they don't exist the system will generate one on first boot and we have to accept them every time
         self.generateSshHostKeys()

@@ -11,6 +11,6 @@ bindkey "\e[8~" end-of-line        # End rxvt
 
 
 alias cd..	cd ..
-alias mount-sources	"mkdir -p {SRCPATH} && mount -o ro 10.0.2.2:{SRCPATH} {SRCPATH}"
-alias mount-rootfs	"mkdir -p /rootfs && mount 10.0.2.2:{ROOTFS_DIR} /rootfs/"
-alias do-reroot "kenv vfs.root.mountfrom=nfs:10.0.2.2:{ROOTFS_DIR} && reboot -r"
+alias mount-sources	"qemu-mount-sources.sh"
+alias mount-rootfs	"qemu-mount-rootfs.sh"
+alias do-reroot "qemu-do-reroot.sh"

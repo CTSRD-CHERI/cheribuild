@@ -1,0 +1,6 @@
+#!/bin/sh
+set -xe
+# I previously mounted this in /rootfs but that is annoying because tab completion
+# will give /root first. Use /nfsroot instead and add a symlink for the old path.
+mkdir -p /nfsroot && mount 10.0.2.2:{ROOTFS_DIR} /nfsroot/
+ln -s /nfsroot /rootfs
