@@ -558,7 +558,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             included_json = self.__load_json_with_includes(included_path)
             result = self.merge_dict_recursive(result, included_json, included_path, config_path)
             if self._parsedArgs and self._parsedArgs.verbose is True:
-                print(coloured(AnsiColour.cyan, "Included JSON config file", included_path))
+                print(coloured(AnsiColour.cyan, "Merging JSON config file", included_path))
                 print("New result is", coloured(AnsiColour.cyan, json.dumps(result)))
 
         return result

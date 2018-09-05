@@ -272,20 +272,28 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     assertBuildDirsDifferent()
     # overriding native build dir is fine:
     _parse_arguments(["--cheribsd-purecap/build-directory=/foo/bar"])
+    assert cheribsd_purecap.buildDir == Path("/foo/bar")
     assertBuildDirsDifferent()
     _parse_config_file_and_args(b'{"cheribsd-purecap/build-directory": "/foo/bar"}')
+    assert cheribsd_purecap.buildDir == Path("/foo/bar")
     assertBuildDirsDifferent()
-    # Should not inherit from the default one:
+    # cheribsd-cheri should inherit from the default one, but not cheribsd-purecap:
     _parse_arguments(["--cheribsd/build-directory=/foo/bar"])
+    assert cheribsd_cheri.buildDir == Path("/foo/bar")
+    assert cheribsd_purecap.buildDir != Path("/foo/bar")
     assertBuildDirsDifferent()
     _parse_config_file_and_args(b'{"cheribsd/build-directory": "/foo/bar"}')
+    assert cheribsd_cheri.buildDir == Path("/foo/bar")
+    assert cheribsd_purecap.buildDir != Path("/foo/bar")
     assertBuildDirsDifferent()
 
-    # Should not inherit from the default one:
+    # cheribsd-cheri/builddir should have higher prirority:
     _parse_arguments(["--cheribsd/build-directory=/foo/bar", "--cheribsd-cheri/build-directory=/bar/foo"])
+    assert cheribsd_cheri.buildDir == Path("/bar/foo")
     assertBuildDirsDifferent()
     _parse_config_file_and_args(b'{"cheribsd/build-directory": "/foo/bar",'
                                      b' "cheribsd-cheri/build-directory": "/bar/foo"}')
+    assert cheribsd_cheri.buildDir == Path("/bar/foo")
     assertBuildDirsDifferent()
 
 

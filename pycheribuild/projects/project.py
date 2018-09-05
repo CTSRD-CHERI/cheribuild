@@ -260,8 +260,18 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # We don't want to inherit certain options from the non-target specific class since they should always be
         # set directly for that target. Currently the only such option is build-directory since sharing that would
         # break the build in most cases.
-        if not _no_fallback_config_name and fallback_name_base and name not in ["build-directory"]:
-            fallback_config_name = fallback_name_base + "/" + name
+        if not _no_fallback_config_name and fallback_name_base:
+            if name not in ["build-directory"]:
+                fallback_config_name = fallback_name_base + "/" + name
+            elif synthetic_base is not None:
+                from .cross.multiarchmixin import MultiArchBaseMixin
+                assert issubclass(cls, MultiArchBaseMixin)
+                # build-directory should only be inherited for the default target (e.g. cheribsd-cheri -> cheribsd):
+                if cls.default_architecture is not None and cls.default_architecture == cls._crossCompileTarget:
+                    # Don't allow cheribsd-purecap/build-directory to fall back to cheribsd/build-directory
+                    # but if the projectName is the same we can assume it's the same class:
+                    if cls.projectName == synthetic_base.projectName:
+                        fallback_config_name = fallback_name_base + "/" + name
         return cls._configLoader.addOption(configOptionKey + "/" + name, shortname, default=default, type=kind,
                                            _owningClass=cls, group=cls._commandLineOptionGroup, helpHidden=helpHidden,
                                            _fallback_name=fallback_config_name, **kwargs)
