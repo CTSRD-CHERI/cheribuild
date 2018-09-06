@@ -222,11 +222,21 @@ class BuildQtBase(BuildQtWithConfigureScript):
             self.run_cheribsd_test_script("run_qtbase_tests.py")
 
 
+def icu_dependencies(cls: "typing.Type[CrossCompileProject]", config: CheriConfig):
+    deps = crosscompile_dependencies(cls, config)
+    target = cls.get_crosscompile_target(config)
+    # ICU4C needs a native buid to cross-compile:
+    if target != CrossCompileTarget.NATIVE:
+        deps.append("icu4c-native")
+    return deps
+
+
 # Webkit needs ICU (and recommended for QtBase too:
 class BuildICU4C(CrossCompileAutotoolsProject):
     repository = "https://github.com/arichardson/icu4c.git"
     crossInstallDir = CrossInstallDir.SDK
     make_kind = MakeCommandKind.GnuMake
+    dependencies = icu_dependencies
     if IS_FREEBSD:
         forceDefaultCC = True  # for some reason crashes on FreeBSD 11 if using clang40/ clang39
 
