@@ -29,7 +29,7 @@
 #
 from .crosscompileproject import *
 from ...config.loader import ComputedDefaultValue
-from ...utils import commandline_to_str, runCmd, IS_FREEBSD, IS_MAC
+from ...utils import commandline_to_str, runCmd, IS_FREEBSD, IS_MAC, fatalError
 from pathlib import Path
 
 # This class is used to build qtbase and all of qt5
@@ -265,11 +265,11 @@ class BuildICU4C(CrossCompileAutotoolsProject):
             # self.configureArgs.append("--with-data-packaging=archive")
             self.configureArgs.append("--with-data-packaging=static")
 
-    def checkSystemDependencies(self):
-        super().checkSystemDependencies()
+    def process(self):
         if not self.compiling_for_host() and not self.nativeBuildDir.exists():
-            self.dependencyError("Missing host build directory", self.nativeBuildDir, " (needed for cross-compiling)",
-                                 installInstructions="Run `cheribuild.py " + self.target + " --xhost`")
+            fatalError("Missing host build directory", self.nativeBuildDir, " (needed for cross-compiling)",
+                       fixitHint="Run `cheribuild.py " + self.target + " --xhost`")
+        super().process()
 
 
 # it also needs libxml2
