@@ -288,7 +288,7 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
             "--disable-shared", "--enable-static", "--without-python",
             "--without-modules", "--without-lzma",
         ])
-        self.cross_warning_flags += ["-Wno-error"]  # FIXME: build with capability -Werror
+        self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-capability-misuse"]  # FIXME: build with capability -Werror
 
 
 class BuildQtWebkit(CrossCompileCMakeProject):
