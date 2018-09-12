@@ -196,7 +196,7 @@ class BuildQEMU(AutotoolsProject):
             self._addRequiredSystemTool(smbd_path, cheribuild_target="samba", freebsd="sambda48", apt="samba")
 
             if Path(smbd_path).exists():
-                self.configureArgs.append("--smbd=" + smbd_path)
+                self.configureArgs.append("--smbd=" + str(smbd_path))
             else:
                 if IS_MAC:
                     # QEMU user networking expects a smbd that accepts the same flags and config files as the samba.org
