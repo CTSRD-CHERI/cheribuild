@@ -1182,8 +1182,8 @@ class BuildFreeBSDBootstrapTools(Project):
             self.make_args.add_flags("-s")
 
         if IS_MAC:
-            self._addRequiredSystemTool("/usr/local/opt/m4/bin/m4",homebrew="m4")
-        self._addRequiredSystemTool("realpath",homebrew="coreutils")
+            self._addRequiredSystemTool("/usr/local/opt/m4/bin/m4", homebrew="m4")
+        self._addRequiredSystemTool("realpath", homebrew="coreutils")
 
     def compile(self, cwd: Path = None):
         "cross-bootstrap-tools-install"
