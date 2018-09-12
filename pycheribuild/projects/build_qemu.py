@@ -52,12 +52,17 @@ class BuildQEMU(AutotoolsProject):
         cls.unaligned = cls.addBoolOption("unaligned", showHelp=True, help="Permit un-aligned loads/stores",
                                           default=True)
 
+        cls.use_smbd = cls.addBoolOption("use-smbd", showHelp=False, default=True,
+                                         help="Don't require SMB support when building QEMU (warning: most --test "
+                                              "targets will fail without smbd support)")
+
         cls.statistics = cls.addBoolOption("statistics", showHelp=True, default=False,
                                            help="Collect statistics on out-of-bounds capability creation.")
         cls.lto = cls.addBoolOption("use-lto", showHelp=True,
                                     help="Try to build QEMU with link-time optimization if possible", default=True)
         cls.legacy_registers = cls.addBoolOption("legacy-registers", showHelp=False,
-                                    help="Build QEMU with the special registers mapped into the GPRs", default=False)
+                                                 help="Build QEMU with the special registers mapped into the GPRs",
+                                                 default=False)
 
     @classmethod
     def qemu_binary(cls, caller: SimpleProject):
@@ -153,7 +158,7 @@ class BuildQEMU(AutotoolsProject):
             "--extra-cflags=" + extraCFlags,
             "--cxx=" + str(self.config.clangPlusPlusPath),
             "--cc=" + str(self.config.clangPath),
-            ])
+        ])
         python_path = shutil.which("python2.7") or shutil.which("python2") or ""
         # QEMU needs python 2.7 for building:
         self.configureArgs.append("--python=" + python_path)
@@ -178,27 +183,31 @@ class BuildQEMU(AutotoolsProject):
         else:
             self.configureArgs.extend(["--disable-linux-aio", "--disable-kvm"])
 
-        smbd_path = "/usr/sbin/smbd"
-        if IS_FREEBSD:
-            smbd_path = "/usr/local/sbin/smbd"
-        elif IS_MAC:
-            smbd_path = "/the/smbd/shipped/by/macos/is/not/compatible/with/qemu"
-        if Path(smbd_path).exists():
-            self.configureArgs.append("--smbd=" + smbd_path)
-        else:
-            bootstrap_smbd = self.config.otherToolsDir / "sbin/smbd"
-            if bootstrap_smbd.exists():
-                self.configureArgs.append("--smbd=" + str(bootstrap_smbd))
+        if self.use_smbd:
+            smbd_path = "/usr/sbin/smbd"
+            if IS_FREEBSD:
+                smbd_path = "/usr/local/sbin/smbd"
             elif IS_MAC:
-                # QEMU user networking expects a smbd that accepts the same flags and config files as the samba.org
-                # sources but the macos /usr/sbin/smbd is incompatible with that:
-                warningMessage("QEMU usermode samba shares require the samba.org smbd. You will need to build it from "
-                               "source (using `cheribuild.py samba`) since the /usr/sbin/smbd shipped by MacOS is "
-                               "incompatible with QEMU")
-                # self._addRequiredSystemTool(valid_smbd, cheribuild_target="samba", apt="samba")
-            else:
-                warningMessage("Could not find smbd -> QEMU SMB shares networking will not work")
+                smbd_path = self.config.otherToolsDir / "sbin/smbd"
 
+            if (self.config.otherToolsDir / "sbin/smbd").exists():
+                smbd_path = self.config.otherToolsDir / "sbin/smbd"
+
+            self._addRequiredSystemTool(smbd_path, cheribuild_target="samba", freebsd="sambda48", apt="samba")
+
+            if Path(smbd_path).exists():
+                self.configureArgs.append("--smbd=" + smbd_path)
+            else:
+                if IS_MAC:
+                    # QEMU user networking expects a smbd that accepts the same flags and config files as the samba.org
+                    # sources but the macos /usr/sbin/smbd is incompatible with that:
+                    warningMessage("QEMU usermode samba shares require the samba.org smbd. You will need to build it from "
+                                   "source (using `cheribuild.py samba`) since the /usr/sbin/smbd shipped by MacOS is "
+                                   "incompatible with QEMU")
+                fatalError("Could not find smbd -> QEMU SMB shares networking will not work",
+                           fixitHint="Either install samba using the system package manager or with cheribuild. "
+                                     "If you really don't need QEMU host shares you can disable the samba dependency "
+                                     "by setting --qemu/no-use-smbd")
 
     def update(self):
         # the build sometimes modifies the po/ subdirectory
@@ -207,5 +216,6 @@ class BuildQEMU(AutotoolsProject):
         if (self.sourceDir / "po").is_dir():
             runCmd("git", "checkout", "HEAD", "po/", cwd=self.sourceDir, printVerboseOnly=True)
         if (self.sourceDir / "pixman/pixman").exists():
-            warningMessage("QEMU might build the broken pixman submodule, run `git submodule deinit -f pixman` to clean")
+            warningMessage(
+                "QEMU might build the broken pixman submodule, run `git submodule deinit -f pixman` to clean")
         super().update()
