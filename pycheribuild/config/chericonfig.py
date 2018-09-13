@@ -235,6 +235,11 @@ class CheriConfig(object):
             warningMessage("No internet connection detected, will skip git updates!")
             self.skipUpdate = True
 
+        # CLICOLOR environment variable can confuse ./configure scripts:
+        os.unsetenv("CLICOLOR")
+        if "CLICOLOR" in os.environ:
+            del os.environ["CLICOLOR"]
+
     def _initializeDerivedPaths(self):
         self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
         # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
