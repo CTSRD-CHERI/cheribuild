@@ -309,7 +309,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                          # generator=BuildQtWebkit.Generator.Makefiles
                          generator=BuildQtWebkit.Generator.Ninja
                          )
-        self.cross_warning_flags += ["-Wno-error"]  # FIXME: build with capability -Werror
+        self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-bitwise-operations", "-Wno-error=cheri-capability-misuse", "-Wno-error=format"]  # FIXME: build with capability -Werror
         self.add_cmake_options(PORT="Qt", ENABLE_X11_TARGET=False,
                                ENABLE_OPENGL=False,
                                USE_LIBHYPHEN=False,  # we don't have libhyphen
@@ -343,3 +343,13 @@ class BuildQtWebkit(CrossCompileCMakeProject):
 
         self._addRequiredSystemTool("gperf")
 
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        cls.build_jsc_only = cls.addBoolOption("build-jsc-only", showHelp=True, help="only build the JavaScript interpreter executable")
+
+    def compile(self, **kwargs):
+        if self.build_jsc_only:
+            self.runMake("jsc")
+        else:
+            self.runMake("all")
