@@ -31,6 +31,7 @@ from .project import *
 from ..utils import *
 from pathlib import Path
 import shutil
+import subprocess
 
 
 class BuildQEMU(AutotoolsProject):
@@ -183,21 +184,28 @@ class BuildQEMU(AutotoolsProject):
         else:
             self.configureArgs.extend(["--disable-linux-aio", "--disable-kvm"])
 
+    def configure(self, **kwargs):
         if self.use_smbd:
             smbd_path = "/usr/sbin/smbd"
             if IS_FREEBSD:
                 smbd_path = "/usr/local/sbin/smbd"
             elif IS_MAC:
-                smbd_path = self.config.otherToolsDir / "sbin/smbd"
+                try:
+                    prefix = runCmd("brew", "--prefix", "samba", captureOutput=True, runInPretendMode=True,
+                                    printVerboseOnly=True).stdout.decode("utf-8").strip()
+                except subprocess.CalledProcessError:
+                    prefix = self.config.otherToolsDir
+                smbd_path = Path(prefix, "sbin/smbd")
+                print("Guessed samba path", smbd_path)
 
             if (self.config.otherToolsDir / "sbin/smbd").exists():
                 smbd_path = self.config.otherToolsDir / "sbin/smbd"
 
-            self._addRequiredSystemTool(smbd_path, cheribuild_target="samba", freebsd="sambda48", apt="samba")
+            self._addRequiredSystemTool(smbd_path, cheribuild_target="samba", freebsd="samba48", apt="samba",
+                                        homebrew="samba")
 
-            if Path(smbd_path).exists():
-                self.configureArgs.append("--smbd=" + str(smbd_path))
-            else:
+            self.configureArgs.append("--smbd=" + str(smbd_path))
+            if not Path(smbd_path).exists():
                 if IS_MAC:
                     # QEMU user networking expects a smbd that accepts the same flags and config files as the samba.org
                     # sources but the macos /usr/sbin/smbd is incompatible with that:
@@ -208,6 +216,7 @@ class BuildQEMU(AutotoolsProject):
                            fixitHint="Either install samba using the system package manager or with cheribuild. "
                                      "If you really don't need QEMU host shares you can disable the samba dependency "
                                      "by setting --qemu/no-use-smbd")
+        super().configure(**kwargs)
 
     def update(self):
         # the build sometimes modifies the po/ subdirectory
