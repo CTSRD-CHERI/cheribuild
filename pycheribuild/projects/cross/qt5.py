@@ -341,6 +341,14 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             self.add_cmake_options(PNG_LIBRARIES="libqtlibpng.a")
             self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.getSourceDir(self, config) / "src/3rdparty/libpng")
 
+            # Pass CHERI capability size so we can pass this to the offlineasm ruby scripts
+            if self._crossCompileTarget == CrossCompileTarget.CHERI:
+                if self.config.cheriBits == 128:
+                    self.add_cmake_options(CHERI_CAPABILITY_SIZE=128)
+                elif self.config.cheriBits == 256:
+                    self.add_cmake_options(CHERI_CAPABILITY_SIZE=256)
+                self.add_cmake_options(CHERI_PURE_CAPABILITY=True)
+
         self._addRequiredSystemTool("gperf")
 
     @classmethod
@@ -353,3 +361,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             self.runMake("jsc")
         else:
             self.runMake("all")
+
+    def install(self, **kwargs):
+        if not self.build_jsc_only:
+            super().install()
