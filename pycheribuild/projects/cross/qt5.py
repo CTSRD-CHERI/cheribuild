@@ -104,6 +104,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # Needed for webkit:
             # "-icu",
             "-no-Werror",
+            "-no-use-gold-linker",
         ])
         if self.build_tests:
             self.configureArgs.append("-developer-build")
@@ -313,7 +314,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         self.add_cmake_options(PORT="Qt", ENABLE_X11_TARGET=False,
                                ENABLE_OPENGL=False,
                                USE_LIBHYPHEN=False,  # we don't have libhyphen
-                               ENABLE_TEST_SUPPORT=False,
+                               DEVELOPER_MODE=True, # needed to enable DumpRenderTree and ImageDiff
                                ENABLE_VIDEO=False,  # probably depends on lots of stuff
                                ENABLE_XSLT=False,  # 1 less library to build
                                USE_GSTREAMER=False,  # needs all the glib+gtk crap
@@ -340,6 +341,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             self.add_cmake_options(Qt5_DIR=self.config.sdkSysrootDir / ("usr/local/Qt-" + self._crossCompileTarget.value) / "lib/cmake/Qt5")
             self.add_cmake_options(PNG_LIBRARIES="libqtlibpng.a")
             self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.getSourceDir(self, config) / "src/3rdparty/libpng")
+            self.LDFLAGS.extend(["-lpthread"]) # Needed for DumpRenderTree
 
             # Pass CHERI capability size so we can pass this to the offlineasm ruby scripts
             if self._crossCompileTarget == CrossCompileTarget.CHERI:
