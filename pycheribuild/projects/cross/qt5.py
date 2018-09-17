@@ -105,6 +105,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # "-icu",
             "-no-Werror",
             "-no-use-gold-linker",
+            "-no-iconv"
         ])
         if self.build_tests:
             self.configureArgs.append("-developer-build")
@@ -154,6 +155,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-no-cups",
                 "-no-syslog",
                 "-no-gui",
+                "-no-iconv"
             ])
 
         self.configureArgs.extend(["-opensource", "-confirm-license"])
