@@ -236,7 +236,7 @@ def icu_dependencies(cls: "typing.Type[CrossCompileProject]", config: CheriConfi
 
 # Webkit needs ICU (and recommended for QtBase too:
 class BuildICU4C(CrossCompileAutotoolsProject):
-    repository = "https://github.com/arichardson/icu4c.git"
+    repository = "https://github.com/CTSRD-CHERI/icu4c.git"
     crossInstallDir = CrossInstallDir.SDK
     make_kind = MakeCommandKind.GnuMake
     dependencies = icu_dependencies
