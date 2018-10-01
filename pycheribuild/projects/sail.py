@@ -99,19 +99,17 @@ class BuildSailCheriMips(Project, OpamMixin):
     repository = "https://github.com/CTSRD-CHERI/sail-cheri-mips"
     dependencies = ["sail-from-opam"]
     defaultInstallDir = Project._installToSDK
+    defaultBuildDir = Project.defaultSourceDir  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
 
     def compile(self, cwd: Path = None):
         # self.make_args.set(SAIL_DIR=self.config.sdkBinDir)
         # self.make_args.set(SAIL_DIR=self.config.sdkDir / "share/sail", SAIL=self.config.sdkBinDir / "sail")
-        self.run_in_ocaml_env(self.make_args.command + " mips mips_c", cwd=self.sourceDir / "mips")
-        self.run_in_ocaml_env(self.make_args.command + " cheri cheri_c", cwd=self.sourceDir / "cheri")
-        self.run_in_ocaml_env(self.make_args.command + " cheri128 cheri128_c", cwd=self.sourceDir / "cheri")
+        self.run_in_ocaml_env(self.make_args.command + " all", cwd=self.sourceDir)
 
-    def install(self):
-        for i in ("mips/mips", "mips/mips_c", "cheri/cheri", "cheri/cheri_c", "cheri/cheri128", "cheri/cheri128_c"):
-            src = self.sourceDir / i
-            self.installFile(src, self.config.sdkBinDir / ("sail-" + src.name), force=True, printVerboseOnly=False)
+    def install(self, **kwargs):
+        self.make_args.set(INSTALL_DIR=self.config.sdkDir)
+        self.runMake("install")
 
 # Old way of installing sail:
 class OcamlProject(Project, OpamMixin):
