@@ -29,12 +29,66 @@
 #
 import os
 from .project import *
-from ..utils import runCmd, setEnv, coloured, AnsiColour
+from ..utils import runCmd, setEnv, coloured, AnsiColour, commandline_to_str, printCommand
 from subprocess import CalledProcessError
 import shlex
 
+class OpamMixin(object):
+    @property
+    def opamroot(self):
+        return self.config.sdkDir / "opamroot"
 
-class OcamlProject(Project):
+    def opam_cmd(self, command, *args):
+        cmdline = ["opam", command, "--root=" + str(self.opamroot)]
+        cmdline.extend(args)
+        return commandline_to_str(cmdline)
+
+    def run_in_ocaml_env(self, command: str, cwd=None, printVerboseOnly=False, **kwargs):
+        if cwd is None:
+            cwd = self.sourceDir if getattr(self, "sourceDir") else "/"
+        script = "eval `opam config env`\n" + command + "\n"
+        self.verbose_print("Running shell script in ocaml env:", coloured(AnsiColour.cyan, command))
+        with setEnv(GIT_TEMPLATE_DIR="", # see https://github.com/ocaml/opam/issues/3493
+                    OPAMROOT=self.opamroot):
+            if not (self.opamroot / "opam-init").exists():
+                runCmd("opam", "init", "--no-setup")
+            flags = "-xe" if self.config.verbose else "-e"
+            printCommand("run-in-cheribuild-opam-env", command, cwd=cwd, printVerboseOnly=printVerboseOnly)
+            return runCmd("sh", flags, cwd=cwd, input=script, printVerboseOnly=True, **kwargs)
+
+REMS_OPAM_REPO = "https://github.com/rems-project/opam-repository.git"
+
+class BuildSailFromOpam(SimpleProject, OpamMixin):
+    target = "sail-from-opam"
+    # repository = "https://github.com/rems-project/sail"
+    # gitBranch = "sail2"
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        self._addRequiredSystemTool("z3", homebrew="z3 --without-python@2 --with-python")
+
+    def process(self):
+        self.run_in_ocaml_env(self.opam_cmd("switch", "4.06.0") + " || " + self.opam_cmd("switch", "create", "4.06.0"))
+        repos = self.run_in_ocaml_env(self.opam_cmd("repository", "list"), captureOutput=True)
+        if not REMS_OPAM_REPO in repos.stdout.decode("utf-8"):
+            self.run_in_ocaml_env(self.opam_cmd("repository", "add", "rems", REMS_OPAM_REPO))
+        else:
+            self.info("REMS opam repo already added")
+        if self.config.clean:
+            self.run_in_ocaml_env(
+                self.opam_cmd("uninstall", "--verbose", "sail", "--destdir=" + str(self.config.sdkDir / "sailprefix")))
+            self.run_in_ocaml_env(self.opam_cmd("uninstall", "--verbose",
+                                                "sail") + " || true")
+        self.run_in_ocaml_env(self.opam_cmd("install", "-y", "--verbose", "sail", "--destdir=" + str(self.config.sdkDir)))
+
+
+class BuildSail(TargetAliasWithDependencies):
+    # alias target to build both sail and the CHERI-MIPS model
+    target = "sail"
+    dependencies = ["sail-from-opam"]
+# Old way of installing sail:
+
+class OcamlProject(Project, OpamMixin):
     doNotAddToTargets = True
     defaultInstallDir = Project._installToSDK
     defaultBuildDir = Project.defaultSourceDir
@@ -50,15 +104,19 @@ class OcamlProject(Project):
             homebrew="Installing with hombrew generates a broken ocaml env, use this instead: "
                      "`wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh -s /usr/local/bin`")
 
-    def run_in_ocaml_env(self, command: str, cwd=None, printVerboseOnly=False):
-        if cwd is None:
-            cwd = self.sourceDir
-        script = "set -xe\neval `opam config env`\n" + command + "\n"
-        self.verbose_print("Running shell script in ocaml env: ", coloured(AnsiColour.cyan, command))
-        runCmd("sh", cwd=cwd, input=script, printVerboseOnly=printVerboseOnly)
-
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
+        for pkg in self.needed_ocaml_packages:
+            try:
+                self.run_in_ocaml_env("ocamlfind query " + shlex.quote(pkg), cwd="/", printVerboseOnly=True)
+            except CalledProcessError:
+                self.dependencyError("missing opam package " + pkg,
+                                     installInstructions="Try running `" + self.opam_cmd("install") + pkg + "`")
+
+    def install(self, **kwargs):
+        pass
+
+    def process(self):
         try:
             # This is run before cloning so the source dir might not exist -> set CWD to /
             self.run_in_ocaml_env("ocamlfind ocamlc -where", cwd="/", printVerboseOnly=True)
@@ -67,23 +125,17 @@ class OcamlProject(Project):
             self.warning("stderr was:", e.stderr)
             self.dependencyError("OCaml env seems to be messed up. Note: On MacOS homebrew OCaml "
                                  "is not installed correctly. Try installing it with opam instead:",
-                                 installInstructions="Try running `opam update && opam switch 4.05.0`")
-        for pkg in self.needed_ocaml_packages:
-            try:
-                self.run_in_ocaml_env("ocamlfind query " + shlex.quote(pkg), cwd="/", printVerboseOnly=True)
-            except CalledProcessError:
-                self.dependencyError("missing opam package" + pkg,
-                                     installInstructions="Try running `opam install " + pkg + "`")
-
-    def install(self, **kwargs):
-        pass
+                                 installInstructions="Try running `" + self.opam_cmd("update") + " && " +
+                                                     self.opam_cmd("switch") + " 4.06.0`")
+        super().process()
 
 
-class BuildSail(OcamlProject):
+class BuildSailFromSource(OcamlProject):
+    target = "sail-from-source"
     repository = "https://github.com/rems-project/sail"
     gitBranch = "sail2"
     dependencies = ["lem", "ott", "linksem"]
-    needed_ocaml_packages = OcamlProject.needed_ocaml_packages + ["zarith"]
+    needed_ocaml_packages = OcamlProject.needed_ocaml_packages + ["zarith", "lem", "linksem"]
     # TODO: `opam install linenoise` for isail?
 
     def __init__(self, config: CheriConfig):
@@ -96,7 +148,7 @@ class BuildSail(OcamlProject):
             # opam and ocamlfind don't agree for menhir
             self.run_in_ocaml_env("ocamlfind query menhirLib", cwd="/", printVerboseOnly=True)
         except CalledProcessError:
-            self.dependencyError("missing opam package" + pkg,
+            self.dependencyError("missing opam package " + pkg,
                                  installInstructions="Try running `opam install menhir`")
 
     def compile(self, cwd: Path = None):
@@ -154,18 +206,3 @@ make -C src USE_OCAMLBUILD=false local-install
                     PATH="{}:{}:".format(ottdir / "bin", lemdir / "bin") + os.environ["PATH"],
                     OCAMLPATH=lemdir / "ocaml-lib/local"):
             super().process()
-
-"""
-'''
-eval `opam config env`
-opam list
-ulimit -s unlimited
-
-#tar xjf binutils.tar.bz2
-#tar xJf cheri-multi-master-clang-llvm.tar.xz
-export PATH=${WORKSPACE}/ott/bin:${WORKSPACE}/lem/bin:${PATH}
-export OCAMLPATH=${WORKSPACE}/lem/ocaml-lib/local:${WORKSPACE}/linksem/src/local
-export LEMLIB=${WORKSPACE}/lem/library
-'''
-
-"""
