@@ -80,14 +80,40 @@ class BuildSailFromOpam(SimpleProject, OpamMixin):
             self.run_in_ocaml_env(self.opam_cmd("uninstall", "--verbose",
                                                 "sail") + " || true")
         self.run_in_ocaml_env(self.opam_cmd("install", "-y", "--verbose", "sail", "--destdir=" + str(self.config.sdkDir)))
+        if False:
+            self.run_in_ocaml_env(self.opam_cmd("install", "-y", "--verbose", "sail"))
+            opamroot_sail_binary = self.opamroot / "4.06.0/bin/sail"
+            runCmd(opamroot_sail_binary, "-v")
+            self.createSymlink(opamroot_sail_binary, self.config.sdkBinDir / opamroot_sail_binary.name)
 
 
 class BuildSail(TargetAliasWithDependencies):
     # alias target to build both sail and the CHERI-MIPS model
     target = "sail"
-    dependencies = ["sail-from-opam"]
-# Old way of installing sail:
+    dependencies = ["sail-from-opam", "sail-cheri-mips"]
 
+
+class BuildSailCheriMips(Project, OpamMixin):
+    target = "sail-cheri-mips"
+    projectName = "sail-cheri-mips"
+    repository = "https://github.com/CTSRD-CHERI/sail-cheri-mips"
+    dependencies = ["sail-from-opam"]
+    defaultInstallDir = Project._installToSDK
+    make_kind = MakeCommandKind.GnuMake
+
+    def compile(self, cwd: Path = None):
+        # self.make_args.set(SAIL_DIR=self.config.sdkBinDir)
+        # self.make_args.set(SAIL_DIR=self.config.sdkDir / "share/sail", SAIL=self.config.sdkBinDir / "sail")
+        self.run_in_ocaml_env(self.make_args.command + " mips mips_c", cwd=self.sourceDir / "mips")
+        self.run_in_ocaml_env(self.make_args.command + " cheri cheri_c", cwd=self.sourceDir / "cheri")
+        self.run_in_ocaml_env(self.make_args.command + " cheri128 cheri128_c", cwd=self.sourceDir / "cheri")
+
+    def install(self):
+        for i in ("mips/mips", "mips/mips_c", "cheri/cheri", "cheri/cheri_c", "cheri/cheri128", "cheri/cheri128_c"):
+            src = self.sourceDir / i
+            self.installFile(src, self.config.sdkBinDir / ("sail-" + src.name), force=True, printVerboseOnly=False)
+
+# Old way of installing sail:
 class OcamlProject(Project, OpamMixin):
     doNotAddToTargets = True
     defaultInstallDir = Project._installToSDK
