@@ -29,7 +29,7 @@
 #
 from .crosscompileproject import *
 from ...config.loader import ComputedDefaultValue
-from ...utils import commandline_to_str, runCmd, IS_FREEBSD, IS_MAC, fatalError
+from ...utils import commandline_to_str, runCmd, IS_FREEBSD, IS_MAC, fatalError, IS_LINUX
 from pathlib import Path
 
 # This class is used to build qtbase and all of qt5
@@ -68,8 +68,13 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
         if self.compiling_for_host():
             self.configureArgs.extend(["-prefix", str(self.installDir)])
+            # TODO: we need to specify a makespec flag to use clang...
             self.configureArgs.append("QMAKE_CC=" + str(self.config.clangPath))
             self.configureArgs.append("QMAKE_CXX=" + str(self.config.clangPlusPlusPath))
+            if IS_LINUX:
+                # otherwise the build assumes GCC
+                self.configureArgs.append("-platform")
+                self.configureArgs.append("linux-clang")
         else:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
             compiler_flags = self.default_compiler_flags
@@ -125,6 +130,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         self.configureArgs.append("-qt-libpng")
 
         if self.debugInfo:
+            self.configureArgs.append("-gdb-index")
             # Build a release build with debug info for now
             if self.optimized_debug_build:
                 self.configureArgs.append("-release")
