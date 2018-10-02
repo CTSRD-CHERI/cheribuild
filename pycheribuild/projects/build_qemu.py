@@ -49,6 +49,7 @@ class BuildQEMU(AutotoolsProject):
         super().setupConfigOptions()
         cls.magic128 = cls.addBoolOption("magic-128")
         cls.debug_info = cls.addBoolOption("debug-info")
+        cls.with_sanitizers = cls.addBoolOption("sanitizers", help="Build QEMU with ASAN/UBSAN (very slow)", default=False)
         # Turn on unaligned loads/stores by default
         cls.unaligned = cls.addBoolOption("unaligned", showHelp=True, help="Permit un-aligned loads/stores",
                                           default=True)
@@ -170,17 +171,21 @@ class BuildQEMU(AutotoolsProject):
         if extraCXXFlags:
             self.configureArgs.append("--extra-cxxflags=" + extraCXXFlags.strip())
         if self.debug_info:
-            self.configureArgs.extend(["--enable-debug", "--disable-strip",
-                                       "--enable-sanitizers", "--enable-debug-tcg"])
+            self.configureArgs.extend(["--enable-debug", "--disable-strip", "--enable-debug-tcg"])
+            extraCFlags += " -DENABLE_CHERI_SANITIY_CHECKS=1"
         else:
             # Try to optimize as much as possible:
             self.configureArgs.extend(["--disable-stack-protector"])
+
+        if self.with_sanitizers:
+            self.configureArgs.append("--enable-sanitizers")
 
         if IS_LINUX:
             # "--enable-libnfs", # version on Ubuntu 14.04 is too old? is it needed?
             # self.configureArgs += ["--enable-kvm", "--enable-linux-aio", "--enable-vte", "--enable-sdl",
             #                        "--with-sdlabi=2.0", "--enable-virtfs"]
             self.configureArgs.extend(["--disable-stack-protector"])  # seems to be broken on some Ubuntu 14.04 systems
+
         else:
             self.configureArgs.extend(["--disable-linux-aio", "--disable-kvm"])
 
