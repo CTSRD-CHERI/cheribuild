@@ -102,10 +102,20 @@ class BuildSailCheriMips(Project, OpamMixin):
     defaultBuildDir = Project.defaultSourceDir  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
 
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        cls.with_trace_support = cls.addBoolOption("trace-support", showHelp=True,
+                                help="Build sail-cheri-mips simulators with tracing support (they will be slow but"
+                                     "the traces are useful to debug failing tests)", default=False)
+
     def compile(self, cwd: Path = None):
         # self.make_args.set(SAIL_DIR=self.config.sdkBinDir)
         # self.make_args.set(SAIL_DIR=self.config.sdkDir / "share/sail", SAIL=self.config.sdkBinDir / "sail")
-        self.run_in_ocaml_env(self.make_args.command + " all", cwd=self.sourceDir)
+        if self.with_trace_support:
+            self.make_args.set(TRACE="yes")
+        cmd = [self.make_args.command, "all"] + self.make_args.all_commandline_args
+        self.run_in_ocaml_env(commandline_to_str(cmd), cwd=self.sourceDir)
 
     def install(self, **kwargs):
         self.make_args.set(INSTALL_DIR=self.config.sdkDir)
