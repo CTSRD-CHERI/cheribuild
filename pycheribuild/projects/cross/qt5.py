@@ -264,11 +264,8 @@ class BuildICU4C(CrossCompileAutotoolsProject):
             # but these seem to be needed
             # self.configureArgs.append("--disable-draft")
             # self.configureArgs.append("--disable-extras")  # can't add this to host build, it will fail otherwise
-            # TODO: not quite sure what to do with the data
-            # ICU generates a little endian library otherwise....
-            # for now packaging as an archive seems to work (maybe)
-            # self.configureArgs.append("--with-data-packaging=archive")
-            self.configureArgs.append("--with-data-packaging=static")
+            # We have modified the ICU data Makefile so that ICU builds a big endian data archive
+            self.configureArgs.append("--with-data-packaging=archive")
 
     def process(self):
         if not self.compiling_for_host() and not self.nativeBuildDir.exists():
