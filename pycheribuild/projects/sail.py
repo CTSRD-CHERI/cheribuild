@@ -114,7 +114,7 @@ class BuildSailCheriMips(Project, OpamMixin):
         # self.make_args.set(SAIL_DIR=self.config.sdkDir / "share/sail", SAIL=self.config.sdkBinDir / "sail")
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
-        cmd = [self.make_args.command, "all"] + self.make_args.all_commandline_args
+        cmd = [self.make_args.command, self.config.makeJFlag, "all"] + self.make_args.all_commandline_args
         self.run_in_ocaml_env(commandline_to_str(cmd), cwd=self.sourceDir)
 
     def install(self, **kwargs):
