@@ -38,10 +38,20 @@ class OpamMixin(object):
     def opamroot(self):
         return self.config.sdkDir / "opamroot"
 
-    def opam_cmd(self, command, *args):
+    def _opam_cmd(self, command, *args):
         cmdline = ["opam", command, "--root=" + str(self.opamroot)]
         cmdline.extend(args)
         return commandline_to_str(cmdline)
+
+    def run_opam_cmd(self, command, *args, ignoreErrors=False, **kwargs):
+        command_str = self._opam_cmd(command, *args)
+        try:
+            return self.run_in_ocaml_env(command_str, **kwargs)
+        except CalledProcessError:
+            if ignoreErrors:
+                self.verbose_print("Ignoring non-zero exit code from " + coloured(AnsiColour.yellow, command_str))
+            else:
+                raise
 
     def run_in_ocaml_env(self, command: str, cwd=None, printVerboseOnly=False, **kwargs):
         if cwd is None:
@@ -66,22 +76,36 @@ class BuildSailFromOpam(SimpleProject, OpamMixin):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self._addRequiredSystemTool("z3", homebrew="z3 --without-python@2 --with-python")
+        self._addRequiredSystemTool("opam", homebrew="opam")
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        cls.use_git_version = cls.addBoolOption("use-git-version-instead-of-release", showHelp=False, default=False)
 
     def process(self):
-        self.run_in_ocaml_env(self.opam_cmd("switch", "4.06.0") + " || " + self.opam_cmd("switch", "create", "4.06.0"))
-        repos = self.run_in_ocaml_env(self.opam_cmd("repository", "list"), captureOutput=True)
-        if not REMS_OPAM_REPO in repos.stdout.decode("utf-8"):
-            self.run_in_ocaml_env(self.opam_cmd("repository", "add", "rems", REMS_OPAM_REPO))
+        self.run_in_ocaml_env(self._opam_cmd("switch", "4.06.0") + " || " + self._opam_cmd("switch", "create", "4.06.0"))
+        repos = self.run_opam_cmd("repository", "list", captureOutput=True)
+        if REMS_OPAM_REPO not in repos.stdout.decode("utf-8"):
+            self.run_opam_cmd("repository", "add", "rems", REMS_OPAM_REPO)
         else:
             self.info("REMS opam repo already added")
         if self.config.clean:
-            self.run_in_ocaml_env(
-                self.opam_cmd("uninstall", "--verbose", "sail", "--destdir=" + str(self.config.sdkDir / "sailprefix")))
-            self.run_in_ocaml_env(self.opam_cmd("uninstall", "--verbose",
-                                                "sail") + " || true")
-        self.run_in_ocaml_env(self.opam_cmd("install", "-y", "--verbose", "sail", "--destdir=" + str(self.config.sdkDir)))
+            self.run_opam_cmd("uninstall", "--verbose", "sail", "--destdir=" + str(self.config.sdkDir / "sailprefix"))
+            self.run_opam_cmd("uninstall", "--verbose", "sail", ignoreErrors=True)
+
+        self.run_opam_cmd("pin", "remove", "sail", ignoreErrors=False)
+        if self.use_git_version:
+            # Force installation from latest git
+            self.run_opam_cmd("pin", "add", "sail", "https://github.com/rems-project/sail.git", "--verbose", "-n")
+        try:
+            self.run_opam_cmd("install", "-y", "--verbose", "sail", "--destdir=" + str(self.config.sdkDir))
+        finally:
+            if self.use_git_version:
+                self.run_opam_cmd("pin", "remove", "sail", ignoreErrors=False)
+
         if False:
-            self.run_in_ocaml_env(self.opam_cmd("install", "-y", "--verbose", "sail"))
+            self.run_opam_cmd("install", "-y", "--verbose", "sail")
             opamroot_sail_binary = self.opamroot / "4.06.0/bin/sail"
             runCmd(opamroot_sail_binary, "-v")
             self.createSymlink(opamroot_sail_binary, self.config.sdkBinDir / opamroot_sail_binary.name)
@@ -145,7 +169,7 @@ class OcamlProject(Project, OpamMixin):
                 self.run_in_ocaml_env("ocamlfind query " + shlex.quote(pkg), cwd="/", printVerboseOnly=True)
             except CalledProcessError:
                 self.dependencyError("missing opam package " + pkg,
-                                     installInstructions="Try running `" + self.opam_cmd("install") + pkg + "`")
+                                     installInstructions="Try running `" + self._opam_cmd("install") + pkg + "`")
 
     def install(self, **kwargs):
         pass
@@ -159,8 +183,8 @@ class OcamlProject(Project, OpamMixin):
             self.warning("stderr was:", e.stderr)
             self.dependencyError("OCaml env seems to be messed up. Note: On MacOS homebrew OCaml "
                                  "is not installed correctly. Try installing it with opam instead:",
-                                 installInstructions="Try running `" + self.opam_cmd("update") + " && " +
-                                                     self.opam_cmd("switch") + " 4.06.0`")
+                                 installInstructions="Try running `" + self._opam_cmd("update") + " && " +
+                                                     self._opam_cmd("switch") + " 4.06.0`")
         super().process()
 
 
