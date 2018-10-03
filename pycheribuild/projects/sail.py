@@ -81,7 +81,8 @@ class BuildSailFromOpam(SimpleProject, OpamMixin):
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
-        cls.use_git_version = cls.addBoolOption("use-git-version-instead-of-release", showHelp=False, default=False)
+        cls.use_git_version = cls.addBoolOption("use-git-version", showHelp=False, default=False,
+                                                help="Install sail from github instead of using the latest released version")
 
     def process(self):
         self.run_in_ocaml_env(self._opam_cmd("switch", "4.06.0") + " || " + self._opam_cmd("switch", "create", "4.06.0"))
@@ -92,17 +93,18 @@ class BuildSailFromOpam(SimpleProject, OpamMixin):
             self.info("REMS opam repo already added")
         if self.config.clean:
             self.run_opam_cmd("uninstall", "--verbose", "sail", "--destdir=" + str(self.config.sdkDir / "sailprefix"))
-            self.run_opam_cmd("uninstall", "--verbose", "sail", ignoreErrors=True)
+            self.run_opam_cmd("uninstall", "--verbose", "sail")
 
-        self.run_opam_cmd("pin", "remove", "sail", ignoreErrors=False)
+        # ensure sail isn't pinned
+        self.run_opam_cmd("pin", "remove", "sail", "--no-action")
         if self.use_git_version:
-            # Force installation from latest git
-            self.run_opam_cmd("pin", "add", "sail", "https://github.com/rems-project/sail.git", "--verbose", "-n")
+            # Force installation from latest git (pin repo now, but pass --no-acton since we need to install with --destdir)
+            self.run_opam_cmd("pin", "add", "sail", "https://github.com/rems-project/sail.git", "--verbose", "--no-action")
         try:
             self.run_opam_cmd("install", "-y", "--verbose", "sail", "--destdir=" + str(self.config.sdkDir))
         finally:
-            if self.use_git_version:
-                self.run_opam_cmd("pin", "remove", "sail", ignoreErrors=False)
+            # reset the pin status even if the pinning failed
+            self.run_opam_cmd("pin", "remove", "sail", "--no-action")
 
         if False:
             self.run_opam_cmd("install", "-y", "--verbose", "sail")
