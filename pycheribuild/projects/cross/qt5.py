@@ -60,9 +60,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         cls.useMxgot = True  # appears to be needed for some tests
 
     def configure(self, **kwargs):
-        if not self.needsConfigure() and not self.config.forceConfigure:
-            return
-
         if self.force_static_linkage:
             self.configureArgs.append("-static")
 

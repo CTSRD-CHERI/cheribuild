@@ -1038,12 +1038,18 @@ class Project(SimpleProject):
         """
         return True
 
+    def should_run_configure(self):
+        if self.config.forceConfigure or self.config.configureOnly:
+            return True
+        if self.config.clean:
+            return True
+        return self.needsConfigure()
+
     def configure(self, cwd: Path = None, configure_path: Path=None):
         if cwd is None:
             cwd = self.buildDir
-        if not self.needsConfigure() and not self.config.configureOnly and not self.config.forceConfigure:
-            if not self.config.pretend and not self.config.clean:
-                return
+        if not self.should_run_configure():
+            return
 
         _configure_path = self.configureCommand
         if configure_path:
@@ -1146,8 +1152,9 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             if not self.buildDir.is_dir():
                 self.makedirs(self.buildDir)
             if not self.config.skipConfigure or self.config.configureOnly:
-                statusUpdate("Configuring", self.display_name, "... ")
-                self.configure()
+                if self.should_run_configure():
+                    statusUpdate("Configuring", self.display_name, "... ")
+                    self.configure()
             if self.config.configureOnly:
                 return
             statusUpdate("Building", self.display_name, "... ")
