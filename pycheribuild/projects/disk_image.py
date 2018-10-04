@@ -99,15 +99,15 @@ class _BuildDiskImageBase(SimpleProject):
         self.manifestFile = None  # type: Path
         self.extraFiles = []  # type: typing.List[Path]
         self._addRequiredSystemTool("ssh-keygen")
-        if IS_FREEBSD:
-            self._addRequiredSystemTool("makefs")
-        else:
-            self._addRequiredSystemTool("freebsd-makefs", cheribuild_target="freebsd-bootstrap-tools")
-            self._addRequiredSystemTool("freebsd-install", cheribuild_target="freebsd-bootstrap-tools")
 
         self.makefs_cmd = None
         self.install_cmd = None
         self.source_project = source_class.get_instance(self, self.config)
+        if IS_FREEBSD:
+            self._addRequiredSystemTool("makefs")
+        elif self.source_project.crossbuild:
+            self._addRequiredSystemTool("freebsd-makefs", cheribuild_target="freebsd-bootstrap-tools")
+            self._addRequiredSystemTool("freebsd-install", cheribuild_target="freebsd-bootstrap-tools")
         assert isinstance(self.source_project, BuildFreeBSD)
         self.rootfsDir = self.source_project.installDir
         assert self.rootfsDir is not None
@@ -405,22 +405,9 @@ class _BuildDiskImageBase(SimpleProject):
             self.__process()
 
     def __process(self):
-        self.makefs_cmd = shutil.which("freebsd-makefs")
-        self.install_cmd = shutil.which("freebsd-install")
-        # On FreeBSD we can use /usr/bin/makefs and /usr/bin/install
-        if IS_FREEBSD:
-            if not self.install_cmd:
-                self.install_cmd = shutil.which("install")
-            if not self.makefs_cmd:
-                self.makefs_cmd = shutil.which("makefs")
-        if not self.makefs_cmd or not self.install_cmd:
-            fatalError("Missing freebsd-install or freebsd-makefs command!")
-        statusUpdate("Disk image will saved to", self.diskImagePath)
-        statusUpdate("Extra files for the disk image will be copied from", self.extraFilesDir)
-
         if self.diskImagePath.is_dir():
             # Given a directory, derive the default file name inside it
-            self.diskImagePath = _defaultDiskImagePathFn(self.config.cheriBits, self.diskImagePath)
+            self.diskImagePath = _defaultDiskImagePath(self.config.cheriBits, self.diskImagePath)
 
         if self.diskImagePath.is_file():
             # only show prompt if we can actually input something to stdin
@@ -435,6 +422,19 @@ class _BuildDiskImageBase(SimpleProject):
         if not IS_FREEBSD and not self.crossBuildImage:
             self.copyFromRemoteHost()
             return
+
+        self.makefs_cmd = shutil.which("freebsd-makefs")
+        self.install_cmd = shutil.which("freebsd-install")
+        # On FreeBSD we can use /usr/bin/makefs and /usr/bin/install
+        if IS_FREEBSD:
+            if not self.install_cmd:
+                self.install_cmd = shutil.which("install")
+            if not self.makefs_cmd:
+                self.makefs_cmd = shutil.which("makefs")
+        if not self.makefs_cmd or not self.install_cmd:
+            fatalError("Missing freebsd-install or freebsd-makefs command!")
+        statusUpdate("Disk image will saved to", self.diskImagePath)
+        statusUpdate("Extra files for the disk image will be copied from", self.extraFilesDir)
 
         if not self.input_METALOG.is_file():
             fatalError("mtree manifest", self.input_METALOG, "is missing")
