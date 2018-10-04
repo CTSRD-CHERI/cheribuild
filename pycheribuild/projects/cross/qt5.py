@@ -29,7 +29,7 @@
 #
 from .crosscompileproject import *
 from ...config.loader import ComputedDefaultValue
-from ...utils import commandline_to_str, runCmd, IS_FREEBSD, IS_MAC, fatalError, IS_LINUX
+from ...utils import commandline_to_str, runCmd, IS_FREEBSD, IS_MAC, fatalError, IS_LINUX, getCompilerInfo
 from pathlib import Path
 
 # This class is used to build qtbase and all of qt5
@@ -65,10 +65,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
         if self.compiling_for_host():
             self.configureArgs.extend(["-prefix", str(self.installDir)])
-            # TODO: we need to specify a makespec flag to use clang...
             self.configureArgs.append("QMAKE_CC=" + str(self.config.clangPath))
             self.configureArgs.append("QMAKE_CXX=" + str(self.config.clangPlusPlusPath))
-            if IS_LINUX:
+            if IS_LINUX and getCompilerInfo(self.config.clangPath).compiler == "clang":
                 # otherwise the build assumes GCC
                 self.configureArgs.append("-platform")
                 self.configureArgs.append("linux-clang")
