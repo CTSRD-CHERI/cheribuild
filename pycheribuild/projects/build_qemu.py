@@ -60,6 +60,8 @@ class BuildQEMU(AutotoolsProject):
 
         cls.statistics = cls.addBoolOption("statistics", showHelp=True, default=False,
                                            help="Collect statistics on out-of-bounds capability creation.")
+        cls.gui = cls.addBoolOption("gui", showHelp=True, default=False,
+                                    help="Build a the graphical UI bits for QEMU (SDL,VNC)")
         cls.lto = cls.addBoolOption("use-lto", showHelp=True,
                                     help="Try to build QEMU with link-time optimization if possible", default=True)
         cls.legacy_registers = cls.addBoolOption("legacy-registers", showHelp=False,
@@ -160,7 +162,12 @@ class BuildQEMU(AutotoolsProject):
             "--extra-cflags=" + extraCFlags,
             "--cxx=" + str(self.config.clangPlusPlusPath),
             "--cc=" + str(self.config.clangPath),
+
         ])
+        # Disable some more unneeded things (we don't usually need the GUI frontends)
+        if not self.gui:
+            self.configureArgs.extend(["--disable-vnc", "--disable-sdl", "--disable-gtk", "--disable-opengl"])
+
         python_path = shutil.which("python2.7") or shutil.which("python2") or ""
         # QEMU needs python 2.7 for building:
         self.configureArgs.append("--python=" + python_path)
