@@ -231,6 +231,9 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             self._copyKernelImageFromRemoteHost()
         super().process()
 
+    def run_tests(self):
+        self.run_cheribsd_test_script("test_boot.py", disk_image_path=self.diskImage, kernel_path=self.currentKernel)
+
 
 class LaunchCheriBSD(AbstractLaunchFreeBSD):
     projectName = "run"
