@@ -509,6 +509,26 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         statusUpdate("No tests defined for target", self.target)
         pass
 
+    def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None):
+        from .build_qemu import BuildQEMU
+        script_dir = Path("/this/will/not/work/when/using/remote-cheribuild.py")
+        if kernel_path is None:
+            from .cross.cheribsd import BuildCheriBsdMfsKernel
+            kernel_path = BuildCheriBsdMfsKernel.get_installed_kernel_path(self, self.config)
+        # generate a sensible error when using remote-cheribuild.py by omitting this line:
+        script_dir = Path(__file__).parent.parent.parent / "test-scripts"   # no-combine
+        script = script_dir / script_name
+        if not script.exists():
+            fatalError("Could not find test script", script)
+        cmd = [script, "--kernel", kernel_path,
+               "--qemu-cmd", BuildQEMU.qemu_binary(self),
+               "--ssh-key", self.config.test_ssh_key, *script_args]
+        if self.buildDir:
+            cmd.extend(["--build-dir", self.buildDir])
+        if disk_image_path:
+            cmd.extend(["--disk-image", disk_image_path])
+        runCmd(cmd)
+
     def print(self, *args, **kwargs):
         if not self.config.quiet:
             print(*args, **kwargs)

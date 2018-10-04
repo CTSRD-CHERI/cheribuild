@@ -337,6 +337,10 @@ class LaunchCheriBsdMfsRoot(AbstractLaunchFreeBSD):
     def __init__(self, config):
         super().__init__(config, source_class=BuildCheriBsdMfsKernel, needs_disk_image=False)
 
+    def run_tests(self):
+        self.run_cheribsd_test_script("test_boot.py")
+
+
 # Allow running cheribsd without the MFS_ROOT kernel, but with a disk image instead:
 class LaunchCheriBsdMinimal(AbstractLaunchFreeBSD):
     projectName = "run-minimal-with-disk-image"
