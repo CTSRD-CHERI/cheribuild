@@ -522,7 +522,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             fatalError("Could not find test script", script)
         cmd = [script, "--kernel", kernel_path,
                "--qemu-cmd", BuildQEMU.qemu_binary(self),
-               "--ssh-key", self.config.test_ssh_key, *script_args]
+               "--ssh-key", self.config.test_ssh_key] + list(script_args)
         if self.buildDir:
             cmd.extend(["--build-dir", self.buildDir])
         if disk_image_path:
