@@ -206,12 +206,13 @@ class JenkinsConfig(CheriConfig):
             if not self.crossCompileTarget == CrossCompileTarget.NATIVE:
                 fatalError("The --without-sdk flag only works when building host binaries")
             self.sdkDir = self.outputRoot / str(self.installationPrefix).strip('/')
-            self.clangPath = Path(os.getenv("HOST_CC", latestClangTool("clang")))
-            self.clangPlusPlusPath = Path(os.getenv("HOST_CXX", latestClangTool("clang++")))
-            if not self.clangPath:
-                fatalError("Could not find clang or $HOST_CC")
-            if not self.clangPlusPlusPath:
-                fatalError("Could not find clang++ or $HOST_CXX")
+            # allow overriding the clang/clang++ paths with HOST_CC/HOST_CXX
+            self.clangPath = Path(os.getenv("HOST_CC", self.clangPath))
+            self.clangPlusPlusPath = Path(os.getenv("HOST_CXX", self.clangPlusPlusPath))
+            if not self.clangPath.exists():
+                fatalError("C compiler", self.clangPath, "does not exit. Pass --clang-path or set $HOST_CC")
+            if not self.clangPlusPlusPath.exists():
+                fatalError("C++ compiler", self.clangPlusPlusPath, "does not exit. Pass --clang++-path or set $HOST_CXX")
         else:
             # always use the CHERI clang built by jenkins to ensure we don't do x86 compilation
             self.clangPath = self.sdkBinDir / "clang"
