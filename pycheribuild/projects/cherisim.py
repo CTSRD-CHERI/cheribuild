@@ -59,8 +59,7 @@ class BuildCheriSim(Project):
         pass
 
     def compile(self, **kwargs):
-
-        self.runShellScript("source setup.sh && " + commandline_to_str(self.get_make_commandline("sim")),
+        self.runShellScript("source setup.sh && " + commandline_to_str(self.get_make_commandline("sim", parallel=False)),
                             cwd=self.sourceDir, shell="bash")
         pass
 
