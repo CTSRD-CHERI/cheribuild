@@ -235,7 +235,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                         fallback_config_name: str=None, **kwargs) -> "Type_T":
         configOptionKey = cls.target
         # if cls.target != cls.projectName.lower():
-        #    fatalError("Target name does not match project name:", cls.target, "vs", cls.projectName.lower())
+        #    self.fatal("Target name does not match project name:", cls.target, "vs", cls.projectName.lower())
 
         # Hide stuff like --foo/install-directory from --help
         helpHidden = not showHelp
@@ -474,7 +474,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def dependencyError(self, *args, installInstructions: str = None):
         self._systemDepsChecked = True  # make sure this is always set
-        fatalError("Dependency for", self.target, "missing:", *args, fixitHint=installInstructions)
+        self.fatal("Dependency for", self.target, "missing:", *args, fixitHint=installInstructions)
 
     def checkSystemDependencies(self) -> None:
         """
@@ -519,7 +519,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         script_dir = Path(__file__).parent.parent.parent / "test-scripts"   # no-combine
         script = script_dir / script_name
         if not script.exists():
-            fatalError("Could not find test script", script)
+            self.fatal("Could not find test script", script)
         cmd = [script, "--kernel", kernel_path,
                "--qemu-cmd", BuildQEMU.qemu_binary(self),
                "--ssh-key", self.config.test_ssh_key] + list(script_args)
@@ -537,12 +537,19 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if self.config.verbose:
             print(*args, **kwargs)
 
-    def info(self, *args, **kwargs):
+    @staticmethod
+    def info(*args, **kwargs):
         # TODO: move all those methods here
         statusUpdate(*args, **kwargs)
 
-    def warning(self, *args, **kwargs):
+    @staticmethod
+    def warning(*args, **kwargs):
         warningMessage(*args, **kwargs)
+
+    @staticmethod
+    def fatal(*args, sep=" ", fixitHint=None, fatalWhenPretending=False):
+        fatalError(*args, sep=sep, fixitHint=fixitHint, fatalWhenPretending=fatalWhenPretending)
+
 
 def installDirNotSpecified(config: CheriConfig, project: "Project"):
     raise RuntimeError("installDirNotSpecified! dummy impl must not be called: " + str(project))
@@ -649,7 +656,7 @@ class MakeOptions(object):
         else:
             if self.__command is not None:
                 return self.__command
-            fatalError("Cannot infer path from CustomMakeTool. Set self.make_args.set_command(\"tool\")")
+            self.fatal("Cannot infer path from CustomMakeTool. Set self.make_args.set_command(\"tool\")")
             raise RuntimeError()
 
     def set_command(self, value, can_pass_j_flag=True, **kwargs):
@@ -832,7 +839,7 @@ class Project(SimpleProject):
     def checkSystemDependencies(self):
         # Check that the make command exists (this will also add it to the required system tools)
         if self.make_args.command is None:
-            fatalError("Make command not set!")
+            self.fatal("Make command not set!")
         super().checkSystemDependencies()
 
     @classmethod
@@ -901,10 +908,10 @@ class Project(SimpleProject):
         # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
         if not (srcDir / ".git").exists():
             if self.config.skipClone:
-                fatalError("Sources for", str(srcDir), " missing!")
+                self.fatal("Sources for", str(srcDir), " missing!")
             print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?", end="")
             if not self.queryYesNo(defaultResult=False):
-                fatalError("Sources for", str(srcDir), " missing!")
+                self.fatal("Sources for", str(srcDir), " missing!")
             cloneCmd = ["git", "clone", "--depth", "1"]
             if not skipSubmodules:
                 cloneCmd.append("--recurse-submodules")
@@ -1011,7 +1018,7 @@ class Project(SimpleProject):
 
     def update(self):
         if not self.repository:
-            fatalError("Cannot update", self.projectName, "as it is missing a git URL", fatalWhenPretending=True)
+            self.fatal("Cannot update", self.projectName, "as it is missing a git URL", fatalWhenPretending=True)
         self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision, initialBranch=self.gitBranch,
                             skipSubmodules=self.skipGitSubmodules)
 
@@ -1256,7 +1263,7 @@ class CMakeProject(Project):
         cmd = Path(self.configureCommand)
         assert self.configureCommand is not None
         if not cmd.is_absolute() or not Path(self.configureCommand).exists():
-            fatalError("Could not find cmake binary:", self.configureCommand)
+            self.fatal("Could not find cmake binary:", self.configureCommand)
             return 0, 0, 0
         assert cmd.is_absolute()
         return get_program_version(cmd, program_name=b"cmake")

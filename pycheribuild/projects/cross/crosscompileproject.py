@@ -71,7 +71,7 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
         return Path(BuildCHERIBSD.rootfsDir(project, config) / "opt" / targetName / project.projectName.lower())
     elif project.crossInstallDir == CrossInstallDir.SDK:
         return config.sdkSysrootDir
-    fatalError("Unknown install dir for", project.projectName)
+    self.fatal("Unknown install dir for", project.projectName)
 
 def _installDirMessage(project: "CrossCompileProject"):
     if project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
@@ -328,7 +328,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
         elif self.compiling_for_mips():
             emulation = "elf64btsmip_fbsd" if not self.baremetal else "elf64btsmip"
         else:
-            fatalError("Logic error!")
+            self.fatal("Logic error!")
             return []
         result += self._essential_compiler_and_linker_flags + [
             "-Wl,-m" + emulation,
@@ -418,11 +418,11 @@ class CrossCompileMixin(MultiArchBaseMixin):
             asan_libs = self.sdkSysroot / "usr/lib/clang/6.0.0/lib/freebsd/"
             libname = "libclang_rt.asan-mips64.a"
             if not (asan_libs / libname).exists():
-                fatalError("Cannot find", libname, "library in sysroot dir", asan_libs, "-- Compilation will fail!")
+                self.fatal("Cannot find", libname, "library in sysroot dir", asan_libs, "-- Compilation will fail!")
             self.makedirs(expected_path)
             runCmd("cp", "-av", asan_libs, expected_path.parent)
             if not (expected_path / libname).exists():
-                fatalError("Cannot find", libname, "library in compiler dir", expected_path, "-- Compilation will fail!")
+                self.fatal("Cannot find", libname, "library in compiler dir", expected_path, "-- Compilation will fail!")
 
         super().process()
 

@@ -272,7 +272,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 
     def process(self):
         if not self.compiling_for_host() and not self.nativeBuildDir.exists():
-            fatalError("Missing host build directory", self.nativeBuildDir, " (needed for cross-compiling)",
+            self.fatal("Missing host build directory", self.nativeBuildDir, " (needed for cross-compiling)",
                        fixitHint="Run `cheribuild.py " + self.target + " --xhost`")
         super().process()
 

@@ -91,7 +91,7 @@ class BuildCheriVis(Project):
         # expectedCheritraceLib = str(self.config.sdkDir / "lib/libcheritrace.a")
         # cheritraceLib = Path(os.getenv("CHERITRACE_LIB") or expectedCheritraceLib)
         # if not cheritraceLib.exists():
-        #     fatalError(cheritraceLib, "does not exist", fixitHint="Try running `cheribuild.py cheritrace` and if that"
+        #     self.fatal(cheritraceLib, "does not exist", fixitHint="Try running `cheribuild.py cheritrace` and if that"
         #                " doesn't work set the environment variable CHERITRACE_LIB to point to libcheritrace.so")
         #     return
         # self.cheritrace_path = cheritraceLib

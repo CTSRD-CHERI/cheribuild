@@ -100,11 +100,11 @@ class GnuStepModule(AutotoolsProject):
         # Just to confirm that we have set up the -rpath flag correctly
         expectedLibdir = self.installDir / "lib"
         if not expectedLibdir.is_dir():
-            fatalError("Expected gnustep libdir", expectedLibdir, "doesn't exist")
+            self.fatal("Expected gnustep libdir", expectedLibdir, "doesn't exist")
         if not Path(gnustepLibdir).is_dir():
-            fatalError("GNUSTEP_SYSTEM_LIBRARIES directory", gnustepLibdir, "doesn't exist")
+            self.fatal("GNUSTEP_SYSTEM_LIBRARIES directory", gnustepLibdir, "doesn't exist")
         if Path(gnustepLibdir).exists() and Path(gnustepLibdir).resolve() != expectedLibdir.resolve():
-            fatalError("GNUSTEP_SYSTEM_LIBRARIES was", gnustepLibdir, "but expected ", expectedLibdir)
+            self.fatal("GNUSTEP_SYSTEM_LIBRARIES was", gnustepLibdir, "but expected ", expectedLibdir)
 
         # print(coloured(AnsiColour.green, "LDFLAGS=-L" + gnustepLibdir))
         # TODO: what about spaces??

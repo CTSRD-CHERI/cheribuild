@@ -224,7 +224,7 @@ class BuildQEMU(AutotoolsProject):
                     warningMessage("QEMU usermode samba shares require the samba.org smbd. You will need to build it from "
                                    "source (using `cheribuild.py samba`) since the /usr/sbin/smbd shipped by MacOS is "
                                    "incompatible with QEMU")
-                fatalError("Could not find smbd -> QEMU SMB shares networking will not work",
+                self.fatal("Could not find smbd -> QEMU SMB shares networking will not work",
                            fixitHint="Either install samba using the system package manager or with cheribuild. "
                                      "If you really don't need QEMU host shares you can disable the samba dependency "
                                      "by setting --qemu/no-use-smbd")

@@ -129,13 +129,13 @@ class BuildFreestandingSdk(SimpleProject):
             if directory.exists():
                 self.cheribsdBuildRoot = directory
         if not self.cheribsdBuildRoot:
-            fatalError("CheriBSD build directory is missing! (Tried", possibleBuildRoots, ")")
+            self.fatal("CheriBSD build directory is missing! (Tried", possibleBuildRoots, ")")
         CHERITOOLS_OBJ = self.cheribsdBuildRoot / "tmp/usr/bin/"
         CHERIBOOTSTRAPTOOLS_OBJ = self.cheribsdBuildRoot / "tmp/legacy/usr/bin/"
         CHERILIBEXEC_OBJ = self.cheribsdBuildRoot / "tmp/usr/libexec/"
         for i in (CHERIBOOTSTRAPTOOLS_OBJ, CHERITOOLS_OBJ, CHERITOOLS_OBJ, BuildCHERIBSD.rootfsDir(self, self.config)):
             if not i.is_dir():
-                fatalError("Directory", i, "is missing!")
+                self.fatal("Directory", i, "is missing!")
 
         # install tools:
         for tool in binutilsBinaries:
@@ -144,7 +144,7 @@ class BuildFreestandingSdk(SimpleProject):
             elif (CHERIBOOTSTRAPTOOLS_OBJ / tool).is_file():
                 self.installFile(CHERIBOOTSTRAPTOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
             else:
-                fatalError("Required tool", tool, "is missing!")
+                self.fatal("Required tool", tool, "is missing!")
 
         # We should no longer need GCC:
         return

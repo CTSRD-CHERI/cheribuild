@@ -193,7 +193,7 @@ class _BuildDiskImageBase(SimpleProject):
         if self.input_METALOG.exists():
             self.mtree.load(self.input_METALOG)
         elif self.input_METALOG_required:
-            fatalError("Could not find required input mtree file", self.input_METALOG)
+            self.fatal("Could not find required input mtree file", self.input_METALOG)
 
         # Add the files needed to install kyua (make sure to download before calculating the list of extra files!)
         if self.needs_special_pkg_repo:
@@ -337,7 +337,7 @@ class _BuildDiskImageBase(SimpleProject):
                 print("qemu-img from CHERI SDK not found, falling back to system qemu-img")
                 qemuImgCommand = Path(systemQemuImg)
             else:
-                fatalError("qemu-img command was not found!", fixitHint="Make sure to build target qemu first")
+                self.fatal("qemu-img command was not found!", fixitHint="Make sure to build target qemu first")
 
         # write out the manifest file:
         self.mtree.write(self.manifestFile)
@@ -386,7 +386,7 @@ class _BuildDiskImageBase(SimpleProject):
     def copyFromRemoteHost(self):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
         if not self.remotePath:
-            fatalError("Path to the remote disk image is not set, option '--", self.target, "/", "remote-path' must "
+            self.fatal("Path to the remote disk image is not set, option '--", self.target, "/", "remote-path' must "
                        "be set to a path that scp understands (e.g. vica:/foo/bar/disk.img)", sep="")
             return
         # noinspection PyAttributeOutsideInit
@@ -432,14 +432,14 @@ class _BuildDiskImageBase(SimpleProject):
             if not self.makefs_cmd:
                 self.makefs_cmd = shutil.which("makefs")
         if not self.makefs_cmd or not self.install_cmd:
-            fatalError("Missing freebsd-install or freebsd-makefs command!")
+            self.fatal("Missing freebsd-install or freebsd-makefs command!")
         statusUpdate("Disk image will saved to", self.diskImagePath)
         statusUpdate("Extra files for the disk image will be copied from", self.extraFilesDir)
 
         if not self.input_METALOG.is_file():
-            fatalError("mtree manifest", self.input_METALOG, "is missing")
+            self.fatal("mtree manifest", self.input_METALOG, "is missing")
         if not (self.userGroupDbDir / "master.passwd").is_file():
-            fatalError("master.passwd does not exist in ", self.userGroupDbDir)
+            self.fatal("master.passwd does not exist in ", self.userGroupDbDir)
 
         with tempfile.TemporaryDirectory() as tmp:
             self.tmpdir = Path(tmp)
@@ -556,7 +556,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             # Otherwise find the file in the rootfs
             file_path = self.rootfsDir / line  # type: Path
             if not file_path.exists():
-                fatalError("Required file", line, "missing from rootfs")
+                self.fatal("Required file", line, "missing from rootfs")
             if file_path.is_dir():
                 self.mtree.add_dir(line, reference_dir=file_path, print_status=self.config.verbose)
             else:
@@ -607,7 +607,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         # update cheribsdbox link in case we stripped it:
         cheribsdbox_entry = self.mtree._mtree.get("./bin/cheribsdbox")
         if not cheribsdbox_entry:
-            fatalError("Could not find cheribsdbox entry in mtree file!")
+            self.fatal("Could not find cheribsdbox entry in mtree file!")
         else:
             cheribsdbox_path = cheribsdbox_entry.attributes["contents"]
             # create at least one hardlink to cheribsdbox so that mtree can detect that the files are all the same
@@ -616,7 +616,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                 self.deleteFile(dummy_hardlink)
                 os.link(cheribsdbox_path, dummy_hardlink)
                 if Path(cheribsdbox_path).stat().st_nlink < 2:
-                    fatalError("Need at least one hardlink to cheribsdbox so that makefs can detect deduplicate. "
+                    self.fatal("Need at least one hardlink to cheribsdbox so that makefs can detect deduplicate. "
                                "This should have been created by cheribuild but something must have gone wrong")
             print("Relocating mtree path ./bin/cheribsdbox to use", cheribsdbox_path)
             for i in self.mtree._mtree.values():

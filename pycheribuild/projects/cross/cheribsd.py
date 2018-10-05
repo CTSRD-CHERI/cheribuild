@@ -349,7 +349,7 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
             # DONT SET XAS!!! It prevents bfd from being built
             # self.cross_toolchain_config.set(XAS=cross_prefix + "clang " + target_flags)
         else:
-            fatalError("Invalid state, should have a cross env")
+            self.fatal("Invalid state, should have a cross env")
             sys.exit(1)
 
         self.externalToolchainCompiler = Path(cross_prefix + "clang")
@@ -389,7 +389,7 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
             result.set_with_options(AUTO_OBJ=True)
         if self.useExternalToolchainForWorld:
             if not self.externalToolchainCompiler.exists():
-                fatalError("Requested build of world with external toolchain, but", self.externalToolchainCompiler,
+                self.fatal("Requested build of world with external toolchain, but", self.externalToolchainCompiler,
                            "doesn't exist!")
             result.update(self.cross_toolchain_config)
         return result
@@ -402,7 +402,7 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
             kernel_options.set(NO_MODULES="yes")
         if self.useExternalToolchainForKernel:
             if not self.externalToolchainCompiler.exists():
-                fatalError("Requested build of kernel with external toolchain, but", self.externalToolchainCompiler,
+                self.fatal("Requested build of kernel with external toolchain, but", self.externalToolchainCompiler,
                            "doesn't exist!")
             # We can't use LLD for the kernel yet but there is a flag to experiment with it
             if self._crossCompileTarget == CrossCompileTarget.NATIVE:
@@ -722,7 +722,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         for tool in host_tools:
             fullpath = shutil.which(tool, path=searchpath)
             if not fullpath:
-                fatalError("Missing", tool, "binary")
+                self.fatal("Missing", tool, "binary")
                 continue
             self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
 
@@ -744,7 +744,7 @@ print("NOOP chflags:", sys.argv, file=sys.stderr)
         #     assert not tool in host_tools, tool + " should not be linked from host"
         #     fullpath = Path(self.config.otherToolsDir, "bin/freebsd-" + tool)
         #     if not fullpath.is_file():
-        #         fatalError(tool, "binary is missing!")
+        #         self.fatal(tool, "binary is missing!")
         #     self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
 
         # /bin/sh on Ubuntu doesn't like shift without any arguments, let's use bash as bin/sh instead...
@@ -923,7 +923,7 @@ class BuildCHERIBSD(BuildFreeBSD):
                 prefix = "CHERI_DE4_"
             else:
                 prefix = "INVALID_KERNCONF_"
-                fatalError("Invalid CHERI BITS")
+                self.fatal("Invalid CHERI BITS")
             # TODO: build the benchmark kernels? TODO: remove the MDROOT option?
             for conf in ("USBROOT", "NFSROOT", "MDROOT", "USBROOT_BENCHMARK", "MDROOT_BENCHMARK"):
                 self.extra_kernels.append(prefix + conf)
@@ -951,13 +951,13 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     def compile(self, **kwargs):
         if not self.cheriCC.is_file():
-            fatalError("CHERI CC does not exist: ", self.cheriCC)
+            self.fatal("CHERI CC does not exist: ", self.cheriCC)
         if not self.cheriCXX.is_file():
-            fatalError("CHERI CXX does not exist: ", self.cheriCXX)
+            self.fatal("CHERI CXX does not exist: ", self.cheriCXX)
         if self.mipsToolchainPath:
             mipsCC = self.mipsToolchainPath / "bin/clang"
             if not mipsCC.is_file():
-                fatalError("MIPS toolchain specified but", mipsCC, "is missing.")
+                self.fatal("MIPS toolchain specified but", mipsCC, "is missing.")
         super().compile(mfs_root_image=self.mfs_root_image, sysroot_only=self.sysroot_only, **kwargs)
         if self.sysroot_only:
             return  # Don't attempt to build extra kernels if we are only building a sysroot
@@ -1073,7 +1073,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         super().checkSystemDependencies()
         if not IS_FREEBSD and not self.remotePath and not self.rootfs_source_class.get_instance(self, self.config).crossbuild:
             configOption = "'--" + self.target + "/" + "remote-sdk-path'"
-            fatalError("Path to the remote SDK is not set, option", configOption, "must be set to a path that "
+            self.fatal("Path to the remote SDK is not set, option", configOption, "must be set to a path that "
                        "scp understands (e.g. vica:~foo/cheri/output/sdk)")
             if not self.config.pretend:
                 sys.exit("Cannot continue...")
@@ -1089,7 +1089,7 @@ class BuildCheriBsdSysroot(SimpleProject):
     def copySysrootFromRemoteMachine(self):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
         if not self.remotePath:
-            fatalError("Missing remote SDK path: Please set --cheribsd-sysroot/remote-sdk-path (or --cheribsd/crossbuild)")
+            self.fatal("Missing remote SDK path: Please set --cheribsd-sysroot/remote-sdk-path (or --cheribsd/crossbuild)")
             if self.config.pretend:
                 self.remotePath = "someuser@somehose:this/path/does/not/exist"
         # noinspection PyAttributeOutsideInit
@@ -1120,7 +1120,7 @@ class BuildCheriBsdSysroot(SimpleProject):
             with subprocess.Popen(archiveCmd, stdout=subprocess.PIPE, cwd=tar_cwd) as tar:
                 runCmd(["tar", "xf", "-"], stdin=tar.stdout, cwd=self.config.sdkSysrootDir)
         if not (self.config.sdkSysrootDir / "lib/libc.so.7").is_file():
-            fatalError(self.config.sdkSysrootDir, "is missing the libc library, install seems to have failed!")
+            self.fatal(self.config.sdkSysrootDir, "is missing the libc library, install seems to have failed!")
 
         # fix symbolic links in the sysroot:
         print("Fixing absolute paths in symbolic links inside lib directory...")

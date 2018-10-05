@@ -29,7 +29,7 @@
 #
 
 from .crosscompileproject import *
-from ...utils import runCmd, statusUpdate, IS_MAC, warningMessage, fatalError
+from ...utils import runCmd, statusUpdate, IS_MAC, warningMessage
 
 import os
 import shutil
@@ -166,7 +166,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
             warningMessage("You are trying to build the old unsupported mips_cheri branch. You should be using",
                            self.gitBranch)
             if not self.queryYesNo("Are you sure you want to continue?", forceResult=False):
-                fatalError("Wrong branch!")
+                self.fatal("Wrong branch!")
 
     @property
     def CC(self):

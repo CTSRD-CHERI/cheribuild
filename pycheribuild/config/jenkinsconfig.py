@@ -34,7 +34,7 @@ from pathlib import Path
 
 from .loader import ConfigLoaderBase
 from .chericonfig import CheriConfig, CrossCompileTarget
-from ..utils import defaultNumberOfMakeJobs, fatalError, latestClangTool
+from ..utils import defaultNumberOfMakeJobs, fatalError
 
 
 def default_install_prefix(conf: "JenkinsConfig", unused):

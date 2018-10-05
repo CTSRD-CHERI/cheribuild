@@ -136,7 +136,7 @@ class BuildGnuBinutils(AutotoolsProject):
         for tool in installedTools:
             prefixedName = "mips64-unknown-freebsd-" + tool
             if not (bindir / prefixedName).is_file():
-                fatalError("Binutils binary", prefixedName, "is missing!")
+                self.fatal("Binutils binary", prefixedName, "is missing!")
             # create the right symlinks to the tool (ld -> mips64-unknown-elf-ld, etc)
             # Also symlink cheri-unknown-freebsd-ld -> ld (and the other targets)
             self.createBuildtoolTargetSymlinks(bindir / prefixedName, toolName=tool, createUnprefixedLink=True)

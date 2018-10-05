@@ -182,7 +182,7 @@ class BuildLLVM(CMakeProject):
             incompatibleFiles = list(self.installDir.glob("lib/clang/*/include/std*"))
             incompatibleFiles += self.installDir.glob("lib/clang/*/include/limits.h")
             if len(incompatibleFiles) == 0:
-                fatalError("Could not find incompatible builtin includes. Build system changed?")
+                self.fatal("Could not find incompatible builtin includes. Build system changed?")
             print("Removing incompatible builtin includes...")
             for i in incompatibleFiles:
                 self.deleteFile(i, printVerboseOnly=True)

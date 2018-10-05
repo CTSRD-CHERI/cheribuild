@@ -111,7 +111,7 @@ class LaunchQEMUBase(SimpleProject):
                                      installInstructions="Run `cheribuild.py disk-image` or `cheribuild.py run -d`.")
         if self._forwardSSHPort and not self.isPortAvailable(self.sshForwardingPort):
             self.printPortUsage(self.sshForwardingPort)
-            fatalError("SSH forwarding port", self.sshForwardingPort, "is already in use! Make sure you don't ",
+            self.fatal("SSH forwarding port", self.sshForwardingPort, "is already in use! Make sure you don't ",
                        "already have a QEMU instance running or change the chosen port by setting the config option",
                        self.target + "/ssh-forwarding-port")
 
@@ -125,7 +125,7 @@ class LaunchQEMUBase(SimpleProject):
                 if self.queryYesNo("Will connect the QEMU monitor to stdio instead. Continue?"):
                     monitorOptions = []
                 else:
-                    fatalError("Monitor port not available and stdio is not acceptable.")
+                    self.fatal("Monitor port not available and stdio is not acceptable.")
                     return
         logfileOptions = []
         if self.logfile:
@@ -218,7 +218,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
     def _copyKernelImageFromRemoteHost(self):
         statusUpdate("Copying kernel image from FreeBSD build machine")
         if not self.remoteKernelPath:
-            fatalError("Path to the remote disk image is not set, option '--", self.target, "/",
+            self.fatal("Path to the remote disk image is not set, option '--", self.target, "/",
                        "remote-kernel-path' must be set to a path that scp understands",
                        " (e.g. vica:/foo/bar/kernel)", sep="")
             return
