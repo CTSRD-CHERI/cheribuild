@@ -46,7 +46,7 @@ class BuildSamba(Project):
     else:
         defaultBuildDir = Project.defaultSourceDir
     repository = "https://github.com/samba-team/samba.git"
-    gitBranch = "v4-8-stable"
+    gitBranch = "v4-9-stable"
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -74,14 +74,15 @@ class BuildSamba(Project):
             "--without-syslog", "--without-regedit",
             "--disable-glusterfs", "--disable-cephfs",
             "--without-ntvfs-fileserver",
+            "--without-json-audit",
             # Avoid depending on libraries from the build tree:
             "--bundled-libraries=talloc,tdb,pytdb,ldb,pyldb,tevent,pytevent",
             "--with-static-modules=ALL",
             "--prefix=" + str(self.installDir),
         ])
-        if SMB_OUT_OF_SOURCE_BUILD_WORKS and IS_MAC:
+        if IS_MAC:
             self._addRequiredSystemTool("/usr/local/opt/krb5/bin/kinit", homebrew="krb5")
-            # TODO: how to specify the path?
+            # TODO: brew --prefix krb5
             self.configureArgs.extend(["--with-system-mitkrb5", "/usr/local/opt/krb5"])
 
     def configure(self, **kwargs):
