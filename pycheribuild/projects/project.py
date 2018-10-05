@@ -297,6 +297,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
         assert self.__class__ in self.__configOptionsSet, "Forgot to call super().setupConfigOptions()? " + str(self.__class__)
         self.__requiredSystemTools = {}  # type: typing.Dict[str, typing.Any]
+        self.__requiredSystemHeaders = {}  # type: typing.Dict[str, typing.Any]
         self.__requiredPkgConfig = {}  # type: typing.Dict[str, typing.Any]
         self._systemDepsChecked = False
 
@@ -304,7 +305,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
         if not installInstructions:
             installInstructions = OSInfo.install_instructions(executable, False, freebsd=freebsd, zypper=zypper, apt=apt,
-                                                               homebrew=homebrew, cheribuild_target=cheribuild_target)
+                                                              homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__requiredSystemTools[executable] = installInstructions
 
     def _addRequiredPkgConfig(self, package: str, install_instructions=None, freebsd: str=None, apt: str = None,
@@ -314,6 +315,14 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             install_instructions = OSInfo.install_instructions(package, True, freebsd=freebsd, zypper=zypper, apt=apt,
                                                                homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__requiredPkgConfig[package] = install_instructions
+
+    def _addRequiredSystemHeader(self, header: str, install_instructions=None, freebsd: str=None, apt: str = None,
+                              zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
+        self._addRequiredSystemTool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config", )
+        if not install_instructions:
+            install_instructions = OSInfo.install_instructions(header, True, freebsd=freebsd, zypper=zypper, apt=apt,
+                                                               homebrew=homebrew, cheribuild_target=cheribuild_target)
+        self.__requiredSystemHeaders[header] = install_instructions
 
     def queryYesNo(self, message: str = "", *, defaultResult=False, forceResult=True, yesNoStr: str=None) -> bool:
         if yesNoStr is None:
@@ -474,6 +483,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def dependencyError(self, *args, installInstructions: str = None):
         self._systemDepsChecked = True  # make sure this is always set
+        if callable(installInstructions):
+            installInstructions = installInstructions()
         self.fatal("Dependency for", self.target, "missing:", *args, fixitHint=installInstructions)
 
     def checkSystemDependencies(self) -> None:
@@ -483,9 +494,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         """
         for (tool, installInstructions) in self.__requiredSystemTools.items():
             if not shutil.which(str(tool)):
-                if callable(installInstructions):
-                    installInstructions = installInstructions()
-                if not installInstructions:
+                if installInstructions is None or installInstructions == "":
                     installInstructions = "Try installing `" + tool + "` using your system package manager."
                 self.dependencyError("Required program", tool, "is missing!", installInstructions=installInstructions)
         for (package, instructions) in self.__requiredPkgConfig.items():
@@ -496,9 +505,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             printCommand(check_cmd, printVerboseOnly=True)
             exit_code = subprocess.call(check_cmd)
             if exit_code != 0:
-                if callable(instructions):
-                    instructions = instructions()
                 self.dependencyError("Required library", package, "is missing!", installInstructions=instructions)
+        for (header, instructions) in self.__requiredSystemHeaders.items():
+            if not Path("/usr/include", header).exists() and not Path("/usr/local/include", header).exists():
+                self.dependencyError("Required C header", header, "is missing!", installInstructions=instructions)
         self._systemDepsChecked = True
 
     def process(self):
@@ -528,6 +538,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if disk_image_path:
             cmd.extend(["--disk-image", disk_image_path])
         runCmd(cmd)
+
+    def runShellScript(self, script, shell="sh", **kwargs):
+        return runCmd(shell, "-xe" if not self.config.verbose else "-e", "-c", script, **kwargs)
 
     def print(self, *args, **kwargs):
         if not self.config.quiet:
@@ -963,27 +976,15 @@ class Project(SimpleProject):
         if revision:
             runCmd("git", "checkout", revision, cwd=srcDir, printVerboseOnly=True)
 
-    def runMake(self, makeTarget="", *, make_command: str = None, options: MakeOptions=None, logfileName: str = None,
-                cwd: Path = None, appendToLogfile=False, compilationDbName="compile_commands.json",
-                parallel: bool=True, stdoutFilter: "typing.Callable[[bytes], None]" = _default_stdout_filter) -> None:
-        if not make_command:
-            make_command = self.make_args.command
-        if not options:
-            options = self.make_args
-        if not cwd:
-            cwd = self.buildDir
-
+    def _get_make_commandline(self, makeTarget, make_command, options, parallel: bool=True, compilationDbName: str=None):
+        assert options is not None
+        assert make_command is not None
         if makeTarget:
             allArgs = options.all_commandline_args + [makeTarget]
-            if not logfileName:
-                logfileName = Path(make_command).name + "." + makeTarget
         else:
             allArgs = options.all_commandline_args
-            if not logfileName:
-                logfileName = Path(make_command).name
         if parallel and options.can_pass_jflag:
             allArgs.append(self.config.makeJFlag)
-
         allArgs = [make_command] + allArgs
         # TODO: use compdb instead for GNU make projects?
         if self.config.create_compilation_db and self.compileDBRequiresBear:
@@ -991,14 +992,6 @@ class Project(SimpleProject):
                        "--append"] + allArgs
         if not self.config.makeWithoutNice:
             allArgs = ["nice"] + allArgs
-        starttime = time.time()
-        if self.config.noLogfile and stdoutFilter == _default_stdout_filter:
-            # if output isatty() (i.e. no logfile) ninja already filters the output -> don't slow this down by
-            # adding a redundant filter in python
-            if make_command == "ninja" and makeTarget != "install":
-                stdoutFilter = None
-        if stdoutFilter is _default_stdout_filter:
-            stdoutFilter = self._stdoutFilter
         # TODO: this should be a super-verbose flag instead
         if self.config.verbose and make_command == "ninja":
             allArgs.append("-v")
@@ -1007,6 +1000,40 @@ class Project(SimpleProject):
             if make_command == "ninja":
                 # ninja needs the maximum number of failed jobs as an argument
                 allArgs.append("50")
+        return allArgs
+
+    def get_make_commandline(self, makeTarget, make_command:str=None, options: MakeOptions=None,
+                             parallel: bool=True, compilationDbName: str=None) -> list:
+        if not options:
+            options = self.make_args
+        if not make_command:
+            make_command = self.make_args.command
+        return self._get_make_commandline(makeTarget, make_command, options, parallel, compilationDbName)
+
+    def runMake(self, makeTarget="", *, make_command: str = None, options: MakeOptions=None, logfileName: str = None,
+                cwd: Path = None, appendToLogfile=False, compilationDbName="compile_commands.json",
+                parallel: bool=True, stdoutFilter: "typing.Callable[[bytes], None]" = _default_stdout_filter) -> None:
+        if not options:
+            options = self.make_args
+        if not make_command:
+            make_command = self.make_args.command
+        allArgs = self._get_make_commandline(makeTarget, make_command, options, parallel=parallel,
+                                             compilationDbName=compilationDbName)
+        if not cwd:
+            cwd = self.buildDir
+        if not logfileName:
+            logfileName = Path(make_command).name
+            if makeTarget:
+                logfileName += "." + makeTarget
+
+        starttime = time.time()
+        if self.config.noLogfile and stdoutFilter == _default_stdout_filter:
+            # if output isatty() (i.e. no logfile) ninja already filters the output -> don't slow this down by
+            # adding a redundant filter in python
+            if make_command == "ninja" and makeTarget != "install":
+                stdoutFilter = None
+        if stdoutFilter is _default_stdout_filter:
+            stdoutFilter = self._stdoutFilter
         env = options.env_vars
         self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=stdoutFilter, cwd=cwd, env=env,
                             appendToLogfile=appendToLogfile)

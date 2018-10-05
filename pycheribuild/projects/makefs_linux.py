@@ -41,6 +41,7 @@ class BuildMakefsOnLinux(Project):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+        self._addRequiredSystemHeader("bsd/bsd.h")
 
     def checkSystemDependencies(self):
         if not IS_LINUX:

@@ -258,6 +258,9 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
             self.addCrossBuildOptions()
             self.useExternalToolchainForWorld = True
             self.useExternalToolchainForKernel = True
+            if IS_LINUX:
+                # To build on Linux we need to install libbsd first
+                self._addRequiredSystemHeader("bsd/bsd.h", apt="libbsd-dev", zypper="libbsd-devel")
 
         # external toolchain options:
         self.externalToolchainCompiler = None
