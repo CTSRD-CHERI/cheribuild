@@ -137,7 +137,7 @@ class BuildQEMU(AutotoolsProject):
                     statusUpdate("Building with LTO -> QEMU should be faster")
                     break
         if self.config.unified_sdk:
-            targets = "cheri256-softmmu,cheri128-softmmu,cheri128magic-softmmu"
+            targets = "cheri256-softmmu,cheri128-softmmu,cheri128magic-softmmu,mips64-softmmu"
         else:
             targets = "cheri-softmmu"
             if config.cheriBits == 128:
