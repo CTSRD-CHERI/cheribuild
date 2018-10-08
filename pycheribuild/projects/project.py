@@ -1322,7 +1322,7 @@ class Project(SimpleProject):
         print("Running", make_command, makeTarget, "took", time.time() - starttime, "seconds")
 
     def update(self):
-        if not self.repository:
+        if not self.repository and not self.config.skipUpdate:
             self.fatal("Cannot update", self.projectName, "as it is missing a repository source", fatalWhenPretending=True)
         self.repository.updateRepo(self, srcDir=self.sourceDir, revision=self.gitRevision, initialBranch=self.gitBranch,
                                    skipSubmodules=self.skipGitSubmodules)
