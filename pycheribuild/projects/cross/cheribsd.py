@@ -37,6 +37,7 @@ import tempfile
 from pathlib import Path
 from .multiarchmixin import MultiArchBaseMixin
 from ..project import *
+from ..llvm import BuildUpstreamLLVM
 from ...config.loader import ComputedDefaultValue
 from ...config.chericonfig import CrossCompileTarget
 from ...utils import *
@@ -109,6 +110,11 @@ def cheribsd_build_dir(config: CheriConfig, project: "BuildFreeBSD"):
         return project.buildDirForTarget(config, project._crossCompileTarget)
 
 
+def default_cross_toolchain_path(config: CheriConfig, proj: "BuildFreeBSD"):
+    if proj.build_with_upstream_llvm:
+        return BuildUpstreamLLVM.getInstallDir(proj, config)
+    return config.sdkDir
+
 
 class BuildFreeBSD(MultiArchBaseMixin, Project):
     dependencies = ["llvm"]
@@ -163,10 +169,12 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         cls.keepOldRootfs = cls.addBoolOption("keep-old-rootfs",
             help="Don't remove the whole old rootfs directory.  This can speed up installing but may cause strange"
                  " errors so is off by default.")
-        defaultExternalToolchain = ComputedDefaultValue(function=lambda config, proj: config.sdkDir,
+        cls.build_with_upstream_llvm = cls.addBoolOption("compile-with-cheribuild-upstream-llvm", showHelp=True,
+             help="Compile with the Clang version built by the `cheribuild.py upstream-llvm` target")
+        defaultExternalToolchain = ComputedDefaultValue(function=default_cross_toolchain_path,
                                                         asString="$CHERI_SDK_DIR")
-        cls.mipsToolchainPath = cls.addPathOption("mips-toolchain", help="Path to the mips64-unknown-freebsd-* tools",
-                                                  default=defaultExternalToolchain)
+        cls.crossToolchainRoot = cls.addPathOption("cross-toolchain", help="Path to the mips64-unknown-freebsd-* tools",
+                                                   default=defaultExternalToolchain)
         # For compatibility we still accept --cheribsd-make-options here
         cls.makeOptions = cls.addConfigOption("build-options", default=cls.defaultExtraMakeOptions, kind=list,
                                               metavar="OPTIONS",
@@ -329,9 +337,8 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         )
 
         # self.cross_toolchain_config.add(CROSS_COMPILER=Falses) # This sets too much, we want elftoolchain and binutils
-
+        cross_prefix = str(self.crossToolchainRoot / "bin") + "/"  # needs to end with / for concatenation
         if self._crossCompileTarget == CrossCompileTarget.NATIVE:
-            cross_prefix = str(self.config.sdkBinDir) + "/"  # needs to end with / for concatenation
             # target_flags = " -fuse-ld=lld -Wno-error=unused-command-line-argument -Wno-unused-command-line-argument"
             target_flags = ""
             self.useExternalToolchainForWorld = True
@@ -340,8 +347,7 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
             self.linker_for_world = "lld"
             # DONT SET XAS!!! It prevents bfd from being built
             # self.cross_toolchain_config.set(XAS="/usr/bin/as")
-        elif self.mipsToolchainPath:
-            cross_prefix = str(self.mipsToolchainPath / "bin") + "/"
+        elif self._crossCompileTarget == CrossCompileTarget.MIPS or self._crossCompileTarget == CrossCompileTarget.CHERI :
             target_flags = " -integrated-as -fcolor-diagnostics -mcpu=mips4"
             # for some reason this is not inferred....
             # if self.crossbuild:
@@ -409,9 +415,9 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
                            "doesn't exist!")
             # We can't use LLD for the kernel yet but there is a flag to experiment with it
             if self._crossCompileTarget == CrossCompileTarget.NATIVE:
-                cross_prefix = str(self.config.sdkBinDir) + "/"
+                cross_prefix = str(self.crossToolchainRoot / "bin") + "/"
             else:
-                cross_prefix = str(self.mipsToolchainPath / "bin/mips64-unknown-freebsd-")
+                cross_prefix = str(self.crossToolchainRoot / "bin/mips64-unknown-freebsd-")
 
             kernel_options.update(self.cross_toolchain_config)
             fuse_ld_flag = "-fuse-ld=" + self.linker_for_kernel
@@ -613,7 +619,7 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         # self.common_options.env_vars["POSIXLY_CORRECT"] = "1"
         # self.make_args.set(PATH=build_path)
         # building without an external toolchain won't work:
-        self.mipsToolchainPath = self.config.sdkDir
+        self.crossToolchainRoot = self.config.sdkDir
         self.make_args.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
         # use clang for the build tools:
         self.make_args.set_env(CC=str(self.config.clangPath), CXX=str(self.config.clangPlusPlusPath))
@@ -957,8 +963,8 @@ class BuildCHERIBSD(BuildFreeBSD):
             self.fatal("CHERI CC does not exist: ", self.cheriCC)
         if not self.cheriCXX.is_file():
             self.fatal("CHERI CXX does not exist: ", self.cheriCXX)
-        if self.mipsToolchainPath:
-            mipsCC = self.mipsToolchainPath / "bin/clang"
+        if self.crossToolchainRoot:
+            mipsCC = self.crossToolchainRoot / "bin/clang"
             if not mipsCC.is_file():
                 self.fatal("MIPS toolchain specified but", mipsCC, "is missing.")
         super().compile(mfs_root_image=self.mfs_root_image, sysroot_only=self.sysroot_only, **kwargs)
