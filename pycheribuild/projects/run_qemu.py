@@ -93,8 +93,6 @@ class LaunchQEMUBase(SimpleProject):
         self._projectSpecificOptions = []
         self.machineFlags = ["-M", "malta"]  # malta cpu
         self._qemuUserNetworking = True
-        if self.qemu_smb_mount:
-            self._addRequiredSystemTool("smbd", apt="samba")
 
     def process(self):
         if not self.qemuBinary.exists():
