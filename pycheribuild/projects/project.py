@@ -810,7 +810,7 @@ class Project(SimpleProject):
 
     _installToSDK = ComputedDefaultValue(
         function=lambda config, project: config.sdkDir,
-        asString="$INSTALL_ROOT/sdk256 or $INSTALL_ROOT/sdk128 depending on CHERI bits")
+        asString="$INSTALL_ROOT/sdk")
     _installToBootstrapTools = ComputedDefaultValue(
         function=lambda config, project: config.otherToolsDir,
         asString="$INSTALL_ROOT/bootstrap")

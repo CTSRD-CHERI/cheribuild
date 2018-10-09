@@ -31,6 +31,7 @@ from pathlib import Path
 import shutil
 from .project import *
 from ..utils import *
+from ..config.loader import ComputedDefaultValue
 
 
 class BuildLLVM(CMakeProject):
@@ -227,7 +228,9 @@ class BuildUpstreamLLVM(BuildLLVM):
     githubBaseUrl = "https://github.com/llvm-mirror/"
     repository = githubBaseUrl + "llvm.git"
     projectName = "upstream-llvm"
-    defaultInstallDir = CMakeProject._installToBootstrapTools
+    defaultInstallDir = ComputedDefaultValue(
+        function=lambda config, project: config.outputRoot / "upstream-llvm",
+        asString="$INSTALL_ROOT/upstream-llvm")
     appendCheriBitsToBuildDir = False
 
     @classmethod
@@ -243,7 +246,9 @@ class BuildUpstreamLLVMMonorepo(BuildLLVM):
     repository = "https://github.com/llvm-project/llvm-project-20170507.git"
     projectName = "llvm-project"
     target = "upstream-llvm-monorepo"
-    defaultInstallDir = CMakeProject._installToBootstrapTools
+    defaultInstallDir = ComputedDefaultValue(
+        function=lambda config, project: config.outputRoot / "upstream-llvm-monorepo",
+        asString="$INSTALL_ROOT/upstream-llvm-monorepo")
     appendCheriBitsToBuildDir = False
 
     @classmethod
