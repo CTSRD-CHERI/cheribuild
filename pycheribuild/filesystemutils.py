@@ -80,7 +80,7 @@ class FileSystemUtils(object):
             except Exception as e:
                 warningMessage("Could not remove directory", self.path, e)
 
-    def asyncCleanDirectory(self, path: Path, *, keepRoot=False) -> ThreadJoiner:
+    def asyncCleanDirectory(self, path: Path, *, keepRoot=False, keep_dirs: list=None) -> ThreadJoiner:
         """
         Delete a directory in the background (e.g. deleting the cheribsd build directory delays the build
         with self.asyncCleanDirectory("foo")
@@ -107,14 +107,26 @@ class FileSystemUtils(object):
                 if not self.config.pretend:
                     assert tempdir.is_dir()
                     assert len(list(tempdir.iterdir())) == 0, list(tempdir.iterdir())
-                runCmd(["mv"] + list(map(str, path.iterdir())) + [tempdir], printVerboseOnly=True)
+                all_entries = list(path.iterdir())
+                if keep_dirs:
+                    all_entries_new = []
+                    for i in all_entries:
+                        if i.name in keep_dirs:
+                            statusUpdate("Not deleting", i, "- If you really want it removed, delete it manually.")
+                        else:
+                            all_entries_new.append(i)
+                    all_entries = all_entries_new
+                all_entries = list(map(str, all_entries))
+                if all_entries:
+                    runCmd(["mv"] + all_entries + [tempdir], printVerboseOnly=True)
             else:
                 # rename the directory, create a new dir and then delete it in a background thread
                 runCmd("mv", path, tempdir)
                 self.makedirs(path)
         if not self.config.pretend:
             assert path.is_dir()
-            assert len(list(path.iterdir())) == 0, list(path.iterdir())
+            if not (keep_dirs and keepRoot):
+                assert len(list(path.iterdir())) == 0, list(path.iterdir())
         if tempdir.is_dir() or self.config.pretend:
             # we now have an empty directory, start background deleter and return to caller
             deleterThread = FileSystemUtils.DeleterThread(self, tempdir)

@@ -441,8 +441,8 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         super().runMake(makeTarget, options=options, cwd=self.sourceDir, parallel=parallel, **kwargs)
 
     def clean(self) -> ThreadJoiner:
-        root_builddir = self.objdir
         if self.config.skipBuildworld:
+            root_builddir = self.objdir
             kernel_dir = self.kernel_objdir(self.kernelConfig)
             print(kernel_dir)
             if kernel_dir and kernel_dir.parent.exists():
@@ -458,7 +458,11 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
             builddir = self.buildDir
         if builddir.exists() and self.buildDir.exists():
             assert not os.path.relpath(str(builddir.resolve()), str(self.buildDir.resolve())).startswith(".."), builddir
-        return self.asyncCleanDirectory(builddir)
+        if self.crossbuild:
+            # avoid rebuilding bmake and libbsd when crossbuilding:
+            return self.asyncCleanDirectory(builddir, keepRoot=True, keep_dirs=["libbsd-install", "bmake-install"])
+        else:
+            return self.asyncCleanDirectory(builddir)
 
     def _buildkernel(self, kernconf: str, mfs_root_image: Path = None):
         kernelMakeArgs = self.kernelMakeArgsForConfig(kernconf)
