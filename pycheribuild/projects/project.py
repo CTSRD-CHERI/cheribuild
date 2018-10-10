@@ -639,7 +639,8 @@ class MakeOptions(object):
     @property
     def command(self) -> str:
         # Don't cache this value in case the user changes the kind
-        # if self.__command is None:
+        if self.__command is not None:
+            return self.__command
         cmd = self.__infer_command()
         assert self.kind == MakeCommandKind.CustomMakeTool or not Path(cmd).is_absolute()
         return cmd
@@ -673,7 +674,7 @@ class MakeOptions(object):
             raise RuntimeError()
 
     def set_command(self, value, can_pass_j_flag=True, **kwargs):
-        self.__command = value
+        self.__command = str(value)
         # noinspection PyProtectedMember
         if not Path(value).is_absolute():
             self.__project._addRequiredSystemTool(value, **kwargs)

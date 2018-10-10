@@ -232,6 +232,9 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
 
     def __init__(self, config: CheriConfig, archBuildFlags: dict = None):
         super().__init__(config)
+        if self.crossbuild:
+            # Use the script that I added for building on Linux/MacOS:
+            self.make_args.set_command(self.sourceDir / "tools/build/make.py")
         if archBuildFlags is None:
             if self._crossCompileTarget == CrossCompileTarget.MIPS:
                 # The following is broken: (https://github.com/CTSRD-CHERI/cheribsd/issues/102)
@@ -266,9 +269,6 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
             self.addCrossBuildOptions()
             self.useExternalToolchainForWorld = True
             self.useExternalToolchainForKernel = True
-            if IS_LINUX:
-                # To build on Linux we need to install libbsd first
-                self._addRequiredSystemHeader("bsd/bsd.h", apt="libbsd-dev", zypper="libbsd-devel")
 
         # external toolchain options:
         self.externalToolchainCompiler = None
@@ -525,7 +525,14 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
 
     def _query_buildenv_path(self, args, var):
         try:
-            make_cmd = shutil.which(self.make_args.command) or self.make_args.command
+            if self.crossbuild:
+                bmake_bootstrap = self.buildDir / "bmake-install/bin/bmake"
+                if not bmake_bootstrap.exists():
+                    self.verbose_print("Cannot query buildenv path if bmake hasn't been bootstrapped")
+                    return None
+                make_cmd = str(bmake_bootstrap)
+            else:
+                make_cmd = shutil.which(self.make_args.command) or self.make_args.command
             buildenv_cmd = make_cmd + " -V " + var
             bw_flags = args.all_commandline_args + ["BUILD_WITH_STRICT_TMPPATH=0", "buildenv",
                                                     "BUILDENV_SHELL=" + buildenv_cmd]
@@ -675,101 +682,12 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         # This should no longer be necessary since we can bootstrap elftoolchain
         # self.make_args.set_env(CROSS_BINUTILS_PREFIX=cross_binutils_prefix)
 
-    def prepareFreeBSDCrossEnv(self):
-        assert False, "This is no longer needed"
-        self.cleanDirectory(self.crossBinDir)
-
-        # From Makefile.inc1:
-        # ITOOLS=	[ awk cap_mkdb cat chflags chmod chown cmp cp \
-        # date echo egrep find grep id install ${_install-info} \
-        # ln make mkdir mtree mv pwd_mkdb \
-        # rm sed services_mkdb sh strip sysctl test true uname wc ${_zoneinfo} \
-        # ${LOCAL_ITOOLS}
-        # TODO: pwd_mkdb, cap_mkdb, services,
-        # strip? sysctl?
-        # Add links for the ones not installed by freebsd-crossbuild:
-        host_tools = [
-            # basic commands
-            "basename", "chmod", "chown", "cmp", "cp", "date", "dirname", "echo", "env",
-            "id", "ln", "mkdir", "mv", "rm", "ls", "tee",
-            "tr", "true", "uname", "wc", "sleep",
-            "hostname", "patch", "which",
-            # compiler and make
-            "cc", "cpp", "c++", "gperf", "m4",  # compiler tools
-            "lorder", "join",  # linking libraries
-            "bmake", "nice",  # calling make
-            "gzip",  # needed to generate some stuff
-            "git",  # to check for updates
-            "touch", "realpath", "head",  # used by kernel build scripts
-            "python3",  # for the fake sysctl wrapper
-            # "asn1_compile",  # kerberos stuff
-            "fmt",  # needed by latest freebsd
-            "bzip2", "dd",  # needed by bootloader
-        ]
-
-        searchpath = self.config.dollarPathWithOtherTools
-        if IS_MAC:
-            host_tools += ["chflags"]  # missing on linux
-            host_tools += ["bsdwhatis"]
-            searchpath = "/usr/local/opt/heimdal/libexec/heimdal/:/usr/local/opt/m4/bin" + os.pathsep + searchpath
-        else:
-            host_tools += ["lesspipe", "dircolors"]
-            # create a fake chflags for linux
-            self.writeFile(self.crossBinDir / "chflags", """#!/usr/bin/env python3
-import sys
-print("NOOP chflags:", sys.argv, file=sys.stderr)
-""", mode=0o755, overwrite=True)
-
-        # We need awk, sed and grep for the initial bootstrap-tools stage, when they get replaced with real ones
-        self.temporary_crossbuild_tools = ["awk", "sed", "grep", "sort", "find", "install", "mtree"]
-        for t in self.temporary_crossbuild_tools:
-            host_tools.append(t)
-        # awk is special because it may also be nawk (e.g. on Ubuntu)
-        awk = shutil.which("nawk") or shutil.which("awk") or "awk"
-        self.createSymlink(awk, self.crossBinDir / "awk", relative=False)
-
-        for tool in host_tools:
-            fullpath = shutil.which(tool, path=searchpath)
-            if not fullpath:
-                self.fatal("Missing", tool, "binary")
-                continue
-            self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
-
-        self.createSymlink(self.config.sdkBinDir / "objcopy", self.crossBinDir / "objcopy", relative=False)
-        self.createSymlink(self.config.sdkBinDir / "llvm-objdump", self.crossBinDir / "objdump", relative=False)
-        self.createSymlink(self.config.sdkBinDir / "strip", self.crossBinDir / "strip", relative=False)
-
-        # make installworld expects make as bmake
-        self.createSymlink(self.crossBinDir / "bmake", self.crossBinDir / "make", relative=True)
-        # create symlinks for the tools installed by freebsd-crosstools
-        crossTools = "awk cat compile_et config file2c find install makefs mtree rpcgen sed lex yacc".split()
-        crossTools += "mktemp tsort expr gencat mandoc gencat pwd_mkdb services_mkdb cap_mkdb".split()
-        crossTools += "test [ sysctl makewhatis rmdir unifdef gensnmptree strfile".split()
-        crossTools += "sort grep egrep fgrep rgrep zgrep zegrep zfgrep xargs".split()
-        crossTools += ["uuencode", "uudecode"]  # needed by x86 kernel
-
-        # TODO: freebsd version of sh?
-        # for tool in crossTools:
-        #     assert not tool in host_tools, tool + " should not be linked from host"
-        #     fullpath = Path(self.config.otherToolsDir, "bin/freebsd-" + tool)
-        #     if not fullpath.is_file():
-        #         self.fatal(tool, "binary is missing!")
-        #     self.createSymlink(Path(fullpath), self.crossBinDir / tool, relative=False)
-
-        # /bin/sh on Ubuntu doesn't like shift without any arguments, let's use bash as bin/sh instead...
-        # This is a problem when running ncurses MKfallback.sh
-        shell = "bash"
-        self.createSymlink(Path(shutil.which(shell)), self.crossBinDir / "sh", relative=False)
-
-        self.make_args.env_vars["AWK"] = self.crossBinDir / "awk"
-
     def process(self):
         if not IS_FREEBSD:
             if not self.crossbuild:
                 statusUpdate("Can't build CHERIBSD on a non-FreeBSD host! Any targets that depend on this will need"
                              " to scp the required files from another server (see --frebsd-build-server options)")
                 return
-            # self.prepareFreeBSDCrossEnv()
         # remove any environment variables that could interfere with bmake running
         for k, v in os.environ.copy().items():
             if k in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL", "MAKE_TERMERR", "MAKE_TERMOUT", "MAKE"):
