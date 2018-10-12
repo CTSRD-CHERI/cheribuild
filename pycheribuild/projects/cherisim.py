@@ -37,7 +37,7 @@ class BuildCheriSim(Project):
     projectName = "cheri-sim"
     repository = "https://please/set/source/dir/to/ctsrd-svn/cheri/trunk"
     defaultInstallDir = Project._installToSDK
-    defaultBuildDir = Project.defaultSourceDir      # Needs to build in the source dir
+    build_in_source_dir = True      # Needs to build in the source dir
     make_kind = MakeCommandKind.GnuMake
 
     def __init__(self, config: CheriConfig):
@@ -47,6 +47,8 @@ class BuildCheriSim(Project):
         self._addRequiredSystemHeader("mpfr.h", apt="libmpfr-dev")
         self.make_args.set(COP1="1" if self.build_fpu else "0")
         self.make_args.set(CAP="1" if self.build_cheri else "0")
+        if self.config.cheriBits == 128:
+            self.make_args.set(CAP128="1" if self.build_cheri else "0")
         self.make_args.set(NOPRINTS="1") # This massively speeds up the simulator
 
     @classmethod
@@ -54,6 +56,10 @@ class BuildCheriSim(Project):
         super().setupConfigOptions(**kwargs)
         cls.build_fpu = cls.addBoolOption("fpu", default=True, help="include the FPU code")
         cls.build_cheri = cls.addBoolOption("cheri", default=True, help="include the CHERI code in the simulator. If false build BERI")
+
+    def clean(self):
+        self.runMake("clean", parallel=False, cwd=self.sourceDir)
+        return None
 
     def update(self):
         pass
