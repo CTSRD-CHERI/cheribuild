@@ -117,7 +117,8 @@ class Opam2(SimpleProject):
             runCmd("wget", "https://github.com/ocaml/opam/releases/download/2.0.0/opam-2.0.0-x86_64-linux", "-O",
                    self.config.otherToolsDir / "bin/opam")
             # Make it executable
-            (self.config.otherToolsDir / "bin/opam").chmod(0o755)
+            if not self.config.pretend:
+                (self.config.otherToolsDir / "bin/opam").chmod(0o755)
         else:
             self.fatal("This target is only implement for Linux x86_64, for others operating systems you will have"
                        " to install opam 2.0 manually")
