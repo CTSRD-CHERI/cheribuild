@@ -36,7 +36,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     repository = "https://github.com/CTSRD-CHERI/postgres.git"
     gitBranch = "96-cheri"
     # we have to build in the source directory, out-of-source is broken
-    # defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir
+    # build_in_source_dir = True
     make_kind = MakeCommandKind.GnuMake
     defaultOptimizationLevel = ["-O2"]
     # TODO: only use mxcaptable for some files

@@ -58,7 +58,7 @@ class BuildCheriVis(Project):
     defaultInstallDir = Project._installToSDK
     # dependencies = ["cheritrace"]
     if IS_MAC:
-        defaultBuildDir = Project.defaultSourceDir
+        build_in_source_dir = True
         make_kind = MakeCommandKind.CustomMakeTool
     else:
         dependencies = ["gnustep"]

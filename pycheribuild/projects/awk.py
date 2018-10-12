@@ -34,7 +34,7 @@ from ..utils import *
 class BuildAwk(Project):
     repository = "https://github.com/danfuzz/one-true-awk.git"
     defaultInstallDir = Project._installToSDK
-    defaultBuildDir = Project.defaultSourceDir  # We build in the source directory
+    build_in_source_dir = True  # We build in the source directory
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

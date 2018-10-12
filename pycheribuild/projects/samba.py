@@ -44,7 +44,7 @@ class BuildSamba(Project):
     if SMB_OUT_OF_SOURCE_BUILD_WORKS:
         make_kind = MakeCommandKind.CustomMakeTool
     else:
-        defaultBuildDir = Project.defaultSourceDir
+        build_in_source_dir = True
     repository = "https://github.com/samba-team/samba.git"
     gitBranch = "v4-9-stable"
 

@@ -202,7 +202,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
     repository = "https://github.com/CTSRD-CHERI/sail-cheri-mips"
     dependencies = ["sail-from-opam"]
     defaultInstallDir = Project._installToSDK
-    defaultBuildDir = Project.defaultSourceDir  # Cannot build out-of-source
+    build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
 
     @classmethod
@@ -228,7 +228,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
 class OcamlProject(OpamMixin, Project):
     doNotAddToTargets = True
     defaultInstallDir = Project._installToSDK
-    defaultBuildDir = Project.defaultSourceDir
+    build_in_source_dir = True
     make_kind = MakeCommandKind.GnuMake
     needed_ocaml_packages = ["ocamlbuild"]
 

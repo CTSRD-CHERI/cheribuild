@@ -37,7 +37,7 @@ class BuildMakefsOnLinux(Project):
     projectName = "makefs-linux"
     repository = "https://github.com/Engil/makefs.git"
     defaultInstallDir = Project._installToBootstrapTools
-    defaultBuildDir = Project.defaultSourceDir  # out of source builds don't work
+    build_in_source_dir = True  # out of source builds don't work
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

@@ -34,7 +34,7 @@ import re
 class BuildNginx(CrossCompileAutotoolsProject):
     repository = "https://github.com/CTSRD-CHERI/nginx.git"
     # we have to build in the source directory, out-of-source is broken
-    # defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir
+    # build_in_source_dir = True
     make_kind = MakeCommandKind.GnuMake
     add_host_target_build_config_options = False
     defaultOptimizationLevel = ["-O2"]

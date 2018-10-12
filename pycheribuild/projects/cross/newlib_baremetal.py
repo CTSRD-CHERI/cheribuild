@@ -46,7 +46,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     crossInstallDir = CrossInstallDir.SDK
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
     default_architecture = CrossCompileTarget.MIPS
-    # defaultBuildDir = CrossCompileAutotoolsProject.defaultSourceDir  # we have to build in the source directory
+    # build_in_source_dir = True  # we have to build in the source directory
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):

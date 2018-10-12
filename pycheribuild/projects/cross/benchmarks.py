@@ -41,7 +41,7 @@ class BuildMibench(CrossCompileProject):
     # Needs bsd make to build
     make_kind = MakeCommandKind.BsdMake
     # and we have to build in the source directory
-    defaultBuildDir = CrossCompileProject.defaultSourceDir
+    build_in_source_dir = True
 
     def compile(self, **kwargs):
         with setEnv(MIPS_SDK=self.config.sdkDir,
@@ -75,7 +75,7 @@ class BuildOlden(CrossCompileProject):
     # Needs bsd make to build
     make_kind = MakeCommandKind.BsdMake
     # and we have to build in the source directory
-    defaultBuildDir = CrossCompileProject.defaultSourceDir
+    build_in_source_dir = True
 
     def compile(self, **kwargs):
         with setEnv(MIPS_SDK=self.config.sdkDir,

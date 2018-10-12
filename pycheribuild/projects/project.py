@@ -140,6 +140,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     is_sdk_target = False  # for --skip-sdk
     sourceDir = None
     buildDir = None
+    build_in_source_dir = False # For projects that can't build in the source dir
     installDir = None
     # Whether to hide the options from the default --help output (only add to --help-hidden)
     hide_options_from_help = False
@@ -300,6 +301,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         self.__requiredSystemHeaders = {}  # type: typing.Dict[str, typing.Any]
         self.__requiredPkgConfig = {}  # type: typing.Dict[str, typing.Any]
         self._systemDepsChecked = False
+        if self.build_in_source_dir:
+            self.verbose_print("Cannot build", self.projectName, "in a separate build dir, will build in", self.sourceDir)
+            self.buildDir = self.sourceDir
+
 
     def _addRequiredSystemTool(self, executable: str, installInstructions=None, freebsd: str=None, apt: str=None,
                                zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
@@ -1068,6 +1073,8 @@ class Project(SimpleProject):
                                                  "build artifacts.")
                 # Try to keep project files for IDEs and other dotfiles:
                 runCmd("git", "clean", "-dfx", "--exclude=.*", "--exclude=*.kdev4", cwd=self.buildDir)
+        elif self.buildDir == self.sourceDir:
+            self.fatal("Cannot clean non-git source directories. Please override")
         else:
             return self.asyncCleanDirectory(self.buildDir, keepRoot=True)
         return ThreadJoiner(None)
@@ -1187,6 +1194,8 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
 
         # run the rm -rf <build dir> in the background
         cleaningTask = self.clean() if self.config.clean else ThreadJoiner(None)
+        if cleaningTask is None:
+            cleaningTask = ThreadJoiner(None)
         assert isinstance(cleaningTask, ThreadJoiner), ""
         with cleaningTask:
             if not self.buildDir.is_dir():

@@ -80,7 +80,7 @@ class BuildGnuStep_Make(AutotoolsProject):
 class GnuStepModule(AutotoolsProject):
     doNotAddToTargets = True
     defaultInstallDir = AutotoolsProject._installToBootstrapTools
-    defaultBuildDir = AutotoolsProject.defaultSourceDir  # out of source builds don't seem to work!
+    build_in_source_dir = True  # out of source builds don't seem to work!
 
     def __init__(self, config: CheriConfig, moduleName: str):
         super().__init__(config)
