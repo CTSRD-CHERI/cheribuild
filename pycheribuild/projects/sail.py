@@ -86,7 +86,6 @@ class OpamMixin(object):
                         OPAMROOT=self.opamroot,
                         HOME=os.path.expanduser("~"),   # seems to be undefined for opam?
                         PATH=self.config.dollarPathWithOtherTools)
-        assert shutil.which("bwrap")
         if not (self.opamroot / "opam-init").exists():
             runCmd(self.opam_binary, "init", "--root=" + str(self.opamroot), "--no-setup", cwd="/", env=opam_env)
         return opam_env, cwd
