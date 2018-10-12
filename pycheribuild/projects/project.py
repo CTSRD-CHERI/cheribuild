@@ -540,7 +540,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         runCmd(cmd)
 
     def runShellScript(self, script, shell="sh", **kwargs):
-        return runCmd(shell, "-xe" if not self.config.verbose else "-e", "-c", script, **kwargs)
+        print_args = dict(**kwargs)
+        if "captureOutput" in print_args:
+            del print_args["captureOutput"]
+        printCommand(shell, "-xe" if self.config.verbose else "-e", "-c", script, **print_args)
+        kwargs["no_print"] = True
+        return runCmd(shell, "-xe" if self.config.verbose else "-e", input=script, **kwargs)
 
     def print(self, *args, **kwargs):
         if not self.config.quiet:

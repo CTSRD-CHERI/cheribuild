@@ -192,14 +192,15 @@ def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Pop
 
 
 def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]"=None, timeout=None,
-           printVerboseOnly=False, runInPretendMode=False, raiseInPretendMode=False, **kwargs):
+           printVerboseOnly=False, runInPretendMode=False, raiseInPretendMode=False, no_print=False, **kwargs):
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         cmdline = args[0]  # list with parameters was passed
     else:
         cmdline = args
     cmdline = list(map(str, cmdline))  # ensure it's all strings so that subprocess can handle it
     # When running scripts from a noexec filesystem try to read the interpreter and run that
-    printCommand(cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), printVerboseOnly=printVerboseOnly)
+    if not no_print:
+        printCommand(cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), printVerboseOnly=printVerboseOnly)
     if "cwd" in kwargs:
         kwargs["cwd"] = str(kwargs["cwd"])
     else:
@@ -318,18 +319,17 @@ def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
 # Cache the versions
 @functools.lru_cache(maxsize=20)
 def get_program_version(program: Path, command_args: tuple=None, componentKind:"typing.Type"=int, regex=None,
-                        program_name: bytes=None):
+                        program_name: bytes=None) -> "typing.Tuple[int, int, int]":
     if program_name is None:
         program_name = program.name.encode("utf-8")
     if command_args is None:
         command_args = ["--version"]
     prog = runCmd([program] + list(command_args), stderr=subprocess.STDOUT, captureOutput=True, runInPretendMode=True)
     return extract_version(prog.stdout, componentKind, regex, program_name)
-    pass
 
 
 # extract the version component from program output such as "git version 2.7.4"
-def extract_version(output: bytes, componentKind: "typing.Type"=int, regex: "typing.Pattern"=None, program_name: bytes=b""):
+def extract_version(output: bytes, componentKind: "typing.Type"=int, regex: "typing.Pattern"=None, program_name: bytes=b"") -> "typing.Tuple[int, int, int]":
     if regex is None:
         prefix = program_name + b" " if program_name else b""
         regex = re.compile(prefix + b"version\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?")

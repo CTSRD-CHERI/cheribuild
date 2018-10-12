@@ -29,46 +29,119 @@
 #
 import os
 from .project import *
-from ..utils import runCmd, setEnv, coloured, AnsiColour, commandline_to_str, printCommand
+from ..utils import runCmd, setEnv, coloured, AnsiColour, commandline_to_str, printCommand, get_program_version, IS_LINUX
 from subprocess import CalledProcessError
 import shlex
+import shutil
 
 class OpamMixin(object):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        assert isinstance(self, SimpleProject)
+        self._addRequiredSystemTool("opam", homebrew="opam", cheribuild_target="opam-2.0")
+
     @property
     def opamroot(self):
         return self.config.sdkDir / "opamroot"
 
+    def checkSystemDependencies(self):
+        assert isinstance(self, SimpleProject)
+        super().checkSystemDependencies()
+        opam_path = shutil.which("opam")
+        if opam_path:
+            opam_version = get_program_version(Path(opam_path), regex=b"(\\d+)\\.(\\d+)\\.?(\\d+)?")
+            if opam_version < (2, 0, 0):
+                self.dependencyError("Opam version", opam_version, "is too old. Need at least 2.0.0",
+                                     installInstructions="Install opam 2.0 with your system package manager or run `cheribuild.py opam-2.0` (Linux-only)")
+
+    @property
+    def opam_binary(self):
+        return shutil.which("opam") or "opam"
+
     def _opam_cmd(self, command, *args):
-        cmdline = ["opam", command, "--root=" + str(self.opamroot)]
+        cmdline = [self.opam_binary, command, "--root=" + str(self.opamroot)]
         cmdline.extend(args)
-        return commandline_to_str(cmdline)
+        return cmdline
+
+    def _opam_cmd_str(self, command, *args):
+        return commandline_to_str(self._opam_cmd(command, *args))
 
     def run_opam_cmd(self, command, *args, ignoreErrors=False, **kwargs):
-        command_str = self._opam_cmd(command, *args)
+        command_list = self._opam_cmd(command, *args)
         try:
-            return self.run_in_ocaml_env(command_str, **kwargs)
+            return self.run_command_in_ocaml_env(command_list, **kwargs)
         except CalledProcessError:
             if ignoreErrors:
-                self.verbose_print("Ignoring non-zero exit code from " + coloured(AnsiColour.yellow, command_str))
+                self.verbose_print("Ignoring non-zero exit code from " + coloured(AnsiColour.yellow, commandline_to_str(command_list)))
             else:
                 raise
 
-    def run_in_ocaml_env(self, command: str, cwd=None, printVerboseOnly=False, **kwargs):
+    def _run_in_ocaml_env_prepare(self, cwd=None) -> dict:
+        assert isinstance(self, SimpleProject)
         if cwd is None:
             cwd = self.sourceDir if getattr(self, "sourceDir") else "/"
+
+        opam_env = dict(GIT_TEMPLATE_DIR="", # see https://github.com/ocaml/opam/issues/3493
+                        OPAMROOT=self.opamroot,
+                        HOME=os.path.expanduser("~"),   # seems to be undefined for opam?
+                        PATH=self.config.dollarPathWithOtherTools)
+        assert shutil.which("bwrap")
+        if not (self.opamroot / "opam-init").exists():
+            runCmd(self.opam_binary, "init", "--root=" + str(self.opamroot), "--no-setup", cwd="/", env=opam_env)
+        return opam_env, cwd
+
+    def run_in_ocaml_env(self, command: str, cwd=None, printVerboseOnly=False, **kwargs):
+        opam_env, cwd = self._run_in_ocaml_env_prepare(cwd=cwd)
         script = "eval `opam config env`\n" + command + "\n"
-        self.verbose_print("Running shell script in ocaml env:", coloured(AnsiColour.cyan, command))
-        with setEnv(GIT_TEMPLATE_DIR="", # see https://github.com/ocaml/opam/issues/3493
-                    OPAMROOT=self.opamroot):
-            if not (self.opamroot / "opam-init").exists():
-                runCmd("opam", "init", "--no-setup")
-            flags = "-xe" if self.config.verbose else "-e"
-            printCommand("run-in-cheribuild-opam-env", command, cwd=cwd, printVerboseOnly=printVerboseOnly)
-            return runCmd("sh", flags, cwd=cwd, input=script, printVerboseOnly=True, **kwargs)
+        return self.runShellScript(script, cwd=cwd, printVerboseOnly=printVerboseOnly, env=opam_env, **kwargs)
+
+    def run_command_in_ocaml_env(self, command: list, cwd=None, printVerboseOnly=False, **kwargs):
+        opam_env, cwd = self._run_in_ocaml_env_prepare(cwd=cwd)
+        # for opam commands we don't need to prepend opam exec --
+        if command[0] != self.opam_binary:
+            command = [self.opam_binary, "exec", "--root=" + str(self.opamroot), "--"] + command
+        return runCmd(command, cwd=cwd, printVerboseOnly=printVerboseOnly, env=opam_env, **kwargs)
+
+
+class Opam2(SimpleProject):
+    target = "opam-2.0"
+
+    def __init__(self, config):
+        super().__init__(config)
+        if IS_LINUX:
+            self._addRequiredSystemTool("wget")
+            self._addRequiredSystemTool("bwrap", cheribuild_target="bubblewrap")
+
+    def process(self):
+        if IS_LINUX:
+            runCmd("wget", "https://github.com/ocaml/opam/releases/download/2.0.0/opam-2.0.0-x86_64-linux", "-O",
+                   self.config.otherToolsDir / "bin/opam")
+            # Make it executable
+            (self.config.otherToolsDir / "bin/opam").chmod(0o755)
+        else:
+            self.fatal("This target is only implement for Linux x86_64, for others operating systems you will have"
+                       " to install opam 2.0 manually")
+
+class BuildBubbleWrap(AutotoolsProject):
+    projectName = "bubblewrap"
+    repository = "https://github.com/projectatomic/bubblewrap"
+    defaultInstallDir = AutotoolsProject._installToBootstrapTools
+
+    def __init__(self, config):
+        super().__init__(config)
+        self._addRequiredSystemHeader("sys/capability.h", apt="libcap-dev")
+        self.configureCommand = self.sourceDir / "autogen.sh"
+        self.configureArgs.append("--with-bash-completion-dir=no")
+
+
+class ProjectUsingOpam(OpamMixin, Project):
+    doNotAddToTargets = True
+
 
 REMS_OPAM_REPO = "https://github.com/rems-project/opam-repository.git"
 
-class BuildSailFromOpam(SimpleProject, OpamMixin):
+class BuildSailFromOpam(OpamMixin, SimpleProject):
     target = "sail-from-opam"
     # repository = "https://github.com/rems-project/sail"
     # gitBranch = "sail2"
@@ -76,7 +149,6 @@ class BuildSailFromOpam(SimpleProject, OpamMixin):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self._addRequiredSystemTool("z3", homebrew="z3 --without-python@2 --with-python")
-        self._addRequiredSystemTool("opam", homebrew="opam")
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -85,7 +157,12 @@ class BuildSailFromOpam(SimpleProject, OpamMixin):
                                                 help="Install sail from github instead of using the latest released version")
 
     def process(self):
-        self.run_in_ocaml_env(self._opam_cmd("switch", "4.06.0") + " || " + self._opam_cmd("switch", "create", "4.06.0"))
+        self.run_command_in_ocaml_env(["env"])
+        try:
+            self.run_opam_cmd("switch", "4.06.0")
+        except CalledProcessError:
+            # create the switch if it doesn't exist
+            self.run_opam_cmd("switch", "create", "4.06.0")
         repos = self.run_opam_cmd("repository", "list", captureOutput=True)
         if REMS_OPAM_REPO not in repos.stdout.decode("utf-8"):
             self.run_opam_cmd("repository", "add", "rems", REMS_OPAM_REPO)
@@ -119,7 +196,7 @@ class BuildSail(TargetAliasWithDependencies):
     dependencies = ["sail-from-opam", "sail-cheri-mips"]
 
 
-class BuildSailCheriMips(Project, OpamMixin):
+class BuildSailCheriMips(ProjectUsingOpam):
     target = "sail-cheri-mips"
     projectName = "sail-cheri-mips"
     repository = "https://github.com/CTSRD-CHERI/sail-cheri-mips"
@@ -141,14 +218,14 @@ class BuildSailCheriMips(Project, OpamMixin):
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
         cmd = [self.make_args.command, self.config.makeJFlag, "all"] + self.make_args.all_commandline_args
-        self.run_in_ocaml_env(commandline_to_str(cmd), cwd=self.sourceDir)
+        self.run_command_in_ocaml_env(cmd, cwd=self.sourceDir)
 
     def install(self, **kwargs):
         self.make_args.set(INSTALL_DIR=self.config.sdkDir)
         self.runMake("install")
 
 # Old way of installing sail:
-class OcamlProject(Project, OpamMixin):
+class OcamlProject(OpamMixin, Project):
     doNotAddToTargets = True
     defaultInstallDir = Project._installToSDK
     defaultBuildDir = Project.defaultSourceDir
@@ -171,7 +248,7 @@ class OcamlProject(Project, OpamMixin):
                 self.run_in_ocaml_env("ocamlfind query " + shlex.quote(pkg), cwd="/", printVerboseOnly=True)
             except CalledProcessError:
                 self.dependencyError("missing opam package " + pkg,
-                                     installInstructions="Try running `" + self._opam_cmd("install") + pkg + "`")
+                                     installInstructions="Try running `" + self._opam_cmd_str("install") + pkg + "`")
 
     def install(self, **kwargs):
         pass
@@ -185,8 +262,8 @@ class OcamlProject(Project, OpamMixin):
             self.warning("stderr was:", e.stderr)
             self.dependencyError("OCaml env seems to be messed up. Note: On MacOS homebrew OCaml "
                                  "is not installed correctly. Try installing it with opam instead:",
-                                 installInstructions="Try running `" + self._opam_cmd("update") + " && " +
-                                                     self._opam_cmd("switch") + " 4.06.0`")
+                                 installInstructions="Try running `" + self._opam_cmd_str("update") + " && " +
+                                                     self._opam_cmd_str("switch") + " 4.06.0`")
         super().process()
 
 
