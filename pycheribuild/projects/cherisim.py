@@ -46,9 +46,11 @@ class BuildCheriSim(Project):
         self._addRequiredSystemTool("dtc", apt="device-tree-compiler")
         self._addRequiredSystemHeader("mpfr.h", apt="libmpfr-dev")
         self.make_args.set(COP1="1" if self.build_fpu else "0")
-        self.make_args.set(CAP="1" if self.build_cheri else "0")
-        if self.config.cheriBits == 128:
-            self.make_args.set(CAP128="1" if self.build_cheri else "0")
+        if self.build_cheri:
+            if self.config.cheriBits == 128:
+                self.make_args.set(CAP128="1")
+            else:
+                self.make_args.set(CAP="1")
         self.make_args.set(NOPRINTS="1") # This massively speeds up the simulator
 
     @classmethod
