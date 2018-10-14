@@ -492,6 +492,10 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         install_kernel_args.env_vars.update(self.makeInstallEnv)
         # Also install all other kernels that were potentially built
         install_kernel_args.set(NO_INSTALLEXTRAKERNELS="no")
+        # also install the debug files
+        if self.addDebugInfoFlag:
+            install_kernel_args.set_with_options(KERNEL_SYMBOLS=True)
+            install_kernel_args.set(INSTALL_KERNEL_DOT_FULL=True)
         if destdir:
             install_kernel_args.set_env(DESTDIR=destdir)
         self.runMake("installkernel", options=install_kernel_args, parallel=False)
@@ -932,10 +936,15 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         # Install to a temporary directory and then copy the kernel to OUTPUT_ROOT
         with tempfile.TemporaryDirectory() as td:
             build_cheribsd._installkernel(kernconf=kernconf, destdir=td)
-            # runCmd("find", td)
+            runCmd("find", td)
             self.deleteFile(self.get_installed_kernel_path(self, self.config))
             self.installFile(Path(td, "boot/kernel/kernel"), self.get_installed_kernel_path(self, self.config),
                              force=True, printVerboseOnly=False)
+            if Path(td, "boot/kernel/kernel.full").exists():
+                fullkernel_install_path = self.get_installed_kernel_path(self, self.config)
+                fullkernel_install_path = fullkernel_install_path.with_name(fullkernel_install_path.name + ".full")
+                self.installFile(Path(td, "boot/kernel/kernel"), fullkernel_install_path,
+                                 force=True, printVerboseOnly=False)
 
     @property
     def crossbuild(self):
