@@ -59,7 +59,8 @@ __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includ
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
            "warningMessage", "Type_T", "typing", "popen_handle_noexec", "extract_version", "get_program_version", # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latestClangTool", "SafeDict", # no-combine
-           "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build", "get_global_config"]  # no-combine
+           "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
+           "get_version_output"]  # no-combine
 
 
 if sys.version_info < (3, 4):
@@ -318,14 +319,20 @@ def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
 
 # Cache the versions
 @functools.lru_cache(maxsize=20)
+def get_version_output(program: Path, command_args: tuple=None) -> "bytes":
+    if command_args is None:
+        command_args = ["--version"]
+    prog = runCmd([program] + list(command_args), stderr=subprocess.STDOUT, captureOutput=True, runInPretendMode=True)
+    return prog.stdout
+
+
+@functools.lru_cache(maxsize=20)
 def get_program_version(program: Path, command_args: tuple=None, componentKind:"typing.Type"=int, regex=None,
                         program_name: bytes=None) -> "typing.Tuple[int, int, int]":
     if program_name is None:
         program_name = program.name.encode("utf-8")
-    if command_args is None:
-        command_args = ["--version"]
-    prog = runCmd([program] + list(command_args), stderr=subprocess.STDOUT, captureOutput=True, runInPretendMode=True)
-    return extract_version(prog.stdout, componentKind, regex, program_name)
+    stdout = get_version_output(program, command_args=command_args)
+    return extract_version(stdout, componentKind, regex, program_name)
 
 
 # extract the version component from program output such as "git version 2.7.4"

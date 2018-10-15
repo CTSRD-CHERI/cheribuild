@@ -647,6 +647,16 @@ class MakeOptions(object):
             return name + "=1"
 
     @property
+    def is_gnu_make(self):
+        if self.kind == MakeCommandKind.GnuMake:
+            return True
+        if self.kind != MakeCommandKind.DefaultMake:
+            return False
+        # otherwise parse make --version
+        print("IS GNU MAKE: ", b"GNU Make" in get_version_output(self.command))
+        return b"GNU Make" in get_version_output(self.command)
+
+    @property
     def command(self) -> str:
         # Don't cache this value in case the user changes the kind
         if self.__command is not None:
