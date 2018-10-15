@@ -916,10 +916,17 @@ class Project(SimpleProject):
         # non-assignable variables:
         self.configureArgs = []  # type: typing.List[str]
         self.configureEnvironment = {}  # type: typing.Dict[str,str]
-        if self.config.create_compilation_db and self.compileDBRequiresBear:
-            self._addRequiredSystemTool("bear", installInstructions="Run `cheribuild.py bear`")
         self._lastStdoutLineCanBeOverwritten = False
         self.make_args = MakeOptions(self.make_kind, self)
+        if self.config.create_compilation_db and self.compileDBRequiresBear:
+            if self.make_args.is_gnu_make:
+                # use compiledb instead of bear for gnu make
+                # https://blog.jetbrains.com/clion/2018/08/working-with-makefiles-in-clion-using-compilation-db/
+                self._addRequiredSystemTool("compiledb", installInstructions="Run `pip2 install --user compiledb``")
+                self._compiledb_tool = "compiledb"
+            else:
+                self._addRequiredSystemTool("bear", installInstructions="Run `cheribuild.py bear`")
+                self._compiledb_tool = "bear"
         self._preventAssign = True
 
     _no_overwrite_allowed = ("configureArgs", "configureEnvironment", "make_args")
@@ -1009,8 +1016,10 @@ class Project(SimpleProject):
         allArgs = [make_command] + allArgs
         # TODO: use compdb instead for GNU make projects?
         if self.config.create_compilation_db and self.compileDBRequiresBear:
-            allArgs = [shutil.which("bear"), "--cdb", self.buildDir / compilationDbName,
-                       "--append"] + allArgs
+            if self._compiledb_tool == "bear":
+                allArgs = [shutil.which("bear"), "--cdb", self.buildDir / compilationDbName, "--append"] + allArgs
+            else:
+                allArgs = [shutil.which("compiledb"), "--output", self.buildDir / compilationDbName] + allArgs
         if not self.config.makeWithoutNice:
             allArgs = ["nice"] + allArgs
         # TODO: this should be a super-verbose flag instead
