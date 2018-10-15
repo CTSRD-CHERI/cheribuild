@@ -182,7 +182,7 @@ class BuildQEMU(AutotoolsProject):
         if extraCXXFlags:
             self.configureArgs.append("--extra-cxxflags=" + extraCXXFlags.strip())
         if self.debug_info:
-            self.configureArgs.extend(["--enable-debug", "--disable-strip", "--enable-debug-tcg"])
+            self.configureArgs.extend(["--enable-debug", "--enable-debug-tcg"])
             extraCFlags += " -DENABLE_CHERI_SANITIY_CHECKS=1"
         else:
             # Try to optimize as much as possible:
@@ -190,6 +190,9 @@ class BuildQEMU(AutotoolsProject):
 
         if self.with_sanitizers:
             self.configureArgs.append("--enable-sanitizers")
+
+        # Having symbol information is useful for debugging and profiling
+        self.configureArgs.append("--disable-strip")
 
         if IS_LINUX:
             # "--enable-libnfs", # version on Ubuntu 14.04 is too old? is it needed?
