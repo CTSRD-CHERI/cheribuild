@@ -134,6 +134,7 @@ class BuildQEMU(AutotoolsProject):
                     extraCFlags += " -flto=thin"
                     extraCXXFlags += " -flto=thin"
                     extraLDFlags += " -flto=thin"
+                    extraLDFlags += " -Wl,--thinlto-cache-dir=" + str(self.buildDir / "thinlto-cache")
                     statusUpdate("Building with LTO -> QEMU should be faster")
                     break
         if self.config.unified_sdk:
