@@ -150,6 +150,9 @@ class BuildQEMU(AutotoolsProject):
             extraCFlags += " -DCHERI_C0_NULL=0"
         if self.statistics:
             extraCFlags += " -DDO_CHERI_STATISTICS=1"
+        extraCFlags += " -Wall"
+        # This would have cought some problems in the past
+        extraCFlags += " -Werror=return-type"
         self.configureArgs.extend([
             "--target-list=" + targets,
             "--disable-linux-user",
