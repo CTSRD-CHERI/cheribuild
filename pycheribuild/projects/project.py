@@ -919,7 +919,8 @@ class Project(SimpleProject):
         self._lastStdoutLineCanBeOverwritten = False
         self.make_args = MakeOptions(self.make_kind, self)
         if self.config.create_compilation_db and self.compileDBRequiresBear:
-            if self.make_args.is_gnu_make:
+            # CompileDB seems to generate broken compile_commands,json
+            if self.make_args.is_gnu_make and False:
                 # use compiledb instead of bear for gnu make
                 # https://blog.jetbrains.com/clion/2018/08/working-with-makefiles-in-clion-using-compilation-db/
                 self._addRequiredSystemTool("compiledb", installInstructions="Run `pip2 install --user compiledb``")
