@@ -719,7 +719,7 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
                     if is_lib:
                         # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
                         sysroot_var = "\"$$$${SYSROOT}\""
-                        install_cmd = "if [ -n {sysroot} ]; then {make} install DESTDIR={sysroot}; fi && ".format(
+                        install_cmd = "if [ -n {sysroot} ]; then {make} install MK_TESTS=no DESTDIR={sysroot}; fi && ".format(
                             make=make_in_subdir, sysroot=sysroot_var) + install_cmd
                 if self.compiling_for_cheri() and not is_lib:
                     # for non-library targets we need to set WANT_CHERI=pure in the environment to get the binary
