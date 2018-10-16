@@ -213,7 +213,7 @@ class FakeSpawn(object):
         print("RUNNING '", msg, "'", sep="")
 
 
-def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *, smb_dir: str=None) -> pexpect.spawn:
+def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *, smb_dir: str=None, kernel_init_only=False) -> pexpect.spawn:
     user_network_args = "user,id=net0,ipv6=off"
     if smb_dir:
         user_network_args += ",smb=" + smb_dir
@@ -246,6 +246,9 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
             failure("start up scripts failed to run")
         userspace_starttime = datetime.datetime.now()
         success("===> init running (kernel startup time: ", userspace_starttime - qemu_starttime, ")")
+        if kernel_init_only:
+            # To test kernel startup time
+            return child
 
         i = child.expect([pexpect.TIMEOUT, LOGIN, SHELL_OPEN, BOOT_FAILURE, PANIC, CHERI_TRAP, STOPPED], timeout=15 * 60)
         if i == 0:  # Timeout
@@ -390,6 +393,7 @@ def main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...]
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60)
     parser.add_argument("--pretend", "-p", action="store_true", help="Don't actually boot CheriBSD just print what would happen")
     parser.add_argument("--interact", "-i", action="store_true")
+    parser.add_argument("--test-kernel-init-only", action="store_true")
     if argparse_setup_callback:
         argparse_setup_callback(parser)
     try:
@@ -466,11 +470,12 @@ def main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...]
         diskimg = str(maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images))
 
     boot_starttime = datetime.datetime.now()
-    qemu = boot_cheribsd(args.qemu_cmd, kernel, diskimg, args.ssh_port, smb_dir=args.smb_mount_directory)
+    qemu = boot_cheribsd(args.qemu_cmd, kernel, diskimg, args.ssh_port, smb_dir=args.smb_mount_directory,
+                         kernel_init_only=args.test_kernel_init_only)
     success("Booting CheriBSD took: ", datetime.datetime.now() - boot_starttime)
 
     tests_okay = True
-    if test_archives or args.test_command or test_function:
+    if (test_archives or args.test_command or test_function) and not args.test_kernel_init_only:
         # noinspection PyBroadException
         try:
             if not args.use_smb_instead_of_ssh:
