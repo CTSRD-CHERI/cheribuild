@@ -98,7 +98,9 @@ class BuildLLVM(CMakeProject):
         if self.skip_static_analyzer:
             # save some build time by skipping the static analyzer
             self.add_cmake_options(CLANG_ENABLE_STATIC_ANALYZER=False,
-                                   CLANG_ENABLE_ARCMT=False)  # also need to disable ARCMT to disable static analyzer
+                                   CLANG_ENABLE_ARCMT=False,   # also need to disable ARCMT to disable static analyzer
+                                   CLANG_ANALYZER_ENABLE_Z3_SOLVER=False, # and this also needs to be set
+                                   )
         if self.canUseLLd(self.cCompiler):
             self.add_cmake_options(LLVM_ENABLE_LLD=True)
             # Add GDB index to speed up debugging
