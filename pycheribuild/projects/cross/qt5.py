@@ -355,6 +355,9 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                     self.add_cmake_options(CHERI_CAPABILITY_SIZE=256)
                 self.add_cmake_options(CHERI_PURE_CAPABILITY=True)
 
+            if not self.compiling_for_host():
+                self.add_cmake_options(QTWEBKIT_LINK_STATIC_ONLY=self.force_static_linkage)
+
         self._addRequiredSystemTool("gperf")
 
     @classmethod
