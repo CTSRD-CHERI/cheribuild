@@ -306,6 +306,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.getSourceDir(project, config) / "qtwebkit",
         asString=lambda cls: "$SOURCE_ROOT/qt5" + cls.projectName.lower())
+    needs_mxcaptable_static = True  # Currently way over the limit
+    needs_mxcaptable_dynamic = True  # Currently way over the limit
 
     def __init__(self, config: CheriConfig):
         # There is a bug in the cmake ninja generator that makes it use a response file for linking
