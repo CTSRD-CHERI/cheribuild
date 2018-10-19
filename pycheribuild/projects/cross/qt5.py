@@ -126,7 +126,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         self.configureArgs.append("-qt-libpng")
 
         if self.debugInfo:
-            self.configureArgs.append("-gdb-index")
+            # TODO: once we update to qt 5.12 add this:
+            # self.configureArgs.append("-gdb-index")
             # Build a release build with debug info for now
             if self.optimized_debug_build:
                 self.configureArgs.append("-release")
