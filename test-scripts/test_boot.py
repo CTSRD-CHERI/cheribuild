@@ -30,13 +30,26 @@
 # SUCH DAMAGE.
 #
 import argparse
+import datetime
 import pexpect
 import sys
 from pathlib import Path
 
 
 def run_noop_test(qemu: pexpect.spawn, args: argparse.Namespace):
-    print("Booted successfully")
+    import boot_cheribsd
+    boot_cheribsd.success("Booted successfully")
+    poweroff_start = datetime.datetime.now()
+    qemu.sendline("poweroff")
+    i = qemu.expect(["Uptime:", pexpect.TIMEOUT, pexpect.EOF] + boot_cheribsd.FATAL_ERROR_MESSAGES, timeout=20)
+    if i != 0:
+        boot_cheribsd.failure("Poweroff " + ("timed out" if i == 1 else "failed"))
+        return False
+    i = qemu.expect([pexpect.TIMEOUT, pexpect.EOF], timeout=20)
+    if i == 0:
+        boot_cheribsd.failure("QEMU didn't exit after shutdown!")
+        return False
+    boot_cheribsd.success("Poweroff took: ", datetime.datetime.now() - poweroff_start)
     return True
 
 
