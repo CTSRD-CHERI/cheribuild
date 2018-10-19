@@ -59,6 +59,8 @@ PANIC = "panic: trap"
 PANIC_KDB = "KDB: enter: panic"
 CHERI_TRAP = "USER_CHERI_EXCEPTION: pid \\d+ tid \\d+ \(.+\)"
 
+FATAL_ERROR_MESSAGES = [PANIC, PANIC_KDB, CHERI_TRAP, STOPPED]
+
 PRETEND = False
 # To keep the port available until we start QEMU
 _SSH_SOCKET_PLACEHOLDER = None  # type: socket.socket
@@ -213,7 +215,8 @@ class FakeSpawn(object):
         print("RUNNING '", msg, "'", sep="")
 
 
-def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *, smb_dir: str=None, kernel_init_only=False) -> pexpect.spawn:
+def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *, smb_dir: str=None,
+                  kernel_init_only=False) -> pexpect.spawn:
     user_network_args = "user,id=net0,ipv6=off"
     if smb_dir:
         user_network_args += ",smb=" + smb_dir
@@ -236,10 +239,11 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
         child = pexpect.spawnu(qemu_cmd, qemu_args, echo=False, timeout=60)
     # child.logfile=sys.stdout.buffer
     child.logfile_read = sys.stdout
+    have_dhclient = False
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
-        i = child.expect([pexpect.TIMEOUT, STARTING_INIT, BOOT_FAILURE, PANIC_KDB, PANIC, CHERI_TRAP, STOPPED], timeout=5 * 60)
+        i = child.expect([pexpect.TIMEOUT, STARTING_INIT, BOOT_FAILURE] + FATAL_ERROR_MESSAGES, timeout=5 * 60)
         if i == 0:  # Timeout
             failure("timeout before booted: ", str(child))
         elif i != 1:  # start up scripts failed
@@ -250,7 +254,11 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
             # To test kernel startup time
             return child
 
-        i = child.expect([pexpect.TIMEOUT, LOGIN, SHELL_OPEN, BOOT_FAILURE, PANIC, CHERI_TRAP, STOPPED], timeout=15 * 60)
+        i = child.expect([pexpect.TIMEOUT, "DHCPACK from ", LOGIN, SHELL_OPEN, BOOT_FAILURE] + FATAL_ERROR_MESSAGES, timeout=15 * 60)
+        if i == 1:
+            have_dhclient = True
+            # we have a network, keep waiting for the login prompt
+            i = child.expect([pexpect.TIMEOUT, LOGIN, SHELL_OPEN, BOOT_FAILURE] + FATAL_ERROR_MESSAGES, timeout=15 * 60)
         if i == 0:  # Timeout
             failure("timeout awaiting login prompt: ", str(child))
         elif i == 1:
@@ -280,17 +288,18 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
             child.expect_exact(PROMPT_SH, timeout=30)
             success("===> /etc/rc completed, got command prompt")
             # set up network (bluehive image tries to use atse0)
-            success("===> Setting up QEMU networking")
-            child.sendline("ifconfig le0 up && dhclient le0")
-            i = child.expect([pexpect.TIMEOUT, "DHCPACK from 10.0.2.2", "dhclient already running"], timeout=120)
-            if i == 0:  # Timeout
-                failure("timeout awaiting dhclient ", str(child))
-            if i == 1:
-                i = child.expect([pexpect.TIMEOUT, "bound to"], timeout=120)
+            if not have_dhclient:
+                success("===> Setting up QEMU networking")
+                child.sendline("ifconfig le0 up && dhclient le0")
+                i = child.expect([pexpect.TIMEOUT, "DHCPACK from 10.0.2.2", "dhclient already running"], timeout=120)
                 if i == 0:  # Timeout
-                   failure("timeout awaiting dhclient ", str(child))
-            success("===> le0 bound to QEMU networking")
-            child.expect_exact(PROMPT_SH, timeout=30)
+                    failure("timeout awaiting dhclient ", str(child))
+                if i == 1:
+                    i = child.expect([pexpect.TIMEOUT, "bound to"], timeout=120)
+                    if i == 0:  # Timeout
+                       failure("timeout awaiting dhclient ", str(child))
+                success("===> le0 bound to QEMU networking")
+                child.expect_exact(PROMPT_SH, timeout=30)
             set_posix_sh_prompt(child)
         else:
             failure("error during boot login prompt: ", str(child))
