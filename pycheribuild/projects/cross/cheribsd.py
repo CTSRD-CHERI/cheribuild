@@ -132,6 +132,7 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
     defaultInstallDir = ComputedDefaultValue(function=freebsd_install_dir,
                                              asString="$INSTALL_ROOT/freebsd-{mips/x86}")
     hide_options_from_help = True  # hide this for now (only show cheribsd)
+    add_custom_make_options = False
 
     defaultExtraMakeOptions = [
         # "-DWITHOUT_HTML",  # should not be needed
@@ -154,7 +155,8 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         return cls.rootfsDir(caller, config) / "boot/kernel/kernel"
 
     @classmethod
-    def setupConfigOptions(cls, buildKernelWithClang: bool=True, **kwargs):
+    def setupConfigOptions(cls, buildKernelWithClang: bool=True, bootstrap_toolchain=False,
+                           debug_info_by_default=True, **kwargs):
         super().setupConfigOptions(add_common_cross_options=False, **kwargs)
         cls.subdirOverride = cls.addConfigOption("subdir-with-deps", kind=str, metavar="DIR", showHelp=False,
                                                  help="Only build subdir DIR instead of the full tree. "
@@ -169,28 +171,40 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         cls.keepOldRootfs = cls.addBoolOption("keep-old-rootfs",
             help="Don't remove the whole old rootfs directory.  This can speed up installing but may cause strange"
                  " errors so is off by default.")
-        cls.build_with_upstream_llvm = cls.addBoolOption("compile-with-cheribuild-upstream-llvm", showHelp=True,
-             help="Compile with the Clang version built by the `cheribuild.py upstream-llvm` target")
-        defaultExternalToolchain = ComputedDefaultValue(function=default_cross_toolchain_path,
-                                                        asString="$CHERI_SDK_DIR")
-        cls.crossToolchainRoot = cls.addPathOption("cross-toolchain", help="Path to the mips64-unknown-freebsd-* tools",
-                                                   default=defaultExternalToolchain)
+        if bootstrap_toolchain:
+            cls.use_external_toolchain = False
+            cls.build_with_upstream_llvm = False
+            cls.crossToolchainRoot = None
+            cls.useExternalToolchainForKernel = False
+            cls.useExternalToolchainForWorld = False
+            cls.linker_for_kernel = "should-not-be-used"
+            cls.linker_for_world = "should-not-be-used"
+        else:
+            cls.use_external_toolchain = True
+            cls.build_with_upstream_llvm = cls.addBoolOption("compile-with-cheribuild-upstream-llvm", showHelp=True,
+                 help="Compile with the Clang version built by the `cheribuild.py upstream-llvm` target")
+            defaultExternalToolchain = ComputedDefaultValue(function=default_cross_toolchain_path,
+                                                            asString="$CHERI_SDK_DIR")
+            cls.crossToolchainRoot = cls.addPathOption("cross-toolchain", help="Path to the mips64-unknown-freebsd-* tools",
+                                                       default=defaultExternalToolchain)
+            # override in CheriBSD
+            cls.useExternalToolchainForKernel = cls.addBoolOption("use-external-toolchain-for-kernel", showHelp=True,
+                help="build the kernel with the external toolchain", default=buildKernelWithClang)
+            cls.useExternalToolchainForWorld = cls.addBoolOption("use-external-toolchain-for-world", showHelp=True,
+                help="build world with the external toolchain", default=True)
+            cls.linker_for_world = cls.addConfigOption("linker-for-world", default="lld", choices=["bfd", "lld"],
+                                                       help="The linker to use for world")
+            cls.linker_for_kernel = cls.addConfigOption("linker-for-kernel", default="lld", choices=["bfd", "lld"],
+                                                        help="The linker to use for the kernel")
+
         # For compatibility we still accept --cheribsd-make-options here
         cls.makeOptions = cls.addConfigOption("build-options", default=cls.defaultExtraMakeOptions, kind=list,
                                               metavar="OPTIONS",
                                               help="Additional make options to be passed to make when building "
-                                                   "CHERIBSD. See `man src.conf` for more info.",
+                                                   "FreeBSD/CheriBSD. See `man src.conf` for more info.",
                                               showHelp=True)
-        # override in CheriBSD
-        cls.useExternalToolchainForKernel = cls.addBoolOption("use-external-toolchain-for-kernel", showHelp=True,
-            help="build the kernel with the external toolchain", default=buildKernelWithClang)
-        cls.useExternalToolchainForWorld = cls.addBoolOption("use-external-toolchain-for-world", showHelp=True,
-            help="build world with the external toolchain", default=True)
-        cls.linker_for_world = cls.addConfigOption("linker-for-world", default="lld", choices=["bfd", "lld"],
-                                                   help="The linker to use for world")
-        cls.linker_for_kernel = cls.addConfigOption("linker-for-kernel", default="lld", choices=["bfd", "lld"],
-                                                    help="The linker to use for the kernel")
-        cls.addDebugInfoFlag = cls.addBoolOption("debug-info", default=True, showHelp=True,
+
+        cls.addDebugInfoFlag = cls.addBoolOption("debug-info", default=debug_info_by_default, showHelp=True,
                                                  help="pass make flags for building with debug info")
         cls.build_tests = cls.addBoolOption("build-tests", help="Build the tests too (-DWITH_TESTS)", showHelp=True)
         cls.auto_obj = cls.addBoolOption("auto-obj", help="Use -DWITH_AUTO_OBJ (experimental)", showHelp=True,
@@ -241,7 +255,7 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
                 # "CPUTYPE=mips64",  # mipsfpu for hardware float
                 archBuildFlags = {"TARGET": "mips", "TARGET_ARCH": config.mips_float_abi.freebsd_target_arch()}
             elif self._crossCompileTarget == CrossCompileTarget.NATIVE:
-                archBuildFlags = {"TARGET": "amd64"}
+                archBuildFlags = {"TARGET": "amd64", "TARGET_ARCH": "amd64"}
             else:
                 assert False, "This should not be reached!"
         if self.kernelConfig is None:
@@ -262,7 +276,6 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
             NO_CLEAN=True,  # don't clean, we have the --clean flag for that
             I_REALLY_MEAN_NO_CLEAN=True, # Also skip the useless delete-old step
             NO_ROOT=True,  # use this even if current user is root, as without it the METALOG file is not created
-            WITHOUT_GDB=True,
         )
         if self.crossbuild:
             self.crossBinDir = self.config.outputRoot / "freebsd-cross/bin"
@@ -277,16 +290,15 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         if self.addDebugInfoFlag:
             self.make_args.set(DEBUG_FLAGS="-g")
 
-        # Don't split the debug info from the binary, just keep it as part of the binary
-        # This means we can just scp the file over to a cheribsd instace, run gdb and get symbols and sources.
-        self.make_args.set_with_options(DEBUG_FILES=False)
-
-        # tests off by default because they take a long time and often seems to break
-        # the creation of disk-image (METALOG is invalid)
-        self.make_args.set_with_options(TESTS=self.build_tests)
-
-        # only build manpages by default
-        self.make_args.set_with_options(MAN=self.with_manpages)
+        if self.add_custom_make_options:
+            # Don't split the debug info from the binary, just keep it as part of the binary
+            # This means we can just scp the file over to a cheribsd instace, run gdb and get symbols and sources.
+            self.make_args.set_with_options(DEBUG_FILES=False)
+            # Don't build manpages by default
+            self.make_args.set_with_options(MAN=self.with_manpages)
+            # tests off by default because they take a long time and often seems to break
+            # the creation of disk-image (METALOG is invalid)
+            self.make_args.set_with_options(TESTS=self.build_tests)
 
         if self.minimal:
             self.make_args.set_with_options(MAN=False, KERBEROS=False, SVN=False, SVNLITE=False, MAIL=False,
@@ -308,10 +320,6 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         if self.subdirOverride:
             self.make_args.set(SUBDIR_OVERRIDE=self.subdirOverride)
 
-        # If WITH_LD_IS_LLD is set (e.g. by reading src.conf) the symlink ld -> ld.bfd in $BUILD_DIR/tmp/ won't be
-        # created and the build system will then fall back to using /usr/bin/ld which won't work!
-        self.make_args.set_with_options(LLD_IS_LD=False)
-
         self.destdir = self.installDir
         self.installPrefix = Path("/")
         self.kernelToolchainAlreadyBuilt = False
@@ -328,6 +336,8 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
                 self.make_args.add_flags(option)
 
     def _setup_cross_toolchain_config(self):
+        if not self.use_external_toolchain:
+            return
         self.cross_toolchain_config.set_with_options(
             # TODO: should we have an option to include a compiler in the target system?
             GCC=False, CLANG=False, LLD=False, # Take a long time and not needed in the target system
@@ -374,6 +384,9 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         if self.linker_for_world == "bfd":
             # self.cross_toolchain_config.set_env(XLDFLAGS="-fuse-ld=bfd")
             target_flags += " -fuse-ld=bfd -Qunused-arguments"
+            # If WITH_LD_IS_LLD is set (e.g. by reading src.conf) the symlink ld -> ld.bfd in $BUILD_DIR/tmp/ won't be
+            # created and the build system will then fall back to using /usr/bin/ld which won't work!
+            self.cross_toolchain_config.set_with_options(LLD_IS_LD=False)
         else:
             assert self.linker_for_world == "lld"
             # TODO: we should have a better way of passing linker flags than adding them to XCFLAGS
@@ -768,6 +781,20 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
 class BuildFreeBSDX86AliasBinutils(TargetAlias):
     target = "freebsd-x86"
     dependencies = ["freebsd-native"]
+
+
+# Build FreeBSD with the default options (build the bundled clang instead of using the SDK one)
+# also don't add any of the default -DWITHOUT/DWITH_FOO options
+class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
+    projectName = "freebsd"
+    target = "freebsd-with-default-options"
+    repository = "https://github.com/freebsd/freebsd.git"
+    build_dir_suffix = "default-options"
+    add_custom_make_options = False
+
+    @classmethod
+    def setupConfigOptions(cls, installDirectoryHelp=None, use_kernconf_shortname=True, **kwargs):
+        super().setupConfigOptions(buildKernelWithClang=True, bootstrap_toolchain=True, debug_info_by_default=False)
 
 
 class BuildCHERIBSD(BuildFreeBSD):

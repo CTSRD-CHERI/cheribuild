@@ -767,6 +767,7 @@ class Project(SimpleProject):
     skipGitSubmodules = False
     compileDBRequiresBear = True
     doNotAddToTargets = True
+    build_dir_suffix = ""   # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
 
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / project.projectName.lower()),
@@ -823,6 +824,8 @@ class Project(SimpleProject):
             result = "-" + target.value + "-build"
         if config.cross_target_suffix:
             result += "-" + config.cross_target_suffix
+        if cls.build_dir_suffix:
+            result = "-" + cls.build_dir_suffix + result
         return result
 
     @classmethod
