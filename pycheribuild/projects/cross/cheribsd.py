@@ -509,10 +509,12 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
         if self.crossbuild:
             dontNeedKernelToolchain = True
         if not dontNeedKernelToolchain and not self.kernelToolchainAlreadyBuilt:
-            # we need to build GCC to build the kernel:
+            # we might need to build GCC to build the kernel:
             kernel_toolchain_opts = self.make_args.copy()
-            kernel_toolchain_opts.set_with_options(LLD_BOOTSTRAP=False, CLANG=False, CLANG_BOOTSTRAP=False)
-            kernel_toolchain_opts.set_with_options(GCC_BOOTSTRAP=self.useExternalToolchainForKernel)
+            # Don't build a compiler if we are using and external toolchain (only build config, etc)
+            if self.use_external_toolchain:
+                kernel_toolchain_opts.set_with_options(LLD_BOOTSTRAP=False, CLANG=False, CLANG_BOOTSTRAP=False)
+                kernel_toolchain_opts.set_with_options(GCC_BOOTSTRAP=self.useExternalToolchainForKernel)
             if self.auto_obj:
                 kernel_toolchain_opts.set_with_options(AUTO_OBJ=True)
             self.runMake("kernel-toolchain", options=kernel_toolchain_opts)
