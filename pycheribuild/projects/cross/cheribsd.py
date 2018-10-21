@@ -280,8 +280,9 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         if self.crossbuild:
             self.crossBinDir = self.config.outputRoot / "freebsd-cross/bin"
             self.addCrossBuildOptions()
-            self.useExternalToolchainForWorld = True
-            self.useExternalToolchainForKernel = True
+            if self.use_external_toolchain:
+                self.useExternalToolchainForWorld = True
+                self.useExternalToolchainForKernel = True
 
         # external toolchain options:
         self.externalToolchainCompiler = None
