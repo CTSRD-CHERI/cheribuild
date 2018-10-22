@@ -116,23 +116,13 @@ def default_cross_toolchain_path(config: CheriConfig, proj: "BuildFreeBSD"):
     return config.sdkDir
 
 
-class BuildFreeBSD(MultiArchBaseMixin, Project):
-    dependencies = ["llvm"]
-    target = "freebsd"
+class BuildFreeBSDBase(Project):
+    doNotAddToTargets = True    # base class only
     repository = "https://github.com/freebsd/freebsd.git"
     make_kind = MakeCommandKind.BsdMake
-    kernelConfig = None  # type: str
     crossbuild = False
     skipBuildworld = False
-    baremetal = True  # We are building the full OS so we don't need a sysroot
-    # Only CheriBSD can target CHERI, upstream FreeBSD won't work
-    supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
-    default_architecture = CrossCompileTarget.NATIVE
-
-    defaultInstallDir = ComputedDefaultValue(function=freebsd_install_dir,
-                                             asString="$INSTALL_ROOT/freebsd-{mips/x86}")
-    hide_options_from_help = True  # hide this for now (only show cheribsd)
-    add_custom_make_options = False
+    use_external_toolchain = False
 
     defaultExtraMakeOptions = [
         # "-DWITHOUT_HTML",  # should not be needed
@@ -145,6 +135,85 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         # "-DWITH_DIRDEPS_BUILD", "-DWITH_DIRDEPS_CACHE",  # experimental fast build options
         # "-DWITH_LIBCHERI_JEMALLOC"  # use jemalloc instead of -lmalloc_simple
     ]
+
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        cls.makeOptions = cls.addConfigOption("build-options", default=cls.defaultExtraMakeOptions, kind=list,
+                                              metavar="OPTIONS",
+                                              help="Additional make options to be passed to make when building "
+                                                   "FreeBSD/CheriBSD. See `man src.conf` for more info.",
+                                              showHelp=True)
+
+        cls.minimal = cls.addBoolOption("minimal", showHelp=True,
+            help="Don't build all of FreeBSD, just what is needed for running most CHERI tests/benchmarks")
+        cls.build_tests = cls.addBoolOption("build-tests", help="Build the tests too (-DWITH_TESTS)", showHelp=True)
+        if IS_FREEBSD:
+            cls.crossbuild = False
+        elif is_jenkins_build():
+            cls.crossbuild = True
+        else:
+            cls.crossbuild = cls.addBoolOption("crossbuild", help="Try to compile FreeBSD on non-FreeBSD machines")
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        if self.crossbuild:
+            # Use the script that I added for building on Linux/MacOS:
+            self.make_args.set_command(self.sourceDir / "tools/build/make.py")
+
+        self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
+        # TODO: once we have merged the latest upstream changes use MAKEOBJDIR instead to get a more sane hierarchy
+        # self.common_options.env_vars = {"MAKEOBJDIR": str(self.buildDir)}
+        self.make_args.set(
+            DB_FROM_SRC=True,  # don't use the system passwd file
+            # NO_WERROR=True,  # make sure we don't fail if clang introduces a new warning
+            NO_CLEAN=True,  # don't clean, we have the --clean flag for that
+            I_REALLY_MEAN_NO_CLEAN=True, # Also skip the useless delete-old step
+            NO_ROOT=True,  # use this even if current user is root, as without it the METALOG file is not created
+        )
+
+        if self.minimal:
+            self.make_args.set_with_options(MAN=False, KERBEROS=False, SVN=False, SVNLITE=False, MAIL=False,
+                                            SENDMAIL=False, EXAMPLES=False, LOCALES=False, NLS=False, CDDL=False)
+
+        # tests off by default because they take a long time and often seems to break
+        # the creation of disk-image (METALOG is invalid)
+        self.make_args.set_with_options(TESTS=self.build_tests)
+
+        if not self.config.verbose and not self.config.quiet:
+            # By default we only want to print the status updates -> use make -s so we have to do less filtering
+            self.make_args.add_flags("-s")
+
+        # print detailed information about the failed target (including the command that was executed)
+        self.make_args.add_flags("-de")
+
+    def runMake(self, makeTarget="", *, options: MakeOptions = None, parallel=True, **kwargs):
+        # make behaves differently with -j1 and not j flags -> remove the j flag if j1 is requested
+        if parallel and self.config.makeJobs == 1:
+            parallel = False
+        super().runMake(makeTarget, options=options, cwd=self.sourceDir, parallel=parallel, **kwargs)
+
+    @property
+    def jflag(self) -> list:
+        return [self.config.makeJFlag] if self.config.makeJobs > 1 else []
+
+
+class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
+    dependencies = ["llvm"]
+    target = "freebsd"
+    repository = "https://github.com/freebsd/freebsd.git"
+    kernelConfig = None  # type: str
+    crossbuild = False
+    baremetal = True  # We are building the full OS so we don't need a sysroot
+    # Only CheriBSD can target CHERI, upstream FreeBSD won't work
+    supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
+    default_architecture = CrossCompileTarget.NATIVE
+
+    defaultInstallDir = ComputedDefaultValue(function=freebsd_install_dir,
+                                             asString="$INSTALL_ROOT/freebsd-{mips/x86}")
+    hide_options_from_help = True  # hide this for now (only show cheribsd)
+    add_custom_make_options = False
 
     @classmethod
     def rootfsDir(cls, caller, config):
@@ -197,30 +266,14 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
             cls.linker_for_kernel = cls.addConfigOption("linker-for-kernel", default="lld", choices=["bfd", "lld"],
                                                         help="The linker to use for the kernel")
 
-        # For compatibility we still accept --cheribsd-make-options here
-        cls.makeOptions = cls.addConfigOption("build-options", default=cls.defaultExtraMakeOptions, kind=list,
-                                              metavar="OPTIONS",
-                                              help="Additional make options to be passed to make when building "
-                                                   "FreeBSD/CheriBSD. See `man src.conf` for more info.",
-                                              showHelp=True)
-
         cls.addDebugInfoFlag = cls.addBoolOption("debug-info", default=debug_info_by_default, showHelp=True,
                                                  help="pass make flags for building with debug info")
-        cls.build_tests = cls.addBoolOption("build-tests", help="Build the tests too (-DWITH_TESTS)", showHelp=True)
         cls.auto_obj = cls.addBoolOption("auto-obj", help="Use -DWITH_AUTO_OBJ (experimental)", showHelp=True,
                                          default=True)
         cls.with_manpages = cls.addBoolOption("with-manpages", help="Also install manpages. This is off by default"
                                                                     " since they can just be read from the host.")
-        cls.minimal = cls.addBoolOption("minimal", showHelp=True,
-            help="Don't build all of FreeBSD, just what is needed for running most CHERI tests/benchmarks")
         cls.fastRebuild = cls.addBoolOption("fast",
                                             help="Skip some (usually) unnecessary build steps to speed up rebuilds")
-        if IS_FREEBSD:
-            cls.crossbuild = False
-        elif is_jenkins_build():
-            cls.crossbuild = True
-        else:
-            cls.crossbuild = cls.addBoolOption("crossbuild", help="Try to compile FreeBSD on non-FreeBSD machines")
 
     def _stdoutFilter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
@@ -246,9 +299,6 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
 
     def __init__(self, config: CheriConfig, archBuildFlags: dict = None):
         super().__init__(config)
-        if self.crossbuild:
-            # Use the script that I added for building on Linux/MacOS:
-            self.make_args.set_command(self.sourceDir / "tools/build/make.py")
         if archBuildFlags is None:
             if self._crossCompileTarget == CrossCompileTarget.MIPS:
                 # The following is broken: (https://github.com/CTSRD-CHERI/cheribsd/issues/102)
@@ -267,18 +317,8 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
                 assert False, "should be unreachable"
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
         self.make_args.set(**archBuildFlags)
-        self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
-        # TODO: once we have merged the latest upstream changes use MAKEOBJDIR instead to get a more sane hierarchy
-        # self.common_options.env_vars = {"MAKEOBJDIR": str(self.buildDir)}
-        self.make_args.set(
-            DB_FROM_SRC=True,  # don't use the system passwd file
-            # NO_WERROR=True,  # make sure we don't fail if clang introduces a new warning
-            NO_CLEAN=True,  # don't clean, we have the --clean flag for that
-            I_REALLY_MEAN_NO_CLEAN=True, # Also skip the useless delete-old step
-            NO_ROOT=True,  # use this even if current user is root, as without it the METALOG file is not created
-        )
+
         if self.crossbuild:
-            self.crossBinDir = self.config.outputRoot / "freebsd-cross/bin"
             self.addCrossBuildOptions()
             if self.use_external_toolchain:
                 self.useExternalToolchainForWorld = True
@@ -297,25 +337,11 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
             self.make_args.set_with_options(DEBUG_FILES=False)
             # Don't build manpages by default
             self.make_args.set_with_options(MAN=self.with_manpages)
-            # tests off by default because they take a long time and often seems to break
-            # the creation of disk-image (METALOG is invalid)
-            self.make_args.set_with_options(TESTS=self.build_tests)
-
-        if self.minimal:
-            self.make_args.set_with_options(MAN=False, KERBEROS=False, SVN=False, SVNLITE=False, MAIL=False,
-                                            SENDMAIL=False, EXAMPLES=False, LOCALES=False, NLS=False, CDDL=False)
 
         # doesn't appear to work for buildkernel
         # if self.auto_obj:
         #     # seems like it should speed up the build significantly
         #     self.common_options.add(AUTO_OBJ=True)
-
-        if not self.config.verbose and not self.config.quiet:
-            # By default we only want to print the status updates -> use make -s so we have to do less filtering
-            self.make_args.add_flags("-s")
-
-        # print detailed information about the failed target (including the command that was executed)
-        self.make_args.add_flags("-de")
 
         # build only part of the tree
         if self.subdirOverride:
@@ -448,12 +474,6 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         kernel_options.set(KERNCONF=kernconf)
         return kernel_options
 
-    def runMake(self, makeTarget="", *, options: MakeOptions = None, parallel=True, **kwargs):
-        # make behaves differently with -j1 and not j flags -> remove the j flag if j1 is requested
-        if parallel and self.config.makeJobs == 1:
-            parallel = False
-        super().runMake(makeTarget, options=options, cwd=self.sourceDir, parallel=parallel, **kwargs)
-
     def clean(self) -> ThreadJoiner:
         if self.config.skipBuildworld:
             root_builddir = self.objdir
@@ -513,10 +533,6 @@ class BuildFreeBSD(MultiArchBaseMixin, Project):
         if destdir:
             install_kernel_args.set_env(DESTDIR=destdir)
         self.runMake("installkernel", options=install_kernel_args, parallel=False)
-
-    @property
-    def jflag(self) -> list:
-        return [self.config.makeJFlag] if self.config.makeJobs > 1 else []
 
     def compile(self, mfs_root_image: Path=None, sysroot_only=False, **kwargs):
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
@@ -796,6 +812,83 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     @classmethod
     def setupConfigOptions(cls, installDirectoryHelp=None, use_kernconf_shortname=True, **kwargs):
         super().setupConfigOptions(buildKernelWithClang=True, bootstrap_toolchain=True, debug_info_by_default=False)
+
+
+def jflag_in_subjobs(config: CheriConfig, proj):
+    return max(1, config.makeJobs / 2)
+
+
+def jflag_for_universe(config: CheriConfig, proj):
+    return max(1, config.makeJobs / 4)
+
+# Build all targets (to test my changes)
+class BuildFreeBSDUniverse(BuildFreeBSDBase):
+    projectName = "freebsd-universe"
+    target = "freebsd-universe"
+    repository = "https://github.com/freebsd/freebsd.git"
+    build_dir_suffix = "universe"
+    defaultInstallDir = Path("/this/target/should/not/be/installed!")
+
+    @classmethod
+    def setupConfigOptions(cls, buildKernelWithClang: bool=True, bootstrap_toolchain=False,
+                           debug_info_by_default=True, **kwargs):
+        super().setupConfigOptions(add_common_cross_options=False, **kwargs)
+        cls.tinderbox = cls.addBoolOption("tinderbox", help="Use `make tinderbox` instead of `make universe`")
+        cls.worlds_only = cls.addBoolOption("worlds-only", help="Only build worlds (skip building kernels)")
+        cls.kernels_only = cls.addBoolOption("kernels-only", help="Only build kernels (skip building worlds)",
+                                             default=ComputedDefaultValue(function=lambda conf, cls: conf.skipBuildworld,
+                                                                          asString="true if --skip-buildworld is set"))
+
+        cls.jflag_in_subjobs = cls.addConfigOption("jflag-in-subjobs", help="Number of jobs in each world/kernel build",
+                                                   kind=int, default=ComputedDefaultValue(jflag_in_subjobs,
+                                                                                          "default -j flag / 2"))
+
+        cls.jflag_for_universe = cls.addConfigOption("jflag-for-universe", help="Number of parallel world/kernel builds",
+                                                     kind=int, default=ComputedDefaultValue(jflag_for_universe,
+                                                                                            "default -j flag / 4"))
+
+    def compile(self, cwd: Path = None):
+        # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
+        # so just omit the flag here if the user passes -j1 on the command line
+        build_args = self.make_args.copy()
+        if self.config.verbose:
+            self.runMake("showconfig", options=build_args)
+
+        if self.worlds_only:
+            build_args.set(MAKE_JUST_WORLDS=True)
+        if self.kernels_only:
+            build_args.set(MAKE_JUST_KERNELS=True)
+
+        build_args.set(__MAKE_CONF="/dev/null")
+        # TODO: warn if both worlds-only and kernels-only is set?
+
+        if self.jflag_in_subjobs > 1:
+            build_args.set(JFLAG="-j" + str(self.jflag_in_subjobs))
+        if self.jflag_for_universe > 1:
+            build_args.add_flags("-j" + str(self.jflag_for_universe))
+
+        # TODO: build N jobs with reduced jflag
+        self.runMake("tinderbox" if self.tinderbox else "universe", options=build_args, parallel=False)
+
+    def install(self, **kwargs):
+        self.info("freebsd-universe is a compile-only target")
+
+    # Don't filter lines here
+    _stdoutFilter = Project._showLineStdoutFilter
+
+    def process(self):
+        if not IS_FREEBSD:
+            if not self.crossbuild:
+                statusUpdate("Can't build CHERIBSD on a non-FreeBSD host! Any targets that depend on this will need"
+                             " to scp the required files from another server (see --frebsd-build-server options)")
+                return
+        # remove any environment variables that could interfere with bmake running
+        for k, v in os.environ.copy().items():
+            if k in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL", "MAKE_TERMERR", "MAKE_TERMOUT", "MAKE"):
+                os.unsetenv(k)
+                del os.environ[k]
+
+        super().process()
 
 
 class BuildCHERIBSD(BuildFreeBSD):
