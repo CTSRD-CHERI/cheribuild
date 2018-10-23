@@ -845,7 +845,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
     projectName = "freebsd-universe"
     target = "freebsd-universe"
     repository = "https://github.com/freebsd/freebsd.git"
-    build_dir_suffix = "universe"
+# already in the project name:    build_dir_suffix = "universe"
     defaultInstallDir = Path("/this/target/should/not/be/installed!")
 
     @classmethod
