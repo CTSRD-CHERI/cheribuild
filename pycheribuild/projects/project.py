@@ -887,6 +887,12 @@ class Project(SimpleProject):
                                           help="Override default source directory for " + cls.projectName)
         cls.buildDir = cls.addPathOption("build-directory", metavar="DIR", default=cls.defaultBuildDir,
                                          help="Override default source directory for " + cls.projectName)
+
+        cls.skipUpdate = cls.addBoolOption("skip-update",
+                                           default=ComputedDefaultValue(lambda config, proj: config.skipUpdate,
+                                                                        "the value of the global --skip-update option"),
+                                           help="Override --skip-update/--no-skip-update for this target only ")
+
         if not installDirectoryHelp:
             installDirectoryHelp = "Override default install directory for " + cls.projectName
         cls.installDir = cls.addPathOption("install-directory", metavar="DIR", help=installDirectoryHelp,
@@ -967,7 +973,7 @@ class Project(SimpleProject):
     def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None, skipSubmodules=False):
         self._ensureGitRepoIsCloned(srcDir=srcDir, remoteUrl=remoteUrl, initialBranch=initialBranch,
                                     skipSubmodules=skipSubmodules)
-        if self.config.skipUpdate:
+        if self.skipUpdate:
             return
         # make sure we run git stash if we discover any local changes
         hasChanges = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
