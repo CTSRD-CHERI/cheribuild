@@ -815,6 +815,10 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     def setupConfigOptions(cls, installDirectoryHelp=None, use_kernconf_shortname=True, **kwargs):
         super().setupConfigOptions(buildKernelWithClang=True, bootstrap_toolchain=True, debug_info_by_default=False)
 
+    def addCrossBuildOptions(self):
+        # Just try to build as much as possible (but using make.py)
+        pass
+
 
 def jflag_in_subjobs(config: CheriConfig, proj):
     return max(1, config.makeJobs / 2)
