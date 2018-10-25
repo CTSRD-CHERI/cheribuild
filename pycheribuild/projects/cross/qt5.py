@@ -71,6 +71,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 # otherwise the build assumes GCC
                 self.configureArgs.append("-platform")
                 self.configureArgs.append("linux-clang")
+            # FreeBSD header files may use the register storage class but c++17 disallows this
+            if IS_FREEBSD:
+                self.configureArgs.extend(["-c++std", "c++14"])
         else:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
             compiler_flags = self.default_compiler_flags
