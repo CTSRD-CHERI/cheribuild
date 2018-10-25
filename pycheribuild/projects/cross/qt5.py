@@ -337,13 +337,14 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         # Use llvm-{ar,ranlib} because elftoolchain's versions truncate libWebCore.a
         self.add_cmake_options(CMAKE_AR=self.config.sdkBinDir / "llvm-ar")
         self.add_cmake_options(CMAKE_RANLIB=self.config.sdkBinDir / "llvm-ranlib")
+        self.add_cmake_options(ENABLE_JIT=False,  # Not supported on MIPS
+                               QT_STATIC_BUILD=True,  # we always build qt static for now
+                               QT_BUNDLED_PNG=True,  # use libpng from Qt
+                               # QT_BUNDLED_JPEG=True,  # use libjpeg from Qt
+                               QTWEBKIT_LINK_STATIC_ONLY=self.force_static_linkage
+                               )
         if not self.compiling_for_host():
             # we need to find the installed Qt
-            self.add_cmake_options(ENABLE_JIT=False,  # Not supported on MIPS
-                                   QT_STATIC_BUILD=True,  # we always build qt static for now
-                                   QT_BUNDLED_PNG=True,  # use libpng from Qt
-                                   # QT_BUNDLED_JPEG=True,  # use libjpeg from Qt
-                                   )
             self.add_cmake_options(Qt5_DIR=self.config.sdkSysrootDir / ("usr/local/Qt-" + self._crossCompileTarget.value) / "lib/cmake/Qt5")
             self.add_cmake_options(PNG_LIBRARIES="libqtlibpng.a")
             self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.getSourceDir(self, config) / "src/3rdparty/libpng")
