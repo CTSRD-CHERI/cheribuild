@@ -71,7 +71,8 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
         return Path(BuildCHERIBSD.rootfsDir(project, config) / "opt" / targetName / project.projectName.lower())
     elif project.crossInstallDir == CrossInstallDir.SDK:
         return config.sdkSysrootDir
-    self.fatal("Unknown install dir for", project.projectName)
+    fatalError("Unknown install dir for", project.projectName)
+
 
 def _installDirMessage(project: "CrossCompileProject"):
     if project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:

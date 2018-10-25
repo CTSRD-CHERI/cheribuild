@@ -82,8 +82,11 @@ def freebsd_install_dir(config: CheriConfig, project: "typing.Type[BuildFreeBSD]
         return config.outputRoot / "freebsd-mips"
     elif project._crossCompileTarget == CrossCompileTarget.NATIVE:
         return config.outputRoot / "freebsd-x86"
+    elif project._crossCompileTarget == CrossCompileTarget.RISCV:
+        return config.outputRoot / "freebsd-riscv"
     else:
         assert False, "should not be reached"
+
 
 # noinspection PyProtectedMember
 def cheribsd_install_dir(config: CheriConfig, project: "typing.Type[BuildCHERIBSD]"):
@@ -306,6 +309,8 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
                 archBuildFlags = {"TARGET": "mips", "TARGET_ARCH": config.mips_float_abi.freebsd_target_arch()}
             elif self._crossCompileTarget == CrossCompileTarget.NATIVE:
                 archBuildFlags = {"TARGET": "amd64", "TARGET_ARCH": "amd64"}
+            elif self._crossCompileTarget == CrossCompileTarget.RISCV:
+                archBuildFlags = {"TARGET": "riscv", "TARGET_ARCH": "riscv64"}
             else:
                 assert False, "This should not be reached!"
         if self.kernelConfig is None:
@@ -313,6 +318,8 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
                 self.kernelConfig = "MALTA64"
             elif self.compiling_for_host():
                 self.kernelConfig = "GENERIC"
+            elif self._crossCompileTarget == CrossCompileTarget.RISCV:
+                self.kernelConfig = "GENERIC"  # TODO: what is the correct config
             else:
                 assert False, "should be unreachable"
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
@@ -364,6 +371,9 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
 
     def _setup_cross_toolchain_config(self):
         if not self.use_external_toolchain:
+            # Building FreeBSD for RISC-V requires an external GCC:
+            if self._crossCompileTarget == CrossCompileTarget.RISCV:
+                self.make_args.set(CROSS_TOOLCHAIN="riscv64-gcc")
             return
         self.cross_toolchain_config.set_with_options(
             # TODO: should we have an option to include a compiler in the target system?
@@ -384,7 +394,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             self.linker_for_world = "lld"
             # DONT SET XAS!!! It prevents bfd from being built
             # self.cross_toolchain_config.set(XAS="/usr/bin/as")
-        elif self._crossCompileTarget == CrossCompileTarget.MIPS or self._crossCompileTarget == CrossCompileTarget.CHERI :
+        elif self._crossCompileTarget == CrossCompileTarget.MIPS or self._crossCompileTarget == CrossCompileTarget.CHERI:
             target_flags = " -integrated-as -fcolor-diagnostics -mcpu=mips4"
             # for some reason this is not inferred....
             # if self.crossbuild:
@@ -810,6 +820,9 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     repository = "https://github.com/freebsd/freebsd.git"
     build_dir_suffix = "default-options"
     add_custom_make_options = False
+
+    # also try to support building for RISCV
+    supported_architectures = BuildFreeBSD.supported_architectures + [CrossCompileTarget.RISCV]
 
     @classmethod
     def setupConfigOptions(cls, installDirectoryHelp=None, use_kernconf_shortname=True, **kwargs):

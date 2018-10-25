@@ -56,6 +56,7 @@ class CrossCompileTarget(Enum):
     NATIVE = "native"
     MIPS = "mips"
     CHERI = "cheri"  # TODO: add 128 and 256
+    RISCV = "riscv"
 
 
 class Linkage(Enum):

@@ -41,7 +41,7 @@ class MultiArchBaseMixin(object):
     CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.MIPS, CrossCompileTarget.CHERI]
     CAN_TARGET_ALL_TARGETS_EXCEPT_CHERI = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
     CAN_TARGET_ALL_TARGETS_EXCEPT_NATIVE = [CrossCompileTarget.CHERI, CrossCompileTarget.MIPS]
-    supported_architectures = list(CrossCompileTarget)
+    supported_architectures = CAN_TARGET_ALL_TARGETS # TODO: once risc-v works: list(CrossCompileTarget)
     # The architecture to build for if no --xmips/--xhost flag is passed (defaults to supported_architectures[0] if no match)
     default_architecture = None
     appendCheriBitsToBuildDir = True
