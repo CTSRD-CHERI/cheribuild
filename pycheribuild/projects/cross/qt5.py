@@ -207,7 +207,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
 
     def __init__(self, config):
         super().__init__(config)
-        self.COMMON_FLAGS.extend(self.extra_c_compat_flags)
+        #self.COMMON_FLAGS.extend(self.extra_c_compat_flags)
         self.cross_warning_flags += ["-Wno-shadow"]  # FIXME: remove after update to 5.12
 
 
