@@ -38,7 +38,7 @@ usr/sbin/service
 # since other binaries might use them
 # ldd /rootfs/bin/cheribsdbox
 # /rootfs/bin/cheribsdbox:
-#   libcrypto.so.8 => /lib/libcrypto.so.8 (0x40671000)
+#   libcrypto.so.9 => /lib/libcrypto.so.9 (0x40671000)
 #   libssl.so.8 => /usr/lib/libssl.so.8 (0x408a4000)
 #   libc.so.7 => /lib/libc.so.7 (0x40945000)
 #   libutil.so.9 => /lib/libutil.so.9 (0x40c7c000)
@@ -53,7 +53,7 @@ libexec/ld-elf.so.1
 # Now the libraries for cheribsdbox and benchmark binaries:
 lib/libc.so.7
 lib/libcrypt.so.5
-lib/libcrypto.so.8
+lib/libcrypto.so.9
 lib/libm.so.5
 # needed by /bin/sh & /bin/csh
 lib/libedit.so.7
