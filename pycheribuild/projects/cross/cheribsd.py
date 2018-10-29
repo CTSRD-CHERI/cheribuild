@@ -573,17 +573,27 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             # We have to keep the rootfs directory in case it has been NFS mounted
             self.cleanDirectory(self.installDir, keepRoot=True)
 
+    @property
+    def real_bmake_binary(self) -> Path:
+        """return the path the bmake binary used for building. On FreeBSD this will generally be /usr/bin/make,
+        but when crossbuilding we will usually use bmake-install/bin/bmake"
+        """
+        if self.crossbuild:
+            make_cmd = self.buildDir / "bmake-install/bin/bmake"
+        else:
+            make_cmd = Path(shutil.which(self.make_args.command) or self.make_args.command)
+        if not make_cmd.exists():
+            raise FileNotFoundError(make_cmd)
+        return make_cmd
+
     def _query_buildenv_path(self, args, var):
         try:
-            if self.crossbuild:
-                bmake_bootstrap = self.buildDir / "bmake-install/bin/bmake"
-                if not bmake_bootstrap.exists():
-                    self.verbose_print("Cannot query buildenv path if bmake hasn't been bootstrapped")
-                    return None
-                make_cmd = str(bmake_bootstrap)
-            else:
-                make_cmd = shutil.which(self.make_args.command) or self.make_args.command
-            buildenv_cmd = make_cmd + " -V " + var
+            try:
+                bmake_binary = self.real_bmake_binary
+            except FileNotFoundError:
+                self.verbose_print("Cannot query buildenv path if bmake hasn't been bootstrapped")
+                return None
+            buildenv_cmd = str(bmake_binary) + " -V " + var
             bw_flags = args.all_commandline_args + ["BUILD_WITH_STRICT_TMPPATH=0", "buildenv",
                                                     "BUILDENV_SHELL=" + buildenv_cmd]
             if self.crossbuild:
@@ -592,7 +602,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
                 assert self.config.pretend, "This should only happen when running in a test environment"
                 return None
             # https://github.com/freebsd/freebsd/commit/1edb3ba87657e28b017dffbdc3d0b3a32999d933
-            cmd = runCmd([self.make_args.command] + bw_flags, env=args.env_vars, cwd=self.sourceDir,
+            cmd = runCmd([bmake_binary] + bw_flags, env=args.env_vars, cwd=self.sourceDir,
                          runInPretendMode=True, captureOutput=True)
             lines = cmd.stdout.strip().split(b"\n")
             last_line = lines[-1].decode("utf-8").strip()
