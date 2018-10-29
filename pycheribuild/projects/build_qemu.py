@@ -134,7 +134,14 @@ class BuildQEMU(AutotoolsProject):
                     extraCFlags += " -flto=thin"
                     extraCXXFlags += " -flto=thin"
                     extraLDFlags += " -flto=thin"
-                    extraLDFlags += " -Wl,--thinlto-cache-dir=" + str(self.buildDir / "thinlto-cache")
+                    if self.canUseLLd(ccinfo.path):
+                        thinlto_cache_flag = "--thinlto-cache-dir="
+                    else:
+                        # Apple ld uses a different flag for the thinlto cache dir
+                        assert ccinfo.compiler == "apple-clang"
+                        thinlto_cache_flag = "-cache_path_lto,"
+                    extraLDFlags += " -Wl," + thinlto_cache_flag + str(self.buildDir / "thinlto-cache")
+
                     statusUpdate("Building with LTO -> QEMU should be faster")
                     break
         if self.config.unified_sdk:
@@ -171,6 +178,8 @@ class BuildQEMU(AutotoolsProject):
         # Disable some more unneeded things (we don't usually need the GUI frontends)
         if not self.gui:
             self.configureArgs.extend(["--disable-vnc", "--disable-sdl", "--disable-gtk", "--disable-opengl"])
+            if IS_MAC:
+                self.configureArgs.append("--disable-cocoa")
 
         python_path = shutil.which("python2.7") or shutil.which("python2") or ""
         # QEMU needs python 2.7 for building:
