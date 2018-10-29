@@ -61,7 +61,8 @@ def flush_thread(f, qemu: pexpect.spawn):
             KERNEL_PANIC = True
             # TODO: tell lit to abort now....
 
-def run_tests_impl(qemu: pexpect.spawn, args: argparse.Namespace, tempdir: str):
+def run_tests_impl(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str):
+    qemu.EXIT_ON_KERNEL_PANIC = False # since we run multiple threads we shouldn't use sys.exit()
     print("PID of QEMU:", qemu.pid)
     port = args.ssh_port
     user = "root"  # TODO: run these tests as non-root!
@@ -169,7 +170,6 @@ def add_cmdline_args(parser: argparse.ArgumentParser):
     # For the parallel jobs
     parser.add_argument("--internal-num-shards", type=int, help=argparse.SUPPRESS)
     parser.add_argument("--internal-shard", type=int, help=argparse.SUPPRESS)
-
 
 
 _MP_QUEUE = None  # type: Queue

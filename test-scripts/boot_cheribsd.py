@@ -59,12 +59,43 @@ PANIC = "panic: trap"
 PANIC_KDB = "KDB: enter: panic"
 CHERI_TRAP = "USER_CHERI_EXCEPTION: pid \\d+ tid \\d+ \(.+\)"
 
-FATAL_ERROR_MESSAGES = [PANIC, PANIC_KDB, CHERI_TRAP, STOPPED]
+FATAL_ERROR_MESSAGES = [CHERI_TRAP]
 
 PRETEND = False
 # To keep the port available until we start QEMU
 _SSH_SOCKET_PLACEHOLDER = None  # type: socket.socket
 
+
+class CheriBSDInstance(pexpect.spawn):
+    EXIT_ON_KERNEL_PANIC = True
+
+    def expect(self, pattern: list, timeout=-1, **kwargs):
+        assert isinstance(pattern, list), "expected list and not " + str(pattern)
+        return self._expect_and_handle_panic(pattern, timeout=timeout, **kwargs)
+
+    def expect_exact(self, pattern_list, timeout=-1, **kwargs):
+        assert PANIC not in pattern_list
+        assert STOPPED not in pattern_list
+        assert PANIC_KDB not in pattern_list
+        if not isinstance(pattern_list, list):
+            pattern_list = [pattern_list]
+        panic_regexes = [PANIC, STOPPED, PANIC_KDB]
+        i = super().expect_exact(panic_regexes + pattern_list, **kwargs)
+        if i < len(panic_regexes):
+            debug_kernel_panic(qemu)
+            failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
+        return i - len(panic_regexes)
+
+    def _expect_and_handle_panic(self, options: list, **kwargs):
+        assert PANIC not in options
+        assert STOPPED not in options
+        assert PANIC_KDB not in options
+        panic_regexes = [PANIC, STOPPED, PANIC_KDB]
+        i = super().expect(panic_regexes + options, **kwargs)
+        if i < len(panic_regexes):
+            debug_kernel_panic(qemu)
+            failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
+        return i - len(panic_regexes)
 
 def find_free_port() -> int:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -149,32 +180,14 @@ def debug_kernel_panic(qemu: pexpect.spawn):
     # print("\n\npexpect info = ", qemu)
 
 
-def safe_expect(qemu: pexpect.spawn, options: list, **kwargs):
-    assert pexpect.TIMEOUT not in options
-    assert PANIC not in options
-    assert STOPPED not in options
-    assert PANIC_KDB not in options
-    panic_regexes = [PANIC, STOPPED, PANIC_KDB]
-    i = qemu.expect(panic_regexes + options, **kwargs)
-    if i < len(panic_regexes):
-        debug_kernel_panic(qemu)
-        failure("EXITING DUE TO KERNEL PANIC!", exit=True)
-    return i - len(panic_regexes)
-
-
-
-def run_cheribsd_command(qemu: pexpect.spawn, cmd: str, expected_output=None, error_output=None, cheri_trap_fatal=True, timeout=60):
+def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None, error_output=None, cheri_trap_fatal=True, timeout=60):
     qemu.sendline(cmd)
     if expected_output:
-        qemu.expect(expected_output)
-    results = [PROMPT, "/bin/sh: [\\w\\d_-]+: not found", CHERI_TRAP]
+        qemu.expect([expected_output])
+    results = [PROMPT, "/bin/sh: [\\w\\d_-]+: not found", CHERI_TRAP, pexpect.TIMEOUT]
     if error_output:
         results.append(error_output)
-    try:
-        i = safe_expect(qemu, results, timeout=timeout)
-    except pexpect.TIMEOUT:
-        failure("timeout running ", cmd)
-        return
+    i = qemu.expect(results, timeout=timeout)
     if i == 1:
         failure("Command not found!")
     elif i == 2:
@@ -183,17 +196,19 @@ def run_cheribsd_command(qemu: pexpect.spawn, cmd: str, expected_output=None, er
         qemu.flush()
         failure("Got CHERI TRAP!", exit=cheri_trap_fatal)
     elif i == 3:
+        failure("timeout running ", cmd)
+    elif i == 4:
         # wait up to 5 seconds for a prompt to ensure the full output has been printed
         qemu.expect([PROMPT], timeout=5)
         qemu.flush()
         failure("Matched error output ", error_output)
 
 
-def run_cheribsd_command_or_die(qemu: pexpect.spawn, cmd: str, timeout=600):
-    qemu.sendline(test_command +
+def run_cheribsd_command_or_die(qemu: CheriBSDInstance, cmd: str, timeout=600):
+    qemu.sendline(cmd +
                   " ;if test $? -eq 0; then echo 'COMMAND' 'SUCCESSFUL'; else echo 'COMMAND' 'FAILED'; fi")
     try:
-        i = safe_expect(qemu, ["COMMAND SUCCESSFUL", "COMMAND FAILED"], timeout=timeout)
+        i = qemu.expect(["COMMAND SUCCESSFUL", "COMMAND FAILED"], timeout=timeout)
     except pexpect.TIMEOUT:
         i = -1
     testtime = datetime.datetime.now() - run_tests_starttime
@@ -207,7 +222,7 @@ def run_cheribsd_command_or_die(qemu: pexpect.spawn, cmd: str, timeout=600):
         return failure("error after ", testtime, "while running tests : ", str(qemu), exit=False)
 
 
-def setup_ssh(qemu: pexpect.spawn, pubkey: Path):
+def setup_ssh(qemu: CheriBSDInstance, pubkey: Path):
     run_cheribsd_command(qemu, "mkdir -p /root/.ssh")
     contents = pubkey.read_text(encoding="utf-8").strip()
     run_cheribsd_command(qemu, "echo " + shlex.quote(contents) + " >> /root/.ssh/authorized_keys")
@@ -217,10 +232,11 @@ def setup_ssh(qemu: pexpect.spawn, pubkey: Path):
     run_cheribsd_command(qemu, "cat /root/.ssh/authorized_keys", expected_output="ssh-")
     run_cheribsd_command(qemu, "grep -n PermitRootLogin /etc/ssh/sshd_config")
     qemu.sendline("service sshd restart")
-    i = qemu.expect([pexpect.TIMEOUT, "service: not found", "Starting sshd."], timeout=120)
-    if i == 0:
+    try:
+        qemu.expect(["service: not found", "Starting sshd."], timeout=120)
+    except pexpect.TIMEOUT:
         failure("Timed out setting up SSH keys")
-    qemu.expect(PROMPT)
+    qemu.expect([PROMPT])
     time.sleep(2)  # sleep for two seconds to avoid a rejection
     success("===> SSH authorized_keys set up")
 
@@ -238,6 +254,7 @@ def set_posix_sh_prompt(child):
 
 class FakeSpawn(object):
     pid = -1
+
     def expect(self, *args, **kwargs):
         # print("Expecting", args)
         return 1 if len(*args) > 1 else 0
@@ -247,7 +264,7 @@ class FakeSpawn(object):
 
 
 def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *, smb_dir: str=None,
-                  kernel_init_only=False) -> pexpect.spawn:
+                  kernel_init_only=False) -> CheriBSDInstance:
     user_network_args = "user,id=net0,ipv6=off"
     if smb_dir:
         user_network_args += ",smb=" + smb_dir
@@ -267,7 +284,8 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
     if PRETEND:
         child = FakeSpawn()
     else:
-        child = pexpect.spawnu(qemu_cmd, qemu_args, echo=False, timeout=60)
+        # child = pexpect.spawnu(qemu_cmd, qemu_args, echo=False, timeout=60)
+        child = CheriBSDInstance(qemu_cmd, qemu_args, encoding="utf-8", echo=False, timeout=60)
     # child.logfile=sys.stdout.buffer
     child.logfile_read = sys.stdout
     have_dhclient = False
@@ -328,7 +346,7 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
                 if i == 1:
                     i = child.expect([pexpect.TIMEOUT, "bound to"], timeout=120)
                     if i == 0:  # Timeout
-                       failure("timeout awaiting dhclient ", str(child))
+                        failure("timeout awaiting dhclient ", str(child))
                 success("===> le0 bound to QEMU networking")
                 child.expect_exact(PROMPT_SH, timeout=30)
             set_posix_sh_prompt(child)
@@ -340,8 +358,8 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
     return child
 
 
-def runtests(qemu: pexpect.spawn, args: argparse.Namespace, test_archives: list,
-             test_function: "typing.Callable[[pexpect.spawn, argparse.Namespace, ...], bool]"=None) -> bool:
+def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: list,
+             test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace, ...], bool]"=None) -> bool:
     test_command = args.test_command
     ssh_keyfile = args.ssh_key
     ssh_port = args.ssh_port
@@ -393,7 +411,7 @@ def runtests(qemu: pexpect.spawn, args: argparse.Namespace, test_archives: list,
 
     qemu.sendline(test_command +
                   " ;if test $? -eq 0; then echo 'TESTS' 'COMPLETED'; else echo 'TESTS' 'FAILED'; fi")
-    i = qemu.expect([pexpect.TIMEOUT, "TESTS COMPLETED", "TESTS UNSTABLE", "TESTS FAILED", PANIC, STOPPED], timeout=timeout)
+    i = qemu.expect([pexpect.TIMEOUT, "TESTS COMPLETED", "TESTS UNSTABLE", "TESTS FAILED"], timeout=timeout)
     testtime = datetime.datetime.now() - run_tests_starttime
     if i == 0:  # Timeout
         return failure("timeout after", testtime, "waiting for tests: ", str(qemu), exit=False)
@@ -409,7 +427,7 @@ def runtests(qemu: pexpect.spawn, args: argparse.Namespace, test_archives: list,
         return failure("error after ", testtime, "while running tests : ", str(qemu), exit=False)
 
 
-def main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...], bool]"=None,
+def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, ...], bool]"=None,
          argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]"=None,
          argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]"=None):
     # TODO: look at click package?
