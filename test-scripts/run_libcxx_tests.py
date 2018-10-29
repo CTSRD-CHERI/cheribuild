@@ -56,13 +56,7 @@ def flush_thread(f, qemu: pexpect.spawn):
             time.sleep(1)
         elif i == 1:
             boot_cheribsd.failure("GOT KERNEL PANIC!", exit=False)
-            print(qemu)
-            # wait up to 10 seconds for a db prompt
-            qemu.expect([pexpect.TIMEOUT, "db> "], timeout=10)
-            if i == 1:
-                qemu.sendline("bt")
-            # wait for the backtrace
-            qemu.expect([pexpect.TIMEOUT, "db> "], timeout=30)
+            boot_cheribsd.debug_kernel_panic(qemu)
             global KERNEL_PANIC
             KERNEL_PANIC = True
             # TODO: tell lit to abort now....

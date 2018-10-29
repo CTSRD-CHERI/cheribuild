@@ -138,37 +138,68 @@ def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True) -
     return path
 
 
-def run_cheribsd_command(qemu: pexpect.spawn, cmd: str, expected_output=None, error_output=None, timeout=60):
+def debug_kernel_panic(qemu: pexpect.spawn):
+    # wait up to 10 seconds for a db prompt
+    i = qemu.expect([pexpect.TIMEOUT, "db> "], timeout=10)
+    if i == 1:
+        qemu.sendline("bt")
+    # wait for the backtrace
+    qemu.expect([pexpect.TIMEOUT, "db> "], timeout=30)
+    failure("GOT KERNEL PANIC!", exit=False)
+    # print("\n\npexpect info = ", qemu)
+
+
+def safe_expect(qemu: pexpect.spawn, options: list, **kwargs):
+    assert pexpect.TIMEOUT not in options
+    assert PANIC not in options
+    assert STOPPED not in options
+    assert PANIC_KDB not in options
+    panic_regexes = [PANIC, STOPPED, PANIC_KDB]
+    i = qemu.expect(panic_regexes + options, **kwargs)
+    if i < len(panic_regexes):
+        debug_kernel_panic(qemu)
+        failure("EXITING DUE TO KERNEL PANIC!", exit=True)
+    return i - len(panic_regexes)
+
+
+
+def run_cheribsd_command(qemu: pexpect.spawn, cmd: str, expected_output=None, error_output=None, cheri_trap_fatal=True, timeout=60):
     qemu.sendline(cmd)
     if expected_output:
         qemu.expect(expected_output)
-    results = [pexpect.TIMEOUT, PROMPT, "/bin/sh: [\\w\\d_-]+: not found", CHERI_TRAP]
+    results = [PROMPT, "/bin/sh: [\\w\\d_-]+: not found", CHERI_TRAP]
     if error_output:
         results.append(error_output)
-    i = qemu.expect(results, timeout=timeout)
-    if i == 0:
+    try:
+        i = safe_expect(qemu, results, timeout=timeout)
+    except pexpect.TIMEOUT:
         failure("timeout running ", cmd)
-    elif i == 2:
+        return
+    if i == 1:
         failure("Command not found!")
-    elif i == 3:
+    elif i == 2:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
         qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
         qemu.flush()
-        failure("Got CHERI TRAP!")
-    elif i == 4:
+        failure("Got CHERI TRAP!", exit=cheri_trap_fatal)
+    elif i == 3:
         # wait up to 5 seconds for a prompt to ensure the full output has been printed
-        qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=5)
+        qemu.expect([PROMPT], timeout=5)
         qemu.flush()
         failure("Matched error output ", error_output)
+
 
 def run_cheribsd_command_or_die(qemu: pexpect.spawn, cmd: str, timeout=600):
     qemu.sendline(test_command +
                   " ;if test $? -eq 0; then echo 'COMMAND' 'SUCCESSFUL'; else echo 'COMMAND' 'FAILED'; fi")
-    i = qemu.expect([pexpect.TIMEOUT, "COMMAND SUCCESSFUL", "COMMAND FAILED", PANIC, CHERI_TRAP, STOPPED], timeout=timeout)
+    try:
+        i = safe_expect(qemu, ["COMMAND SUCCESSFUL", "COMMAND FAILED"], timeout=timeout)
+    except pexpect.TIMEOUT:
+        i = -1
     testtime = datetime.datetime.now() - run_tests_starttime
-    if i == 0:  # Timeout
+    if i == -1:  # Timeout
         return failure("timeout after", testtime, "waiting for tests: ", str(qemu), exit=False)
-    elif i == 1:
+    elif i == 0:
         success("===> Tests completed!")
         success("Running tests took ", testtime)
         return True
