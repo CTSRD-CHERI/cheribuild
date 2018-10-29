@@ -216,7 +216,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
     defaultInstallDir = ComputedDefaultValue(function=freebsd_install_dir,
                                              asString="$INSTALL_ROOT/freebsd-{mips/x86}")
     hide_options_from_help = True  # hide this for now (only show cheribsd)
-    add_custom_make_options = False
+    add_custom_make_options = True
 
     @classmethod
     def rootfsDir(cls, caller, config):
