@@ -193,7 +193,8 @@ def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Pop
 
 
 def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]"=None, timeout=None,
-           printVerboseOnly=False, runInPretendMode=False, raiseInPretendMode=False, no_print=False, **kwargs):
+           printVerboseOnly=False, runInPretendMode=False, raiseInPretendMode=False, no_print=False,
+           replace_env=False, **kwargs):
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         cmdline = args[0]  # list with parameters was passed
     else:
@@ -228,7 +229,13 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
         kwargs["stdout"] = subprocess.DEVNULL
 
     if "env" in kwargs:
-        kwargs["env"] = dict((k, str(v)) for k, v in kwargs["env"].items())
+        if not replace_env:
+            new_env = os.environ.copy()
+            env = {k: str(v) for k, v in kwargs["env"].items()}  # make sure everything is a string
+            new_env.update(env)
+            kwargs["env"] = new_env
+        else:
+            kwargs["env"] = dict((k, str(v)) for k, v in kwargs["env"].items())
     with popen_handle_noexec(cmdline, **kwargs) as process:
         try:
             stdout, stderr = process.communicate(input, timeout=timeout)
