@@ -575,8 +575,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             # We have to keep the rootfs directory in case it has been NFS mounted
             self.cleanDirectory(self.installDir, keepRoot=True)
 
-    @property
-    def real_bmake_binary(self) -> Path:
+    def find_real_bmake_binary(self) -> Path:
         """return the path the bmake binary used for building. On FreeBSD this will generally be /usr/bin/make,
         but when crossbuilding we will usually use bmake-install/bin/bmake"
         """
@@ -591,7 +590,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
     def _query_buildenv_path(self, args, var):
         try:
             try:
-                bmake_binary = self.real_bmake_binary
+                bmake_binary = self.find_real_bmake_binary()
             except FileNotFoundError:
                 self.verbose_print("Cannot query buildenv path if bmake hasn't been bootstrapped")
                 return None
