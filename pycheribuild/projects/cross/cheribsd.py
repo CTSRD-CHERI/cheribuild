@@ -884,10 +884,8 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
         if self.config.verbose:
             self.runMake("showconfig", options=build_args)
 
-        if self.worlds_only:
-            build_args.set(MAKE_JUST_WORLDS=True)
-        if self.kernels_only:
-            build_args.set(MAKE_JUST_KERNELS=True)
+        if self.worlds_only and self.kernels_only:
+            self.fatal("Can't set both worlds-only and kernels-only!")
 
         build_args.set(__MAKE_CONF="/dev/null")
         # TODO: warn if both worlds-only and kernels-only is set?
@@ -897,7 +895,14 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
         if self.jflag_for_universe > 1:
             build_args.add_flags("-j" + str(self.jflag_for_universe))
 
-        # TODO: build N jobs with reduced jflag
+        if self.kernels_only:
+            # We need to build kernel-toolchains first (see https://reviews.freebsd.org/D17779)
+            self.runMake("kernel-toolchains", options=build_args, parallel=False)
+
+        if self.worlds_only:
+            build_args.set(MAKE_JUST_WORLDS=True)
+        if self.kernels_only:
+            build_args.set(MAKE_JUST_KERNELS=True)
         self.runMake("tinderbox" if self.tinderbox else "universe", options=build_args, parallel=False)
 
     def install(self, **kwargs):
