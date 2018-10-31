@@ -484,12 +484,14 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
         return kernel_options
 
     def clean(self) -> ThreadJoiner:
+        cleaning_kerneldir = False
         if self.config.skipBuildworld:
             root_builddir = self.objdir
             kernel_dir = self.kernel_objdir(self.kernelConfig)
             print(kernel_dir)
             if kernel_dir and kernel_dir.parent.exists():
                 builddir = kernel_dir
+                cleaning_kerneldir = True
             else:
                 warningMessage("Do not know the full path to the kernel build directory, will clean the whole tree!")
                 builddir = root_builddir
@@ -503,7 +505,8 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             assert not os.path.relpath(str(builddir.resolve()), str(self.buildDir.resolve())).startswith(".."), builddir
         if self.crossbuild:
             # avoid rebuilding bmake and libbsd when crossbuilding:
-            return self.asyncCleanDirectory(builddir, keepRoot=True, keep_dirs=["libbsd-install", "bmake-install"])
+            return self.asyncCleanDirectory(builddir, keepRoot=not cleaning_kerneldir,
+                                            keep_dirs=["libbsd-install", "bmake-install"])
         else:
             return self.asyncCleanDirectory(builddir)
 
