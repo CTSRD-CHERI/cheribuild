@@ -455,7 +455,6 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
 
     def kernelMakeArgsForConfig(self, kernconf: str) -> MakeOptions:
         kernel_options = self.make_args.copy()
-        kernel_options.set_with_options(AUTO_OBJ=False)  # TODO: remove this
         if self._crossCompileTarget != CrossCompileTarget.NATIVE:
             # Don't build kernel modules for MIPS
             kernel_options.set(NO_MODULES="yes")
