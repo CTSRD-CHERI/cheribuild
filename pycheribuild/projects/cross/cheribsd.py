@@ -235,7 +235,10 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
                                                       "This uses the SUBDIR_OVERRIDE mechanism so will build much more"
                                                       "than just that directory")
 
-        cls.explicit_subdirs_only = cls.addConfigOption("subdir", kind=list, metavar="SUBDIRS", showHelp=True,
+        subdir_default = ComputedDefaultValue(function=lambda config, proj: config.freebsd_subdir,
+                                              asString="the value of the global --freebsd-subdir options")
+
+        cls.explicit_subdirs_only = cls.addConfigOption("subdir", kind=list, metavar="SUBDIRS", showHelp=True, default=subdir_default,
             help="Only build subdirs SUBDIRS instead of the full tree. Useful for quickly rebuilding an individual"
                  " programs/libraries. If more than one dir is passed they will be processed in order."
                  " Note: This will break if not all dependencies have been built.")
