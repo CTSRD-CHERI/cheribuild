@@ -84,6 +84,8 @@ def freebsd_install_dir(config: CheriConfig, project: "typing.Type[BuildFreeBSD]
         return config.outputRoot / "freebsd-x86"
     elif project._crossCompileTarget == CrossCompileTarget.RISCV:
         return config.outputRoot / "freebsd-riscv"
+    elif project._crossCompileTarget == CrossCompileTarget.I386:
+        return config.outputRoot / "freebsd-i386"
     else:
         assert False, "should not be reached"
 
@@ -314,6 +316,8 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
                 archBuildFlags = {"TARGET": "amd64", "TARGET_ARCH": "amd64"}
             elif self._crossCompileTarget == CrossCompileTarget.RISCV:
                 archBuildFlags = {"TARGET": "riscv", "TARGET_ARCH": "riscv64"}
+            elif self._crossCompileTarget == CrossCompileTarget.I386:
+                archBuildFlags = {"TARGET": "i386", "TARGET_ARCH": "i386"}
             else:
                 assert False, "This should not be reached!"
         if self.kernelConfig is None:
@@ -322,6 +326,8 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             elif self.compiling_for_host():
                 self.kernelConfig = "GENERIC"
             elif self._crossCompileTarget == CrossCompileTarget.RISCV:
+                self.kernelConfig = "GENERIC"  # TODO: what is the correct config
+            elif self._crossCompileTarget == CrossCompileTarget.I386:
                 self.kernelConfig = "GENERIC"  # TODO: what is the correct config
             else:
                 assert False, "should be unreachable"
@@ -836,7 +842,7 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     add_custom_make_options = False
 
     # also try to support building for RISCV
-    supported_architectures = BuildFreeBSD.supported_architectures + [CrossCompileTarget.RISCV]
+    supported_architectures = BuildFreeBSD.supported_architectures + [CrossCompileTarget.RISCV, CrossCompileTarget.I386]
 
     @classmethod
     def setupConfigOptions(cls, installDirectoryHelp=None, use_kernconf_shortname=True, **kwargs):
