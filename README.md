@@ -14,7 +14,7 @@ MacOS 10.13 is also supported.
 If you want to start up a QEMU VM running CheriBSD run `cheribuild.py run -d` (-d means build all dependencies).
 This will build the CHERI compiler, QEMU, CheriBSD, create a disk image and boot that in QEMU.
 By default this builds the 128-bit version of CheriBSD. If you would like to use the 256-bit
-compressed capabilities, run `cheribuild.py run -d --256`.
+version, run `cheribuild.py run -d --256`.
 
 By default `cheribuild.py` will clone all projects in `~/cheri`, use `~/cheri/build` for build directories
 and install into `~/cheri/output`. However, these directories are all configurable (see below for details).
