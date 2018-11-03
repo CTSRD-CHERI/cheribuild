@@ -396,7 +396,7 @@ Actions to be performed:
 
 Configuration of default paths:
   --config-file FILE    The config file that is used to load the default
-                        settings (default: '/home/def/.config/cheribuild.json')
+                        settings (default: '~/.config/cheribuild.json')
   --clang-path CLANG_PATH
                         The Clang C compiler to use for compiling LLVM+Clang
                         (must be at least version 3.7) (default:
@@ -407,7 +407,7 @@ Configuration of default paths:
                         '/usr/bin/clang++')
   --source-root SOURCE_ROOT
                         The directory to store all sources (default:
-                        '/home/def/cheri')
+                        '~/cheri')
   --output-root OUTPUT_ROOT
                         The directory to store all output (default:
                         '<SOURCE_ROOT>/output')
@@ -434,7 +434,7 @@ Configuration for running tests:
   --test-ssh-key TEST_SSH_KEY
                         The SSH key to used to connect to the QEMU instance when
                         running tests on CheriBSD (default:
-                        '/home/def/.ssh/id_ed25519.pub')
+                        '~/.ssh/id_ed25519.pub')
 
 FreeBSD and CheriBSD build configuration:
   --skip-buildworld     Skip the buildworld step when building FreeBSD or
