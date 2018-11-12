@@ -52,7 +52,8 @@ from ..filesystemutils import FileSystemUtils
 from ..utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies", # no-combine
-           "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions", "MakeCommandKind", "Path"]  # no-combine
+           "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
+           "CrossCompileTarget"]  # no-combine
 
 
 def flushStdio(stream):

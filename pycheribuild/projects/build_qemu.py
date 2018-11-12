@@ -250,9 +250,14 @@ class BuildQEMU(BuildQEMUBase):
     def qemu_binary(cls, caller: SimpleProject):
         binary_name = "qemu-system-cheri"
         if caller.config.unified_sdk:
-            binary_name += caller.config.cheriBitsStr
-            if caller.config.cheriBits == 128 and cls.get_instance(caller, caller.config).magic128:
-                binary_name += "magic"
+            if caller.get_crosscompile_target(caller.config) == CrossCompileTarget.MIPS:
+                # Use the cheri256 QEMU binary for running MIPS since it's a bit faster than 128
+                # and ensure that plain MIPS code works fine on the 256 CPU
+                binary_name += "256"
+            else:
+                binary_name += caller.config.cheriBitsStr
+                if caller.config.cheriBits == 128 and cls.get_instance(caller, caller.config).magic128:
+                    binary_name += "magic"
         return caller.config.sdkBinDir / binary_name
 
     def __init__(self, config: CheriConfig):
