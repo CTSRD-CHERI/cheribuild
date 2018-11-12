@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import argparse
 import os
 import shlex
 import subprocess
@@ -58,8 +59,8 @@ class JenkinsConfigLoader(ConfigLoaderBase):
         self._parsedArgs = self._parser.parse_args()
 
     def finalizeOptions(self, availableTargets: list, **kwargs):
-        targetOption = self._parser.add_argument("targets", metavar="TARGET", nargs=1, help="The target to build",
-                                                 choices=availableTargets + [EXTRACT_SDK_TARGET])
+        targetOption = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE, help="The target to build",
+                                                 choices=availableTargets + [EXTRACT_SDK_TARGET], default=[])
         if "_ARGCOMPLETE" in os.environ:
             try:
                 import argcomplete
@@ -212,12 +213,17 @@ def _jenkins_main():
     setCheriConfig(cheriConfig)
 
     # special target to extract the sdk
-    if cheriConfig.targets[0] == EXTRACT_SDK_TARGET or JenkinsAction.EXTRACT_SDK in cheriConfig.action:
+    if JenkinsAction.EXTRACT_SDK in cheriConfig.action or (len(cheriConfig.targets) > 0 and cheriConfig.targets[0] == EXTRACT_SDK_TARGET):
         create_sdk_from_archives(cheriConfig)
         sys.exit()
 
     if cheriConfig.action == [""]:
         fatalError("No action specified, did you mean to pass --build?")
+        sys.exit()
+
+    print(cheriConfig.targets)
+    if len(cheriConfig.targets) != 1:
+        fatalError("Expected exactly one target!")
         sys.exit()
 
     if JenkinsAction.BUILD in cheriConfig.action:
