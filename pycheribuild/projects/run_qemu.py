@@ -103,6 +103,8 @@ class LaunchQEMUBase(SimpleProject):
         if self.currentKernel is not None and not self.currentKernel.exists():
             self.dependencyError("Kernel is missing:", self.currentKernel,
                                  installInstructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
+
+        diskOptions = []
         if self.diskImage:
             if self.virtioDisk:
                 diskOptions = ["-drive", "if=none,file=" + str(self.diskImage) + ",id=drv,format=raw",

@@ -46,13 +46,16 @@ class BuildBBLFreeBSDWithDefaultOptionsRISCV(AutotoolsProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # Extract tool prefix via toolchain's XCC
-        with open("/usr/local/share/toolchains/riscv64-gcc.mk", "r") as f:
-            for l in f:
-                if l[:4] == "XCC=":
-                    self.host = re.sub(r".*/(.*)-.*", r"\1", l[4:]).strip()
-                    break
-            else:
-                self.fatal("Could not find riscv64-gcc XCC")
+        cross_toolchain_mk = Path("/usr/local/share/toolchains/riscv64-gcc.mk")
+        self.host = ""
+        if cross_toolchain_mk.exists():
+            with cross_toolchain_mk.open("r") as f:
+                for l in f:
+                    if l[:4] == "XCC=":
+                        self.host = re.sub(r".*/(.*)-.*", r"\1", l[4:]).strip()
+                        break
+        if not self.host:
+            self.fatal("Could not find riscv64-gcc XCC")
 
         freebsdTarget = targetManager.get_target_raw("freebsd-with-default-options-riscv")
         freebsdProject = freebsdTarget.get_or_create_project(None, config)

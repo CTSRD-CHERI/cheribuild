@@ -39,6 +39,7 @@ class BuildQEMUBase(AutotoolsProject):
     defaultInstallDir = AutotoolsProject._installToSDK
     # QEMU will not work with BSD make, need GNU make
     make_kind = MakeCommandKind.GnuMake
+    doNotAddToTargets = True
     is_sdk_target = True
     skipGitSubmodules = True  # we don't need these
 
