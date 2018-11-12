@@ -131,7 +131,7 @@ def get_sdk_archives(cheriConfig, needs_cheribsd_sysroot: bool) -> "typing.List[
         includes_archive = SdkArchive(cheriConfig, llvm_includes_name, required_globs=["lib/clang/*/include/stddef.h"])
         return [clang_archive, includes_archive]
     else:
-        if not needs_cheribsd_sysroot:
+        if not needs_cheribsd_sysroot or cheriConfig.extract_compiler_only:
             return [clang_archive]  # only need the clang archive
         # if we only extracted the compiler, extract the sysroot now
         cheri_sysroot_archive_name = "{}-{}-cheribsd-world.tar.xz".format(cheriConfig.sdk_cpu, cheriConfig.cheri_sdk_isa_name)
@@ -214,7 +214,7 @@ def _jenkins_main():
 
     # special target to extract the sdk
     if JenkinsAction.EXTRACT_SDK in cheriConfig.action or (len(cheriConfig.targets) > 0 and cheriConfig.targets[0] == EXTRACT_SDK_TARGET):
-        create_sdk_from_archives(cheriConfig)
+        create_sdk_from_archives(cheriConfig, not cheriConfig.extract_compiler_only)
         sys.exit()
 
     if cheriConfig.action == [""]:

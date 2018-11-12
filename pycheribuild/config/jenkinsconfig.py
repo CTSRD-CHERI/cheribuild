@@ -101,6 +101,8 @@ class JenkinsConfig(CheriConfig):
                                                                        " image)")  # type: Path
         self.without_sdk = loader.addCommandLineOnlyBoolOption("without-sdk",
                                                               help="Don't use the CHERI SDK -> only /usr (for native builds)")
+        self.extract_compiler_only = loader.addCommandLineOnlyBoolOption("extract-compiler-only",
+                                                                         help="Don't attempt to extract the CheriBSD sysroot")
         self.tarball_name = loader.addCommandLineOnlyOption("tarball-name",
             default=lambda conf, cls: conf.targets[0] + "-" + conf.cpu + ".tar.xz")
 
