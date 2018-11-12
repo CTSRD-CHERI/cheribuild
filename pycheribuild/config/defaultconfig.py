@@ -139,6 +139,7 @@ class DefaultCheriConfig(CheriConfig):
         # now set some generic derived config options
         self.sdkDir = self.outputRoot / self.sdkDirectoryName  # qemu and binutils (and llvm/clang)
         self.otherToolsDir = self.outputRoot / "bootstrap"
+        self.cheribsd_image_root = self.outputRoot  # TODO: allow this to be different?
         self._initializeDerivedPaths()
 
         assert self._ensureRequiredPropertiesSet()

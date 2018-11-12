@@ -1127,7 +1127,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 
     @classmethod
     def get_installed_kernel_path(cls, caller, config):
-        return config.outputRoot / ("kernel." + cls.get_kernel_config(caller, config))
+        return config.cheribsd_image_root / ("kernel." + cls.get_kernel_config(caller, config))
 
 
 class BuildCHERIBSDPurecap(BuildCHERIBSD):

@@ -46,6 +46,7 @@ def default_install_prefix(conf: "JenkinsConfig", unused):
 class JenkinsAction(Enum):
     BUILD = ("--build", "Run (usually build+install) chosen targets (default)")
     CREATE_TARBALL = ("--create-tarball", "Create an archive of the installed files", "--tarball")
+    TEST = ("--test", "Run tests")
     EXTRACT_SDK = ("--extract-sdk", "Extract the SDK archive and then exit")
     # TODO: TEST = ("--test", "Run tests for the passed targets instead of building them", "--run-tests")
 
@@ -177,6 +178,10 @@ class JenkinsConfig(CheriConfig):
                 print("Not cleaning non-default output path", self.workspace / self.output_path)
             self.keepInstallDir = True
         self.outputRoot = self.workspace / self.output_path
+
+        # expect the CheriBSD disk images in the workspace root
+        self.cheribsd_image_root = self.workspace
+
         self.otherToolsDir = self.workspace / "bootstrap"
         self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
         # check for ctsrd/cheri-sdk-{cheri256,cheri128,mips} docker image

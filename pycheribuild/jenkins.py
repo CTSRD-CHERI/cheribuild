@@ -228,7 +228,7 @@ def _jenkins_main():
         fatalError("Expected exactly one target!")
         sys.exit()
 
-    if JenkinsAction.BUILD in cheriConfig.action:
+    if JenkinsAction.BUILD in cheriConfig.action or JenkinsAction.TEST in cheriConfig.action:
         assert len(cheriConfig.targets) == 1
         target = targetManager.get_target_raw(cheriConfig.targets[0])
         for tgt in targetManager.targets:
@@ -265,7 +265,11 @@ def _jenkins_main():
         # delete the install root:
         cleaningTask = cheriConfig.FS.asyncCleanDirectory(cheriConfig.outputRoot) if not cheriConfig.keepInstallDir else ThreadJoiner(None)
         with cleaningTask:
-            target.execute(cheriConfig)
+            if JenkinsAction.BUILD in cheriConfig.action:
+                target.execute(cheriConfig)
+            elif JenkinsAction.TEST in cheriConfig.action:
+                target.run_tests(cheriConfig)
+
 
     if JenkinsAction.CREATE_TARBALL in cheriConfig.action:
         if IS_LINUX:

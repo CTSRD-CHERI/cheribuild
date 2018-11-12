@@ -179,6 +179,8 @@ class CheriConfig(object):
         self.sourceRoot = None  # type: Path
         self.outputRoot = None  # type: Path
         self.buildRoot = None  # type: Path
+        # Path to kernel/disk images (this is the same as outputRoot by default but different in Jenkins)
+        self.cheribsd_image_root = None  # type: Path
         self.sdkDir = None  # type: Path
         self.otherToolsDir = None  # type: Path
         self.dollarPathWithOtherTools = None  # type: Path
