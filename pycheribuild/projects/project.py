@@ -530,6 +530,21 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if kernel_path is None:
             from .cross.cheribsd import BuildCheriBsdMfsKernel
             kernel_path = BuildCheriBsdMfsKernel.get_installed_kernel_path(self, self.config)
+            if not kernel_path.exists():
+                if self.get_crosscompile_target(self.config) == CrossCompileTarget.MIPS:
+                    guessed_archive = "freebsd-malta64-mfs-root-jenkins_bluehive-kernel.bz2"
+                elif self.get_crosscompile_target(self.config) == CrossCompileTarget.CHERI:
+                    guessed_archive = "cheribsd{suffix}-cheri{suffix}-malta64-mfs-root-jenkins_bluehive-kernel.bz2".format(
+                        suffix="" if self.config.cheriBits == 256 else self.config.cheriBitsStr)
+                else:
+                    self.fatal("Could not guess path to kernel image for CheriBSD")
+                    guessed_archive = "invalid path"
+                jenkins_kernel_path = self.config.cheribsd_image_root / guessed_archive
+                if jenkins_kernel_path.exists():
+                    kernel_path = jenkins_kernel_path
+                else:
+                    self.fatal("Could not find kernel image", kernel_path, "and jenkins path", jenkins_kernel_path,
+                               "is also missing")
         # generate a sensible error when using remote-cheribuild.py by omitting this line:
         script_dir = Path(__file__).parent.parent.parent / "test-scripts"   # no-combine
         script = script_dir / script_name

@@ -427,6 +427,14 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
         return failure("error after ", testtime, "while running tests : ", str(qemu), exit=False)
 
 
+def default_ssh_key():
+    for i in ("id_ed25519.pub", "id_rsa.pub"):
+        guess = Path(os.path.expanduser("~/.ssh/"), i)
+        if guess.exists():
+            return str(guess)
+    return "/could/not/infer/default/ssh/public/key/path"
+
+
 def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, ...], bool]"=None,
          argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]"=None,
          argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]"=None):
@@ -440,7 +448,7 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
     parser.add_argument("--reuse-image", action="store_true")
     parser.add_argument("--keep-compressed-images", action="store_true", default=True, dest="keep_compressed_images")
     parser.add_argument("--no-keep-compressed-images", action="store_false", dest="keep_compressed_images")
-    parser.add_argument("--ssh-key", default=os.path.expanduser("~/.ssh/id_ed25519.pub"))
+    parser.add_argument("--ssh-key", default=default_ssh_key())
     parser.add_argument("--ssh-port", type=int, default=None)
     parser.add_argument("--use-smb-instead-of-ssh", action="store_true")
     parser.add_argument("--smb-mount-directory", help="directory used for sharing data with the QEMU guest via smb")
