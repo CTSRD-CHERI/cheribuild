@@ -57,10 +57,16 @@ class JenkinsConfigLoader(ConfigLoaderBase):
 
     def load(self):
         self._parsedArgs = self._parser.parse_args()
+        print(self._parsedArgs.targets)
+        if self._parsedArgs.targets is None:
+            self._parsedArgs.targets = []
+        if isinstance(self._parsedArgs.targets, str):
+            self._parsedArgs.targets = [self._parsedArgs.targets]
+        assert isinstance(self._parsedArgs.targets, list)
 
     def finalizeOptions(self, availableTargets: list, **kwargs):
-        targetOption = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE, help="The target to build",
-                                                 choices=availableTargets + [EXTRACT_SDK_TARGET], default=[])
+        targetOption = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.OPTIONAL, help="The target to build",
+                                                 choices=availableTargets + [EXTRACT_SDK_TARGET])
         if "_ARGCOMPLETE" in os.environ:
             try:
                 import argcomplete
@@ -76,9 +82,6 @@ class JenkinsConfigLoader(ConfigLoaderBase):
 
     def __init__(self):
         super().__init__(CommandLineConfigOption)
-
-    def parseArguments(self):
-        self._parsedArgs = self._parser.parse_args()
 
 
 class SdkArchive(object):
@@ -221,7 +224,6 @@ def _jenkins_main():
         fatalError("No action specified, did you mean to pass --build?")
         sys.exit()
 
-    print(cheriConfig.targets)
     if len(cheriConfig.targets) != 1:
         fatalError("Expected exactly one target!")
         sys.exit()
