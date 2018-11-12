@@ -30,10 +30,11 @@
 import datetime
 import socket
 
+from .cross.bbl import *
 from .cross.cheribsd import BuildFreeBSD
 from .cross.cheribsd import *
 from .cherios import BuildCheriOS
-from .build_qemu import BuildQEMU
+from .build_qemu import BuildQEMU, BuildQEMURISCV
 from .disk_image import BuildFreeBSDImageBase
 from .disk_image import *
 from .project import *
@@ -52,6 +53,7 @@ class LaunchQEMUBase(SimpleProject):
     _provide_src_via_smb = False
     sshForwardingPort = None  # type: int
     qemu_smb_mount = None
+    _hasPCI = True
 
     @classmethod
     def setupConfigOptions(cls, sshPortShortname: "typing.Optional[str]", defaultSshPort: int=None, **kwargs):
@@ -89,7 +91,7 @@ class LaunchQEMUBase(SimpleProject):
 
         self.currentKernel = None  # type: Path
         self.diskImage = None  # type: Path
-        self._diskOptions = []
+        self.virtioDisk = False
         self._projectSpecificOptions = []
         self.machineFlags = ["-M", "malta"]  # malta cpu
         self._qemuUserNetworking = True
@@ -102,8 +104,11 @@ class LaunchQEMUBase(SimpleProject):
             self.dependencyError("Kernel is missing:", self.currentKernel,
                                  installInstructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
         if self.diskImage:
-            if len(self._diskOptions) == 0:
-                self._diskOptions = ["-hda", self.diskImage]
+            if self.virtioDisk:
+                diskOptions = ["-drive", "if=none,file=" + str(self.diskImage) + ",id=drv,format=raw",
+                               "-device", "virtio-blk-device,drive=drv"]
+            else:
+                diskOptions = ["-hda", self.diskImage]
             if not self.diskImage.exists():
                 self.dependencyError("Disk image is missing:", self.diskImage,
                                      installInstructions="Run `cheribuild.py disk-image` or `cheribuild.py run -d`.")
@@ -143,7 +148,7 @@ class LaunchQEMUBase(SimpleProject):
         qemuCommand = [self.qemuBinary] + self.machineFlags + kernelFlags + [
             "-m", "2048",  # 2GB memory
             "-nographic",  # no GPU
-        ] + self._projectSpecificOptions + self._diskOptions + monitorOptions + logfileOptions + self.extraOptions
+        ] + self._projectSpecificOptions + diskOptions + monitorOptions + logfileOptions + self.extraOptions
         statusUpdate("About to run QEMU with image", self.diskImage, "and kernel", self.currentKernel)
         user_network_options = ""
         if self.qemu_smb_mount:
@@ -160,7 +165,9 @@ class LaunchQEMUBase(SimpleProject):
             qemuCommand += ["-net", "nic", "-net", "user,id=net0,ipv6=off" + user_network_options]
 
         # Add a virtio RNG to speed up random number generation
-        qemuCommand += ["-device", "virtio-rng-pci"]
+        if self._hasPCI:
+            qemuCommand += ["-device", "virtio-rng-pci"]
+
         runCmd(qemuCommand, stdout=sys.stdout, stderr=sys.stderr)  # even with --quiet we want stdout here
 
     @staticmethod
@@ -295,8 +302,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
         self.currentKernel = BuildCheriOS.getBuildDir(self, config) / "boot/cherios.elf"
         self.diskImage = self.config.outputRoot / "cherios-disk.img"
         self._projectSpecificOptions = ["-no-reboot"]
-        self._diskOptions = ["-drive", "if=none,file=" + str(self.diskImage) + ",id=drv,format=raw",
-                             "-device", "virtio-blk-device,drive=drv"]
+        self.virtioDisk = True
         self._qemuUserNetworking = False
 
     def process(self):
@@ -324,6 +330,26 @@ class LaunchFreeBSDX86(AbstractLaunchFreeBSD):
         self.qemuBinary = Path(qemu_path if qemu_path else shutil.which("false"))
         self.machineFlags = []  # default cpu
         self.currentKernel = None  # needs the bootloader
+
+
+class LaunchFreeBSDWithDefaultOptionsRISCV(AbstractLaunchFreeBSD):
+    projectName = "run-freebsd-with-default-options-riscv"
+    dependencies = ["disk-image-freebsd-with-default-options-riscv"]
+    hide_options_from_help = True
+    _hasPCI = False
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
+                                   defaultSshPort=defaultSshForwardingPort() + 5,
+                                   **kwargs)
+
+    def __init__(self, config):
+        super().__init__(config, disk_image_class=BuildFreeBSDWithDefaultOptionsDiskImageRISCV)
+        self.qemuBinary = BuildQEMURISCV.qemu_binary(self)
+        self.machineFlags = ["-M", "virt"]  # want VirtIO
+        self.virtioDisk = True
+        self.currentKernel = BuildBBLFreeBSDWithDefaultOptionsRISCV(config).get_installed_kernel_path(self, config)
 
 
 class LaunchCheriBsdMfsRoot(AbstractLaunchFreeBSD):

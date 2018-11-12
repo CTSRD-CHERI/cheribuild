@@ -34,11 +34,9 @@ import shutil
 import subprocess
 
 
-class BuildQEMU(AutotoolsProject):
-    repository = "https://github.com/CTSRD-CHERI/qemu.git"
-    gitBranch = "qemu-cheri"
+class BuildQEMUBase(AutotoolsProject):
+    repository = "https://github.com/qemu/qemu.git"
     defaultInstallDir = AutotoolsProject._installToSDK
-    appendCheriBitsToBuildDir = True
     # QEMU will not work with BSD make, need GNU make
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
@@ -47,35 +45,21 @@ class BuildQEMU(AutotoolsProject):
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions()
-        cls.magic128 = cls.addBoolOption("magic-128")
         cls.debug_info = cls.addBoolOption("debug-info")
         cls.with_sanitizers = cls.addBoolOption("sanitizers", help="Build QEMU with ASAN/UBSAN (very slow)", default=False)
-        # Turn on unaligned loads/stores by default
-        cls.unaligned = cls.addBoolOption("unaligned", showHelp=True, help="Permit un-aligned loads/stores",
-                                          default=True)
 
         cls.use_smbd = cls.addBoolOption("use-smbd", showHelp=False, default=True,
                                          help="Don't require SMB support when building QEMU (warning: most --test "
                                               "targets will fail without smbd support)")
 
-        cls.statistics = cls.addBoolOption("statistics", showHelp=True, default=False,
-                                           help="Collect statistics on out-of-bounds capability creation.")
         cls.gui = cls.addBoolOption("gui", showHelp=True, default=False,
                                     help="Build a the graphical UI bits for QEMU (SDL,VNC)")
         cls.lto = cls.addBoolOption("use-lto", showHelp=True,
                                     help="Try to build QEMU with link-time optimization if possible", default=True)
-        cls.legacy_registers = cls.addBoolOption("legacy-registers", showHelp=False,
-                                                 help="Build QEMU with the special registers mapped into the GPRs",
-                                                 default=False)
 
     @classmethod
     def qemu_binary(cls, caller: SimpleProject):
-        binary_name = "qemu-system-cheri"
-        if caller.config.unified_sdk:
-            binary_name += caller.config.cheriBitsStr
-            if caller.config.cheriBits == 128 and cls.get_instance(caller, caller.config).magic128:
-                binary_name += "magic"
-        return caller.config.sdkBinDir / binary_name
+        raise NotImplementedError()
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -91,29 +75,29 @@ class BuildQEMU(AutotoolsProject):
 
         # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
         # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
-        extraCFlags = "-DCONFIG_DEBUG_TCG=1" if self.debug_info else "-O3"
-        extraLDFlags = ""
-        extraCXXFlags = ""
+        self._extraCFlags = "-DCONFIG_DEBUG_TCG=1" if self.debug_info else "-O3"
+        self._extraLDFlags = ""
+        self._extraCXXFlags = ""
         if shutil.which("pkg-config"):
             glibIncludes = runCmd("pkg-config", "--cflags-only-I", "glib-2.0", captureOutput=True,
                                   printVerboseOnly=True, runInPretendMode=True).stdout.decode("utf-8").strip()
-            extraCFlags += " " + glibIncludes
+            self._extraCFlags += " " + glibIncludes
 
         compiler = self.config.clangPath
         if compiler:
             ccinfo = getCompilerInfo(compiler)
             if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
                 # Turn implicit function declaration into an error -Wimplicit-function-declaration
-                extraCFlags += " -Werror=implicit-function-declaration"
+                self._extraCFlags += " -Werror=implicit-function-declaration"
                 # Also make discarding const an error:
-                extraCFlags += " -Werror=incompatible-pointer-types-discards-qualifiers"
+                self._extraCFlags += " -Werror=incompatible-pointer-types-discards-qualifiers"
                 # silence this warning that comes lots of times (it's fine on x86)
-                extraCFlags += " -Wno-address-of-packed-member"
+                self._extraCFlags += " -Wno-address-of-packed-member"
             if self.lto and self.can_use_lto(ccinfo):
                 while True:  # add a loop so I can break early
                     statusUpdate("Compiling with Clang and LLD -> trying to build with LTO enabled")
                     if ccinfo.compiler != "apple-clang":
-                        extraLDFlags += " -fuse-ld=lld"
+                        self._extraLDFlags += " -fuse-ld=lld"
                         # For non apple-clang compilers we need to use llvm binutils:
                         version_suffix = ""
                         if compiler.name.startswith("clang"):
@@ -131,50 +115,22 @@ class BuildQEMU(AutotoolsProject):
                         self.configureEnvironment.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
                         # self.make_args.env_vars.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
                         self.make_args.set(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
-                    extraCFlags += " -flto=thin"
-                    extraCXXFlags += " -flto=thin"
-                    extraLDFlags += " -flto=thin"
+                    self._extraCFlags += " -flto=thin"
+                    self._extraCXXFlags += " -flto=thin"
+                    self._extraLDFlags += " -flto=thin"
                     if self.canUseLLd(ccinfo.path):
                         thinlto_cache_flag = "--thinlto-cache-dir="
                     else:
                         # Apple ld uses a different flag for the thinlto cache dir
                         assert ccinfo.compiler == "apple-clang"
                         thinlto_cache_flag = "-cache_path_lto,"
-                    extraLDFlags += " -Wl," + thinlto_cache_flag + str(self.buildDir / "thinlto-cache")
+                    self._extraLDFlags += " -Wl," + thinlto_cache_flag + str(self.buildDir / "thinlto-cache")
 
                     statusUpdate("Building with LTO -> QEMU should be faster")
                     break
-        if self.config.unified_sdk:
-            targets = "cheri256-softmmu,cheri128-softmmu,cheri128magic-softmmu,mips64-softmmu"
-        else:
-            targets = "cheri-softmmu"
-            if config.cheriBits == 128:
-                # enable QEMU 128 bit capabilities
-                # https://github.com/CTSRD-CHERI/qemu/commit/40a7fc2823e2356fa5ffe1ee1d672f1d5ec39a12
-                extraCFlags += " -DCHERI_128=1" if not self.magic128 else " -DCHERI_MAGIC128=1"
-        if self.unaligned:
-            extraCFlags += " -DCHERI_UNALIGNED"
-        if self.legacy_registers:
-            extraCFlags += " -DCHERI_C0_NULL=0"
-        if self.statistics:
-            extraCFlags += " -DDO_CHERI_STATISTICS=1"
-        extraCFlags += " -Wall"
+        self._extraCFlags += " -Wall"
         # This would have cought some problems in the past
-        extraCFlags += " -Werror=return-type"
-        self.configureArgs.extend([
-            "--target-list=" + targets,
-            "--disable-linux-user",
-            "--disable-bsd-user",
-            "--disable-xen",
-            "--disable-docs",
-            "--disable-rdma",
-            "--disable-werror",
-            "--disable-pie",  # no need to build as PIE (this just slows down QEMU)
-            "--extra-cflags=" + extraCFlags,
-            "--cxx=" + str(self.config.clangPlusPlusPath),
-            "--cc=" + str(self.config.clangPath),
-
-        ])
+        self._extraCFlags += " -Werror=return-type"
         # Disable some more unneeded things (we don't usually need the GUI frontends)
         if not self.gui:
             self.configureArgs.extend(["--disable-vnc", "--disable-sdl", "--disable-gtk", "--disable-opengl"])
@@ -184,15 +140,8 @@ class BuildQEMU(AutotoolsProject):
         python_path = shutil.which("python2.7") or shutil.which("python2") or ""
         # QEMU needs python 2.7 for building:
         self.configureArgs.append("--python=" + python_path)
-        # the capstone disassembler doesn't support CHERI instructions:
-        self.configureArgs.append("--disable-capstone")
-        if extraLDFlags:
-            self.configureArgs.append("--extra-ldflags=" + extraLDFlags.strip())
-        if extraCXXFlags:
-            self.configureArgs.append("--extra-cxxflags=" + extraCXXFlags.strip())
         if self.debug_info:
             self.configureArgs.extend(["--enable-debug", "--enable-debug-tcg"])
-            extraCFlags += " -DENABLE_CHERI_SANITIY_CHECKS=1"
         else:
             # Try to optimize as much as possible:
             self.configureArgs.extend(["--disable-stack-protector"])
@@ -244,6 +193,25 @@ class BuildQEMU(AutotoolsProject):
                            fixitHint="Either install samba using the system package manager or with cheribuild. "
                                      "If you really don't need QEMU host shares you can disable the samba dependency "
                                      "by setting --qemu/no-use-smbd")
+
+        self.configureArgs.extend([
+            "--target-list=" + self._qemuTargets,
+            "--disable-linux-user",
+            "--disable-bsd-user",
+            "--disable-xen",
+            "--disable-docs",
+            "--disable-rdma",
+            "--disable-werror",
+            "--disable-pie",  # no need to build as PIE (this just slows down QEMU)
+            "--extra-cflags=" + self._extraCFlags,
+            "--cxx=" + str(self.config.clangPlusPlusPath),
+            "--cc=" + str(self.config.clangPath),
+        ])
+        if self._extraLDFlags:
+            self.configureArgs.append("--extra-ldflags=" + self._extraLDFlags.strip())
+        if self._extraCXXFlags:
+            self.configureArgs.append("--extra-cxxflags=" + self._extraCXXFlags.strip())
+
         super().configure(**kwargs)
 
     def update(self):
@@ -256,3 +224,64 @@ class BuildQEMU(AutotoolsProject):
             warningMessage(
                 "QEMU might build the broken pixman submodule, run `git submodule deinit -f pixman` to clean")
         super().update()
+
+
+class BuildQEMU(BuildQEMUBase):
+    repository = "https://github.com/CTSRD-CHERI/qemu.git"
+    gitBranch = "qemu-cheri"
+    appendCheriBitsToBuildDir = True
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions()
+        cls.magic128 = cls.addBoolOption("magic-128")
+        # Turn on unaligned loads/stores by default
+        cls.unaligned = cls.addBoolOption("unaligned", showHelp=True, help="Permit un-aligned loads/stores",
+                                          default=True)
+
+        cls.statistics = cls.addBoolOption("statistics", showHelp=True, default=False,
+                                           help="Collect statistics on out-of-bounds capability creation.")
+        cls.legacy_registers = cls.addBoolOption("legacy-registers", showHelp=False,
+                                                 help="Build QEMU with the special registers mapped into the GPRs",
+                                                 default=False)
+
+    @classmethod
+    def qemu_binary(cls, caller: SimpleProject):
+        binary_name = "qemu-system-cheri"
+        if caller.config.unified_sdk:
+            binary_name += caller.config.cheriBitsStr
+            if caller.config.cheriBits == 128 and cls.get_instance(caller, caller.config).magic128:
+                binary_name += "magic"
+        return caller.config.sdkBinDir / binary_name
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+
+        if self.config.unified_sdk:
+            self._qemuTargets = "cheri256-softmmu,cheri128-softmmu,cheri128magic-softmmu,mips64-softmmu"
+        else:
+            self._qemuTargets = "cheri-softmmu"
+            if config.cheriBits == 128:
+                # enable QEMU 128 bit capabilities
+                # https://github.com/CTSRD-CHERI/qemu/commit/40a7fc2823e2356fa5ffe1ee1d672f1d5ec39a12
+                self._extraCFlags += " -DCHERI_128=1" if not self.magic128 else " -DCHERI_MAGIC128=1"
+        if self.unaligned:
+            self._extraCFlags += " -DCHERI_UNALIGNED"
+        if self.legacy_registers:
+            self._extraCFlags += " -DCHERI_C0_NULL=0"
+        if self.statistics:
+            self._extraCFlags += " -DDO_CHERI_STATISTICS=1"
+
+        # the capstone disassembler doesn't support CHERI instructions:
+        self.configureArgs.append("--disable-capstone")
+        if self.debug_info:
+            self._extraCFlags += " -DENABLE_CHERI_SANITIY_CHECKS=1"
+
+class BuildQEMURISCV(BuildQEMUBase):
+    target = "qemu-riscv"
+    projectName = "qemu-riscv"
+    _qemuTargets = "riscv64-softmmu"
+
+    @classmethod
+    def qemu_binary(cls, caller: SimpleProject):
+        return caller.config.sdkBinDir / "qemu-system-riscv64"

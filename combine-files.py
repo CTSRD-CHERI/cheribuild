@@ -153,6 +153,7 @@ addFilteredFile(scriptDir / "projects/cross/llvm_test_suite.py")
 addFilteredFile(scriptDir / "projects/cross/newlib_baremetal.py")
 addFilteredFile(scriptDir / "projects/cross/sqlite.py")
 addFilteredFile(scriptDir / "projects/cross/qt5.py")
+addFilteredFile(scriptDir / "projects/cross/bbl.py")
 
 # disk-image, sdk and run_qemu must come after cheribsd as they use CheriBSD.rootfsDir
 addFilteredFile(scriptDir / "projects/disk_image.py")

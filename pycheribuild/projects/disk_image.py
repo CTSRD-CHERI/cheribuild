@@ -72,6 +72,7 @@ class _BuildDiskImageBase(SimpleProject):
     _freebsd_build_class = None
     needs_special_pkg_repo = False  # True for CheriBSD
     strip_binaries = False  # True by default for minimal disk-image
+    bigEndian = True # True for MIPS
 
     @classmethod
     def setupConfigOptions(cls, *, defaultHostname, extraFilesShortname=None, extraFilesSuffix="", **kwargs):
@@ -352,7 +353,7 @@ class _BuildDiskImageBase(SimpleProject):
                 "-f", "30%",  # minimum 30% free inodes
                 "-R", "4m",  # round up size to the next 1m multiple
                 "-M", self.minimumImageSize,
-                "-B", "be",  # big endian byte order
+                "-B", "be" if self.bigEndian else "le",  # byte order
                 "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
                 # which makes sure that the numeric UID values are correct
                 self.diskImagePath,  # output file
@@ -723,3 +724,20 @@ class BuildFreeBSDDiskImageX86(BuildFreeBSDImageBase):
     _freebsd_build_class = BuildFreeBSD.get_class_for_target(CrossCompileTarget.NATIVE)
     _freebsd_suffix = "x86"
     hide_options_from_help = True
+    bigEndian = False
+
+class BuildFreeBSDWithDefaultOptionsDiskImageRISCV(BuildFreeBSDImageBase):
+    projectName = "disk-image-freebsd-with-default-options-riscv"
+    dependencies = ["qemu", "freebsd-with-default-options-riscv"]
+    _freebsd_build_class = BuildFreeBSDWithDefaultOptions.get_class_for_target(CrossCompileTarget.RISCV)
+    _freebsd_suffix = "riscv"
+    hide_options_from_help = True
+    bigEndian = False
+
+    class _RISCVFileTemplates(_AdditionalFileTemplates):
+        def get_fstab_template(self):
+            return includeLocalFile("files/riscv/fstab.in")
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        self.file_templates = self._RISCVFileTemplates()
