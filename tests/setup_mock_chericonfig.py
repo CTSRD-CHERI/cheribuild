@@ -21,6 +21,7 @@ class MockConfig(CheriConfig):
         self.sourceRoot = sourceRoot
         self.buildRoot = sourceRoot / "build"
         self.outputRoot = sourceRoot / "output"
+        self.cheribsd_image_root = self.outputRoot
         self.pretend = True
         self.clean = True
         self.verbose = True
