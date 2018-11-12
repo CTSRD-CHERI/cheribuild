@@ -64,6 +64,7 @@ class BuildLLVM(CMakeProject):
         cls.enable_assertions = cls.addBoolOption("assertions", help="build with assertions enabled", default=True)
         cls.enable_lto = cls.addBoolOption("enable-lto", help="build with LTO enabled (experimental)")
         cls.skip_lld = cls.addBoolOption("skip-lld", help="Don't build lld as part of the llvm target")
+        cls.llvm_only = cls.addBoolOption("llvm-only", help="Only build LLVM (skip clang+lld)")
         cls.skip_static_analyzer = cls.addBoolOption("skip-static-analyzer", help="Don't build the clang static analyzer")
         cls.build_everything = cls.addBoolOption("build-everything", default=False,
                                                  help="Also build documentation,examples and bindings")
@@ -79,6 +80,9 @@ class BuildLLVM(CMakeProject):
         self.cCompiler = config.clangPath
         self.cppCompiler = config.clangPlusPlusPath
         # this must be added after checkSystemDependencies
+        if self.llvm_only:
+            self.add_cmake_options(LLVM_TOOL_CLANG_BUILD=False)
+            self.skip_lld = True
         self.add_cmake_options(
             CMAKE_CXX_COMPILER=self.cppCompiler,
             CMAKE_C_COMPILER=self.cCompiler,
@@ -86,6 +90,8 @@ class BuildLLVM(CMakeProject):
             LLVM_TOOL_LLD_BUILD=not self.skip_lld,
             LLVM_PARALLEL_LINK_JOBS=2 if self.enable_lto else 4,  # anything more causes too much I/O
         )
+
+
         if not self.build_everything:
             self.add_cmake_options(
                 LLVM_ENABLE_OCAMLDOC=False,
@@ -170,13 +176,14 @@ class BuildLLVM(CMakeProject):
 
     def update(self):
         self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision)
-        self._updateGitRepo(self.sourceDir / "tools/clang", self.clangRepository, revision=self.clangRevision)
-        if not self.skip_lld:
-            self._updateGitRepo(self.sourceDir / "tools/lld", self.lldRepository, revision=self.lldRevision,
-                                initialBranch="master")
-        if False:  # Not yet usable
-            self._updateGitRepo(self.sourceDir / "tools/lldb", self.lldbRepository, revision=self.lldbRevision,
-                                initialBranch="master")
+        if not self.llvm_only:
+            self._updateGitRepo(self.sourceDir / "tools/clang", self.clangRepository, revision=self.clangRevision)
+            if not self.skip_lld:
+                self._updateGitRepo(self.sourceDir / "tools/lld", self.lldRepository, revision=self.lldRevision,
+                                    initialBranch="master")
+            if False:  # Not yet usable
+                self._updateGitRepo(self.sourceDir / "tools/lldb", self.lldbRepository, revision=self.lldbRevision,
+                                    initialBranch="master")
 
     def install(self, **kwargs):
         super().install()
@@ -190,14 +197,17 @@ class BuildLLVM(CMakeProject):
             for i in incompatibleFiles:
                 self.deleteFile(i, printVerboseOnly=True)
         # create a symlink for the target
-        llvmBinaries = "clang clang++ clang-cpp llvm-mc llvm-objdump llvm-readobj llvm-size llc".split()
+        llvmBinaries = "llvm-mc llvm-objdump llvm-readobj llvm-size llc".split()
+        if not self.llvm_only:
+            llvmBinaries += ["clang", "clang++", "clang-cpp"]
         for tool in llvmBinaries:
             self.createBuildtoolTargetSymlinks(self.installDir / "bin" / tool)
 
-        # create cc and c++ symlinks (expected by some build systems)
-        self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang", toolName="cc", createUnprefixedLink=False)
-        self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang++", toolName="c++", createUnprefixedLink=False)
-        self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang-cpp", toolName="cpp", createUnprefixedLink=False)
+        if not self.llvm_only:
+            # create cc and c++ symlinks (expected by some build systems)
+            self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang", toolName="cc", createUnprefixedLink=False)
+            self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang++", toolName="c++", createUnprefixedLink=False)
+            self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang-cpp", toolName="cpp", createUnprefixedLink=False)
 
         # Use the LLVM versions of ranlib and ar and nm
         for tool in ("ar", "ranlib", "nm"):
