@@ -87,7 +87,7 @@ Host cheribsd-test-instance
     # print("Writing ssh config: ", config_contents)
     with Path(tempdir, "config").open("w") as c:
         c.write(config_contents)
-    Path(Path.home(), "controlmasters").mkdir(exist_ok=True)
+    Path(Path.home(), ".ssh/controlmasters").mkdir(exist_ok=True)
     boot_cheribsd.run_host_command(["cat", str(Path(tempdir, "config"))])
     # Check that the config file works:
     boot_cheribsd.run_host_command(["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance", "-p", str(port), "--", "echo", "connection successful"], cwd=str(libcxx_dir))
