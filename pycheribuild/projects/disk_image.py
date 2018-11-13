@@ -110,7 +110,7 @@ class _BuildDiskImageBase(SimpleProject):
             self._addRequiredSystemTool("freebsd-makefs", cheribuild_target="freebsd-bootstrap-tools")
             self._addRequiredSystemTool("freebsd-install", cheribuild_target="freebsd-bootstrap-tools")
         assert isinstance(self.source_project, BuildFreeBSD)
-        self.rootfsDir = self.source_project.installDir
+        self.rootfsDir = self.source_project.getInstallDir(self, config)
         assert self.rootfsDir is not None
         self.userGroupDbDir = self.source_project.sourceDir / "etc"
         self.crossBuildImage = self.source_project.crossbuild

@@ -102,6 +102,8 @@ class JenkinsConfig(CheriConfig):
                                                                        " image)")  # type: Path
         self.without_sdk = loader.addCommandLineOnlyBoolOption("without-sdk",
                                                               help="Don't use the CHERI SDK -> only /usr (for native builds)")
+        self.cheri_sdk_path = loader.addCommandLineOnlyOption("cheri-sdk-path", default=None, type=Path,
+                                                              help="Override the path to the CHERI SDK (default is $WORKSPACE/cherisdk)")  # type: Path
         self.extract_compiler_only = loader.addCommandLineOnlyBoolOption("extract-compiler-only",
                                                                          help="Don't attempt to extract the CheriBSD sysroot")
         self.tarball_name = loader.addCommandLineOnlyOption("tarball-name",
@@ -202,7 +204,9 @@ class JenkinsConfig(CheriConfig):
         self.otherToolsDir = self.workspace / "bootstrap"
         self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
         # check for ctsrd/cheri-sdk-{cheri256,cheri128,mips} docker image
-        if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
+        if self.cheri_sdk_path is not None:
+            self.sdkDir = self.cheri_sdk_path
+        elif Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
             self.sdkDir = Path("/cheri-sdk")
         else:
             self.sdkDir = self.workspace / self.sdkDirectoryName
@@ -241,6 +245,9 @@ class JenkinsConfig(CheriConfig):
             # always use the CHERI clang built by jenkins to ensure we don't do x86 compilation
             self.clangPath = self.sdkBinDir / "clang"
             self.clangPlusPlusPath = self.sdkBinDir / "clang++"
+
+        if self.cheri_sdk_path is not None:
+            assert self.sdkBinDir == self.cheri_sdk_path / "bin"
 
         self._initializeDerivedPaths()
 

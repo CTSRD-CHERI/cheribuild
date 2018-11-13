@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import argparse
+import inspect
 import os
 import shlex
 import subprocess
@@ -233,8 +234,17 @@ def _jenkins_main():
         for tgt in targetManager.targets:
             cls = tgt.projectClass
             if issubclass(cls, Project):
+                # override the default install directory to point to the jenkins WORKSPACE
                 cls.defaultInstallDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
-                cls.installDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
+                i = inspect.getattr_static(cls, "installDir")
+                assert isinstance(i, CommandLineConfigOption)
+                # But don't change it if it was specified on the command line. Note: This also does the config
+                # inheritance: i.e. setting --cheribsd/install-dir will also affect cheribsd-cheri/cheribsd-mips
+                from_cmdline = i.loadOption(cheriConfig, cls, cls, return_none_if_default=True)
+                if from_cmdline is not None:
+                    statusUpdate("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
+                else:
+                    cls.installDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
                 # print(project.projectClass.projectName, project.projectClass.installDir)
         if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
             assert cheriConfig.sdkDir == Path("/cheri-sdk"), cheriConfig.sdkDir
@@ -242,6 +252,10 @@ def _jenkins_main():
             statusUpdate("Not using CHERI SDK, only files from /usr")
             assert cheriConfig.clangPath.exists(), cheriConfig.clangPath
             assert cheriConfig.clangPlusPlusPath.exists(), cheriConfig.clangPlusPlusPath
+        elif cheriConfig.cheri_sdk_path:
+            expected_clang = cheriConfig.sdkBinDir / "clang"
+            if not expected_clang.exists():
+                fatalError("--cheri-sdk-path specified but", expected_clang, "does not exist")
         else:
             create_sdk_from_archives(cheriConfig, needs_cheribsd_sysroot=target.projectClass.needs_cheribsd_sysroot(cheriConfig.crossCompileTarget))
 

@@ -220,7 +220,8 @@ class ConfigOptionBase(object):
         self._owningClass = _owningClass  # if none it means the global CheriConfig is the class containing this option
         self._fallback_name = _fallback_name  # for targets such as gdb-mips, etc
 
-    def loadOption(self, config: "CheriConfig", instance: "typing.Optional[SimpleProject]", owner: "typing.Type"):
+    def loadOption(self, config: "CheriConfig", instance: "typing.Optional[SimpleProject]", owner: "typing.Type",
+                   return_none_if_default=False):
         result = self._loadOptionImpl(config, self.fullOptionName)
         # fall back from --qtbase-mips/foo to --qtbase/foo
         if result is None and self._fallback_name is not None:
@@ -231,6 +232,8 @@ class ConfigOptionBase(object):
                 print("Using fallback config option value", self._fallback_name, "for", self.name, "->", result)
 
         if result is None:  # If no option is set fall back to the default
+            if return_none_if_default:
+                return None # Used in jenkins to avoid updating install directory for explicit options on commandline
             result = self._getDefaultValue(config, instance)
         # Now convert it to the right type
         try:
