@@ -57,7 +57,6 @@ class JenkinsConfigLoader(ConfigLoaderBase):
 
     def load(self):
         self._parsedArgs = self._parser.parse_args()
-        print(self._parsedArgs.targets)
         if self._parsedArgs.targets is None:
             self._parsedArgs.targets = []
         if isinstance(self._parsedArgs.targets, str):
