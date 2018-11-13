@@ -338,7 +338,7 @@ class _BuildDiskImageBase(SimpleProject):
                 print("qemu-img from CHERI SDK not found, falling back to system qemu-img")
                 qemuImgCommand = Path(systemQemuImg)
             else:
-                self.warning("qemu-img command was not found!", fixitHint="Make sure to build target qemu first")
+                self.warning("qemu-img command was not found! Make sure to build target qemu first.")
 
         # write out the manifest file:
         self.mtree.write(self.manifestFile)
