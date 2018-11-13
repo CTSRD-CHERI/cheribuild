@@ -533,9 +533,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             kernel_path = BuildCheriBsdMfsKernel.get_installed_kernel_path(self, self.config)
             if not kernel_path.exists():
                 if self.get_crosscompile_target(self.config) == CrossCompileTarget.MIPS:
-                    guessed_archive = "freebsd-malta64-mfs-root-jenkins_bluehive-kernel.bz2"
+                    guessed_archive = "cheribsd128-cheri128-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
+                    # TODO: guessed_archive = "freebsd-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
                 elif self.get_crosscompile_target(self.config) == CrossCompileTarget.CHERI:
-                    guessed_archive = "cheribsd{suffix}-cheri{suffix}-malta64-mfs-root-jenkins_bluehive-kernel.bz2".format(
+                    guessed_archive = "cheribsd{suffix}-cheri{suffix}-malta64-mfs-root-minimal-cheribuild-kernel.bz2".format(
                         suffix="" if self.config.cheriBits == 256 else self.config.cheriBitsStr)
                 else:
                     self.fatal("Could not guess path to kernel image for CheriBSD")
