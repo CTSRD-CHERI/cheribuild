@@ -615,7 +615,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             dummy_hardlink = Path(cheribsdbox_path).with_suffix(".dummy_hardlink")
             if not self.config.pretend:
                 self.deleteFile(dummy_hardlink)
-                os.link(cheribsdbox_path, dummy_hardlink)
+                os.link(str(cheribsdbox_path), str(dummy_hardlink))
                 if Path(cheribsdbox_path).stat().st_nlink < 2:
                     self.fatal("Need at least one hardlink to cheribsdbox so that makefs can detect deduplicate. "
                                "This should have been created by cheribuild but something must have gone wrong")
