@@ -272,6 +272,10 @@ class CheriConfig(object):
         return self.sdkDir / "bin"
 
     @property
+    def qemu_bindir(self):
+        return self.sdkBinDir
+
+    @property
     def sdkSysrootDir(self):
         return self.sdkDir / ("sysroot" + self.cheriBitsStr)
 

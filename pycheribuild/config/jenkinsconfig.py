@@ -34,7 +34,7 @@ from pathlib import Path
 
 from .loader import ConfigLoaderBase
 from .chericonfig import CheriConfig, CrossCompileTarget
-from ..utils import defaultNumberOfMakeJobs, fatalError
+from ..utils import defaultNumberOfMakeJobs, fatalError, IS_MAC, IS_LINUX, IS_FREEBSD
 
 
 def default_install_prefix(conf: "JenkinsConfig", unused):
@@ -160,6 +160,23 @@ class JenkinsConfig(CheriConfig):
         if self.cheri_cap_table_abi == "legacy":
             guessed_abi_suffix = "legacy"
         return os.getenv("ISA", guessed_abi_suffix)
+
+    @property
+    def qemu_bindir(self):
+        for i in self.sdkBinDir.glob("qemu-system-*"):
+            if self.verbose:
+                print("Found QEMU binary", i, "in SDK dir -> using that for QEMU binaries")
+            # If one qemu-system-foo exists in the sdkBinDir use that instead of $WORKSPACE/qemu-<OS>
+            return self.sdkBinDir
+        if IS_LINUX:
+            os_suffix = "linux"
+        elif IS_FREEBSD:
+            os_suffix = "freebsd"
+        elif IS_MAC:
+            os_suffix = "mac"
+        else:
+            os_suffix = "unknown-os"
+        return self.workspace / ("qemu-" + os_suffix) / "bin"
 
     @property
     def sdkSysrootDir(self):

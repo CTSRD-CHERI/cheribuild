@@ -258,7 +258,8 @@ class BuildQEMU(BuildQEMUBase):
                 binary_name += caller.config.cheriBitsStr
                 if caller.config.cheriBits == 128 and cls.get_instance(caller, caller.config).magic128:
                     binary_name += "magic"
-        return caller.config.sdkBinDir / binary_name
+
+        return caller.config.qemu_bindir / binary_name
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
