@@ -338,7 +338,7 @@ class _BuildDiskImageBase(SimpleProject):
                 print("qemu-img from CHERI SDK not found, falling back to system qemu-img")
                 qemuImgCommand = Path(systemQemuImg)
             else:
-                self.fatal("qemu-img command was not found!", fixitHint="Make sure to build target qemu first")
+                self.warning("qemu-img command was not found!", fixitHint="Make sure to build target qemu first")
 
         # write out the manifest file:
         self.mtree.write(self.manifestFile)
@@ -369,9 +369,11 @@ class _BuildDiskImageBase(SimpleProject):
             raise
 
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
-        if not self.config.quiet:
+        if not self.config.quiet and qemuImgCommand.exists():
             runCmd(qemuImgCommand, "info", self.diskImagePath)
         if self.useQCOW2:
+            if not qemuImgCommand.exists():
+                self.fatal("Cannot create QCOW2 image without qemu-img command!")
             # create a qcow2 version from the raw image:
             rawImg = self.diskImagePath.with_suffix(".raw")
             runCmd("mv", "-f", self.diskImagePath, rawImg)
