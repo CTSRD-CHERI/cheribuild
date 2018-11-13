@@ -149,10 +149,10 @@ def decompress(archive: Path, force_decompression: bool, *, keep_archive=True, c
 def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True) -> Path:
     # drop the suffix and then try decompressing
     def bunzip(archive):
-        return decompress(archive, force_decompression, cmd=["bunzip2", "-v"], keep_archive=keep_archive)
+        return decompress(archive, force_decompression, cmd=["bunzip2", "-v", "-f"], keep_archive=keep_archive)
 
     def unxz(archive):
-        return decompress(archive, force_decompression, cmd=["xz", "-d", "-v"], keep_archive=keep_archive)
+        return decompress(archive, force_decompression, cmd=["xz", "-d", "-v", "-f"], keep_archive=keep_archive)
 
     if path.suffix == ".bz2":
         return bunzip(path)
@@ -233,7 +233,7 @@ def setup_ssh(qemu: CheriBSDInstance, pubkey: Path):
     run_cheribsd_command(qemu, "grep -n PermitRootLogin /etc/ssh/sshd_config")
     qemu.sendline("service sshd restart")
     try:
-        qemu.expect(["service: not found", "Starting sshd."], timeout=120)
+        qemu.expect(["service: not found", "Starting sshd.", "Cannot 'restart' sshd."], timeout=120)
     except pexpect.TIMEOUT:
         failure("Timed out setting up SSH keys")
     qemu.expect([PROMPT])
