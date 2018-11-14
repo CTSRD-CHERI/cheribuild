@@ -34,7 +34,7 @@ from ..build_qemu import BuildQEMU
 from ..llvm import BuildLLVM
 from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
-from ...utils import OSInfo, statusUpdate, runCmd, warningMessage, commandline_to_str
+from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str
 import os
 
 installToCXXDir = ComputedDefaultValue(
@@ -144,10 +144,12 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
         # self.installFile(self.buildDir / "lib/libcxxrt.so", self.installDir / "usr/libcheri/libcxxrt.so", force=True)
 
     def run_tests(self):
-        if self.compiling_for_host():
-            runCmd("ctest", ".", "-v", cwd=self.buildDir)
-        else:
-            warningMessage("Running libcxxrt tests not yet implemented for non-native case")
+        # TODO: this won't work on macOS
+        with setEnv(LD_LIBRARY_PATH=self.buildDir / "lib"):
+            if self.compiling_for_host():
+                runCmd("ctest", ".", "-VV", cwd=self.buildDir)
+            else:
+                warningMessage("Running libcxxrt tests not yet implemented for non-native case")
 
 
 class BuildLibCXX(CrossCompileCMakeProject):
