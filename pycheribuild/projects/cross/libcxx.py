@@ -188,8 +188,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.add_cmake_options(
             CMAKE_INSTALL_RPATH_USE_LINK_PATH=True,  # Fix finding libunwind.so
             LIBCXX_INCLUDE_TESTS=True,
-            # LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config",
-            LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
+            LLVM_PATH=BuildLLVM.getSourceDir(self, config),
             LLVM_EXTERNAL_LIT=BuildLLVM.getBuildDir(self, config) / "bin/llvm-lit",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
             LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
