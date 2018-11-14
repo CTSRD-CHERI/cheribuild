@@ -30,6 +30,7 @@
 from .project import *
 from ..utils import *
 from pathlib import Path
+import os
 import shutil
 import subprocess
 
@@ -250,16 +251,11 @@ class BuildQEMU(BuildQEMUBase):
     def qemu_binary(cls, caller: SimpleProject):
         binary_name = "qemu-system-cheri"
         if caller.config.unified_sdk:
-            if caller.get_crosscompile_target(caller.config) == CrossCompileTarget.MIPS:
-                # Use the cheri256 QEMU binary for running MIPS since it's a bit faster than 128
-                # and ensure that plain MIPS code works fine on the 256 CPU
-                binary_name += "256"
-            else:
-                binary_name += caller.config.cheriBitsStr
-                if caller.config.cheriBits == 128 and cls.get_instance(caller, caller.config).magic128:
-                    binary_name += "magic"
+            binary_name += caller.config.cheriBitsStr
+            if caller.config.cheriBits == 128 and cls.get_instance(caller, caller.config).magic128:
+                binary_name += "magic"
 
-        return caller.config.qemu_bindir / binary_name
+        return caller.config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
