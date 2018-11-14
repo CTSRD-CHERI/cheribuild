@@ -37,9 +37,14 @@ from ...config.loader import ComputedDefaultValue
 from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str
 import os
 
-installToCXXDir = ComputedDefaultValue(
-    function=lambda config, project: BuildCHERIBSD.rootfsDir(project, config) / "opt/c++",
-    asString="$CHERIBSD_ROOTFS/opt/c++")
+
+def _cxx_install_dir(config: CheriConfig, project):
+    if project.get_crosscompile_target(config) == CrossCompileTarget.NATIVE:
+        return _INVALID_INSTALL_DIR
+    return BuildCHERIBSD.rootfsDir(project, config) / "opt/c++"
+
+
+installToCXXDir = ComputedDefaultValue(function=_cxx_install_dir, asString="$CHERIBSD_ROOTFS/opt/c++")
 
 
 class BuildLibunwind(CrossCompileCMakeProject):

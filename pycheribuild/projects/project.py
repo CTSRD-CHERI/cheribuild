@@ -1197,7 +1197,6 @@ class Project(SimpleProject):
             return self._installPrefix
         return self._installDir
 
-
     def runMakeInstall(self, *, options: MakeOptions=None, target="install", _stdoutFilter=_default_stdout_filter, cwd=None,
                        parallel=False, **kwargs):
         if options is None:

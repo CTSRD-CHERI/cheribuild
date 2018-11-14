@@ -45,14 +45,17 @@ from ..project import *
 from ...utils import *
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget",  # no-combine
-           "CrossCompileProject", "CrossInstallDir", "MakeCommandKind", "Linkage", "Path", "crosscompile_dependencies"]  # no-combine
+           "CrossCompileProject", "CrossInstallDir", "MakeCommandKind", "Linkage", "Path", "crosscompile_dependencies",
+           "_INVALID_INSTALL_DIR"]  # no-combine
 
 class CrossInstallDir(Enum):
     NONE = 0
     CHERIBSD_ROOTFS = 1
     SDK = 2
 
-_INVALID_INSTALL_DIR = "/this/dir/should/be/overwritten/and/not/used/!!!!"
+
+_INVALID_INSTALL_DIR = Path("/this/dir/should/be/overwritten/and/not/used/!!!!")
+
 
 def _installDir(config: CheriConfig, project: "CrossCompileProject"):
     assert isinstance(project, CrossCompileMixin)
@@ -170,8 +173,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
         if self.compiling_for_host():
             self.COMMON_FLAGS = []
             self.targetTriple = self.get_host_triple()
-            if self.installDir == _INVALID_INSTALL_DIR:
-                self.installDir = self.buildDir / "test-install-prefix"
+            if self._installDir == _INVALID_INSTALL_DIR:
+                self._installDir = self.buildDir / "test-install-prefix"
         else:
             self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-G0"]
             # clang currently gets the TLS model wrong:
@@ -218,11 +221,10 @@ class CrossCompileMixin(MultiArchBaseMixin):
                     self.destdir = config.sdkSysrootDir
             elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
                 from .cheribsd import BuildCHERIBSD
-                print(self.installDir)
                 self._installPrefix = Path("/", self._installDir.relative_to(BuildCHERIBSD.rootfsDir(self, config)))
                 self.destdir = BuildCHERIBSD.rootfsDir(self, config)
             else:
-                assert self.installPrefix and self.destdir, "both must be set!"
+                assert self._installPrefix and self.destdir, "both must be set!"
 
         assert self.installDir, "must be set"
 
