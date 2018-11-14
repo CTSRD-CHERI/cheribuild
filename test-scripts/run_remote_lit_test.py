@@ -61,7 +61,8 @@ def flush_thread(f, qemu: pexpect.spawn):
             # TODO: tell lit to abort now....
 
 
-def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str):
+def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str,
+                         llvm_lit_path: str=None):
     qemu.EXIT_ON_KERNEL_PANIC = False # since we run multiple threads we shouldn't use sys.exit()
     print("PID of QEMU:", qemu.pid)
     port = args.ssh_port
@@ -101,7 +102,9 @@ Host cheribsd-test-instance
 
     print("Running", testsuite, "tests with executor", executor)
     # have to use -j1 + --single-process since otherwise CheriBSD might wedge
-    lit_cmd = [str(test_build_dir / "bin/llvm-lit"), "-j1", "-vv", "--single-process", "-Dexecutor=" + executor, "test"]
+    if llvm_lit_path is None:
+        llvm_lit_path = str(test_build_dir / "bin/llvm-lit")
+    lit_cmd = [llvm_lit_path, "-j1", "-vv", "--single-process", "-Dexecutor=" + executor, "test"]
     if args.lit_debug_output:
         lit_cmd.append("--debug")
     # This does not work since it doesn't handle running ssh commands....

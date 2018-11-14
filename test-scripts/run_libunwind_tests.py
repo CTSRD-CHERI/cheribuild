@@ -47,11 +47,12 @@ import run_remote_lit_test
 
 def run_libcxx_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     with tempfile.TemporaryDirectory() as tempdir:
-        run_remote_lit_test.run_remote_lit_tests("libcxx", qemu, args, tempdir)
+        run_remote_lit_test.run_remote_lit_tests("libcxx", qemu, args, tempdir, llvm_lit_path=args.llvm_lit_path)
 
 
 def add_cmdline_args(parser: argparse.ArgumentParser):
     parser.add_argument("--lit-debug-output", action="store_true")
+    parser.add_argument("--llvm-lit-path")
     parser.add_argument("--xunit-output", default="libunwind-tests.xml")
 
 

@@ -50,9 +50,11 @@ class BuildLibunwind(CrossCompileCMakeProject):
         super().__init__(config)
         # Adding -ldl won't work: no libdl in /usr/libcheri
         self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)
+        self.lit_path = BuildLLVM.getBuildDir(self, config) / "bin/llvm-lit"
         self.add_cmake_options(
-            LLVM_CONFIG_PATH=self.compiler_dir / "llvm-config",
-            LLVM_EXTERNAL_LIT=BuildLLVM.getBuildDir(self, config) / "bin/llvm-lit",
+            #  LLVM_CONFIG_PATH=self.compiler_dir / "llvm-config",
+            LLVM_PATH=BuildLLVM.getSourceDir(self, config),
+            LLVM_EXTERNAL_LIT=self.lit_path,
         )
 
     def configure(self, **kwargs):
@@ -103,7 +105,9 @@ class BuildLibunwind(CrossCompileCMakeProject):
         if self.compiling_for_host():
             runCmd("ninja", "check-unwind", "-v", cwd=self.buildDir)
         else:
-            self.run_cheribsd_test_script("run_libunwind_tests.py", "--lit-debug-output")
+            # Check that the four tests compile and then attempt to run them:
+            runCmd("ninja", "check-unwind", "-v", cwd=self.buildDir)
+            self.run_cheribsd_test_script("run_libunwind_tests.py", "--lit-debug-output", "--llvm-lit-path", self.lit_path)
 
 
 
