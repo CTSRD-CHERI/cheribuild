@@ -82,7 +82,7 @@ class BuildCheriVis(Project):
         self.cheritrace_subproject = BuildCheriTrace(config)
         self.cheritrace_subproject.sourceDir = self.sourceDir / "cheritrace"
         self.cheritrace_subproject.buildDir = self.sourceDir / "cheritrace/Build"
-        self.cheritrace_subproject.installDir = "/this/path/does/not/exist"
+        self.cheritrace_subproject._installDir = "/this/path/does/not/exist"
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
@@ -134,7 +134,7 @@ class BuildCheriVis(Project):
         # First build the bundled cheritrace
         assert self.cheritrace_subproject.sourceDir == self.sourceDir / "cheritrace"
         assert self.cheritrace_subproject.buildDir == self.sourceDir / "cheritrace/Build"
-        assert self.cheritrace_subproject.installDir == "/this/path/does/not/exist"
+        assert self.cheritrace_subproject.installDir == "/this/path/does/not/exist", self.cheritrace_subproject.installDir
         self.makedirs(self.cheritrace_subproject.buildDir)
         self.cheritrace_subproject.configure()
         self.cheritrace_subproject.compile()

@@ -53,10 +53,9 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
         super().setupConfigOptions(**kwargs)
         cls.locale_support = cls.addBoolOption("locale-support", showHelp=False, help="Build with locale support")
 
-
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.installDir = self.installDir.parent  # newlib install already appends the triple
+        self._installDir = self._installDir.parent  # newlib install already appends the triple
         #self.configureCommand = Path("/this/path/does/not/exist")
         self.configureCommand = self.sourceDir / "configure"
         # FIXME: how can I force it to run a full configure step (this is needed because it runs the newlib configure

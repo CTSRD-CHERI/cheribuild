@@ -833,7 +833,7 @@ class Project(SimpleProject):
 
     @classmethod
     def getInstallDir(cls, caller: "SimpleProject", config: CheriConfig):
-        return cls.get_instance(caller, config).installDir
+        return cls.get_instance(caller, config).real_install_root_dir
 
     @classmethod
     def buildDirSuffix(cls, config: CheriConfig, target: CrossCompileTarget):
@@ -869,7 +869,7 @@ class Project(SimpleProject):
     """ The default installation directory (will probably be set to _installToSDK or _installToBootstrapTools) """
 
     # useful for cross compile projects that use a prefix and DESTDIR
-    installPrefix = None
+    _installPrefix = None
     destdir = None
 
     __can_use_lld_map = dict()  # type: typing.Dict[Path, bool]
@@ -921,7 +921,7 @@ class Project(SimpleProject):
 
         if not installDirectoryHelp:
             installDirectoryHelp = "Override default install directory for " + cls.projectName
-        cls.installDir = cls.addPathOption("install-directory", metavar="DIR", help=installDirectoryHelp,
+        cls._installDir = cls.addPathOption("install-directory", metavar="DIR", help=installDirectoryHelp,
                                            default=cls.defaultInstallDir)
         if "repository" in cls.__dict__:
             cls.gitRevision = cls.addConfigOption("git-revision", kind=str, help="The git revision to checkout prior to"
@@ -974,6 +974,7 @@ class Project(SimpleProject):
         # self.__dict__[name] = value
         if self.__dict__.get("_preventAssign"):
             # assert name not in ("sourceDir", "buildDir", "installDir")
+            assert name != "installDir", "installDir should not be modified, only _installDir or _installPrefix"
             if name in self._no_overwrite_allowed:
                 import traceback
                 traceback.print_stack()
@@ -1183,7 +1184,18 @@ class Project(SimpleProject):
         if self.destdir is not None:
             assert self.installPrefix
             return self.destdir / self.installPrefix.relative_to(Path("/"))
-        return self.installDir
+        return self._installDir
+
+    @property
+    def installDir(self):
+        return self.real_install_root_dir
+
+    @property
+    def installPrefix(self):
+        if self._installPrefix is not None:
+            return self._installPrefix
+        return self._installDir
+
 
     def runMakeInstall(self, *, options: MakeOptions=None, target="install", _stdoutFilter=_default_stdout_filter, cwd=None,
                        parallel=False, **kwargs):
@@ -1237,11 +1249,8 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if self.generate_cmakelists:
             self._do_generate_cmakelists()
         if self.config.verbose:
-            installDir = self.installDir
-            if self.destdir is not None:
-                installDir = str(self.destdir) + str(self.installPrefix)
             print(self.projectName, "directories: source=%s, build=%s, install=%s" %
-                  (self.sourceDir, self.buildDir, installDir))
+                  (self.sourceDir, self.buildDir, self.installDir))
         self.update()
         if not self._systemDepsChecked:
             self.checkSystemDependencies()
@@ -1337,7 +1346,7 @@ class CMakeProject(Project):
         return not cmakeCache.exists() or not (self.buildDir / buildFile).exists()
 
     def configure(self, **kwargs):
-        if self.installPrefix:
+        if self.installPrefix != self.installDir:
             assert self.destdir, "custom install prefix requires DESTDIR being set!"
             self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installPrefix)
         else:
@@ -1414,7 +1423,7 @@ class AutotoolsProject(Project):
 
     def configure(self, **kwargs):
         if self._configure_supports_prefix:
-            if self.installPrefix:
+            if self.installPrefix != self.installDir:
                 assert self.destdir, "custom install prefix requires DESTDIR being set!"
                 self.configureArgs.append("--prefix=" + str(self.installPrefix))
             else:
