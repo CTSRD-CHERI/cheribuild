@@ -280,7 +280,7 @@ def _jenkins_main():
         with cleaningTask:
             if JenkinsAction.BUILD in cheriConfig.action:
                 target.execute(cheriConfig)
-            elif JenkinsAction.TEST in cheriConfig.action:
+            if JenkinsAction.TEST in cheriConfig.action:
                 target.run_tests(cheriConfig)
 
 
