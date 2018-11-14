@@ -143,6 +143,12 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
         # self.installFile(self.buildDir / "lib/libcxxrt.a", libdir / "libcxxrt.so", force=True)
         # self.installFile(self.buildDir / "lib/libcxxrt.so", self.installDir / "usr/libcheri/libcxxrt.so", force=True)
 
+    def run_tests(self):
+        if self.compiling_for_host():
+            runCmd("ctest", ".", "-v", cwd=self.buildDir)
+        else:
+            warningMessage("Running libcxxrt tests not yet implemented for non-native case")
+
 
 class BuildLibCXX(CrossCompileCMakeProject):
     repository = "https://github.com/CTSRD-CHERI/libcxx.git"
