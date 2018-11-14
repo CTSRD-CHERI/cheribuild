@@ -34,7 +34,7 @@ from ..build_qemu import BuildQEMU
 from ..llvm import BuildLLVM
 from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
-from ...utils import OSInfo, statusUpdate, runCmd, warningMessage
+from ...utils import OSInfo, statusUpdate, runCmd, warningMessage, commandline_to_str
 import os
 
 installToCXXDir = ComputedDefaultValue(
@@ -55,22 +55,37 @@ class BuildLibunwind(CrossCompileCMakeProject):
             LLVM_EXTERNAL_LIT=BuildLLVM.getBuildDir(self, config) / "bin/llvm-lit",
         )
 
-        # TODO: this breaks the build: LLVM_LIBDIR_SUFFIX="cheri"
-        # Now that cheribsd includes libc++ we no longer need this:
-        # self.COMMON_FLAGS.append("-isystem")
-        # self.COMMON_FLAGS.append(str(BuildLibCXX.sourceDir / "include"))
+    def configure(self, **kwargs):
+        # TODO: should share some code with libcxx
+        # to find the libcxx lit config files and library:
+        test_compiler_flags = commandline_to_str(self.default_compiler_flags)
+        test_linker_flags = commandline_to_str(self.default_ldflags)
+
+        self.add_cmake_options(LIBUNWIND_LIBCXX_PATH=BuildLibCXX.getSourceDir(self, self.config),
+                               # Should use libc++ from sysroot
+                               # LIBUNWIND_LIBCXX_LIBRARY_PATH=BuildLibCXX.getBuildDir(self, self.config) / "lib",
+                               LIBUNWIND_LIBCXX_LIBRARY_PATH="",
+                               LIBUNWIND_TEST_LINKER_FLAGS=test_linker_flags,
+                               LIBUNWIND_TEST_COMPILER_FLAGS=test_compiler_flags,
+                               )
         if not self.compiling_for_host():
+            # Needing a .so makes it slightly annoying to test
+            # TODO: fix this
+            self.add_cmake_options(LIBCXX_ENABLE_SHARED=False,
+                                   LIBUNWIND_ENABLE_SHARED=self.force_dynamic_linkage,
+                                   )
             self.collect_test_binaries = self.buildDir / "test-output"
             executor = "CollectBinariesExecutor(\\\"{path}\\\", self)".format(path=self.collect_test_binaries)
             self.add_cmake_options(
                 LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
-                              "/lit-test-results.xml --max-time 3600 --timeout 120 -s -vv -j1",
+                              "/libunwind-test-results.xml --max-time 3600 --timeout 120 -s -vv -j1",
                 LIBUNWIND_TARGET_TRIPLE=self.targetTriple, LIBUNWIND_SYSROOT=self.sdkSysroot)
 
             target_info = "libcxx.test.target_info.CheriBSDRemoteTI"
             # add the config options required for running tests:
             self.add_cmake_options(LIBUNWIND_EXECUTOR=executor, LIBUNWIND_TARGET_INFO=target_info,
                                    LIBUNWIND_CXX_ABI_LIBNAME="libcxxrt")
+        super().configure(**kwargs)
 
     def process(self):
         # TODO: update libcxxrt to always build against host/cheribsd version
@@ -83,6 +98,13 @@ class BuildLibunwind(CrossCompileCMakeProject):
             if not self.queryYesNo("Continue anyway?", defaultResult=True):
                 return
         super().process()
+
+    def run_tests(self):
+        if self.compiling_for_host():
+            runCmd("ninja", "check-unwind", "-v", cwd=self.buildDir)
+        else:
+            self.run_cheribsd_test_script("run_libunwind_tests.py", "--lit-debug-output")
+
 
 
 class BuildLibCXXRT(CrossCompileCMakeProject):
@@ -184,7 +206,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
                                LIBCXX_SYSROOT=self.sdkSysroot)
 
         # We need to build with -G0 otherwise we get R_MIPS_GPREL16 out of range linker errors
-        test_compile_flags = " ".join(self.default_compiler_flags)
+        test_compile_flags = commandline_to_str(self.default_compiler_flags)
         if self.baremetal:
             if self.compiling_for_mips():
                 test_compile_flags += " -fno-pic -mno-abicalls"
