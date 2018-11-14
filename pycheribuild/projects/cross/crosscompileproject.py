@@ -211,14 +211,15 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
             if self.crossInstallDir == CrossInstallDir.SDK:
                 if self.baremetal:
-                    self.installPrefix = "/"
+                    self._installPrefix = "/"
                     self.destdir = self.sdkSysroot
                 else:
-                    self.installPrefix = "/usr/local"
+                    self._installPrefix = "/usr/local"
                     self.destdir = config.sdkSysrootDir
             elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
                 from .cheribsd import BuildCHERIBSD
-                self.installPrefix = Path("/", self.installDir.relative_to(BuildCHERIBSD.rootfsDir(self, config)))
+                print(self.installDir)
+                self._installPrefix = Path("/", self._installDir.relative_to(BuildCHERIBSD.rootfsDir(self, config)))
                 self.destdir = BuildCHERIBSD.rootfsDir(self, config)
             else:
                 assert self.installPrefix and self.destdir, "both must be set!"

@@ -266,8 +266,8 @@ def _jenkins_main():
         assert project
         if isinstance(project, CrossCompileMixin):
             project.destdir = cheriConfig.outputRoot
-            project.installPrefix = cheriConfig.installationPrefix
-            project.installDir = cheriConfig.outputRoot
+            project._installPrefix = cheriConfig.installationPrefix
+            project._installDir = cheriConfig.outputRoot
         statusUpdate("Configuration options for building", project.projectName, file=sys.stderr)
         for attr in dir(project):
             if attr.startswith("_"):

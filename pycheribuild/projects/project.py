@@ -975,6 +975,7 @@ class Project(SimpleProject):
         if self.__dict__.get("_preventAssign"):
             # assert name not in ("sourceDir", "buildDir", "installDir")
             assert name != "installDir", "installDir should not be modified, only _installDir or _installPrefix"
+            assert name != "installPrefix", "installPrefix should not be modified, only _installDir or _installPrefix"
             if name in self._no_overwrite_allowed:
                 import traceback
                 traceback.print_stack()

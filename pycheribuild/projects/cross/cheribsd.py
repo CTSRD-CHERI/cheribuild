@@ -364,7 +364,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             self.make_args.set(SUBDIR_OVERRIDE=self.subdirOverride)
 
         self.destdir = self.installDir
-        self.installPrefix = Path("/")
+        self._installPrefix = Path("/")
         self.kernelToolchainAlreadyBuilt = False
         for option in self.makeOptions:
             if self._crossCompileTarget != CrossCompileTarget.CHERI and "CHERI_" in option:
