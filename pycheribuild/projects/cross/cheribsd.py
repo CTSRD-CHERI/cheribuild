@@ -1122,7 +1122,10 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 
     @classmethod
     def get_kernel_config(cls, caller: SimpleProject, config) -> str:
-        build_cheribsd = BuildCHERIBSD.get_instance(caller, config)
+        if caller.get_crosscompile_target(config) == CrossCompileTarget.MIPS and config.run_mips_tests_with_cheri_image:
+            build_cheribsd = BuildCHERIBSD.get_instance_for_cross_target(CrossCompileTarget.CHERI, config)
+        else:
+            build_cheribsd = BuildCHERIBSD.get_instance(caller, config)
         return build_cheribsd.kernelConfig + "_MFS_ROOT"
 
     @classmethod

@@ -203,6 +203,10 @@ class CheriConfig(object):
         self.test_ssh_key = loader.addPathOption("test-ssh-key", default=os.path.expanduser("~/.ssh/id_ed25519.pub"),
                                                  help="The SSH key to used to connect to the QEMU instance when running"
                                                       " tests on CheriBSD", group=loader.testsGroup)
+        # This is currently the default since we don't build a minimal MIPS image yet
+        self.run_mips_tests_with_cheri_image = loader.addBoolOption("run-mips-tests-with-cheri-image",
+            default=True, help="Use a CHERI kernel+image to run plain MIPS CheriBSD tests. "
+                               "This only affects the --test option", group=loader.testsGroup)
 
         self.targets = None  # type: list
         self.FS = None  # type: FileSystemUtils

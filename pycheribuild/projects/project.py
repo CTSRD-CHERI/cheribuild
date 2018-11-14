@@ -213,6 +213,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         cross_target = None
         if caller is not None:
             cross_target = caller.get_crosscompile_target(config)
+        return cls.get_instance_for_cross_target(cross_target, config)
+
+    @classmethod
+    def get_instance_for_cross_target(cls: "typing.Type[Type_T]", cross_target: CrossCompileTarget,
+                                      config: CheriConfig) -> "Type_T":
         target = targetManager.get_target(cls.target, cross_target, config)
         result = target.get_or_create_project(cross_target, config)
         return result
@@ -532,11 +537,13 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             from .cross.cheribsd import BuildCheriBsdMfsKernel
             kernel_path = BuildCheriBsdMfsKernel.get_installed_kernel_path(self, self.config)
             if not kernel_path.exists():
-                if self.get_crosscompile_target(self.config) == CrossCompileTarget.MIPS:
-                    guessed_archive = "freebsd-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
-                elif self.get_crosscompile_target(self.config) == CrossCompileTarget.CHERI:
-                    guessed_archive = "cheribsd{suffix}-cheri{suffix}-malta64-mfs-root-minimal-cheribuild-kernel.bz2".format(
+                cheribsd_image = "cheribsd{suffix}-cheri{suffix}-malta64-mfs-root-minimal-cheribuild-kernel.bz2".format(
                         suffix="" if self.config.cheriBits == 256 else self.config.cheriBitsStr)
+                freebsd_image = "freebsd-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
+                if self.get_crosscompile_target(self.config) == CrossCompileTarget.MIPS:
+                    guessed_archive = cheribsd_image if self.config.run_mips_tests_with_cheri_image else freebsd_image
+                elif self.get_crosscompile_target(self.config) == CrossCompileTarget.CHERI:
+                    guessed_archive = cheribsd_image
                 else:
                     self.fatal("Could not guess path to kernel image for CheriBSD")
                     guessed_archive = "invalid path"
