@@ -1183,8 +1183,8 @@ class Project(SimpleProject):
          return /tmp/benchdir/usr/local
         """
         if self.destdir is not None:
-            assert self.installPrefix
-            return self.destdir / self.installPrefix.relative_to(Path("/"))
+            assert self._installPrefix
+            return self.destdir / Path(self._installPrefix).relative_to(Path("/"))
         return self._installDir
 
     @property
