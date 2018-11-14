@@ -52,10 +52,16 @@ class CrossInstallDir(Enum):
     CHERIBSD_ROOTFS = 1
     SDK = 2
 
+_INVALID_INSTALL_DIR = "/this/dir/should/be/overwritten/and/not/used/!!!!"
+
 def _installDir(config: CheriConfig, project: "CrossCompileProject"):
     assert isinstance(project, CrossCompileMixin)
     if project.compiling_for_host():
-        return config.sdkDir
+        if project.crossInstallDir == CrossInstallDir.SDK:
+            return config.sdkDir
+        elif project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
+            return _INVALID_INSTALL_DIR
+        return _INVALID_INSTALL_DIR
     if project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
         from .cheribsd import BuildCHERIBSD
         if hasattr(project, "rootfs_path"):
@@ -164,12 +170,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
         if self.compiling_for_host():
             self.COMMON_FLAGS = []
             self.targetTriple = self.get_host_triple()
-            if self.crossInstallDir == CrossInstallDir.SDK:
-                self.installDir = self.config.sdkDir
-            elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
+            if self.installDir == _INVALID_INSTALL_DIR:
                 self.installDir = self.buildDir / "test-install-prefix"
-            else:
-                assert self.installDir, "must be set"
         else:
             self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-G0"]
             # clang currently gets the TLS model wrong:
@@ -209,8 +211,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
             if self.crossInstallDir == CrossInstallDir.SDK:
                 if self.baremetal:
-                    self.installDir = self.sdkSysroot
-                    # self.destdir = Path("/")
+                    self.installPrefix = "/"
+                    self.destdir = self.sdkSysroot
                 else:
                     self.installPrefix = "/usr/local"
                     self.destdir = config.sdkSysrootDir
@@ -220,6 +222,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 self.destdir = BuildCHERIBSD.rootfsDir(self, config)
             else:
                 assert self.installPrefix and self.destdir, "both must be set!"
+
+        assert self.installDir, "must be set"
 
         if self.debugInfo:
             self.COMMON_FLAGS.append("-ggdb")
