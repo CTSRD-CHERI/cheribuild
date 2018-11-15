@@ -189,7 +189,7 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
         results.append(error_output)
     i = qemu.expect(results, timeout=timeout)
     if i == 1:
-        failure("Command not found!")
+        failure("/bin/sh: Command not found!")
     elif i == 2:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
         qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
@@ -255,12 +255,22 @@ def set_posix_sh_prompt(child):
 class FakeSpawn(object):
     pid = -1
 
-    def expect(self, *args, **kwargs):
-        # print("Expecting", args)
-        return 1 if len(*args) > 1 else 0
+    def expect(self, *args, pretend_result=None, **kwargs):
+        print("Expecting", args)
+        args_list = args[0]
+        assert isinstance(args_list, list)
+        if pretend_result:
+            return pretend_result
+        # Never return TIMEOUT in pretend mode
+        if args_list[0] == pexpect.TIMEOUT:
+            return 1
+        return 0
 
     def sendline(self, msg):
         print("RUNNING '", msg, "'", sep="")
+
+    def isalive(self):
+        return False
 
 
 def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *, smb_dir: str=None,
