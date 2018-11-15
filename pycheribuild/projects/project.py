@@ -530,8 +530,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         statusUpdate("No tests defined for target", self.target)
         pass
 
-    def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None):
+    def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
+                                 mount_builddir=True):
         from .build_qemu import BuildQEMU
+        # noinspection PyUnusedLocal
         script_dir = Path("/this/will/not/work/when/using/remote-cheribuild.py")
         if kernel_path is None:
             from .cross.cheribsd import BuildCheriBsdMfsKernel
@@ -564,7 +566,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         cmd = [script, "--kernel", kernel_path,
                "--qemu-cmd", qemu_path,
                "--ssh-key", self.config.test_ssh_key] + list(script_args)
-        if self.buildDir:
+        if self.buildDir and mount_builddir:
             cmd.extend(["--build-dir", self.buildDir])
         if disk_image_path:
             cmd.extend(["--disk-image", disk_image_path])

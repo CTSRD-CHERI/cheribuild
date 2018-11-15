@@ -124,7 +124,10 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         if self.compiling_for_host():
             self.runMake("check", cwd=self.buildDir / "src/test/regress", stdoutFilter=None)
             # self.runMake("check", cwd=self.buildDir / "src/interfaces/ecpg/test", stdoutFilter=None)
-        pass
+        else:
+            self.run_cheribsd_test_script("run_postgres_tests.py", "-i",
+                                          "--smb-mount-directory", self.installDir,
+                                          "--smb-dir-in-cheribsd", self.installPrefix, mount_builddir=False)
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):

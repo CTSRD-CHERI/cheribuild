@@ -33,33 +33,16 @@ import pexpect
 import argparse
 import os
 import subprocess
-import sys
 from pathlib import Path
+boot_cheribsd = __import__("boot_cheribsd")
 
-def run_tests_main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...], bool]"=None, need_ssh=False,
-                   should_mount_builddir=True,
-                   argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]"=None,
-                   argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]"=None):
-    def default_add_cmdline_args(parser: argparse.ArgumentParser):
-        if should_mount_builddir:
-            parser.add_argument("--build-dir", required=True)
-        if argparse_setup_callback:
-            argparse_setup_callback(parser)
 
-    def default_setup_args(args: argparse.Namespace):
-        if need_ssh:
-            args.use_smb_instead_of_ssh = False  # we need ssh running to execute the tests
-        else:
-            args.use_smb_instead_of_ssh = True  # skip the ssh setup
-        if should_mount_builddir:
-            args.build_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.build_dir)))
-            args.smb_mount_directory = args.build_dir
-            args.smb_dir_in_cheribsd = "/mnt"
-        if argparse_adjust_args_callback:
-            argparse_adjust_args_callback(args)
+def run_postgres_tests(qemu: pexpect.spawn, args: argparse.Namespace):
+    print(args)
+    print("Running PostgreSQL tests")
+    # TODO: copy over the logfile and enable coredumps?
+    boot_cheribsd.run_cheribsd_command(qemu, "cd '{}' && sh -xe ./run-postgres-tests.sh".format(args.smb_dir_in_cheribsd))
 
-    import boot_cheribsd
-    assert sys.path[0] == str(Path(__file__).parent.absolute()), sys.path
-    boot_cheribsd.main(test_function=test_function, argparse_setup_callback=default_add_cmdline_args,
-                       argparse_adjust_args_callback=default_setup_args)
-
+if __name__ == '__main__':
+    from run_tests_common import run_tests_main
+    run_tests_main(test_function=run_postgres_tests, need_ssh=False, should_mount_builddir=False) # we don't need ssh running to execute the tests
