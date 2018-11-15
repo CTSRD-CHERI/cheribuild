@@ -570,6 +570,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             cmd.extend(["--build-dir", self.buildDir])
         if disk_image_path:
             cmd.extend(["--disk-image", disk_image_path])
+        if self.config.tests_interact:
+            cmd.append("--interact")
+        if self.config.test_extra_args:
+            cmd.extend(map(str, self.config.test_extra_args))
         runCmd(cmd)
 
     def runShellScript(self, script, shell="sh", **kwargs):

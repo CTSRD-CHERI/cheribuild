@@ -208,6 +208,11 @@ class CheriConfig(object):
             default=True, help="Use a CHERI kernel+image to run plain MIPS CheriBSD tests. "
                                "This only affects the --test option", group=loader.testsGroup)
 
+        self.test_extra_args = loader.addCommandLineOnlyOption("test-extra-args", group=loader.testsGroup, type=list,
+            metavar="ARGS", help="Additional flags to pass to the test script in --test")
+        self.tests_interact = loader.addCommandLineOnlyBoolOption("interact-after-tests", group=loader.testsGroup,
+            help="Interact with the CheriBSD instance after running the tests on QEMU (only for --test)")
+
         self.targets = None  # type: list
         self.FS = None  # type: FileSystemUtils
         self.__optionalProperties = []
