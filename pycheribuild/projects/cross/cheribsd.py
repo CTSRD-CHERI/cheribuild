@@ -176,6 +176,7 @@ class BuildFreeBSDBase(Project):
             NO_CLEAN=True,  # don't clean, we have the --clean flag for that
             I_REALLY_MEAN_NO_CLEAN=True, # Also skip the useless delete-old step
             NO_ROOT=True,  # use this even if current user is root, as without it the METALOG file is not created
+            BUILD_WITH_STRICT_TMPPATH=True,  # This can catch lots of depdency errors
         )
 
         if self.minimal:
