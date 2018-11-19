@@ -29,18 +29,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import atexit
 import pexpect
 import argparse
-import os
-import subprocess
-import tempfile
 import time
-import datetime
-import signal
-import sys
 import threading
-from multiprocessing import Process, Semaphore, Queue
 from pathlib import Path
 import boot_cheribsd
 

@@ -66,6 +66,33 @@ PRETEND = False
 _SSH_SOCKET_PLACEHOLDER = None  # type: socket.socket
 
 
+class SmbMount(object):
+    def __init__(self, hostdir: str, readonly: bool, in_target: str):
+        self.readonly = readonly
+        self.hostdir = str(Path(hostdir).absolute())
+        self.in_target = in_target
+
+    @property
+    def qemu_arg(self):
+        if self.readonly:
+            return self.hostdir + "@ro"
+        return self.hostdir
+
+    def __repr__(self):
+        return "<{} ({}) -> {}>".format(self.hostdir, "ro" if self.readonly else "rw", self.in_target)
+
+
+def parse_smb_mount(arg: str):
+    if ":" not in arg:
+        sys.exit("Invalid smb_mount string '" + arg + "'. Expected format is <HOST_PATH>:<PATH_IN_TARGET>")
+    host, target = arg.split(":", 2)
+    readonly = False
+    if host.endswith("@ro"):
+        host = host[:-3]
+        readonly = True
+    return SmbMount(host, readonly, target)
+
+
 class CheriBSDInstance(pexpect.spawn):
     EXIT_ON_KERNEL_PANIC = True
 
@@ -256,7 +283,7 @@ class FakeSpawn(object):
     pid = -1
 
     def expect(self, *args, pretend_result=None, **kwargs):
-        print("Expecting", args)
+        print("Expecting", args, file=sys.stderr, flush=True)
         args_list = args[0]
         assert isinstance(args_list, list)
         if pretend_result:
@@ -267,17 +294,17 @@ class FakeSpawn(object):
         return 0
 
     def sendline(self, msg):
-        print("RUNNING '", msg, "'", sep="")
+        print("RUNNING '", msg, "'", sep="", file=sys.stderr, flush=True)
 
     def isalive(self):
         return False
 
 
-def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *, smb_dir: str=None,
+def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *, smb_dirs: typing.List[SmbMount]=None,
                   kernel_init_only=False) -> CheriBSDInstance:
     user_network_args = "user,id=net0,ipv6=off"
-    if smb_dir:
-        user_network_args += ",smb=" + smb_dir
+    if smb_dirs:
+        user_network_args += ",smb=" + ":".join(d.qemu_arg for d in smb_dirs)
     if ssh_port is not None:
         user_network_args += ",hostfwd=tcp::" + str(ssh_port) + "-:22"
     qemu_args = ["-M", "malta", "-kernel", kernel_image, "-m", "2048", "-nographic",
@@ -374,8 +401,7 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     ssh_keyfile = args.ssh_key
     ssh_port = args.ssh_port
     timeout = args.test_timeout
-    smb_dir = args.smb_mount_directory
-    smb_dir_in_cheribsd = args.smb_dir_in_cheribsd
+    smb_dirs = args.smb_mount_directories  # type: typing.List[SmbMount]
     setup_tests_starttime = datetime.datetime.now()
     # disable coredumps, otherwise we get no space left on device errors
     run_cheribsd_command(qemu, "sysctl kern.coredump=0")
@@ -387,8 +413,8 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     info("\nWill transfer the following archives: ", test_archives)
     # strip the .pub from the key file
     for archive in test_archives:
-        if smb_dir:
-            run_host_command(["tar", "xJf", str(archive), "-C", str(smb_dir)])
+        if smb_dirs:
+            run_host_command(["tar", "xJf", str(archive), "-C", str(smb_dirs[0].hostdir)])
         else:
             # Extract to temporary directory and scp over
             with tempfile.TemporaryDirectory(dir=os.getcwd(), prefix="test_files_") as tmp:
@@ -402,9 +428,9 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
                     scp_cmd = ["script", "--quiet", "--return", "--command", " ".join(scp_cmd), "/dev/null"]
                 run_host_command(["ls", "-la"], cwd=tmp)
                 run_host_command(scp_cmd, cwd=tmp)
-    if smb_dir:
-        run_cheribsd_command(qemu, "mkdir -p '{}'".format(smb_dir_in_cheribsd))
-        run_cheribsd_command(qemu, "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu '{}'".format(smb_dir_in_cheribsd),
+    for index, d in enumerate(smb_dirs):
+        run_cheribsd_command(qemu, "mkdir -p '{}'".format(d.in_target))
+        run_cheribsd_command(qemu, "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu{} '{}'".format(index + 1, d.in_target),
                              error_output="mount_smbfs: unable to open connection:")
     if test_archives:
         time.sleep(5)  # wait 5 seconds to make sure the disks have synced
@@ -461,9 +487,12 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
     parser.add_argument("--ssh-key", default=default_ssh_key())
     parser.add_argument("--ssh-port", type=int, default=None)
     parser.add_argument("--use-smb-instead-of-ssh", action="store_true")
-    parser.add_argument("--smb-mount-directory", help="directory used for sharing data with the QEMU guest via smb")
-    parser.add_argument("--smb-dir-in-cheribsd", default="/mnt",
-                        help="The path where the smb shared directory is mounted in CheriBSD (default: /mnt)")
+    parser.add_argument("--smb-mount-directory", metavar="HOST_PATH:IN_TARGET",
+                        help="Share a host directory with the QEMU guest via smb. This option can be passed multiple times "
+                             "to share more than one directory. The argument should be colon-separated as follows: "
+                             "'<HOST_PATH>:<EXPECTED_PATH_IN_TARGET>'. Appending '@ro' to HOST_PATH will cause the directory "
+                             "to be mapped as a read-only smb share", action="append",
+                        dest="smb_mount_directories", type=parse_smb_mount, default=[])
     parser.add_argument("--test-archive", "-t", action="append", nargs=1)
     parser.add_argument("--test-command", "-c")
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60)
@@ -487,9 +516,6 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
     if shutil.which(args.qemu_cmd) is None:
         sys.exit("ERROR: QEMU binary " + args.qemu_cmd + " doesn't exist")
 
-    if args.smb_mount_directory:
-        args.smb_mount_directory = str(Path(args.smb_mount_directory).absolute())
-
     global PRETEND
     if args.pretend:
         PRETEND = True
@@ -504,7 +530,7 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
     # validate args:
     test_archives = []  # type: list
     if args.test_archive:
-        if args.use_smb_instead_of_ssh and not args.smb_mount_directory:
+        if args.use_smb_instead_of_ssh and not args.smb_mount_directories:
             failure("--smb-mount-directory is required if ssh is disabled")
         info("Using the following test archives:", args.test_archive)
         if not args.use_smb_instead_of_ssh:
@@ -546,7 +572,7 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
         diskimg = str(maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images))
 
     boot_starttime = datetime.datetime.now()
-    qemu = boot_cheribsd(args.qemu_cmd, kernel, diskimg, args.ssh_port, smb_dir=args.smb_mount_directory,
+    qemu = boot_cheribsd(args.qemu_cmd, kernel, diskimg, args.ssh_port, smb_dirs=args.smb_mount_directories,
                          kernel_init_only=args.test_kernel_init_only)
     success("Booting CheriBSD took: ", datetime.datetime.now() - boot_starttime)
 

@@ -37,12 +37,14 @@ import sys
 from pathlib import Path
 
 def run_tests_main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...], bool]"=None, need_ssh=False,
-                   should_mount_builddir=True,
+                   should_mount_builddir=True, should_mount_srcdir=False,
                    argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]"=None,
                    argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]"=None):
     def default_add_cmdline_args(parser: argparse.ArgumentParser):
         if should_mount_builddir:
             parser.add_argument("--build-dir", required=True)
+        if should_mount_srcdir:
+            parser.add_argument("--source-dir", required=True)
         if argparse_setup_callback:
             argparse_setup_callback(parser)
 
@@ -51,10 +53,17 @@ def run_tests_main(test_function:"typing.Callable[[pexpect.spawn, argparse.Names
             args.use_smb_instead_of_ssh = False  # we need ssh running to execute the tests
         else:
             args.use_smb_instead_of_ssh = True  # skip the ssh setup
+        current_smb_index = 0
         if should_mount_builddir:
             args.build_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.build_dir)))
-            args.smb_mount_directory = args.build_dir
-            args.smb_dir_in_cheribsd = "/mnt"
+            args.smb_mount_directories.insert(current_smb_index,
+                                              boot_cheribsd.SmbMount(args.build_dir, readonly=False, in_target="/build"))
+            current_smb_index += 1
+        if should_mount_srcdir:
+            args.source_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.build_dir)))
+            args.smb_mount_directories.insert(current_smb_index,
+                                              boot_cheribsd.SmbMount(args.source_dir, readonly=True, in_target="/source"))
+            current_smb_index += 1
         if argparse_adjust_args_callback:
             argparse_adjust_args_callback(args)
 

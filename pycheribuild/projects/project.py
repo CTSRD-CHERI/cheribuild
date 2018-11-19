@@ -531,7 +531,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         pass
 
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
-                                 mount_builddir=True):
+                                 mount_builddir=True, mount_sourcedir=False):
         from .build_qemu import BuildQEMU
         # noinspection PyUnusedLocal
         script_dir = Path("/this/will/not/work/when/using/remote-cheribuild.py")
@@ -568,6 +568,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                "--ssh-key", self.config.test_ssh_key] + list(script_args)
         if self.buildDir and mount_builddir:
             cmd.extend(["--build-dir", self.buildDir])
+        if self.sourceDir and mount_sourcedir:
+            cmd.extend(["--source-dir", self.sourceDir])
         if disk_image_path:
             cmd.extend(["--disk-image", disk_image_path])
         if self.config.tests_interact:

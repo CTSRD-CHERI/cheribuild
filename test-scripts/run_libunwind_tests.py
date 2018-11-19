@@ -57,7 +57,6 @@ def add_cmdline_args(parser: argparse.ArgumentParser):
 
 
 def set_cmdline_args(args: argparse.Namespace):
-    print(args)
     # We don't support parallel jobs but are reusing libcxx infrastructure -> set the expected vars
     args.internal_shard = None
     args.parallel_jobs = None
