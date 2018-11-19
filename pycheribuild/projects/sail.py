@@ -156,7 +156,7 @@ class BuildSailFromOpam(OpamMixin, SimpleProject):
                                                 help="Install sail from github instead of using the latest released version")
 
     def process(self):
-        self.run_command_in_ocaml_env(["env"])
+        # self.run_command_in_ocaml_env(["env"])
         try:
             self.run_opam_cmd("switch", "4.06.0")
         except CalledProcessError:
@@ -167,6 +167,10 @@ class BuildSailFromOpam(OpamMixin, SimpleProject):
             self.run_opam_cmd("repository", "add", "rems", REMS_OPAM_REPO)
         else:
             self.info("REMS opam repo already added")
+
+        if not self.config.skipUpdate:
+            self.run_opam_cmd("update")
+
         if self.config.clean:
             self.run_opam_cmd("uninstall", "--verbose", "sail", "--destdir=" + str(self.config.sdkDir / "sailprefix"))
             self.run_opam_cmd("uninstall", "--verbose", "sail")
