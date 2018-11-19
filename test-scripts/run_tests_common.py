@@ -32,14 +32,14 @@
 import pexpect
 import argparse
 import os
-import subprocess
+import typing
 import sys
 from pathlib import Path
 
-def run_tests_main(test_function:"typing.Callable[[pexpect.spawn, argparse.Namespace, ...], bool]"=None, need_ssh=False,
+def run_tests_main(test_function: typing.Callable[[pexpect.spawn, argparse.Namespace], bool]=None, need_ssh=False,
                    should_mount_builddir=True, should_mount_srcdir=False,
-                   argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]"=None,
-                   argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]"=None):
+                   argparse_setup_callback: typing.Callable[[argparse.ArgumentParser], None]=None,
+                   argparse_adjust_args_callback: typing.Callable[[argparse.Namespace], None]=None):
     def default_add_cmdline_args(parser: argparse.ArgumentParser):
         if should_mount_builddir:
             parser.add_argument("--build-dir", required=True)
@@ -60,7 +60,7 @@ def run_tests_main(test_function:"typing.Callable[[pexpect.spawn, argparse.Names
                                               boot_cheribsd.SmbMount(args.build_dir, readonly=False, in_target="/build"))
             current_smb_index += 1
         if should_mount_srcdir:
-            args.source_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.build_dir)))
+            args.source_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.source_dir)))
             args.smb_mount_directories.insert(current_smb_index,
                                               boot_cheribsd.SmbMount(args.source_dir, readonly=True, in_target="/source"))
             current_smb_index += 1

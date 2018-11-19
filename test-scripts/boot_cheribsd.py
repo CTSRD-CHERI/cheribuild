@@ -211,19 +211,21 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
     qemu.sendline(cmd)
     if expected_output:
         qemu.expect([expected_output])
-    results = [PROMPT, "/bin/sh: [\\w\\d_-]+: not found", CHERI_TRAP, pexpect.TIMEOUT]
+    results = ["/bin/sh: [/\\w\\d_-]+: not found", CHERI_TRAP, pexpect.TIMEOUT, PROMPT]
     if error_output:
         results.append(error_output)
     i = qemu.expect(results, timeout=timeout)
-    if i == 1:
-        failure("/bin/sh: Command not found!")
-    elif i == 2:
+    if i == 0:
+        failure("/bin/sh: command not found: ", cmd)
+    elif i == 1:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
         qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
         qemu.flush()
         failure("Got CHERI TRAP!", exit=cheri_trap_fatal)
-    elif i == 3:
+    elif i == 2:
         failure("timeout running ", cmd)
+    elif i == 3:
+        success("ran '", cmd, "' successfully")
     elif i == 4:
         # wait up to 5 seconds for a prompt to ensure the full output has been printed
         qemu.expect([PROMPT], timeout=5)
@@ -304,6 +306,9 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
                   kernel_init_only=False) -> CheriBSDInstance:
     user_network_args = "user,id=net0,ipv6=off"
     if smb_dirs:
+        for d in smb_dirs:
+            if not Path(d.hostdir).exists():
+                failure("SMB share directory ", d.hostdir, " doesn't exist!")
         user_network_args += ",smb=" + ":".join(d.qemu_arg for d in smb_dirs)
     if ssh_port is not None:
         user_network_args += ",hostfwd=tcp::" + str(ssh_port) + "-:22"
@@ -611,6 +616,7 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
     success("===> DONE")
     info("Total execution time:", datetime.datetime.now() - starttime)
     if not tests_okay:
+        failure("Some tests failed!")
         sys.exit(1)
 
 

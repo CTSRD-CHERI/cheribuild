@@ -380,3 +380,9 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     def install(self, **kwargs):
         if not self.build_jsc_only:
             super().install()
+
+    def run_tests(self):
+        if self.compiling_for_host():
+            self.fatal("Running host tests not implemented")
+        else:
+            self.run_cheribsd_test_script("run_qtwebkit_tests.py", mount_builddir=True, mount_sourcedir=True)

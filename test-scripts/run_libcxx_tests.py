@@ -45,9 +45,9 @@ from pathlib import Path
 import boot_cheribsd
 import run_remote_lit_test
 
-def run_libcxx_tests(qemu: pexpect.spawn, args: argparse.Namespace):
+def run_libcxx_tests(qemu: pexpect.spawn, args: argparse.Namespace) -> bool:
     with tempfile.TemporaryDirectory() as tempdir:
-        run_remote_lit_test.run_remote_lit_tests("libcxx", qemu, args, tempdir)
+        return run_remote_lit_test.run_remote_lit_tests("libcxx", qemu, args, tempdir)
 
 def add_cmdline_args(parser: argparse.ArgumentParser):
     parser.add_argument("--lit-debug-output", action="store_true")

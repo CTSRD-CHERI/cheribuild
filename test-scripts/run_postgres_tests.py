@@ -29,20 +29,18 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import pexpect
 import argparse
-import os
-import subprocess
-from pathlib import Path
-boot_cheribsd = __import__("boot_cheribsd")
+import boot_cheribsd
 
 
-def run_postgres_tests(qemu: pexpect.spawn, args: argparse.Namespace):
-    print(args)
-    print("Running PostgreSQL tests")
+def run_postgres_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
+    boot_cheribsd.info("Running PostgreSQL tests")
     # TODO: copy over the logfile and enable coredumps?
     boot_cheribsd.run_cheribsd_command(qemu, "cd '{}' && sh -xe ./run-postgres-tests.sh".format(args.smb_dir_in_cheribsd))
+    return True
+
 
 if __name__ == '__main__':
     from run_tests_common import run_tests_main
-    run_tests_main(test_function=run_postgres_tests, need_ssh=False, should_mount_builddir=False) # we don't need ssh running to execute the tests
+    # we don't need ssh running to execute the tests
+    run_tests_main(test_function=run_postgres_tests, need_ssh=False, should_mount_builddir=False)
