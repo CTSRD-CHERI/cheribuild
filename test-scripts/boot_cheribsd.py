@@ -211,22 +211,26 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
     qemu.sendline(cmd)
     if expected_output:
         qemu.expect([expected_output])
-    results = ["/bin/sh: [/\\w\\d_-]+: not found", CHERI_TRAP, pexpect.TIMEOUT, PROMPT]
+    results = ["/bin/sh: [/\\w\\d_-]+: not found",
+               "ld(-cheri)?-elf.so.1: Shared object \".+\" not found, required by \".+\"",
+               CHERI_TRAP, pexpect.TIMEOUT, PROMPT]
     if error_output:
         results.append(error_output)
     i = qemu.expect(results, timeout=timeout)
     if i == 0:
         failure("/bin/sh: command not found: ", cmd)
     elif i == 1:
+        failure("Missing shared library dependencies: ", cmd)
+    elif i == 2:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
         qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
         qemu.flush()
         failure("Got CHERI TRAP!", exit=cheri_trap_fatal)
-    elif i == 2:
-        failure("timeout running ", cmd)
     elif i == 3:
-        success("ran '", cmd, "' successfully")
+        failure("timeout running ", cmd)
     elif i == 4:
+        success("ran '", cmd, "' successfully")
+    elif i == 5:
         # wait up to 5 seconds for a prompt to ensure the full output has been printed
         qemu.expect([PROMPT], timeout=5)
         qemu.flush()
