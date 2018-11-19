@@ -581,11 +581,6 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                 test_binary = self.rootfsDir / "bin" / i  # type: Path
                 if test_binary.exists():
                     self.addFileToImage(test_binary, baseDirectory=self.rootfsDir)
-        # currently mount_smbfs cannot be used as part of cheribsdbox since
-        # the kernel only supports the purecap version
-        for i in ("usr/sbin/mount_smbfs", "usr/libcheri/libkiconv.so.4", "usr/libcheri/libsmb.so.4"):
-            if (self.rootfsDir / i).exists():
-                self.addFileToImage(self.rootfsDir / i, baseDirectory=self.rootfsDir)
 
         # These dirs seem to be needed
         self.mtree.add_dir("var/db", print_status=self.config.verbose)
