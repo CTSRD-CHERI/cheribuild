@@ -531,7 +531,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         pass
 
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
-                                 mount_builddir=True, mount_sourcedir=False):
+                                 mount_builddir=True, mount_sourcedir=False, mount_sysroot=False):
+        # mount_sysroot may be needed for projects such as QtWebkit where the minimal image doesn't contain all the
+        # necessary libraries
         from .build_qemu import BuildQEMU
         # noinspection PyUnusedLocal
         script_dir = Path("/this/will/not/work/when/using/remote-cheribuild.py")
@@ -570,6 +572,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             cmd.extend(["--build-dir", self.buildDir])
         if self.sourceDir and mount_sourcedir:
             cmd.extend(["--source-dir", self.sourceDir])
+        if mount_sysroot:
+            cmd.extend(["--sysroot-dir", self.config.sdkSysrootDir])
         if disk_image_path:
             cmd.extend(["--disk-image", disk_image_path])
         if self.config.tests_interact:

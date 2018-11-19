@@ -37,8 +37,11 @@ from pathlib import Path
 import boot_cheribsd
 
 
-def run_postgres_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
+def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running QtWebkit tests")
+    boot_cheribsd.run_cheribsd_command(qemu, "export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/sysroot/lib:/sysroot/usr/lib:/sysroot/usr/local/lib")
+    boot_cheribsd.run_cheribsd_command(qemu, "export LD_CHERI_LIBRARY_PATH=/usr/libcheri:/usr/local/libcheri:/sysroot/libcheri:/sysroot/usr/libcheri:/sysroot/usr/local/libcheri")
+    boot_cheribsd.run_cheribsd_command(qemu, "ldd /build/bin/jsc")
     boot_cheribsd.run_cheribsd_command(qemu, "/build/bin/jsc --help")
     return True
 
@@ -46,4 +49,5 @@ def run_postgres_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
 if __name__ == '__main__':
     from run_tests_common import run_tests_main
     # we don't need ssh running to execute the tests, but we need both host and source dir mounted
-    run_tests_main(test_function=run_postgres_tests, need_ssh=False, should_mount_builddir=True, should_mount_srcdir=True)
+    run_tests_main(test_function=run_qtwebkit_tests, need_ssh=False, should_mount_builddir=True,
+                   should_mount_srcdir=True, should_mount_sysroot=True)

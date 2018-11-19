@@ -385,4 +385,5 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         if self.compiling_for_host():
             self.fatal("Running host tests not implemented")
         else:
-            self.run_cheribsd_test_script("run_qtwebkit_tests.py", mount_builddir=True, mount_sourcedir=True)
+            self.run_cheribsd_test_script("run_qtwebkit_tests.py",
+                                          mount_builddir=True, mount_sourcedir=True, mount_sysroot=True)
