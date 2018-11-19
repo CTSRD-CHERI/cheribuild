@@ -78,4 +78,4 @@ usr/lib/pam_rootok.so
 usr/lib/pam_rootok.so.6
 
 usr/share/misc/termcap
-var/run
+var/run/dhclient
