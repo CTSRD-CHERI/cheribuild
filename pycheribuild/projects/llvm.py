@@ -65,7 +65,10 @@ class BuildLLVM(CMakeProject):
         cls.enable_lto = cls.addBoolOption("enable-lto", help="build with LTO enabled (experimental)")
         cls.skip_lld = cls.addBoolOption("skip-lld", help="Don't build lld as part of the llvm target")
         cls.llvm_only = cls.addBoolOption("llvm-only", help="Only build LLVM (skip clang+lld)")
-        cls.skip_static_analyzer = cls.addBoolOption("skip-static-analyzer", help="Don't build the clang static analyzer")
+        cls.skip_static_analyzer = cls.addBoolOption("skip-static-analyzer", default=True,
+                                                     help="Don't build the clang static analyzer")
+        cls.skip_misc_llvm_tools = cls.addBoolOption("skip-unused-tools", default=True,
+            help="Don't build some of the LLVM tools that should not be needed by default (e.g. llvm-mca, llvm-pdbutil)")
         cls.build_everything = cls.addBoolOption("build-everything", default=False,
                                                  help="Also build documentation,examples and bindings")
         if includeClangRevision:
@@ -106,6 +109,11 @@ class BuildLLVM(CMakeProject):
             self.add_cmake_options(CLANG_ENABLE_STATIC_ANALYZER=False,
                                    CLANG_ENABLE_ARCMT=False,   # also need to disable ARCMT to disable static analyzer
                                    CLANG_ANALYZER_ENABLE_Z3_SOLVER=False, # and this also needs to be set
+                                   )
+        if self.skip_misc_llvm_tools:
+            self.add_cmake_options(LLVM_TOOL_LLVM_MCA_BUILD=False,
+                                   LLVM_TOOL_LLVM_EXEGESIS_BUILD=False,
+                                   LLVM_TOOL_LLVM_RC_BUILD=False,
                                    )
         if self.canUseLLd(self.cCompiler):
             self.add_cmake_options(LLVM_ENABLE_LLD=True)
