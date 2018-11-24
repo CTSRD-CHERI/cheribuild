@@ -392,6 +392,8 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             GCC_BOOTSTRAP=False, CLANG_BOOTSTRAP=False, LLD_BOOTSTRAP=False,
             LIB32=False,  # takes a long time and not needed
         )
+        if self.config.csetbounds_stats:
+            self.cross_toolchain_config.set(CSETBOUNDS_LOGFILE=self.buildDir / "csetbounds-stats.csv")
 
         # self.cross_toolchain_config.add(CROSS_COMPILER=Falses) # This sets too much, we want elftoolchain and binutils
         cross_prefix = str(self.crossToolchainRoot / "bin") + "/"  # needs to end with / for concatenation
