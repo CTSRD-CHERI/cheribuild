@@ -167,6 +167,7 @@ class CheriConfig(object):
         self.configureOnly = loader.addBoolOption("configure-only",
                                                   help="Only run the configure step (skip build and install)")
         self.skipInstall = loader.addBoolOption("skip-install", help="Skip the install step (only do the build)")
+        self.skipBuild = loader.addBoolOption("skip-build", help="Skip the build step (only do the install)")
         self.skipSdk = loader.addBoolOption("skip-sdk", help="When building with --include-dependencies ignore the "
                                                              "CHERI sdk dependencies. Saves a lot of time when "
                                                              "building libc++, etc. with dependencies but the sdk "

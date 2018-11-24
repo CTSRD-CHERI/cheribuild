@@ -1282,8 +1282,9 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     self.configure()
             if self.config.configureOnly:
                 return
-            statusUpdate("Building", self.display_name, "... ")
-            self.compile()
+            if not self.config.skipBuild:
+                statusUpdate("Building", self.display_name, "... ")
+                self.compile()
             if not self.config.skipInstall:
                 statusUpdate("Installing", self.display_name, "... ")
                 self.install()

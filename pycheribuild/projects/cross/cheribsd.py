@@ -106,6 +106,16 @@ def cheribsd_purecap_install_dir(config: CheriConfig, project: "typing.Type[Buil
     return config.outputRoot / ("rootfs-purecap" + config.cheriBitsStr)
 
 
+def cheribsd_minimal_install_dir(config: CheriConfig, project: "typing.Type[BuildCHERIBSD]"):
+    if project._crossCompileTarget == CrossCompileTarget.CHERI:
+        return config.outputRoot / ("rootfs-minimal" + config.cheriBitsStr)
+    elif project._crossCompileTarget == CrossCompileTarget.MIPS:
+        return config.outputRoot / "rootfs-minimal-mips"
+    else:
+        assert project._crossCompileTarget == CrossCompileTarget.NATIVE
+        return config.outputRoot / "rootfs-minimal-x86"
+
+
 # noinspection PyProtectedMember
 def cheribsd_build_dir(config: CheriConfig, project: "BuildFreeBSD"):
     if project._crossCompileTarget == CrossCompileTarget.CHERI:
@@ -151,9 +161,11 @@ class BuildFreeBSDBase(Project):
                                                    "FreeBSD/CheriBSD. See `man src.conf` for more info.",
                                               showHelp=True)
 
-        cls.minimal = cls.addBoolOption("minimal", showHelp=True,
-            help="Don't build all of FreeBSD, just what is needed for running most CHERI tests/benchmarks")
-        cls.build_tests = cls.addBoolOption("build-tests", help="Build the tests too (-DWITH_TESTS)", showHelp=True)
+        if "minimal" not in cls.__dict__:
+            cls.minimal = cls.addBoolOption("minimal", showHelp=True,
+                help="Don't build all of FreeBSD, just what is needed for running most CHERI tests/benchmarks")
+        if "build_tests" not in cls.__dict__:
+            cls.build_tests = cls.addBoolOption("build-tests", help="Build the tests too (-DWITH_TESTS)", showHelp=True)
         if IS_FREEBSD:
             cls.crossbuild = False
         elif is_jenkins_build():
@@ -180,7 +192,7 @@ class BuildFreeBSDBase(Project):
         )
 
         if self.minimal:
-            self.make_args.set_with_options(MAN=False, KERBEROS=False, SVN=False, SVNLITE=False, MAIL=False,
+            self.make_args.set_with_options(MAN=False, KERBEROS=False, SVN=False, SVNLITE=False, MAIL=False, ZFS=False,
                                             SENDMAIL=False, EXAMPLES=False, LOCALES=False, NLS=False, CDDL=False)
 
         # tests off by default because they take a long time and often seems to break
@@ -233,10 +245,10 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
     def setupConfigOptions(cls, buildKernelWithClang: bool=True, bootstrap_toolchain=False,
                            debug_info_by_default=True, **kwargs):
         super().setupConfigOptions(add_common_cross_options=False, **kwargs)
-        cls.subdirOverride = cls.addConfigOption("subdir-with-deps", kind=str, metavar="DIR", showHelp=False,
-                                                 help="Only build subdir DIR instead of the full tree. "
-                                                      "This uses the SUBDIR_OVERRIDE mechanism so will build much more"
-                                                      "than just that directory")
+        if "subdirOverride" not in cls.__dict__:
+            cls.subdirOverride = cls.addConfigOption("subdir-with-deps", kind=str, metavar="DIR", showHelp=False,
+                 help="Only build subdir DIR instead of the full tree. This uses the SUBDIR_OVERRIDE mechanism so "
+                      "will build much more than just that directory")
 
         subdir_default = ComputedDefaultValue(function=lambda config, proj: config.freebsd_subdir,
                                               asString="the value of the global --freebsd-subdir options")
@@ -651,8 +663,9 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
         result.env_vars.update(self.makeInstallEnv)
         return result
 
-    def install(self, all_kernel_configs: str=None, sysroot_only=False, **kwargs):
-        if self.subdirOverride:
+    def install(self, all_kernel_configs: str=None, sysroot_only=False, install_with_subdir_override=False,
+                skip_kernel=False, **kwargs):
+        if self.subdirOverride and not install_with_subdir_override:
             statusUpdate("Skipping install step because SUBDIR_OVERRIDE was set")
             return
         # keeping the old rootfs directory prior to install can sometimes cause the build to fail so delete by default
@@ -682,6 +695,8 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
                 self.runMake("installworld", options=install_world_args)
                 self.runMake("distribution", options=install_world_args)
 
+        if skip_kernel:
+            return
         assert not sysroot_only, "Should not end up here"
         # Run installkernel after installworld since installworld deletes METALOG and therefore the files added by
         # the installkernel step will not be included if we run it first.
@@ -771,47 +786,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             # Allow building a single FreeBSD/CheriBSD directory using the BUILDENV_SHELL trick
             args = self.installworld_args
             for subdir in self.explicit_subdirs_only:
-                is_lib = subdir.startswith("lib/") or "/lib/" in subdir or subdir.endswith("/lib")
-                make_in_subdir = "make -C \"" + subdir + "\" "
-                if self.config.passDashKToMake:
-                    make_in_subdir += "-k "
-                if self.config.skipInstall:
-                    install_cmd = "echo \"  Skipping make install\""
-                else:
-                    install_cmd = make_in_subdir + "install"
-                    # if we are building a library also install to the sysroot so that other targets afterwards use the
-                    # updated static lib
-                    if is_lib:
-                        # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
-                        sysroot_var = "\"$$$${SYSROOT}\""
-                        install_cmd = "if [ -n {sysroot} ]; then {make} install MK_TESTS=no DESTDIR={sysroot}; fi && ".format(
-                            make=make_in_subdir, sysroot=sysroot_var) + install_cmd
-                if self.compiling_for_cheri() and not is_lib:
-                    # for non-library targets we need to set WANT_CHERI=pure in the environment to get the binary
-                    # to build as a CHERI binary
-                    if any("WITH_CHERI_PURE" in x for x in args.all_commandline_args):
-                        statusUpdate("WITH_CHERI_PURE found in build args -> set WANT_CHERI?=pure for non-library", subdir)
-                        args.set_env(WANT_CHERI="pure")
-                colour_diags = "export CLANG_FORCE_COLOR_DIAGNOSTICS=always; " if self.config.clang_colour_diags else ""
-                build_cmd = "{colour_diags} {clean} && {build} && {install} && echo \"  Done.\"".format(
-                    build=make_in_subdir + "all " + " ".join(self.jflag),
-                    clean=make_in_subdir + "clean" if self.config.clean else "echo \"  Skipping make clean\"",
-                    install=install_cmd, colour_diags=colour_diags)
-                args.set(BUILDENV_SHELL="sh -ex -c '" + build_cmd + "' || exit 1")
-                # If --libcheri-buildenv was passed skip the MIPS lib
-                is_cheri_lib = self.compiling_for_cheri() and is_lib
-                if is_cheri_lib and self.config.libcheri_buildenv:
-                    statusUpdate("Skipping MIPS build of", subdir, "since --libcheri-buildenv was passed.")
-                else:
-                    statusUpdate("Building", subdir, "using buildenv target")
-                    runCmd([self.make_args.command] + args.all_commandline_args + ["buildenv"], env=args.env_vars,
-                             cwd=self.sourceDir)
-                # If we are building a library we want to build both the CHERI and the mips version (unless the
-                # user explicitly specified --libcheri-buildenv)
-                if is_cheri_lib:
-                    statusUpdate("Building", subdir, "using libcheribuildenv target")
-                    runCmd([self.make_args.command] + args.all_commandline_args + ["libcheribuildenv"], env=args.env_vars,
-                           cwd=self.sourceDir)
+                self.build_and_install_subdir(args, subdir)
 
         elif self.config.buildenv or self.config.libcheri_buildenv:
             args = self.buildworldArgs
@@ -828,6 +803,61 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
                    cwd=self.sourceDir)
         else:
             super().process()
+
+    def build_and_install_subdir(self, make_args, subdir, skip_build=False, skip_clean=None, skip_install=None,
+                                 install_to_sysroot=None, libcheri_only=False, noncheri_only=False):
+        is_lib = subdir.startswith("lib/") or "/lib/" in subdir or subdir.endswith("/lib")
+        make_in_subdir = "make -C \"" + subdir + "\" "
+        if skip_clean is None:
+            skip_clean = not self.config.clean
+        if skip_install is None:
+            skip_install = self.config.skipInstall
+        if self.config.passDashKToMake:
+            make_in_subdir += "-k "
+        install_to_sysroot_cmd = ""
+        if is_lib and install_to_sysroot is not None:
+            # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
+            sysroot_var = "\"$$$${SYSROOT}\""
+            install_to_sysroot_cmd = "if [ -n {sysroot} ]; then {make} install MK_TESTS=no DESTDIR={sysroot}; fi".format(
+                make=make_in_subdir, sysroot=sysroot_var)
+
+        if skip_install:
+            if install_to_sysroot_cmd:
+                install_cmd = install_to_sysroot_cmd
+            else:
+                install_cmd = "echo \"  Skipping make install\""
+        else:
+            # if we are building a library also install to the sysroot so that other targets afterwards use the
+            # updated static lib
+            if install_to_sysroot_cmd:
+                install_to_sysroot_cmd += " &&  "
+            install_cmd = install_to_sysroot_cmd + make_in_subdir + "install"
+        if self.compiling_for_cheri() and not is_lib:
+            # for non-library targets we need to set WANT_CHERI=pure in the environment to get the binary
+            # to build as a CHERI binary
+            if any("WITH_CHERI_PURE" in x for x in make_args.all_commandline_args):
+                statusUpdate("WITH_CHERI_PURE found in build args -> set WANT_CHERI?=pure for non-library", subdir)
+                make_args.set_env(WANT_CHERI="pure")
+        colour_diags = "export CLANG_FORCE_COLOR_DIAGNOSTICS=always; " if self.config.clang_colour_diags else ""
+        build_cmd = "{colour_diags} {clean} && {build} && {install} && echo \"  Done.\"".format(
+            build=make_in_subdir + "all " + " ".join(self.jflag) if not skip_build else "echo \"  Skipping make all\"",
+            clean=make_in_subdir + "clean" if not skip_clean else "echo \"  Skipping make clean\"",
+            install=install_cmd, colour_diags=colour_diags)
+        make_args.set(BUILDENV_SHELL="sh -ex -c '" + build_cmd + "' || exit 1")
+        # If --libcheri-buildenv was passed skip the MIPS lib
+        is_cheri_lib = self.compiling_for_cheri() and is_lib
+        if is_cheri_lib and (self.config.libcheri_buildenv or libcheri_only):
+            statusUpdate("Skipping MIPS build of", subdir, "since --libcheri-buildenv was passed.")
+        else:
+            statusUpdate("Building", subdir, "using buildenv target")
+            runCmd([self.make_args.command] + make_args.all_commandline_args + ["buildenv"], env=make_args.env_vars,
+                   cwd=self.sourceDir)
+        # If we are building a library we want to build both the CHERI and the mips version (unless the
+        # user explicitly specified --libcheri-buildenv)
+        if is_cheri_lib and not noncheri_only:
+            statusUpdate("Building", subdir, "using libcheribuildenv target")
+            runCmd([self.make_args.command] + make_args.all_commandline_args + ["libcheribuildenv"], env=make_args.env_vars,
+                   cwd=self.sourceDir)
 
 # Keep the old name
 class BuildFreeBSDX86AliasBinutils(TargetAlias):
@@ -854,7 +884,6 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     def addCrossBuildOptions(self):
         # Just try to build as much as possible (but using make.py)
         pass
-
 
 def jflag_in_subjobs(config: CheriConfig, proj):
     return max(1, config.makeJobs / 2)
@@ -1148,10 +1177,7 @@ class BuildCHERIBSDPurecap(BuildCHERIBSD):
 
     # use cheribsd-purecap-256-build
     defaultBuildDir = BuildFreeBSD.defaultBuildDir
-
-    @classmethod
-    def buildDirSuffix(cls, config: CheriConfig, target: CrossCompileTarget):
-        return "-purecap" + super().buildDirSuffix(config, target)
+    build_dir_suffix = "purecap"
 
     defaultInstallDir = ComputedDefaultValue(function=cheribsd_purecap_install_dir,
                                              asString="$INSTALL_ROOT/rootfs-purecap{128/256}")
@@ -1163,6 +1189,76 @@ class BuildCHERIBSDPurecap(BuildCHERIBSD):
     def __init__(self, config):
         super().__init__(config)
         self.make_args.set_with_options(CHERI_PURE=True)
+
+
+class BuildCHERIBSDMinimal(BuildCHERIBSD):
+    projectName = "cheribsd"   # reuse the same source dir
+    target = "cheribsd-minimal"
+    _config_inherits_from = "cheribsd"  # we want the CheriBSD config options as well
+
+    # Set these variables to override the multi target magic and only support CHERI
+    #supported_architectures = None # Only Cheri is supported
+    #_crossCompileTarget = CrossCompileTarget.CHERI
+    _should_not_be_instantiated = False
+
+    # use cheribsd-purecap-256-build
+    defaultBuildDir = BuildFreeBSD.defaultBuildDir
+    build_dir_suffix = "minimal"
+    defaultInstallDir = ComputedDefaultValue(function=cheribsd_minimal_install_dir,
+                                             asString="$INSTALL_ROOT/rootfs-minmal{128,256,-mips,-x86}")
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        cls.subdirOverride = None #  "tools/cheribsdbox"
+        cls.minimal = True
+        cls.build_tests = False
+        super().setupConfigOptions(use_kernconf_shortname=False)
+
+    def __init__(self, config):
+        super().__init__(config)
+        if self.compiling_for_cheri():
+            self.make_args.set_with_options(CHERI_PURE=True)
+        self.make_args.set_with_options(INCLUDES=False, PROFILE=False, MAN=False, KERBEROS=False)
+        # Avoid building as many libraries as possible
+        self.make_args.set_with_options(PMC=False, RADIUS_SUPPORT=False, SENDMAIL=False, TELNET=False, TESTS=False,
+                                        TESTS_SUPPORT=False, UNBOUND=False, USB=False, OFED=False, ZFS=False,
+                                        NIS=False, NAND=False, CUSE=False, DIALOG=False, FILE=False, GPIO=False,
+                                        GSSAPI=False, KERBEROS_SUPPORT=False, LDNS=False, TOOLCHAIN=False,
+                                        BLUETOOTH=False, BSNMP=False, AMD=False, AT=False)
+        self.make_args.set(NO_SHARE=True)
+        # TODO: ICONV=False?
+        self.needed_shlibs = ("lib/libc", "lib/libthr", "lib/libutil", "lib/libz", "lib/libutil",
+                              "lib/libstatcounters", "lib/libxo", "lib/libedit", "lib/ncurses")
+        self.sysroot_only = True
+
+    def compile(self, **kwargs):
+        # subdir-override seems to break if we don't build toolchain first
+        args = self.buildworldArgs
+        args.remove_var("SUBDIR_OVERRIDE")
+        # self.runMake("kernel-toolchain", options=self.buildworldArgs)
+        super().compile(**kwargs)
+        self.build_and_install_subdir(args, "tools/cheribsdbox",
+                                      skip_build=False, skip_install=True, install_to_sysroot=True)
+        for i in self.needed_shlibs:
+            self.build_and_install_subdir(args, i, skip_build=False, skip_install=True, install_to_sysroot=True)
+
+    def install(self, **kwargs):
+        self.makedirs(self.installDir)
+        for i in ("bin", "sbin", "usr/sbin", "usr/bin", "lib", "usr/lib", "usr/libcheri"):
+            self.makedirs(self.installDir / i)
+        # install all the needed libs
+        args = self.installworld_args
+        args.remove_var("SUBDIR_OVERRIDE")
+        for i in self.needed_shlibs:
+            self.build_and_install_subdir(args, i, skip_build=True, skip_clean=True, skip_install=False)
+        for i in ["lib/libpam"]:
+            # only needed as non-CheriABI libs:
+            self.build_and_install_subdir(args, i, skip_build=True, skip_clean=True, skip_install=False,
+                                          noncheri_only=True)
+
+        self.build_and_install_subdir(args, "tools/cheribsdbox", skip_build=True, skip_clean=True,
+                                      skip_install=False, install_to_sysroot=False)
+        # TODO: install bin/sh? bin/csh?
 
 
 class BuildCheriBsdSysroot(SimpleProject):
