@@ -151,7 +151,9 @@ class CheriConfig(object):
                                                      group=loader.crossCompileOptionsGroup,
                                                      enum_choices=(Linkage.DYNAMIC, Linkage.STATIC),
                                                      help="Whether to link cross-compile projects static or dynamic by default")
-
+        self.csetbounds_stats = loader.addBoolOption("collect-csetbounds-stats", default=False,
+                                                     group=loader.crossCompileOptionsGroup, helpHidden=True,
+                                                     help="Whether to log CSetBounds statistics in csv format")
         self.unified_sdk = loader.addBoolOption("unified-sdk", help="Build a single SDK instead of separate 128"
                                                 " and 256 bits ones", default=True)
 
