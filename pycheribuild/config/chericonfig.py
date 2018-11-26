@@ -37,7 +37,7 @@ from collections import OrderedDict
 from pathlib import Path
 # Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
 from .loader import ConfigLoaderBase
-from ..utils import latestClangTool, warningMessage, have_working_internet_connection
+from ..utils import latestClangTool, warningMessage, statusUpdate, have_working_internet_connection
 
 
 # custom encoder to handle pathlib.Path objects
@@ -135,6 +135,7 @@ class CheriConfig(object):
 
         # Attributes for code completion:
         self.verbose = None  # type: bool
+        self.debug_output = loader.addCommandLineOnlyBoolOption("debug-output", default=False, help="Extremely verbose output")
         self.quiet = None  # type: bool
         self.clean = None  # type: bool
         self.force = None  # type: bool
@@ -340,3 +341,7 @@ class CheriConfig(object):
                 result = str(os.getgid())
                 warningMessage("Could not get group name for GID", result)
                 return result
+
+    def debug_message(self, *args, **kwargs):
+        if self.debug_output:
+            statusUpdate(*args, **kwargs)
