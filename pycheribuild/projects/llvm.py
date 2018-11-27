@@ -103,6 +103,8 @@ class BuildLLVM(CMakeProject):
                 # the list of available targets in CLion
                 LLVM_INCLUDE_EXAMPLES=False,
                 LLVM_INCLUDE_DOCS=False,
+                # This saves some CMake time since it is used as a sub-project
+                LLVM_INCLUDE_BENCHMARKS=False,
             )
         if self.skip_static_analyzer:
             # save some build time by skipping the static analyzer
