@@ -53,7 +53,7 @@ def run_libcxx_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
 def add_cmdline_args(parser: argparse.ArgumentParser):
     parser.add_argument("--lit-debug-output", action="store_true")
     parser.add_argument("--llvm-lit-path")
-    parser.add_argument("--xunit-output", default="libunwind-tests.xml")
+    parser.add_argument("--xunit-output", default="qemu-libunwind-test-results.xml")
 
 
 def set_cmdline_args(args: argparse.Namespace):

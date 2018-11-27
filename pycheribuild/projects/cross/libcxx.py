@@ -111,7 +111,6 @@ class BuildLibunwind(CrossCompileCMakeProject):
             runCmd("ninja", "check-unwind", "-v", cwd=self.buildDir)
         else:
             # Check that the four tests compile and then attempt to run them:
-            runCmd("ninja", "check-unwind", "-v", cwd=self.buildDir)
             self.run_cheribsd_test_script("run_libunwind_tests.py", "--lit-debug-output", "--llvm-lit-path", self.lit_path)
 
 
@@ -205,7 +204,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LLVM_EXTERNAL_LIT=BuildLLVM.getBuildDir(self, config) / "bin/llvm-lit",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
             LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
-                          "/lit-test-results.xml --max-time 3600 --timeout 120 -s -vv" + self.libcxx_lit_jobs
+                          "/libcxx-test-results.xml --max-time 3600 --timeout 120 -s -vv" + self.libcxx_lit_jobs
         )
         # select libcxxrt as the runtime library
         self.add_cmake_options(

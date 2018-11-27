@@ -51,7 +51,7 @@ def run_libcxx_tests(qemu: pexpect.spawn, args: argparse.Namespace) -> bool:
 
 def add_cmdline_args(parser: argparse.ArgumentParser):
     parser.add_argument("--lit-debug-output", action="store_true")
-    parser.add_argument("--xunit-output", default="libcxx-tests.xml")
+    parser.add_argument("--xunit-output", default="qemu-libcxx-test-results.xml")
     parser.add_argument("--parallel-jobs", metavar="N", type=int, help="Split up the testsuite into N parallel jobs")
     # For the parallel jobs
     parser.add_argument("--internal-num-shards", type=int, help=argparse.SUPPRESS)
@@ -98,12 +98,14 @@ def libcxx_main():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--parallel-jobs", metavar="N", type=int, help="Split up the testsuite into N parallel jobs")
+    parser.add_argument("--xunit-output", default="qemu-libcxx-test-results.xml")
     # Don't let this parser capture --help
     args, remainder = parser.parse_known_args(filter(lambda x: x != "-h" and x != "--help", sys.argv))
     # If parallel is set spawn N processes and use the lit --num-shards + --run-shard flags to split the work
     # Since a full run takes about 16 hours this should massively reduce the amount of time needed.
 
     if args.parallel_jobs and args.parallel_jobs != 1:
+        import junitparser
         if args.parallel_jobs < 1:
             boot_cheribsd.failure("Invalid number of parallel jobs: ", args.parallel_jobs, exit=True)
         starttime = datetime.datetime.now()
@@ -159,6 +161,24 @@ if __name__ == '__main__':
         else:
             boot_cheribsd.success("All parallel jobs completed!")
         boot_cheribsd.success("Total execution time for parallel libcxx tests: ", datetime.datetime.now() - starttime)
+        # merge junit xml files
+        if args.xunit_output:
+            boot_cheribsd.success("Merging JUnit XML outputs")
+            result = junitparser.JUnitXml()
+            xunit_file = Path(args.xunit_output).absolute()
+            for i in range(args.parallel_jobs):
+                shard_num = i + 1
+                shard_file = xunit_file.with_name("shard-" + str(shard_num) + "-" + xunit_file.name)
+                if not shard_file.exists():
+                    boot_cheribsd.failure("Error could not find JUnit XML ", shard_file, " for shard", shard_num,
+                                          exit=False)
+                    continue
+                result += junitparser.JUnitXml.fromfile(path)
+
+            result.update_statistics()
+            result.write(str(xunit_file))
+            boot_cheribsd.success("Done merging JUnit XML outputs into ", xunit_file)
+
         sys.exit()
 
     libcxx_main()
