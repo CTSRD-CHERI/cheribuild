@@ -378,8 +378,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             self.runMake("all")
 
     def install(self, **kwargs):
-        if not self.build_jsc_only:
-            super().install()
+        self.info("Not installing qtwebit since it uses too much space. If you really want this run `ninja install`")
 
     def run_tests(self):
         if self.compiling_for_host():
