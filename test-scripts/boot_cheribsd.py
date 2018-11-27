@@ -96,11 +96,11 @@ def parse_smb_mount(arg: str):
 class CheriBSDInstance(pexpect.spawn):
     EXIT_ON_KERNEL_PANIC = True
 
-    def expect(self, pattern: list, timeout=-1, **kwargs):
+    def expect(self, pattern: list, timeout=-1, pretend_result=None, **kwargs):
         assert isinstance(pattern, list), "expected list and not " + str(pattern)
         return self._expect_and_handle_panic(pattern, timeout=timeout, **kwargs)
 
-    def expect_exact(self, pattern_list, timeout=-1, **kwargs):
+    def expect_exact(self, pattern_list, timeout=-1, pretend_result=None, **kwargs):
         assert PANIC not in pattern_list
         assert STOPPED not in pattern_list
         assert PANIC_KDB not in pattern_list
@@ -216,7 +216,7 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
                CHERI_TRAP, pexpect.TIMEOUT, PROMPT]
     if error_output:
         results.append(error_output)
-    i = qemu.expect(results, timeout=timeout)
+    i = qemu.expect(results, timeout=timeout, pretend_result=4)
     if i == 0:
         failure("/bin/sh: command not found: ", cmd)
     elif i == 1:

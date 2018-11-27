@@ -105,6 +105,7 @@ if __name__ == '__main__':
     # Since a full run takes about 16 hours this should massively reduce the amount of time needed.
 
     if args.parallel_jobs and args.parallel_jobs != 1:
+        # ensure we import junitparser only when running parallel jobs since it is not needed otherwise
         import junitparser
         if args.parallel_jobs < 1:
             boot_cheribsd.failure("Invalid number of parallel jobs: ", args.parallel_jobs, exit=True)

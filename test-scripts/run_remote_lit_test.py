@@ -54,7 +54,7 @@ def flush_thread(f, qemu: pexpect.spawn):
 
 
 def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str,
-                         llvm_lit_path: str=None):
+                         llvm_lit_path: str=None) -> bool:
     qemu.EXIT_ON_KERNEL_PANIC = False # since we run multiple threads we shouldn't use sys.exit()
     print("PID of QEMU:", qemu.pid)
     port = args.ssh_port
@@ -151,3 +151,4 @@ Host cheribsd-test-instance
     finally:
         if qemu_logfile:
             qemu_logfile.flush()
+    return True

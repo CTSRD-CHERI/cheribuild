@@ -45,9 +45,9 @@ from pathlib import Path
 import boot_cheribsd
 import run_remote_lit_test
 
-def run_libcxx_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
+def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     with tempfile.TemporaryDirectory() as tempdir:
-        run_remote_lit_test.run_remote_lit_tests("libcxx", qemu, args, tempdir, llvm_lit_path=args.llvm_lit_path)
+        return run_remote_lit_test.run_remote_lit_tests("libcxx", qemu, args, tempdir, llvm_lit_path=args.llvm_lit_path)
 
 
 def add_cmdline_args(parser: argparse.ArgumentParser):
@@ -61,10 +61,11 @@ def set_cmdline_args(args: argparse.Namespace):
     args.internal_shard = None
     args.parallel_jobs = None
 
+
 if __name__ == '__main__':
     from run_tests_common import run_tests_main
     try:
-        run_tests_main(test_function=run_libcxx_tests, need_ssh=True, # we need ssh running to execute the tests
+        run_tests_main(test_function=run_libunwind_tests, need_ssh=True, # we need ssh running to execute the tests
                        argparse_setup_callback=add_cmdline_args, argparse_adjust_args_callback=set_cmdline_args)
     finally:
         print("Finished running ", " ".join(sys.argv))

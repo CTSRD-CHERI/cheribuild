@@ -34,10 +34,10 @@ import datetime
 import pexpect
 import sys
 from pathlib import Path
+import boot_cheribsd
 
 
-def run_noop_test(qemu: pexpect.spawn, args: argparse.Namespace):
-    import boot_cheribsd
+def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     boot_cheribsd.success("Booted successfully")
     boot_cheribsd.run_cheribsd_command(qemu, "mount_smbfs --help", cheri_trap_fatal=False)
     boot_cheribsd.run_cheribsd_command(qemu, "/libexec/ld-cheri-elf.so.1 --help")
