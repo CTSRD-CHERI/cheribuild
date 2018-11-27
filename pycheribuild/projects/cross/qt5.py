@@ -81,7 +81,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             assert self.force_static_linkage, "Currently only static linking is supported!"
 
             if self.compiling_for_cheri():
-                self.configureArgs.append("QMAKE_LIBDIR=" + str(self.config.sdkSysrootDir / "usr/libcheri"))
+                self.configureArgs.append("QMAKE_LIBDIR=" + str(self.crossSysrootPath / "usr/libcheri"))
             elif self.compiling_for_mips():
                 # self.configureArgs.append("QMAKE_CXXFLAGS+=-stdlib=libc++")
                 pass
@@ -96,7 +96,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-device-option", "CROSS_COMPILE={}/{}-".format(self.config.sdkBinDir, self.targetTriple),
                 "-device-option", "COMPILER_FLAGS=" + commandline_to_str(compiler_flags),
                 "-device-option", "LINKER_FLAGS=" + commandline_to_str(linker_flags),
-                "-sysroot", self.config.sdkSysrootDir,
+                "-sysroot", self.crossSysrootPath,
                 "-prefix", "/usr/local/Qt-" + self._crossCompileTarget.value
             ])
 
@@ -348,7 +348,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                                )
         if not self.compiling_for_host():
             # we need to find the installed Qt
-            self.add_cmake_options(Qt5_DIR=self.config.sdkSysrootDir / ("usr/local/Qt-" + self._crossCompileTarget.value) / "lib/cmake/Qt5")
+            self.add_cmake_options(Qt5_DIR=self.crossSysrootPath / ("usr/local/Qt-" + self._crossCompileTarget.value) / "lib/cmake/Qt5")
             self.add_cmake_options(PNG_LIBRARIES="libqtlibpng.a")
             self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.getSourceDir(self, config) / "src/3rdparty/libpng")
             self.LDFLAGS.extend(["-lpthread"]) # Needed for DumpRenderTree

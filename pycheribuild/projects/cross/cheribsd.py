@@ -1274,7 +1274,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         # TODO: we could do this in python as well, but this method works
         fixlinksSrc = includeLocalFile("files/fixlinks.c")
         runCmd("cc", "-x", "c", "-", "-o", self.config.sdkDir / "bin/fixlinks", input=fixlinksSrc)
-        runCmd(self.config.sdkDir / "bin/fixlinks", cwd=self.config.sdkSysrootDir / "usr/lib")
+        runCmd(self.config.sdkDir / "bin/fixlinks", cwd=self.config.crossSysrootPath / "usr/lib")
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
@@ -1307,13 +1307,13 @@ class BuildCheriBsdSysroot(SimpleProject):
             return
 
         # now copy the files
-        self.makedirs(self.config.sdkSysrootDir)
+        self.makedirs(self.crossSysrootPath)
         self.copyRemoteFile(remoteSysrootArchive, self.config.sdkDir / self.config.sysrootArchiveName)
         runCmd("tar", "xzf", self.config.sdkDir / self.config.sysrootArchiveName, cwd=self.config.sdkDir)
 
     def createSysroot(self):
         # we need to add include files and libraries to the sysroot directory
-        self.makedirs(self.config.sdkSysrootDir / "usr")
+        self.makedirs(self.crossSysrootPath / "usr")
         # GNU tar doesn't accept --include
         tar_cmd = "bsdtar" if IS_LINUX else "tar"
         # use tar+untar to copy all necessary files listed in metalog to the sysroot dir
@@ -1325,16 +1325,16 @@ class BuildCheriBsdSysroot(SimpleProject):
         if not self.config.pretend:
             tar_cwd = str(BuildCHERIBSD.rootfsDir(self, self.config))
             with subprocess.Popen(archiveCmd, stdout=subprocess.PIPE, cwd=tar_cwd) as tar:
-                runCmd(["tar", "xf", "-"], stdin=tar.stdout, cwd=self.config.sdkSysrootDir)
-        if not (self.config.sdkSysrootDir / "lib/libc.so.7").is_file():
-            self.fatal(self.config.sdkSysrootDir, "is missing the libc library, install seems to have failed!")
+                runCmd(["tar", "xf", "-"], stdin=tar.stdout, cwd=self.crossSysrootPath)
+        if not (self.crossSysrootPath / "lib/libc.so.7").is_file():
+            self.fatal(self.crossSysrootPath, "is missing the libc library, install seems to have failed!")
 
         # fix symbolic links in the sysroot:
         print("Fixing absolute paths in symbolic links inside lib directory...")
         self.fixSymlinks()
         # create an archive to make it easier to copy the sysroot to another machine
         self.deleteFile(self.config.sdkDir / self.config.sysrootArchiveName, printVerboseOnly=True)
-        runCmd("tar", "-czf", self.config.sdkDir / self.config.sysrootArchiveName, self.config.sdkSysrootDir.name,
+        runCmd("tar", "-czf", self.config.sdkDir / self.config.sysrootArchiveName, self.crossSysrootPath.name,
                cwd=self.config.sdkDir)
         print("Successfully populated sysroot")
 
@@ -1349,9 +1349,9 @@ class BuildCheriBsdSysroot(SimpleProject):
                 self.cleanDirectory(unprefixed_sysroot)
                 if not self.config.pretend:
                     unprefixed_sysroot.rmdir()
-                self.createSymlink(self.config.sdkSysrootDir, unprefixed_sysroot)
+                self.createSymlink(self.crossSysrootPath, unprefixed_sysroot)
 
-        with self.asyncCleanDirectory(self.config.sdkSysrootDir):
+        with self.asyncCleanDirectory(self.crossSysrootPath):
             if IS_FREEBSD or self.rootfs_source_class.get_instance(self, self.config).crossbuild:
                 self.createSysroot()
             else:

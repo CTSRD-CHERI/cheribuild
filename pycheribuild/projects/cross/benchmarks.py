@@ -55,13 +55,13 @@ class BuildMibench(CrossCompileProject):
             if self.compiling_for_host():
                 self.make_args.set(VERSION="x86")
             if self.compiling_for_mips():
-                self.make_args.set(VERSION="mips", MIPS_SYSROOT=self.config.sdkSysrootDir)
+                self.make_args.set(VERSION="mips", MIPS_SYSROOT=self.config.get_sysroot_path(CrossCompileTarget.MIPS))
             if self.compiling_for_cheri():
                 if self.config.cheriBits == 128:
-                    self.make_args.set(VERSION="cheri128", CHERI128_SYSROOT=self.config.sdkSysrootDir)
+                    self.make_args.set(VERSION="cheri128", CHERI128_SYSROOT=self.config.cheriSysrootDir)
                 else:
                     assert self.config.cheriBits == 256
-                    self.make_args.set(VERSION="cheri256", CHERI256_SYSROOT=self.config.sdkSysrootDir)
+                    self.make_args.set(VERSION="cheri256", CHERI256_SYSROOT=self.config.cheriSysrootDir)
             self.runMake("bundle_dump")
 
     def install(self, **kwargs):
@@ -82,7 +82,7 @@ class BuildOlden(CrossCompileProject):
                     CHERI128_SDK=self.config.sdkDir,
                     CHERI256_SDK=self.config.sdkDir,
                     CHERI_SDK=self.config.sdkDir):
-            self.make_args.set(SYSROOT_DIRNAME=self.config.sdkSysrootDir.name)
+            self.make_args.set(SYSROOT_DIRNAME=self.crossSysrootPath.name)
             self.make_args.add_flags("-f", "Makefile.jenkins")
             self.make_args.set(ADDITIONAL_CFLAGS=" ".join(self.default_compiler_flags))
             if self.compiling_for_host():

@@ -181,7 +181,11 @@ class JenkinsConfig(CheriConfig):
         return self.workspace / ("qemu-" + os_suffix) / "bin"
 
     @property
-    def sdkSysrootDir(self):
+    def cheriSysrootDir(self):
+        # TODO: currently we need this to be unprefixed since that is what the archives created by jenkins look like
+        return self.sdkDir / "sysroot"
+
+    def get_sysroot_path(self, cross_compile_target: CrossCompileTarget):
         # TODO: currently we need this to be unprefixed since that is what the archives created by jenkins look like
         return self.sdkDir / "sysroot"
 

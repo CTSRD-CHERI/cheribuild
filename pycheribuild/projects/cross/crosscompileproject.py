@@ -79,7 +79,7 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
             targetName += "-" + config.cross_target_suffix
         return Path(BuildCHERIBSD.rootfsDir(project, config) / "opt" / targetName / project.projectName.lower())
     elif project.crossInstallDir == CrossInstallDir.SDK:
-        return config.sdkSysrootDir
+        return project.crossSysrootPath
     fatalError("Unknown install dir for", project.projectName)
 
 
@@ -208,7 +208,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 self.COMMON_FLAGS.append("-D_POSIX_MONOTONIC_CLOCK=1")  # pretend that we have a monotonic clock
                 self.COMMON_FLAGS.append("-D_POSIX_TIMERS=1")  # pretend that we have a monotonic clock
 
-            self.sdkSysroot = self.config.sdkSysrootDir
+            self.sdkSysroot = self.config.crossSysrootPath
             if self.baremetal:
                 self.sdkSysroot = self.config.sdkDir / "baremetal" / self.targetTriple
 
@@ -218,7 +218,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                     self.destdir = self.sdkSysroot
                 else:
                     self._installPrefix = "/usr/local"
-                    self.destdir = config.sdkSysrootDir
+                    self.destdir = self.crossSysrootPath
             elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
                 from .cheribsd import BuildCHERIBSD
                 self._installPrefix = Path("/", self._installDir.relative_to(BuildCHERIBSD.rootfsDir(self, config)))
@@ -417,7 +417,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
         if hasattr(self, "_configure_status_message"):
             statusUpdate(self._configure_status_message)
         if not self.compiling_for_host():
-            env.update(PKG_CONFIG_LIBDIR=self.pkgconfig_dirs, PKG_CONFIG_SYSROOT_DIR=self.config.sdkSysrootDir)
+            env.update(PKG_CONFIG_LIBDIR=self.pkgconfig_dirs, PKG_CONFIG_SYSROOT_DIR=self.crossSysrootPath)
         with setEnv(**env):
             super().configure(**kwargs)
 

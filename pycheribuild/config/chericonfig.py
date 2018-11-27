@@ -289,8 +289,19 @@ class CheriConfig(object):
         return self.sdkBinDir
 
     @property
-    def sdkSysrootDir(self):
+    def cheriSysrootDir(self):
         return self.sdkDir / ("sysroot" + self.cheriBitsStr)
+
+    def get_sysroot_path(self, cross_compile_target: CrossCompileTarget):
+        assert cross_compile_target != cross_compile_target.NATIVE, "Should not be called"
+        if cross_compile_target == cross_compile_target.MIPS:
+            return self.sdkDir / "sysroot-mips"
+        elif cross_compile_target == cross_compile_target.CHERI:
+            return self.cheriSysrootDir
+        elif cross_compile_target == cross_compile_target.RISCV:
+            return self.sdkDir / "sysroot-riscv"
+        else:
+            assert False, "Invalid cross_compile_target: " + str(cross_compile_target)
 
     def _ensureRequiredPropertiesSet(self) -> bool:
         for key in self.__dict__.keys():

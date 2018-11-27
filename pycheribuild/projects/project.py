@@ -226,6 +226,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def get_crosscompile_target(cls, config: CheriConfig) -> "typing.Optional[CrossCompileTarget]":
         return None  # XXX: does it make sense to return NATIVE instead? Will break stuff for little gain I guess
 
+    @property
+    def crossSysrootPath(self):
+        assert self.get_crosscompile_target(self.config) is not None, "called from invalid class " + str(self.__class__)
+        return self.config.get_sysroot_path(self.get_crosscompile_target(self.config))
+
     # Project subclasses will automatically have a target based on their name generated unless they add this:
     doNotAddToTargets = True
 
@@ -573,7 +578,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if self.sourceDir and mount_sourcedir:
             cmd.extend(["--source-dir", self.sourceDir])
         if mount_sysroot:
-            cmd.extend(["--sysroot-dir", self.config.sdkSysrootDir])
+            cmd.extend(["--sysroot-dir", self.crossSysrootPath])
         if disk_image_path:
             cmd.extend(["--disk-image", disk_image_path])
         if self.config.tests_interact:
