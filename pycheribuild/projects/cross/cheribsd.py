@@ -1295,7 +1295,7 @@ class BuildCheriBsdSysrootBase(MultiArchBaseMixin, SimpleProject):
                                                  "the CHERI SDK on the remote FreeBSD machine (e.g. "
                                                  "vica:~foo/cheri/output/sdk)")
         if cls._crossCompileTarget == CrossCompileTarget.MIPS or cls._crossCompileTarget is None:
-            cls.use_cheri_sysroot_for_mips = cls.addBoolOption("use-cheri-sysroot-for-mips", default=True,
+            cls.use_cheri_sysroot_for_mips = cls.addBoolOption("use-cheri-sysroot-for-mips", default=False,
                                                                help="Create the MIPS sysroot using the files from "
                                                                     "hybrid CHERI libraries (note: binaries build from "
                                                                     "this sysroot will only work on the matching CHERI "
@@ -1345,6 +1345,14 @@ class BuildCheriBsdSysrootBase(MultiArchBaseMixin, SimpleProject):
         else:
             rootfs_target = self.rootfs_source_class.get_instance(self, self.config)
         rootfs_dir = rootfs_target.real_install_root_dir
+        if not (rootfs_dir / "lib/libc.so.7").is_file():
+            if self.compiling_for_mips() and not self.use_cheri_sysroot_for_mips:
+                fixit = "Either build a plain-mips CheriBSD rootfs first by running `cheribuild.py " + \
+                        rootfs_target.target + "` or set --cheribsd-sysroot-mips/use-cheri-sysroot-for-mips" \
+                        " to copy from the CheriBSD sysroot instead"
+            else:
+                fixit = "Run `cheribuild.py " + rootfs_target.target + "` first"
+            self.fatal("Sysroot source directory", rootfs_dir, "does not contain libc.so.7", fixitHint=fixit)
         printCommand(archiveCmd, cwd=rootfs_dir)
         if not self.config.pretend:
             tar_cwd = str(rootfs_dir)
