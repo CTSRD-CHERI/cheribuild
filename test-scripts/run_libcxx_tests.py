@@ -174,7 +174,7 @@ if __name__ == '__main__':
                     boot_cheribsd.failure("Error could not find JUnit XML ", shard_file, " for shard", shard_num,
                                           exit=False)
                     continue
-                result += junitparser.JUnitXml.fromfile(path)
+                result += junitparser.JUnitXml.fromfile(str(shard_file))
 
             result.update_statistics()
             result.write(str(xunit_file))
