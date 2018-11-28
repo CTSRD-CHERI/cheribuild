@@ -292,13 +292,13 @@ class CheriConfig(object):
         return self.sdkDir / ("sysroot" + self.cheriBitsStr)
 
     def get_sysroot_path(self, cross_compile_target: CrossCompileTarget):
-        if cross_compile_target == cross_compile_target.MIPS:
+        if cross_compile_target == CrossCompileTarget.MIPS:
             return self.sdkDir / "sysroot-mips"
-        elif cross_compile_target == cross_compile_target.CHERI:
+        elif cross_compile_target == CrossCompileTarget.CHERI:
             return self.cheriSysrootDir
-        elif cross_compile_target == cross_compile_target.RISCV:
+        elif cross_compile_target == CrossCompileTarget.RISCV:
             return self.sdkDir / "sysroot-riscv"
-        elif cross_compile_target == cross_compile_target.NATIVE:
+        elif cross_compile_target == CrossCompileTarget.NATIVE:
             return self.sdkDir / "sysroot-native"
         else:
             assert False, "Invalid cross_compile_target: " + str(cross_compile_target)
