@@ -50,7 +50,6 @@ class MockConfig(CheriConfig):
         self.sdkDir = self.outputRoot / "sdk"
         self.otherToolsDir = self.outputRoot / "other"
         self.dollarPathWithOtherTools = "$PATH"
-        self.sysrootArchiveName = "sysroot.tar.gz"
 
         assert self._ensureRequiredPropertiesSet()
 

@@ -1261,12 +1261,14 @@ class BuildCHERIBSDMinimal(BuildCHERIBSD):
         # TODO: install bin/sh? bin/csh?
 
 
-class BuildCheriBsdSysroot(SimpleProject):
+class BuildCheriBsdSysrootBase(MultiArchBaseMixin, SimpleProject):
     # TODO: could use this to build only cheribsd sysroot by extending build-cheribsd
     projectName = "cheribsd-sysroot"
     dependencies = ["cheribsd-cheri"]
     is_sdk_target = True
 
+    supported_architectures = [CrossCompileTarget.CHERI, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
+    default_architecture = CrossCompileTarget.CHERI
     rootfs_source_class = BuildCHERIBSD  # type: BuildCHERIBSD
 
     def fixSymlinks(self):
@@ -1274,7 +1276,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         # TODO: we could do this in python as well, but this method works
         fixlinksSrc = includeLocalFile("files/fixlinks.c")
         runCmd("cc", "-x", "c", "-", "-o", self.config.sdkDir / "bin/fixlinks", input=fixlinksSrc)
-        runCmd(self.config.sdkDir / "bin/fixlinks", cwd=self.config.crossSysrootPath / "usr/lib")
+        runCmd(self.config.sdkDir / "bin/fixlinks", cwd=self.crossSysrootPath / "usr/lib")
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
@@ -1292,6 +1294,14 @@ class BuildCheriBsdSysroot(SimpleProject):
             cls.remotePath = cls.addConfigOption("remote-sdk-path", showHelp=True, metavar="PATH", help="The path to "
                                                  "the CHERI SDK on the remote FreeBSD machine (e.g. "
                                                  "vica:~foo/cheri/output/sdk)")
+        if cls._crossCompileTarget == CrossCompileTarget.MIPS or cls._crossCompileTarget is None:
+            cls.use_cheri_sysroot_for_mips = cls.addBoolOption("use-cheri-sysroot-for-mips", default=True,
+                                                               help="Create the MIPS sysroot using the files from "
+                                                                    "hybrid CHERI libraries (note: binaries build from "
+                                                                    "this sysroot will only work on the matching CHERI "
+                                                                    "128/256 architecture)")
+        else:
+            cls.use_cheri_sysroot_for_mips = False
 
     def copySysrootFromRemoteMachine(self):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
@@ -1301,15 +1311,22 @@ class BuildCheriBsdSysroot(SimpleProject):
                 self.remotePath = "someuser@somehose:this/path/does/not/exist"
         # noinspection PyAttributeOutsideInit
         self.remotePath = os.path.expandvars(self.remotePath)
-        remoteSysrootArchive = self.remotePath + "/" + self.config.sysrootArchiveName
+        remoteSysrootArchive = self.remotePath + "/" + self.sysrootArchiveName
         statusUpdate("Will copy the sysroot files from ", remoteSysrootArchive, sep="")
         if not self.queryYesNo("Continue?"):
             return
 
         # now copy the files
         self.makedirs(self.crossSysrootPath)
-        self.copyRemoteFile(remoteSysrootArchive, self.config.sdkDir / self.config.sysrootArchiveName)
-        runCmd("tar", "xzf", self.config.sdkDir / self.config.sysrootArchiveName, cwd=self.config.sdkDir)
+        self.copyRemoteFile(remoteSysrootArchive, self.config.sdkDir / self.sysrootArchiveName)
+        runCmd("tar", "xzf", self.config.sdkDir / self.sysrootArchiveName, cwd=self.config.sdkDir)
+
+    @property
+    def sysrootArchiveName(self):
+        if self.compiling_for_cheri():
+            return "cheri-sysroot" + self.config.cheriBitsStr + ".tar.gz"
+        else:
+            return "cheribsd-" + self._crossCompileTarget.value  + "-sysroot.tar.gz"
 
     def createSysroot(self):
         # we need to add include files and libraries to the sysroot directory
@@ -1318,12 +1335,19 @@ class BuildCheriBsdSysroot(SimpleProject):
         tar_cmd = "bsdtar" if IS_LINUX else "tar"
         # use tar+untar to copy all necessary files listed in metalog to the sysroot dir
         archiveCmd = [tar_cmd, "cf", "-", "--include=./lib/", "--include=./usr/include/",
-                      "--include=./usr/lib/", "--include=./usr/libcheri", "--include=./usr/libdata/",
-                      # only pack those files that are mentioned in METALOG
-                      "@METALOG"]
-        printCommand(archiveCmd, cwd=BuildCHERIBSD.rootfsDir(self, self.config))
+                      "--include=./usr/lib/", "--include=./usr/libdata/"]
+        if self.compiling_for_cheri():
+            archiveCmd.append("--include=./usr/libcheri")
+        # only pack those files that are mentioned in METALOG
+        archiveCmd.append("@METALOG")
+        if self.compiling_for_mips() and self.use_cheri_sysroot_for_mips:
+            rootfs_target = self.rootfs_source_class.get_instance_for_cross_target(CrossCompileTarget.CHERI, self.config)
+        else:
+            rootfs_target = self.rootfs_source_class.get_instance(self, self.config)
+        rootfs_dir = rootfs_target.real_install_root_dir
+        printCommand(archiveCmd, cwd=rootfs_dir)
         if not self.config.pretend:
-            tar_cwd = str(BuildCHERIBSD.rootfsDir(self, self.config))
+            tar_cwd = str(rootfs_dir)
             with subprocess.Popen(archiveCmd, stdout=subprocess.PIPE, cwd=tar_cwd) as tar:
                 runCmd(["tar", "xf", "-"], stdin=tar.stdout, cwd=self.crossSysrootPath)
         if not (self.crossSysrootPath / "lib/libc.so.7").is_file():
@@ -1333,8 +1357,8 @@ class BuildCheriBsdSysroot(SimpleProject):
         print("Fixing absolute paths in symbolic links inside lib directory...")
         self.fixSymlinks()
         # create an archive to make it easier to copy the sysroot to another machine
-        self.deleteFile(self.config.sdkDir / self.config.sysrootArchiveName, printVerboseOnly=True)
-        runCmd("tar", "-czf", self.config.sdkDir / self.config.sysrootArchiveName, self.crossSysrootPath.name,
+        self.deleteFile(self.config.sdkDir / self.sysrootArchiveName, printVerboseOnly=True)
+        runCmd("tar", "-czf", self.config.sdkDir / self.sysrootArchiveName, self.crossSysrootPath.name,
                cwd=self.config.sdkDir)
         print("Successfully populated sysroot")
 
@@ -1366,7 +1390,7 @@ class BuildCheriBsdSysroot(SimpleProject):
 
 class BuildCheriBsdAndSysroot(TargetAlias):
     target = "cheribsd-with-sysroot"
-    dependencies = ["cheribsd-cheri", "cheribsd-sysroot"]
+    dependencies = ["cheribsd-cheri", "cheribsd-sysroot-cheri"]
 
 
 class BuildFreeBSDBootstrapTools(Project):
