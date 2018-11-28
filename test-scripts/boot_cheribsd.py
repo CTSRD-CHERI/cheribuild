@@ -109,7 +109,7 @@ class CheriBSDInstance(pexpect.spawn):
         panic_regexes = [PANIC, STOPPED, PANIC_KDB]
         i = super().expect_exact(panic_regexes + pattern_list, **kwargs)
         if i < len(panic_regexes):
-            debug_kernel_panic(qemu)
+            debug_kernel_panic(self)
             failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
         return i - len(panic_regexes)
 
@@ -120,7 +120,7 @@ class CheriBSDInstance(pexpect.spawn):
         panic_regexes = [PANIC, STOPPED, PANIC_KDB]
         i = super().expect(panic_regexes + options, **kwargs)
         if i < len(panic_regexes):
-            debug_kernel_panic(qemu)
+            debug_kernel_panic(self)
             failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
         return i - len(panic_regexes)
 
@@ -397,6 +397,8 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
                 child.expect_exact(PROMPT_SH, timeout=30)
             set_posix_sh_prompt(child)
         else:
+            # If this was a failure of init we should get a debugger backtrace
+            debug_kernel_panic(child)
             failure("error during boot login prompt: ", str(child))
         success("===> booted CheriBSD (userspace startup time: ", datetime.datetime.now() - userspace_starttime, ")")
     except KeyboardInterrupt:
