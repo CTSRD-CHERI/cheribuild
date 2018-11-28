@@ -42,7 +42,7 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, skip_sdk=
 freestanding_deps = ["elftoolchain", "binutils", "llvm", "qemu", "gdb-native", "freestanding-sdk"]
 baremetal_deps = freestanding_deps + ["newlib-baremetal-mips", "compiler-rt-baremetal-mips", "libcxxrt-baremetal-mips",
                                       "libcxx-baremetal-mips", "baremetal-sdk"]
-cheribsd_sdk_deps = freestanding_deps + ["cheribsd-cheri", "cheribsd-sysroot", "cheribsd-sdk"]
+cheribsd_sdk_deps = freestanding_deps + ["cheribsd-cheri", "cheribsd-sysroot-cheri", "cheribsd-sdk"]
 
 @pytest.mark.parametrize("target_name,expected_list", [
     pytest.param("freestanding-sdk", freestanding_deps, id="freestanding-sdk"),
@@ -72,7 +72,7 @@ def test_reordering():
     # GDB is a cross compiled project so cheribsd should be built first
     assert _sort_targets(["cheribsd", "gdb-mips"]) == ["cheribsd-cheri", "gdb-mips"]
     assert _sort_targets(["gdb-mips", "cheribsd"]) == ["cheribsd-cheri", "gdb-mips"]
-    assert _sort_targets(["gdb-mips", "cheribsd-sysroot"]) == ["cheribsd-sysroot", "gdb-mips"]
+    assert _sort_targets(["gdb-mips", "cheribsd-sysroot-cheri"]) == ["cheribsd-sysroot-cheri", "gdb-mips"]
 
 
 def test_run_comes_last():
@@ -88,7 +88,7 @@ def test_disk_image_comes_second_last():
 
 def test_all_run_deps():
     assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm", "cheribsd-cheri", "elftoolchain", "binutils",
-                                                             "gdb-native", "freestanding-sdk", "cheribsd-sysroot",
+                                                             "gdb-native", "freestanding-sdk", "cheribsd-sysroot-cheri",
                                                              "cheribsd-sdk", "gdb-mips", "disk-image", "run"]
 
 
