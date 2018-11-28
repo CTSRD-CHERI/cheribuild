@@ -208,7 +208,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 self.COMMON_FLAGS.append("-D_POSIX_MONOTONIC_CLOCK=1")  # pretend that we have a monotonic clock
                 self.COMMON_FLAGS.append("-D_POSIX_TIMERS=1")  # pretend that we have a monotonic clock
 
-            self.sdkSysroot = self.config.crossSysrootPath
+            self.sdkSysroot = self.crossSysrootPath
             if self.baremetal:
                 self.sdkSysroot = self.config.sdkDir / "baremetal" / self.targetTriple
 
