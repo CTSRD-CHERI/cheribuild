@@ -282,6 +282,10 @@ class _BuildDiskImageBase(SimpleProject):
         self.createFileForImage("/sbin/qemu-do-reroot.sh", contents=do_reroot_script,
                                 mode=0o755, showContentsByDefault=False)
 
+        # Add a script to launch gdb, run a program and get a backtrace:
+        self.createFileForImage("/usr/bin/gdb-run.sh", contents=includeLocalFile("files/cheribsd/gdb-run.sh"),
+                                mode=0o755, showContentsByDefault=False)
+
         # make sure that the disk image always has the same SSH host keys
         # If they don't exist the system will generate one on first boot and we have to accept them every time
         self.generateSshHostKeys()
