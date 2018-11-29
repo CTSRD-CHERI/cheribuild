@@ -115,8 +115,9 @@ class CheriConfig(object):
                                                              "This is only useful when targetting FPGA")
         self.skipBuildworld = loader.addBoolOption("skip-buildworld", group=loader.freebsdGroup,
                                                    help="Skip the buildworld step when building FreeBSD or CheriBSD")
-        self.freebsd_subdir = loader.addCommandLineOnlyOption("freebsd-subdir", group=loader.freebsdGroup, type=list,
-            metavar="SUBDIRS", help="Only build subdirs SUBDIRS of FreeBSD/CheriBSD instead of the full tree. Useful "
+        self.freebsd_subdir = loader.addCommandLineOnlyOption("freebsd-subdir", "-subdir",
+            group=loader.freebsdGroup, type=list, metavar="SUBDIRS",
+            help="Only build subdirs SUBDIRS of FreeBSD/CheriBSD instead of the full tree. Useful "
             "for quickly rebuilding an individual programs/libraries. If more than one dir is passed they will be "
             "processed in order.  Note: This will break if not all dependencies have been built.")
 
