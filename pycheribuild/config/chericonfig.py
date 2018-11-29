@@ -113,7 +113,7 @@ class CheriConfig(object):
         self.withLibstatcounters = loader.addBoolOption("with-libstatcounters", group=loader.crossCompileOptionsGroup,
                                                         help="Link cross compiled CHERI project with libstatcounters. "
                                                              "This is only useful when targetting FPGA")
-        self.skipBuildworld = loader.addBoolOption("skip-buildworld", group=loader.freebsdGroup,
+        self.skipBuildworld = loader.addBoolOption("skip-buildworld", "-skip-world", group=loader.freebsdGroup,
                                                    help="Skip the buildworld step when building FreeBSD or CheriBSD")
         self.freebsd_subdir = loader.addCommandLineOnlyOption("freebsd-subdir", "-subdir",
             group=loader.freebsdGroup, type=list, metavar="SUBDIRS",
