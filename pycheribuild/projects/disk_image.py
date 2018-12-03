@@ -34,6 +34,7 @@ import io
 import tempfile
 
 from .cross.cheribsd import BuildFreeBSD
+from .cross.gdb import BuildGDB
 from .cross.cheribsd import *
 from ..config.loader import ComputedDefaultValue
 from .project import *
@@ -91,6 +92,7 @@ class _BuildDiskImageBase(SimpleProject):
         cls.wget_via_tmp = cls.addBoolOption("wget-via-tmp",
                                 help="Use a directory in /tmp for recursive wget operations;"
                                       "of interest in rare cases, like extra-files on smbfs.")
+        cls.include_gdb = cls.addBoolOption("include-gdb", default=True, help="Include GDB in the disk image (if it exists)")
         cls.disableTMPFS = None
 
     def __init__(self, config, source_class: "typing.Type[BuildFreeBSD]"):
@@ -124,26 +126,28 @@ class _BuildDiskImageBase(SimpleProject):
         if self.needs_special_pkg_repo:
             self._addRequiredSystemTool("wget")  # Needed to recursively fetch the pkg repo
 
-    def addFileToImage(self, file: Path, *, baseDirectory: Path, user="root", group="wheel", mode=None):
-        pathInTarget = file.relative_to(baseDirectory)
-        assert not str(pathInTarget).startswith(".."), pathInTarget
+    def addFileToImage(self, file: Path, *, baseDirectory: Path, user="root", group="wheel", mode=None,
+                       path_in_target=None):
+        if path_in_target is None:
+            path_in_target = file.relative_to(baseDirectory)
+        assert not str(path_in_target).startswith(".."), path_in_target
 
         if self.strip_binaries and file.exists():
             # Try to shrink the size by stripping all elf binaries
             with file.open("rb") as f:
                 if f.read(4) == b"\x7fELF":
                     self.verbose_print("Stripping ELF binary", file)
-                    stripped_path = self.tmpdir / pathInTarget
+                    stripped_path = self.tmpdir / path_in_target
                     self.makedirs(stripped_path.parent)
                     runCmd(self.config.sdkBinDir / "llvm-strip", file, "-o", stripped_path)
                     # runCmd("file", stripped_path)
                     file = stripped_path
 
         if not self.config.quiet:
-            statusUpdate(file, " -> /", pathInTarget, sep="")
+            statusUpdate(file, " -> /", path_in_target, sep="")
 
         # This also adds all the parent directories to METALOG
-        self.mtree.add_file(file, pathInTarget, mode=mode, uname=user, gname=group, print_status=self.config.verbose)
+        self.mtree.add_file(file, path_in_target, mode=mode, uname=user, gname=group, print_status=self.config.verbose)
         if file in self.extraFiles:
             self.extraFiles.remove(file)  # remove it from extraFiles so we don't install it twice
 
@@ -318,6 +322,14 @@ class _BuildDiskImageBase(SimpleProject):
                         self.installFile(self.tmpdir / "root/.ssh/authorized_keys", authorizedKeys)
                         runCmd("chmod", "0700", authorizedKeys.parent)
                         runCmd("chmod", "0600", authorizedKeys)
+
+        if self.include_gdb:
+            gdb_path = BuildGDB.get_instance(self, self.config).real_install_root_dir
+            gdb_binary = gdb_path / "bin/gdb"
+            if gdb_binary.exists():
+                self.info("Adding GDB binary", gdb_binary, "to disk image")
+                self.addFileToImage(gdb_binary, baseDirectory=gdb_path, mode=0o755, path_in_target="usr/bin/gdb")
+
 
         # Avoid long boot time on first start due to missing entropy:
         # for i in ("boot/entropy", "entropy"):
