@@ -805,7 +805,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             super().process()
 
     def build_and_install_subdir(self, make_args, subdir, skip_build=False, skip_clean=None, skip_install=None,
-                                 install_to_sysroot=None, libcheri_only=False, noncheri_only=False):
+                                 install_to_sysroot=True, libcheri_only=False, noncheri_only=False):
         is_lib = subdir.startswith("lib/") or "/lib/" in subdir or subdir.endswith("/lib")
         make_in_subdir = "make -C \"" + subdir + "\" "
         if skip_clean is None:
@@ -815,7 +815,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
         if self.config.passDashKToMake:
             make_in_subdir += "-k "
         install_to_sysroot_cmd = ""
-        if is_lib and install_to_sysroot is not None:
+        if is_lib and install_to_sysroot:
             # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
             sysroot_var = "\"$$$${SYSROOT}\""
             install_to_sysroot_cmd = "if [ -n {sysroot} ]; then {make} install MK_TESTS=no DESTDIR={sysroot}; fi".format(
