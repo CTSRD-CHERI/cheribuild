@@ -41,6 +41,7 @@ class BuildLLVM(CMakeProject):
     no_default_sysroot = None
     appendCheriBitsToBuildDir = True
     is_sdk_target = True
+    skip_cheri_symlinks = False
 
     @classmethod
     def setupConfigOptions(cls, includeClangRevision=True, includeLldbRevision=False, includeLldRevision=True,
@@ -63,18 +64,22 @@ class BuildLLVM(CMakeProject):
 
         cls.enable_assertions = cls.addBoolOption("assertions", help="build with assertions enabled", default=True)
         cls.enable_lto = cls.addBoolOption("enable-lto", help="build with LTO enabled (experimental)")
-        cls.skip_lld = cls.addBoolOption("skip-lld", help="Don't build lld as part of the llvm target")
         cls.llvm_only = cls.addBoolOption("llvm-only", help="Only build LLVM (skip clang+lld)")
-        cls.skip_static_analyzer = cls.addBoolOption("skip-static-analyzer", default=True,
-                                                     help="Don't build the clang static analyzer")
-        cls.skip_misc_llvm_tools = cls.addBoolOption("skip-unused-tools", default=True,
-            help="Don't build some of the LLVM tools that should not be needed by default (e.g. llvm-mca, llvm-pdbutil)")
+        if "skip_static_analyzer" not in cls.__dict__:
+            cls.skip_static_analyzer = cls.addBoolOption("skip-static-analyzer", default=True,
+                                                         help="Don't build the clang static analyzer")
+        if "skip_misc_llvm_tools" not in cls.__dict__:
+            cls.skip_misc_llvm_tools = cls.addBoolOption("skip-unused-tools", default=True,
+                help="Don't build some of the LLVM tools that should not be needed by default (e.g. llvm-mca, llvm-pdbutil)")
         cls.build_everything = cls.addBoolOption("build-everything", default=False,
                                                  help="Also build documentation,examples and bindings")
         if includeClangRevision:
             cls.clangRepository, cls.clangRevision = addToolOptions("clang")
         if includeLldRevision:
             cls.lldRepository, cls.lldRevision = addToolOptions("lld")
+            cls.skip_lld = cls.addBoolOption("skip-lld", help="Don't build lld as part of the llvm target")
+        else:
+            cls.skip_lld = True
         if includeLldbRevision:  # not built yet
             cls.lldbRepository, cls.lldbRevision = addToolOptions("lldb")
 
@@ -197,6 +202,8 @@ class BuildLLVM(CMakeProject):
 
     def install(self, **kwargs):
         super().install()
+        if self.skip_cheri_symlinks:
+            return
         if False:  # No longer needed
             # delete the files incompatible with cheribsd
             incompatibleFiles = list(self.installDir.glob("lib/clang/*/include/std*"))
@@ -254,6 +261,7 @@ class BuildUpstreamLLVM(BuildLLVM):
         function=lambda config, project: config.outputRoot / "upstream-llvm",
         asString="$INSTALL_ROOT/upstream-llvm")
     appendCheriBitsToBuildDir = False
+    skip_cheri_symlinks = True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
