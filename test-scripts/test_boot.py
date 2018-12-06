@@ -61,6 +61,6 @@ def test_boot_setup_args(args: argparse.Namespace):
 
 if __name__ == '__main__':
     import boot_cheribsd
-    assert sys.path[0] == str(Path(__file__).parent.absolute()), sys.path
+    assert Path(sys.path[0]).resolve() == Path(__file__).parent.resolve(), sys.path
     # we don't need to setup ssh config/authorized_keys to test the boot
     boot_cheribsd.main(test_function=run_noop_test, argparse_adjust_args_callback=test_boot_setup_args)
