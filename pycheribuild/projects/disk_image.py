@@ -324,7 +324,11 @@ class _BuildDiskImageBase(SimpleProject):
                         runCmd("chmod", "0600", authorizedKeys)
 
         if self.include_gdb:
-            gdb_path = BuildGDB.get_instance(self, self.config).real_install_root_dir
+            cross_target = self.source_project.get_crosscompile_target(self.config)
+            # We always want to include the MIPS GDB for CHERI targets:
+            if cross_target == CrossCompileTarget.CHERI:
+                cross_target = CrossCompileTarget.MIPS
+            gdb_path = BuildGDB.get_instance_for_cross_target(cross_target, self.config).real_install_root_dir
             gdb_binary = gdb_path / "bin/gdb"
             if gdb_binary.exists():
                 self.info("Adding GDB binary", gdb_binary, "to disk image")
