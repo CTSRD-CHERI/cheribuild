@@ -328,11 +328,14 @@ class _BuildDiskImageBase(SimpleProject):
             # We always want to include the MIPS GDB for CHERI targets:
             if cross_target == CrossCompileTarget.CHERI:
                 cross_target = CrossCompileTarget.MIPS
-            gdb_path = BuildGDB.get_instance_for_cross_target(cross_target, self.config).real_install_root_dir
-            gdb_binary = gdb_path / "bin/gdb"
-            if gdb_binary.exists():
-                self.info("Adding GDB binary", gdb_binary, "to disk image")
-                self.addFileToImage(gdb_binary, baseDirectory=gdb_path, mode=0o755, path_in_target="usr/bin/gdb")
+            if cross_target not in BuildGDB.supported_architectures:
+                warningMessage("GDB cannot be built for architecture ", cross_target, " -> not addding it")
+            else:
+                gdb_path = BuildGDB.get_instance_for_cross_target(cross_target, self.config).real_install_root_dir
+                gdb_binary = gdb_path / "bin/gdb"
+                if gdb_binary.exists():
+                    self.info("Adding GDB binary", gdb_binary, "to disk image")
+                    self.addFileToImage(gdb_binary, baseDirectory=gdb_path, mode=0o755, path_in_target="usr/bin/gdb")
 
 
         # Avoid long boot time on first start due to missing entropy:
