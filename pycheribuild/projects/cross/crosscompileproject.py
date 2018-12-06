@@ -316,7 +316,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
         result = self._essential_compiler_and_linker_flags + self.optimizationFlags
         result += self.COMMON_FLAGS + self.compiler_warning_flags
         if self.config.csetbounds_stats:
-            result.extend(["-mllvm", "-collect-csetbounds-output=" + str(self.buildDir) + "/csetbounds-stats.csv",
+            result.extend(["-mllvm", "-collect-csetbounds-output=" + str(self.csetbounds_stats_file),
                            "-mllvm", "-collect-csetbounds-stats=csv",
                            "-Xclang", "-cheri-bounds=everywhere-unsafe"])
         # Add mxcaptable for projects that need it

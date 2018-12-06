@@ -1262,6 +1262,10 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
     def display_name(self):
         return self.projectName
 
+    @property
+    def csetbounds_stats_file(self) -> Path:
+        return self.buildDir / "csetbounds-stats.csv"
+
     def process(self):
         if self.generate_cmakelists:
             self._do_generate_cmakelists()
@@ -1288,6 +1292,10 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             if self.config.configureOnly:
                 return
             if not self.config.skipBuild:
+                if self.config.csetbounds_stats and (self.csetbounds_stats_file.exists() or self.config.pretend):
+                    self.moveFile(self.csetbounds_stats_file, self.csetbounds_stats_file.with_suffix(".configure.csv"),
+                                  force=True)
+                    # move any csetbounds stats from configuration (since they are not useful)
                 statusUpdate("Building", self.display_name, "... ")
                 self.compile()
             if not self.config.skipInstall:
