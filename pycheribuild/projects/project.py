@@ -1293,7 +1293,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 return
             if not self.config.skipBuild:
                 if self.config.csetbounds_stats and (self.csetbounds_stats_file.exists() or self.config.pretend):
-                    self.moveFile(self.csetbounds_stats_file, self.csetbounds_stats_file.with_suffix(".configure.csv"),
+                    self.moveFile(self.csetbounds_stats_file, self.csetbounds_stats_file.with_suffix(".from-configure.csv"),
                                   force=True)
                     # move any csetbounds stats from configuration (since they are not useful)
                 statusUpdate("Building", self.display_name, "... ")
