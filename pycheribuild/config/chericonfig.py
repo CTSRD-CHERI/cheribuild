@@ -155,10 +155,9 @@ class CheriConfig(object):
         self.csetbounds_stats = loader.addBoolOption("collect-csetbounds-stats", default=False,
                                                      group=loader.crossCompileOptionsGroup, helpHidden=True,
                                                      help="Whether to log CSetBounds statistics in csv format")
-        self.subobject_bounds = loader.addOption("subobject-bounds", default=False, type=str,
+        self.subobject_bounds = loader.addOption("subobject-bounds", type=str, group=loader.crossCompileOptionsGroup,
             choices=("conservative", "subobject-safe", "aggressive", "very-aggressive", "everywhere-unsafe"),
-            group=loader.crossCompileOptionsGroup, helpHidden=False,
-            help="Whether to add additional CSetBounds to subobject references/&-operator (default is off)")
+            helpHidden=False, help="Whether to add additional CSetBounds to subobject references/&-operator")
         self.unified_sdk = loader.addBoolOption("unified-sdk", help="Build a single SDK instead of separate 128"
                                                 " and 256 bits ones", default=True)
 
