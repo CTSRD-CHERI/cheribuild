@@ -163,12 +163,21 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         dependencies = cls.dependencies
         expected_build_arch = cls.get_crosscompile_target(config)
         if callable(dependencies):
-            dependencies = dependencies(cls, config)
+            if inspect.ismethod(dependencies):
+                dependencies = cls.dependencies(config)
+            else:
+                dependencies = dependencies(cls, config)
         for dep_name in dependencies:
             if callable(dep_name):
                 dep_name = dep_name(cls, config)
+            try:
+                dep_target = targetManager.get_target_raw(dep_name)
+            except KeyError:
+                for x in targetManager.targets:
+                    print(x)
+                fatalError("Could not find target '", dep_name, "' for ", cls.__name__, sep="")
+                raise
             # Handle --include-dependencies with --skip-sdk is passed
-            dep_target = targetManager.get_target_raw(dep_name)
             if config.skipSdk and dep_target.projectClass.is_sdk_target:
                 if config.verbose:
                     statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,

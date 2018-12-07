@@ -34,6 +34,7 @@ import io
 import tempfile
 
 from .cross.cheribsd import BuildFreeBSD
+from .cross.multiarchmixin import MultiArchBaseMixin
 from .cross.gdb import BuildGDB
 from .cross.cheribsd import *
 from ..config.loader import ComputedDefaultValue
@@ -623,7 +624,6 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         self.createFileForImage("/etc/rc", showContentsByDefault=False,
                                 contents=includeLocalFile("files/minimal-image/etc/rc"))
 
-
     def makeImage(self):
         # update cheribsdbox link in case we stripped it:
         cheribsdbox_entry = self.mtree._mtree.get("./bin/cheribsdbox")
@@ -709,55 +709,49 @@ class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
         self.needs_special_pkg_repo = True
 
 
-class BuildFreeBSDImageBase(_BuildDiskImageBase):
-    doNotAddToTargets = True
-    _freebsd_suffix = None
+class BuildFreeBSDImage(MultiArchBaseMixin, _BuildDiskImageBase):
+    target = "disk-image-freebsd"
+    _source_class = BuildFreeBSD
+
+    @classproperty
+    def default_architecture(cls):
+        return cls._source_class.default_architecture
+
+    @classproperty
+    def supported_architectures(cls):
+        return cls._source_class.supported_architectures
+
+    @staticmethod
+    def dependencies(cls, config: CheriConfig):
+        return ["qemu", cls._source_class.get_class_for_target(cls.get_crosscompile_target(config)).target]
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         hostUsername = CheriConfig.get_user_name()
-        super().setupConfigOptions(defaultHostname="qemu-" + cls._freebsd_suffix + "-" + hostUsername, **kwargs)
+        suffix = cls._crossCompileTarget.value if cls._crossCompileTarget else "<TARGET>"
+        super().setupConfigOptions(defaultHostname="qemu-" + suffix + "-" + hostUsername, **kwargs)
         defaultDiskImagePath = ComputedDefaultValue(
-                function=lambda config, project: config.outputRoot / ("freebsd-" + cls._freebsd_suffix + ".img"),
-                asString="$OUTPUT_ROOT/freebsd-" + cls._freebsd_suffix + " .img")
+                function=lambda config, project: config.outputRoot / ("freebsd-" + suffix + ".img"),
+                asString="$OUTPUT_ROOT/freebsd-" + suffix + " .img")
         cls.diskImagePath = cls.addPathOption("path", default=defaultDiskImagePath, showHelp=True,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image")
-        cls.disableTMPFS = cls._freebsd_suffix == "mips"  # MALTA64 doesn't include tmpfs
-
-    def __init__(self, config: CheriConfig):
-        # TODO: different extra-files directory
-        super().__init__(config, source_class=self._freebsd_build_class)
-        self.minimumImageSize = "256m"
-
-
-class BuildFreeBSDDiskImageMIPS(BuildFreeBSDImageBase):
-    projectName = "disk-image-freebsd-mips"
-    dependencies = ["qemu", "freebsd-mips"]
-    _freebsd_build_class = BuildFreeBSD.get_class_for_target(CrossCompileTarget.MIPS)
-    _freebsd_suffix = "mips"
-    hide_options_from_help = True
-
-
-class BuildFreeBSDDiskImageX86(BuildFreeBSDImageBase):
-    projectName = "disk-image-freebsd-x86"
-    dependencies = ["qemu", "freebsd-native"]
-    _freebsd_build_class = BuildFreeBSD.get_class_for_target(CrossCompileTarget.NATIVE)
-    _freebsd_suffix = "x86"
-    hide_options_from_help = True
-    bigEndian = False
-
-class BuildFreeBSDWithDefaultOptionsDiskImageRISCV(BuildFreeBSDImageBase):
-    projectName = "disk-image-freebsd-with-default-options-riscv"
-    dependencies = ["qemu", "freebsd-with-default-options-riscv"]
-    _freebsd_build_class = BuildFreeBSDWithDefaultOptions.get_class_for_target(CrossCompileTarget.RISCV)
-    _freebsd_suffix = "riscv"
-    hide_options_from_help = True
-    bigEndian = False
+        cls.disableTMPFS = cls._crossCompileTarget == CrossCompileTarget.MIPS  # MALTA64 doesn't include tmpfs
 
     class _RISCVFileTemplates(_AdditionalFileTemplates):
         def get_fstab_template(self):
             return includeLocalFile("files/riscv/fstab.in")
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.file_templates = self._RISCVFileTemplates()
+        # TODO: different extra-files directory
+        super().__init__(config, source_class=self._source_class.get_class_for_target(self.get_crosscompile_target(config)))
+        self.minimumImageSize = "256m"
+        if self.get_crosscompile_target(config) == CrossCompileTarget.RISCV:
+            self.file_templates = self._RISCVFileTemplates()
+            self.bigEndian = False
+
+
+class BuildFreeBSDWithDefaultOptionsDiskImage(BuildFreeBSDImage):
+    projectName = "disk-image-freebsd-with-default-options"
+    _source_class = BuildFreeBSDWithDefaultOptions
+    hide_options_from_help = True
+

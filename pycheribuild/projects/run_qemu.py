@@ -35,7 +35,7 @@ from .cross.cheribsd import BuildFreeBSD
 from .cross.cheribsd import *
 from .cherios import BuildCheriOS
 from .build_qemu import BuildQEMU, BuildQEMURISCV
-from .disk_image import BuildFreeBSDImageBase
+from .disk_image import BuildFreeBSDImage
 from .disk_image import *
 from .project import *
 from pathlib import Path
@@ -205,7 +205,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
                                                      help="Don't update the kernel from the remote host")
 
     def __init__(self, config: CheriConfig, source_class: type(BuildFreeBSD)=None,
-                 disk_image_class: type(BuildFreeBSDImageBase)=None, needs_disk_image=True):
+                 disk_image_class: type(BuildFreeBSDImage)=None, needs_disk_image=True):
         super().__init__(config)
         if source_class is None and disk_image_class is not None:
             # noinspection PyProtectedMember
@@ -281,7 +281,7 @@ class LaunchFreeBSDMips(AbstractLaunchFreeBSD):
                                    **kwargs)
 
     def __init__(self, config):
-        super().__init__(config, disk_image_class=BuildFreeBSDDiskImageMIPS)
+        super().__init__(config, disk_image_class=BuildFreeBSDImage.get_class_for_target(CrossCompileTarget.MIPS))
 
 
 class LaunchCheriOSQEMU(LaunchQEMUBase):
@@ -316,7 +316,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
 
 class LaunchFreeBSDX86(AbstractLaunchFreeBSD):
     projectName = "run-freebsd-x86"
-    dependencies = ["disk-image-freebsd-x86"]
+    dependencies = ["disk-image-freebsd-native"]
     hide_options_from_help = True
 
     @classmethod
@@ -326,7 +326,7 @@ class LaunchFreeBSDX86(AbstractLaunchFreeBSD):
                                    **kwargs)
 
     def __init__(self, config):
-        super().__init__(config, disk_image_class=BuildFreeBSDDiskImageX86)
+        super().__init__(config, disk_image_class=BuildFreeBSDImage.get_class_for_target(CrossCompileTarget.NATIVE))
         self._addRequiredSystemTool("qemu-system-x86_64")
         qemu_path = shutil.which("qemu-system-x86_64")
         self.qemuBinary = Path(qemu_path if qemu_path else shutil.which("false"))
@@ -347,7 +347,7 @@ class LaunchFreeBSDWithDefaultOptionsRISCV(AbstractLaunchFreeBSD):
                                    **kwargs)
 
     def __init__(self, config):
-        super().__init__(config, disk_image_class=BuildFreeBSDWithDefaultOptionsDiskImageRISCV)
+        super().__init__(config, disk_image_class=BuildFreeBSDWithDefaultOptionsDiskImage.get_class_for_target(CrossCompileTarget.RISCV))
         self.qemuBinary = BuildQEMURISCV.qemu_binary(self)
         self.machineFlags = ["-M", "virt"]  # want VirtIO
         self.virtioDisk = True
