@@ -99,7 +99,6 @@ class CheriConfig(object):
         self.print_targets_only = loader.addBoolOption("print-targets-only", helpHidden=False, group=loader.actionGroup,
             help="Don't run the build but instead only print the targets that would be executed")
 
-
         self.clangPath = loader.addPathOption("clang-path",
               default=latestClangTool("clang"), group=loader.pathGroup,
               help="The Clang C compiler to use for compiling LLVM+Clang (must be at least version 3.7)")
@@ -156,6 +155,10 @@ class CheriConfig(object):
         self.csetbounds_stats = loader.addBoolOption("collect-csetbounds-stats", default=False,
                                                      group=loader.crossCompileOptionsGroup, helpHidden=True,
                                                      help="Whether to log CSetBounds statistics in csv format")
+        self.subobject_bounds = loader.addOption("subobject-bounds", default=False, type=str,
+            choices=("conservative", "subobject-safe", "aggressive", "very-aggressive", "everywhere-unsafe"),
+            group=loader.crossCompileOptionsGroup, helpHidden=False,
+            help="Whether to add additional CSetBounds to subobject references/&-operator (default is off)")
         self.unified_sdk = loader.addBoolOption("unified-sdk", help="Build a single SDK instead of separate 128"
                                                 " and 256 bits ones", default=True)
 

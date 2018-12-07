@@ -300,6 +300,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
         if self.compiling_for_cheri():
             # TODO: should we use -mcpu=cheri128/256?
             result.extend(["-mabi=purecap", "-mcpu=mips4", "-cheri=" + self.config.cheriBitsStr])
+            if self.config.subobject_bounds:
+                result.extend(["-Xclang", "-cheri-bounds=" + str(self.config.subobject_bounds)])
         else:
             assert self.compiling_for_mips()
             # TODO: should we use -mcpu=cheri128/256?
