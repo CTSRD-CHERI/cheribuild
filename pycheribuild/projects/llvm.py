@@ -91,12 +91,16 @@ class BuildLLVM(CMakeProject):
         if self.llvm_only:
             self.add_cmake_options(LLVM_TOOL_CLANG_BUILD=False)
             self.skip_lld = True
+        link_jobs = 2 if self.enable_lto else 4
+        # non-shared debug builds take lots of ram -> use only one parallel job
+        if self.cmakeBuildType.lower() in ("debug", "relwithdebinfo") and "-DBUILD_SHARED_LIBS=ON" not in self.cmakeOptions:
+            link_jobs = 1
         self.add_cmake_options(
             CMAKE_CXX_COMPILER=self.cppCompiler,
             CMAKE_C_COMPILER=self.cCompiler,
             LLVM_TOOL_LLDB_BUILD=False,
             LLVM_TOOL_LLD_BUILD=not self.skip_lld,
-            LLVM_PARALLEL_LINK_JOBS=2 if self.enable_lto else 4,  # anything more causes too much I/O
+            LLVM_PARALLEL_LINK_JOBS=link_jobs,  # anything more causes too much I/O
         )
 
 
