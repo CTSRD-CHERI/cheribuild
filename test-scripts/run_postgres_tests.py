@@ -36,7 +36,8 @@ import boot_cheribsd
 def run_postgres_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running PostgreSQL tests")
     # TODO: copy over the logfile and enable coredumps?
-    boot_cheribsd.run_cheribsd_command(qemu, "cd '{}' && sh -xe ./run-postgres-tests.sh".format(args.smb_dir_in_cheribsd))
+    # Run tests with a two hour timeout:
+    boot_cheribsd.run_cheribsd_command(qemu, "cd '{}' && sh -xe ./run-postgres-tests.sh".format(qemu.smb_dirs[0].in_target), timeout=120 * 60)
     return True
 
 

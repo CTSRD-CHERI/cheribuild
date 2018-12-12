@@ -95,6 +95,7 @@ def parse_smb_mount(arg: str):
 
 class CheriBSDInstance(pexpect.spawn):
     EXIT_ON_KERNEL_PANIC = True
+    smb_dirs = None  # type: typing.List[SmbMount]
 
     def expect(self, pattern: list, timeout=-1, pretend_result=None, **kwargs):
         assert isinstance(pattern, list), "expected list and not " + str(pattern)
@@ -309,6 +310,8 @@ class FakeSpawn(object):
 def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *, smb_dirs: typing.List[SmbMount]=None,
                   kernel_init_only=False) -> CheriBSDInstance:
     user_network_args = "user,id=net0,ipv6=off"
+    if smb_dirs is None:
+        smb_dirs = []
     if smb_dirs:
         for d in smb_dirs:
             if not Path(d.hostdir).exists():
@@ -333,6 +336,7 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
         # child = pexpect.spawnu(qemu_cmd, qemu_args, echo=False, timeout=60)
         child = CheriBSDInstance(qemu_cmd, qemu_args, encoding="utf-8", echo=False, timeout=60)
     # child.logfile=sys.stdout.buffer
+    child.smb_dirs = smb_dirs
     child.logfile_read = sys.stdout
     have_dhclient = False
     # ignore SIGINT for the python code, the child should still receive it
@@ -412,7 +416,7 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     ssh_keyfile = args.ssh_key
     ssh_port = args.ssh_port
     timeout = args.test_timeout
-    smb_dirs = args.smb_mount_directories  # type: typing.List[SmbMount]
+    smb_dirs = qemu.smb_dirs  # type: typing.List[SmbMount]
     setup_tests_starttime = datetime.datetime.now()
     # disable coredumps, otherwise we get no space left on device errors
     run_cheribsd_command(qemu, "sysctl kern.coredump=0")
@@ -549,7 +553,6 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
                 failure("--ssh-key should point to the public key and not ", args.ssh_key)
             if not Path(args.ssh_key).exists():
                 failure("SSH key missing: ", args.ssh_key)
-
 
         for test_archive in args.test_archive:
             if isinstance(test_archive, list):
