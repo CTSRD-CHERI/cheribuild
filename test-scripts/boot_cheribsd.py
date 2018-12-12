@@ -208,21 +208,30 @@ def debug_kernel_panic(qemu: pexpect.spawn):
     # print("\n\npexpect info = ", qemu)
 
 
-def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None, error_output=None, cheri_trap_fatal=True, timeout=60):
+def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None, error_output=None,
+                         cheri_trap_fatal=True, ignore_cheri_trap=False, timeout=60):
     qemu.sendline(cmd)
+    # FIXME: allow ignoring CHERI traps
     if expected_output:
         qemu.expect([expected_output])
+
     results = ["/bin/sh: [/\\w\\d_-]+: not found",
                "ld(-cheri)?-elf.so.1: Shared object \".+\" not found, required by \".+\"",
-               CHERI_TRAP, pexpect.TIMEOUT, PROMPT]
+               pexpect.TIMEOUT, PROMPT]
+    error_output_index = -1
+    cheri_trap_index = -1
     if error_output:
+        error_output_index = len(results)
         results.append(error_output)
+    if not ignore_cheri_trap:
+        cheri_trap_index = len(results)
+        results.append(CHERI_TRAP)
     i = qemu.expect(results, timeout=timeout, pretend_result=4)
     if i == 0:
         failure("/bin/sh: command not found: ", cmd)
     elif i == 1:
         failure("Missing shared library dependencies: ", cmd)
-    elif i == 2:
+    elif i == cheri_trap_index:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
         qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
         qemu.flush()
@@ -231,7 +240,7 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
         failure("timeout running ", cmd)
     elif i == 4:
         success("ran '", cmd, "' successfully")
-    elif i == 5:
+    elif i == error_output_index:
         # wait up to 5 seconds for a prompt to ensure the full output has been printed
         qemu.expect([PROMPT], timeout=5)
         qemu.flush()
