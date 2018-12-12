@@ -366,6 +366,8 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             self.make_args.set_with_options(DEBUG_FILES=False)
             # Don't build manpages by default
             self.make_args.set_with_options(MAN=self.with_manpages)
+            # we want to build makefs for the disk image
+            self.make_args.set(LOCAL_XTOOL_DIRS="usr.sbin/makefs")
 
         # doesn't appear to work for buildkernel
         # if self.auto_obj:
@@ -630,7 +632,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
                 return None
             # https://github.com/freebsd/freebsd/commit/1edb3ba87657e28b017dffbdc3d0b3a32999d933
             cmd = runCmd([bmake_binary] + bw_flags, env=args.env_vars, cwd=self.sourceDir,
-                         runInPretendMode=True, captureOutput=True)
+                         runInPretendMode=True, captureOutput=True, printVerboseOnly=True)
             lines = cmd.stdout.strip().split(b"\n")
             last_line = lines[-1].decode("utf-8").strip()
             if last_line.startswith("/") and cmd.returncode == 0:

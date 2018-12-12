@@ -107,11 +107,6 @@ class _BuildDiskImageBase(SimpleProject):
         self.makefs_cmd = None
         self.install_cmd = None
         self.source_project = source_class.get_instance(self, self.config)
-        if IS_FREEBSD:
-            self._addRequiredSystemTool("makefs")
-        elif self.source_project.crossbuild:
-            self._addRequiredSystemTool("freebsd-makefs", cheribuild_target="freebsd-bootstrap-tools")
-            self._addRequiredSystemTool("freebsd-install", cheribuild_target="freebsd-bootstrap-tools")
         assert isinstance(self.source_project, BuildFreeBSD)
         self.rootfsDir = self.source_project.getInstallDir(self, config)
         assert self.rootfsDir is not None
@@ -450,16 +445,24 @@ class _BuildDiskImageBase(SimpleProject):
             self.copyFromRemoteHost()
             return
 
-        self.makefs_cmd = shutil.which("freebsd-makefs")
-        self.install_cmd = shutil.which("freebsd-install")
-        # On FreeBSD we can use /usr/bin/makefs and /usr/bin/install
+        # Try to find makefs and install in the freebsd build dir
+        freebsd_builddir = self.source_project.objdir
+        makefs_xtool = freebsd_builddir / "tmp/usr/sbin/makefs"
+        if makefs_xtool.exists():
+            self.makefs_cmd = str(makefs_xtool)
+        install_xtool = freebsd_builddir / "tmp/legacy/usr/bin/install"
+        if install_xtool.exists():
+            self.install_cmd = str(install_xtool)
+
+        # On FreeBSD we can use /usr/bin/makefs and /usr/bin/install (assuming FreeBSD version is new enough)
         if IS_FREEBSD:
             if not self.install_cmd:
                 self.install_cmd = shutil.which("install")
             if not self.makefs_cmd:
                 self.makefs_cmd = shutil.which("makefs")
+
         if not self.makefs_cmd or not self.install_cmd:
-            self.fatal("Missing freebsd-install or freebsd-makefs command!")
+            self.fatal("Missing freebsd-install or freebsd-makefs command! Should be found in FreeBSD build dir")
         statusUpdate("Disk image will saved to", self.diskImagePath)
         statusUpdate("Extra files for the disk image will be copied from", self.extraFilesDir)
 
@@ -745,9 +748,10 @@ class BuildFreeBSDImage(MultiArchBaseMixin, _BuildDiskImageBase):
         # TODO: different extra-files directory
         super().__init__(config, source_class=self._source_class.get_class_for_target(self.get_crosscompile_target(config)))
         self.minimumImageSize = "256m"
+        self.bigEndian = self.compiling_for_mips() or self.compiling_for_cheri()
+
         if self.get_crosscompile_target(config) == CrossCompileTarget.RISCV:
             self.file_templates = self._RISCVFileTemplates()
-            self.bigEndian = False
 
 
 class BuildFreeBSDWithDefaultOptionsDiskImage(BuildFreeBSDImage):
