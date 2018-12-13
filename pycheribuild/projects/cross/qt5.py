@@ -73,6 +73,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 self.configureArgs.append("linux-clang")
             # FreeBSD header files may use the register storage class but c++17 disallows this
             if IS_FREEBSD:
+                self.configureArgs.append("-platform")
+                self.configureArgs.append("offscreen")
                 self.configureArgs.extend(["-c++std", "c++14"])
         else:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
@@ -320,6 +322,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                          generator=BuildQtWebkit.Generator.Ninja
                          )
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-bitwise-operations", "-Wno-error=cheri-capability-misuse", "-Wno-error=format"]  # FIXME: build with capability -Werror
+        if self.debugInfo:
+            self.COMMON_FLAGS.append("-gline-tables-only") # otherwise too much debug info
         self.add_cmake_options(PORT="Qt", ENABLE_X11_TARGET=False,
                                ENABLE_OPENGL=False,
                                USE_LIBHYPHEN=False,  # we don't have libhyphen
