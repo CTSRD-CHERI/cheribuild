@@ -366,8 +366,9 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             self.make_args.set_with_options(DEBUG_FILES=False)
             # Don't build manpages by default
             self.make_args.set_with_options(MAN=self.with_manpages)
-            # we want to build makefs for the disk image
-            self.make_args.set(LOCAL_XTOOL_DIRS="usr.sbin/makefs")
+            # we want to build makefs for the disk image (makefs depends on libnetbsd which will not be
+            # bootstrapped on FreeBSD)
+            self.make_args.set(LOCAL_XTOOL_DIRS="lib/libnetbsd usr.sbin/makefs")
 
         # doesn't appear to work for buildkernel
         # if self.auto_obj:
