@@ -39,7 +39,7 @@ def run_postgres_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
     # Run tests with a two hour timeout:
     boot_cheribsd.run_cheribsd_command(qemu, "cd '{}' && sh -xe ./run-postgres-tests.sh".format(qemu.smb_dirs[0].in_target),
                                        # We currently get some CHERI traps in postgres -> ignore
-                                       timeout=120 * 60, ignore_cheri_trap=True)
+                                       timeout=240 * 60, ignore_cheri_trap=True)
     return True
 
 
