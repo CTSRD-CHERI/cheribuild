@@ -467,7 +467,13 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     run_tests_starttime = datetime.datetime.now()
     # Run the tests (allowing custom test functions)
     if test_function:
-        return test_function(qemu, args)
+        result = test_function(qemu, args)
+        testtime = datetime.datetime.now() - run_tests_starttime
+        if result is True:
+            success("Running tests took ", testtime)
+        else:
+            failure("Tests failed after ", testtime, exit=False)
+        return result
 
     qemu.sendline(test_command +
                   " ;if test $? -eq 0; then echo 'TESTS' 'COMPLETED'; else echo 'TESTS' 'FAILED'; fi")
