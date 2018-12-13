@@ -1116,7 +1116,7 @@ class Project(SimpleProject):
 
     def runMake(self, makeTarget="", *, make_command: str = None, options: MakeOptions=None, logfileName: str = None,
                 cwd: Path = None, appendToLogfile=False, compilationDbName="compile_commands.json",
-                parallel: bool=True, stdoutFilter: "typing.Callable[[bytes], None]" = _default_stdout_filter) -> None:
+                parallel: bool=True, stdoutFilter: "typing.Optional[typing.Callable[[bytes], None]]" = _default_stdout_filter) -> None:
         if not options:
             options = self.make_args
         if not make_command:
