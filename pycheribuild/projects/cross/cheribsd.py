@@ -1133,19 +1133,25 @@ class BuildCheriBsdMfsKernel(SimpleProject):
                     self.verbose_print("Cleaning ", kernel_dir)
         from ..disk_image import BuildMinimalCheriBSDDiskImage
         image = BuildMinimalCheriBSDDiskImage.get_instance(self, self.config).diskImagePath
-        build_cheribsd._buildkernel(kernconf=kernconf, mfs_root_image=image)
+        self._build_and_install_kernel_binary(build_cheribsd, kernconf=kernconf, image=image)
+        # also build the benchmark kernel:
+        self._build_and_install_kernel_binary(build_cheribsd, kernconf=kernconf + "_BENCHMARK", image=image)
+
+    def _build_and_install_kernel_binary(self, build_cheribsd: BuildCHERIBSD, kernconf: str, image: Path):
         # Install to a temporary directory and then copy the kernel to OUTPUT_ROOT
+        # noinspection PyProtectedMember
+        build_cheribsd._buildkernel(kernconf=kernconf, mfs_root_image=image)
         with tempfile.TemporaryDirectory() as td:
+            # noinspection PyProtectedMember
             build_cheribsd._installkernel(kernconf=kernconf, destdir=td)
             # runCmd("find", td)
             self.deleteFile(self.get_installed_kernel_path(self, self.config))
-            self.installFile(Path(td, "boot/kernel/kernel"), self.get_installed_kernel_path(self, self.config),
-                             force=True, printVerboseOnly=False)
+            kernel_install_path = self._installed_kernel_for_config(self.config, kernconf)
+            self.installFile(Path(td, "boot/kernel/kernel"), kernel_install_path, force=True, printVerboseOnly=False)
             if Path(td, "boot/kernel/kernel.full").exists():
-                fullkernel_install_path = self.get_installed_kernel_path(self, self.config)
-                fullkernel_install_path = fullkernel_install_path.with_name(fullkernel_install_path.name + ".full")
-                self.installFile(Path(td, "boot/kernel/kernel"), fullkernel_install_path,
-                                 force=True, printVerboseOnly=False)
+                fullkernel_install_path = kernel_install_path.with_name(kernel_install_path.name + ".full")
+                self.installFile(Path(td, "boot/kernel/kernel.full"), fullkernel_install_path, force=True,
+                                 printVerboseOnly=False)
 
     @property
     def crossbuild(self):
@@ -1166,7 +1172,15 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 
     @classmethod
     def get_installed_kernel_path(cls, caller, config) -> Path:
-        return config.cheribsd_image_root / ("kernel." + cls.get_kernel_config(caller, config))
+        return cls._installed_kernel_for_config(config, cls.get_kernel_config(caller, config))
+
+    @classmethod
+    def get_installed_benchmark_kernel_path(cls, caller, config) -> Path:
+        return cls._installed_kernel_for_config(config, cls.get_kernel_config(caller, config) + "_BENCHMARK")
+
+    @staticmethod
+    def _installed_kernel_for_config(config: CheriConfig, kernconf: str) -> Path:
+        return config.cheribsd_image_root / ("kernel." + kernconf)
 
 
 class BuildCHERIBSDPurecap(BuildCHERIBSD):

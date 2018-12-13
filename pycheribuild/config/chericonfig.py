@@ -213,6 +213,11 @@ class CheriConfig(object):
         self.run_mips_tests_with_cheri_image = loader.addBoolOption("run-mips-tests-with-cheri-image",
             default=True, help="Use a CHERI kernel+image to run plain MIPS CheriBSD tests. "
                                "This only affects the --test option", group=loader.testsGroup)
+        self.use_minimal_benchmark_kernel = loader.addBoolOption("use-minimal-benchmark-kernel",
+            help="Use a CHERI BENCHMARK version of the cheribsd-mfs-root-kernel (without INVARIATES) for the "
+                 "run-minimal target and for tests. This can speed up longer running tests. This is the default for "
+                 "PostgreSQL and libc++ tests (passing use-minimal-benchmark-kernel can force these tests to use "
+                 "an INVARIANTS kernel).", group=loader.testsGroup, default=False)
 
         self.test_extra_args = loader.addCommandLineOnlyOption("test-extra-args", group=loader.testsGroup, type=list,
             metavar="ARGS", help="Additional flags to pass to the test script in --test")

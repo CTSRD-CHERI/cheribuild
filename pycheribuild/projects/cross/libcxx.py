@@ -291,7 +291,9 @@ class BuildLibCXX(CrossCompileCMakeProject):
         if self.compiling_for_host():
             runCmd("ninja", "check-cxx", "-v", cwd=self.buildDir)
         else:
-            self.run_cheribsd_test_script("run_libcxx_tests.py", "--lit-debug-output", "--parallel-jobs", self.test_jobs)
+            self.run_cheribsd_test_script("run_libcxx_tests.py", "--lit-debug-output", "--parallel-jobs", self.test_jobs,
+                                          # long running test -> speed up by using a kernel without invariants
+                                          use_benchmark_kernel_by_default=True)
 
 
 class BuildCompilerRtBaremetal(CrossCompileCMakeProject):

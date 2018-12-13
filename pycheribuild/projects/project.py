@@ -545,7 +545,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         pass
 
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
-                                 mount_builddir=True, mount_sourcedir=False, mount_sysroot=False):
+                                 mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
+                                 use_benchmark_kernel_by_default=False):
         # mount_sysroot may be needed for projects such as QtWebkit where the minimal image doesn't contain all the
         # necessary libraries
         from .build_qemu import BuildQEMU
@@ -553,7 +554,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         script_dir = Path("/this/will/not/work/when/using/remote-cheribuild.py")
         if kernel_path is None:
             from .cross.cheribsd import BuildCheriBsdMfsKernel
-            kernel_path = BuildCheriBsdMfsKernel.get_installed_kernel_path(self, self.config)
+            # Use the benchmark kernel by default if the parameter is set and the user didn't pass
+            # --no-use-minimal-benchmark-kernel on the command line or in the config JSON
+            use_benchmark_kernel_value = self.config.use_minimal_benchmark_kernel  # Load the value first to ensure that it has been loaded
+            use_benchmark_config_option = inspect.getattr_static(self.config, "use_minimal_benchmark_kernel")
+            assert isinstance(use_benchmark_config_option, ConfigOptionBase)
+            if use_benchmark_kernel_value or (use_benchmark_kernel_by_default and use_benchmark_config_option.is_default_value):
+                kernel_path = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self, self.config)
+            else:
+                kernel_path = BuildCheriBsdMfsKernel.get_installed_kernel_path(self, self.config)
+
             if not kernel_path.exists():
                 cheribsd_image = "cheribsd{suffix}-cheri{suffix}-malta64-mfs-root-minimal-cheribuild-kernel.bz2".format(
                         suffix="" if self.config.cheriBits == 256 else self.config.cheriBitsStr)

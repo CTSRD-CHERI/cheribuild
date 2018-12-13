@@ -219,6 +219,7 @@ class ConfigOptionBase(object):
         self._loader = _loader
         self._owningClass = _owningClass  # if none it means the global CheriConfig is the class containing this option
         self._fallback_name = _fallback_name  # for targets such as gdb-mips, etc
+        self._is_default_value = False
 
     def loadOption(self, config: "CheriConfig", instance: "typing.Optional[SimpleProject]", owner: "typing.Type",
                    return_none_if_default=False):
@@ -235,6 +236,7 @@ class ConfigOptionBase(object):
             if return_none_if_default:
                 return None # Used in jenkins to avoid updating install directory for explicit options on commandline
             result = self._getDefaultValue(config, instance)
+            self._is_default_value = True
         # Now convert it to the right type
         try:
             result = self._convertType(result)
@@ -252,6 +254,11 @@ class ConfigOptionBase(object):
     def fullOptionName(self):
         return self.name
 
+    @property
+    def is_default_value(self):
+        assert self._cached is not None, "Must load value before calling is_default_value()"
+        return self._is_default_value
+
     def __get__(self, instance, owner):
         assert instance is not None, "This attribute needs an object instance. Owner = " + str(owner)
 
@@ -260,10 +267,10 @@ class ConfigOptionBase(object):
         #     return self
         assert not self._owningClass or issubclass(owner, self._owningClass)
         if self._cached is None:
-            # noinspection PyProtectedMember
             # allow getting the value when used on a class as well:
             if instance is None:
                 instance = owner
+            # noinspection PyProtectedMember
             self._cached = self.loadOption(self._loader._cheriConfig, instance, owner)
         return self._cached
 

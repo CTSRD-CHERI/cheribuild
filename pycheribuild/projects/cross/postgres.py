@@ -126,7 +126,9 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             # self.runMake("check", cwd=self.buildDir / "src/interfaces/ecpg/test", stdoutFilter=None)
         else:
             self.run_cheribsd_test_script("run_postgres_tests.py", "--smb-mount-directory",
-                                          str(self.installDir) + ":" + str(self.installPrefix), mount_builddir=False)
+                                          str(self.installDir) + ":" + str(self.installPrefix), mount_builddir=False,
+                                          # long running test -> speed up by using a kernel without invariants
+                                          use_benchmark_kernel_by_default=True)
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
