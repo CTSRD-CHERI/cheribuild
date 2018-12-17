@@ -81,8 +81,8 @@ class BuildLibunwind(CrossCompileCMakeProject):
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=False,
                                    LIBUNWIND_ENABLE_SHARED=self.force_dynamic_linkage,
                                    )
-            self.collect_test_binaries = self.buildDir / "test-output"
-            executor = "CollectBinariesExecutor(\\\"{path}\\\", self)".format(path=self.collect_test_binaries)
+            collect_test_binaries = self.buildDir / "test-output"
+            executor = "CollectBinariesExecutor(\\\"{path}\\\", self)".format(path=collect_test_binaries)
             self.add_cmake_options(
                 LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
                               "/libunwind-test-results.xml --max-time 3600 --timeout 120 -s -vv -j1",
@@ -176,7 +176,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         cls.qemu_host = cls.addConfigOption("ssh-host", help="The QEMU SSH hostname to connect to for running tests",
                                             default=lambda c, p: "localhost")
         cls.qemu_port = cls.addConfigOption("ssh-port", help="The QEMU SSH port to connect to for running tests",
-                                            default=lambda c, p: LaunchCheriBSD.get_instance(cls, c).sshForwardingPort)
+                                            default=lambda c, p: LaunchCheriBSD.get_instance(p, c).sshForwardingPort)
         cls.qemu_user = cls.addConfigOption("ssh-user", default="root", help="The CheriBSD used for running tests")
 
         cls.test_jobs = cls.addConfigOption("parallel-test-jobs", help="Number of QEMU instances spawned to run tests "
