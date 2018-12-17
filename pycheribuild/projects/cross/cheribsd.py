@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import inspect
 import os
 import shlex
 import shutil
@@ -135,7 +136,7 @@ class BuildFreeBSDBase(Project):
     doNotAddToTargets = True    # base class only
     repository = "https://github.com/freebsd/freebsd.git"
     make_kind = MakeCommandKind.BsdMake
-    crossbuild = False
+    crossbuild = None
     skipBuildworld = False
     use_external_toolchain = False
 
@@ -171,8 +172,10 @@ class BuildFreeBSDBase(Project):
         elif is_jenkins_build():
             cls.crossbuild = True
         else:
-            if "crossbuild" not in cls.__dict__:
+            cross = inspect.getattr_static(cls, "crossbuild")
+            if cross is not True:
                 cls.crossbuild = cls.addBoolOption("crossbuild", help="Try to compile FreeBSD on non-FreeBSD machines")
+            print("CROSS:", cls.target, inspect.getattr_static(cls, "crossbuild"))
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
