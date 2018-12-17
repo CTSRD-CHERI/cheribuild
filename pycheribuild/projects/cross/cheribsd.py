@@ -171,7 +171,8 @@ class BuildFreeBSDBase(Project):
         elif is_jenkins_build():
             cls.crossbuild = True
         else:
-            cls.crossbuild = cls.addBoolOption("crossbuild", help="Try to compile FreeBSD on non-FreeBSD machines")
+            if "crossbuild" not in cls.__dict__:
+                cls.crossbuild = cls.addBoolOption("crossbuild", help="Try to compile FreeBSD on non-FreeBSD machines")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -983,6 +984,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     default_architecture = CrossCompileTarget.CHERI
     is_sdk_target = True
     hide_options_from_help = False  # FreeBSD options are hidden, but this one should be visible
+    crossbuild = True  # changes have been merged into master
 
 
     @classmethod
@@ -991,7 +993,7 @@ class BuildCHERIBSD(BuildFreeBSD):
             installDirectoryHelp = "Install directory for CheriBSD root file system (default: " \
                                    "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)"
         super().setupConfigOptions(buildKernelWithClang=True, installDirectoryHelp=installDirectoryHelp)
-        # Avoid duplicate --kerneconf string for cheribsd-native vs cheribsd
+        # Avoid duplicate --kernconf string for cheribsd-native vs cheribsd
         kernconf_shortname = None
         if use_kernconf_shortname and cls._crossCompileTarget == CrossCompileTarget.CHERI:
             kernconf_shortname = "-kernconf"
