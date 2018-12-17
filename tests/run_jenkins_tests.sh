@@ -33,7 +33,7 @@ else
 fi
 
 # env | sort
-./cheribuild.py -p __run_everything__ --cheribsd/crossbuild > /dev/null
+./cheribuild.py -p __run_everything__ --freebsd/crossbuild > /dev/null
 ./cheribuild.py --help > /dev/null
 ./cheribuild.py --help-all > /dev/null
 $pytest_binary -v --junit-xml "../$test_prefix-results.xml" tests || echo "Some tests failed"

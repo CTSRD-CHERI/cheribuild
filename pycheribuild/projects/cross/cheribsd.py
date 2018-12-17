@@ -1330,7 +1330,7 @@ class BuildCheriBsdSysrootBase(MultiArchBaseMixin, SimpleProject):
     def copySysrootFromRemoteMachine(self):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
         if not self.remotePath:
-            self.fatal("Missing remote SDK path: Please set --cheribsd-sysroot/remote-sdk-path (or --cheribsd/crossbuild)")
+            self.fatal("Missing remote SDK path: Please set --cheribsd-sysroot/remote-sdk-path (or --freebsd/crossbuild)")
             if self.config.pretend:
                 self.remotePath = "someuser@somehose:this/path/does/not/exist"
         # noinspection PyAttributeOutsideInit
