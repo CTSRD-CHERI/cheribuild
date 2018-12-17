@@ -175,7 +175,6 @@ class BuildFreeBSDBase(Project):
             cross = inspect.getattr_static(cls, "crossbuild")
             if cross is not True:
                 cls.crossbuild = cls.addBoolOption("crossbuild", help="Try to compile FreeBSD on non-FreeBSD machines")
-            print("CROSS:", cls.target, inspect.getattr_static(cls, "crossbuild"))
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
