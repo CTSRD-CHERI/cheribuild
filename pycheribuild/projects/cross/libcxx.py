@@ -138,7 +138,7 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
             # TODO: __sync_fetch_and_add in exceptions code
             self.add_cmake_options(NO_SHARED=self.force_static_linkage,
                                    DISABLE_EXCEPTIONS_RTTI=False,
-                                   NO_UNWIND_LIBRARY=True)
+                                   NO_UNWIND_LIBRARY=False)
             self.add_cmake_options(COMPARE_TEST_OUTPUT_TO_SYSTEM_OUTPUT=False)
             if not self.baremetal:
                 self.add_cmake_options(BUILD_TESTS=True)
@@ -224,11 +224,11 @@ class BuildLibCXX(CrossCompileCMakeProject):
 
         # We need to build with -G0 otherwise we get R_MIPS_GPREL16 out of range linker errors
         test_compile_flags = commandline_to_str(self.default_compiler_flags)
+        test_linker_flags = commandline_to_str(self.default_ldflags)
         if self.baremetal:
             if self.compiling_for_mips():
                 test_compile_flags += " -fno-pic -mno-abicalls"
             self.add_cmake_options(
-                LIBCXX_TEST_LINKER_FLAGS="-Wl,-T,qemu-malta.ld",
                 LIBCXX_ENABLE_FILESYSTEM=False,
                 LIBCXX_USE_COMPILER_RT=True,
                 LIBCXX_ENABLE_STDIN=False,  # currently not support on baremetal QEMU
@@ -236,10 +236,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
                 # TODO: we should be able to implement this in QEMU
                 LIBCXX_ENABLE_MONOTONIC_CLOCK=False,  # no monotonic clock for now
             )
-        else:
-            if self.compiling_for_cheri():
-                test_compile_flags += " -cheri=" + self.config.cheriBitsStr + " -mabi=purecap"
-        self.add_cmake_options(LIBCXX_TEST_COMPILER_FLAGS=test_compile_flags)
+            test_linker_flags += " -Wl,-T,qemu-malta.ld"
+        self.add_cmake_options(LIBCXX_TEST_COMPILER_FLAGS=test_compile_flags, LIBCXX_TEST_LINKER_FLAGS=test_linker_flags)
 
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
