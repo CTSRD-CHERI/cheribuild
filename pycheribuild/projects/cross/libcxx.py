@@ -136,7 +136,9 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
             self.add_cmake_options(NO_UNWIND_LIBRARY=False)
         else:
             # TODO: __sync_fetch_and_add in exceptions code
-            self.add_cmake_options(NO_SHARED=True, DISABLE_EXCEPTIONS_RTTI=True, NO_UNWIND_LIBRARY=True)
+            self.add_cmake_options(NO_SHARED=self.force_static_linkage,
+                                   DISABLE_EXCEPTIONS_RTTI=False,
+                                   NO_UNWIND_LIBRARY=True)
             self.add_cmake_options(COMPARE_TEST_OUTPUT_TO_SYSTEM_OUTPUT=False)
             if not self.baremetal:
                 self.add_cmake_options(BUILD_TESTS=True)
