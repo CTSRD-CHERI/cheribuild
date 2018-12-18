@@ -215,6 +215,10 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.getSourceDir(self, config) / "src",
             LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.getBuildDir(self, config) / "lib",
         )
+        # use llvm libunwind when testing
+        self.add_cmake_options(LIBCXX_STATIC_CXX_ABI_LIBRARY_NEEDS_UNWIND_LIBRARY=True,
+                               LIBCXX_CXX_ABI_UNWIND_LIBRARY="unwind",
+                               LIBCXX_CXX_ABI_UNWIND_LIBRARY_PATH=BuildLibunwind.getBuildDir(self, config) / "lib")
 
     def addCrossFlags(self):
         # TODO: do I even need the toolchain file to cross compile?
@@ -237,6 +241,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
                 LIBCXX_ENABLE_MONOTONIC_CLOCK=False,  # no monotonic clock for now
             )
             test_linker_flags += " -Wl,-T,qemu-malta.ld"
+
+
         self.add_cmake_options(LIBCXX_TEST_COMPILER_FLAGS=test_compile_flags, LIBCXX_TEST_LINKER_FLAGS=test_linker_flags)
 
         self.add_cmake_options(
