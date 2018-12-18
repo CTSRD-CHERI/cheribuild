@@ -194,6 +194,13 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             assert not isinstance(dep_target, MultiArchTargetAlias), "All targets should be fully resolved: " + cls.__name__
             yield dep_target
 
+    def is_exact_instance(self, class_type: "typing.Type[Any]") -> bool:
+        if self.__class__ == class_type or getattr(self, "synthetic_base", object) == class_type:
+            self.verbose_print(self, "is exact instance of", class_type)
+            return True
+        else:
+            self.verbose_print(self, "is not exact instance of", class_type)
+            return False
 
     @classmethod
     def recursive_dependencies(cls, config: CheriConfig) -> "typing.List[Target]":

@@ -120,6 +120,10 @@ class CheriConfig(object):
             "for quickly rebuilding an individual programs/libraries. If more than one dir is passed they will be "
             "processed in order.  Note: This will break if not all dependencies have been built.")
 
+        self.install_subdir_to_sysroot = loader.addBoolOption("install-subdir-to-sysroot", group=loader.freebsdGroup,
+            help="When using the --subdir option for CheriBSD targets also install the built libraries into the sysroot."
+                 " This can also be achived by running the cheribsd-sysroot target afterwards but is faster.")
+
         self.buildenv = loader.addCommandLineOnlyBoolOption("buildenv", group=loader.freebsdGroup,
                                                             help="Open a shell with the right environment for building"
                                                                  " the project. Currently only works for FreeBSD/CheriBSD")

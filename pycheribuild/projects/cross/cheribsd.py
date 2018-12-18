@@ -219,6 +219,12 @@ class BuildFreeBSDBase(Project):
     def jflag(self) -> list:
         return [self.config.makeJFlag] if self.config.makeJobs > 1 else []
 
+    # Return the path the a potetial sysroot created from installing this project
+    # Currently we only create sysroots for CheriBSD but we might change that in the future
+    # noinspection PyMethodMayBeStatic
+    def get_corresponding_sysroot(self) -> "typing.Optional[Path]":
+        return None
+
 
 class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
     dependencies = ["llvm"]
@@ -813,7 +819,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             super().process()
 
     def build_and_install_subdir(self, make_args, subdir, skip_build=False, skip_clean=None, skip_install=None,
-                                 install_to_sysroot=True, libcheri_only=False, noncheri_only=False):
+                                 install_to_internal_sysroot=True, libcheri_only=False, noncheri_only=False):
         is_lib = subdir.startswith("lib/") or "/lib/" in subdir or subdir.endswith("/lib")
         make_in_subdir = "make -C \"" + subdir + "\" "
         if skip_clean is None:
@@ -823,11 +829,17 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
         if self.config.passDashKToMake:
             make_in_subdir += "-k "
         install_to_sysroot_cmd = ""
-        if is_lib and install_to_sysroot:
-            # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
-            sysroot_var = "\"$$$${SYSROOT}\""
-            install_to_sysroot_cmd = "if [ -n {sysroot} ]; then {make} install MK_TESTS=no DESTDIR={sysroot}; fi".format(
-                make=make_in_subdir, sysroot=sysroot_var)
+        if is_lib:
+            if install_to_internal_sysroot:
+                # Due to all the bmake + shell escaping I need 4 dollars here to get it to expand SYSROOT
+                sysroot_var = "\"$$$${SYSROOT}\""
+                install_to_sysroot_cmd = "if [ -n {sysroot} ]; then {make} install MK_TESTS=no DESTDIR={sysroot}; fi".format(
+                    make=make_in_subdir, sysroot=sysroot_var)
+            if self.config.install_subdir_to_sysroot and self.get_corresponding_sysroot() is not None:
+                if install_to_sysroot_cmd:
+                    install_to_sysroot_cmd += " && "
+                install_to_sysroot_cmd += "{make} install MK_TESTS=no DESTDIR={sysroot}".format(
+                    make=make_in_subdir, sysroot=self.get_corresponding_sysroot())
 
         if skip_install:
             if install_to_sysroot_cmd:
@@ -1030,6 +1042,11 @@ class BuildCHERIBSD(BuildFreeBSD):
     @property
     def mipsOnly(self) -> bool: # Compat
         return self._crossCompileTarget == CrossCompileTarget.MIPS
+
+    def get_corresponding_sysroot(self):
+        if not self.is_exact_instance(BuildCHERIBSD):
+            return None
+        return self.config.get_sysroot_path(self.get_crosscompile_target(self.config))
 
     def __init__(self, config: CheriConfig):
         self.installAsRoot = os.getuid() == 0
@@ -1261,9 +1278,9 @@ class BuildCHERIBSDMinimal(BuildCHERIBSD):
         # self.runMake("kernel-toolchain", options=self.buildworldArgs)
         super().compile(**kwargs)
         self.build_and_install_subdir(args, "tools/cheribsdbox",
-                                      skip_build=False, skip_install=True, install_to_sysroot=True)
+                                      skip_build=False, skip_install=True, install_to_internal_sysroot=True)
         for i in self.needed_shlibs:
-            self.build_and_install_subdir(args, i, skip_build=False, skip_install=True, install_to_sysroot=True)
+            self.build_and_install_subdir(args, i, skip_build=False, skip_install=True, install_to_internal_sysroot=True)
 
     def install(self, **kwargs):
         self.makedirs(self.installDir)
@@ -1280,7 +1297,7 @@ class BuildCHERIBSDMinimal(BuildCHERIBSD):
                                           noncheri_only=True)
 
         self.build_and_install_subdir(args, "tools/cheribsdbox", skip_build=True, skip_clean=True,
-                                      skip_install=False, install_to_sysroot=False)
+                                      skip_install=False, install_to_internal_sysroot=False)
         # TODO: install bin/sh? bin/csh?
 
 
