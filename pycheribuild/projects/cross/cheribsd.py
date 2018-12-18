@@ -1439,39 +1439,3 @@ class BuildCheriBsdSysrootBase(MultiArchBaseMixin, SimpleProject):
 class BuildCheriBsdAndSysroot(TargetAlias):
     target = "cheribsd-with-sysroot"
     dependencies = ["cheribsd-cheri", "cheribsd-sysroot-cheri"]
-
-
-class BuildFreeBSDBootstrapTools(Project):
-    target = "freebsd-bootstrap-tools"
-    projectName = "freebsd-bootstrap-tools"
-    repository = "https://github.com/arichardson/cheribsd"
-    gitBranch = "crossbuild-bootstrap-tools"
-    make_kind = MakeCommandKind.BsdMake
-    defaultInstallDir = Project._installToBootstrapTools
-
-    _stdoutFilter = BuildFreeBSD._stdoutFilter
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.make_args.set_env(MAKEOBJDIRPREFIX=self.buildDir)
-        # TODO: fix this
-        # self.make_args.set_with_options(CDDL=False)
-        self.make_args.set(NO_CLEAN=True)
-        if not self.config.verbose:
-            self.make_args.add_flags("-s")
-
-        if IS_MAC:
-            self._addRequiredSystemTool("/usr/local/opt/m4/bin/m4", homebrew="m4")
-        self._addRequiredSystemTool("realpath", homebrew="coreutils")
-
-    def compile(self, cwd: Path = None):
-        "cross-bootstrap-tools-install"
-        self.runMake("cross-bootstrap-tools", cwd=self.sourceDir)
-
-    def install(self, **kwargs):
-        self.makedirs(self.installDir / "bin")
-        self.make_args.set(BOOTSTRAP_TOOLS_DESTDIR=self.installDir)
-        self.runMake("cross-bootstrap-tools-install", cwd=self.sourceDir)
-        # TODO: symlinks?
-        if not IS_FREEBSD:
-            self.createSymlink(self.installDir / "bin/freebsd-makefs", self.installDir / "bin/makefs")
