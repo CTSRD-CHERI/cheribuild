@@ -59,25 +59,6 @@ def defaultKernelConfig(config: CheriConfig, project: "BuildCHERIBSD"):
     return kernconf_name.format(bits=cheri_bits, pure=cheri_pure, mfs=mfs_root_img)
 
 
-class FreeBSDCrossTools(CMakeProject):
-    repository = "https://github.com/arichardson/freebsd-crossbuild.git"
-    defaultInstallDir = CMakeProject._installToBootstrapTools
-    projectName = "freebsd-crossbuild"
-
-    @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
-        cls.freebsd_source_dir = cls.addPathOption("freebsd-source-directory",
-                                                   help="The path to the FreeBSD source tree used for building the"
-                                                        " cross tools. Defaults to the CheriBSD source directory")
-
-    def configure(self, **kwargs):
-        freebsd_dir = self.freebsd_source_dir if self.freebsd_source_dir else BuildCHERIBSD.getSourceDir(self, self.config)
-        self.add_cmake_options(CHERIBSD_DIR=freebsd_dir, CMAKE_C_COMPILER=self.config.clangPath)
-        super().configure()
-
-
-
 def freebsd_install_dir(config: CheriConfig, project: "typing.Type[BuildFreeBSD]"):
     if project._crossCompileTarget == CrossCompileTarget.MIPS:
         return config.outputRoot / "freebsd-mips"
