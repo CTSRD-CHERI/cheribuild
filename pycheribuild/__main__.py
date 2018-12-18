@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import fcntl
 import os
 import shlex
 import shutil
@@ -75,7 +76,22 @@ def updateCheck():
             os.execv(sys.argv[0], sys.argv)
 
 
+def ensure_fd_is_blocking(fd):
+    flag = fcntl.fcntl(fd, fcntl.F_GETFL)
+    if flag & os.O_NONBLOCK:
+        # Try to unset the flag (this appears to happen on macOS sometimes):
+        fcntl.fcntl(fd, fcntl.F_SETFL, flag & ~os.O_NONBLOCK)
+    flag = fcntl.fcntl(fd, fcntl.F_GETFL)
+    if flag & os.O_NONBLOCK:
+        fatalError("fd", fd, "is set to nonblocking and could not unset flag")
+
+
 def real_main():
+    # avoid weird errors with macos terminal:
+    ensure_fd_is_blocking(sys.stdin.fileno())
+    ensure_fd_is_blocking(sys.stdout.fileno())
+    ensure_fd_is_blocking(sys.stderr.fileno())
+
     allTargetNames = list(sorted(targetManager.targetNames))
     runEverythingTarget = "__run_everything__"
     configLoader = JsonAndCommandLineConfigLoader()
