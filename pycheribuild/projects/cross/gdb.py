@@ -169,7 +169,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
                 warningMessage("You are trying to build the ", current_branch.decode("utf-8"),
                                " branch. You should be using", self.gitBranch)
                 if self.queryYesNo("Would you like to change to the " + self.gitBranch + " branch?", forceResult=False):
-                    self.runCmd("git", "checkout", self.gitBranch)
+                    runCmd("git", "checkout", self.gitBranch)
                 elif not self.queryYesNo("Are you sure you want to continue?", forceResult=False):
                     self.fatal("Wrong branch!")
 
