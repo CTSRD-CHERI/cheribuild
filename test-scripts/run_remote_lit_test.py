@@ -38,8 +38,8 @@ import boot_cheribsd
 
 KERNEL_PANIC = False
 
-def flush_thread(f, qemu: pexpect.spawn):
-    while not qemu.tests_completed:
+def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
+    while not should_exit_event.wait(timeout=0.1):
         if f:
             f.flush()
         i = qemu.expect([pexpect.TIMEOUT, "KDB: enter:"], timeout=qemu.flush_interval)
@@ -123,9 +123,9 @@ Host cheribsd-test-instance
     # Fixme starting lit at the same time does not work!
     # TODO: add the polling to the main thread instead of having another thread?
     # start the qemu output flushing thread so that we can see the kernel panic
-    qemu.tests_completed = False
     qemu.flush_interval = 15 # flush the logfile every 15 seconds
-    t = threading.Thread(target=flush_thread, args=(qemu_logfile, qemu))
+    should_exit_event = threading.Event()
+    t = threading.Thread(target=flush_thread, args=(qemu_logfile, qemu, should_exit_event))
     t.daemon = True
     t.start()
     shard_prefix = "SHARD" + str(args.internal_shard) + ": " if args.internal_shard else ""
@@ -148,7 +148,7 @@ Host cheribsd-test-instance
             print(shard_prefix + lit_proc.read())
         print("Lit finished.")
         qemu.flush_interval = 1
-        qemu.tests_completed = True
+        should_exit_event.set()
         if lit_proc and lit_proc.exitstatus == 1:
             boot_cheribsd.failure(shard_prefix + "SOME TESTS FAILED", exit=False)
     except:
@@ -156,5 +156,7 @@ Host cheribsd-test-instance
     finally:
         if qemu_logfile:
             qemu_logfile.flush()
-        t.join()
+        t.join(timeout=30)
+        if t.is_alive():
+            boot_cheribsd.failure("Failed to kill flush thread. Interacting with CheriBSD will not work!")
     return True
