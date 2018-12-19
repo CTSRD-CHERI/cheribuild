@@ -1253,15 +1253,16 @@ class BuildCHERIBSDMinimal(BuildCHERIBSD):
         self.sysroot_only = True
 
     def compile(self, **kwargs):
+        args_without_subdir_override = self.buildworldArgs
         # subdir-override seems to break if we don't build toolchain first
-        args = self.buildworldArgs
-        args.remove_var("SUBDIR_OVERRIDE")
-        # self.runMake("kernel-toolchain", options=self.buildworldArgs)
+        args_without_subdir_override.remove_var("SUBDIR_OVERRIDE")
+        self.runMake("kernel-toolchain", options=args_without_subdir_override)
         super().compile(**kwargs)
-        self.build_and_install_subdir(args, "tools/cheribsdbox",
+        self.build_and_install_subdir(args_without_subdir_override, "tools/cheribsdbox",
                                       skip_build=False, skip_install=True, install_to_internal_sysroot=True)
         for i in self.needed_shlibs:
-            self.build_and_install_subdir(args, i, skip_build=False, skip_install=True, install_to_internal_sysroot=True)
+            self.build_and_install_subdir(args_without_subdir_override, i, skip_build=False,
+                                          skip_install=True, install_to_internal_sysroot=True)
 
     def install(self, **kwargs):
         self.makedirs(self.installDir)
