@@ -160,17 +160,18 @@ class BuildGDB(CrossCompileAutotoolsProject):
                     runCmd("git", "remote", "set-url", "origin", "https://github.com/CTSRD-CHERI/gdb.git",
                            runInPretendMode=True, cwd=self.sourceDir)
         super().update()
-        # TODO: move this to Project so it can also be used for other targets
-        status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
-                        captureOutput=True, printVerboseOnly=True, cwd=self.sourceDir, runInPretendMode=True)
-        if status.stdout.startswith(b"## ") and not status.stdout.startswith(b"## " + self.gitBranch.encode("utf-8") + b"..."):
-            current_branch = status.stdout[3:status.stdout.find(b"...")]
-            warningMessage("You are trying to build the ", current_branch.decode("utf-8"),
-                           " branch. You should be using", self.gitBranch)
-            if self.queryYesNo("Would you like to change to the " + self.gitBranch + " branch?", forceResult=False):
-                self.runCmd("git", "checkout", self.gitBranch)
-            elif not self.queryYesNo("Are you sure you want to continue?", forceResult=False):
-                self.fatal("Wrong branch!")
+        if self.sourceDir.exists():
+            # TODO: move this to Project so it can also be used for other targets
+            status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
+                            captureOutput=True, printVerboseOnly=True, cwd=self.sourceDir, runInPretendMode=True)
+            if status.stdout.startswith(b"## ") and not status.stdout.startswith(b"## " + self.gitBranch.encode("utf-8") + b"..."):
+                current_branch = status.stdout[3:status.stdout.find(b"...")]
+                warningMessage("You are trying to build the ", current_branch.decode("utf-8"),
+                               " branch. You should be using", self.gitBranch)
+                if self.queryYesNo("Would you like to change to the " + self.gitBranch + " branch?", forceResult=False):
+                    self.runCmd("git", "checkout", self.gitBranch)
+                elif not self.queryYesNo("Are you sure you want to continue?", forceResult=False):
+                    self.fatal("Wrong branch!")
 
     @property
     def CC(self):
