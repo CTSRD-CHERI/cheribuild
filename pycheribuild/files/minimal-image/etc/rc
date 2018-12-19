@@ -54,6 +54,7 @@ MDSZ=500m
 echo "create $MDSZ TMPFS at /tmp"
 mkdir -p /tmp
 mount -t tmpfs -o size=$MDSZ tmpfs /tmp
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 
 if /sbin/ifconfig -l | grep atse0; then
     echo "set atse0 if to polling"
