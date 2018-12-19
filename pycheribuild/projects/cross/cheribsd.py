@@ -1148,8 +1148,8 @@ class BuildCheriBsdMfsKernel(SimpleProject):
             # noinspection PyProtectedMember
             build_cheribsd._installkernel(kernconf=kernconf, destdir=td)
             # runCmd("find", td)
-            self.deleteFile(self.get_installed_kernel_path(self, self.config))
             kernel_install_path = self._installed_kernel_for_config(self.config, kernconf)
+            self.deleteFile(kernel_install_path)
             self.installFile(Path(td, "boot/kernel/kernel"), kernel_install_path, force=True, printVerboseOnly=False)
             if Path(td, "boot/kernel/kernel.full").exists():
                 fullkernel_install_path = kernel_install_path.with_name(kernel_install_path.name + ".full")
