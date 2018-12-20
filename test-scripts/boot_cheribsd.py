@@ -226,7 +226,7 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
     if not ignore_cheri_trap:
         cheri_trap_index = len(results)
         results.append(CHERI_TRAP)
-    i = qemu.expect(results, timeout=timeout, pretend_result=4)
+    i = qemu.expect(results, timeout=timeout, pretend_result=3)
     if i == 0:
         failure("/bin/sh: command not found: ", cmd)
     elif i == 1:
@@ -311,6 +311,9 @@ class FakeSpawn(object):
 
     def sendline(self, msg):
         print("RUNNING '", msg, "'", sep="", file=sys.stderr, flush=True)
+
+    def flush(self):
+        pass
 
     def isalive(self):
         return False
