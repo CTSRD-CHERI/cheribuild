@@ -147,7 +147,7 @@ class _BuildDiskImageBase(SimpleProject):
         if file in self.extraFiles:
             self.extraFiles.remove(file)  # remove it from extraFiles so we don't install it twice
 
-    def createFileForImage(self, pathInImage: str, *, contents: str="\n", showContentsByDefault=True, mode=None):
+    def createFileForImage(self, pathInImage: str, *, contents: str="\n", showContentsByDefault=False, mode=None):
         if pathInImage.startswith("/"):
             pathInImage = pathInImage[1:]
         assert not pathInImage.startswith("/")
@@ -255,13 +255,13 @@ class _BuildDiskImageBase(SimpleProject):
         else:
             fstabContents = fstabContents.format_map(dict(tmpfsrem=""))
 
-        self.createFileForImage("/etc/fstab", contents=fstabContents)
+        self.createFileForImage("/etc/fstab", contents=fstabContents, showContentsByDefault=True)
 
         # enable ssh and set hostname
         # TODO: use separate file in /etc/rc.conf.d/ ?
         self.hostname = os.path.expandvars(self.hostname)   # Expand env vars in hostname to allow $CHERI_BITS
         rcConfContents = self.file_templates.get_rc_conf_template().format(hostname=self.hostname)
-        self.createFileForImage("/etc/rc.conf", contents=rcConfContents)
+        self.createFileForImage("/etc/rc.conf", contents=rcConfContents, showContentsByDefault=False)
 
         cshrcContents = self.file_templates.get_cshrc_template().format(
             SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
@@ -363,7 +363,7 @@ class _BuildDiskImageBase(SimpleProject):
         self.mtree.write(self.manifestFile)
         # print(self.manifestFile.read_text())
         debug_options = []
-        if self.config.verbose:
+        if self.config.debug_output:
             debug_options = ["-d", "0x90000"]  # trace POPULATE and WRITE_FILE events
         try:
             runCmd([self.makefs_cmd] + debug_options + [
@@ -479,7 +479,7 @@ class _BuildDiskImageBase(SimpleProject):
             # we have to make a copy as we modify self.extraFiles in self.addFileToImage()
             for p in self.extraFiles.copy():
                 pathInImage = p.relative_to(self.extraFilesDir)
-                self.print("Adding user provided file /", pathInImage, " to disk image.", sep="")
+                self.verbose_print("Adding user provided file /", pathInImage, " to disk image.", sep="")
                 self.addFileToImage(p, baseDirectory=self.extraFilesDir)
 
             # then walk the rootfs to see if any additional files should be added:
@@ -648,8 +648,9 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                     i.attributes["contents"] = cheribsdbox_path
 
         # runCmd(["sh", "-c", "du -ah " + shlex.quote(str(self.tmpdir)) + " | sort -h"])
-        if self.config.verbose:
+        if self.config.debug_output:
             self.mtree.write(sys.stderr)
+        if self.config.verbose:
             runCmd("du", "-ah", self.tmpdir)
         super().makeImage()
 
