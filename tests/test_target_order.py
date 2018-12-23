@@ -104,9 +104,9 @@ def test_remove_duplicates():
 def test_minimal_run():
     # Check that we build the mfs root first
     assert _sort_targets(["disk-image-minimal", "cheribsd-mfs-root-kernel", "run-minimal"]) == \
-                         ["disk-image-minimal", "cheribsd-mfs-root-kernel", "run-minimal"]
+                         ["disk-image-minimal", "cheribsd-mfs-root-kernel-cheri", "run-minimal"]
     assert _sort_targets(["cheribsd-mfs-root-kernel", "disk-image-minimal", "run-minimal"]) == \
-                         ["disk-image-minimal", "cheribsd-mfs-root-kernel", "run-minimal"]
+                         ["disk-image-minimal", "cheribsd-mfs-root-kernel-cheri", "run-minimal"]
 
 
 # Check that libcxx deps with skip sdk pick the matching -native/-mips versions
