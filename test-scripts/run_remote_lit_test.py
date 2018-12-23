@@ -54,7 +54,7 @@ def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
             global KERNEL_PANIC
             KERNEL_PANIC = True
             # TODO: tell lit to abort now....
-    boot_cheribsd.success("EXIT FLUSH THREAD.")
+    boot_cheribsd.success("QEMU output flushing thread terminated.")
 
 
 def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str,
@@ -153,8 +153,10 @@ Host cheribsd-test-instance
         if lit_proc and lit_proc.exitstatus == 1:
             boot_cheribsd.failure(shard_prefix + "SOME TESTS FAILED", exit=False)
     except subprocess.CalledProcessError as e:
+        boot_cheribsd.failure(shard_prefix + "SOME TESTS FAILED: ", e, exit=False)
+        # Should only ever return 1 (otherwise something else went wrong!)
         if e.returncode == 1:
-            boot_cheribsd.failure(shard_prefix + "SOME TESTS FAILED", exit=False)
+            return False
         else:
             raise
     finally:
