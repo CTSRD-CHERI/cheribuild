@@ -179,7 +179,10 @@ if __name__ == '__main__':
             result.update_statistics()
             result.write(str(xunit_file))
             boot_cheribsd.success("Done merging JUnit XML outputs into ", xunit_file)
-
+            print("Duration: ", result.time)
+            print("Tests: ", result.tests)
+            print("Failures: ", result.failures)
+            print("Errors: ", result.errors)
         sys.exit()
 
     libcxx_main()
