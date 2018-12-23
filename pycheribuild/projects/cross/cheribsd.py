@@ -1122,13 +1122,15 @@ class BuildCHERIBSD(BuildFreeBSD):
             runCmd("git", "submodule", "update", cwd=self.sourceDir)
 
 
-class BuildCheriBsdMfsKernel(SimpleProject):
+class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
     projectName = "cheribsd-mfs-root-kernel"
     dependencies = ["disk-image-minimal"]
+    supported_architectures = [CrossCompileTarget.CHERI, CrossCompileTarget.MIPS]
+    default_architecture = CrossCompileTarget.CHERI
 
     def process(self):
         build_cheribsd = BuildCHERIBSD.get_instance(self, self.config)
-        kernconf = self.get_kernel_config(self, self.config)
+        kernconf = self._get_kernconf_to_build(BuildCHERIBSD.get_instance(self, self.config))
         if self.config.clean:
             kernel_dir = build_cheribsd.kernel_objdir(kernconf)
             if kernel_dir:
@@ -1171,6 +1173,10 @@ class BuildCheriBsdMfsKernel(SimpleProject):
             build_cheribsd = BuildCHERIBSD.get_instance_for_cross_target(CrossCompileTarget.CHERI, config)
         else:
             build_cheribsd = BuildCHERIBSD.get_instance(caller, config)
+        return cls._get_kernconf_to_build(build_cheribsd)
+
+    @classmethod
+    def _get_kernconf_to_build(cls, build_cheribsd: BuildCHERIBSD):
         return build_cheribsd.kernelConfig + "_MFS_ROOT"
 
     @classmethod
