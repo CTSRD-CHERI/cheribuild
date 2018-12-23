@@ -74,6 +74,7 @@ class BuildLibunwind(CrossCompileCMakeProject):
                                LIBUNWIND_LIBCXX_LIBRARY_PATH="",
                                LIBUNWIND_TEST_LINKER_FLAGS=test_linker_flags,
                                LIBUNWIND_TEST_COMPILER_FLAGS=test_compiler_flags,
+                               LIBUNWIND_ENABLE_ASSERTIONS=True,
                                )
         if not self.compiling_for_host():
             # Needing a .so makes it slightly annoying to test
