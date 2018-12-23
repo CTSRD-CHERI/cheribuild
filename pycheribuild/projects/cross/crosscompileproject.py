@@ -79,7 +79,7 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
             targetName += "-" + config.cross_target_suffix
         return Path(BuildCHERIBSD.rootfsDir(project, config) / "opt" / targetName / project.projectName.lower())
     elif project.crossInstallDir == CrossInstallDir.SDK:
-        return project.crossSysrootPath
+        return project.sdkSysroot
     fatalError("Unknown install dir for", project.projectName)
 
 
@@ -208,21 +208,21 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 self.COMMON_FLAGS.append("-D_POSIX_MONOTONIC_CLOCK=1")  # pretend that we have a monotonic clock
                 self.COMMON_FLAGS.append("-D_POSIX_TIMERS=1")  # pretend that we have a monotonic clock
 
-            self.sdkSysroot = self.crossSysrootPath
-            if self.baremetal:
-                self.sdkSysroot = self.config.sdkDir / "baremetal" / self.targetTriple
-
             if self.crossInstallDir == CrossInstallDir.SDK:
-                if self.baremetal:
-                    self._installPrefix = "/"
-                    self.destdir = self.sdkSysroot
-                else:
-                    self._installPrefix = "/usr/local"
-                    self.destdir = self.crossSysrootPath
+                statusUpdate("INSTALLDIR = ", self._installDir, "INSTALL_PREFIX=", self._installPrefix,
+                             "DESTDIR=", self.destdir)
+                self._installPrefix = Path("/" if self.baremetal else "/usr/local")
+                self.destdir = self._installPrefix
             elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
                 from .cheribsd import BuildCHERIBSD
-                self._installPrefix = Path("/", self._installDir.relative_to(BuildCHERIBSD.rootfsDir(self, config)))
-                self.destdir = BuildCHERIBSD.rootfsDir(self, config)
+                relative_to_rootfs = os.path.relpath(str(self._installDir), str(BuildCHERIBSD.rootfsDir(self, config)))
+                if relative_to_rootfs.startswith(os.path.pardir):
+                    self.verbose_print("Custom install dir", self._installDir, "-> using / as install prefix")
+                    self._installPrefix = Path("/")
+                    self.destdir = self._installDir
+                else:
+                    self._installPrefix = Path("/", relative_to_rootfs)
+                    self.destdir = BuildCHERIBSD.rootfsDir(self, config)
             else:
                 assert self._installPrefix and self.destdir, "both must be set!"
 
@@ -238,6 +238,12 @@ class CrossCompileMixin(MultiArchBaseMixin):
         if self.use_asan and not self.compiling_for_cheri():
             self.COMMON_FLAGS.append("-fsanitize=address")
             self.LDFLAGS.append("-fsanitize=address")
+
+    @property
+    def sdkSysroot(self) -> Path:
+        if self.baremetal:
+            return self.config.sdkDir / "baremetal" / self.targetTriple
+        return self.crossSysrootPath
 
     def links_against_newlib_baremetal(self):
         # This needs to be fixed once we have RTEMS

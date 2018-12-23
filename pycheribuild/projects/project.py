@@ -1235,7 +1235,7 @@ class Project(SimpleProject):
         return self.real_install_root_dir
 
     @property
-    def installPrefix(self):
+    def installPrefix(self) -> Path:
         if self._installPrefix is not None:
             return self._installPrefix
         return self._installDir
