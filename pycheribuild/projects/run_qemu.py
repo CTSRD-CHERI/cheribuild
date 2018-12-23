@@ -356,7 +356,7 @@ class LaunchFreeBSDWithDefaultOptionsRISCV(AbstractLaunchFreeBSD):
 
 class LaunchCheriBsdMfsRoot(AbstractLaunchFreeBSD):
     projectName = "run-minimal"
-    dependencies = ["qemu", "cheribsd-mfs-root-kernel"]
+    dependencies = ["qemu", "cheribsd-mfs-root-kernel-cheri"]
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
