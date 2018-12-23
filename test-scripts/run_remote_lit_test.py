@@ -33,6 +33,7 @@ import pexpect
 import argparse
 import time
 import threading
+import subprocess
 from pathlib import Path
 import boot_cheribsd
 
@@ -42,6 +43,8 @@ def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
     while not should_exit_event.wait(timeout=0.1):
         if f:
             f.flush()
+        if should_exit_event.is_set():
+            break
         i = qemu.expect([pexpect.TIMEOUT, "KDB: enter:"], timeout=qemu.flush_interval)
         if boot_cheribsd.PRETEND:
             time.sleep(1)
@@ -147,15 +150,18 @@ Host cheribsd-test-instance
                 lit_proc.sendintr()
             print(shard_prefix + lit_proc.read())
         print("Lit finished.")
-        qemu.flush_interval = 1
-        should_exit_event.set()
         if lit_proc and lit_proc.exitstatus == 1:
             boot_cheribsd.failure(shard_prefix + "SOME TESTS FAILED", exit=False)
-    except:
-        raise
+    except subprocess.CalledProcessError as e:
+        if e.returncode == 1:
+            boot_cheribsd.failure(shard_prefix + "SOME TESTS FAILED", exit=False)
+        else:
+            raise
     finally:
         if qemu_logfile:
             qemu_logfile.flush()
+        qemu.flush_interval = 0.1
+        should_exit_event.set()
         t.join(timeout=30)
         if t.is_alive():
             boot_cheribsd.failure("Failed to kill flush thread. Interacting with CheriBSD will not work!")
