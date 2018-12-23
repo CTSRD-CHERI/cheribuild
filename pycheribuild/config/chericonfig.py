@@ -139,7 +139,7 @@ class CheriConfig(object):
 
         # Attributes for code completion:
         self.verbose = None  # type: bool
-        self.debug_output = loader.addCommandLineOnlyBoolOption("debug-output", default=False, help="Extremely verbose output")
+        self.debug_output = loader.addCommandLineOnlyBoolOption("debug-output", "vv", default=False, help="Extremely verbose output")
         self.quiet = None  # type: bool
         self.clean = None  # type: bool
         self.force = None  # type: bool
@@ -236,6 +236,8 @@ class CheriConfig(object):
         self.loader.load()
         if self.print_targets_only:
             self.pretend = True
+        if self.debug_output:
+            self.verbose = True
         self.targets = self.loader.targets
         from ..filesystemutils import FileSystemUtils
         if self.clangPath is None:
