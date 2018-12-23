@@ -1299,6 +1299,16 @@ class BuildCheriBsdSysrootBase(MultiArchBaseMixin, SimpleProject):
     default_architecture = CrossCompileTarget.CHERI
     rootfs_source_class = BuildCHERIBSD  # type: BuildCHERIBSD
 
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        bsdtar_path = shutil.which("bsdtar")
+        if IS_LINUX:
+            # GNU tar doesn't accept --include (and doesn't handle METALOG
+            self.bsdtar_cmd = "bsdtar"
+            self._addRequiredSystemTool("bsdtar", cheribuild_target="bsdtar", apt="bsdtar")
+        else:
+            self.bsdtar_cmd = "bsdtar" if bsdtar_path else "tar"
+
     def fixSymlinks(self):
         # copied from the build_sdk.sh script
         # TODO: we could do this in python as well, but this method works
@@ -1359,10 +1369,12 @@ class BuildCheriBsdSysrootBase(MultiArchBaseMixin, SimpleProject):
     def createSysroot(self):
         # we need to add include files and libraries to the sysroot directory
         self.makedirs(self.crossSysrootPath / "usr")
-        # GNU tar doesn't accept --include
-        tar_cmd = "bsdtar" if IS_LINUX else "tar"
         # use tar+untar to copy all necessary files listed in metalog to the sysroot dir
-        archiveCmd = [tar_cmd, "cf", "-", "--include=./lib/", "--include=./usr/include/",
+        # Since we are using the metalog argument we need to use BSD tar and not GNU tar!
+        bsdtar_path = shutil.which(str(self.bsdtar_cmd))
+        if not bsdtar_path:
+            bsdtar_path = str(self.bsdtar_cmd)
+        archiveCmd = [bsdtar_path, "cf", "-", "--include=./lib/", "--include=./usr/include/",
                       "--include=./usr/lib/", "--include=./usr/libdata/"]
         if self.compiling_for_cheri():
             archiveCmd.append("--include=./usr/libcheri")
