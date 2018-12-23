@@ -125,7 +125,7 @@ class _BuildDiskImageBase(SimpleProject):
     def addFileToImage(self, file: Path, *, baseDirectory: Path, user="root", group="wheel", mode=None,
                        path_in_target=None):
         if path_in_target is None:
-            path_in_target = file.relative_to(baseDirectory)
+            path_in_target = os.path.relpath(str(file), str(baseDirectory))
         assert not str(path_in_target).startswith(".."), path_in_target
 
         if self.strip_binaries and file.exists():
