@@ -1301,13 +1301,10 @@ class BuildCheriBsdSysrootBase(MultiArchBaseMixin, SimpleProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        bsdtar_path = shutil.which("bsdtar")
-        if IS_LINUX:
-            # GNU tar doesn't accept --include (and doesn't handle METALOG
-            self.bsdtar_cmd = "bsdtar"
-            self._addRequiredSystemTool("bsdtar", cheribuild_target="bsdtar", apt="bsdtar")
-        else:
-            self.bsdtar_cmd = "bsdtar" if bsdtar_path else "tar"
+        # GNU tar doesn't accept --include (and doesn't handle METALOG). bsdtar appears to be available
+        # on FreeBSD and macOS by default. On Linux it is not always installed by default.
+        self.bsdtar_cmd = "bsdtar"
+        self._addRequiredSystemTool("bsdtar", cheribuild_target="bsdtar", apt="bsdtar")
 
     def fixSymlinks(self):
         # copied from the build_sdk.sh script
