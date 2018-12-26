@@ -51,6 +51,10 @@ class BuildLibunwind(CrossCompileCMakeProject):
     repository = "https://github.com/CTSRD-CHERI/libunwind.git"
     defaultInstallDir = installToCXXDir
 
+    @property
+    def should_use_sdk_clang(self):
+        return True
+
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # Adding -ldl won't work: no libdl in /usr/libcheri
@@ -163,6 +167,10 @@ class BuildLibCXX(CrossCompileCMakeProject):
     repository = "https://github.com/CTSRD-CHERI/libcxx.git"
     defaultInstallDir = installToCXXDir
     dependencies = ["libcxxrt"]
+
+    @property
+    def should_use_sdk_clang(self):
+        return True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):

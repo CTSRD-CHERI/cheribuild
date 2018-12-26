@@ -368,8 +368,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
     @property
     def CC(self):
-        # on MacOS compiling with the SDK clang doesn't seem to work as expected (it picks the wrong linker)
-        if self.compiling_for_host() and (not self.config.use_sdk_clang_for_native_xbuild or IS_MAC):
+        if not self.should_use_sdk_clang:
             return self.config.clangPath if not self.forceDefaultCC else Path("cc")
         use_prefixed_cc = not self.compiling_for_host() and not self.baremetal
         compiler_name = self.targetTriple + "-clang" if use_prefixed_cc else "clang"
@@ -377,11 +376,18 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
     @property
     def CXX(self):
-        if self.compiling_for_host() and not self.config.use_sdk_clang_for_native_xbuild:
+        if not self.should_use_sdk_clang:
             return self.config.clangPlusPlusPath if not self.forceDefaultCC else Path("c++")
         use_prefixed_cxx = not self.compiling_for_host() and not self.baremetal
         compiler_name = self.targetTriple + "-clang++" if use_prefixed_cxx else "clang++"
         return self.compiler_dir / compiler_name
+
+    @property
+    def should_use_sdk_clang(self):
+        # on MacOS compiling with the SDK clang doesn't seem to work as expected (it picks the wrong linker)
+        if self.compiling_for_host() and (not self.config.use_sdk_clang_for_native_xbuild or IS_MAC):
+            return False
+        return True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
