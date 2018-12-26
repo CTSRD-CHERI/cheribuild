@@ -6,6 +6,10 @@ from pycheribuild.config.loader import ConfigLoaderBase, DefaultValueOnlyConfigL
 from pycheribuild.projects.project import SimpleProject
 from pycheribuild.targets import Target
 
+import pycheribuild.utils
+
+pycheribuild.utils._TEST_MODE = True
+
 class MockArgs(object):
     targets = []
 

@@ -52,7 +52,7 @@ class LaunchQEMUBase(SimpleProject):
     _forwardSSHPort = True
     _provide_src_via_smb = False
     sshForwardingPort = None  # type: int
-    qemu_smb_mount = None
+    custom_qemu_smb_mount = None
     _hasPCI = True
 
     @classmethod

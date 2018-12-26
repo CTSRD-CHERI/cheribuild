@@ -63,6 +63,8 @@ __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includ
            "get_version_output", "classproperty"]  # no-combine
 
 
+_TEST_MODE = False
+
 class classproperty(object):
     def __init__(self, f):
         self.f = f
@@ -429,6 +431,8 @@ def includeLocalFile(path: str) -> str:
 
 
 def have_working_internet_connection():
+    if _TEST_MODE:
+        return True
     # Try to connect to google DNS server at 8.8.8.8 to check if we have a working internet connection
     # Don't make a DNS request since that could be broken for other reasons!
     # From https://stackoverflow.com/questions/3764291/checking-network-connection/33117579#33117579

@@ -351,7 +351,7 @@ def test_config_file_include():
             b'{ "run": { "smb-host-directory": "/some/path" }, "#include": "common.json" }')
         result = _get_config_with_include(config_dir, b'{ "run": { "ssh-forwarding-port": 12345 }, "#include": "change-smb-dir.json" }')
         run_project = targetManager.get_target_raw("run").get_or_create_project(None, result)
-        assert run_project.qemu_smb_mount == Path("/some/path")
+        assert run_project.custom_qemu_smb_mount == Path("/some/path")
         assert run_project.sshForwardingPort == 12345
 
 
