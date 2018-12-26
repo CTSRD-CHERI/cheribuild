@@ -231,7 +231,8 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             source_class = disk_image_class.get_instance(self, config).source_project
         self.source_class = source_class
         self.currentKernel = source_class.get_installed_kernel_path(self, config)
-        self.rootfs_path = source_class.rootfsDir(self, config)
+        if hasattr(source_class, "rootfsDir"):
+            self.rootfs_path = source_class.rootfsDir(self, config)
         if needs_disk_image:
             self.diskImage = disk_image_class.get_instance(self, config).diskImagePath
         self.needsRemoteKernelCopy = True
