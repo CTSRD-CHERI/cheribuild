@@ -85,6 +85,37 @@ class BuildQEMUBase(AutotoolsProject):
                                   printVerboseOnly=True, runInPretendMode=True).stdout.decode("utf-8").strip()
             self._extraCFlags += " " + glibIncludes
 
+        # Disable some more unneeded things (we don't usually need the GUI frontends)
+        if not self.gui:
+            self.configureArgs.extend(["--disable-vnc", "--disable-sdl", "--disable-gtk", "--disable-opengl"])
+            if IS_MAC:
+                self.configureArgs.append("--disable-cocoa")
+
+        python_path = shutil.which("python2.7") or shutil.which("python2") or ""
+        # QEMU needs python 2.7 for building:
+        self.configureArgs.append("--python=" + python_path)
+        if self.debug_info:
+            self.configureArgs.extend(["--enable-debug", "--enable-debug-tcg"])
+        else:
+            # Try to optimize as much as possible:
+            self.configureArgs.extend(["--disable-stack-protector"])
+
+        if self.with_sanitizers:
+            self.configureArgs.append("--enable-sanitizers")
+
+        # Having symbol information is useful for debugging and profiling
+        self.configureArgs.append("--disable-strip")
+
+        if IS_LINUX:
+            # "--enable-libnfs", # version on Ubuntu 14.04 is too old? is it needed?
+            # self.configureArgs += ["--enable-kvm", "--enable-linux-aio", "--enable-vte", "--enable-sdl",
+            #                        "--with-sdlabi=2.0", "--enable-virtfs"]
+            self.configureArgs.extend(["--disable-stack-protector"])  # seems to be broken on some Ubuntu 14.04 systems
+
+        else:
+            self.configureArgs.extend(["--disable-linux-aio", "--disable-kvm"])
+
+    def configure(self, **kwargs):
         compiler = self.config.clangPath
         if compiler:
             ccinfo = getCompilerInfo(compiler)
@@ -133,37 +164,6 @@ class BuildQEMUBase(AutotoolsProject):
         self._extraCFlags += " -Wall"
         # This would have cought some problems in the past
         self._extraCFlags += " -Werror=return-type"
-        # Disable some more unneeded things (we don't usually need the GUI frontends)
-        if not self.gui:
-            self.configureArgs.extend(["--disable-vnc", "--disable-sdl", "--disable-gtk", "--disable-opengl"])
-            if IS_MAC:
-                self.configureArgs.append("--disable-cocoa")
-
-        python_path = shutil.which("python2.7") or shutil.which("python2") or ""
-        # QEMU needs python 2.7 for building:
-        self.configureArgs.append("--python=" + python_path)
-        if self.debug_info:
-            self.configureArgs.extend(["--enable-debug", "--enable-debug-tcg"])
-        else:
-            # Try to optimize as much as possible:
-            self.configureArgs.extend(["--disable-stack-protector"])
-
-        if self.with_sanitizers:
-            self.configureArgs.append("--enable-sanitizers")
-
-        # Having symbol information is useful for debugging and profiling
-        self.configureArgs.append("--disable-strip")
-
-        if IS_LINUX:
-            # "--enable-libnfs", # version on Ubuntu 14.04 is too old? is it needed?
-            # self.configureArgs += ["--enable-kvm", "--enable-linux-aio", "--enable-vte", "--enable-sdl",
-            #                        "--with-sdlabi=2.0", "--enable-virtfs"]
-            self.configureArgs.extend(["--disable-stack-protector"])  # seems to be broken on some Ubuntu 14.04 systems
-
-        else:
-            self.configureArgs.extend(["--disable-linux-aio", "--disable-kvm"])
-
-    def configure(self, **kwargs):
         if self.use_smbd:
             smbd_path = "/usr/sbin/smbd"
             if IS_FREEBSD:
