@@ -252,7 +252,9 @@ class BuildLibCXX(CrossCompileCMakeProject):
             test_linker_flags += " -Wl,-T,qemu-malta.ld"
 
 
-        self.add_cmake_options(LIBCXX_TEST_COMPILER_FLAGS=test_compile_flags, LIBCXX_TEST_LINKER_FLAGS=test_linker_flags)
+        self.add_cmake_options(LIBCXX_TEST_COMPILER_FLAGS=test_compile_flags,
+                               LIBCXX_TEST_LINKER_FLAGS=test_linker_flags,
+                               LIBCXX_SLOW_TEST_HOST=True) # some tests need more tolerance/less iterations on QEMU
 
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
