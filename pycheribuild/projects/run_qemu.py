@@ -69,14 +69,9 @@ class LaunchQEMUBase(SimpleProject):
                                             help="If set, the QEMU monitor will be reachable by connecting to localhost"
                                                  "at $PORT via telnet instead of using CTRL+A,C")
 
-        default_smb_dir = None
-        # Only default to providing the smb mount if smbd exists
-        if cls._provide_src_via_smb and shutil.which("smbd"):  # for running CheriBSD + FreeBSD
-            default_smb_dir = ComputedDefaultValue(function=lambda cfg, proj: cfg.sourceRoot,
-                                                   asString="$CHERIBUILD_SOURCE_ROOT")
-        cls.qemu_smb_mount = cls.addPathOption("smb-host-directory", default=default_smb_dir, metavar="DIR",
-                                               help="If set QEMU will provide this directory over smb with the "
-                                                    "name //10.0.2.4/qemu for use with mount_smbfs")
+        cls.custom_qemu_smb_mount = cls.addPathOption("smb-host-directory", default=None, metavar="DIR",
+                                                      help="If set QEMU will provide this directory over smb with the "
+                                                            "name //10.0.2.4/qemu for use with mount_smbfs")
         # TODO: -s will no longer work, not sure anyone uses it though
         if cls._forwardSSHPort:
             cls.sshForwardingPort = cls.addConfigOption("ssh-forwarding-port", shortname=sshPortShortname, kind=int,
@@ -95,6 +90,7 @@ class LaunchQEMUBase(SimpleProject):
         self._projectSpecificOptions = []
         self.machineFlags = ["-M", "malta"]  # malta cpu
         self._qemuUserNetworking = True
+        self.rootfs_path = None  # type: Path
 
     def process(self):
         if not self.qemuBinary.exists():
@@ -153,10 +149,33 @@ class LaunchQEMUBase(SimpleProject):
         ] + self._projectSpecificOptions + diskOptions + monitorOptions + logfileOptions + self.extraOptions
         statusUpdate("About to run QEMU with image", self.diskImage, "and kernel", self.currentKernel)
         user_network_options = ""
-        if self.qemu_smb_mount:
-            statusUpdate("Providing", self.qemu_smb_mount, "over SMB to guest. "
-                         "Use `mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu /mnt` to mount it")
-            user_network_options += ",smb=" + str(self.qemu_smb_mount)
+        smb_dir_count = 0
+
+        def add_smb_dir(directory, target, readonly=False):
+            if not directory:
+                return
+            nonlocal user_network_options
+            nonlocal smb_dir_count
+            if smb_dir_count:
+                user_network_options += ":"
+            else:
+                user_network_options += ",smb="
+            user_network_options += str(directory) + ("@ro" if readonly else "")
+            smb_dir_count += 1
+            guest_cmd = coloured(AnsiColour.yellow, "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu", str(smb_dir_count),
+                                 target, sep="")
+            statusUpdate("Providing ", coloured(AnsiColour.green, str(directory)),
+                         coloured(AnsiColour.cyan, " over SMB to the guest. Use `"), guest_cmd,
+                         coloured(AnsiColour.cyan, "` to mount it"), sep="")
+
+        # Only default to providing the smb mount if smbd exists
+        if self._provide_src_via_smb and shutil.which("smbd"):  # for running CheriBSD + FreeBSD
+            add_smb_dir(self.custom_qemu_smb_mount, "/mnt")
+            add_smb_dir(self.config.sourceRoot, "/srcroot", readonly=True)
+            add_smb_dir(self.config.buildRoot, "/buildroot", readonly=False)
+            add_smb_dir(self.config.outputRoot, "/outputroot", readonly=True)
+            add_smb_dir(self.rootfs_path, "/rootfs", readonly=False)
+
         if self._forwardSSHPort:
             user_network_options += ",hostfwd=tcp::" + str(self.sshForwardingPort) + "-:22"
             # bind the qemu ssh port to the hosts port
@@ -212,6 +231,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             source_class = disk_image_class.get_instance(self, config).source_project
         self.source_class = source_class
         self.currentKernel = source_class.get_installed_kernel_path(self, config)
+        self.rootfs_path = source_class.rootfsDir(self, config)
         if needs_disk_image:
             self.diskImage = disk_image_class.get_instance(self, config).diskImagePath
         self.needsRemoteKernelCopy = True
