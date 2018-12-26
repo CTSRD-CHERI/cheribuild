@@ -1103,8 +1103,7 @@ class Project(SimpleProject):
                 allArgs = [shutil.which("compiledb"), "--output", self.buildDir / compilationDbName] + allArgs
         if not self.config.makeWithoutNice:
             allArgs = ["nice"] + allArgs
-        # TODO: this should be a super-verbose flag instead
-        if self.config.verbose and make_command == "ninja":
+        if self.config.debug_output and make_command == "ninja":
             allArgs.append("-v")
         if self.config.passDashKToMake:
             allArgs.append("-k")
@@ -1358,13 +1357,25 @@ class CMakeProject(Project):
         super().__init__(config)
         self.configureCommand = os.getenv("CMAKE_COMMAND", "cmake")
         self._addRequiredSystemTool("cmake", homebrew="cmake", zypper="cmake", apt="cmake", freebsd="cmake")
+        # allow a -G flag in cmake-options to override the default generator (e.g. use makefiles for CLion)
+        custom_generator = next((x for x in self.cmakeOptions if x.startswith("-G")), None)
+        if custom_generator:
+            if "Unix Makefiles" in custom_generator:
+                generator = CMakeProject.Generator.Makefiles
+            elif "Ninja" in custom_generator:
+                generator = CMakeProject.Generator.Ninja
+            else:
+                # TODO: add support for cmake --build <dir> --target <tgt> -- <args>
+                fatalError("Unknown CMake Generator", custom_generator, "-> don't know which build command to run")
         self.generator = generator
         self.configureArgs.append(str(self.sourceDir))  # TODO: use undocumented -H and -B options?
         if self.generator == CMakeProject.Generator.Ninja:
-            self.configureArgs.append("-GNinja")
+            if not custom_generator:
+                self.configureArgs.append("-GNinja")
             self.make_args.kind = MakeCommandKind.Ninja
         if self.generator == CMakeProject.Generator.Makefiles:
-            self.configureArgs.append("-GUnix Makefiles")
+            if not custom_generator:
+                self.configureArgs.append("-GUnix Makefiles")
             self.make_args.kind = MakeCommandKind.DefaultMake
 
         self.configureArgs.append("-DCMAKE_BUILD_TYPE=" + self.cmakeBuildType)
