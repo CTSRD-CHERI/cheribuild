@@ -1297,7 +1297,8 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if self.config.verbose:
             print(self.projectName, "directories: source=%s, build=%s, install=%s" %
                   (self.sourceDir, self.buildDir, self.installDir))
-        self.update()
+        if not self.config.skipUpdate:
+            self.update()
         if not self._systemDepsChecked:
             self.checkSystemDependencies()
         assert self._systemDepsChecked, "self._systemDepsChecked must be set by now!"
