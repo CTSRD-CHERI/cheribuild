@@ -33,11 +33,16 @@ import pexpect
 import argparse
 import time
 import threading
+import multiprocessing
 import subprocess
+import sys
 from pathlib import Path
 import boot_cheribsd
 
 KERNEL_PANIC = False
+COMPLETED = "COMPLETED"
+FAILURE = "FAILURE"
+
 
 def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
     while not should_exit_event.wait(timeout=0.1):
@@ -58,9 +63,41 @@ def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
 
 
 def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str,
-                         llvm_lit_path: str=None) -> bool:
+                         mp_q: multiprocessing.Queue = None, mp_barrier: multiprocessing.Barrier = None,
+                         llvm_lit_path: str = None) -> bool:
+    try:
+        result = run_remote_lit_tests_impl(testsuite=testsuite, qemu=qemu, args=args, tempdir=tempdir,
+                                           mp_q=mp_q, mp_barrier=mp_barrier, llvm_lit_path=llvm_lit_path)
+        if mp_q:
+            mp_q.put((COMPLETED, args.internal_shard))
+        return result
+    except:
+        if mp_q:
+            boot_cheribsd.failure("GOT EXCEPTION in shard ", args.internal_shard, sys.exc_info())
+            e = sys.exc_info()[1]
+            mp_q.put((FAILURE, args.internal_shard, str(type(e)) + ": " +str(e)))
+        raise
+
+
+def run_remote_lit_tests_impl(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str,
+                              mp_q: multiprocessing.Queue = None, mp_barrier: multiprocessing.Barrier = None,
+                              llvm_lit_path: str = None) -> bool:
     qemu.EXIT_ON_KERNEL_PANIC = False # since we run multiple threads we shouldn't use sys.exit()
-    print("PID of QEMU:", qemu.pid)
+    boot_cheribsd.info("PID of QEMU: ", qemu.pid)
+
+    def sync_with_main_process(stage):
+        if mp_barrier:
+            assert mp_q is not None
+            if args.multiprocessing_debug:
+                boot_cheribsd.success("Syncing shard ", args.internal_shard, " with main process. Stage: ", stage)
+            try:
+                mp_q.put((COMPLETED, args.internal_shard, stage))
+                mp_barrier.wait(timeout=4*60*60)
+            except threading.BrokenBarrierError:
+                boot_cheribsd.failure("ERROR: Another shard caused a fatal error. EXITING shard", args.internal_shard,
+                                      exit=True)
+
+    sync_with_main_process("booted CheriBSD")
     port = args.ssh_port
     user = "root"  # TODO: run these tests as non-root!
     test_build_dir = Path(args.build_dir)
@@ -88,6 +125,10 @@ Host cheribsd-test-instance
     boot_cheribsd.run_host_command(["cat", str(Path(tempdir, "config"))])
     # Check that the config file works:
     boot_cheribsd.run_host_command(["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance", "-p", str(port), "--", "echo", "connection successful"], cwd=str(test_build_dir))
+
+    if args.pretend:
+        time.sleep(0.5)
+    sync_with_main_process("checked SSH connection")
 
     if False:
         # slow executor using scp:
@@ -167,4 +208,5 @@ Host cheribsd-test-instance
         t.join(timeout=30)
         if t.is_alive():
             boot_cheribsd.failure("Failed to kill flush thread. Interacting with CheriBSD will not work!")
+            return False
     return True

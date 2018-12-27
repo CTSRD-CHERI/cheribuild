@@ -129,7 +129,8 @@ def find_free_port() -> int:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind(('', 0))
     global _SSH_SOCKET_PLACEHOLDER
-    _SSH_SOCKET_PLACEHOLDER = s  # don't let other parallel jobs grab the same socket name
+    # keep the socket open until just before we start QEMU to prevent other parallel jobs from reusing the same port
+    _SSH_SOCKET_PLACEHOLDER = s
     return s.getsockname()[1]
 
 
