@@ -33,6 +33,7 @@ import traceback
 
 import pexpect
 import argparse
+import os
 import time
 import threading
 import multiprocessing
@@ -76,8 +77,7 @@ def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
 
 
 def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str,
-                         mp_q: multiprocessing.Queue = None, mp_barrier: multiprocessing.Barrier = None,
-                         llvm_lit_path: str = None) -> bool:
+                         mp_q: multiprocessing.Queue = None, llvm_lit_path: str = None) -> bool:
     try:
         result = run_remote_lit_tests_impl(testsuite=testsuite, qemu=qemu, args=args, tempdir=tempdir,
                                            mp_q=mp_q, llvm_lit_path=llvm_lit_path)
@@ -88,9 +88,7 @@ def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, a
         if mp_q:
             boot_cheribsd.failure("GOT EXCEPTION in shard ", args.internal_shard, sys.exc_info(), exit=False)
             # print(sys.exc_info()[2])
-            traceback.print_tb(sys.exc_info()[2])
-            boot_cheribsd.failure("PRINTED TB shard ", args.internal_shard, sys.exc_info(), exit=False)
-
+            # traceback.print_tb(sys.exc_info()[2])
             e = sys.exc_info()[1]
             mp_q.put((FAILURE, args.internal_shard, str(type(e)) + ": " +str(e)))
         raise
@@ -107,10 +105,11 @@ def run_remote_lit_tests_impl(testsuite: str, qemu: boot_cheribsd.CheriBSDInstan
                 boot_cheribsd.success("Shard ", args.internal_shard, " stage complete: ", stage)
             mp_q.put((NEXT_STAGE, args.internal_shard, stage))
 
-    if args.pretend:
-        if args.internal_shard == 2:
-            time.sleep(10)
+    if args.pretend and os.getenv("FAIL_TIMEOUT_BOOT") and args.internal_shard == 2:
+        time.sleep(10)
     notify_main_process(MultiprocessStages.TESTING_SSH_CONNECTION)
+    if args.pretend and os.getenv("FAIL_RAISE_EXCEPTION") and args.internal_shard == 1:
+        raise RuntimeError("SOMETHING WENT WRONG!")
     port = args.ssh_port
     user = "root"  # TODO: run these tests as non-root!
     test_build_dir = Path(args.build_dir)

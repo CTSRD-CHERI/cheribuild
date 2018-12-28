@@ -44,6 +44,7 @@ import subprocess
 import sys
 import time
 import tempfile
+import traceback
 import typing
 from pathlib import Path
 from contextlib import closing
@@ -600,6 +601,8 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
         force_decompression = True
         keep_compressed_images = False
     kernel = str(maybe_decompress(Path(args.kernel), force_decompression, keep_archive=keep_compressed_images))
+    if (os.getenv("FAIL_EXTRACT_KERNEL") or args.pretend) and getattr(args, "internal_shard", 0) == 2:
+        raise RuntimeError("Simulating failed extraction of " + args.kernel)
     diskimg = None
     if args.disk_image:
         diskimg = str(maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images))
@@ -619,9 +622,8 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
                 info("Setting up SSH took: ", datetime.datetime.now() - setup_ssh_starttime)
             tests_okay = runtests(qemu, args, test_archives=test_archives, test_function=test_function)
         except Exception:
-            import traceback
-            traceback.print_exc(file=sys.stderr)
             failure("FAILED to run tests!! ", exit=False)
+            traceback.print_exc(file=sys.stderr)
             tests_okay = False
         except KeyboardInterrupt:
             failure("Tests interrupted!!! ", exit=False)
@@ -644,8 +646,7 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
     success("===> DONE")
     info("Total execution time:", datetime.datetime.now() - starttime)
     if not tests_okay:
-        failure("Some tests failed!")
-        sys.exit(1)
+        failure("Some tests failed!", exit=True)
 
 
 if __name__ == "__main__":

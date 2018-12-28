@@ -37,6 +37,7 @@ import signal
 import sys
 import tempfile
 import time
+import traceback
 from multiprocessing import Process, Queue, Barrier
 from pathlib import Path
 from queue import Empty
@@ -69,23 +70,25 @@ def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue):
     # sys.argv.append("--pretend")
     print("shard", num, sys.argv)
     try:
-        libcxx_main(ssh_port_barrier=barrier, mp_queue=q, ssh_port_queue=ssh_port_queue)
-        print("Job", num, "completed")
+        libcxx_main(ssh_port_barrier=barrier, mp_queue=q, ssh_port_queue=ssh_port_queue, shard_num=num)
+        boot_cheribsd.success("====> Job ", num, " completed")
     except Exception as e:
         boot_cheribsd.failure("Job ", num, " failed!!", e, exit=False)
+        raise
 
 
-def libcxx_main(ssh_port_barrier: Barrier = None, mp_queue: Queue = None, ssh_port_queue: Queue = None):
+def libcxx_main(ssh_port_barrier: Barrier = None, mp_queue: Queue = None, ssh_port_queue: Queue = None,
+                shard_num: int = None):
     def set_cmdline_args(args: argparse.Namespace):
         print("Setting args:", args)
         if mp_queue:
             # check that we don't get a conflict
-            mp_debug(args, "Syncing shard ", args.internal_shard, " with main process. Stage: assign SSH port")
-            ssh_port_queue.put((args.ssh_port, args.internal_shard))  # check that we don't get a conflict
+            mp_debug(args, "Syncing shard ", shard_num, " with main process. Stage: assign SSH port")
+            ssh_port_queue.put((args.ssh_port, shard_num))  # check that we don't get a conflict
             ssh_port_barrier.wait()  # barrier ensures that all processes are using a different port
             mp_queue.put((run_remote_lit_test.NEXT_STAGE, args.internal_shard,
                           run_remote_lit_test.MultiprocessStages.BOOTING_CHERIBSD))
-        if args.interact and (args.internal_shard or args.internal_num_shards or args.parallel_jobs):
+        if args.interact and (shard_num is not None or args.internal_num_shards or args.parallel_jobs):
             boot_cheribsd.failure("Cannot use --interact with multiple shards")
             sys.exit()
 
@@ -97,6 +100,13 @@ def libcxx_main(ssh_port_barrier: Barrier = None, mp_queue: Queue = None, ssh_po
     try:
         run_tests_main(test_function=run_libcxx_tests, need_ssh=True, # we need ssh running to execute the tests
                        argparse_setup_callback=add_cmdline_args, argparse_adjust_args_callback=set_cmdline_args)
+    except Exception as e:
+        if mp_queue:
+            boot_cheribsd.failure("GOT EXCEPTION in shard ", shard_num, sys.exc_info(), exit=False)
+            # print(sys.exc_info()[2])
+            traceback.print_tb(sys.exc_info()[2])
+            mp_queue.put((run_remote_lit_test.FAILURE, shard_num, str(type(e)) + ": " + str(e)))
+        raise
     finally:
         print("Finished running ", " ".join(sys.argv))
 
@@ -146,6 +156,8 @@ def run_parallel(args: argparse.Namespace):
                     result.add_testsuite(error_suite)
                 if processes[i].stage != run_remote_lit_test.MultiprocessStages.EXITED:
                     error_msg = "ERROR: shard " + str(shard_num) + " did not exit cleanly! Was in stage: " + processes[i].stage.value
+                    if hasattr(processes[i], "error_message"):
+                        error_msg += "\nError message:\n" + processes[i].error_message
                     error_suite = junitparser.TestSuite(name="bad-exit-shard-" + str(shard_num))
                     error_case = junitparser.TestCase(name="bad-exit-status")
                     error_case.result = junitparser.Error(message=error_msg)
@@ -259,7 +271,9 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
                 # assert target_process.stage < shard_result[2], "STAGE WENT BACKWARDS?"
                 target_process.stage = shard_result[2]
             elif shard_result[0] == run_remote_lit_test.FAILURE:
-                boot_cheribsd.failure("===> FATAL: Shard ", shard_result[1], " failed: ", shard_result[2], exit=True)
+                target_process.error_message = shard_result[2]
+                target_process.stage = run_remote_lit_test.MultiprocessStages.FAILED
+                boot_cheribsd.failure("===> FATAL: Shard ", shard_result[1], " failed: ", shard_result[2], exit=False)
             else:
                 boot_cheribsd.failure("===> FATAL: Received invalid shard result message: ", shard_result, exit=True)
         except Empty:
@@ -268,13 +282,18 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
                 if not p.is_alive():
                     mp_debug(args, "Found dead process", p)
                     if retrying_queue_read:
+                        mp_debug(args, "Already retried read after finding dead process", p)
                         boot_cheribsd.failure("===> ERROR: shard ", p, " died without sending a message!", exit=False)
                         remaining_processes.remove(p)
                     else:
                         # Try to read from the queue one more time to see if we missed a message
                         retrying_queue_read = True
+                        mp_debug(args, "Retrying read after finding dead process", p)
                         break
             continue
+        except KeyboardInterrupt:
+            dump_processes(processes)
+            boot_cheribsd.failure("GOT KEYBOARD INTERRUPT! EXITING!", exit=True)
 
     boot_cheribsd.success("All shards have terminated")
     # If we got an error we should not end up here -> all processes should be in stage exited
@@ -283,7 +302,7 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
         if p.stage not in (run_remote_lit_test.MultiprocessStages.EXITED,
                            run_remote_lit_test.MultiprocessStages.FAILED,
                            run_remote_lit_test.MultiprocessStages.TIMED_OUT):
-            boot_cheribsd.failure("Processs", p, "in invalid state:", p.stage, exit=True)
+            boot_cheribsd.failure(p, " exited in invalid state:", p.stage, exit=True)
 
     # All shards should have completed -> give them 60 seconds to shut down cleanly
     wait_or_terminate_all_shards(processes, max_time=60, timed_out=timed_out)
