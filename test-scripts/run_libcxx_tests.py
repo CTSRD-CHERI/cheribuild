@@ -29,20 +29,21 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import atexit
-import pexpect
 import argparse
-import os
-import subprocess
-import tempfile
-import time
+import atexit
 import datetime
+import os
 import signal
 import sys
-import threading
-from multiprocessing import Process, Semaphore, Queue, Barrier
-from queue import Empty
+import tempfile
+import time
+from multiprocessing import Process, Queue, Barrier
 from pathlib import Path
+from queue import Empty
+
+# To combine the test result xmls
+import junitparser
+
 import boot_cheribsd
 import run_remote_lit_test
 
@@ -123,6 +124,43 @@ def run_parallel(args: argparse.Namespace):
         return run_parallel_impl(args, processes, mp_q, mp_barrier, ssh_port_queue)
     finally:
         wait_or_terminate_all_shards(processes, max_time=5, timed_out=False)
+        # merge junit xml files
+        if args.xunit_output:
+            boot_cheribsd.success("Merging JUnit XML outputs")
+            result = junitparser.JUnitXml()
+            xunit_file = Path(args.xunit_output).absolute()
+            dump_processes(processes)
+            for i in range(args.parallel_jobs):
+                shard_num = i + 1
+                shard_file = xunit_file.with_name("shard-" + str(shard_num) + "-" + xunit_file.name)
+                mp_debug(args, processes[i], processes[i].stage)
+                if shard_file.exists():
+                    result += junitparser.JUnitXml.fromfile(str(shard_file))
+                else:
+                    error_msg = "ERROR: could not find JUnit XML " + str(shard_file) + " for shard " + str(shard_num)
+                    boot_cheribsd.failure(error_msg, exit=False)
+                    error_suite = junitparser.TestSuite(name="failed-shard-" + str(shard_num))
+                    error_case = junitparser.TestCase(name="cannot-find-file")
+                    error_case.result = junitparser.Error(message=error_msg)
+                    error_suite.add_testcase(error_case)
+                    result.add_testsuite(error_suite)
+                if processes[i].stage != run_remote_lit_test.MultiprocessStages.EXITED:
+                    error_msg = "ERROR: shard " + str(shard_num) + " did not exit cleanly! Was in stage: " + processes[i].stage.value
+                    error_suite = junitparser.TestSuite(name="bad-exit-shard-" + str(shard_num))
+                    error_case = junitparser.TestCase(name="bad-exit-status")
+                    error_case.result = junitparser.Error(message=error_msg)
+                    error_suite.add_testcase(error_case)
+                    result.add_testsuite(error_suite)
+
+            result.update_statistics()
+            result.write(str(xunit_file))
+            if args.pretend:
+                print(xunit_file.read_text())
+            boot_cheribsd.success("Done merging JUnit XML outputs into ", xunit_file)
+            print("Duration: ", result.time)
+            print("Tests: ", result.tests)
+            print("Failures: ", result.failures)
+            print("Errors: ", result.errors)
 
 def wait_or_terminate_all_shards(processes, max_time, timed_out):
     assert max_time > 0 or timed_out
@@ -155,8 +193,6 @@ def dump_processes(processes: "typing.List[Process]"):
 
 def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]", mp_q: Queue, mp_barrier: Barrier,
                       ssh_port_queue: Queue):
-    # ensure we import junitparser only when running parallel jobs since it is not needed otherwise
-    import junitparser
     timed_out = False
     starttime = datetime.datetime.now()
     ssh_ports = []  # check that we don't have multiple parallel jobs trying to use the same port
@@ -177,12 +213,15 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
     max_test_duration = datetime.timedelta(seconds=4 * 60 * 60)
     test_end_time = datetime.datetime.utcnow() + max_test_duration
     # If any shard has not yet booted CheriBSD after 10 minutes something went horribly wrong
-    boot_end_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=10 * 60)
+    max_boot_time = datetime.timedelta(seconds=10 * 60) if not args.pretend else datetime.timedelta(seconds=5)
+    boot_end_time = datetime.datetime.utcnow() + max_boot_time
     booted_shards = 0
     remaining_processes = processes.copy()
     retrying_queue_read = False
     while len(remaining_processes) > 0:
         if timed_out:
+            for p in remaining_processes:
+                p.stage = run_remote_lit_test.MultiprocessStages.TIMED_OUT
             break
         loop_start_time = datetime.datetime.utcnow()
         num_shards_not_booted = len(processes) - booted_shards
@@ -190,21 +229,20 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
             mp_debug(args, "Still waiting for ", num_shards_not_booted, "to boot")
             if loop_start_time > boot_end_time:
                 timed_out = True
-                boot_cheribsd.failure("ERROR: ", num_shards_not_booted, " shards did not boot within", len(remaining_processes),
-                                      "shards remaining: ", remaining_processes, exit=False)
-                boot_cheribsd.failure("ERROR: ", num_shards_not_booted, " shards did not boot within",
-                                      len(remaining_processes),
-                                      "shards remaining: ", remaining_processes, exit=False)
-                break
+                boot_cheribsd.failure("ERROR: ", num_shards_not_booted, " shards did not boot within ", max_boot_time,
+                                      ". Shards remaining: ", remaining_processes, exit=False)
+                dump_processes(processes)
+                continue
 
         mp_debug(args, "Still waiting for ", remaining_processes, "to finish")
         if boot_end_time > test_end_time:
             timed_out = True
             boot_cheribsd.failure("Reached test timeout of", max_test_duration, " with ", len(remaining_processes),
                                   "shards remaining: ", remaining_processes, exit=False)
-            break
+            dump_processes(processes)
+            continue
         remaining_test_time = test_end_time - loop_start_time
-        max_timeout = 120.0 if not args.pretend else 2.0
+        max_timeout = 120.0 if not args.pretend else 0.5
         try:
             shard_result = mp_q.get(timeout=min(max(1.0, remaining_test_time.total_seconds()), max_timeout))
             retrying_queue_read = False
@@ -242,7 +280,10 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
     # If we got an error we should not end up here -> all processes should be in stage exited
     dump_processes(processes)
     for p in processes:
-        assert p.stage == run_remote_lit_test.MultiprocessStages.EXITED, p.stage
+        if p.stage not in (run_remote_lit_test.MultiprocessStages.EXITED,
+                           run_remote_lit_test.MultiprocessStages.FAILED,
+                           run_remote_lit_test.MultiprocessStages.TIMED_OUT):
+            boot_cheribsd.failure("Processs", p, "in invalid state:", p.stage, exit=True)
 
     # All shards should have completed -> give them 60 seconds to shut down cleanly
     wait_or_terminate_all_shards(processes, max_time=60, timed_out=timed_out)
@@ -252,34 +293,6 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
     else:
         boot_cheribsd.success("All parallel jobs completed!")
     boot_cheribsd.success("Total execution time for parallel libcxx tests: ", datetime.datetime.now() - starttime)
-    # merge junit xml files
-    if args.xunit_output:
-        boot_cheribsd.success("Merging JUnit XML outputs")
-        result = junitparser.JUnitXml()
-        xunit_file = Path(args.xunit_output).absolute()
-        for i in range(args.parallel_jobs):
-            shard_num = i + 1
-            shard_file = xunit_file.with_name("shard-" + str(shard_num) + "-" + xunit_file.name)
-            if not shard_file.exists():
-                error_msg = "ERROR: could not find JUnit XML " + str(shard_file) + " for shard " + str(shard_num)
-                boot_cheribsd.failure(error_msg, exit=False)
-                error_suite = junitparser.TestSuite(name="failed-shard-" + str(shard_num))
-                error_case = junitparser.TestCase(name="cannot-find-file")
-                error_case.result = junitparser.Error(message=error_msg)
-                error_suite.add_testcase(error_case)
-                result.add_testsuite(error_suite)
-                continue
-            result += junitparser.JUnitXml.fromfile(str(shard_file))
-
-        result.update_statistics()
-        result.write(str(xunit_file))
-        if args.pretend:
-            print(xunit_file.read_text())
-        boot_cheribsd.success("Done merging JUnit XML outputs into ", xunit_file)
-        print("Duration: ", result.time)
-        print("Tests: ", result.tests)
-        print("Failures: ", result.failures)
-        print("Errors: ", result.errors)
 
 
 def main():

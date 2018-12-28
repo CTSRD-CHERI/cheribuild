@@ -53,6 +53,8 @@ class MultiprocessStages(Enum):
     TESTING_SSH_CONNECTION = "testing SSH connection to CheriBSD"
     RUNNING_TESTS = "running lit tests"
     EXITED = "exited"
+    FAILED = "failed"
+    TIMED_OUT = "timed out"
 
 
 def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
@@ -105,6 +107,9 @@ def run_remote_lit_tests_impl(testsuite: str, qemu: boot_cheribsd.CheriBSDInstan
                 boot_cheribsd.success("Shard ", args.internal_shard, " stage complete: ", stage)
             mp_q.put((NEXT_STAGE, args.internal_shard, stage))
 
+    if args.pretend:
+        if args.internal_shard == 2:
+            time.sleep(10)
     notify_main_process(MultiprocessStages.TESTING_SSH_CONNECTION)
     port = args.ssh_port
     user = "root"  # TODO: run these tests as non-root!
@@ -135,7 +140,7 @@ Host cheribsd-test-instance
     boot_cheribsd.run_host_command(["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance", "-p", str(port), "--", "echo", "connection successful"], cwd=str(test_build_dir))
 
     if args.pretend:
-        time.sleep(0.5)
+        time.sleep(2.5)
 
     if False:
         # slow executor using scp:
