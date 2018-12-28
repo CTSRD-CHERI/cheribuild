@@ -86,7 +86,7 @@ def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue, kernel, di
 def libcxx_main(ssh_port_barrier: Barrier = None, mp_queue: Queue = None, ssh_port_queue: Queue = None,
                 shard_num: int = None):
     def set_cmdline_args(args: argparse.Namespace):
-        print("Setting args:", args)
+        boot_cheribsd.info("Setting args:", args)
         if mp_queue:
             # check that we don't get a conflict
             mp_debug(args, "Syncing shard ", shard_num, " with main process. Stage: assign SSH port")
@@ -114,7 +114,7 @@ def libcxx_main(ssh_port_barrier: Barrier = None, mp_queue: Queue = None, ssh_po
             mp_queue.put((run_remote_lit_test.FAILURE, shard_num, str(type(e)) + ": " + str(e)))
         raise
     finally:
-        print("Finished running ", " ".join(sys.argv))
+        boot_cheribsd.info("Finished running ", " ".join(sys.argv))
 
 
 def run_parallel(args: argparse.Namespace):
@@ -145,6 +145,9 @@ def run_parallel(args: argparse.Namespace):
     dump_processes(processes)
     try:
         return run_parallel_impl(args, processes, mp_q, mp_barrier, ssh_port_queue)
+    except BaseException as e:
+        boot_cheribsd.info("Got error while running run_parallel_impl (", type(e), "): ", e)
+        raise
     finally:
         wait_or_terminate_all_shards(processes, max_time=5, timed_out=False)
         # merge junit xml files
@@ -222,16 +225,27 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
     starttime = datetime.datetime.now()
     ssh_ports = []  # check that we don't have multiple parallel jobs trying to use the same port
     assert not mp_barrier.broken, mp_barrier
+    # FIXME: without this sleep it fails in jenkins (is the python version there broken?)
+    # Works just fine everywhere else where I test it...
+    boot_cheribsd.info("Waiting 5 seconds before releasing barrier")
+    time.sleep(5)
+    boot_cheribsd.info("Waiting 5 more seconds to release barrier")
+    time.sleep(5)
     mp_debug(args, "Waiting for SSH port barrier")
     mp_barrier.wait(timeout=10)  # wait for ssh ports to be assigned
     for i in range(len(processes)):
-        ssh_port, index = ssh_port_queue.get_nowait()
-        assert index <= len(processes)
-        print("SSH port for ", processes[index - 1].name, "is", ssh_port)
-        processes[index - 1].ssh_port = ssh_port
-        if ssh_port in ssh_ports:
+        try:
+            ssh_port, index = ssh_port_queue.get(timeout=1)
+            assert index <= len(processes)
+            print("SSH port for ", processes[index - 1].name, "is", ssh_port)
+            processes[index - 1].ssh_port = ssh_port
+            if ssh_port in ssh_ports:
+                timed_out = True  # kill all child processes
+                boot_cheribsd.failure("ERROR: reusing the same SSH port in multiple jobs: ", ssh_port, exit=False)
+        except Empty:
+            # This seems to be happening in jenkins? Barrier should ensure that we can read without blocking!
             timed_out = True  # kill all child processes
-            boot_cheribsd.failure("ERROR: reusing the same SSH port in multiple jobs: ", ssh_port, exit=False)
+            boot_cheribsd.failure("ERROR: Could not determine SSH port for one of the processes!", exit=False)
 
     # wait for the success/failure message from the process:
     # if the shard takes longer than 4 hours to run something went wrong
