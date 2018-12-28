@@ -256,6 +256,7 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
     boot_end_time = datetime.datetime.utcnow() + max_boot_time
     booted_shards = 0
     remaining_processes = processes.copy()
+    not_booted_processes = processes.copy()
     retrying_queue_read = False
     while len(remaining_processes) > 0:
         if timed_out:
@@ -263,7 +264,7 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
                 p.stage = run_remote_lit_test.MultiprocessStages.TIMED_OUT
             break
         loop_start_time = datetime.datetime.utcnow()
-        num_shards_not_booted = len(processes) - booted_shards
+        num_shards_not_booted = len(not_booted_processes)
         if num_shards_not_booted > 0:
             mp_debug(args, "Still waiting for ", num_shards_not_booted, " shards to boot")
             if loop_start_time > boot_end_time:
@@ -295,6 +296,9 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
                 target_process.stage = run_remote_lit_test.MultiprocessStages.EXITED
             elif shard_result[0] == run_remote_lit_test.NEXT_STAGE:
                 mp_debug(args, "===> Shard ", shard_result[1], " reached next stage: ", shard_result[2])
+                if target_process.stage == run_remote_lit_test.MultiprocessStages.BOOTING_CHERIBSD:
+                    not_booted_processes.remove(target_process)
+                    boot_cheribsd.success("Shard ", shard_result[1], " has booted successfully.")
                 # assert target_process.stage < shard_result[2], "STAGE WENT BACKWARDS?"
                 target_process.stage = shard_result[2]
             elif shard_result[0] == run_remote_lit_test.FAILURE:
@@ -335,6 +339,8 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
             return
 
     if not timed_out:
+        if not_booted_processes:
+            boot_cheribsd.failure("FATAL: all processes exited but some still not booted? ", not_booted_processes)
         boot_cheribsd.success("All shards have terminated")
     # If we got an error we should not end up here -> all processes should be in stage exited
     dump_processes(processes)
