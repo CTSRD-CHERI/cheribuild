@@ -164,12 +164,11 @@ def run_host_command(*args, **kwargs):
     subprocess.check_call(*args, **kwargs)
 
 
-def decompress(archive: Path, force_decompression: bool, *, keep_archive=True, cmd=None) -> Path:
+def decompress(archive: Path, force_decompression: bool, *, keep_archive=True, cmd=None, args=None) -> Path:
     result = archive.with_suffix("")
     if result.exists():
         if not force_decompression:
             return result
-        result.unlink()
     info("Extracting ", archive)
     if keep_archive:
         cmd = cmd + ["-k"]
@@ -177,24 +176,46 @@ def decompress(archive: Path, force_decompression: bool, *, keep_archive=True, c
     return result
 
 
-def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True) -> Path:
+def is_newer(path1: Path, path2: Path):
+    # info(path1.stat())
+    # info(path2.stat())
+    return path1.stat().st_ctime > path2.stat().st_ctime
+
+
+def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, args: argparse.Namespace = None) -> Path:
     # drop the suffix and then try decompressing
     def bunzip(archive):
-        return decompress(archive, force_decompression, cmd=["bunzip2", "-v", "-f"], keep_archive=keep_archive)
+        return decompress(archive, force_decompression, cmd=["bunzip2", "-v", "-f"], keep_archive=keep_archive, args=args)
 
     def unxz(archive):
-        return decompress(archive, force_decompression, cmd=["xz", "-d", "-v", "-f"], keep_archive=keep_archive)
+        return decompress(archive, force_decompression, cmd=["xz", "-d", "-v", "-f"], keep_archive=keep_archive, args=args)
+
+    if args and getattr(args, "internal_shard") and not PRETEND:
+        assert path.exists()
 
     if path.suffix == ".bz2":
         return bunzip(path)
-    elif path.suffix == ".xz":
+    if path.suffix == ".xz":
         return unxz(path)
-    # try adding the arhive suffix suffix
-    elif path.with_suffix(path.suffix + ".bz2").exists():
-        return bunzip(path.with_suffix(path.suffix + ".bz2"))
-    elif path.with_suffix(path.suffix + ".xz").exists():
-        return unxz(path.with_suffix(path.suffix + ".xz"))
-    elif not path.exists():
+
+    bz2_guess = path.with_suffix(path.suffix + ".bz2")
+    # try adding the archive suffix suffix
+    if bz2_guess.exists():
+        if path.is_file() and is_newer(path, bz2_guess):
+            info("Not Extracting ", bz2_guess, " since uncompressed image ", path, " is newer")
+            return path
+        info("Extracting ", bz2_guess, " since it is newer than uncompressed image ", path)
+        return bunzip(bz2_guess)
+
+    xz_guess = path.with_suffix(path.suffix + ".xz")
+    if xz_guess.exists():
+        if path.is_file() and is_newer(path, xz_guess):
+            info("Not Extracting ", xz_guess, " since uncompressed image ", path, " is newer")
+            return path
+        info("Extracting ", xz_guess, " since it is newer than uncompressed image ", path)
+        return unxz(xz_guess)
+
+    if not path.exists():
         sys.exit("Could not find " + str(path))
     assert path.exists(), path
     return path
@@ -507,14 +528,11 @@ def default_ssh_key():
     return "/could/not/infer/default/ssh/public/key/path"
 
 
-def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, ...], bool]"=None,
-         argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]"=None,
-         argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]"=None):
-    # TODO: look at click package?
+def get_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--qemu-cmd", "--qemu", default="qemu-system-cheri")
     parser.add_argument("--kernel", default="/usr/local/share/cheribsd/cheribsd-malta64-kernel")
-    parser.add_argument("--disk-image", default=None, # default="/usr/local/share/cheribsd/cheribsd-full.img"
+    parser.add_argument("--disk-image", default=None,  # default="/usr/local/share/cheribsd/cheribsd-full.img"
                         )
     parser.add_argument("--extract-images-to", help="Path where the compressed images should be extracted to")
     parser.add_argument("--reuse-image", action="store_true")
@@ -532,9 +550,22 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
     parser.add_argument("--test-archive", "-t", action="append", nargs=1)
     parser.add_argument("--test-command", "-c")
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60)
-    parser.add_argument("--pretend", "-p", action="store_true", help="Don't actually boot CheriBSD just print what would happen")
+    parser.add_argument("--pretend", "-p", action="store_true",
+                        help="Don't actually boot CheriBSD just print what would happen")
     parser.add_argument("--interact", "-i", action="store_true")
     parser.add_argument("--test-kernel-init-only", action="store_true")
+
+    # Ensure that we don't get a race when running multiple shards:
+    # If we extract the disk image at the same time we might spawn QEMU just between when the
+    # value extracted by one job is unlinked and when it is replaced with a new file
+    parser.add_argument("--internal-kernel-override", help=argparse.SUPPRESS)
+    parser.add_argument("--internal-disk-image-override", help=argparse.SUPPRESS)
+    return parser
+
+def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, ...], bool]"=None,
+         argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]"=None,
+         argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]"=None):
+    parser = get_argument_parser()
     if argparse_setup_callback:
         argparse_setup_callback(parser)
     try:
@@ -547,6 +578,10 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
     args = parser.parse_args()
     if args.ssh_port is None:
         args.ssh_port = find_free_port()
+    if args.internal_kernel_override:
+        args.kernel = args.internal_kernel_override
+    if args.internal_disk_image_override:
+        args.disk_image = args.internal_disk_image_override
     if argparse_adjust_args_callback:
         argparse_adjust_args_callback(args)
     if shutil.which(args.qemu_cmd) is None:
@@ -601,12 +636,10 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
 
         force_decompression = True
         keep_compressed_images = False
-    kernel = str(maybe_decompress(Path(args.kernel), force_decompression, keep_archive=keep_compressed_images))
-    if (os.getenv("FAIL_EXTRACT_KERNEL") or args.pretend) and getattr(args, "internal_shard", 0) == 2:
-        raise RuntimeError("Simulating failed extraction of " + args.kernel)
+    kernel = str(maybe_decompress(Path(args.kernel), force_decompression, keep_archive=keep_compressed_images, args=args))
     diskimg = None
     if args.disk_image:
-        diskimg = str(maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images))
+        diskimg = str(maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images, args=args))
 
     boot_starttime = datetime.datetime.now()
     qemu = boot_cheribsd(args.qemu_cmd, kernel, diskimg, args.ssh_port, smb_dirs=args.smb_mount_directories,

@@ -64,9 +64,14 @@ def add_cmdline_args(parser: argparse.ArgumentParser):
     parser.add_argument("--internal-shard", type=int, help=argparse.SUPPRESS)
 
 
-def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue):
+def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue, kernel, disk_image):
     sys.argv.append("--internal-num-shards=" + str(total))
     sys.argv.append("--internal-shard=" + str(num))
+    if kernel is not None:
+        sys.argv.append("--internal-kernel-override=" + str(kernel))
+    if disk_image is not None:
+        sys.argv.append("--internal-disk-image-override=" + str(disk_image))
+
     # sys.argv.append("--pretend")
     print("Starting shard", num, sys.argv)
     boot_cheribsd.MESSAGE_PREFIX = "\033[0;34m" + "shard" + str(num) + ": \033[0m"
@@ -113,6 +118,8 @@ def libcxx_main(ssh_port_barrier: Barrier = None, mp_queue: Queue = None, ssh_po
 
 
 def run_parallel(args: argparse.Namespace):
+    if args.pretend:
+        boot_cheribsd.PRETEND = True
     boot_cheribsd.MESSAGE_PREFIX = "\033[0;35m" + "main process: \033[0m"
     if args.parallel_jobs < 1:
         boot_cheribsd.failure("Invalid number of parallel jobs: ", args.parallel_jobs, exit=True)
@@ -122,9 +129,13 @@ def run_parallel(args: argparse.Namespace):
     mp_q = Queue()
     ssh_port_queue = Queue()
     processes = []
+    # Extract the kernel + disk image in the main process to avoid race condition:
+    kernel_path = boot_cheribsd.maybe_decompress(Path(args.kernel), True, True, args) if args.kernel else None
+    disk_image_path = boot_cheribsd.maybe_decompress(Path(args.disk_image), True, True, args) if args.disk_image else None
     for i in range(args.parallel_jobs):
         shard_num = i + 1
-        p = Process(target=run_shard, args=(mp_q, mp_barrier, shard_num, args.parallel_jobs, ssh_port_queue))
+        p = Process(target=run_shard, args=(mp_q, mp_barrier, shard_num, args.parallel_jobs, ssh_port_queue,
+                                            kernel_path, disk_image_path))
         p.stage = run_remote_lit_test.MultiprocessStages.FINDING_SSH_PORT
         p.daemon = True  # kill process on parent exit
         p.name = "<LIBCXX test shard " + str(shard_num) + ">"
@@ -325,11 +336,8 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--parallel-jobs", metavar="N", type=int, help="Split up the testsuite into N parallel jobs")
-    parser.add_argument("--xunit-output", default="qemu-libcxx-test-results.xml")
-    parser.add_argument("--pretend", "-p", action="store_true")
-    parser.add_argument("--multiprocessing-debug", action="store_true")
+    parser = boot_cheribsd.get_argument_parser()
+    add_cmdline_args(parser)
     # Don't let this parser capture --help
     args, remainder = parser.parse_known_args(filter(lambda x: x != "-h" and x != "--help", sys.argv))
     # If parallel is set spawn N processes and use the lit --num-shards + --run-shard flags to split the work
