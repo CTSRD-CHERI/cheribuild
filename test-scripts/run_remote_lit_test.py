@@ -29,6 +29,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import traceback
+
 import pexpect
 import argparse
 import time
@@ -37,11 +39,20 @@ import multiprocessing
 import subprocess
 import sys
 from pathlib import Path
+from enum import Enum
 import boot_cheribsd
 
 KERNEL_PANIC = False
 COMPLETED = "COMPLETED"
+NEXT_STAGE = "NEXT_STAGE"
 FAILURE = "FAILURE"
+
+class MultiprocessStages(Enum):
+    FINDING_SSH_PORT = "find free port for SSH"
+    BOOTING_CHERIBSD = "booting CheriBSD"
+    TESTING_SSH_CONNECTION = "testing SSH connection to CheriBSD"
+    RUNNING_TESTS = "running lit tests"
+    EXITED = "exited"
 
 
 def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
@@ -67,37 +78,34 @@ def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, a
                          llvm_lit_path: str = None) -> bool:
     try:
         result = run_remote_lit_tests_impl(testsuite=testsuite, qemu=qemu, args=args, tempdir=tempdir,
-                                           mp_q=mp_q, mp_barrier=mp_barrier, llvm_lit_path=llvm_lit_path)
+                                           mp_q=mp_q, llvm_lit_path=llvm_lit_path)
         if mp_q:
             mp_q.put((COMPLETED, args.internal_shard))
         return result
     except:
         if mp_q:
-            boot_cheribsd.failure("GOT EXCEPTION in shard ", args.internal_shard, sys.exc_info())
+            boot_cheribsd.failure("GOT EXCEPTION in shard ", args.internal_shard, sys.exc_info(), exit=False)
+            # print(sys.exc_info()[2])
+            traceback.print_tb(sys.exc_info()[2])
+            boot_cheribsd.failure("PRINTED TB shard ", args.internal_shard, sys.exc_info(), exit=False)
+
             e = sys.exc_info()[1]
             mp_q.put((FAILURE, args.internal_shard, str(type(e)) + ": " +str(e)))
         raise
 
 
 def run_remote_lit_tests_impl(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str,
-                              mp_q: multiprocessing.Queue = None, mp_barrier: multiprocessing.Barrier = None,
-                              llvm_lit_path: str = None) -> bool:
+                              mp_q: multiprocessing.Queue = None, llvm_lit_path: str = None) -> bool:
     qemu.EXIT_ON_KERNEL_PANIC = False # since we run multiple threads we shouldn't use sys.exit()
     boot_cheribsd.info("PID of QEMU: ", qemu.pid)
 
-    def sync_with_main_process(stage):
-        if mp_barrier:
-            assert mp_q is not None
+    def notify_main_process(stage):
+        if mp_q:
             if args.multiprocessing_debug:
-                boot_cheribsd.success("Syncing shard ", args.internal_shard, " with main process. Stage: ", stage)
-            try:
-                mp_q.put((COMPLETED, args.internal_shard, stage))
-                mp_barrier.wait(timeout=4*60*60)
-            except threading.BrokenBarrierError:
-                boot_cheribsd.failure("ERROR: Another shard caused a fatal error. EXITING shard", args.internal_shard,
-                                      exit=True)
+                boot_cheribsd.success("Shard ", args.internal_shard, " stage complete: ", stage)
+            mp_q.put((NEXT_STAGE, args.internal_shard, stage))
 
-    sync_with_main_process("booted CheriBSD")
+    notify_main_process(MultiprocessStages.TESTING_SSH_CONNECTION)
     port = args.ssh_port
     user = "root"  # TODO: run these tests as non-root!
     test_build_dir = Path(args.build_dir)
@@ -128,7 +136,6 @@ Host cheribsd-test-instance
 
     if args.pretend:
         time.sleep(0.5)
-    sync_with_main_process("checked SSH connection")
 
     if False:
         # slow executor using scp:
@@ -138,6 +145,7 @@ Host cheribsd-test-instance
                'extra_scp_flags=["-F", "{tempdir}/config"])'.format(user=user, port=port, host_dir=str(test_build_dir / "tmp"), tempdir=tempdir)
 
     print("Running", testsuite, "tests with executor", executor)
+    notify_main_process(MultiprocessStages.RUNNING_TESTS)
     # have to use -j1 + --single-process since otherwise CheriBSD might wedge
     if llvm_lit_path is None:
         llvm_lit_path = str(test_build_dir / "bin/llvm-lit")
