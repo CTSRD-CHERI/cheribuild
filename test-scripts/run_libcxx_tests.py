@@ -68,12 +68,13 @@ def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue):
     sys.argv.append("--internal-num-shards=" + str(total))
     sys.argv.append("--internal-shard=" + str(num))
     # sys.argv.append("--pretend")
-    print("shard", num, sys.argv)
+    print("Starting shard", num, sys.argv)
+    boot_cheribsd.MESSAGE_PREFIX = "\033[0;34m" + "shard" + str(num) + ": \033[0m"
     try:
         libcxx_main(ssh_port_barrier=barrier, mp_queue=q, ssh_port_queue=ssh_port_queue, shard_num=num)
         boot_cheribsd.success("====> Job ", num, " completed")
     except Exception as e:
-        boot_cheribsd.failure("Job ", num, " failed!!", e, exit=False)
+        boot_cheribsd.failure("Job ", num, " failed: ", e, exit=False)
         raise
 
 

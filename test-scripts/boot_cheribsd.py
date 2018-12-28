@@ -63,6 +63,7 @@ CHERI_TRAP = "USER_CHERI_EXCEPTION: pid \\d+ tid \\d+ \(.+\)"
 FATAL_ERROR_MESSAGES = [CHERI_TRAP]
 
 PRETEND = False
+MESSAGE_PREFIX = ""
 # To keep the port available until we start QEMU
 _SSH_SOCKET_PLACEHOLDER = None  # type: socket.socket
 
@@ -136,16 +137,16 @@ def find_free_port() -> int:
 
 
 def info(*args, **kwargs):
-    print(*args, file=sys.stderr, flush=True, **kwargs)
+    print(MESSAGE_PREFIX, *args, file=sys.stderr, sep="", flush=True, **kwargs)
 
 
 def success(*args, **kwargs):
-    print("\n\033[0;32m", *args, "\033[0m", sep="", file=sys.stderr, flush=True, **kwargs)
+    print("\n", MESSAGE_PREFIX, "\033[0;32m", *args, "\033[0m", sep="", file=sys.stderr, flush=True, **kwargs)
 
 
 # noinspection PyShadowingBuiltins
 def failure(*args, exit=True, **kwargs):
-    print("\n\033[0;31m", *args, "\033[0m", sep="", file=sys.stderr, flush=True, **kwargs)
+    print("\n", MESSAGE_PREFIX, "\033[0;31m", *args, "\033[0m", sep="", file=sys.stderr, flush=True, **kwargs)
     if exit:
         time.sleep(1)  # to get the remaining output
         sys.exit(1)
@@ -155,9 +156,9 @@ def failure(*args, exit=True, **kwargs):
 def run_host_command(*args, **kwargs):
     args_str = " ".join((shlex.quote(i) for i in list(*args)))
     if kwargs:
-        info("\033[0;33mRunning", args_str, "with", kwargs.copy(), "\033[0m")
+        info("\033[0;33mRunning ", args_str, " with ", kwargs.copy(), "\033[0m")
     else:
-        info("\033[0;33mRunning", args_str, "\033[0m")
+        info("\033[0;33mRunning ", args_str, "\033[0m")
     if PRETEND:
         return
     subprocess.check_call(*args, **kwargs)
@@ -169,7 +170,7 @@ def decompress(archive: Path, force_decompression: bool, *, keep_archive=True, c
         if not force_decompression:
             return result
         result.unlink()
-    info("Extracting", archive)
+    info("Extracting ", archive)
     if keep_archive:
         cmd = cmd + ["-k"]
     run_host_command(cmd + [str(archive)])
@@ -567,7 +568,7 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
     if args.test_archive:
         if args.use_smb_instead_of_ssh and not args.smb_mount_directories:
             failure("--smb-mount-directory is required if ssh is disabled")
-        info("Using the following test archives:", args.test_archive)
+        info("Using the following test archives: ", args.test_archive)
         if not args.use_smb_instead_of_ssh:
             if Path(args.ssh_key).suffix != ".pub":
                 failure("--ssh-key should point to the public key and not ", args.ssh_key)
@@ -644,7 +645,7 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
                 continue
 
     success("===> DONE")
-    info("Total execution time:", datetime.datetime.now() - starttime)
+    info("Total execution time: ", datetime.datetime.now() - starttime)
     if not tests_okay:
         failure("Some tests failed!", exit=True)
 
