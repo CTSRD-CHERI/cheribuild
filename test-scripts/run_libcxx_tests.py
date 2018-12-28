@@ -103,9 +103,9 @@ def libcxx_main(ssh_port_barrier: Barrier = None, mp_queue: Queue = None, ssh_po
                        argparse_setup_callback=add_cmdline_args, argparse_adjust_args_callback=set_cmdline_args)
     except Exception as e:
         if mp_queue:
-            boot_cheribsd.failure("GOT EXCEPTION in shard ", shard_num, sys.exc_info(), exit=False)
+            boot_cheribsd.failure("GOT EXCEPTION in shard ", shard_num, ": ", sys.exc_info(), exit=False)
             # print(sys.exc_info()[2])
-            traceback.print_tb(sys.exc_info()[2])
+            boot_cheribsd.info("".join(traceback.format_tb(sys.exc_info()[2])))
             mp_queue.put((run_remote_lit_test.FAILURE, shard_num, str(type(e)) + ": " + str(e)))
         raise
     finally:
@@ -113,6 +113,7 @@ def libcxx_main(ssh_port_barrier: Barrier = None, mp_queue: Queue = None, ssh_po
 
 
 def run_parallel(args: argparse.Namespace):
+    boot_cheribsd.MESSAGE_PREFIX = "\033[0;35m" + "main process: \033[0m"
     if args.parallel_jobs < 1:
         boot_cheribsd.failure("Invalid number of parallel jobs: ", args.parallel_jobs, exit=True)
     boot_cheribsd.success("Running ", args.parallel_jobs, " parallel jobs")
@@ -201,7 +202,7 @@ def wait_or_terminate_all_shards(processes, max_time, timed_out):
 
 def dump_processes(processes: "typing.List[Process]"):
     for i, p in enumerate(processes):
-        boot_cheribsd.info("Subprocess", i + 1, p, "-- current stage:", p.stage.value)
+        boot_cheribsd.info("Subprocess ", i + 1, " ", p, " -- current stage: ", p.stage.value)
 
 
 def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]", mp_q: Queue, mp_barrier: Barrier,
@@ -239,7 +240,7 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
         loop_start_time = datetime.datetime.utcnow()
         num_shards_not_booted = len(processes) - booted_shards
         if num_shards_not_booted > 0:
-            mp_debug(args, "Still waiting for ", num_shards_not_booted, "to boot")
+            mp_debug(args, "Still waiting for ", num_shards_not_booted, " shards to boot")
             if loop_start_time > boot_end_time:
                 timed_out = True
                 boot_cheribsd.failure("ERROR: ", num_shards_not_booted, " shards did not boot within ", max_boot_time,
@@ -247,7 +248,7 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
                 dump_processes(processes)
                 continue
 
-        mp_debug(args, "Still waiting for ", remaining_processes, "to finish")
+        mp_debug(args, "Still waiting for ", remaining_processes, " to finish")
         if boot_end_time > test_end_time:
             timed_out = True
             boot_cheribsd.failure("Reached test timeout of", max_test_duration, " with ", len(remaining_processes),
@@ -255,7 +256,7 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
             dump_processes(processes)
             continue
         remaining_test_time = test_end_time - loop_start_time
-        max_timeout = 120.0 if not args.pretend else 0.5
+        max_timeout = 120.0 if not args.pretend else 1.0
         try:
             shard_result = mp_q.get(timeout=min(max(1.0, remaining_test_time.total_seconds()), max_timeout))
             retrying_queue_read = False
@@ -272,9 +273,20 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
                 # assert target_process.stage < shard_result[2], "STAGE WENT BACKWARDS?"
                 target_process.stage = shard_result[2]
             elif shard_result[0] == run_remote_lit_test.FAILURE:
-                target_process.error_message = shard_result[2]
+                previous_stage = target_process.stage
                 target_process.stage = run_remote_lit_test.MultiprocessStages.FAILED
-                boot_cheribsd.failure("===> FATAL: Shard ", shard_result[1], " failed: ", shard_result[2], exit=False)
+                target_process.error_message = shard_result[2]
+                if target_process in remaining_processes:
+                    remaining_processes.remove(target_process)
+                if previous_stage != run_remote_lit_test.MultiprocessStages.RUNNING_TESTS:
+                    boot_cheribsd.failure("===> FATAL: Shard ", target_process, " failed before running tests stage: ",
+                                          previous_stage, " -> Aborting all other shards",
+                                          exit=False)
+                    timed_out = True
+                    break
+                else:
+                    boot_cheribsd.failure("===> ERROR: Shard ", shard_result[1], " failed while running tests: ",
+                                          shard_result[2], exit=True)
             else:
                 boot_cheribsd.failure("===> FATAL: Received invalid shard result message: ", shard_result, exit=True)
         except Empty:
@@ -294,16 +306,13 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
             continue
         except KeyboardInterrupt:
             dump_processes(processes)
-            boot_cheribsd.failure("GOT KEYBOARD INTERRUPT! EXITING!", exit=True)
+            boot_cheribsd.failure("GOT KEYBOARD INTERRUPT! EXITING!", exit=False)
+            return
 
-    boot_cheribsd.success("All shards have terminated")
+    if not timed_out:
+        boot_cheribsd.success("All shards have terminated")
     # If we got an error we should not end up here -> all processes should be in stage exited
     dump_processes(processes)
-    for p in processes:
-        if p.stage not in (run_remote_lit_test.MultiprocessStages.EXITED,
-                           run_remote_lit_test.MultiprocessStages.FAILED,
-                           run_remote_lit_test.MultiprocessStages.TIMED_OUT):
-            boot_cheribsd.failure(p, " exited in invalid state:", p.stage, exit=True)
 
     # All shards should have completed -> give them 60 seconds to shut down cleanly
     wait_or_terminate_all_shards(processes, max_time=60, timed_out=timed_out)

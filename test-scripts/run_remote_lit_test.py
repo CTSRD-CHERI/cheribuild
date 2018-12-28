@@ -29,8 +29,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import traceback
-
 import pexpect
 import argparse
 import os
@@ -86,9 +84,7 @@ def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, a
         return result
     except:
         if mp_q:
-            boot_cheribsd.failure("GOT EXCEPTION in shard ", args.internal_shard, sys.exc_info(), exit=False)
-            # print(sys.exc_info()[2])
-            # traceback.print_tb(sys.exc_info()[2])
+            boot_cheribsd.failure("GOT EXCEPTION in shard ", args.internal_shard, ": ", sys.exc_info(), exit=False)
             e = sys.exc_info()[1]
             mp_q.put((FAILURE, args.internal_shard, str(type(e)) + ": " +str(e)))
         raise
