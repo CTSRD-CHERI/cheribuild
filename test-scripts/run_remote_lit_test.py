@@ -167,7 +167,7 @@ Host cheribsd-test-instance
         lit_cmd.append("--num-shards=" + str(args.internal_num_shards))
         lit_cmd.append("--run-shard=" + str(args.internal_shard))
         if xunit_file:
-            qemu_log_path = xunit_file.with_suffix(".output").absolute()
+            qemu_log_path = xunit_file.with_suffix(".output.log").absolute()
             boot_cheribsd.success("Writing QEMU output to ", qemu_log_path)
             qemu_logfile = qemu_log_path.open("w")
             qemu.logfile_read = qemu_logfile
