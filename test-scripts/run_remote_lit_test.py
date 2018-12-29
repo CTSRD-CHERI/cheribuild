@@ -31,6 +31,7 @@
 #
 import pexpect
 import argparse
+import datetime
 import os
 import time
 import threading
@@ -125,6 +126,8 @@ Host cheribsd-test-instance
         # ConnectTimeout 30
         # ConnectionAttempts 3
         ControlMaster auto
+        # Keep socket open for 10 min
+        ControlPersist 600
 """.format(user=user, port=port, ssh_key=Path(args.ssh_key).with_suffix(""), home=Path.home())
     # print("Writing ssh config: ", config_contents)
     with Path(tempdir, "config").open("w") as c:
@@ -132,7 +135,20 @@ Host cheribsd-test-instance
     Path(Path.home(), ".ssh/controlmasters").mkdir(exist_ok=True)
     boot_cheribsd.run_host_command(["cat", str(Path(tempdir, "config"))])
     # Check that the config file works:
+    connection_test_start = datetime.datetime.utcnow()
     boot_cheribsd.run_host_command(["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance", "-p", str(port), "--", "echo", "connection successful"], cwd=str(test_build_dir))
+    first_connection_time = (datetime.datetime.utcnow() - connection_test_start).total_seconds()
+    boot_cheribsd.success("First SSH connection successful after ", first_connection_time, " seconds")
+    # Check that controlmaster worked: second connection should be much faster:
+    connection_test_start = datetime.datetime.utcnow()
+    boot_cheribsd.run_host_command(["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance", "-p", str(port), "--", "echo", "connection successful"], cwd=str(test_build_dir))
+    second_connection_time = (datetime.datetime.utcnow() - connection_test_start).total_seconds()
+    boot_cheribsd.success("Second SSH connection successful after ", second_connection_time, "seconds")
+    # Diagnose broken controlmaster setting (it needs ControlPersist to be set)
+    if second_connection_time > 2.0:
+        boot_cheribsd.failure("WARNING: Second SSH connection took over two seconds:", second_connection_time,
+                              " seconds\n WARNING: ControlMaster setting not working? First SSH connection took: ",
+                              first_connection_time, " seconds", exit=False)
 
     if args.pretend:
         time.sleep(2.5)
