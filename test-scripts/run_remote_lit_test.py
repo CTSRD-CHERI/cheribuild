@@ -127,28 +127,34 @@ Host cheribsd-test-instance
         # ConnectionAttempts 3
         ControlMaster auto
         # Keep socket open for 10 min
-        ControlPersist 600
 """.format(user=user, port=port, ssh_key=Path(args.ssh_key).with_suffix(""), home=Path.home())
+    config_contents += "        ControlPersist {control_persist}\n"
     # print("Writing ssh config: ", config_contents)
     with Path(tempdir, "config").open("w") as c:
-        c.write(config_contents)
+        c.write(config_contents.format(control_persist="600"))
     Path(Path.home(), ".ssh/controlmasters").mkdir(exist_ok=True)
     boot_cheribsd.run_host_command(["cat", str(Path(tempdir, "config"))])
     # Check that the config file works:
-    connection_test_start = datetime.datetime.utcnow()
-    boot_cheribsd.run_host_command(["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance", "-p", str(port), "--", "echo", "connection successful"], cwd=str(test_build_dir))
-    first_connection_time = (datetime.datetime.utcnow() - connection_test_start).total_seconds()
-    boot_cheribsd.success("First SSH connection successful after ", first_connection_time, " seconds")
-    # Check that controlmaster worked: second connection should be much faster:
-    connection_test_start = datetime.datetime.utcnow()
-    boot_cheribsd.run_host_command(["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance", "-p", str(port), "--", "echo", "connection successful"], cwd=str(test_build_dir))
-    second_connection_time = (datetime.datetime.utcnow() - connection_test_start).total_seconds()
-    boot_cheribsd.success("Second SSH connection successful after ", second_connection_time, "seconds")
-    # Diagnose broken controlmaster setting (it needs ControlPersist to be set)
-    if second_connection_time > 2.0:
-        boot_cheribsd.failure("WARNING: Second SSH connection took over two seconds:", second_connection_time,
-                              " seconds\n WARNING: ControlMaster setting not working? First SSH connection took: ",
-                              first_connection_time, " seconds", exit=False)
+
+    def check_ssh_connection(prefix):
+        connection_test_start = datetime.datetime.utcnow()
+        boot_cheribsd.run_host_command(["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance", "-p", str(port), "--", "echo", "connection successful"], cwd=str(test_build_dir))
+        connection_time = (datetime.datetime.utcnow() - connection_test_start).total_seconds()
+        boot_cheribsd.success(prefix, " successful after ", connection_time, " seconds")
+
+    check_ssh_connection("First SSH connection")
+    try:
+        # Check that controlmaster worked by running ssh -O check
+        boot_cheribsd.info("Checking if SSH control master is working.")
+        boot_cheribsd.run_host_command(["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance",
+                                        "-p", str(port), "-O", "check"], cwd=str(test_build_dir))
+        check_ssh_connection("Second SSH connection (with controlmaster)")
+    except subprocess.CalledProcessError:
+        boot_cheribsd.failure("WARNING: Could not connect to ControlMaster SSH connection. Running tests will be slower",
+                               first_connection_time, " seconds", exit=False)
+        with Path(tempdir, "config").open("w") as c:
+            c.write(config_contents.format(control_persist="no"))
+        check_ssh_connection("Second SSH connection (without controlmaster)")
 
     if args.pretend:
         time.sleep(2.5)
