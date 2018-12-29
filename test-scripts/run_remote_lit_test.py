@@ -143,12 +143,14 @@ Host cheribsd-test-instance
         boot_cheribsd.success(prefix, " successful after ", connection_time, " seconds")
 
     check_ssh_connection("First SSH connection")
+    controlmaster_running = False
     try:
         # Check that controlmaster worked by running ssh -O check
         boot_cheribsd.info("Checking if SSH control master is working.")
         boot_cheribsd.run_host_command(["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance",
                                         "-p", str(port), "-O", "check"], cwd=str(test_build_dir))
         check_ssh_connection("Second SSH connection (with controlmaster)")
+        controlmaster_running = True
     except subprocess.CalledProcessError:
         boot_cheribsd.failure("WARNING: Could not connect to ControlMaster SSH connection. Running tests will be slower",
                                first_connection_time, " seconds", exit=False)
@@ -236,6 +238,13 @@ Host cheribsd-test-instance
         qemu.flush_interval = 0.1
         should_exit_event.set()
         t.join(timeout=30)
+        if controlmaster_running:
+            boot_cheribsd.info("Terminating SSH controlmaster")
+            try:
+                boot_cheribsd.run_host_command(["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance",
+                                                "-p", str(port), "-O", "exit"], cwd=str(test_build_dir))
+            except subprocess.CalledProcessError:
+                boot_cheribsd.failure("Could not close SSH controlmaster connection.", exit=False)
         if t.is_alive():
             boot_cheribsd.failure("Failed to kill flush thread. Interacting with CheriBSD will not work!")
             return False
