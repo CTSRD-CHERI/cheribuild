@@ -390,6 +390,7 @@ class LaunchCheriBsdMfsRoot(AbstractLaunchFreeBSD):
             self.currentKernel = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self, self.config)
             if str(self.remoteKernelPath).endswith("MFS_ROOT"):
                 self.remoteKernelPath = self.remoteKernelPath + "_BENCHMARK"
+        self.rootfs_path = BuildCHERIBSD.rootfsDir(self, config)
 
     def run_tests(self):
         self.run_cheribsd_test_script("test_boot.py")
