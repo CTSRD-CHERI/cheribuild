@@ -1200,7 +1200,7 @@ class Project(SimpleProject):
         _configure_path = self.configureCommand
         if configure_path:
             _configure_path = configure_path
-        if not _configure_path.exists():
+        if not Path(_configure_path).exists():
             self.fatal("Configure command ", _configure_path, "does not exist!")
         if _configure_path:
             self.runWithLogfile([_configure_path] + self.configureArgs,
