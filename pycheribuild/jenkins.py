@@ -267,6 +267,10 @@ def _jenkins_main():
         # need to set destdir after checkSystemDeps:
         project = target.get_or_create_project(None, cheriConfig)
         assert project
+        cross_target = project.get_crosscompile_target(cheriConfig)
+        if cross_target is not None and cross_target != cheriConfig.crossCompileTarget:
+            fatalError("Cannot build project", project.target, "with cross compile target", cross_target.name,
+                       "when --cpu is set to", cheriConfig.crossCompileTarget.name)
         if isinstance(project, CrossCompileMixin):
             project.destdir = cheriConfig.outputRoot
             project._installPrefix = cheriConfig.installationPrefix
