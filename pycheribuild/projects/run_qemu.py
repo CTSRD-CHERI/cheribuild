@@ -162,8 +162,8 @@ class LaunchQEMUBase(SimpleProject):
                 user_network_options += ",smb="
             user_network_options += str(directory) + ("@ro" if readonly else "")
             smb_dir_count += 1
-            guest_cmd = coloured(AnsiColour.yellow, "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu", str(smb_dir_count),
-                                 target, sep="")
+            guest_cmd = coloured(AnsiColour.yellow, "mkdir -p {target} && mount_smbfs -I 10.0.2.4 -N "
+                                 "//10.0.2.4/qemu{n} {target}".format(target=target, n=smb_dir_count))
             statusUpdate("Providing ", coloured(AnsiColour.green, str(directory)),
                          coloured(AnsiColour.cyan, " over SMB to the guest. Use `"), guest_cmd,
                          coloured(AnsiColour.cyan, "` to mount it"), sep="")
