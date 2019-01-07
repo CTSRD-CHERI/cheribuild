@@ -284,7 +284,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 
 # it also needs libxml2
 class BuildLibXml2(CrossCompileAutotoolsProject):
-    repository = "https://github.com/arichardson/libxml2"
+    repository = "https://github.com/CTSRD-CHERI/libxml2"
     crossInstallDir = CrossInstallDir.SDK
     make_kind = MakeCommandKind.GnuMake
 
