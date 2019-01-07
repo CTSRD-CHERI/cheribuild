@@ -27,8 +27,9 @@ if [ -z "$SKIP_DOWNLOAD" ]; then
 
     # QEMU
     curl -O -u "readonly:${password}" https://ctsrd-build.cl.cam.ac.uk/view/QEMU/job/qemu/job/qemu-cheri/lastSuccessfulBuild/artifact/*zip*/archive.zip
+    rm -rf qemu-* archive/
     unzip archive.zip
-    mv archive/* .
+    mv archive/qemu-* .
     chmod -v +x qemu-*/bin/*
     rmdir archive
 fi

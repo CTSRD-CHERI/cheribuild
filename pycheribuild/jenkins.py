@@ -175,6 +175,9 @@ def extract_sdk_archives(cheriConfig, archives: "typing.List[SdkArchive]"):
                 # otherwise fall back to the /usr/bin version
                 cheriConfig.FS.createSymlink(Path(shutil.which(tool)), cheriConfig.sdkBinDir / tool, relative=False)
             cheriConfig.FS.createBuildtoolTargetSymlinks(cheriConfig.sdkBinDir / tool)
+    if not (cheriConfig.sdkBinDir / "ld").exists():
+        statusUpdate("Adding missing $SDK/ld link to ld.lld")
+        cheriConfig.FS.createSymlink(cheriConfig.sdkBinDir / "ld.lld", cheriConfig.sdkBinDir / "ld", relative=True)
 
 
 def create_sdk_from_archives(cheriConfig, needs_cheribsd_sysroot=True):
