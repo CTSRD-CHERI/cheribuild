@@ -35,14 +35,20 @@ import os
 import subprocess
 from pathlib import Path
 import boot_cheribsd
+from junitparser import JUnitXml
 
 
 def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running QtWebkit tests")
     boot_cheribsd.run_cheribsd_command(qemu, "export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/sysroot/lib:/sysroot/usr/lib:/sysroot/usr/local/lib")
     boot_cheribsd.run_cheribsd_command(qemu, "export LD_CHERI_LIBRARY_PATH=/usr/libcheri:/usr/local/libcheri:/sysroot/libcheri:/sysroot/usr/libcheri:/sysroot/usr/local/libcheri")
-    boot_cheribsd.run_cheribsd_command(qemu, "ldd /build/bin/jsc")
-    boot_cheribsd.run_cheribsd_command(qemu, "/build/bin/jsc --help")
+    boot_cheribsd.run_cheribsd_command(qemu, "/source/Tools/Scripts/run-layout-jsc -j /build/bin/jsc -t /source/LayoutTests -r /build/results -x /build/results.xml -f /source/filter.txt", timeout=None)
+
+    # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
+    xml = JUnitXml.fromfile(args.build_dir + '/results.xml')
+    xml.update_statistics()
+    xml.write()
+
     return True
 
 
