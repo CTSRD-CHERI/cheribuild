@@ -190,7 +190,7 @@ def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, a
     def unxz(archive):
         return decompress(archive, force_decompression, cmd=["xz", "-d", "-v", "-f"], keep_archive=keep_archive, args=args)
 
-    if args and getattr(args, "internal_shard") and not PRETEND:
+    if args and getattr(args, "internal_shard", None) and not PRETEND:
         assert path.exists()
 
     if path.suffix == ".bz2":
