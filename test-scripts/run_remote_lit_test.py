@@ -124,6 +124,7 @@ Host cheribsd-test-instance
         # avoid errors due to changed host key:
         UserKnownHostsFile /dev/null
         StrictHostKeyChecking no
+        NoHostAuthenticationForLocalhost yes
         # faster connection by reusing the existing one:
         ControlPath {home}/.ssh/controlmasters/%r@%h:%p
         # ConnectTimeout 30
