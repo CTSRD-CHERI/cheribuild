@@ -241,10 +241,6 @@ Host cheribsd-test-instance
     finally:
         if qemu_logfile:
             qemu_logfile.flush()
-        if t:
-            qemu.flush_interval = 0.1
-            should_exit_event.set()
-            t.join(timeout=30)
         if controlmaster_running:
             boot_cheribsd.info("Terminating SSH controlmaster")
             try:
@@ -252,7 +248,11 @@ Host cheribsd-test-instance
                                                 "-p", str(port), "-O", "exit"], cwd=str(test_build_dir))
             except subprocess.CalledProcessError:
                 boot_cheribsd.failure("Could not close SSH controlmaster connection.", exit=False)
-        if t.is_alive():
-            boot_cheribsd.failure("Failed to kill flush thread. Interacting with CheriBSD will not work!")
-            return False
+        if t:
+            qemu.flush_interval = 0.1
+            should_exit_event.set()
+            t.join(timeout=30)
+            if t.is_alive():
+                boot_cheribsd.failure("Failed to kill flush thread. Interacting with CheriBSD will not work!")
+                return False
     return True
