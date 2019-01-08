@@ -199,14 +199,16 @@ Host cheribsd-test-instance
             qemu_logfile = qemu_log_path.open("w")
             qemu.logfile_read = qemu_logfile
             boot_cheribsd.run_cheribsd_command(qemu, "echo HELLO LOGFILE")
-    # Fixme starting lit at the same time does not work!
-    # TODO: add the polling to the main thread instead of having another thread?
-    # start the qemu output flushing thread so that we can see the kernel panic
-    qemu.flush_interval = 15 # flush the logfile every 15 seconds
-    should_exit_event = threading.Event()
-    t = threading.Thread(target=flush_thread, args=(qemu_logfile, qemu, should_exit_event))
-    t.daemon = True
-    t.start()
+    t = None  # type: threading.Thread
+    if qemu_logfile:
+        # Fixme starting lit at the same time does not work!
+        # TODO: add the polling to the main thread instead of having another thread?
+        # start the qemu output flushing thread so that we can see the kernel panic
+        qemu.flush_interval = 15 # flush the logfile every 15 seconds
+        should_exit_event = threading.Event()
+        t = threading.Thread(target=flush_thread, args=(qemu_logfile, qemu, should_exit_event))
+        t.daemon = True
+        t.start()
     shard_prefix = "SHARD" + str(args.internal_shard) + ": " if args.internal_shard else ""
     try:
         boot_cheribsd.success("Starting llvm-lit: cd ", test_build_dir, " && ", " ".join(lit_cmd))
@@ -238,9 +240,10 @@ Host cheribsd-test-instance
     finally:
         if qemu_logfile:
             qemu_logfile.flush()
-        qemu.flush_interval = 0.1
-        should_exit_event.set()
-        t.join(timeout=30)
+        if t:
+            qemu.flush_interval = 0.1
+            should_exit_event.set()
+            t.join(timeout=30)
         if controlmaster_running:
             boot_cheribsd.info("Terminating SSH controlmaster")
             try:
