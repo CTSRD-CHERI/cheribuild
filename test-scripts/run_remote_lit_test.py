@@ -63,7 +63,7 @@ def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
             f.flush()
         if should_exit_event.is_set():
             break
-        i = qemu.expect([pexpect.TIMEOUT, "KDB: enter:"], timeout=qemu.flush_interval)
+        i = qemu.expect([pexpect.TIMEOUT, "KDB: enter:", pexpect.EOF], timeout=qemu.flush_interval)
         if boot_cheribsd.PRETEND:
             time.sleep(1)
         elif i == 1:
@@ -72,6 +72,9 @@ def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
             global KERNEL_PANIC
             KERNEL_PANIC = True
             # TODO: tell lit to abort now....
+        elif i == 2:
+            # QEMU exited?
+            break
     boot_cheribsd.success("QEMU output flushing thread terminated.")
 
 
