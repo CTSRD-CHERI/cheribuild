@@ -238,10 +238,9 @@ class _BuildDiskImageBase(SimpleProject):
         # Additionally all other files in the extra-files directory will be added to the disk image
         if self.extraFilesDir.exists():
             for root, dirnames, filenames in os.walk(str(self.extraFilesDir)):
-                if '.svn' in dirnames:
-                    dirnames.remove('.svn')
-                if '.git' in dirnames:
-                    dirnames.remove('.git')
+                for blacklisted_dirname in ('.svn', '.git', '.idea'):
+                    if blacklisted_dirname in dirnames:
+                        dirnames.remove(blacklisted_dirname)
                 for filename in filenames:
                     self.extraFiles.append(Path(root, filename))
 
