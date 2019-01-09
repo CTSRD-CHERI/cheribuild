@@ -491,6 +491,10 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     run_cheribsd_command(qemu, "chmod 777 /tmp")
     success("Preparing test enviroment took ", datetime.datetime.now() - setup_tests_starttime)
 
+    if args.test_environment_only:
+        success("Test environment set up. Skipping tests due to --test-environment-only")
+        return True
+
     run_tests_starttime = datetime.datetime.now()
     # Run the tests (allowing custom test functions)
     if test_function:
@@ -550,6 +554,8 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--test-archive", "-t", action="append", nargs=1)
     parser.add_argument("--test-command", "-c")
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60)
+    parser.add_argument("--test-environment-only", action="store_true",
+                        help="Setup mount paths + SSH for tests but don't actually run the tests (implies --interact)")
     parser.add_argument("--pretend", "-p", action="store_true",
                         help="Don't actually boot CheriBSD just print what would happen")
     parser.add_argument("--interact", "-i", action="store_true")
@@ -582,6 +588,8 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
         args.kernel = args.internal_kernel_override
     if args.internal_disk_image_override:
         args.disk_image = args.internal_disk_image_override
+    if args.test_environment_only:
+        args.interact = True
     if argparse_adjust_args_callback:
         argparse_adjust_args_callback(args)
     if shutil.which(args.qemu_cmd) is None:

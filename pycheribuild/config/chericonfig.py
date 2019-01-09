@@ -227,6 +227,8 @@ class CheriConfig(object):
             metavar="ARGS", help="Additional flags to pass to the test script in --test")
         self.tests_interact = loader.addCommandLineOnlyBoolOption("interact-after-tests", group=loader.testsGroup,
             help="Interact with the CheriBSD instance after running the tests on QEMU (only for --test)")
+        self.tests_env_only = loader.addCommandLineOnlyBoolOption("test-environment-only", group=loader.testsGroup,
+            help="Don't actually run the tests. Instead setup a QEMU instance with the right paths set up.")
 
         self.targets = None  # type: list
         self.FS = None  # type: FileSystemUtils

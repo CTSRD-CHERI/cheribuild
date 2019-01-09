@@ -609,6 +609,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             cmd.extend(["--disk-image", disk_image_path])
         if self.config.tests_interact:
             cmd.append("--interact")
+        if self.config.tests_env_only:
+            cmd.append("--test-environment-only")
         if self.config.test_extra_args:
             cmd.extend(map(str, self.config.test_extra_args))
         runCmd(cmd)
