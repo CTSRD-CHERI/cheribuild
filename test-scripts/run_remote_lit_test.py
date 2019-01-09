@@ -131,15 +131,15 @@ Host cheribsd-test-instance
         NoHostAuthenticationForLocalhost yes
         # faster connection by reusing the existing one:
         ControlPath {home}/.ssh/controlmasters/%r@%h:%p
-        # ConnectTimeout 30
-        # ConnectionAttempts 3
+        # ConnectTimeout 20
+        # ConnectionAttempts 2
         ControlMaster auto
-        # Keep socket open for 10 min
 """.format(user=user, port=port, ssh_key=Path(args.ssh_key).with_suffix(""), home=Path.home())
     config_contents += "        ControlPersist {control_persist}\n"
     # print("Writing ssh config: ", config_contents)
     with Path(tempdir, "config").open("w") as c:
-        c.write(config_contents.format(control_persist="600"))
+        # Keep socket open for 10 min (600) or indefinitely (yes)
+        c.write(config_contents.format(control_persist="yes"))
     Path(Path.home(), ".ssh/controlmasters").mkdir(exist_ok=True)
     boot_cheribsd.run_host_command(["cat", str(Path(tempdir, "config"))])
     # Check that the config file works:
