@@ -209,10 +209,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 self.COMMON_FLAGS.append("-D_POSIX_TIMERS=1")  # pretend that we have a monotonic clock
 
             if self.crossInstallDir == CrossInstallDir.SDK:
-                statusUpdate(self.target, "INSTALLDIR = ", self._installDir, "INSTALL_PREFIX=", self._installPrefix,
-                             "DESTDIR=", self.destdir)
                 self._installPrefix = Path("/" if self.baremetal else "/usr/local")
-                self.destdir = self._installPrefix
+                self.destdir = self._installDir
             elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
                 from .cheribsd import BuildCHERIBSD
                 relative_to_rootfs = os.path.relpath(str(self._installDir), str(BuildCHERIBSD.rootfsDir(self, config)))
@@ -227,6 +225,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 assert self._installPrefix and self.destdir, "both must be set!"
 
         assert self.installDir, "must be set"
+        statusUpdate(self.target, "INSTALLDIR = ", self._installDir, "INSTALL_PREFIX=", self._installPrefix,
+                     "DESTDIR=", self.destdir)
 
         if self.debugInfo:
             self.COMMON_FLAGS.append("-ggdb")
