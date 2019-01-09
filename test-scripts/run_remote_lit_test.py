@@ -173,9 +173,9 @@ Host cheribsd-test-instance
         # slow executor using scp:
         executor = 'SSHExecutor("localhost", username="{user}", port={port})'.format(user=user, port=port)
     executor = 'SSHExecutorWithNFSMount("cheribsd-test-instance", username="{user}", port={port}, nfs_dir="{host_dir}", ' \
-               'path_in_target="/build/tmp", extra_ssh_flags=["-F", "{tempdir}/config", "-n", "-4", "-t", "-t"], ' \
+               'path_in_target="/build/tmp", extra_ssh_flags=["-F", "{tempdir}/config", "-n", "-4"], ' \
                'extra_scp_flags=["-F", "{tempdir}/config"])'.format(user=user, port=port, host_dir=str(test_build_dir / "tmp"), tempdir=tempdir)
-
+    # TODO: I was previously passing -t -t to ssh. Is this actually needed?
     print("Running", testsuite, "tests with executor", executor)
     notify_main_process(MultiprocessStages.RUNNING_TESTS)
     # have to use -j1 + --single-process since otherwise CheriBSD might wedge
