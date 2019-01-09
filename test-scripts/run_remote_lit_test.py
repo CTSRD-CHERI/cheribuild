@@ -63,7 +63,8 @@ def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
             f.flush()
         if should_exit_event.is_set():
             break
-        i = qemu.expect([pexpect.TIMEOUT, "KDB: enter:", pexpect.EOF], timeout=qemu.flush_interval)
+        # keep reading line-by-line to output any QEMU trap messages:
+        i = qemu.expect([pexpect.TIMEOUT, "KDB: enter:", pexpect.EOF, qemu.crlf], timeout=qemu.flush_interval)
         if boot_cheribsd.PRETEND:
             time.sleep(1)
         elif i == 1:
@@ -73,8 +74,11 @@ def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
             KERNEL_PANIC = True
             # TODO: tell lit to abort now....
         elif i == 2:
+            boot_cheribsd.failure("GOT QEMU EOF!", exit=False)
             # QEMU exited?
             break
+    # One final expect to flush the buffer:
+    qemu.expect([pexpect.TIMEOUT, pexpect.EOF], timeout=1)
     boot_cheribsd.success("QEMU output flushing thread terminated.")
 
 
@@ -200,16 +204,14 @@ Host cheribsd-test-instance
             qemu_logfile = qemu_log_path.open("w")
             qemu.logfile_read = qemu_logfile
             boot_cheribsd.run_cheribsd_command(qemu, "echo HELLO LOGFILE")
-    t = None  # type: threading.Thread
-    if qemu_logfile:
-        # Fixme starting lit at the same time does not work!
-        # TODO: add the polling to the main thread instead of having another thread?
-        # start the qemu output flushing thread so that we can see the kernel panic
-        qemu.flush_interval = 15 # flush the logfile every 15 seconds
-        should_exit_event = threading.Event()
-        t = threading.Thread(target=flush_thread, args=(qemu_logfile, qemu, should_exit_event))
-        t.daemon = True
-        t.start()
+    # Fixme starting lit at the same time does not work!
+    # TODO: add the polling to the main thread instead of having another thread?
+    # start the qemu output flushing thread so that we can see the kernel panic
+    qemu.flush_interval = 15 # flush the logfile every 15 seconds
+    should_exit_event = threading.Event()
+    t = threading.Thread(target=flush_thread, args=(qemu_logfile, qemu, should_exit_event))
+    t.daemon = True
+    t.start()
     shard_prefix = "SHARD" + str(args.internal_shard) + ": " if args.internal_shard else ""
     try:
         boot_cheribsd.success("Starting llvm-lit: cd ", test_build_dir, " && ", " ".join(lit_cmd))
@@ -248,13 +250,12 @@ Host cheribsd-test-instance
                                                 "-p", str(port), "-O", "exit"], cwd=str(test_build_dir))
             except subprocess.CalledProcessError:
                 boot_cheribsd.failure("Could not close SSH controlmaster connection.", exit=False)
-        if t:
-            qemu.flush_interval = 0.1
-            should_exit_event.set()
-            t.join(timeout=30)
-            if t.is_alive():
-                boot_cheribsd.failure("Failed to kill flush thread. Interacting with CheriBSD will not work!", exit=True)
-                return False
+        qemu.flush_interval = 0.1
+        should_exit_event.set()
+        t.join(timeout=30)
+        if t.is_alive():
+            boot_cheribsd.failure("Failed to kill flush thread. Interacting with CheriBSD will not work!", exit=True)
+            return False
         if not qemu.isalive():
             boot_cheribsd.failure("QEMU died while running tests! ", qemu, exit=True)
     return True
