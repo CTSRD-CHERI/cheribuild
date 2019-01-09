@@ -180,6 +180,10 @@ class CheriConfig(object):
                                                              "CHERI sdk dependencies. Saves a lot of time when "
                                                              "building libc++, etc. with dependencies but the sdk "
                                                              "is already up-to-date")
+
+        self.trap_on_unrepresentable = loader.addBoolOption("trap-on-unrepresentable", default=True,
+            help="Raise a CHERI exception when capabilities become unreprestable instead of detagging. Useful for "
+                 "debugging and therfore on by default.")
         self.includeDependencies = None  # type: bool
         self.crossCompileTarget = None  # type: CrossCompileTarget
         self.makeWithoutNice = None  # type: bool

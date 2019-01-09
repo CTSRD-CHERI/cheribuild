@@ -89,6 +89,9 @@ class LaunchQEMUBase(SimpleProject):
         self.virtioDisk = False
         self._projectSpecificOptions = []
         self.machineFlags = ["-M", "malta"]  # malta cpu
+        # For debugging generate a trap on unrepresentable instead of detagging:
+        if self.config.trap_on_unrepresentable:
+            self.machineFlags.append("-cheri-c2e-on-unrepresentable")
         self._qemuUserNetworking = True
         self.rootfs_path = None  # type: Path
 

@@ -344,7 +344,7 @@ class FakeSpawn(object):
 
 
 def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *, smb_dirs: typing.List[SmbMount]=None,
-                  kernel_init_only=False) -> CheriBSDInstance:
+                  kernel_init_only=False, trap_on_unrepresentable=False) -> CheriBSDInstance:
     user_network_args = "user,id=net0,ipv6=off"
     if smb_dirs is None:
         smb_dirs = []
@@ -356,9 +356,11 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
     if ssh_port is not None:
         user_network_args += ",hostfwd=tcp::" + str(ssh_port) + "-:22"
     qemu_args = ["-M", "malta", "-kernel", kernel_image, "-m", "2048", "-nographic",
-                 "-device", "virtio-rng-pci",  # faster entrop gathering
+                 "-device", "virtio-rng-pci",  # faster entropy gathering
                  #  ssh forwarding:
                  "-net", "nic", "-net", user_network_args]
+    if trap_on_unrepresentable:
+        qemu_args.append("-cheri-c2e-on-unrepresentable")  # trap on unrepresetable instead of detagging
     if disk_image:
         qemu_args += ["-hda", disk_image]
     success("Starting QEMU: ", qemu_cmd, " ", " ".join(qemu_args))
@@ -542,6 +544,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--reuse-image", action="store_true")
     parser.add_argument("--keep-compressed-images", action="store_true", default=True, dest="keep_compressed_images")
     parser.add_argument("--no-keep-compressed-images", action="store_false", dest="keep_compressed_images")
+    parser.add_argument("--trap-on-unrepresentable", action="store_true", help="CHERI trap on unrepresentable caps instead of detagging")
     parser.add_argument("--ssh-key", default=default_ssh_key())
     parser.add_argument("--ssh-port", type=int, default=None)
     parser.add_argument("--use-smb-instead-of-ssh", action="store_true")
@@ -651,7 +654,7 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
 
     boot_starttime = datetime.datetime.now()
     qemu = boot_cheribsd(args.qemu_cmd, kernel, diskimg, args.ssh_port, smb_dirs=args.smb_mount_directories,
-                         kernel_init_only=args.test_kernel_init_only)
+                         kernel_init_only=args.test_kernel_init_only, trap_on_unrepresentable=args.trap_on_unrepresentable)
     success("Booting CheriBSD took: ", datetime.datetime.now() - boot_starttime)
 
     tests_okay = True
