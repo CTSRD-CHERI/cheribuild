@@ -160,8 +160,7 @@ Host cheribsd-test-instance
         check_ssh_connection("Second SSH connection (with controlmaster)")
         controlmaster_running = True
     except subprocess.CalledProcessError:
-        boot_cheribsd.failure("WARNING: Could not connect to ControlMaster SSH connection. Running tests will be slower",
-                               first_connection_time, " seconds", exit=False)
+        boot_cheribsd.failure("WARNING: Could not connect to ControlMaster SSH connection. Running tests will be slower", exit=False)
         with Path(tempdir, "config").open("w") as c:
             c.write(config_contents.format(control_persist="no"))
         check_ssh_connection("Second SSH connection (without controlmaster)")
