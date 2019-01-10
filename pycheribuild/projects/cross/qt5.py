@@ -303,7 +303,7 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
 
 class BuildQtWebkit(CrossCompileCMakeProject):
     repository = "https://github.com/CTSRD-CHERI/qtwebkit"
-    gitBranch = "dev"
+    gitBranch = "qtwebkit-5.212-cheri"
     dependencies = ["qtbase", "icu4c", "libxml2", "sqlite"]
     # webkit is massive if we include debug info
     defaultCMakeBuildType = "MinSizeRel"
