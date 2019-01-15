@@ -68,6 +68,14 @@ MESSAGE_PREFIX = ""
 _SSH_SOCKET_PLACEHOLDER = None  # type: socket.socket
 
 
+class CheriBSDCommandFailed(Exception):
+    def __str__(self):
+        return "".join(map(str, self.args))
+
+class CheriBSDCommandTimeout(CheriBSDCommandFailed):
+    pass
+
+
 class SmbMount(object):
     def __init__(self, hostdir: str, readonly: bool, in_target: str):
         self.readonly = readonly
@@ -252,41 +260,43 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
         results.append(CHERI_TRAP)
     i = qemu.expect(results, timeout=timeout, pretend_result=3)
     if i == 0:
-        failure("/bin/sh: command not found: ", cmd)
+        raise CheriBSDCommandFailed("/bin/sh: command not found: ", cmd)
     elif i == 1:
-        failure("Missing shared library dependencies: ", cmd)
+        raise CheriBSDCommandFailed("Missing shared library dependencies: ", cmd)
     elif i == 2:
-        failure("timeout running ", cmd)
+        raise CheriBSDCommandTimeout("timeout running ", cmd)
     elif i == 3:
         success("ran '", cmd, "' successfully")
     elif i == error_output_index:
         # wait up to 5 seconds for a prompt to ensure the full output has been printed
         qemu.expect([PROMPT], timeout=5)
         qemu.flush()
-        failure("Matched error output ", error_output)
+        raise CheriBSDCommandFailed("Matched error output ", error_output, " in ", cmd)
     elif i == cheri_trap_index:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
         qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
         qemu.flush()
-        failure("Got CHERI TRAP!", exit=cheri_trap_fatal)
+        if cheri_trap_fatal:
+            raise CheriBSDCommandFailed("Got CHERI TRAP!")
+        else:
+            failure("Got CHERI TRAP!", exit=False)
 
 
-def run_cheribsd_command_or_die(qemu: CheriBSDInstance, cmd: str, timeout=600):
-    qemu.sendline(cmd +
-                  " ;if test $? -eq 0; then echo 'COMMAND' 'SUCCESSFUL'; else echo 'COMMAND' 'FAILED'; fi")
+def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600):
+    starttime = datetime.datetime.now()
+    qemu.sendline(cmd + " ;if test $? -eq 0; then echo '__COMMAND' 'SUCCESSFUL__'; else echo '__COMMAND' 'FAILED__'; fi")
     try:
-        i = qemu.expect(["COMMAND SUCCESSFUL", "COMMAND FAILED"], timeout=timeout)
+        i = qemu.expect(["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__"], timeout=timeout)
     except pexpect.TIMEOUT:
         i = -1
-    testtime = datetime.datetime.now() - run_tests_starttime
+    runtime = datetime.datetime.now() - starttime
     if i == -1:  # Timeout
-        return failure("timeout after", testtime, "waiting for tests: ", str(qemu), exit=False)
+        return CheriBSDCommandTimeout("timeout after", runtime, " waiting for tests: ", str(qemu))
     elif i == 0:
-        success("===> Tests completed!")
-        success("Running tests took ", testtime)
+        success("ran '", cmd, "' successfully (in ", runtime.total_seconds(), "s)")
         return True
     else:
-        return failure("error after ", testtime, "while running tests : ", str(qemu), exit=False)
+        raise CheriBSDCommandFailed("error running '", cmd, "' (after '", runtime.total_seconds(), "s)")
 
 
 def setup_ssh(qemu: CheriBSDInstance, pubkey: Path):
@@ -297,7 +307,7 @@ def setup_ssh(qemu: CheriBSDInstance, pubkey: Path):
     run_cheribsd_command(qemu, "echo 'PermitRootLogin without-password' >> /etc/ssh/sshd_config")
     # TODO: check for bluehive images without /sbin/service
     run_cheribsd_command(qemu, "cat /root/.ssh/authorized_keys", expected_output="ssh-")
-    run_cheribsd_command(qemu, "grep -n PermitRootLogin /etc/ssh/sshd_config")
+    checked_run_cheribsd_command(qemu, "grep -n PermitRootLogin /etc/ssh/sshd_config")
     qemu.sendline("service sshd restart")
     try:
         qemu.expect(["service: not found", "Starting sshd.", "Cannot 'restart' sshd."], timeout=120)
@@ -483,8 +493,7 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
                 run_host_command(scp_cmd, cwd=tmp)
     for index, d in enumerate(smb_dirs):
         run_cheribsd_command(qemu, "mkdir -p '{}'".format(d.in_target))
-        run_cheribsd_command(qemu, "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu{} '{}'".format(index + 1, d.in_target),
-                             error_output="mount_smbfs: unable to open connection:")
+        checked_run_cheribsd_command(qemu, "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu{} '{}'".format(index + 1, d.in_target))
     if test_archives:
         time.sleep(5)  # wait 5 seconds to make sure the disks have synced
     # See how much space we have after running scp
@@ -500,7 +509,12 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     run_tests_starttime = datetime.datetime.now()
     # Run the tests (allowing custom test functions)
     if test_function:
-        result = test_function(qemu, args)
+        result = False
+        try:
+            result = test_function(qemu, args)
+        except CheriBSDCommandFailed as e:
+            testtime = datetime.datetime.now() - run_tests_starttime
+            failure("Command failed after ", testtime, " while running tests: ", str(e), exit=False)
         testtime = datetime.datetime.now() - run_tests_starttime
         if result is True:
             success("Running tests took ", testtime)
@@ -666,6 +680,9 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
                 setup_ssh(qemu, Path(args.ssh_key))
                 info("Setting up SSH took: ", datetime.datetime.now() - setup_ssh_starttime)
             tests_okay = runtests(qemu, args, test_archives=test_archives, test_function=test_function)
+        except CheriBSDCommandFailed as e:
+            failure("Command failed while runnings tests: ", str(e), exit=False)
+            traceback.print_exc(file=sys.stderr)
         except Exception:
             failure("FAILED to run tests!! ", exit=False)
             traceback.print_exc(file=sys.stderr)
@@ -691,7 +708,7 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
     success("===> DONE")
     info("Total execution time: ", datetime.datetime.now() - starttime)
     if not tests_okay:
-        failure("Some tests failed!", exit=True)
+        failure("ERROR: Some tests failed!", exit=True)
 
 
 if __name__ == "__main__":

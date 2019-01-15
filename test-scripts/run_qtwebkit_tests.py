@@ -44,14 +44,16 @@ def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
     boot_cheribsd.run_cheribsd_command(qemu, "export LD_CHERI_LIBRARY_PATH=/usr/libcheri:/usr/local/libcheri:/sysroot/libcheri:/sysroot/usr/libcheri:/sysroot/usr/local/libcheri")
     boot_cheribsd.run_cheribsd_command(qemu, "export ICU_DATA=/sysroot/usr/local/share/icu/60.0.1")
     boot_cheribsd.run_cheribsd_command(qemu, "export LANG=en_US.UTF-8")
-    boot_cheribsd.run_cheribsd_command(qemu, "/source/Tools/Scripts/run-layout-jsc -j /build/bin/jsc -t /source/LayoutTests -r /build/results -x /build/results.xml", timeout=None)
-
-    # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
-    xml = JUnitXml.fromfile(args.build_dir + '/results.xml')
-    xml.update_statistics()
-    xml.write()
-
-    return True
+    try:
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "/source/Tools/Scripts/run-layout-jsc -j /build/bin/jsc -t /source/LayoutTests -r /build/results -x /build/results.xml", timeout=None)
+        return True
+    finally:
+        tests_xml_path = Path(args.build_dir, 'results.xml')
+        if tests_xml_path.exists():
+            # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
+            xml = JUnitXml.fromfile(str(tests_xml_path))
+            xml.update_statistics()
+            xml.write()
 
 
 if __name__ == '__main__':

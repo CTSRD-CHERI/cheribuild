@@ -39,8 +39,8 @@ import boot_cheribsd
 
 def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     boot_cheribsd.success("Booted successfully")
-    boot_cheribsd.run_cheribsd_command(qemu, "mount_smbfs --help", cheri_trap_fatal=False)
-    boot_cheribsd.run_cheribsd_command(qemu, "/libexec/ld-cheri-elf.so.1 --help")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "mount_smbfs --help")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "/libexec/ld-cheri-elf.so.1 --help")
     poweroff_start = datetime.datetime.now()
     qemu.sendline("poweroff")
     i = qemu.expect(["Uptime:", pexpect.TIMEOUT, pexpect.EOF] + boot_cheribsd.FATAL_ERROR_MESSAGES, timeout=20)

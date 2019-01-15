@@ -175,7 +175,7 @@ Host cheribsd-test-instance
                'path_in_target="/build/tmp", extra_ssh_flags=["-F", "{tempdir}/config", "-n", "-4"], ' \
                'extra_scp_flags=["-F", "{tempdir}/config"])'.format(user=user, port=port, host_dir=str(test_build_dir / "tmp"), tempdir=tempdir)
     # TODO: I was previously passing -t -t to ssh. Is this actually needed?
-    print("Running", testsuite, "tests with executor", executor)
+    boot_cheribsd.success("Running", testsuite, "tests with executor", executor)
     notify_main_process(MultiprocessStages.RUNNING_TESTS)
     # have to use -j1 + --single-process since otherwise CheriBSD might wedge
     if llvm_lit_path is None:
