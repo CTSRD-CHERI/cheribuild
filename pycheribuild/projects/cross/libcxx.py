@@ -160,7 +160,7 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
             if self.compiling_for_host():
                 runCmd("ctest", ".", "-VV", cwd=self.buildDir)
             else:
-                warningMessage("Running libcxxrt tests not yet implemented for non-native case")
+                self.run_cheribsd_test_script("run_libcxxrt_tests.py")
 
 
 class BuildLibCXX(CrossCompileCMakeProject):
