@@ -64,7 +64,6 @@ class Linkage(Enum):
     DEFAULT = "default"
     STATIC = "static"
     DYNAMIC = "dynamic"
-    STATIC_AND_DYNAMIC = "static-and-dynamic"  # for projects that can build both
 
 
 class MipsFloatAbi(Enum):
@@ -153,9 +152,9 @@ class CheriConfig(object):
         self.mips_float_abi = loader.addOption("mips-float-abi", default=MipsFloatAbi.SOFT, type=MipsFloatAbi,
                                                group=loader.crossCompileOptionsGroup,
                                                help="The floating point ABI to use for building MIPS+CHERI programs")
-        self.crosscompile_linkage = loader.addOption("cross-compile-linkage", default=Linkage.STATIC_AND_DYNAMIC, type=Linkage,
+        self.crosscompile_linkage = loader.addOption("cross-compile-linkage", default=Linkage.DYNAMIC, type=Linkage,
                                                      group=loader.crossCompileOptionsGroup,
-                                                     enum_choices=(Linkage.DEFAULT, Linkage.DYNAMIC, Linkage.STATIC, Linkage.STATIC_AND_DYNAMIC),
+                                                     enum_choices=(Linkage.DYNAMIC, Linkage.STATIC),
                                                      help="Whether to link cross-compile projects static or dynamic by default")
         self.csetbounds_stats = loader.addBoolOption("collect-csetbounds-stats", default=False,
                                                      group=loader.crossCompileOptionsGroup, helpHidden=True,
