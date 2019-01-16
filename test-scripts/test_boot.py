@@ -39,8 +39,11 @@ import boot_cheribsd
 
 def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     boot_cheribsd.success("Booted successfully")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "mount_smbfs --help")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "/libexec/ld-cheri-elf.so.1 --help")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "kenv")
+    # unchecked since mount_smbfs returns non-zero for --help:
+    boot_cheribsd.run_cheribsd_command(qemu, "mount_smbfs --help", cheri_trap_fatal=True)
+    # same for ld-cheri-elf.so (but do check for CHERI traps:
+    boot_cheribsd.run_cheribsd_command(qemu, "/libexec/ld-cheri-elf.so.1 -h", cheri_trap_fatal=True)
     poweroff_start = datetime.datetime.now()
     qemu.sendline("poweroff")
     i = qemu.expect(["Uptime:", pexpect.TIMEOUT, pexpect.EOF] + boot_cheribsd.FATAL_ERROR_MESSAGES, timeout=20)
@@ -57,6 +60,7 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
 
 def test_boot_setup_args(args: argparse.Namespace):
     args.use_smb_instead_of_ssh = True  # skip the ssh setup
+    args.skip_ssh_setup = True
 
 
 if __name__ == '__main__':

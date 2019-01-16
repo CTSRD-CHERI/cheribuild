@@ -353,8 +353,22 @@ class FakeSpawn(object):
         return False
 
 
+def start_dhclient(qemu: CheriBSDInstance):
+    success("===> Setting up QEMU networking")
+    qemu.sendline("ifconfig le0 up && dhclient le0")
+    i = qemu.expect([pexpect.TIMEOUT, "DHCPACK from 10.0.2.2", "dhclient already running"], timeout=120)
+    if i == 0:  # Timeout
+        failure("timeout awaiting dhclient ", str(child))
+    if i == 1:
+        i = qemu.expect([pexpect.TIMEOUT, "bound to"], timeout=120)
+        if i == 0:  # Timeout
+            failure("timeout awaiting dhclient ", str(child))
+    success("===> le0 bound to QEMU networking")
+    qemu.expect_exact(PROMPT_SH, timeout=30)
+
+
 def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *, smb_dirs: typing.List[SmbMount]=None,
-                  kernel_init_only=False, trap_on_unrepresentable=False) -> CheriBSDInstance:
+                  kernel_init_only=False, trap_on_unrepresentable=False, skip_ssh_setup=False) -> CheriBSDInstance:
     user_network_args = "user,id=net0,ipv6=off"
     if smb_dirs is None:
         smb_dirs = []
@@ -371,6 +385,9 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
                  "-net", "nic", "-net", user_network_args]
     if trap_on_unrepresentable:
         qemu_args.append("-cheri-c2e-on-unrepresentable")  # trap on unrepresetable instead of detagging
+    if skip_ssh_setup:
+        qemu_args.append("-append")
+        qemu_args.append("cheribuild.skip_sshd=1 cheribuild.skip_entropy=1")
     if disk_image:
         qemu_args += ["-hda", disk_image]
     success("Starting QEMU: ", qemu_cmd, " ", " ".join(qemu_args))
@@ -401,11 +418,12 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
             # To test kernel startup time
             return child
 
-        i = child.expect([pexpect.TIMEOUT, "DHCPACK from ", LOGIN, SHELL_OPEN, BOOT_FAILURE] + FATAL_ERROR_MESSAGES, timeout=15 * 60)
-        if i == 1:
+        boot_expect_strings = [pexpect.TIMEOUT, LOGIN, SHELL_OPEN, BOOT_FAILURE]
+        i = child.expect(boot_expect_strings + ["DHCPACK from "] + FATAL_ERROR_MESSAGES, timeout=15 * 60)
+        if i == len(boot_expect_strings):
             have_dhclient = True
             # we have a network, keep waiting for the login prompt
-            i = child.expect([pexpect.TIMEOUT, LOGIN, SHELL_OPEN, BOOT_FAILURE] + FATAL_ERROR_MESSAGES, timeout=15 * 60)
+            i = child.expect(boot_expect_strings + FATAL_ERROR_MESSAGES, timeout=15 * 60)
         if i == 0:  # Timeout
             failure("timeout awaiting login prompt: ", str(child))
         elif i == 1:
@@ -436,17 +454,7 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
             success("===> /etc/rc completed, got command prompt")
             # set up network (bluehive image tries to use atse0)
             if not have_dhclient:
-                success("===> Setting up QEMU networking")
-                child.sendline("ifconfig le0 up && dhclient le0")
-                i = child.expect([pexpect.TIMEOUT, "DHCPACK from 10.0.2.2", "dhclient already running"], timeout=120)
-                if i == 0:  # Timeout
-                    failure("timeout awaiting dhclient ", str(child))
-                if i == 1:
-                    i = child.expect([pexpect.TIMEOUT, "bound to"], timeout=120)
-                    if i == 0:  # Timeout
-                        failure("timeout awaiting dhclient ", str(child))
-                success("===> le0 bound to QEMU networking")
-                child.expect_exact(PROMPT_SH, timeout=30)
+                start_dhclient(qemu)
             set_posix_sh_prompt(child)
         else:
             # If this was a failure of init we should get a debugger backtrace
@@ -573,6 +581,8 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60)
     parser.add_argument("--test-environment-only", action="store_true",
                         help="Setup mount paths + SSH for tests but don't actually run the tests (implies --interact)")
+    parser.add_argument("--skip-ssh-setup", action="store_true",
+                        help="Don't start sshd on boot. Saves a few seconds of boot time if not needed.")
     parser.add_argument("--pretend", "-p", action="store_true",
                         help="Don't actually boot CheriBSD just print what would happen")
     parser.add_argument("--interact", "-i", action="store_true")
@@ -668,7 +678,8 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
 
     boot_starttime = datetime.datetime.now()
     qemu = boot_cheribsd(args.qemu_cmd, kernel, diskimg, args.ssh_port, smb_dirs=args.smb_mount_directories,
-                         kernel_init_only=args.test_kernel_init_only, trap_on_unrepresentable=args.trap_on_unrepresentable)
+                         kernel_init_only=args.test_kernel_init_only, trap_on_unrepresentable=args.trap_on_unrepresentable,
+                         skip_ssh_setup=args.skip_ssh_setup)
     success("Booting CheriBSD took: ", datetime.datetime.now() - boot_starttime)
 
     tests_okay = True

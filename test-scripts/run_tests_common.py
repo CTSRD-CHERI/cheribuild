@@ -55,6 +55,7 @@ def run_tests_main(test_function: typing.Callable[[pexpect.spawn, argparse.Names
             args.use_smb_instead_of_ssh = False  # we need ssh running to execute the tests
         else:
             args.use_smb_instead_of_ssh = True  # skip the ssh setup
+            args.skip_ssh_setup = True
         if should_mount_builddir:
             args.build_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.build_dir)))
             args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.build_dir, readonly=False, in_target="/build"))
