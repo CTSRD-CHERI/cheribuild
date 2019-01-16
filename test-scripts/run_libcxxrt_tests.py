@@ -35,9 +35,11 @@ import boot_cheribsd
 
 def run_libcxxrt_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running libcxxrt tests")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "'{}/bin/cxxrt-test-static'".format(qemu.smb_dirs[0].in_target))
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "'{}/bin/cxxrt-test-shared'".format(qemu.smb_dirs[0].in_target))
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "'{}/bin/cxxrt-test-foreign-exceptions'".format(qemu.smb_dirs[0].in_target))
+    boot_cheribsd.run_cheribsd_command(qemu, "export LD_CHERI_LIBRARY_PATH='{}/lib'".format(qemu.smb_dirs[0].in_target), timeout=2)
+    boot_cheribsd.run_cheribsd_command(qemu, "export LD_LIBRARY_PATH='{}/lib'".format(qemu.smb_dirs[0].in_target), timeout=2)
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "'{}/bin/cxxrt-test-static' -v".format(qemu.smb_dirs[0].in_target))
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "'{}/bin/cxxrt-test-foreign-exceptions' -v".format(qemu.smb_dirs[0].in_target))
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "'{}/bin/cxxrt-test-shared' -v".format(qemu.smb_dirs[0].in_target))
     return True
 
 
