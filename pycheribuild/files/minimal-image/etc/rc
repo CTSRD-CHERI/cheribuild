@@ -56,20 +56,18 @@ mkdir -p /tmp
 mount -t tmpfs -o size=$MDSZ tmpfs /tmp
 export PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 
-if /sbin/ifconfig -l | grep atse0; then
-    echo "set atse0 if to polling"
-    /sbin/ifconfig atse0 polling
+setup_network() {
+    if /sbin/ifconfig -l | grep "$1"; then
+        echo "ifconfig $@"
+        /sbin/ifconfig "$@"
 
-    echo "run dhclient on atse0"
-    /sbin/dhclient atse0
-fi
-if /sbin/ifconfig -l | grep le0; then
-    echo "set le0"
-    /sbin/ifconfig le0
+        echo "run dhclient on $1"
+        /sbin/dhclient $1
+    fi
+}
 
-    echo "run dhclient on le0"
-    /sbin/dhclient le0
-fi
+setup_network atse0 polling # FPGA needs polling
+setup_network le0  # QEMU
 
 echo "set up loopback"
 /sbin/ifconfig lo0 inet 127.0.0.1 up
