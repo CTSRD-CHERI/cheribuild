@@ -601,7 +601,9 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
 
     def configure(self, **kwargs):
         if self._configure_understands_enable_static:     # workaround for nginx which isn't really autotools
-            if self.force_static_linkage:
+            if self.linkage() == Linkage.STATIC_AND_DYNAMIC:
+                self.configureArgs.extend(["--enable-static", "--enable-shared"])
+            elif self.force_static_linkage:
                 self.configureArgs.extend(["--enable-static", "--disable-shared"])
             elif self.force_dynamic_linkage:
                 self.configureArgs.extend(["--disable-static", "--enable-shared"])
