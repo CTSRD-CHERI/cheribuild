@@ -298,6 +298,9 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
             "--disable-shared", "--enable-static", "--without-python",
             "--without-modules", "--without-lzma",
         ])
+        if IS_MAC:
+            self._addRequiredSystemTool("glibtoolize", homebrew="libtool")
+            self.configureEnvironment["LIBTOOLIZE"] = "glibtoolize"
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-capability-misuse"]  # FIXME: build with capability -Werror
 
 
