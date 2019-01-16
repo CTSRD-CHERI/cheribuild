@@ -160,7 +160,9 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
             if self.compiling_for_host():
                 runCmd("ctest", ".", "-VV", cwd=self.buildDir)
             else:
-                self.run_cheribsd_test_script("run_libcxxrt_tests.py")
+                self.run_cheribsd_test_script("run_libcxxrt_tests.py",
+                                              "--libunwind-build-dir", BuildLibunwind.getBuildDir(self, self.config),
+                                              mount_builddir=True, mount_sysroot=True)
 
 
 class BuildLibCXX(CrossCompileCMakeProject):
@@ -177,6 +179,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         super().setupConfigOptions(**kwargs)
         cls.only_compile_tests = cls.addBoolOption("only-compile-tests",
                                                    help="Don't attempt to run tests, only compile them")
+        cls.enable_exceptions = cls.addBoolOption("exceptions", help="Build with support for C++ exceptions")
         cls.collect_test_binaries = cls.addPathOption("collect-test-binaries", metavar="TEST_PATH",
                                                       help="Instead of running tests copy them to $TEST_PATH")
         cls.nfs_mounted_path = cls.addPathOption("nfs-mounted-path", metavar="PATH", help="Use a PATH as a directory"

@@ -31,19 +31,33 @@
 #
 import argparse
 import boot_cheribsd
+import os
 
 
 def run_libcxxrt_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running libcxxrt tests")
-    boot_cheribsd.run_cheribsd_command(qemu, "export LD_CHERI_LIBRARY_PATH='{}/lib'".format(qemu.smb_dirs[0].in_target), timeout=2)
-    boot_cheribsd.run_cheribsd_command(qemu, "export LD_LIBRARY_PATH='{}/lib'".format(qemu.smb_dirs[0].in_target), timeout=2)
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "'{}/bin/cxxrt-test-static' -v".format(qemu.smb_dirs[0].in_target))
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "'{}/bin/cxxrt-test-foreign-exceptions' -v".format(qemu.smb_dirs[0].in_target))
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "'{}/bin/cxxrt-test-shared' -v".format(qemu.smb_dirs[0].in_target))
+    boot_cheribsd.run_cheribsd_command(qemu, "export LD_LIBRARY_PATH=/build/lib:/libunwind/lib:/sysroot/lib:/sysroot/usr/lib:/sysroot/usr/local/lib", timeout=2)
+    boot_cheribsd.run_cheribsd_command(qemu, "export LD_CHERI_LIBRARY_PATH=/build/lib:/libunwind/lib:/sysroot/libcheri:/sysroot/usr/libcheri:/sysroot/usr/local/libcheri", timeout=2)
+    boot_cheribsd.run_cheribsd_command(qemu, "export LIBUNWIND_PRINT_UNWINDING=1", timeout=2)
+    boot_cheribsd.run_cheribsd_command(qemu, "export LIBUNWIND_PRINT_APIS=1", timeout=2)
+    boot_cheribsd.run_cheribsd_command(qemu, "export LIBUNWIND_PRINT_DWARF=1", timeout=2)
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "'/build/bin/cxxrt-test-static' -v")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "'/build/bin/cxxrt-test-shared' -v")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "'/build/bin/cxxrt-test-foreign-exceptions' -v")
     return True
+
+
+def add_args(parser: argparse.ArgumentParser):
+    parser.add_argument("--libunwind-build-dir", required=True)
+
+
+def adjust_args(args: argparse.Namespace):
+    args.build_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.build_dir)))
+    args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.libunwind_build_dir, readonly=True, in_target="/libunwind"))
 
 
 if __name__ == '__main__':
     from run_tests_common import run_tests_main
     # we don't need ssh running to execute the tests
-    run_tests_main(test_function=run_libcxxrt_tests, need_ssh=False, should_mount_builddir=True)
+    run_tests_main(test_function=run_libcxxrt_tests, need_ssh=False, argparse_setup_callback=add_args,
+                   argparse_adjust_args_callback=adjust_args, should_mount_builddir=True, should_mount_sysroot=True)
