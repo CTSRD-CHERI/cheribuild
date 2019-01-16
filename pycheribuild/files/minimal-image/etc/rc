@@ -37,7 +37,9 @@ echo "Setting up sysctls"
 echo "mount / rw"
 /sbin/mount -o rw /
 
-if [ ! -w "/dev/random" ]; then
+if [ -n "$(kenv -q cheribuild.skip_entropy)" ]; then
+    echo "Skipping entropy seeding since cheribuild.skip_entropy was set"
+elif [ ! -w "/dev/random" ]; then
     echo "Not seeding initial entropy since /dev/random is not writable"
 else
 	for f in /boot/entropy /entropy /var/db/entropy/*; do
@@ -76,17 +78,20 @@ BENCHDIR=/tmp/benchdir
 mkdir $BENCHDIR
 chmod 777 $BENCHDIR
 
-echo "generate host keys"
-for alg in rsa ecdsa ed25519 ; do
-    keyfile="/etc/ssh/ssh_host_${alg}_key"
-    if [ ! -e "$keyfile" ]; then
-        ssh-keygen -t $alg -f "$keyfile" -N ""
-    fi
-    # ssh-keygen -l -f "$keyfile.pub"
-done
-
-echo "start sshd"
-/usr/sbin/sshd
+if [ -n "$(kenv -q cheribuild.skip_sshd)" ]; then
+    echo "Not starting sshd since cheribuild.skip_sshd was set"
+else
+    echo "generate host keys"
+    for alg in rsa ecdsa ed25519 ; do
+        keyfile="/etc/ssh/ssh_host_${alg}_key"
+        if [ ! -e "$keyfile" ]; then
+            ssh-keygen -t $alg -f "$keyfile" -N ""
+        fi
+        # ssh-keygen -l -f "$keyfile.pub"
+    done
+    echo "start sshd"
+    /usr/sbin/sshd
+fi
 
 echo "exec /bin/sh"
 exec /bin/sh
