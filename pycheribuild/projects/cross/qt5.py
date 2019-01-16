@@ -324,6 +324,9 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                          # generator=BuildQtWebkit.Generator.Makefiles
                          generator=BuildQtWebkit.Generator.Ninja
                          )
+        if not self.compiling_for_host():
+            self._linkage = Linkage.STATIC  # currently dynamic doesn't work
+
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-bitwise-operations", "-Wno-error=cheri-capability-misuse", "-Wno-error=format"]  # FIXME: build with capability -Werror
         if self.debugInfo:
             self.COMMON_FLAGS.append("-gline-tables-only") # otherwise too much debug info
