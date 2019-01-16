@@ -41,7 +41,7 @@ if [ ! -w "/dev/random" ]; then
     echo "Not seeding initial entropy since /dev/random is not writable"
 else
 	for f in /boot/entropy /entropy /var/db/entropy/*; do
-		if [ -f "$f" -a -r "$f" -a -s "$f" ] ; then
+		if [ -f "$f" ] && [ -r "$f" ] && [ -s "$f" ]; then
 			if dd if="$f" of=/dev/random bs=4096 2>/dev/null ; then
 				echo "entropy read from $f"
 				rm -f "$f"
