@@ -45,8 +45,8 @@ def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
     boot_cheribsd.run_cheribsd_command(qemu, "export ICU_DATA=/sysroot/usr/local/share/icu/60.0.1")
     boot_cheribsd.run_cheribsd_command(qemu, "export LANG=en_US.UTF-8")
     try:
-		# Run JSC tests. This will invoke jsc for each test. We want to continue
-		# running even if there is a CHERI trap, so ignore them.
+        # Run JSC tests. This will invoke jsc for each test. We want to continue
+        # running even if there is a CHERI trap, so ignore them.
         boot_cheribsd.checked_run_cheribsd_command(qemu, "/source/Tools/Scripts/run-layout-jsc -j /build/bin/jsc -t /source/LayoutTests -r /build/results -x /build/results.xml", ignore_cheri_trap=True, timeout=None)
         return True
     finally:
