@@ -85,6 +85,10 @@ def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
 def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str,
                          mp_q: multiprocessing.Queue = None, llvm_lit_path: str = None) -> bool:
     try:
+        import psutil
+    except ImportError:
+        boot_cheribsd.failure("Cannot run lit without `psutil` python module installed", exit=True)
+    try:
         result = run_remote_lit_tests_impl(testsuite=testsuite, qemu=qemu, args=args, tempdir=tempdir,
                                            mp_q=mp_q, llvm_lit_path=llvm_lit_path)
         if mp_q:
