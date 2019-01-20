@@ -49,11 +49,15 @@ def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
         return True
     finally:
         tests_xml_path = Path(args.build_dir, 'results.xml')
-        if tests_xml_path.exists():
-            # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
-            xml = JUnitXml.fromfile(str(tests_xml_path))
-            xml.update_statistics()
-            xml.write()
+        try:
+            if tests_xml_path.exists():
+                # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
+                xml = JUnitXml.fromfile(str(tests_xml_path))
+                xml.update_statistics()
+                xml.write()
+        except:
+            boot_cheribsd.failure("Could not update JUnit XML", tests_xml_path, exit=False)
+            return False
 
 
 if __name__ == '__main__':

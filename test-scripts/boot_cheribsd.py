@@ -520,6 +520,9 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
         result = False
         try:
             result = test_function(qemu, args)
+        except KeyboardInterrupt:
+            result = False
+            failure("Got CTRL+C while running tests", exit=False)
         except CheriBSDCommandFailed as e:
             testtime = datetime.datetime.now() - run_tests_starttime
             failure("Command failed after ", testtime, " while running tests: ", str(e), exit=False)
