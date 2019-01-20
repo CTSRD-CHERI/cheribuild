@@ -467,7 +467,8 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
 
 
 def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: list,
-             test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace, ...], bool]"=None) -> bool:
+             test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace, ...], None]" = None,
+             test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace, ...], bool]" = None) -> bool:
     test_command = args.test_command
     ssh_keyfile = args.ssh_key
     ssh_port = args.ssh_port
@@ -509,6 +510,12 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     # ensure that /tmp is world-writable
     run_cheribsd_command(qemu, "chmod 777 /tmp")
     success("Preparing test enviroment took ", datetime.datetime.now() - setup_tests_starttime)
+    if test_setup_function:
+        setup_tests_starttime = datetime.datetime.now()
+        test_setup_function(qemu, args)
+        success("Additional test enviroment setup took ", datetime.datetime.now() - setup_tests_starttime)
+
+
 
     if args.test_environment_only:
         success("Test environment set up. Skipping tests due to --test-environment-only")
@@ -599,6 +606,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, ...], bool]"=None,
+         test_setup_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, ...], None]"=None,
          argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]"=None,
          argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]"=None):
     parser = get_argument_parser()
@@ -693,7 +701,8 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
                 setup_ssh_starttime = datetime.datetime.now()
                 setup_ssh(qemu, Path(args.ssh_key))
                 info("Setting up SSH took: ", datetime.datetime.now() - setup_ssh_starttime)
-            tests_okay = runtests(qemu, args, test_archives=test_archives, test_function=test_function)
+            tests_okay = runtests(qemu, args, test_archives=test_archives, test_function=test_function,
+                                  test_setup_function=test_setup_function)
         except CheriBSDCommandFailed as e:
             failure("Command failed while runnings tests: ", str(e), exit=False)
             traceback.print_exc(file=sys.stderr)

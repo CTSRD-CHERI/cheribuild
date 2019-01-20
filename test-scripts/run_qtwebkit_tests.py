@@ -38,12 +38,15 @@ import boot_cheribsd
 from junitparser import JUnitXml
 
 
-def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
-    boot_cheribsd.info("Running QtWebkit tests")
+def setup_qtwebkit_test_environment(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     boot_cheribsd.run_cheribsd_command(qemu, "export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/sysroot/lib:/sysroot/usr/lib:/sysroot/usr/local/lib")
     boot_cheribsd.run_cheribsd_command(qemu, "export LD_CHERI_LIBRARY_PATH=/usr/libcheri:/usr/local/libcheri:/sysroot/libcheri:/sysroot/usr/libcheri:/sysroot/usr/local/libcheri")
     boot_cheribsd.run_cheribsd_command(qemu, "export ICU_DATA=/sysroot/usr/local/share/icu/60.0.1")
     boot_cheribsd.run_cheribsd_command(qemu, "export LANG=en_US.UTF-8")
+    boot_cheribsd.run_cheribsd_command(qemu, "echo '<h1>Hello World!</h1>' > /tmp/helloworld.html")
+
+def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
+    boot_cheribsd.info("Running QtWebkit tests")
     try:
         boot_cheribsd.checked_run_cheribsd_command(qemu, "/source/Tools/Scripts/run-layout-jsc -j /build/bin/jsc -t /source/LayoutTests -r /build/results -x /build/results.xml", timeout=None)
         return True
@@ -63,5 +66,5 @@ def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
 if __name__ == '__main__':
     from run_tests_common import run_tests_main
     # we don't need ssh running to execute the tests, but we need both host and source dir mounted
-    run_tests_main(test_function=run_qtwebkit_tests, need_ssh=False, should_mount_builddir=True,
-                   should_mount_srcdir=True, should_mount_sysroot=True)
+    run_tests_main(test_function=run_qtwebkit_tests, test_setup_function=setup_qtwebkit_test_environment,
+                   need_ssh=False, should_mount_builddir=True, should_mount_srcdir=True, should_mount_sysroot=True)
