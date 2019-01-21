@@ -45,9 +45,25 @@ def setup_qtwebkit_test_environment(qemu: boot_cheribsd.CheriBSDInstance, args: 
     boot_cheribsd.run_cheribsd_command(qemu, "export LANG=en_US.UTF-8")
     boot_cheribsd.run_cheribsd_command(qemu, "echo '<h1>Hello World!</h1>' > /tmp/helloworld.html")
 
+    # mime database
+    boot_cheribsd.run_cheribsd_command(qemu, "mkdir -p /usr/share/mime/packages")
+    boot_cheribsd.run_cheribsd_command(qemu, "mkdir -p /usr/local/Qt-cheri/lib/fonts")
+    boot_cheribsd.run_cheribsd_command(qemu, "ln -sf /usr/local/Qt-cheri /usr/local/Qt-mips")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /source/LayoutTests/resources/Ahem.ttf /usr/local/Qt-cheri/lib/fonts")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /source/LayoutTests/fast/writing-mode/resources/DroidSansFallback-reduced.ttf /usr/local/Qt-cheri/lib/fonts")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /build/mime.cache /usr/share/mime")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /build/freedesktop.org.xml /usr/share/mime/packages/freedesktop.org.xml")
+
+    boot_cheribsd.success("To debug crashes run: `sysctl kern.corefile=/build/%N.%P.core; sysctl kern.coredump=1` and then run CHERI gdb on the host system.")
+
 def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running QtWebkit tests")
     try:
+        # Check that jsc + dumprendertree work
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "/build/bin/jsc --help", timeout=1200)
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "/build/bin/DumpRenderTree -v /tmp/helloworld.html", timeout=1800)
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "/build/bin/DumpRenderTree -p --stdout /build/hello.png /tmp/helloworld.html", timeout=1800)
+
         boot_cheribsd.checked_run_cheribsd_command(qemu, "/source/Tools/Scripts/run-layout-jsc -j /build/bin/jsc -t /source/LayoutTests -r /build/results -x /build/results.xml", timeout=None)
         return True
     finally:
