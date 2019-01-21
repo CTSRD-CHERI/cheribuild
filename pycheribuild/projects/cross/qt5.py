@@ -27,6 +27,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import tempfile
+
 from .crosscompileproject import *
 from ...config.loader import ComputedDefaultValue
 from ...utils import commandline_to_str, runCmd, IS_FREEBSD, IS_MAC, fatalError, IS_LINUX, getCompilerInfo
@@ -324,6 +326,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                          # generator=BuildQtWebkit.Generator.Makefiles
                          generator=BuildQtWebkit.Generator.Ninja
                          )
+        self._addRequiredSystemTool("update-mime-database", homebrew="shared-mime-info", apt="shared-mime-info")
         if not self.compiling_for_host():
             self._linkage = Linkage.STATIC  # currently dynamic doesn't work
 
@@ -382,6 +385,22 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         cls.build_jsc_only = cls.addBoolOption("build-jsc-only", showHelp=True, help="only build the JavaScript interpreter executable")
 
     def compile(self, **kwargs):
+        # Generate the shared mime info cache to MASSIVELY speed up tests
+        with tempfile.TemporaryDirectory() as td:
+            mime_info_src = BuildQtBase.getSourceDir(self, self.config) / "src/corelib/mimetypes/mime/packages/freedesktop.org.xml"
+            self.installFile(mime_info_src, Path(td, "mime/packages/freedesktop.org.xml"), force=True, printVerboseOnly=False)
+            try:
+                runCmd("update-mime-database", "-V", Path(td, "mime"), cwd="/")
+            except:
+                input("Failed in" + td + "/mime")
+                raise
+
+            if not Path(td, "mime/mime.cache").exists():
+                fatalError("Could not generated shared-mime-info cache!")
+            # install mime.cache and freedesktop.org.xml into the build dir for tests
+            self.installFile(mime_info_src, self.buildDir / "freedesktop.org.xml", force=True, printVerboseOnly=False)
+            self.installFile(Path(td, "mime/mime.cache"), self.buildDir / "mime.cache", force=True, printVerboseOnly=False)
+            # TODO: get https://github.com/annulen/webkit-test-fonts to run the full testsuite
         if self.build_jsc_only:
             self.runMake("jsc")
         else:
