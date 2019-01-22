@@ -45,6 +45,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
     hide_options_from_help = True  # hide this for now
 
+    default_build_type = BuildType.MINSIZERELWITHDEBINFO # Default to -Os with debug info:
+
+
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.configureCommand = self.sourceDir / "configure"
@@ -56,6 +59,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         super().setupConfigOptions(**kwargs)
         cls.build_tests = cls.addBoolOption("build-tests", showHelp=True, help="build the Qt unit tests")
         cls.build_examples = cls.addBoolOption("build-examples", showHelp=True, help="build the Qt examples")
+        cls.assertions = cls.addBoolOption("assertions", default=False, showHelp=True, help="Include assertions")
         cls.minimal = cls.addBoolOption("minimal", showHelp=True, help="Don't build QtWidgets or QtGui, etc")
         cls.optimized_debug_build = cls.addBoolOption("optimized-debug-build",
                                                       help="Don't build with -Os instead of -O0 for debug info builds")
@@ -130,21 +134,24 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         # Seems like I need to define PNG_READ_GAMMA_SUPPORTED
         self.configureArgs.append("-qt-libpng")
 
-        if self.debugInfo:
-            # TODO: once we update to qt 5.12 add this:
-            # self.configureArgs.append("-gdb-index")
-            # Build a release build with debug info for now
-            if self.optimized_debug_build:
-                self.configureArgs.append("-release")
-                self.configureArgs.append("-optimize-size")  # Use -Os, otherwise it will use -O3
-                self.configureArgs.append("-force-debug-info")
-                self.configureArgs.append("-force-asserts")
-            else:
-                self.configureArgs.append("-debug")
-                # optimize-debug needs GCC
-                # self.configureArgs.append("-optimize-debug")
+        print("TYPE:", self.cross_build_type)
+        # TODO: once we update to qt 5.12 add this:
+        # self.configureArgs.append("-gdb-index")
+        if self.cross_build_type == BuildType.DEBUG:
+            self.configureArgs.append("-debug")
+            # optimize-debug needs GCC
+            # self.configureArgs.append("-optimize-debug")
         else:
+            assert self.cross_build_type in (BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO,
+                                             BuildType.MINSIZEREL, BuildType.RELEASE)
             self.configureArgs.append("-release")
+            if self.cross_build_type in (BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO):
+                self.configureArgs.append("-force-debug-info")
+            if self.cross_build_type in (BuildType.MINSIZEREL, BuildType.MINSIZERELWITHDEBINFO):
+                self.configureArgs.append("-optimize-size")  # Use -Os, otherwise it will use -O3
+
+        if self.assertions:
+            self.configureArgs.append("-force-asserts")
 
         self.configureArgs.append("-no-pch")  # slows down build but gives useful crash testcases
 
@@ -309,7 +316,9 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     gitBranch = "qtwebkit-5.212-cheri"
     dependencies = ["qtbase", "icu4c", "libxml2", "sqlite"]
     # webkit is massive if we include debug info
-    defaultCMakeBuildType = "MinSizeRel"
+    default_build_type = BuildType.MINSIZEREL
+    # TODO: default_build_type = BuildType.MINSIZERELWITHDEBINFO # Default to -Os with debug info:
+
     crossInstallDir = CrossInstallDir.SDK
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.getSourceDir(project, config) / "qtwebkit",
