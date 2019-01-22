@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import *
+from .qt5 import BuildQtWebkit
 from ...utils import runCmd, IS_FREEBSD
 
 class BuildSQLite(CrossCompileAutotoolsProject):
@@ -39,6 +40,8 @@ class BuildSQLite(CrossCompileAutotoolsProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         if not self.compiling_for_host():
+            if BuildQtWebkit.get_instance(self, config).force_static_linkage:
+                self._linkage = Linkage.STATIC  # make sure it works with webkit
             if IS_FREEBSD:
                 # For some reason using clang39/clang40 to crossbuild is broken on FreeBSD 11
                 self.configureEnvironment["BUILD_CC"] = "/usr/bin/cc"

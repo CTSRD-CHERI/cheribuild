@@ -262,6 +262,8 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 
     def __init__(self, config):
         super().__init__(config)
+        if not self.compiling_for_host() and BuildQtWebkit.get_instance(self, config).force_static_linkage:
+            self._linkage = Linkage.STATIC  # make sure it works with webkit
         self.configureCommand = self.sourceDir / "source/configure"
         self.configureArgs.extend(["--disable-plugins", "--disable-dyload",
                                    "--disable-tests",
@@ -297,13 +299,15 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
 
     def __init__(self, config):
         super().__init__(config)
+        if not self.compiling_for_host() and BuildQtWebkit.get_instance(self, config).force_static_linkage:
+            self._linkage = Linkage.STATIC  # make sure it works with webkit
+
         if (self.sourceDir / "configure").exists():
             self.configureCommand = self.sourceDir / "configure"
         else:
             self.configureCommand = self.sourceDir / "autogen.sh"
         self.configureArgs.extend([
-            "--disable-shared", "--enable-static", "--without-python",
-            "--without-modules", "--without-lzma",
+            "--without-python", "--without-modules", "--without-lzma",
         ])
         if IS_MAC:
             self._addRequiredSystemTool("glibtoolize", homebrew="libtool")
