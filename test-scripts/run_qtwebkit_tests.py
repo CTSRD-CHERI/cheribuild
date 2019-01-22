@@ -68,8 +68,8 @@ def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
         boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/jsc --help", timeout=1200)
         boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/DumpRenderTree -v /tmp/helloworld.html", timeout=1800)
         boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/DumpRenderTree -p --stdout /build/hello.png /tmp/helloworld.html", timeout=1800)
-
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "/source/Tools/Scripts/run-layout-jsc -j /tmp/jsc -t /source/LayoutTests -r /build/results -x /build/results.xml", timeout=None)
+        if not args.smoketest:
+            boot_cheribsd.checked_run_cheribsd_command(qemu, "/source/Tools/Scripts/run-layout-jsc -j /tmp/jsc -t /source/LayoutTests -r /build/results -x /build/results.xml", timeout=None)
         return True
     finally:
         tests_xml_path = Path(args.build_dir, 'results.xml')
@@ -83,9 +83,13 @@ def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
             boot_cheribsd.failure("Could not update JUnit XML", tests_xml_path, exit=False)
             return False
 
+def add_args(parser: argparse.ArgumentParser):
+    parser.add_argument("--smoketest", action="store_true", required=False,
+                        help="Don't run full jsc layout tests, only check that jsc and DumpRenderTree work")
 
 if __name__ == '__main__':
     from run_tests_common import run_tests_main
     # we don't need ssh running to execute the tests, but we need both host and source dir mounted
     run_tests_main(test_function=run_qtwebkit_tests, test_setup_function=setup_qtwebkit_test_environment,
+                   argparse_setup_callback=add_args,
                    need_ssh=False, should_mount_builddir=True, should_mount_srcdir=True, should_mount_sysroot=True)
