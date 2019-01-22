@@ -36,15 +36,15 @@ from builtins import issubclass
 from enum import Enum
 from pathlib import Path
 
-
+from pycheribuild.config.chericonfig import BuildType
 from ...config.loader import ComputedDefaultValue, ConfigOptionBase
-from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi, Linkage
+from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi, Linkage, BuildType
 from .multiarchmixin import MultiArchBaseMixin
 from ..llvm import BuildLLVM
 from ..project import *
 from ...utils import *
 
-__all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget",  # no-combine
+__all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget", "BuildType", # no-combine
            "CrossCompileProject", "CrossInstallDir", "MakeCommandKind", "Linkage", "Path", "crosscompile_dependencies",  # no-combine
            "_INVALID_INSTALL_DIR"]  # no-combine
 
@@ -106,6 +106,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
 
     defaultInstallDir = ComputedDefaultValue(function=_installDir, asString=_installDirMessage)
+    default_build_type = BuildType.DEFAULT
     dependencies = crosscompile_dependencies
     baremetal = False
     forceDefaultCC = False  # for some reason ICU binaries build during build crash -> fall back to /usr/bin/cc there
@@ -141,6 +142,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
     def __init__(self, config: CheriConfig, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
+        if self.cross_build_type in (BuildType.DEBUG, BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO):
+            assert self.debugInfo, "Need --" + self.target + "/debug-info if build-type is " + str(self.cross_build_type.value)
         # convert the tuples into mutable lists (this is needed to avoid modifying class variables)
         # See https://github.com/CTSRD-CHERI/cheribuild/issues/33
         self.defaultOptimizationLevel = list(self.defaultOptimizationLevel)
@@ -399,6 +402,10 @@ class CrossCompileMixin(MultiArchBaseMixin):
         cls.optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
                                                     default=default_opt_level)
         cls.use_asan = cls.addBoolOption("use-asan", default=False, help="Build with AddressSanitizer enabled")
+        cls.cross_build_type = cls.addConfigOption("cross-build-type",
+            help="Optimization+debuginfo defaults (supports the same values as CMake plus 'DEFAULT' which does not pass"
+                 " any additional flags to the configure script). Note: The overrides the CMake --build-type option.",
+            default=cls.default_build_type, kind=BuildType, enum_choice_strings=[t.value for t in BuildType])
         cls._linkage = cls.addConfigOption("linkage", help="Build static or dynamic (default means for host=dynamic,"
                                                           " CHERI/MIPS=<value of option --cross-compile-linkage>)",
                                            default=Linkage.DEFAULT, kind=Linkage)
@@ -467,6 +474,13 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
         super().setupConfigOptions(**kwargs)
 
     def __init__(self, config: CheriConfig, generator: CMakeProject.Generator=CMakeProject.Generator.Ninja):
+        if self.cross_build_type != BuildType.DEFAULT:
+            # no CMake equivalent for MinSizeRelWithDebInfo -> set minsizerel and force debug info
+            if self.cross_build_type == BuildType.MINSIZERELWITHDEBINFO:
+                self.cmakeBuildType = BuildType.MINSIZEREL.value
+                self.debugInfo = True
+            else:
+                self.cmakeBuildType = self.cross_build_type.value
         super().__init__(config, generator)
         # This must come first:
         if self.compiling_for_host():

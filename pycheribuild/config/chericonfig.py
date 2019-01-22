@@ -60,6 +60,15 @@ class CrossCompileTarget(Enum):
     I386 = "i386"
 
 
+class BuildType(Enum):
+    DEFAULT = "Default"
+    DEBUG = "Debug"
+    RELEASE = "Release"
+    RELWITHDEBINFO = "RelWithDebInfo"
+    MINSIZEREL = "MinSizeRel"
+    MINSIZERELWITHDEBINFO = "MinSizeRelWithDebInfo"
+
+
 class Linkage(Enum):
     DEFAULT = "default"
     STATIC = "static"
