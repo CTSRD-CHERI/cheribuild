@@ -93,8 +93,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # The build system already passes these:
             linker_flags = filter(lambda s: not s.startswith("--sysroot"), linker_flags)
             compiler_flags = filter(lambda s: not s.startswith("--sysroot"), compiler_flags)
-            if self.debugInfo:
-                compiler_flags = list(compiler_flags) + ["-O0"]
             self.configureArgs.extend([
                 "-device", "freebsd-generic-clang",
                 "-device-option", "CROSS_COMPILE={}/{}-".format(self.config.sdkBinDir, self.targetTriple),

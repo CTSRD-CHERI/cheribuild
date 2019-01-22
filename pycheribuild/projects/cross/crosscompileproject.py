@@ -321,6 +321,18 @@ class CrossCompileMixin(MultiArchBaseMixin):
         return result
 
     @property
+    def optimizationFlags(self):
+        cbt = self.cross_build_type
+        if cbt == BuildType.DEFAULT:
+            return self.defaultOptimizationLevel + self._optimizationFlags
+        elif cbt == BuildType.DEBUG:
+            return ["-O0"] + self._optimizationFlags
+        elif cbt in (BuildType.RELEASE, BuildType.RELWITHDEBINFO):
+            return ["-O2"] + self._optimizationFlags
+        elif cbt in (BuildType.MINSIZEREL, BuildType.MINSIZERELWITHDEBINFO):
+            return ["-Os"] + self._optimizationFlags
+
+    @property
     def default_compiler_flags(self):
         if self.compiling_for_host():
             return self.COMMON_FLAGS + self.compiler_warning_flags
@@ -394,13 +406,13 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        default_opt_level = list(cls.defaultOptimizationLevel)
         assert issubclass(cls, SimpleProject)
         super().setupConfigOptions(**kwargs)
         cls.useMxgot = cls.addBoolOption("use-mxgot", help="Compile with -mxgot flag (should not be needed when using lld)")
-        cls.debugInfo = cls.addBoolOption("debug-info", help="build with debug info", default=True)
-        cls.optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
-                                                    default=default_opt_level)
+        cls._debugInfo = cls.addBoolOption("debug-info",
+            help="build with debug info by default (Note: this only affects --cross-build-type=DEFAULT)", default=True)
+        cls._optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
+                                                     default=[])
         cls.use_asan = cls.addBoolOption("use-asan", default=False, help="Build with AddressSanitizer enabled")
         cls.cross_build_type = cls.addConfigOption("cross-build-type",
             help="Optimization+debuginfo defaults (supports the same values as CMake plus 'DEFAULT' which does not pass"
@@ -409,6 +421,13 @@ class CrossCompileMixin(MultiArchBaseMixin):
         cls._linkage = cls.addConfigOption("linkage", help="Build static or dynamic (default means for host=dynamic,"
                                                           " CHERI/MIPS=<value of option --cross-compile-linkage>)",
                                            default=Linkage.DEFAULT, kind=Linkage)
+
+    @property
+    def debugInfo(self):
+        # Add debug info by default (to disable set --cross-build-type=Release
+        if self.cross_build_type == BuildType.DEBUG:
+            return self._debugInfo
+        return self.cross_build_type in (BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO, BuildType.DEBUG)
 
     def linkage(self):
         if self._linkage == Linkage.DEFAULT:
