@@ -191,6 +191,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                     if tgt.target_arch == expected_build_arch:
                         dep_target = tgt
                         # print("Overriding with", tgt.name)
+                        break
             assert not isinstance(dep_target, MultiArchTargetAlias), "All targets should be fully resolved: " + cls.__name__
             yield dep_target
 
@@ -204,8 +205,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def recursive_dependencies(cls, config: CheriConfig) -> "typing.List[Target]":
-        if cls.__cached_deps:
-            return cls.__cached_deps
+        # look only in __dict__ to avoid parent class lookup
+        _cached = cls.__dict__.get("_cached_deps", None)
+        if _cached is not None:
+            return _cached
         result = []  # type: typing.List[Target]
         for target in cls.direct_dependencies(config):
             if target not in result:
@@ -215,13 +218,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             for r in recursive_deps:
                 if r not in result:
                     result.append(r)
-        cls.__cached_deps = result
+        cls._cached_deps = result
         return result
 
     @classmethod
     def _cached_dependencies(cls) -> "typing.List[Target]":
-        assert cls.__cached_deps is not None, "_cached_dependencies called before allDependencyNames()"
-        return cls.__cached_deps
+        # look only in __dict__ to avoid parent class lookup
+        _cached = cls.__dict__.get("_cached_deps", None)
+        if _cached is None:
+            raise ValueError("_cached_dependencies called before allDependencyNames()")
+        return _cached
 
     @classmethod
     def get_instance(cls: "typing.Type[Type_T]", caller: "typing.Optional[SimpleProject]", config: CheriConfig) -> "Type_T":
