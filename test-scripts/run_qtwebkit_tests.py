@@ -56,15 +56,20 @@ def setup_qtwebkit_test_environment(qemu: boot_cheribsd.CheriBSDInstance, args: 
 
     boot_cheribsd.success("To debug crashes run: `sysctl kern.corefile=/build/%N.%P.core; sysctl kern.coredump=1` and then run CHERI gdb on the host system.")
 
+    # copy the smaller files to /tmp to avoid the smbfs overhead
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /build/bin/jsc.stripped /tmp/jsc")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /build/bin/DumpRenderTree.stripped /tmp/DumpRenderTree")
+
+
 def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running QtWebkit tests")
     try:
         # Check that jsc + dumprendertree work
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "/build/bin/jsc --help", timeout=1200)
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "/build/bin/DumpRenderTree -v /tmp/helloworld.html", timeout=1800)
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "/build/bin/DumpRenderTree -p --stdout /build/hello.png /tmp/helloworld.html", timeout=1800)
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/jsc --help", timeout=1200)
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/DumpRenderTree -v /tmp/helloworld.html", timeout=1800)
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/DumpRenderTree -p --stdout /build/hello.png /tmp/helloworld.html", timeout=1800)
 
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "/source/Tools/Scripts/run-layout-jsc -j /build/bin/jsc -t /source/LayoutTests -r /build/results -x /build/results.xml", timeout=None)
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "/source/Tools/Scripts/run-layout-jsc -j /tmp/jsc -t /source/LayoutTests -r /build/results -x /build/results.xml", timeout=None)
         return True
     finally:
         tests_xml_path = Path(args.build_dir, 'results.xml')

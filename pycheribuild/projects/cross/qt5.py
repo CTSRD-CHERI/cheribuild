@@ -341,7 +341,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                                ENABLE_XSLT=False,  # 1 less library to build
                                USE_GSTREAMER=False,  # needs all the glib+gtk crap
                                USE_LD_GOLD=False,  # Webkit wants to use gold by default...
-                               USE_SYSTEM_MALLOC=True,  # we want bounds
+                               USE_SYSTEM_MALLOC=True,  # we want bounds (instead of the fast bump-the-pointer bmalloc code)
                                ENABLE_API_TESTS=False,
                                )
         # TODO: when we use the full build of Qt enable these:
@@ -407,6 +407,13 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             self.runMake("all")
 
     def install(self, **kwargs):
+        # create a stripped version of DumpRenderTree and jsc since the one with debug info is too big
+        dump_render_tree = self.buildDir / "bin/DumpRenderTree" # type: Path
+        if dump_render_tree.is_file():
+            runCmd(self.config.sdkBinDir / "llvm-strip", "-o", dump_render_tree.with_suffix(".stripped"), dump_render_tree)
+        jsc = self.buildDir / "bin/jsc" # type: Path
+        if jsc.is_file():
+            runCmd(self.config.sdkBinDir / "llvm-strip", "-o", jsc.with_suffix(".stripped"), jsc)
         self.info("Not installing qtwebit since it uses too much space. If you really want this run `ninja install`")
 
     def run_tests(self):
