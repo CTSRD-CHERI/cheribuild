@@ -123,7 +123,7 @@ def _check_deps_cached(classes):
 
 def test_webkit_cached_deps():
     # regression test for a bug in caching deps
-    config = copy.deepcopy(get_global_config())
+    config = copy.copy(get_global_config())
     config.skipSdk = True
     webkit_generic = targetManager.get_target_raw("qtwebkit").projectClass
     webkit_native = targetManager.get_target_raw("qtwebkit-native").projectClass
