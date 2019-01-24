@@ -84,7 +84,10 @@ class OpamMixin(object):
 
         opam_env = dict(GIT_TEMPLATE_DIR="", # see https://github.com/ocaml/opam/issues/3493
                         OPAMROOT=self.opamroot,
+                        CCACHE_DISABLE=1, # https://github.com/ocaml/opam/issues/3395
                         PATH=self.config.dollarPathWithOtherTools)
+        if Path(self.opam_binary).is_absolute():
+            opam_env["OPAM_USER_PATH_RO"] = Path(self.opam_binary).parent
         if not (self.opamroot / "opam-init").exists():
             runCmd(self.opam_binary, "init", "--root=" + str(self.opamroot), "--no-setup", cwd="/", env=opam_env)
         return opam_env, cwd
@@ -113,7 +116,8 @@ class Opam2(SimpleProject):
 
     def process(self):
         if IS_LINUX:
-            runCmd("wget", "https://github.com/ocaml/opam/releases/download/2.0.0/opam-2.0.0-x86_64-linux", "-O",
+            # NOTE: 2.0.2 won't work for me
+            runCmd("wget", "https://github.com/ocaml/opam/releases/download/2.0.1/opam-2.0.1-x86_64-linux", "-O",
                    self.config.otherToolsDir / "bin/opam")
             # Make it executable
             if not self.config.pretend:
@@ -161,7 +165,7 @@ class BuildSailFromOpam(OpamMixin, SimpleProject):
             self.run_opam_cmd("switch", "4.06.0")
         except CalledProcessError:
             # create the switch if it doesn't exist
-            self.run_opam_cmd("switch", "create", "4.06.0")
+            self.run_opam_cmd("switch", "--verbose", "--debug", "create", "4.06.0")
         repos = self.run_opam_cmd("repository", "list", captureOutput=True)
         if REMS_OPAM_REPO not in repos.stdout.decode("utf-8"):
             self.run_opam_cmd("repository", "add", "rems", REMS_OPAM_REPO)
