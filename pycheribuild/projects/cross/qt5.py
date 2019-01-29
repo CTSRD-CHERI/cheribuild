@@ -53,6 +53,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         self.configureCommand = self.sourceDir / "configure"
         if not self.compiling_for_host():
             self._linkage = Linkage.STATIC
+        if self.compiling_for_mips() and self.force_static_linkage:
+            assert "-mxgot" in self.default_compiler_flags
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -63,7 +65,6 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         cls.minimal = cls.addBoolOption("minimal", showHelp=True, help="Don't build QtWidgets or QtGui, etc")
         cls.optimized_debug_build = cls.addBoolOption("optimized-debug-build",
                                                       help="Don't build with -Os instead of -O0 for debug info builds")
-        cls.useMxgot = True  # appears to be needed for some tests
 
     def configure(self, **kwargs):
         if self.force_static_linkage:

@@ -201,8 +201,6 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 else:
                     self.COMMON_FLAGS.append("-fno-pic")
                     self.COMMON_FLAGS.append("-mno-abicalls")
-            if self.useMxgot:
-                self.COMMON_FLAGS.append("-mxgot")
 
             if self.links_against_newlib_baremetal():
                 assert self.baremetal
@@ -349,6 +347,12 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 result.append("-mxcaptable")
             if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
                 result.append("-mxcaptable")
+        # Do the same for MIPS to get even performance comparisons
+        if self.compiling_for_mips():
+            if self.force_static_linkage and self.needs_mxcaptable_static:
+                result.extend(["-mxgot", "-mllvm", "-mxmxgot"])
+            if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
+                result.extend(["-mxgot", "-mllvm", "-mxmxgot"])
         return result
 
     @property
@@ -408,7 +412,6 @@ class CrossCompileMixin(MultiArchBaseMixin):
     def setupConfigOptions(cls, **kwargs):
         assert issubclass(cls, SimpleProject)
         super().setupConfigOptions(**kwargs)
-        cls.useMxgot = cls.addBoolOption("use-mxgot", help="Compile with -mxgot flag (should not be needed when using lld)")
         cls._debugInfo = cls.addBoolOption("debug-info",
             help="build with debug info by default (Note: this only affects --cross-build-type=DEFAULT)", default=True)
         cls._optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
