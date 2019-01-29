@@ -99,7 +99,7 @@ def libcxx_main(ssh_port_barrier: Barrier = None, mp_queue: Queue = None, ssh_po
             sys.exit()
 
     def run_libcxx_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
-        with tempfile.TemporaryDirectory() as tempdir:
+        with tempfile.TemporaryDirectory(prefix="cheribuild-libcxx-tests-") as tempdir:
             return run_remote_lit_test.run_remote_lit_tests("libcxx", qemu, args, tempdir, mp_q=mp_queue)
 
     from run_tests_common import run_tests_main

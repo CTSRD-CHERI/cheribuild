@@ -162,7 +162,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
             self.createSymlink(root_dir / "lib", root_dir / "libcheri")
 
     def run_tests(self):
-        with tempfile.TemporaryDirectory() as td:
+        with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
             self.writeFile(Path(td, "main.c"), contents="""
 #include <stdio.h>
 int main(int argc, char** argv) {

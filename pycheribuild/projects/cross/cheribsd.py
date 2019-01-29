@@ -1146,7 +1146,7 @@ class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
         # Install to a temporary directory and then copy the kernel to OUTPUT_ROOT
         # noinspection PyProtectedMember
         build_cheribsd._buildkernel(kernconf=kernconf, mfs_root_image=image)
-        with tempfile.TemporaryDirectory() as td:
+        with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
             # noinspection PyProtectedMember
             build_cheribsd._installkernel(kernconf=kernconf, destdir=td)
             # runCmd("find", td)

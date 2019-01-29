@@ -180,7 +180,7 @@ class _BuildDiskImageBase(SimpleProject):
 
     def _wget_fetch_dir(self, what, where):
         if self.wget_via_tmp:
-            with tempfile.TemporaryDirectory(prefix="cheribuild-wget-", dir="/tmp") as td:
+            with tempfile.TemporaryDirectory(prefix="cheribuild-wget-") as td:
                 # Speed things up by using whatever we've got locally, too
                 runCmd("rsync", "-avvP", str(where) + "/.", td + "/.")
                 self._wget_fetch(what, td)
@@ -470,7 +470,7 @@ class _BuildDiskImageBase(SimpleProject):
         if not (self.userGroupDbDir / "master.passwd").is_file():
             self.fatal("master.passwd does not exist in ", self.userGroupDbDir)
 
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as tmp:
             self.tmpdir = Path(tmp)
             self.manifestFile = self.tmpdir / "METALOG"
             self.prepareRootfs()

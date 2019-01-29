@@ -398,7 +398,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
 
     def compile(self, **kwargs):
         # Generate the shared mime info cache to MASSIVELY speed up tests
-        with tempfile.TemporaryDirectory() as td:
+        with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
             mime_info_src = BuildQtBase.getSourceDir(self, self.config) / "src/corelib/mimetypes/mime/packages/freedesktop.org.xml"
             self.installFile(mime_info_src, Path(td, "mime/packages/freedesktop.org.xml"), force=True, printVerboseOnly=False)
             try:

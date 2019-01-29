@@ -46,8 +46,8 @@ import boot_cheribsd
 import run_remote_lit_test
 
 def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
-    with tempfile.TemporaryDirectory() as tempdir:
-        return run_remote_lit_test.run_remote_lit_tests("libcxx", qemu, args, tempdir, llvm_lit_path=args.llvm_lit_path)
+    with tempfile.TemporaryDirectory(prefix="cheribuild-libunwind-tests-") as tempdir:
+        return run_remote_lit_test.run_remote_lit_tests("libunwind", qemu, args, tempdir, llvm_lit_path=args.llvm_lit_path)
 
 
 def add_cmdline_args(parser: argparse.ArgumentParser):
