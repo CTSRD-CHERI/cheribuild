@@ -66,6 +66,8 @@ def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
     try:
         # Check that jsc + dumprendertree work
         boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/jsc --help", timeout=1200)
+        # Run a simple javascript loop
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/jsc -e 'for (i = 0; i < 10; i++) print(1 + i);'", timeout=1200)
         boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/DumpRenderTree -v /tmp/helloworld.html", timeout=1800)
         boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/DumpRenderTree -p --stdout /build/hello.png /tmp/helloworld.html", timeout=1800)
         if not args.smoketest:
