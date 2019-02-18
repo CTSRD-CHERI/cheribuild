@@ -28,14 +28,14 @@
 # SUCH DAMAGE.
 #
 from .project import *
-from .llvm import BuildLLVM
+from .llvm import BuildLLVMSplitRepoBase
 from ..config.loader import ComputedDefaultValue
 
 
 install_to_soaap_dir = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "soaap",
                                             asString="$INSTALL_ROOT/soaap")
 
-class BuildSoaapLLVM(BuildLLVM):
+class BuildSoaapLLVM(BuildLLVMSplitRepoBase):
     target = "soaap-llvm"
     projectName = "soaap-llvm"
     githubBaseUrl = "https://github.com/CTSRD-SOAAP/"
@@ -49,8 +49,8 @@ class BuildSoaapLLVM(BuildLLVM):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(includeClangRevision=True, includeLldbRevision=False,
-                                   includeLldRevision=False, useDefaultSysroot=False, **kwargs)
+        cls.included_projects = ["llvm", "clang"]
+        super().setupConfigOptions(includeLldbRevision=False, includeLldRevision=False, useDefaultSysroot=False)
 
 
 class BuildSoaap(CMakeProject):

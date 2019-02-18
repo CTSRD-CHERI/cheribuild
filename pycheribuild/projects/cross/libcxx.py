@@ -31,7 +31,7 @@
 from .crosscompileproject import *
 from .cheribsd import BuildCHERIBSD
 from ..build_qemu import BuildQEMU
-from ..llvm import BuildLLVM
+from ..llvm import BuildCheriLLVM
 from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
 from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str
@@ -59,10 +59,10 @@ class BuildLibunwind(CrossCompileCMakeProject):
         super().__init__(config)
         # Adding -ldl won't work: no libdl in /usr/libcheri
         self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)
-        self.lit_path = BuildLLVM.getBuildDir(self, config) / "bin/llvm-lit"
+        self.lit_path = BuildCheriLLVM.getBuildDir(self, config) / "bin/llvm-lit"
         self.add_cmake_options(
             #  LLVM_CONFIG_PATH=self.compiler_dir / "llvm-config",
-            LLVM_PATH=BuildLLVM.getSourceDir(self, config),
+            LLVM_PATH=BuildCheriLLVM.getSourceDir(self, config),
             LLVM_EXTERNAL_LIT=self.lit_path,
         )
 
@@ -214,8 +214,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.add_cmake_options(
             CMAKE_INSTALL_RPATH_USE_LINK_PATH=True,  # Fix finding libunwind.so
             LIBCXX_INCLUDE_TESTS=True,
-            LLVM_PATH=BuildLLVM.getSourceDir(self, config),
-            LLVM_EXTERNAL_LIT=BuildLLVM.getBuildDir(self, config) / "bin/llvm-lit",
+            LLVM_PATH=BuildCheriLLVM.getSourceDir(self, config),
+            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, config) / "bin/llvm-lit",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
             LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
                           "/libcxx-test-results.xml --max-time 3600 --timeout 120 -s -vv" + self.libcxx_lit_jobs
@@ -334,9 +334,9 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
         if self.compiling_for_mips():
             self.add_cmake_options(COMPILER_RT_HAS_FPIC_FLAG=False)  # HACK: currently we build everything as -fno-pic
         self.add_cmake_options(
-            # LLVM_CONFIG_PATH=BuildLLVM.buildDir / "bin/llvm-config",
+            # LLVM_CONFIG_PATH=BuildCheriLLVM.buildDir / "bin/llvm-config",
             LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
-            LLVM_EXTERNAL_LIT=BuildLLVM.getBuildDir(self, config) / "bin/llvm-lit",
+            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, config) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=False,
             COMPILER_RT_BUILD_XRAY=False,

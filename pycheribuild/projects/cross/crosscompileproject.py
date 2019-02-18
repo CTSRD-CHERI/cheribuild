@@ -40,7 +40,7 @@ from pycheribuild.config.chericonfig import BuildType
 from ...config.loader import ComputedDefaultValue, ConfigOptionBase
 from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi, Linkage, BuildType
 from .multiarchmixin import MultiArchBaseMixin
-from ..llvm import BuildLLVM
+from ..llvm import BuildCheriLLVM
 from ..project import *
 from ...utils import *
 
@@ -167,7 +167,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
         self.compiler_dir = self.config.sdkBinDir
         # Use the compiler from the build directory for native builds to get stddef.h (which will be deleted)
         if self._crossCompileTarget == CrossCompileTarget.NATIVE:
-            llvm_build_dir = BuildLLVM.get_instance(self, config).buildDir
+            llvm_build_dir = BuildCheriLLVM.get_instance(self, config).buildDir
             if (llvm_build_dir / "bin/clang").exists():
                 self.compiler_dir = llvm_build_dir / "bin"
 

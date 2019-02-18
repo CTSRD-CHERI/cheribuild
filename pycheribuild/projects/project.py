@@ -75,8 +75,11 @@ def _default_stdout_filter(arg: bytes):
 class ProjectSubclassDefinitionHook(type):
     def __init__(cls, name: str, bases, clsdict):
         super().__init__(name, bases, clsdict)
-        if clsdict.get("doNotAddToTargets"):
-            return  # if doNotAddToTargets is defined within the class we skip it
+        if clsdict.get("doNotAddToTargets") is not None:
+            if clsdict.get("doNotAddToTargets") is True:
+                return  # if doNotAddToTargets is defined within the class we skip it
+        elif name.endswith("Base"):
+            fatalError("Found class name ending in Base (", name, ") but doNotAddToTargets was not defined", sep="")
 
         projectName = None
         if "projectName" in clsdict:
@@ -889,7 +892,7 @@ class Project(SimpleProject):
     @classmethod
     def buildDirSuffix(cls, config: CheriConfig, target: CrossCompileTarget):
         if target is None:
-            # HACK since I can't make the class variable in BuildLLVM dynamic
+            # HACK since I can't make the class variable in BuildCheriLLVM dynamic
             # TODO: remove once unified SDK is stable
             append_bits = cls.appendCheriBitsToBuildDir
             if cls.target in ("llvm", "qemu") and config.unified_sdk:

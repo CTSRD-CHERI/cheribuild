@@ -34,27 +34,20 @@ from ..utils import *
 from ..config.loader import ComputedDefaultValue
 
 
-class BuildLLVM(CMakeProject):
-    defaultInstallDir = CMakeProject._installToSDK
+class BuildLLVMBase(CMakeProject):
     githubBaseUrl = "https://github.com/CTSRD-CHERI/"
     repository = githubBaseUrl + "llvm.git"
     no_default_sysroot = None
     appendCheriBitsToBuildDir = True
-    is_sdk_target = True
     skip_cheri_symlinks = False
+    doNotAddToTargets = True
 
     @classmethod
-    def setupConfigOptions(cls, includeClangRevision=True, includeLldbRevision=False, includeLldRevision=True,
-                           useDefaultSysroot=True):
+    def setupConfigOptions(cls, useDefaultSysroot=True):
         super().setupConfigOptions()
-
-        def addToolOptions(name):
-            rev = cls.addConfigOption(name + "-git-revision", kind=str, metavar="REVISION",
-                                      help="The git revision for tools/" + name)
-            repo = cls.addConfigOption(name + "-repository", kind=str, metavar="REPOSITORY",
-                                       default=cls.githubBaseUrl + name + ".git",
-                                       help="The git repository for tools/" + name)
-            return repo, rev
+        if "included_projects" not in cls.__dict__:
+            cls.included_projects = cls.addConfigOption("include-projects", default=["llvm", "clang", "lld"], kind=list,
+                                                         help="List of LLVM subprojects that should be built")
 
         if useDefaultSysroot:
             cls.add_default_sysroot = cls.addBoolOption("add-default-sysroot", help="Set default sysroot and "
@@ -64,7 +57,6 @@ class BuildLLVM(CMakeProject):
 
         cls.enable_assertions = cls.addBoolOption("assertions", help="build with assertions enabled", default=True)
         cls.enable_lto = cls.addBoolOption("enable-lto", help="build with LTO enabled (experimental)")
-        cls.llvm_only = cls.addBoolOption("llvm-only", help="Only build LLVM (skip clang+lld)")
         if "skip_static_analyzer" not in cls.__dict__:
             cls.skip_static_analyzer = cls.addBoolOption("skip-static-analyzer", default=True,
                                                          help="Don't build the clang static analyzer")
@@ -73,24 +65,12 @@ class BuildLLVM(CMakeProject):
                 help="Don't build some of the LLVM tools that should not be needed by default (e.g. llvm-mca, llvm-pdbutil)")
         cls.build_everything = cls.addBoolOption("build-everything", default=False,
                                                  help="Also build documentation,examples and bindings")
-        if includeClangRevision:
-            cls.clangRepository, cls.clangRevision = addToolOptions("clang")
-        if includeLldRevision:
-            cls.lldRepository, cls.lldRevision = addToolOptions("lld")
-            cls.skip_lld = cls.addBoolOption("skip-lld", help="Don't build lld as part of the llvm target")
-        else:
-            cls.skip_lld = True
-        if includeLldbRevision:  # not built yet
-            cls.lldbRepository, cls.lldbRevision = addToolOptions("lldb")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.cCompiler = config.clangPath
         self.cppCompiler = config.clangPlusPlusPath
         # this must be added after checkSystemDependencies
-        if self.llvm_only:
-            self.add_cmake_options(LLVM_TOOL_CLANG_BUILD=False)
-            self.skip_lld = True
         link_jobs = 2 if self.enable_lto else 4
         # non-shared debug builds take lots of ram -> use only one parallel job
         if self.cmakeBuildType.lower() in ("debug", "relwithdebinfo") and "-DBUILD_SHARED_LIBS=ON" not in self.cmakeOptions:
@@ -98,11 +78,8 @@ class BuildLLVM(CMakeProject):
         self.add_cmake_options(
             CMAKE_CXX_COMPILER=self.cppCompiler,
             CMAKE_C_COMPILER=self.cCompiler,
-            LLVM_TOOL_LLDB_BUILD=False,
-            LLVM_TOOL_LLD_BUILD=not self.skip_lld,
             LLVM_PARALLEL_LINK_JOBS=link_jobs,  # anything more causes too much I/O
         )
-
 
         if not self.build_everything:
             self.add_cmake_options(
@@ -129,7 +106,7 @@ class BuildLLVM(CMakeProject):
         if self.canUseLLd(self.cCompiler):
             self.add_cmake_options(LLVM_ENABLE_LLD=True)
             # Add GDB index to speed up debugging
-            if self.cmakeBuildType.lower()== "debug" or self.cmakeBuildType.lower()== "relwithdebinfo":
+            if self.cmakeBuildType.lower() == "debug" or self.cmakeBuildType.lower() == "relwithdebinfo":
                 self.add_cmake_options(CMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld -Wl,--gdb-index",
                                        CMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Wl,--gdb-index")
         if self.add_default_sysroot:
@@ -160,7 +137,8 @@ class BuildLLVM(CMakeProject):
             if not self.canUseLLd(self.cCompiler):
                 warningMessage("LLD not found for LTO build, it may fail.")
 
-    def clang38InstallHint(self):
+    @staticmethod
+    def clang38InstallHint():
         if IS_FREEBSD:
             return "Try running `pkg install clang38`"
         if OSInfo.isUbuntu():
@@ -193,49 +171,30 @@ class BuildLLVM(CMakeProject):
                                  "is not supported. Clang version %d.%d or newer is required." % (major, minor),
                                  installInstructions=self.clang38InstallHint())
 
-    def update(self):
-        self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision)
-        if not self.llvm_only:
-            self._updateGitRepo(self.sourceDir / "tools/clang", self.clangRepository, revision=self.clangRevision)
-            if not self.skip_lld:
-                self._updateGitRepo(self.sourceDir / "tools/lld", self.lldRepository, revision=self.lldRevision,
-                                    initialBranch="master")
-            if False:  # Not yet usable
-                self._updateGitRepo(self.sourceDir / "tools/lldb", self.lldbRepository, revision=self.lldbRevision,
-                                    initialBranch="master")
-
     def install(self, **kwargs):
         super().install()
         if self.skip_cheri_symlinks:
             return
-        if False:  # No longer needed
-            # delete the files incompatible with cheribsd
-            incompatibleFiles = list(self.installDir.glob("lib/clang/*/include/std*"))
-            incompatibleFiles += self.installDir.glob("lib/clang/*/include/limits.h")
-            if len(incompatibleFiles) == 0:
-                self.fatal("Could not find incompatible builtin includes. Build system changed?")
-            print("Removing incompatible builtin includes...")
-            for i in incompatibleFiles:
-                self.deleteFile(i, printVerboseOnly=True)
         # create a symlink for the target
         llvmBinaries = "llvm-mc llvm-objdump llvm-readobj llvm-size llc".split()
-        if not self.llvm_only:
+        if "clang" in self.included_projects:
             llvmBinaries += ["clang", "clang++", "clang-cpp"]
         for tool in llvmBinaries:
             self.createBuildtoolTargetSymlinks(self.installDir / "bin" / tool)
 
-        if not self.llvm_only:
+        if "clang" in self.included_projects:
             # create cc and c++ symlinks (expected by some build systems)
             self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang", toolName="cc", createUnprefixedLink=False)
             self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang++", toolName="c++", createUnprefixedLink=False)
             self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang-cpp", toolName="cpp", createUnprefixedLink=False)
 
         # Use the LLVM versions of ranlib and ar and nm
-        for tool in ("ar", "ranlib", "nm"):
-            # TODO: also for objcopy soon so we don't need elftoolchain at all
-            self.createBuildtoolTargetSymlinks(self.installDir / ("bin/llvm-" + tool), toolName=tool, createUnprefixedLink=True)
+        if "llvm" in self.included_projects:
+            for tool in ("ar", "ranlib", "nm"):
+                # TODO: also for objcopy soon so we don't need elftoolchain at all
+                self.createBuildtoolTargetSymlinks(self.installDir / ("bin/llvm-" + tool), toolName=tool, createUnprefixedLink=True)
 
-        if not self.skip_lld:
+        if "lld" in self.included_projects:
             self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld")
             if IS_MAC:
                 self.deleteFile(self.installDir / "bin/ld", printVerboseOnly=True)
@@ -246,59 +205,123 @@ class BuildLLVM(CMakeProject):
                                                createUnprefixedLink=not IS_MAC)
 
 
-# Add an alias target clang that builds llvm
-class BuildClang(TargetAlias):
-    target = "clang"
-    dependencies = ["llvm"]
-
-
-class BuildLLD(TargetAlias):
-    target = "lld"
-    dependencies = ["llvm"]
-
-
-class BuildUpstreamLLVM(BuildLLVM):
-    githubBaseUrl = "https://github.com/llvm-mirror/"
-    repository = githubBaseUrl + "llvm.git"
-    projectName = "upstream-llvm"
-    defaultInstallDir = ComputedDefaultValue(
-        function=lambda config, project: config.outputRoot / "upstream-llvm",
-        asString="$INSTALL_ROOT/upstream-llvm")
+class BuildLLVMMonoRepoBase(BuildLLVMBase):
     appendCheriBitsToBuildDir = False
-    skip_cheri_symlinks = True
+    doNotAddToTargets = True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(includeClangRevision=True, includeLldRevision=True, useDefaultSysroot=False)
-
-    def install(self, **kwargs):
-        CMakeProject.install(self)
-
-
-# TODO: make this the base class and let the other two inherit
-class BuildUpstreamLLVMMonorepo(BuildLLVM):
-    repository = "https://github.com/llvm-project/llvm-project-20170507.git"
-    projectName = "llvm-project"
-    target = "upstream-llvm-monorepo"
-    defaultInstallDir = ComputedDefaultValue(
-        function=lambda config, project: config.outputRoot / "upstream-llvm-monorepo",
-        asString="$INSTALL_ROOT/upstream-llvm-monorepo")
-    appendCheriBitsToBuildDir = False
-
-    @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(includeClangRevision=False, includeLldRevision=False, includeLldbRevision=False,
-                                   useDefaultSysroot=False)
-        cls.included_projects = cls.addConfigOption("include-projects", default="clang;lld")
-
-    def update(self):
-        self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision)
+        super().setupConfigOptions(useDefaultSysroot=False)
 
     def configure(self, **kwargs):
-        self.add_cmake_options(LLVM_ENABLE_PROJECTS=self.included_projects)
+        if not self.included_projects:
+            self.fatal("Need at least one project in --include-projects config option")
+        self.add_cmake_options(LLVM_ENABLE_PROJECTS=";".join(self.included_projects))
         # CMake needs to run on the llvm subdir
         self.configureArgs[0] = self.configureArgs[0] + "/llvm"
         super().configure(**kwargs)
 
     def install(self, **kwargs):
         CMakeProject.install(self)
+
+
+class BuildCheriLLVM(BuildLLVMMonoRepoBase):
+    repository = "https://github.com/CTSRD-CHERI/llvm-project.git"
+    projectName = "llvm-project"
+    target = "llvm"
+    skip_cheri_symlinks = True
+    is_sdk_target = True
+    defaultInstallDir = CMakeProject._installToSDK
+
+
+# Add an alias target clang that builds llvm
+class BuildClang(TargetAlias):
+    target = "clang"
+    dependencies = ["llvm"]
+
+class BuildLLD(TargetAlias):
+    target = "lld"
+    dependencies = ["llvm"]
+
+
+class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
+    repository = "https://github.com/llvm/llvm-project.git"
+    projectName = "llvm-project"
+    target = "upstream-llvm"
+    defaultInstallDir = ComputedDefaultValue(
+        function=lambda config, project: config.outputRoot / "upstream-llvm",
+        asString="$INSTALL_ROOT/upstream-llvm")
+    skip_cheri_symlinks = True
+
+
+# Keep around the build infrastructure for building the split repos for now:
+class BuildLLVMSplitRepoBase(BuildLLVMBase):
+    doNotAddToTargets = True
+
+    @classmethod
+    def setupConfigOptions(cls, includeLldRevision=True, includeLldbRevision=False, useDefaultSysroot=True):
+        super().setupConfigOptions(useDefaultSysroot=useDefaultSysroot)
+
+        def addToolOptions(name):
+            rev = cls.addConfigOption(name + "-git-revision", kind=str, metavar="REVISION",
+                                      help="The git revision for tools/" + name)
+            repo = cls.addConfigOption(name + "-repository", kind=str, metavar="REPOSITORY",
+                                       default=cls.githubBaseUrl + name + ".git",
+                                       help="The git repository for tools/" + name)
+            return repo, rev
+
+        cls.clangRepository, cls.clangRevision = addToolOptions("clang")
+        if includeLldRevision:  # not built yet
+            cls.lldRepository, cls.lldRevision = addToolOptions("lld")
+        if includeLldbRevision:  # not built yet
+            cls.lldbRepository, cls.lldbRevision = addToolOptions("lldb")
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        self.add_cmake_options(LLVM_TOOL_CLANG_BUILD="clang" in self.included_projects,
+                               LLVM_TOOL_LLDB_BUILD="lldb" in self.included_projects,
+                               LLVM_TOOL_LLD_BUILD="lld" in self.included_projects)
+
+    def update(self):
+        self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision)
+        if "clang" in self.included_projects:
+            self._updateGitRepo(self.sourceDir / "tools/clang", self.clangRepository, revision=self.clangRevision)
+        if "lld" in self.included_projects:
+            self._updateGitRepo(self.sourceDir / "tools/lld", self.lldRepository, revision=self.lldRevision,
+                                initialBranch="master")
+        if "lldb" in self.included_projects:  # Not yet usable
+            self._updateGitRepo(self.sourceDir / "tools/lldb", self.lldbRepository, revision=self.lldbRevision,
+                                initialBranch="master")
+
+
+class BuildUpstreamSplitRepoLLVM(BuildLLVMSplitRepoBase):
+    githubBaseUrl = "https://github.com/llvm-mirror/"
+    repository = githubBaseUrl + "llvm.git"
+    projectName = "upstream-llvm-separate-repos"
+
+    defaultInstallDir = ComputedDefaultValue(
+        function=lambda config, project: config.outputRoot / "upstream-llvm-split",
+        asString="$INSTALL_ROOT/upstream-llvm-split")
+    skip_cheri_symlinks = True
+    is_sdk_target = True
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(useDefaultSysroot=False)
+
+
+class BuildCheriSplitRepoLLVM(BuildLLVMSplitRepoBase):
+    githubBaseUrl = "https://github.com/CTSRD-CHERI/"
+    repository = githubBaseUrl + "llvm.git"
+    target = "llvm-separate-repos"
+    projectName = "llvm"
+    # install both split and merged CHERI LLVM to sdk for now
+    defaultInstallDir = CMakeProject._installToSDK
+    #defaultInstallDir = ComputedDefaultValue(
+    #    function=lambda config, project: config.outputRoot / "cheri-llvm-old-layout",
+    #    asString="$INSTALL_ROOT/cheri-llvm-old-layout")
+    skip_cheri_symlinks = False
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(useDefaultSysroot=False)

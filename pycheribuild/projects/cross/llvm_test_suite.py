@@ -30,7 +30,7 @@
 
 from .crosscompileproject import *
 from .cheribsd import BuildCHERIBSD
-from ..llvm import BuildLLVM
+from ..llvm import BuildCheriLLVM
 from ...config.loader import ComputedDefaultValue
 from ...utils import statusUpdate
 from pathlib import Path
@@ -46,8 +46,8 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
         asString="$SOURCE_ROOT/llvm-test-suite")
 
     def _find_in_sdk_or_llvm_build_dir(self, name) -> Path:
-        if (BuildLLVM.getBuildDir(self, self.config) / "bin" / name).exists():
-            return BuildLLVM.getBuildDir(self, self.config) / "bin" / name
+        if (BuildCheriLLVM.getBuildDir(self, self.config) / "bin" / name).exists():
+            return BuildCheriLLVM.getBuildDir(self, self.config) / "bin" / name
         return self.config.sdkBinDir / name
 
     def __init__(self, config):

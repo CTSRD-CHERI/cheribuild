@@ -211,6 +211,7 @@ class BuildQt5(BuildQtWithConfigureScript):
 
 
 class BuildQtBase(BuildQtWithConfigureScript):
+    doNotAddToTargets = False  # Even though it ends in Base this is not a Base class
     repository = "https://github.com/CTSRD-CHERI/qtbase"
     gitBranch = "5.10.0"
     defaultSourceDir = ComputedDefaultValue(

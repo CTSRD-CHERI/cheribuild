@@ -1289,7 +1289,7 @@ class BuildCHERIBSDMinimal(BuildCHERIBSD):
         # TODO: install bin/sh? bin/csh?
 
 
-class BuildCheriBsdSysrootBase(MultiArchBaseMixin, SimpleProject):
+class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
     # TODO: could use this to build only cheribsd sysroot by extending build-cheribsd
     projectName = "cheribsd-sysroot"
     dependencies = ["cheribsd-cheri"]

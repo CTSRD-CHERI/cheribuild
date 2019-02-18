@@ -113,6 +113,8 @@ class GnuStepModule(AutotoolsProject):
 
 
 class BuildGnuStep_Base(GnuStepModule):
+    doNotAddToTargets = False  # Even though it ends in Base this is not a Base class
+
     def __init__(self, config: CheriConfig):
         super().__init__(config, moduleName="base")
         self.configureArgs.extend([

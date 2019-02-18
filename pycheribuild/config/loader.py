@@ -54,8 +54,8 @@ class ComputedDefaultValue(object):
     def __call__(self, config: "CheriConfig", cls):
         return self.function(config, cls)
 
-    # def __str__(self):
-    #     return self.asString
+    def __repr__(self):
+        return "{ComputedDefault:" + str(self.asString) + "}"
 
 # From https://bugs.python.org/issue25061
 class _EnumArgparseType(object):
