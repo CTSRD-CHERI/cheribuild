@@ -39,7 +39,7 @@ class BuildLLVMBase(CMakeProject):
     repository = githubBaseUrl + "llvm.git"
     no_default_sysroot = None
     appendCheriBitsToBuildDir = True
-    skip_cheri_symlinks = False
+    skip_cheri_symlinks = True
     doNotAddToTargets = True
 
     @classmethod
@@ -173,6 +173,8 @@ class BuildLLVMBase(CMakeProject):
 
     def install(self, **kwargs):
         super().install()
+        print("INSTALL", self.included_projects)
+        print("INSTALL", self.skip_cheri_symlinks)
         if self.skip_cheri_symlinks:
             return
         # create a symlink for the target
@@ -223,15 +225,12 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
         self.configureArgs[0] = self.configureArgs[0] + "/llvm"
         super().configure(**kwargs)
 
-    def install(self, **kwargs):
-        CMakeProject.install(self)
-
 
 class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     repository = "https://github.com/CTSRD-CHERI/llvm-project.git"
     projectName = "llvm-project"
     target = "llvm"
-    skip_cheri_symlinks = True
+    skip_cheri_symlinks = False
     is_sdk_target = True
     defaultInstallDir = CMakeProject._installToSDK
 
@@ -253,7 +252,6 @@ class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
     defaultInstallDir = ComputedDefaultValue(
         function=lambda config, project: config.outputRoot / "upstream-llvm",
         asString="$INSTALL_ROOT/upstream-llvm")
-    skip_cheri_symlinks = True
     skip_misc_llvm_tools = False # Cannot skip these tools in upstream LLVM
 
 
@@ -305,9 +303,7 @@ class BuildUpstreamSplitRepoLLVM(BuildLLVMSplitRepoBase):
     defaultInstallDir = ComputedDefaultValue(
         function=lambda config, project: config.outputRoot / "upstream-llvm-split",
         asString="$INSTALL_ROOT/upstream-llvm-split")
-    skip_cheri_symlinks = True
     skip_misc_llvm_tools = False # Cannot skip these tools in upstream LLVM
-
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
