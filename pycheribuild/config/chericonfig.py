@@ -243,6 +243,10 @@ class CheriConfig(object):
         self.tests_env_only = loader.addCommandLineOnlyBoolOption("test-environment-only", group=loader.testsGroup,
             help="Don't actually run the tests. Instead setup a QEMU instance with the right paths set up.")
 
+        self.shallow_clone = loader.addBoolOption("shallow-clone", default=True,
+            help="Perform a shallow `git clone` when cloning new projects. This can save a lot of time for large"
+            "repositories such as FreeBSD or LLVM. Use `git fetch --unshallow` to convert to a non-shallow clone")
+
         self.targets = None  # type: list
         self.FS = None  # type: FileSystemUtils
         self.__optionalProperties = []

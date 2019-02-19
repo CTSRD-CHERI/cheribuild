@@ -1045,7 +1045,9 @@ class Project(SimpleProject):
             print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?", end="")
             if not self.queryYesNo(defaultResult=False):
                 self.fatal("Sources for", str(srcDir), " missing!")
-            cloneCmd = ["git", "clone", "--depth", "1"]
+            cloneCmd = ["git", "clone"]
+            if self.config.shallow_clone:
+                cloneCmd.extend(["--depth", "1"])
             if not skipSubmodules:
                 cloneCmd.append("--recurse-submodules")
             if initialBranch:
