@@ -214,6 +214,8 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
         super().setupConfigOptions(useDefaultSysroot=False)
 
     def configure(self, **kwargs):
+        if (self.sourceDir / "tools/clang/.git").exists():
+            self.fatal("Attempting to build LLVM Monorepo but the checkout is from the split repos!")
         if not self.included_projects:
             self.fatal("Need at least one project in --include-projects config option")
         self.add_cmake_options(LLVM_ENABLE_PROJECTS=";".join(self.included_projects))
@@ -308,6 +310,11 @@ class BuildUpstreamSplitRepoLLVM(BuildLLVMSplitRepoBase):
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(useDefaultSysroot=False)
+
+    def configure(self, **kwargs):
+        if not (self.sourceDir / "tools/clang/.git").exists():
+            self.fatal("Attempting to build LLVM split repos but the checkout is from the monorepo!")
+        super().configure(**kwargs)
 
 
 class BuildCheriSplitRepoLLVM(BuildLLVMSplitRepoBase):
