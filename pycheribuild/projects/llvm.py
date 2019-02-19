@@ -173,8 +173,6 @@ class BuildLLVMBase(CMakeProject):
 
     def install(self, **kwargs):
         super().install()
-        print("INSTALL", self.included_projects)
-        print("INSTALL", self.skip_cheri_symlinks)
         if self.skip_cheri_symlinks:
             return
         # create a symlink for the target
