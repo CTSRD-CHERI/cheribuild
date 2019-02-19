@@ -248,12 +248,13 @@ class BuildLLD(TargetAlias):
 
 class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
     repository = "https://github.com/llvm/llvm-project.git"
-    projectName = "llvm-project"
+    projectName = "upstream-llvm-project"
     target = "upstream-llvm"
     defaultInstallDir = ComputedDefaultValue(
         function=lambda config, project: config.outputRoot / "upstream-llvm",
         asString="$INSTALL_ROOT/upstream-llvm")
     skip_cheri_symlinks = True
+    skip_misc_llvm_tools = False # Cannot skip these tools in upstream LLVM
 
 
 # Keep around the build infrastructure for building the split repos for now:
@@ -305,7 +306,8 @@ class BuildUpstreamSplitRepoLLVM(BuildLLVMSplitRepoBase):
         function=lambda config, project: config.outputRoot / "upstream-llvm-split",
         asString="$INSTALL_ROOT/upstream-llvm-split")
     skip_cheri_symlinks = True
-    is_sdk_target = True
+    skip_misc_llvm_tools = False # Cannot skip these tools in upstream LLVM
+
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
