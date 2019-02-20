@@ -1325,10 +1325,11 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
-        if not IS_FREEBSD:
-            cls.remotePath = cls.addConfigOption("remote-sdk-path", showHelp=True, metavar="PATH", help="The path to "
-                                                 "the CHERI SDK on the remote FreeBSD machine (e.g. "
-                                                 "vica:~foo/cheri/output/sdk)")
+        cls.copy_remote_sysroot = cls.addBoolOption("copy-remote-sysroot", default=False,
+                                                    help="Copy sysroot from remote server instead of from local machine")
+        cls.remotePath = cls.addConfigOption("remote-sdk-path", showHelp=True, metavar="PATH", help="The path to "
+                                             "the CHERI SDK on the remote FreeBSD machine (e.g. "
+                                             "vica:~foo/cheri/output/sdk)")
         if cls._crossCompileTarget == CrossCompileTarget.MIPS or cls._crossCompileTarget is None:
             cls.use_cheri_sysroot_for_mips = cls.addBoolOption("use-cheri-sysroot-for-mips", default=False,
                                                                help="Create the MIPS sysroot using the files from "
@@ -1339,7 +1340,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
             cls.use_cheri_sysroot_for_mips = False
 
     def copySysrootFromRemoteMachine(self):
-        statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
+        statusUpdate("Copying sysroot from remote system.")
         if not self.remotePath:
             self.fatal("Missing remote SDK path: Please set --cheribsd-sysroot/remote-sdk-path (or --freebsd/crossbuild)")
             if self.config.pretend:
@@ -1421,10 +1422,10 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
                 self.createSymlink(self.crossSysrootPath, unprefixed_sysroot)
 
         with self.asyncCleanDirectory(self.crossSysrootPath):
-            if IS_FREEBSD or self.rootfs_source_class.get_instance(self, self.config).crossbuild:
-                self.createSysroot()
-            else:
+            if self.copy_remote_sysroot or not self.rootfs_source_class.get_instance(self, self.config).crossbuild:
                 self.copySysrootFromRemoteMachine()
+            else:
+                self.createSysroot()
             if (self.config.sdkDir / "sysroot/usr/libcheri/").is_dir():
                 # clang++ expects libgcc_eh to exist:
                 libgcc_eh = self.config.sdkDir / "sysroot/usr/libcheri/libgcc_eh.a"
