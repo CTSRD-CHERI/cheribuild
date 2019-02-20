@@ -471,12 +471,21 @@ class CrossCompileMixin(MultiArchBaseMixin):
             resource_dir = getCompilerInfo(self.CC).get_resource_dir()
             statusUpdate("Copying ASAN libs to", resource_dir)
             expected_path = resource_dir / "lib/freebsd/"
-            asan_libs = self.sdkSysroot / "usr/lib/clang/6.0.0/lib/freebsd/"
+            asan_libdir_candidates = list((self.sdkSysroot / "usr/lib/clang").glob("*"))
+            versions = [a.name for a in asan_libdir_candidates]
+            # Find the newest ASAN runtime library versions from the FreeBSD sysroot
+            found_asan_lib = None
+            from distutils.version import StrictVersion
             libname = "libclang_rt.asan-mips64.a"
-            if not (asan_libs / libname).exists():
-                self.fatal("Cannot find", libname, "library in sysroot dir", asan_libs, "-- Compilation will fail!")
+            for version in reversed(sorted(versions, key=StrictVersion)):
+                asan_libs = self.sdkSysroot / "usr/lib/clang" / version / "lib/freebsd"
+                if (asan_libs / libname).exists():
+                    found_asan_lib = asan_libs / libname
+                    break
+            if not found_asan_lib:
+                self.fatal("Cannot find", libname, "library in sysroot dirs", asan_libdir_candidates, "-- Compilation will fail!")
             self.makedirs(expected_path)
-            runCmd("cp", "-av", asan_libs, expected_path.parent)
+            runCmd("cp", "-av", found_asan_lib.parent, expected_path.parent)
             if not (expected_path / libname).exists():
                 self.fatal("Cannot find", libname, "library in compiler dir", expected_path, "-- Compilation will fail!")
 
