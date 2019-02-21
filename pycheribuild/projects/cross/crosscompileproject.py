@@ -46,7 +46,7 @@ from ...utils import *
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget", "BuildType", # no-combine
            "CrossCompileProject", "CrossInstallDir", "MakeCommandKind", "Linkage", "Path", "crosscompile_dependencies",  # no-combine
-           "_INVALID_INSTALL_DIR"]  # no-combine
+           "_INVALID_INSTALL_DIR", "GitRepository"]  # no-combine
 
 class CrossInstallDir(Enum):
     NONE = 0

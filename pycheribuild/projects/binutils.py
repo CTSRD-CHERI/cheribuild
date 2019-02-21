@@ -39,7 +39,7 @@ from ..utils import *
 class BuildGnuBinutils(AutotoolsProject):
     target = "gnu-binutils"
     projectName = "gnu-binutils"
-    repository = "https://github.com/CTSRD-CHERI/binutils.git"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/binutils.git")
     gitBranch = "cheribsd"  # the default branch "cheri" won't work for cross-compiling
     defaultInstallDir = AutotoolsProject._installToSDK
 
@@ -98,7 +98,7 @@ class BuildGnuBinutils(AutotoolsProject):
         self.configureEnvironment["CFLAGS"] = cflags
 
     def update(self):
-        self._ensureGitRepoIsCloned(srcDir=self.sourceDir, remoteUrl=self.repository, initialBranch=self.gitBranch)
+        super().update()
         # Make sure we have the version that can compile FreeBSD binaries
         status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
                         captureOutput=True, printVerboseOnly=True, cwd=self.sourceDir)
@@ -107,7 +107,6 @@ class BuildGnuBinutils(AutotoolsProject):
             if b" cheribsd" not in branches:
                 runCmd("git", "checkout", "-b", "cheribsd", "--track", "origin/cheribsd")
         runCmd("git", "checkout", "cheribsd", cwd=self.sourceDir)
-        super().update()
 
     def compile(self, **kwargs):
         self.runMake("all-ld", logfileName="build")
@@ -152,7 +151,7 @@ class BuildGPLv3Binutils(BuildGnuBinutils):
     target = "gplv3-binutils"
     projectName = "GPLv3-BinUtils"
     # This is much faster to clone than the official repo
-    repository = "https://github.com/arichardson/binutils-gdb.git"
+    repository = GitRepository("https://github.com/arichardson/binutils-gdb.git")
     gitBranch = "cheribsd"
 
     def __init__(self, config: CheriConfig):

@@ -35,7 +35,7 @@ from ..utils import OSInfo, commandline_to_str
 class BuildCheriSim(Project):
     target = "cheri-sim"
     projectName = "cheri-sim"
-    repository = "https://please/set/source/dir/to/ctsrd-svn/cheri/trunk"
+    repository = GitRepository("https://please/set/source/dir/to/ctsrd-svn/cheri/trunk")
     defaultInstallDir = Project._installToSDK
     build_in_source_dir = True      # Needs to build in the source dir
     make_kind = MakeCommandKind.GnuMake

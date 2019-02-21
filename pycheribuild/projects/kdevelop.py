@@ -34,7 +34,7 @@ from ..utils import *
 # doesn't seem to be part of distro packages
 class BuildLibKompareDiff2(CMakeProject):
     defaultCMakeBuildType = "Debug"
-    repository = "git://anongit.kde.org/libkomparediff2.git"
+    repository = GitRepository("git://anongit.kde.org/libkomparediff2.git")
     defaultInstallDir = CMakeProject._installToBootstrapTools
 
     def __init__(self, config: CheriConfig):
@@ -44,7 +44,7 @@ class BuildLibKompareDiff2(CMakeProject):
 class BuildKDevplatform(CMakeProject):
     dependencies = ["libkomparediff2"]
     defaultCMakeBuildType = "Debug"
-    repository = "https://github.com/arichardson/kdevplatform.git"
+    repository = GitRepository("https://github.com/arichardson/kdevplatform.git")
     defaultInstallDir = CMakeProject._installToBootstrapTools
     appendCheriBitsToBuildDir = True
 
@@ -57,7 +57,7 @@ class BuildKDevplatform(CMakeProject):
 class BuildKDevelop(CMakeProject):
     dependencies = ["kdevplatform", "llvm"]
     defaultCMakeBuildType = "Debug"
-    repository = "https://github.com/arichardson/kdevelop.git"
+    repository = GitRepository("https://github.com/arichardson/kdevelop.git")
     defaultInstallDir = CMakeProject._installToBootstrapTools
     appendCheriBitsToBuildDir = True
 

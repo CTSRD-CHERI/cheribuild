@@ -33,7 +33,7 @@ import re
 
 
 class BuildPostgres(CrossCompileAutotoolsProject):
-    repository = "https://github.com/CTSRD-CHERI/postgres.git"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/postgres.git")
     gitBranch = "96-cheri"
     # we have to build in the source directory, out-of-source is broken
     # build_in_source_dir = True

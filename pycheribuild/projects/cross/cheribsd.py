@@ -115,7 +115,7 @@ def default_cross_toolchain_path(config: CheriConfig, proj: "BuildFreeBSD"):
 
 class BuildFreeBSDBase(Project):
     doNotAddToTargets = True    # base class only
-    repository = "https://github.com/freebsd/freebsd.git"
+    repository = GitRepository("https://github.com/freebsd/freebsd.git")
     make_kind = MakeCommandKind.BsdMake
     crossbuild = None
     skipBuildworld = False
@@ -210,7 +210,7 @@ class BuildFreeBSDBase(Project):
 class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
     dependencies = ["llvm"]
     target = "freebsd"
-    repository = "https://github.com/freebsd/freebsd.git"
+    repository = GitRepository("https://github.com/freebsd/freebsd.git")
     kernelConfig = None  # type: str
     crossbuild = False
     baremetal = True  # We are building the full OS so we don't need a sysroot
@@ -871,7 +871,7 @@ class BuildFreeBSDX86AliasBinutils(TargetAlias):
 class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     projectName = "freebsd"
     target = "freebsd-with-default-options"
-    repository = "https://github.com/freebsd/freebsd.git"
+    repository = GitRepository("https://github.com/freebsd/freebsd.git")
     build_dir_suffix = "default-options"
     add_custom_make_options = False
 
@@ -897,7 +897,7 @@ def jflag_for_universe(config: CheriConfig, proj):
 class BuildFreeBSDUniverse(BuildFreeBSDBase):
     projectName = "freebsd-universe"
     target = "freebsd-universe"
-    repository = "https://github.com/freebsd/freebsd.git"
+    repository = GitRepository("https://github.com/freebsd/freebsd.git")
 # already in the project name:    build_dir_suffix = "universe"
     defaultInstallDir = Path("/this/target/should/not/be/installed!")
 
@@ -971,7 +971,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
 class BuildCHERIBSD(BuildFreeBSD):
     projectName = "cheribsd"
     target = "cheribsd"
-    repository = "https://github.com/CTSRD-CHERI/cheribsd.git"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git")
     defaultInstallDir = cheribsd_install_dir
     appendCheriBitsToBuildDir = True
     defaultBuildDir = cheribsd_build_dir

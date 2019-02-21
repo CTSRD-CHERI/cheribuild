@@ -37,7 +37,7 @@ from pathlib import Path
 
 
 class BuildLLVMTestSuite(CrossCompileCMakeProject):
-    repository = "https://github.com/CTSRD-CHERI/llvm-test-suite.git"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-test-suite.git")
     dependencies = ["llvm"]
     defaultCMakeBuildType = "Debug"
     projectName = "llvm-test-suite"

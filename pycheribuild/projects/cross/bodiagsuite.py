@@ -32,7 +32,7 @@ from .crosscompileproject import *
 
 class BuildBODiagSuite(CrossCompileCMakeProject):
     projectName = "bodiagsuite"
-    repository = "https://github.com/nwf/bodiagsuite"
+    repository = GitRepository("https://github.com/nwf/bodiagsuite")
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     appendCheriBitsToBuildDir = True
     supported_architectures = [CrossCompileTarget.CHERI, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]

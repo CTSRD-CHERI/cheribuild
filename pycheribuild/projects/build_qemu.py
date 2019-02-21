@@ -36,7 +36,7 @@ import subprocess
 
 
 class BuildQEMUBase(AutotoolsProject):
-    repository = "https://github.com/qemu/qemu.git"
+    repository = GitRepository("https://github.com/qemu/qemu.git")
     defaultInstallDir = AutotoolsProject._installToSDK
     # QEMU will not work with BSD make, need GNU make
     make_kind = MakeCommandKind.GnuMake
@@ -229,7 +229,7 @@ class BuildQEMUBase(AutotoolsProject):
 
 
 class BuildQEMU(BuildQEMUBase):
-    repository = "https://github.com/CTSRD-CHERI/qemu.git"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git")
     gitBranch = "qemu-cheri"
     appendCheriBitsToBuildDir = True
 

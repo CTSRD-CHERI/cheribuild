@@ -33,7 +33,7 @@ from ..utils import *
 
 class BuildCheriTrace(CMakeProject):
     dependencies = ["llvm"]
-    repository = "https://github.com/CTSRD-CHERI/cheritrace.git"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/cheritrace.git")
     defaultInstallDir = CMakeProject._installToSDK
     appendCheriBitsToBuildDir = True
 

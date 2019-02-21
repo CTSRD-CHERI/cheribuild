@@ -186,7 +186,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
 
 class BuildQt5(BuildQtWithConfigureScript):
-    repository = "https://github.com/CTSRD-CHERI/qt5"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qt5")
     gitBranch = "5.10.0"
     skipGitSubmodules = True  # init-repository does it for us
 
@@ -213,7 +213,7 @@ class BuildQt5(BuildQtWithConfigureScript):
 
 class BuildQtBase(BuildQtWithConfigureScript):
     doNotAddToTargets = False  # Even though it ends in Base this is not a Base class
-    repository = "https://github.com/CTSRD-CHERI/qtbase"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase")
     gitBranch = "5.10.0"
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.getSourceDir(project, config) / "qtbase",
@@ -255,7 +255,7 @@ def icu_dependencies(cls: "typing.Type[CrossCompileProject]", config: CheriConfi
 
 # Webkit needs ICU (and recommended for QtBase too:
 class BuildICU4C(CrossCompileAutotoolsProject):
-    repository = "https://github.com/CTSRD-CHERI/icu4c.git"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/icu4c.git")
     crossInstallDir = CrossInstallDir.SDK
     make_kind = MakeCommandKind.GnuMake
     dependencies = icu_dependencies
@@ -295,7 +295,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 
 # it also needs libxml2
 class BuildLibXml2(CrossCompileAutotoolsProject):
-    repository = "https://github.com/CTSRD-CHERI/libxml2"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/libxml2")
     crossInstallDir = CrossInstallDir.SDK
     make_kind = MakeCommandKind.GnuMake
 
@@ -318,7 +318,7 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
 
 
 class BuildQtWebkit(CrossCompileCMakeProject):
-    repository = "https://github.com/CTSRD-CHERI/qtwebkit"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qtwebkit")
     gitBranch = "qtwebkit-5.212-cheri"
     dependencies = ["qtbase", "icu4c", "libxml2", "sqlite"]
     # webkit is massive if we include debug info

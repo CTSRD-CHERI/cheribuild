@@ -35,7 +35,7 @@ import tempfile
 
 
 class BuildMibench(CrossCompileProject):
-    repository = "git@github.com:CTSRD-CHERI/mibench"
+    repository = GitRepository("git@github.com:CTSRD-CHERI/mibench")
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     projectName = "mibench"
     # Needs bsd make to build
@@ -69,7 +69,7 @@ class BuildMibench(CrossCompileProject):
 
 
 class BuildOlden(CrossCompileProject):
-    repository = "git@github.com:CTSRD-CHERI/olden"
+    repository = GitRepository("git@github.com:CTSRD-CHERI/olden")
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     projectName = "olden"
     # Needs bsd make to build

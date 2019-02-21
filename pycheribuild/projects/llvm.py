@@ -29,6 +29,9 @@
 #
 from pathlib import Path
 import shutil
+
+import sys
+
 from .project import *
 from ..utils import *
 from ..config.loader import ComputedDefaultValue
@@ -36,7 +39,7 @@ from ..config.loader import ComputedDefaultValue
 
 class BuildLLVMBase(CMakeProject):
     githubBaseUrl = "https://github.com/CTSRD-CHERI/"
-    repository = githubBaseUrl + "llvm.git"
+    repository = GitRepository(githubBaseUrl + "llvm.git")
     no_default_sysroot = None
     appendCheriBitsToBuildDir = True
     skip_cheri_symlinks = True
@@ -80,6 +83,9 @@ class BuildLLVMBase(CMakeProject):
             CMAKE_C_COMPILER=self.cCompiler,
             LLVM_PARALLEL_LINK_JOBS=link_jobs,  # anything more causes too much I/O
         )
+
+        # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
+        self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
 
         if not self.build_everything:
             self.add_cmake_options(
@@ -225,7 +231,7 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
 
 
 class BuildCheriLLVM(BuildLLVMMonoRepoBase):
-    repository = "https://github.com/CTSRD-CHERI/llvm-project.git"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-project.git")
     projectName = "llvm-project"
     target = "llvm"
     skip_cheri_symlinks = False
@@ -244,7 +250,7 @@ class BuildLLD(TargetAlias):
 
 
 class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
-    repository = "https://github.com/llvm/llvm-project.git"
+    repository = GitRepository("https://github.com/llvm/llvm-project.git")
     projectName = "upstream-llvm-project"
     target = "upstream-llvm"
     defaultInstallDir = ComputedDefaultValue(
@@ -282,20 +288,18 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
                                LLVM_TOOL_LLD_BUILD="lld" in self.included_projects)
 
     def update(self):
-        self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision)
+        super().update()
         if "clang" in self.included_projects:
-            self._updateGitRepo(self.sourceDir / "tools/clang", self.clangRepository, revision=self.clangRevision)
+            GitRepository(self.clangRepository).updateRepo(self, srcDir=self.sourceDir / "tools/clang", revision=self.clangRevision, initialBranch="master"),
         if "lld" in self.included_projects:
-            self._updateGitRepo(self.sourceDir / "tools/lld", self.lldRepository, revision=self.lldRevision,
-                                initialBranch="master")
+            GitRepository(self.lldRepository).updateRepo(self, srcDir=self.sourceDir / "tools/lld", revision=self.lldRevision, initialBranch="master"),
         if "lldb" in self.included_projects:  # Not yet usable
-            self._updateGitRepo(self.sourceDir / "tools/lldb", self.lldbRepository, revision=self.lldbRevision,
-                                initialBranch="master")
+            GitRepository(self.lldbRepository).updateRepo(self, srcDir=self.sourceDir / "tools/lldb", revision=self.lldbRevision, initialBranch="master"),
 
 
 class BuildUpstreamSplitRepoLLVM(BuildLLVMSplitRepoBase):
     githubBaseUrl = "https://github.com/llvm-mirror/"
-    repository = githubBaseUrl + "llvm.git"
+    repository = GitRepository(githubBaseUrl + "llvm.git")
     projectName = "upstream-llvm-separate-repos"
 
     defaultInstallDir = ComputedDefaultValue(
@@ -315,7 +319,7 @@ class BuildUpstreamSplitRepoLLVM(BuildLLVMSplitRepoBase):
 
 class BuildCheriSplitRepoLLVM(BuildLLVMSplitRepoBase):
     githubBaseUrl = "https://github.com/CTSRD-CHERI/"
-    repository = githubBaseUrl + "llvm.git"
+    repository = GitRepository(githubBaseUrl + "llvm.git")
     target = "llvm-separate-repos"
     projectName = "llvm"
     # install both split and merged CHERI LLVM to sdk for now

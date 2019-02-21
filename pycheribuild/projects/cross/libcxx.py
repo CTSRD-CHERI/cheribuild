@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import sys
 
 from .crosscompileproject import *
 from .cheribsd import BuildCHERIBSD
@@ -48,7 +49,7 @@ installToCXXDir = ComputedDefaultValue(function=_cxx_install_dir, asString="$CHE
 
 
 class BuildLibunwind(CrossCompileCMakeProject):
-    repository = "https://github.com/CTSRD-CHERI/libunwind.git"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/libunwind.git")
     defaultInstallDir = installToCXXDir
 
     @property
@@ -121,7 +122,7 @@ class BuildLibunwind(CrossCompileCMakeProject):
 
 
 class BuildLibCXXRT(CrossCompileCMakeProject):
-    repository = "https://github.com/CTSRD-CHERI/libcxxrt.git"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/libcxxrt.git")
     defaultInstallDir = installToCXXDir
     dependencies = ["libunwind"]
 
@@ -166,7 +167,7 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
 
 
 class BuildLibCXX(CrossCompileCMakeProject):
-    repository = "https://github.com/CTSRD-CHERI/libcxx.git"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/libcxx.git")
     defaultInstallDir = installToCXXDir
     dependencies = ["libcxxrt"]
 
@@ -220,6 +221,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
                           "/libcxx-test-results.xml --max-time 3600 --timeout 120 -s -vv" + self.libcxx_lit_jobs
         )
+        # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
+        self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
         # select libcxxrt as the runtime library
         self.add_cmake_options(
             LIBCXX_CXX_ABI="libcxxrt",
@@ -318,7 +321,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
 
 
 class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
-    repository = "https://github.com/llvm-mirror/compiler-rt.git"
+    repository = GitRepository("https://github.com/llvm-mirror/compiler-rt.git")
     projectName = "compiler-rt-baremetal"
     crossInstallDir = CrossInstallDir.SDK
     dependencies = ["newlib-baremetal"]
@@ -364,7 +367,7 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
 
 
 class BuildLibCXXBaremetal(BuildLibCXX):
-    repository = "https://github.com/CTSRD-CHERI/libcxx.git"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/libcxx.git")
     dependencies = ["libcxxrt-baremetal"]
     projectName = "libcxx-baremetal"
     # target = "libcxx-baremetal"
@@ -384,7 +387,7 @@ class BuildLibCXXBaremetal(BuildLibCXX):
 
 
 class BuildLibCXXRTBaremetal(BuildLibCXXRT):
-    repository = "https://github.com/CTSRD-CHERI/libcxxrt.git"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/libcxxrt.git")
     projectName = "libcxxrt-baremetal"
     dependencies = ["newlib-baremetal", "compiler-rt-baremetal"]
     crossInstallDir = CrossInstallDir.SDK

@@ -33,7 +33,7 @@ from ..utils import *
 
 class BuildQtCreator(Project):
     dependencies = ["llvm"]
-    repository = "https://code.qt.io/qt-creator/qt-creator.git"
+    repository = GitRepository("https://code.qt.io/qt-creator/qt-creator.git")
     defaultInstallDir = Project._installToSDK
     appendCheriBitsToBuildDir = True
 

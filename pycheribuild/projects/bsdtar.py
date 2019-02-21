@@ -31,7 +31,7 @@ from .project import *
 
 
 class BuildBsdTar(CMakeProject):
-    repository = "https://github.com/libarchive/libarchive.git"
+    repository = GitRepository("https://github.com/libarchive/libarchive.git")
     defaultInstallDir = CMakeProject._installToBootstrapTools
 
     def configure(self, **kwargs):

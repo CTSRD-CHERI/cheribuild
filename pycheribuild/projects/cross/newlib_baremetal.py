@@ -35,7 +35,7 @@ import tempfile
 
 
 class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
-    repository = "https://github.com/CTSRD-CHERI/newlib"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/newlib")
     projectName = "newlib-baremetal"
     make_kind = MakeCommandKind.GnuMake
     baremetal = True

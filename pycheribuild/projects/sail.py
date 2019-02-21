@@ -128,7 +128,7 @@ class Opam2(SimpleProject):
 
 class BuildBubbleWrap(AutotoolsProject):
     projectName = "bubblewrap"
-    repository = "https://github.com/projectatomic/bubblewrap"
+    repository = GitRepository("https://github.com/projectatomic/bubblewrap")
     defaultInstallDir = AutotoolsProject._installToBootstrapTools
 
     def __init__(self, config):
@@ -146,7 +146,7 @@ REMS_OPAM_REPO = "https://github.com/rems-project/opam-repository.git"
 
 class BuildSailFromOpam(OpamMixin, SimpleProject):
     target = "sail-from-opam"
-    # repository = "https://github.com/rems-project/sail"
+    # repository = GitRepository("https://github.com/rems-project/sail")
     # gitBranch = "sail2"
 
     def __init__(self, config: CheriConfig):
@@ -206,7 +206,7 @@ class BuildSail(TargetAliasWithDependencies):
 class BuildSailCheriMips(ProjectUsingOpam):
     target = "sail-cheri-mips"
     projectName = "sail-cheri-mips"
-    repository = "https://github.com/CTSRD-CHERI/sail-cheri-mips"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-mips")
     dependencies = ["sail-from-opam"]
     defaultInstallDir = Project._installToSDK
     build_in_source_dir = True  # Cannot build out-of-source
@@ -276,7 +276,7 @@ class OcamlProject(OpamMixin, Project):
 
 class BuildSailFromSource(OcamlProject):
     target = "sail-from-source"
-    repository = "https://github.com/rems-project/sail"
+    repository = GitRepository("https://github.com/rems-project/sail")
     gitBranch = "sail2"
     dependencies = ["lem", "ott", "linksem"]
     needed_ocaml_packages = OcamlProject.needed_ocaml_packages + ["zarith", "lem", "linksem"]
@@ -314,7 +314,7 @@ make -C cheri cheri128 cheri128_c""")
 
 
 class BuildLem(OcamlProject):
-    repository = "https://github.com/rems-project/lem"
+    repository = GitRepository("https://github.com/rems-project/lem")
     needed_ocaml_packages = OcamlProject.needed_ocaml_packages + ["zarith"]
 
     def compile(self, cwd: Path = None):
@@ -326,14 +326,14 @@ class BuildLem(OcamlProject):
 
 
 class BuildOtt(OcamlProject):
-    repository = "https://github.com/ott-lang/ott"
+    repository = GitRepository("https://github.com/ott-lang/ott")
 
     def compile(self, cwd: Path = None):
         self.run_in_ocaml_env("make")
 
 
 class BuildLinksem(OcamlProject):
-    repository = "https://github.com/rems-project/linksem"
+    repository = GitRepository("https://github.com/rems-project/linksem")
     dependencies = ["lem", "ott"]
 
     def compile(self, cwd: Path = None):

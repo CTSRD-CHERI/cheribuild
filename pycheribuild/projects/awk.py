@@ -32,7 +32,7 @@ from ..utils import *
 
 
 class BuildAwk(Project):
-    repository = "https://github.com/danfuzz/one-true-awk.git"
+    repository = GitRepository("https://github.com/danfuzz/one-true-awk.git")
     defaultInstallDir = Project._installToSDK
     build_in_source_dir = True  # We build in the source directory
 

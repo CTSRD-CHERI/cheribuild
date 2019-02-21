@@ -37,7 +37,7 @@ from pathlib import Path
 
 
 class BuildLibObjC2(CMakeProject):
-    repository = "https://github.com/gnustep/libobjc2.git"
+    repository = GitRepository("https://github.com/gnustep/libobjc2.git")
     defaultInstallDir = CMakeProject._installToBootstrapTools
 
     def __init__(self, config: CheriConfig):
@@ -61,7 +61,7 @@ class BuildLibObjC2(CMakeProject):
 
 
 class BuildGnuStep_Make(AutotoolsProject):
-    repository = "https://github.com/gnustep/tools-make.git"
+    repository = GitRepository("https://github.com/gnustep/tools-make.git")
     defaultInstallDir = AutotoolsProject._installToBootstrapTools
 
     def __init__(self, config: CheriConfig):
@@ -83,8 +83,8 @@ class GnuStepModule(AutotoolsProject):
     build_in_source_dir = True  # out of source builds don't seem to work!
 
     def __init__(self, config: CheriConfig, moduleName: str):
+        self.repository = GitRepository("https://github.com/gnustep/libs-" + moduleName + ".git")
         super().__init__(config)
-        self.repository = "https://github.com/gnustep/libs-" + moduleName + ".git"
         self._addRequiredPkgConfig("gnutls")
         # Ubuntu puts libtiff-4 is in libtiff5-dev...
         self._addRequiredPkgConfig("libtiff-4", apt="libtiff5-dev")

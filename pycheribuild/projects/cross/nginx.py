@@ -32,7 +32,7 @@ import re
 
 
 class BuildNginx(CrossCompileAutotoolsProject):
-    repository = "https://github.com/CTSRD-CHERI/nginx.git"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/nginx.git")
     # we have to build in the source directory, out-of-source is broken
     # build_in_source_dir = True
     make_kind = MakeCommandKind.GnuMake

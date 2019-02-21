@@ -39,7 +39,7 @@ class BuildSoaapLLVM(BuildLLVMSplitRepoBase):
     target = "soaap-llvm"
     projectName = "soaap-llvm"
     githubBaseUrl = "https://github.com/CTSRD-SOAAP/"
-    repository = githubBaseUrl + "llvm.git"
+    repository = GitRepository(githubBaseUrl + "llvm.git")
     no_default_sysroot = True
     appendCheriBitsToBuildDir = False
     skip_misc_llvm_tools = False
@@ -55,7 +55,7 @@ class BuildSoaapLLVM(BuildLLVMSplitRepoBase):
 
 class BuildSoaap(CMakeProject):
     dependencies = ["soaap-llvm"]
-    repository = "https://github.com/CTSRD-SOAAP/soaap"
+    repository = GitRepository("https://github.com/CTSRD-SOAAP/soaap")
     defaultInstallDir = install_to_soaap_dir
 
     def configure(self, **kwargs):

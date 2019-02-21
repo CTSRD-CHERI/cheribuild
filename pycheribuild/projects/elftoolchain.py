@@ -38,7 +38,7 @@ class BuildElftoolchain(Project):
     target = "elftoolchain"
     projectName = "elftoolchain"
     gitBranch = "master"
-    repository = "https://github.com/emaste/elftoolchain.git"
+    repository = GitRepository("https://github.com/emaste/elftoolchain.git")
     defaultInstallDir = Project._installToSDK
     make_kind = MakeCommandKind.BsdMake
     is_sdk_target = True

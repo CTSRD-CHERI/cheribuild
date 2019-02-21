@@ -38,7 +38,7 @@ class BuildBBLFreeBSDWithDefaultOptionsRISCV(AutotoolsProject):
     projectName = "bbl-freebsd-with-default-options-riscv"
     target = "bbl-freebsd-with-default-options-riscv"
     dependencies = ["freebsd-with-default-options-riscv"]
-    repository = "https://github.com/jrtc27/riscv-pk.git"
+    repository = GitRepository("https://github.com/jrtc27/riscv-pk.git")
     defaultInstallDir = AutotoolsProject._installToSDK
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True

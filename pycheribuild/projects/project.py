@@ -53,7 +53,7 @@ from ..utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies", # no-combine
            "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
-           "CrossCompileTarget"]  # no-combine
+           "CrossCompileTarget", "GitRepository"]  # no-combine
 
 
 def flushStdio(stream):
@@ -840,8 +840,89 @@ class MakeOptions(object):
         return self.kind != MakeCommandKind.CustomMakeTool
 
 
+class SourceRepository(object):
+    def ensureCloned(self, current_project: "Project", *, srcDir: Path, initialBranch=None,
+                     skipSubmodules=False):
+        raise NotImplementedError
+
+    def updateRepo(self, current_project: "Project", *, srcDir: Path, revision=None, initialBranch=None,
+                     skipSubmodules=False):
+        raise NotImplementedError
+
+class GitRepository(SourceRepository):
+    def __init__(self, url):
+        self.url = url
+
+    def ensureCloned(self, current_project: "Project", *, srcDir: Path, initialBranch=None, skipSubmodules=False):
+        # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
+        if not (srcDir / ".git").exists():
+            if current_project.config.skipClone:
+                current_project.fatal("Sources for", str(srcDir), " missing!")
+            print(srcDir, "is not a git repository. Clone it from' " + self.url + "'?", end="")
+            if not current_project.queryYesNo(defaultResult=False):
+                current_project.fatal("Sources for", str(srcDir), " missing!")
+            cloneCmd = ["git", "clone"]
+            if current_project.config.shallow_clone:
+                # Note: we pass --no-single-branch since otherwise git fetch will not work with branches and
+                # the solution of running  `git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"`
+                # is not very intuitive. This increases the amount of data fetched but increases usability
+                cloneCmd.extend(["--depth", "1", "--no-single-branch"])
+            if not skipSubmodules:
+                cloneCmd.append("--recurse-submodules")
+            if initialBranch:
+                cloneCmd += ["--branch", initialBranch]
+            runCmd(cloneCmd + [self.url, srcDir], cwd="/")
+            # Could also do this but it seems to fetch more data than --no-single-branch
+            # if self.config.shallow_clone:
+            #    runCmd(["git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"], cwd=srcDir)
+
+
+    def updateRepo(self, current_project: "Project", *, srcDir: Path, revision=None, initialBranch=None, skipSubmodules=False):
+        self.ensureCloned(current_project, srcDir=srcDir, initialBranch=initialBranch, skipSubmodules=skipSubmodules)
+        if current_project.skipUpdate:
+            return
+        # make sure we run git stash if we discover any local changes
+        hasChanges = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
+                                captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
+
+        pullCmd = ["git", "pull"]
+        has_autostash = False
+        git_version = get_program_version(Path(shutil.which("git"))) if shutil.which("git") else (0, 0, 0)
+        # Use the autostash flag for Git >= 2.14 (https://stackoverflow.com/a/30209750/894271)
+        if git_version >= (2, 14):
+            has_autostash = True
+            pullCmd.append("--autostash")
+
+        if hasChanges:
+            print(coloured(AnsiColour.green, "Local changes detected in", srcDir))
+            # TODO: add a config option to skip this query?
+            if self.config.force_update:
+                statusUpdate("Updating", srcDir, "with autostash due to --force-update")
+            elif not current_project.queryYesNo("Stash the changes, update and reapply?", defaultResult=True, forceResult=True):
+                statusUpdate("Skipping update of", srcDir)
+                return
+            if not has_autostash:
+                # TODO: ask if we should continue?
+                stashResult = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
+                                     captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout
+                # print("stashResult =", stashResult)
+                if "No local changes to save" in stashResult.decode("utf-8"):
+                    # print("NO REAL CHANGES")
+                    hasChanges = False  # probably git diff showed something from a submodule
+
+        if not skipSubmodules:
+            pullCmd.append("--recurse-submodules")
+        runCmd(pullCmd + ["--rebase"], cwd=srcDir, printVerboseOnly=True)
+        if not skipSubmodules:
+            runCmd("git", "submodule", "update", "--recursive", cwd=srcDir, printVerboseOnly=True)
+        if hasChanges and not has_autostash:
+            runCmd("git", "stash", "pop", cwd=srcDir, printVerboseOnly=True)
+        if revision:
+            runCmd("git", "checkout", revision, cwd=srcDir, printVerboseOnly=True)
+
+
 class Project(SimpleProject):
-    repository = ""
+    repository = None  # type: SourceRepository
     gitRevision = None
     gitBranch = ""
     skipGitSubmodules = False
@@ -977,13 +1058,23 @@ class Project(SimpleProject):
             installDirectoryHelp = "Override default install directory for " + cls.projectName
         cls._installDir = cls.addPathOption("install-directory", metavar="DIR", help=installDirectoryHelp,
                                            default=cls.defaultInstallDir)
-        if "repository" in cls.__dict__:
+        if "repository" in cls.__dict__ and isinstance(cls.repository, GitRepository):
             cls.gitRevision = cls.addConfigOption("git-revision", kind=str, help="The git revision to checkout prior to"
                                                                                  " building. Useful if HEAD is broken for one project but you still"
                                                                                  " want to update the other projects.",
                                                   metavar="REVISION")
-            cls.repository = cls.addConfigOption("repository", kind=str, help="The URL of the git repository",
-                                                 default=cls.repository, metavar="REPOSITORY")
+            # TODO: can argparse action be used to store to the class member directly?
+            # seems like I can create a new action a pass a reference to the repository:
+            #class FooAction(argparse.Action):
+            # def __init__(self, option_strings, dest, nargs=None, **kwargs):
+            #     if nargs is not None:
+            #         raise ValueError("nargs not allowed")
+            #     super(FooAction, self).__init__(option_strings, dest, **kwargs)
+            # def __call__(self, parser, namespace, values, option_string=None):
+            #     print('%r %r %r' % (namespace, values, option_string))
+            #     setattr(namespace, self.dest, values)
+            cls._repositoryUrl = cls.addConfigOption("repository", kind=str, help="The URL of the git repository",
+                                                    default=cls.repository, metavar="REPOSITORY")
         if "generate_cmakelists" not in cls.__dict__:
             # Make sure not to dereference a parent class descriptor here -> use getattr_static
             option = inspect.getattr_static(cls, "generate_cmakelists")
@@ -1000,7 +1091,11 @@ class Project(SimpleProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # set up the install/build/source directories (allowing overrides from config file)
-
+        assert isinstance(self.repository, SourceRepository), self.target + " repository member is wrong!"
+        if hasattr(self, "_repositoryUrl"):
+            # TODO: remove this and use a custom argparse.Action subclass
+            assert isinstance(self.repository, GitRepository)
+            self.repository.url = self._repositoryUrl
         self.configureCommand = ""
         # non-assignable variables:
         self.configureArgs = []  # type: typing.List[str]
@@ -1036,73 +1131,6 @@ class Project(SimpleProject):
                 raise RuntimeError(self.__class__.__name__ + "." + name + " mustn't be set. Called from" +
                                    self.__class__.__name__)
         self.__dict__[name] = value
-
-    def _ensureGitRepoIsCloned(self, *, srcDir: Path, remoteUrl, initialBranch=None, skipSubmodules=False):
-        # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
-        if not (srcDir / ".git").exists():
-            if self.config.skipClone:
-                self.fatal("Sources for", str(srcDir), " missing!")
-            print(srcDir, "is not a git repository. Clone it from' " + remoteUrl + "'?", end="")
-            if not self.queryYesNo(defaultResult=False):
-                self.fatal("Sources for", str(srcDir), " missing!")
-            cloneCmd = ["git", "clone"]
-            if self.config.shallow_clone:
-                # Note: we pass --no-single-branch since otherwise git fetch will not work with branches and
-                # the solution of running  `git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"`
-                # is not very intuitive. This increases the amount of data fetched but increases usability
-                cloneCmd.extend(["--depth", "1", "--no-single-branch"])
-            if not skipSubmodules:
-                cloneCmd.append("--recurse-submodules")
-            if initialBranch:
-                cloneCmd += ["--branch", initialBranch]
-            runCmd(cloneCmd + [remoteUrl, srcDir], cwd="/")
-            # Could also do this but it seems to fetch more data than --no-single-branch
-            # if self.config.shallow_clone:
-            #    runCmd(["git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"], cwd=srcDir)
-
-    def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None, skipSubmodules=False):
-        self._ensureGitRepoIsCloned(srcDir=srcDir, remoteUrl=remoteUrl, initialBranch=initialBranch,
-                                    skipSubmodules=skipSubmodules)
-        if self.skipUpdate:
-            return
-        # make sure we run git stash if we discover any local changes
-        hasChanges = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
-                                captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
-
-        pullCmd = ["git", "pull"]
-        has_autostash = False
-        git_version = get_program_version(Path(shutil.which("git"))) if shutil.which("git") else (0, 0, 0)
-        # Use the autostash flag for Git >= 2.14 (https://stackoverflow.com/a/30209750/894271)
-        if git_version >= (2, 14):
-            has_autostash = True
-            pullCmd.append("--autostash")
-
-        if hasChanges:
-            print(coloured(AnsiColour.green, "Local changes detected in", srcDir))
-            # TODO: add a config option to skip this query?
-            if self.config.force_update:
-                statusUpdate("Updating", srcDir, "with autostash due to --force-update")
-            elif not self.queryYesNo("Stash the changes, update and reapply?", defaultResult=True, forceResult=True):
-                statusUpdate("Skipping update of", srcDir)
-                return
-            if not has_autostash:
-                # TODO: ask if we should continue?
-                stashResult = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
-                                     captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout
-                # print("stashResult =", stashResult)
-                if "No local changes to save" in stashResult.decode("utf-8"):
-                    # print("NO REAL CHANGES")
-                    hasChanges = False  # probably git diff showed something from a submodule
-
-        if not skipSubmodules:
-            pullCmd.append("--recurse-submodules")
-        runCmd(pullCmd + ["--rebase"], cwd=srcDir, printVerboseOnly=True)
-        if not skipSubmodules:
-            runCmd("git", "submodule", "update", "--recursive", cwd=srcDir, printVerboseOnly=True)
-        if hasChanges and not has_autostash:
-            runCmd("git", "stash", "pop", cwd=srcDir, printVerboseOnly=True)
-        if revision:
-            runCmd("git", "checkout", revision, cwd=srcDir, printVerboseOnly=True)
 
     def _get_make_commandline(self, makeTarget, make_command, options, parallel: bool=True, compilationDbName: str=None):
         assert options is not None
@@ -1174,9 +1202,9 @@ class Project(SimpleProject):
 
     def update(self):
         if not self.repository:
-            self.fatal("Cannot update", self.projectName, "as it is missing a git URL", fatalWhenPretending=True)
-        self._updateGitRepo(self.sourceDir, self.repository, revision=self.gitRevision, initialBranch=self.gitBranch,
-                            skipSubmodules=self.skipGitSubmodules)
+            self.fatal("Cannot update", self.projectName, "as it is missing a repository source", fatalWhenPretending=True)
+        self.repository.updateRepo(self, srcDir=self.sourceDir, revision=self.gitRevision, initialBranch=self.gitBranch,
+                                   skipSubmodules=self.skipGitSubmodules)
 
     def clean(self) -> ThreadJoiner:
         assert self.config.clean
