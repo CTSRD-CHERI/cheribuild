@@ -1047,12 +1047,18 @@ class Project(SimpleProject):
                 self.fatal("Sources for", str(srcDir), " missing!")
             cloneCmd = ["git", "clone"]
             if self.config.shallow_clone:
-                cloneCmd.extend(["--depth", "1"])
+                # Note: we pass --no-single-branch since otherwise git fetch will not work with branches and
+                # the solution of running  `git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"`
+                # is not very intuitive. This increases the amount of data fetched but increases usability
+                cloneCmd.extend(["--depth", "1", "--no-single-branch"])
             if not skipSubmodules:
                 cloneCmd.append("--recurse-submodules")
             if initialBranch:
                 cloneCmd += ["--branch", initialBranch]
             runCmd(cloneCmd + [remoteUrl, srcDir], cwd="/")
+            # Could also do this but it seems to fetch more data than --no-single-branch
+            # if self.config.shallow_clone:
+            #    runCmd(["git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"], cwd=srcDir)
 
     def _updateGitRepo(self, srcDir: Path, remoteUrl, *, revision=None, initialBranch=None, skipSubmodules=False):
         self._ensureGitRepoIsCloned(srcDir=srcDir, remoteUrl=remoteUrl, initialBranch=initialBranch,
