@@ -179,7 +179,8 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
 
 
 class BuildLibCXX(CrossCompileCMakeProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/libcxx.git")
+    # TODO: add an option to allow upstream llvm?
+    repository = ReuseOtherProjectRepository(BuildCheriLLVM, subdirectory="libcxx")
     defaultInstallDir = installToCXXDir
     dependencies = ["libcxxrt"]
 
@@ -333,7 +334,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
 
 
 class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
-    repository = GitRepository("https://github.com/llvm-mirror/compiler-rt.git")
+    # TODO: add an option to allow upstream llvm?
+    repository = ReuseOtherProjectRepository(BuildCheriLLVM, subdirectory="compiler-rt")
     projectName = "compiler-rt-baremetal"
     crossInstallDir = CrossInstallDir.SDK
     dependencies = ["newlib-baremetal"]
