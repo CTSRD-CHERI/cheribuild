@@ -122,7 +122,8 @@ class BuildLibunwind(CrossCompileCMakeProject):
             runCmd("ninja", "check-unwind", "-v", cwd=self.buildDir)
         else:
             # Check that the four tests compile and then attempt to run them:
-            self.run_cheribsd_test_script("run_libunwind_tests.py", "--lit-debug-output", "--llvm-lit-path", self.lit_path)
+            self.run_cheribsd_test_script("run_libunwind_tests.py", "--lit-debug-output",
+                                          "--llvm-lit-path", self.lit_path, mount_sysroot=True)
 
 
 

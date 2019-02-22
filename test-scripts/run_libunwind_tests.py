@@ -46,8 +46,34 @@ import boot_cheribsd
 import run_remote_lit_test
 
 def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
+    # TODO: do I really want the sysroot mounted? or should I just copy libcxxrt.so.1 to the bindir
+    # boot_cheribsd.run_cheribsd_command(qemu, "export LD_LIBRARY_PATH=/build/lib:/sysroot/lib:/sysroot/usr/lib", timeout=2)
+    # boot_cheribsd.run_cheribsd_command(qemu, "export LD_CHERI_LIBRARY_PATH=/build/lib:/sysroot/libcheri:/sysroot/usr/libcheri", timeout=2)
+
+    # Copy the libunwind library to both MIPS and CHERI library dirs so that it is picked up
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /build/lib/libunwind.so* /usr/lib/")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /build/lib/libunwind.so* /usr/libcheri/")
+    # Also link libcxxrt from the sysroot to one of the default search paths
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /sysroot/usr/lib/libcxxrt.so* /usr/lib/")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /sysroot/usr/libcheri/libcxxrt.so* /usr/libcheri/")
+    # libcxxrt links against libgcc_s which is libunwind:
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /usr/lib/libunwind.so.1 /usr/lib/libgcc_s.so.1")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /usr/libcheri/libunwind.so.1 /usr/libcheri/libgcc_s.so.1")
+
     with tempfile.TemporaryDirectory(prefix="cheribuild-libunwind-tests-") as tempdir:
-        return run_remote_lit_test.run_remote_lit_tests("libunwind", qemu, args, tempdir, llvm_lit_path=args.llvm_lit_path)
+        # run the tests both for shared and static libunwind by setting -Denable_shared=
+        # TODO: this needs -lcompiler_rt
+        # static_everything_success = run_remote_lit_test.run_remote_lit_tests("libunwind", qemu, args, tempdir,
+        #                                                          lit_extra_args=["-Dforce_static_executable=True", "-Denable_shared=False"],
+        #                                                          llvm_lit_path=args.llvm_lit_path)
+        static_everything_success = True # TODO: run this
+        static_libunwind_success = run_remote_lit_test.run_remote_lit_tests("libunwind", qemu, args, tempdir,
+                                                                  lit_extra_args=["-Denable_shared=False"],
+                                                                  llvm_lit_path=args.llvm_lit_path)
+        shared_success = run_remote_lit_test.run_remote_lit_tests("libunwind", qemu, args, tempdir,
+                                                                  lit_extra_args=["-Denable_shared=True"],
+                                                                  llvm_lit_path=args.llvm_lit_path)
+        return static_libunwind_success and static_everything_success and shared_success
 
 
 def add_cmdline_args(parser: argparse.ArgumentParser):
@@ -66,6 +92,7 @@ if __name__ == '__main__':
     from run_tests_common import run_tests_main
     try:
         run_tests_main(test_function=run_libunwind_tests, need_ssh=True, # we need ssh running to execute the tests
-                       argparse_setup_callback=add_cmdline_args, argparse_adjust_args_callback=set_cmdline_args)
+                       argparse_setup_callback=add_cmdline_args, argparse_adjust_args_callback=set_cmdline_args,
+                       should_mount_sysroot=True, should_mount_builddir=True)
     finally:
         print("Finished running ", " ".join(sys.argv))

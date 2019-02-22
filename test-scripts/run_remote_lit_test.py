@@ -83,14 +83,14 @@ def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
 
 
 def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str,
-                         mp_q: multiprocessing.Queue = None, llvm_lit_path: str = None) -> bool:
+                         mp_q: multiprocessing.Queue = None, llvm_lit_path: str = None, lit_extra_args: list = None) -> bool:
     try:
         import psutil
     except ImportError:
         boot_cheribsd.failure("Cannot run lit without `psutil` python module installed", exit=True)
     try:
         result = run_remote_lit_tests_impl(testsuite=testsuite, qemu=qemu, args=args, tempdir=tempdir,
-                                           mp_q=mp_q, llvm_lit_path=llvm_lit_path)
+                                           mp_q=mp_q, llvm_lit_path=llvm_lit_path, lit_extra_args=lit_extra_args)
         if mp_q:
             mp_q.put((COMPLETED, args.internal_shard))
         return result
@@ -103,7 +103,7 @@ def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, a
 
 
 def run_remote_lit_tests_impl(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str,
-                              mp_q: multiprocessing.Queue = None, llvm_lit_path: str = None) -> bool:
+                              mp_q: multiprocessing.Queue = None, llvm_lit_path: str = None, lit_extra_args: list = None) -> bool:
     qemu.EXIT_ON_KERNEL_PANIC = False # since we run multiple threads we shouldn't use sys.exit()
     boot_cheribsd.info("PID of QEMU: ", qemu.pid)
 
@@ -186,6 +186,8 @@ Host cheribsd-test-instance
         llvm_lit_path = str(test_build_dir / "bin/llvm-lit")
     # Note: we require python 3 since otherwise it seems to deadlock in Jenkins
     lit_cmd = ["python3", llvm_lit_path, "-j1", "-vv", "-Dexecutor=" + executor, "test"]
+    if lit_extra_args:
+        lit_cmd.extend(lit_extra_args)
     if args.lit_debug_output:
         lit_cmd.append("--debug")
     # This does not work since it doesn't handle running ssh commands....
