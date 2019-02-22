@@ -1,6 +1,6 @@
 from pathlib import Path
 from unittest import TestCase
-from pycheribuild.projects.project import Project, CrossCompileTarget
+from pycheribuild.projects.project import Project, CrossCompileTarget, SourceRepository
 from pycheribuild.utils import setCheriConfig, IS_LINUX
 from .setup_mock_chericonfig import setup_mock_chericonfig, MockConfig
 import os
@@ -22,6 +22,7 @@ class MockProject(Project):
         os.makedirs(str(self.sourceDir))
         self.buildDir = Path(config.sourceRoot, "build", name + "-build")
         self.installDir = config.sourceRoot / "install" / name  # type: Path
+        self.repository = SourceRepository()
         super().__init__(config)
 
     def _deleteDirectories(self, *dirs):
