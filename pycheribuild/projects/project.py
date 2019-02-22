@@ -916,7 +916,7 @@ class GitRepository(SourceRepository):
         if hasChanges:
             print(coloured(AnsiColour.green, "Local changes detected in", srcDir))
             # TODO: add a config option to skip this query?
-            if self.config.force_update:
+            if current_project.config.force_update:
                 statusUpdate("Updating", srcDir, "with autostash due to --force-update")
             elif not current_project.queryYesNo("Stash the changes, update and reapply?", defaultResult=True, forceResult=True):
                 statusUpdate("Skipping update of", srcDir)
