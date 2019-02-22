@@ -53,9 +53,12 @@ def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Nam
     # Copy the libunwind library to both MIPS and CHERI library dirs so that it is picked up
     boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /build/lib/libunwind.so* /usr/lib/")
     boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /build/lib/libunwind.so* /usr/libcheri/")
-    # Also link libcxxrt from the sysroot to one of the default search paths
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /sysroot/usr/lib/libcxxrt.so* /sysroot/usr/lib/libdl.so* /usr/lib/")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /sysroot/usr/libcheri/libcxxrt.so* /sysroot/usr/libcheri/libdl.so* /usr/libcheri/")
+    # Link the libcxxrt built by cheribuild (NOT the sysroot one since that needs a libunwind built from the FreeBSD makefiles)
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /build/lib/libcxxrt.so* /usr/lib/")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /build/lib/libcxxrt.so* /usr/libcheri/")
+    # We also need libdl from the sysroot:
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /sysroot/usr/lib/libdl.so* /usr/lib/")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /sysroot/usr/libcheri/libdl.so* /usr/libcheri/")
     # libcxxrt links against libgcc_s which is libunwind:
     boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /usr/lib/libunwind.so.1 /usr/lib/libgcc_s.so.1")
     boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /usr/libcheri/libunwind.so.1 /usr/libcheri/libgcc_s.so.1")
