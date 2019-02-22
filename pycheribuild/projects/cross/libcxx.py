@@ -87,11 +87,8 @@ class BuildLibunwind(CrossCompileCMakeProject):
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
         self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
         if not self.compiling_for_host():
-            # Needing a .so makes it slightly annoying to test
-            # TODO: fix this
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=False,
-                                   LIBUNWIND_ENABLE_SHARED=self.force_dynamic_linkage,
-                                   )
+                                   LIBUNWIND_ENABLE_SHARED=True)
             collect_test_binaries = self.buildDir / "test-output"
             executor = "CollectBinariesExecutor(\\\"{path}\\\", self)".format(path=collect_test_binaries)
             self.add_cmake_options(
@@ -103,6 +100,9 @@ class BuildLibunwind(CrossCompileCMakeProject):
             # add the config options required for running tests:
             self.add_cmake_options(LIBUNWIND_EXECUTOR=executor, LIBUNWIND_TARGET_INFO=target_info,
                                    LIBUNWIND_CXX_ABI_LIBNAME="libcxxrt")
+
+        # Do not link against libgcc_s when building the shared library:
+        self.add_cmake_options(LIBUNWIND_USE_COMPILER_RT=True)
         super().configure(**kwargs)
 
     def process(self):
