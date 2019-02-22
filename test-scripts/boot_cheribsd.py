@@ -331,6 +331,7 @@ def set_posix_sh_prompt(child):
 
 class FakeSpawn(object):
     pid = -1
+    should_quit = False
 
     def expect(self, *args, pretend_result=None, **kwargs):
         print("Expecting", args, file=sys.stderr, flush=True)
@@ -350,7 +351,10 @@ class FakeSpawn(object):
         pass
 
     def isalive(self):
-        return False
+        return not self.should_quit
+
+    def interact(self):
+        pass
 
 
 def start_dhclient(qemu: CheriBSDInstance):
@@ -722,6 +726,7 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
         qemu.logfile_send = None
         while True:
             try:
+                qemu.should_quit = True
                 if not qemu.isalive():
                     break
                 qemu.interact()
