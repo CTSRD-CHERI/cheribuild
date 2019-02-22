@@ -181,11 +181,11 @@ Host cheribsd-test-instance
     # TODO: I was previously passing -t -t to ssh. Is this actually needed?
     boot_cheribsd.success("Running", testsuite, "tests with executor", executor)
     notify_main_process(MultiprocessStages.RUNNING_TESTS)
-    # have to use -j1 + --single-process since otherwise CheriBSD might wedge
+    # have to use -j1 since otherwise CheriBSD might wedge
     if llvm_lit_path is None:
         llvm_lit_path = str(test_build_dir / "bin/llvm-lit")
     # Note: we require python 3 since otherwise it seems to deadlock in Jenkins
-    lit_cmd = ["python3", llvm_lit_path, "-j1", "-vv", "--single-process", "-Dexecutor=" + executor, "test"]
+    lit_cmd = ["python3", llvm_lit_path, "-j1", "-vv", "-Dexecutor=" + executor, "test"]
     if args.lit_debug_output:
         lit_cmd.append("--debug")
     # This does not work since it doesn't handle running ssh commands....
