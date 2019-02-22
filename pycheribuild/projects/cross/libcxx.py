@@ -36,6 +36,7 @@ from ..llvm import BuildCheriLLVM
 from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
 from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str
+from ..project import ReuseOtherProjectRepository
 import os
 
 
@@ -49,7 +50,8 @@ installToCXXDir = ComputedDefaultValue(function=_cxx_install_dir, asString="$CHE
 
 
 class BuildLibunwind(CrossCompileCMakeProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/libunwind.git")
+    # TODO: add an option to allow upstream llvm?
+    repository = ReuseOtherProjectRepository(BuildCheriLLVM, subdirectory="libunwind")
     defaultInstallDir = installToCXXDir
 
     @property
@@ -63,7 +65,7 @@ class BuildLibunwind(CrossCompileCMakeProject):
         self.lit_path = BuildCheriLLVM.getBuildDir(self, config) / "bin/llvm-lit"
         self.add_cmake_options(
             #  LLVM_CONFIG_PATH=self.compiler_dir / "llvm-config",
-            LLVM_PATH=BuildCheriLLVM.getSourceDir(self, config),
+            LLVM_PATH=BuildCheriLLVM.getSourceDir(self, config) / "llvm",
             LLVM_EXTERNAL_LIT=self.lit_path,
         )
 
@@ -73,7 +75,8 @@ class BuildLibunwind(CrossCompileCMakeProject):
         test_compiler_flags = commandline_to_str(self.default_compiler_flags)
         test_linker_flags = commandline_to_str(self.default_ldflags)
 
-        self.add_cmake_options(LIBUNWIND_LIBCXX_PATH=BuildLibCXX.getSourceDir(self, self.config),
+        self.add_cmake_options(# LIBUNWIND_LIBCXX_PATH=BuildLibCXX.getSourceDir(self, self.config),
+                               LIBUNWIND_LIBCXX_PATH=self.repository.source_project.getSourceDir(self, self.config) / "libcxx",
                                # Should use libc++ from sysroot
                                # LIBUNWIND_LIBCXX_LIBRARY_PATH=BuildLibCXX.getBuildDir(self, self.config) / "lib",
                                LIBUNWIND_LIBCXX_LIBRARY_PATH="",
@@ -81,6 +84,8 @@ class BuildLibunwind(CrossCompileCMakeProject):
                                LIBUNWIND_TEST_COMPILER_FLAGS=test_compiler_flags,
                                LIBUNWIND_ENABLE_ASSERTIONS=True,
                                )
+        # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
+        self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
         if not self.compiling_for_host():
             # Needing a .so makes it slightly annoying to test
             # TODO: fix this
@@ -215,7 +220,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.add_cmake_options(
             CMAKE_INSTALL_RPATH_USE_LINK_PATH=True,  # Fix finding libunwind.so
             LIBCXX_INCLUDE_TESTS=True,
-            LLVM_PATH=BuildCheriLLVM.getSourceDir(self, config),
+            LLVM_PATH=BuildCheriLLVM.getSourceDir(self, config) / "llvm",
             LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, config) / "bin/llvm-lit",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
             LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +

@@ -849,6 +849,26 @@ class SourceRepository(object):
                      skipSubmodules=False):
         raise NotImplementedError
 
+
+class ReuseOtherProjectRepository(SourceRepository):
+    def __init__(self, source_project: "typing.Type[Project]", subdirectory="."):
+        self.source_project = source_project
+        self.subdirectory = subdirectory
+
+    def ensureCloned(self, current_project: "Project", *, srcDir: Path, initialBranch=None, skipSubmodules=False):
+        if not self.source_project.getSourceDir(current_project, current_project.config).exists():
+            current_project.fatal("Source repository for target", current_project.target, "does not exist.",
+                                  fixitHint="This project uses the sources from the " + self.source_project.target +
+                                  "target so you will have to clone that first. Try running:\n\t`" +
+                                  "cheribuild.py " + self.source_project.target + "--no-skip-update --skip-configure " +
+                                  "--skip-build --skip-install`")
+
+    def updateRepo(self, current_project: "Project", *, srcDir: Path, revision=None, initialBranch=None,
+                     skipSubmodules=False):
+        # TODO: allow updating the repo?
+        current_project.info("Not updating", srcDir, "since it reuses the repository for ", self.source_project.target)
+
+
 class GitRepository(SourceRepository):
     def __init__(self, url):
         self.url = url
@@ -1089,6 +1109,13 @@ class Project(SimpleProject):
                 assert issubclass(cls, CMakeProject), "Should be a CMakeProject: " + cls.__name__
 
     def __init__(self, config: CheriConfig):
+        if isinstance(self.repository, ReuseOtherProjectRepository):
+            # HACK: override the source directory (ignoring the setting from the JSON)
+            # This should be done using a decorator that also changes defaultSourceDir so that we can
+            # take the JSON into account
+            self.sourceDir = self.repository.source_project.getSourceDir(self, config) / self.repository.subdirectory
+            self.info("Overriding source directory for", self.target, "since it reuses the sources of",
+                      self.repository.source_project.target, "->", self.sourceDir)
         super().__init__(config)
         # set up the install/build/source directories (allowing overrides from config file)
         assert isinstance(self.repository, SourceRepository), self.target + " repository member is wrong!"
