@@ -46,33 +46,27 @@ import boot_cheribsd
 import run_remote_lit_test
 
 def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
-    # TODO: do I really want the sysroot mounted? or should I just copy libcxxrt.so.1 to the bindir
-    # boot_cheribsd.run_cheribsd_command(qemu, "export LD_LIBRARY_PATH=/build/lib:/sysroot/lib:/sysroot/usr/lib", timeout=2)
-    # boot_cheribsd.run_cheribsd_command(qemu, "export LD_CHERI_LIBRARY_PATH=/build/lib:/sysroot/libcheri:/sysroot/usr/libcheri", timeout=2)
-
     # Copy the libunwind library to both MIPS and CHERI library dirs so that it is picked up
     boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /build/lib/libunwind.so* /usr/lib/")
     boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /build/lib/libunwind.so* /usr/libcheri/")
-    # Link the libcxxrt built by cheribuild (NOT the sysroot one since that needs a libunwind built from the FreeBSD makefiles)
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /build/lib/libcxxrt.so* /usr/lib/")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /build/lib/libcxxrt.so* /usr/libcheri/")
     # We also need libdl from the sysroot:
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /sysroot/usr/lib/libdl.so* /usr/lib/")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /sysroot/usr/libcheri/libdl.so* /usr/libcheri/")
-    # libcxxrt links against libgcc_s which is libunwind:
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /usr/lib/libunwind.so.1 /usr/lib/libgcc_s.so.1")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /usr/libcheri/libunwind.so.1 /usr/libcheri/libgcc_s.so.1")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /sysroot/usr/lib/libcxxrt.so* /sysroot/usr/lib/libdl.so* /usr/lib/")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /sysroot/usr/libcheri/libcxxrt.so*  /sysroot/usr/libcheri/libdl.so* /usr/libcheri/")
+    # Add a fake libgcc_s link to libunwind (this works now that we build libunwind with version info)
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /usr/lib/libunwind.so /usr/lib/libgcc_s.so.1")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /usr/libcheri/libunwind.so /usr/libcheri/libgcc_s.so.1")
 
     with tempfile.TemporaryDirectory(prefix="cheribuild-libunwind-tests-") as tempdir:
         # run the tests both for shared and static libunwind by setting -Denable_shared=
-        # TODO: this needs -lcompiler_rt
-        # static_everything_success = run_remote_lit_test.run_remote_lit_tests("libunwind", qemu, args, tempdir,
-        #                                                          lit_extra_args=["-Dforce_static_executable=True", "-Denable_shared=False"],
-        #                                                          llvm_lit_path=args.llvm_lit_path)
-        static_everything_success = True # TODO: run this
+        # First static binaries
+        static_everything_success = run_remote_lit_test.run_remote_lit_tests("libunwind", qemu, args, tempdir,
+                                                                  lit_extra_args=["-Dforce_static_executable=True", "-Denable_shared=False"],
+                                                                  llvm_lit_path=args.llvm_lit_path)
+        # dynamic binary with libunwind linked statically
         static_libunwind_success = run_remote_lit_test.run_remote_lit_tests("libunwind", qemu, args, tempdir,
                                                                   lit_extra_args=["-Denable_shared=False"],
                                                                   llvm_lit_path=args.llvm_lit_path)
+        # dynamic binary with libunwind linked shared
         shared_success = run_remote_lit_test.run_remote_lit_tests("libunwind", qemu, args, tempdir,
                                                                   lit_extra_args=["-Denable_shared=True"],
                                                                   llvm_lit_path=args.llvm_lit_path)

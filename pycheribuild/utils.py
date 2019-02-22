@@ -299,6 +299,7 @@ def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
         clangVersionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         gccVersionPattern = re.compile(b"gcc version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         appleLlvmVersionPattern = re.compile(b"Apple LLVM version (\\d+)\\.(\\d+)\\.?(\\d+)?")
+        # TODO: could also use -dumpmachine to get the triple
         targetPattern = re.compile(b"Target: (.+)")
         # clang prints this output to stderr
         try:

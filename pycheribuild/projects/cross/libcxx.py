@@ -100,6 +100,10 @@ class BuildLibunwind(CrossCompileCMakeProject):
             # add the config options required for running tests:
             self.add_cmake_options(LIBUNWIND_EXECUTOR=executor, LIBUNWIND_TARGET_INFO=target_info,
                                    LIBUNWIND_CXX_ABI_LIBNAME="libcxxrt")
+            version_script = self.sourceDir / "Version.map.FreeBSD"
+            if not version_script.exists():
+                self.fatal("libunwind version script is missing, please update llvm-project!")
+            self.add_cmake_options(LIBUNWIND_USE_VERSION_SCRIPT=version_script)
 
         # Do not link against libgcc_s when building the shared library:
         self.add_cmake_options(LIBUNWIND_USE_COMPILER_RT=True)
@@ -122,11 +126,8 @@ class BuildLibunwind(CrossCompileCMakeProject):
             runCmd("ninja", "check-unwind", "-v", cwd=self.buildDir)
         else:
             # Check that the four tests compile and then attempt to run them:
-            libcxxrt = BuildLibCXXRT.getBuildDir(self, self.config) / "lib/libcxxrt.so"
-            if not libcxxrt.exists():
-                self.fatal("To run the libunwind tests you will also need a build of libcxxrt. Could not find"
-                           " libcxxrt at the expected path", libcxxrt)
-            self.installFile(libcxxrt, self.buildDir / "lib/libcxxrt.so.1", force=True, printVerboseOnly=False)
+            # TODO: run the three combinations here too?
+            runCmd("ninja", "check-unwind", "-v", cwd=self.buildDir)
             self.run_cheribsd_test_script("run_libunwind_tests.py", "--lit-debug-output",
                                           "--llvm-lit-path", self.lit_path, mount_sysroot=True)
 
