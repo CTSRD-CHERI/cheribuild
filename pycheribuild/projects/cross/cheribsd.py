@@ -1422,7 +1422,8 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
                 self.createSymlink(self.crossSysrootPath, unprefixed_sysroot)
 
         with self.asyncCleanDirectory(self.crossSysrootPath):
-            if self.copy_remote_sysroot or not self.rootfs_source_class.get_instance(self, self.config).crossbuild:
+            building_on_host = IS_FREEBSD or self.rootfs_source_class.get_instance(self, self.config).crossbuild
+            if self.copy_remote_sysroot or not building_on_host:
                 self.copySysrootFromRemoteMachine()
             else:
                 self.createSysroot()
