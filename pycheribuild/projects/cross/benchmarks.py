@@ -43,6 +43,16 @@ class BuildMibench(CrossCompileProject):
     # and we have to build in the source directory
     build_in_source_dir = True
 
+    @property
+    def bunde_name(self):
+        if self.compiling_for_host():
+            return "x86"
+        if self.compiling_for_mips():
+            return "mips"
+        if self.compiling_for_cheri():
+            return "cheri" + self.config.cheriBitsStr
+        raise ValueError("Unsupported target architecture!")
+
     def compile(self, **kwargs):
         with setEnv(MIPS_SDK=self.config.sdkDir,
                     CHERI128_SDK=self.config.sdkDir,
@@ -52,10 +62,9 @@ class BuildMibench(CrossCompileProject):
             self.make_args.set(AR=str(self.config.sdkBinDir / "ar") + " rc")
             self.make_args.set(AR2=str(self.config.sdkBinDir / "ranlib"))
             self.make_args.set(ADDITIONAL_CFLAGS=" ".join(self.default_compiler_flags))
-            if self.compiling_for_host():
-                self.make_args.set(VERSION="x86")
+            self.make_args.set(VERSION=self.bunde_name)
             if self.compiling_for_mips():
-                self.make_args.set(VERSION="mips", MIPS_SYSROOT=self.config.get_sysroot_path(CrossCompileTarget.MIPS))
+                self.make_args.set(MIPS_SYSROOT=self.config.get_sysroot_path(CrossCompileTarget.MIPS))
             if self.compiling_for_cheri():
                 if self.config.cheriBits == 128:
                     self.make_args.set(VERSION="cheri128", CHERI128_SYSROOT=self.config.cheriSysrootDir)
@@ -66,6 +75,15 @@ class BuildMibench(CrossCompileProject):
 
     def install(self, **kwargs):
         pass  # skip install for now...
+
+    def run_tests(self):
+        if self.compiling_for_host():
+            self.fatal("running x86 tests is not implemented yet")
+        # testing, not benchmarking -> run only once: (-s small / -s large?)
+        test_command = "cd " + self.bunde_name + "-bundle && ./run_jenkins-bluehive.sh -d0 -r1 -s small " + self.bunde_name
+        self.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
+                                      "--test-timeout", str(120 * 60),
+                                      mount_builddir=True)
 
 
 class BuildOlden(CrossCompileProject):

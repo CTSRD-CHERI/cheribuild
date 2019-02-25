@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # PYTHON_ARGCOMPLETE_OK
 #
-# Copyright (c) 2018 Alex Richardson
+# Copyright (c) 2019 Alex Richardson
 # All rights reserved.
 #
 # This software was developed by SRI International and the University of
@@ -33,16 +33,22 @@ import argparse
 import boot_cheribsd
 
 
-def run_postgres_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
+def run_simple_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running PostgreSQL tests")
     # TODO: copy over the logfile and enable coredumps?
     # Run tests with a two hour timeout:
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "cd '{}' && sh -xe ./run-postgres-tests.sh".format(qemu.smb_dirs[0].in_target),
-                                               timeout=240 * 60)
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "cd '{}'".format(qemu.smb_dirs[0].in_target), timeout=10)
+    boot_cheribsd.checked_run_cheribsd_command(qemu, args.test_command, timeout=args.test_timeout, pretend_result=2)
     return True
 
+
+def set_cmdline_args(args: argparse.Namespace):
+    # We don't support parallel jobs but are reusing libcxx infrastructure -> set the expected vars
+    if not args.test_command:
+        boot_cheribsd.failure("--test-command must be set!", exit=True)
 
 if __name__ == '__main__':
     from run_tests_common import run_tests_main
     # we don't need ssh running to execute the tests
-    run_tests_main(test_function=run_postgres_tests, need_ssh=False, should_mount_builddir=False)
+    run_tests_main(test_function=run_simple_test, need_ssh=False, should_mount_builddir=True,
+                   argparse_adjust_args_callback=set_cmdline_args)

@@ -282,11 +282,16 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
             failure("Got CHERI TRAP!", exit=False)
 
 
-def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600):
+def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, ignore_cheri_trap=False, **kwargs):
     starttime = datetime.datetime.now()
     qemu.sendline(cmd + " ;if test $? -eq 0; then echo '__COMMAND' 'SUCCESSFUL__'; else echo '__COMMAND' 'FAILED__'; fi")
+    cheri_trap_index = None
     try:
-        i = qemu.expect(["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__"], timeout=timeout)
+        results = ["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__"]
+        if not ignore_cheri_trap:
+            cheri_trap_index = len(results)
+            results.append(CHERI_TRAP)
+        i = qemu.expect(results, timeout=timeout, **kwargs)
     except pexpect.TIMEOUT:
         i = -1
     runtime = datetime.datetime.now() - starttime
@@ -295,6 +300,11 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600):
     elif i == 0:
         success("ran '", cmd, "' successfully (in ", runtime.total_seconds(), "s)")
         return True
+    if i == cheri_trap_index:
+        # wait up to 20 seconds for a prompt to ensure the dump output has been printed
+        qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
+        qemu.flush()
+        raise CheriBSDCommandFailed("Got CHERI trap running '", cmd, "' (after '", runtime.total_seconds(), "s)")
     else:
         raise CheriBSDCommandFailed("error running '", cmd, "' (after '", runtime.total_seconds(), "s)")
 
