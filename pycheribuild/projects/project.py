@@ -878,7 +878,9 @@ class GitRepository(SourceRepository):
         if not (srcDir / ".git").exists():
             if current_project.config.skipClone:
                 current_project.fatal("Sources for", str(srcDir), " missing!")
-            print(srcDir, "is not a git repository. Clone it from' " + self.url + "'?", end="")
+            assert isinstance(self.url, str), self.url
+            assert not self.url.startswith("<"), "Invalid URL " + self.url
+            print(srcDir, "is not a git repository. Clone it from '" + self.url + "'?", end="")
             if not current_project.queryYesNo(defaultResult=False):
                 current_project.fatal("Sources for", str(srcDir), " missing!")
             cloneCmd = ["git", "clone"]
@@ -1094,7 +1096,7 @@ class Project(SimpleProject):
             #     print('%r %r %r' % (namespace, values, option_string))
             #     setattr(namespace, self.dest, values)
             cls._repositoryUrl = cls.addConfigOption("repository", kind=str, help="The URL of the git repository",
-                                                    default=cls.repository, metavar="REPOSITORY")
+                                                    default=cls.repository.url, metavar="REPOSITORY")
         if "generate_cmakelists" not in cls.__dict__:
             # Make sure not to dereference a parent class descriptor here -> use getattr_static
             option = inspect.getattr_static(cls, "generate_cmakelists")
