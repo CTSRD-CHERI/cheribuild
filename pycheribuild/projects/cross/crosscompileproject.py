@@ -36,7 +36,6 @@ from builtins import issubclass
 from enum import Enum
 from pathlib import Path
 
-from pycheribuild.config.chericonfig import BuildType
 from ...config.loader import ComputedDefaultValue, ConfigOptionBase
 from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi, Linkage, BuildType
 from .multiarchmixin import MultiArchBaseMixin
