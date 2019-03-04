@@ -241,6 +241,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
     @property
     def sdkSysroot(self) -> Path:
+        assert isinstance(self, Project)
         if self.baremetal:
             return self.config.sdkDir / "baremetal" / self.targetTriple
         return self.crossSysrootPath

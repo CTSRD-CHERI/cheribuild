@@ -119,8 +119,11 @@ class CheriConfig(object):
                                                                    help="Pass the -k flag to make to continue after"
                                                                         " the first error")
         self.withLibstatcounters = loader.addBoolOption("with-libstatcounters", group=loader.crossCompileOptionsGroup,
-                                                        help="Link cross compiled CHERI project with libstatcounters. "
-                                                             "This is only useful when targetting FPGA")
+                                                        help="Link cross compiled CHERI project with libstatcounters.")
+        self.use_hybrid_sysroot_for_mips = loader.addBoolOption("use-hybrid-sysroot-for-mips",
+            group=loader.crossCompileOptionsGroup, default=True,
+            help="Build and install MIPS binaries against the hybrid sysroot instead of using a sysroot built without "
+                 "CHERI support. Do not unset this option when building benchmarks since memcpy will be slower!")
         self.skipBuildworld = loader.addBoolOption("skip-buildworld", "-skip-world", group=loader.freebsdGroup,
                                                    help="Skip the buildworld step when building FreeBSD or CheriBSD")
         self.freebsd_subdir = loader.addCommandLineOnlyOption("freebsd-subdir", "-subdir",
@@ -326,7 +329,7 @@ class CheriConfig(object):
 
     def get_sysroot_path(self, cross_compile_target: CrossCompileTarget):
         if cross_compile_target == CrossCompileTarget.MIPS:
-            return self.sdkDir / "sysroot-mips"
+            return self.cheriSysrootDir if self.use_hybrid_sysroot_for_mips else self.sdkDir / "sysroot-mips"
         elif cross_compile_target == CrossCompileTarget.CHERI:
             return self.cheriSysrootDir
         elif cross_compile_target == CrossCompileTarget.RISCV:
