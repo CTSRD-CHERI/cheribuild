@@ -68,7 +68,12 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
         from .cheribsd import BuildCHERIBSD
         if hasattr(project, "rootfs_path"):
             assert project.rootfs_path.startswith("/"), project.rootfs_path
-            return BuildCHERIBSD.rootfsDir(project, config) / project.rootfs_path[1:]
+            # If use_hybrid_sysroot_for_mips is set, install to rootfs128 instead of rootfs-mips
+            cross_target = project.get_crosscompile_target(config)
+            if project.compiling_for_mips() and config.use_hybrid_sysroot_for_mips:
+                cross_target = CrossCompileTarget.CHERI
+            cheribsd_instance = BuildCHERIBSD.get_instance_for_cross_target(cross_target, config)
+            return cheribsd_instance.installDir / project.rootfs_path[1:]
         if project.compiling_for_cheri():
             targetName = "cheri" + config.cheriBitsStr
         else:
@@ -209,7 +214,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 self.COMMON_FLAGS.append("-D_POSIX_TIMERS=1")  # pretend that we have a monotonic clock
 
             if self.crossInstallDir == CrossInstallDir.SDK:
-                self._installPrefix = Path("/" if self.baremetal else "/usr/local")
+                self._installPrefix = Path("/" if self.baremetal else "/usr/local/" + self._crossCompileTarget.value)
                 self.destdir = self._installDir
             elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
                 from .cheribsd import BuildCHERIBSD
@@ -451,9 +456,12 @@ class CrossCompileMixin(MultiArchBaseMixin):
     @property
     def pkgconfig_dirs(self):
         if self.compiling_for_mips():
-            return str(self.sdkSysroot / "usr/lib/pkgconfig") + ":" + str(self.sdkSysroot / "usr/local/lib/pkgconfig")
+            return str(self.sdkSysroot / "usr/lib/pkgconfig") + ":" + \
+                   str(self.sdkSysroot / "usr/local/mips/lib/pkgconfig")
         if self.compiling_for_cheri():
-            return str(self.sdkSysroot / "usr/libcheri/pkgconfig") + ":" + str(self.sdkSysroot / "usr/local/libcheri/pkgconfig")
+            return str(self.sdkSysroot / "usr/libcheri/pkgconfig") + ":" + \
+                   str(self.sdkSysroot / "usr/local/cheri/lib/pkgconfig") + ":" +\
+                   str(self.sdkSysroot / "usr/local/cheri/libcheri/pkgconfig")
         return None
 
     def configure(self, **kwargs):
@@ -488,6 +496,15 @@ class CrossCompileMixin(MultiArchBaseMixin):
             runCmd("cp", "-av", found_asan_lib.parent, expected_path.parent)
             if not (expected_path / libname).exists():
                 self.fatal("Cannot find", libname, "library in compiler dir", expected_path, "-- Compilation will fail!")
+
+        if self.compiling_for_cheri() and CrossCompileTarget.MIPS in self.supported_architectures:
+            # Check that we are not installing to the same directory as MIPS to avoid conflicts
+            assert hasattr(self, "synthetic_base")
+            mips_instance = self.synthetic_base.get_instance_for_cross_target(CrossCompileTarget.MIPS, self.config)
+            assert mips_instance.get_crosscompile_target(self.config) == CrossCompileTarget.MIPS, mips_instance.get_crosscompile_target(self.config)
+            self.info(self.target, self.installDir)
+            self.info(mips_instance.target, mips_instance.installDir)
+            assert mips_instance.installDir != self.installDir, mips_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(mips_instance.installDir)
 
         super().process()
 
@@ -551,17 +568,17 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
                 # create a /usr/lib/cheri -> /usr/libcheri symlink so that cmake can find the right libraries
                 self.createSymlink(Path("../libcheri"), self.sdkSysroot / "usr/lib/cheri", relative=True,
                                    cwd=self.sdkSysroot / "usr/lib")
-                self.makedirs(self.sdkSysroot / "usr/local/lib")
-                self.makedirs(self.sdkSysroot / "usr/local/libcheri")
-                self.createSymlink(Path("../libcheri"), self.sdkSysroot / "usr/local/lib/cheri",
-                                   relative=True, cwd=self.sdkSysroot / "usr/local/lib")
+                self.makedirs(self.sdkSysroot / "usr/local/cheri/lib")
+                self.makedirs(self.sdkSysroot / "usr/local/cheri/libcheri")
+                self.createSymlink(Path("../libcheri"), self.sdkSysroot / "usr/local/cheri/lib/cheri",
+                                   relative=True, cwd=self.sdkSysroot / "usr/local/cheri/lib")
             add_lib_suffix = """
 # cheri libraries are found in /usr/libcheri:
 if("${CMAKE_VERSION}" VERSION_LESS 3.9)
   # message(STATUS "CMAKE < 3.9 HACK to find libcheri libraries")
   # need to create a <sysroot>/usr/lib/cheri -> <sysroot>/usr/libcheri symlink 
   set(CMAKE_LIBRARY_ARCHITECTURE "cheri")
-  set(CMAKE_SYSTEM_LIBRARY_PATH "${CMAKE_FIND_ROOT_PATH}/usr/libcheri;${CMAKE_FIND_ROOT_PATH}/usr/local/libcheri")
+  set(CMAKE_SYSTEM_LIBRARY_PATH "${CMAKE_FIND_ROOT_PATH}/usr/libcheri;${CMAKE_FIND_ROOT_PATH}/usr/local/cheri/lib;${CMAKE_FIND_ROOT_PATH}/usr/local/cheri/libcheri"")
 else()
     set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
 endif()
