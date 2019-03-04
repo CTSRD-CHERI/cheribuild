@@ -116,6 +116,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
     forceDefaultCC = False  # for some reason ICU binaries build during build crash -> fall back to /usr/bin/cc there
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
     _should_not_be_instantiated = True
+    _check_install_dir_conflict = True
     defaultOptimizationLevel = ("-O2",)
 
     # noinspection PyProtectedMember
@@ -497,7 +498,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
             if not (expected_path / libname).exists():
                 self.fatal("Cannot find", libname, "library in compiler dir", expected_path, "-- Compilation will fail!")
 
-        if self.compiling_for_cheri() and CrossCompileTarget.MIPS in self.supported_architectures:
+        if self._check_install_dir_conflict and self.compiling_for_cheri() and CrossCompileTarget.MIPS in self.supported_architectures:
             # Check that we are not installing to the same directory as MIPS to avoid conflicts
             assert hasattr(self, "synthetic_base")
             mips_instance = self.synthetic_base.get_instance_for_cross_target(CrossCompileTarget.MIPS, self.config)

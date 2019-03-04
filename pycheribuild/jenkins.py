@@ -248,6 +248,7 @@ def _jenkins_main():
                     statusUpdate("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
                 else:
                     cls._installDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
+                    cls._check_install_dir_conflict = False
                 # print(project.projectClass.projectName, project.projectClass.installDir)
         if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
             assert cheriConfig.sdkDir == Path("/cheri-sdk"), cheriConfig.sdkDir
