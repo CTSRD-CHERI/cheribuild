@@ -190,6 +190,11 @@ def is_newer(path1: Path, path2: Path):
     return path1.stat().st_ctime > path2.stat().st_ctime
 
 
+def set_ld_library_path(qemu: CheriBSDInstance):
+    run_cheribsd_command(qemu, "export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/sysroot/lib:/sysroot/usr/lib:/sysroot/usr/local/mips/lib", timeout=3)
+    run_cheribsd_command(qemu, "export LD_CHERI_LIBRARY_PATH=/usr/libcheri:/usr/local/libcheri:/sysroot/libcheri:/sysroot/usr/libcheri:/sysroot/usr/local/cheri/lib:/sysroot/usr/local/cheri/libcheri", timeout=3)
+
+
 def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, args: argparse.Namespace = None) -> Path:
     # drop the suffix and then try decompressing
     def bunzip(archive):

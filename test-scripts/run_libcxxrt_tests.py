@@ -36,8 +36,7 @@ import os
 
 def run_libcxxrt_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running libcxxrt tests")
-    boot_cheribsd.run_cheribsd_command(qemu, "export LD_LIBRARY_PATH=/build/lib:/libunwind/lib:/sysroot/lib:/sysroot/usr/lib:/sysroot/usr/local/lib", timeout=2)
-    boot_cheribsd.run_cheribsd_command(qemu, "export LD_CHERI_LIBRARY_PATH=/build/lib:/libunwind/lib:/sysroot/libcheri:/sysroot/usr/libcheri:/sysroot/usr/local/libcheri", timeout=2)
+    boot_cheribsd.set_ld_library_path(qemu)
     boot_cheribsd.run_cheribsd_command(qemu, "export LIBUNWIND_PRINT_UNWINDING=1", timeout=2)
     boot_cheribsd.run_cheribsd_command(qemu, "export LIBUNWIND_PRINT_APIS=1", timeout=2)
     boot_cheribsd.run_cheribsd_command(qemu, "export LIBUNWIND_PRINT_DWARF=1", timeout=2)

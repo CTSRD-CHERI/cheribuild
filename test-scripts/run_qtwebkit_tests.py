@@ -39,16 +39,19 @@ from junitparser import JUnitXml
 
 
 def setup_qtwebkit_test_environment(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
-    boot_cheribsd.run_cheribsd_command(qemu, "export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/sysroot/lib:/sysroot/usr/lib:/sysroot/usr/local/lib")
-    boot_cheribsd.run_cheribsd_command(qemu, "export LD_CHERI_LIBRARY_PATH=/usr/libcheri:/usr/local/libcheri:/sysroot/libcheri:/sysroot/usr/libcheri:/sysroot/usr/local/libcheri")
+    boot_cheribsd.set_ld_library_path(qemu)
     boot_cheribsd.run_cheribsd_command(qemu, "export ICU_DATA=/sysroot/usr/local/share/icu/60.0.1")
     boot_cheribsd.run_cheribsd_command(qemu, "export LANG=en_US.UTF-8")
     boot_cheribsd.run_cheribsd_command(qemu, "echo '<h1>Hello World!</h1>' > /tmp/helloworld.html")
 
     # mime database
     boot_cheribsd.run_cheribsd_command(qemu, "mkdir -p /usr/share/mime/packages")
+    # old directory names:
     boot_cheribsd.run_cheribsd_command(qemu, "mkdir -p /usr/local/Qt-cheri/lib/fonts")
     boot_cheribsd.run_cheribsd_command(qemu, "ln -sf /usr/local/Qt-cheri /usr/local/Qt-mips")
+    # New directory names:
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sf /usr/local/Qt-cheri /usr/local/mips")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sf /usr/local/Qt-cheri /usr/local/cheri")
     boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /source/LayoutTests/resources/Ahem.ttf /usr/local/Qt-cheri/lib/fonts")
     boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /source/LayoutTests/fast/writing-mode/resources/DroidSansFallback-reduced.ttf /usr/local/Qt-cheri/lib/fonts")
     boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /build/mime.cache /usr/share/mime")
