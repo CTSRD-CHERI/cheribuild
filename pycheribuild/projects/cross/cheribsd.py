@@ -537,8 +537,6 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
                 warningMessage("Attempting to build an MFS_ROOT kernel but kernel config name sounds wrong")
         # needKernelToolchain = not self.useExternalToolchainForKernel
         dontNeedKernelToolchain = self.useExternalToolchainForKernel and self.linker_for_kernel == "lld"
-        if self.crossbuild:
-            dontNeedKernelToolchain = True
         if not dontNeedKernelToolchain and not self.kernelToolchainAlreadyBuilt:
             # we might need to build GCC to build the kernel:
             kernel_toolchain_opts = self.make_args.copy()
@@ -581,6 +579,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             if self.fastRebuild:
                 build_args.set(WORLDFAST=True)
             self.runMake("buildworld", options=build_args)
+            self.kernelToolchainAlreadyBuilt = True  # includes the necessary tools for kernel-toolchain
         if not self.subdirOverride:
             self._buildkernel(kernconf=self.kernelConfig, mfs_root_image=mfs_root_image)
 
