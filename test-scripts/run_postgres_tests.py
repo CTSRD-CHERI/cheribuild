@@ -37,12 +37,24 @@ def run_postgres_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
     boot_cheribsd.info("Running PostgreSQL tests")
     # TODO: copy over the logfile and enable coredumps?
     # Run tests with a two hour timeout:
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -s /locale /usr/share/locale")
+    # check that the locale files exist
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ls /usr/share/locale/C.UTF-8")
     boot_cheribsd.checked_run_cheribsd_command(qemu, "cd '{}' && sh -xe ./run-postgres-tests.sh".format(qemu.smb_dirs[0].in_target),
                                                timeout=240 * 60)
     return True
 
 
+def add_args(parser: argparse.ArgumentParser):
+    parser.add_argument("--locale-files-dir", required=True)
+
+
+def adjust_args(args: argparse.Namespace):
+    args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.locale_files_dir, readonly=True, in_target="/locale"))
+
+
 if __name__ == '__main__':
     from run_tests_common import run_tests_main
     # we don't need ssh running to execute the tests
-    run_tests_main(test_function=run_postgres_tests, need_ssh=False, should_mount_builddir=False)
+    run_tests_main(test_function=run_postgres_tests, need_ssh=False, should_mount_builddir=False,
+                   argparse_setup_callback=add_args, argparse_adjust_args_callback=adjust_args)

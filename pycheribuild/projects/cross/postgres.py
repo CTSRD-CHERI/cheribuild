@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import *
+from .cheribsd import BuildCHERIBSD
 from ...utils import fatalError, runCmd, IS_FREEBSD
 import re
 
@@ -125,8 +126,10 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             self.runMake("check", cwd=self.buildDir / "src/test/regress", stdoutFilter=None)
             # self.runMake("check", cwd=self.buildDir / "src/interfaces/ecpg/test", stdoutFilter=None)
         else:
+            locale_dir = BuildCHERIBSD.rootfsDir(self, self.config) / "usr/share/locale"
             self.run_cheribsd_test_script("run_postgres_tests.py", "--smb-mount-directory",
-                                          str(self.installDir) + ":" + str(self.installPrefix), mount_builddir=False,
+                                          str(self.installDir) + ":" + str(self.installPrefix),
+                                          "--locale-files-dir", locale_dir, mount_builddir=False,
                                           # long running test -> speed up by using a kernel without invariants
                                           use_benchmark_kernel_by_default=True)
 
