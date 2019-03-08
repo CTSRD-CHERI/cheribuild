@@ -421,9 +421,10 @@ class BuildQtWebkit(CrossCompileCMakeProject):
 
     def install(self, **kwargs):
         # create a stripped version of DumpRenderTree and jsc since the one with debug info is too big
-        dump_render_tree = self.buildDir / "bin/DumpRenderTree" # type: Path
-        if dump_render_tree.is_file():
-            runCmd(self.config.sdkBinDir / "llvm-strip", "-o", dump_render_tree.with_suffix(".stripped"), dump_render_tree)
+        if not self.build_jsc_only:
+            dump_render_tree = self.buildDir / "bin/DumpRenderTree" # type: Path
+            if dump_render_tree.is_file():
+                runCmd(self.config.sdkBinDir / "llvm-strip", "-o", dump_render_tree.with_suffix(".stripped"), dump_render_tree)
         jsc = self.buildDir / "bin/jsc" # type: Path
         if jsc.is_file():
             runCmd(self.config.sdkBinDir / "llvm-strip", "-o", jsc.with_suffix(".stripped"), jsc)
