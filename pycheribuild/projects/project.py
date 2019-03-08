@@ -620,6 +620,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             cmd.append("--interact")
         if self.config.tests_env_only:
             cmd.append("--test-environment-only")
+        if self.config.trap_on_unrepresentable:
+            cmd.append("--trap-on-unrepresentable")
         if self.config.test_extra_args:
             cmd.extend(map(str, self.config.test_extra_args))
         runCmd(cmd)
