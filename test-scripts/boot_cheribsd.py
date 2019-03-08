@@ -495,6 +495,10 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     smb_dirs = qemu.smb_dirs  # type: typing.List[SmbMount]
     setup_tests_starttime = datetime.datetime.now()
     # disable coredumps, otherwise we get no space left on device errors
+    for dir in smb_dirs:
+        # If we are mounting /build set kern.corefile to point there:
+        if not dir.readonly and dir.in_target == "/build":
+            run_cheribsd_command(qemu, "sysctl kern.corefile=/build/%N.%P.core")
     run_cheribsd_command(qemu, "sysctl kern.coredump=0")
     # create tmpfs on opt
     run_cheribsd_command(qemu, "mkdir -p /opt && mount -t tmpfs -o size=500m tmpfs /opt")
