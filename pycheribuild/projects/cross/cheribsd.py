@@ -571,6 +571,9 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
         build_args = self.buildworldArgs
         if self.config.verbose:
             self.runMake("showconfig", options=build_args)
+        if self.config.freebsd_host_tools_only:
+            self.runMake("kernel-toolchain", options=build_args)
+            return
         if sysroot_only:
             self.runMake("buildsysroot", options=build_args)
             return  # We are done after building the sysroot
@@ -661,6 +664,9 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
                 skip_kernel=False, **kwargs):
         if self.subdirOverride and not install_with_subdir_override:
             statusUpdate("Skipping install step because SUBDIR_OVERRIDE was set")
+            return
+        if self.config.freebsd_host_tools_only:
+            statusUpdate("Skipping install step because freebsd-host-tools was set")
             return
         # keeping the old rootfs directory prior to install can sometimes cause the build to fail so delete by default
         if self.config.clean or not self.keepOldRootfs:

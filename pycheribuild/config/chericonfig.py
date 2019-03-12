@@ -131,6 +131,8 @@ class CheriConfig(object):
             help="Only build subdirs SUBDIRS of FreeBSD/CheriBSD instead of the full tree. Useful "
             "for quickly rebuilding an individual programs/libraries. If more than one dir is passed they will be "
             "processed in order.  Note: This will break if not all dependencies have been built.")
+        self.freebsd_host_tools_only = loader.addCommandLineOnlyBoolOption("freebsd-host-tools-only", helpHidden=True,
+            group=loader.freebsdGroup, help="Stop the FreeBSD/CheriBSD build after the host tools have been built")
 
         self.install_subdir_to_sysroot = loader.addBoolOption("install-subdir-to-sysroot", group=loader.freebsdGroup,
             help="When using the --subdir option for CheriBSD targets also install the built libraries into the sysroot."
