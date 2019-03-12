@@ -515,9 +515,10 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
             with tempfile.TemporaryDirectory(dir=os.getcwd(), prefix="test_files_") as tmp:
                 run_host_command(["tar", "xJf", str(archive), "-C", tmp])
                 private_key = str(Path(ssh_keyfile).with_suffix(""))
+                # CVE-2018-20685 -> Can no longer use '.' See https://superuser.com/questions/1403473/scp-error-unexpected-filename
                 scp_cmd = ["scp", "-B", "-r", "-P", str(ssh_port), "-o", "StrictHostKeyChecking=no",
                            "-o", "UserKnownHostsFile=/dev/null",
-                           "-i", shlex.quote(private_key), ".", "root@localhost:/"]
+                           "-i", shlex.quote(private_key), tmp, "root@localhost:/"]
                 # use script for a fake tty to get progress output from scp
                 if sys.platform.startswith("linux"):
                     scp_cmd = ["script", "--quiet", "--return", "--command", " ".join(scp_cmd), "/dev/null"]
