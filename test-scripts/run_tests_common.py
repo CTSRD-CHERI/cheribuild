@@ -50,13 +50,15 @@ def run_tests_main(test_function: typing.Callable[[pexpect.spawn, argparse.Names
             parser.add_argument("--sysroot-dir", required=True)
         if argparse_setup_callback:
             argparse_setup_callback(parser)
+        if not need_ssh:
+            parser.add_argument("--force-ssh-setup", action="store_true", dest="__foce_ssh_setup")
 
     def default_setup_args(args: argparse.Namespace):
         if need_ssh:
             args.use_smb_instead_of_ssh = False  # we need ssh running to execute the tests
         else:
             args.use_smb_instead_of_ssh = True  # skip the ssh setup
-            args.skip_ssh_setup = True
+            args.skip_ssh_setup = not args.__foce_ssh_setup
         if should_mount_builddir:
             args.build_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.build_dir)))
             args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.build_dir, readonly=False, in_target="/build"))

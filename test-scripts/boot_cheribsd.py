@@ -646,6 +646,9 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
     args = parser.parse_args()
     if args.ssh_port is None:
         args.ssh_port = find_free_port()
+    if args.use_smb_instead_of_ssh:
+        # Skip all ssh setup by default if we are using smb instead
+        args.skip_ssh_setup = True
     if args.internal_kernel_override:
         args.kernel = args.internal_kernel_override
     if args.internal_disk_image_override:
@@ -662,11 +665,6 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
         PRETEND = True
 
     starttime = datetime.datetime.now()
-
-    # Skip all ssh setup if we are using smb instead:
-    if args.use_smb_instead_of_ssh:
-        args.ssh_key = None
-        args.ssh_port = None
 
     # validate args:
     test_archives = []  # type: list
@@ -721,7 +719,7 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
     if (test_archives or args.test_command or test_function) and not args.test_kernel_init_only:
         # noinspection PyBroadException
         try:
-            if not args.use_smb_instead_of_ssh:
+            if not args.skip_ssh_setup:
                 setup_ssh_starttime = datetime.datetime.now()
                 setup_ssh(qemu, Path(args.ssh_key))
                 info("Setting up SSH took: ", datetime.datetime.now() - setup_ssh_starttime)
