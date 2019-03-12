@@ -79,7 +79,7 @@ def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
     finally:
         tests_xml_path = Path(args.build_dir, 'results.xml')
         try:
-            if tests_xml_path.exists():
+            if not args.smoketest and tests_xml_path.exists():
                 # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
                 xml = JUnitXml.fromfile(str(tests_xml_path))
                 xml.update_statistics()
@@ -89,7 +89,9 @@ def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
             return False
 
 def add_args(parser: argparse.ArgumentParser):
-    parser.add_argument("--smoketest", action="store_true", required=False,
+    parser.add_argument("--smoketest", action="store_true", required=False, default=True,
+                        help="Don't run full jsc layout tests, only check that jsc and DumpRenderTree work")
+    parser.add_argument("--full-test", action="store_false", required=False, dest="smoketest",
                         help="Don't run full jsc layout tests, only check that jsc and DumpRenderTree work")
 
 if __name__ == '__main__':
