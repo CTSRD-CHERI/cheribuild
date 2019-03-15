@@ -279,9 +279,10 @@ class CompilerInfo(object):
         self.version = version
         self.default_target = default_target
         self._resource_dir = None
+        assert compiler in ("unknown compiler", "clang", "apple-clang", "gcc"), "unknown type: " + compiler
 
     def get_resource_dir(self):
-        assert self.compiler == "clang"
+        assert self.is_clang, self.compiler
         if not self._resource_dir:
             # pretend to compile an existing source file and capture the -resource-dir output
             cc1_cmd = runCmd(self.path, "-###", "-xc", "-c", "/usr/include/unistd.h",
@@ -289,6 +290,10 @@ class CompilerInfo(object):
             resource_dir_pat = re.compile(b'"-cc1".+"-resource-dir" "([^"]+)"')
             self._resource_dir = Path(resource_dir_pat.search(cc1_cmd.stderr).group(1).decode("utf-8"))
         return self._resource_dir
+
+    @property
+    def is_clang(self):
+        return self.compiler in ("clang", "apple-clang")
 
 _cached_compiler_infos = dict()  # type: typing.Dict[Path, CompilerInfo]
 

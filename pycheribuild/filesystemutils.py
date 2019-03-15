@@ -209,6 +209,7 @@ class FileSystemUtils(object):
             printCommand("cp", src, dest, printVerboseOnly=printVerboseOnly)
         if self.config.pretend:
             return
+        assert not dest.is_dir(), "installFile: target is a directory and not a file: " + str(dest)
         if (dest.is_symlink() or dest.exists()) and force:
             dest.unlink()
         if not src.exists():

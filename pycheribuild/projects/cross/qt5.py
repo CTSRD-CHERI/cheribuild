@@ -74,7 +74,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             self.configureArgs.extend(["-prefix", str(self.installDir)])
             self.configureArgs.append("QMAKE_CC=" + str(self.config.clangPath))
             self.configureArgs.append("QMAKE_CXX=" + str(self.config.clangPlusPlusPath))
-            if IS_LINUX and getCompilerInfo(self.config.clangPath).compiler == "clang":
+            if IS_LINUX and getCompilerInfo(self.config.clangPath).is_clang:
                 # otherwise the build assumes GCC
                 self.configureArgs.append("-platform")
                 self.configureArgs.append("linux-clang")

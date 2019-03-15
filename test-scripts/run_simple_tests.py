@@ -38,11 +38,16 @@ def run_simple_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
     # TODO: copy over the logfile and enable coredumps?
     # Run tests with a two hour timeout:
     boot_cheribsd.checked_run_cheribsd_command(qemu, "cd '{}'".format(qemu.smb_dirs[0].in_target), timeout=10)
-    boot_cheribsd.checked_run_cheribsd_command(qemu, args.test_command, timeout=args.test_timeout, pretend_result=2)
+    boot_cheribsd.checked_run_cheribsd_command(qemu, args.test_command, timeout=args.test_timeout, pretend_result=2,
+                                               ignore_cheri_trap=args.ignore_cheri_trap)
     return True
 
 
-def set_cmdline_args(args: argparse.Namespace):
+def add_args(parser: argparse.ArgumentParser):
+    parser.add_argument("--ignore-cheri-trap", action="store_true", required=False, default=True,
+                        help="Don't fail the tests when a CHERI trap happens (useful for BODiagSuite or similar)")
+
+def adjust_args(args: argparse.Namespace):
     # We don't support parallel jobs but are reusing libcxx infrastructure -> set the expected vars
     if not args.test_command:
         boot_cheribsd.failure("--test-command must be set!", exit=True)
@@ -51,4 +56,4 @@ if __name__ == '__main__':
     from run_tests_common import run_tests_main
     # we don't need ssh running to execute the tests
     run_tests_main(test_function=run_simple_test, need_ssh=False, should_mount_builddir=True,
-                   argparse_adjust_args_callback=set_cmdline_args)
+                   argparse_setup_callback=add_args, argparse_adjust_args_callback=adjust_args)

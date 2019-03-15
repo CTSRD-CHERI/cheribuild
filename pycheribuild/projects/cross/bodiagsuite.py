@@ -29,6 +29,7 @@
 #
 
 from .crosscompileproject import *
+from ...utils import getCompilerInfo
 
 class BuildBODiagSuite(CrossCompileCMakeProject):
     projectName = "bodiagsuite"
@@ -37,12 +38,32 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
     appendCheriBitsToBuildDir = True
     supported_architectures = [CrossCompileTarget.CHERI, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
     defaultOptimizationLevel = ["-O0"]
+    default_build_type = BuildType.DEBUG
 
     def __init__(self, config: CheriConfig, *args, **kwargs):
         if self.compiling_for_host():
             self.use_asan = True  # must set this before calling the superclass constructor
         super().__init__(config, *args, **kwargs)
-        self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
+        if getCompilerInfo(self.CC).is_clang:
+            self.common_warning_flags.append("-Wno-unused-command-line-argument")
+            self.common_warning_flags.append("-Wno-array-bounds") # lots of statically out of bounds cases
+
+    def process(self):
+        if self.cross_build_type != BuildType.DEBUG:
+            self.warning("BODiagsuite contains undefined behaviour that might be optimized away unless you compile"
+                         " at -O0.")
+            if not self.queryYesNo("Are you sure you want to continue?"):
+                self.fatal("Cannot continue.")
+        super().process()
 
     def install(*args, **kwargs):
         pass
+
+    def run_tests(self):
+        # Ensure the run directory exists
+        self.cleanDirectory(self.buildDir / "run", keepRoot=False)
+        # TODO: add this copy to the CMakeLists.txt
+        self.installFile(self.sourceDir / "Makefile.bsd-run", self.buildDir / "Makefile.bsd-run", force=True)
+        self.run_cheribsd_test_script("run_simple_tests.py", "--test-command", "make -r -f /build/Makefile.bsd-run all",
+                                      "--test-timeout", str(120 * 60), "--ignore-cheri-trap",
+                                      mount_builddir=True, mount_sourcedir=False)
