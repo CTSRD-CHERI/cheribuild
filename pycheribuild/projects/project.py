@@ -568,7 +568,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         from .build_qemu import BuildQEMU
         # noinspection PyUnusedLocal
         script_dir = Path("/this/will/not/work/when/using/remote-cheribuild.py")
-        if kernel_path is None:
+        test_native = self.get_crosscompile_target(self.config) == CrossCompileTarget.NATIVE
+        if kernel_path is None and not test_native:
             from .cross.cheribsd import BuildCheriBsdMfsKernel
             # Use the benchmark kernel by default if the parameter is set and the user didn't pass
             # --no-use-minimal-benchmark-kernel on the command line or in the config JSON
@@ -605,16 +606,19 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         qemu_path = BuildQEMU.qemu_binary(self)
         if not qemu_path.exists():
             self.fatal("QEMU binary", qemu_path, "doesn't exist")
-        cmd = [script, "--kernel", kernel_path,
-               "--qemu-cmd", qemu_path,
-               "--ssh-key", self.config.test_ssh_key] + list(script_args)
+        if test_native:
+            cmd = [script, "--test-native"] + list(script_args)
+        else:
+            cmd = [script, "--kernel", kernel_path,
+                   "--qemu-cmd", qemu_path,
+                   "--ssh-key", self.config.test_ssh_key] + list(script_args)
         if self.buildDir and mount_builddir:
             cmd.extend(["--build-dir", self.buildDir])
         if self.sourceDir and mount_sourcedir:
             cmd.extend(["--source-dir", self.sourceDir])
         if mount_sysroot:
             cmd.extend(["--sysroot-dir", self.crossSysrootPath])
-        if disk_image_path:
+        if disk_image_path and not test_native:
             cmd.extend(["--disk-image", disk_image_path])
         if self.config.tests_interact:
             cmd.append("--interact")

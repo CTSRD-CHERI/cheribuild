@@ -27,9 +27,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import shutil
 
 from .crosscompileproject import *
-from ...utils import getCompilerInfo
+from ...utils import getCompilerInfo, runCmd, IS_FREEBSD
 
 class BuildBODiagSuite(CrossCompileCMakeProject):
     projectName = "bodiagsuite"
@@ -56,14 +57,29 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
                 self.fatal("Cannot continue.")
         super().process()
 
+    def compile(self, **kwargs):
+        super().compile(**kwargs)
+        # TODO: add this copy to the CMakeLists.txt
+        self.installFile(self.sourceDir / "Makefile.bsd-run", self.buildDir / "Makefile.bsd-run", force=True)
+
     def install(*args, **kwargs):
         pass
 
     def run_tests(self):
+        bmake = shutil.which("bmake")
+        if bmake is None and IS_FREEBSD:
+            # on FreeBSD bmake is
+            bmake = shutil.which("make")
+        if bmake is None:
+            self.fatal("Could not find bmake")
         # Ensure the run directory exists
-        self.cleanDirectory(self.buildDir / "run", keepRoot=False)
-        # TODO: add this copy to the CMakeLists.txt
-        self.installFile(self.sourceDir / "Makefile.bsd-run", self.buildDir / "Makefile.bsd-run", force=True)
-        self.run_cheribsd_test_script("run_simple_tests.py", "--test-command", "make -r -f /build/Makefile.bsd-run all",
-                                      "--test-timeout", str(120 * 60), "--ignore-cheri-trap",
-                                      mount_builddir=True, mount_sourcedir=False)
+        self.makedirs(self.buildDir / "run")
+        if self.config.clean:
+            self.cleanDirectory(self.buildDir / "run", keepRoot=False)
+        testsuite_prefix = self.buildDirSuffix(self.config, self.get_crosscompile_target(self.config))[1:]
+        testsuite_prefix = testsuite_prefix.replace("-build", "")
+        if self.use_asan:
+            testsuite_prefix += "-asan"
+        extra_args = ["--bmake-path", bmake] if self.compiling_for_host() else []
+        self.run_cheribsd_test_script("run_bodiagsuite.py", "--junit-testsuite-name", testsuite_prefix, *extra_args,
+                                      mount_sourcedir=False, mount_builddir=True)
