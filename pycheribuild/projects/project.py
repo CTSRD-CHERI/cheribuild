@@ -666,8 +666,9 @@ def installDirNotSpecified(config: CheriConfig, project: "Project"):
 
 def _defaultBuildDir(config: CheriConfig, project: "Project"):
     # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
+    assert isinstance(project, Project)
     target = project.get_crosscompile_target(config)
-    return project.buildDirForTarget(config, target)
+    return project.buildDirForTarget(config, target, project.use_asan)
 
 
 class MakeCommandKind(Enum):
@@ -999,7 +1000,7 @@ class Project(SimpleProject):
         return cls.get_instance(caller, config).real_install_root_dir
 
     @classmethod
-    def buildDirSuffix(cls, config: CheriConfig, target: CrossCompileTarget):
+    def buildDirSuffix(cls, config: CheriConfig, target: CrossCompileTarget, use_asan: bool):
         if target is None:
             # HACK since I can't make the class variable in BuildCheriLLVM dynamic
             # TODO: remove once unified SDK is stable
@@ -1013,13 +1014,15 @@ class Project(SimpleProject):
             result = "-" + target.value + "-build"
         if config.cross_target_suffix:
             result += "-" + config.cross_target_suffix
+        if use_asan:
+            result = "-asan" + result
         if cls.build_dir_suffix:
             result = "-" + cls.build_dir_suffix + result
         return result
 
     @classmethod
-    def buildDirForTarget(cls, config: CheriConfig, target: CrossCompileTarget):
-        return config.buildRoot / (cls.projectName.lower() + cls.buildDirSuffix(config, target))
+    def buildDirForTarget(cls, config: CheriConfig, target: CrossCompileTarget, use_asan: bool):
+        return config.buildRoot / (cls.projectName.lower() + cls.buildDirSuffix(config, target, use_asan))
 
     _installToSDK = ComputedDefaultValue(
         function=lambda config, project: config.sdkDir,
@@ -1027,6 +1030,9 @@ class Project(SimpleProject):
     _installToBootstrapTools = ComputedDefaultValue(
         function=lambda config, project: config.otherToolsDir,
         asString="$INSTALL_ROOT/bootstrap")
+
+    default_use_asan = False
+    can_build_with_asan = False
 
     defaultInstallDir = installDirNotSpecified
     """ The default installation directory (will probably be set to _installToSDK or _installToBootstrapTools) """
@@ -1076,7 +1082,14 @@ class Project(SimpleProject):
                                           help="Override default source directory for " + cls.projectName)
         cls.buildDir = cls.addPathOption("build-directory", metavar="DIR", default=cls.defaultBuildDir,
                                          help="Override default source directory for " + cls.projectName)
-
+        # TODO: move this to project and change the build dir too
+        if cls.can_build_with_asan:
+            asan_default = ComputedDefaultValue(
+                function=lambda config, proj: False if proj.get_crosscompile_target(config) == CrossCompileTarget.CHERI else proj.default_use_asan,
+                asString=str(cls.default_use_asan))
+            cls.use_asan = cls.addBoolOption("use-asan", default=asan_default, help="Build with AddressSanitizer enabled")
+        else:
+            cls.use_asan = False
         cls.skipUpdate = cls.addBoolOption("skip-update",
                                            default=ComputedDefaultValue(lambda config, proj: config.skipUpdate,
                                                                         "the value of the global --skip-update option"),

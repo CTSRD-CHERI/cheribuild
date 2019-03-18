@@ -118,6 +118,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
     _should_not_be_instantiated = True
     _check_install_dir_conflict = True
     defaultOptimizationLevel = ("-O2",)
+    can_build_with_asan = True
 
     # noinspection PyProtectedMember
     _no_overwrite_allowed = MultiArchBaseMixin._no_overwrite_allowed + ("baremetal",)  # type: typing.Tuple[str]
@@ -422,7 +423,6 @@ class CrossCompileMixin(MultiArchBaseMixin):
             help="build with debug info by default (Note: this only affects --cross-build-type=DEFAULT)", default=True)
         cls._optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
                                                      default=[])
-        cls.use_asan = cls.addBoolOption("use-asan", default=False, help="Build with AddressSanitizer enabled")
         cls.cross_build_type = cls.addConfigOption("cross-build-type",
             help="Optimization+debuginfo defaults (supports the same values as CMake plus 'DEFAULT' which does not pass"
                  " any additional flags to the configure script). Note: The overrides the CMake --build-type option.",

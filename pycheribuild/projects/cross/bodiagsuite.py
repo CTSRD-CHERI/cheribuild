@@ -40,10 +40,9 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
     supported_architectures = [CrossCompileTarget.CHERI, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
     defaultOptimizationLevel = ["-O0"]
     default_build_type = BuildType.DEBUG
+    default_use_asan = True
 
     def __init__(self, config: CheriConfig, *args, **kwargs):
-        if self.compiling_for_host():
-            self.use_asan = True  # must set this before calling the superclass constructor
         super().__init__(config, *args, **kwargs)
         if getCompilerInfo(self.CC).is_clang:
             self.common_warning_flags.append("-Wno-unused-command-line-argument")
@@ -76,10 +75,8 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
         self.makedirs(self.buildDir / "run")
         if self.config.clean:
             self.cleanDirectory(self.buildDir / "run", keepRoot=False)
-        testsuite_prefix = self.buildDirSuffix(self.config, self.get_crosscompile_target(self.config))[1:]
+        testsuite_prefix = self.buildDirSuffix(self.config, self.get_crosscompile_target(self.config), self.use_asan)[1:]
         testsuite_prefix = testsuite_prefix.replace("-build", "")
-        if self.use_asan:
-            testsuite_prefix += "-asan"
         extra_args = ["--bmake-path", bmake] if self.compiling_for_host() else []
         self.run_cheribsd_test_script("run_bodiagsuite.py", "--junit-testsuite-name", testsuite_prefix, *extra_args,
                                       mount_sourcedir=False, mount_builddir=True)

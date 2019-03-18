@@ -104,7 +104,7 @@ def cheribsd_build_dir(config: CheriConfig, project: "BuildFreeBSD"):
         # TODO: change this to be the default build dir name
         return config.buildRoot / ("cheribsd-obj-" + config.cheriBitsStr)
     else:
-        return project.buildDirForTarget(config, project._crossCompileTarget)
+        return project.buildDirForTarget(config, project._crossCompileTarget, project.use_asan)
 
 
 def default_cross_toolchain_path(config: CheriConfig, proj: "BuildFreeBSD"):
