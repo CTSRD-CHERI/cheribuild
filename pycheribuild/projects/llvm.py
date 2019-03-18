@@ -44,6 +44,7 @@ class BuildLLVMBase(CMakeProject):
     appendCheriBitsToBuildDir = True
     skip_cheri_symlinks = True
     doNotAddToTargets = True
+    can_build_with_asan = True
 
     @classmethod
     def setupConfigOptions(cls, useDefaultSysroot=True):
@@ -83,6 +84,9 @@ class BuildLLVMBase(CMakeProject):
             CMAKE_C_COMPILER=self.cCompiler,
             LLVM_PARALLEL_LINK_JOBS=link_jobs,  # anything more causes too much I/O
         )
+        if self.use_asan:
+            # Use asan+ubsan
+            self.add_cmake_options(LLVM_USE_SANITIZER="Address;Undefined")
 
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
         self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)

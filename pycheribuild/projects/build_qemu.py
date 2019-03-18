@@ -43,6 +43,7 @@ class BuildQEMUBase(AutotoolsProject):
     doNotAddToTargets = True
     is_sdk_target = True
     skipGitSubmodules = True  # we don't need these
+    can_build_with_asan = True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -101,7 +102,12 @@ class BuildQEMUBase(AutotoolsProject):
             self.configureArgs.extend(["--disable-stack-protector"])
 
         if self.with_sanitizers:
+            self.warning("Option --qemu/sanitizers is deprecated, use --qemu/use-asan instead")
+        if self.with_sanitizers or self.use_asan:
             self.configureArgs.append("--enable-sanitizers")
+            if self.lto:
+                self.info("Disabling LTO for ASAN instrumented builds")
+            self.lto = False
 
         # Having symbol information is useful for debugging and profiling
         self.configureArgs.append("--disable-strip")
