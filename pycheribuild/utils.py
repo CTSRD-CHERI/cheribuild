@@ -282,7 +282,7 @@ class CompilerInfo(object):
         assert compiler in ("unknown compiler", "clang", "apple-clang", "gcc"), "unknown type: " + compiler
 
     def get_resource_dir(self):
-        assert self.is_clang, self.compiler
+        # assert self.is_clang, self.compiler
         if not self._resource_dir:
             # pretend to compile an existing source file and capture the -resource-dir output
             cc1_cmd = runCmd(self.path, "-###", "-xc", "-c", "/usr/include/unistd.h",
