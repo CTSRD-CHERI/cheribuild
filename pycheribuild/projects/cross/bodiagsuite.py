@@ -49,6 +49,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
             self.common_warning_flags.append("-Wno-array-bounds") # lots of statically out of bounds cases
 
     def process(self):
+        # FIXME: add option to disable FORTIFY_SOURCE
         if self.cross_build_type != BuildType.DEBUG:
             self.warning("BODiagsuite contains undefined behaviour that might be optimized away unless you compile"
                          " at -O0.")
