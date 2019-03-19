@@ -40,6 +40,9 @@ class OpamMixin(object):
         super().__init__(*args, **kwargs)
         assert isinstance(self, SimpleProject)
         self._addRequiredSystemTool("opam", homebrew="opam", cheribuild_target="opam-2.0")
+        self.required_ocaml_version = "4.06.1"
+        self.__using_correct_switch = False
+        self.__ignore_switch_version = False
 
     @property
     def opamroot(self):
@@ -59,16 +62,31 @@ class OpamMixin(object):
     def opam_binary(self):
         return shutil.which("opam") or "opam"
 
-    def _opam_cmd(self, command, *args):
-        cmdline = [self.opam_binary, command, "--root=" + str(self.opamroot)]
+    def _opam_cmd(self, command, *args, _add_switch=True):
+        cmdline = [self.opam_binary,  command, "--root=" + str(self.opamroot)]
+        if _add_switch:
+            cmdline.append("--switch=" + self.required_ocaml_version)
         cmdline.extend(args)
         return cmdline
 
-    def _opam_cmd_str(self, command, *args):
-        return commandline_to_str(self._opam_cmd(command, *args))
+    def _opam_cmd_str(self, command, *args, _add_switch):
+        return commandline_to_str(self._opam_cmd(command, *args, _add_switch=_add_switch))
 
-    def run_opam_cmd(self, command, *args, ignoreErrors=False, **kwargs):
-        command_list = self._opam_cmd(command, *args)
+    def _ensure_correct_switch(self):
+        if not self.__using_correct_switch and not self.__ignore_switch_version:
+            self.__ignore_switch_version = True
+            try:
+                self.run_opam_cmd("switch", self.required_ocaml_version, _add_switch=False)
+            except CalledProcessError:
+                # create the switch if it doesn't exist
+                self.run_opam_cmd("switch", "--verbose", "--debug", "create", self.required_ocaml_version, _add_switch=False)
+            finally:
+                self.__ignore_switch_version = False
+            self.__using_correct_switch = True
+
+    def run_opam_cmd(self, command, *args, ignoreErrors=False, _add_switch=True, **kwargs):
+        self._ensure_correct_switch()
+        command_list = self._opam_cmd(command, *args, _add_switch=_add_switch)
         try:
             return self.run_command_in_ocaml_env(command_list, **kwargs)
         except CalledProcessError:
@@ -77,11 +95,12 @@ class OpamMixin(object):
             else:
                 raise
 
-    def _run_in_ocaml_env_prepare(self, cwd=None) -> dict:
+    def _run_in_ocaml_env_prepare(self, cwd=None) -> "Tuple[Dict[Any, Union[Union[str, int], Any]], Union[str, Any]]":
         assert isinstance(self, SimpleProject)
         if cwd is None:
             cwd = self.sourceDir if getattr(self, "sourceDir") else "/"
 
+        self._ensure_correct_switch()
         opam_env = dict(GIT_TEMPLATE_DIR="", # see https://github.com/ocaml/opam/issues/3493
                         OPAMROOT=self.opamroot,
                         CCACHE_DISABLE=1, # https://github.com/ocaml/opam/issues/3395
@@ -98,6 +117,7 @@ class OpamMixin(object):
         return self.runShellScript(script, cwd=cwd, printVerboseOnly=printVerboseOnly, env=opam_env, **kwargs)
 
     def run_command_in_ocaml_env(self, command: list, cwd=None, printVerboseOnly=False, **kwargs):
+        self._ensure_correct_switch()
         opam_env, cwd = self._run_in_ocaml_env_prepare(cwd=cwd)
         # for opam commands we don't need to prepend opam exec --
         if command[0] != self.opam_binary:
@@ -161,11 +181,6 @@ class BuildSailFromOpam(OpamMixin, SimpleProject):
 
     def process(self):
         # self.run_command_in_ocaml_env(["env"])
-        try:
-            self.run_opam_cmd("switch", "4.06.0")
-        except CalledProcessError:
-            # create the switch if it doesn't exist
-            self.run_opam_cmd("switch", "--verbose", "--debug", "create", "4.06.0")
         repos = self.run_opam_cmd("repository", "list", captureOutput=True)
         if REMS_OPAM_REPO not in repos.stdout.decode("utf-8"):
             self.run_opam_cmd("repository", "add", "rems", REMS_OPAM_REPO)
@@ -269,8 +284,8 @@ class OcamlProject(OpamMixin, Project):
             self.warning("stderr was:", e.stderr)
             self.dependencyError("OCaml env seems to be messed up. Note: On MacOS homebrew OCaml "
                                  "is not installed correctly. Try installing it with opam instead:",
-                                 installInstructions="Try running `" + self._opam_cmd_str("update") + " && " +
-                                                     self._opam_cmd_str("switch") + " 4.06.0`")
+                                 installInstructions="Try running `" + self._opam_cmd_str("update", _add_switch=False) + " && " +
+                                                     self._opam_cmd_str("switch", _add_switch=False) + " 4.06.0`")
         super().process()
 
 
