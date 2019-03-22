@@ -284,6 +284,8 @@ class CompilerInfo(object):
     def get_resource_dir(self):
         # assert self.is_clang, self.compiler
         if not self._resource_dir:
+            if not self.path.exists() and _cheriConfig.pretend:
+                return "/unknown/resource/dir"  # avoid failing in jenkins
             # pretend to compile an existing source file and capture the -resource-dir output
             cc1_cmd = runCmd(self.path, "-###", "-xc", "-c", "/usr/include/unistd.h",
                              captureError=True, printVerboseOnly=True, runInPretendMode=True)
