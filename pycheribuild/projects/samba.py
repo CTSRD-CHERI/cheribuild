@@ -46,7 +46,7 @@ class BuildSamba(Project):
     else:
         build_in_source_dir = True
     repository = GitRepository("https://github.com/samba-team/samba.git")
-    gitBranch = "v4-9-stable"
+    gitBranch = "v4-10-stable"
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -67,19 +67,22 @@ class BuildSamba(Project):
             "--without-libarchive",
             "--disable-cups",
             "--disable-python",
-            "--disable-gnutls",
+            # "--disable-gnutls",
             "--without-ldap", "--disable-iprint",
             "--without-gettext",
             "--without-ads", "--without-winbind", "--without-pam", "--without-utmp",
             "--without-syslog", "--without-regedit",
             "--disable-glusterfs", "--disable-cephfs",
             "--without-ntvfs-fileserver",
-            "--without-json-audit",
             # Avoid depending on libraries from the build tree:
             "--bundled-libraries=talloc,tdb,pytdb,ldb,pyldb,tevent,pytevent",
             "--with-static-modules=ALL",
             "--prefix=" + str(self.installDir),
         ])
+        # Force python2 for now (since py3 seems broken)
+        self.configureEnvironment["PYTHON"] = shutil.which("python")
+        #  version 4.9 "--without-json-audit",
+        self.configureArgs.append("--without-json")
         if IS_MAC:
             self._addRequiredSystemTool("/usr/local/opt/krb5/bin/kinit", homebrew="krb5")
             # TODO: brew --prefix krb5
