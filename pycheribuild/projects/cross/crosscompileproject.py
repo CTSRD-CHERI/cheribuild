@@ -156,6 +156,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
         self.cross_warning_flags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
                                     "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types",
                                     "-Werror=mips-cheri-prototypes", "-Werror=cheri-bitwise-operations"]
+        # Make underaligned capability loads/stores an error and require an explicit cast:
+        self.cross_warning_flags.append("-Werror=pass-failed")
         self.host_warning_flags = []
         self.common_warning_flags = []
 
