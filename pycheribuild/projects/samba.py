@@ -31,6 +31,7 @@
 from .project import *
 from ..utils import runCmd, setEnv, coloured, AnsiColour, IS_MAC
 import os
+import shutil
 
 SMB_OUT_OF_SOURCE_BUILD_WORKS = False
 
