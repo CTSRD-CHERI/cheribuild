@@ -495,6 +495,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                     break
             if not found_asan_lib:
                 self.fatal("Cannot find", libname, "library in sysroot dirs", asan_libdir_candidates, "-- Compilation will fail!")
+                found_asan_lib = "/some/invalid/path/to/lib"
             self.makedirs(expected_path)
             runCmd("cp", "-av", found_asan_lib.parent, expected_path.parent)
             if not (expected_path / libname).exists():
