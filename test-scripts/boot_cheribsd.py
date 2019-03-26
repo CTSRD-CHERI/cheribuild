@@ -301,7 +301,7 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, 
         i = -1
     runtime = datetime.datetime.now() - starttime
     if i == -1:  # Timeout
-        return CheriBSDCommandTimeout("timeout after", runtime, " waiting for tests: ", str(qemu))
+        raise CheriBSDCommandTimeout("timeout after", runtime, " waiting for tests: ", str(qemu))
     elif i == 0:
         success("ran '", cmd, "' successfully (in ", runtime.total_seconds(), "s)")
         return True
