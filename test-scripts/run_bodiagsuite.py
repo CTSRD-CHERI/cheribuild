@@ -39,65 +39,68 @@ import os
 import sys
 from pathlib import Path
 
+class BODiagTestsuite(object):
+    def __init__(self, name: str, xml: "junitparser.JUnitXml"):
+        self.test_prefix = name
+        self.min_suite = junitparser.TestSuite(name=name + "-min-overflow")
+        xml.add_testsuite(self.min_suite)
+        self.med_suite = junitparser.TestSuite(name=name + "-med-overflow")
+        xml.add_testsuite(self.med_suite)
+        self.large_suite = junitparser.TestSuite(name=name + "-large-overflow")
+        xml.add_testsuite(self.large_suite)
+        self.ok_suite = junitparser.TestSuite(name=name + "-in-bounds")
+        xml.add_testsuite(self.ok_suite)
+        self.error_suite = junitparser.TestSuite(name=name + "-test-broken")
+        xml.add_testsuite(self.error_suite)
 
-def _create_junit_xml(builddir: Path, name):
-    xml = junitparser.JUnitXml(name)
-    min_suite = junitparser.TestSuite(name=name + "-min-overflow")
-    xml.add_testsuite(min_suite)
-    med_suite = junitparser.TestSuite(name=name + "-med-overflow")
-    xml.add_testsuite(med_suite)
-    large_suite = junitparser.TestSuite(name=name + "-large-overflow")
-    xml.add_testsuite(large_suite)
-    ok_suite = junitparser.TestSuite(name=name + "-in-bounds")
-    xml.add_testsuite(ok_suite)
-    error_suite = junitparser.TestSuite(name=name + "-test-broken")
-    xml.add_testsuite(error_suite)
-
-    # TODO: check that all cases exist (otherwise add an error)
-    output_files = builddir.glob("run/*.out")
-    sorted_files = []
-    for o in output_files:
-        sorted_files.append(str(o))
-    sorted_files.sort()
-
-    expected_test_names = []
-    # There are 291 tests, we want to check that all of them were run
-    for base_prefix in ("basic", "basic-heap"):
+        # There are 291 tests, we want to check that all of them were run
+        self.expected_test_names = []
+        assert name in ("basic", "basic-heap")
         for i in range(291, 0, -1):
-            prefix = "{}-{:0>5}".format(base_prefix, i)
-            expected_test_names.append(prefix + "-min")
-            expected_test_names.append(prefix + "-med")
-            expected_test_names.append(prefix + "-large")
-            expected_test_names.append(prefix + "-ok")
+            prefix = "{}-{:0>5}".format(name, i)
+            self.expected_test_names.append(prefix + "-min")
+            self.expected_test_names.append(prefix + "-med")
+            self.expected_test_names.append(prefix + "-large")
+            self.expected_test_names.append(prefix + "-ok")
 
-    for fullpath in sorted_files:
-        o = Path(fullpath)
-        exit_code_str = o.read_text()
+    def check_all_cases_parsed(self):
+        for missing_test in self.expected_test_names:
+            self.error("Could not find output file for test: ", missing_test)
+            testcase = junitparser.TestCase(name=missing_test)
+            testcase.result = junitparser.Error(message="Could not find output for test " + missing_test)
+            self.error_suite.add_testcase(testcase)
+
+    def error(self, *args):
+        print(self.test_prefix, "ERROR:", *args, file=sys.stderr)
+
+    def handle_testcase(self, o: Path):
         stem = o.stem
+        assert stem.startswith(self.test_prefix), stem
+        exit_code_str = o.read_text()
         testcase = junitparser.TestCase(name=stem)
         try:
-            index = expected_test_names.index(stem)
+            index = self.expected_test_names.index(stem)
         except ValueError:
-            print("ERROR: Found output for unknown test: ", o, file=sys.stderr)
+            self.error("Found output for unknown test: ", o)
             testcase.result = junitparser.Error(message="UNEXPECTED TEST NAME: " + o.name)
             testcase.system_err = exit_code_str
-            error_suite.add_testcase(testcase)
-            continue
+            self.error_suite.add_testcase(testcase)
+            return
         # test has been handled -> remove from expected list
-        del expected_test_names[index]
+        del self.expected_test_names[index]
 
         try:
             exit_code = int(exit_code_str)
         except ValueError:
             if exit_code_str == "skip\n" and stem.endswith("00183-large"):
                 testcase.result = junitparser.Skipped(message="Skipped since the test needs too big cwd")
-                large_suite.add_testcase(testcase)
+                self.large_suite.add_testcase(testcase)
             else:
-                print("ERROR: Malformed output for test: ", o, file=sys.stderr)
+                self.error("Malformed output for test: ", o)
                 testcase.result = junitparser.Error(message="INVALID OUTPUT FILE CONTENTS: " + o.name)
                 testcase.system_err = exit_code_str
-                error_suite.add_testcase(testcase)
-            continue
+                self.error_suite.add_testcase(testcase)
+            return
 
         signaled = os.WIFSIGNALED(exit_code)
         exited = os.WIFEXITED(exit_code)
@@ -109,33 +112,59 @@ def _create_junit_xml(builddir: Path, name):
                 # This is not just a failure, it means something is seriously wrong if the good case fails
                 testcase.result = junitparser.Error(message="Expected exit code 0 but got " + exit_code_str)
                 testcase.system_err = exit_code_str
-            ok_suite.add_testcase(testcase)
+            self.ok_suite.add_testcase(testcase)
         else:
             # all others should crash
-            suite = None
             if stem.endswith("-min"):
-                suite = min_suite
+                suite = self.min_suite
             elif stem.endswith("-med"):
-                suite = med_suite
+                suite = self.med_suite
             elif stem.endswith("-large"):
-                suite = large_suite
+                suite = self.large_suite
             else:
-                print("ERROR: Found invalid test output: ", o, file=sys.stderr)
+                self.error("Malformed output for test: ", o)
                 testcase.result = junitparser.Error(message="INVALID OUTPUT FILE FOUND: " + o.name)
-                error_suite.add_testcase(testcase)
-                continue
+                self.error_suite.add_testcase(testcase)
+                return
             if not signaled:
+                # test should fail with a signal: (162 for CHERI)
                 # TODO: for CHERI check that it was signal 34?
                 testcase.result = junitparser.Failure(message="Expected test to be killed by a SIGNAL but got exit code" + exit_code_str)
                 testcase.system_err = exit_code_str
             suite.add_testcase(testcase)
-            # test should fail with a signal: (162 for CHERI)
 
-    for missing_test in expected_test_names:
-        print("ERROR: Could not find output file for test: ", missing_test, file=sys.stderr)
-        testcase = junitparser.TestCase(name=missing_test)
-        testcase.result = junitparser.Error(message="Could not find output for test " + missing_test)
-        error_suite.add_testcase(testcase)
+
+def _create_junit_xml(builddir: Path, name):
+    xml = junitparser.JUnitXml(name)
+
+    # TODO: check that all cases exist (otherwise add an error)
+    output_files = builddir.glob("run/*.out")
+    sorted_files = []
+    for o in output_files:
+        sorted_files.append(str(o))
+    sorted_files.sort()
+
+    expected_test_names = []
+    testsuite_basic = BODiagTestsuite("basic", xml)
+    testsuite_heap = BODiagTestsuite("basic-heap", xml)
+    # There are 291 tests, we want to check that all of them were run
+    for base_prefix in ("basic", "basic-heap"):
+        for i in range(291, 0, -1):
+            prefix = "{}-{:0>5}".format(base_prefix, i)
+            expected_test_names.append(prefix + "-min")
+            expected_test_names.append(prefix + "-med")
+            expected_test_names.append(prefix + "-large")
+            expected_test_names.append(prefix + "-ok")
+
+    for fullpath in sorted_files:
+        o = Path(fullpath)
+        if "-heap-" in o.stem:
+            testsuite_heap.handle_testcase(o)
+        else:
+            testsuite_basic.handle_testcase(o)
+
+    testsuite_basic.check_all_cases_parsed()
+    testsuite_heap.check_all_cases_parsed()
 
     xml.update_statistics()
     xml.write(builddir / "test-results.xml", pretty=True)
@@ -148,7 +177,8 @@ def create_junit_xml(builddir, name):
     if not test_output.exists():
         boot_cheribsd.failure("Failed to create the JUnit XML file")
         return False
-    boot_cheribsd.run_host_command(["head", "-n2", str(test_output)])
+    # boot_cheribsd.run_host_command(["head", "-n2", str(test_output)])
+    boot_cheribsd.run_host_command(["grep", "<testsuite", str(test_output)])
     return True
 
 
