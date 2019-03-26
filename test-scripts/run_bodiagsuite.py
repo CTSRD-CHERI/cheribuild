@@ -62,12 +62,13 @@ def _create_junit_xml(builddir: Path, name):
 
     expected_test_names = []
     # There are 291 tests, we want to check that all of them were run
-    for i in range(291, 0, -1):
-        prefix = "basic-{:0>5}".format(i)
-        expected_test_names.append(prefix + "-min")
-        expected_test_names.append(prefix + "-med")
-        expected_test_names.append(prefix + "-large")
-        expected_test_names.append(prefix + "-ok")
+    for base_prefix in ("basic", "basic-heap"):
+        for i in range(291, 0, -1):
+            prefix = "{}-{:0>5}".format(base_prefix, i)
+            expected_test_names.append(prefix + "-min")
+            expected_test_names.append(prefix + "-med")
+            expected_test_names.append(prefix + "-large")
+            expected_test_names.append(prefix + "-ok")
 
     for fullpath in sorted_files:
         o = Path(fullpath)
@@ -88,10 +89,14 @@ def _create_junit_xml(builddir: Path, name):
         try:
             exit_code = int(exit_code_str)
         except ValueError:
-            print("ERROR: Malformed output for test: ", o, file=sys.stderr)
-            testcase.result = junitparser.Error(message="INVALID OUTPUT FILE CONTENTS: " + o.name)
-            testcase.system_err = exit_code_str
-            error_suite.add_testcase(testcase)
+            if exit_code_str == "skip\n" and stem.endswith("00183-large"):
+                testcase.result = junitparser.Skipped(message="Skipped since the test needs too big cwd")
+                large_suite.add_testcase(testcase)
+            else:
+                print("ERROR: Malformed output for test: ", o, file=sys.stderr)
+                testcase.result = junitparser.Error(message="INVALID OUTPUT FILE CONTENTS: " + o.name)
+                testcase.system_err = exit_code_str
+                error_suite.add_testcase(testcase)
             continue
 
         signaled = os.WIFSIGNALED(exit_code)
@@ -101,7 +106,8 @@ def _create_junit_xml(builddir: Path, name):
         # -ok testcases are expected to run succesfully -> exit code zero
         if stem.endswith("-ok"):
             if not exited or os.WEXITSTATUS(exit_code) != 0:
-                testcase.result = junitparser.Failure(message="Expected exit code 0 but got " + exit_code_str)
+                # This is not just a failure, it means something is seriously wrong if the good case fails
+                testcase.result = junitparser.Error(message="Expected exit code 0 but got " + exit_code_str)
                 testcase.system_err = exit_code_str
             ok_suite.add_testcase(testcase)
         else:
