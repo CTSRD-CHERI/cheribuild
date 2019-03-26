@@ -78,6 +78,6 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
             self.cleanDirectory(self.buildDir / "run", keepRoot=False)
         testsuite_prefix = self.buildDirSuffix(self.config, self.get_crosscompile_target(self.config), self.use_asan)[1:]
         testsuite_prefix = testsuite_prefix.replace("-build", "")
-        extra_args = ["--bmake-path", bmake] if self.compiling_for_host() else []
+        extra_args = ["--bmake-path", bmake, "--jobs", str(self.config.makeJobs)] if self.compiling_for_host() else []
         self.run_cheribsd_test_script("run_bodiagsuite.py", "--junit-testsuite-name", testsuite_prefix, *extra_args,
                                       mount_sourcedir=False, mount_builddir=True)

@@ -213,7 +213,7 @@ if __name__ == '__main__':
         if args.test_native and not args.junit_xml_only:
             cmd = [args.bmake_path, "-r", "-f", args.build_dir + "/Makefile.bsd-run", "all"]
             if args.jobs > 1:
-                cmd += ["-j", args.jobs]
+                cmd += ["-j", str(args.jobs)]
             boot_cheribsd.run_host_command(cmd, cwd=args.build_dir)
         if not create_junit_xml(Path(args.build_dir), args.junit_testsuite_name):
             sys.exit("Failed to create JUnit xml")
