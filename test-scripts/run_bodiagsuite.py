@@ -197,6 +197,8 @@ def run_bodiagsuite(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
         # restore old behaviour
         boot_cheribsd.checked_run_cheribsd_command(qemu, "sysctl machdep.log_cheri_exceptions=1")
 
+    if not create_junit_xml(Path(args.build_dir), args.junit_testsuite_name):
+        return False
     return True
 
 
@@ -205,9 +207,6 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--bmake-path", default="make")
     parser.add_argument("--junit-testsuite-name", default="tests")
     parser.add_argument("--jobs", "-j", help="make jobs", type=int, default=1)
-
-
-# TODO: allow running native as well
 
 
 if __name__ == '__main__':
