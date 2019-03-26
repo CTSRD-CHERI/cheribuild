@@ -110,6 +110,7 @@ class BODiagTestsuite(object):
         if stem.endswith("-ok"):
             if not exited or os.WEXITSTATUS(exit_code) != 0:
                 # This is not just a failure, it means something is seriously wrong if the good case fails
+                self.error("One of the good test cases failed: ", o)
                 testcase.result = junitparser.Error(message="Expected exit code 0 but got " + exit_code_str)
                 testcase.system_err = exit_code_str
             self.ok_suite.add_testcase(testcase)
