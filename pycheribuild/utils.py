@@ -287,7 +287,7 @@ class CompilerInfo(object):
             if not self.path.exists() and _cheriConfig.pretend:
                 return Path("/unknown/resource/dir")  # avoid failing in jenkins
             # pretend to compile an existing source file and capture the -resource-dir output
-            cc1_cmd = runCmd(self.path, "-###", "-xc", "-c", "/usr/include/unistd.h",
+            cc1_cmd = runCmd(self.path, "-###", "-xc", "-c", "/dev/null",
                              captureError=True, printVerboseOnly=True, runInPretendMode=True)
             resource_dir_pat = re.compile(b'"-cc1".+"-resource-dir" "([^"]+)"')
             self._resource_dir = Path(resource_dir_pat.search(cc1_cmd.stderr).group(1).decode("utf-8"))
