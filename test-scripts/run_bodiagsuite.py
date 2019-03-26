@@ -167,7 +167,8 @@ def _create_junit_xml(builddir: Path, name):
     testsuite_heap.check_all_cases_parsed()
 
     xml.update_statistics()
-    xml.write(builddir / "test-results.xml", pretty=True)
+    # Older version of python only support str and not Path
+    xml.write(str(builddir / "test-results.xml"), pretty=True)
 
 
 
