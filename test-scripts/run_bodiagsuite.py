@@ -188,6 +188,8 @@ def run_bodiagsuite(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
     boot_cheribsd.info("Running BODiagSuite")
 
     if not args.junit_xml_only:
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "rm -rf /build/run")
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "cd /build && mkdir -p run")
         boot_cheribsd.checked_run_cheribsd_command(qemu, "{} -r -f /build/Makefile.bsd-run all".format(args.bmake_path),
                                                    timeout=60*60, ignore_cheri_trap=True)
 
