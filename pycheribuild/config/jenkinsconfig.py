@@ -232,6 +232,9 @@ class JenkinsConfig(CheriConfig):
         else:
             fatalError("CPU is not set to a valid value:", self.cpu)
 
+        if IS_MAC and self.crossCompileTarget == CrossCompileTarget.NATIVE:
+            self.without_sdk = True  # cannot build macos binaries with lld
+
         if self.force_update:
             self.skipUpdate = False
             self.skipClone = False

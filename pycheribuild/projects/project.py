@@ -604,14 +604,14 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if not script.exists():
             self.fatal("Could not find test script", script)
         qemu_path = BuildQEMU.qemu_binary(self)
-        if not qemu_path.exists():
-            self.fatal("QEMU binary", qemu_path, "doesn't exist")
         if test_native:
             cmd = [script, "--test-native"] + list(script_args)
         else:
             cmd = [script, "--kernel", kernel_path,
                    "--qemu-cmd", qemu_path,
                    "--ssh-key", self.config.test_ssh_key] + list(script_args)
+            if not qemu_path.exists():
+                self.fatal("QEMU binary", qemu_path, "doesn't exist")
         if self.buildDir and mount_builddir:
             cmd.extend(["--build-dir", self.buildDir])
         if self.sourceDir and mount_sourcedir:
