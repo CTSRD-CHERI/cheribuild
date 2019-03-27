@@ -76,29 +76,30 @@ class BODiagTestsuite(object):
     def handle_testcase(self, o: Path):
         stem = o.stem
         assert stem.startswith(self.test_prefix), stem
-        exit_code_str = o.read_text()
+        exit_code_str = o.read_text().rstrip()
         testcase = junitparser.TestCase(name=stem)
         try:
             index = self.expected_test_names.index(stem)
         except ValueError:
             self.error("Found output for unknown test: ", o)
             testcase.result = junitparser.Error(message="UNEXPECTED TEST NAME: " + o.name)
-            testcase.system_err = exit_code_str
+            testcase.system_out = exit_code_str
             self.error_suite.add_testcase(testcase)
             return
         # test has been handled -> remove from expected list
         del self.expected_test_names[index]
-
+        if o.with_suffix(".stderr").exists():
+            testcase.system_err = o.with_suffix(".stderr").read_text().rstrip()
         try:
             exit_code = int(exit_code_str)
         except ValueError:
-            if exit_code_str == "skip\n" and stem.endswith("00183-large"):
+            if exit_code_str == "skip" and stem.endswith("00183-large"):
                 testcase.result = junitparser.Skipped(message="Skipped since the test needs too big cwd")
                 self.large_suite.add_testcase(testcase)
             else:
                 self.error("Malformed output for test: ", o)
                 testcase.result = junitparser.Error(message="INVALID OUTPUT FILE CONTENTS: " + o.name)
-                testcase.system_err = exit_code_str
+                testcase.system_out = exit_code_str
                 self.error_suite.add_testcase(testcase)
             return
 
@@ -112,7 +113,6 @@ class BODiagTestsuite(object):
                 # This is not just a failure, it means something is seriously wrong if the good case fails
                 self.error("One of the good test cases failed: ", o)
                 testcase.result = junitparser.Error(message="Expected exit code 0 but got " + exit_code_str)
-                testcase.system_err = exit_code_str
             self.ok_suite.add_testcase(testcase)
         else:
             # all others should crash
@@ -130,8 +130,7 @@ class BODiagTestsuite(object):
             if not signaled:
                 # test should fail with a signal: (162 for CHERI)
                 # TODO: for CHERI check that it was signal 34?
-                testcase.result = junitparser.Failure(message="Expected test to be killed by a SIGNAL but got exit code" + exit_code_str)
-                testcase.system_err = exit_code_str
+                testcase.result = junitparser.Failure(message="Expected test to be killed by a SIGNAL but got exit code " + exit_code_str)
             suite.add_testcase(testcase)
 
 
