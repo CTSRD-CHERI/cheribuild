@@ -39,7 +39,7 @@ from ..utils import *
 class BuildGnuBinutils(AutotoolsProject):
     target = "gnu-binutils"
     projectName = "gnu-binutils"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/binutils.git")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/binutils.git", force_branch=True)
     gitBranch = "cheribsd"  # the default branch "cheri" won't work for cross-compiling
     defaultInstallDir = AutotoolsProject._installToSDK
 
@@ -96,17 +96,6 @@ class BuildGnuBinutils(AutotoolsProject):
         if info.compiler == "clang" or (info.compiler == "gcc" and info.version >= (4, 6, 0)):
             cflags += " -Wno-unused"
         self.configureEnvironment["CFLAGS"] = cflags
-
-    def update(self):
-        super().update()
-        # Make sure we have the version that can compile FreeBSD binaries
-        status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
-                        captureOutput=True, printVerboseOnly=True, cwd=self.sourceDir)
-        if not status.stdout.startswith(b"## cheribsd"):
-            branches = runCmd("git", "branch", "--list", captureOutput=True, printVerboseOnly=True).stdout
-            if b" cheribsd" not in branches:
-                runCmd("git", "checkout", "-b", "cheribsd", "--track", "origin/cheribsd")
-        runCmd("git", "checkout", "cheribsd", cwd=self.sourceDir)
 
     def compile(self, **kwargs):
         self.runMake("all-ld", logfileName="build")

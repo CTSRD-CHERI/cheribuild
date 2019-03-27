@@ -58,7 +58,8 @@ class TemporarilyRemoveProgramsFromSdk(object):
 class BuildGDB(CrossCompileAutotoolsProject):
     rootfs_path = "/usr/local"  # Always install gdb as /usr/local/bin/gdb
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
-    repository = GitRepository("https://github.com/CTSRD-CHERI/gdb.git", old_urls=[b'https://github.com/bsdjhb/gdb.git'])
+    repository = GitRepository("https://github.com/CTSRD-CHERI/gdb.git", old_urls=[b'https://github.com/bsdjhb/gdb.git'],
+                               force_branch=True)
     gitBranch = "mips_cheri-8.2"
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
@@ -149,21 +150,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
         # TODO: do I need these:
         """(cd $obj; env INSTALL="/usr/bin/install -c "  INSTALL_DATA="install   -m 0644"  INSTALL_LIB="install    -m 444"  INSTALL_PROGRAM="install    -m 555"  INSTALL_SCRIPT="install   -m 555"   PYTHON="${PYTHON}" SHELL=/bin/sh CONFIG_SHELL=/bin/sh CONFIG_SITE=/usr/ports/Templates/config.site ../configure ${CONFIGURE_ARGS} )"""
-
-    def update(self):
-        super().update()
-        if self.sourceDir.exists():
-            # TODO: move this to Project so it can also be used for other targets
-            status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
-                            captureOutput=True, printVerboseOnly=True, cwd=self.sourceDir, runInPretendMode=True)
-            if status.stdout.startswith(b"## ") and not status.stdout.startswith(b"## " + self.gitBranch.encode("utf-8") + b"..."):
-                current_branch = status.stdout[3:status.stdout.find(b"...")]
-                warningMessage("You are trying to build the ", current_branch.decode("utf-8"),
-                               " branch. You should be using", self.gitBranch)
-                if self.queryYesNo("Would you like to change to the " + self.gitBranch + " branch?", forceResult=False):
-                    runCmd("git", "checkout", self.gitBranch)
-                elif not self.queryYesNo("Are you sure you want to continue?", forceResult=False):
-                    self.fatal("Wrong branch!")
 
     @property
     def CC(self):

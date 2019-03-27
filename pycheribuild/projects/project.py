@@ -881,9 +881,10 @@ class ReuseOtherProjectRepository(SourceRepository):
 
 
 class GitRepository(SourceRepository):
-    def __init__(self, url, *, old_urls: list=None):
+    def __init__(self, url, *, old_urls: list=None, force_branch: bool=False):
         self.url = url
         self.old_urls = old_urls
+        self.force_branch = force_branch
 
     def ensureCloned(self, current_project: "Project", *, srcDir: Path, initialBranch=None, skipSubmodules=False):
         # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
@@ -964,6 +965,20 @@ class GitRepository(SourceRepository):
             runCmd("git", "stash", "pop", cwd=srcDir, printVerboseOnly=True)
         if revision:
             runCmd("git", "checkout", revision, cwd=srcDir, printVerboseOnly=True)
+
+        if srcDir.exists() and self.force_branch:
+            assert initialBranch, "InitialBranch must be set if force_branch is true!"
+            # TODO: move this to Project so it can also be used for other targets
+            status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
+                            captureOutput=True, printVerboseOnly=True, cwd=srcDir, runInPretendMode=True)
+            if status.stdout.startswith(b"## ") and not status.stdout.startswith(b"## " + initialBranch.encode("utf-8") + b"..."):
+                current_branch = status.stdout[3:status.stdout.find(b"...")].strip()
+                warningMessage("You are trying to build the", current_branch.decode("utf-8"),
+                               "branch. You should be using", initialBranch)
+                if current_project.queryYesNo("Would you like to change to the " + initialBranch + " branch?", forceResult=False):
+                    runCmd("git", "checkout", initialBranch, cwd=srcDir)
+                elif not current_project.queryYesNo("Are you sure you want to continue?", forceResult=False):
+                    current_project.fatal("Wrong branch:", current_branch.decode("utf-8"))
 
 
 class Project(SimpleProject):
