@@ -881,8 +881,9 @@ class ReuseOtherProjectRepository(SourceRepository):
 
 
 class GitRepository(SourceRepository):
-    def __init__(self, url):
+    def __init__(self, url, *, old_urls: list=None):
         self.url = url
+        self.old_urls = old_urls
 
     def ensureCloned(self, current_project: "Project", *, srcDir: Path, initialBranch=None, skipSubmodules=False):
         # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
@@ -914,6 +915,17 @@ class GitRepository(SourceRepository):
         self.ensureCloned(current_project, srcDir=srcDir, initialBranch=initialBranch, skipSubmodules=skipSubmodules)
         if current_project.skipUpdate:
             return
+        # handle repositories that have moved
+        if srcDir.exists() and self.old_urls:
+            # Update from the old url:
+            for old_url in self.old_urls:
+                assert isinstance(old_url, bytes)
+                remote_url = runCmd("git", "remote", "get-url", "origin", captureOutput=True, cwd=srcDir).stdout.strip()
+                if remote_url == old_url:
+                    warningMessage(current_project.projectName, "still points to old repository", remote_url)
+                    if self.queryYesNo("Update to correct URL?"):
+                        runCmd("git", "remote", "set-url", "origin", self.url, runInPretendMode=True, cwd=srcDir)
+
         # make sure we run git stash if we discover any local changes
         hasChanges = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
                                 captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1

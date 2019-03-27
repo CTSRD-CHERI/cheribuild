@@ -58,7 +58,7 @@ class TemporarilyRemoveProgramsFromSdk(object):
 class BuildGDB(CrossCompileAutotoolsProject):
     rootfs_path = "/usr/local"  # Always install gdb as /usr/local/bin/gdb
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
-    repository = GitRepository("https://github.com/CTSRD-CHERI/gdb.git")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/gdb.git", old_urls=[b'https://github.com/bsdjhb/gdb.git'])
     gitBranch = "mips_cheri-8.2"
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
@@ -151,14 +151,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
         """(cd $obj; env INSTALL="/usr/bin/install -c "  INSTALL_DATA="install   -m 0644"  INSTALL_LIB="install    -m 444"  INSTALL_PROGRAM="install    -m 555"  INSTALL_SCRIPT="install   -m 555"   PYTHON="${PYTHON}" SHELL=/bin/sh CONFIG_SHELL=/bin/sh CONFIG_SITE=/usr/ports/Templates/config.site ../configure ${CONFIGURE_ARGS} )"""
 
     def update(self):
-        if self.sourceDir.exists():
-            # Update from the old url:
-            remote_url = runCmd("git", "remote", "get-url", "origin", captureOutput=True, cwd=self.sourceDir).stdout.strip()
-            if remote_url == b'https://github.com/bsdjhb/gdb.git':
-                warningMessage("GDB still points to old repository", remote_url)
-                if self.queryYesNo("Update to correct URL?"):
-                    runCmd("git", "remote", "set-url", "origin", "https://github.com/CTSRD-CHERI/gdb.git",
-                           runInPretendMode=True, cwd=self.sourceDir)
         super().update()
         if self.sourceDir.exists():
             # TODO: move this to Project so it can also be used for other targets
