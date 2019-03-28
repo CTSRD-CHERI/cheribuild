@@ -31,6 +31,7 @@
 import os
 import inspect
 import pprint
+import re
 import shutil
 from builtins import issubclass
 from enum import Enum
@@ -558,7 +559,9 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
                 strval = str(value)
             assert "@" + key + "@" in configuredTemplate, key
             configuredTemplate = configuredTemplate.replace("@" + key + "@", strval)
-        assert "@" not in configuredTemplate, configuredTemplate
+        # work around jenkins paths that might contain @[0-9]+ in the path:
+        configured_jenkins_workaround = re.sub(r"@\d+", "", configuredTemplate)
+        assert "@" not in configured_jenkins_workaround, configured_jenkins_workaround
         self.writeFile(contents=configuredTemplate, file=self.toolchainFile, overwrite=True)
 
     def configure(self, **kwargs):
