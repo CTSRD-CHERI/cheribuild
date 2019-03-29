@@ -43,13 +43,21 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
     default_build_type = BuildType.DEBUG
     default_use_asan = True
 
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        cls.use_valgrind = cls.addBoolOption("use-valgrind", help="Run tests using valgrind (native only)",
+                                             only_add_for_targets=[CrossCompileTarget.NATIVE])
+
     def __init__(self, config: CheriConfig, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
         if getCompilerInfo(self.CC).is_clang:
             self.common_warning_flags.append("-Wno-unused-command-line-argument")
-            self.common_warning_flags.append("-Wno-array-bounds") # lots of statically out of bounds cases
 
     def process(self):
+        if self.use_asan and self.use_valgrind:
+            # ASAN is incompatible with valgrind
+            self.fatal("Cannot use ASAN and valgrind at the same time!")
         # FIXME: add option to disable FORTIFY_SOURCE
         if self.cross_build_type != BuildType.DEBUG:
             self.warning("BODiagsuite contains undefined behaviour that might be optimized away unless you compile"
@@ -80,5 +88,8 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
         testsuite_prefix = self.buildDirSuffix(self.config, self.get_crosscompile_target(self.config), self.use_asan)[1:]
         testsuite_prefix = testsuite_prefix.replace("-build", "")
         extra_args = ["--bmake-path", bmake, "--jobs", str(self.config.makeJobs)] if self.compiling_for_host() else []
+        if self.use_valgrind:
+            assert self.compiling_for_host()
+            extra_args.append("--use-valgrind")
         self.run_cheribsd_test_script("run_bodiagsuite.py", "--junit-testsuite-name", testsuite_prefix, *extra_args,
                                       mount_sourcedir=False, mount_builddir=True)

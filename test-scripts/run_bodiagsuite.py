@@ -185,6 +185,7 @@ def create_junit_xml(builddir, name):
 
 def run_bodiagsuite(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running BODiagSuite")
+    assert not args.use_valgrind, "Not support for CheriBSD"
 
     if not args.junit_xml_only:
         boot_cheribsd.checked_run_cheribsd_command(qemu, "rm -rf /build/run")
@@ -205,6 +206,7 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--junit-xml-only", action="store_true")
     parser.add_argument("--bmake-path", default="make")
     parser.add_argument("--junit-testsuite-name", default="tests")
+    parser.add_argument("--use-valgrind", action="store_true")
     parser.add_argument("--jobs", "-j", help="make jobs", type=int, default=1)
 
 
@@ -219,6 +221,8 @@ if __name__ == '__main__':
             cmd = [args.bmake_path, "-r", "-f", args.build_dir + "/Makefile.bsd-run", "all"]
             if args.jobs > 1:
                 cmd += ["-j", str(args.jobs)]
+            if args.use_valgrind:
+                cmd.append("-DUSE_VALGRIND")
             boot_cheribsd.run_host_command(cmd, cwd=args.build_dir)
         if not create_junit_xml(Path(args.build_dir), args.junit_testsuite_name):
             sys.exit("Failed to create JUnit xml")
