@@ -48,11 +48,18 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
         super().setupConfigOptions(**kwargs)
         cls.use_valgrind = cls.addBoolOption("use-valgrind", help="Run tests using valgrind (native only)",
                                              only_add_for_targets=[CrossCompileTarget.NATIVE])
+        cls.use_stack_protector = cls.addBoolOption("use-stack-protector", help="Compile tests with stack-protector (non-CHERI only)")
+        cls.use_fortify_source = cls.addBoolOption("use-fortify-source", help="Compile tests with _DFORTIFY_SOURCE=2 (no effect on FreeBSD)")
+
 
     def __init__(self, config: CheriConfig, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
         if getCompilerInfo(self.CC).is_clang:
             self.common_warning_flags.append("-Wno-unused-command-line-argument")
+        if self.use_stack_protector:
+            self.add_cmake_options(WITH_STACK_PROTECTOR=True)
+        if self.use_fortify_source:
+            self.add_cmake_options(WITH_FORTIFY_SOURCE=True)
 
     def process(self):
         if self.use_asan and self.use_valgrind:
