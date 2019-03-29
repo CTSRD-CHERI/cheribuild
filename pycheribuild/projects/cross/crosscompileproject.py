@@ -175,7 +175,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
         assert self.get_crosscompile_target(config) == target_arch
         self.compiler_dir = self.config.sdkBinDir
         # Use the compiler from the build directory for native builds to get stddef.h (which will be deleted)
-        if self._crossCompileTarget == CrossCompileTarget.NATIVE:
+        if self.compiling_for_host():
             llvm_build_dir = BuildCheriLLVM.get_instance(self, config).buildDir
             if (llvm_build_dir / "bin/clang").exists():
                 self.compiler_dir = llvm_build_dir / "bin"

@@ -90,6 +90,9 @@ class MultiArchBaseMixin(object):
     def compiling_for_host(self):
         return self._crossCompileTarget == CrossCompileTarget.NATIVE
 
+    def compiling_for_riscv(self):
+        return self._crossCompileTarget == CrossCompileTarget.RISCV
+
     @property
     def display_name(self):
         return self.projectName + " (" + self._crossCompileTarget.value + ")"

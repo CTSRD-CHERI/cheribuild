@@ -46,10 +46,12 @@ from ...utils import *
 
 # noinspection PyUnusedLocal
 def defaultKernelConfig(config: CheriConfig, project: "BuildCHERIBSD"):
-    if project._crossCompileTarget == CrossCompileTarget.NATIVE:
+    assert isinstance(project, BuildCHERIBSD)
+    if project.compiling_for_host():
         return "GENERIC"
-    elif project._crossCompileTarget == CrossCompileTarget.MIPS:
+    elif project.compiling_for_mips():
         return "MALTA64"
+    assert project.compiling_for_cheri()
     # make sure we use a kernel with 128 bit CPU features selected
     # or a purecap kernel is selected
     kernconf_name = "CHERI{bits}{pure}_MALTA64{mfs}"
@@ -59,48 +61,54 @@ def defaultKernelConfig(config: CheriConfig, project: "BuildCHERIBSD"):
     return kernconf_name.format(bits=cheri_bits, pure=cheri_pure, mfs=mfs_root_img)
 
 
-def freebsd_install_dir(config: CheriConfig, project: "typing.Type[BuildFreeBSD]"):
-    if project._crossCompileTarget == CrossCompileTarget.MIPS:
+def freebsd_install_dir(config: CheriConfig, project: "BuildFreeBSD"):
+    assert isinstance(project, BuildFreeBSD)
+    target = project.get_crosscompile_target(config)
+    if target == CrossCompileTarget.MIPS:
         return config.outputRoot / "freebsd-mips"
-    elif project._crossCompileTarget == CrossCompileTarget.NATIVE:
+    elif target == CrossCompileTarget.NATIVE:
         return config.outputRoot / "freebsd-x86"
-    elif project._crossCompileTarget == CrossCompileTarget.RISCV:
+    elif target == CrossCompileTarget.RISCV:
         return config.outputRoot / "freebsd-riscv"
-    elif project._crossCompileTarget == CrossCompileTarget.I386:
+    elif target == CrossCompileTarget.I386:
         return config.outputRoot / "freebsd-i386"
     else:
         assert False, "should not be reached"
 
 
 # noinspection PyProtectedMember
-def cheribsd_install_dir(config: CheriConfig, project: "typing.Type[BuildCHERIBSD]"):
-    if project._crossCompileTarget == CrossCompileTarget.CHERI:
+def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
+    assert isinstance(project, BuildCHERIBSD)
+    if project.compiling_for_cheri():
         return config.outputRoot / ("rootfs" + config.cheriBitsStr)
-    elif project._crossCompileTarget == CrossCompileTarget.MIPS:
+    elif project.compiling_for_mips():
         return config.outputRoot / "rootfs-mips"
     else:
-        assert project._crossCompileTarget == CrossCompileTarget.NATIVE
+        assert project.compiling_for_host()
         return config.outputRoot / "rootfs-x86"
 
 
-def cheribsd_purecap_install_dir(config: CheriConfig, project: "typing.Type[BuildCHERIBSD]"):
-    assert project._crossCompileTarget == CrossCompileTarget.CHERI
+def cheribsd_purecap_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
+    assert project.compiling_for_cheri()
+    assert isinstance(project, BuildCHERIBSD)
     return config.outputRoot / ("rootfs-purecap" + config.cheriBitsStr)
 
 
-def cheribsd_minimal_install_dir(config: CheriConfig, project: "typing.Type[BuildCHERIBSD]"):
-    if project._crossCompileTarget == CrossCompileTarget.CHERI:
+def cheribsd_minimal_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
+    assert isinstance(project, BuildCHERIBSD)
+    if project.compiling_for_cheri():
         return config.outputRoot / ("rootfs-minimal" + config.cheriBitsStr)
-    elif project._crossCompileTarget == CrossCompileTarget.MIPS:
+    elif project.compiling_for_mips():
         return config.outputRoot / "rootfs-minimal-mips"
     else:
-        assert project._crossCompileTarget == CrossCompileTarget.NATIVE
+        assert project.compiling_for_host()
         return config.outputRoot / "rootfs-minimal-x86"
 
 
 # noinspection PyProtectedMember
-def cheribsd_build_dir(config: CheriConfig, project: "BuildFreeBSD"):
-    if project._crossCompileTarget == CrossCompileTarget.CHERI:
+def cheribsd_build_dir(config: CheriConfig, project: "BuildCHERIBSD"):
+    assert isinstance(project, BuildCHERIBSD)
+    if project.compiling_for_cheri():
         # TODO: change this to be the default build dir name
         return config.buildRoot / ("cheribsd-obj-" + config.cheriBitsStr)
     else:
@@ -311,13 +319,13 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
     def __init__(self, config: CheriConfig, archBuildFlags: dict = None):
         super().__init__(config)
         if archBuildFlags is None:
-            if self._crossCompileTarget == CrossCompileTarget.MIPS:
+            if self.compiling_for_mips():
                 # The following is broken: (https://github.com/CTSRD-CHERI/cheribsd/issues/102)
                 # "CPUTYPE=mips64",  # mipsfpu for hardware float
                 archBuildFlags = {"TARGET": "mips", "TARGET_ARCH": config.mips_float_abi.freebsd_target_arch()}
-            elif self._crossCompileTarget == CrossCompileTarget.NATIVE:
+            elif self.compiling_for_host():
                 archBuildFlags = {"TARGET": "amd64", "TARGET_ARCH": "amd64"}
-            elif self._crossCompileTarget == CrossCompileTarget.RISCV:
+            elif self.compiling_for_riscv():
                 archBuildFlags = {"TARGET": "riscv", "TARGET_ARCH": "riscv64"}
             elif self._crossCompileTarget == CrossCompileTarget.I386:
                 archBuildFlags = {"TARGET": "i386", "TARGET_ARCH": "i386"}
@@ -328,7 +336,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
                 self.kernelConfig = "MALTA64"
             elif self.compiling_for_host():
                 self.kernelConfig = "GENERIC"
-            elif self._crossCompileTarget == CrossCompileTarget.RISCV:
+            elif self.compiling_for_riscv():
                 self.kernelConfig = "GENERIC"  # TODO: what is the correct config
             elif self._crossCompileTarget == CrossCompileTarget.I386:
                 self.kernelConfig = "GENERIC"  # TODO: what is the correct config
@@ -387,7 +395,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
     def _setup_cross_toolchain_config(self):
         if not self.use_external_toolchain:
             # Building FreeBSD for RISC-V requires an external GCC:
-            if self._crossCompileTarget == CrossCompileTarget.RISCV:
+            if self.compiling_for_riscv():
                 self.make_args.set(CROSS_TOOLCHAIN="riscv64-gcc")
             return
         self.cross_toolchain_config.set_with_options(
@@ -404,7 +412,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
 
         # self.cross_toolchain_config.add(CROSS_COMPILER=Falses) # This sets too much, we want elftoolchain and binutils
         cross_prefix = str(self.crossToolchainRoot / "bin") + "/"  # needs to end with / for concatenation
-        if self._crossCompileTarget == CrossCompileTarget.NATIVE:
+        if self.compiling_for_host():
             # target_flags = " -fuse-ld=lld -Wno-error=unused-command-line-argument -Wno-unused-command-line-argument"
             target_flags = ""
             self.useExternalToolchainForWorld = True
@@ -413,7 +421,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             self.linker_for_world = "lld"
             # DONT SET XAS!!! It prevents bfd from being built
             # self.cross_toolchain_config.set(XAS="/usr/bin/as")
-        elif self._crossCompileTarget == CrossCompileTarget.MIPS or self._crossCompileTarget == CrossCompileTarget.CHERI:
+        elif self.compiling_for_mips() or self.compiling_for_cheri():
             target_flags = " -integrated-as -fcolor-diagnostics -mcpu=mips4"
             # for some reason this is not inferred....
             # if self.crossbuild:
@@ -482,7 +490,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
                 self.fatal("Requested build of kernel with external toolchain, but", self.externalToolchainCompiler,
                            "doesn't exist!")
             # We can't use LLD for the kernel yet but there is a flag to experiment with it
-            if self._crossCompileTarget == CrossCompileTarget.NATIVE:
+            if self.compiling_for_host():
                 cross_prefix = str(self.crossToolchainRoot / "bin") + "/"
             else:
                 cross_prefix = str(self.crossToolchainRoot / "bin/mips64-unknown-freebsd-")
@@ -758,7 +766,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
         # We don't want separate .debug for now
         self.make_args.set_with_options(DEBUG_FILES=False)
 
-        if self._crossCompileTarget == CrossCompileTarget.NATIVE:
+        if self.compiling_for_host():
             cross_binutils_prefix = str(self.config.sdkBinDir) + "/"
             self.make_args.set_with_options(BHYVE=False,
                                             # seems to be missing some include paths which appears to work on freebsd
@@ -797,7 +805,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             else:
                 args.set(BUILDENV_SHELL="/bin/sh")
             buildenv_target = "buildenv"
-            if self._crossCompileTarget == CrossCompileTarget.CHERI and self.config.libcheri_buildenv:
+            if self.compiling_for_cheri() and self.config.libcheri_buildenv:
                 buildenv_target = "libcheribuildenv"
             runCmd([self.make_args.command] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
                    cwd=self.sourceDir)
@@ -1027,7 +1035,7 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     @property
     def mipsOnly(self) -> bool: # Compat
-        return self._crossCompileTarget == CrossCompileTarget.MIPS
+        return self.compiling_for_mips()
 
     def get_corresponding_sysroot(self):
         if not self.is_exact_instance(BuildCHERIBSD):
@@ -1038,7 +1046,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         self.installAsRoot = os.getuid() == 0
         self.cheriCXX = self.cheriCC.parent / "clang++"
         archBuildFlags = None
-        if self._crossCompileTarget == CrossCompileTarget.CHERI:
+        if self.compiling_for_cheri():
             archBuildFlags = {
                 "CHERI": config.cheriBitsStr,
                 "CHERI_CC": str(self.cheriCC),
@@ -1051,7 +1059,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         # TODO: shouldwe  keep building a cheri kernel even with a mips userspace?
         # self.kernelConfig = "MALTA64"
         super().__init__(config, archBuildFlags=archBuildFlags)
-        if self._crossCompileTarget == CrossCompileTarget.CHERI:
+        if self.compiling_for_cheri():
             if self.config.cheri_cap_table_abi:
                 self.cross_toolchain_config.set(CHERI_USE_CAP_TABLE=self.config.cheri_cap_table_abi)
             self.make_args.set_with_options(CHERI_SHARED_PROG=not self.build_static)
@@ -1059,7 +1067,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         self.extra_kernels = []
         self.extra_kernels_with_mfs = []
         if self._crossCompileTarget != CrossCompileTarget.NATIVE and self.buildFpgaKernels:
-            if self._crossCompileTarget == CrossCompileTarget.MIPS:
+            if self.compiling_for_mips():
                 prefix = "BERI_DE4_"
             elif self.config.cheriBits == 128:
                 prefix = "CHERI128_DE4_"

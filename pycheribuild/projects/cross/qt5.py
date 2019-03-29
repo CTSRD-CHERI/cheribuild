@@ -380,7 +380,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             self.LDFLAGS.extend(["-lpthread"]) # Needed for DumpRenderTree
 
             # Pass CHERI capability size so we can pass this to the offlineasm ruby scripts
-            if self._crossCompileTarget == CrossCompileTarget.CHERI:
+            if self.compiling_for_cheri():
                 if self.config.cheriBits == 128:
                     self.add_cmake_options(CHERI_CAPABILITY_SIZE=128)
                 elif self.config.cheriBits == 256:
