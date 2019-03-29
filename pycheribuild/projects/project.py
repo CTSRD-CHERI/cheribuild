@@ -269,7 +269,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def addConfigOption(cls, name: str, default: "typing.Union[Type_T, typing.Callable[[], Type_T]]" = None,
                         kind: "typing.Union[typing.Type[str], typing.Callable[[str], Type_T]]" = str, *,
                         showHelp=False, shortname=None, _no_fallback_config_name: bool=False,
-                        fallback_config_name: str=None, **kwargs) -> "Type_T":
+                        only_add_for_targets: list = None, fallback_config_name: str=None, **kwargs) -> "Type_T":
+        if only_add_for_targets is not None:
+            # Some config options only apply to certain targets -> add them to those targets and the generic one
+            target = getattr(cls, "_crossCompileTarget")
+            if target is not None and target not in only_add_for_targets:
+                return default
         configOptionKey = cls.target
         # if cls.target != cls.projectName.lower():
         #    self.fatal("Target name does not match project name:", cls.target, "vs", cls.projectName.lower())
@@ -314,13 +319,15 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                            _fallback_name=fallback_config_name, **kwargs)
 
     @classmethod
-    def addBoolOption(cls, name: str, *, shortname=None, default=False, **kwargs):
+    def addBoolOption(cls, name: str, *, shortname=None, default=False, only_add_for_targets: list=None, **kwargs):
         # noinspection PyTypeChecker
-        return cls.addConfigOption(name, default=default, kind=bool, shortname=shortname, action="store_true", **kwargs)
+        return cls.addConfigOption(name, default=default, kind=bool, shortname=shortname, action="store_true",
+                                   only_add_for_targets=only_add_for_targets, **kwargs)
 
     @classmethod
-    def addPathOption(cls, name: str, *, shortname=None, **kwargs):
-        return cls.addConfigOption(name, kind=Path, shortname=shortname, **kwargs)
+    def addPathOption(cls, name: str, *, shortname=None, only_add_for_targets: list=None, **kwargs):
+        return cls.addConfigOption(name, kind=Path, shortname=shortname, only_add_for_targets=only_add_for_targets,
+                                   **kwargs)
 
     __configOptionsSet = dict()  # typing.Dict[Type, bool]
 

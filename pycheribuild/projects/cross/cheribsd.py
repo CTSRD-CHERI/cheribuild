@@ -1332,14 +1332,10 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
         cls.remotePath = cls.addConfigOption("remote-sdk-path", showHelp=True, metavar="PATH", help="The path to "
                                              "the CHERI SDK on the remote FreeBSD machine (e.g. "
                                              "vica:~foo/cheri/output/sdk)")
-        if cls._crossCompileTarget == CrossCompileTarget.MIPS or cls._crossCompileTarget is None:
-            cls.use_cheri_sysroot_for_mips = cls.addBoolOption("use-cheri-sysroot-for-mips", default=False,
-                                                               help="Create the MIPS sysroot using the files from "
-                                                                    "hybrid CHERI libraries (note: binaries build from "
-                                                                    "this sysroot will only work on the matching CHERI "
-                                                                    "128/256 architecture)")
-        else:
-            cls.use_cheri_sysroot_for_mips = False
+        cls.use_cheri_sysroot_for_mips = cls.addBoolOption("use-cheri-sysroot-for-mips", default=False,
+            help="Create the MIPS sysroot using the files from hybrid CHERI libraries (note: binaries build from this "
+                 "sysroot will only work on the matching CHERI 128/256 architecture)",
+            only_add_for_targets=[CrossCompileTarget.MIPS])
 
     def copySysrootFromRemoteMachine(self):
         statusUpdate("Copying sysroot from remote system.")
