@@ -272,6 +272,9 @@ class CheriConfig(object):
             self.clangPlusPlusPath = Path("/c++/compiler/is/missing")
         self.FS = FileSystemUtils(self)
 
+        if self.test_extra_args is None:
+            self.test_extra_args = []
+
         # if we are creating a compilation db in the source that implies creating one in the first place:
         if self.copy_compilation_db_to_source_dir:
             self.create_compilation_db = True
