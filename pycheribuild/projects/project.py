@@ -603,15 +603,17 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         script = script_dir / script_name
         if not script.exists():
             self.fatal("Could not find test script", script)
-        qemu_path = BuildQEMU.qemu_binary(self)
         if test_native:
             cmd = [script, "--test-native"]
         else:
-            cmd = [script, "--qemu-cmd", qemu_path, "--ssh-key", self.config.test_ssh_key]
+            cmd = [script, "--ssh-key", self.config.test_ssh_key]
             if "--kernel" not in self.config.test_extra_args:
                 cmd.extend(["--kernel", kernel_path])
-            if not qemu_path.exists():
-                self.fatal("QEMU binary", qemu_path, "doesn't exist")
+            if "--qemu-cmd" not in self.config.test_extra_args:
+                qemu_path = BuildQEMU.qemu_binary(self)
+                if not qemu_path.exists():
+                    self.fatal("QEMU binary", qemu_path, "doesn't exist")
+                cmd.extend(["--qemu-cmd", qemu_path])
         if mount_builddir and self.buildDir and "--build-dir" not in self.config.test_extra_args:
             cmd.extend(["--build-dir", self.buildDir])
         if mount_sourcedir and self.sourceDir and "--source-dir" not in self.config.test_extra_args:
