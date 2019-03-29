@@ -1,3 +1,4 @@
+import inspect
 import sys
 import tempfile
 import unittest
@@ -6,7 +7,7 @@ from unittest import TestCase
 
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
-from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader
+from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader, JsonAndCommandLineConfigOption
 
 _loader = JsonAndCommandLineConfigLoader()
 from pycheribuild.projects.project import SimpleProject
@@ -295,6 +296,37 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
                                      b' "cheribsd-cheri/build-directory": "/bar/foo"}')
     assert cheribsd_cheri.buildDir == Path("/bar/foo")
     assertBuildDirsDifferent()
+
+
+def test_kernconf():
+    # Parse args once to ensure targetManager is initialized
+
+    # check default values
+    config = _parse_arguments([])
+    cheribsd_cheri = targetManager.get_target_raw("cheribsd-cheri").get_or_create_project(None, config)  # type: BuildCHERIBSD
+    freebsd_mips = targetManager.get_target_raw("freebsd-mips").get_or_create_project(None, config)  # type: BuildCHERIBSD
+    freebsd_native = targetManager.get_target_raw("freebsd-native").get_or_create_project(None, config)  # type: BuildCHERIBSD
+    assert config.freebsd_kernconf is None
+    attr = inspect.getattr_static(freebsd_mips, "kernelConfig")
+    assert freebsd_mips.kernelConfig == "MALTA64"
+    assert cheribsd_cheri.kernelConfig == "CHERI128_MALTA64"
+    assert freebsd_native.kernelConfig == "GENERIC"
+
+    # Check that --kernconf is used as the fallback
+    config = _parse_arguments(["--kernconf=LINT", "--freebsd-mips/kernel-config=NOTMALTA64"])
+    assert config.freebsd_kernconf == "LINT"
+    attr = inspect.getattr_static(freebsd_mips, "kernelConfig")
+    # previously we would replace the command line attribute with a string -> check this is no longer true
+    assert isinstance(attr, JsonAndCommandLineConfigOption)
+    assert freebsd_mips.kernelConfig == "NOTMALTA64"
+    assert cheribsd_cheri.kernelConfig == "LINT"
+    assert freebsd_native.kernelConfig == "LINT"
+
+    config = _parse_arguments(["--kernconf=LINT", "--cheribsd-cheri/kernel-config=SOMETHING"])
+    assert config.freebsd_kernconf == "LINT"
+    assert freebsd_mips.kernelConfig == "LINT"
+    assert cheribsd_cheri.kernelConfig == "SOMETHING"
+    assert freebsd_native.kernelConfig == "LINT"
 
 
 def test_duplicate_key():

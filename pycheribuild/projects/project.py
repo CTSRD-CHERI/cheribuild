@@ -297,7 +297,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # We don't want to inherit certain options from the non-target specific class since they should always be
         # set directly for that target. Currently the only such option is build-directory since sharing that would
         # break the build in most cases.
-        if not _no_fallback_config_name and fallback_name_base:
+        if not _no_fallback_config_name and fallback_name_base and fallback_config_name is None:
             if name not in ["build-directory"]:
                 fallback_config_name = fallback_name_base + "/" + name
             elif synthetic_base is not None:

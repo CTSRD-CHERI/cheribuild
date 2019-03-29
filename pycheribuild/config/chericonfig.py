@@ -126,6 +126,8 @@ class CheriConfig(object):
                  "CHERI support. Do not unset this option when building benchmarks since memcpy will be slower!")
         self.skipBuildworld = loader.addBoolOption("skip-buildworld", "-skip-world", group=loader.freebsdGroup,
                                                    help="Skip the buildworld step when building FreeBSD or CheriBSD")
+        self.freebsd_kernconf = loader.addOption("kernel-config", "-kernconf", group=loader.freebsdGroup, helpHidden=True,
+                                                 help="Override default kernel config to use.")
         self.freebsd_subdir = loader.addCommandLineOnlyOption("freebsd-subdir", "-subdir",
             group=loader.freebsdGroup, type=list, metavar="SUBDIRS",
             help="Only build subdirs SUBDIRS of FreeBSD/CheriBSD instead of the full tree. Useful "

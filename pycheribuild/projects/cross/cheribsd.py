@@ -45,21 +45,24 @@ from ...utils import *
 
 
 # noinspection PyUnusedLocal
-def defaultKernelConfig(config: CheriConfig, project: "BuildCHERIBSD"):
-    assert isinstance(project, BuildCHERIBSD)
+def defaultKernelConfig(config: CheriConfig, project: "BuildFreeBSD"):
+    assert isinstance(project, BuildFreeBSD)
     if project.compiling_for_host():
         return "GENERIC"
     elif project.compiling_for_mips():
         return "MALTA64"
-    assert project.compiling_for_cheri()
-    # make sure we use a kernel with 128 bit CPU features selected
-    # or a purecap kernel is selected
-    kernconf_name = "CHERI{bits}{pure}_MALTA64{mfs}"
-    cheri_bits = "128" if config.cheriBits == 128 else ""
-    cheri_pure = "_PURECAP" if project.purecapKernel else ""
-    mfs_root_img = "_MFS_ROOT" if project.mfs_root_image else ""
-    return kernconf_name.format(bits=cheri_bits, pure=cheri_pure, mfs=mfs_root_img)
-
+    elif project.compiling_for_cheri():
+        # make sure we use a kernel with 128 bit CPU features selected
+        # or a purecap kernel is selected
+        kernconf_name = "CHERI{bits}{pure}_MALTA64{mfs}"
+        cheri_bits = "128" if config.cheriBits == 128 else ""
+        cheri_pure = "_PURECAP" if project.purecapKernel else ""
+        mfs_root_img = "_MFS_ROOT" if project.mfs_root_image else ""
+        return kernconf_name.format(bits=cheri_bits, pure=cheri_pure, mfs=mfs_root_img)
+    elif project.compiling_for_riscv() or project._crossCompileTarget == CrossCompileTarget.I386:
+        return "GENERIC"  # TODO: what is the correct config
+    else:
+        assert False, "should be unreachable"
 
 def freebsd_install_dir(config: CheriConfig, project: "BuildFreeBSD"):
     assert isinstance(project, BuildFreeBSD)
@@ -219,7 +222,6 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
     dependencies = ["llvm"]
     target = "freebsd"
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
-    kernelConfig = None  # type: str
     crossbuild = False
     baremetal = True  # We are building the full OS so we don't need a sysroot
     # Only CheriBSD can target CHERI, upstream FreeBSD won't work
@@ -259,6 +261,12 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
         cls.keepOldRootfs = cls.addBoolOption("keep-old-rootfs",
             help="Don't remove the whole old rootfs directory.  This can speed up installing but may cause strange"
                  " errors so is off by default.")
+
+        cls.kernelConfig = cls.addConfigOption("kernel-config", default=defaultKernelConfig, kind=str,
+           metavar="CONFIG", showHelp=True, fallback_config_name="kernel-config",
+           help="The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64 or CHERI128_MALTA64"
+                " depending on --cheri-bits)")
+
         if bootstrap_toolchain:
             cls.use_external_toolchain = False
             cls.build_with_upstream_llvm = False
@@ -331,17 +339,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
                 archBuildFlags = {"TARGET": "i386", "TARGET_ARCH": "i386"}
             else:
                 assert False, "This should not be reached!"
-        if self.kernelConfig is None:
-            if self.compiling_for_mips():
-                self.kernelConfig = "MALTA64"
-            elif self.compiling_for_host():
-                self.kernelConfig = "GENERIC"
-            elif self.compiling_for_riscv():
-                self.kernelConfig = "GENERIC"  # TODO: what is the correct config
-            elif self._crossCompileTarget == CrossCompileTarget.I386:
-                self.kernelConfig = "GENERIC"  # TODO: what is the correct config
-            else:
-                assert False, "should be unreachable"
+        assert self.kernelConfig is not None
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
         self.make_args.set(**archBuildFlags)
 
@@ -892,7 +890,7 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     supported_architectures = BuildFreeBSD.supported_architectures + [CrossCompileTarget.RISCV, CrossCompileTarget.I386]
 
     @classmethod
-    def setupConfigOptions(cls, installDirectoryHelp=None, use_kernconf_shortname=True, **kwargs):
+    def setupConfigOptions(cls, installDirectoryHelp=None, **kwargs):
         super().setupConfigOptions(buildKernelWithClang=True, bootstrap_toolchain=True, debug_info_by_default=False)
 
     def addCrossBuildOptions(self):
@@ -996,20 +994,11 @@ class BuildCHERIBSD(BuildFreeBSD):
 
 
     @classmethod
-    def setupConfigOptions(cls, installDirectoryHelp=None, use_kernconf_shortname=True, **kwargs):
+    def setupConfigOptions(cls, installDirectoryHelp=None, **kwargs):
         if installDirectoryHelp is None:
             installDirectoryHelp = "Install directory for CheriBSD root file system (default: " \
                                    "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)"
         super().setupConfigOptions(buildKernelWithClang=True, installDirectoryHelp=installDirectoryHelp)
-        # Avoid duplicate --kernconf string for cheribsd-native vs cheribsd
-        kernconf_shortname = None
-        if use_kernconf_shortname and cls._crossCompileTarget == CrossCompileTarget.CHERI:
-            kernconf_shortname = "-kernconf"
-        cls.kernelConfig = cls.addConfigOption("kernel-config", default=defaultKernelConfig, kind=str,
-           metavar="CONFIG", shortname=kernconf_shortname, showHelp=True,
-           help="The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64 or CHERI128_MALTA64"
-                " depending on --cheri-bits)")
-
         defaultCheriCC = ComputedDefaultValue(
             function=lambda config, unused: config.sdkDir / "bin/clang",
             asString="${SDK_DIR}/bin/clang")
@@ -1224,7 +1213,7 @@ class BuildCHERIBSDPurecap(BuildCHERIBSD):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(use_kernconf_shortname=False)
+        super().setupConfigOptions(**kwargs)
 
     def __init__(self, config):
         super().__init__(config)
@@ -1252,7 +1241,7 @@ class BuildCHERIBSDMinimal(BuildCHERIBSD):
         cls.subdirOverride = None #  "tools/cheribsdbox"
         cls.minimal = True
         cls.build_tests = False
-        super().setupConfigOptions(use_kernconf_shortname=False)
+        super().setupConfigOptions(**kwargs)
 
     def __init__(self, config):
         super().__init__(config)
