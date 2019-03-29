@@ -46,6 +46,7 @@ class MockConfig(CheriConfig):
         self.force_update = False
         self.force = True
         self.noLogfile = True
+        self.test_extra_args = []
         self.load()
 
         # for the async delete test:
