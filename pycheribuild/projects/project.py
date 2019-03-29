@@ -605,20 +605,20 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             self.fatal("Could not find test script", script)
         qemu_path = BuildQEMU.qemu_binary(self)
         if test_native:
-            cmd = [script, "--test-native"] + list(script_args)
+            cmd = [script, "--test-native"]
         else:
-            cmd = [script, "--kernel", kernel_path,
-                   "--qemu-cmd", qemu_path,
-                   "--ssh-key", self.config.test_ssh_key] + list(script_args)
+            cmd = [script, "--qemu-cmd", qemu_path, "--ssh-key", self.config.test_ssh_key]
+            if "--kernel" not in self.config.test_extra_args:
+                cmd.extend(["--kernel", kernel_path])
             if not qemu_path.exists():
                 self.fatal("QEMU binary", qemu_path, "doesn't exist")
-        if self.buildDir and mount_builddir:
+        if mount_builddir and self.buildDir and "--build-dir" not in self.config.test_extra_args:
             cmd.extend(["--build-dir", self.buildDir])
-        if self.sourceDir and mount_sourcedir:
+        if mount_sourcedir and self.sourceDir and "--source-dir" not in self.config.test_extra_args:
             cmd.extend(["--source-dir", self.sourceDir])
-        if mount_sysroot:
+        if mount_sysroot and "--sysroot-dir" not in self.config.test_extra_args:
             cmd.extend(["--sysroot-dir", self.crossSysrootPath])
-        if disk_image_path and not test_native:
+        if disk_image_path and not test_native and "--disk-image" not in self.config.test_extra_args:
             cmd.extend(["--disk-image", disk_image_path])
         if self.config.tests_interact:
             cmd.append("--interact")
@@ -626,6 +626,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             cmd.append("--test-environment-only")
         if self.config.trap_on_unrepresentable:
             cmd.append("--trap-on-unrepresentable")
+
+        cmd += list(script_args)
         if self.config.test_extra_args:
             cmd.extend(map(str, self.config.test_extra_args))
         runCmd(cmd)

@@ -147,6 +147,7 @@ def get_sdk_archives(cheriConfig, needs_cheribsd_sysroot: bool) -> "typing.List[
             warningMessage("Project needs a full SDK archive but only clang archive was found and",
                            sysroot_archive.archive, "is missing. Will attempt to build anyway but build "
                                                     "will most likely fail.")
+            runCmd("ls", "-la")
             return [clang_archive]
         return [clang_archive, sysroot_archive]
 

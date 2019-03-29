@@ -94,7 +94,7 @@ class SmbMount(object):
 
 def parse_smb_mount(arg: str):
     if ":" not in arg:
-        sys.exit("Invalid smb_mount string '" + arg + "'. Expected format is <HOST_PATH>:<PATH_IN_TARGET>")
+        failure("Invalid smb_mount string '", arg, "'. Expected format is <HOST_PATH>:<PATH_IN_TARGET>", exit=True)
     host, target = arg.split(":", 2)
     readonly = False
     if host.endswith("@ro"):
@@ -195,7 +195,7 @@ def set_ld_library_path(qemu: CheriBSDInstance):
     run_cheribsd_command(qemu, "export LD_CHERI_LIBRARY_PATH=/usr/libcheri:/usr/local/libcheri:/sysroot/libcheri:/sysroot/usr/libcheri:/sysroot/usr/local/cheri/lib:/sysroot/usr/local/cheri/libcheri", timeout=3)
 
 
-def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, args: argparse.Namespace = None) -> Path:
+def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, args: argparse.Namespace = None, what: str = None) -> Path:
     # drop the suffix and then try decompressing
     def bunzip(archive):
         return decompress(archive, force_decompression, cmd=["bunzip2", "-v", "-f"], keep_archive=keep_archive, args=args)
@@ -229,7 +229,7 @@ def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, a
         return unxz(xz_guess)
 
     if not path.exists():
-        sys.exit("Could not find " + str(path))
+        failure("Could not find " + what + " " + str(path), exit=True)
     assert path.exists(), path
     return path
 
@@ -658,7 +658,7 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
     if argparse_adjust_args_callback:
         argparse_adjust_args_callback(args)
     if shutil.which(args.qemu_cmd) is None:
-        sys.exit("ERROR: QEMU binary " + args.qemu_cmd + " doesn't exist")
+        failure("ERROR: QEMU binary ", args.qemu_cmd, " doesn't exist", exit=True)
 
     global PRETEND
     if args.pretend:
@@ -704,10 +704,10 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
 
         force_decompression = True
         keep_compressed_images = False
-    kernel = str(maybe_decompress(Path(args.kernel), force_decompression, keep_archive=keep_compressed_images, args=args))
+    kernel = str(maybe_decompress(Path(args.kernel), force_decompression, keep_archive=keep_compressed_images, args=args, what="kernel"))
     diskimg = None
     if args.disk_image:
-        diskimg = str(maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images, args=args))
+        diskimg = str(maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images, args=args, what="kernel"))
 
     boot_starttime = datetime.datetime.now()
     qemu = boot_cheribsd(args.qemu_cmd, kernel, diskimg, args.ssh_port, smb_dirs=args.smb_mount_directories,
