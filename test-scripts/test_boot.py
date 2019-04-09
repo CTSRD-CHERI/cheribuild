@@ -46,7 +46,7 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
     boot_cheribsd.run_cheribsd_command(qemu, "/libexec/ld-cheri-elf.so.1 -h", cheri_trap_fatal=True)
     poweroff_start = datetime.datetime.now()
     qemu.sendline("poweroff")
-    i = qemu.expect(["Uptime:", pexpect.TIMEOUT, pexpect.EOF] + boot_cheribsd.FATAL_ERROR_MESSAGES, timeout=20)
+    i = qemu.expect(["Uptime:", pexpect.TIMEOUT, pexpect.EOF] + boot_cheribsd.FATAL_ERROR_MESSAGES, timeout=120)
     if i != 0:
         boot_cheribsd.failure("Poweroff " + ("timed out" if i == 1 else "failed"))
         return False
