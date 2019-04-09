@@ -1,6 +1,15 @@
 #!/bin/sh
 set -xe
+kind=${{1:-smb}}
+if [ "$kind" = "smb" ]; then
+    # rootfs is provided as the fourth SMB mount
+    # TODO: should modify QEMU to allow names to be set for the smb mounts
+    mkdir -p /nfsroot && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu4 /nfsroot
+elif [ "$kind" = "nfs" ]; then
+    mkdir -p /nfsroot && mount 10.0.2.2:{ROOTFS_DIR} /nfsroot/
+else
+    echo "usage: $0 [smb|nfs]"
+fi
 # I previously mounted this in /rootfs but that is annoying because tab completion
 # will give /root first. Use /nfsroot instead and add a symlink for the old path.
-mkdir -p /nfsroot && mount 10.0.2.2:{ROOTFS_DIR} /nfsroot/
 test -L /rootfs || ln -sfnv /nfsroot /rootfs
