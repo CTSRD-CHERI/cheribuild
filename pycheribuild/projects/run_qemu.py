@@ -154,7 +154,7 @@ class LaunchQEMUBase(SimpleProject):
         user_network_options = ""
         smb_dir_count = 0
 
-        def add_smb_dir(directory, target, readonly=False):
+        def add_smb_dir(directory, target, share_name=None, readonly=False):
             if not directory:
                 return
             nonlocal user_network_options
@@ -163,10 +163,15 @@ class LaunchQEMUBase(SimpleProject):
                 user_network_options += ":"
             else:
                 user_network_options += ",smb="
-            user_network_options += str(directory) + ("@ro" if readonly else "")
             smb_dir_count += 1
+            share_name_option = ""
+            if share_name is not None:
+                share_name_option = "<<<" + share_name
+            else:
+                share_name = "qemu{}".format(smb_dir_count)
+            user_network_options += str(directory) + share_name_option + ("@ro" if readonly else "")
             guest_cmd = coloured(AnsiColour.yellow, "mkdir -p {target} && mount_smbfs -I 10.0.2.4 -N "
-                                 "//10.0.2.4/qemu{n} {target}".format(target=target, n=smb_dir_count))
+                                 "//10.0.2.4/{share_name} {target}".format(target=target, share_name=share_name))
             statusUpdate("Providing ", coloured(AnsiColour.green, str(directory)),
                          coloured(AnsiColour.cyan, " over SMB to the guest. Use `"), guest_cmd,
                          coloured(AnsiColour.cyan, "` to mount it"), sep="")
@@ -174,10 +179,10 @@ class LaunchQEMUBase(SimpleProject):
         # Only default to providing the smb mount if smbd exists
         if self._provide_src_via_smb and shutil.which("smbd"):  # for running CheriBSD + FreeBSD
             add_smb_dir(self.custom_qemu_smb_mount, "/mnt")
-            add_smb_dir(self.config.sourceRoot, "/srcroot", readonly=True)
-            add_smb_dir(self.config.buildRoot, "/buildroot", readonly=False)
-            add_smb_dir(self.config.outputRoot, "/outputroot", readonly=True)
-            add_smb_dir(self.rootfs_path, "/rootfs", readonly=False)
+            add_smb_dir(self.config.sourceRoot, "/srcroot", share_name="source_root", readonly=True)
+            add_smb_dir(self.config.buildRoot, "/buildroot", share_name="build_root", readonly=False)
+            add_smb_dir(self.config.outputRoot, "/outputroot", share_name="output_root", readonly=True)
+            add_smb_dir(self.rootfs_path, "/rootfs", share_name="rootfs", readonly=False)
 
         if self._forwardSSHPort:
             user_network_options += ",hostfwd=tcp::" + str(self.sshForwardingPort) + "-:22"

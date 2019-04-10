@@ -2,9 +2,9 @@
 set -xe
 kind=${{1:-smb}}
 if [ "$kind" = "smb" ]; then
-    # source dir is provided as the first SMB mount
-    # TODO: should modify QEMU to allow names to be set for the smb mounts
-    mkdir -p {SRCPATH} && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu1 {SRCPATH}
+    # rootfs is provided as the first SMB mount, but we now have named smb mounts:
+    # mkdir -p /nfsroot && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu1 /nfsroot
+    mkdir -p {SRCPATH} && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/source_root {SRCPATH}
 elif [ "$kind" = "nfs" ]; then
     mkdir -p {SRCPATH} && mount -o ro 10.0.2.2:{SRCPATH} {SRCPATH}
 else
