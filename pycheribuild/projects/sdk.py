@@ -60,7 +60,7 @@ class BuildCheriCompressedCaps(CMakeProject):
 
 class BuildFreestandingSdk(SimpleProject):
     target = "freestanding-sdk"
-    dependencies = ["llvm", "qemu", "gdb-native"]  # TODO: should we add ld.bfd?
+    dependencies = ["binutils", "llvm", "qemu", "gdb-native"]  # TODO: should we add ld.bfd?
     dependenciesMustBeBuilt = True
     is_sdk_target = True
 

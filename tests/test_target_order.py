@@ -41,7 +41,7 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, skip_sdk=
     # print("result = ", result)
     return result
 
-freestanding_deps = ["llvm", "qemu", "gdb-native", "freestanding-sdk"]
+freestanding_deps = ["elftoolchain", "binutils", "llvm", "qemu", "gdb-native", "freestanding-sdk"]
 baremetal_deps = freestanding_deps + ["newlib-baremetal-mips", "compiler-rt-baremetal-mips", "libcxxrt-baremetal-mips",
                                       "libcxx-baremetal-mips", "baremetal-sdk"]
 cheribsd_sdk_deps = freestanding_deps + ["cheribsd-cheri", "cheribsd-sysroot-cheri", "cheribsd-sdk"]
@@ -89,7 +89,8 @@ def test_disk_image_comes_second_last():
 
 
 def test_all_run_deps():
-    assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm", "cheribsd-cheri", "gdb-native", "freestanding-sdk", "cheribsd-sysroot-cheri",
+    assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm", "cheribsd-cheri", "elftoolchain", "binutils",
+                                                             "gdb-native", "freestanding-sdk", "cheribsd-sysroot-cheri",
                                                              "cheribsd-sdk", "gdb-mips", "disk-image", "run"]
 
 
