@@ -91,6 +91,9 @@ class BuildLLVMBase(CMakeProject):
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
         self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
 
+        # Install the llvm binutils symlinks since they now seem to work fine.
+        self.add_cmake_options(LLVM_INSTALL_BINUTILS_SYMLINKS=True)
+
         if not self.build_everything:
             self.add_cmake_options(
                 LLVM_ENABLE_OCAMLDOC=False,
@@ -200,9 +203,11 @@ class BuildLLVMBase(CMakeProject):
 
         # Use the LLVM versions of ranlib and ar and nm
         if "llvm" in self.included_projects:
-            for tool in ("ar", "ranlib", "nm"):
+            for tool in ("ar", "ranlib", "nm", "objcopy", "readelf", "objdump", "strip"):
                 # TODO: also for objcopy soon so we don't need elftoolchain at all
                 self.createBuildtoolTargetSymlinks(self.installDir / ("bin/llvm-" + tool), toolName=tool, createUnprefixedLink=True)
+            self.createBuildtoolTargetSymlinks(self.installDir / "bin/llvm-symbolizer", toolName="addr2line", createUnprefixedLink=True)
+            self.createBuildtoolTargetSymlinks(self.installDir / "bin/llvm-cxxfilt", toolName="c++filt", createUnprefixedLink=True)
 
         if "lld" in self.included_projects:
             self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld")
@@ -241,7 +246,6 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     skip_cheri_symlinks = False
     is_sdk_target = True
     defaultInstallDir = CMakeProject._installToSDK
-
 
 # Add an alias target clang that builds llvm
 class BuildClang(TargetAlias):
