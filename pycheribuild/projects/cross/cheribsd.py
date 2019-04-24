@@ -442,6 +442,8 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             X_COMPILER_TYPE="clang",  # This is needed otherwise the build assumes it should build with $CC
             XOBJDUMP=cross_prefix + "llvm-objdump",
             OBJDUMP=cross_prefix + "llvm-objdump",
+            XOBJCOPY=cross_prefix + "llvm-objcopy",
+            XSTRIP=cross_prefix + "llvm-strip",
         )
         if self.linker_for_world == "bfd":
             # self.cross_toolchain_config.set_env(XLDFLAGS="-fuse-ld=bfd")
