@@ -35,7 +35,7 @@ from ..build_qemu import BuildQEMU
 from ..llvm import BuildCheriLLVM
 from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
-from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str
+from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str, IS_MAC
 from ..project import ReuseOtherProjectRepository
 import os
 
@@ -86,7 +86,11 @@ class BuildLibunwind(CrossCompileCMakeProject):
                                )
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
         self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
-        if not self.compiling_for_host():
+        if self.compiling_for_host():
+            if IS_MAC or OSInfo.isUbuntu():
+                # Can't link libc++abi on MacOS and libsupc++ statically on Ubuntu
+                self.add_cmake_options(LIBUNWIND_TEST_ENABLE_EXCEPTIONS=False)
+        else:
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=False,
                                    LIBUNWIND_ENABLE_SHARED=True)
             collect_test_binaries = self.buildDir / "test-output"
