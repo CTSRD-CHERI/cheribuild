@@ -629,7 +629,7 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
         if self.baremetal and not self.compiling_for_host():
             self.add_cmake_options(CMAKE_EXE_LINKER_FLAGS="-Wl,-T,qemu-malta.ld")
         # TODO: BUILD_SHARED_LIBS=OFF?
-        super().configure()
+        super().configure(**kwargs)
 
 
 class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
