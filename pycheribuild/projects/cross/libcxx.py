@@ -148,7 +148,7 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
                                CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
         if self.compiling_for_host():
             assert not self.baremetal
-            self.add_cmake_options(BUILD_TESTS=True)
+            self.add_cmake_options(BUILD_TESTS=True, TEST_LIBUNWIND=True)
             if OSInfo.isUbuntu():
                 self.add_cmake_options(COMPARE_TEST_OUTPUT_TO_SYSTEM_OUTPUT=False)
                 # Seems to be needed for at least jenkins (it says relink with -pie)
@@ -163,7 +163,7 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
                                    NO_UNWIND_LIBRARY=False)
             self.add_cmake_options(COMPARE_TEST_OUTPUT_TO_SYSTEM_OUTPUT=False)
             if not self.baremetal:
-                self.add_cmake_options(BUILD_TESTS=True)
+                self.add_cmake_options(BUILD_TESTS=True, TEST_LIBUNWIND=True)
 
     def install(self, **kwargs):
         libdir = self.installDir / "libcheri" if self.compiling_for_cheri() else self.installDir / "lib"

@@ -40,9 +40,18 @@ def run_libcxxrt_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
     boot_cheribsd.run_cheribsd_command(qemu, "export LIBUNWIND_PRINT_UNWINDING=1", timeout=2)
     boot_cheribsd.run_cheribsd_command(qemu, "export LIBUNWIND_PRINT_APIS=1", timeout=2)
     boot_cheribsd.run_cheribsd_command(qemu, "export LIBUNWIND_PRINT_DWARF=1", timeout=2)
+    # Copy the libunwind library to both MIPS and CHERI library dirs so that it is picked up
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /libunwind/lib/libunwind.so* /usr/lib/")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /libunwind/lib/libunwind.so* /usr/libcheri/")
+
     boot_cheribsd.checked_run_cheribsd_command(qemu, "'/build/bin/cxxrt-test-static' -v")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "'/build/bin/cxxrt-test-shared' -v")
     boot_cheribsd.checked_run_cheribsd_command(qemu, "'/build/bin/cxxrt-test-foreign-exceptions' -v")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "'/build/bin/cxxrt-test-shared' -v")
+
+    # Check the test binaries linked against libunwind
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "'/build/bin/cxxrt-test-libunwind-static' -v")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "'/build/bin/cxxrt-test-libunwind-allstatic' -v")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "'/build/bin/cxxrt-test-libunwind-shared' -v")
     return True
 
 
