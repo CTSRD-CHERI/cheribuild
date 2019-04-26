@@ -75,6 +75,8 @@ class CheriBSDCommandFailed(Exception):
 class CheriBSDCommandTimeout(CheriBSDCommandFailed):
     pass
 
+class CheriBSDMatchedErrorOutput(CheriBSDCommandFailed):
+    pass
 
 class SmbMount(object):
     def __init__(self, hostdir: str, readonly: bool, in_target: str):
@@ -145,7 +147,7 @@ def find_free_port() -> int:
 
 
 def info(*args, **kwargs):
-    print(MESSAGE_PREFIX, *args, file=sys.stderr, sep="", flush=True, **kwargs)
+    print(MESSAGE_PREFIX, "\033[0;34m", *args, "\033[0m", file=sys.stderr, sep="", flush=True, **kwargs)
 
 
 def success(*args, **kwargs):
@@ -276,7 +278,7 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
         # wait up to 5 seconds for a prompt to ensure the full output has been printed
         qemu.expect([PROMPT], timeout=5)
         qemu.flush()
-        raise CheriBSDCommandFailed("Matched error output ", error_output, " in ", cmd)
+        raise CheriBSDMatchedErrorOutput("Matched error output ", error_output, " in ", cmd)
     elif i == cheri_trap_index:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
         qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
@@ -287,15 +289,20 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
             failure("Got CHERI TRAP!", exit=False)
 
 
-def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, ignore_cheri_trap=False, **kwargs):
+def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, ignore_cheri_trap=False,
+                                 error_output: str=None, **kwargs):
     starttime = datetime.datetime.now()
     qemu.sendline(cmd + " ;if test $? -eq 0; then echo '__COMMAND' 'SUCCESSFUL__'; else echo '__COMMAND' 'FAILED__'; fi")
     cheri_trap_index = None
+    error_output_index = None
     try:
         results = ["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__"]
         if not ignore_cheri_trap:
             cheri_trap_index = len(results)
             results.append(CHERI_TRAP)
+        if error_output:
+            error_output_index = len(results)
+            results.append(error_output)
         i = qemu.expect(results, timeout=timeout, **kwargs)
     except pexpect.TIMEOUT:
         i = -1
@@ -305,12 +312,18 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, 
     elif i == 0:
         success("ran '", cmd, "' successfully (in ", runtime.total_seconds(), "s)")
         return True
-    if i == cheri_trap_index:
+    elif i == cheri_trap_index:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
         qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
         qemu.flush()
         raise CheriBSDCommandFailed("Got CHERI trap running '", cmd, "' (after '", runtime.total_seconds(), "s)")
+    elif i == error_output_index:
+        # wait up to 20 seconds for the shell prompt
+        qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
+        qemu.flush()
+        raise CheriBSDMatchedErrorOutput("Matched error output '" + error_output + "' running '", cmd, "' (after '", runtime.total_seconds(), ")")
     else:
+        assert i < len(results), str(i) + " >= len(" + str(results) + ")"
         raise CheriBSDCommandFailed("error running '", cmd, "' (after '", runtime.total_seconds(), "s)")
 
 
@@ -526,7 +539,18 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
                 run_host_command(scp_cmd, cwd=tmp)
     for index, d in enumerate(smb_dirs):
         run_cheribsd_command(qemu, "mkdir -p '{}'".format(d.in_target))
-        checked_run_cheribsd_command(qemu, "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu{} '{}'".format(index + 1, d.in_target))
+        mount_command = "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu{} '{}'".format(index + 1, d.in_target)
+        try:
+            checked_run_cheribsd_command(qemu, mount_command, error_output="unable to open connection: syserr = Operation timed out", pretend_result=3)
+        except CheriBSDMatchedErrorOutput:
+            failure("QEMU SMBD timed out while mounting ", d.in_target, ". Trying one more time.", exit=False)
+            info("Waiting for 5 seconds before retrying mount_smbfs...")
+            if not PRETEND:
+                time.sleep(5) # wait 5 seconds, hopefully the server is less busy then.
+            # If the smbfs connection timed out try once more. This can happen when multiple libc++ test jobs are running
+            # on the same jenkins slaves so one of them might time out
+            checked_run_cheribsd_command(qemu, mount_command)
+
     if test_archives:
         time.sleep(5)  # wait 5 seconds to make sure the disks have synced
     # See how much space we have after running scp
@@ -556,7 +580,7 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
             failure("Got CTRL+C while running tests", exit=False)
         except CheriBSDCommandFailed as e:
             testtime = datetime.datetime.now() - run_tests_starttime
-            failure("Command failed after ", testtime, " while running tests: ", str(e), exit=False)
+            failure("Command failed after ", testtime, " while running tests: ", str(e), "\n", str(qemu), exit=False)
         testtime = datetime.datetime.now() - run_tests_starttime
         if result is True:
             success("Running tests took ", testtime)
@@ -726,14 +750,14 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, .
             tests_okay = runtests(qemu, args, test_archives=test_archives, test_function=test_function,
                                   test_setup_function=test_setup_function)
         except CheriBSDCommandFailed as e:
-            failure("Command failed while runnings tests: ", str(e), exit=False)
+            failure("Command failed while runnings tests: ", str(e), "\n", str(qemu), exit=False)
             traceback.print_exc(file=sys.stderr)
         except Exception:
-            failure("FAILED to run tests!! ", exit=False)
+            failure("FAILED to run tests!!\n", str(qemu), exit=False)
             traceback.print_exc(file=sys.stderr)
             tests_okay = False
         except KeyboardInterrupt:
-            failure("Tests interrupted!!! ", exit=False)
+            failure("Tests interrupted!!!", exit=False)
             tests_okay = False
 
     if args.interact:
