@@ -100,7 +100,11 @@ def libcxx_main(ssh_port_barrier: Barrier = None, mp_queue: Queue = None, ssh_po
 
     def run_libcxx_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
         with tempfile.TemporaryDirectory(prefix="cheribuild-libcxx-tests-") as tempdir:
-            return run_remote_lit_test.run_remote_lit_tests("libcxx", qemu, args, tempdir, mp_q=mp_queue)
+            # We skip the libc++ filesystem tests since they need additional changes before we can run
+            # them remotely.
+            # TODO: we should really only skip the subset that doesn't work instead of all of them
+            return run_remote_lit_test.run_remote_lit_tests("libcxx", qemu, args, tempdir, mp_q=mp_queue,
+                                                            lit_extra_args=["-Denable_filesystem=False"])
 
     from run_tests_common import run_tests_main
     try:
