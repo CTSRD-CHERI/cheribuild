@@ -499,8 +499,8 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
 
 
 def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: list,
-             test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace, ...], None]" = None,
-             test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace, ...], bool]" = None) -> bool:
+             test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None,
+             test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]" = None) -> bool:
     test_command = args.test_command
     ssh_keyfile = args.ssh_key
     ssh_port = args.ssh_port
@@ -653,8 +653,8 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--internal-disk-image-override", help=argparse.SUPPRESS)
     return parser
 
-def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, ...], bool]"=None,
-         test_setup_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace, ...], None]"=None,
+def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]"=None,
+         test_setup_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace], None]"=None,
          argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]"=None,
          argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]"=None):
     parser = get_argument_parser()
