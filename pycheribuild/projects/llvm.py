@@ -76,6 +76,8 @@ class BuildLLVMBase(CMakeProject):
         self.cppCompiler = config.clangPlusPlusPath
         # this must be added after checkSystemDependencies
         link_jobs = 2 if self.enable_lto else 4
+        if os.cpu_count() >= 24:
+            link_jobs *= 2  # Increase number of link jobs for powerful servers
         # non-shared debug builds take lots of ram -> use only one parallel job
         if self.cmakeBuildType.lower() in ("debug", "relwithdebinfo") and "-DBUILD_SHARED_LIBS=ON" not in self.cmakeOptions:
             link_jobs = 1

@@ -410,7 +410,7 @@ def defaultNumberOfMakeJobs():
     if makeJobs > 24:
         # don't use up all the resources on shared build systems
         # (you can still override this with the -j command line option)
-        makeJobs = 16
+        makeJobs = makeJobs / 2
     return makeJobs
 
 
