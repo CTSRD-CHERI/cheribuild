@@ -30,6 +30,7 @@
 from pathlib import Path
 import shutil
 
+import os
 import sys
 
 from .project import *
