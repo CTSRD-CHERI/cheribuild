@@ -265,6 +265,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     __commandLineOptionGroup = None
 
+
+    # Duplicate all arguments instead of using **kwargs to get sensible code completion
+    @staticmethod
+    def run_cmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]"=None, timeout=None,
+           printVerboseOnly=False, runInPretendMode=False, raiseInPretendMode=False, no_print=False,
+           replace_env=False, **kwargs):
+        return runCmd(*args, captureOutput=captureOutput, captureError=captureError, input=input, timeout=timeout,
+                      printVerboseOnly=printVerboseOnly, runInPretendMode=runInPretendMode,
+                      raiseInPretendMode=raiseInPretendMode, no_print=no_print, replace_env=replace_env, **kwargs)
+
     @classmethod
     def addConfigOption(cls, name: str, default: "typing.Union[Type_T, typing.Callable[[], Type_T]]" = None,
                         kind: "typing.Union[typing.Type[str], typing.Callable[[str], Type_T]]" = str, *,
