@@ -31,6 +31,7 @@ from .project import *
 from ..utils import *
 from pathlib import Path
 import os
+import shlex
 import shutil
 import subprocess
 
@@ -136,7 +137,6 @@ class BuildQEMUBase(AutotoolsProject):
                 while True:  # add a loop so I can break early
                     statusUpdate("Compiling with Clang and LLD -> trying to build with LTO enabled")
                     if ccinfo.compiler != "apple-clang":
-                        self._extraLDFlags += " -fuse-ld=lld"
                         # For non apple-clang compilers we need to use llvm binutils:
                         version_suffix = ""
                         if compiler.name.startswith("clang"):
@@ -144,6 +144,23 @@ class BuildQEMUBase(AutotoolsProject):
                         llvm_ar = shutil.which("llvm-ar" + version_suffix)
                         llvm_ranlib = shutil.which("llvm-ranlib" + version_suffix)
                         llvm_nm = shutil.which("llvm-nm" + version_suffix)
+                        lld = shutil.which("ld.lld" + version_suffix)
+                        if compiler.is_symlink():
+                            real_compiler = compiler.resolve()
+                            if real_compiler.parent != compiler.parent and not lld:
+                                # Clang is installed in a different directory (e.g. /usr/lib/llvm-7)
+                                lld = real_compiler.parent / "ld.lld"
+                                if not lld.exists():
+                                    self.warning("Could not find lld in expected path", lld)
+                                    lld = None
+
+
+                        if not lld:
+                            lld = "lld" # fall back to the default and assume clang can find the right lld versions
+
+                        # Find lld with the correct version (it must match the version of clang otherwise it breaks!)
+                        self._extraLDFlags += " -fuse-ld=" + shlex.quote(str(lld))
+
                         if not llvm_ar or not llvm_ranlib or not llvm_nm:
                             self.warning("Could not find llvm-{ar,ranlib,nm}" + version_suffix,
                                          "-> disabling LTO (qemu will be a bit slower)")
