@@ -173,6 +173,7 @@ class BuildFreeBSDBase(Project):
         if self.crossbuild:
             # Use the script that I added for building on Linux/MacOS:
             self.make_args.set_command(self.sourceDir / "tools/build/make.py")
+            # self._addRequiredSystemHeader("archive.h", apt="libarchive-dev", homebrew="libarchive")
 
         self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
         # TODO: once we have merged the latest upstream changes use MAKEOBJDIR instead to get a more sane hierarchy
@@ -723,7 +724,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
         # self.make_args.set(PATH=build_path)
         # building without an external toolchain won't work:
         self.crossToolchainRoot = self.config.sdkDir
-        self.make_args.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
+
         # use clang for the build tools:
         self.make_args.set_env(CC=str(self.config.clangPath), CXX=str(self.config.clangPlusPlusPath))
 
@@ -1043,7 +1044,6 @@ class BuildCHERIBSD(BuildFreeBSD):
                 "TARGET": "mips",
                 "TARGET_ARCH": config.mips_float_abi.freebsd_target_arch()
             }
-
         # TODO: shouldwe  keep building a cheri kernel even with a mips userspace?
         # self.kernelConfig = "MALTA64"
         super().__init__(config, archBuildFlags=archBuildFlags)
@@ -1051,6 +1051,24 @@ class BuildCHERIBSD(BuildFreeBSD):
             if self.config.cheri_cap_table_abi:
                 self.cross_toolchain_config.set(CHERI_USE_CAP_TABLE=self.config.cheri_cap_table_abi)
             self.make_args.set_with_options(CHERI_SHARED_PROG=not self.build_static)
+
+
+        # TODO: build with llvm binutils instead
+        self.use_elftoolchain = True
+        if self.use_elftoolchain:
+            self.make_args.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
+        else:
+            self.make_args.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=False)
+            self.make_args.set(XAR=config.sdkBinDir / "llvm-ar",
+                               XNM=config.sdkBinDir / "llvm-nm",
+                               XSIZE=config.sdkBinDir / "llvm-size",
+                               XSTRIP=config.sdkBinDir / "llvm-strip",
+                               XSTRINGS=config.sdkBinDir / "llvm-strings",
+                               XOBJCOPY=config.sdkBinDir / "llvm-objcopy",
+                               XRANLIB=config.sdkBinDir / "llvm-ranlib",
+                               # See https://bugs.llvm.org/show_bug.cgi?id=41707
+                               RANLIBFLAGS="", # llvm-ranlib doesn't support -D flag
+                               )
 
         self.extra_kernels = []
         self.extra_kernels_with_mfs = []
