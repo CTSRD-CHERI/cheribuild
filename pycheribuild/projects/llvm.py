@@ -250,6 +250,29 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     is_sdk_target = True
     defaultInstallDir = CMakeProject._installToSDK
 
+    def install(self, **kwargs):
+        super().install(**kwargs)
+        # Create symlinks that hardcode the sdk and the ABI to easily compile binaries
+        config_file_template = """-target cheri-unknown-freebsd13
+-integrated-as
+-G0
+-msoft-float
+-cheri={cheri_bits}
+-mcpu=cheri{cheri_bits}
+--sysroot={sdk_dir}/sysroot{cheri_bits}
+-B{sdk_dir}/bin
+-mabi={abi}
+"""
+        for cheri_bits in (128, 256):
+            for abi in ("purecap", "n64"):
+                prefix = "cheribsd" + str(cheri_bits) + abi
+                config_file_contents = config_file_template.format(cheri_bits=cheri_bits, abi=abi, sdk_dir=self.installDir)
+                self.writeFile(self.installDir / "bin" / (prefix + ".cfg"), config_file_contents, overwrite=True, mode=0o644)
+                self.createSymlink(self.installDir / "bin/clang", self.installDir / "bin" / (prefix + "-clang"))
+                self.createSymlink(self.installDir / "bin/clang++", self.installDir / "bin" / (prefix + "-clang++"))
+                self.createSymlink(self.installDir / "bin/clang-cpp", self.installDir / "bin" / (prefix + "-clang-cpp"))
+
+
 # Add an alias target clang that builds llvm
 class BuildClang(TargetAlias):
     target = "clang"
