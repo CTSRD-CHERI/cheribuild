@@ -725,8 +725,11 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
         # building without an external toolchain won't work:
         self.crossToolchainRoot = self.config.sdkDir
 
-        # use clang for the build tools:
-        self.make_args.set_env(CC=str(self.config.clangPath), CXX=str(self.config.clangPlusPlusPath))
+        # Force use of clang for the build tools (the build system can't deal with GCC as the host compiler for now):
+        if not getCompilerInfo(self.config.clangPath).is_clang:
+            self.make_args.set_env(CC=self.config.sdkBinDir / "clang", CXX=self.config.sdkBinDir / "clang++")
+        else:
+            self.make_args.set_env(CC=str(self.config.clangPath), CXX=str(self.config.clangPlusPlusPath))
 
         # we don't build elftoolchain during buildworld so for the kernel we need to set these variables
         self.make_args.set_env(XOBJDUMP=self.config.sdkBinDir / "llvm-objdump")
