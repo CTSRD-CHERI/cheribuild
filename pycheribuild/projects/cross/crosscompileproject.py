@@ -399,17 +399,20 @@ class CrossCompileMixin(MultiArchBaseMixin):
     def CC(self):
         if not self.should_use_sdk_clang:
             return self.config.clangPath if not self.forceDefaultCC else Path("cc")
-        use_prefixed_cc = not self.compiling_for_host() and not self.baremetal
-        compiler_name = self.targetTriple + "-clang" if use_prefixed_cc else "clang"
-        return self.compiler_dir / compiler_name
+        return self.compiler_dir / "clang"
 
     @property
     def CXX(self):
         if not self.should_use_sdk_clang:
             return self.config.clangPlusPlusPath if not self.forceDefaultCC else Path("c++")
-        use_prefixed_cxx = not self.compiling_for_host() and not self.baremetal
-        compiler_name = self.targetTriple + "-clang++" if use_prefixed_cxx else "clang++"
-        return self.compiler_dir / compiler_name
+        return self.compiler_dir / "clang++"
+
+    @property
+    def CPP(self):
+        if not self.should_use_sdk_clang:
+            if not self.should_use_sdk_clang:
+                return self.config.clangCppPath if not self.forceDefaultCC else Path("c++")
+        return self.compiler_dir / "clang++"
 
     @property
     def should_use_sdk_clang(self):
@@ -699,7 +702,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             self.add_configure_env_arg("LDFLAGS", " ".join(self.LDFLAGS + self.default_ldflags))
 
             if not self.compiling_for_host():
-                self.set_prog_with_args("CPP", self.compiler_dir / (self.targetTriple + "-clang-cpp"), CPPFLAGS)
+                self.set_prog_with_args("CPP", self.CPP, CPPFLAGS)
                 self.add_configure_env_arg("LD", str(self.compiler_dir / "ld.lld"))
 
         # remove all empty items from environment:
