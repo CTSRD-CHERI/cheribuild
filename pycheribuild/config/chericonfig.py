@@ -108,12 +108,12 @@ class CheriConfig(object):
         self.print_targets_only = loader.addBoolOption("print-targets-only", helpHidden=False, group=loader.actionGroup,
             help="Don't run the build but instead only print the targets that would be executed")
 
-        self.clangPath = loader.addPathOption("clang-path",
+        self.clangPath = loader.addPathOption("clang-path", shortname="-cc-path",
               default=latestClangTool("clang"), group=loader.pathGroup,
-              help="The Clang C compiler to use for compiling LLVM+Clang (must be at least version 3.7)")
-        self.clangPlusPlusPath = loader.addPathOption("clang++-path",
+              help="The C compiler to use for host binaries (must be compatible with Clang >= 3.7)")
+        self.clangPlusPlusPath = loader.addPathOption("clang++-path", shortname="-c++-path",
               default=latestClangTool("clang++"), group=loader.pathGroup,
-              help="The Clang C++ compiler to use for compiling LLVM+Clang (must be at least version 3.7)")
+              help="The C++ compiler to use for host binaries (must be compatible with Clang >= 3.7)")
 
         self.passDashKToMake = loader.addCommandLineOnlyBoolOption("pass-k-to-make", "k",
                                                                    help="Pass the -k flag to make to continue after"
