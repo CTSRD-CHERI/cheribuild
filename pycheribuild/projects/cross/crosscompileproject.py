@@ -192,9 +192,9 @@ class CrossCompileMixin(MultiArchBaseMixin):
             # clang currently gets the TLS model wrong:
             # https://github.com/CTSRD-CHERI/cheribsd/commit/f863a7defd1bdc797712096b6778940cfa30d901
             self.COMMON_FLAGS.append("-ftls-model=initial-exec")
-            # use *-*-freebsd12 to default to libc++
+            # use *-*-freebsd13 to default to libc++
             if self.compiling_for_cheri():
-                self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "mips64-qemu-elf-cheri" + self.config.cheriBitsStr
+                self.targetTriple = "mips64c" + self.config.cheriBitsStr + "-unknown-freebsd13-purecap" if not self.baremetal else "mips64-qemu-elf-cheri" + self.config.cheriBitsStr
                 # This break e.g. compiler_rt: self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "cheri-qemu-elf-cheri" + self.config.cheriBitsStr
                 if self.should_use_extra_c_compat_flags():
                     self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
@@ -202,7 +202,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                     self.COMMON_FLAGS.append("-cheri-cap-table-abi=" + self.config.cheri_cap_table_abi)
             else:
                 assert self.compiling_for_mips()
-                self.targetTriple = "mips64-unknown-freebsd" if not self.baremetal else "mips64-qemu-elf"
+                self.targetTriple = "mips64-unknown-freebsd13" if not self.baremetal else "mips64-qemu-elf"
                 self.COMMON_FLAGS.append("-integrated-as")
                 self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
                 if not self.baremetal:
@@ -281,7 +281,9 @@ class CrossCompileMixin(MultiArchBaseMixin):
             return self.targetTriple
         else:
             # anything over 10 should use libc++ by default
-            return self.targetTriple + "12"
+            if self.targetTriple.endswith("-freebsd"):
+                return self.targetTriple + "13"
+            return self.targetTriple.replace("-freebsd-", "-freebsd13-")
 
     @property
     def sizeof_void_ptr(self):

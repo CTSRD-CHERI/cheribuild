@@ -127,7 +127,7 @@ class BuildLLVMBase(CMakeProject):
                                        CMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Wl,--gdb-index")
         if self.add_default_sysroot:
             self.add_cmake_options(DEFAULT_SYSROOT=self.crossSysrootPath,
-                                   LLVM_DEFAULT_TARGET_TRIPLE="cheri-unknown-freebsd")
+                                   LLVM_DEFAULT_TARGET_TRIPLE="mips64c" + self.config.cheriBitsStr + "hybrid-unknown-freebsd")
         # when making a debug or asserts build speed it up by building a release tablegen
         # Actually it seems like the time spent in CMake is longer than that spent running tablegen, disable for now
         self.add_cmake_options(LLVM_OPTIMIZED_TABLEGEN=False)
@@ -253,7 +253,7 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     def install(self, **kwargs):
         super().install(**kwargs)
         # Create symlinks that hardcode the sdk and the ABI to easily compile binaries
-        config_file_template = """-target cheri-unknown-freebsd13
+        config_file_template = """-target mips64-unknown-freebsd13
 -integrated-as
 -G0
 -msoft-float
