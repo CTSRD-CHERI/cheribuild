@@ -114,6 +114,9 @@ class CheriConfig(object):
         self.clangPlusPlusPath = loader.addPathOption("clang++-path", shortname="-c++-path",
               default=latestClangTool("clang++"), group=loader.pathGroup,
               help="The C++ compiler to use for host binaries (must be compatible with Clang >= 3.7)")
+        self.clangCppPath = loader.addPathOption("clang-cpp-path", shortname="-cpp-path",
+              default=latestClangTool("clang-cpp"), group=loader.pathGroup,
+              help="The C preprocessor to use for host binaries (must be compatible with Clang >= 3.7)")
 
         self.passDashKToMake = loader.addCommandLineOnlyBoolOption("pass-k-to-make", "k",
                                                                    help="Pass the -k flag to make to continue after"
