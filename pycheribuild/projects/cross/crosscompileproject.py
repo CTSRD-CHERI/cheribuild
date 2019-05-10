@@ -420,7 +420,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
         if not self.should_use_sdk_clang:
             if not self.should_use_sdk_clang:
                 return self.config.clangCppPath if not self.forceDefaultCC else Path("c++")
-        return self.compiler_dir / "clang++"
+        return self.compiler_dir / "clang-cpp"
 
     @property
     def should_use_sdk_clang(self):
