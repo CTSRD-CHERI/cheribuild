@@ -56,6 +56,8 @@ class BuildLibunwind(CrossCompileCMakeProject):
 
     @property
     def should_use_sdk_clang(self):
+        if self.compiling_for_host() and not self.config.use_sdk_clang_for_native_xbuild:
+            return False
         return True
 
     def __init__(self, config: CheriConfig):
@@ -90,6 +92,8 @@ class BuildLibunwind(CrossCompileCMakeProject):
             if IS_MAC or OSInfo.isUbuntu():
                 # Can't link libc++abi on MacOS and libsupc++ statically on Ubuntu
                 self.add_cmake_options(LIBUNWIND_TEST_ENABLE_EXCEPTIONS=False)
+                # Static linking is broken on Ubuntu 16.04
+                self.add_cmake_options(LIBUINWIND_BUILD_STATIC_TEST_BINARIES=False)
         else:
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=False,
                                    LIBUNWIND_ENABLE_SHARED=True)
@@ -190,6 +194,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
 
     @property
     def should_use_sdk_clang(self):
+        if self.compiling_for_host() and not self.config.use_sdk_clang_for_native_xbuild:
+            return False
         return True
 
     @classmethod
