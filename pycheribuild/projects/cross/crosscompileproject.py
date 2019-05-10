@@ -34,7 +34,7 @@ import pprint
 import re
 import shutil
 from builtins import issubclass
-from enum import Enum
+from enum import Enum, auto
 from pathlib import Path
 
 from ...config.loader import ComputedDefaultValue, ConfigOptionBase
@@ -49,9 +49,10 @@ __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProj
            "_INVALID_INSTALL_DIR", "GitRepository"]  # no-combine
 
 class CrossInstallDir(Enum):
-    NONE = 0
-    CHERIBSD_ROOTFS = 1
-    SDK = 2
+    NONE = auto()
+    CHERIBSD_ROOTFS = auto()
+    SDK = auto()
+    COMPILER_RESOURCE_DIR = auto()
 
 
 _INVALID_INSTALL_DIR = Path("/this/dir/should/be/overwritten/and/not/used/!!!!")
@@ -85,6 +86,8 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
         return Path(BuildCHERIBSD.rootfsDir(project, config) / "opt" / targetName / project.projectName.lower())
     elif project.crossInstallDir == CrossInstallDir.SDK:
         return project.sdkSysroot
+    elif project.crossInstallDir == CrossInstallDir.COMPILER_RESOURCE_DIR:
+        return getCompilerInfo(config.sdkBinDir / "clang").get_resource_dir()
     fatalError("Unknown install dir for", project.projectName)
 
 
@@ -231,6 +234,9 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 else:
                     self._installPrefix = Path("/", relative_to_rootfs)
                     self.destdir = BuildCHERIBSD.rootfsDir(self, config)
+            elif self.crossInstallDir == CrossInstallDir.COMPILER_RESOURCE_DIR:
+                self._installPrefix = self._installDir
+                self.destdir = None
             else:
                 assert self._installPrefix and self.destdir, "both must be set!"
 

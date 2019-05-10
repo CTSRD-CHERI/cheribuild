@@ -336,6 +336,47 @@ class BuildLibCXX(CrossCompileCMakeProject):
                                           # long running test -> speed up by using a kernel without invariants
                                           use_benchmark_kernel_by_default=True)
 
+class BuildCompilerRt(CrossCompileCMakeProject):
+    # TODO: add an option to allow upstream llvm?
+    repository = ReuseOtherProjectRepository(BuildCheriLLVM, subdirectory="compiler-rt")
+    projectName = "compiler-rt"
+    crossInstallDir = CrossInstallDir.COMPILER_RESOURCE_DIR
+    _check_install_dir_conflict = False
+    supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_TARGETS
+    default_architecture = CrossCompileTarget.CHERI
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+
+        self.add_cmake_options(
+            # LLVM_CONFIG_PATH=BuildCheriLLVM.buildDir / "bin/llvm-config",
+            LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
+            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, config) / "bin/llvm-lit",
+            COMPILER_RT_BUILD_BUILTINS=True,
+            COMPILER_RT_BUILD_SANITIZERS=True,
+            COMPILER_RT_BUILD_XRAY=False,
+            COMPILER_RT_BUILD_LIBFUZZER=True,
+            COMPILER_RT_BUILD_PROFILE=False,
+            COMPILER_RT_BAREMETAL_BUILD=self.baremetal,
+            # COMPILER_RT_DEFAULT_TARGET_ONLY=True,
+            # BUILTIN_SUPPORTED_ARCH="mips64",
+            TARGET_TRIPLE=self.targetTriple,
+            # LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=True,
+        )
+
+        if self.compiling_for_mips() or self.compiling_for_cheri():
+            # self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH="mips")
+            self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ONLY=True)
+
+    def install(self, **kwargs):
+        super().install(**kwargs)
+        if self.compiling_for_cheri():
+            # HACK: we don't really need the ubsan runtime but the toolchain pulls it in automatically
+            # TODO: is there an easier way to create an empty archive?
+            ubsan_runtime_path = self.installDir / ("lib/freebsd/libclang_rt.ubsan_standalone-mips64c" + self.config.cheriBitsStr + ".a")
+            if not ubsan_runtime_path.exists():
+                self.warning("Did not install ubsan runtime", ubsan_runtime_path)
+
 
 class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
