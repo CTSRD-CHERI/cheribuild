@@ -655,7 +655,13 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
         super().__init__(config)
         buildhost = self.get_host_triple()
         if not self.compiling_for_host() and self.add_host_target_build_config_options:
-            self.configureArgs.extend(["--host=" + self.targetTriple, "--target=" + self.targetTriple,
+            autotools_triple = self.targetTriple
+            # Most scripts don't like the final -purecap component:
+            autotools_triple = autotools_triple.replace("-purecap", "")
+            # TODO: do we have to remove these too?
+            #autotools_triple = autotools_triple.replace("mips64c128-", "cheri-")
+            #autotools_triple = autotools_triple.replace("mips64c256-", "cheri-")
+            self.configureArgs.extend(["--host=" + autotools_triple, "--target=" + autotools_triple,
                                        "--build=" + buildhost])
 
     def add_configure_env_arg(self, arg: str, value: str):
