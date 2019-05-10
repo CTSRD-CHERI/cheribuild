@@ -34,7 +34,7 @@ import pprint
 import re
 import shutil
 from builtins import issubclass
-from enum import Enum, auto
+from enum import Enum
 from pathlib import Path
 
 from ...config.loader import ComputedDefaultValue, ConfigOptionBase
@@ -49,10 +49,10 @@ __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProj
            "_INVALID_INSTALL_DIR", "GitRepository"]  # no-combine
 
 class CrossInstallDir(Enum):
-    NONE = auto()
-    CHERIBSD_ROOTFS = auto()
-    SDK = auto()
-    COMPILER_RESOURCE_DIR = auto()
+    NONE = 0
+    CHERIBSD_ROOTFS = 1
+    SDK = 2
+    COMPILER_RESOURCE_DIR = 3
 
 
 _INVALID_INSTALL_DIR = Path("/this/dir/should/be/overwritten/and/not/used/!!!!")
