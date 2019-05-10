@@ -1533,6 +1533,10 @@ class CMakeProject(Project):
 
     def add_cmake_options(self, **kwargs):
         for option, value in kwargs.items():
+            if any(x.startswith("-D" + option) for x in self.cmakeOptions):
+                self.info("Not using default value of '", value, "' for CMake option '", option,
+                          "' since it is explicitly overwritten in the configuration", sep="")
+                continue
             if isinstance(value, bool):
                 value = "ON" if value else "OFF"
             self.configureArgs.append("-D" + option + "=" + str(value))
