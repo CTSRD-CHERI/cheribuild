@@ -148,6 +148,10 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.configureEnvironment["CFLAGS_FOR_BUILD"] = "-g"
         self.configureEnvironment["CXXFLAGS_FOR_BUILD"] = "-g"
 
+        if not self.compiling_for_host():
+            self.add_configure_env_arg("AR", self.config.sdkBinDir / "ar")
+            self.add_configure_env_arg("RANLIB", self.config.sdkBinDir / "ranlib")
+            self.add_configure_env_arg("NM", self.config.sdkBinDir / "nm")
         # TODO: do I need these:
         """(cd $obj; env INSTALL="/usr/bin/install -c "  INSTALL_DATA="install   -m 0644"  INSTALL_LIB="install    -m 444"  INSTALL_PROGRAM="install    -m 555"  INSTALL_SCRIPT="install   -m 555"   PYTHON="${PYTHON}" SHELL=/bin/sh CONFIG_SHELL=/bin/sh CONFIG_SITE=/usr/ports/Templates/config.site ../configure ${CONFIGURE_ARGS} )"""
 
