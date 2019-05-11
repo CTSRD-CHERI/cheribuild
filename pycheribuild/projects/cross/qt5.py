@@ -343,6 +343,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                          generator=BuildQtWebkit.Generator.Ninja
                          )
         self._addRequiredSystemTool("update-mime-database", homebrew="shared-mime-info", apt="shared-mime-info")
+        self._addRequiredSystemTool("ruby", apt="ruby")
         if not self.compiling_for_host():
             self._linkage = Linkage.STATIC  # currently dynamic doesn't work
 
