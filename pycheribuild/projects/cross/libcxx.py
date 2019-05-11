@@ -353,7 +353,6 @@ class BuildCompilerRt(CrossCompileCMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-
         self.add_cmake_options(
             # LLVM_CONFIG_PATH=BuildCheriLLVM.buildDir / "bin/llvm-config",
             LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
@@ -369,6 +368,8 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             TARGET_TRIPLE=self.targetTriple,
             # LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=True,
         )
+        if self.debugInfo:
+            self.add_cmake_options(COMPILER_RT_DEBUG=True)
 
         if self.compiling_for_mips() or self.compiling_for_cheri():
             # self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH="mips")
