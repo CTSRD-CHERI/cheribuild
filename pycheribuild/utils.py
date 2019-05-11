@@ -310,7 +310,10 @@ def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
         targetPattern = re.compile(b"Target: (.+)")
         # clang prints this output to stderr
         try:
-            versionCmd = runCmd(compiler, "-v", captureError=True, printVerboseOnly=True, runInPretendMode=True)
+            # Use -v instead of --version to support both gcc and clang
+            # Note: for clang-cpp/cpp we need to have stdin as devnull
+            versionCmd = runCmd(compiler, "-v", captureError=True, printVerboseOnly=True, runInPretendMode=True,
+                                stdin=subprocess.DEVNULL, captureOutput=True)
         except subprocess.CalledProcessError as e:
             stderr = e.stderr if e.stderr else b"FAILED: " + str(e).encode("utf-8")
             versionCmd = CompletedProcess(e.cmd, e.returncode, e.output, stderr)
@@ -346,7 +349,8 @@ def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
 def get_version_output(program: Path, command_args: tuple=None) -> "bytes":
     if command_args is None:
         command_args = ["--version"]
-    prog = runCmd([program] + list(command_args), stderr=subprocess.STDOUT, captureOutput=True, runInPretendMode=True)
+    prog = runCmd([program] + list(command_args), stdin=subprocess.DEVNULL,
+                  stderr=subprocess.STDOUT, captureOutput=True, runInPretendMode=True)
     return prog.stdout
 
 
