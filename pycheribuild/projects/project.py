@@ -148,6 +148,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     installDir = None
     # Whether to hide the options from the default --help output (only add to --help-hidden)
     hide_options_from_help = False
+    mips_build_hybrid = False  # whether to build MIPS binaries as hybrid ones
     # To check that we don't create an crosscompile targets without a fixed target
     _should_not_be_instantiated = False
     __cached_deps = None  # type: typing.List[Target]
@@ -254,7 +255,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     @property
     def crossSysrootPath(self):
         assert self.get_crosscompile_target(self.config) is not None, "called from invalid class " + str(self.__class__)
-        return self.config.get_sysroot_path(self.get_crosscompile_target(self.config))
+        return self.config.get_sysroot_path(self.get_crosscompile_target(self.config), self.mips_build_hybrid)
 
     # Project subclasses will automatically have a target based on their name generated unless they add this:
     doNotAddToTargets = True
@@ -1007,6 +1008,7 @@ class Project(SimpleProject):
     doNotAddToTargets = True
     build_dir_suffix = ""   # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
 
+
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / project.projectName.lower()),
         asString=lambda cls: "$SOURCE_ROOT/" + cls.projectName.lower())
@@ -1058,6 +1060,8 @@ class Project(SimpleProject):
             result = "-" + config.cheriBitsStr + "-build" if append_bits else "-build"
         elif target == CrossCompileTarget.CHERI:
             result = "-" + config.cheriBitsStr + "-build"
+        elif target == CrossCompileTarget.MIPS and cls.mips_build_hybrid:
+            result = "-" + target.value + "-hybrid" + config.cheriBitsStr + "-build"
         else:
             result = "-" + target.value + "-build"
         if config.cross_target_suffix:

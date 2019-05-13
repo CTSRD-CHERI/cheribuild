@@ -72,7 +72,7 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
             assert project.rootfs_path.startswith("/"), project.rootfs_path
             # If use_hybrid_sysroot_for_mips is set, install to rootfs128 instead of rootfs-mips
             cross_target = project.get_crosscompile_target(config)
-            if project.compiling_for_mips() and config.use_hybrid_sysroot_for_mips:
+            if project.compiling_for_mips() and (project.mips_build_hybrid or config.use_hybrid_sysroot_for_mips):
                 cross_target = CrossCompileTarget.CHERI
             cheribsd_instance = BuildCHERIBSD.get_instance_for_cross_target(cross_target, config)
             return cheribsd_instance.installDir / project.rootfs_path[1:]
@@ -331,6 +331,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
             assert self.compiling_for_mips()
             # TODO: should we use -mcpu=cheri128/256?
             result.extend(["-mabi=n64", "-mcpu=mips4"])
+            if self.mips_build_hybrid:
+                result.append("-cheri=" + self.config.cheriBitsStr)
         if not self.baremetal:
             result.append("--sysroot=" + str(self.sdkSysroot))
         result += ["-B" + str(self.config.sdkBinDir)]
