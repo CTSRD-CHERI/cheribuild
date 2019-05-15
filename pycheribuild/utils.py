@@ -293,6 +293,30 @@ class CompilerInfo(object):
             self._resource_dir = Path(resource_dir_pat.search(cc1_cmd.stderr).group(1).decode("utf-8"))
         return self._resource_dir
 
+    def get_matching_binutil(self, binutil):
+        assert self.is_clang
+        name = self.path.name
+        version_suffix = ""
+        for basename in ("clang++", "clang-cpp", "clang"):
+            if name.startswith(basename):
+                version_suffix = name[len(basename):]
+        result = None
+        real_compiler_path = self.path.resolve()
+        if real_compiler_path != self.path.parent:
+            # Clang is installed in a different directory (e.g. /usr/lib/llvm-7) -> should be unversioned
+            result = real_compiler_path.parent / binutil
+            if not result.exists():
+                self.warning("Could not find", binutil, "in expected path", result)
+                result = None
+        if not binutil:
+            result = real_compiler_path.parent / binutil + version_suffix
+            if not result.exists():
+                self.warning("Could not find", binutil, "in expected path", result)
+                result = None
+        if not result:
+            result = binutil  # fall back to the default and assume clang can find the right one
+        return result
+
     @property
     def is_clang(self):
         return self.compiler in ("clang", "apple-clang")

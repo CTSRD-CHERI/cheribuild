@@ -141,23 +141,10 @@ class BuildQEMUBase(AutotoolsProject):
                         version_suffix = ""
                         if compiler.name.startswith("clang"):
                             version_suffix = compiler.name[len("clang"):]
-                        llvm_ar = shutil.which("llvm-ar" + version_suffix)
-                        llvm_ranlib = shutil.which("llvm-ranlib" + version_suffix)
-                        llvm_nm = shutil.which("llvm-nm" + version_suffix)
-                        lld = shutil.which("ld.lld" + version_suffix)
-                        if compiler.is_symlink():
-                            real_compiler = compiler.resolve()
-                            if real_compiler.parent != compiler.parent and not lld:
-                                # Clang is installed in a different directory (e.g. /usr/lib/llvm-7)
-                                lld = real_compiler.parent / "ld.lld"
-                                if not lld.exists():
-                                    self.warning("Could not find lld in expected path", lld)
-                                    lld = None
-
-
-                        if not lld:
-                            lld = "lld" # fall back to the default and assume clang can find the right lld versions
-
+                        llvm_ar = ccinfo.get_matching_binutil("llvm-ar")
+                        llvm_ranlib = ccinfo.get_matching_binutil("llvm-ranlib")
+                        llvm_nm = ccinfo.get_matching_binutil("llvm-nm")
+                        lld = ccinfo.get_matching_binutil("ld.lld")
                         # Find lld with the correct version (it must match the version of clang otherwise it breaks!)
                         self._extraLDFlags += " -fuse-ld=" + shlex.quote(str(lld))
 
@@ -165,9 +152,6 @@ class BuildQEMUBase(AutotoolsProject):
                             self.warning("Could not find llvm-{ar,ranlib,nm}" + version_suffix,
                                          "-> disabling LTO (qemu will be a bit slower)")
                             break
-                        self._addRequiredSystemTool("llvm-ar" + version_suffix)
-                        self._addRequiredSystemTool("llvm-ranlib" + version_suffix)
-                        self._addRequiredSystemTool("llvm-nm" + version_suffix)
                         self.configureEnvironment.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
                         # self.make_args.env_vars.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
                         self.make_args.set(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
