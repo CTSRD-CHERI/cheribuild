@@ -122,9 +122,10 @@ class _BuildDiskImageBase(SimpleProject):
         if self.needs_special_pkg_repo:
             self._addRequiredSystemTool("wget")  # Needed to recursively fetch the pkg repo
 
-    def addFileToImage(self, file: Path, *, baseDirectory: Path, user="root", group="wheel", mode=None,
+    def addFileToImage(self, file: Path, *, baseDirectory: Path=None, user="root", group="wheel", mode=None,
                        path_in_target=None):
         if path_in_target is None:
+            assert baseDirectory is not None, "Either baseDirectory or path_in_target must be set!"
             path_in_target = os.path.relpath(str(file), str(baseDirectory))
         assert not str(path_in_target).startswith(".."), path_in_target
 
@@ -326,11 +327,16 @@ class _BuildDiskImageBase(SimpleProject):
             if cross_target not in BuildGDB.supported_architectures:
                 warningMessage("GDB cannot be built for architecture ", cross_target, " -> not addding it")
             else:
-                gdb_path = BuildGDB.get_instance_for_cross_target(cross_target, self.config).real_install_root_dir
+                gdb_instance = BuildGDB.get_instance_for_cross_target(cross_target, self.config) # type: BuildGDB
+                gdb_path = gdb_instance.real_install_root_dir
                 gdb_binary = gdb_path / "bin/gdb"
+                if not gdb_binary.exists():
+                    # try to add GDB from the build directory
+                    gdb_binary = gdb_instance.buildDir / "gdb/gdb"
+                    # self.info("Adding GDB binary from GDB build directory to image")
                 if gdb_binary.exists():
                     self.info("Adding GDB binary", gdb_binary, "to disk image")
-                    self.addFileToImage(gdb_binary, baseDirectory=gdb_path, mode=0o755, path_in_target="usr/bin/gdb")
+                    self.addFileToImage(gdb_binary, mode=0o755, path_in_target="usr/bin/gdb")
 
 
         # Avoid long boot time on first start due to missing entropy:
