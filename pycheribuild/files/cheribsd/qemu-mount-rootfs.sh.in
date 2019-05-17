@@ -1,6 +1,11 @@
 #!/bin/sh
 set -xe
 kind=${{1:-smb}}
+if [ -z "$(ls -A "/nfsroot")" ]; then
+    echo "/nfsroot is not empty. Already mounted?"
+    exit 0
+fi
+
 if [ "$kind" = "smb" ]; then
     # rootfs is provided as the fourth SMB mount, but we now have named smb mounts:
     # mkdir -p /nfsroot && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu4 /nfsroot
