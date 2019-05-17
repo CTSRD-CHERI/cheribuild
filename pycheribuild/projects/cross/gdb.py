@@ -68,6 +68,12 @@ class BuildGDB(CrossCompileAutotoolsProject):
     mips_build_hybrid = True  # build MIPS binaries as CHERI hybrid so that the trap register number works
 
 
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        cls.cheri_hybrid = cls.addBoolOption("use-cheri-hybrid", help="Build against a hybrid sysroot (required for faulting capability register number support)",
+                                             only_add_for_targets=[CrossCompileTarget.MIPS], default=True)
+
     def __init__(self, config: CheriConfig):
         self._compile_status_message = None
         if self.compiling_for_host():
@@ -75,6 +81,10 @@ class BuildGDB(CrossCompileAutotoolsProject):
         else:
             # We always want to build the MIPS binary static so we can just scp it over to QEMU
             self._linkage = Linkage.STATIC
+        # In jenkins, we also want to be able to build a non- building the MIPS version of GDB
+
+        self.mips_build_hybrid = self.cheri_hybrid
+
         super().__init__(config)
         assert not self.compiling_for_cheri(), "Should only build this as a static MIPS binary not CHERIABI"
         installRoot = self.installDir if self.compiling_for_host() else self.installPrefix
