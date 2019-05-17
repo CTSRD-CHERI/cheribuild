@@ -286,6 +286,11 @@ class _BuildDiskImageBase(SimpleProject):
         self.createFileForImage("/usr/bin/gdb-run.sh", contents=includeLocalFile("files/cheribsd/gdb-run.sh"),
                                 mode=0o755, showContentsByDefault=False)
 
+        # Add a script to turn of network and stop running services:
+        self.createFileForImage("/usr/bin/prepare-benchmark-environment.sh",
+                                contents=includeLocalFile("files/cheribsd/prepare-benchmark-environment.sh"),
+                                mode=0o755, showContentsByDefault=False)
+
         # make sure that the disk image always has the same SSH host keys
         # If they don't exist the system will generate one on first boot and we have to accept them every time
         self.generateSshHostKeys()
