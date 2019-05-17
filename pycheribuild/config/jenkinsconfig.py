@@ -185,7 +185,7 @@ class JenkinsConfig(CheriConfig):
         # TODO: currently we need this to be unprefixed since that is what the archives created by jenkins look like
         return self.sdkDir / "sysroot"
 
-    def get_sysroot_path(self, cross_compile_target: CrossCompileTarget):
+    def get_sysroot_path(self, cross_compile_target: CrossCompileTarget, use_hybrid_sysroot=False):
         # TODO: currently we need this to be unprefixed since that is what the archives created by jenkins look like
         return self.sdkDir / "sysroot"
 
