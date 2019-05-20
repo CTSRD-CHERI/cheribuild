@@ -29,8 +29,11 @@
 #
 
 from .crosscompileproject import *
+from ..project import ReuseOtherProjectRepository
+from ...config.loader import ConfigOptionBase
 from ...utils import setEnv, IS_FREEBSD
 from pathlib import Path
+import inspect
 import tempfile
 
 
@@ -116,3 +119,68 @@ class BuildOlden(CrossCompileProject):
 
     def install(self, **kwargs):
         pass  # skip install for now...
+
+
+class BuildSpec2006(CrossCompileProject):
+    target = "spec2006"
+    projectName = "spec2006"
+    # No repository to clone (just hack around this):
+    repository = ReuseOtherProjectRepository(BuildOlden, ".")
+    crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+    make_kind = MakeCommandKind.GnuMake
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        cls.spec_iso = cls.addPathOption("spec-iso", help="Path to the spec ISO image")
+        cls.spec_config_dir = cls.addPathOption("spec-config-dir", help="Path to the CHERI spec config files")
+        cls.spec_base_dir = cls.addPathOption("spec-base-dir", help="Path to the CHERI spec build scripts")
+
+    def compile(self, cwd: Path = None):
+        for attr in ("spec_iso", "spec_config_dir", "spec_base_dir"):
+            if not getattr(self, attr):
+                option = inspect.getattr_static(self, attr)
+                assert isinstance(option, ConfigOptionBase)
+                self.fatal("Required SPEC path is not set! Please set", option.fullOptionName)
+        self.makedirs(self.buildDir / "spec")
+        if not (self.buildDir / "spec/README-CTSRD.txt").exists():
+            self.cleanDirectory(self.buildDir / "spec")  # clean up partial builds
+            self.run_cmd("bsdtar", "xf", self.spec_iso, "-C", "spec", cwd=self.buildDir)
+            self.run_cmd("chmod", "-R", "u+w", "spec/", cwd=self.buildDir)
+            for dir in Path(self.spec_base_dir).iterdir():
+                self.run_cmd("cp", "-a", dir, ".", cwd=self.buildDir / "spec")
+            self.run_cmd(self.buildDir / "spec/install.sh", "-f", cwd=self.buildDir / "spec")
+        # TODO: allow building hardfloat!
+        if self.compiling_for_mips():
+            config_name =  "freebsd-mips-clang-softfp"
+        elif self.compiling_for_cheri():
+            config_name = "freebsd-cheri" + self.config.cheriBitsStr + "-clang-softfp"
+        else:
+            self.fatal("Compiling for host not implemented yet!")
+            return
+        # TODO: edit config file
+        config_file_text = Path(self.spec_config_dir / (config_name + ".cfg")).read_text()
+        # TODO: change CFLAGS to allow dynamic linking
+        if self.compiling_for_mips():
+            config_file_text = config_file_text.replace("@MIPS_CLANG_BIN@", str(self.config.sdkBinDir))
+            config_file_text = config_file_text.replace("@MIPS_SYS_BIN@", str(self.config.sdkBinDir))
+            config_file_text = config_file_text.replace("@MIPS_SYSROOT@", str(self.sdkSysroot))
+        elif self.compiling_for_cheri():
+            config_file_text = config_file_text.replace("@CHERI" + self.config.cheriBitsStr + "_CLANG_BIN@", str(self.config.sdkBinDir))
+            config_file_text = config_file_text.replace("@CHERI" + self.config.cheriBitsStr + "_SYS_BIN@", str(self.config.sdkBinDir))
+            config_file_text = config_file_text.replace("@CHERI" + self.config.cheriBitsStr + "_SYSROOT@", str(self.sdkSysroot))
+        else:
+            self.fatal("Not supported")
+        print(config_file_text)
+        self.writeFile(self.buildDir / "spec/config/" / (config_name + ".cfg"), contents=config_file_text,
+                       overwrite=True, noCommandPrint=True, mode=0o644)
+        benchmark_list = "483"
+        script = """
+source shrc
+runspec -c {spec_config_name} --noreportable --make_bundle {spec_config_name} {benchmark_list}
+""".format(benchmark_list=benchmark_list, spec_config_name=config_name)
+        self.writeFile(self.buildDir / "build.sh", contents=script, mode=0o755, overwrite=True)
+        self.run_cmd("sh", "-x", self.buildDir / "build.sh", cwd=self.buildDir / "spec")
+
+    def install(self, **kwargs):
+        pass
