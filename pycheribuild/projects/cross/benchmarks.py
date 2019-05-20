@@ -142,6 +142,7 @@ class BuildSpec2006(CrossCompileProject):
                 option = inspect.getattr_static(self, attr)
                 assert isinstance(option, ConfigOptionBase)
                 self.fatal("Required SPEC path is not set! Please set", option.fullOptionName)
+                return
         self.makedirs(self.buildDir / "spec")
         if not (self.buildDir / "spec/README-CTSRD.txt").exists():
             self.cleanDirectory(self.buildDir / "spec")  # clean up partial builds
@@ -171,7 +172,6 @@ class BuildSpec2006(CrossCompileProject):
             config_file_text = config_file_text.replace("@CHERI" + self.config.cheriBitsStr + "_SYSROOT@", str(self.sdkSysroot))
         else:
             self.fatal("Not supported")
-        print(config_file_text)
         self.writeFile(self.buildDir / "spec/config/" / (config_name + ".cfg"), contents=config_file_text,
                        overwrite=True, noCommandPrint=True, mode=0o644)
         benchmark_list = "483"
