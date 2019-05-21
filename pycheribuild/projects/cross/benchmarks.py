@@ -31,7 +31,7 @@
 from .crosscompileproject import *
 from ..project import ReuseOtherProjectRepository
 from ...config.loader import ConfigOptionBase
-from ...utils import setEnv, IS_FREEBSD
+from ...utils import setEnv, IS_FREEBSD, commandline_to_str
 from pathlib import Path
 import inspect
 import tempfile
@@ -152,29 +152,35 @@ class BuildSpec2006(CrossCompileProject):
             for dir in Path(self.spec_base_dir).iterdir():
                 self.run_cmd("cp", "-a", dir, ".", cwd=self.buildDir / "spec")
             self.run_cmd(self.buildDir / "spec/install.sh", "-f", cwd=self.buildDir / "spec")
-        # TODO: allow building hardfloat!
+
+
+        config_file_text = Path(self.spec_config_dir / "freebsd-cheribuild.cfg").read_text()
         if self.compiling_for_mips():
-            config_name =  "freebsd-mips-clang-softfp"
+            build_arch = "mips-" + self.linkage().value
+            hw_cpu = "BERI"
+            float_abi = self.config.mips_float_abi.name.lower() + "fp"
         elif self.compiling_for_cheri():
-            config_name = "freebsd-cheri" + self.config.cheriBitsStr + "-clang-softfp"
+            build_arch = "cheri" + self.config.cheriBitsStr + "-" + self.linkage().value
+            hw_cpu = "CHERI" + self.config.cheriBitsStr
+            float_abi = self.config.mips_float_abi.name.lower() + "fp"
         else:
-            self.fatal("Compiling for host not implemented yet!")
+            self.fatal("NOT SUPPORTED YET")
             return
-        # TODO: edit config file
-        config_file_text = Path(self.spec_config_dir / (config_name + ".cfg")).read_text()
-        # TODO: change CFLAGS to allow dynamic linking
-        if self.compiling_for_mips():
-            config_file_text = config_file_text.replace("@MIPS_CLANG_BIN@", str(self.config.sdkBinDir))
-            config_file_text = config_file_text.replace("@MIPS_SYS_BIN@", str(self.config.sdkBinDir))
-            config_file_text = config_file_text.replace("@MIPS_SYSROOT@", str(self.sdkSysroot))
-        elif self.compiling_for_cheri():
-            config_file_text = config_file_text.replace("@CHERI" + self.config.cheriBitsStr + "_CLANG_BIN@", str(self.config.sdkBinDir))
-            config_file_text = config_file_text.replace("@CHERI" + self.config.cheriBitsStr + "_SYS_BIN@", str(self.config.sdkBinDir))
-            config_file_text = config_file_text.replace("@CHERI" + self.config.cheriBitsStr + "_SYSROOT@", str(self.sdkSysroot))
-        else:
-            self.fatal("Not supported")
+
+        config_name = "freebsd-" + build_arch + "-" + float_abi
+        config_file_text = config_file_text.replace("@HW_CPU@", hw_cpu)
+        config_file_text = config_file_text.replace("@CONFIG_NAME@", config_name)
+
+        config_file_text = config_file_text.replace("@CLANG@", str(self.CC))
+        config_file_text = config_file_text.replace("@CLANGXX@", str(self.CXX))
+        config_file_text = config_file_text.replace("@CFLAGS@", commandline_to_str(self.default_compiler_flags + self.CFLAGS))
+        config_file_text = config_file_text.replace("@CXXFLAGS@", commandline_to_str(self.default_compiler_flags + self.CXXFLAGS))
+        config_file_text = config_file_text.replace("@LDFLAGS@", commandline_to_str(self.default_ldflags + self.LDFLAGS))
+        config_file_text = config_file_text.replace("@SYSROOT@", str(self.sdkSysroot))
+        config_file_text = config_file_text.replace("@SYS_BIN@", str(self.config.sdkBinDir))
+
         self.writeFile(self.buildDir / "spec/config/" / (config_name + ".cfg"), contents=config_file_text,
-                       overwrite=True, noCommandPrint=True, mode=0o644)
+                       overwrite=True, noCommandPrint=False, mode=0o644)
         benchmark_list = "483"
         script = """
 source shrc
