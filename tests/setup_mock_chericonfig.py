@@ -55,7 +55,6 @@ class MockConfig(CheriConfig):
         self.outputRoot = sourceRoot / "output"
         self.sdkDir = self.outputRoot / "sdk"
         self.otherToolsDir = self.outputRoot / "other"
-        self.dollarPathWithOtherTools = "$PATH"
 
         assert self._ensureRequiredPropertiesSet()
 
