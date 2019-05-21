@@ -81,6 +81,8 @@ class BuildMibench(CrossCompileProject):
         if is_jenkins_build():
             self.makedirs(self.installDir)
             self.run_cmd("cp", "-av", self.bunde_name + "-bundle/", self.installDir, cwd=self.buildDir)
+            # Remove all the .dump files from the tarball
+            self.run_cmd("find", self.installDir, "-name", "*.dump", "-delete")
         else:
             self.info("Not installing MiBench for non-Jenkins builds")
 
