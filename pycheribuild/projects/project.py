@@ -1315,7 +1315,7 @@ class Project(SimpleProject):
                 runCmd(self.make_args.command, "distclean", cwd=self.buildDir)
             else:
                 # just use git clean for cleanup
-                warningMessage(self.projectName, "does not support out-of-source builds, using git clean to remove"
+                warningMessage(self.projectName, "does not support out-of-source builds, using git clean to remove "
                                                  "build artifacts.")
                 # Try to keep project files for IDEs and other dotfiles:
                 runCmd("git", "clean", "-dfx", "--exclude=.*", "--exclude=*.kdev4", cwd=self.buildDir)

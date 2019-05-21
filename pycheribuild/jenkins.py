@@ -320,8 +320,30 @@ def _jenkins_main():
             fatalError("Could not find a usable version of the tar command")
             return
         statusUpdate("Creating tarball", cheriConfig.tarball_name)
+        # Strip all ELF files:
+        if cheriConfig.strip_elf_files:
+            strip_binaries(cheriConfig, cheriConfig.workspace / "tarball")
         runCmd([tar_cmd, "--create", "--xz"] + owner_flags + ["-f", cheriConfig.tarball_name, "-C", "tarball", "."], cwd=cheriConfig.workspace)
 
+
+def strip_binaries(cheriConfig: JenkinsConfig, directory: Path):
+    statusUpdate("Tarball size before stripping ELF files:")
+    runCmd("du", "-sh", directory)
+    for root, dirs, files in os.walk(str(directory)):
+        for file in files:
+            # Try to shrink the size by stripping all elf binaries
+            filepath = Path(root, file)
+            if filepath.is_symlink():
+                continue
+            try:
+                with filepath.open("rb") as f:
+                    if f.read(4) == b"\x7fELF":
+                        # self.verbose_print("Stripping ELF binary", filepath)
+                        runCmd(cheriConfig.sdkBinDir / "llvm-strip", filepath)
+            except Exception as e:
+                warningMessage("Failed to detect type of file:", filepath, e)
+    statusUpdate("Tarball size after stripping ELF files:")
+    runCmd("du", "-sh", directory)
 
 def jenkins_main():
     try:

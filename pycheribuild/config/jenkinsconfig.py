@@ -100,8 +100,8 @@ class JenkinsConfig(CheriConfig):
                                                                   help="The install prefix for cross compiled projects"
                                                                        " (the path where it will end up in the install"
                                                                        " image)")  # type: Path
-        self.without_sdk = loader.addCommandLineOnlyBoolOption("without-sdk",
-                                                              help="Don't use the CHERI SDK -> only /usr (for native builds)")
+        self.without_sdk = loader.addCommandLineOnlyBoolOption("without-sdk", help="Don't use the CHERI SDK -> only /usr (for native builds)")
+        self.strip_elf_files = loader.addCommandLineOnlyBoolOption("strip-elf-files", help="Strip ELF files before creating the tarball", default=True)
         self.cheri_sdk_path = loader.addCommandLineOnlyOption("cheri-sdk-path", default=None, type=Path,
                                                               help="Override the path to the CHERI SDK (default is $WORKSPACE/cherisdk)")  # type: Path
         self.extract_compiler_only = loader.addCommandLineOnlyBoolOption("extract-compiler-only",
