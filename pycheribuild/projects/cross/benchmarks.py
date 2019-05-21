@@ -31,7 +31,7 @@
 from .crosscompileproject import *
 from ..project import ReuseOtherProjectRepository
 from ...config.loader import ConfigOptionBase
-from ...utils import setEnv, IS_FREEBSD, commandline_to_str
+from ...utils import setEnv, IS_FREEBSD, commandline_to_str, is_jenkins_build
 from pathlib import Path
 import inspect
 import tempfile
@@ -78,7 +78,11 @@ class BuildMibench(CrossCompileProject):
             self.runMake("bundle_dump")
 
     def install(self, **kwargs):
-        pass  # skip install for now...
+        if is_jenkins_build():
+            self.makedirs(self.installDir)
+            self.run_cmd("cp", "-av", self.bunde_name + "-bundle/", self.installDir, cwd=self.buildDir)
+        else:
+            self.info("Not installing MiBench for non-Jenkins builds")
 
     def run_tests(self):
         if self.compiling_for_host():

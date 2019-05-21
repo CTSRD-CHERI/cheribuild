@@ -93,7 +93,7 @@ class SdkArchive(object):
 
     def extract(self):
         assert self.archive.exists(), str(self.archive)
-        runCmd(["tar", "Jxf", self.archive, "-C", self.cheriConfig.sdkDir] + self.extra_args)
+        runCmd(["tar", "Jxf", self.archive, "-C", self.cheriConfig.sdkDir] + self.extra_args, cwd=self.cheriConfig.workspace)
         self.check_required_files()
 
     def check_required_files(self, fatal=True) -> bool:
@@ -147,7 +147,7 @@ def get_sdk_archives(cheriConfig, needs_cheribsd_sysroot: bool) -> "typing.List[
             warningMessage("Project needs a full SDK archive but only clang archive was found and",
                            sysroot_archive.archive, "is missing. Will attempt to build anyway but build "
                                                     "will most likely fail.")
-            runCmd("ls", "-la")
+            runCmd("ls", "-la", cwd=cheriConfig.workspace)
             return [clang_archive]
         return [clang_archive, sysroot_archive]
 
@@ -300,12 +300,27 @@ def _jenkins_main():
 
 
     if JenkinsAction.CREATE_TARBALL in cheriConfig.action:
-        if IS_LINUX:
+        bsdtar_path = shutil.which("bsdtar")
+        tar_cmd = None
+        owner_flags = ["--invalid-flag"]
+        if bsdtar_path:
+            bsdtar_version = get_program_version(Path(bsdtar_path), regex=b"bsdtar\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?")
+            if bsdtar_version > (3, 0, 0):
+                # Only newer versions support --uid/--gid
+                tar_cmd = bsdtar_path
+                owner_flags = ["--uid=0", "--gid=0", "--numeric-owner"]
+
+        if not tar_cmd and (shutil.which("gtar") or IS_LINUX):
+            # GNU tar
+            tar_cmd = "tar" if IS_LINUX else "gtar"
             owner_flags = ["--owner=0", "--group=0", "--numeric-owner"]
-        else:
-            owner_flags = ["--uid=0", "--gid=0", "--numeric-owner"]
+
+        # bsdtar too old and GNU tar not found
+        if not tar_cmd:
+            fatalError("Could not find a usable version of the tar command")
+            return
         statusUpdate("Creating tarball", cheriConfig.tarball_name)
-        runCmd(["tar", "--create", "--xz"] + owner_flags + ["-f", cheriConfig.tarball_name, "-C", "tarball", "."])
+        runCmd([tar_cmd, "--create", "--xz"] + owner_flags + ["-f", cheriConfig.tarball_name, "-C", "tarball", "."], cwd=cheriConfig.workspace)
 
 
 def jenkins_main():
