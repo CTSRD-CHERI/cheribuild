@@ -289,8 +289,12 @@ def _jenkins_main():
         # delete the install root:
         if JenkinsAction.BUILD in cheriConfig.action:
             cleaningTask = cheriConfig.FS.asyncCleanDirectory(cheriConfig.outputRoot) if not cheriConfig.keepInstallDir else ThreadJoiner(None)
-            with cleaningTask:
-                target.execute(cheriConfig)
+            new_path = os.getenv("PATH", "")
+            if not cheriConfig.without_sdk:
+                new_path = str(cheriConfig.sdkBinDir) + ":" + new_path
+            with setEnv(PATH=new_path):
+                with cleaningTask:
+                    target.execute(cheriConfig)
         if JenkinsAction.TEST in cheriConfig.action:
             target.run_tests(cheriConfig)
 

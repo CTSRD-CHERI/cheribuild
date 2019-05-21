@@ -47,7 +47,7 @@ if [ "$(uname -s)" = "Darwin" ]; then
         ln -svfn "$CHERI_SDK/$i" "cherisdk/bin/cheri-unknown-freebsd-$i"
         ln -svfn "$CHERI_SDK/$i" "cherisdk/bin/mips64-unknown-freebsd-$i"
     done
-    for i in ar nm objcopy objdump objcopy ranlib; do
+    for i in ar nm objcopy objdump objcopy ranlib strip; do
         ln -svfn "$CHERI_SDK/llvm-$i" "cherisdk/bin/llvm-$i"
         ln -svfn "$CHERI_SDK/llvm-$i" "cherisdk/bin/$i"
         ln -svfn "$CHERI_SDK/llvm-$i" "cherisdk/bin/cheri-unknown-freebsd-$i"

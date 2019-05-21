@@ -64,6 +64,7 @@ class BuildMibench(CrossCompileProject):
             # We can't fall back to /usr/bin/ar here since that breaks on MacOS
             self.make_args.set(AR=str(self.config.sdkBinDir / "ar") + " rc")
             self.make_args.set(AR2=str(self.config.sdkBinDir / "ranlib"))
+            self.make_args.set(RANLIB=str(self.config.sdkBinDir / "ranlib"))
             self.make_args.set(ADDITIONAL_CFLAGS=" ".join(self.default_compiler_flags))
             self.make_args.set(VERSION=self.bunde_name)
             if self.compiling_for_mips():

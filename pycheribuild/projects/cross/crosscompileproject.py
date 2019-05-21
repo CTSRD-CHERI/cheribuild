@@ -512,6 +512,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 found_asan_lib = Path("/some/invalid/path/to/lib")
             self.makedirs(expected_path)
             runCmd("cp", "-av", found_asan_lib.parent, expected_path.parent)
+            # For some reason they are 644 so we can't overwrite for the next build unless we chmod first
+            runCmd("chmod", "-R", "u+w", expected_path.parent)
             if not (expected_path / libname).exists():
                 self.fatal("Cannot find", libname, "library in compiler dir", expected_path, "-- Compilation will fail!")
 

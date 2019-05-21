@@ -217,7 +217,6 @@ class CheriConfig(object):
         self.cheribsd_image_root = None  # type: Path
         self.sdkDir = None  # type: Path
         self.otherToolsDir = None  # type: Path
-        self.dollarPathWithOtherTools = None  # type: Path
         self.docker = loader.addBoolOption("docker", help="Run the build inside a docker container",
                                            group=loader.dockerGroup)
         self.docker_container = loader.addOption("docker-container", help="Name of the docker container to use",
@@ -308,10 +307,13 @@ class CheriConfig(object):
             del os.environ["CLICOLOR"]
 
     def _initializeDerivedPaths(self):
-        self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
         # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
         os.environ["CHERI_BITS"] = self.cheriBitsStr
         self.sysrootArchiveName = "cheri-sysroot" + self.cheriBitsStr + ".tar.gz"
+
+    @property
+    def dollarPathWithOtherTools(self) -> str:
+        return str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
 
     @property
     def makeJFlag(self):

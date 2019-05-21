@@ -206,7 +206,6 @@ class JenkinsConfig(CheriConfig):
         self.cheribsd_image_root = self.workspace
 
         self.otherToolsDir = self.workspace / "bootstrap"
-        self.dollarPathWithOtherTools = str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
         # check for ctsrd/cheri-sdk-{cheri256,cheri128,mips} docker image
         if self.cheri_sdk_path is not None:
             self.sdkDir = self.cheri_sdk_path
