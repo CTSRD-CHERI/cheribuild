@@ -110,7 +110,7 @@ class _BuildDiskImageBase(SimpleProject):
         assert isinstance(self.source_project, BuildFreeBSD)
         self.rootfsDir = self.source_project.getInstallDir(self, config)
         assert self.rootfsDir is not None
-        if (self.userGroupDbDir / "master.passwd").is_file():
+        if (self.self.source_project.sourceDir / "master.passwd").is_file():
             self.userGroupDbDir = self.source_project.sourceDir / "lib/libc/gen"
         else:
             self.userGroupDbDir = self.source_project.sourceDir / "etc"
