@@ -311,12 +311,12 @@ class CompilerInfo(object):
             # Clang is installed in a different directory (e.g. /usr/lib/llvm-7) -> should be unversioned
             result = real_compiler_path.parent / binutil
             if not result.exists():
-                self.warning("Could not find", binutil, "in expected path", result)
+                warningMessage("Could not find", binutil, "in expected path", result)
                 result = None
         if not binutil:
             result = real_compiler_path.parent / binutil + version_suffix
             if not result.exists():
-                self.warning("Could not find", binutil, "in expected path", result)
+                warningMessage("Could not find", binutil, "in expected path", result)
                 result = None
         if not result:
             result = binutil  # fall back to the default and assume clang can find the right one
