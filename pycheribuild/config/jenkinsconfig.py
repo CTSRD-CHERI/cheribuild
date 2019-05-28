@@ -122,7 +122,7 @@ class JenkinsConfig(CheriConfig):
         self.clean = loader.addCommandLineOnlyBoolOption("clean", default=True,
                                                          help="Clean build directory before building")
         self.force = True  # no user input in jenkins
-        self.noLogfile = True  # jenkins stores the output anyway
+        self.write_logfile = False  # jenkins stores the output anyway
         self.skipConfigure = False
         self.forceConfigure = True
         # self.listTargets = False

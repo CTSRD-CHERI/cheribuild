@@ -45,7 +45,7 @@ class MockConfig(CheriConfig):
         self.makeWithoutNice = True
         self.force_update = False
         self.force = True
-        self.noLogfile = True
+        self.write_logfile = True
         self.test_extra_args = []
         self.load()
 

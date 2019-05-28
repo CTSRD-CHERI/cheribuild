@@ -68,7 +68,7 @@ class DefaultCheriConfig(CheriConfig):
         self.verbose = loader.addBoolOption("verbose", "v", help="Print all commmands that are executed")
         self.clean = loader.addBoolOption("clean", "c", help="Remove the build directory before build")
         self.force = loader.addBoolOption("force", "f", help="Don't prompt for user input but use the default action")
-        self.noLogfile = loader.addBoolOption("no-logfile", help="Don't write a logfile for the build steps")
+        self.write_logfile = loader.addBoolOption("logfile", help="Don't write a logfile for the build steps", default=False)
         self.skipUpdate = loader.addBoolOption("skip-update", help="Skip the git pull step")
         self.skipClone = False
         self.force_update = loader.addBoolOption("force-update", help="Always update (with autostash) even if there "

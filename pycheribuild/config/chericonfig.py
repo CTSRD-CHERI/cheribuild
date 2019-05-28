@@ -164,7 +164,7 @@ class CheriConfig(object):
         self.quiet = None  # type: bool
         self.clean = None  # type: bool
         self.force = None  # type: bool
-        self.noLogfile = None  # type: bool
+        self.write_logfile = None  # type: bool
         self.skipUpdate = None  # type: bool
         self.skipClone = None  # type: bool
         self.skipConfigure = None  # type: bool

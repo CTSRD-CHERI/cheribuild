@@ -412,7 +412,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                         project._lastStdoutLineCanBeOverwritten = False
                     sys.stderr.buffer.write(errLine)
                     flushStdio(sys.stderr)
-                    if not project.config.noLogfile:
+                    if project.config.write_logfile:
                         outfile.write(errLine)
                 except ValueError:
                     # Don't print a backtrace on ctrl+C (since that will exit the main thread and close the file)
@@ -460,22 +460,22 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         else:
             newEnv = None
         assert not logfileName.startswith("/")
-        if self.config.noLogfile:
-            logfilePath = Path(os.devnull)
-        else:
+        if self.config.write_logfile:
             logfilePath = self.buildDir / (logfileName + ".log")
             print("Saving build log to", logfilePath)
+        else:
+            logfilePath = Path(os.devnull)
         if self.config.pretend:
             return
         if self.config.verbose:
             stdoutFilter = None
 
-        if not self.config.noLogfile and logfilePath.is_file() and not appendToLogfile:
+        if self.config.write_logfile and logfilePath.is_file() and not appendToLogfile:
             logfilePath.unlink()  # remove old logfile
         args = list(map(str, args))  # make sure all arguments are strings
         cmdStr = " ".join([shlex.quote(s) for s in args])
 
-        if self.config.noLogfile:
+        if not self.config.write_logfile:
             if stdoutFilter is None:
                 # just run the process connected to the current stdout/stdin
                 check_call_handle_noexec(args, cwd=str(cwd), env=newEnv)
@@ -1284,7 +1284,7 @@ class Project(SimpleProject):
                 logfileName += "." + makeTarget
 
         starttime = time.time()
-        if self.config.noLogfile and stdoutFilter == _default_stdout_filter:
+        if not self.config.write_logfile and stdoutFilter == _default_stdout_filter:
             # if output isatty() (i.e. no logfile) ninja already filters the output -> don't slow this down by
             # adding a redundant filter in python
             if make_command == "ninja" and makeTarget != "install":
