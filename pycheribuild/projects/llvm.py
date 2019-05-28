@@ -293,6 +293,17 @@ class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
     skip_misc_llvm_tools = False # Cannot skip these tools in upstream LLVM
 
 
+class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
+    repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-project.git", force_branch=True)
+    gitBranch = "temporal"
+    projectName = "cherios-llvm-project"
+    target = "cherios-llvm"
+    defaultInstallDir = ComputedDefaultValue(
+        function=lambda config, project: config.outputRoot / "cherios-llvm",
+        asString="$INSTALL_ROOT/cherios-llvm")
+    skip_misc_llvm_tools = False # Cannot skip these tools in upstream LLVM
+
+
 # Keep around the build infrastructure for building the split repos for now:
 class BuildLLVMSplitRepoBase(BuildLLVMBase):
     doNotAddToTargets = True
