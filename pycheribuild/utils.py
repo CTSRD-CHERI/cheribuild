@@ -143,7 +143,12 @@ def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remain
     new_args = (shlex.quote(str(arg1)),) + tuple(map(shlex.quote, map(str, remaining_args)))
     if outputFile:
         new_args += (">", str(outputFile))
-    print(coloured(colour, prefix, sep=sep), coloured(colour, new_args, sep=sep), flush=True, **kwargs)
+    # Avoid a space before the actual command if there is no prefic:
+    if not prefix:
+        print(coloured(colour, new_args, sep=sep), flush=True, **kwargs)
+    else:
+        print(coloured(colour, prefix, sep=sep), coloured(colour, new_args, sep=sep), flush=True, **kwargs)
+
 
 
 def getInterpreter(cmdline: "typing.Sequence[str]") -> "typing.Optional[typing.List[str]]":
