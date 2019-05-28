@@ -1135,7 +1135,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     def process(self):
         # Compatibility with older versions of cheribuild (and scripts that hardcode the path):
         # Create a symlink from the new build directory name to the old build directory name.
-        if self.compiling_for_cheri():
+        if self.compiling_for_cheri() and self.config.cheri_cap_table_abi == self.config.DEFAULT_CAP_TABLE_ABI:
             old_build_dir = Path(self.config.buildRoot, "cheribsd-obj-" + self.config.cheriBitsStr)
             if not old_build_dir.is_symlink():
                 self.info("Updating old build directory name:")
