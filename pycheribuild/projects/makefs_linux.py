@@ -52,7 +52,7 @@ class BuildMakefsOnLinux(Project):
 
     def compile(self, **kwargs):
         # Doesn't have an all target
-        self.runMake(makeTarget="")
+        self.runMake(makeTarget="", parallel=False)
 
     def install(self, **kwargs):
         self.installFile(self.sourceDir / "builddir/usr.sbin/makefs/makefs", self.installDir / "bin/makefs")
