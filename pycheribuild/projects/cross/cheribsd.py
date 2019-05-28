@@ -108,16 +108,6 @@ def cheribsd_minimal_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
         return config.outputRoot / "rootfs-minimal-x86"
 
 
-# noinspection PyProtectedMember
-def cheribsd_build_dir(config: CheriConfig, project: "BuildCHERIBSD"):
-    assert isinstance(project, BuildCHERIBSD)
-    if project.compiling_for_cheri():
-        # TODO: change this to be the default build dir name
-        return config.buildRoot / ("cheribsd-obj-" + config.cheriBitsStr)
-    else:
-        return project.buildDirForTarget(config, project._crossCompileTarget, project.use_asan)
-
-
 def default_cross_toolchain_path(config: CheriConfig, proj: "BuildFreeBSD"):
     if proj.build_with_upstream_llvm:
         return BuildUpstreamLLVM.getInstallDir(proj, config)
@@ -988,7 +978,6 @@ class BuildCHERIBSD(BuildFreeBSD):
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git")
     defaultInstallDir = cheribsd_install_dir
     appendCheriBitsToBuildDir = True
-    defaultBuildDir = cheribsd_build_dir
     supported_architectures = [CrossCompileTarget.CHERI, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
     default_architecture = CrossCompileTarget.CHERI
     is_sdk_target = True
@@ -1143,6 +1132,20 @@ class BuildCHERIBSD(BuildFreeBSD):
             runCmd("git", "submodule", "init", cwd=self.sourceDir)
             runCmd("git", "submodule", "update", cwd=self.sourceDir)
 
+    def process(self):
+        # Compatibility with older versions of cheribuild (and scripts that hardcode the path):
+        # Create a symlink from the new build directory name to the old build directory name.
+        if self.compiling_for_cheri():
+            old_build_dir = Path(self.config.buildRoot, "cheribsd-obj-" + self.config.cheriBitsStr)
+            if not old_build_dir.is_symlink():
+                self.info("Updating old build directory name:")
+            if not self.buildDir.exists() and not self.config.clean:
+                self.run_cmd("mv", old_build_dir, self.buildDir)
+            else:
+                self.cleanDirectory(old_build_dir, ensure_dir_exists=False)
+            self.createSymlink(self.buildDir, old_build_dir, cwd=old_build_dir.parent, printVerboseOnly=False)
+        super().process()
+
 
 class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
     projectName = "cheribsd-mfs-root-kernel"
@@ -1223,9 +1226,6 @@ class BuildCHERIBSDPurecap(BuildCHERIBSD):
     supported_architectures = None # Only Cheri is supported
     _crossCompileTarget = CrossCompileTarget.CHERI
     _should_not_be_instantiated = False
-
-    # use cheribsd-purecap-256-build
-    defaultBuildDir = BuildFreeBSD.defaultBuildDir
     build_dir_suffix = "purecap"
 
     defaultInstallDir = ComputedDefaultValue(function=cheribsd_purecap_install_dir,
@@ -1249,9 +1249,6 @@ class BuildCHERIBSDMinimal(BuildCHERIBSD):
     #supported_architectures = None # Only Cheri is supported
     #_crossCompileTarget = CrossCompileTarget.CHERI
     _should_not_be_instantiated = False
-
-    # use cheribsd-purecap-256-build
-    defaultBuildDir = BuildFreeBSD.defaultBuildDir
     build_dir_suffix = "minimal"
     defaultInstallDir = ComputedDefaultValue(function=cheribsd_minimal_install_dir,
                                              asString="$INSTALL_ROOT/rootfs-minmal{128,256,-mips,-x86}")

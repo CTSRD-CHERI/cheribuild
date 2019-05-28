@@ -52,7 +52,7 @@ class FileSystemUtils(object):
         # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
         runCmd("rm", "-rf", *dirs)
 
-    def cleanDirectory(self, path: Path, keepRoot=False) -> None:
+    def cleanDirectory(self, path: Path, keepRoot=False, ensure_dir_exists=True) -> None:
         """ After calling this function path will be an empty directory
         :param path: the directory to delete
         :param keepRoot: Whether to keep the root directory (e.g. for NFS exported mountpoints)
@@ -62,7 +62,8 @@ class FileSystemUtils(object):
             entries = list(map(str, path.iterdir())) if keepRoot else [path]
             self._deleteDirectories(*entries)
         # always make sure the path exists
-        self.makedirs(path)
+        if ensure_dir_exists:
+            self.makedirs(path)
 
     class DeleterThread(threading.Thread):
         def __init__(self, parent: "FileSystemUtils", path: Path):
@@ -181,7 +182,7 @@ class FileSystemUtils(object):
         if mode:
             file.chmod(mode)
 
-    def createSymlink(self, src: Path, dest: Path, *, relative=True, cwd: Path = None):
+    def createSymlink(self, src: Path, dest: Path, *, relative=True, cwd: Path = None, printVerboseOnly = True):
         assert dest.is_absolute() or cwd is not None
         if not cwd:
             cwd = dest.parent
@@ -190,9 +191,9 @@ class FileSystemUtils(object):
                 src = os.path.relpath(str(src), str(dest.parent if dest.is_absolute() else cwd))
             if cwd is not None and cwd.is_dir():
                 dest = dest.relative_to(cwd)
-            runCmd("ln", "-fsn", src, dest, cwd=cwd, printVerboseOnly=True)
+            runCmd("ln", "-fsn", src, dest, cwd=cwd, printVerboseOnly=printVerboseOnly)
         else:
-            runCmd("ln", "-fsn", src, dest, cwd=cwd, printVerboseOnly=True)
+            runCmd("ln", "-fsn", src, dest, cwd=cwd, printVerboseOnly=printVerboseOnly)
 
     def moveFile(self, src: Path, dest: Path, force=False, createDirs=True):
         if not src.exists():
