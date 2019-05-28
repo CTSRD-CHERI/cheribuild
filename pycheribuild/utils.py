@@ -307,14 +307,14 @@ class CompilerInfo(object):
                 version_suffix = name[len(basename):]
         result = None
         real_compiler_path = self.path.resolve()
+        suffixed_binutil = real_compiler_path.parent / (binutil + version_suffix)
+        if suffixed_binutil.exists():
+            return suffixed_binutil
+        else:
+            statusUpdate("Could not find version-suffixed", binutil, "in expected path", result)
         if real_compiler_path != self.path.parent:
             # Clang is installed in a different directory (e.g. /usr/lib/llvm-7) -> should be unversioned
             result = real_compiler_path.parent / binutil
-            if not result.exists():
-                warningMessage("Could not find", binutil, "in expected path", result)
-                result = None
-        if not binutil:
-            result = real_compiler_path.parent / binutil + version_suffix
             if not result.exists():
                 warningMessage("Could not find", binutil, "in expected path", result)
                 result = None
