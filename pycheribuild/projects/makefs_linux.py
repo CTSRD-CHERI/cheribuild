@@ -38,13 +38,17 @@ class BuildMakefsOnLinux(Project):
     repository = GitRepository("https://github.com/Engil/makefs.git")
     defaultInstallDir = Project._installToBootstrapTools
     build_in_source_dir = True  # out of source builds don't work
+    make_kind = MakeCommandKind.GnuMake
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self._addRequiredSystemHeader("bsd/bsd.h")
+        if IS_LINUX:
+            self._addRequiredSystemHeader("bsd/bsd.h")
+        if not IS_FREEBSD:
+            self._addRequiredSystemTool("bmake", homebrew="bmake", cheribuild_target="bmake")
 
     def checkSystemDependencies(self):
-        if not IS_LINUX:
+        if IS_FREEBSD:
             return  # not need on FreeBSD
         super().checkSystemDependencies()
         if not Path("/usr/include/bsd/bsd.h").is_file():
@@ -54,11 +58,16 @@ class BuildMakefsOnLinux(Project):
         # Doesn't have an all target
         self.runMake(makeTarget="", parallel=False)
 
+    def clean(self):
+        self.deleteFile(self.sourceDir / "builddir/.build_stamp")
+        self.cleanDirectory(self.sourceDir / "builddir")
+        return super().clean()
+
     def install(self, **kwargs):
         self.installFile(self.sourceDir / "builddir/usr.sbin/makefs/makefs", self.installDir / "bin/makefs")
 
     def process(self):
-        if not IS_LINUX:
+        if IS_FREEBSD:
             statusUpdate("Skipping makefs as this is only needed on Linux hosts")
         else:
             super().process()
