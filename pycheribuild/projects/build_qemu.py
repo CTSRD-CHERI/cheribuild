@@ -29,6 +29,7 @@
 #
 from .project import *
 from ..utils import *
+from ..config.loader import ComputedDefaultValue
 from pathlib import Path
 import os
 import shlex
@@ -295,3 +296,25 @@ class BuildQEMURISCV(BuildQEMUBase):
     @classmethod
     def qemu_binary(cls, caller: SimpleProject):
         return caller.config.sdkBinDir / "qemu-system-riscv64"
+
+
+class BuildCheriOSQEMU(BuildQEMU):
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", force_branch=True)
+    gitBranch = "cherios"
+    projectName = "cherios-qemu"
+    target = "cherios-qemu"
+    defaultInstallDir = ComputedDefaultValue(
+        function=lambda config, project: config.outputRoot / "cherios-sdk",
+        asString="$INSTALL_ROOT/cherios-sdk")
+    skip_misc_llvm_tools = False # Cannot skip these tools in upstream LLVM
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        self._qemuTargets = "cheri256-softmmu,cheri128-softmmu"
+
+
+    @classmethod
+    def qemu_binary(cls, caller: SimpleProject):
+        assert caller.config.unified_sdk, "UPDATE PLS"
+        binary_name = "qemu-system-cheri" + caller.config.cheriBitsStr
+        return cls.get_instance(caller, caller.config).installDir / "bin" / binary_name

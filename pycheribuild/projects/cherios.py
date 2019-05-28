@@ -48,13 +48,13 @@ class BuildCheriOS(CMakeProject):
     def setupConfigOptions(cls, useDefaultSysroot=True):
         super().setupConfigOptions()
         cls.smp_cores = cls.addConfigOption("smp-cores", default=1, kind=int)
-        cls.build_net = cls.addBoolOption("build-net", default=True)
+        cls.build_net = cls.addBoolOption("build-net", default=False)
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.add_cmake_options(CHERI_SDK_DIR=BuildCheriOSLLVM.get_instance(self, self.config).installDir)
         self.add_cmake_options(BUILD_FOR_CHERI128=self.config.cheriBits == 128)
-        self.add_cmake_options(BUILD_NET=self.build_net)
+        self.add_cmake_options(BUILD_WITH_NET=self.build_net)
         self.add_cmake_options(SMP_CORES=self.smp_cores)
         self.set_minimum_cmake_version(3, 4)
 

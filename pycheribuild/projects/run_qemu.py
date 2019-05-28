@@ -34,7 +34,7 @@ from .cross.bbl import *
 from .cross.cheribsd import BuildFreeBSD
 from .cross.cheribsd import *
 from .cherios import BuildCheriOS
-from .build_qemu import BuildQEMU, BuildQEMURISCV
+from .build_qemu import BuildQEMU, BuildQEMURISCV, BuildCheriOSQEMU
 from .disk_image import BuildFreeBSDImage
 from .disk_image import *
 from .project import *
@@ -94,6 +94,7 @@ class LaunchQEMUBase(SimpleProject):
             self.machineFlags.append("-cheri-c2e-on-unrepresentable")
         self._qemuUserNetworking = True
         self.rootfs_path = None  # type: Path
+        self._after_disk_options = []
 
     def process(self):
         if not self.qemuBinary.exists():
@@ -149,7 +150,7 @@ class LaunchQEMUBase(SimpleProject):
         qemuCommand = [self.qemuBinary] + self.machineFlags + kernelFlags + [
             "-m", "2048",  # 2GB memory
             "-nographic",  # no GPU
-        ] + self._projectSpecificOptions + diskOptions + monitorOptions + logfileOptions + self.extraOptions
+        ] + self._projectSpecificOptions + diskOptions + self._after_disk_options + monitorOptions + logfileOptions + self.extraOptions
         statusUpdate("About to run QEMU with image", self.diskImage, "and kernel", self.currentKernel)
         user_network_options = ""
         smb_dir_count = 0
@@ -316,7 +317,7 @@ class LaunchFreeBSDMips(AbstractLaunchFreeBSD):
 class LaunchCheriOSQEMU(LaunchQEMUBase):
     target = "run-cherios"
     projectName = "run-cherios"
-    dependencies = ["qemu", "cherios"]
+    dependencies = ["cherios-qemu", "cherios"]
     _forwardSSHPort = False
     _qemuUserNetworking = False
     hide_options_from_help = True
@@ -330,9 +331,22 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # FIXME: these should be config options
+        cherios = BuildCheriOS.get_instance(self, config)
         self.currentKernel = BuildCheriOS.getBuildDir(self, config) / "boot/cherios.elf"
+        self.qemuBinary = BuildCheriOSQEMU.qemu_binary(self)
         self.diskImage = self.config.outputRoot / "cherios-disk.img"
         self._projectSpecificOptions = ["-no-reboot"]
+
+        if cherios.build_net:
+            self._after_disk_options.extend([
+                "-netdev", "tap,id=tap0,ifname=cherios_tap,script=no,downscript=no",
+                "-device", "virtio-net-device,netdev=tap0",
+            ])
+
+        if cherios.smp_cores > 1:
+            self._projectSpecificOptions.append("-smp")
+            self._projectSpecificOptions.append(str(cherios.smp_cores))
+
         self.virtioDisk = True
         self._qemuUserNetworking = False
 

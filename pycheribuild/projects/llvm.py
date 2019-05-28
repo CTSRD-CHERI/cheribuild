@@ -299,8 +299,8 @@ class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
     projectName = "cherios-llvm-project"
     target = "cherios-llvm"
     defaultInstallDir = ComputedDefaultValue(
-        function=lambda config, project: config.outputRoot / "cherios-llvm",
-        asString="$INSTALL_ROOT/cherios-llvm")
+        function=lambda config, project: config.outputRoot / "cherios-sdk",
+        asString="$INSTALL_ROOT/cherios-sdk")
     skip_misc_llvm_tools = False # Cannot skip these tools in upstream LLVM
 
 
