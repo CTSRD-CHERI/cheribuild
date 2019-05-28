@@ -31,21 +31,31 @@ import re
 
 from .project import *
 from ..utils import *
+from .llvm import BuildCheriOSLLVM
 
 
 class BuildCheriOS(CMakeProject):
-    dependencies = ["freestanding-sdk"]
+    dependencies = ["cherios-llvm"]
     if IS_LINUX:
         dependencies.append("makefs-linux")
     defaultCMakeBuildType = "Debug"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cherios.git")
+    gitBranch = "lawrence"
     appendCheriBitsToBuildDir = True
     defaultInstallDir = lambda config, cls: config.outputRoot / ("cherios" + config.cheriBitsStr)
 
+    @classmethod
+    def setupConfigOptions(cls, useDefaultSysroot=True):
+        super().setupConfigOptions()
+        cls.smp_cores = cls.addConfigOption("smp-cores", default=1, kind=int)
+        cls.build_net = cls.addBoolOption("build-net", default=True)
+
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.add_cmake_options(CHERI_SDK_DIR=self.config.sdkDir)
+        self.add_cmake_options(CHERI_SDK_DIR=BuildCheriOSLLVM.get_instance(self, self.config).installDir)
         self.add_cmake_options(BUILD_FOR_CHERI128=self.config.cheriBits == 128)
+        self.add_cmake_options(BUILD_NET=self.build_net)
+        self.add_cmake_options(SMP_CORES=self.smp_cores)
         self.set_minimum_cmake_version(3, 4)
 
     def install(self, **kwargs):
