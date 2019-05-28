@@ -1059,7 +1059,7 @@ class Project(SimpleProject):
                 append_bits = False
             result = "-" + config.cheriBitsStr + "-build" if append_bits else "-build"
         elif target == CrossCompileTarget.CHERI:
-            result = "-" + config.cheriBitsStr + "-build"
+            result = "-" + config.cheri_bits_and_abi_str + "-build"
         elif target == CrossCompileTarget.MIPS and cls.mips_build_hybrid:
             result = "-" + target.value + "-hybrid" + config.cheriBitsStr + "-build"
         else:

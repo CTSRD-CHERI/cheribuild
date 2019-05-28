@@ -83,7 +83,7 @@ def freebsd_install_dir(config: CheriConfig, project: "BuildFreeBSD"):
 def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
     assert isinstance(project, BuildCHERIBSD)
     if project.compiling_for_cheri():
-        return config.outputRoot / ("rootfs" + config.cheriBitsStr)
+        return config.outputRoot / ("rootfs" + config.cheri_bits_and_abi_str)
     elif project.compiling_for_mips():
         return config.outputRoot / "rootfs-mips"
     else:
@@ -94,13 +94,13 @@ def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
 def cheribsd_purecap_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
     assert project.compiling_for_cheri()
     assert isinstance(project, BuildCHERIBSD)
-    return config.outputRoot / ("rootfs-purecap" + config.cheriBitsStr)
+    return config.outputRoot / ("rootfs-purecap" + config.cheri_bits_and_abi_str)
 
 
 def cheribsd_minimal_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
     assert isinstance(project, BuildCHERIBSD)
     if project.compiling_for_cheri():
-        return config.outputRoot / ("rootfs-minimal" + config.cheriBitsStr)
+        return config.outputRoot / ("rootfs-minimal" + config.cheri_bits_and_abi_str)
     elif project.compiling_for_mips():
         return config.outputRoot / "rootfs-minimal-mips"
     else:
@@ -1375,9 +1375,9 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
     @property
     def sysrootArchiveName(self):
         if self.compiling_for_cheri():
-            return "cheri-sysroot" + self.config.cheriBitsStr + ".tar.gz"
+            return "cheri-sysroot" + self.config.cheri_bits_and_abi_str + ".tar.gz"
         else:
-            return "cheribsd-" + self._crossCompileTarget.value  + "-sysroot.tar.gz"
+            return "cheribsd-" + self._crossCompileTarget.value + "-sysroot.tar.gz"
 
     def createSysroot(self):
         # we need to add include files and libraries to the sysroot directory

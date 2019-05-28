@@ -442,7 +442,7 @@ class _BuildDiskImageBase(SimpleProject):
     def __process(self):
         if self.diskImagePath.is_dir():
             # Given a directory, derive the default file name inside it
-            self.diskImagePath = _defaultDiskImagePath(self.config.cheriBits, self.diskImagePath)
+            self.diskImagePath = _defaultDiskImagePath(self.config, self.diskImagePath)
 
         if self.diskImagePath.is_file():
             # only show prompt if we can actually input something to stdin
@@ -544,10 +544,8 @@ class _BuildDiskImageBase(SimpleProject):
             self.addFileToImage(publicKey, baseDirectory=self.extraFilesDir, mode="0644")
 
 
-def _defaultDiskImagePath(bits, pfx, img_prefix=""):
-    if bits == 128:
-        return pfx / (img_prefix + "cheri128-disk.img")
-    return pfx / (img_prefix + "cheri256-disk.img")
+def _defaultDiskImagePath(config: CheriConfig, pfx, img_prefix=""):
+    return pfx / (img_prefix + "cheri" + config.cheri_bits_and_abi_str + "-disk.img")
 
 
 class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
@@ -565,11 +563,11 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
     def setupConfigOptions(cls, **kwargs):
         hostUsername = CheriConfig.get_user_name()
         defaultHostname = ComputedDefaultValue(
-            function=lambda conf, unused: "qemu-cheri" + conf.cheriBitsStr + "-" + hostUsername,
+            function=lambda conf, unused: "qemu-cheri" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
             asString="qemu-cheri${CHERI_BITS}-" + hostUsername)
 
         def _defaultMinimalDiskImagePath(conf, proj):
-            return _defaultDiskImagePath(conf.cheriBits, conf.outputRoot, "minimal-")
+            return _defaultDiskImagePath(conf, conf.outputRoot, "minimal-")
 
         super().setupConfigOptions(defaultHostname=defaultHostname, extraFilesSuffix="-minimal", **kwargs)
         cls.diskImagePath = cls.addPathOption("path", default=ComputedDefaultValue(
@@ -676,12 +674,12 @@ class BuildCheriBSDDiskImage(_BuildDiskImageBase):
     def setupConfigOptions(cls, **kwargs):
         hostUsername = CheriConfig.get_user_name()
         defaultHostname = ComputedDefaultValue(
-            function=lambda conf, unused: "qemu-cheri" + conf.cheriBitsStr + "-" + hostUsername,
+            function=lambda conf, unused: "qemu-cheri" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
             asString="qemu-cheri${CHERI_BITS}-" + hostUsername)
         super().setupConfigOptions(extraFilesShortname="-extra-files", defaultHostname=defaultHostname, **kwargs)
 
         defaultDiskImagePath = ComputedDefaultValue(
-            function=lambda conf, proj: _defaultDiskImagePath(conf.cheriBits, conf.outputRoot),
+            function=lambda conf, proj: _defaultDiskImagePath(conf, conf.outputRoot),
             asString="$OUTPUT_ROOT/cheri256-disk.img or $OUTPUT_ROOT/cheri128-disk.img depending on --cheri-bits.")
         cls.diskImagePath = cls.addPathOption("path", shortname="-disk-image-path", default=defaultDiskImagePath,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image",
@@ -705,12 +703,12 @@ class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
     def setupConfigOptions(cls, **kwargs):
         hostUsername = CheriConfig.get_user_name()
         defaultHostname = ComputedDefaultValue(
-            function=lambda conf, unused: "qemu-purecap" + conf.cheriBitsStr + "-" + hostUsername,
+            function=lambda conf, unused: "qemu-purecap" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
             asString="qemu-purecap${CHERI_BITS}-" + hostUsername)
         super().setupConfigOptions(defaultHostname=defaultHostname, **kwargs)
 
         defaultDiskImagePath = ComputedDefaultValue(
-            function=lambda conf, proj: _defaultDiskImagePath(conf.cheriBits, conf.outputRoot, "purecap-"),
+            function=lambda conf, proj: _defaultDiskImagePath(conf, conf.outputRoot, "purecap-"),
             asString="$OUTPUT_ROOT/purecap-cheri256-disk.img or $OUTPUT_ROOT/purecap-cheri128-disk.img depending on --cheri-bits.")
         cls.diskImagePath = cls.addPathOption("path", default=defaultDiskImagePath,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image",

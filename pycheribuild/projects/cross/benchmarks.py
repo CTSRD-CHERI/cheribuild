@@ -168,8 +168,8 @@ class BuildSpec2006(CrossCompileProject):
             hw_cpu = "BERI"
             float_abi = self.config.mips_float_abi.name.lower() + "fp"
         elif self.compiling_for_cheri():
-            build_arch = "cheri" + self.config.cheriBitsStr + "-" + self.linkage().value
-            hw_cpu = "CHERI" + self.config.cheriBitsStr
+            build_arch = "cheri" + self.config.cheri_bits_and_abi_str + "-" + self.linkage().value
+            hw_cpu = "CHERI" + self.config.cheri_bits_and_abi_str
             float_abi = self.config.mips_float_abi.name.lower() + "fp"
         else:
             self.fatal("NOT SUPPORTED YET")

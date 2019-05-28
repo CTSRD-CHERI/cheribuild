@@ -87,6 +87,8 @@ class MipsFloatAbi(Enum):
 
 
 class CheriConfig(object):
+    DEFAULT_CAP_TABLE_ABI = "pcrel"
+
     def __init__(self, loader: ConfigLoaderBase, action_class):
         loader._cheriConfig = self
         self.loader = loader
@@ -309,7 +311,8 @@ class CheriConfig(object):
     def _initializeDerivedPaths(self):
         # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
         os.environ["CHERI_BITS"] = self.cheriBitsStr
-        self.sysrootArchiveName = "cheri-sysroot" + self.cheriBitsStr + ".tar.gz"
+        os.environ["CHERI_CAPTABLE_ABI"] = self.cheri_cap_table_abi
+        self.sysrootArchiveName = "cheri-sysroot" + self.cheri_bits_and_abi_str + ".tar.gz"
 
     @property
     def dollarPathWithOtherTools(self) -> str:
@@ -322,6 +325,12 @@ class CheriConfig(object):
     @property
     def cheriBitsStr(self):
         return str(self.cheriBits)
+
+    @property
+    def cheri_bits_and_abi_str(self):
+        if self.cheri_cap_table_abi == self.DEFAULT_CAP_TABLE_ABI:
+            return str(self.cheriBits)
+        return str(self.cheriBits) + "-" + str(self.cheri_cap_table_abi)
 
     @property
     def sdkDirectoryName(self):
@@ -337,7 +346,7 @@ class CheriConfig(object):
 
     @property
     def cheriSysrootDir(self):
-        return self.sdkDir / ("sysroot" + self.cheriBitsStr)
+        return self.sdkDir / ("sysroot" + self.cheri_bits_and_abi_str)
 
     def get_sysroot_path(self, cross_compile_target: CrossCompileTarget, use_hybrid_sysroot=False):
         if cross_compile_target == CrossCompileTarget.MIPS:
