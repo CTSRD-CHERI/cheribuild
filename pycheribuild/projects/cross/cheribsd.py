@@ -412,6 +412,8 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             # self.cross_toolchain_config.set(XAS="/usr/bin/as")
         elif self.compiling_for_mips() or self.compiling_for_cheri():
             target_flags = " -integrated-as -fcolor-diagnostics -mcpu=mips4"
+            if self.compiling_for_cheri() and self.config.cheri_cap_table_abi == "legacy":
+                target_flags += " -DCHERIABI_LEGACY_SUPPORT"
             # for some reason this is not inferred....
             # if self.crossbuild:
             #     # For some reason STRINGS is not set
