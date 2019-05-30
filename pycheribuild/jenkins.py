@@ -46,6 +46,7 @@ from .projects import *  # make sure all projects are loaded so that targetManag
 # noinspection PyUnresolvedReferences
 from .projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
 from .projects.cross.crosscompileproject import CrossCompileMixin
+from .projects.cross.cheribsd import BuildFreeBSDBase
 from .targets import targetManager, Target
 from .utils import *
 
@@ -238,8 +239,10 @@ def _jenkins_main():
             for tgt in targetManager.targets:
                 cls = tgt.projectClass
                 if issubclass(cls, Project):
-                    # override the default install directory to point to the jenkins WORKSPACE
-                    cls.defaultInstallDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
+                    if not issubclass(cls, BuildFreeBSDBase):
+                        # override the default install directory to point to the jenkins WORKSPACE
+                        # But don't do it for FreeBSD/CheriBSD derived projects
+                        cls.defaultInstallDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
                     i = inspect.getattr_static(cls, "_installDir")
                     assert isinstance(i, CommandLineConfigOption)
                     # But don't change it if it was specified on the command line. Note: This also does the config
@@ -248,7 +251,8 @@ def _jenkins_main():
                     if from_cmdline is not None:
                         statusUpdate("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
                     else:
-                        cls._installDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
+                        if not issubclass(cls, BuildFreeBSDBase):
+                            cls._installDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
                         cls._check_install_dir_conflict = False
                     # print(project.projectClass.projectName, project.projectClass.installDir)
             if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
