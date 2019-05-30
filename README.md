@@ -12,6 +12,7 @@ MacOS 10.13 is also supported.
 # TL;DR
 
 If you want to start up a QEMU VM running CheriBSD run `cheribuild.py run -d` (-d means build all dependencies).
+If you would like the VM to have all userspace binaries to be built for CheriABI use `cheribuild.py run-purecap -d`.
 This will build the CHERI compiler, QEMU, CheriBSD, create a disk image and boot that in QEMU.
 By default this builds the 128-bit version of CheriBSD. If you would like to use the 256-bit
 version, run `cheribuild.py run -d --256`.
@@ -20,14 +21,12 @@ By default `cheribuild.py` will clone all projects in `~/cheri`, use `~/cheri/bu
 and install into `~/cheri/output`. However, these directories are all configurable (see below for details).
 
 
-
 If you would like to see what the script would do run it with the `--pretend` or `-p` option.
 For even more detail you can also pass `--verbose` or `-v`.
 
-**NOTE**: Currently, you will need to run this script on a FreeBSD system if you would like to build CheriBSD.
-All the other steps work on other operating systems but you will have to copy the CheriBSD files from a FreeBSD system.
-It is also possible to run this script on a remote FreeBSD host by using the `remote-cheribuild.py` script that is included in this repository:
-`remote-cheribuild.py my.freebsd.server [options] <targets...>` will run this script on `my.freebsd.server`.
+
+It is also possible to run this script on a remote host by using the `remote-cheribuild.py` script that is included in this repository:
+`remote-cheribuild.py my.remote.server [options] <targets...>` will run this script on `my.remote.server`.
 
 
 # Usage
@@ -36,6 +35,33 @@ It is also possible to run this script on a remote FreeBSD host by using the `re
 
 Example: to build and run a 128-bit CheriBSD: `cheribuild.py --include-dependencies --128 run` and
 for a clean verbose build of 256-bit CheriBSD `cheribuild.py -v --clean --include-dependencies --256 run`
+
+## Available Targets
+
+When selecting a target you can also build all the targets that it depends on by passing the `--include-dependencies` or `-d` option.
+However, some targets (e.g. `all`, `sdk`) will always build their dependencies because running them without building the dependencies does not make sense (see the list of targets for details).
+
+#### The following main targets are available
+
+- `qemu` builds and installs [CTSRD-CHERI/qemu](https://github.com/CTSRD-CHERI/qemu)
+- `llvm` builds and installs [CTSRD-CHERI/llvm](https://github.com/CTSRD-CHERI/llvm) and [CTSRD-CHERI/clang](https://github.com/CTSRD-CHERI/clang) and [CTSRD-CHERI/lld](https://github.com/CTSRD-CHERI/lld)
+- `cheribsd` builds and installs [CTSRD-CHERI/cheribsd](https://github.com/CTSRD-CHERI/cheribsd). **NOTE**: most userspace binaries will be MIPS binaries and not CheriABI.
+- `cheribsd-purecap` builds and installs [CTSRD-CHERI/cheribsd](https://github.com/CTSRD-CHERI/cheribsd) with all userspace binaries built for CheriABI.
+- `disk-image` creates a CHERIBSD disk-image (MIPS userspace)
+- `disk-image-purecap` creates a CHERIBSD disk-image (CheriABI userspace)
+- `run` launches QEMU with the CHERIBSD disk image (MIPS userspace)
+- `run-purecap` launches QEMU with the CHERIBSD disk image (CheriABI userspace)
+- `cheribsd-sysroot` creates a CheriBSD sysroot.
+- `freestanding-sdk` builds everything required to build and run `-ffreestanding` binaries: compiler, binutils and qemu
+- `cheribsd-sdk` builds everything required to compile binaries for CheriBSD: `freestanding-sdk` and `cheribsd-sysroot`
+- `sdk` is an alias for `cheribsd-sdk`
+- `all`: runs all the targets listed so far (`run` comes last so you can then interact with QEMU)
+
+#### Other targets
+- `cmake` builds and installs latest [CMake](https://github.com/Kitware/CMake)
+- `cherios` builds and installs [CTSRD-CHERI/cherios](https://github.com/CTSRD-CHERI/cherios)
+- `cheritrace` builds and installs [CTSRD-CHERI/cheritrace](https://github.com/CTSRD-CHERI/cheritrace)
+- `cherivis` builds and installs [CTSRD-CHERI/cherivis](https://github.com/CTSRD-CHERI/cherivis)
 
 ## Building the compiler and QEMU
 
@@ -52,18 +78,16 @@ All binaries will by default be installed to `~/cheri/sdk/bin`.
 
 ## Building and running CheriBSD
 
-To build CheriBSD (currently only possible on FreeBSD hosts) run `cheribuild.py cheribsd`.
+To build CheriBSD run `cheribuild.py cheribsd` or `cheribuild.py cheribsd-purecap`.
 
-If you would like to build all binaries in CheriBSD as pure capability programs you will need to pass
-the `-DWITH_CHERI_PURE` flag to make. This can either be set in the environment or passed as an option
-to cheribuild: `cheribuild.py cheribsd --cheribsd/build-options=-DWITH_CHERI_PURE`.
-The current default is to build the normal userspace binaries as MIPS binaries since this speeds up
-the boot under QEMU (because QEMU has to emulate the bounds checks instead of doing them in hardware).
-
+If you would like to build all binaries in CheriBSD as pure capability programs can use the `cheribsd-purecap`
+target instead.
 
 ### Disk image
 
 The disk image is created by the `cheribuild.py disk-image` target and can then be used as a boot disk by QEMU.
+To boot the pure-capability userspace you can use `cheribuild.py disk-image-purecap` instead.
+
 In order to customize the disk image it will add all files under (by default) `~/cheri/extra-files/`
 to the resulting image. When building the image cheribuild will ask you whether it should add your
 SSH public keys to the `/root/.ssh/authorized_keys` file in the CheriBSD image. It will also
@@ -72,6 +96,8 @@ A suitable `/etc/rc.conf` and `/etc/fstab` will also be added to this directory 
 
 The default path for the disk image is `~/cheri/output/cheri256-disk.img` for 256-bit CHERI and
  `~/cheri/output/cheri128-disk.img` for 128-bit.
+ The pure-capability images will be installed to `~/cheri/output/purecap-cheri128-disk.img` and
+ `~/cheri/output/purecap-cheri256-disk.img`.
 
 ### CheriBSD SSH ports
 
@@ -85,6 +111,8 @@ with the following configuration file (see below for more details on the config 
 {
     "run": {
         "ssh-forwarding-port": 12345
+    }, "run-purecap": {
+        "ssh-forwarding-port": 12346
     }
 }
 ```
@@ -95,7 +123,15 @@ be sped up by using the openssh ControlMaster setting:
 ```
 Host cheribsd
   User root
-  Port 12374
+  Port 12345
+  HostName localhost
+  ControlPath ~/.ssh/controlmasters/%r@%h:%p
+  ControlMaster auto
+  StrictHostKeyChecking no
+  
+Host cheribsd-purecap
+  User root
+  Port 12346
   HostName localhost
   ControlPath ~/.ssh/controlmasters/%r@%h:%p
   ControlMaster auto
@@ -119,7 +155,6 @@ By default these projects will be installed into your CheriBSD rootfs under /opt
 automatically included the next time you build a disk image.
 
 See `cheribuild.py --list-targets` for a full list of targets.
-
 
 ## Cross-compiling baremetal MIPS/CHERI
 
@@ -171,36 +206,6 @@ For example a `~/.config/purecap-cheribuild.json` could look like this:
 	}
 }
 ```
-
-## Available Targets
-
-When selecting a target you can also build all the targets that it depends on by passing the `--include-dependencies` or `-d` option.
-However, some targets (e.g. `all`, `sdk`) will always build their dependencies because running them without building the dependencies does not make sense (see the list of targets for details).
-
-#### The following main targets are available
-
-- `qemu` builds and installs [CTSRD-CHERI/qemu](https://github.com/CTSRD-CHERI/qemu)
-- `llvm` builds and installs [CTSRD-CHERI/llvm](https://github.com/CTSRD-CHERI/llvm) and [CTSRD-CHERI/clang](https://github.com/CTSRD-CHERI/clang) and [CTSRD-CHERI/lld](https://github.com/CTSRD-CHERI/lld)
-- `cheribsd` builds and installs [CTSRD-CHERI/cheribsd](https://github.com/CTSRD-CHERI/cheribsd) (**NOTE:** Only works on FreeBSD systems)
-- `disk-image` creates a CHERIBSD disk-image
-- `elftoolchain` builds the binutils such as ar, readelf, etc. This will probably be replaced by the tools from LLVM soon
-- `run` launches QEMU with the CHERIBSD disk image
-- `cheribsd-sysroot` creates a CheriBSD sysroot. When running this script on a non-FreeBSD system the files will need to be copied from a build server
-- `freestanding-sdk` builds everything required to build and run `-ffreestanding` binaries: compiler, binutils and qemu
-- `cheribsd-sdk` builds everything required to compile binaries for CheriBSD: `freestanding-sdk` and `cheribsd-sysroot`
-- `sdk` is an alias for `cheribsd-sdk` when building on FreeBSD, otherwise builds `freestanding-sdk`
-- `all`: runs all the targets listed so far (`run` comes last so you can then interact with QEMU)
-
-#### Other targets
-- `gnu-binutils` (deprecated) builds and installs [CTSRD-CHERI/binutils](https://github.com/CTSRD-CHERI/binutils). This is only useful if you want to use GNU objdump instead of llvm-objdump since it builds the ancient 2.17 version of binutils
-- `cmake` builds and installs latest [CMake](https://github.com/Kitware/CMake)
-- `binutils` builds and installs [CTSRD-CHERI/binutils](https://github.com/CTSRD-CHERI/binutils)
-- `brandelf` builds and installs `brandelf` from [elftoolchain](https://github.com/Richardson/elftoolchain/) (needed for SDK on non-FreeBSD systems)
-- `awk` builds and installs BSD AWK (if you need it on Linux)
-- `cherios` builds and installs [CTSRD-CHERI/cherios](https://github.com/CTSRD-CHERI/cherios)
-- `cheritrace` builds and installs [CTSRD-CHERI/cheritrace](https://github.com/CTSRD-CHERI/cheritrace)
-- `cherivis` builds and installs [CTSRD-CHERI/cherivis](https://github.com/CTSRD-CHERI/cherivis)
-
 
 # Getting shell completion
 
