@@ -40,7 +40,7 @@ class BuildCheriOS(CMakeProject):
         dependencies.append("makefs-linux")
     defaultCMakeBuildType = "Debug"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cherios.git")
-    gitBranch = "lawrence"
+    gitBranch = "master"
     appendCheriBitsToBuildDir = True
     defaultInstallDir = lambda config, cls: config.outputRoot / ("cherios" + config.cheriBitsStr)
 
