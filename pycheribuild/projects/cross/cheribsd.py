@@ -344,6 +344,10 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
         self.externalToolchainCompiler = None
         self._setup_cross_toolchain_config()
 
+        if self.compiling_for_host() and not self.build_with_upstream_llvm:
+            self.warning("DISABLING openmp to work around clang crash")
+            self.make_args.set_with_options(OPENMP=False)  # causes clang crash
+
         if self.addDebugInfoFlag:
             self.make_args.set(DEBUG_FLAGS="-g")
 
@@ -1045,7 +1049,6 @@ class BuildCHERIBSD(BuildFreeBSD):
             if self.config.cheri_cap_table_abi:
                 self.cross_toolchain_config.set(CHERI_USE_CAP_TABLE=self.config.cheri_cap_table_abi)
             self.make_args.set_with_options(CHERI_SHARED_PROG=not self.build_static)
-
 
         # TODO: build with llvm binutils instead
         self.use_elftoolchain = True
