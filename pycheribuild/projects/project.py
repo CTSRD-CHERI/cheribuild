@@ -1061,7 +1061,7 @@ class Project(SimpleProject):
         elif target == CrossCompileTarget.CHERI:
             result = "-" + config.cheri_bits_and_abi_str + "-build"
         elif target == CrossCompileTarget.MIPS and cls.mips_build_hybrid:
-            result = "-" + target.value + "-hybrid" + config.cheriBitsStr + "-build"
+            result = "-" + target.value + "-hybrid" + config.cheri_bits_and_abi_str + "-build"
         else:
             result = "-" + target.value + "-build"
         if config.cross_target_suffix:
