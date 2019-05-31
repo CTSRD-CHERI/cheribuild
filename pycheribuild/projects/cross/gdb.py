@@ -60,7 +60,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     repository = GitRepository("https://github.com/CTSRD-CHERI/gdb.git", old_urls=[b'https://github.com/bsdjhb/gdb.git'],
                                force_branch=True)
-    gitBranch = "mips_cheri-8.2"
+    gitBranch = "mips_cheri-8.3"
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
     defaultOptimizationLevel = ["-O2"]
