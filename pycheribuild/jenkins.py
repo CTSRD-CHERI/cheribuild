@@ -235,26 +235,23 @@ def _jenkins_main():
     if JenkinsAction.BUILD in cheriConfig.action or JenkinsAction.TEST in cheriConfig.action:
         assert len(cheriConfig.targets) == 1
         target = targetManager.get_target_raw(cheriConfig.targets[0])
+
+        for tgt in targetManager.targets:
+            cls = tgt.projectClass
+            if issubclass(cls, Project):
+                cls.defaultInstallDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
+                i = inspect.getattr_static(cls, "_installDir")
+                assert isinstance(i, CommandLineConfigOption)
+                # But don't change it if it was specified on the command line. Note: This also does the config
+                # inheritance: i.e. setting --cheribsd/install-dir will also affect cheribsd-cheri/cheribsd-mips
+                from_cmdline = i.loadOption(cheriConfig, cls, cls, return_none_if_default=True)
+                if from_cmdline is not None:
+                    statusUpdate("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
+                else:
+                    cls._installDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
+                    cls._check_install_dir_conflict = False
+                # print(project.projectClass.projectName, project.projectClass.installDir)
         if JenkinsAction.BUILD in cheriConfig.action:
-            for tgt in targetManager.targets:
-                cls = tgt.projectClass
-                if issubclass(cls, Project):
-                    if not issubclass(cls, BuildFreeBSDBase):
-                        # override the default install directory to point to the jenkins WORKSPACE
-                        # But don't do it for FreeBSD/CheriBSD derived projects
-                        cls.defaultInstallDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
-                    i = inspect.getattr_static(cls, "_installDir")
-                    assert isinstance(i, CommandLineConfigOption)
-                    # But don't change it if it was specified on the command line. Note: This also does the config
-                    # inheritance: i.e. setting --cheribsd/install-dir will also affect cheribsd-cheri/cheribsd-mips
-                    from_cmdline = i.loadOption(cheriConfig, cls, cls, return_none_if_default=True)
-                    if from_cmdline is not None:
-                        statusUpdate("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
-                    else:
-                        if not issubclass(cls, BuildFreeBSDBase):
-                            cls._installDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
-                        cls._check_install_dir_conflict = False
-                    # print(project.projectClass.projectName, project.projectClass.installDir)
             if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
                 assert cheriConfig.sdkDir == Path("/cheri-sdk"), cheriConfig.sdkDir
             elif cheriConfig.without_sdk:
