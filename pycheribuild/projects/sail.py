@@ -227,6 +227,10 @@ class BuildSailCheriMips(ProjectUsingOpam):
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
 
+    def __init__(self, config):
+        super().__init__(config)
+        self._addRequiredSystemHeader("gmp.h", homebrew="gmp", apt="libgmp-dev")
+
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
@@ -245,6 +249,39 @@ class BuildSailCheriMips(ProjectUsingOpam):
     def install(self, **kwargs):
         self.make_args.set(INSTALL_DIR=self.config.sdkDir)
         self.runMake("install")
+
+class BuildSailCheriRISCV(ProjectUsingOpam):
+    target = "sail-cheri-riscv"
+    projectName = "sail-cheri-riscv"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-riscv")
+    dependencies = ["sail-from-opam"]
+    defaultInstallDir = Project._installToSDK
+    build_in_source_dir = True  # Cannot build out-of-source
+    make_kind = MakeCommandKind.GnuMake
+
+    def __init__(self, config):
+        super().__init__(config)
+        self._addRequiredSystemHeader("gmp.h", homebrew="gmp", apt="libgmp-dev")
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        cls.with_trace_support = cls.addBoolOption("trace-support", showHelp=True,
+                                help="Build sail-cheri-mips simulators with tracing support (they will be slow but"
+                                     "the traces are useful to debug failing tests)", default=False)
+
+    def compile(self, cwd: Path = None):
+        # self.make_args.set(SAIL_DIR=self.config.sdkBinDir)
+        # self.make_args.set(SAIL_DIR=self.config.sdkDir / "share/sail", SAIL=self.config.sdkBinDir / "sail")
+        if self.with_trace_support:
+            self.make_args.set(TRACE="yes")
+        cmd = [self.make_args.command, self.config.makeJFlag, "all"] + self.make_args.all_commandline_args
+        self.run_command_in_ocaml_env(cmd, cwd=self.sourceDir)
+
+    def install(self, **kwargs):
+        self.make_args.set(INSTALL_DIR=self.config.sdkDir)
+        self.runMake("install")
+
 
 # Old way of installing sail:
 class OcamlProject(OpamMixin, Project):
