@@ -54,11 +54,10 @@ def defaultKernelConfig(config: CheriConfig, project: "BuildFreeBSD"):
     elif project.compiling_for_cheri():
         # make sure we use a kernel with 128 bit CPU features selected
         # or a purecap kernel is selected
-        kernconf_name = "CHERI{bits}{pure}_MALTA64{mfs}"
+        kernconf_name = "CHERI{bits}{pure}_MALTA64"
         cheri_bits = "128" if config.cheriBits == 128 else ""
         cheri_pure = "_PURECAP" if project.purecapKernel else ""
-        mfs_root_img = "_MFS_ROOT" if project.mfs_root_image else ""
-        return kernconf_name.format(bits=cheri_bits, pure=cheri_pure, mfs=mfs_root_img)
+        return kernconf_name.format(bits=cheri_bits, pure=cheri_pure)
     elif project.compiling_for_riscv() or project._crossCompileTarget == CrossCompileTarget.I386:
         return "GENERIC"  # TODO: what is the correct config
     else:
