@@ -250,10 +250,11 @@ class CrossCompileMixin(MultiArchBaseMixin):
         self.CXXFLAGS = []
         self.ASMFLAGS = []
         self.LDFLAGS = []
+        self.COMMON_LDFLAGS = []
         # Don't build CHERI with ASAN since that doesn't work or make much sense
         if self.use_asan and not self.compiling_for_cheri():
             self.COMMON_FLAGS.append("-fsanitize=address")
-            self.LDFLAGS.append("-fsanitize=address")
+            self.COMMON_LDFLAGS.append("-fsanitize=address")
 
     @property
     def sdkSysroot(self) -> Path:
@@ -377,7 +378,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
     @property
     def default_ldflags(self):
-        result = []
+        result = list(self.COMMON_LDFLAGS)
         if self.force_static_linkage:
             result.append("-static")
         if self.compiling_for_host():
