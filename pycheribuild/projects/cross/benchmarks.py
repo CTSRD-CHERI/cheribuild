@@ -131,6 +131,15 @@ class BuildOlden(CrossCompileProject):
     def install(self, **kwargs):
         pass  # skip install for now...
 
+    def run_tests(self):
+        if self.compiling_for_host():
+            self.fatal("running x86 tests is not implemented yet")
+        # testing, not benchmarking -> run only once: (-s small / -s large?)
+        test_command = "cd /build && ./run_jenkins-bluehive.sh -d0 -r1"
+        self.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
+                                      "--test-timeout", str(120 * 60),
+                                      mount_builddir=True)
+
 
 class BuildSpec2006(CrossCompileProject):
     target = "spec2006"
