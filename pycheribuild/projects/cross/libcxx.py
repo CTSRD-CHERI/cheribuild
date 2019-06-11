@@ -397,7 +397,6 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-
         # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")
         if self.compiling_for_mips():
@@ -416,6 +415,11 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
             # BUILTIN_SUPPORTED_ARCH="mips64",
             TARGET_TRIPLE=self.targetTriple,
         )
+        if self.debugInfo:
+            self.add_cmake_options(COMPILER_RT_DEBUG=True)
+        if self.compiling_for_mips() or self.compiling_for_cheri():
+            # self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH="mips")
+            self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ONLY=True)
 
     def configure(self, **kwargs):
         self.configureArgs[0] = str(self.sourceDir / "lib/builtins")
@@ -423,13 +427,20 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
 
     def install(self, **kwargs):
         super().install(**kwargs)
-        libname = "libclang_rt.builtins-mips64.a"
+
+        libname = "libclang_rt.builtins-" + self.triple_arch + ".a"
         self.moveFile(self.installDir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
         if self.compiling_for_cheri():
+            # compatibility with older compilers
             self.createSymlink(self.real_install_root_dir / "lib" / libname,
-                               self.real_install_root_dir / "lib" / "libclang_rt.builtins-cheri.a")
+                               self.real_install_root_dir / "lib" / "libclang_rt.builtins-cheri.a", printVerboseOnly=False)
+            self.createSymlink(self.real_install_root_dir / "lib" / libname,
+                               self.real_install_root_dir / "lib" / "libclang_rt.builtins-mips64.a", printVerboseOnly=False)
         # HACK: we don't really need libunwind but the toolchain pulls it in automatically
-        runCmd("ar", "rc", self.installDir / "lib/libunwind.a", "/dev/null")
+        # TODO: is there an easier way to create empty .a files?
+        runCmd("ar", "rcv", self.installDir / "lib/libunwind.a", "/dev/null")
+        runCmd("ar", "dv", self.installDir / "lib/libunwind.a", "null")
+        runCmd("ar", "t", self.installDir / "lib/libunwind.a")  # should be empty now
 
 
 class BuildLibCXXBaremetal(BuildLibCXX):

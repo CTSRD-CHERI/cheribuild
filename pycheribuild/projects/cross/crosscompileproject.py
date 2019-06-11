@@ -197,7 +197,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
             self.COMMON_FLAGS.append("-ftls-model=initial-exec")
             # use *-*-freebsd13 to default to libc++
             if self.compiling_for_cheri():
-                self.targetTriple = "mips64c" + self.config.cheriBitsStr + "-unknown-freebsd13-purecap" if not self.baremetal else "mips64-qemu-elf-cheri" + self.config.cheriBitsStr
+                self.targetTriple = "mips64c" + self.config.cheriBitsStr + ("-unknown-freebsd13-purecap" if not self.baremetal else "-qemu-elf-purecap")
                 # This break e.g. compiler_rt: self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "cheri-qemu-elf-cheri" + self.config.cheriBitsStr
                 if self.should_use_extra_c_compat_flags():
                     self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
@@ -222,8 +222,12 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 self.COMMON_FLAGS.append("-D_POSIX_TIMERS=1")  # pretend that we have a monotonic clock
 
             if self.crossInstallDir == CrossInstallDir.SDK:
-                self._installPrefix = Path("/" if self.baremetal else "/usr/local/" + self._crossCompileTarget.value)
-                self.destdir = self._installDir
+                if self.baremetal:
+                    self.destdir = self.sdkSysroot.parent
+                    self._installPrefix = Path("/", self.targetTriple)
+                else:
+                    self._installPrefix = Path("/usr/local", self._crossCompileTarget.value)
+                    self.destdir = self._installDir
             elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
                 from .cheribsd import BuildCHERIBSD
                 relative_to_rootfs = os.path.relpath(str(self._installDir), str(BuildCHERIBSD.rootfsDir(self, config)))
@@ -257,10 +261,19 @@ class CrossCompileMixin(MultiArchBaseMixin):
             self.COMMON_LDFLAGS.append("-fsanitize=address")
 
     @property
+    def triple_arch(self):
+        return self.targetTriple[:self.targetTriple.find("-")]
+
+    @property
     def sdkSysroot(self) -> Path:
         assert isinstance(self, Project)
         if self.baremetal:
-            return self.config.sdkDir / "baremetal" / self.targetTriple
+            # Install to mips/cheri128/cheri256 directory
+            if self.compiling_for_cheri():
+                suffix = "cheri" + self.config.cheriBitsStr
+            else:
+                suffix = self._crossCompileTarget.value
+            return self.config.sdkDir / "baremetal" / suffix / self.targetTriple
         return self.crossSysrootPath
 
     def links_against_newlib_baremetal(self):
