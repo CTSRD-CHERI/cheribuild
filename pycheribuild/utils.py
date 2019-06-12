@@ -411,13 +411,12 @@ def latestClangTool(basename: str):
     found_versioned_clang = (None, None)
     versions = [(i, 0) for i in range(10, 3, -1)] + [(3, 9), (3, 8), (3, 7)]
     for version in versions:
-        # FreeBSD installs clang39 and clang7, Linux uses clang-3.9 and clang-7
+        # FreeBSD installs clang39 and clang70, Linux uses clang-3.9 and clang-7
+        suffix1 = ("%d%d" % version)
         if version[0] >= 7:
-            # version after 7.0 don't include the minor component anymore:
-            suffix1 = str(version[0])
+            # version after 7.0 don't include the minor component anymore on Linux:
             suffix2 = "-" + str(version[0])
         else:
-            suffix1 = ("%d%d" % version)
             suffix2 = ("-%d.%d" % version)
         guess = shutil.which(basename + suffix1)
         if guess:
