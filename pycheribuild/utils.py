@@ -319,7 +319,7 @@ class CompilerInfo(object):
                 warningMessage("Could not find", binutil, "in expected path", result)
                 result = None
         if not result:
-            result = binutil  # fall back to the default and assume clang can find the right one
+            result = shutil.which(binutil)  # fall back to the default and assume clang can find the right one
         return result
 
     @property

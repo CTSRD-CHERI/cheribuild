@@ -148,7 +148,6 @@ class BuildQEMUBase(AutotoolsProject):
                         lld = ccinfo.get_matching_binutil("ld.lld")
                         # Find lld with the correct version (it must match the version of clang otherwise it breaks!)
                         self._extraLDFlags += " -fuse-ld=" + shlex.quote(str(lld))
-
                         if not llvm_ar or not llvm_ranlib or not llvm_nm:
                             self.warning("Could not find llvm-{ar,ranlib,nm}" + version_suffix,
                                          "-> disabling LTO (qemu will be a bit slower)")

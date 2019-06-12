@@ -143,15 +143,18 @@ class BuildLLVMBase(CMakeProject):
 
         if self.enable_lto:
             ccinfo = getCompilerInfo(self.cCompiler)
-            if ccinfo.is_clang and ccinfo.compiler != "apple-clang":
-                self.add_cmake_options(CMAKE_AR=ccinfo.get_matching_binutil("llvm-ar"),
-                                       CMAKE_RANLIB=ccinfo.get_matching_binutil("llvm-ranlib"),
-                                       LLVM_USE_LINKER=ccinfo.get_matching_binutil("ld.lld"))
+            llvm_ar = ccinfo.get_matching_binutil("llvm-ar")
+            llvm_ranlib = ccinfo.get_matching_binutil("llvm-ranlib")
+            lld = ccinfo.get_matching_binutil("ld.lld")
+            if not llvm_ar or not llvm_ranlib or not lld:
+                self.warning("Could not find all required binutils to enable LTO")
+            elif ccinfo.is_clang and ccinfo.compiler != "apple-clang":
+                self.add_cmake_options(CMAKE_AR=llvm_ar, CMAKE_RANLIB=llvm_ranlib, LLVM_USE_LINKER=lld)
                 # we are passing an explicit linker path -> cannot use LLVM_ENABLE_LLD
                 self.add_cmake_options(LLVM_ENABLE_LLD=False)
                 if not self.canUseLLd(self.cCompiler):
                     warningMessage("LLD not found for LTO build, it may fail.")
-            self.add_cmake_options(LLVM_ENABLE_LTO="Thin")
+                self.add_cmake_options(LLVM_ENABLE_LTO="Thin")
 
     @staticmethod
     def clang38InstallHint():
