@@ -306,6 +306,10 @@ class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
         asString="$INSTALL_ROOT/cherios-sdk")
     skip_misc_llvm_tools = False # Cannot skip these tools in upstream LLVM
 
+    def configure(self, **kwargs):
+        self.add_cmake_options(LLVM_TARGETS_TO_BUILD="Mips")
+        super().configure(**kwargs)
+
 
 # Keep around the build infrastructure for building the split repos for now:
 class BuildLLVMSplitRepoBase(BuildLLVMBase):
