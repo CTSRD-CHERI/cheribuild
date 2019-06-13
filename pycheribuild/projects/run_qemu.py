@@ -353,7 +353,8 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
     def process(self):
         if not self.diskImage.exists():
             if self.queryYesNo("CheriOS disk image is missing. Would you like to create a zero-filled 1MB image?"):
-                runCmd("dd", "if=/dev/zero", "of=" + str(self.diskImage), "bs=128M", "count=1")
+                size_flag = "bs=128m" if IS_MAC else "bs=128M"
+                runCmd("dd", "if=/dev/zero", "of=" + str(self.diskImage), size_flag, "count=1")
         super().process()
 
 
