@@ -56,6 +56,8 @@ class BuildCheriOS(CMakeProject):
         self.add_cmake_options(BUILD_FOR_CHERI128=self.config.cheriBits == 128)
         self.add_cmake_options(BUILD_WITH_NET=self.build_net)
         self.add_cmake_options(SMP_CORES=self.smp_cores)
+        self.add_cmake_options(CMAKE_AR=BuildCheriOSLLVM.get_instance(self, self.config).installDir / "bin/llvm-ar")
+        self.add_cmake_options(CMAKE_RANLIB=BuildCheriOSLLVM.get_instance(self, self.config).installDir / "bin/llvm-ranlib")
         self.set_minimum_cmake_version(3, 4)
 
     def install(self, **kwargs):
