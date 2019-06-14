@@ -148,6 +148,9 @@ class BuildFreeBSDBase(Project):
                 help="Don't build all of FreeBSD, just what is needed for running most CHERI tests/benchmarks")
         if "build_tests" not in cls.__dict__:
             cls.build_tests = cls.addBoolOption("build-tests", help="Build the tests too (-DWITH_TESTS)", showHelp=True)
+
+        cls.debug_kernel = cls.addBoolOption("debug-kernel", help="Build the kernel with -O0 and verbose boot output",
+                                             showHelp=False)
         if IS_FREEBSD:
             cls.crossbuild = False
         elif is_jenkins_build():
@@ -535,6 +538,11 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
 
     def _buildkernel(self, kernconf: str, mfs_root_image: Path = None):
         kernelMakeArgs = self.kernelMakeArgsForConfig(kernconf)
+        if self.debug_kernel:
+            if "_BENCHMARK" in kernconf:
+                if not self.queryYesNo("Trying to build BENCHMARK kernel without optimization. Continue?"):
+                    return
+            kernelMakeArgs.set(COPTFLAGS="-O0 -DBOOTVERBOSE=2")
         if mfs_root_image:
             kernelMakeArgs.set(MFS_IMAGE=mfs_root_image)
             if "MFS_ROOT" not in kernconf:
