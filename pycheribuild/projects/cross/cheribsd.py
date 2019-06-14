@@ -596,6 +596,11 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             self.runMake("buildworld", options=build_args)
             self.kernelToolchainAlreadyBuilt = True  # includes the necessary tools for kernel-toolchain
         if not self.subdirOverride:
+            for i in ("USBROOT", "NFSROOT", "MDROOT"):
+                if ("_" + i) in self.kernelConfig:
+                    self.info("Not embedding MFS_ROOT image in non-MFS root kernel config:", self.kernelConfig)
+                    mfs_root_image = None
+                    break
             self._buildkernel(kernconf=self.kernelConfig, mfs_root_image=mfs_root_image)
 
     def _removeOldRootfs(self):
