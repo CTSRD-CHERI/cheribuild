@@ -1143,7 +1143,7 @@ class BuildCHERIBSD(BuildFreeBSD):
             old_build_dir = Path(self.config.buildRoot, "cheribsd-obj-" + self.config.cheriBitsStr)
             if not old_build_dir.is_symlink():
                 self.info("Updating old build directory name:")
-                if not self.buildDir.exists() and not self.config.clean:
+                if not self.buildDir.exists() and old_build_dir.exists() and not self.config.clean:
                     self.run_cmd("mv", old_build_dir, self.buildDir)
                 else:
                     self.cleanDirectory(old_build_dir, ensure_dir_exists=False)
