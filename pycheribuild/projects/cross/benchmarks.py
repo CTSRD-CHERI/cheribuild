@@ -77,6 +77,9 @@ class BuildMibench(CrossCompileProject):
                     assert self.config.cheriBits == 256
                     self.make_args.set(VERSION="cheri256", CHERI256_SYSROOT=self.config.cheriSysrootDir)
             self.runMake("bundle_dump")
+            if self.compiling_for_mips() and self.use_asan:
+                libdir = self.buildDir / (self.bunde_name + "-bundle") / "lib"
+                self.copy_asan_dependencies(libdir)
 
     def install(self, **kwargs):
         if is_jenkins_build():
@@ -129,6 +132,7 @@ class BuildOlden(CrossCompileProject):
                     self.runMake("cheriabi256")
 
     def install(self, **kwargs):
+        self.copy_asan_dependencies(self.buildDir / "lib")
         pass  # skip install for now...
 
     def run_tests(self):

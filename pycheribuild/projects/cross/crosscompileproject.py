@@ -504,6 +504,14 @@ class CrossCompileMixin(MultiArchBaseMixin):
         with setEnv(**env):
             super().configure(**kwargs)
 
+    def copy_asan_dependencies(self, dest_libdir):
+        # ASAN depends on libraries that are not included in the benchmark image by default:
+        assert self.compiling_for_mips() and self.use_asan
+        self.info("Adding ASAN library depedencies to", dest_libdir)
+        self.makedirs(dest_libdir)
+        for lib in ("usr/lib/librt.so.1", "usr/lib/libexecinfo.so.1", "lib/libgcc_s.so.1", "lib/libelf.so.2"):
+            self.installFile(self.sdkSysroot / lib, dest_libdir / Path(lib).name, force=True, printVerboseOnly=False)
+
     def process(self):
         if self.use_asan and self.compiling_for_mips():
             # copy the ASAN lib into the right directory:
