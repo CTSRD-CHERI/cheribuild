@@ -1308,7 +1308,7 @@ class BuildCHERIBSDMinimal(BuildCHERIBSD):
 
     def install(self, **kwargs):
         self.makedirs(self.installDir)
-        for i in ("bin", "sbin", "usr/sbin", "usr/bin", "lib", "usr/lib", "usr/libcheri"):
+        for i in ("bin", "dev", "mnt", "root", "sbin", "usr/sbin", "usr/bin", "lib", "usr/lib", "usr/libcheri"):
             self.makedirs(self.installDir / i)
         # install all the needed libs
         args = self.installworld_args

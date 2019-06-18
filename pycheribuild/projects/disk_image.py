@@ -581,7 +581,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                                                   help="Also add cheritest/cheriabitest to the disk image")
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, source_class=BuildCHERIBSD)
+        super().__init__(config, source_class=BuildCHERIBSDMinimal)
         self.minimumImageSize = "20m"  # let's try to shrink the image size
         # The base input is only cheribsdbox and all the symlinks
         self.input_METALOG = self.rootfsDir / "cheribsdbox.mtree"
