@@ -56,7 +56,7 @@ class TemporarilyRemoveProgramsFromSdk(object):
 
 
 class BuildGDB(CrossCompileAutotoolsProject):
-    rootfs_path = "/usr/local"  # Always install gdb as /usr/local/bin/gdb
+    path_in_rootfs = "/usr/local"  # Always install gdb as /usr/local/bin/gdb
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     repository = GitRepository("https://github.com/CTSRD-CHERI/gdb.git", old_urls=[b'https://github.com/bsdjhb/gdb.git'],
                                force_branch=True)

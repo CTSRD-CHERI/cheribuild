@@ -58,6 +58,14 @@ class CrossInstallDir(Enum):
 _INVALID_INSTALL_DIR = Path("/this/dir/should/be/overwritten/and/not/used/!!!!")
 
 
+def get_cheribsd_instance_for_install_dir(config: CheriConfig, project: "CrossCompileMixin") -> "BuildCHERIBSD":
+    from .cheribsd import BuildCHERIBSD
+    cross_target = project.get_crosscompile_target(config)
+    # If use_hybrid_sysroot_for_mips is set, install to rootfs128 instead of rootfs-mips
+    if project.compiling_for_mips() and (project.mips_build_hybrid or config.use_hybrid_sysroot_for_mips):
+        cross_target = CrossCompileTarget.CHERI
+    return BuildCHERIBSD.get_instance_for_cross_target(cross_target, config)
+
 def _installDir(config: CheriConfig, project: "CrossCompileProject"):
     assert isinstance(project, CrossCompileMixin)
     if project.compiling_for_host():
@@ -67,15 +75,10 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
             return _INVALID_INSTALL_DIR
         return _INVALID_INSTALL_DIR
     if project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
-        from .cheribsd import BuildCHERIBSD
-        if hasattr(project, "rootfs_path"):
-            assert project.rootfs_path.startswith("/"), project.rootfs_path
-            # If use_hybrid_sysroot_for_mips is set, install to rootfs128 instead of rootfs-mips
-            cross_target = project.get_crosscompile_target(config)
-            if project.compiling_for_mips() and (project.mips_build_hybrid or config.use_hybrid_sysroot_for_mips):
-                cross_target = CrossCompileTarget.CHERI
-            cheribsd_instance = BuildCHERIBSD.get_instance_for_cross_target(cross_target, config)
-            return cheribsd_instance.installDir / project.rootfs_path[1:]
+        cheribsd_instance = get_cheribsd_instance_for_install_dir(config, project)
+        if hasattr(project, "path_in_rootfs"):
+            assert project.path_in_rootfs.startswith("/"), project.path_in_rootfs
+            return cheribsd_instance.installDir / project.path_in_rootfs[1:]
         if project.compiling_for_cheri():
             targetName = "cheri" + config.cheriBitsStr
         else:
@@ -83,7 +86,7 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
             targetName = "mips"
         if config.cross_target_suffix:
             targetName += "-" + config.cross_target_suffix
-        return Path(BuildCHERIBSD.rootfsDir(project, config) / "opt" / targetName / project.projectName.lower())
+        return Path(cheribsd_instance.installDir / "opt" / targetName / project.projectName.lower())
     elif project.crossInstallDir == CrossInstallDir.SDK:
         return project.sdkSysroot
     elif project.crossInstallDir == CrossInstallDir.COMPILER_RESOURCE_DIR:
@@ -229,15 +232,15 @@ class CrossCompileMixin(MultiArchBaseMixin):
                     self._installPrefix = Path("/usr/local", self._crossCompileTarget.value)
                     self.destdir = self._installDir
             elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
-                from .cheribsd import BuildCHERIBSD
-                relative_to_rootfs = os.path.relpath(str(self._installDir), str(BuildCHERIBSD.rootfsDir(self, config)))
+                cheribsd_rootfs = get_cheribsd_instance_for_install_dir(self.config, self).installDir
+                relative_to_rootfs = os.path.relpath(str(self._installDir), str(cheribsd_rootfs))
                 if relative_to_rootfs.startswith(os.path.pardir):
                     self.verbose_print("Custom install dir", self._installDir, "-> using / as install prefix")
                     self._installPrefix = Path("/")
                     self.destdir = self._installDir
                 else:
                     self._installPrefix = Path("/", relative_to_rootfs)
-                    self.destdir = BuildCHERIBSD.rootfsDir(self, config)
+                    self.destdir = cheribsd_rootfs
             elif self.crossInstallDir == CrossInstallDir.COMPILER_RESOURCE_DIR:
                 self._installPrefix = self._installDir
                 self.destdir = None
