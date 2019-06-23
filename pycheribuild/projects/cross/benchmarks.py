@@ -132,7 +132,8 @@ class BuildOlden(CrossCompileProject):
                     self.runMake("cheriabi256")
 
     def install(self, **kwargs):
-        self.copy_asan_dependencies(self.buildDir / "lib")
+        if self.compiling_for_mips() and self.use_asan:
+            self.copy_asan_dependencies(self.buildDir / "lib")
         pass  # skip install for now...
 
     def run_tests(self):
