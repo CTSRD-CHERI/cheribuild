@@ -36,12 +36,13 @@ import typing
 import sys
 from pathlib import Path
 
-def run_tests_main(test_function: typing.Callable[[pexpect.spawn, argparse.Namespace], bool] = None, need_ssh=False,
-                   test_setup_function: typing.Callable[[pexpect.spawn, argparse.Namespace], None] = None,
+import boot_cheribsd
+
+def run_tests_main(test_function: typing.Callable[[boot_cheribsd.CheriBSDInstance, argparse.Namespace], bool] = None, need_ssh=False,
+                   test_setup_function: typing.Callable[[boot_cheribsd.CheriBSDInstance, argparse.Namespace], None] = None,
                    should_mount_builddir=True, should_mount_srcdir=False, should_mount_sysroot=False,
                    argparse_setup_callback: typing.Callable[[argparse.ArgumentParser], None] = None,
                    argparse_adjust_args_callback: typing.Callable[[argparse.Namespace], None] = None):
-    import boot_cheribsd
 
     def default_add_cmdline_args(parser: argparse.ArgumentParser):
         if should_mount_builddir:
