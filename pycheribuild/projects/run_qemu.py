@@ -72,6 +72,7 @@ class LaunchQEMUBase(SimpleProject):
         cls.custom_qemu_smb_mount = cls.addPathOption("smb-host-directory", default=None, metavar="DIR",
                                                       help="If set QEMU will provide this directory over smb with the "
                                                             "name //10.0.2.4/qemu for use with mount_smbfs")
+        cls.cvtrace = cls.addBoolOption("cvtrace", help="Use binary trace output instead of textual")
         # TODO: -s will no longer work, not sure anyone uses it though
         if cls._forwardSSHPort:
             cls.sshForwardingPort = cls.addConfigOption("ssh-forwarding-port", shortname=sshPortShortname, kind=int,
@@ -145,6 +146,9 @@ class LaunchQEMUBase(SimpleProject):
             if not latestSymlink.exists():
                 self.createSymlink(self.logDir / filename, latestSymlink, relative=True, cwd=self.logDir)
             logfileOptions = ["-D", self.logDir / filename]
+
+        if self.cvtrace:
+            logfileOptions =+ ["-cheri-trace-format", "cvtrace"]
         # input("Press enter to continue")
         kernelFlags = ["-kernel", self.currentKernel] if self.currentKernel else []
         qemuCommand = [self.qemuBinary] + self.machineFlags + kernelFlags + [
