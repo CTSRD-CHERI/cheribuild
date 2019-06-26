@@ -278,7 +278,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
 
 class LaunchCheriBSD(AbstractLaunchFreeBSD):
     projectName = "run"
-    dependencies = ["qemu", "disk-image"]
+    dependencies = ["qemu", "disk-image-cheri"]
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):

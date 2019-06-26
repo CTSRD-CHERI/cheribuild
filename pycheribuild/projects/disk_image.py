@@ -72,9 +72,12 @@ class _BuildDiskImageBase(SimpleProject):
     doNotAddToTargets = True
     diskImagePath = None  # type: Path
     _freebsd_build_class = None
-    needs_special_pkg_repo = False  # True for CheriBSD
     strip_binaries = False  # True by default for minimal disk-image
     bigEndian = True # True for MIPS
+
+    @property
+    def needs_special_pkg_repo(self):
+        return False  # True for CheriBSD
 
     @classmethod
     def setupConfigOptions(cls, *, defaultHostname, extraFilesShortname=None, extraFilesSuffix="", **kwargs):
@@ -476,7 +479,8 @@ class _BuildDiskImageBase(SimpleProject):
 
         if not self.makefs_cmd or not self.install_cmd:
             self.fatal("Missing freebsd-install or freebsd-makefs command! Should be found in FreeBSD build dir")
-        statusUpdate("Disk image will saved to", self.diskImagePath)
+        statusUpdate("Disk image will be saved to", self.diskImagePath)
+        statusUpdate("Disk image root fs is", self.rootfsDir)
         statusUpdate("Extra files for the disk image will be copied from", self.extraFilesDir)
 
         if not self.input_METALOG.is_file():
@@ -586,7 +590,11 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         # The base input is only cheribsdbox and all the symlinks
         self.input_METALOG = self.rootfsDir / "cheribsdbox.mtree"
         self.file_templates = BuildMinimalCheriBSDDiskImage._MinimalFileTemplates()
-        self.needs_special_pkg_repo = False
+
+
+    @property
+    def needs_special_pkg_repo(self):
+        return False
 
     def process_files_list(self, files_list):
         for line in io.StringIO(files_list).readlines():
@@ -666,9 +674,31 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         super().makeImage()
 
 
-class BuildCheriBSDDiskImage(_BuildDiskImageBase):
+class _BuildMultiArchDiskImage(MultiArchBaseMixin, _BuildDiskImageBase):
+    doNotAddToTargets = True
+
+    @classproperty
+    def default_architecture(cls):
+        return cls._source_class.default_architecture
+
+    @classproperty
+    def supported_architectures(cls):
+        return cls._source_class.supported_architectures
+
+    @staticmethod
+    def dependencies(cls, config: CheriConfig):
+        return ["qemu", cls._source_class.get_class_for_target(cls.get_crosscompile_target(config)).target]
+
+class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
     projectName = "disk-image"
     dependencies = ["qemu", "cheribsd-cheri", "gdb-mips"]
+    _source_class = BuildCHERIBSD
+
+    @classproperty
+    def supported_architectures(cls):
+        # FIXME:
+        return [CrossCompileTarget.CHERI]
+        # return cls._source_class.supported_architectures
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -676,15 +706,23 @@ class BuildCheriBSDDiskImage(_BuildDiskImageBase):
         defaultHostname = ComputedDefaultValue(
             function=lambda conf, unused: "qemu-cheri" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
             asString="qemu-cheri${CHERI_BITS}-" + hostUsername)
-        super().setupConfigOptions(extraFilesShortname="-extra-files", defaultHostname=defaultHostname, **kwargs)
 
+        tmpfs_shortname = None
+        extra_files_shortname = None
+        disk_img_shortname = None
+        if cls._crossCompileTarget == CrossCompileTarget.CHERI:
+            tmpfs_shortname = "-disable-tmpfs"
+            disk_img_shortname = "-disk-image-path"
+            extra_files_shortname = "-extra-files"
+
+        super().setupConfigOptions(extraFilesShortname=extra_files_shortname, defaultHostname=defaultHostname, **kwargs)
         defaultDiskImagePath = ComputedDefaultValue(
             function=lambda conf, proj: _defaultDiskImagePath(conf, conf.outputRoot),
             asString="$OUTPUT_ROOT/cheri256-disk.img or $OUTPUT_ROOT/cheri128-disk.img depending on --cheri-bits.")
-        cls.diskImagePath = cls.addPathOption("path", shortname="-disk-image-path", default=defaultDiskImagePath,
+        cls.diskImagePath = cls.addPathOption("path", shortname=disk_img_shortname, default=defaultDiskImagePath,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image",
                                               showHelp=True)
-        cls.disableTMPFS = cls.addBoolOption("disable-tmpfs", shortname="-disable-tmpfs",
+        cls.disableTMPFS = cls.addBoolOption("disable-tmpfs", shortname=tmpfs_shortname,
                                              help="Don't make /tmp a TMPFS mount in the CHERIBSD system image."
                                                   " This is a workaround in case TMPFS is not working correctly")
 
@@ -692,8 +730,11 @@ class BuildCheriBSDDiskImage(_BuildDiskImageBase):
         super().__init__(config, source_class=BuildCHERIBSD.get_class_for_target(CrossCompileTarget.CHERI))
         self.minimumImageSize = "256m"  # let's try to shrink the image size
         # self.needs_special_pkg_repo = self.source_project.buildTests
-        self.needs_special_pkg_repo = True
 
+    @property
+    def needs_special_pkg_repo(self):
+        tgt = self.get_crosscompile_target(self.config)
+        return tgt == CrossCompileTarget.MIPS or tgt == CrossCompileTarget.CHERI
 
 class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
     projectName = "disk-image-purecap"
@@ -721,24 +762,14 @@ class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
         super().__init__(config, source_class=BuildCHERIBSDPurecap)
         self.minimumImageSize = "256m"  # let's try to shrink the image size
         # self.needs_special_pkg_repo = self.source_project.buildTests
-        self.needs_special_pkg_repo = True
 
+    @property
+    def needs_special_pkg_repo(self):
+        return True
 
-class BuildFreeBSDImage(MultiArchBaseMixin, _BuildDiskImageBase):
+class BuildFreeBSDImage(_BuildMultiArchDiskImage):
     target = "disk-image-freebsd"
     _source_class = BuildFreeBSD
-
-    @classproperty
-    def default_architecture(cls):
-        return cls._source_class.default_architecture
-
-    @classproperty
-    def supported_architectures(cls):
-        return cls._source_class.supported_architectures
-
-    @staticmethod
-    def dependencies(cls, config: CheriConfig):
-        return ["qemu", cls._source_class.get_class_for_target(cls.get_crosscompile_target(config)).target]
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
