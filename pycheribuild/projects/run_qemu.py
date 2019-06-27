@@ -276,6 +276,48 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
         self.run_cheribsd_test_script("test_boot.py", disk_image_path=self.diskImage, kernel_path=self.currentKernel)
 
 
+class _RunMultiArchFreeBSDImage(MultiArchBaseMixin, AbstractLaunchFreeBSD):
+    doNotAddToTargets = True
+    _source_class = None
+
+    @classproperty
+    def default_architecture(cls):
+        return cls._source_class.default_architecture
+
+    @classproperty
+    def supported_architectures(cls):
+        return cls._source_class.supported_architectures
+
+    @staticmethod
+    def dependencies(cls, config: CheriConfig):
+        xtarget = cls.get_crosscompile_target(config)
+        result = []
+        if xtarget == CrossCompileTarget.RISCV:
+            result.append("qemu-riscv")
+        if xtarget == CrossCompileTarget.MIPS or xtarget == CrossCompileTarget.CHERI:
+            result.append("qemu")
+        result.append(cls._source_class.get_class_for_target(xtarget).target)
+        return result
+
+    def __init__(self, config):
+        xtarget = self.get_crosscompile_target(config)
+        super().__init__(config, disk_image_class=self._source_class.get_class_for_target(xtarget))
+        if xtarget == CrossCompileTarget.RISCV:
+            self.qemuBinary = BuildQEMURISCV.qemu_binary(self)
+            _hasPCI = False
+            self.machineFlags = ["-M", "virt"]  # want VirtIO
+            self.virtioDisk = True
+            self.currentKernel = BuildBBLFreeBSDWithDefaultOptionsRISCV(config).get_installed_kernel_path(self, config)
+        elif xtarget == CrossCompileTarget.NATIVE or xtarget == CrossCompileTarget.I386:
+            qemu_suffix = "x86_64" if xtarget == CrossCompileTarget.NATIVE else "i386"
+            self.currentKernel = None  # boot from disk
+            self._addRequiredSystemTool("qemu-system-" + qemu_suffix)
+            self.qemuBinary = Path(shutil.which("qemu-system-" + qemu_suffix) or "/could/not/find/qemu")
+            self.machineFlags = []  # default CPU (and NOT -M malta!)
+        # only QEMU-MIPS supports more than one SMB share
+        self._provide_src_via_smb = self.compiling_for_mips() or self.compiling_for_cheri()
+
+
 class LaunchCheriBSD(AbstractLaunchFreeBSD):
     projectName = "run"
     dependencies = ["qemu", "disk-image-cheri"]
@@ -301,21 +343,6 @@ class LaunchCheriBSDPurecap(AbstractLaunchFreeBSD):
 
     def __init__(self, config):
         super().__init__(config, disk_image_class=BuildCheriBSDPurecapDiskImage)
-
-
-class LaunchFreeBSDMips(AbstractLaunchFreeBSD):
-    projectName = "run-freebsd-mips"
-    dependencies = ["qemu", "disk-image-freebsd-mips"]
-    hide_options_from_help = True
-
-    @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
-                                   defaultSshPort=defaultSshForwardingPort() + 2,
-                                   **kwargs)
-
-    def __init__(self, config):
-        super().__init__(config, disk_image_class=BuildFreeBSDImage.get_class_for_target(CrossCompileTarget.MIPS))
 
 
 class LaunchCheriOSQEMU(LaunchQEMUBase):
@@ -362,44 +389,28 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
         super().process()
 
 
-class LaunchFreeBSDX86(AbstractLaunchFreeBSD):
-    projectName = "run-freebsd-x86"
-    dependencies = ["disk-image-freebsd-native"]
+class LaunchFreeBSDMips(_RunMultiArchFreeBSDImage):
+    projectName = "run-freebsd"
     hide_options_from_help = True
+    _source_class = BuildFreeBSDImage
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
+        add_to_port = 0 if cls._crossCompileTarget is None else cls._crossCompileTarget.get_index()
         super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
-                                   defaultSshPort=defaultSshForwardingPort() + 6,
-                                   **kwargs)
-
-    def __init__(self, config):
-        super().__init__(config, disk_image_class=BuildFreeBSDImage.get_class_for_target(CrossCompileTarget.NATIVE))
-        self._addRequiredSystemTool("qemu-system-x86_64")
-        qemu_path = shutil.which("qemu-system-x86_64")
-        self.qemuBinary = Path(qemu_path if qemu_path else shutil.which("false"))
-        self.machineFlags = []  # default cpu
-        self.currentKernel = None  # needs the bootloader
+                                   defaultSshPort=defaultSshForwardingPort() + 10 + add_to_port, **kwargs)
 
 
-class LaunchFreeBSDWithDefaultOptionsRISCV(AbstractLaunchFreeBSD):
-    projectName = "run-freebsd-with-default-options-riscv"
-    dependencies = ["disk-image-freebsd-with-default-options-riscv"]
+class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
+    projectName = "run-freebsd-with-default-options"
     hide_options_from_help = True
-    _hasPCI = False
+    _source_class = BuildFreeBSDWithDefaultOptionsDiskImage
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
+        add_to_port = 0 if cls._crossCompileTarget is None else cls._crossCompileTarget.get_index()
         super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
-                                   defaultSshPort=defaultSshForwardingPort() + 5,
-                                   **kwargs)
-
-    def __init__(self, config):
-        super().__init__(config, disk_image_class=BuildFreeBSDWithDefaultOptionsDiskImage.get_class_for_target(CrossCompileTarget.RISCV))
-        self.qemuBinary = BuildQEMURISCV.qemu_binary(self)
-        self.machineFlags = ["-M", "virt"]  # want VirtIO
-        self.virtioDisk = True
-        self.currentKernel = BuildBBLFreeBSDWithDefaultOptionsRISCV(config).get_installed_kernel_path(self, config)
+                                   defaultSshPort=defaultSshForwardingPort() + 20 + add_to_port, **kwargs)
 
 
 class LaunchCheriBsdMfsRoot(AbstractLaunchFreeBSD):

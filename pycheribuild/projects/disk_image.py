@@ -107,8 +107,9 @@ class _BuildDiskImageBase(SimpleProject):
         self.extraFiles = []  # type: typing.List[Path]
         self._addRequiredSystemTool("ssh-keygen")
 
-        self.makefs_cmd = None
-        self.install_cmd = None
+        self.makefs_cmd = None  # type: typing.Optional[Path]
+        self.mkimg_cmd = None  # type: typing.Optional[Path]
+        self.install_cmd = None  # type: typing.Optional[Path]
         self.source_project = source_class.get_instance(self, self.config)
         assert isinstance(self.source_project, BuildFreeBSD)
         self.rootfsDir = self.source_project.getInstallDir(self, config)
@@ -217,7 +218,8 @@ class _BuildDiskImageBase(SimpleProject):
             # Download all the kyua pkg files from and put them in /var/db/kyua-pkg-cache
             # But only do that if we really need to update (since the recursive wget is slow)
 
-            download_time_path = (self.extraFilesDir / "var/db/kyua-pkg-cache/.downloaded_time")
+            custom_pkg_repo_root_dir = self.config.outputRoot / "kyua-cheribsd-pkgcache"
+            download_time_path = (custom_pkg_repo_root_dir / "var/db/kyua-pkg-cache/.downloaded_time")
             needs_fresh_download = True
             if download_time_path.exists():
                 last_downloaded = datetime.datetime.utcfromtimestamp(float(download_time_path.read_text()))
@@ -229,27 +231,23 @@ class _BuildDiskImageBase(SimpleProject):
                                  "\nTo force an update delete the file", str(download_time_path))
 
             if needs_fresh_download:
-                pkgcache_dir = self.extraFilesDir / "var/db/kyua-pkg-cache"
+                pkgcache_dir = custom_pkg_repo_root_dir / "var/db/kyua-pkg-cache"
                 self.makedirs(pkgcache_dir)
                 self.makedirs(pkgcache_dir)
                 runCmd("find", pkgcache_dir)
                 self._wget_fetch_dir(["--accept", "*.txz", # only download .txz files
                                 PKG_REPO_URL], pkgcache_dir)
                 # fetch old libarchive which is currently needed
-                self.makedirs(self.extraFilesDir / "usr/lib")
-                self._wget_fetch([OLD_LIBARCHIVE_URL], self.extraFilesDir / "usr/lib")
+                self.makedirs(custom_pkg_repo_root_dir / "usr/lib")
+                self._wget_fetch([OLD_LIBARCHIVE_URL], custom_pkg_repo_root_dir / "usr/lib")
                 self.writeFile(download_time_path, str(datetime.datetime.utcnow().timestamp()), overwrite=True)
 
+            self.add_all_files_in_dir(custom_pkg_repo_root_dir)
         # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
         # If they do not exist in the extra-files directory yet we generate a default one and use that
         # Additionally all other files in the extra-files directory will be added to the disk image
         if self.extraFilesDir.exists():
-            for root, dirnames, filenames in os.walk(str(self.extraFilesDir)):
-                for blacklisted_dirname in ('.svn', '.git', '.idea'):
-                    if blacklisted_dirname in dirnames:
-                        dirnames.remove(blacklisted_dirname)
-                for filename in filenames:
-                    self.extraFiles.append(Path(root, filename))
+            self.add_all_files_in_dir(self.extraFilesDir)
 
         # TODO: https://www.freebsd.org/cgi/man.cgi?mount_unionfs(8) should make this easier
         # Overlay extra-files over additional stuff over cheribsd rootfs dir
@@ -364,6 +362,19 @@ class _BuildDiskImageBase(SimpleProject):
                     f.write(random_data)
             self.addFileToImage(entropy_file, baseDirectory=self.tmpdir)
 
+    def add_all_files_in_dir(self, root_dir: Path):
+        for root, dirnames, filenames in os.walk(str(root_dir)):
+            for blacklisted_dirname in ('.svn', '.git', '.idea'):
+                if blacklisted_dirname in dirnames:
+                    dirnames.remove(blacklisted_dirname)
+            for filename in filenames:
+                self.extraFiles.append(Path(root, filename))
+
+    @property
+    def is_x86(self):
+        tgt = self.get_crosscompile_target(self.config)
+        return tgt is None or tgt == CrossCompileTarget.NATIVE or tgt == CrossCompileTarget.I386
+
     def makeImage(self):
         # check that qemu-img exists before starting the potentially long-running makefs command
         qemuImgCommand = self.config.sdkDir / "bin/qemu-img"
@@ -382,11 +393,15 @@ class _BuildDiskImageBase(SimpleProject):
         if self.config.debug_output:
             debug_options = ["-d", "0x90000"]  # trace POPULATE and WRITE_FILE events
         try:
-            runCmd([self.makefs_cmd] + debug_options + [
+            extra_flags = []
+            if self.is_x86:
+                # x86: -t ffs -f 200000 -s 8g -o version=2,bsize=32768,fsize=4096
+                extra_flags = ["-t", "ffs", "-o", "version=2,bsize=32768,fsize=4096"]
+            runCmd([self.makefs_cmd] + debug_options + extra_flags + [
                 "-Z",  # sparse file output
                 "-b", "30%",  # minimum 30% free blocks
                 "-f", "30%",  # minimum 30% free inodes
-                "-R", "4m",  # round up size to the next 1m multiple
+                "-R", "4m",  # round up size to the next 4m multiple
                 "-M", self.minimumImageSize,
                 "-B", "be" if self.bigEndian else "le",  # byte order
                 "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
@@ -403,6 +418,22 @@ class _BuildDiskImageBase(SimpleProject):
                             yesNoStr="")
             raise
 
+        if self.is_x86:
+            if not self.mkimg_cmd:
+                self.fatal("Missing freebsd mkimg command! Should be found in FreeBSD build dir")
+            root_partition = self.diskImagePath.with_suffix(".partition.img")
+            self.moveFile(self.diskImagePath, root_partition, force=True)
+            # See https://github.com/freebsd/freebsd-ci/blob/master/scripts/build/build-images.sh
+            runCmd([self.mkimg_cmd,
+                    "-s", "gpt", # use GUID Partition Table (GPT)
+                    "-f", "raw", # raw disk image instead of qcow2
+                    "-b", self.rootfsDir / "boot/pmbr",  # bootload (MBR)
+                    "-p", "freebsd-boot/bootfs:=" + str(self.rootfsDir / "boot/gptboot"),  # gpt boot partition
+                    "-p", "freebsd-swap/swapfs::1G",  # 1 GB swap partition
+                    "-p", "freebsd-ufs/rootfs:=" + str(root_partition), # rootfs
+                    "-o", self.diskImagePath # output file
+                    ], cwd=self.rootfsDir)
+            self.deleteFile(root_partition) # no need to keep the partition now that we have built the full image
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
         if not self.config.quiet and qemuImgCommand.exists():
             runCmd(qemuImgCommand, "info", self.diskImagePath)
@@ -469,6 +500,9 @@ class _BuildDiskImageBase(SimpleProject):
         install_xtool = freebsd_builddir / "tmp/legacy/usr/bin/install"
         if install_xtool.exists():
             self.install_cmd = str(install_xtool)
+        mkimg_xtool = freebsd_builddir / "tmp/usr/bin/mkimg"
+        if mkimg_xtool.exists():
+            self.mkimg_cmd = str(mkimg_xtool)
 
         # On FreeBSD we can use /usr/bin/makefs and /usr/bin/install (assuming FreeBSD version is new enough)
         if IS_FREEBSD:
@@ -476,6 +510,8 @@ class _BuildDiskImageBase(SimpleProject):
                 self.install_cmd = shutil.which("install")
             if not self.makefs_cmd:
                 self.makefs_cmd = shutil.which("makefs")
+            if not self.mkimg_cmd:
+                self.mkimg_cmd = shutil.which("mkimg")
 
         if not self.makefs_cmd or not self.install_cmd:
             self.fatal("Missing freebsd-install or freebsd-makefs command! Should be found in FreeBSD build dir")
@@ -674,6 +710,14 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         super().makeImage()
 
 
+class _RISCVFileTemplates(_AdditionalFileTemplates):
+    def get_fstab_template(self):
+        return includeLocalFile("files/riscv/fstab.in")
+
+class _X86FileTemplates(_AdditionalFileTemplates):
+    def get_fstab_template(self):
+        return includeLocalFile("files/x86/fstab.in")
+
 class _BuildMultiArchDiskImage(MultiArchBaseMixin, _BuildDiskImageBase):
     doNotAddToTargets = True
 
@@ -688,6 +732,16 @@ class _BuildMultiArchDiskImage(MultiArchBaseMixin, _BuildDiskImageBase):
     @staticmethod
     def dependencies(cls, config: CheriConfig):
         return ["qemu", cls._source_class.get_class_for_target(cls.get_crosscompile_target(config)).target]
+
+    def __init__(self, config: CheriConfig):
+        # TODO: different extra-files directory
+        super().__init__(config, source_class=self._source_class.get_class_for_target(self.get_crosscompile_target(config)))
+        self.bigEndian = self.compiling_for_mips() or self.compiling_for_cheri()
+        if self.get_crosscompile_target(config) == CrossCompileTarget.RISCV:
+            self.file_templates = _RISCVFileTemplates()
+        elif self.is_x86:
+            self.file_templates = _X86FileTemplates()
+
 
 class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
     projectName = "disk-image"
@@ -727,7 +781,7 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
                                                   " This is a workaround in case TMPFS is not working correctly")
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, source_class=BuildCHERIBSD.get_class_for_target(CrossCompileTarget.CHERI))
+        super().__init__(config)
         self.minimumImageSize = "256m"  # let's try to shrink the image size
         # self.needs_special_pkg_repo = self.source_project.buildTests
 
@@ -783,18 +837,10 @@ class BuildFreeBSDImage(_BuildMultiArchDiskImage):
                                               metavar="IMGPATH", help="The output path for the QEMU disk image")
         cls.disableTMPFS = cls._crossCompileTarget == CrossCompileTarget.MIPS  # MALTA64 doesn't include tmpfs
 
-    class _RISCVFileTemplates(_AdditionalFileTemplates):
-        def get_fstab_template(self):
-            return includeLocalFile("files/riscv/fstab.in")
-
     def __init__(self, config: CheriConfig):
+        super().__init__(config)
         # TODO: different extra-files directory
-        super().__init__(config, source_class=self._source_class.get_class_for_target(self.get_crosscompile_target(config)))
         self.minimumImageSize = "256m"
-        self.bigEndian = self.compiling_for_mips() or self.compiling_for_cheri()
-
-        if self.get_crosscompile_target(config) == CrossCompileTarget.RISCV:
-            self.file_templates = self._RISCVFileTemplates()
 
 
 class BuildFreeBSDWithDefaultOptionsDiskImage(BuildFreeBSDImage):

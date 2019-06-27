@@ -59,6 +59,12 @@ class CrossCompileTarget(Enum):
     RISCV = "riscv"
     I386 = "i386"
 
+    def get_index(self):
+        for idx, value in enumerate(CrossCompileTarget):
+            if self == value:
+                return idx
+        assert False, "Should not be reachable"
+
 
 class BuildType(Enum):
     DEFAULT = "Default"
