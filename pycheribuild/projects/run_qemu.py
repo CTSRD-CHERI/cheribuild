@@ -111,7 +111,7 @@ class LaunchQEMUBase(SimpleProject):
                 diskOptions = ["-drive", "if=none,file=" + str(self.diskImage) + ",id=drv,format=raw",
                                "-device", "virtio-blk-device,drive=drv"]
             else:
-                diskOptions = ["-hda", self.diskImage]
+                diskOptions = ["-drive", "file=" + str(self.diskImage) + ",format=raw,index=0,media=disk"]
             if not self.diskImage.exists():
                 self.dependencyError("Disk image is missing:", self.diskImage,
                                      installInstructions="Run `cheribuild.py disk-image` or `cheribuild.py run -d`.")
