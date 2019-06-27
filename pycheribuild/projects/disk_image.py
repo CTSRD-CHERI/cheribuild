@@ -427,17 +427,46 @@ class _BuildDiskImageBase(SimpleProject):
                 self.fatal("Missing freebsd mkimg command! Should be found in FreeBSD build dir")
             root_partition = self.diskImagePath.with_suffix(".partition.img")
             self.moveFile(self.diskImagePath, root_partition, force=True)
-            # See https://github.com/freebsd/freebsd-ci/blob/master/scripts/build/build-images.sh
-            runCmd([self.mkimg_cmd,
-                    "-s", "gpt", # use GUID Partition Table (GPT)
-                    "-f", "raw", # raw disk image instead of qcow2
-                    "-b", self.rootfsDir / "boot/pmbr",  # bootload (MBR)
-                    "-p", "freebsd-boot/bootfs:=" + str(self.rootfsDir / "boot/gptboot"),  # gpt boot partition
-                    "-p", "freebsd-swap/swapfs::1G",  # 1 GB swap partition
-                    "-p", "freebsd-ufs/rootfs:=" + str(root_partition), # rootfs
-                    "-o", self.diskImagePath # output file
-                    ], cwd=self.rootfsDir)
-            self.deleteFile(root_partition) # no need to keep the partition now that we have built the full image
+            if True:
+                # See mk_nogeli_mbr_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
+                # cat > ${src}/etc/fstab <<EOF
+                # /dev/ada0s1a	/		ufs	rw	1	1
+                # EOF
+                # makefs -t ffs -B little -s 200m ${img}.s1a ${src}
+                # mkimg -s bsd -b ${src}/boot/boot -p freebsd-ufs:=${img}.s1a -o ${img}.s1
+                # mkimg -a 1 -s mbr -b ${src}/boot/boot0sio -p freebsd:=${img}.s1 -o ${img}
+                # rm -f ${src}/etc/fstab
+                s1_path = self.diskImagePath.with_suffix(".s1.img")
+                runCmd([self.mkimg_cmd,
+                        "-s", "bsd",
+                        "-f", "raw", # raw disk image instead of qcow2
+                        "-b", self.rootfsDir / "boot/boot",  # bootload (MBR)
+                        "-p", "freebsd-ufs:=" + str(root_partition), # rootfs
+                        "-o", s1_path # output file
+                        ], cwd=self.rootfsDir)
+                runCmd([self.mkimg_cmd, "-a", "1", "-s", "mbr",
+                        "-f", "raw", # raw disk image instead of qcow2
+                        "-b", self.rootfsDir / "boot/boot0sio",  # bootload (MBR)
+                        "-p", "freebsd:=" + str(s1_path), # rootfs
+                        "-o", self.diskImagePath # output file
+                        ], cwd=self.rootfsDir)
+                self.deleteFile(root_partition) # no need to keep the partition now that we have built the full image
+                self.deleteFile(s1_path) # no need to keep the partition now that we have built the full image
+            else:
+                # See https://github.com/freebsd/freebsd-ci/blob/master/scripts/build/build-images.sh
+                runCmd([self.mkimg_cmd,
+                        "-s", "gpt",  # use GUID Partition Table (GPT)
+                        "-f", "raw",  # raw disk image instead of qcow2
+                        "-b", self.rootfsDir / "boot/pmbr",  # bootload (MBR)
+                        "-p",
+                        "freebsd-boot/bootfs:=" + str(self.rootfsDir / "boot/gptboot"),
+                        # gpt boot partition
+                        "-p", "freebsd-swap/swapfs::1G",  # 1 GB swap partition
+                        "-p", "freebsd-ufs/rootfs:=" + str(root_partition),  # rootfs
+                        "-o", self.diskImagePath  # output file
+                        ], cwd=self.rootfsDir)
+                self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
+
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
         if not self.config.quiet and qemuImgCommand.exists():
             runCmd(qemuImgCommand, "info", self.diskImagePath)
