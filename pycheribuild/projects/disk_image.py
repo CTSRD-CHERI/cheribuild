@@ -368,7 +368,11 @@ class _BuildDiskImageBase(SimpleProject):
                 if blacklisted_dirname in dirnames:
                     dirnames.remove(blacklisted_dirname)
             for filename in filenames:
-                self.extraFiles.append(Path(root, filename))
+                new_file = Path(root, filename)
+                if root_dir == self.extraFilesDir:
+                    self.extraFiles.append(new_file)
+                else:
+                    self.addFileToImage(new_file, baseDirectory=root_dir)
 
     @property
     def is_x86(self):
