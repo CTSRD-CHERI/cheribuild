@@ -1,5 +1,6 @@
 hostname="{hostname}"
-ifconfig_le0="DHCP"  # use DHCP on the standard QEMU usermode nic
+ifconfig_le0="DHCP"  # use DHCP on the standard QEMU usermode nic (MIPS)
+ifconfig_em0="DHCP"  # use DHCP on the standard QEMU usermode nic (x86)
 ifconfig_atse0="polling DHCP"  # For the default fpga interface we need polling mode
 background_dhclient="no"  # launch dhclient in the background (hope it doesn't break sshd)
 defaultroute_delay=10  # 30 seconds default is a long time

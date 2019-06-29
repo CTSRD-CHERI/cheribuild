@@ -347,6 +347,10 @@ class _BuildDiskImageBase(SimpleProject):
                     self.info("Adding GDB binary", gdb_binary, "to disk image")
                     self.addFileToImage(gdb_binary, mode=0o755, path_in_target="usr/bin/gdb")
 
+        if self.is_x86:
+            self.createFileForImage("/boot/loader.conf", contents="console=\"comconsole\"\n", mode=0o644)
+
+
 
         # Avoid long boot time on first start due to missing entropy:
         # for i in ("boot/entropy", "entropy"):
@@ -376,8 +380,47 @@ class _BuildDiskImageBase(SimpleProject):
 
     @property
     def is_x86(self):
-        tgt = self.get_crosscompile_target(self.config)
-        return tgt is None or tgt == CrossCompileTarget.NATIVE or tgt == CrossCompileTarget.I386
+        return False
+
+    def build_mbr_image(self, root_partition: Path):  # FIXME: doesn't actually work
+        assert self.is_x86
+        # See mk_nogeli_mbr_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
+        # cat > ${src}/etc/fstab <<EOF
+        # /dev/ada0s1a	/		ufs	rw	1	1
+        # EOF
+        # makefs -t ffs -B little -s 200m ${img}.s1a ${src}
+        # mkimg -s bsd -b ${src}/boot/boot -p freebsd-ufs:=${img}.s1a -o ${img}.s1
+        # mkimg -a 1 -s mbr -b ${src}/boot/boot0sio -p freebsd:=${img}.s1 -o ${img}
+        # rm -f ${src}/etc/fstab
+        s1_path = self.diskImagePath.with_suffix(".s1.img")
+        runCmd([self.mkimg_cmd,
+                "-s", "bsd",
+                "-f", "raw",  # raw disk image instead of qcow2
+                "-b", self.rootfsDir / "boot/boot",  # bootload (MBR)
+                "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
+                "-o", s1_path  # output file
+                ], cwd=self.rootfsDir)
+        runCmd([self.mkimg_cmd, "-a", "1", "-s", "mbr",
+                "-f", "raw",  # raw disk image instead of qcow2
+                "-b", self.rootfsDir / "boot/boot0sio",  # bootload (MBR)
+                "-p", "freebsd:=" + str(s1_path),  # rootfs
+                "-o", self.diskImagePath  # output file
+                ], cwd=self.rootfsDir)
+        self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
+        self.deleteFile(s1_path)  # no need to keep the partition now that we have built the full image
+
+    def build_gpt_image(self, root_partition: Path):
+        assert self.is_x86
+        # See mk_nogeli_gpt_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
+        runCmd([self.mkimg_cmd,
+                "-s", "gpt",  # use GUID Partition Table (GPT)
+                # "-f", "raw",  # raw disk image instead of qcow2
+                "-b", self.rootfsDir / "boot/pmbr",  # bootload (MBR)
+                "-p", "freebsd-boot:=" + str(self.rootfsDir / "boot/gptboot"),  # gpt boot partition
+                "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
+                "-o", self.diskImagePath  # output file
+                ], cwd=self.rootfsDir)
+        self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
 
     def makeImage(self):
         # check that qemu-img exists before starting the potentially long-running makefs command
@@ -427,45 +470,8 @@ class _BuildDiskImageBase(SimpleProject):
                 self.fatal("Missing freebsd mkimg command! Should be found in FreeBSD build dir")
             root_partition = self.diskImagePath.with_suffix(".partition.img")
             self.moveFile(self.diskImagePath, root_partition, force=True)
-            if True:
-                # See mk_nogeli_mbr_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
-                # cat > ${src}/etc/fstab <<EOF
-                # /dev/ada0s1a	/		ufs	rw	1	1
-                # EOF
-                # makefs -t ffs -B little -s 200m ${img}.s1a ${src}
-                # mkimg -s bsd -b ${src}/boot/boot -p freebsd-ufs:=${img}.s1a -o ${img}.s1
-                # mkimg -a 1 -s mbr -b ${src}/boot/boot0sio -p freebsd:=${img}.s1 -o ${img}
-                # rm -f ${src}/etc/fstab
-                s1_path = self.diskImagePath.with_suffix(".s1.img")
-                runCmd([self.mkimg_cmd,
-                        "-s", "bsd",
-                        "-f", "raw", # raw disk image instead of qcow2
-                        "-b", self.rootfsDir / "boot/boot",  # bootload (MBR)
-                        "-p", "freebsd-ufs:=" + str(root_partition), # rootfs
-                        "-o", s1_path # output file
-                        ], cwd=self.rootfsDir)
-                runCmd([self.mkimg_cmd, "-a", "1", "-s", "mbr",
-                        "-f", "raw", # raw disk image instead of qcow2
-                        "-b", self.rootfsDir / "boot/boot0sio",  # bootload (MBR)
-                        "-p", "freebsd:=" + str(s1_path), # rootfs
-                        "-o", self.diskImagePath # output file
-                        ], cwd=self.rootfsDir)
-                self.deleteFile(root_partition) # no need to keep the partition now that we have built the full image
-                self.deleteFile(s1_path) # no need to keep the partition now that we have built the full image
-            else:
-                # See https://github.com/freebsd/freebsd-ci/blob/master/scripts/build/build-images.sh
-                runCmd([self.mkimg_cmd,
-                        "-s", "gpt",  # use GUID Partition Table (GPT)
-                        "-f", "raw",  # raw disk image instead of qcow2
-                        "-b", self.rootfsDir / "boot/pmbr",  # bootload (MBR)
-                        "-p",
-                        "freebsd-boot/bootfs:=" + str(self.rootfsDir / "boot/gptboot"),
-                        # gpt boot partition
-                        "-p", "freebsd-swap/swapfs::1G",  # 1 GB swap partition
-                        "-p", "freebsd-ufs/rootfs:=" + str(root_partition),  # rootfs
-                        "-o", self.diskImagePath  # output file
-                        ], cwd=self.rootfsDir)
-                self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
+            self.build_gpt_image(root_partition)
+            self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
 
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
         if not self.config.quiet and qemuImgCommand.exists():
@@ -765,6 +771,11 @@ class _BuildMultiArchDiskImage(MultiArchBaseMixin, _BuildDiskImageBase):
     @staticmethod
     def dependencies(cls, config: CheriConfig):
         return ["qemu", cls._source_class.get_class_for_target(cls.get_crosscompile_target(config)).target]
+
+    @property
+    def is_x86(self):
+        tgt = self.get_crosscompile_target(self.config)
+        return tgt is None or tgt == CrossCompileTarget.NATIVE or tgt == CrossCompileTarget.I386
 
     def __init__(self, config: CheriConfig):
         # TODO: different extra-files directory
