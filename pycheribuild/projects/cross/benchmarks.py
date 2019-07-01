@@ -132,9 +132,20 @@ class BuildOlden(CrossCompileProject):
                     self.runMake("cheriabi256")
 
     def install(self, **kwargs):
-        if self.compiling_for_mips() and self.use_asan:
-            self.copy_asan_dependencies(self.buildDir / "lib")
-        pass  # skip install for now...
+        if is_jenkins_build():
+            self.makedirs(self.installDir)
+            for script in ("run_micro2016.sh", "run_isca2017.sh", "run_jenkins-bluehive.sh"):
+                self.installFile(self.sourceDir / script, self.installDir / script, force=True)
+            self.run_cmd("cp", "-av", self.sourceDir / "bin/", self.installDir, cwd=self.buildDir)
+            if self.compiling_for_mips() and self.use_asan:
+                self.copy_asan_dependencies(self.buildDir / "lib")
+            self.run_cmd("du", "-sh", self.installDir)
+            # Remove all the .dump files from the tarball
+            self.run_cmd("find", self.installDir, "-name", "*.dump", "-delete")
+            self.run_cmd("du", "-sh", self.installDir)
+        else:
+            if self.compiling_for_mips() and self.use_asan:
+                self.copy_asan_dependencies(self.buildDir / "lib")
 
     def run_tests(self):
         if self.compiling_for_host():
