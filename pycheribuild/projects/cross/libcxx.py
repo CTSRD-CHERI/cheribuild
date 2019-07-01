@@ -203,7 +203,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         super().setupConfigOptions(**kwargs)
         cls.only_compile_tests = cls.addBoolOption("only-compile-tests",
                                                    help="Don't attempt to run tests, only compile them")
-        cls.enable_exceptions = cls.addBoolOption("exceptions", help="Build with support for C++ exceptions")
+        cls.exceptions = cls.addBoolOption("exceptions", default=True, help="Build with support for C++ exceptions")
         cls.collect_test_binaries = cls.addPathOption("collect-test-binaries", metavar="TEST_PATH",
                                                       help="Instead of running tests copy them to $TEST_PATH")
         cls.nfs_mounted_path = cls.addPathOption("nfs-mounted-path", metavar="PATH", help="Use a PATH as a directory"
@@ -246,17 +246,26 @@ class BuildLibCXX(CrossCompileCMakeProject):
         )
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
         self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
-        # select libcxxrt as the runtime library
-        self.add_cmake_options(
-            LIBCXX_CXX_ABI="libcxxrt",
-            LIBCXX_CXX_ABI_LIBNAME="libcxxrt",
-            LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.getSourceDir(self, config) / "src",
-            LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.getBuildDir(self, config) / "lib",
-        )
-        # use llvm libunwind when testing
-        self.add_cmake_options(LIBCXX_STATIC_CXX_ABI_LIBRARY_NEEDS_UNWIND_LIBRARY=True,
-                               LIBCXX_CXX_ABI_UNWIND_LIBRARY="unwind",
-                               LIBCXX_CXX_ABI_UNWIND_LIBRARY_PATH=BuildLibunwind.getBuildDir(self, config) / "lib")
+        # select libcxxrt as the runtime library (except on macos where this doesn't seem to work very well)
+        if not (self.compiling_for_host() and IS_MAC):
+            self.add_cmake_options(
+                LIBCXX_CXX_ABI="libcxxrt",
+                LIBCXX_CXX_ABI_LIBNAME="libcxxrt",
+                LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.getSourceDir(self, config) / "src",
+                LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.getBuildDir(self, config) / "lib",
+            )
+            # use llvm libunwind when testing
+            self.add_cmake_options(LIBCXX_STATIC_CXX_ABI_LIBRARY_NEEDS_UNWIND_LIBRARY=True,
+                                   LIBCXX_CXX_ABI_UNWIND_LIBRARY="unwind",
+                                   LIBCXX_CXX_ABI_UNWIND_LIBRARY_PATH=BuildLibunwind.getBuildDir(self, config) / "lib")
+
+        if not self.exceptions or self.baremetal:
+            self.add_cmake_options(LIBCXX_ENABLE_EXCEPTIONS=False, LIBCXX_ENABLE_RTTI=False)
+        else:
+            self.add_cmake_options(LIBCXX_ENABLE_EXCEPTIONS=True, LIBCXX_ENABLE_RTTI=True)
+
+        # TODO: remove this once stuff has been fixed:
+        self.common_warning_flags.append("-Wno-ignored-attributes")
 
     def addCrossFlags(self):
         # TODO: do I even need the toolchain file to cross compile?
@@ -296,9 +305,6 @@ class BuildLibCXX(CrossCompileCMakeProject):
             LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=False,  # not yet
             LIBCXX_INCLUDE_BENCHMARKS=False,
             LIBCXX_INCLUDE_DOCS=False,
-            # exceptions and rtti still missing:
-            LIBCXX_ENABLE_EXCEPTIONS=False,
-            LIBCXX_ENABLE_RTTI=False,
             # When cross compiling we link the ABI library statically (except baremetal since that doens;t have it yet)
             LIBCXX_ENABLE_STATIC_ABI_LIBRARY=not self.baremetal,
         )
