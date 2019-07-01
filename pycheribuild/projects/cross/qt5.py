@@ -325,8 +325,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     gitBranch = "qtwebkit-5.212-cheri"
     dependencies = ["qtbase", "icu4c", "libxml2", "sqlite"]
     # webkit is massive if we include debug info
-    default_build_type = BuildType.MINSIZEREL
-    # TODO: default_build_type = BuildType.MINSIZERELWITHDEBINFO # Default to -Os with debug info:
+    default_build_type = BuildType.RELWITHDEBINFO
 
     crossInstallDir = CrossInstallDir.SDK
     defaultSourceDir = ComputedDefaultValue(
