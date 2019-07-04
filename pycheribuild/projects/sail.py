@@ -275,12 +275,13 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
         # self.make_args.set(SAIL_DIR=self.config.sdkDir / "share/sail", SAIL=self.config.sdkBinDir / "sail")
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
-        cmd = [self.make_args.command, self.config.makeJFlag, "all"] + self.make_args.all_commandline_args
+        cmd = [self.make_args.command, self.config.makeJFlag, "opam-build"] + self.make_args.all_commandline_args
         self.run_command_in_ocaml_env(cmd, cwd=self.sourceDir)
 
     def install(self, **kwargs):
         self.make_args.set(INSTALL_DIR=self.config.sdkDir)
-        self.runMake("install")
+        # self.runMake("install")
+        self.info("NO INSTALL TARGET YET")
 
 
 # Old way of installing sail:
