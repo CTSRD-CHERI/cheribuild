@@ -658,9 +658,15 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                                                help="strip ELF files to reduce size of generated image")
         cls.include_cheritest = cls.addBoolOption("include-cheritest", default=True,
                                                   help="Also add cheritest/cheriabitest to the disk image")
+        cls.use_cheribsd_purecap_rootfs = cls.addBoolOption("use-cheribsd-purecap-rootfs", default=False,
+                                                            help="Use the rootfs built by cheribsd-purecap instead")
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, source_class=BuildCHERIBSD)
+        if self.use_cheribsd_purecap_rootfs:
+            src = BuildCHERIBSDPurecap
+        else:
+            src = BuildCHERIBSD.get_class_for_target(CrossCompileTarget.CHERI)
+        super().__init__(config, source_class=src)
         self.minimumImageSize = "20m"  # let's try to shrink the image size
         # The base input is only cheribsdbox and all the symlinks
         self.input_METALOG = self.rootfsDir / "cheribsdbox.mtree"
@@ -759,6 +765,7 @@ class _X86FileTemplates(_AdditionalFileTemplates):
 
 class _BuildMultiArchDiskImage(MultiArchBaseMixin, _BuildDiskImageBase):
     doNotAddToTargets = True
+    _source_class = None  # type: typing.Type[MultiArchBaseMixin]
 
     @classproperty
     def default_architecture(cls):
@@ -778,6 +785,7 @@ class _BuildMultiArchDiskImage(MultiArchBaseMixin, _BuildDiskImageBase):
         return tgt is None or tgt == CrossCompileTarget.NATIVE or tgt == CrossCompileTarget.I386
 
     def __init__(self, config: CheriConfig):
+        assert issubclass(self._source_class, MultiArchBaseMixin)
         # TODO: different extra-files directory
         super().__init__(config, source_class=self._source_class.get_class_for_target(self.get_crosscompile_target(config)))
         self.bigEndian = self.compiling_for_mips() or self.compiling_for_cheri()
