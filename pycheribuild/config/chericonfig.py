@@ -94,6 +94,7 @@ class MipsFloatAbi(Enum):
 
 class CheriConfig(object):
     DEFAULT_CAP_TABLE_ABI = "pcrel"
+    DEFAULT_SUBOBJECT_BOUNDS = "conservative"
 
     def __init__(self, loader: ConfigLoaderBase, action_class):
         loader._cheriConfig = self
@@ -334,9 +335,12 @@ class CheriConfig(object):
 
     @property
     def cheri_bits_and_abi_str(self):
-        if self.cheri_cap_table_abi == self.DEFAULT_CAP_TABLE_ABI:
-            return str(self.cheriBits)
-        return str(self.cheriBits) + "-" + str(self.cheri_cap_table_abi)
+        result = str(self.cheriBits)
+        if self.cheri_cap_table_abi != self.DEFAULT_CAP_TABLE_ABI:
+            result += "-" + str(self.cheri_cap_table_abi)
+        if self.subobject_bounds is not None and self.subobject_bounds != self.DEFAULT_SUBOBJECT_BOUNDS:
+            result += "-" + str(self.subobject_bounds)
+        return result
 
     @property
     def sdkDirectoryName(self):
