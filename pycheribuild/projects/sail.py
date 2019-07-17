@@ -201,6 +201,8 @@ class BuildSailFromOpam(OpamMixin, SimpleProject):
             self.run_opam_cmd("pin", "add", "sail", "https://github.com/rems-project/sail.git", "--verbose", "--no-action")
         try:
             self.run_opam_cmd("install", "-y", "--verbose", "sail", "--destdir=" + str(self.config.sdkDir))
+            # I bet this will not work as intended... Probably better to just uninstall and reinstall
+            self.run_opam_cmd("upgrade", "-y", "--verbose", "sail")#  "--destdir=" + str(self.config.sdkDir))
         finally:
             # reset the pin status even if the pinning failed
             self.run_opam_cmd("pin", "remove", "sail", "--no-action")
