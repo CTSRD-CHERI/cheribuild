@@ -132,21 +132,21 @@ class BuildOlden(CrossCompileProject):
                     self.runMake("cheriabi256")
 
     def install(self, **kwargs):
+        self.makedirs(self.installDir)
+        for script in ("run_micro2016.sh", "run_isca2017.sh", "run_jenkins-bluehive.sh"):
+            self.installFile(self.sourceDir / script, self.installDir / script, force=True)
+        if Path(self.sourceDir / "bin").exists():
+            for file in Path(self.sourceDir / "bin").iterdir():
+                if file.is_file() and file.name.endswith(".bench"):
+                    self.installFile(file, self.installDir / file.name, force=True)
         if is_jenkins_build():
-            self.makedirs(self.installDir)
-            for script in ("run_micro2016.sh", "run_isca2017.sh", "run_jenkins-bluehive.sh"):
-                self.installFile(self.sourceDir / script, self.installDir / script, force=True)
-            if Path(self.sourceDir / "bin").exists():
-                for file in Path(self.sourceDir / "bin").iterdir():
-                    if file.is_file() and file.name.endswith(".bench"):
-                        self.installFile(file, self.installDir / file.name, force=True)
             if self.compiling_for_mips() and self.use_asan:
-                self.copy_asan_dependencies(self.buildDir / "lib")
-            self.run_cmd("du", "-sh", self.installDir)
+                self.copy_asan_dependencies(self.installDir / "lib")
             # Remove all the .dump files from the tarball
             self.run_cmd("find", self.installDir, "-name", "*.dump", "-delete")
             self.run_cmd("du", "-sh", self.installDir)
         else:
+            # copy asan libraries to the build dir to ensure that we can run with --test
             if self.compiling_for_mips() and self.use_asan:
                 self.copy_asan_dependencies(self.buildDir / "lib")
 
