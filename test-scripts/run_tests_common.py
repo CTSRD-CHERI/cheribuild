@@ -42,7 +42,8 @@ def run_tests_main(test_function: typing.Callable[[boot_cheribsd.CheriBSDInstanc
                    test_setup_function: typing.Callable[[boot_cheribsd.CheriBSDInstance, argparse.Namespace], None] = None,
                    should_mount_builddir=True, should_mount_srcdir=False, should_mount_sysroot=False,
                    argparse_setup_callback: typing.Callable[[argparse.ArgumentParser], None] = None,
-                   argparse_adjust_args_callback: typing.Callable[[argparse.Namespace], None] = None):
+                   argparse_adjust_args_callback: typing.Callable[[argparse.Namespace], None] = None,
+                   build_dir_in_target="/build"):
 
     def default_add_cmdline_args(parser: argparse.ArgumentParser):
         if should_mount_builddir:
@@ -64,7 +65,7 @@ def run_tests_main(test_function: typing.Callable[[boot_cheribsd.CheriBSDInstanc
             args.skip_ssh_setup = not args.__foce_ssh_setup
         if should_mount_builddir:
             args.build_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.build_dir)))
-            args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.build_dir, readonly=False, in_target="/build"))
+            args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.build_dir, readonly=False, in_target=build_dir_in_target))
         if should_mount_srcdir:
             args.source_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.source_dir)))
             args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.source_dir, readonly=True, in_target="/source"))

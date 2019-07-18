@@ -39,6 +39,8 @@ import os
 import sys
 from pathlib import Path
 
+LONG_NAME_FOR_BUILDDIR = "/build-dir-with-long-name-to-ensure-cwd-causes-buffer-overflow"
+
 class BODiagTestsuite(object):
     def __init__(self, name: str, xml: "junitparser.JUnitXml"):
         self.test_prefix = name
@@ -186,11 +188,11 @@ def run_bodiagsuite(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
     assert not args.use_valgrind, "Not support for CheriBSD"
 
     if not args.junit_xml_only:
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "rm -rf /build/run")
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "cd /build && mkdir -p run")
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "rm -rf {}/run".format(LONG_NAME_FOR_BUILDDIR))
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "cd {} && mkdir -p run".format(LONG_NAME_FOR_BUILDDIR))
         # Don't log all the CHERI traps while running (should speed up the tests a bit and produce shorter logfiles)
         boot_cheribsd.run_cheribsd_command(qemu, "sysctl machdep.log_cheri_exceptions=0 || true")
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "{} -r -f /build/Makefile.bsd-run all".format(args.bmake_path),
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "{} -r -f {}/Makefile.bsd-run all".format(args.bmake_path, LONG_NAME_FOR_BUILDDIR),
                                                    timeout=120*60, ignore_cheri_trap=True)
         # restore old behaviour
         boot_cheribsd.run_cheribsd_command(qemu, "sysctl machdep.log_cheri_exceptions=1 || true")
@@ -229,4 +231,4 @@ if __name__ == '__main__':
     from run_tests_common import run_tests_main
     # we don't need ssh running to execute the tests
     run_tests_main(test_function=run_bodiagsuite, need_ssh=False, should_mount_builddir=True,
-                   argparse_setup_callback=add_args)
+                   argparse_setup_callback=add_args, build_dir_in_target=LONG_NAME_FOR_BUILDDIR)
