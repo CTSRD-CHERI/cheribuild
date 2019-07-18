@@ -30,6 +30,7 @@
 import shutil
 
 from .crosscompileproject import *
+from ..softboundscets import BuildSoftBoundCETS
 from ...utils import getCompilerInfo, runCmd, IS_FREEBSD
 
 class BuildBODiagSuite(CrossCompileCMakeProject):
@@ -50,18 +51,45 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
                                              only_add_for_targets=[CrossCompileTarget.NATIVE])
         cls.use_stack_protector = cls.addBoolOption("use-stack-protector", help="Compile tests with stack-protector (non-CHERI only)")
         cls.use_fortify_source = cls.addBoolOption("use-fortify-source", help="Compile tests with _DFORTIFY_SOURCE=2 (no effect on FreeBSD)")
+        cls.use_softboundcets = cls.addBoolOption("use-softboundcets", help="Compile tests with SoftBoundCETS (native only)")
 
+
+    @property
+    def CC(self):
+        if self.use_softboundcets:
+            return BuildSoftBoundCETS.getBuildDir(self, self.config) / "bin/clang"
+        return super().CC
+
+    @property
+    def CXX(self):
+        if self.use_softboundcets:
+            return BuildSoftBoundCETS.getBuildDir(self, self.config) / "bin/clang++"
+        return super().CXX
 
     def __init__(self, config: CheriConfig, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
         if getCompilerInfo(self.CC).is_clang:
             self.common_warning_flags.append("-Wno-unused-command-line-argument")
+        if self.compiling_for_host() and self.use_softboundcets:
+            self.COMMON_FLAGS.append("-fsoftboundcets")
+            self.COMMON_LDFLAGS.append("-lm")
+            self.COMMON_LDFLAGS.append("-lrt")
+            self.COMMON_LDFLAGS.append("-lsoftboundcets_rt")
+            # TODO: would be nice to build the runtime in the build dir and not the source dir..
+            self.COMMON_LDFLAGS.append("-L" + str(BuildSoftBoundCETS.getSourceDir(self, self.config) / "runtime"))
+            # Recent BFD seems unhappy with the softboundcets runtime
+            self.COMMON_LDFLAGS.append("-fuse-ld=lld")
         if self.use_stack_protector:
             self.add_cmake_options(WITH_STACK_PROTECTOR=True)
         if self.use_fortify_source:
             self.add_cmake_options(WITH_FORTIFY_SOURCE=True)
 
     def process(self):
+        if self.compiling_for_host() and self.use_softboundcets:
+            assert "-fsoftboundcets" in self.default_compiler_flags
+            assert "-lsoftboundcets_rt" in self.default_ldflags
+            if self.use_asan or self.use_valgrind:
+                self.fatal("Cannot use SoftBoundCETS and ASAN/Valgrind at the same time!")
         if self.use_asan and self.use_valgrind:
             # ASAN is incompatible with valgrind
             self.fatal("Cannot use ASAN and valgrind at the same time!")
