@@ -93,14 +93,10 @@ class BODiagTestsuite(object):
         try:
             exit_code = int(exit_code_str)
         except ValueError:
-            if exit_code_str == "skip" and stem.endswith("00183-large"):
-                testcase.result = junitparser.Skipped(message="Skipped since the test needs too big cwd")
-                self.large_suite.add_testcase(testcase)
-            else:
-                self.error("Malformed output for test: ", o)
-                testcase.result = junitparser.Error(message="INVALID OUTPUT FILE CONTENTS: " + o.name)
-                testcase.system_out = exit_code_str
-                self.error_suite.add_testcase(testcase)
+            self.error("Malformed output for test: ", o)
+            testcase.result = junitparser.Error(message="INVALID OUTPUT FILE CONTENTS: " + o.name)
+            testcase.system_out = exit_code_str
+            self.error_suite.add_testcase(testcase)
             return
 
         signaled = os.WIFSIGNALED(exit_code)
@@ -127,7 +123,9 @@ class BODiagTestsuite(object):
                 testcase.result = junitparser.Error(message="INVALID OUTPUT FILE FOUND: " + o.name)
                 self.error_suite.add_testcase(testcase)
                 return
-            if not signaled:
+            if exit_code == 1 and testcase.system_err and testcase.system_err.startswith("This test needs a CWD with length"):
+                testcase.result = junitparser.Skipped(message="This test needs a large working directory")
+            elif not signaled:
                 # test should fail with a signal: (162 for CHERI)
                 # TODO: for CHERI check that it was signal 34?
                 testcase.result = junitparser.Failure(message="Expected test to be killed by a SIGNAL but got exit code " + exit_code_str)
