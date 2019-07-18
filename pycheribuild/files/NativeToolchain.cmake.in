@@ -43,7 +43,9 @@ set(CMAKE_CXX_COMPILER_TARGET "@TOOLCHAIN_TARGET_TRIPLE@")
 
 set(CMAKE_ASM_COMPILER "@TOOLCHAIN_C_COMPILER@")
 set(CMAKE_ASM_COMPILER_TARGET "@TOOLCHAIN_TARGET_TRIPLE@")
-set(CMAKE_ASM_COMPILER_ID "Clang")  # for some reason CMake doesn't detect this automatically
+if (NOT "@TOOLCHAIN_C_COMPILER@" STREQUAL "cc")
+    set(CMAKE_ASM_COMPILER_ID "Clang")  # for some reason CMake doesn't detect this automatically
+endif()
 
 set(NATIVE_COMMON_FLAGS "@TOOLCHAIN_COMMON_FLAGS@")
 set(NATIVE_LINK_FLAGS "@TOOLCHAIN_LINKER_FLAGS@")

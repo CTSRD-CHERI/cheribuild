@@ -43,6 +43,8 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
     defaultOptimizationLevel = ["-O0"]
     default_build_type = BuildType.DEBUG
     default_use_asan = True
+    # _FORTIFY_SOURCE only works with GCC on Linux
+    forceDefaultCC = True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
