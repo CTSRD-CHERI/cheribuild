@@ -75,7 +75,7 @@ class BODiagTestsuite(object):
     def error(self, *args):
         print(self.test_prefix, "ERROR:", *args, file=sys.stderr)
 
-    def handle_testcase(self, o: Path):
+    def handle_testcase(self, o: Path, tools: list):
         stem = o.stem
         assert stem.startswith(self.test_prefix), stem
         exit_code_str = o.read_text().rstrip()
@@ -127,14 +127,26 @@ class BODiagTestsuite(object):
                 return
             if exit_code == 1 and testcase.system_err and testcase.system_err.startswith("This test needs a CWD with length"):
                 testcase.result = junitparser.Skipped(message="This test needs a large working directory")
-            elif not signaled:
-                # test should fail with a signal: (162 for CHERI)
-                # TODO: for CHERI check that it was signal 34?
-                testcase.result = junitparser.Failure(message="Expected test to be killed by a SIGNAL but got exit code " + exit_code_str)
+
+            # Handle tool-specific exit codes:
+            if "effectivesan" in tools:
+                # We do not instruct EffectiveSan to terminate on first error:
+                if "BOUNDS ERROR:\n" not in testcase.system_err:
+                    testcase.result = junitparser.Failure(message="EffectiveSan did not detect a bounds error. Exit code " + exit_code_str)
+            elif "softboundcets" in tools:
+                # We do not instruct EffectiveSan to terminate on first error:
+                if "Softboundcets: Memory safety violation detected" not in testcase.system_err:
+                    testcase.result = junitparser.Failure(message="SoftBoundCETS did not detect a bounds error. Exit code " + exit_code_str)
+            else:
+                # Otherwise we assume that the test must be killed by a signal
+                if not signaled:
+                    # test should fail with a signal: (162 for CHERI)
+                    # TODO: for CHERI check that it was signal 34?
+                    testcase.result = junitparser.Failure(message="Expected test to be killed by a SIGNAL but got exit code " + exit_code_str)
             suite.add_testcase(testcase)
 
 
-def _create_junit_xml(builddir: Path, name):
+def _create_junit_xml(builddir: Path, name, tools):
     xml = junitparser.JUnitXml(name)
 
     # TODO: check that all cases exist (otherwise add an error)
@@ -159,9 +171,9 @@ def _create_junit_xml(builddir: Path, name):
     for fullpath in sorted_files:
         o = Path(fullpath)
         if "-heap-" in o.stem:
-            testsuite_heap.handle_testcase(o)
+            testsuite_heap.handle_testcase(o, tools)
         else:
-            testsuite_basic.handle_testcase(o)
+            testsuite_basic.handle_testcase(o, tools)
 
     testsuite_basic.check_all_cases_parsed()
     testsuite_heap.check_all_cases_parsed()
@@ -172,8 +184,8 @@ def _create_junit_xml(builddir: Path, name):
 
 
 
-def create_junit_xml(builddir, name):
-    _create_junit_xml(builddir, name)
+def create_junit_xml(builddir, name, tools):
+    _create_junit_xml(builddir, name, tools)
     test_output = Path(builddir, "test-results.xml")
     if not test_output.exists():
         boot_cheribsd.failure("Failed to create the JUnit XML file")
@@ -207,6 +219,7 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--bmake-path", default="make")
     parser.add_argument("--junit-testsuite-name", default="tests")
     parser.add_argument("--use-valgrind", action="store_true")
+    parser.add_argument("--tools", nargs=argparse.ZERO_OR_MORE, default=[])
     parser.add_argument("--jobs", "-j", help="make jobs", type=int, default=1)
 
 
@@ -224,7 +237,7 @@ if __name__ == '__main__':
             if args.use_valgrind:
                 cmd.append("-DUSE_VALGRIND")
             boot_cheribsd.run_host_command(cmd, cwd=args.build_dir)
-        if not create_junit_xml(Path(args.build_dir), args.junit_testsuite_name):
+        if not create_junit_xml(Path(args.build_dir), args.junit_testsuite_name, args.tools):
             sys.exit("Failed to create JUnit xml")
         sys.exit()
 
