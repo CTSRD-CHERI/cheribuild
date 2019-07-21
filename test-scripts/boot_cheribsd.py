@@ -308,7 +308,7 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, 
         i = -1
     runtime = datetime.datetime.now() - starttime
     if i == -1:  # Timeout
-        raise CheriBSDCommandTimeout("timeout after", runtime, " waiting for tests: ", str(qemu))
+        raise CheriBSDCommandTimeout("timeout after ", runtime, " running '", cmd, "': ", str(qemu))
     elif i == 0:
         success("ran '", cmd, "' successfully (in ", runtime.total_seconds(), "s)")
         return True
@@ -593,7 +593,7 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     i = qemu.expect([pexpect.TIMEOUT, "TESTS COMPLETED", "TESTS UNSTABLE", "TESTS FAILED"], timeout=timeout)
     testtime = datetime.datetime.now() - run_tests_starttime
     if i == 0:  # Timeout
-        return failure("timeout after", testtime, "waiting for tests: ", str(qemu), exit=False)
+        return failure("timeout after ", testtime, "waiting for tests (command='", test_command, "'): ", str(qemu), exit=False)
     elif i == 1 or i == 2:
         if i == 2:
             success("===> Tests completed (but with FAILURES)!")

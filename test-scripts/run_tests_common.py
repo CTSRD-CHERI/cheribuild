@@ -80,7 +80,7 @@ def run_tests_main(test_function: typing.Callable[[boot_cheribsd.CheriBSDInstanc
         # i.e. the libc++ filesystem tests, etc.
         if should_mount_builddir:
             assert args.build_dir
-            boot_cheribsd.checked_run_cheribsd_command(qemu, "mkdir -p {} && ln -sf /build {}".format(Path(args.build_dir).parent, args.build_dir))
+            boot_cheribsd.checked_run_cheribsd_command(qemu, "mkdir -p '{}' && ln -sf /build '{}'".format(Path(args.build_dir).parent, args.build_dir))
             boot_cheribsd.success("Mounted build directory using host path")
         # Finally call the custom test setup function
         if test_setup_function:
