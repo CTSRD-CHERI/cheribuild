@@ -325,7 +325,8 @@ class _BuildDiskImageBase(SimpleProject):
                                        "(You can always change them by editing/deleting '" +
                                        str(authorizedKeys) + "')?", defaultResult=False):
                         self.installFile(self.tmpdir / "root/.ssh/authorized_keys", authorizedKeys)
-                        runCmd("chmod", "0700", authorizedKeys.parent)
+                        # SSHD complains and rejects all connections if /root or /root/.ssh is not 0700
+                        runCmd("chmod", "0700", authorizedKeys.parent.parent, authorizedKeys.parent)
                         runCmd("chmod", "0600", authorizedKeys)
 
         if self.include_gdb:

@@ -194,6 +194,12 @@ class MtreeFile(object):
                     statusUpdate("Inferring permissions for", path, "from", reference_dir, file=sys.stderr)
                 mode = self.infer_mode_string(reference_dir, True)
         mode = self._ensure_mtree_mode_fmt(mode)
+        print(path, reference_dir, mode)
+        # Ensure that SSH will work even if the extra-file directory has wrong permissions
+        if path == "root" or path == "root/.ssh":
+            if mode != "0700" and mode != "0755":
+                warningMessage("Wrong file mode", mode, "for /", path, " --  it should be 0755, fixing it for image")
+                mode = "0755"
         # recursively add all parent dirs that don't exist yet
         parent = str(Path(path).parent)
         if parent != path:  # avoid recursion for path == "."

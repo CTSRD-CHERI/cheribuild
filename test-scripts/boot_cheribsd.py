@@ -333,6 +333,8 @@ def setup_ssh(qemu: CheriBSDInstance, pubkey: Path):
     contents = pubkey.read_text(encoding="utf-8").strip()
     run_cheribsd_command(qemu, "echo " + shlex.quote(contents) + " >> /root/.ssh/authorized_keys")
     run_cheribsd_command(qemu, "chmod 600 /root/.ssh/authorized_keys")
+    # Ensure that we have permissions set up in a way so that ssh doesn't complain
+    run_cheribsd_command(qemu, "chmod 700 /root /root/.ssh/")
     run_cheribsd_command(qemu, "echo 'PermitRootLogin without-password' >> /etc/ssh/sshd_config")
     # TODO: check for bluehive images without /sbin/service
     run_cheribsd_command(qemu, "cat /root/.ssh/authorized_keys", expected_output="ssh-")
