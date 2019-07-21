@@ -273,7 +273,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
         self.configureArgs.extend(["--disable-plugins", "--disable-dyload",
                                    "--disable-tests",
                                    "--disable-samples"])
-        self.nativeBuildDir = self.buildDirForTarget(self.config, CrossCompileTarget.NATIVE, self.use_asan)
+        self.nativeBuildDir = self.buildDirForTarget(CrossCompileTarget.NATIVE)
         # we can't create objects for a different endianess:
         self.COMMON_FLAGS.append("-DU_DISABLE_OBJ_CODE")
         self.cross_warning_flags += ["-Wno-error"]  # FIXME: build with capability -Werror

@@ -690,7 +690,7 @@ def _defaultBuildDir(config: CheriConfig, project: "Project"):
     # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
     assert isinstance(project, Project)
     target = project.get_crosscompile_target(config)
-    return project.buildDirForTarget(config, target, project.use_asan)
+    return project.buildDirForTarget(target)
 
 
 class MakeCommandKind(Enum):
@@ -1049,32 +1049,31 @@ class Project(SimpleProject):
     def getInstallDir(cls, caller: "SimpleProject", config: CheriConfig):
         return cls.get_instance(caller, config).real_install_root_dir
 
-    @classmethod
-    def buildDirSuffix(cls, config: CheriConfig, target: CrossCompileTarget, use_asan: bool):
+    def buildDirSuffix(self, target: CrossCompileTarget):
+        config = self.config
         if target is None:
             # HACK since I can't make the class variable in BuildCheriLLVM dynamic
             # TODO: remove once unified SDK is stable
-            append_bits = cls.appendCheriBitsToBuildDir
-            if cls.target in ("llvm", "qemu") and config.unified_sdk:
+            append_bits = self.appendCheriBitsToBuildDir
+            if self.target in ("llvm", "qemu") and config.unified_sdk:
                 append_bits = False
             result = "-" + config.cheriBitsStr + "-build" if append_bits else "-build"
         elif target == CrossCompileTarget.CHERI:
             result = "-" + config.cheri_bits_and_abi_str + "-build"
-        elif target == CrossCompileTarget.MIPS and cls.mips_build_hybrid:
+        elif target == CrossCompileTarget.MIPS and self.mips_build_hybrid:
             result = "-" + target.value + "-hybrid" + config.cheri_bits_and_abi_str + "-build"
         else:
             result = "-" + target.value + "-build"
         if config.cross_target_suffix:
             result += "-" + config.cross_target_suffix
-        if use_asan:
+        if self.use_asan:
             result = "-asan" + result
-        if cls.build_dir_suffix:
-            result = "-" + cls.build_dir_suffix + result
+        if self.build_dir_suffix:
+            result = self.build_dir_suffix + result
         return result
 
-    @classmethod
-    def buildDirForTarget(cls, config: CheriConfig, target: CrossCompileTarget, use_asan: bool):
-        return config.buildRoot / (cls.projectName.lower() + cls.buildDirSuffix(config, target, use_asan))
+    def buildDirForTarget(self, target: CrossCompileTarget):
+        return self.config.buildRoot / (self.projectName.lower() + self.buildDirSuffix(target))
 
     _installToSDK = ComputedDefaultValue(
         function=lambda config, project: config.sdkDir,

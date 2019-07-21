@@ -894,7 +894,7 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     projectName = "freebsd"
     target = "freebsd-with-default-options"
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
-    build_dir_suffix = "default-options"
+    build_dir_suffix = "-default-options"
     add_custom_make_options = False
 
     # also try to support building for RISCV
@@ -1243,7 +1243,7 @@ class BuildCHERIBSDPurecap(BuildCHERIBSD):
     supported_architectures = None # Only Cheri is supported
     _crossCompileTarget = CrossCompileTarget.CHERI
     _should_not_be_instantiated = False
-    build_dir_suffix = "purecap"
+    build_dir_suffix = "-purecap"
 
     defaultInstallDir = ComputedDefaultValue(function=cheribsd_purecap_install_dir,
                                              asString="$INSTALL_ROOT/rootfs-purecap{128/256}")
@@ -1266,7 +1266,7 @@ class BuildCHERIBSDMinimal(BuildCHERIBSD):
     #supported_architectures = None # Only Cheri is supported
     #_crossCompileTarget = CrossCompileTarget.CHERI
     _should_not_be_instantiated = False
-    build_dir_suffix = "minimal"
+    build_dir_suffix = "-minimal"
     defaultInstallDir = ComputedDefaultValue(function=cheribsd_minimal_install_dir,
                                              asString="$INSTALL_ROOT/rootfs-minmal{128,256,-mips,-x86}")
 

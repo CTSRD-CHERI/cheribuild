@@ -47,6 +47,22 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
     # _FORTIFY_SOURCE only works with GCC on Linux
     forceDefaultCC = True
 
+    @property
+    def build_dir_suffix(self):
+        result = ""
+        if self.use_stack_protector:
+            result += "-stack-protector"
+        if self.use_fortify_source:
+            result += "-fortify"
+        if self.use_valgrind:
+            result += "-valgrind"
+        if self.use_effectivesan:
+            result += "-effectivesan"
+        if self.use_softboundcets:
+            result += "-softboundcets"
+        print("RESULT=", result, type(self), dir(self))
+        return result
+
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
@@ -94,8 +110,12 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
                 self.COMMON_FLAGS.append("-fsanitize=effective")
                 self.COMMON_LDFLAGS.append("-fsanitize=effective")
         if self.use_stack_protector:
+            if self.use_effectivesan or self.use_softboundcets:
+                self.fatal("Stack protector should not be used with effectivesan/softboundcets")
             self.add_cmake_options(WITH_STACK_PROTECTOR=True)
         if self.use_fortify_source:
+            if self.use_softboundcets:
+                self.fatal("_FORTIFY_SOURCE should not be used with softboundcets")
             self.add_cmake_options(WITH_FORTIFY_SOURCE=True)
 
     def process(self):
@@ -129,7 +149,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
         self.makedirs(self.buildDir / "run")
         if self.config.clean:
             self.cleanDirectory(self.buildDir / "run", keepRoot=False)
-        testsuite_prefix = self.buildDirSuffix(self.config, self.get_crosscompile_target(self.config), self.use_asan)[1:]
+        testsuite_prefix = self.buildDirSuffix(self.get_crosscompile_target(self.config))[1:]
         testsuite_prefix = testsuite_prefix.replace("-build", "")
         extra_args = ["--bmake-path", bmake, "--jobs", str(self.config.makeJobs)] if self.compiling_for_host() else []
         tools = []
