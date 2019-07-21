@@ -37,6 +37,7 @@ import boot_cheribsd
 import junitparser
 import os
 import sys
+import xml.sax.saxutils
 from pathlib import Path
 
 LONG_NAME_FOR_BUILDDIR = "/build-dir-with-long-name-to-ensure-cwd-causes-buffer-overflow"
@@ -78,7 +79,7 @@ class BODiagTestsuite(object):
     def handle_testcase(self, o: Path, tools: list):
         stem = o.stem
         assert stem.startswith(self.test_prefix), stem
-        exit_code_str = o.read_text().rstrip()
+        exit_code_str = o.read_text(encoding="utf-8", errors="replace").rstrip()
         testcase = junitparser.TestCase(name=stem)
         try:
             index = self.expected_test_names.index(stem)
@@ -91,7 +92,9 @@ class BODiagTestsuite(object):
         # test has been handled -> remove from expected list
         del self.expected_test_names[index]
         if o.with_suffix(".stderr").exists():
-            testcase.system_err = o.with_suffix(".stderr").read_text().rstrip()
+            stderr = o.with_suffix(".stderr").read_bytes().rstrip()  # type: bytes
+            stderr = stderr.replace(b"\x00", b"\\0")
+            testcase.system_err = xml.sax.saxutils.escape(stderr.decode("utf-8", errors="replace"))
         try:
             exit_code = int(exit_code_str)
         except ValueError:
