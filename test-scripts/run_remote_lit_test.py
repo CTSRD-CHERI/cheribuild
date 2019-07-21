@@ -38,6 +38,7 @@ import threading
 import multiprocessing
 import subprocess
 import sys
+import typing
 from pathlib import Path
 from enum import Enum
 import boot_cheribsd
@@ -56,6 +57,26 @@ class MultiprocessStages(Enum):
     FAILED = "failed"
     TIMED_OUT = "timed out"
 
+CURRENT_STAGE = MultiprocessStages.FINDING_SSH_PORT  # type: MultiprocessStages
+
+def mp_debug(cmdline_args: argparse.Namespace, *args, **kwargs):
+    if cmdline_args.multiprocessing_debug:
+        boot_cheribsd.info(*args, **kwargs)
+
+
+def notify_main_process(cmdline_args: argparse.Namespace, stage: MultiprocessStages, mp_q: multiprocessing.Queue,
+                        barrier: "typing.Optional[multiprocessing.Barrier]"=None):
+    if mp_q:
+        global CURRENT_STAGE
+        mp_debug(cmdline_args, "Next stage: ", CURRENT_STAGE, "->", stage)
+        mp_q.put((NEXT_STAGE, cmdline_args.internal_shard, stage))
+        CURRENT_STAGE = stage
+    if barrier:
+        assert mp_q
+        mp_debug(cmdline_args, "Waiting for main process to release barrier for stage ", stage)
+        barrier.wait()
+        mp_debug(cmdline_args, "Barrier released for stage ", stage)
+        time.sleep(1)
 
 def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
     while not should_exit_event.wait(timeout=0.1):
@@ -83,13 +104,16 @@ def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
 
 
 def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str,
-                         mp_q: multiprocessing.Queue = None, llvm_lit_path: str = None, lit_extra_args: list = None) -> bool:
+                         mp_q: multiprocessing.Queue = None, barrier: multiprocessing.Barrier = None,
+                         llvm_lit_path: str = None, lit_extra_args: list = None) -> bool:
     try:
         import psutil
     except ImportError:
         boot_cheribsd.failure("Cannot run lit without `psutil` python module installed", exit=True)
     try:
-        result = run_remote_lit_tests_impl(testsuite=testsuite, qemu=qemu, args=args, tempdir=tempdir,
+        if mp_q:
+            assert barrier is not None
+        result = run_remote_lit_tests_impl(testsuite=testsuite, qemu=qemu, args=args, tempdir=tempdir, barrier=barrier,
                                            mp_q=mp_q, llvm_lit_path=llvm_lit_path, lit_extra_args=lit_extra_args)
         if mp_q:
             mp_q.put((COMPLETED, args.internal_shard))
@@ -103,21 +127,18 @@ def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, a
 
 
 def run_remote_lit_tests_impl(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str,
-                              mp_q: multiprocessing.Queue = None, llvm_lit_path: str = None, lit_extra_args: list = None) -> bool:
+                              mp_q: multiprocessing.Queue = None, barrier: multiprocessing.Barrier = None, llvm_lit_path: str = None, lit_extra_args: list = None) -> bool:
     qemu.EXIT_ON_KERNEL_PANIC = False # since we run multiple threads we shouldn't use sys.exit()
     boot_cheribsd.info("PID of QEMU: ", qemu.pid)
 
-    def notify_main_process(stage):
-        if mp_q:
-            if args.multiprocessing_debug:
-                boot_cheribsd.success("Shard ", args.internal_shard, " stage complete: ", stage)
-            mp_q.put((NEXT_STAGE, args.internal_shard, stage))
-
     if args.pretend and os.getenv("FAIL_TIMEOUT_BOOT") and args.internal_shard == 2:
         time.sleep(10)
-    notify_main_process(MultiprocessStages.TESTING_SSH_CONNECTION)
+    if mp_q:
+        assert barrier is not None
+    notify_main_process(args, MultiprocessStages.TESTING_SSH_CONNECTION, mp_q, barrier=barrier)
     if args.pretend and os.getenv("FAIL_RAISE_EXCEPTION") and args.internal_shard == 1:
         raise RuntimeError("SOMETHING WENT WRONG!")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "cat /root/.ssh/authorized_keys", timeout=20)
     port = args.ssh_port
     user = "root"  # TODO: run these tests as non-root!
     test_build_dir = Path(args.build_dir)
@@ -180,7 +201,7 @@ Host cheribsd-test-instance
                'extra_scp_flags=["-F", "{tempdir}/config"])'.format(user=user, port=port, host_dir=str(test_build_dir / "tmp"), tempdir=tempdir)
     # TODO: I was previously passing -t -t to ssh. Is this actually needed?
     boot_cheribsd.success("Running", testsuite, "tests with executor", executor)
-    notify_main_process(MultiprocessStages.RUNNING_TESTS)
+    notify_main_process(args, MultiprocessStages.RUNNING_TESTS, mp_q)
     # have to use -j1 since otherwise CheriBSD might wedge
     if llvm_lit_path is None:
         llvm_lit_path = str(test_build_dir / "bin/llvm-lit")
@@ -199,17 +220,14 @@ Host cheribsd-test-instance
         if args.internal_shard:
             xunit_file = xunit_file.with_name("shard-" + str(args.internal_shard) + "-" + xunit_file.name)
         lit_cmd.append(str(xunit_file))
-    qemu_logfile = None
+    qemu_logfile = qemu.logfile
     if args.internal_shard:
         assert args.internal_num_shards, "Invalid call!"
         lit_cmd.append("--num-shards=" + str(args.internal_num_shards))
         lit_cmd.append("--run-shard=" + str(args.internal_shard))
         if xunit_file:
-            qemu_log_path = xunit_file.with_suffix(".output.log").absolute()
-            boot_cheribsd.success("Writing QEMU output to ", qemu_log_path)
-            qemu_logfile = qemu_log_path.open("w")
-            qemu.logfile_read = qemu_logfile
-            boot_cheribsd.run_cheribsd_command(qemu, "echo HELLO LOGFILE")
+            assert qemu_logfile is not None, "Should have a valid logfile when running multiple shards"
+            boot_cheribsd.success("Writing QEMU output to ", qemu_logfile)
     # Fixme starting lit at the same time does not work!
     # TODO: add the polling to the main thread instead of having another thread?
     # start the qemu output flushing thread so that we can see the kernel panic

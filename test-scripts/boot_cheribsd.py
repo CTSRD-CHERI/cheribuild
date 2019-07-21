@@ -64,6 +64,7 @@ FATAL_ERROR_MESSAGES = [CHERI_TRAP]
 
 PRETEND = False
 MESSAGE_PREFIX = ""
+QEMU_LOGFILE = None # type: Optional[Path]
 # To keep the port available until we start QEMU
 _SSH_SOCKET_PLACEHOLDER = None  # type: socket.socket
 
@@ -434,7 +435,10 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
         child = CheriBSDInstance(qemu_cmd, qemu_args, encoding="utf-8", echo=False, timeout=60)
     # child.logfile=sys.stdout.buffer
     child.smb_dirs = smb_dirs
-    child.logfile_read = sys.stdout
+    if QEMU_LOGFILE:
+        child.logfile = QEMU_LOGFILE.open("w")
+    else:
+        child.logfile_read = sys.stdout
     have_dhclient = False
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -637,6 +641,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--test-archive", "-t", action="append", nargs=1)
     parser.add_argument("--test-command", "-c")
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60)
+    parser.add_argument("--qemu-logfile", help="File to write all interactions with QEMU to", type=Path)
     parser.add_argument("--test-environment-only", action="store_true",
                         help="Setup mount paths + SSH for tests but don't actually run the tests (implies --interact)")
     parser.add_argument("--skip-ssh-setup", action="store_true",
@@ -687,6 +692,9 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace], 
     global PRETEND
     if args.pretend:
         PRETEND = True
+    global QEMU_LOGFILE
+    if args.qemu_logfile:
+        QEMU_LOGFILE = args.qemu_logfile
 
     starttime = datetime.datetime.now()
 
