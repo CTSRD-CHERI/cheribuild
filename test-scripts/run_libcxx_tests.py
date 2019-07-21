@@ -301,10 +301,11 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
                     not_booted_processes.remove(target_process)
                     boot_cheribsd.success("Shard ", shard_result[1], " has booted successfully.")
                     if len(not_booted_processes) == 0:
-                        boot_cheribsd.success("All shards have booted succesfully. Releasing barrier")
+                        boot_cheribsd.success("All shards have booted succesfully. Releasing barrier (num_waiting = ",
+                                              mp_barrier.n_waiting, ")")
+                        assert mp_barrier.n_waiting == len(processes), "{} != {}".format(mp_barrier.n_waiting, len(processes))
                         mp_barrier.wait(timeout=10)
                         boot_cheribsd.success("Barrier has been released, tests should run now.")
-                        mp_barrier.abort()  # ensure barrier can't be used any more
                 # assert target_process.stage < shard_result[2], "STAGE WENT BACKWARDS?"
                 target_process.stage = shard_result[2]
             elif shard_result[0] == run_remote_lit_test.FAILURE:
