@@ -226,7 +226,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
         if self.qemu_host:
             self.qemu_host = os.path.expandvars(self.qemu_host)
         self.libcxx_lit_jobs = ""
-        self.COMMON_FLAGS.append("-D__LP64__=1")  # HACK to get it to compile
+
+
         if self.compiling_for_host():
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=True, LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False)
             if OSInfo.isUbuntu():
@@ -263,11 +264,9 @@ class BuildLibCXX(CrossCompileCMakeProject):
             self.add_cmake_options(LIBCXX_ENABLE_EXCEPTIONS=False, LIBCXX_ENABLE_RTTI=False)
         else:
             self.add_cmake_options(LIBCXX_ENABLE_EXCEPTIONS=True, LIBCXX_ENABLE_RTTI=True)
-
         # TODO: remove this once stuff has been fixed:
         self.common_warning_flags.append("-Wno-ignored-attributes")
-        if self.compiling_for_cheri():
-            self.common_warning_flags.append("-Werror=cheri")
+        print(self.common_warning_flags)
 
     def addCrossFlags(self):
         # TODO: do I even need the toolchain file to cross compile?
@@ -275,9 +274,15 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.add_cmake_options(LIBCXX_TARGET_TRIPLE=self.targetTriple,
                                LIBCXX_SYSROOT=self.sdkSysroot)
 
+        if self.compiling_for_cheri():
+            # Ensure that we don't have failing tests due to cheri bugs
+            self.common_warning_flags.append("-Werror=cheri")
+
         # We need to build with -G0 otherwise we get R_MIPS_GPREL16 out of range linker errors
         test_compile_flags = commandline_to_str(self.default_compiler_flags)
         test_linker_flags = commandline_to_str(self.default_ldflags)
+        print("test_compile_flags:", test_compile_flags)
+
         if self.baremetal:
             if self.compiling_for_mips():
                 test_compile_flags += " -fno-pic -mno-abicalls"
@@ -327,9 +332,9 @@ class BuildLibCXX(CrossCompileCMakeProject):
             self.libcxx_lit_jobs = " -j1" # We can only run one job here since we are using scp
             executor = "SSHExecutorWithNFSMount(\\\"{host}\\\", nfs_dir=\\\"{nfs_dir}\\\", path_in_target=\\\"{nfs_in_target}\\\"," \
                        " config=self, username=\\\"{user}\\\", port={port})".format(host=self.qemu_host, user=self.qemu_user,
-                                                                              port=self.qemu_port,
-                                                                              nfs_dir=self.nfs_mounted_path,
-                                                                              nfs_in_target=self.nfs_path_in_qemu)
+                                                                                    port=self.qemu_port,
+                                                                                    nfs_dir=self.nfs_mounted_path,
+                                                                                    nfs_in_target=self.nfs_path_in_qemu)
         else:
             self.libcxx_lit_jobs = " -j1" # We can only run one job here since we are using scp
             executor = "SSHExecutor('{host}', username='{user}', port={port}, config=self)".format(
