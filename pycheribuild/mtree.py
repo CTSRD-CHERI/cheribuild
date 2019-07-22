@@ -194,7 +194,6 @@ class MtreeFile(object):
                     statusUpdate("Inferring permissions for", path, "from", reference_dir, file=sys.stderr)
                 mode = self.infer_mode_string(reference_dir, True)
         mode = self._ensure_mtree_mode_fmt(mode)
-        print(path, reference_dir, mode)
         # Ensure that SSH will work even if the extra-file directory has wrong permissions
         if path == "root" or path == "root/.ssh":
             if mode != "0700" and mode != "0755":
