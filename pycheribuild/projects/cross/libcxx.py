@@ -266,6 +266,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
 
         # TODO: remove this once stuff has been fixed:
         self.common_warning_flags.append("-Wno-ignored-attributes")
+        if self.compiling_for_cheri():
+            self.common_warning_flags.append("-Werror=cheri")
 
     def addCrossFlags(self):
         # TODO: do I even need the toolchain file to cross compile?
