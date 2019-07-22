@@ -134,7 +134,7 @@ def test_add_file_infer_ssh_mode():
 
         expected = """#mtree 2.0
 . type=dir uname=root gname=wheel mode=0755
-./root type=dir uname=root gname=wheel mode=0744
+./root type=dir uname=root gname=wheel mode=0755
 ./root/.ssh type=dir uname=root gname=wheel mode=0700
 ./root/.ssh/authorized_keys type=file uname=root gname=wheel mode=0600 contents={auth_keys}
 ./root/.ssh/id_foo type=file uname=root gname=wheel mode=0600 contents={privkey}
