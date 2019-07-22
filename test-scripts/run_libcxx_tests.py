@@ -249,12 +249,13 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
 
     # wait for the success/failure message from the process:
     # if the shard takes longer than 4 hours to run something went wrong
+    start_time = datetime.datetime.utcnow()
     max_test_duration = datetime.timedelta(seconds=4 * 60 * 60)
-    test_end_time = datetime.datetime.utcnow() + max_test_duration
+    test_end_time = start_time + max_test_duration
     # If any shard has not yet booted CheriBSD after 10 minutes something went horribly wrong
     max_boot_time = datetime.timedelta(seconds=10 * 60) if not args.pretend else datetime.timedelta(seconds=5)
     boot_cheribsd.info("Waiting for all shards to boot...")
-    boot_end_time = datetime.datetime.utcnow() + max_boot_time
+    boot_end_time = start_time + max_boot_time
     booted_shards = 0
     remaining_processes = processes.copy()
     not_booted_processes = processes.copy()
@@ -299,7 +300,7 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
                 mp_debug(args, "===> Shard ", shard_result[1], " reached next stage: ", shard_result[2])
                 if target_process.stage == run_remote_lit_test.MultiprocessStages.BOOTING_CHERIBSD:
                     not_booted_processes.remove(target_process)
-                    boot_cheribsd.success("Shard ", shard_result[1], " has booted successfully.")
+                    boot_cheribsd.success("Shard ", shard_result[1], " has booted successfully afer ", loop_start_time - start_time)
                     if len(not_booted_processes) == 0:
                         boot_cheribsd.success("All shards have booted succesfully. Releasing barrier (num_waiting = ",
                                               mp_barrier.n_waiting, ")")
