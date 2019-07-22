@@ -315,6 +315,8 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, 
         raise CheriBSDCommandTimeout("timeout after ", runtime, " running '", cmd, "': ", str(qemu))
     elif i == 0:
         success("ran '", cmd, "' successfully (in ", runtime.total_seconds(), "s)")
+        qemu.expect([PROMPT])
+        qemu.flush()
         return True
     elif i == 2:
         raise CheriBSDCommandFailed("Detected line continuation, cannot handle this yet! ", cmd)
