@@ -59,6 +59,7 @@ STOPPED = "Stopped at"
 PANIC = "panic: trap"
 PANIC_KDB = "KDB: enter: panic"
 CHERI_TRAP = "USER_CHERI_EXCEPTION: pid \\d+ tid \\d+ \(.+\)"
+SHELL_LINE_CONTINUATION = "\r\r\n> "
 
 FATAL_ERROR_MESSAGES = [CHERI_TRAP]
 
@@ -253,11 +254,11 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
     qemu.sendline(cmd)
     # FIXME: allow ignoring CHERI traps
     if expected_output:
-        qemu.expect([expected_output])
+        qemu.expect([expected_output], timeout=timeout)
 
     results = ["/bin/sh: [/\\w\\d_-]+: not found",
                "ld(-cheri)?-elf.so.1: Shared object \".+\" not found, required by \".+\"",
-               pexpect.TIMEOUT, PROMPT]
+               pexpect.TIMEOUT, PROMPT, SHELL_LINE_CONTINUATION]
     error_output_index = -1
     cheri_trap_index = -1
     if error_output:
@@ -275,6 +276,8 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
         raise CheriBSDCommandTimeout("timeout running ", cmd)
     elif i == 3:
         success("ran '", cmd, "' successfully")
+    elif i == 4:
+        raise CheriBSDCommandFailed("Detected line continuation, cannot handle this yet! ", cmd)
     elif i == error_output_index:
         # wait up to 5 seconds for a prompt to ensure the full output has been printed
         qemu.expect([PROMPT], timeout=5)
@@ -297,7 +300,7 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, 
     cheri_trap_index = None
     error_output_index = None
     try:
-        results = ["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__"]
+        results = ["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__", SHELL_LINE_CONTINUATION]
         if not ignore_cheri_trap:
             cheri_trap_index = len(results)
             results.append(CHERI_TRAP)
@@ -313,6 +316,8 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, 
     elif i == 0:
         success("ran '", cmd, "' successfully (in ", runtime.total_seconds(), "s)")
         return True
+    elif i == 2:
+        raise CheriBSDCommandFailed("Detected line continuation, cannot handle this yet! ", cmd)
     elif i == cheri_trap_index:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
         qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
