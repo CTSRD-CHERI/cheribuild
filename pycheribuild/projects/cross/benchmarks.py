@@ -123,13 +123,23 @@ class BuildOlden(CrossCompileProject):
             if self.compiling_for_host():
                 self.runMake("x86")
             if self.compiling_for_mips():
-                self.runMake("mips")
+                self.runMake("mips-asan" if self.use_asan else "mips")
             if self.compiling_for_cheri():
                 if self.config.cheriBits == 128:
                     self.runMake("cheriabi128")
                 else:
                     assert self.config.cheriBits == 256
                     self.runMake("cheriabi256")
+
+    @property
+    def test_arch_suffix(self):
+        if self.compiling_for_host():
+            return "x86"
+        if self.compiling_for_cheri():
+            return "cheri" + self.config.cheriBitsStr
+        else:
+            assert self.compiling_for_mips(), "other arches not support"
+            return "mips-asan" if self.use_asan else "mips"
 
     def install(self, **kwargs):
         self.makedirs(self.installDir)
@@ -146,15 +156,18 @@ class BuildOlden(CrossCompileProject):
             self.run_cmd("find", self.installDir, "-name", "*.dump", "-delete")
             self.run_cmd("du", "-sh", self.installDir)
         else:
-            # copy asan libraries to the build dir to ensure that we can run with --test
+            # copy asan libraries and the run script to the bin dir to ensure that we can run with --test from the
+            # build directory.
+            self.installFile(self.sourceDir / "run_jenkins-bluehive.sh",
+                             self.buildDir / "bin/run_jenkins-bluehive.sh", force=True)
             if self.compiling_for_mips() and self.use_asan:
-                self.copy_asan_dependencies(self.buildDir / "lib")
+                self.copy_asan_dependencies(self.buildDir / "bin/lib")
 
     def run_tests(self):
         if self.compiling_for_host():
             self.fatal("running x86 tests is not implemented yet")
         # testing, not benchmarking -> run only once: (-s small / -s large?)
-        test_command = "cd /build && ./run_jenkins-bluehive.sh -d0 -r1"
+        test_command = "cd /build/bin && ./run_jenkins-bluehive.sh -d0 -r1 {tgt}".format(tgt=self.test_arch_suffix)
         self.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
                                       "--test-timeout", str(120 * 60),
                                       mount_builddir=True)
