@@ -190,6 +190,7 @@ def run_parallel(args: argparse.Namespace):
             print("Tests: ", result.tests)
             print("Failures: ", result.failures)
             print("Errors: ", result.errors)
+            print("Skipped: ", result.skipped)
 
 def wait_or_terminate_all_shards(processes, max_time, timed_out):
     assert max_time > 0 or timed_out
