@@ -37,7 +37,6 @@ import boot_cheribsd
 import junitparser
 import os
 import sys
-import xml.sax.saxutils
 from pathlib import Path
 
 LONG_NAME_FOR_BUILDDIR = "/build-dir-with-long-name-to-ensure-cwd-causes-buffer-overflow"
@@ -94,7 +93,7 @@ class BODiagTestsuite(object):
         if o.with_suffix(".stderr").exists():
             stderr = o.with_suffix(".stderr").read_bytes().rstrip()  # type: bytes
             stderr = stderr.replace(b"\x00", b"\\0")
-            testcase.system_err = xml.sax.saxutils.escape(stderr.decode("utf-8", errors="replace"))
+            testcase.system_err = stderr.decode("utf-8", errors="replace")
         try:
             exit_code = int(exit_code_str)
         except ValueError:
@@ -212,7 +211,7 @@ def run_bodiagsuite(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
         # restore old behaviour
         boot_cheribsd.run_cheribsd_command(qemu, "sysctl machdep.log_cheri_exceptions=1 || true")
 
-    if not create_junit_xml(Path(args.build_dir), args.junit_testsuite_name):
+    if not create_junit_xml(Path(args.build_dir), args.junit_testsuite_name, args.tools):
         return False
     return True
 
@@ -226,7 +225,7 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--jobs", "-j", help="make jobs", type=int, default=1)
 
 
-if __name__ == '__main__':
+def main():
     if "--junit-xml-only" in sys.argv or "--test-native" in sys.argv:
         parser = argparse.ArgumentParser()
         add_args(parser)
@@ -248,3 +247,6 @@ if __name__ == '__main__':
     # we don't need ssh running to execute the tests
     run_tests_main(test_function=run_bodiagsuite, need_ssh=False, should_mount_builddir=True,
                    argparse_setup_callback=add_args, build_dir_in_target=LONG_NAME_FOR_BUILDDIR)
+
+if __name__ == '__main__':
+    main()
