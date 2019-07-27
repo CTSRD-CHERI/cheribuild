@@ -168,6 +168,7 @@ def run_parallel(args: argparse.Namespace):
                     boot_cheribsd.failure(error_msg, exit=False)
                     error_suite = junitparser.TestSuite(name="failed-shard-" + str(shard_num))
                     error_case = junitparser.TestCase(name="cannot-find-file")
+                    error_case.classname = "failed-shard-" + str(shard_num)
                     error_case.result = junitparser.Error(message=error_msg)
                     error_suite.add_testcase(error_case)
                     result.add_testsuite(error_suite)

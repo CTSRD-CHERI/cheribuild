@@ -45,8 +45,9 @@ from pathlib import Path
 import boot_cheribsd
 import run_remote_lit_test
 
-def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
+def setup_libunwind_env(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     # Copy the libunwind library to both MIPS and CHERI library dirs so that it is picked up
+    # Do this instead of setting LD_LIBRARY_PATH to use only the libraries that we actually need
     boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /build/lib/libunwind.so* /usr/lib/")
     boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /build/lib/libunwind.so* /usr/libcheri/")
     # We also need libdl from the sysroot:
@@ -56,6 +57,7 @@ def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Nam
     boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /usr/lib/libunwind.so /usr/lib/libgcc_s.so.1")
     boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /usr/libcheri/libunwind.so /usr/libcheri/libgcc_s.so.1")
 
+def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     with tempfile.TemporaryDirectory(prefix="cheribuild-libunwind-tests-") as tempdir:
         # run the tests both for shared and static libunwind by setting -Denable_shared=
         # First static binaries
@@ -71,7 +73,6 @@ def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Nam
                                                                   lit_extra_args=["-Denable_shared=True"],
                                                                   llvm_lit_path=args.llvm_lit_path)
         return static_libunwind_success and static_everything_success and shared_success
-
 
 def add_cmdline_args(parser: argparse.ArgumentParser):
     parser.add_argument("--lit-debug-output", action="store_true")
@@ -90,6 +91,6 @@ if __name__ == '__main__':
     try:
         run_tests_main(test_function=run_libunwind_tests, need_ssh=True, # we need ssh running to execute the tests
                        argparse_setup_callback=add_cmdline_args, argparse_adjust_args_callback=set_cmdline_args,
-                       should_mount_sysroot=True, should_mount_builddir=True)
+                       should_mount_sysroot=True, should_mount_builddir=True, test_setup_function=setup_libunwind_env)
     finally:
         print("Finished running ", " ".join(sys.argv))
