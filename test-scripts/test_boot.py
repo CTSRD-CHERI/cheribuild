@@ -42,8 +42,13 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
     boot_cheribsd.checked_run_cheribsd_command(qemu, "kenv")
     # unchecked since mount_smbfs returns non-zero for --help:
     boot_cheribsd.run_cheribsd_command(qemu, "mount_smbfs --help", cheri_trap_fatal=True)
-    # same for ld-cheri-elf.so (but do check for CHERI traps:
+    # same for ld-cheri-elf.so (but do check for CHERI traps):
     boot_cheribsd.run_cheribsd_command(qemu, "/libexec/ld-cheri-elf.so.1 -h", cheri_trap_fatal=True)
+
+    # potentially bootstrap kyua for later testing
+    if args.bootstrap_kyua:
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "/bin/prepare-testsuite.sh", timeout=20 * 60)
+
     poweroff_start = datetime.datetime.now()
     qemu.sendline("poweroff")
     i = qemu.expect(["Uptime:", pexpect.TIMEOUT, pexpect.EOF] + boot_cheribsd.FATAL_ERROR_MESSAGES, timeout=120)
@@ -62,9 +67,14 @@ def test_boot_setup_args(args: argparse.Namespace):
     args.use_smb_instead_of_ssh = True  # skip the ssh setup
     args.skip_ssh_setup = True
 
+def add_args(parser: argparse.ArgumentParser):
+    parser.add_argument("--bootstrap-kyua", action="store_true",
+                        help="Install kyua using the /bin/prepare-testsuite.sh script")
+
 
 if __name__ == '__main__':
     import boot_cheribsd
     assert Path(sys.path[0]).resolve() == Path(__file__).parent.resolve(), sys.path
     # we don't need to setup ssh config/authorized_keys to test the boot
-    boot_cheribsd.main(test_function=run_noop_test, argparse_adjust_args_callback=test_boot_setup_args)
+    boot_cheribsd.main(test_function=run_noop_test, argparse_setup_callback=add_args,
+                       argparse_adjust_args_callback=test_boot_setup_args)
