@@ -51,9 +51,9 @@ from ..mtree import MtreeFile
 
 PKG_REPO_URL = "https://people.freebsd.org/~brooks/packages/cheribsd-mips-20170403-brooks-20170609/"
 # old version of libarchive needed by kyua
-OLD_LIBARCHIVE_URL = "https://people.freebsd.org/~arichardson/cheri-files/libarchive.so.6"
+OLD_LIBRARIES_BASE_URL = "https://people.freebsd.org/~arichardson/cheri-files/{file}"
 # Bump this to redownload all the pkg files
-PKG_REPO_NEEDS_UPDATE = datetime.datetime(day=20, month=5, year=2018)
+PKG_REPO_NEEDS_UPDATE = datetime.datetime(day=28, month=7, year=2019)
 
 
 # noinspection PyMethodMayBeStatic
@@ -212,8 +212,7 @@ class _BuildDiskImageBase(SimpleProject):
             self.createFileForImage("/etc/local-kyua-pkg/config/pkg.conf", mode=0o644,
                                     showContentsByDefault=False,
                                     contents=includeLocalFile("files/cheribsd/kyua-pkg-cache.options.conf"))
-            # Add a script to install from these config files:
-            self.createFileForImage("/bin/prepare-testsuite.sh", mode=0o755, showContentsByDefault=False,
+            self.createFileForImage("/sbin/prepare-testsuite.sh", mode=0o755, showContentsByDefault=False,
                                     contents=includeLocalFile("files/cheribsd/prepare-testsuite.sh"))
             # Download all the kyua pkg files from and put them in /var/db/kyua-pkg-cache
             # But only do that if we really need to update (since the recursive wget is slow)
@@ -236,12 +235,13 @@ class _BuildDiskImageBase(SimpleProject):
                 self.makedirs(pkgcache_dir)
                 runCmd("find", pkgcache_dir)
                 self._wget_fetch_dir(["--accept", "*.txz", # only download .txz files
-                                PKG_REPO_URL], pkgcache_dir)
+                                      PKG_REPO_URL], pkgcache_dir)
                 # fetch old libarchive which is currently needed
+                # We also need old versions of libssl and libcrypto
                 self.makedirs(custom_pkg_repo_root_dir / "usr/lib")
-                self._wget_fetch([OLD_LIBARCHIVE_URL], custom_pkg_repo_root_dir / "usr/lib")
+                for lib in ("libarchive.so.6", "libcrypto.so.8", "libssl.so.8"):
+                    self._wget_fetch([OLD_LIBRARIES_BASE_URL.format(file=lib)], custom_pkg_repo_root_dir / "usr/lib")
                 self.writeFile(download_time_path, str(datetime.datetime.utcnow().timestamp()), overwrite=True)
-
             self.add_all_files_in_dir(custom_pkg_repo_root_dir)
         # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
         # If they do not exist in the extra-files directory yet we generate a default one and use that

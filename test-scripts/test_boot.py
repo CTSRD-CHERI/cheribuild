@@ -47,7 +47,7 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
 
     # potentially bootstrap kyua for later testing
     if args.bootstrap_kyua:
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "/bin/prepare-testsuite.sh", timeout=20 * 60)
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "/sbin/prepare-testsuite.sh", timeout=20 * 60)
 
     poweroff_start = datetime.datetime.now()
     qemu.sendline("poweroff")
@@ -69,7 +69,7 @@ def test_boot_setup_args(args: argparse.Namespace):
 
 def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--bootstrap-kyua", action="store_true",
-                        help="Install kyua using the /bin/prepare-testsuite.sh script")
+                        help="Install kyua using the /sbin/prepare-testsuite.sh script")
 
 
 if __name__ == '__main__':
