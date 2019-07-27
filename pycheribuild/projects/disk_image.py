@@ -663,11 +663,10 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                                                             help="Use the rootfs built by cheribsd-purecap instead")
 
     def __init__(self, config: CheriConfig):
+        self.cheribsd_class = BuildCHERIBSD.get_class_for_target(CrossCompileTarget.CHERI)  # type: typing.Type[BuildCHERIBSD]
         if self.use_cheribsd_purecap_rootfs:
-            src = BuildCHERIBSDPurecap
-        else:
-            src = BuildCHERIBSD.get_class_for_target(CrossCompileTarget.CHERI)
-        super().__init__(config, source_class=src)
+            self.cheribsd_class = BuildCHERIBSDPurecap
+        super().__init__(config, source_class=self.cheribsd_class)
         self.minimumImageSize = "20m"  # let's try to shrink the image size
         # The base input is only cheribsdbox and all the symlinks
         self.input_METALOG = self.rootfsDir / "cheribsdbox.mtree"

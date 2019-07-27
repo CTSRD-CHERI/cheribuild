@@ -1171,18 +1171,21 @@ class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
     default_architecture = CrossCompileTarget.CHERI
 
     def process(self):
-        build_cheribsd = BuildCHERIBSD.get_instance(self, self.config)
-        kernconf = self._get_kernconf_to_build(BuildCHERIBSD.get_instance(self, self.config))
+        from ..disk_image import BuildMinimalCheriBSDDiskImage
+        minimal_image_instance = BuildMinimalCheriBSDDiskImage.get_instance(self, self.config)
+        image = minimal_image_instance.diskImagePath
+        # Re-use the same build directory as the CheriBSD target that was used for the disk image
+        # This ensure that the kernel build tools can be found in the build directory
+        build_cheribsd_instance = minimal_image_instance.cheribsd_class.get_instance(self, self.config)
+        kernconf = self._get_kernconf_to_build(build_cheribsd_instance)
         if self.config.clean:
-            kernel_dir = build_cheribsd.kernel_objdir(kernconf)
+            kernel_dir = build_cheribsd_instance.kernel_objdir(kernconf)
             if kernel_dir:
                 with self.asyncCleanDirectory(kernel_dir):
                     self.verbose_print("Cleaning ", kernel_dir)
-        from ..disk_image import BuildMinimalCheriBSDDiskImage
-        image = BuildMinimalCheriBSDDiskImage.get_instance(self, self.config).diskImagePath
-        self._build_and_install_kernel_binary(build_cheribsd, kernconf=kernconf, image=image)
+        self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=kernconf, image=image)
         # also build the benchmark kernel:
-        self._build_and_install_kernel_binary(build_cheribsd, kernconf=kernconf + "_BENCHMARK", image=image)
+        self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=kernconf + "_BENCHMARK", image=image)
 
     def _build_and_install_kernel_binary(self, build_cheribsd: BuildCHERIBSD, kernconf: str, image: Path):
         # Install to a temporary directory and then copy the kernel to OUTPUT_ROOT
