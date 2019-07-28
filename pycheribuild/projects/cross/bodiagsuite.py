@@ -60,7 +60,6 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
             result += "-effectivesan"
         if self.use_softboundcets:
             result += "-softboundcets"
-        print("RESULT=", result, type(self), dir(self))
         return result
 
     @classmethod
