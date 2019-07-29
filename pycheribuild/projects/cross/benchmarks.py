@@ -240,7 +240,7 @@ class BuildSpec2006(CrossCompileProject):
         config_file_text = config_file_text.replace("@SYSROOT@", str(self.sdkSysroot))
         config_file_text = config_file_text.replace("@SYS_BIN@", str(self.config.sdkBinDir))
 
-        self.writeFile(self.buildDir / "spec/config/" / (config_name + ".cfg"), contents=config_file_text,
+        self.writeFile(self.buildDir / "spec/config/" / (self.config_name + ".cfg"), contents=config_file_text,
                        overwrite=True, noCommandPrint=False, mode=0o644)
         # Worst case benchmarks: 471.omnetpp 483.xalancbmk 400.perlbench
         benchmark_list = "471"
