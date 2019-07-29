@@ -247,7 +247,7 @@ class BuildSpec2006(CrossCompileProject):
         script = """
 source shrc
 runspec -c {spec_config_name} --noreportable --make_bundle {spec_config_name} {benchmark_list}
-""".format(benchmark_list=benchmark_list, spec_config_name=config_name)
+""".format(benchmark_list=benchmark_list, spec_config_name=self.config_name)
         self.writeFile(self.buildDir / "build.sh", contents=script, mode=0o755, overwrite=True)
         self.run_cmd("sh", "-x", self.buildDir / "build.sh", cwd=self.buildDir / "spec")
 
