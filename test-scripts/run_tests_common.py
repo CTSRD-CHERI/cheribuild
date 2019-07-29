@@ -46,12 +46,9 @@ def run_tests_main(test_function: typing.Callable[[boot_cheribsd.CheriBSDInstanc
                    build_dir_in_target="/build"):
 
     def default_add_cmdline_args(parser: argparse.ArgumentParser):
-        if should_mount_builddir:
-            parser.add_argument("--build-dir", required=True)
-        if should_mount_srcdir:
-            parser.add_argument("--source-dir", required=True)
-        if should_mount_sysroot:
-            parser.add_argument("--sysroot-dir", required=True)
+        parser.add_argument("--build-dir", required=should_mount_builddir)
+        parser.add_argument("--source-dir", required=should_mount_srcdir)
+        parser.add_argument("--sysroot-dir", required=should_mount_sysroot)
         if argparse_setup_callback:
             argparse_setup_callback(parser)
         if not need_ssh:
@@ -63,13 +60,13 @@ def run_tests_main(test_function: typing.Callable[[boot_cheribsd.CheriBSDInstanc
         else:
             args.use_smb_instead_of_ssh = True  # skip the ssh setup
             args.skip_ssh_setup = not args.__foce_ssh_setup
-        if should_mount_builddir:
+        if should_mount_builddir or args.build_dir:
             args.build_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.build_dir)))
             args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.build_dir, readonly=False, in_target=build_dir_in_target))
-        if should_mount_srcdir:
+        if should_mount_srcdir or args.source_dir:
             args.source_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.source_dir)))
             args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.source_dir, readonly=True, in_target="/source"))
-        if should_mount_sysroot:
+        if should_mount_sysroot or args.sysroot_dir:
             args.source_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.sysroot_dir)))
             args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.sysroot_dir, readonly=True, in_target="/sysroot"))
         if argparse_adjust_args_callback:

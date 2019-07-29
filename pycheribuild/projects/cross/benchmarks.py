@@ -188,6 +188,28 @@ class BuildSpec2006(CrossCompileProject):
         cls.spec_config_dir = cls.addPathOption("spec-config-dir", help="Path to the CHERI spec config files")
         cls.spec_base_dir = cls.addPathOption("spec-base-dir", help="Path to the CHERI spec build scripts")
 
+    @property
+    def config_name(self):
+        if self.compiling_for_mips():
+            build_arch = "mips-" + self.linkage().value
+            float_abi = self.config.mips_float_abi.name.lower() + "fp"
+            return "freebsd-" + build_arch + "-" + float_abi
+        elif self.compiling_for_cheri():
+            build_arch = "cheri" + self.config.cheri_bits_and_abi_str + "-" + self.linkage().value
+            float_abi = self.config.mips_float_abi.name.lower() + "fp"
+            return "freebsd-" + build_arch + "-" + float_abi
+        else:
+            self.fatal("NOT SUPPORTED YET")
+            return "EROROR"
+
+    @property
+    def hw_cpu(self):
+        if self.compiling_for_mips():
+            return "BERI"
+        elif self.compiling_for_cheri():
+            return "CHERI" + self.config.cheri_bits_and_abi_str
+        return "unknown"
+
     def compile(self, cwd: Path = None):
         for attr in ("spec_iso", "spec_config_dir", "spec_base_dir"):
             if not getattr(self, attr):
@@ -206,21 +228,9 @@ class BuildSpec2006(CrossCompileProject):
 
 
         config_file_text = Path(self.spec_config_dir / "freebsd-cheribuild.cfg").read_text()
-        if self.compiling_for_mips():
-            build_arch = "mips-" + self.linkage().value
-            hw_cpu = "BERI"
-            float_abi = self.config.mips_float_abi.name.lower() + "fp"
-        elif self.compiling_for_cheri():
-            build_arch = "cheri" + self.config.cheri_bits_and_abi_str + "-" + self.linkage().value
-            hw_cpu = "CHERI" + self.config.cheri_bits_and_abi_str
-            float_abi = self.config.mips_float_abi.name.lower() + "fp"
-        else:
-            self.fatal("NOT SUPPORTED YET")
-            return
 
-        config_name = "freebsd-" + build_arch + "-" + float_abi
-        config_file_text = config_file_text.replace("@HW_CPU@", hw_cpu)
-        config_file_text = config_file_text.replace("@CONFIG_NAME@", config_name)
+        config_file_text = config_file_text.replace("@HW_CPU@", self.hw_cpu)
+        config_file_text = config_file_text.replace("@CONFIG_NAME@", self.config_name)
 
         config_file_text = config_file_text.replace("@CLANG@", str(self.CC))
         config_file_text = config_file_text.replace("@CLANGXX@", str(self.CXX))
@@ -232,7 +242,8 @@ class BuildSpec2006(CrossCompileProject):
 
         self.writeFile(self.buildDir / "spec/config/" / (config_name + ".cfg"), contents=config_file_text,
                        overwrite=True, noCommandPrint=False, mode=0o644)
-        benchmark_list = "483"
+        # Worst case benchmarks: 471.omnetpp 483.xalancbmk 400.perlbench
+        benchmark_list = "471"
         script = """
 source shrc
 runspec -c {spec_config_name} --noreportable --make_bundle {spec_config_name} {benchmark_list}
@@ -242,3 +253,18 @@ runspec -c {spec_config_name} --noreportable --make_bundle {spec_config_name} {b
 
     def install(self, **kwargs):
         pass
+
+    def run_tests(self):
+        if self.compiling_for_host():
+            self.fatal("running host tests is not implemented yet")
+        # self.makedirs(self.buildDir / "test")
+        #self.run_cmd("tar", "-xvjf", self.buildDir / "spec/{}.cpu2006bundle.bz2".format(self.config_name),
+        #             cwd=self.buildDir / "test")
+        #self.run_cmd("find", ".", cwd=self.buildDir / "test")
+        test_command = """
+export LD_LIBRARY_PATH=/sysroot/usr/lib:/sysroot/lib;
+export LD_CHERI_LIBRARY_PATH=/sysroot/usr/libcheri;
+cd /build/spec/benchspec/CPU2006/471.omnetpp/ && ./exe/omnetpp_base.{config} -f data/test/input/omnetpp.ini""".format(config=self.config_name)
+        self.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
+                                      "--test-timeout", str(120 * 60),
+                                      mount_builddir=True, mount_sysroot=True)
