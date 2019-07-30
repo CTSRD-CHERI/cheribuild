@@ -75,6 +75,7 @@ class SNMalloc(CrossCompileCMakeProject):
         if self.pagemap_rederive:
             self.pagemap_pointers = True
 
+        self.add_cmake_options(USE_REVOCATION=self.revoke)
         self.COMMON_FLAGS.append("-DSNMALLOC_CHERI_ALIGN=%d"        % self.cheri_align     )
         self.COMMON_FLAGS.append("-DSNMALLOC_PAGEMAP_POINTERS=%d"   % self.pagemap_pointers)
         self.COMMON_FLAGS.append("-DSNMALLOC_PAGEMAP_REDERIVE=%d"   % self.pagemap_rederive)
@@ -87,9 +88,6 @@ class SNMalloc(CrossCompileCMakeProject):
 
         if not self.debug:
             self.COMMON_FLAGS.append("-DNDEBUG")
-
-    def compile(self, **kwargs):
-        super().compile(**kwargs)
 
     def install(*args, **kwargs):
         pass
