@@ -74,6 +74,7 @@ class _BuildDiskImageBase(SimpleProject):
     _freebsd_build_class = None
     strip_binaries = False  # True by default for minimal disk-image
     bigEndian = True # True for MIPS
+    is_minimal = False  # To allow building a much smaller image
 
     @property
     def needs_special_pkg_repo(self):
@@ -447,8 +448,10 @@ class _BuildDiskImageBase(SimpleProject):
                 extra_flags = ["-t", "ffs", "-o", "version=2,bsize=32768,fsize=4096"]
             runCmd([self.makefs_cmd] + debug_options + extra_flags + [
                 "-Z",  # sparse file output
-                "-b", "30%",  # minimum 30% free blocks
-                "-f", "30%",  # minimum 30% free inodes
+                # For the minimal image 2mb of free space and 1k inodes should be enough
+                # For the larger images we need a lot more space (kyua needs around 400MB and the test might create big files)
+                "-b", "2m" if self.is_minimal else "1g",  # kyua needs a lot of space -> at least 1g
+                "-f", "1k" if self.is_minimal else "1m",  # minimum 1024 free inodes for minimal, otherwise at least 1M
                 "-R", "4m",  # round up size to the next 4m multiple
                 "-M", self.minimumImageSize,
                 "-B", "be" if self.bigEndian else "le",  # byte order
@@ -671,6 +674,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         # The base input is only cheribsdbox and all the symlinks
         self.input_METALOG = self.rootfsDir / "cheribsdbox.mtree"
         self.file_templates = BuildMinimalCheriBSDDiskImage._MinimalFileTemplates()
+        self.is_minimal = True
 
 
     @property

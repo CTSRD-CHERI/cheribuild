@@ -5,6 +5,8 @@
 
 # The QEMU user DNS server appears to be broken for the version that we are using:
 echo 'nameserver 8.8.8.8' > /etc/resolv.conf
+# See https://github.com/freebsd/pkg/blob/master/libpkg/pkg_config.c for options
+export NAMESERVER=8.8.8.8
 
 # The current binary pkg depends on on older version of libarchive, libssl and libcrypto:
 for _lib in libarchive.so.6 libssl.so.8 libcrypto.so.8; do
@@ -19,13 +21,23 @@ done
 # Verify that the local pkg.conf exists:
 stat /etc/local-kyua-pkg/config/pkg.conf || exit 1
 
+# "Add extra strict, pedantic warnings as an aid to package maintainers"
+export DEVELOPER_MODE=yes
+# Should not be needed since we are only fetching locally
+# export SSL_NO_VERIFY_PEER=1
+export ASSUME_ALWAYS_YES=yes
+
+# FIXME: pkg bootstrap invokes pkg-static without a way of setting the config file
+# Therefore we have to link /usr/local/etc/pkg.conf with the custom override
+mkdir -p /usr/local/etc
+ln -sf /etc/local-kyua-pkg/config/pkg.conf /usr/local/etc/pkg.conf
+# Check that we actually linked the right file:
+grep ABI /usr/local/etc/pkg.conf
 # pkg bootstrap doesn't parse arguments sensibly so we need to set env vars
-env SSL_NO_VERIFY_PEER=1 ASSUME_ALWAYS_YES=yes PKG_BOOTSTRAP_CONFIG_FILE=/etc/local-kyua-pkg/config/pkg.conf pkg bootstrap
-
-
+# FIXME: for bootstrap I seem to have to set ABI=FreeBSD:12:mips64 but the packages expect ABI=freebsd:12:mips:64:eb:n64
+env ABI=FreeBSD:12:mips64 PKG_BOOTSTRAP_CONFIG_FILE=/etc/local-kyua-pkg/config/pkg.conf pkg bootstrap
 # only fetch from the kyua-pkg-cache repository
-PKG_OPTIONS="--config /etc/local-kyua-pkg/config/pkg.conf --option ASSUME_ALWAYS_YES=yes"
-env SSL_NO_VERIFY_PEER=1 pkg $PKG_OPTIONS install kyua
+env SSL_NO_VERIFY_PEER=1 pkg --config /etc/local-kyua-pkg/config/pkg.conf --option ASSUME_ALWAYS_YES=yes install kyua
 
 # Now run kyua test -k /usr/tests/cheri/lib/Kyuafile
 
