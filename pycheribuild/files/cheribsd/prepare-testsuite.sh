@@ -1,5 +1,9 @@
 #!/bin/sh -xe
 
+if command -v kyua > /dev/null; then
+    echo "kyua is already installed"
+    exit 0
+fi
 # TODO: sysctl kern.corefile=/var/coredumps/%U/%N.%P.core
 # TODO: sysctl kern.corefile=/rootfs/%N.%P.core
 
