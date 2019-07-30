@@ -451,7 +451,7 @@ class _BuildDiskImageBase(SimpleProject):
                 # For the minimal image 2mb of free space and 1k inodes should be enough
                 # For the larger images we need a lot more space (kyua needs around 400MB and the test might create big files)
                 "-b", "2m" if self.is_minimal else "1g",  # kyua needs a lot of space -> at least 1g
-                "-f", "1k" if self.is_minimal else "1m",  # minimum 1024 free inodes for minimal, otherwise at least 1M
+                "-f", "1k" if self.is_minimal else "200k",  # minimum 1024 free inodes for minimal, otherwise at least 1M
                 "-R", "4m",  # round up size to the next 4m multiple
                 "-M", self.minimumImageSize,
                 "-B", "be" if self.bigEndian else "le",  # byte order

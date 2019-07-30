@@ -526,11 +526,13 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
         if not dir.readonly and dir.in_target == "/build":
             run_cheribsd_command(qemu, "sysctl kern.corefile=/build/%N.%P.core")
     run_cheribsd_command(qemu, "sysctl kern.coredump=0")
-    # create tmpfs on opt
-    run_cheribsd_command(qemu, "mkdir -p /opt && mount -t tmpfs -o size=500m tmpfs /opt")
     # ensure that /usr/local exists and if not create it as a tmpfs (happens in the minimal image)
-    run_cheribsd_command(qemu, "mkdir -p /usr/local && mount -t tmpfs -o size=300m tmpfs /usr/local")
-    run_cheribsd_command(qemu, "df -h", expected_output="/opt")
+    # However, don't do it on the full image since otherwise we would install kyua to the tmpfs on /usr/local
+    # We can differentiate the two by checking if /boot/kernel/kernel exists since it will be missing in the minimal image
+    run_cheribsd_command(qemu, "if [ ! -e /boot/kernel/kernel ]; then mkdir -p /usr/local && mount -t tmpfs -o size=300m tmpfs /usr/local; fi")
+    # Or this: if [ "$(ls -A $DIR)" ]; then echo "Not Empty"; else echo "Empty"; fi
+    run_cheribsd_command(qemu, "if [ ! -e /opt ]; then mkdir -p /opt && mount -t tmpfs -o size=500m tmpfs /opt; fi")
+    run_cheribsd_command(qemu, "df -ih")
     info("\nWill transfer the following archives: ", test_archives)
     # strip the .pub from the key file
     for archive in test_archives:
