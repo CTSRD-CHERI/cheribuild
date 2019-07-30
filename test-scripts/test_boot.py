@@ -56,7 +56,9 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
     if i != 0:
         boot_cheribsd.failure("Poweroff " + ("timed out" if i == 1 else "failed"))
         return False
-    i = qemu.expect([pexpect.TIMEOUT, pexpect.EOF], timeout=120)  # 120 secs since it takes a lot longer on a full image
+    # 240 secs since it takes a lot longer on a full image (it took 44 seconds after installing kyua, so on a really
+    # busy jenkins slave it might be a lot slower)
+    i = qemu.expect([pexpect.TIMEOUT, pexpect.EOF], timeout=240)
     if i == 0:
         boot_cheribsd.failure("QEMU didn't exit after shutdown!")
         return False
