@@ -48,6 +48,8 @@ class SNMalloc(CrossCompileCMakeProject):
         super().setupConfigOptions(**kwargs)
 
         cls.debug            = cls.addBoolOption("debug", help="Turn on debugging features")
+        cls.stats            = cls.addBoolOption("stats", help="Turn on statistics tracking")
+
         cls.pagemap_pointers = cls.addBoolOption("pagemap-pointers", help="Change pagemap data structure to store pointers")
         cls.pagemap_rederive = cls.addBoolOption("pagemap-rederive", help="Rederive internal pointers using the pagemap")
         cls.cheri_align      = cls.addBoolOption("cheri-align", help="Align sizes for CHERI bounds setting")
@@ -76,6 +78,7 @@ class SNMalloc(CrossCompileCMakeProject):
             self.pagemap_pointers = True
 
         self.add_cmake_options(USE_REVOCATION=self.revoke)
+        self.add_cmake_options(USE_SNMALLOC_STATS=self.stats)
         self.COMMON_FLAGS.append("-DSNMALLOC_CHERI_ALIGN=%d"        % self.cheri_align     )
         self.COMMON_FLAGS.append("-DSNMALLOC_PAGEMAP_POINTERS=%d"   % self.pagemap_pointers)
         self.COMMON_FLAGS.append("-DSNMALLOC_PAGEMAP_REDERIVE=%d"   % self.pagemap_rederive)
