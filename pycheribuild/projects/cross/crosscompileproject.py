@@ -46,7 +46,7 @@ from ...utils import *
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget", "BuildType", # no-combine
            "CrossCompileProject", "CrossInstallDir", "MakeCommandKind", "Linkage", "Path", "crosscompile_dependencies",  # no-combine
-           "_INVALID_INSTALL_DIR", "GitRepository"]  # no-combine
+           "_INVALID_INSTALL_DIR", "GitRepository", "commandline_to_str"]  # no-combine
 
 class CrossInstallDir(Enum):
     NONE = 0
@@ -594,7 +594,7 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
             if isinstance(value, bool):
                 strval = "1" if value else "0"
             elif isinstance(value, list):
-                strval = " ".join(value)
+                strval = commandline_to_str(value)
             else:
                 strval = str(value)
             assert "@" + key + "@" in configuredTemplate, key
@@ -709,7 +709,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
     def set_prog_with_args(self, prog: str, path: Path, args: list):
         fullpath = str(path)
         if args:
-            fullpath += " " + " ".join(args)
+            fullpath += " " + commandline_to_str(args)
         self.configureEnvironment[prog] = fullpath
         if self._configure_supports_variables_on_cmdline:
             self.configureArgs.append(prog + "=" + fullpath)
@@ -738,11 +738,11 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             # autotools overrides CFLAGS -> use CC and CXX vars here
             self.set_prog_with_args("CC", self.CC, CPPFLAGS + self.CFLAGS)
             self.set_prog_with_args("CXX", self.CXX, CPPFLAGS + self.CXXFLAGS)
-            # self.add_configure_env_arg("CPPFLAGS", " ".join(CPPFLAGS))
-            self.add_configure_env_arg("CFLAGS", " ".join(self.optimizationFlags + self.compiler_warning_flags))
-            self.add_configure_env_arg("CXXFLAGS", " ".join(self.optimizationFlags + self.compiler_warning_flags))
+            # self.add_configure_env_arg("CPPFLAGS", commandline_to_str(CPPFLAGS))
+            self.add_configure_env_arg("CFLAGS", commandline_to_str(self.optimizationFlags + self.compiler_warning_flags))
+            self.add_configure_env_arg("CXXFLAGS", commandline_to_str(self.optimizationFlags + self.compiler_warning_flags))
             # this one seems to work:
-            self.add_configure_env_arg("LDFLAGS", " ".join(self.LDFLAGS + self.default_ldflags))
+            self.add_configure_env_arg("LDFLAGS", commandline_to_str(self.LDFLAGS + self.default_ldflags))
 
             if not self.compiling_for_host():
                 self.set_prog_with_args("CPP", self.CPP, CPPFLAGS)

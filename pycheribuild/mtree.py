@@ -86,7 +86,7 @@ class MtreeEntry(object):
             return result
 
     def __str__(self):
-        return self.path + " " + " ".join(k + "=" + v for k, v in self.attributes.items())
+        return self.path + " " + commandline_to_str(k + "=" + v for k, v in self.attributes.items())
 
     def __repr__(self):
         return "<MTREE entry: " + str(self) + ">"

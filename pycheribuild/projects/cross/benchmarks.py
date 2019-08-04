@@ -65,8 +65,8 @@ class BuildMibench(CrossCompileProject):
             self.make_args.set(AR=str(self.config.sdkBinDir / "ar") + " rc")
             self.make_args.set(AR2=str(self.config.sdkBinDir / "ranlib"))
             self.make_args.set(RANLIB=str(self.config.sdkBinDir / "ranlib"))
-            self.make_args.set(ADDITIONAL_CFLAGS=" ".join(self.default_compiler_flags))
-            self.make_args.set(ADDITIONAL_LDFLAGS=" ".join(self.default_ldflags))
+            self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(self.default_compiler_flags))
+            self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
             self.make_args.set(VERSION=self.bunde_name)
             if self.compiling_for_mips():
                 self.make_args.set(MIPS_SYSROOT=self.config.get_sysroot_path(CrossCompileTarget.MIPS))
@@ -118,8 +118,8 @@ class BuildOlden(CrossCompileProject):
                     CHERI_SDK=self.config.sdkDir):
             self.make_args.set(SYSROOT_DIRNAME=self.crossSysrootPath.name)
             self.make_args.add_flags("-f", "Makefile.jenkins")
-            self.make_args.set(ADDITIONAL_CFLAGS=" ".join(self.default_compiler_flags))
-            self.make_args.set(ADDITIONAL_LDFLAGS=" ".join(self.default_ldflags))
+            self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(self.default_compiler_flags))
+            self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
             if self.compiling_for_host():
                 self.runMake("x86")
             if self.compiling_for_mips():

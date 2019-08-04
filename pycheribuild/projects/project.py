@@ -53,7 +53,7 @@ from ..utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies", # no-combine
            "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
-           "CrossCompileTarget", "GitRepository", "ComputedDefaultValue"]  # no-combine
+           "CrossCompileTarget", "GitRepository", "ComputedDefaultValue", "commandline_to_str"]  # no-combine
 
 
 def flushStdio(stream):
@@ -473,7 +473,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if self.config.write_logfile and logfilePath.is_file() and not appendToLogfile:
             logfilePath.unlink()  # remove old logfile
         args = list(map(str, args))  # make sure all arguments are strings
-        cmdStr = " ".join([shlex.quote(s) for s in args])
+        cmdStr = commandline_to_str(args)
 
         if not self.config.write_logfile:
             if stdoutFilter is None:

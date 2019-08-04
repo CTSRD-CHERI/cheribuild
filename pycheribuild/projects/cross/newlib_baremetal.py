@@ -92,7 +92,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
                 # self.make_args.env_vars[k2] = str(v)
 
     def configure(self):
-        target_cflags = " ".join(self._essential_compiler_and_linker_flags + self.COMMON_FLAGS)
+        target_cflags = commandline_to_str(self._essential_compiler_and_linker_flags + self.COMMON_FLAGS)
         bindir = self.config.sdkBinDir
 
         self.add_configure_vars(

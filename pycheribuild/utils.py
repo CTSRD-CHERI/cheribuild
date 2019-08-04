@@ -266,7 +266,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
         if retcode:
             if _cheriConfig and _cheriConfig.pretend and not raiseInPretendMode:
                 cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
-                fatalError("Command ", "`" + " ".join(map(shlex.quote, process.args)) +
+                fatalError("Command ", "`" + commandline_to_str(process.args) +
                            "` failed with non-zero exit code ", retcode, *cwd, sep="")
             else:
                 raise _make_called_process_error(retcode, process.args, stdout=stdout, cwd=kwargs["cwd"])

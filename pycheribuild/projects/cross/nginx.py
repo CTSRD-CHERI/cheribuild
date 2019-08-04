@@ -85,12 +85,12 @@ class BuildNginx(CrossCompileAutotoolsProject):
         if not self.compiling_for_host():
             self.LDFLAGS.append("-v")
             self.configureArgs.extend(["--crossbuild=FreeBSD:12.0-CURRENT:mips",
-                                       "--with-cc-opt=" + " ".join(self.default_compiler_flags),
-                                       "--with-ld-opt=" + " ".join(self.default_ldflags),
+                                       "--with-cc-opt=" + commandline_to_str(self.default_compiler_flags),
+                                       "--with-ld-opt=" + commandline_to_str(self.default_ldflags),
                                        "--sysroot=" + str(self.sdkSysroot),
                                        ])
-            self.configureEnvironment["CC_TEST_FLAGS"] = " ".join(self.default_compiler_flags)
-            self.configureEnvironment["NGX_TEST_LD_OPT"] = " ".join(self.default_ldflags)
+            self.configureEnvironment["CC_TEST_FLAGS"] = commandline_to_str(self.default_compiler_flags)
+            self.configureEnvironment["NGX_TEST_LD_OPT"] = commandline_to_str(self.default_ldflags)
             self.configureEnvironment["NGX_SIZEOF_int"] = "4"
             self.configureEnvironment["NGX_SIZEOF_sig_atomic_t"] = "4"  # on mips it is an int
             self.configureEnvironment["NGX_SIZEOF_long"] = "8"

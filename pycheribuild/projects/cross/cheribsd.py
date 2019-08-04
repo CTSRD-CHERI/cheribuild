@@ -863,7 +863,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
                 make_args.set_env(WANT_CHERI="pure")
         colour_diags = "export CLANG_FORCE_COLOR_DIAGNOSTICS=always; " if self.config.clang_colour_diags else ""
         build_cmd = "{colour_diags} {clean} && {build} && {install} && echo \"  Done.\"".format(
-            build=make_in_subdir + "all " + " ".join(self.jflag) if not skip_build else "echo \"  Skipping make all\"",
+            build=make_in_subdir + "all " + commandline_to_str(self.jflag) if not skip_build else "echo \"  Skipping make all\"",
             clean=make_in_subdir + "clean" if not skip_clean else "echo \"  Skipping make clean\"",
             install=install_cmd, colour_diags=colour_diags)
         make_args.set(BUILDENV_SHELL="sh -ex -c '" + build_cmd + "' || exit 1")
