@@ -1305,19 +1305,26 @@ class Project(SimpleProject):
         self.repository.updateRepo(self, srcDir=self.sourceDir, revision=self.gitRevision, initialBranch=self.gitBranch,
                                    skipSubmodules=self.skipGitSubmodules)
 
+    _extra_git_clean_excludes = []
+
+    def _git_clean_source_dir(self):
+        # just use git clean for cleanup
+        warningMessage(self.projectName, "does not support out-of-source builds, using git clean to remove "
+                                         "build artifacts.")
+        git_clean_cmd = ["git", "clean", "-dfx", "--exclude=.*", "--exclude=*.kdev4"] + self._extra_git_clean_excludes
+        # Try to keep project files for IDEs and other dotfiles:
+        runCmd(git_clean_cmd, cwd=self.sourceDir)
+
     def clean(self) -> ThreadJoiner:
         assert self.config.clean
-        # TODO: never use the source dir as a build dir (unfortunately GDB, postgres and elftoolchain won't work)
+        # TODO: never use the source dir as a build dir (unfortunately mibench and elftoolchain won't work)
         # will have to check how well binutils and qemu work there
         if (self.buildDir / ".git").is_dir():
             if (self.buildDir / "GNUmakefile").is_file() and self.make_kind != MakeCommandKind.BsdMake and self.target != "elftoolchain":
                 runCmd(self.make_args.command, "distclean", cwd=self.buildDir)
             else:
-                # just use git clean for cleanup
-                warningMessage(self.projectName, "does not support out-of-source builds, using git clean to remove "
-                                                 "build artifacts.")
-                # Try to keep project files for IDEs and other dotfiles:
-                runCmd("git", "clean", "-dfx", "--exclude=.*", "--exclude=*.kdev4", cwd=self.buildDir)
+                assert self.sourceDir == self.buildDir
+                self._git_clean_source_dir()
         elif self.buildDir == self.sourceDir:
             self.fatal("Cannot clean non-git source directories. Please override")
         else:

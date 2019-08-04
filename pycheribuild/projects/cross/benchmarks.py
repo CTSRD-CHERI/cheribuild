@@ -45,13 +45,20 @@ class BuildMibench(CrossCompileProject):
     make_kind = MakeCommandKind.BsdMake
     # and we have to build in the source directory
     build_in_source_dir = True
+    # Keep the old bundles when cleaning
+    _extra_git_clean_excludes = ["--exclude=*-bundle"]
 
     @property
-    def bunde_name(self):
+    def bundle_dir(self):
+        return Path(self.buildDir, self.get_crosscompile_target(self.config).value +
+                    self.buildDirSuffix(self.get_crosscompile_target(self.config)).replace("-build", "-bundle"))
+
+    @property
+    def benchmark_version(self):
         if self.compiling_for_host():
             return "x86"
         if self.compiling_for_mips():
-            return "mips"
+            return "mips-asan" if self.compiling_for_mips() else "mips"
         if self.compiling_for_cheri():
             return "cheri" + self.config.cheriBitsStr
         raise ValueError("Unsupported target architecture!")
@@ -67,7 +74,7 @@ class BuildMibench(CrossCompileProject):
             self.make_args.set(RANLIB=str(self.config.sdkBinDir / "ranlib"))
             self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(self.default_compiler_flags))
             self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
-            self.make_args.set(VERSION=self.bunde_name)
+            self.make_args.set(VERSION=self.benchmark_version)
             if self.compiling_for_mips():
                 self.make_args.set(MIPS_SYSROOT=self.config.get_sysroot_path(CrossCompileTarget.MIPS))
             if self.compiling_for_cheri():
@@ -76,15 +83,16 @@ class BuildMibench(CrossCompileProject):
                 else:
                     assert self.config.cheriBits == 256
                     self.make_args.set(VERSION="cheri256", CHERI256_SYSROOT=self.config.cheriSysrootDir)
-            self.runMake("bundle_dump")
+            self.makedirs(self.buildDir / "bundle")
+            self.make_args.set(BUNDLE_DIR=self.buildDir / self.bundle_dir)
+            self.runMake("bundle_dump", cwd=self.sourceDir)
             if self.compiling_for_mips() and self.use_asan:
-                libdir = self.buildDir / (self.bunde_name + "-bundle") / "lib"
-                self.copy_asan_dependencies(libdir)
+                self.copy_asan_dependencies(self.buildDir / "bundle/lib")
 
     def install(self, **kwargs):
         if is_jenkins_build():
             self.makedirs(self.installDir)
-            self.run_cmd("cp", "-av", self.bunde_name + "-bundle/", self.installDir, cwd=self.buildDir)
+            self.run_cmd("cp", "-av", self.bundle_dir, self.installDir, cwd=self.buildDir)
             self.run_cmd("du", "-sh", self.installDir)
             # Remove all the .dump files from the tarball
             self.run_cmd("find", self.installDir, "-name", "*.dump", "-delete")
@@ -96,7 +104,7 @@ class BuildMibench(CrossCompileProject):
         if self.compiling_for_host():
             self.fatal("running x86 tests is not implemented yet")
         # testing, not benchmarking -> run only once: (-s small / -s large?)
-        test_command = "cd " + self.bunde_name + "-bundle && ./run_jenkins-bluehive.sh -d0 -r1 -s small " + self.bunde_name
+        test_command = "cd '/build/" + self.bundle_dir.name + "' && ./run_jenkins-bluehive.sh -d0 -r1 -s small " + self.benchmark_version
         self.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
                                       "--test-timeout", str(120 * 60),
                                       mount_builddir=True)
