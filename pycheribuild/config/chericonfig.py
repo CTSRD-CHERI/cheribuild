@@ -277,10 +277,17 @@ class CheriConfig(object):
             self.verbose = True
         self.targets = self.loader.targets
         from ..filesystemutils import FileSystemUtils
-        if self.clangPath is None:
+        # If there is no clang, default to /usr/bin/cc
+        if self.clangCppPath is None and self.clangPlusPlusPath is None and self.clangPath is None:
+            self.clangPath = Path("/usr/bin/cc")
+            self.clangCppPath = Path("/usr/bin/cpp")
+            self.clangPlusPlusPath = Path("/usr/bin/c++")
+        if self.clangPath is None or not self.clangPath.exists():
             self.clangPath = Path("/c/compiler/is/missing")
-        if self.clangPlusPlusPath is None:
+        if self.clangPlusPlusPath is None or not self.clangPlusPlusPath.exists():
             self.clangPlusPlusPath = Path("/c++/compiler/is/missing")
+        if self.clangCppPath is None or not self.clangCppPath.exists():
+            self.clangCppPath = Path("/cpp/is/missing")
         self.FS = FileSystemUtils(self)
 
         if self.test_extra_args is None:

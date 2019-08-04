@@ -245,10 +245,13 @@ class JenkinsConfig(CheriConfig):
             # allow overriding the clang/clang++ paths with HOST_CC/HOST_CXX
             self.clangPath = Path(os.getenv("HOST_CC", self.clangPath))
             self.clangPlusPlusPath = Path(os.getenv("HOST_CXX", self.clangPlusPlusPath))
+            self.clangCppPath = Path(os.getenv("HOST_CPP", self.clangCppPath))
             if not self.clangPath.exists():
                 fatalError("C compiler", self.clangPath, "does not exit. Pass --clang-path or set $HOST_CC")
             if not self.clangPlusPlusPath.exists():
                 fatalError("C++ compiler", self.clangPlusPlusPath, "does not exit. Pass --clang++-path or set $HOST_CXX")
+            if not self.clangCppPath.exists():
+                fatalError("C pre-processor", self.clangCppPath, "does not exit. Pass --clang++-path or set $HOST_CPP")
         else:
             # always use the CHERI clang built by jenkins to ensure we don't do x86 compilation
             self.clangPath = self.sdkBinDir / "clang"
