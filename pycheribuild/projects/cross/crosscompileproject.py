@@ -529,6 +529,20 @@ class CrossCompileMixin(MultiArchBaseMixin):
         assert benchmarks_dir is not None
         assert output_file is not None, "output_file must be set to a valid value"
         assert isinstance(self, Project)
+        self.info("Stripping all ELF files before copying to the FPGA")
+        self.run_cmd("du", "-sh", benchmarks_dir)
+        for root, dirnames, filenames in os.walk(str(benchmarks_dir)):
+            for filename in filenames:
+                file = Path(root, filename)
+                if file.suffix == ".dump":
+                    # TODO: make this an error since we should have deleted them
+                    self.warning("Will copy a .dump file to the FPGA:", file)
+                # Try to reduce the amount of copied data
+                with file.open("rb") as f:
+                    if f.read(4) == b"\x7fELF":
+                        self.verbose_print("Stripping ELF binary", file)
+                        runCmd(self.config.sdkBinDir / "llvm-strip", file)
+        self.run_cmd("du", "-sh", benchmarks_dir)
         extra_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
         if self.config.benchmark_extra_args:
             extra_args.extend(self.config.benchmark_extra_args)
@@ -543,7 +557,9 @@ class CrossCompileMixin(MultiArchBaseMixin):
         if extra_runbench_args:
             extra_args.extend(extra_runbench_args)
         beri_fpga_bsd_boot_script = """
+set +x
 source "{cheri_svn}/setup.sh"
+set -x
 export PATH="$PATH:{cherilibs_svn}/tools:{cherilibs_svn}/tools/debug"
 exec beri-fpga-bsd-boot.py -vvvvv runbench {runbench_args}
 """.format(cheri_svn=self.config.cheri_svn_checkout, cherilibs_svn=self.config.cherilibs_svn_checkout,
