@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 
+import datetime
 import os
 import inspect
 import pprint
@@ -516,6 +517,38 @@ class CrossCompileMixin(MultiArchBaseMixin):
         self.makedirs(dest_libdir)
         for lib in ("usr/lib/librt.so.1", "usr/lib/libexecinfo.so.1", "lib/libgcc_s.so.1", "lib/libelf.so.2"):
             self.installFile(self.sdkSysroot / lib, dest_libdir / Path(lib).name, force=True, printVerboseOnly=False)
+
+    @property
+    def default_statcounters_csv_name(self):
+        assert isinstance(self, Project)
+        return self.target + "-statcounters{}-{}.csv".format(self.build_configuration_suffix(),
+                                                             datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+
+    def run_fpga_benchmark(self, benchmarks_dir: Path, *, output_file: str = None, benchmark_script: str = None,
+                           benchmark_script_args: list = None, extra_runbench_args: list = None):
+        assert benchmarks_dir is not None
+        assert output_file is not None, "output_file must be set to a valid value"
+        assert isinstance(self, Project)
+        extra_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
+        if self.config.benchmark_extra_args:
+            extra_args.extend(self.config.benchmark_extra_args)
+        if self.config.tests_interact:
+            extra_args.append("--interact")
+        if not self.config.benchmark_clean_boot:
+            extra_args.append("--skip-boot")
+        if benchmark_script:
+            extra_args.append("--script-name=" + benchmark_script)
+        if benchmark_script_args:
+            extra_args.append("--script-args=" + commandline_to_str(benchmark_script_args))
+        if extra_runbench_args:
+            extra_args.extend(extra_runbench_args)
+        beri_fpga_bsd_boot_script = """
+source "{cheri_svn}/setup.sh"
+export PATH="$PATH:{cherilibs_svn}/tools:{cherilibs_svn}/tools/debug"
+exec beri-fpga-bsd-boot.py -vvvvv runbench {runbench_args}
+""".format(cheri_svn=self.config.cheri_svn_checkout, cherilibs_svn=self.config.cherilibs_svn_checkout,
+           runbench_args=commandline_to_str(extra_args))
+        self.runShellScript(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
 
     def process(self):
         if self.use_asan and self.compiling_for_mips():

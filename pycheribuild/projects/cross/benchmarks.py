@@ -110,6 +110,12 @@ class BuildMibench(CrossCompileProject):
                                       "--test-timeout", str(120 * 60),
                                       mount_builddir=True)
 
+    def run_benchmarks(self):
+        self.run_fpga_benchmark(self.buildDir / self.bundle_dir.name,
+                                output_file=self.default_statcounters_csv_name,
+                                benchmark_script_args=["-d1", "-r5", "-s", "small",
+                                                       "-o", self.default_statcounters_csv_name,
+                                                       self.benchmark_version])
 
 class BuildOlden(CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/olden")
@@ -182,34 +188,9 @@ class BuildOlden(CrossCompileProject):
 
     def run_benchmarks(self):
         statcounters_name = "olden-statcounters{}-{}.csv".format(
-            self.build_configuration_suffix(), datetime.datetime.now().strftime("%Y%m%d_%H-%M-%S"))
-        self._fpga_benchmark(self.buildDir / "bin", output_file=statcounters_name,
+            self.build_configuration_suffix(), datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+        self.run_fpga_benchmark(self.buildDir / "bin", output_file=statcounters_name,
                              benchmark_script_args=["-d1", "-r5", "-o", statcounters_name, self.test_arch_suffix])
-
-    def _fpga_benchmark(self, benchmarks_dir: Path, *, output_file: str=None, benchmark_script: str=None,
-                        benchmark_script_args: list=None, extra_runbench_args: list=None):
-        assert benchmarks_dir is not None
-        assert output_file is not None, "output_file must be set to a valid value"
-        extra_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
-        if self.config.benchmark_extra_args:
-            extra_args.extend(self.config.benchmark_extra_args)
-        if self.config.tests_interact:
-            extra_args.append("--interact")
-        if not self.config.benchmark_clean_boot:
-            extra_args.append("--skip-boot")
-        if benchmark_script:
-            extra_args.append("--script-name=" + benchmark_script)
-        if benchmark_script_args:
-            extra_args.append("--script-args=" + commandline_to_str(benchmark_script_args))
-        if extra_runbench_args:
-            extra_args.extend(extra_runbench_args)
-        beri_fpga_bsd_boot_script = """
-source "{cheri_svn}/setup.sh"
-export PATH="$PATH:{cherilibs_svn}/tools:{cherilibs_svn}/tools/debug"
-exec beri-fpga-bsd-boot.py -vvvvv runbench {runbench_args}
-""".format(cheri_svn=self.config.cheri_svn_checkout, cherilibs_svn=self.config.cherilibs_svn_checkout,
-           runbench_args=commandline_to_str(extra_args))
-        self.runShellScript(beri_fpga_bsd_boot_script, shell="bash") # the setup script needs bash not sh
 
 class BuildSpec2006(CrossCompileProject):
     target = "spec2006"
