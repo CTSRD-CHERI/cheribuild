@@ -38,6 +38,7 @@ from ..utils import defaultNumberOfMakeJobs
 class CheribuildAction(Enum):
     BUILD = ("--build", "Run (usually build+install) chosen targets (default)")
     TEST = ("--test", "Run tests for the passed targets instead of building them", "--run-tests")
+    BENCHMARK = ("--benchmark", "Run tests for the passed targets instead of building them")
     BUILD_AND_TEST = ("--build-and-test", "Run chosen targets and then run any tests afterwards", None,
                       # can get the other instances yet -> use strings
                       ["build", "test"])

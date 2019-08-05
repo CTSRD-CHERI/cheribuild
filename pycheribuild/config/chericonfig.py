@@ -190,6 +190,9 @@ class CheriConfig(object):
         self.subobject_bounds = loader.addOption("subobject-bounds", type=str, group=loader.crossCompileOptionsGroup,
             choices=("conservative", "subobject-safe", "aggressive", "very-aggressive", "everywhere-unsafe"),
             helpHidden=False, help="Whether to add additional CSetBounds to subobject references/&-operator")
+        self.subobject_debug = loader.addBoolOption("subobject-debug", group=loader.crossCompileOptionsGroup,
+            default=True, helpHidden=False, help="Clear software permission bit 2 when subobject bounds reduced size"
+                                                 " (Note: this should be turned off for benchmarks!)")
         self.unified_sdk = loader.addBoolOption("unified-sdk", help="Build a single SDK instead of separate 128"
                                                 " and 256 bits ones", default=True)
 
@@ -260,6 +263,21 @@ class CheriConfig(object):
             help="Interact with the CheriBSD instance after running the tests on QEMU (only for --test)")
         self.tests_env_only = loader.addCommandLineOnlyBoolOption("test-environment-only", group=loader.testsGroup,
             help="Don't actually run the tests. Instead setup a QEMU instance with the right paths set up.")
+
+        self.cherilibs_svn_checkout = loader.addPathOption("cherilibs-svn-checkout", group=loader.benchmarkGroup,
+                                                           default="/missing/--cherilibs-svn-checkout/config/option",
+                                                           help="PATH to the CTSRD SVN cherilibs/trunk checkout")
+        self.cheri_svn_checkout = loader.addPathOption("cheri-svn-checkout", group=loader.benchmarkGroup,
+                                                       default="/missing/--cheri-svn-checkout/config/option",
+                                                       help="PATH to the CTSRD SVN cheri/trunk checkout")
+        self.benchmark_clean_boot = loader.addBoolOption("benchmark-clean-boot", group=loader.benchmarkGroup,
+            help="Reboot the FPGA with a new bitfile and kernel before running benchmarks. "
+                 "If not set, assume the FPGA is running.")
+        self.benchmark_extra_args = loader.addCommandLineOnlyOption("benchmark-extra-args", group=loader.benchmarkGroup, type=list,
+            metavar="ARGS", help="Additional flags to pass to the beri-fpga-bsd-boot.py script in --benchmark")
+        self.benchmark_ssh_host = loader.addOption("benchmark-ssh-host", group=loader.benchmarkGroup, type=str,
+                                                   default="cheri-fpga", help="The SSH hostname/IP for the benchmark FPGA")
+
 
         self.shallow_clone = loader.addBoolOption("shallow-clone", default=True,
             help="Perform a shallow `git clone` when cloning new projects. This can save a lot of time for large"

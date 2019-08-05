@@ -46,6 +46,7 @@ class Target(object):
         self.__project = None  # type: pycheribuild.project.SimpleProject
         self._completed = False
         self._tests_have_run = False
+        self._benchmarks_have_run = False
         self._creating_project = False  # avoid cycles
 
     def get_or_create_project(self, target_arch: "typing.Optional[CrossCompileTarget]", config) -> "SimpleProject":
@@ -108,6 +109,22 @@ class Target(object):
             project.run_tests()
         statusUpdate("Ran tests for target '" + self.name + "' in", time.time() - starttime, "seconds")
         self._tests_have_run = True
+
+    def run_benchmarks(self, config: "CheriConfig"):
+        if self._benchmarks_have_run:
+            # TODO: make this an error once I have a clean solution for the pseudo targets
+            warningMessage(self.name, "has already been executed!")
+            return
+        # instantiate the project and run it
+        starttime = time.time()
+        project = self.get_or_create_project(None, config)
+        new_env = {"PATH": project.config.dollarPathWithOtherTools}
+        if project.config.clang_colour_diags:
+            new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
+        with setEnv(**new_env):
+            project.run_benchmarks()
+        statusUpdate("Ran benchmarks for target '" + self.name + "' in", time.time() - starttime, "seconds")
+        self._benchmarks_have_run = True
 
     def reset(self):
         # For unit tests to get a fresh instance
@@ -204,6 +221,9 @@ class MultiArchTargetAlias(Target):
 
     def run_tests(self, config: "CheriConfig"):
         return self.get_real_target(None, config).run_tests(config)
+
+    def run_benchmarks(self, config: "CheriConfig"):
+        return self.get_real_target(None, config).run_benchmarks(config)
 
     def checkSystemDeps(self, config: CheriConfig):
         return self.get_real_target(None, config).checkSystemDeps(config)

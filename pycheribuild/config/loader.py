@@ -117,6 +117,7 @@ class ConfigLoaderBase(object):
         self.pathGroup = self._parser.add_argument_group("Configuration of default paths")
         self.crossCompileOptionsGroup = self._parser.add_argument_group("Adjust flags used when compiling MIPS/CHERI projects")
         self.testsGroup = self._parser.add_argument_group("Configuration for running tests")
+        self.benchmarkGroup = self._parser.add_argument_group("Configuration for running benchmarks on the FPGA")
 
         # put this one right at the end since it is not that useful
         self.freebsdGroup = self._parser.add_argument_group("FreeBSD and CheriBSD build configuration")

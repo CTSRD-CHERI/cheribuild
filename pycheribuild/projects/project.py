@@ -576,7 +576,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def run_tests(self):
         # for the --test option
         statusUpdate("No tests defined for target", self.target)
-        pass
+
+    def run_benchmarks(self):
+        # for the --benchmark option
+        statusUpdate("No benchmarks defined for target", self.target)
 
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
                                  mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
@@ -1049,21 +1052,27 @@ class Project(SimpleProject):
     def getInstallDir(cls, caller: "SimpleProject", config: CheriConfig):
         return cls.get_instance(caller, config).real_install_root_dir
 
-    def buildDirSuffix(self, target: CrossCompileTarget):
+    def build_configuration_suffix(self, target: CrossCompileTarget=None) -> str:
+        """
+        :param target: the target to use
+        :return: a string such as -128/-native-asan that identifies the build configuration
+        """
         config = self.config
+        if target is None:
+            target = self.get_crosscompile_target(config)
         if target is None:
             # HACK since I can't make the class variable in BuildCheriLLVM dynamic
             # TODO: remove once unified SDK is stable
             append_bits = self.appendCheriBitsToBuildDir
             if self.target in ("llvm", "qemu") and config.unified_sdk:
                 append_bits = False
-            result = "-" + config.cheriBitsStr + "-build" if append_bits else "-build"
+            result = "-" + config.cheriBitsStr if append_bits else ""
         elif target == CrossCompileTarget.CHERI:
-            result = "-" + config.cheri_bits_and_abi_str + "-build"
+            result = "-" + config.cheri_bits_and_abi_str
         elif target == CrossCompileTarget.MIPS and self.mips_build_hybrid:
-            result = "-" + target.value + "-hybrid" + config.cheri_bits_and_abi_str + "-build"
+            result = "-" + target.value + "-hybrid" + config.cheri_bits_and_abi_str
         else:
-            result = "-" + target.value + "-build"
+            result = "-" + target.value
         if config.cross_target_suffix:
             result += "-" + config.cross_target_suffix
         if self.use_asan:
@@ -1071,6 +1080,12 @@ class Project(SimpleProject):
         if self.build_dir_suffix:
             result = self.build_dir_suffix + result
         return result
+
+    def buildDirSuffix(self, target: CrossCompileTarget=None):
+        result = self.build_configuration_suffix(target)
+        if self.build_dir_suffix:
+            result = self.build_dir_suffix + result
+        return result + "-build"
 
     def buildDirForTarget(self, target: CrossCompileTarget):
         return self.config.buildRoot / (self.projectName.lower() + self.buildDirSuffix(target))

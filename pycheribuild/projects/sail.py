@@ -114,6 +114,7 @@ class OpamMixin(object):
     def run_in_ocaml_env(self, command: str, cwd=None, printVerboseOnly=False, **kwargs):
         opam_env, cwd = self._run_in_ocaml_env_prepare(cwd=cwd)
         script = "eval `opam config env`\n" + command + "\n"
+        assert isinstance(self, Project)
         return self.runShellScript(script, cwd=cwd, printVerboseOnly=printVerboseOnly, env=opam_env, **kwargs)
 
     def run_command_in_ocaml_env(self, command: list, cwd=None, printVerboseOnly=False, **kwargs):

@@ -148,7 +148,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
         self.makedirs(self.buildDir / "run")
         if self.config.clean:
             self.cleanDirectory(self.buildDir / "run", keepRoot=False)
-        testsuite_prefix = self.buildDirSuffix(self.get_crosscompile_target(self.config))[1:]
+        testsuite_prefix = self.build_configuration_suffix()[1:]
         testsuite_prefix = testsuite_prefix.replace("-build", "")
         extra_args = ["--bmake-path", bmake, "--jobs", str(self.config.makeJobs)] if self.compiling_for_host() else []
         tools = []

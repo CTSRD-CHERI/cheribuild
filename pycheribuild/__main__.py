@@ -131,7 +131,8 @@ def real_main():
         print(option.__get__(cheriConfig, option._owningClass if option._owningClass else cheriConfig))
         sys.exit()
 
-    assert any(x in cheriConfig.action for x in (CheribuildAction.TEST, CheribuildAction.PRINT_CHOSEN_TARGETS, CheribuildAction.BUILD))
+    assert any(x in cheriConfig.action for x in (CheribuildAction.TEST, CheribuildAction.PRINT_CHOSEN_TARGETS,
+                                                 CheribuildAction.BUILD, CheribuildAction.BENCHMARK))
 
     # create the required directories
     for d in (cheriConfig.sourceRoot, cheriConfig.outputRoot, cheriConfig.buildRoot):
@@ -220,7 +221,9 @@ def real_main():
     if CheribuildAction.TEST in cheriConfig.action:
         for target in targetManager.get_all_chosen_targets(cheriConfig):
             target.run_tests(cheriConfig)
-
+    if CheribuildAction.BENCHMARK in cheriConfig.action:
+        for target in targetManager.get_all_chosen_targets(cheriConfig):
+            target.run_benchmarks(cheriConfig)
 
 def main():
     try:
