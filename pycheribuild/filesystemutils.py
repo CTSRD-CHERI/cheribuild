@@ -203,12 +203,14 @@ class FileSystemUtils(object):
             self.makedirs(dest.parent)
         runCmd(cmd + [src, dest])
 
-    def installFile(self, src: Path, dest: Path, *, force=False, createDirs=True, printVerboseOnly=True):
+    def installFile(self, src: Path, dest: Path, *, force=False, createDirs=True, printVerboseOnly=True, mode=None):
         if force:
             printCommand("cp", "-f", src, dest, printVerboseOnly=printVerboseOnly)
         else:
             printCommand("cp", src, dest, printVerboseOnly=printVerboseOnly)
         if self.config.pretend:
+            if mode is not None:
+                printCommand("chmod", oct(mode), dest, printVerboseOnly=printVerboseOnly)
             return
         assert not dest.is_dir(), "installFile: target is a directory and not a file: " + str(dest)
         if (dest.is_symlink() or dest.exists()) and force:
@@ -221,6 +223,10 @@ class FileSystemUtils(object):
             dest.unlink()
         # noinspection PyArgumentList
         shutil.copy(str(src), str(dest), follow_symlinks=False)
+        if mode is not None:
+            printCommand("chmod", oct(mode), dest, printVerboseOnly=printVerboseOnly)
+            if not self.config.pretend:
+                dest.chmod(mode)
 
     @staticmethod
     def createBuildtoolTargetSymlinks(tool: Path, toolName: str = None, createUnprefixedLink: bool = False,
