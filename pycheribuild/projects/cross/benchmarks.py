@@ -246,7 +246,7 @@ class BuildSpec2006(CrossCompileProject):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Worst case benchmarks: 471.omnetpp 483.xalancbmk 400.perlbench (which won't compile)
-        self.benchmark_list = ["483.xalancbmk"]
+        self.benchmark_list = ["471.omnetpp", "483.xalancbmk"]
 
     def compile(self, cwd: Path = None):
         for attr in ("ctsrd_evaluation_trunk", "ctsrd_evaluation_vendor"):
