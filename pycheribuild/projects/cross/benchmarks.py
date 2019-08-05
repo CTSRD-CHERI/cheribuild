@@ -308,6 +308,20 @@ runspec -c {spec_config_name} --noreportable --make_bundle {spec_config_name} {b
         if not self.config.pretend:
             assert run_script.stat().st_mode & stat.S_IXUSR
 
+        # Add C++ dependencies for omnetpp and xalanbmk:
+        # TODO: should we add these to the minimal disk image? would make things a bit easier.
+        cxx_libs = ["libc++.so.1", "libcxxrt.so.1", "libgcc_s.so.1"]
+        for needed_lib in cxx_libs:
+            libdirs = []
+            if self.compiling_for_cheri():
+                libdirs = ["usr/libcheri"]
+            elif self.compiling_for_mips():
+                libdirs = ["usr/lib", "lib"]
+            for libdir in libdirs:
+                guess = Path(self.sdkSysroot, libdir, needed_lib)
+                if guess.exists():
+                    self.installFile(guess, spec_root / "lib" / needed_lib, printVerboseOnly=False, force=True)
+
         # To copy all of them:
         # self.run_cmd("cp", "-av", self.spec_run_scripts, output_dir / "benchspec/")
         self.cleanDirectory(output_dir / "config", ensure_dir_exists=False)
