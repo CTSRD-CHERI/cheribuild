@@ -1189,15 +1189,19 @@ class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
         self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=kernconf + "_BENCHMARK", image=image)
 
         if build_cheribsd_instance.buildFpgaKernels:
-            if self.compiling_for_mips():
-                prefix = "BERI_DE4_MFS_ROOT"
-            elif self.compiling_for_cheri():
-                prefix = "CHERI128_DE4_MFS_ROOT" if self.config.cheriBits == 128 else "CHERI_DE4_MFS_ROOT"
-            else:
-                prefix = "INVALID_KERNCONF"
-                self.fatal("Invalid CHERI BITS")
+            prefix = self.fpga_kernconf
             self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=prefix, image=image)
             self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=prefix + "_BENCHMARK", image=image)
+
+    @property
+    def fpga_kernconf(self):
+        if self.compiling_for_mips():
+            return "BERI_DE4_MFS_ROOT"
+        elif self.compiling_for_cheri():
+            return ("CHERI128_DE4_MFS_ROOT" if self.config.cheriBits == 128 else "CHERI_DE4_MFS_ROOT")
+        else:
+            self.fatal("Invalid ARCH")
+            return "INVALID_KERNCONF"
 
     def _build_and_install_kernel_binary(self, build_cheribsd: BuildCHERIBSD, kernconf: str, image: Path):
         # Install to a temporary directory and then copy the kernel to OUTPUT_ROOT
@@ -1207,7 +1211,7 @@ class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
             # noinspection PyProtectedMember
             build_cheribsd._installkernel(kernconf=kernconf, destdir=td)
             # runCmd("find", td)
-            kernel_install_path = self._installed_kernel_for_config(self.config, kernconf)
+            kernel_install_path = self.installed_kernel_for_config(self.config, kernconf)
             self.deleteFile(kernel_install_path)
             self.installFile(Path(td, "boot/kernel/kernel"), kernel_install_path, force=True, printVerboseOnly=False)
             if Path(td, "boot/kernel/kernel.full").exists():
@@ -1238,15 +1242,15 @@ class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
 
     @classmethod
     def get_installed_kernel_path(cls, caller, config) -> Path:
-        return cls._installed_kernel_for_config(config, cls.get_kernel_config(caller, config))
+        return cls.installed_kernel_for_config(config, cls.get_kernel_config(caller, config))
 
     @classmethod
     def get_installed_benchmark_kernel_path(cls, caller, config) -> Path:
-        return cls._installed_kernel_for_config(config, cls.get_kernel_config(caller, config) + "_BENCHMARK")
+        return cls.installed_kernel_for_config(config, cls.get_kernel_config(caller, config) + "_BENCHMARK")
 
     @staticmethod
-    def _installed_kernel_for_config(config: CheriConfig, kernconf: str) -> Path:
-        return config.cheribsd_image_root / ("kernel." + kernconf)
+    def installed_kernel_for_config(config: CheriConfig, kernconf: str) -> Path:
+        return config.cheribsd_image_root / ("kernel" + config.cheri_bits_and_abi_str + "." + kernconf)
 
 
 class BuildCHERIBSDPurecap(BuildCHERIBSD):
