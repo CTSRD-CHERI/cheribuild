@@ -45,7 +45,8 @@ class BuildSimpleCheriBenchmarks(CrossCompileCMakeProject):
     def create_test_dir(self, outdir: Path):
         self.cleanDirectory(outdir)
         for f in ("run_jenkins-bluehive.sh", "libqsort_default.so", "test_qsort_default", "test_qsort_static",
-                  "malloc_bench_shared", "malloc_bench_static", "malloc_benchmark.sh", "run_cheribsd.sh"):
+                  "benchmark_qsort", "malloc_bench_shared", "malloc_bench_static", "malloc_benchmark.sh",
+                  "run_cheribsd.sh"):
             self.installFile(self.buildDir / f, outdir / f, force=True, printVerboseOnly=False)
         return outdir
 

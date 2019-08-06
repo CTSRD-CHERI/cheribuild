@@ -34,7 +34,7 @@ import pexpect
 import boot_cheribsd
 
 def run_simple_benchmarks(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "cd /build/test-dir && ./run_jenkins_bluehive.sh -d0 -r1")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "cd /build/test-dir && ./run_jenkins-bluehive.sh -d0 -r1")
     return True
 
 if __name__ == '__main__':
