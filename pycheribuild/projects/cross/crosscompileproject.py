@@ -533,7 +533,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                            benchmark_script_args: list = None, extra_runbench_args: list = None):
         assert benchmarks_dir is not None
         assert output_file is not None, "output_file must be set to a valid value"
-        assert isinstance(self, Project)
+        assert isinstance(self, Project) and isinstance(self, CrossCompileMixin)
         self.info("Stripping all ELF files before copying to the FPGA")
         self.run_cmd("du", "-sh", benchmarks_dir)
         for root, dirnames, filenames in os.walk(str(benchmarks_dir)):
@@ -548,27 +548,40 @@ class CrossCompileMixin(MultiArchBaseMixin):
                         self.verbose_print("Stripping ELF binary", file)
                         runCmd(self.config.sdkBinDir / "llvm-strip", file)
         self.run_cmd("du", "-sh", benchmarks_dir)
-        extra_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
+        runbench_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
+        basic_args = []
         if self.config.benchmark_extra_args:
-            extra_args.extend(self.config.benchmark_extra_args)
+            runbench_args.extend(self.config.benchmark_extra_args)
         if self.config.tests_interact:
-            extra_args.append("--interact")
-        if not self.config.benchmark_clean_boot:
-            extra_args.append("--skip-boot")
+            runbench_args.append("--interact")
+        if self.config.benchmark_clean_boot:
+            # use a bitfile from jenkins. TODO: add option for overriding
+            if self.compiling_for_mips():
+                # TODO: use a MIPS kernel?
+                basic_args.append("--jenkins-bitfile=cheri128")
+            else:
+                assert self.compiling_for_cheri()
+                basic_args.append("--jenkins-bitfile=cheri" + self.config.cheriBitsStr)
+            from .cheribsd import BuildCheriBsdMfsKernel
+            mfs_kernel = BuildCheriBsdMfsKernel.get_instance(self, self.config)
+            basic_args.append("--kernel-img=" + str(mfs_kernel.installed_kernel_for_config(
+                self.config, mfs_kernel.fpga_kernconf + "_BENCHMARK")))
+        else:
+            runbench_args.append("--skip-boot")
         if benchmark_script:
-            extra_args.append("--script-name=" + benchmark_script)
+            runbench_args.append("--script-name=" + benchmark_script)
         if benchmark_script_args:
-            extra_args.append("--script-args=" + commandline_to_str(benchmark_script_args))
+            runbench_args.append("--script-args=" + commandline_to_str(benchmark_script_args))
         if extra_runbench_args:
-            extra_args.extend(extra_runbench_args)
+            runbench_args.extend(extra_runbench_args)
         beri_fpga_bsd_boot_script = """
 set +x
 source "{cheri_svn}/setup.sh"
 set -x
 export PATH="$PATH:{cherilibs_svn}/tools:{cherilibs_svn}/tools/debug"
-exec beri-fpga-bsd-boot.py -vvvvv runbench {runbench_args}
+exec beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbench_args}
 """.format(cheri_svn=self.config.cheri_svn_checkout, cherilibs_svn=self.config.cherilibs_svn_checkout,
-           runbench_args=commandline_to_str(extra_args))
+           runbench_args=commandline_to_str(runbench_args), basic_args=commandline_to_str(basic_args))
         self.runShellScript(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
 
     def process(self):
