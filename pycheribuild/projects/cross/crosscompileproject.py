@@ -519,10 +519,15 @@ class CrossCompileMixin(MultiArchBaseMixin):
             self.installFile(self.sdkSysroot / lib, dest_libdir / Path(lib).name, force=True, printVerboseOnly=False)
 
     @property
-    def default_statcounters_csv_name(self):
+    def default_statcounters_csv_name(self) -> str:
         assert isinstance(self, Project)
-        return self.target + "-statcounters{}-{}.csv".format(self.build_configuration_suffix(),
-                                                             datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+        # Only compute it once since we encode seconds in the file name:
+        if hasattr(self, "_statcounters_csv"):
+            return self._statcounters_csv
+        else:
+            self._statcounters_csv = self.target + "-statcounters{}-{}.csv".format(
+                self.build_configuration_suffix(), datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+            return self._statcounters_csv
 
     def run_fpga_benchmark(self, benchmarks_dir: Path, *, output_file: str = None, benchmark_script: str = None,
                            benchmark_script_args: list = None, extra_runbench_args: list = None):
@@ -682,7 +687,7 @@ else()
 endif()
 set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
 """
-            processor = "CHERI (MIPS IV compatible)"
+            processor = "CHERI (MIPS IV compatible) with {}-bit capabilities".format(self.config.cheriBitsStr)
         elif self.compiling_for_mips():
             add_lib_suffix = "# no lib suffix for mips libraries"
             processor = "BERI (MIPS IV compatible)"
