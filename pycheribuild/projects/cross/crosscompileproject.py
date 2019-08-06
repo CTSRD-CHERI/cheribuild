@@ -550,6 +550,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
         self.run_cmd("du", "-sh", benchmarks_dir)
         runbench_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
         basic_args = []
+        if self.config.benchmark_fpga_extra_args:
+            basic_args.extend(self.config.benchmark_fpga_extra_args)
         if self.config.benchmark_extra_args:
             runbench_args.extend(self.config.benchmark_extra_args)
         if self.config.tests_interact:

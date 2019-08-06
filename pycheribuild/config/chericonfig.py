@@ -264,6 +264,9 @@ class CheriConfig(object):
         self.tests_env_only = loader.addCommandLineOnlyBoolOption("test-environment-only", group=loader.testsGroup,
             help="Don't actually run the tests. Instead setup a QEMU instance with the right paths set up.")
 
+        self.benchmark_fpga_extra_args = loader.addCommandLineOnlyOption("benchmark-fpga-extra-args", group=loader.benchmarkGroup,
+                                                                         type=list, metavar="ARGS",
+                                                                         help="Extra options for beri-fpga-bsd-boot.py")
         self.cherilibs_svn_checkout = loader.addPathOption("cherilibs-svn-checkout", group=loader.benchmarkGroup,
                                                            default="/missing/--cherilibs-svn-checkout/config/option",
                                                            help="PATH to the CTSRD SVN cherilibs/trunk checkout")
