@@ -1167,7 +1167,8 @@ class BuildCHERIBSD(BuildFreeBSD):
 class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
     projectName = "cheribsd-mfs-root-kernel"
     dependencies = ["disk-image-minimal"]
-    supported_architectures = [CrossCompileTarget.CHERI, CrossCompileTarget.MIPS]
+    # TODO: also support building a non-CHERI kernel... But that needs a plain MIPS disk-image-minimal first...
+    supported_architectures = [CrossCompileTarget.CHERI]
     default_architecture = CrossCompileTarget.CHERI
 
     def process(self):
@@ -1186,6 +1187,17 @@ class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
         self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=kernconf, image=image)
         # also build the benchmark kernel:
         self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=kernconf + "_BENCHMARK", image=image)
+
+        if build_cheribsd_instance.buildFpgaKernels:
+            if self.compiling_for_mips():
+                prefix = "BERI_DE4_MFS_ROOT"
+            elif self.compiling_for_cheri():
+                prefix = "CHERI128_DE4_MFS_ROOT" if self.config.cheriBits == 128 else "CHERI_DE4_MFS_ROOT"
+            else:
+                prefix = "INVALID_KERNCONF"
+                self.fatal("Invalid CHERI BITS")
+            self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=prefix, image=image)
+            self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=prefix + "_BENCHMARK", image=image)
 
     def _build_and_install_kernel_binary(self, build_cheribsd: BuildCHERIBSD, kernconf: str, image: Path):
         # Install to a temporary directory and then copy the kernel to OUTPUT_ROOT
