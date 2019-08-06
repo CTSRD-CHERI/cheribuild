@@ -42,5 +42,20 @@ class BuildSimpleCheriBenchmarks(CrossCompileCMakeProject):
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     projectName = "simple-cheri-benchmarks"
 
+    def create_test_dir(self, outdir: Path):
+        self.cleanDirectory(outdir)
+        for f in ("run_jenkins_bluehive.sh", "libqsort_default.so", "test_qsort_default", "test_qsort_static",
+                  "malloc_bench_shared", "malloc_bench_static", "malloc_benchmark.sh", "run_cheribsd.sh"):
+            self.installFile(self.buildDir / f, outdir / f, force=True, printVerboseOnly=False)
+        return outdir
+
+
     def run_tests(self):
+        self.create_test_dir(self.buildDir / "test-dir")
         self.run_cheribsd_test_script("run_simple_benchmarks.py", use_benchmark_kernel_by_default=True)
+
+    def run_benchmarks(self):
+        with tempfile.TemporaryDirectory() as td:
+            benchmarks_dir = self.create_test_dir(Path(td))
+            self.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
+                                    benchmark_script_args=["-d1", "-r10", "-o", self.default_statcounters_csv_name])

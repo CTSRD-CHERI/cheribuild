@@ -34,10 +34,7 @@ import pexpect
 import boot_cheribsd
 
 def run_simple_benchmarks(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
-    print("Running qtbase tests")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "cd /build && ./malloc_benchmark.sh")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "mkdir -p /build/test_results")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "cp -vf /tmp/benchdir/* /build/test_results")
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "cd /build/test-dir && ./run_jenkins_bluehive.sh -d0 -r1")
     return True
 
 if __name__ == '__main__':
