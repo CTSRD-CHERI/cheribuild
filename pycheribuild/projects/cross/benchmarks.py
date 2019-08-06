@@ -52,7 +52,7 @@ class BuildMibench(CrossCompileProject):
 
     @property
     def bundle_dir(self):
-        return Path(self.buildDir, self.get_crosscompile_target(self.config).value +
+        return Path(self.buildDir, self.crosscompile_target.value +
                     self.build_configuration_suffix() + "-bundle")
 
     @property

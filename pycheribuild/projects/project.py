@@ -254,8 +254,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @property
     def crossSysrootPath(self):
-        assert self.get_crosscompile_target(self.config) is not None, "called from invalid class " + str(self.__class__)
-        return self.config.get_sysroot_path(self.get_crosscompile_target(self.config), self.mips_build_hybrid)
+        assert self.crosscompile_target is not None, "called from invalid class " + str(self.__class__)
+        return self.config.get_sysroot_path(self.crosscompile_target, self.mips_build_hybrid)
 
     # Project subclasses will automatically have a target based on their name generated unless they add this:
     doNotAddToTargets = True
@@ -589,7 +589,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         from .build_qemu import BuildQEMU
         # noinspection PyUnusedLocal
         script_dir = Path("/this/will/not/work/when/using/remote-cheribuild.py")
-        test_native = self.get_crosscompile_target(self.config) == CrossCompileTarget.NATIVE
+        test_native = self.crosscompile_target == CrossCompileTarget.NATIVE
         if kernel_path is None and not test_native and "--kernel" not in self.config.test_extra_args:
             from .cross.cheribsd import BuildCheriBsdMfsKernel
             # Use the benchmark kernel by default if the parameter is set and the user didn't pass
@@ -606,9 +606,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 cheribsd_image = "cheribsd{suffix}-cheri{suffix}-malta64-mfs-root-minimal-cheribuild-kernel.bz2".format(
                         suffix="" if self.config.cheriBits == 256 else self.config.cheriBitsStr)
                 freebsd_image = "freebsd-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
-                if self.get_crosscompile_target(self.config) == CrossCompileTarget.MIPS:
+                if self.crosscompile_target == CrossCompileTarget.MIPS:
                     guessed_archive = cheribsd_image if self.config.run_mips_tests_with_cheri_image else freebsd_image
-                elif self.get_crosscompile_target(self.config) == CrossCompileTarget.CHERI:
+                elif self.crosscompile_target == CrossCompileTarget.CHERI:
                     guessed_archive = cheribsd_image
                 else:
                     self.fatal("Could not guess path to kernel image for CheriBSD")

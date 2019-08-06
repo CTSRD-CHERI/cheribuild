@@ -51,6 +51,10 @@ class MultiArchBaseMixin(object):
     # noinspection PyProtectedMember
     _no_overwrite_allowed = Project._no_overwrite_allowed + ("_crossCompileTarget",)
 
+    @property
+    def crosscompile_target(self):
+        return self.get_crosscompile_target(self.config)
+
     @classmethod
     def get_crosscompile_target(cls, config: CheriConfig) -> CrossCompileTarget:
         target = cls._crossCompileTarget

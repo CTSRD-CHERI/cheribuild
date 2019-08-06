@@ -1039,7 +1039,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     def get_corresponding_sysroot(self):
         if not self.is_exact_instance(BuildCHERIBSD):
             return None
-        return self.config.get_sysroot_path(self.get_crosscompile_target(self.config), False)
+        return self.config.get_sysroot_path(self.crosscompile_target, False)
 
     def __init__(self, config: CheriConfig):
         self.installAsRoot = os.getuid() == 0

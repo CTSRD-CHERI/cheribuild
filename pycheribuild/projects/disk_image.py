@@ -785,7 +785,7 @@ class _BuildMultiArchDiskImage(MultiArchBaseMixin, _BuildDiskImageBase):
 
     @property
     def is_x86(self):
-        tgt = self.get_crosscompile_target(self.config)
+        tgt = self.crosscompile_target
         return tgt is None or tgt == CrossCompileTarget.NATIVE or tgt == CrossCompileTarget.I386
 
     def __init__(self, config: CheriConfig):
@@ -843,7 +843,7 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
 
     @property
     def needs_special_pkg_repo(self):
-        tgt = self.get_crosscompile_target(self.config)
+        tgt = self.crosscompile_target
         return tgt == CrossCompileTarget.MIPS or tgt == CrossCompileTarget.CHERI
 
 class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
