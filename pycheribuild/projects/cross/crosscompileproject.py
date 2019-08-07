@@ -582,9 +582,10 @@ set +x
 source "{cheri_svn}/setup.sh"
 set -x
 export PATH="$PATH:{cherilibs_svn}/tools:{cherilibs_svn}/tools/debug"
-exec beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbench_args}
+exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbench_args}
 """.format(cheri_svn=self.config.cheri_svn_checkout, cherilibs_svn=self.config.cherilibs_svn_checkout,
-           runbench_args=commandline_to_str(runbench_args), basic_args=commandline_to_str(basic_args))
+           runbench_args=commandline_to_str(runbench_args), basic_args=commandline_to_str(basic_args),
+           cheribuild_path=Path(__file__).parent.parent.parent.parent)
         self.runShellScript(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
 
     def process(self):
