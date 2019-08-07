@@ -34,8 +34,8 @@ from ..utils import OSInfo, commandline_to_str
 
 class BuildCheriSim(Project):
     target = "cheri-sim"
-    projectName = "cheri-sim"
-    repository = GitRepository("https://please/set/source/dir/to/ctsrd-svn/cheri/trunk")
+    projectName = "cheri-cpu"
+    repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-cpu")
     defaultInstallDir = Project._installToSDK
     build_in_source_dir = True      # Needs to build in the source dir
     make_kind = MakeCommandKind.GnuMake
@@ -63,20 +63,17 @@ class BuildCheriSim(Project):
         self.runMake("clean", parallel=False, cwd=self.sourceDir)
         return None
 
-    def update(self):
-        pass
-
     def compile(self, **kwargs):
+        if not (self.sourceDir / "cheri/setup.sh").exists():
+            self.fatal("Could not find setup.sh, please set --cheri-sim/source-directory")
         self.runShellScript("source setup.sh && " + commandline_to_str(self.get_make_commandline("sim", parallel=False)),
-                            cwd=self.sourceDir, shell="bash")
+                            cwd=self.sourceDir / "cheri", shell="bash")
         pass
 
     def install(self, **kwargs):
         pass
 
     def process(self):
-        if not (self.sourceDir / "setup.sh").exists():
-            self.fatal("Could not find setup.sh, please set --cheri-sim/source-directory")
         if OSInfo.isUbuntu() and not Path("/usr/lib/x86_64-linux-gnu/libgmp.so.3").exists():
             # BSC needs libgmp.so.3
             self.fatal("libgmp.so.3 is needed to run BSC",
