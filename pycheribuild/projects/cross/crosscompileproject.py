@@ -69,6 +69,9 @@ def get_cheribsd_instance_for_install_dir(config: CheriConfig, project: "CrossCo
 
 def _installDir(config: CheriConfig, project: "CrossCompileProject"):
     assert isinstance(project, CrossCompileMixin)
+    if project.crossInstallDir == CrossInstallDir.COMPILER_RESOURCE_DIR:
+        return getCompilerInfo(config.sdkBinDir / "clang").get_resource_dir()
+
     if project.compiling_for_host():
         if project.crossInstallDir == CrossInstallDir.SDK:
             return config.sdkDir
@@ -90,8 +93,6 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
         return Path(cheribsd_instance.installDir / "opt" / targetName / project.projectName.lower())
     elif project.crossInstallDir == CrossInstallDir.SDK:
         return project.sdkSysroot
-    elif project.crossInstallDir == CrossInstallDir.COMPILER_RESOURCE_DIR:
-        return getCompilerInfo(config.sdkBinDir / "clang").get_resource_dir()
     fatalError("Unknown install dir for", project.projectName)
 
 
