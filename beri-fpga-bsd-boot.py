@@ -1,0 +1,691 @@
+#!/usr/bin/env python3
+# PYTHON_ARGCOMPLETE_OK
+#-
+# Copyright (c) 2017 Alexandre Joannou
+# Copyright (c) 2018 Alex Richardson
+# All rights reserved.
+#
+# This software was developed by SRI International and the University of
+# Cambridge Computer Laboratory under DARPA/AFRL contract FA8750-10-C-0237
+# ("CTSRD"), as part of the DARPA CRASH research programme.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+import argparse
+import re
+import sys
+import string
+import os
+import signal
+import os.path as op
+import tempfile
+import requests
+from subprocess import Popen, PIPE, check_output, check_call, CalledProcessError
+from time import sleep
+from pexpect import *
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+
+##########################
+# Command line arguments #
+##########################
+
+parser = ArgumentParser(
+            prog="beri-fpga-bsd-boot",
+            description='A high level script wrapping berictl for interacting with the BERI FPGA softcore.',
+            formatter_class=ArgumentDefaultsHelpFormatter)
+
+def auto_int (x):
+    return int(x,0)
+
+def default_qemu_path(args):
+    if args.qemu_path:
+        if not op.isfile(result):
+            sys.exit("ERROR: seletect --qemu-path " + args.qemu_path + " does not exist!")
+        return args.qemu_path
+    sdk_bindir = os.getenv("CHERI_SDK")
+    if not op.isfile(op.join(sdk_bindir, "clang")):
+        sdk_bindir = op.join(sdk_bindir, bin)
+    if not op.isfile(op.join(sdk_bindir, "clang")):
+        sys.exit("ERROR: could not infer SDK path for QEMU: Neither $CHERI_SDK/clang nor $CHERI_SDK/bin/clang exist!\n"
+                 "Either set $CHERI_SDK to point to the SDK bindir or pass --qemu-path")
+    cpu = args.jenkins_bitfile or args.jenkins_kernel_cpu_kind
+    if cpu == "mips":
+        suffix = "cheri256"
+    elif cpu == "cheri256":
+        suffix = "cheri256"
+    elif cpu == "cheri128":
+        suffix = "cheri128"
+    else:
+        sys.exit("ERROR: could not infer CPU for QEMU path! Pass --qemu-path")
+    result = op.join(sdk_bindir, "qemu-system-" + suffix)
+    if not op.isfile(result):
+        sys.exit("ERROR: Inferred QEMU path " + result + " does not exist! Pass --qemu-path")
+    return result
+
+
+# general arguments
+parser.add_argument('-b','--berictl', type=str, default="berictl", metavar='BERICTL',
+                    help="Specify BERICTL as the berictl utility.")
+parser.add_argument('-c','--cable-id', type=str, default="1", metavar='CABLEID',
+                    help="Specify CABLEID as the -c argument to berictl.")
+parser.add_argument('--bitfile', type=str, default="DE4_BERI.sof", metavar='BITFILE',
+                    help="Specify BITFILE as the argument to loadsof in berictl.")
+parser.add_argument('--kernel-img', type=str, default="bsd.bz2", metavar='KIMAGE',
+                    help="Specify KIMAGE as the file argument to loadbin in berictl.")
+parser.add_argument('--kernel-addr', type=auto_int, default="0x100000", metavar='KADDR',
+                    help="Specify KADDR as the address argument to loadbin in berictl.")
+parser.add_argument("--use-qemu-instead-of-fpga", action='store_true',
+                    help="Run boot/runbench with QEMU instead of berictl")
+parser.add_argument('--qemu-path', type=str, metavar='QEMU_PATH',
+                    help="Path to QEMU (only used if --use-qemu-instead-of-fpga is passed). If not set will guess based"
+                         "on the value of the $CHERI_SDK environment variable and the cpu kind.")
+parser.add_argument('--qemu-ssh-port', type=auto_int, default="12345", metavar='PORT',
+                    help="The localhost port that is used for ssh connections when running with QEMU.")
+parser.add_argument('--network-interface', type=str,
+                    help="The network interface that is used on the board (default is atse0 for fpga and le0 for QEMU)")
+jenkins_cpus = ["mips", "cheri128", "cheri256"]
+jenkins_kernels = ["mfs-root-singleuser", "mfs-root-net", "mfs-root-smoketest", "mfs-root-benchmark-jenkins_bluehive", "mfs-root-jenkins_bluehive", "usbroot", "usbroot-benchmark", "nfsroot", "sdroot"]
+parser.add_argument('--jenkins-bitfile', type=str, choices=jenkins_cpus,
+                    help="Download and flash latest jenkins bitfile for CPU")
+parser.add_argument('--jenkins-bitfile-job-number', type=str, default="lastSuccessfulBuild",
+                    help="The job number to use when fetching the bitfile from jenkins (defaults to last successful build)")
+parser.add_argument('--jenkins-kernel', type=str, choices=jenkins_kernels,
+                    help="Download and boot latest jenkins TYPE kernel")
+parser.add_argument('--jenkins-kernel-job-number', type=str, default="lastSuccessfulBuild",
+                    help="The job number to use when fetching the kernel from jenkins (defaults to last successful build)")
+parser.add_argument('--jenkins-kernel-cpu-kind', type=str, choices=jenkins_cpus,
+                    help="Which CPU the BITFILE is. Only needed if --jenkins-kernel is passed without --jenkins-bitfile")
+parser.add_argument('--jenkins-user', default='readonly', help='The username for jenkins authentication')
+parser.add_argument('--jenkins-password', default='Aiquaith3ooh', help='The password for jenkins authentication')
+parser.add_argument('-v', '--verbose', action='count', default=0,
+        help="Increase verbosity level by adding more \"v\".")
+subcmds = parser.add_subparsers(dest='subcmd',metavar='sub-command',help="Individual sub-command help available by invoking it with -h or --help.")
+subcmds.required = True
+
+bitfile_only = subcmds.add_parser('load-bitfile', help="Load the bitfile onto the FPGA.",
+                                  formatter_class=ArgumentDefaultsHelpFormatter)
+
+# bootonly
+bootonly = subcmds.add_parser('bootonly', help="Boot KIMAGE on BITFILE.",
+                              formatter_class=ArgumentDefaultsHelpFormatter)
+bootonly.add_argument('-i', '--interact', action='store_true', default=False,
+                    help="Get an interactive session once logged in.")
+
+# runbench
+runbench = subcmds.add_parser('runbench', help="Boot KIMAGE on BITFILE, scp BENCHDIR over, run SCRIPT and scp OUTPATH back.",
+                              formatter_class=ArgumentDefaultsHelpFormatter)
+runbench.add_argument('benchdir', type=str, metavar='BENCHDIR',
+                    help="The benchmark directory to be copied and run (must contain SCRIPT).")
+runbench.add_argument('--timeout', type=int, metavar='TIMEOUT', default="10000",
+                    help="The TIMEOUT in seconds to specify when running the benchmarks.")
+runbench.add_argument('-s', '--script-name', type=str, metavar='SCRIPT', default="run_jenkins-bluehive.sh",
+                    help="The name SCRIPT of the script to run from whithin BENCHDIR once copied onto the board.")
+runbench.add_argument('-a', '--script-args', type=str, metavar='SCRIPTARGS', default="",
+                    help="The arguments to pass to SCRIPT (default: \"%(default)s\"). KNOWN ISSUE: this breaks when the provided string starts with '-' followed by an option that is also an option to this script. To work around, prepend a space ' ' to your argument string.")
+runbench.add_argument('-o', '--out-path', type=str, metavar='OUTPATH', default="*results*",
+                    help="The path OUTPATH (relative to BENCHDIR) to the output file or directory generated by the benchmarks, to copy out of the board.")
+runbench.add_argument('--extra-output-files', nargs=argparse.ZERO_OR_MORE, metavar= 'FILES',
+                      help="Additional files to copy out of the board.")
+runbench.add_argument('-k', '--ssh-key', type=str, metavar='SSHKEY', default=op.join(op.expanduser("~"),".ssh","id_rsa"),
+                    help="The ssh private key SSHKEY to use for ssh connection with the board.")
+runbench.add_argument('-u', '--user', type=str, metavar='USER', default="ctsrd",
+                    help="The user name USER to use for ssh connection with the board.")
+runbench.add_argument('-t', '--target', type=str, metavar='TGT', default="de4",
+                    help="The name or IP address TGT of the board to use for ssh connection.")
+runbench.add_argument('--skip-boot', action='store_true', default=False,
+                    help="Assume that the FPGA has booted already and just attach to the console instead of loading the"
+                         "bitfile and the kernel.")
+runbench.add_argument('--skip-copy', action='store_true', default=False,
+                    help="Assume that benchmark files are already on the FPGA -> skip the scp phase.")
+runbench.add_argument('-i', '--interact', action='store_true', default=False,
+                    help="Get an interactive session once done running SCRIPT and outputs are transfered.")
+
+# console
+console = subcmds.add_parser('console', help="Run \"BERICTL console\". Does not attempt to loadsof or loadbin.")
+
+# bash completion:
+# activate-global-python-argcomplete --user &&  source ~/.bash_completion.d/python-argcomplete.sh
+try:
+    import argcomplete
+    argcomplete.autocomplete(parser)
+except ImportError:
+    pass
+# parse the arguments
+args = parser.parse_args()
+
+################
+# Output utils #
+################
+
+# pretty printer
+
+cred     = '\x1b[31m'
+cgreen   = '\x1b[32m'
+cyellow  = '\x1b[33m'
+cblue    = '\x1b[34m'
+cpurple  = '\x1b[35m'
+creset   = '\x1b[0m'
+
+error_lvl   = 0
+info_lvl    = 1
+phase_lvl   = 1
+hostcmd_lvl = 2
+stdout_lvl  = 3
+
+error_col   = cred
+info_col    = cpurple
+phase_col   = cyellow
+hostcmd_col = cblue
+
+class PP(string.Formatter):
+    def format_field (self,value,spec):
+        do_fmt = None
+        if spec.startswith('cr_'):
+            do_fmt = (cred,3)
+        elif spec.startswith('cg_'):
+            do_fmt = (cgreen,3)
+        elif spec.startswith('cb_'):
+            do_fmt = (cblue,3)
+        elif spec.startswith('cy_'):
+            do_fmt = (cyellow,3)
+        elif spec.startswith('cp_'):
+            do_fmt = (cpurple,3)
+        elif spec.startswith('error_'):
+            do_fmt = (error_col,6)
+        elif spec.startswith('info_'):
+            do_fmt = (info_col,5)
+        elif spec.startswith('phase_'):
+            do_fmt = (phase_col,6)
+        elif spec.startswith('hostcmd_'):
+            do_fmt = (hostcmd_col,8)
+        if do_fmt:
+            return "{}{}{}".format(do_fmt[0],super(PP,self).format(value,spec[do_fmt[1]:]),creset)
+        else:
+            return super(PP,self).format(value,spec)
+
+errorprint   = lambda msg: verboseprint(error_lvl, PP().format("{:error_}",msg))
+infoprint    = lambda msg: verboseprint(info_lvl, PP().format("{:info_}",msg))
+phaseprint   = lambda msg: verboseprint(phase_lvl, PP().format("{:phase_}",msg))
+hostcmdprint = lambda msg: verboseprint(hostcmd_lvl, PP().format("{:hostcmd_}",msg))
+
+logf = None
+def verboseprint(lvl,msg):
+    if args.verbose >= lvl:
+        print(msg)
+if args.verbose >= stdout_lvl:
+    logf = sys.stdout
+
+def die(message):
+    sys.exit(PP().format("{:red_}",message))
+
+#################
+# Pexpect utils #
+#################
+
+def cleanup (cable_id=args.cable_id):
+    if args.use_qemu_instead_of_fpga:
+        return  # no need to cleanup anything
+    # get pid of nios2-terminal instance to kill
+    p0 = Popen(["ps","-aux"],stdout=PIPE)
+    try:
+        p1 = Popen(["grep","nios2-terminal.*{:s}.*".format(str(cable_id))],stdin=p0.stdout,stdout=PIPE)
+        niosterm2pid = int(check_output(["grep","-v","grep"],stdin=p1.stdout).split()[1])
+        # kill the nios2-terminal instance
+        os.kill(niosterm2pid, signal.SIGKILL)
+    except CalledProcessError as e:
+        if e.returncode == 1:
+            infoprint("no nios2-terminal instance found ===> nothing to kill")
+        else:
+            errorprint("failed to kill nios2-terminal instance in cleanup()")
+
+class MySpawn(spawn):
+    def checked_expect(self, step, pat, timeout=10, failstr=None):
+        try:
+            if not failstr:
+                return self.expect(pat,timeout)
+            else:
+                idx = self.expect([pat,failstr],timeout)
+                if idx == 1:
+                    verboseprint(error_lvl,PP().format("{:error_}{:phase_}{:error_}",
+                        "Phase ",step," - Failure detected"))
+                    cleanup()
+                    exit(1)
+                else:
+                    return idx
+        except EOF:
+            verboseprint(error_lvl,PP().format("{:error_}{:phase_}{:error_}",
+                "Phase ",step," - EOF encountered"))
+            cleanup()
+            exit(1)
+        except TIMEOUT:
+            verboseprint(error_lvl,PP().format("{:error_}{:phase_}{:error_}",
+                "Phase ",step," - TIMEOUT ({:d} sec.)".format(timeout)))
+            streamtrace_berictl(args)
+            cleanup()
+            exit(1)
+
+    def interact(self, escape_character=chr(29),
+            input_filter=None, output_filter=None):
+        print("Interacting with console")
+        # otherwise we get the output twice and weird bytes/str errors because __interact doesn't decode ...
+        old_log = self.logfile
+        self.logfile = None
+        super().interact(escape_character=escape_character, input_filter=input_filter, output_filter=output_filter)
+        self.logfile = old_log
+
+
+def get_console (cable_id=args.cable_id,berictl=args.berictl):
+    cmd = [berictl]
+    cmd += ['-c',str(cable_id)]
+    cmd += ['-j','console']
+    hostcmdprint(" ".join(cmd))
+    # if we specify encoding=utf-8 then spawn only accepts bytes...
+    c = MySpawn(" ".join(cmd), encoding="utf-8", logfile=logf, echo=False)
+    return c
+
+def loadsof (bitfile=args.bitfile,cable_id=args.cable_id,berictl=args.berictl,timeout=30):
+    if not os.path.isfile(bitfile):
+        sys.exit("Bitfile doesn't exist: " + bitfile)
+    if args.use_qemu_instead_of_fpga:
+        return
+    cmd = [berictl]
+    cmd += ['-c',str(cable_id)]
+    cmd += ['-j','loadsof']
+    if bitfile.endswith('.bz2'):
+        cmd += ['-z']
+    cmd += [bitfile]
+    hostcmdprint(" ".join(cmd))
+    ldsof = MySpawn(" ".join(cmd), encoding="utf-8", logfile=logf, echo=False)
+    ldsof.checked_expect("loading bitfile","Programmer was successful. 0 errors", timeout)
+    ldsof.wait()
+    ldsof.close()
+
+def loadbin (img=args.kernel_img,addr=args.kernel_addr,cable_id=args.cable_id,berictl=args.berictl):
+    if not os.path.isfile(img):
+        sys.exit("IMAGE doesn't exist: " + img)
+    if args.use_qemu_instead_of_fpga:
+        return
+    cmd = [berictl]
+    cmd += ['-c',str(cable_id)]
+    cmd += ['-j','loadbin']
+    if img.endswith('.bz2'):
+        cmd += ['-z']
+    cmd += [img,hex(addr)]
+    hostcmdprint(" ".join(cmd))
+    ldbin = MySpawn(" ".join(cmd), encoding="utf-8", logfile=logf, echo=False)
+    ldbin.checked_expect("loading kernel image","100% of *", 3000)
+    ldbin.wait()
+    ldbin.close()
+
+def boot_bsd_berictl(args):
+    # trigger boot
+    cmd = [args.berictl]
+    cmd += ['-c',str(args.cable_id)]
+    cmd += ['-j','boot']
+    hostcmdprint(" ".join(cmd))
+    boot = MySpawn(" ".join(cmd), encoding="utf-8", logfile=logf, echo=False)
+    boot.checked_expect("booting",EOF)
+    boot.wait()
+    boot.close()
+    # check for reaching of userspace
+    console = get_console(args.cable_id,args.berictl)
+    return console
+
+def traceall (cable_id=args.cable_id,berictl=args.berictl):
+    cmd = [berictl]
+    cmd += ['-c',str(cable_id)]
+    cmd += ['-j','settracefilter']
+    hostcmdprint(" ".join(cmd))
+    ldbin = MySpawn(" ".join(cmd), encoding="utf-8", logfile=logf, echo=False)
+    ldbin.checked_expect("Trace Mask",EOF)
+    ldbin.wait()
+    ldbin.close()
+
+def streamtrace_berictl(args):
+    # trigger streamtrace
+    cmd = [args.berictl]
+    cmd += ['-c',str(args.cable_id)]
+    cmd += ['-j','streamtrace']
+    hostcmdprint(" ".join(cmd))
+    boot = MySpawn(" ".join(cmd), encoding="utf-8", logfile=logf, echo=False)
+    boot.checked_expect("Leaving processor paused",EOF)
+    boot.wait()
+    boot.close()
+
+def boot_bsd_qemu(disk_image, kernel, args):
+    qemu = default_qemu_path(args)
+
+    # if needed extract the kernel/image:
+    print(kernel)
+    print(disk_image)
+    if kernel.endswith(".bz2"):
+        check_call(["bunzip2", kernel])
+        check_call(["ls", "-la", op.dirname(kernel)])
+        kernel = os.path.splitext(kernel)[0]  # strip .xz
+    if disk_image.endswith(".xz"):
+        check_call(["xz", "-d", disk_image])
+        check_call(["ls", "-la", op.dirname(disk_image)])
+        disk_image = os.path.splitext(disk_image)[0]  # strip .xz
+    # For booting QEMU we (ab)use the bitfile as the QEMU kernel and the FPGA kernel image as the disk image
+
+    cmd = [qemu, "-M", "malta", "-kernel", kernel, "-m", "2048", "-nographic", "-hda", disk_image,
+           # Add the necessary flags to allow connecting to QEMU via ssh
+           # TODO: smb=/foo/bar?
+           "-net", "nic", "-net", "user,id=net0,ipv6=off,hostfwd=tcp::" + str(args.qemu_ssh_port) + "-:22"]
+    # TODO: ssh host forwarding
+    c = MySpawn(" ".join(cmd), encoding="utf-8", logfile=logf, echo=False)
+    return c
+
+
+def boot_bsd(bitfile, kernel_img, args):
+    if args.use_qemu_instead_of_fpga:
+        console = boot_bsd_qemu(bitfile, kernel_img, args)
+    else:
+        # bitfile and image are not needed here since they have already been loaded
+        console = boot_bsd_berictl(args)
+    # console.checked_expect("booting - reaching init",'start_init: trying /sbin/init',300)
+    # idx = console.checked_expect("booting - key check 1",
+    #     ['Overwrite (y/n)?', 'machdep.unaligned', 'atse0: '], 300)
+    # if idx == 0:
+    #     console.sendline('n')
+    # log in
+    STOPPED = "Stopped at"
+    PANIC = "panic: trap"
+    PANIC_KDB = "KDB: enter: panic"
+    idx = console.checked_expect("booting - login", [
+           'login:',
+           'Enter full pathname of shell or RETURN for /bin/sh:',
+           'wait for /bin/sh on /etc/rc failed', STOPPED, PANIC, PANIC_KDB,
+           'exec /bin/sh'],
+           1800)
+    if idx == 0:
+        console.sendline('root')
+    elif idx == 1:
+        console.sendline()
+    elif idx in (2, 3, 4, 5):
+        die("Failed to boot!")
+    console.sendline('')
+    console.expect_exact('#')
+    # create the ctsrd user if it doesn't exist yet
+    console.sendline("if ! pw user show ctsrd -q > /dev/null; then pw useradd -n ctsrd ctsrd-test-user -s /bin/sh -m -w none && mkdir -p /home/ctsrd && cp -a /root/.ssh /home/ctsrd/.ssh && chown -R ctsrd /home/ctsrd/.ssh && echo \"Created user ctsrd\"; fi")
+    console.expect_exact('#')
+    return console
+
+def do_scp (src,dst,key,timeout=600):
+    cmd = ['scp']
+    # For some reason jenkins no longer likes the de4 bluehive host keys so to work around this we
+    # completely disable host key checking by setting the known hosts file to /dev/null
+    # See https://dustymabe.com/2012/01/09/hi-planet---ssh-disable-checking-host-key-against-known_hosts-file./
+    cmd += ['-o','StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null', '-o', 'BatchMode=yes']
+    cmd += ['-i',key]
+    cmd += ['-r']
+    cmd += [src, dst]
+    hostcmdprint(" ".join(cmd))
+    boot = MySpawn(" ".join(cmd), encoding="utf-8", logfile=logf, echo=False)
+    boot.checked_expect("transfering files - scp",EOF,timeout)
+    boot.wait()
+    boot.close()
+
+def get_network_iface(args):
+    result = args.network_interface
+    if result:
+        return result
+    if args.use_qemu_instead_of_fpga:
+        return "le0"
+    else:
+        return "atse0"
+
+def do_network_on(console, args, timeout=300):
+    ifc = get_network_iface(args)
+    console.sendline('/usr/sbin/devctl enable {}'.format(ifc))
+    console.expect_exact('{}: bpf attached'.format(ifc))
+    console.expect_exact('#')
+    console.sendline('/sbin/ifconfig {} up'.format(ifc))
+    console.expect_exact('{}: link state changed to UP'.format(ifc))
+    console.sendline('/sbin/ifconfig {} polling'.format(ifc))
+    console.expect_exact('#')
+    console.sendline('/sbin/dhclient {}'.format(ifc))
+    console.checked_expect("turning network on","bound to .* -- renewal in .*",timeout)
+
+def do_network_off(console, args):
+    ifc = get_network_iface(args)
+    console.sendline('/sbin/ifconfig {} down'.format(ifc))
+    console.expect_exact('#')
+#    console.sendline('killall dhclient')
+#    console.expect_exact('#')
+    console.sendline('/usr/sbin/devctl disable {}'.format(ifc))
+    console.expect_exact('{}: detached'.format(ifc))
+    console.expect_exact('#')
+
+def get_board_ip_address(console: MySpawn, args):
+    ifc = get_network_iface(args)
+    console.sendline('ifconfig {}'.format(ifc))
+    idx = console.expect([
+        re.compile("inet (.+) netmask "),
+        # error cases:
+        TIMEOUT, "interface " + ifc + " does not exist"], timeout=10)
+    if idx == 0:
+        print(console.match)
+        return console.match.group(1)
+    console.expect_exact('#')
+
+
+def do_runbench(console,tgtdir,script,scriptargs,failstr="FAILED RUNNING BENCHMARKS",timeout=None):
+    if timeout is None:
+        timeout = args.timeout
+
+    badcmd = "/this/command/does/not/exist"
+    runbenchcmd = './{} {} || {}'.format(script, scriptargs, badcmd)
+    console.sendline()
+    console.expect_exact('#')
+    console.sendline('cd {} && ls -la'.format(tgtdir))
+    console.expect_exact('#')
+    # Ensure that we don't use lazy binding for CheriABI since MIPS doesn't support it
+    # This can skew the results since we have faster startup on CHERI but slower runtime
+    # due to trampolines
+    console.sendline('export LD_CHERI_BIND_NOW=1')
+    console.expect_exact('#')
+    console.sendline('export LD_BIND_NOW=1')
+    console.expect_exact('#')
+    console.sendline(runbenchcmd)
+    panicstr = "KDB: enter: "
+    "/this/command/does/not/exist: Command not found."
+    idx = console.checked_expect("running benchmark", ["DONE RUNNING BENCHMARKS", ": Command not found.", badcmd + ": not found", failstr, panicstr], timeout)
+    if idx != 0:
+        print("Failed to run benchmark")
+
+
+def download_file(url, outfile):
+    with open(outfile, 'wb') as f:
+        print("Downloading", url)
+        resp = requests.get(url, verify=False, auth=(args.jenkins_user, args.jenkins_password))
+        f.write(resp.content)
+        f.flush()
+
+def common_boot (kernel_img=args.kernel_img,addr=args.kernel_addr,bitfile=args.bitfile,cable_id=args.cable_id,
+                 berictl=args.berictl, jenkins_bitfile=args.jenkins_bitfile, jenkins_kernel=args.jenkins_kernel,
+                 stop_after_bitfile=False):
+
+    bitfile_job_nr = args.jenkins_bitfile_job_number
+    kernel_job_nr = args.jenkins_kernel_job_number
+
+    if jenkins_kernel or jenkins_bitfile:
+        cpu = jenkins_bitfile or args.jenkins_kernel_cpu_kind
+        # FIXME
+        kernel_template = "https://ctsrd-build.cl.cam.ac.uk/job/CheriBSD-allkernels-multi/BASE_ABI={ABI},CPU={CPU}," \
+                          "ISA=vanilla,label=freebsd/{kernel_job_nr}/artifact/ctsrd/cheribsd/trunk/bsdtools/" \
+                          "{BSD_TYPE}-{KERNEL_CPU}-de4-{KERNEL_TYPE}-kernel.bz2"
+        bitfile_template = "https://ctsrd-build.cl.cam.ac.uk/job/CPU1-DE4-SYNTH/CPU={DE4_CPU},FLAGS=vanilla,FPU=noFPU," \
+                           "TSTRUCT=0_256,cheri_dimm=1GB,label=altera/{bitfile_job_nr}/artifact/ctsrd/cheri/trunk/boards/" \
+                           "terasic_de4/output_files/DE4_BERI.sof"
+        if args.use_qemu_instead_of_fpga:
+            if args.jenkins_bitfile:
+                die("--jenkins-bitfile is invalid with QEMU, set --jenkins-kernel-cpu instead!")
+            if not jenkins_kernel:
+                die("When fetching from jenkins with QEMU you need to set --jenkins-kernel")
+            kernel_template = "https://ctsrd-build.cl.cam.ac.uk/job/CheriBSD-allkernels-multi/BASE_ABI={ABI},CPU={CPU}," \
+                              "ISA=vanilla,label=freebsd/{kernel_job_nr}/artifact/ctsrd/cheribsd/trunk/bsdtools/" \
+                              "{BSD_TYPE}-{KERNEL_CPU}-malta64-kernel.bz2"
+            image_template = "https://ctsrd-build.cl.cam.ac.uk/job/CheriBSD-allkernels-multi/BASE_ABI={ABI},CPU={CPU}," \
+                              "ISA=vanilla,label=freebsd/{kernel_job_nr}/artifact/ctsrd/cheribsd/trunk/bsdtools/" \
+                              "{BSD_TYPE}-{IMAGE_NAME}.img.xz"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            if not cpu:
+                die("Cannot determine CPU for jenkins kernel download. Set --jenkins-kernel-cpu-kind or --jenkins-bitfile")
+            if cpu == "mips":
+                bsd_type = "freebsd"
+                kernel_cpu = "beri"
+            elif cpu == "cheri128":
+                bsd_type = "cheribsd128"
+                kernel_cpu = "cheri128"
+            else:
+                bsd_type = "cheribsd"
+                kernel_cpu = "cheri"
+            if jenkins_kernel:
+                outfile = op.join(tmpdir, "kernel.bz2")
+                url = kernel_template.format(ABI="n64", CPU=cpu, KERNEL_CPU=kernel_cpu, KERNEL_TYPE=jenkins_kernel,
+                                             BSD_TYPE=bsd_type, kernel_job_nr=kernel_job_nr)
+                download_file(url, outfile)
+                kernel_img = outfile
+                if os.stat(outfile).st_size < 100000:
+                    sys.exit("Downloaded an invalid kernel file. Maybe the download URL is no longer valid: " + url)
+            if args.use_qemu_instead_of_fpga:
+                if jenkins_kernel:
+                    # image name is the part of jenkins-kernel after the last -
+                    image_name = jenkins_kernel[jenkins_kernel.rfind("-") + 1:]
+                url = image_template.format(ABI="n64", CPU=cpu, KERNEL_CPU=kernel_cpu, KERNEL_TYPE=jenkins_kernel,
+                                            BSD_TYPE=bsd_type, IMAGE_NAME=image_name, kernel_job_nr=kernel_job_nr)
+                outfile = op.join(tmpdir, image_name + ".img.xz")
+                download_file(url, outfile)
+                if os.stat(outfile).st_size < 100000:
+                    sys.exit("Downloaded an invalid disk image. Maybe the download URL is no longer valid: " + url)
+                bitfile = outfile  # Hack use bitfile as the disk image
+            elif jenkins_bitfile:
+                assert cpu
+                de4_cpu_name = "cheri256" if cpu == "mips" else cpu
+                outfile = op.join(tmpdir, "DE4_" + de4_cpu_name + ".sof")
+                url = bitfile_template.format(DE4_CPU=de4_cpu_name, bitfile_job_nr=bitfile_job_nr)
+                download_file(url, outfile)
+                if os.stat(outfile).st_size < 100000:
+                    sys.exit("Downloaded an invalid bitfile. Maybe the download URL is no longer valid: " + url)
+                bitfile = outfile
+            # Do the real boot now (hack to keep the rest of the function inside this with statement)
+            return common_boot(kernel_img=kernel_img, addr=addr, bitfile=bitfile, cable_id=cable_id, berictl=berictl,
+                               jenkins_kernel=None, jenkins_bitfile=None)
+
+    # Loading bitfile onto the board
+    phaseprint("loading bitfile")
+    loadsof(bitfile,cable_id,berictl,160)
+    if stop_after_bitfile:
+        return None
+    # Loading kernel image onto the board
+    phaseprint("loading kernel image")
+    loadbin(kernel_img,addr,cable_id,berictl)
+    traceall(cable_id,berictl)
+    # Booting BSD
+    phaseprint("booting")
+    return boot_bsd(bitfile, kernel_img, args)
+
+#################
+# main function #
+#################
+
+def main():
+    ############
+    # bitfile #
+    ############
+    if args.subcmd == "load-bitfile":
+        # always print what's going on when running load-bitfile
+        args.verbose = 3
+        common_boot(stop_after_bitfile=True)
+
+    ############
+    # bootonly #
+    ############
+    if args.subcmd == "bootonly":
+        console = common_boot()
+        if args.interact:
+            console.interact()
+        console.close()
+
+    ############
+    # runbench #
+    ############
+    elif args.subcmd == "runbench":
+        if not op.exists(args.benchdir):
+            die("Benchmark dir does not exist: " + str(args.benchdir))
+        if args.skip_boot:
+            console = get_console()
+            phaseprint("turn network on")
+            do_network_off(console, args)
+            do_network_on(console, args)
+        else:
+            console = common_boot()
+            print("Sleeping for 20 seconds to ensure FPGA is ready")
+            sleep(20)
+        # Try to find out the board ip address (since the hostname assignment is flaky)
+        board_ip = get_board_ip_address(console, args)
+        print("inferred board IP as:", board_ip)
+        if board_ip is not None:
+            args.target = board_ip
+        tgtfs = op.join("/","tmp","benchdir")
+        tgtdir = op.join(tgtfs,op.basename(args.benchdir))
+        print("Will copy", args.benchdir, "to", tgtfs)
+        tgtout = op.join(tgtdir,args.out_path)
+        phaseprint("transfer benchmark")
+        if not args.skip_copy:
+            do_scp(args.benchdir,"{}@{}:{}".format(args.user,args.target,tgtfs),args.ssh_key,1200)
+        phaseprint("turn network off")
+        do_network_off(console, args)
+        phaseprint("running benchmark")
+        do_runbench(console,tgtdir,args.script_name,args.script_args)
+        phaseprint("turn network on")
+        do_network_on(console, args)
+        phaseprint("transfer benchmark result")
+        do_scp("{}@{}:{}".format(args.user,args.target,tgtout),os.getcwd(),args.ssh_key)
+        # Allow copying more than one file from the FPGA:
+        if args.extra_output_files:
+            for extra_file in args.extra_output_files:
+                do_scp("{}@{}:{}".format(args.user,args.target,extra_file),os.getcwd(),args.ssh_key)
+        if args.interact:
+            console.interact()
+        console.close()
+
+    ###########
+    # console #
+    ###########
+    elif args.subcmd == "console":
+        console = get_console()
+        console.interact()
+        console.close()
+
+    #######
+    # end #
+    #######
+    phaseprint("DONE")
+    exit(0)
+
+if __name__ == "__main__":
+    try:
+        main()
+    finally:
+        cleanup()
