@@ -57,6 +57,14 @@ class SNMalloc(CrossCompileCMakeProject):
 
         # XXX Make this set the policy somehow?
         cls.quarantine       = cls.addBoolOption("quarantine", help="Quarantine deallocations")
+
+        cls.qpathresh        = cls.addConfigOption("qpathresh", kind=int,
+                                                   help="Quarantine physical memory per allocator threshold")
+        cls.qpacthresh       = cls.addConfigOption("qpacthresh",  kind=int,
+                                                   help="Quarantine chunk per allocator threshold")
+        cls.qcsc             = cls.addConfigOption("qcsc", kind=int,
+                                                   help="Quarantine chunk size class")
+
         cls.revoke           = cls.addBoolOption("revoke", help="Revoke quarantine before reusing")
         cls.revoke_dry_run   = cls.addBoolOption("revoke-dry-run", help="Do everything but caprevoke()")
         cls.revoke_paranoia  = cls.addBoolOption("revoke-paranoia", help="Double-check the revoker")
@@ -88,6 +96,15 @@ class SNMalloc(CrossCompileCMakeProject):
         self.COMMON_FLAGS.append("-DSNMALLOC_REVOKE_DRY_RUN=%d"     % self.revoke_dry_run  )
         self.COMMON_FLAGS.append("-DSNMALLOC_REVOKE_PARANOIA=%d"    % self.revoke_paranoia )
         self.COMMON_FLAGS.append("-DSNMALLOC_REVOKE_CHATTY=%d"      % self.revoke_verbose  )
+
+        if self.qpathresh is not None:
+            self.COMMON_FLAGS.append("-DSNMALLOC_QUARANTINE_PER_ALLOC_THRESHOLD=%d"       % self.qpathresh)
+
+        if self.qpacthresh is not None:
+            self.COMMON_FLAGS.append("-DSNMALLOC_QUARANTINE_PER_ALLOC_CHUNK_THRESHOLD=%d" % self.qpacthresh)
+
+        if self.qcsc is not None:
+            self.COMMON_FLAGS.append("-DSNMALLOC_QUARANTINE_CHUNK_SIZECLASS=%d"           % self.qcsc)
 
         if not self.debug:
             self.COMMON_FLAGS.append("-DNDEBUG")
