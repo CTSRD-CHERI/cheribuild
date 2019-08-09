@@ -67,6 +67,8 @@ def freebsd_install_dir(config: CheriConfig, project: "BuildFreeBSD"):
     assert isinstance(project, BuildFreeBSD)
     target = project.get_crosscompile_target(config)
     if target == CrossCompileTarget.MIPS:
+        if config.mips_float_abi == MipsFloatAbi.HARD:
+            return config.outputRoot / "freebsd-mipshf"
         return config.outputRoot / "freebsd-mips"
     elif target == CrossCompileTarget.NATIVE:
         return config.outputRoot / "freebsd-x86"
@@ -84,6 +86,8 @@ def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
     if project.compiling_for_cheri():
         return config.outputRoot / ("rootfs" + config.cheri_bits_and_abi_str)
     elif project.compiling_for_mips():
+        if config.mips_float_abi == MipsFloatAbi.HARD:
+            return config.outputRoot / "rootfs-mipshf"
         return config.outputRoot / "rootfs-mips"
     else:
         assert project.compiling_for_host()
@@ -101,6 +105,8 @@ def cheribsd_minimal_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
     if project.compiling_for_cheri():
         return config.outputRoot / ("rootfs-minimal" + config.cheri_bits_and_abi_str)
     elif project.compiling_for_mips():
+        if config.mips_float_abi == MipsFloatAbi.HARD:
+            return config.outputRoot / "rootfs-minimal-mipshf"
         return config.outputRoot / "rootfs-minimal-mips"
     else:
         assert project.compiling_for_host()

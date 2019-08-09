@@ -368,6 +368,8 @@ class CheriConfig(object):
             result += "-" + str(self.cheri_cap_table_abi)
         if self.subobject_bounds is not None and self.subobject_bounds != self.DEFAULT_SUBOBJECT_BOUNDS:
             result += "-" + str(self.subobject_bounds)
+        if self.mips_float_abi == MipsFloatAbi.HARD:
+            result += "-hardfloat"
         return result
 
     @property
@@ -390,6 +392,8 @@ class CheriConfig(object):
         if cross_compile_target == CrossCompileTarget.MIPS:
             if use_hybrid_sysroot or self.use_hybrid_sysroot_for_mips:
                 return self.cheriSysrootDir
+            if self.mips_float_abi == MipsFloatAbi.HARD:
+                return self.sdkDir / "sysroot-mipshf"
             return self.sdkDir / "sysroot-mips"
         elif cross_compile_target == CrossCompileTarget.CHERI:
             return self.cheriSysrootDir

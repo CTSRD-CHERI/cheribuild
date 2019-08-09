@@ -38,6 +38,7 @@ from .cross.multiarchmixin import MultiArchBaseMixin
 from .cross.gdb import BuildGDB
 from .cross.cheribsd import *
 from ..config.loader import ComputedDefaultValue
+from ..config.chericonfig import MipsFloatAbi
 from .project import *
 from ..utils import *
 from ..mtree import MtreeFile
@@ -877,6 +878,14 @@ class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
     def needs_special_pkg_repo(self):
         return True
 
+def _default_freebsd_disk_image_name(config: CheriConfig, project: MultiArchBaseMixin):
+        suffix = cls._crossCompileTarget.value if cls._crossCompileTarget else "<TARGET>"
+        if cls.compiling_for_mips():
+            if config.mips_float_abi == MipsFloatAbi.HARD:
+                suffix += "-hardfloat"
+        return config.outputRoot / ("freebsd-" + suffix + ".img")
+
+
 class BuildFreeBSDImage(_BuildMultiArchDiskImage):
     target = "disk-image-freebsd"
     _source_class = BuildFreeBSD
@@ -887,8 +896,7 @@ class BuildFreeBSDImage(_BuildMultiArchDiskImage):
         suffix = cls._crossCompileTarget.value if cls._crossCompileTarget else "<TARGET>"
         super().setupConfigOptions(defaultHostname="qemu-" + suffix + "-" + hostUsername, **kwargs)
         defaultDiskImagePath = ComputedDefaultValue(
-                function=lambda config, project: config.outputRoot / ("freebsd-" + suffix + ".img"),
-                asString="$OUTPUT_ROOT/freebsd-" + suffix + " .img")
+                function=_default_freebsd_disk_image_name, asString="$OUTPUT_ROOT/freebsd-" + suffix + " .img")
         cls.diskImagePath = cls.addPathOption("path", default=defaultDiskImagePath, showHelp=True,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image")
         cls.disableTMPFS = cls._crossCompileTarget == CrossCompileTarget.MIPS  # MALTA64 doesn't include tmpfs

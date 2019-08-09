@@ -46,7 +46,7 @@ from pathlib import Path
 from copy import deepcopy
 
 from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase
-from ..config.chericonfig import CheriConfig, CrossCompileTarget
+from ..config.chericonfig import CheriConfig, CrossCompileTarget, MipsFloatAbi
 from ..targets import Target, MultiArchTarget, MultiArchTargetAlias, targetManager
 from ..filesystemutils import FileSystemUtils
 from ..utils import *
@@ -1071,6 +1071,8 @@ class Project(SimpleProject):
             result = "-" + config.cheri_bits_and_abi_str
         elif target == CrossCompileTarget.MIPS and self.mips_build_hybrid:
             result = "-" + target.value + "-hybrid" + config.cheri_bits_and_abi_str
+            if config.mips_float_abi == MipsFloatAbi.HARD:
+                result += "-hardfloat"
         else:
             result = "-" + target.value
         if config.cross_target_suffix:
