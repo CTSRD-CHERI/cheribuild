@@ -47,6 +47,7 @@ class SNMalloc(CrossCompileCMakeProject):
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
 
+        cls.just_so          = cls.addBoolOption("just-so", help="Just build the .so shim")
         cls.debug            = cls.addBoolOption("debug", help="Turn on debugging features")
         cls.stats            = cls.addBoolOption("stats", help="Turn on statistics tracking")
 
@@ -110,6 +111,12 @@ class SNMalloc(CrossCompileCMakeProject):
 
         if not self.debug:
             self.COMMON_FLAGS.append("-DNDEBUG")
+
+    def compile(self, **kwargs):
+      if self.just_so:
+        self.runMake("libsnmallocshim.so", cwd=kwargs.get("cwd"))
+      else:
+        return super().compile(**kwargs)
 
     def install(*args, **kwargs):
         pass
