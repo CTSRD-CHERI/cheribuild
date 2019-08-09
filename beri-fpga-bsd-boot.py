@@ -434,7 +434,7 @@ def boot_bsd(bitfile, kernel_img, args):
     ssh_pubkey_contents = None
     ssh_pubkey = Path(args.ssh_key).with_suffix(".pub")
     if ssh_pubkey.exists():
-        ssh_pubkey_contents = ssh_pubkey.read_text()
+        ssh_pubkey_contents = ssh_pubkey.read_text().strip()
     if ssh_pubkey_contents:
         console.sendline("mkdir -p /root/.ssh && chmod 700 /root/.ssh")
         console.expect_exact('#')
