@@ -258,7 +258,7 @@ class BuildSpec2006(CrossCompileProject):
             #for dir in Path(self.ctsrd_evaluation_trunk / "spec-cpu2006-v1.1").iterdir():
             #    self.run_cmd("cp", "-a", dir, ".", cwd=self.buildDir / "spec")
 
-        config_file_text = Path(self.spec_config_dir / "freebsd-cheribuild.cfg").read_text()
+        config_file_text = self.readFile(self.spec_config_dir / "freebsd-cheribuild.cfg")
         # FIXME: this should really not be needed....
         self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse") # FIXME: cannot patch xalanbmk
         self.cross_warning_flags.append("-Wno-c++11-narrowing") # FIXME: cannot patch xalanbmk
