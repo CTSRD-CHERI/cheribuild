@@ -43,6 +43,7 @@ from subprocess import Popen, PIPE, check_output, check_call, CalledProcessError
 from time import sleep
 from pexpect import *
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+from pathlib import Path
 
 ##########################
 # Command line arguments #
@@ -429,6 +430,16 @@ def boot_bsd(bitfile, kernel_img, args):
         die("Failed to boot!")
     console.sendline('')
     console.expect_exact('#')
+    # ensure that we have the ssh public key added
+    ssh_pubkey_contents = None
+    ssh_pubkey = Path(args.ssh_key).with_suffix(".pub")
+    if ssh_pubkey.exists():
+        ssh_pubkey_contents = ssh_pubkey.read_text()
+    if ssh_pubkey_contents:
+        console.sendline("echo '{}' > /root/.ssh/authorized_keys".format(ssh_pubkey_contents))
+        console.expect_exact('#')
+        console.sendline("test -e /home/ctsrd/.ssh/authorized_keys && echo '{}' > /home/ctsrd/.ssh/authorized_keys".format(ssh_pubkey_contents))
+        console.expect_exact('#')
     # create the ctsrd user if it doesn't exist yet
     console.sendline("if ! pw user show ctsrd -q > /dev/null; then pw useradd -n ctsrd ctsrd-test-user -s /bin/sh -m -w none && mkdir -p /home/ctsrd && cp -a /root/.ssh /home/ctsrd/.ssh && chown -R ctsrd /home/ctsrd/.ssh && echo \"Created user ctsrd\"; fi")
     console.expect_exact('#')
