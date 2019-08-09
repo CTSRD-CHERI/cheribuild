@@ -1415,8 +1415,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
                                                            only_add_for_targets=[CrossCompileTarget.MIPS])
         cls.use_cheribsd_purecap_rootfs = cls.addBoolOption("use-cheribsd-purecap-rootfs", default=False,
                                                             help="Use the rootfs built by cheribsd-purecap instead")
-        cls.install_dir_override = cls.addPathOption("install-directory", default=False,
-                                                     help="Override for the sysroot install directory")
+        cls.install_dir_override = cls.addPathOption("install-directory", help="Override for the sysroot install directory")
 
     @property
     def crossSysrootPath(self) -> Path:
