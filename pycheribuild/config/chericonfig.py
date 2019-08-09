@@ -280,6 +280,8 @@ class CheriConfig(object):
             metavar="ARGS", help="Additional flags to pass to the beri-fpga-bsd-boot.py script in --benchmark")
         self.benchmark_ssh_host = loader.addOption("benchmark-ssh-host", group=loader.benchmarkGroup, type=str,
                                                    default="cheri-fpga", help="The SSH hostname/IP for the benchmark FPGA")
+        self.benchmark_ld_preload = loader.addPathOption("benchmark-ld-preload", group=loader.benchmarkGroup,
+                                                         help="Preload the given library before running benchmarks")
 
 
         self.shallow_clone = loader.addBoolOption("shallow-clone", default=True,
