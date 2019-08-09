@@ -1374,7 +1374,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
 
     supported_architectures = [CrossCompileTarget.CHERI, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
     default_architecture = CrossCompileTarget.CHERI
-    rootfs_source_class = BuildCHERIBSD  # type: BuildCHERIBSD
+    rootfs_source_class = BuildCHERIBSD  # type: typing.Type[BuildCHERIBSD]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -1388,6 +1388,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
     def fixSymlinks(self):
         # copied from the build_sdk.sh script
         # TODO: we could do this in python as well, but this method works
+        # FIXME: should no longer be needed
         fixlinksSrc = includeLocalFile("files/fixlinks.c")
         runCmd("cc", "-x", "c", "-", "-o", self.config.sdkDir / "bin/fixlinks", input=fixlinksSrc)
         runCmd(self.config.sdkDir / "bin/fixlinks", cwd=self.crossSysrootPath / "usr/lib")
@@ -1396,8 +1397,8 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
         super().checkSystemDependencies()
         if not IS_FREEBSD and not self.remotePath and not self.rootfs_source_class.get_instance(self, self.config).crossbuild:
             configOption = "'--" + self.target + "/" + "remote-sdk-path'"
-            self.fatal("Path to the remote SDK is not set, option", configOption, "must be set to a path that "
-                                                                                  "scp understands (e.g. vica:~foo/cheri/output/sdk)")
+            self.fatal("Path to the remote SDK is not set, option", configOption,
+                       "must be set to a path that scp understands (e.g. vica:~foo/cheri/output/sdk)")
             if not self.config.pretend:
                 sys.exit("Cannot continue...")
 
@@ -1438,8 +1439,8 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
 
         # now copy the files
         self.makedirs(self.crossSysrootPath)
-        self.copyRemoteFile(remoteSysrootArchive, self.config.sdkDir / self.sysrootArchiveName)
-        runCmd("tar", "xzf", self.config.sdkDir / self.sysrootArchiveName, cwd=self.config.sdkDir)
+        self.copyRemoteFile(remoteSysrootArchive, self.sysroot_archive)
+        runCmd("tar", "xzf", self.sysroot_archive, cwd=self.crossSysrootPath.parent)
 
     @property
     def sysrootArchiveName(self):
@@ -1447,6 +1448,10 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
             return "cheri-sysroot" + self.config.cheri_bits_and_abi_str + ".tar.gz"
         else:
             return "cheribsd-" + self._crossCompileTarget.value + "-sysroot.tar.gz"
+
+    @property
+    def sysroot_archive(self):
+        return self.crossSysrootPath.parent / self.sysrootArchiveName
 
     def createSysroot(self):
         # we need to add include files and libraries to the sysroot directory
@@ -1487,9 +1492,8 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
         print("Fixing absolute paths in symbolic links inside lib directory...")
         self.fixSymlinks()
         # create an archive to make it easier to copy the sysroot to another machine
-        self.deleteFile(self.config.sdkDir / self.sysrootArchiveName, printVerboseOnly=True)
-        runCmd("tar", "-czf", self.crossSysrootPath.parent / self.sysrootArchiveName, self.crossSysrootPath.name,
-               cwd=self.config.sdkDir)
+        self.deleteFile(self.sysroot_archive, printVerboseOnly=True)
+        runCmd("tar", "-czf", self.sysroot_archive, self.crossSysrootPath, cwd=self.crossSysrootPath.parent)
         print("Successfully populated sysroot")
 
     def process(self):
@@ -1498,7 +1502,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
             return
         # prepare for a unified SDK that contains sysroot128/sysroot256
         if not self.config.unified_sdk:
-            unprefixed_sysroot = self.config.sdkDir / "sysroot"
+            unprefixed_sysroot = self.config.crossSysrootPath.parent / "sysroot"
             if unprefixed_sysroot.is_dir() and not unprefixed_sysroot.is_symlink():
                 self.cleanDirectory(unprefixed_sysroot)
                 if not self.config.pretend:
@@ -1511,9 +1515,9 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
                 self.copySysrootFromRemoteMachine()
             else:
                 self.createSysroot()
-            if (self.config.sdkDir / "sysroot/usr/libcheri/").is_dir():
+            if (self.config.crossSysrootPath / "usr/libcheri/").is_dir():
                 # clang++ expects libgcc_eh to exist:
-                libgcc_eh = self.config.sdkDir / "sysroot/usr/libcheri/libgcc_eh.a"
+                libgcc_eh = self.crossSysrootPath / "usr/libcheri/libgcc_eh.a"
                 if not libgcc_eh.is_file():
                     warningMessage("CHERI libgcc_eh missing! You should probably update CheriBSD")
                     runCmd("ar", "rc", libgcc_eh)
