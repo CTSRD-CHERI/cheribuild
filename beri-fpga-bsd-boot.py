@@ -562,7 +562,7 @@ def common_boot (kernel_img=args.kernel_img,addr=args.kernel_addr,bitfile=args.b
                           "ISA=vanilla,label=freebsd/{kernel_job_nr}/artifact/ctsrd/cheribsd/trunk/bsdtools/" \
                           "{BSD_TYPE}-{KERNEL_CPU}-de4-{KERNEL_TYPE}-kernel.bz2"
         bitfile_template = "https://ctsrd-build.cl.cam.ac.uk/job/CPU1-DE4-SYNTH/CPU={DE4_CPU},FLAGS=vanilla,FPU=noFPU," \
-                           "TSTRUCT=0_256,cheri_dimm=1GB,label=altera/{bitfile_job_nr}/artifact/ctsrd/cheri/trunk/boards/" \
+                           "TSTRUCT=0_256,cheri_dimm=1GB,label=altera/{bitfile_job_nr}/artifact/ctsrd/cheri/boards/" \
                            "terasic_de4/output_files/DE4_BERI.sof"
         if args.use_qemu_instead_of_fpga:
             if args.jenkins_bitfile:
