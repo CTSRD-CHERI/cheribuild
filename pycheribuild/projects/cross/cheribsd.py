@@ -1413,9 +1413,16 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
                                                            help="Create the MIPS sysroot using the files from hybrid CHERI libraries (note: binaries build from this "
                                                                 "sysroot will only work on the matching CHERI 128/256 architecture)",
                                                            only_add_for_targets=[CrossCompileTarget.MIPS])
-
         cls.use_cheribsd_purecap_rootfs = cls.addBoolOption("use-cheribsd-purecap-rootfs", default=False,
                                                             help="Use the rootfs built by cheribsd-purecap instead")
+        cls.install_dir_override = cls.addPathOption("install-directory", default=False,
+                                                     help="Override for the sysroot install directory")
+
+    @property
+    def crossSysrootPath(self) -> Path:
+        if self.install_dir_override:
+            return self.install_dir_override
+        return super().crossSysrootPath
 
     def copySysrootFromRemoteMachine(self):
         statusUpdate("Copying sysroot from remote system.")
@@ -1482,7 +1489,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
         self.fixSymlinks()
         # create an archive to make it easier to copy the sysroot to another machine
         self.deleteFile(self.config.sdkDir / self.sysrootArchiveName, printVerboseOnly=True)
-        runCmd("tar", "-czf", self.config.sdkDir / self.sysrootArchiveName, self.crossSysrootPath.name,
+        runCmd("tar", "-czf", self.crossSysrootPath.parent / self.sysrootArchiveName, self.crossSysrootPath.name,
                cwd=self.config.sdkDir)
         print("Successfully populated sysroot")
 
