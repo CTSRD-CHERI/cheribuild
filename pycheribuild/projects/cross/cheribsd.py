@@ -40,7 +40,7 @@ from .multiarchmixin import MultiArchBaseMixin
 from ..project import *
 from ..llvm import BuildUpstreamLLVM
 from ...config.loader import ComputedDefaultValue
-from ...config.chericonfig import CrossCompileTarget
+from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi
 from ...utils import *
 
 

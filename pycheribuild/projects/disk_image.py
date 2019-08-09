@@ -879,8 +879,8 @@ class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
         return True
 
 def _default_freebsd_disk_image_name(config: CheriConfig, project: MultiArchBaseMixin):
-        suffix = cls._crossCompileTarget.value if cls._crossCompileTarget else "<TARGET>"
-        if cls.compiling_for_mips():
+        suffix = project._crossCompileTarget.value if project._crossCompileTarget else "<TARGET>"
+        if project.compiling_for_mips():
             if config.mips_float_abi == MipsFloatAbi.HARD:
                 suffix += "-hardfloat"
         return config.outputRoot / ("freebsd-" + suffix + ".img")
