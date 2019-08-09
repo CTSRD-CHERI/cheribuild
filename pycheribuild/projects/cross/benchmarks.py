@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import shlex
 import stat
 
 from .crosscompileproject import *
@@ -205,6 +206,7 @@ class BuildSpec2006(CrossCompileProject):
         super().setupConfigOptions(**kwargs)
         cls.ctsrd_evaluation_trunk = cls.addPathOption("ctsrd-evaluation-trunk", help="Path to the CTSRD evaluation/trunk svn checkout")
         cls.ctsrd_evaluation_vendor = cls.addPathOption("ctsrd-evaluation-vendor", help="Path to the CTSRD evaluation/vendor svn checkout")
+        cls.ld_preload = cls.addPathOption("ld-preload", help="Preload the given library before running benchmarks")
 
     @property
     def config_name(self):
@@ -363,7 +365,15 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh -b "{ben
         # TODO: don't bother creating tempdir if --skip-copy is set
         with tempfile.TemporaryDirectory() as td:
             benchmarks_dir = self.create_tests_dir(Path(td))
+            runbench_args = []
+            # TODO: allow multiple and run all configurations?
+            if self.ld_preload:
+                runbench_args.append("--extra-input-files=" + str(self.ld_preload))
+                env_var = "LD_CHERI_PRELOAD" if self.compiling_for_cheri() else "LD_PRELOAD"
+                pre_cmd = "export {}={};".format(env_var, shlex.quote("/tmp/benchdir/" + self.ld_preload.name))
+                runbench_args.append("--pre-command=" + pre_cmd)
             self.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
+                                    extra_runbench_args=runbench_args,
                                     benchmark_script_args=["-d0", "-r3",
                                                            "-t", self.config_name,
                                                            "-o", self.default_statcounters_csv_name,
