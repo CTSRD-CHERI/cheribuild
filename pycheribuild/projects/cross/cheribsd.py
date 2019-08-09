@@ -1494,7 +1494,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
         self.fixSymlinks()
         # create an archive to make it easier to copy the sysroot to another machine
         self.deleteFile(self.sysroot_archive, printVerboseOnly=True)
-        runCmd("tar", "-czf", self.sysroot_archive, self.crossSysrootPath, cwd=self.crossSysrootPath.parent)
+        runCmd("tar", "-czf", self.sysroot_archive, self.crossSysrootPath.name, cwd=self.crossSysrootPath.parent)
         print("Successfully populated sysroot")
 
     def process(self):
