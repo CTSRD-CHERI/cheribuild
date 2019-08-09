@@ -42,4 +42,5 @@ targets=$(./cheribuild.py --list-targets | grep -v Available | grep -v $(printf 
 # echo "targets=$targets"
 for i in $targets; do
   WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=cheri128 -p $i > /dev/null;
+  WORKSPACE=/tmp ./jenkins-cheri-build.py --test --cpu=cheri128 -p $i > /dev/null;
 done

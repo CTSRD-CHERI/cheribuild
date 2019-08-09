@@ -57,6 +57,8 @@ do
 		fi
 		# check that there are no obvious mistakes:
 		try_run ./cheribuild.py -p __run_everything__ --freebsd/crossbuild --clean
+		try_run ./cheribuild.py -p __run_everything__ --freebsd/crossbuild --test
+		try_run ./cheribuild.py -p __run_everything__ --freebsd/crossbuild --benchmark
 		try_run ./cheribuild.py --help
 		try_run ./jenkins-cheri-build.py --help
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=cheri128 -p libcxx

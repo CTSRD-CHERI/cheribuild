@@ -203,8 +203,11 @@ class BuildSpec2006(CrossCompileProject):
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
-        cls.ctsrd_evaluation_trunk = cls.addPathOption("ctsrd-evaluation-trunk", help="Path to the CTSRD evaluation/trunk svn checkout")
-        cls.ctsrd_evaluation_vendor = cls.addPathOption("ctsrd-evaluation-vendor", help="Path to the CTSRD evaluation/vendor svn checkout")
+        cls.ctsrd_evaluation_trunk = cls.addPathOption("ctsrd-evaluation-trunk", default="/you/must/set --spec2006/ctsrd-evaluation-trunk config option",
+                                                        help="Path to the CTSRD evaluation/trunk svn checkout")
+        cls.ctsrd_evaluation_vendor = cls.addPathOption("ctsrd-evaluation-vendor",
+                                                        default="/you/must/set --spec2006/ctsrd-evaluation-vendor config option",
+                                                        help="Path to the CTSRD evaluation/vendor svn checkout")
 
     @property
     def config_name(self):
@@ -230,17 +233,14 @@ class BuildSpec2006(CrossCompileProject):
 
     @property
     def spec_config_dir(self) -> Path:
-        assert self.ctsrd_evaluation_trunk is not None, "Set --spec2006/ctsrd-evaluation-trunk config option!"
         return self.ctsrd_evaluation_trunk / "201603-spec2006/config"
 
     @property
     def spec_run_scripts(self) -> Path:
-        assert self.ctsrd_evaluation_trunk is not None, "Set --spec2006/ctsrd-evaluation-trunk config option!"
         return self.ctsrd_evaluation_trunk / "spec-cpu2006-v1.1/cheri-scripts/CPU2006"
 
     @property
     def spec_iso(self) -> Path:
-        assert self.ctsrd_evaluation_vendor is not None, "Set --spec2006/ctsrd-evaluation-vendor config option!"
         return self.ctsrd_evaluation_vendor / "SPEC_CPU2006_v1.1/SPEC_CPU2006v1.1.iso"
 
     def __init__(self, *args, **kwargs):
@@ -249,12 +249,6 @@ class BuildSpec2006(CrossCompileProject):
         self.benchmark_list = ["471.omnetpp", "483.xalancbmk"]
 
     def compile(self, cwd: Path = None):
-        for attr in ("ctsrd_evaluation_trunk", "ctsrd_evaluation_vendor"):
-            if not getattr(self, attr):
-                option = inspect.getattr_static(self, attr)
-                assert isinstance(option, ConfigOptionBase)
-                self.fatal("Required SPEC path is not set! Please set", option.fullOptionName)
-                return
         self.makedirs(self.buildDir / "spec")
         if not (self.buildDir / "spec/README-CTSRD.txt").exists():
             self.cleanDirectory(self.buildDir / "spec")  # clean up partial builds

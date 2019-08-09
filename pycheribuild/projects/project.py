@@ -589,7 +589,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         from .build_qemu import BuildQEMU
         # noinspection PyUnusedLocal
         script_dir = Path("/this/will/not/work/when/using/remote-cheribuild.py")
-        test_native = self.crosscompile_target == CrossCompileTarget.NATIVE
+        xtarget = self.get_crosscompile_target(self.config)
+        test_native = xtarget in (CrossCompileTarget.NATIVE, CrossCompileTarget.I386)
         if kernel_path is None and not test_native and "--kernel" not in self.config.test_extra_args:
             from .cross.cheribsd import BuildCheriBsdMfsKernel
             # Use the benchmark kernel by default if the parameter is set and the user didn't pass
