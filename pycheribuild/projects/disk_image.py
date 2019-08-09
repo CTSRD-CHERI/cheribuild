@@ -201,7 +201,8 @@ class _BuildDiskImageBase(SimpleProject):
     def prepareRootfs(self):
         assert self.tmpdir is not None
         assert self.manifestFile is not None
-        if self.input_METALOG.exists():
+        # skip parsing the metalog in the git push hook since it takes a long time and isn't that useful
+        if self.input_METALOG.exists() and not os.getenv("_TEST_SKIP_METALOG"):
             self.mtree.load(self.input_METALOG)
         elif self.input_METALOG_required:
             self.fatal("Could not find required input mtree file", self.input_METALOG)
@@ -580,7 +581,9 @@ class _BuildDiskImageBase(SimpleProject):
                 self.addFileToImage(p, baseDirectory=self.extraFilesDir)
 
             # then walk the rootfs to see if any additional files should be added:
-            self.add_unlisted_files_to_metalog()
+            if not os.getenv("_TEST_SKIP_METALOG"):
+                # skip adding to the metalog in the git push hook since it takes a long time and isn't that useful
+                self.add_unlisted_files_to_metalog()
 
             # finally create the disk image
             self.makeImage()

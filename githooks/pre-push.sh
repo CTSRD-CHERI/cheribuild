@@ -39,6 +39,9 @@ try_run() {
     fi
 }
 
+# skip expensive metalog checks in pre-push hook
+export _TEST_SKIP_METALOG=1
+
 
 while read local_ref local_sha remote_ref remote_sha
 do
