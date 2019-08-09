@@ -1097,11 +1097,12 @@ class BuildCHERIBSD(BuildFreeBSD):
             else:
                 prefix = "INVALID_KERNCONF_"
                 self.fatal("Invalid CHERI BITS")
-            # TODO: build the benchmark kernels? TODO: remove the MDROOT option?
-            for conf in ("USBROOT", "NFSROOT", "MDROOT", "USBROOT_BENCHMARK", "MDROOT_BENCHMARK"):
+            # TODO: build the benchmark kernels?
+            for conf in ("USBROOT", "USBROOT_BENCHMARK"):
                 self.extra_kernels.append(prefix + conf)
             if self.mfs_root_image:
                 self.extra_kernels_with_mfs.append(prefix + "MFS_ROOT")
+                self.extra_kernels_with_mfs.append(prefix + "MFS_ROOT_BENCHMARK")
 
     def _removeSchgFlag(self, *paths: "typing.Iterable[str]"):
         for i in paths:
@@ -1515,7 +1516,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
                 self.copySysrootFromRemoteMachine()
             else:
                 self.createSysroot()
-            if (self.config.crossSysrootPath / "usr/libcheri/").is_dir():
+            if (self.crossSysrootPath / "usr/libcheri/").is_dir():
                 # clang++ expects libgcc_eh to exist:
                 libgcc_eh = self.crossSysrootPath / "usr/libcheri/libgcc_eh.a"
                 if not libgcc_eh.is_file():
