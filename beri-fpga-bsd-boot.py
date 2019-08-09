@@ -436,9 +436,13 @@ def boot_bsd(bitfile, kernel_img, args):
     if ssh_pubkey.exists():
         ssh_pubkey_contents = ssh_pubkey.read_text()
     if ssh_pubkey_contents:
-        console.sendline("echo '{}' > /root/.ssh/authorized_keys".format(ssh_pubkey_contents))
+        console.sendline("mkdir -p /root/.ssh && chmod 700 /root/.ssh")
         console.expect_exact('#')
-        console.sendline("test -e /home/ctsrd/.ssh/authorized_keys && echo '{}' > /home/ctsrd/.ssh/authorized_keys".format(ssh_pubkey_contents))
+        console.sendline("echo '{}' >> /root/.ssh/authorized_keys".format(ssh_pubkey_contents))
+        console.expect_exact('#')
+        console.sendline("chmod 600 /root/.ssh")
+        console.expect_exact('#')
+        console.sendline("test -e /home/ctsrd/.ssh/authorized_keys && echo '{}' >> /home/ctsrd/.ssh/authorized_keys".format(ssh_pubkey_contents))
         console.expect_exact('#')
     # create the ctsrd user if it doesn't exist yet
     console.sendline("if ! pw user show ctsrd -q > /dev/null; then pw useradd -n ctsrd ctsrd-test-user -s /bin/sh -m -w none && mkdir -p /home/ctsrd && cp -a /root/.ssh /home/ctsrd/.ssh && chown -R ctsrd /home/ctsrd/.ssh && echo \"Created user ctsrd\"; fi")
