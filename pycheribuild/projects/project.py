@@ -253,6 +253,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return None  # XXX: does it make sense to return NATIVE instead? Will break stuff for little gain I guess
 
     @property
+    def crosscompile_target(self):
+        return self.get_crosscompile_target(self.config)
+
+    @property
     def crossSysrootPath(self):
         assert self.crosscompile_target is not None, "called from invalid class " + str(self.__class__)
         return self.config.get_sysroot_path(self.crosscompile_target, self.mips_build_hybrid)
@@ -589,7 +593,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         from .build_qemu import BuildQEMU
         # noinspection PyUnusedLocal
         script_dir = Path("/this/will/not/work/when/using/remote-cheribuild.py")
-        xtarget = self.get_crosscompile_target(self.config)
+        xtarget = self.crosscompile_target
         test_native = xtarget in (CrossCompileTarget.NATIVE, CrossCompileTarget.I386)
         if kernel_path is None and not test_native and "--kernel" not in self.config.test_extra_args:
             from .cross.cheribsd import BuildCheriBsdMfsKernel
@@ -607,9 +611,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 cheribsd_image = "cheribsd{suffix}-cheri{suffix}-malta64-mfs-root-minimal-cheribuild-kernel.bz2".format(
                         suffix="" if self.config.cheriBits == 256 else self.config.cheriBitsStr)
                 freebsd_image = "freebsd-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
-                if self.crosscompile_target == CrossCompileTarget.MIPS:
+                if xtarget == CrossCompileTarget.MIPS:
                     guessed_archive = cheribsd_image if self.config.run_mips_tests_with_cheri_image else freebsd_image
-                elif self.crosscompile_target == CrossCompileTarget.CHERI:
+                elif xtarget == CrossCompileTarget.CHERI:
                     guessed_archive = cheribsd_image
                 else:
                     self.fatal("Could not guess path to kernel image for CheriBSD")

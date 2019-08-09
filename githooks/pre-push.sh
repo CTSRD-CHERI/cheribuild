@@ -64,6 +64,7 @@ do
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=cheri128 -p libcxx
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=cheri128 -p llvm
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --tarball --cpu=cheri128 -p llvm
+		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --cpu=cheri128 --test run-minimal --keep-install-dir --install-prefix=/rootfs --cheribsd-cheri/build-fpga-kernels --no-clean -p
 
 		# Run python tests before pushing
 		if [ -e pytest.ini ]; then
