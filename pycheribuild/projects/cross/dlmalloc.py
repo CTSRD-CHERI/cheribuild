@@ -33,7 +33,7 @@ import shutil
 from .crosscompileproject import *
 from ...utils import setEnv
 
-class SNMalloc(CrossCompileProject):
+class DLMalloc(CrossCompileProject):
     projectName = "dlmalloc"
     repository = GitRepository("https://github.com/brooksdavis/dlmalloc_nonreuse")
     appendCheriBitsToBuildDir = True
@@ -67,7 +67,7 @@ class SNMalloc(CrossCompileProject):
             self.CFLAGS.append("-DCAPREVOKE")
 
         if self.qmabs :
-            self.CFLAGS.append("-DDEFAULT_MAX_FREEBUFBYTES=%d" % self.qpathresh)
+            self.CFLAGS.append("-DDEFAULT_MAX_FREEBUFBYTES=%d" % self.qmabs)
 
         if self.qmratio :
             self.CFLAGS.append("-DDEFAULT_FREEBUF_PERCENT=%f" % self.qmratio)
