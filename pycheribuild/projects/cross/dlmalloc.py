@@ -35,7 +35,7 @@ from ...utils import setEnv
 
 class DLMalloc(CrossCompileProject):
     projectName = "dlmalloc"
-    repository = GitRepository("https://github.com/brooksdavis/dlmalloc_nonreuse")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/dlmalloc_nonreuse")
     appendCheriBitsToBuildDir = True
     supported_architectures = [CrossCompileTarget.CHERI, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
     defaultOptimizationLevel = ["-O2"]
