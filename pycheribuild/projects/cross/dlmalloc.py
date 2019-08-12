@@ -73,7 +73,7 @@ class DLMalloc(CrossCompileProject):
             self.CFLAGS.append("-DDEFAULT_FREEBUF_PERCENT=%f" % self.qmratio)
 
         if not self.quar_unsafe :
-            self.CFLAGS.append("-DSAFE_FREEBUF") 
+            self.CFLAGS.append("-DSAFE_FREEBUF")
 
         self.make_args.add_flags("-f", self.sourceDir / "Makefile.cheribuild")
         self.make_args.set(DEBUG=self.debug)
