@@ -56,7 +56,6 @@ class SNMalloc(CrossCompileCMakeProject):
         cls.cheri_align      = cls.addBoolOption("cheri-align", help="Align sizes for CHERI bounds setting")
         cls.cheri_bounds     = cls.addBoolOption("cheri-bounds", help="Set bounds on returned allocations")
 
-        # XXX Make this set the policy somehow?
         cls.quarantine       = cls.addBoolOption("quarantine", help="Quarantine deallocations")
 
         cls.qpathresh        = cls.addConfigOption("qpathresh", kind=int,
@@ -65,6 +64,11 @@ class SNMalloc(CrossCompileCMakeProject):
                                                    help="Quarantine chunk per allocator threshold")
         cls.qcsc             = cls.addConfigOption("qcsc", kind=int,
                                                    help="Quarantine chunk size class")
+
+        cls.decommit         = cls.addConfigOption("decommit", kind=str,
+                                                   help="Specify memory decommit policy")
+
+        cls.zero             = cls.addBoolOption("zero", help="Specify memory decommit policy")
 
         cls.revoke           = cls.addBoolOption("revoke", help="Revoke quarantine before reusing")
         cls.revoke_dry_run   = cls.addBoolOption("revoke-dry-run", help="Do everything but caprevoke()")
@@ -99,6 +103,11 @@ class SNMalloc(CrossCompileCMakeProject):
         self.COMMON_FLAGS.append("-DSNMALLOC_REVOKE_DRY_RUN=%d"     % self.revoke_dry_run  )
         self.COMMON_FLAGS.append("-DSNMALLOC_REVOKE_PARANOIA=%d"    % self.revoke_paranoia )
         self.COMMON_FLAGS.append("-DSNMALLOC_QUARANTINE_CHATTY=%d"  % self.revoke_verbose  )
+        self.COMMON_FLAGS.append("-DSNMALLOC_DEFAULT_ZERO=%s" %
+            ( "ZeroMem::YesZero" if self.zero else "ZeroMem::NoZero" ))
+
+        if self.decommit is not None:
+            self.COMMON_FLAGS.append("-DUSE_DECOMMIT_STRATEGY=%s" % self.decommit)
 
         if self.qpathresh is not None:
             self.COMMON_FLAGS.append("-DSNMALLOC_QUARANTINE_PER_ALLOC_THRESHOLD=%d"       % self.qpathresh)
