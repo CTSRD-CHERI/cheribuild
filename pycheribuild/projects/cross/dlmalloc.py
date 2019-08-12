@@ -56,6 +56,8 @@ class DLMalloc(CrossCompileProject):
 
         cls.revoke           = cls.addBoolOption("revoke", help="Revoke quarantine before reusing")
 
+        cls.unmap_no_support    = cls.addBoolOption("without-unmap-support", help="disable support for unmapping")
+
         cls.unmap_threshold  = cls.addConfigOption("unmap-threshold", kind=int,
                                                    help="Threshold (in pages) at which interior pages of quanantined chunks are unmapped")
         cls.quar_unsafe      = cls.addBoolOption("unsafe-quarantine",
@@ -73,6 +75,9 @@ class DLMalloc(CrossCompileProject):
 
         if self.qmratio :
             self.CFLAGS.append("-DDEFAULT_FREEBUF_PERCENT=%f" % self.qmratio)
+
+        if self.unmap_no_support :
+            self.CFLAGS.append("-DSUPPORT_UNMAP=0")
 
         if self.unmap_threshold :
             self.CFLAGS.append("-DDEFAULT_UNMAP_THRESHOLD=%d" % self.unmap_threshold)
