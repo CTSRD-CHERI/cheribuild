@@ -30,7 +30,7 @@
 from .crosscompileproject import *
 
 class BuildLibMemwalk(CrossCompileCMakeProject):
-    repository = "https://github.com/zxombie/libmemwalk.git"
+    repository = GitRepository("https://github.com/zxombie/libmemwalk.git")
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     defaultCMakeBuildType = "Debug"
     projectName = "libmemwalk"
