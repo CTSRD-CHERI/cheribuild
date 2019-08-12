@@ -56,7 +56,11 @@ class DLMalloc(CrossCompileProject):
 
         cls.revoke           = cls.addBoolOption("revoke", help="Revoke quarantine before reusing")
 
-        cls.unmap_no_support    = cls.addBoolOption("without-unmap-support", help="disable support for unmapping")
+        cls.consolidate_on_free = cls.addBoolOption("consolidate", default=True, help="Consolidate memory when quarantining")
+
+        cls.zero_memory      = cls.addBoolOption("zero-memory", help="Zero allocated memory")
+
+        cls.unmap_support    = cls.addBoolOption("unmap-support", default=True, help="support for unmapping")
 
         cls.unmap_threshold  = cls.addConfigOption("unmap-threshold", kind=int,
                                                    help="Threshold (in pages) at which interior pages of quanantined chunks are unmapped")
@@ -76,7 +80,19 @@ class DLMalloc(CrossCompileProject):
         if self.qmratio :
             self.CFLAGS.append("-DDEFAULT_FREEBUF_PERCENT=%f" % self.qmratio)
 
-        if self.unmap_no_support :
+        if self.consolidate_on_free :
+            self.CFLAGS.append("-DCONSOLIDATE_ON_FREE=1")
+        else :
+            self.CFLAGS.append("-DCONSOLIDATE_ON_FREE=0")
+
+        if self.zero_memory :
+            self.CFLAGS.append("-DZERO_MEMORY=1")
+        else :
+            self.CFLAGS.append("-DZERO_MEMORY=0")
+
+        if self.unmap_support :
+            self.CFLAGS.append("-DSUPPORT_UNMAP=1")
+        else :
             self.CFLAGS.append("-DSUPPORT_UNMAP=0")
 
         if self.unmap_threshold :
