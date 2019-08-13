@@ -117,7 +117,7 @@ parser.add_argument('--jenkins-kernel-job-number', type=str, default="lastSucces
 parser.add_argument('--jenkins-kernel-cpu-kind', type=str, choices=jenkins_cpus,
                     help="Which CPU the BITFILE is. Only needed if --jenkins-kernel is passed without --jenkins-bitfile")
 parser.add_argument('--jenkins-user', default='readonly', help='The username for jenkins authentication')
-parser.add_argument('--jenkins-password', default='Aiquaith3ooh', help='The password for jenkins authentication')
+parser.add_argument('--jenkins-password', default=None, help='The password for jenkins authentication')
 parser.add_argument('-v', '--verbose', action='count', default=0,
         help="Increase verbosity level by adding more \"v\".")
 subcmds = parser.add_subparsers(dest='subcmd',metavar='sub-command',help="Individual sub-command help available by invoking it with -h or --help.")
@@ -177,6 +177,7 @@ except ImportError:
     pass
 # parse the arguments
 args = parser.parse_args()
+
 
 ################
 # Output utils #
@@ -541,7 +542,20 @@ def do_runbench(console,tgtdir,script,scriptargs,failstr="FAILED RUNNING BENCHMA
         print("Failed to run benchmark")
 
 
+def get_jenkins_password():
+    password = "invalid"
+    pw_file = Path.home() / ".config" / "ctsrd-jenkins-readonly-user.txt"
+    try:
+        password = pw_file.read_text().strip()  # remove newline
+    except:
+        sys.exit("Could not read jenkins readonly user password from " + str(pw_file))
+    return password
+
+
 def download_file(url, outfile):
+    if args.jenkins_user == "readonly" and not args.jenkins_password:
+        args.jenkins_password = get_jenkins_password()
+
     with open(outfile, 'wb') as f:
         print("Downloading", url)
         resp = requests.get(url, verify=False, auth=(args.jenkins_user, args.jenkins_password))
