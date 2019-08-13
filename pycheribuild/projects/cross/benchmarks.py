@@ -246,30 +246,56 @@ class BuildSpec2006(CrossCompileProject):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Worst case benchmarks: 471.omnetpp 483.xalancbmk 400.perlbench (which won't compile)
-        self.benchmark_list = ["471.omnetpp", "483.xalancbmk"]
+        self.benchmark_list = [
+            # "400.perlbench", # --- broken
+            "401.bzip",       # 3 runs = 0:18:56 -> ~6mins per run
+            # "403.gcc", # --- broken
+            # "429.mcf",      # Strange tag violation even after fixing realloc() and would use too much memor
+            "401.bzip",       # 3 runs = 0:18:56 -> ~6mins per run
+            "445.gobmk",      # 3 runs = 1:32:13 -> ~30mins per run
+            "456.hmmer",      # 3 runs = 0:10:43 -> ~3:30mins per run
+            "458.sjeng",      # 3 runs = ???? ->
+            "462.libquantum", # 3 runs = 0:00:33 -> ~10s per run
+            "464.h264ref",    # 3 runs = 2:19:49 -> 45mins per run
+            "471.omnetpp",    # 3 runs = 0:05:54 -> ~2min per run
+            "473.astar",      # 3 runs = 0:46:16 -> ~15 mins per run
+            "483.xalanbmk",   # 3 runs = 0:00:56 -> ~20 secs per run"
+        ]
+        # self.benchmark_list = ["456.hmmer"]
+        self.fast_list = ["471.omnetpp", "483.xalanbmk", "456.hmmer"]
+        #self.benchmark_list = self.fast_list
 
     def compile(self, cwd: Path = None):
         self.makedirs(self.buildDir / "spec")
-        if not (self.buildDir / "spec/README-CTSRD.txt").exists():
+        if not (self.buildDir / "spec/install.sh").exists():
             self.cleanDirectory(self.buildDir / "spec")  # clean up partial builds
             self.run_cmd("bsdtar", "xf", self.spec_iso, "-C", "spec", cwd=self.buildDir)
             self.run_cmd("chmod", "-R", "u+w", "spec/", cwd=self.buildDir)
             self.run_cmd(self.buildDir / "spec/install.sh", "-f", cwd=self.buildDir / "spec")
-            #for dir in Path(self.ctsrd_evaluation_trunk / "spec-cpu2006-v1.1").iterdir():
-            #    self.run_cmd("cp", "-a", dir, ".", cwd=self.buildDir / "spec")
+
+        # TODO: apply a patch instead?
+        for dir in Path(self.ctsrd_evaluation_trunk / "spec-cpu2006-v1.1/benchspec").iterdir():
+            self.run_cmd("cp", "-a", dir, ".", cwd=self.buildDir / "spec/benchspec")
 
         config_file_text = self.readFile(self.spec_config_dir / "freebsd-cheribuild.cfg")
         # FIXME: this should really not be needed....
-        self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse") # FIXME: cannot patch xalanbmk
+        self.cross_warning_flags.append("-Werror=cheri-capability-misuse") # FIXME: cannot patch xalanbmk
+        self.cross_warning_flags.append("-Wcheri") # FIXME: cannot patch xalanbmk
         self.cross_warning_flags.append("-Wno-c++11-narrowing") # FIXME: cannot patch xalanbmk
+        self.cross_warning_flags.append("-Wno-undefined-bool-conversion")
+        self.cross_warning_flags.append("-Wno-writable-strings")
+        self.cross_warning_flags.append("-Wno-unused-variable")
+        self.cross_warning_flags.append("-Wno-error=format")
+        self.cross_warning_flags.append("-Wno-error=mips-cheri-prototypes")  # FIXME: h264 has this, but seeems to run fine
+        self.cross_warning_flags.append("-Wno-unused-function")
         self.cross_warning_flags.append("-Wno-logical-op-parentheses") # so noisy in  xalanbmk
 
         config_file_text = config_file_text.replace("@HW_CPU@", self.hw_cpu)
         config_file_text = config_file_text.replace("@CONFIG_NAME@", self.config_name)
         config_file_text = config_file_text.replace("@CLANG@", str(self.CC))
         config_file_text = config_file_text.replace("@CLANGXX@", str(self.CXX))
-        config_file_text = config_file_text.replace("@CFLAGS@", commandline_to_str(self.default_compiler_flags + self.CFLAGS))
-        config_file_text = config_file_text.replace("@CXXFLAGS@", commandline_to_str(self.default_compiler_flags + self.CXXFLAGS))
+        config_file_text = config_file_text.replace("@CFLAGS@", commandline_to_str(self.default_compiler_flags + self.CFLAGS + ["-ggdb"]))
+        config_file_text = config_file_text.replace("@CXXFLAGS@", commandline_to_str(self.default_compiler_flags + self.CXXFLAGS + ["-ggdb"]))
         config_file_text = config_file_text.replace("@LDFLAGS@", commandline_to_str(self.default_ldflags + self.LDFLAGS))
         config_file_text = config_file_text.replace("@SYSROOT@", str(self.sdkSysroot))
         config_file_text = config_file_text.replace("@SYS_BIN@", str(self.config.sdkBinDir))
@@ -279,10 +305,13 @@ class BuildSpec2006(CrossCompileProject):
 
         script = """
 source shrc
-runspec -c {spec_config_name} --noreportable --make_bundle {spec_config_name} {benchmark_list}
+# --make_no_clobber can avoid rebuilds but doesn't seem to work correctly
+runspec -c {spec_config_name} --noreportable --action build {benchmark_list}
+# ensure that the overwrite prompt gets yes as an answer:
+echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --iterations 1 --make_bundle {spec_config_name} {benchmark_list}
 """.format(benchmark_list=commandline_to_str(self.benchmark_list), spec_config_name=self.config_name)
-        self.writeFile(self.buildDir / "build.sh", contents=script, mode=0o755, overwrite=True)
-        self.run_cmd("bash", "-x", self.buildDir / "build.sh", cwd=self.buildDir / "spec")
+        # TODO: add extra files to the bundle instead of copying later? https://www.spec.org/cpu2006/Docs/runspec.html#makebundle
+        self.runShellScript(script, shell="bash", cwd=self.buildDir / "spec")
 
     def install(self, **kwargs):
         pass
@@ -355,6 +384,23 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh -b "{ben
 
     def run_benchmarks(self):
         # TODO: don't bother creating tempdir if --skip-copy is set
+
+
+        # Approximate duration for 3 runs on the FPGA:
+        # 400.perlbench	 --- broken
+        # 401.bzip: 0:18:56 -> ~6mins per run
+        # 403.gcc  --- broken
+        # 429.mcf
+        # 445.gobmk: 1:32:13 -> 30mins per run
+        # 456.hmmer: 0:10:43 -> ~3:30mins per run
+        # 458.sjeng
+        # 462.libquantum: 0:00:33 -> ~10s per run
+        # 464.h264ref: 2:19:49 -> 45mins per run
+        # 471.omnetpp: 0:05:54 -> ~2min per run
+        # 473.astar: 0:46:16 -> ~15 mins per run
+        # 483.xalanbmk: 0:00:56 -> ~20 secs per run
+
+
         with tempfile.TemporaryDirectory() as td:
             benchmarks_dir = self.create_tests_dir(Path(td))
             runbench_args = []
