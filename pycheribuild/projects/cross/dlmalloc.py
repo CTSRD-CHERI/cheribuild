@@ -108,7 +108,7 @@ class DLMalloc(CrossCompileProject):
         self.CFLAGS.append("--sysroot=%s" % self.sdkSysroot)
         with setEnv(CHERI_SDK=self.config.sdkDir,
                     CC=self.config.sdkBinDir/"clang",
-                    CFLAGS=commandline_to_str(self.default_compiler_flags)):
+                    CFLAGS=commandline_to_str(self.default_compiler_flags + self.CFLAGS)):
             if self.just_so :
                 self.runMake("libdlmalloc_nonreuse.so", cwd=self.buildDir)
             else :
