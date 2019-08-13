@@ -48,7 +48,7 @@ class DLMalloc(CrossCompileProject):
         cls.just_so          = cls.addBoolOption("just-so", help="Just build the .so shim")
         cls.debug            = cls.addBoolOption("debug", help="Turn on debugging features")
 
-        cls.cheri_set_bounds = cls.addBoolOption("cheri-set-bounds", default=True, help="Set bounds on allocations")
+        cls.cheri_set_bounds = cls.addBoolOption("cheri-bounds", default=True, help="Set bounds on allocations")
 
         cls.qmabs            = cls.addConfigOption("qmabs", kind=int,
                                                    help="Quarantine memory absolute threshold")
