@@ -511,7 +511,7 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
     return child
 
 
-def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: list,
+def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: list, test_ld_preload_files: list,
              test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None,
              test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]" = None) -> bool:
     test_command = args.test_command
@@ -534,7 +534,19 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     run_cheribsd_command(qemu, "if [ ! -e /opt ]; then mkdir -p /opt && mount -t tmpfs -o size=500m tmpfs /opt; fi")
     run_cheribsd_command(qemu, "df -ih")
     info("\nWill transfer the following archives: ", test_archives)
-    # strip the .pub from the key file
+
+    def do_scp(src, dst="/"):
+        # strip the .pub from the key file
+        private_key = str(Path(ssh_keyfile).with_suffix(""))
+        # CVE-2018-20685 -> Can no longer use '.' See https://superuser.com/questions/1403473/scp-error-unexpected-filename
+        scp_cmd = ["scp", "-B", "-r", "-P", str(ssh_port), "-o", "StrictHostKeyChecking=no",
+                   "-o", "UserKnownHostsFile=/dev/null",
+                   "-i", shlex.quote(private_key), str(src), "root@localhost:" + dst]
+        # use script for a fake tty to get progress output from scp
+        if sys.platform.startswith("linux"):
+            scp_cmd = ["script", "--quiet", "--return", "--command", " ".join(scp_cmd), "/dev/null"]
+        run_host_command(scp_cmd, cwd=str(src))
+
     for archive in test_archives:
         if smb_dirs:
             run_host_command(["tar", "xJf", str(archive), "-C", str(smb_dirs[0].hostdir)])
@@ -542,21 +554,25 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
             # Extract to temporary directory and scp over
             with tempfile.TemporaryDirectory(dir=os.getcwd(), prefix="test_files_") as tmp:
                 run_host_command(["tar", "xJf", str(archive), "-C", tmp])
-                private_key = str(Path(ssh_keyfile).with_suffix(""))
-                # CVE-2018-20685 -> Can no longer use '.' See https://superuser.com/questions/1403473/scp-error-unexpected-filename
-                scp_cmd = ["scp", "-B", "-r", "-P", str(ssh_port), "-o", "StrictHostKeyChecking=no",
-                           "-o", "UserKnownHostsFile=/dev/null",
-                           "-i", shlex.quote(private_key), tmp, "root@localhost:/"]
-                # use script for a fake tty to get progress output from scp
-                if sys.platform.startswith("linux"):
-                    scp_cmd = ["script", "--quiet", "--return", "--command", " ".join(scp_cmd), "/dev/null"]
                 run_host_command(["ls", "-la"], cwd=tmp)
-                run_host_command(scp_cmd, cwd=tmp)
+                do_scp(tmp)
+    ld_preload_target_paths = []
+    for lib in test_ld_preload_files:
+        assert isinstance(lib, Path)
+        if smb_dirs:
+            run_host_command(["mkdir", "-p", str(smb_dirs[0].hostdir) + "/preload"])
+            run_host_command(["cp", "-v", str(lib.absolute()), str(smb_dirs[0].hostdir) + "/preload"])
+            ld_preload_target_paths.append(str(Path(smb_dirs[0].in_target, "preload", lib.name)))
+        else:
+            run_cheribsd_command(qemu, "mkdir -p /tmp/preload")
+            do_scp(str(lib), "/tmp/preload/" + lib.name)
+            ld_preload_target_paths.append(str(Path("/tmp/preload", lib.name)))
+
     for index, d in enumerate(smb_dirs):
         run_cheribsd_command(qemu, "mkdir -p '{}'".format(d.in_target))
         mount_command = "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu{} '{}'".format(index + 1, d.in_target)
         try:
-            checked_run_cheribsd_command(qemu, mount_command, error_output="unable to open connection: syserr = Operation timed out", pretend_result=3)
+            checked_run_cheribsd_command(qemu, mount_command, error_output="unable to open connection: syserr = Operation timed out", pretend_result=0)
         except CheriBSDMatchedErrorOutput:
             failure("QEMU SMBD timed out while mounting ", d.in_target, ". Trying one more time.", exit=False)
             info("Waiting for 5 seconds before retrying mount_smbfs...")
@@ -572,6 +588,14 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     run_cheribsd_command(qemu, "df -h", expected_output="/opt")
     # ensure that /tmp is world-writable
     run_cheribsd_command(qemu, "chmod 777 /tmp")
+
+
+    for lib in ld_preload_target_paths:
+        # Ensure that the libraries exist
+        checked_run_cheribsd_command(qemu, "test -x '{}'".format(lib))
+    if ld_preload_target_paths:
+        checked_run_cheribsd_command(qemu, "export '{}={}'".format(args.test_ld_preload_variable,
+                                                                   ":".join(ld_preload_target_paths)))
     success("Preparing test enviroment took ", datetime.datetime.now() - setup_tests_starttime)
     if test_setup_function:
         setup_tests_starttime = datetime.datetime.now()
@@ -651,6 +675,10 @@ def get_argument_parser() -> argparse.ArgumentParser:
                         dest="smb_mount_directories", type=parse_smb_mount, default=[])
     parser.add_argument("--test-archive", "-t", action="append", nargs=1)
     parser.add_argument("--test-command", "-c")
+    parser.add_argument('--test-ld-preload', action="append", nargs=1, metavar='LIB',
+                        help="Copy LIB to the guest andLD_PRELOAD it before running tests")
+    parser.add_argument('--test-ld-preload-variable', type=str, default=None,
+                        help="The environment variable to set to LD_PRELOAD a library. should be set to either LD_PRELOAD or LD_CHERI_PRELOAD")
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60)
     parser.add_argument("--qemu-logfile", help="File to write all interactions with QEMU to", type=Path)
     parser.add_argument("--test-environment-only", action="store_true",
@@ -711,24 +739,38 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace], 
 
     # validate args:
     test_archives = []  # type: list
-    if args.test_archive:
+    test_ld_preload_files = []  # type: list
+    if args.test_archive or args.test_ld_preload:
         if args.use_smb_instead_of_ssh and not args.smb_mount_directories:
             failure("--smb-mount-directory is required if ssh is disabled")
-        info("Using the following test archives: ", args.test_archive)
         if not args.use_smb_instead_of_ssh:
             if Path(args.ssh_key).suffix != ".pub":
                 failure("--ssh-key should point to the public key and not ", args.ssh_key)
             if not Path(args.ssh_key).exists():
                 failure("SSH key missing: ", args.ssh_key)
 
-        for test_archive in args.test_archive:
-            if isinstance(test_archive, list):
-                test_archive = test_archive[0]
-            if not Path(test_archive).exists():
-                failure("Test archive is missing: ", test_archive)
-            if not test_archive.endswith(".tar.xz"):
-                failure("Currently only .tar.xz archives are supported")
-            test_archives.append(test_archive)
+        if args.test_archive:
+            info("Using the following test archives: ", args.test_archive)
+            for test_archive in args.test_archive:
+                if isinstance(test_archive, list):
+                    test_archive = test_archive[0]
+                if not Path(test_archive).exists():
+                    failure("Test archive is missing: ", test_archive)
+                if not test_archive.endswith(".tar.xz"):
+                    failure("Currently only .tar.xz archives are supported")
+                test_archives.append(test_archive)
+        elif args.test_ld_preload:
+            info("Preloading the following libraries: ", args.test_ld_preload)
+            if not args.test_ld_preload_variable:
+                failure("--test-ld-preload-variable must be set of --test-ld-preload is set!")
+
+            for lib in args.test_ld_preload:
+                if isinstance(lib, list):
+                    lib = lib[0]
+                if not Path(lib).exists():
+                    failure("PRELOAD library is missing: ", lib)
+                test_ld_preload_files.append(Path(lib).resolve())
+
         if not args.test_command:
             failure("WARNING: No test command specified, tests will fail", exit=False)
             args.test_command = "false"
@@ -767,7 +809,7 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace], 
                 setup_ssh(qemu, Path(args.ssh_key))
                 info("Setting up SSH took: ", datetime.datetime.now() - setup_ssh_starttime)
             tests_okay = runtests(qemu, args, test_archives=test_archives, test_function=test_function,
-                                  test_setup_function=test_setup_function)
+                                  test_setup_function=test_setup_function, test_ld_preload_files=test_ld_preload_files)
         except CheriBSDCommandFailed as e:
             failure("Command failed while runnings tests: ", str(e), "\n", str(qemu), exit=False)
             traceback.print_exc(file=sys.stderr)

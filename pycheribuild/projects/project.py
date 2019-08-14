@@ -654,6 +654,13 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             cmd.append("--test-environment-only")
         if self.config.trap_on_unrepresentable:
             cmd.append("--trap-on-unrepresentable")
+        if self.config.test_ld_preload:
+            cmd.append("--test-ld-preload=" + str(self.config.test_ld_preload))
+            if xtarget == CrossCompileTarget.CHERI:
+                cmd.append("--test-ld-preload-variable=LD_CHERI_PRELOAD")
+            else:
+                cmd.append("--test-ld-preload-variable=LD_PRELOAD")
+
 
         cmd += list(script_args)
         if self.config.test_extra_args:

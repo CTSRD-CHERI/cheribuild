@@ -274,8 +274,9 @@ class BuildSpec2006(CrossCompileProject):
             self.run_cmd(self.buildDir / "spec/install.sh", "-f", cwd=self.buildDir / "spec")
 
         # TODO: apply a patch instead?
-        for dir in Path(self.ctsrd_evaluation_trunk / "spec-cpu2006-v1.1/benchspec").iterdir():
-            self.run_cmd("cp", "-a", dir, ".", cwd=self.buildDir / "spec/benchspec")
+        if self.ctsrd_evaluation_trunk.exists():
+            for dir in Path(self.ctsrd_evaluation_trunk / "spec-cpu2006-v1.1/benchspec").iterdir():
+                self.run_cmd("cp", "-a", dir, ".", cwd=self.buildDir / "spec/benchspec")
 
         config_file_text = self.readFile(self.spec_config_dir / "freebsd-cheribuild.cfg")
         # FIXME: this should really not be needed....

@@ -263,6 +263,8 @@ class CheriConfig(object):
             help="Interact with the CheriBSD instance after running the tests on QEMU (only for --test)")
         self.tests_env_only = loader.addCommandLineOnlyBoolOption("test-environment-only", group=loader.testsGroup,
             help="Don't actually run the tests. Instead setup a QEMU instance with the right paths set up.")
+        self.test_ld_preload = loader.addPathOption("test-ld-preload", group=loader.testsGroup,
+                                                    help="Preload the given library before running tests")
 
         self.benchmark_fpga_extra_args = loader.addCommandLineOnlyOption("benchmark-fpga-extra-args", group=loader.benchmarkGroup,
                                                                          type=list, metavar="ARGS",
