@@ -346,6 +346,13 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
                 if guess.exists():
                     self.installFile(guess, spec_root / "lib" / needed_lib, printVerboseOnly=False, force=True)
 
+        # Add libcheri_caprevoke if it exists:
+        if self.compiling_for_cheri():
+            caprevoke = "libcheri_caprevoke.so.1"
+            if (self.sdkSysroot / "usr/libcheri" / caprevoke).exists():
+                self.installFile(self.sdkSysroot / "usr/libcheri" / caprevoke, spec_root / "lib" / caprevoke,
+                                 printVerboseOnly=False, force=True)
+
         # To copy all of them:
         # self.run_cmd("cp", "-av", self.spec_run_scripts, output_dir / "benchspec/")
         self.cleanDirectory(output_dir / "config", ensure_dir_exists=False)
