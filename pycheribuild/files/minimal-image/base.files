@@ -66,6 +66,7 @@ lib/libz.so.6
 
 usr/lib/libbsm.so.3
 usr/lib/libpam.so.6
+usr/lib/libprocstat.so.1
 # TODO: add this? usr/lib/libssh.so.5
 usr/lib/libssl.so.111
 # needed for benchmarks
