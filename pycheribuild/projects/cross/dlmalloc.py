@@ -62,6 +62,8 @@ class DLMalloc(CrossCompileProject):
 
         cls.zero_memory      = cls.addBoolOption("zero-memory", help="Zero allocated memory")
 
+        cls.stats_at_exit    = cls.addBoolOption("stats-at-exit", default=True, help="print statistics on exit")
+
         cls.unmap_support    = cls.addBoolOption("unmap-support", default=True, help="support for unmapping")
 
         cls.unmap_threshold  = cls.addConfigOption("unmap-threshold", kind=int,
@@ -105,6 +107,9 @@ class DLMalloc(CrossCompileProject):
 
         if not self.quar_unsafe :
             self.CFLAGS.append("-DSAFE_FREEBUF")
+
+        if self.stats_at_exit:
+            self.CFLAGS.append("-DSWEEP_STATS=1")
 
         self.make_args.add_flags("-f", self.sourceDir / "Makefile.cheribuild")
         self.make_args.set(DEBUG=self.debug)
