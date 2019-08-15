@@ -259,9 +259,10 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
             # TODO py35: pass stderr=stderr as well
             raise subprocess.TimeoutExpired(process.args, timeout, output=stdout)
         except BrokenPipeError:
+            # just return the exit code
             process.kill()
-            process.wait()
-            # just return the exit codes
+            retcode = process.wait()
+            raise _make_called_process_error(retcode, process.args, stdout=b"", cwd=kwargs["cwd"])
         except Exception:
             process.kill()
             process.wait()
