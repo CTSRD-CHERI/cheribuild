@@ -35,7 +35,7 @@ from ...utils import getCompilerInfo, runCmd, IS_FREEBSD
 
 class MRS(CrossCompileCMakeProject):
     projectName = "mrs"
-    repository = GitRepository("https://github.com/brettferdosi/mrs")
+    repository = GitRepository("https://github.com/ctsrd-cheri/mrs")
     appendCheriBitsToBuildDir = True
     supported_architectures = [CrossCompileTarget.CHERI]
     defaultOptimizationLevel = ["-O2"]
