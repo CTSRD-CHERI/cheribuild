@@ -93,9 +93,8 @@ def run_juliet_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
         run_command = "/build/juliet-run.sh {}".format(args.testcase_timeout)
 
 
-    # maybe need to increase overall timeout of command
     build_dir = Path(args.build_dir)
-    boot_cheribsd.checked_run_cheribsd_command(qemu, run_command, ignore_cheri_trap=True)
+    boot_cheribsd.checked_run_cheribsd_command(qemu, run_command, ignore_cheri_trap=True, timeout=60000)
     xml = junitparser.JUnitXml()
     output_to_junit_suite(xml, build_dir / "bin" / "good.run", "good", True)
     output_to_junit_suite(xml, build_dir / "bin" / "bad.run", "bad", False)
