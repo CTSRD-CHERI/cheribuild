@@ -52,6 +52,8 @@ class MRS(CrossCompileCMakeProject):
         cls.offload_quarantine = cls.addBoolOption("offload-quarantine", help="process the quarantine in a separate worker thread")
         cls.bypass_quarantine = cls.addBoolOption("bypass-quarantine", help="MADV_FREE freed page-size allocations")
         cls.clear_allocations = cls.addBoolOption("clear-allocations", help="zero out allocations made by malloc")
+        cls.dont_revoke = cls.addBoolOption("dont-revoke", help="don't perform quarantining or revocation")
+        cls.print_stats= cls.addBoolOption("print-stats", help="print heap statistics on exit")
 
         cls.quarantine_ratio = cls.addConfigOption("quarantine-ratio", kind=int, help="limit the quarantine size to 1/QUARANTINE_RATIO times the size of the heap")
         cls.quarantine_highwater = cls.addConfigOption("quarantine-highwater", kind=int, help="limit the quarantine size to QUARANTINE_HIGHWATER bytes (supersedes QUARANTINE_RATIO)")
@@ -67,6 +69,10 @@ class MRS(CrossCompileCMakeProject):
             self.add_cmake_options(BYPASS_QUARANTINE="ON")
         if self.clear_allocations:
             self.add_cmake_options(CLEAR_ALLOCATIONS="ON")
+        if self.dont_revoke:
+            self.add_cmake_options(DONT_REVOKE="ON")
+        if self.print_stats:
+            self.add_cmake_options(PRINT_STATS="ON")
 
         if self.quarantine_ratio:
             self.add_cmake_options(QUARANTINE_RATIO=self.quarantine_ratio)
