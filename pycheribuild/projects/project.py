@@ -53,7 +53,7 @@ from ..utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies", # no-combine
            "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
-           "CrossCompileTarget", "GitRepository", "ComputedDefaultValue", "commandline_to_str"]  # no-combine
+           "CrossCompileTarget", "GitRepository", "ComputedDefaultValue", "commandline_to_str", "ReuseOtherProjectRepository"]  # no-combine
 
 
 def flushStdio(stream):

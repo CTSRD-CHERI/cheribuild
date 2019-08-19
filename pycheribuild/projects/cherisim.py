@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import shlex
 
 from .project import *
 from ..utils import OSInfo, commandline_to_str
@@ -81,4 +82,37 @@ class BuildCheriSim(Project):
                                  "\t\tTry running `sudo ln -s libgmp.so.10 /usr/lib/x86_64-linux-gnu/libgmp.so.3`")
         super().process()
 
+
+class BuildBeriCtl(Project):
+    target = "berictl"
+    repository = ReuseOtherProjectRepository(source_project=BuildCheriSim, subdirectory="cherilibs/tools/debug")
+    defaultInstallDir = Project._installToSDK
+    build_in_source_dir = True      # Needs to build in the source dir
+    make_kind = MakeCommandKind.GnuMake
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        self.make_args.set(JTAG_ATLANTIC=1) # MUCH faster
+
+    def clean(self):
+        self.runMake("clean", parallel=False, cwd=self.sourceDir)
+        return None
+
+    def compile(self, **kwargs):
+        setup_sh = self.sourceDir / "../../../cheri/setup.sh"
+        if not setup_sh.exists():
+            self.fatal("Could not find setup.sh")
+        self.runShellScript("source {} && ".format(shlex.quote(str(setup_sh))) + commandline_to_str(self.get_make_commandline(None, parallel=False)),
+                            cwd=self.sourceDir, shell="bash")
+
+    def install(self, **kwargs):
+        pass
+
+    def process(self):
+        if OSInfo.isUbuntu() and not Path("/usr/lib/x86_64-linux-gnu/libgmp.so.3").exists():
+            # BSC needs libgmp.so.3
+            self.fatal("libgmp.so.3 is needed to run BSC",
+                       fixitHint="Creating a symlink to /usr/lib/x86_64-linux-gnu/libgmp.so.10 seems to work.\n"
+                                 "\t\tTry running `sudo ln -s libgmp.so.10 /usr/lib/x86_64-linux-gnu/libgmp.so.3`")
+        super().process()
 

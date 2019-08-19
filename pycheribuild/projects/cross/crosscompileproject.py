@@ -566,15 +566,16 @@ class CrossCompileMixin(MultiArchBaseMixin):
                     self.warning("Will copy a .dump file to the FPGA:", file)
 
         runbench_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
-        basic_args = []
 
         from ..cherisim import BuildCheriSim
         sim_project = BuildCheriSim.get_instance(self, self.config)
         cherilibs_dir = Path(sim_project.sourceDir, "cherilibs")
         cheri_dir = Path(sim_project.sourceDir, "cheri")
         if not cheri_dir.exists() or not cherilibs_dir.exists():
-            self.fatal("cheri-cpu repository missing. Run `cheribuild.py cheri-sim` or `git clone {} {}`".format(
-                       sim_project.repository.url, sim_project.sourceDir))
+            self.fatal("cheri-cpu repository missing. Run `cheribuild.py berictl` or `git clone {} {}`".format(
+                sim_project.repository.url, sim_project.sourceDir))
+        from ..cherisim import BuildBeriCtl
+        basic_args = ["--berictl=" + str(BuildBeriCtl.getBuildDir(self, self.config) / "berictl")]
 
         if self.config.benchmark_ld_preload:
             runbench_args.append("--extra-input-files=" + str(self.config.benchmark_ld_preload))
