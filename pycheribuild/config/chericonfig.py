@@ -269,12 +269,6 @@ class CheriConfig(object):
         self.benchmark_fpga_extra_args = loader.addCommandLineOnlyOption("benchmark-fpga-extra-args", group=loader.benchmarkGroup,
                                                                          type=list, metavar="ARGS",
                                                                          help="Extra options for beri-fpga-bsd-boot.py")
-        self.cherilibs_svn_checkout = loader.addPathOption("cherilibs-svn-checkout", group=loader.benchmarkGroup,
-                                                           default="/missing/--cherilibs-svn-checkout/config/option",
-                                                           help="PATH to the CTSRD SVN cherilibs/trunk checkout")
-        self.cheri_svn_checkout = loader.addPathOption("cheri-svn-checkout", group=loader.benchmarkGroup,
-                                                       default="/missing/--cheri-svn-checkout/config/option",
-                                                       help="PATH to the CTSRD SVN cheri/trunk checkout")
         self.benchmark_clean_boot = loader.addBoolOption("benchmark-clean-boot", group=loader.benchmarkGroup,
             help="Reboot the FPGA with a new bitfile and kernel before running benchmarks. "
                  "If not set, assume the FPGA is running.")
@@ -284,8 +278,6 @@ class CheriConfig(object):
                                                    default="cheri-fpga", help="The SSH hostname/IP for the benchmark FPGA")
         self.benchmark_ld_preload = loader.addPathOption("benchmark-ld-preload", group=loader.benchmarkGroup,
                                                          help="Preload the given library before running benchmarks")
-
-
         self.shallow_clone = loader.addBoolOption("shallow-clone", default=True,
             help="Perform a shallow `git clone` when cloning new projects. This can save a lot of time for large"
             "repositories such as FreeBSD or LLVM. Use `git fetch --unshallow` to convert to a non-shallow clone")

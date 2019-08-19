@@ -567,6 +567,15 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
         runbench_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
         basic_args = []
+
+        from ..cherisim import BuildCheriSim
+        sim_project = BuildCheriSim.get_instance(self, self.config)
+        cherilibs_dir = Path(sim_project.sourceDir, "cherilibs")
+        cheri_dir = Path(sim_project.sourceDir, "cheri")
+        if not cheri_dir.exists() or not cherilibs_dir.exists():
+            self.fatal("cheri-cpu repository missing. Run `cheribuild.py cheri-sim` or `git clone {} {}`".format(
+                       sim_project.repository.url, sim_project.sourceDir))
+
         if self.config.benchmark_ld_preload:
             runbench_args.append("--extra-input-files=" + str(self.config.benchmark_ld_preload))
             env_var = "LD_CHERI_PRELOAD" if self.compiling_for_cheri() else "LD_PRELOAD"
@@ -600,13 +609,12 @@ class CrossCompileMixin(MultiArchBaseMixin):
             runbench_args.extend(extra_runbench_args)
         beri_fpga_bsd_boot_script = """
 set +x
-source "{cheri_svn}/setup.sh"
+source "{cheri_dir}/setup.sh"
 set -x
-export PATH="$PATH:{cherilibs_svn}/tools:{cherilibs_svn}/tools/debug"
+export PATH="$PATH:{cherilibs_dir}/tools:{cherilibs_dir}/tools/debug"
 exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbench_args}
-""".format(cheri_svn=self.config.cheri_svn_checkout, cherilibs_svn=self.config.cherilibs_svn_checkout,
-           runbench_args=commandline_to_str(runbench_args), basic_args=commandline_to_str(basic_args),
-           cheribuild_path=Path(__file__).parent.parent.parent.parent)
+""".format(cheri_dir=cheri_dir, cherilibs_dir=cherilibs_dir, runbench_args=commandline_to_str(runbench_args),
+           basic_args=commandline_to_str(basic_args), cheribuild_path=Path(__file__).parent.parent.parent.parent)
         self.runShellScript(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
 
     def process(self):
