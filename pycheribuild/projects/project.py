@@ -1096,10 +1096,7 @@ class Project(SimpleProject):
         return result
 
     def buildDirSuffix(self, target: CrossCompileTarget=None):
-        result = self.build_configuration_suffix(target)
-        if self.build_dir_suffix:
-            result = self.build_dir_suffix + result
-        return result + "-build"
+        return self.build_configuration_suffix(target) + "-build"
 
     def buildDirForTarget(self, target: CrossCompileTarget):
         return self.config.buildRoot / (self.projectName.lower() + self.buildDirSuffix(target))

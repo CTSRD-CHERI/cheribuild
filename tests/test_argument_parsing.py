@@ -455,3 +455,34 @@ def test_default_arch(base_name, expected):
         config = _parse_arguments(["--skip-configure", default_flag])
         target = targetManager.get_target(base_name, None, config)
         assert expected == target.name, "Failed for " + default_flag
+
+
+@pytest.mark.parametrize("target,args,expected", [
+    pytest.param("cheribsd", ["--foo"],
+                 "cheribsd-128-build"),
+    pytest.param("cheribsd-purecap", ["--foo"],
+                 "cheribsd-purecap-128-build"),
+    # --subobject debug should not have any effect if subobject bounds is disabled
+    pytest.param("cheribsd-purecap", ["--subobject-bounds=conservative", "--subobject-debug"],
+                 "cheribsd-purecap-128-build"),
+    pytest.param("cheribsd-purecap", ["--subobject-bounds=subobject-safe", "--subobject-debug"],
+                 "cheribsd-purecap-128-subobject-safe-build"),
+    pytest.param("cheribsd-purecap", ["--subobject-bounds=subobject-safe", "--no-subobject-debug"],
+                 "cheribsd-purecap-128-subobject-safe-subobject-nodebug-build"),
+    # No change for pcrel:
+    pytest.param("cheribsd", ["--cap-table-abi=pcrel", "--subobject-bounds=conservative"],
+                 "cheribsd-128-build"),
+    # plt should be encoded
+    pytest.param("cheribsd", ["--cap-table-abi=plt", "--subobject-bounds=conservative"],
+                 "cheribsd-128-plt-build"),
+    # everything
+    pytest.param("cheribsd-purecap", ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
+                 "cheribsd-purecap-128-plt-aggressive-hardfloat-build"),
+])
+def test_default_arch(target: str, args: list, expected: str):
+    # Check that the cheribsd build dir is correct
+    config = _parse_arguments(args)
+    target = targetManager.get_target(target, None, config)
+    builddir = target.get_or_create_project(None, config).buildDir
+    assert isinstance(builddir, Path)
+    assert builddir.name == expected
