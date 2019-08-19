@@ -372,6 +372,9 @@ class CheriConfig(object):
             result += "-" + str(self.cheri_cap_table_abi)
         if self.subobject_bounds is not None and self.subobject_bounds != self.DEFAULT_SUBOBJECT_BOUNDS:
             result += "-" + str(self.subobject_bounds)
+            # TODO: this suffix should not be added. However, it's useful for me right now...
+            if not self.subobject_debug:
+                result += "-subobject-nodebug"
         if self.mips_float_abi == MipsFloatAbi.HARD:
             result += "-hardfloat"
         return result

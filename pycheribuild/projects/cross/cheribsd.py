@@ -410,6 +410,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             self.cross_toolchain_config.set(CSETBOUNDS_LOGFILE=self.csetbounds_stats_file)
         if self.config.subobject_bounds:
             self.cross_toolchain_config.set(CHERI_SUBOBJECT_BOUNDS=self.config.subobject_bounds)
+            self.cross_toolchain_config.set(CHERI_SUBOBJECT_BOUNDS_DEBUG="yes" if self.config.subobject_debug else "no")
 
         # self.cross_toolchain_config.add(CROSS_COMPILER=Falses) # This sets too much, we want elftoolchain and binutils
         cross_prefix = str(self.crossToolchainRoot / "bin") + "/"  # needs to end with / for concatenation
