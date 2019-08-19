@@ -169,18 +169,20 @@ class BuildOlden(CrossCompileProject):
 
     def install(self, **kwargs):
         self.makedirs(self.installDir)
-        for script in ("run_micro2016.sh", "run_isca2017.sh", "run_jenkins-bluehive.sh"):
-            self.installFile(self.sourceDir / script, self.installDir / script, force=True)
-        if Path(self.sourceDir / "bin").exists():
-            for file in Path(self.sourceDir / "bin").iterdir():
-                if file.is_file() and file.name.endswith(".bench"):
-                    self.installFile(file, self.installDir / file.name, force=True)
         if is_jenkins_build():
-            if self.compiling_for_mips() and self.use_asan:
-                self.copy_asan_dependencies(self.installDir / "lib")
-            # Remove all the .dump files from the tarball
-            self.run_cmd("find", self.installDir, "-name", "*.dump", "-delete")
-            self.run_cmd("du", "-sh", self.installDir)
+            self._create_benchmark_dir(self.installDir)
+        else:
+            # Note: no trailing slash to ensure bin/ subdir exists
+            self.run_cmd("cp", "-av", self.sourceDir / "bin", self.installDir, cwd=self.buildDir)
+
+    def _create_benchmark_dir(self, bench_dir: Path):
+        self.makedirs(bench_dir)
+        # Note: no trailing slash to ensure bin/ subdir exists
+        self.run_cmd("cp", "-av", self.sourceDir / "bin", bench_dir, cwd=self.buildDir)
+        # Remove all the .dump files from the tarball
+        self.run_cmd("find", bench_dir, "-name", "*.dump", "-delete")
+        self.run_cmd("du", "-sh", bench_dir)
+        self.strip_elf_files(bench_dir)
 
     def run_tests(self):
         if self.compiling_for_host():
@@ -192,9 +194,15 @@ class BuildOlden(CrossCompileProject):
                                       mount_builddir=True)
 
     def run_benchmarks(self):
-        self.run_fpga_benchmark(self.buildDir / "bin", output_file=self.default_statcounters_csv_name,
-                                benchmark_script_args=["-d1", "-r5", "-o", self.default_statcounters_csv_name,
-                                                       self.test_arch_suffix])
+        with tempfile.TemporaryDirectory() as td:
+            self._create_benchmark_dir(Path(td))
+            benchmark_dir = Path(td, "bin")
+            self.run_cmd("find", benchmark_dir)
+            if not (benchmark_dir / "run_jenkins-bluehive.sh").exists():
+                self.fatal("Created invalid benchmark bundle...")
+            self.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
+                                    benchmark_script_args=["-d1", "-r5", "-o", self.default_statcounters_csv_name,
+                                                           self.test_arch_suffix])
 
 class BuildSpec2006(CrossCompileProject):
     target = "spec2006"
