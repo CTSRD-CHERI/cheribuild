@@ -531,14 +531,15 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 self.build_configuration_suffix(), datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
             return self._statcounters_csv
 
-    def run_fpga_benchmark(self, benchmarks_dir: Path, *, output_file: str = None, benchmark_script: str = None,
-                           benchmark_script_args: list = None, extra_runbench_args: list = None):
-        assert benchmarks_dir is not None
-        assert output_file is not None, "output_file must be set to a valid value"
+    def strip_elf_files(self, benchmark_dir):
+        """
+        Strip all ELF binaries to reduce the size of the benchmark directory
+        :param benchmark_dir: The directory containing multiple ELF binaries
+        """
         assert isinstance(self, Project) and isinstance(self, CrossCompileMixin)
-        self.info("Stripping all ELF files before copying to the FPGA")
-        self.run_cmd("du", "-sh", benchmarks_dir)
-        for root, dirnames, filenames in os.walk(str(benchmarks_dir)):
+        self.info("Stripping all ELF files in", benchmark_dir)
+        self.run_cmd("du", "-sh", benchmark_dir)
+        for root, dirnames, filenames in os.walk(str(benchmark_dir)):
             for filename in filenames:
                 file = Path(root, filename)
                 if file.suffix == ".dump":
@@ -549,7 +550,21 @@ class CrossCompileMixin(MultiArchBaseMixin):
                     if f.read(4) == b"\x7fELF":
                         self.verbose_print("Stripping ELF binary", file)
                         runCmd(self.config.sdkBinDir / "llvm-strip", file)
-        self.run_cmd("du", "-sh", benchmarks_dir)
+        self.run_cmd("du", "-sh", benchmark_dir)
+
+    def run_fpga_benchmark(self, benchmarks_dir: Path, *, output_file: str = None, benchmark_script: str = None,
+                           benchmark_script_args: list = None, extra_runbench_args: list = None):
+        assert benchmarks_dir is not None
+        assert output_file is not None, "output_file must be set to a valid value"
+        assert isinstance(self, Project) and isinstance(self, CrossCompileMixin)
+        self.strip_elf_files(benchmarks_dir)
+        for root, dirnames, filenames in os.walk(str(benchmarks_dir)):
+            for filename in filenames:
+                file = Path(root, filename)
+                if file.suffix == ".dump":
+                    # TODO: make this an error since we should have deleted them
+                    self.warning("Will copy a .dump file to the FPGA:", file)
+
         runbench_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
         basic_args = []
         if self.config.benchmark_ld_preload:

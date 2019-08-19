@@ -91,14 +91,17 @@ class BuildMibench(CrossCompileProject):
             if self.compiling_for_mips() and self.use_asan:
                 self.copy_asan_dependencies(self.buildDir / "bundle/lib")
 
+    def _create_benchmark_dir(self, bench_dir: Path):
+        self.makedirs(bench_dir)
+        self.run_cmd("cp", "-av", self.bundle_dir, bench_dir, cwd=self.buildDir)
+        # Remove all the .dump files from the tarball
+        self.run_cmd("find", bench_dir, "-name", "*.dump", "-delete")
+        self.run_cmd("du", "-sh", bench_dir)
+        self.strip_elf_files(bench_dir)
+
     def install(self, **kwargs):
         if is_jenkins_build():
-            self.makedirs(self.installDir)
-            self.run_cmd("cp", "-av", self.bundle_dir, self.installDir, cwd=self.buildDir)
-            self.run_cmd("du", "-sh", self.installDir)
-            # Remove all the .dump files from the tarball
-            self.run_cmd("find", self.installDir, "-name", "*.dump", "-delete")
-            self.run_cmd("du", "-sh", self.installDir)
+            self._create_benchmark_dir(self.installDir)
         else:
             self.info("Not installing MiBench for non-Jenkins builds")
 
@@ -112,11 +115,12 @@ class BuildMibench(CrossCompileProject):
                                       mount_builddir=True)
 
     def run_benchmarks(self):
-        self.run_fpga_benchmark(self.buildDir / self.bundle_dir.name,
-                                output_file=self.default_statcounters_csv_name,
-                                benchmark_script_args=["-d1", "-r5", "-s", "small",
-                                                       "-o", self.default_statcounters_csv_name,
-                                                       self.benchmark_version])
+        with tempfile.TemporaryDirectory() as td:
+            self._create_benchmark_dir(Path(td))
+            self.run_fpga_benchmark(Path(td), output_file=self.default_statcounters_csv_name,
+                                    benchmark_script_args=["-d1", "-r5", "-s", "small",
+                                                           "-o", self.default_statcounters_csv_name,
+                                                           self.benchmark_version])
 
 class BuildOlden(CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/olden")
