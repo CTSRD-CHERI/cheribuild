@@ -50,6 +50,12 @@ class BuildMibench(CrossCompileProject):
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
 
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        cls.benchmark_size = cls.addConfigOption("benchmark-size", choices=("small", "large"), default="large",
+                                                 kind=str, help="Size of benchmark input data to use")
+
     @property
     def bundle_dir(self):
         return Path(self.buildDir, self.crosscompile_target.value +
@@ -91,17 +97,31 @@ class BuildMibench(CrossCompileProject):
             if self.compiling_for_mips() and self.use_asan:
                 self.copy_asan_dependencies(self.buildDir / "bundle/lib")
 
-    def _create_benchmark_dir(self, bench_dir: Path):
+    def _create_benchmark_dir(self, bench_dir: Path, *, keep_both_sizes: bool):
         self.makedirs(bench_dir)
         self.run_cmd("cp", "-av", self.bundle_dir, bench_dir, cwd=self.buildDir)
         # Remove all the .dump files from the tarball
+        if self.config.verbose:
+            self.run_cmd("find", bench_dir, "-name", "*.dump", "-print")
         self.run_cmd("find", bench_dir, "-name", "*.dump", "-delete")
         self.run_cmd("du", "-sh", bench_dir)
+        if not keep_both_sizes:
+            if self.benchmark_size == "large":
+                if self.config.verbose:
+                    self.run_cmd("find", bench_dir, "-name", "*small*", "-print")
+                self.run_cmd("find", bench_dir, "-name", "*small*", "-delete")
+            else:
+                assert self.benchmark_size == "small"
+                if self.config.verbose:
+                    self.run_cmd("find", bench_dir, "-name", "*large*", "-print")
+                self.run_cmd("find", bench_dir, "-name", "*large*", "-delete")
+            self.run_cmd("du", "-sh", bench_dir)
+        self.run_cmd("find", bench_dir)
         self.strip_elf_files(bench_dir)
 
     def install(self, **kwargs):
         if is_jenkins_build():
-            self._create_benchmark_dir(self.installDir)
+            self._create_benchmark_dir(self.installDir, keep_both_sizes=True)
         else:
             self.info("Not installing MiBench for non-Jenkins builds")
 
@@ -109,19 +129,19 @@ class BuildMibench(CrossCompileProject):
         if self.compiling_for_host():
             self.fatal("running x86 tests is not implemented yet")
         # testing, not benchmarking -> run only once: (-s small / -s large?)
-        test_command = "cd '/build/" + self.bundle_dir.name + "' && ./run_jenkins-bluehive.sh -d0 -r1 -s small " + self.benchmark_version
+        test_command = "cd '/build/{dirname}' && ./run_jenkins-bluehive.sh -d0 -r1 -s {size} {version}".format(
+            dirname=self.bundle_dir.name, size=self.benchmark_size, version=self.benchmark_version)
         self.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
-                                      "--test-timeout", str(120 * 60),
-                                      mount_builddir=True)
+                                      "--test-timeout", str(120 * 60), mount_builddir=True)
 
     def run_benchmarks(self):
         with tempfile.TemporaryDirectory() as td:
-            self._create_benchmark_dir(Path(td))
+            self._create_benchmark_dir(Path(td), keep_both_sizes=False)
             benchmark_dir = Path(td, self.bundle_dir.name)
             if not (benchmark_dir / "run_jenkins-bluehive.sh").exists():
                 self.fatal("Created invalid benchmark bundle...")
             self.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
-                                    benchmark_script_args=["-d1", "-r5", "-s", "small",
+                                    benchmark_script_args=["-d1", "-r10", "-s", self.benchmark_size,
                                                            "-o", self.default_statcounters_csv_name,
                                                            self.benchmark_version])
 
