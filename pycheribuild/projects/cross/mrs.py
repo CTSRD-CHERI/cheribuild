@@ -52,8 +52,13 @@ class MRS(CrossCompileCMakeProject):
         cls.offload_quarantine = cls.addBoolOption("offload-quarantine", help="process the quarantine in a separate worker thread")
         cls.bypass_quarantine = cls.addBoolOption("bypass-quarantine", help="MADV_FREE freed page-size allocations")
         cls.clear_allocations = cls.addBoolOption("clear-allocations", help="zero out allocations made by malloc")
-        cls.dont_revoke = cls.addBoolOption("dont-revoke", help="don't perform quarantining or revocation")
         cls.print_stats= cls.addBoolOption("print-stats", help="print heap statistics on exit")
+        cls.sanitize = cls.addBoolOption("sanitize", help="behave more like a sanitizer")
+
+        cls.just_interpose = cls.addBoolOption("just-interpose", help="just call the real functions")
+        cls.just_bookkeeping = cls.addBoolOption("just-bookkeeping", help="just update data structures")
+        cls.just_quarantine = cls.addBoolOption("just-quarantine", help="do bookkeeping and quarantining")
+        cls.just_paint_bitmap = cls.addBoolOption("just-paint-bitmap", help="do bookkeeping, quarantining, and bitmap painting")
 
         cls.quarantine_ratio = cls.addConfigOption("quarantine-ratio", kind=int, help="limit the quarantine size to 1/QUARANTINE_RATIO times the size of the heap")
         cls.quarantine_highwater = cls.addConfigOption("quarantine-highwater", kind=int, help="limit the quarantine size to QUARANTINE_HIGHWATER bytes (supersedes QUARANTINE_RATIO)")
@@ -69,10 +74,19 @@ class MRS(CrossCompileCMakeProject):
             self.add_cmake_options(BYPASS_QUARANTINE="ON")
         if self.clear_allocations:
             self.add_cmake_options(CLEAR_ALLOCATIONS="ON")
-        if self.dont_revoke:
-            self.add_cmake_options(DONT_REVOKE="ON")
         if self.print_stats:
             self.add_cmake_options(PRINT_STATS="ON")
+        if self.sanitize:
+            self.add_cmake_options(SANITIZE="ON")
+
+        if self.just_interpose:
+            self.add_cmake_options(JUST_INTERPOSE="ON")
+        if self.just_bookkeeping:
+            self.add_cmake_options(JUST_BOOKKEEPING="ON")
+        if self.just_quarantine:
+            self.add_cmake_options(JUST_QUARANTINE="ON")
+        if self.just_paint_bitmap:
+            self.add_cmake_options(JUST_PAINT_BITMAP="ON")
 
         if self.quarantine_ratio:
             self.add_cmake_options(QUARANTINE_RATIO=self.quarantine_ratio)
