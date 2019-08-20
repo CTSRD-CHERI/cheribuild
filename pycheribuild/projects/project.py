@@ -1237,6 +1237,7 @@ class Project(SimpleProject):
             else:
                 self._addRequiredSystemTool("bear", installInstructions="Run `cheribuild.py bear`")
                 self._compiledb_tool = "bear"
+        self._force_clean = False
         self._preventAssign = True
 
     _no_overwrite_allowed = ("configureArgs", "configureEnvironment", "make_args")
@@ -1342,7 +1343,7 @@ class Project(SimpleProject):
         runCmd(git_clean_cmd, cwd=self.sourceDir)
 
     def clean(self) -> ThreadJoiner:
-        assert self.config.clean
+        assert self.config.clean or self._force_clean
         # TODO: never use the source dir as a build dir (unfortunately mibench and elftoolchain won't work)
         # will have to check how well binutils and qemu work there
         if (self.buildDir / ".git").is_dir():
@@ -1484,14 +1485,30 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             self.checkSystemDependencies()
         assert self._systemDepsChecked, "self._systemDepsChecked must be set by now!"
 
+        last_build_file = Path(self.buildDir, ".last_build_kind")
+        if self.build_in_source_dir:
+            if not last_build_file.exists():
+                self._force_clean = True  # could be an old build prior to adding this check
+            else:
+                last_build_kind = self.readFile(last_build_file)
+                if last_build_kind != self.build_configuration_suffix():
+                    if not self.queryYesNo("Last build was for configuration" + last_build_kind +
+                                           " but currently building" + self.build_configuration_suffix() +
+                                           ". Will clean before build. Continue?", forceResult=True, defaultResult=True):
+                        self.fatal("Cannot continue")
+                        return
+                    self._force_clean = True
+
         # run the rm -rf <build dir> in the background
-        cleaningTask = self.clean() if self.config.clean else ThreadJoiner(None)
+        cleaningTask = self.clean() if (self._force_clean or self.config.clean) else ThreadJoiner(None)
         if cleaningTask is None:
             cleaningTask = ThreadJoiner(None)
         assert isinstance(cleaningTask, ThreadJoiner), ""
         with cleaningTask:
             if not self.buildDir.is_dir():
                 self.makedirs(self.buildDir)
+            if self.build_in_source_dir:
+                self.writeFile(last_build_file, self.build_configuration_suffix(), overwrite=True)
             if not self.config.skipConfigure or self.config.configureOnly:
                 if self.should_run_configure():
                     statusUpdate("Configuring", self.display_name, "... ")

@@ -55,6 +55,7 @@ class CrossInstallDir(Enum):
     CHERIBSD_ROOTFS = 1
     SDK = 2
     COMPILER_RESOURCE_DIR = 3
+    BOOTSTRAP_TOOLS = 4
 
 
 _INVALID_INSTALL_DIR = Path("/this/dir/should/be/overwritten/and/not/used/!!!!")
@@ -76,10 +77,12 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
     if project.compiling_for_host():
         if project.crossInstallDir == CrossInstallDir.SDK:
             return config.sdkDir
+        elif project.crossInstallDir == CrossInstallDir.BOOTSTRAP_TOOLS:
+            return config.otherToolsDir
         elif project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
             return _INVALID_INSTALL_DIR
         return _INVALID_INSTALL_DIR
-    if project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
+    if project.crossInstallDir in (CrossInstallDir.CHERIBSD_ROOTFS, CrossInstallDir.BOOTSTRAP_TOOLS):
         cheribsd_instance = get_cheribsd_instance_for_install_dir(config, project)
         if hasattr(project, "path_in_rootfs"):
             assert project.path_in_rootfs.startswith("/"), project.path_in_rootfs
@@ -227,7 +230,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 self.COMMON_FLAGS.append("-D_POSIX_MONOTONIC_CLOCK=1")  # pretend that we have a monotonic clock
                 self.COMMON_FLAGS.append("-D_POSIX_TIMERS=1")  # pretend that we have a monotonic clock
 
-            if self.crossInstallDir == CrossInstallDir.SDK:
+            if self.crossInstallDir in (CrossInstallDir.SDK, CrossInstallDir.BOOTSTRAP_TOOLS):
                 if self.baremetal:
                     self.destdir = self.sdkSysroot.parent
                     self._installPrefix = Path("/", self.targetTriple)
