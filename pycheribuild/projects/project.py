@@ -1486,7 +1486,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         assert self._systemDepsChecked, "self._systemDepsChecked must be set by now!"
 
         last_build_file = Path(self.buildDir, ".last_build_kind")
-        if self.build_in_source_dir:
+        if self.build_in_source_dir and not self.config.clean:
             if not last_build_file.exists():
                 self._force_clean = True  # could be an old build prior to adding this check
             else:
