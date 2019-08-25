@@ -66,7 +66,7 @@ class BuildMibench(CrossCompileProject):
         if self.compiling_for_host():
             return "x86"
         if self.compiling_for_mips():
-            return "mips-asan" if self.compiling_for_mips() else "mips"
+            return "mips-asan" if self.use_asan else "mips"
         if self.compiling_for_cheri():
             return "cheri" + self.config.cheriBitsStr
         raise ValueError("Unsupported target architecture!")

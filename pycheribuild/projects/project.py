@@ -1159,7 +1159,6 @@ class Project(SimpleProject):
                                           help="Override default source directory for " + cls.projectName)
         cls.buildDir = cls.addPathOption("build-directory", metavar="DIR", default=cls.defaultBuildDir,
                                          help="Override default source directory for " + cls.projectName)
-        # TODO: move this to project and change the build dir too
         if cls.can_build_with_asan:
             asan_default = ComputedDefaultValue(
                 function=lambda config, proj: False if proj.get_crosscompile_target(config) == CrossCompileTarget.CHERI else proj.default_use_asan,
