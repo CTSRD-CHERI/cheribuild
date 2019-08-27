@@ -486,8 +486,10 @@ def boot_bsd(bitfile, kernel_img, args):
     console.expect_exact('#')
     return console
 
-def do_scp (src,dst,key,timeout=600):
+def do_scp (src, dst, *, port:int, key,timeout=600):
     cmd = ['scp']
+    if port != 22:
+        cmd += ['-P', str(port)]
     # For some reason jenkins no longer likes the de4 bluehive host keys so to work around this we
     # completely disable host key checking by setting the known hosts file to /dev/null
     # See https://dustymabe.com/2012/01/09/hi-planet---ssh-disable-checking-host-key-against-known_hosts-file./
@@ -518,7 +520,9 @@ def do_network_on(console, args, timeout=300):
         console.expect_exact('{}: bpf attached'.format(ifc))
         console.expect_exact('#')
     console.sendline('/sbin/ifconfig {} up'.format(ifc))
-    console.expect_exact('{}: link state changed to UP'.format(ifc))
+    if ifc != "le0":
+        # apparently the le0 driver doesn't print this message
+        console.expect_exact('{}: link state changed to UP'.format(ifc))
     console.sendline('/sbin/ifconfig {} polling'.format(ifc))
     console.expect_exact('#')
     console.sendline('/sbin/dhclient {}'.format(ifc))
@@ -537,6 +541,7 @@ def do_network_off(console, args):
         console.expect_exact('#')
 
 def get_board_ip_address(console: MySpawn, args):
+    assert not args.use_qemu_instead_of_fpga
     ifc = get_network_iface(args)
     console.sendline('ifconfig {}'.format(ifc))
     idx = console.expect([
@@ -722,23 +727,30 @@ def main():
             do_network_on(console, args)
         else:
             console = common_boot()
-            print("Sleeping for 20 seconds to ensure FPGA is ready")
-            sleep(20)
-        # Try to find out the board ip address (since the hostname assignment is flaky)
-        board_ip = get_board_ip_address(console, args)
-        print("inferred board IP as:", board_ip)
-        if board_ip is not None:
-            args.target = board_ip
+            if not args.use_qemu_instead_of_fpga:
+                print("Sleeping for 20 seconds to ensure FPGA is ready")
+                sleep(20)
+
+        ssh_port = 22
+        if args.use_qemu_instead_of_fpga:
+            args.target = "localhost"
+            ssh_port = args.qemu_ssh_port
+        else:
+            # Try to find out the board ip address (since the hostname assignment is flaky)
+            board_ip = get_board_ip_address(console, args)
+            print("inferred board IP as:", board_ip)
+            if board_ip is not None:
+                args.target = board_ip
         tgtfs = op.join("/","tmp","benchdir")
         tgtdir = op.join(tgtfs,op.basename(args.benchdir))
         print("Will copy", args.benchdir, "to", tgtfs)
         tgtout = op.join(tgtdir,args.out_path)
         phaseprint("transfer benchmark")
         if not args.skip_copy:
-            do_scp(src=args.benchdir, dst="{}@{}:{}".format(args.user,args.target,tgtfs), key=args.ssh_key, timeout=1200)
+            do_scp(src=args.benchdir, dst="{}@{}:{}".format(args.user,args.target,tgtfs), port=ssh_port, key=args.ssh_key, timeout=1200)
             # Allow copying additional files to the fpga
             for extra_file in args.extra_input_files:
-                do_scp(src=extra_file, dst="{}@{}:{}".format(args.user, args.target, tgtfs), key=args.ssh_key)
+                do_scp(src=extra_file, dst="{}@{}:{}".format(args.user, args.target, tgtfs), port=ssh_port, key=args.ssh_key)
         phaseprint("turn network off")
         do_network_off(console, args)
         phaseprint("running benchmark")
@@ -746,11 +758,11 @@ def main():
         phaseprint("turn network on")
         do_network_on(console, args)
         phaseprint("transfer benchmark result")
-        do_scp("{}@{}:{}".format(args.user,args.target,tgtout),os.getcwd(),args.ssh_key)
+        do_scp("{}@{}:{}".format(args.user,args.target,tgtout),os.getcwd(),port=ssh_port,key=args.ssh_key)
         # Allow copying more than one file from the FPGA:
         if args.extra_output_files:
             for extra_file in args.extra_output_files:
-                do_scp("{}@{}:{}".format(args.user,args.target,extra_file),os.getcwd(),args.ssh_key)
+                do_scp("{}@{}:{}".format(args.user,args.target,extra_file),os.getcwd(),port=ssh_port,key=args.ssh_key)
         if args.interact:
             console.interact()
         console.close()
