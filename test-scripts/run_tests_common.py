@@ -36,7 +36,10 @@ import typing
 import sys
 from pathlib import Path
 
-import boot_cheribsd
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from pycheribuild import boot_cheribsd
+
+__all__ = ["run_tests_main", "boot_cheribsd"]
 
 def run_tests_main(test_function: typing.Callable[[boot_cheribsd.CheriBSDInstance, argparse.Namespace], bool] = None, need_ssh=False,
                    test_setup_function: typing.Callable[[boot_cheribsd.CheriBSDInstance, argparse.Namespace], None] = None,
@@ -86,7 +89,8 @@ def run_tests_main(test_function: typing.Callable[[boot_cheribsd.CheriBSDInstanc
         if test_setup_function:
             test_setup_function(qemu, args)
 
-    assert sys.path[0] == str(Path(__file__).parent.absolute()), sys.path
+    assert sys.path[0] == str(Path(__file__).parent.parent.absolute()), sys.path
+    assert sys.path[1] == str(Path(__file__).parent.absolute()), sys.path
     boot_cheribsd.main(test_function=test_function, test_setup_function=default_setup_tests,
                        argparse_setup_callback=default_add_cmdline_args,
                        argparse_adjust_args_callback=default_setup_args)

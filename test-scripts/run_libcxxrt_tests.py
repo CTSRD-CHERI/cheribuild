@@ -30,8 +30,8 @@
 # SUCH DAMAGE.
 #
 import argparse
-import boot_cheribsd
 import os
+from run_tests_common import *
 
 
 def run_libcxxrt_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
@@ -65,7 +65,6 @@ def adjust_args(args: argparse.Namespace):
 
 
 if __name__ == '__main__':
-    from run_tests_common import run_tests_main
     # we don't need ssh running to execute the tests
     run_tests_main(test_function=run_libcxxrt_tests, need_ssh=False, argparse_setup_callback=add_args,
                    argparse_adjust_args_callback=adjust_args, should_mount_builddir=True, should_mount_sysroot=True)

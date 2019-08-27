@@ -34,8 +34,7 @@ import datetime
 import pexpect
 import sys
 from pathlib import Path
-import boot_cheribsd
-
+from run_tests_common import *
 
 def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     boot_cheribsd.success("Booted successfully")
@@ -76,8 +75,7 @@ def add_args(parser: argparse.ArgumentParser):
 
 
 if __name__ == '__main__':
-    import boot_cheribsd
-    assert Path(sys.path[0]).resolve() == Path(__file__).parent.resolve(), sys.path
     # we don't need to setup ssh config/authorized_keys to test the boot
-    boot_cheribsd.main(test_function=run_noop_test, argparse_setup_callback=add_args,
-                       argparse_adjust_args_callback=test_boot_setup_args)
+    run_tests_main(test_function=run_noop_test, argparse_setup_callback=add_args,
+                                    should_mount_builddir=False,
+                                    argparse_adjust_args_callback=test_boot_setup_args)

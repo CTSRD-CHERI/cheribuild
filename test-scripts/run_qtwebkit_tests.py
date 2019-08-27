@@ -34,7 +34,7 @@ import argparse
 import os
 import subprocess
 from pathlib import Path
-import boot_cheribsd
+from run_tests_common import *
 from junitparser import JUnitXml
 
 
@@ -95,7 +95,6 @@ def add_args(parser: argparse.ArgumentParser):
                         help="Don't run full jsc layout tests, only check that jsc and DumpRenderTree work")
 
 if __name__ == '__main__':
-    from run_tests_common import run_tests_main
     # we don't need ssh running to execute the tests, but we need both host and source dir mounted
     run_tests_main(test_function=run_qtwebkit_tests, test_setup_function=setup_qtwebkit_test_environment,
                    argparse_setup_callback=add_args,

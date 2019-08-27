@@ -31,14 +31,13 @@
 #
 import argparse
 import pexpect
+from run_tests_common import *
 
-def run_qtbase_tests(qemu: pexpect.spawn, args: argparse.Namespace):
+def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     print("Running qtbase tests")
-    import boot_cheribsd
     boot_cheribsd.run_cheribsd_command(qemu, "/mnt/tests/auto/corelib/global/qtendian/tst_qtendian")
     # TODO: -o /path/to/file,xunitxml
     return True
 
 if __name__ == '__main__':
-    from run_tests_common import run_tests_main
     run_tests_main(test_function=run_qtbase_tests, need_ssh=False) # we don't need ssh running to execute the tests

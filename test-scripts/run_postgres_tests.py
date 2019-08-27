@@ -30,8 +30,7 @@
 # SUCH DAMAGE.
 #
 import argparse
-import boot_cheribsd
-
+from run_tests_common import *
 
 def run_postgres_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running PostgreSQL tests")
@@ -54,7 +53,6 @@ def adjust_args(args: argparse.Namespace):
 
 
 if __name__ == '__main__':
-    from run_tests_common import run_tests_main
     # we don't need ssh running to execute the tests
     run_tests_main(test_function=run_postgres_tests, need_ssh=False, should_mount_builddir=False,
                    argparse_setup_callback=add_args, argparse_adjust_args_callback=adjust_args)

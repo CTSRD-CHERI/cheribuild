@@ -45,7 +45,7 @@ from queue import Empty
 # To combine the test result xmls
 import junitparser
 
-import boot_cheribsd
+from run_tests_common import *
 import run_remote_lit_test
 from run_remote_lit_test import mp_debug
 
@@ -102,7 +102,6 @@ def libcxx_main(barrier: Barrier = None, mp_queue: Queue = None, ssh_port_queue:
             # Some of the tests might fail on a SMBFS directory.
             return run_remote_lit_test.run_remote_lit_tests("libcxx", qemu, args, tempdir, mp_q=mp_queue, barrier=barrier)
 
-    from run_tests_common import run_tests_main
     try:
         run_tests_main(test_function=run_libcxx_tests, need_ssh=True, # we need ssh running to execute the tests
                        argparse_setup_callback=add_cmdline_args, argparse_adjust_args_callback=set_cmdline_args)

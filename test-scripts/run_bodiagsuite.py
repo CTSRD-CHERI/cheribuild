@@ -33,11 +33,11 @@
 # device.
 #
 import argparse
-import boot_cheribsd
 import junitparser
 import os
 import sys
 from pathlib import Path
+from run_tests_common import *
 
 LONG_NAME_FOR_BUILDDIR = "/build-dir-with-long-name-to-ensure-cwd-causes-buffer-overflow"
 
@@ -243,7 +243,6 @@ def main():
             sys.exit("Failed to create JUnit xml")
         sys.exit()
 
-    from run_tests_common import run_tests_main
     # we don't need ssh running to execute the tests
     run_tests_main(test_function=run_bodiagsuite, need_ssh=False, should_mount_builddir=True,
                    argparse_setup_callback=add_args, build_dir_in_target=LONG_NAME_FOR_BUILDDIR)

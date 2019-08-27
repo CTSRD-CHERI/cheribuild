@@ -42,7 +42,7 @@ import sys
 import threading
 from multiprocessing import Process, Semaphore, Queue
 from pathlib import Path
-import boot_cheribsd
+from run_tests_common import *
 import run_remote_lit_test
 
 def setup_libunwind_env(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
@@ -87,7 +87,6 @@ def set_cmdline_args(args: argparse.Namespace):
 
 
 if __name__ == '__main__':
-    from run_tests_common import run_tests_main
     try:
         run_tests_main(test_function=run_libunwind_tests, need_ssh=True, # we need ssh running to execute the tests
                        argparse_setup_callback=add_cmdline_args, argparse_adjust_args_callback=set_cmdline_args,

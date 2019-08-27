@@ -31,12 +31,12 @@
 #
 import pexpect
 import argparse
+import junitparser
 import os
 import shutil
 import subprocess
 from pathlib import Path
-import boot_cheribsd
-import junitparser
+from run_tests_common import *
 
 def output_to_junit_suite(xml, output_path, suite_name, good=True):
     suite = junitparser.TestSuite(suite_name)
@@ -103,7 +103,6 @@ def run_juliet_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
     return True
 
 if __name__ == '__main__':
-    from run_tests_common import run_tests_main
     # we don't need ssh running to execute the tests, but we need both host and source dir mounted
     run_tests_main(test_function=run_juliet_tests, test_setup_function=setup_juliet_test_environment, argparse_setup_callback=add_args,
                    need_ssh=False, should_mount_builddir=True, should_mount_srcdir=True, should_mount_sysroot=True)

@@ -41,7 +41,7 @@ import sys
 import typing
 from pathlib import Path
 from enum import Enum
-import boot_cheribsd
+from run_tests_common import *
 
 KERNEL_PANIC = False
 COMPLETED = "COMPLETED"
