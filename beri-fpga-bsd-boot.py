@@ -456,20 +456,30 @@ def boot_bsd(bitfile, kernel_img, args):
         die("Failed to boot!")
     console.sendline('')
     console.expect_exact('#')
+    # Ensure that we are up-to-date with the latest # by matching some command output
+    console.sendline("echo 'finished' 'booting'")
+    console.expect_exact('finished booting')
+    console.expect_exact('#')
     # ensure that we have the ssh public key added
     ssh_pubkey_contents = None
     ssh_pubkey = Path(args.ssh_key).with_suffix(".pub")
     if ssh_pubkey.exists():
         ssh_pubkey_contents = ssh_pubkey.read_text(encoding="utf-8").strip()
-        ssh_pubkey_contents = shlex.quote(ssh_pubkey_contents)
+        ssh_pubkey_contents = ssh_pubkey_contents
     if ssh_pubkey_contents:
         console.sendline("mkdir -p /root/.ssh && chmod 700 /root /root/.ssh")
         console.expect_exact('#')
-        console.sendline("echo {} >> /root/.ssh/authorized_keys".format(ssh_pubkey_contents))
+        # Handle ssh-pubkeys that might be too long to send as a single line (write 150-char chunks instead):
+        chunk_size = 150
+        for part in (ssh_pubkey_contents[i:i + chunk_size] for i in range(0, len(ssh_pubkey_contents), chunk_size)):
+            console.sendline("printf %s " + shlex.quote(part) + " >> /root/.ssh/authorized_keys")
+            console.expect_exact('#')
+        # Add a final newline
+        console.sendline("printf '\\n' >> /root/.ssh/authorized_keys")
         console.expect_exact('#')
         console.sendline("cat /root/.ssh/authorized_keys")
         console.expect_exact('#')
-        console.sendline("test -e /home/ctsrd/.ssh/authorized_keys && echo {} >> /home/ctsrd/.ssh/authorized_keys".format(ssh_pubkey_contents))
+        console.sendline("test -e /home/ctsrd/.ssh/authorized_keys && cat /root/.ssh/authorized_keys >> /home/ctsrd/.ssh/authorized_keys".format(ssh_pubkey_contents))
         console.expect_exact('#')
     # create the ctsrd user if it doesn't exist yet
     console.sendline("if ! pw user show ctsrd -q > /dev/null; then pw useradd -n ctsrd ctsrd-test-user -s /bin/sh -m -w none && mkdir -p /home/ctsrd && cp -a /root/.ssh /home/ctsrd/.ssh && chown -R ctsrd /home/ctsrd/.ssh && echo \"Created user ctsrd\"; fi")

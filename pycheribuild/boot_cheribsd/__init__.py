@@ -329,8 +329,13 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, 
 
 def setup_ssh(qemu: CheriBSDInstance, pubkey: Path):
     run_cheribsd_command(qemu, "mkdir -p /root/.ssh")
-    contents = pubkey.read_text(encoding="utf-8").strip()
-    run_cheribsd_command(qemu, "echo " + shlex.quote(contents) + " >> /root/.ssh/authorized_keys")
+    ssh_pubkey_contents = pubkey.read_text(encoding="utf-8").strip()
+    # Handle ssh-pubkeys that might be too long to send as a single line (write 150-char chunks instead):
+    chunk_size = 150
+    for part in (ssh_pubkey_contents[i:i + chunk_size] for i in range(0, len(ssh_pubkey_contents), chunk_size)):
+        run_cheribsd_command(qemu, "printf %s " + shlex.quote(part) + " >> /root/.ssh/authorized_keys")
+    # Add a final newline
+    run_cheribsd_command(qemu, "printf '\\n' >> /root/.ssh/authorized_keys")
     run_cheribsd_command(qemu, "chmod 600 /root/.ssh/authorized_keys")
     # Ensure that we have permissions set up in a way so that ssh doesn't complain
     run_cheribsd_command(qemu, "chmod 700 /root /root/.ssh/")
