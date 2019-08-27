@@ -39,7 +39,7 @@ import signal
 import shlex
 import os.path as op
 import tempfile
-import requests
+import time
 from subprocess import Popen, PIPE, check_output, check_call, CalledProcessError
 from time import sleep
 from pexpect import *
@@ -60,7 +60,7 @@ def auto_int (x):
 
 def default_qemu_path(args):
     if args.qemu_path:
-        if not op.isfile(result):
+        if not op.isfile(args.qemu_path):
             sys.exit("ERROR: seletect --qemu-path " + args.qemu_path + " does not exist!")
         return args.qemu_path
     sdk_bindir = os.getenv("CHERI_SDK")
@@ -100,6 +100,8 @@ parser.add_argument("--use-qemu-instead-of-fpga", action='store_true',
 parser.add_argument('--qemu-path', type=str, metavar='QEMU_PATH',
                     help="Path to QEMU (only used if --use-qemu-instead-of-fpga is passed). If not set will guess based"
                          "on the value of the $CHERI_SDK environment variable and the cpu kind.")
+parser.add_argument('--qemu-disk-image', type=str, metavar='QEMU_DISK_IMAGE',
+                    help="Optional disk image to be used as the -hda parameter for QEMU.")
 parser.add_argument('--qemu-ssh-port', type=auto_int, default="12345", metavar='PORT',
                     help="The localhost port that is used for ssh connections when running with QEMU.")
 parser.add_argument('--network-interface', type=str,
@@ -326,10 +328,10 @@ def get_console (cable_id=args.cable_id,berictl=args.berictl):
     return c
 
 def loadsof (bitfile=args.bitfile,cable_id=args.cable_id,berictl=args.berictl,timeout=30):
-    if not os.path.isfile(bitfile):
-        sys.exit("Bitfile doesn't exist: " + bitfile)
     if args.use_qemu_instead_of_fpga:
         return
+    if not os.path.isfile(bitfile):
+        sys.exit("Bitfile doesn't exist: " + bitfile)
     cmd = [berictl]
     cmd += ['-c',str(cable_id)]
     cmd += ['-j','loadsof']
@@ -374,6 +376,8 @@ def boot_bsd_berictl(args):
     return console
 
 def traceall (cable_id=args.cable_id,berictl=args.berictl):
+    if args.use_qemu_instead_of_fpga:
+        return
     cmd = [berictl]
     cmd += ['-c',str(cable_id)]
     cmd += ['-j','settracefilter']
@@ -384,6 +388,8 @@ def traceall (cable_id=args.cable_id,berictl=args.berictl):
     ldbin.close()
 
 def streamtrace_berictl(args):
+    if args.use_qemu_instead_of_fpga:
+        return
     # trigger streamtrace
     cmd = [args.berictl]
     cmd += ['-c',str(args.cable_id)]
@@ -398,30 +404,32 @@ def boot_bsd_qemu(disk_image, kernel, args):
     qemu = default_qemu_path(args)
 
     # if needed extract the kernel/image:
-    print(kernel)
-    print(disk_image)
+    print("kernel =", kernel, "disk image=", disk_image)
     if kernel.endswith(".bz2"):
         check_call(["bunzip2", kernel])
         check_call(["ls", "-la", op.dirname(kernel)])
         kernel = os.path.splitext(kernel)[0]  # strip .xz
-    if disk_image.endswith(".xz"):
+    if disk_image and disk_image.endswith(".xz"):
         check_call(["xz", "-d", disk_image])
         check_call(["ls", "-la", op.dirname(disk_image)])
         disk_image = os.path.splitext(disk_image)[0]  # strip .xz
     # For booting QEMU we (ab)use the bitfile as the QEMU kernel and the FPGA kernel image as the disk image
 
-    cmd = [qemu, "-M", "malta", "-kernel", kernel, "-m", "2048", "-nographic", "-hda", disk_image,
+    cmd = [qemu, "-M", "malta", "-kernel", kernel, "-m", "2048", "-nographic",
            # Add the necessary flags to allow connecting to QEMU via ssh
            # TODO: smb=/foo/bar?
            "-net", "nic", "-net", "user,id=net0,ipv6=off,hostfwd=tcp::" + str(args.qemu_ssh_port) + "-:22"]
+    if disk_image:
+        cmd.extend(["-hda", disk_image])
     # TODO: ssh host forwarding
+    print("Running", " ".join(cmd))
     c = MySpawn(" ".join(cmd), encoding="utf-8", logfile=logf, echo=False)
     return c
 
 
 def boot_bsd(bitfile, kernel_img, args):
     if args.use_qemu_instead_of_fpga:
-        console = boot_bsd_qemu(bitfile, kernel_img, args)
+        console = boot_bsd_qemu(args.qemu_disk_image, kernel_img, args)
     else:
         # bitfile and image are not needed here since they have already been loaded
         console = boot_bsd_berictl(args)
@@ -574,6 +582,7 @@ def download_file(url, outfile):
 
     with open(outfile, 'wb') as f:
         print("Downloading", url)
+        import requests
         resp = requests.get(url, verify=False, auth=(args.jenkins_user, args.jenkins_password))
         f.write(resp.content)
         f.flush()
@@ -691,6 +700,8 @@ def main():
         if not op.exists(args.benchdir):
             die("Benchmark dir does not exist: " + str(args.benchdir))
         if args.skip_boot:
+            if args.use_qemu_instead_of_fpga:
+                die("--skip-boot is not compatible with --use-qemu-instead-of-fpga")
             console = get_console()
             phaseprint("turn network on")
             do_network_off(console, args)

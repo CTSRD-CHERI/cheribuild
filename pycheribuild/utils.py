@@ -60,7 +60,7 @@ __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includ
            "warningMessage", "Type_T", "typing", "popen_handle_noexec", "extract_version", "get_program_version", # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latestClangTool", "SafeDict", # no-combine
            "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
-           "get_version_output", "classproperty"]  # no-combine
+           "get_version_output", "classproperty", "find_free_port"]  # no-combine
 
 
 _TEST_MODE = False
@@ -280,6 +280,17 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
 
 def commandline_to_str(args: "typing.Iterable[str]") -> str:
     return " ".join((shlex.quote(str(s)) for s in args))
+
+
+class SocketAndPort(object):
+    def __init__(self, socket: socket.socket, port: int):
+        self.socket = socket
+        self.port = port
+
+def find_free_port() -> SocketAndPort:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('', 0))
+    return SocketAndPort(s, s.getsockname()[1])
 
 
 class CompilerInfo(object):

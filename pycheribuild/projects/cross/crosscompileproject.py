@@ -584,8 +584,19 @@ class CrossCompileMixin(MultiArchBaseMixin):
         if not cheri_dir.exists() or not cherilibs_dir.exists():
             self.fatal("cheri-cpu repository missing. Run `cheribuild.py berictl` or `git clone {} {}`".format(
                 sim_project.repository.url, sim_project.sourceDir))
-        from ..cherisim import BuildBeriCtl
-        basic_args = ["--berictl=" + str(BuildBeriCtl.getBuildDir(self, self.config) / "berictl")]
+
+        if self.config.benchmark_with_qemu:
+            from ..build_qemu import BuildQEMU
+            qemu_path = BuildQEMU.qemu_binary(self)
+            qemu_ssh_socket = find_free_port()
+            if not qemu_path.exists():
+                self.fatal("QEMU binary", qemu_path, "doesn't exist")
+            basic_args = ["--use-qemu-instead-of-fpga",
+                          "--qemu-path=" + str(qemu_path),
+                          "--qemu-ssh-port=" + str(qemu_ssh_socket.port)]
+        else:
+            from ..cherisim import BuildBeriCtl
+            basic_args = ["--berictl=" + str(BuildBeriCtl.getBuildDir(self, self.config) / "berictl")]
 
         if self.config.benchmark_ld_preload:
             runbench_args.append("--extra-input-files=" + str(self.config.benchmark_ld_preload))
@@ -598,7 +609,16 @@ class CrossCompileMixin(MultiArchBaseMixin):
             runbench_args.extend(self.config.benchmark_extra_args)
         if self.config.tests_interact:
             runbench_args.append("--interact")
-        if self.config.benchmark_clean_boot:
+
+        from .cheribsd import BuildCheriBsdMfsKernel
+        if self.config.benchmark_with_qemu:
+            # When benchmarking with QEMU we always spawn a new instance
+            if self.config.benchmark_with_debug_kernel:
+                kernel_image = BuildCheriBsdMfsKernel.get_installed_kernel_path(self, self.config)
+            else:
+                kernel_image = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self, self.config)
+            basic_args.append("--kernel-img=" + str(kernel_image))
+        elif self.config.benchmark_clean_boot:
             # use a bitfile from jenkins. TODO: add option for overriding
             if self.compiling_for_mips():
                 # TODO: use a MIPS kernel?
@@ -606,10 +626,12 @@ class CrossCompileMixin(MultiArchBaseMixin):
             else:
                 assert self.compiling_for_cheri()
                 basic_args.append("--jenkins-bitfile=cheri" + self.config.cheriBitsStr)
-            from .cheribsd import BuildCheriBsdMfsKernel
             mfs_kernel = BuildCheriBsdMfsKernel.get_instance(self, self.config)
-            basic_args.append("--kernel-img=" + str(mfs_kernel.installed_kernel_for_config(
-                self.config, mfs_kernel.fpga_kernconf + "_BENCHMARK")))
+            if self.config.benchmark_with_debug_kernel:
+                kernel_config = mfs_kernel.fpga_kernconf
+            else:
+                kernel_config = mfs_kernel.fpga_kernconf + "_BENCHMARK"
+            basic_args.append("--kernel-img=" + str(mfs_kernel.installed_kernel_for_config(self.config, kernel_config)))
         else:
             runbench_args.append("--skip-boot")
         if benchmark_script:
@@ -618,15 +640,23 @@ class CrossCompileMixin(MultiArchBaseMixin):
             runbench_args.append("--script-args=" + commandline_to_str(benchmark_script_args))
         if extra_runbench_args:
             runbench_args.extend(extra_runbench_args)
+
+        cheribuild_path = Path(__file__).parent.parent.parent.parent
         beri_fpga_bsd_boot_script = """
 set +x
 source "{cheri_dir}/setup.sh"
 set -x
 export PATH="$PATH:{cherilibs_dir}/tools:{cherilibs_dir}/tools/debug"
 exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbench_args}
-""".format(cheri_dir=cheri_dir, cherilibs_dir=cherilibs_dir, runbench_args=commandline_to_str(runbench_args),
-           basic_args=commandline_to_str(basic_args), cheribuild_path=Path(__file__).parent.parent.parent.parent)
-        self.runShellScript(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
+        """.format(cheri_dir=cheri_dir, cherilibs_dir=cherilibs_dir, runbench_args=commandline_to_str(runbench_args),
+                   basic_args=commandline_to_str(basic_args), cheribuild_path=cheribuild_path)
+        if self.config.benchmark_with_qemu:
+            # Free the port that we reserved for QEMU before starting beri-fpga-bsd-boot.py
+            qemu_ssh_socket.socket.close()
+            time.sleep(1)
+            self.run_cmd([cheribuild_path / "beri-fpga-bsd-boot.py"] + basic_args + ["-vvvvv", "runbench"] + runbench_args)
+        else:
+            self.runShellScript(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
 
     def process(self):
         if self.use_asan and self.compiling_for_mips():

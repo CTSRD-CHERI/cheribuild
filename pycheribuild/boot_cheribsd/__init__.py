@@ -48,6 +48,7 @@ import traceback
 import typing
 from pathlib import Path
 from contextlib import closing
+from ..utils import find_free_port
 
 STARTING_INIT = "start_init: trying /sbin/init"
 BOOT_FAILURE = "Enter full pathname of shell or RETURN for /bin/sh"
@@ -138,15 +139,6 @@ class CheriBSDInstance(pexpect.spawn):
             debug_kernel_panic(self)
             failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
         return i - len(panic_regexes)
-
-def find_free_port() -> int:
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind(('', 0))
-    global _SSH_SOCKET_PLACEHOLDER
-    # keep the socket open until just before we start QEMU to prevent other parallel jobs from reusing the same port
-    _SSH_SOCKET_PLACEHOLDER = s
-    return s.getsockname()[1]
-
 
 def info(*args, **kwargs):
     print(MESSAGE_PREFIX, "\033[0;34m", *args, "\033[0m", file=sys.stderr, sep="", flush=True, **kwargs)
@@ -713,7 +705,11 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace], 
 
     args = parser.parse_args()
     if args.ssh_port is None:
-        args.ssh_port = find_free_port()
+        temp_ssh_port = find_free_port()
+        args.ssh_port = temp_ssh_port.port
+        # keep the socket open until just before we start QEMU to prevent other parallel jobs from reusing the same port
+        global _SSH_SOCKET_PLACEHOLDER
+        _SSH_SOCKET_PLACEHOLDER = temp_ssh_port.socket
     if args.use_smb_instead_of_ssh:
         # Skip all ssh setup by default if we are using smb instead
         args.skip_ssh_setup = True
