@@ -530,8 +530,15 @@ class CrossCompileMixin(MultiArchBaseMixin):
         if hasattr(self, "_statcounters_csv"):
             return self._statcounters_csv
         else:
+            suffix = self.build_configuration_suffix()
+            assert isinstance(self, CrossCompileMixin)
+            # If we explicitly override the linkage model, encode it in the statcounters file
+            if self.force_static_linkage:
+                suffix += "-static"
+            elif self.force_dynamic_linkage:
+                suffix += "-dynamic"
             self._statcounters_csv = self.target + "-statcounters{}-{}.csv".format(
-                self.build_configuration_suffix(), datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+                suffix, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
             return self._statcounters_csv
 
     def strip_elf_files(self, benchmark_dir):
