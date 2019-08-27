@@ -512,9 +512,11 @@ def get_network_iface(args):
 
 def do_network_on(console, args, timeout=300):
     ifc = get_network_iface(args)
-    console.sendline('/usr/sbin/devctl enable {}'.format(ifc))
-    console.expect_exact('{}: bpf attached'.format(ifc))
-    console.expect_exact('#')
+    # Note: If we devctl disable le0, we can't enable it anymore
+    if not args.use_qemu_instead_of_fpga:
+        console.sendline('/usr/sbin/devctl enable {}'.format(ifc))
+        console.expect_exact('{}: bpf attached'.format(ifc))
+        console.expect_exact('#')
     console.sendline('/sbin/ifconfig {} up'.format(ifc))
     console.expect_exact('{}: link state changed to UP'.format(ifc))
     console.sendline('/sbin/ifconfig {} polling'.format(ifc))
@@ -528,9 +530,11 @@ def do_network_off(console, args):
     console.expect_exact('#')
 #    console.sendline('killall dhclient')
 #    console.expect_exact('#')
-    console.sendline('/usr/sbin/devctl disable {}'.format(ifc))
-    console.expect_exact('{}: detached'.format(ifc))
-    console.expect_exact('#')
+    # Note: If we devctl disable le0, we can't enable it anymore
+    if not args.use_qemu_instead_of_fpga:
+        console.sendline('/usr/sbin/devctl disable {}'.format(ifc))
+        console.expect_exact('{}: detached'.format(ifc))
+        console.expect_exact('#')
 
 def get_board_ip_address(console: MySpawn, args):
     ifc = get_network_iface(args)
