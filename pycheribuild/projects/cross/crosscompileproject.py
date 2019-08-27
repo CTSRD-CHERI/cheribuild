@@ -653,7 +653,6 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
         if self.config.benchmark_with_qemu:
             # Free the port that we reserved for QEMU before starting beri-fpga-bsd-boot.py
             qemu_ssh_socket.socket.close()
-            time.sleep(1)
             self.run_cmd([cheribuild_path / "beri-fpga-bsd-boot.py"] + basic_args + ["-vvvvv", "runbench"] + runbench_args)
         else:
             self.runShellScript(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
