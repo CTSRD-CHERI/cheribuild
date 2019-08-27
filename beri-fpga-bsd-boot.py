@@ -244,6 +244,22 @@ if args.verbose >= stdout_lvl:
 def die(message):
     sys.exit(PP().format("{:red_}",message))
 
+
+# For rsync:
+"""
+[benchdir]
+path = /tmp/benchdir
+comment = benchmark dir
+uid = root
+gid = wheel
+list = yes
+read only = no
+refuse options = checksum
+"""
+# ./bin/rsync --daemon --no-detach --port=22 -v --config=/tmp/rsync.conf
+# On host:
+# rsync --human-readable --progress -r cheri128-bundle rsync://root@localhost:12374/benchdir/
+
 #################
 # Pexpect utils #
 #################
