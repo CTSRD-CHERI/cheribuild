@@ -35,6 +35,9 @@ import functools
 import os
 import operator
 import shlex
+import time
+
+import junitparser
 
 import pexpect
 import sys
@@ -49,7 +52,6 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
     # same for ld-cheri-elf.so (but do check for CHERI traps):
     qemu.run("/libexec/ld-cheri-elf.so.1 -h", cheri_trap_fatal=True)
 
-
     try:
         # potentially bootstrap kyua for later testing
         if args.bootstrap_kyua or args.kyua_tests_files:
@@ -57,7 +59,7 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
             qemu.checked_run("kyua help", timeout=60)
 
         for i, tests_file in enumerate(args.kyua_tests_files):
-            # TODO: is the results file too big for tmpfs?
+            # TODO: is the results file too big for tmpfs? No should be fine, only a few megabytes
             qemu.checked_run("rm -f /tmp/results.db")
             # Allow up to 24 hours to run the full testsuite
             # Not a checked run since it might return false if some tests fail
@@ -67,15 +69,38 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
             boot_cheribsd.success("Running tests for ", tests_file, " took: ", datetime.datetime.now() - test_start)
 
             if i == 0:
-                results_file = "/kyua-results/test-results.db"
+                results_db = Path("/kyua-results/test-results.db")
             else:
-                results_file = "/kyua-results/test-results-{}.db".format(i)
-            qemu.checked_run("cp -v /tmp/results.db {}".format(results_file))
-            qemu.checked_run("fsync " + results_file)
+                results_db = Path("/kyua-results/test-results-{}.db".format(i))
+            results_xml = results_db.with_suffix(".xml")
+            assert shlex.quote(str(results_db)) == str(results_db), "Should not contain any special chars"
+            qemu.checked_run("cp -v /tmp/results.db {}".format(results_db))
+            qemu.checked_run("fsync " + str(results_db))
+            # run: kyua report-junit --results-file=test-results.db | vis -os > ${CPU}-${TEST_NAME}-test-results.xml
+            # Not sure how much we gain by running it on the host instead. Probably at most a minute
+            qemu.checked_run("kyua report-junit --results-file=/tmp/results.db | vis -os > '{}' ".format(results_xml), timeout=20 * 60)
+            qemu.checked_run("fsync " + str(results_xml))
     except boot_cheribsd.CheriBSDCommandFailed as e:
         boot_cheribsd.failure("Failed to run: " + str(e), exit=False)
         boot_cheribsd.info("Trying to shut down cleanly")
 
+    # Update the JUnit stats in the XML file
+    if args.kyua_tests_files:
+        time.sleep(2)  # sleep two seconds to ensure the files exist
+        junit_dir = Path(args.kyua_tests_output)
+        boot_cheribsd.info("Updating statistics in JUnit output directory ", junit_dir)
+        try:
+            for host_xml_path in junit_dir.glob("*.xml"):
+                boot_cheribsd.info("Updating statistics in JUnit file ", host_xml_path)
+                if host_xml_path.exists():
+                    # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
+                    xml = JUnitXml.fromfile(str(host_xml_path))
+                    xml.update_statistics()
+                    xml.write()
+                    # boot_cheribsd.run_host_command(["head", "-n2", str(test_output)])
+                    boot_cheribsd.run_host_command(["grep", "<testsuite", str(xml)])
+        except Exception as e:
+            boot_cheribsd.failure("Could not update stats in ", junit_dir, ": ", e)
 
     if args.interact:
         boot_cheribsd.info("Skipping poweroff step since --interact was passed.")
@@ -100,7 +125,6 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
 def test_boot_setup_args(args: argparse.Namespace):
     args.use_smb_instead_of_ssh = True  # skip the ssh setup
     args.skip_ssh_setup = True
-    print(args)
     if args.kyua_tests_files:
         # flatten the list (https://stackoverflow.com/a/45323085/894271):
         args.kyua_tests_files = functools.reduce(operator.iconcat, args.kyua_tests_files, [])
@@ -111,7 +135,11 @@ def test_boot_setup_args(args: argparse.Namespace):
         test_output_dir = Path(os.path.expandvars(os.path.expanduser(args.kyua_tests_output)))
         if not test_output_dir.is_dir():
             boot_cheribsd.failure("Output directory does not exist: ", test_output_dir)
-        args.kyua_tests_output = str(test_output_dir)
+        # Create a timestamped directory:
+        args.timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        real_output_dir = (test_output_dir / args.timestamp).absolute()
+        args.kyua_tests_output = str(real_output_dir)
+        boot_cheribsd.run_host_command(["mkdir", "-p", str(real_output_dir)])
         args.smb_mount_directories.append(boot_cheribsd.SmbMount(test_output_dir, readonly=False, in_target="/kyua-results"))
 
 def add_args(parser: argparse.ArgumentParser):

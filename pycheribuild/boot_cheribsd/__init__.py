@@ -596,7 +596,7 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     if test_archives:
         time.sleep(5)  # wait 5 seconds to make sure the disks have synced
     # See how much space we have after running scp
-    run_cheribsd_command(qemu, "df -h", expected_output="/opt")
+    run_cheribsd_command(qemu, "df -h")
     # ensure that /tmp is world-writable
     run_cheribsd_command(qemu, "chmod 777 /tmp")
 
