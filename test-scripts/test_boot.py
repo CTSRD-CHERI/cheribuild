@@ -31,6 +31,11 @@
 #
 import argparse
 import datetime
+import functools
+import os
+import operator
+import shlex
+
 import pexpect
 import sys
 from pathlib import Path
@@ -38,16 +43,43 @@ from run_tests_common import *
 
 def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     boot_cheribsd.success("Booted successfully")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "kenv")
+    qemu.checked_run("kenv")
     # unchecked since mount_smbfs returns non-zero for --help:
-    boot_cheribsd.run_cheribsd_command(qemu, "mount_smbfs --help", cheri_trap_fatal=True)
+    qemu.run("mount_smbfs --help", cheri_trap_fatal=True)
     # same for ld-cheri-elf.so (but do check for CHERI traps):
-    boot_cheribsd.run_cheribsd_command(qemu, "/libexec/ld-cheri-elf.so.1 -h", cheri_trap_fatal=True)
+    qemu.run("/libexec/ld-cheri-elf.so.1 -h", cheri_trap_fatal=True)
 
-    # potentially bootstrap kyua for later testing
-    if args.bootstrap_kyua:
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "/sbin/prepare-testsuite.sh", timeout=20 * 60)
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "kyua help", timeout=60)
+
+    try:
+        # potentially bootstrap kyua for later testing
+        if args.bootstrap_kyua or args.kyua_tests_files:
+            qemu.checked_run("/sbin/prepare-testsuite.sh", timeout=20 * 60)
+            qemu.checked_run("kyua help", timeout=60)
+
+        for i, tests_file in enumerate(args.kyua_tests_files):
+            # TODO: is the results file too big for tmpfs?
+            qemu.checked_run("rm -f /tmp/results.db")
+            # Allow up to 24 hours to run the full testsuite
+            # Not a checked run since it might return false if some tests fail
+            test_start = datetime.datetime.now()
+            qemu.run("kyua test --results-file=/tmp/results.db -k {}".format(shlex.quote(tests_file)),
+                     ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=24 * 60 * 60)
+            boot_cheribsd.success("Running tests for ", tests_file, " took: ", datetime.datetime.now() - test_start)
+
+            if i == 0:
+                results_file = "/kyua-results/test-results.db"
+            else:
+                results_file = "/kyua-results/test-results-{}.db".format(i)
+            qemu.checked_run("cp -v /tmp/results.db {}".format(results_file))
+            qemu.checked_run("fsync " + results_file)
+    except boot_cheribsd.CheriBSDCommandFailed as e:
+        boot_cheribsd.failure("Failed to run: " + str(e), exit=False)
+        boot_cheribsd.info("Trying to shut down cleanly")
+
+
+    if args.interact:
+        boot_cheribsd.info("Skipping poweroff step since --interact was passed.")
+        return True
 
     poweroff_start = datetime.datetime.now()
     qemu.sendline("poweroff")
@@ -68,14 +100,29 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
 def test_boot_setup_args(args: argparse.Namespace):
     args.use_smb_instead_of_ssh = True  # skip the ssh setup
     args.skip_ssh_setup = True
+    print(args)
+    if args.kyua_tests_files:
+        # flatten the list (https://stackoverflow.com/a/45323085/894271):
+        args.kyua_tests_files = functools.reduce(operator.iconcat, args.kyua_tests_files, [])
+        print(args.kyua_tests_files)
+        for file in args.kyua_tests_files:
+            if not Path(file).name == "Kyuafile":
+                boot_cheribsd.failure("Expected a path to a Kyuafile but got: ", file)
+        test_output_dir = Path(os.path.expandvars(os.path.expanduser(args.kyua_tests_output)))
+        if not test_output_dir.is_dir():
+            boot_cheribsd.failure("Output directory does not exist: ", test_output_dir)
+        args.kyua_tests_output = str(test_output_dir)
+        args.smb_mount_directories.append(boot_cheribsd.SmbMount(test_output_dir, readonly=False, in_target="/kyua-results"))
 
 def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--bootstrap-kyua", action="store_true",
                         help="Install kyua using the /sbin/prepare-testsuite.sh script")
-
+    parser.add_argument("--kyua-tests-files", action="append", nargs=argparse.ZERO_OR_MORE, default=[],
+                        help="Run tests for the given following Kyuafile(s)")
+    parser.add_argument("--kyua-tests-output", default=str(Path(".").resolve() / "kyua-results"),
+                        help="Copy the kyua results.db to the following directory (it will be mounted with SMB)")
 
 if __name__ == '__main__':
     # we don't need to setup ssh config/authorized_keys to test the boot
-    run_tests_main(test_function=run_noop_test, argparse_setup_callback=add_args,
-                                    should_mount_builddir=False,
-                                    argparse_adjust_args_callback=test_boot_setup_args)
+    run_tests_main(test_function=run_noop_test, argparse_setup_callback=add_args, should_mount_builddir=False,
+                   argparse_adjust_args_callback=test_boot_setup_args)

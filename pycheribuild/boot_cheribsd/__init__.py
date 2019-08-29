@@ -140,6 +140,14 @@ class CheriBSDInstance(pexpect.spawn):
             failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
         return i - len(panic_regexes)
 
+    def run(self, cmd: str, *, expected_output=None, error_output=None, cheri_trap_fatal=True, ignore_cheri_trap=False, timeout=60):
+        run_cheribsd_command(self, cmd, expected_output=expected_output, error_output=error_output,
+                             cheri_trap_fatal=cheri_trap_fatal, ignore_cheri_trap=ignore_cheri_trap, timeout=timeout)
+
+    def checked_run(self, cmd: str, *, timeout=600, ignore_cheri_trap=False, error_output: str=None, **kwargs):
+        checked_run_cheribsd_command(self, cmd, timeout=timeout, ignore_cheri_trap=ignore_cheri_trap,
+                                     error_output=error_output, **kwargs)
+
 def info(*args, **kwargs):
     print(MESSAGE_PREFIX, "\033[0;34m", *args, "\033[0m", file=sys.stderr, sep="", flush=True, **kwargs)
 
@@ -187,8 +195,8 @@ def is_newer(path1: Path, path2: Path):
 
 
 def set_ld_library_path(qemu: CheriBSDInstance):
-    run_cheribsd_command(qemu, "export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/sysroot/lib:/sysroot/usr/lib:/sysroot/usr/local/mips/lib", timeout=3)
-    run_cheribsd_command(qemu, "export LD_CHERI_LIBRARY_PATH=/usr/libcheri:/usr/local/libcheri:/sysroot/libcheri:/sysroot/usr/libcheri:/sysroot/usr/local/cheri/lib:/sysroot/usr/local/cheri/libcheri", timeout=3)
+    qemu.run("export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/sysroot/lib:/sysroot/usr/lib:/sysroot/usr/local/mips/lib", timeout=3)
+    qemu.run("export LD_CHERI_LIBRARY_PATH=/usr/libcheri:/usr/local/libcheri:/sysroot/libcheri:/sysroot/usr/libcheri:/sysroot/usr/local/cheri/lib:/sysroot/usr/local/cheri/libcheri", timeout=3)
 
 
 def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, args: argparse.Namespace = None, what: str = None) -> Path:
@@ -390,6 +398,12 @@ class FakeSpawn(object):
 
     def interact(self):
         pass
+
+    def run(self, cmd, **kwargs):
+        run_cheribsd_command(self, cmd, **kwargs)
+
+    def checked_run(self, cmd, **kwargs):
+        checked_run_cheribsd_command(self, cmd, **kwargs)
 
 
 def start_dhclient(qemu: CheriBSDInstance):
