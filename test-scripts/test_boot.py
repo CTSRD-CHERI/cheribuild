@@ -66,8 +66,6 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
             test_start = datetime.datetime.now()
             qemu.run("kyua test --results-file=/tmp/results.db -k {}".format(shlex.quote(tests_file)),
                      ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=24 * 60 * 60)
-            boot_cheribsd.success("Running tests for ", tests_file, " took: ", datetime.datetime.now() - test_start)
-
             if i == 0:
                 results_db = Path("/kyua-results/test-results.db")
             else:
@@ -76,12 +74,15 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
             assert shlex.quote(str(results_db)) == str(results_db), "Should not contain any special chars"
             qemu.checked_run("cp -v /tmp/results.db {}".format(results_db))
             qemu.checked_run("fsync " + str(results_db))
+            boot_cheribsd.success("Running tests for ", tests_file, " took: ", datetime.datetime.now() - test_start)
+
             # run: kyua report-junit --results-file=test-results.db | vis -os > ${CPU}-${TEST_NAME}-test-results.xml
             # Not sure how much we gain by running it on the host instead. Probably at most a minute
             xml_conversion_start = datetime.datetime.now()
-            qemu.checked_run("kyua report-junit --results-file=/tmp/results.db | vis -os > '{}' ".format(results_xml), timeout=20 * 60)
-            boot_cheribsd.success("Creating JUnit XML ", results_xml, " took: ", datetime.datetime.now() - xml_conversion_start)
+            qemu.checked_run("kyua report-junit --results-file=/tmp/results.db | vis -os > /tmp/results.xml", timeout=20 * 60)
+            qemu.checked_run("cp -v /tmp/results.xml {}".format(results_xml))
             qemu.checked_run("fsync " + str(results_xml))
+            boot_cheribsd.success("Creating JUnit XML ", results_xml, " took: ", datetime.datetime.now() - xml_conversion_start)
     except boot_cheribsd.CheriBSDCommandFailed as e:
         boot_cheribsd.failure("Failed to run: " + str(e), exit=False)
         boot_cheribsd.info("Trying to shut down cleanly")
@@ -101,7 +102,7 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
                     xml.update_statistics()
                     xml.write()
                     # boot_cheribsd.run_host_command(["head", "-n2", str(test_output)])
-                    boot_cheribsd.run_host_command(["grep", "<testsuite", str(xml)])
+                    boot_cheribsd.run_host_command(["grep", "<testsuite", str(host_xml_path)])
         except Exception as e:
             boot_cheribsd.failure("Could not update stats in ", junit_dir, ": ", e, exit=False)
 

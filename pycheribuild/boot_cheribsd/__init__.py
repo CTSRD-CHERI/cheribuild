@@ -68,7 +68,7 @@ PRETEND = False
 MESSAGE_PREFIX = ""
 QEMU_LOGFILE = None # type: Optional[Path]
 # To keep the port available until we start QEMU
-_SSH_SOCKET_PLACEHOLDER = None  # type: socket.socket
+_SSH_SOCKET_PLACEHOLDER = None  # type: typing.Optional[socket.socket]
 
 
 class CheriBSDCommandFailed(Exception):
@@ -267,7 +267,9 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
     if not ignore_cheri_trap:
         cheri_trap_index = len(results)
         results.append(CHERI_TRAP)
+    starttime = datetime.datetime.now()
     i = qemu.expect(results, timeout=timeout, pretend_result=3)
+    runtime = datetime.datetime.now() - starttime
     if i == 0:
         raise CheriBSDCommandFailed("/bin/sh: command not found: ", cmd)
     elif i == 1:
@@ -275,7 +277,7 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
     elif i == 2:
         raise CheriBSDCommandTimeout("timeout running ", cmd)
     elif i == 3:
-        success("ran '", cmd, "' successfully")
+        success("ran '", cmd, "' successfully (in ", runtime.total_seconds(), "s)")
     elif i == 4:
         raise CheriBSDCommandFailed("Detected line continuation, cannot handle this yet! ", cmd)
     elif i == error_output_index:
@@ -299,8 +301,8 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, 
     qemu.sendline(cmd + " ;if test $? -eq 0; then echo '__COMMAND' 'SUCCESSFUL__'; else echo '__COMMAND' 'FAILED__'; fi")
     cheri_trap_index = None
     error_output_index = None
+    results = ["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__", SHELL_LINE_CONTINUATION]
     try:
-        results = ["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__", SHELL_LINE_CONTINUATION]
         if not ignore_cheri_trap:
             cheri_trap_index = len(results)
             results.append(CHERI_TRAP)
