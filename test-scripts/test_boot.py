@@ -97,13 +97,13 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
                 boot_cheribsd.info("Updating statistics in JUnit file ", host_xml_path)
                 if host_xml_path.exists():
                     # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
-                    xml = JUnitXml.fromfile(str(host_xml_path))
+                    xml = junitparser.JUnitXml.fromfile(str(host_xml_path))
                     xml.update_statistics()
                     xml.write()
                     # boot_cheribsd.run_host_command(["head", "-n2", str(test_output)])
                     boot_cheribsd.run_host_command(["grep", "<testsuite", str(xml)])
         except Exception as e:
-            boot_cheribsd.failure("Could not update stats in ", junit_dir, ": ", e)
+            boot_cheribsd.failure("Could not update stats in ", junit_dir, ": ", e, exit=False)
 
     if args.interact:
         boot_cheribsd.info("Skipping poweroff step since --interact was passed.")
@@ -143,7 +143,9 @@ def test_boot_setup_args(args: argparse.Namespace):
         real_output_dir = (test_output_dir / args.timestamp).absolute()
         args.kyua_tests_output = str(real_output_dir)
         boot_cheribsd.run_host_command(["mkdir", "-p", str(real_output_dir)])
-        args.smb_mount_directories.append(boot_cheribsd.SmbMount(test_output_dir, readonly=False, in_target="/kyua-results"))
+        if not boot_cheribsd.PRETEND:
+            (real_output_dir / "cmdline").write_text(str(sys.argv))
+        args.smb_mount_directories.append(boot_cheribsd.SmbMount(real_output_dir, readonly=False, in_target="/kyua-results"))
 
 def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--bootstrap-kyua", action="store_true",
