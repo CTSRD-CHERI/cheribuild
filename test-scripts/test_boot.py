@@ -78,7 +78,9 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
             qemu.checked_run("fsync " + str(results_db))
             # run: kyua report-junit --results-file=test-results.db | vis -os > ${CPU}-${TEST_NAME}-test-results.xml
             # Not sure how much we gain by running it on the host instead. Probably at most a minute
+            xml_conversion_start = datetime.datetime.now()
             qemu.checked_run("kyua report-junit --results-file=/tmp/results.db | vis -os > '{}' ".format(results_xml), timeout=20 * 60)
+            boot_cheribsd.success("Creating JUnit XML ", results_xml, " took: ", datetime.datetime.now() - xml_conversion_start)
             qemu.checked_run("fsync " + str(results_xml))
     except boot_cheribsd.CheriBSDCommandFailed as e:
         boot_cheribsd.failure("Failed to run: " + str(e), exit=False)
