@@ -88,7 +88,8 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
 
     # Update the JUnit stats in the XML file
     if args.kyua_tests_files:
-        time.sleep(2)  # sleep two seconds to ensure the files exist
+        if not boot_cheribsd.PRETEND:
+            time.sleep(2)  # sleep two seconds to ensure the files exist
         junit_dir = Path(args.kyua_tests_output)
         boot_cheribsd.info("Updating statistics in JUnit output directory ", junit_dir)
         try:
