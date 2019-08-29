@@ -537,6 +537,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 suffix += "-static"
             elif self.force_dynamic_linkage:
                 suffix += "-dynamic"
+            if self.config.benchmark_lazy_binding:
+                suffix += "-lazybinding"
             self._statcounters_csv = self.target + "-statcounters{}-{}.csv".format(
                 suffix, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
             return self._statcounters_csv

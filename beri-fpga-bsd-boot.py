@@ -164,6 +164,7 @@ runbench.add_argument('--skip-boot', action='store_true', default=False,
                          "bitfile and the kernel.")
 runbench.add_argument('--skip-copy', action='store_true', default=False,
                     help="Assume that benchmark files are already on the FPGA -> skip the scp phase.")
+runbench.add_argument('--lazy-binding', action='store_true', default=False, help="Allow the benchmarks to run without LD_BIND_NOW")
 runbench.add_argument('-i', '--interact', action='store_true', default=False,
                     help="Get an interactive session once done running SCRIPT and outputs are transfered.")
 
@@ -564,13 +565,20 @@ def do_runbench(console,tgtdir,script,scriptargs,failstr="FAILED RUNNING BENCHMA
     console.expect_exact('#')
     console.sendline('cd {} && ls -la'.format(tgtdir))
     console.expect_exact('#')
-    # Ensure that we don't use lazy binding for CheriABI since MIPS doesn't support it
-    # This can skew the results since we have faster startup on CHERI but slower runtime
-    # due to trampolines
-    console.sendline('export LD_CHERI_BIND_NOW=1')
-    console.expect_exact('#')
-    console.sendline('export LD_BIND_NOW=1')
-    console.expect_exact('#')
+    if not args.lazy_binding:
+        console.sendline('unset LD_CHERI_BIND_NOW')
+        console.expect_exact('#')
+        console.sendline('unset LD_BIND_NOW')
+        console.expect_exact('#')
+    else:
+        # Ensure that we don't use lazy binding for CheriABI since MIPS doesn't support it
+        # This can skew the results since we have faster startup on CHERI but slower runtime
+        # due to trampolines
+        console.sendline('export LD_CHERI_BIND_NOW=1')
+        console.expect_exact('#')
+        console.sendline('export LD_BIND_NOW=1')
+        console.expect_exact('#')
+
     if pre_cmd:
         console.sendline(pre_cmd)
         console.expect_exact('#')
