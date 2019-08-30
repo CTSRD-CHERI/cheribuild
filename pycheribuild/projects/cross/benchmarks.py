@@ -224,7 +224,7 @@ class BuildOlden(CrossCompileProject):
             if not (benchmark_dir / "run_jenkins-bluehive.sh").exists():
                 self.fatal("Created invalid benchmark bundle...")
             self.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
-                                    benchmark_script_args=["-d1", "-r5", "-o", self.default_statcounters_csv_name,
+                                    benchmark_script_args=["-d1", "-r15", "-o", self.default_statcounters_csv_name,
                                                            self.test_arch_suffix])
 
 class BuildSpec2006(CrossCompileProject):
