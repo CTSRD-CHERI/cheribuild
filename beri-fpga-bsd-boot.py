@@ -565,7 +565,7 @@ def do_runbench(console,tgtdir,script,scriptargs,failstr="FAILED RUNNING BENCHMA
     console.expect_exact('#')
     console.sendline('cd {} && ls -la'.format(tgtdir))
     console.expect_exact('#')
-    if not args.lazy_binding:
+    if args.lazy_binding:
         console.sendline('unset LD_CHERI_BIND_NOW')
         console.expect_exact('#')
         console.sendline('unset LD_BIND_NOW')
