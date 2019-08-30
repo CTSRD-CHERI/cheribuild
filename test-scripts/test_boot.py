@@ -43,6 +43,7 @@ import pexpect
 import sys
 from pathlib import Path
 from run_tests_common import *
+from kyua_db_to_junit_xml import convert_kyua_db_to_junit_xml, fixup_kyua_generated_junit_xml
 
 def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     boot_cheribsd.success("Booted successfully")
@@ -77,12 +78,23 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
             boot_cheribsd.success("Running tests for ", tests_file, " took: ", datetime.datetime.now() - test_start)
 
             # run: kyua report-junit --results-file=test-results.db | vis -os > ${CPU}-${TEST_NAME}-test-results.xml
-            # Not sure how much we gain by running it on the host instead. Probably at most a minute
-            xml_conversion_start = datetime.datetime.now()
-            qemu.checked_run("kyua report-junit --results-file=/tmp/results.db | vis -os > /tmp/results.xml", timeout=20 * 60)
-            qemu.checked_run("cp -v /tmp/results.xml {}".format(results_xml))
-            qemu.checked_run("fsync " + str(results_xml))
-            boot_cheribsd.success("Creating JUnit XML ", results_xml, " took: ", datetime.datetime.now() - xml_conversion_start)
+            # Not sure how much we gain by running it on the host instead.
+            # Converting the full test suite to xml can take over an hour (probably a lot faster without the vis -os pipe)
+            # TODO: should escape the XML file but that's probably faster on the host
+            if shutil.which("kyua"):
+                boot_cheribsd.info("KYUA installed on the host, no need to do slow conversion in QEMU")
+            else:
+                xml_conversion_start = datetime.datetime.now()
+                qemu.checked_run("kyua report-junit --results-file=/tmp/results.db > /tmp/results.xml", timeout=200 * 60)
+                qemu.checked_run("cp -v /tmp/results.xml {}".format(results_xml))
+                qemu.checked_run("fsync " + str(results_xml))
+                boot_cheribsd.success("Creating JUnit XML ", results_xml, " took: ", datetime.datetime.now() - xml_conversion_start)
+    except boot_cheribsd.CheriBSDCommandTimeout as e:
+        qemu.sendintr()
+        qemu.sendintr()
+        # Try to cancel the running command and get back to having a sensible prompt
+        qemu.checked_run("pwd")
+        time.sleep(10)
     except boot_cheribsd.CheriBSDCommandFailed as e:
         boot_cheribsd.failure("Failed to run: " + str(e), exit=False)
         boot_cheribsd.info("Trying to shut down cleanly")
@@ -92,17 +104,15 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
         if not boot_cheribsd.PRETEND:
             time.sleep(2)  # sleep two seconds to ensure the files exist
         junit_dir = Path(args.kyua_tests_output)
-        boot_cheribsd.info("Updating statistics in JUnit output directory ", junit_dir)
         try:
-            for host_xml_path in junit_dir.glob("*.xml"):
-                boot_cheribsd.info("Updating statistics in JUnit file ", host_xml_path)
-                if host_xml_path.exists():
-                    # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
-                    xml = junitparser.JUnitXml.fromfile(str(host_xml_path))
-                    xml.update_statistics()
-                    xml.write()
-                    # boot_cheribsd.run_host_command(["head", "-n2", str(test_output)])
-                    boot_cheribsd.run_host_command(["grep", "<testsuite", str(host_xml_path)])
+            if shutil.which("kyua"):
+                boot_cheribsd.info("Converting kyua databases to JUNitXML in output directory ", junit_dir)
+                for host_kyua_db_path in junit_dir.glob("*.db"):
+                    convert_kyua_db_to_junit_xml(host_kyua_db_path, host_kyua_db_path.with_suffix(".xml"))
+            else:
+                boot_cheribsd.info("Updating statistics in JUnit output directory ", junit_dir)
+                for host_xml_path in junit_dir.glob("*.xml"):
+                    fixup_kyua_generated_junit_xml(host_xml_path)
         except Exception as e:
             boot_cheribsd.failure("Could not update stats in ", junit_dir, ": ", e, exit=False)
 

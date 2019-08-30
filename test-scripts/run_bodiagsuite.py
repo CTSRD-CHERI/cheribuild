@@ -29,9 +29,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# runtests.py - run FreeBSD tests and export them to a tarfile via a disk
-# device.
-#
 import argparse
 import junitparser
 import os
