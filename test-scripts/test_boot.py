@@ -37,8 +37,6 @@ import operator
 import shlex
 import time
 
-import junitparser
-
 import pexpect
 import sys
 from pathlib import Path
@@ -140,6 +138,7 @@ def test_boot_setup_args(args: argparse.Namespace):
     args.use_smb_instead_of_ssh = True  # skip the ssh setup
     args.skip_ssh_setup = True
     if args.kyua_tests_files:
+        import junitparser  # ensure that we don't get an error later
         # flatten the list (https://stackoverflow.com/a/45323085/894271):
         args.kyua_tests_files = functools.reduce(operator.iconcat, args.kyua_tests_files, [])
         print(args.kyua_tests_files)
