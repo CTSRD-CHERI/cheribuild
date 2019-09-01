@@ -273,7 +273,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
         super().process()
 
     def run_tests(self):
-        self.run_cheribsd_test_script("test_boot.py", disk_image_path=self.diskImage, kernel_path=self.currentKernel)
+        self.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.diskImage, kernel_path=self.currentKernel)
 
 
 class _RunMultiArchFreeBSDImage(MultiArchBaseMixin, AbstractLaunchFreeBSD):
@@ -431,7 +431,7 @@ class LaunchCheriBsdMfsRoot(AbstractLaunchFreeBSD):
         self.rootfs_path = BuildCHERIBSD.rootfsDir(self, config)
 
     def run_tests(self):
-        self.run_cheribsd_test_script("test_boot.py")
+        self.run_cheribsd_test_script("run_cheribsd_tests.py")
 
 
 # Allow running cheribsd without the MFS_ROOT kernel, but with a disk image instead:

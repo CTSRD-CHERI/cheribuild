@@ -37,15 +37,14 @@ import operator
 import shlex
 import shutil
 import time
-
 import pexpect
 import sys
 from pathlib import Path
-from run_tests_common import *
+from run_tests_common import boot_cheribsd, run_tests_main
 from kyua_db_to_junit_xml import convert_kyua_db_to_junit_xml, fixup_kyua_generated_junit_xml
 
 
-def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
+def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     boot_cheribsd.success("Booted successfully")
     qemu.checked_run("kenv")
     # unchecked since mount_smbfs returns non-zero for --help:
@@ -139,7 +138,7 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
     return True
 
 
-def test_boot_setup_args(args: argparse.Namespace):
+def cheribsd_setup_args(args: argparse.Namespace):
     args.use_smb_instead_of_ssh = True  # skip the ssh setup
     args.skip_ssh_setup = True
     if args.kyua_tests_files:
@@ -174,5 +173,5 @@ def add_args(parser: argparse.ArgumentParser):
 
 if __name__ == '__main__':
     # we don't need to setup ssh config/authorized_keys to test the boot
-    run_tests_main(test_function=run_noop_test, argparse_setup_callback=add_args, should_mount_builddir=False,
-                   argparse_adjust_args_callback=test_boot_setup_args)
+    run_tests_main(test_function=run_cheribsd_test, argparse_setup_callback=add_args, should_mount_builddir=False,
+                   argparse_adjust_args_callback=cheribsd_setup_args)
