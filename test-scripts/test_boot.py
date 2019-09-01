@@ -35,6 +35,7 @@ import functools
 import os
 import operator
 import shlex
+import shutil
 import time
 
 import pexpect
@@ -43,6 +44,7 @@ from pathlib import Path
 from run_tests_common import *
 from kyua_db_to_junit_xml import convert_kyua_db_to_junit_xml, fixup_kyua_generated_junit_xml
 
+
 def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     boot_cheribsd.success("Booted successfully")
     qemu.checked_run("kenv")
@@ -50,6 +52,8 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
     qemu.run("mount_smbfs --help", cheri_trap_fatal=True)
     # same for ld-cheri-elf.so (but do check for CHERI traps):
     qemu.run("/libexec/ld-cheri-elf.so.1 -h", cheri_trap_fatal=True)
+
+    host_has_kyua = shutil.which("kyua") is not None
 
     try:
         # potentially bootstrap kyua for later testing
@@ -79,7 +83,7 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
             # Not sure how much we gain by running it on the host instead.
             # Converting the full test suite to xml can take over an hour (probably a lot faster without the vis -os pipe)
             # TODO: should escape the XML file but that's probably faster on the host
-            if shutil.which("kyua"):
+            if host_has_kyua:
                 boot_cheribsd.info("KYUA installed on the host, no need to do slow conversion in QEMU")
             else:
                 xml_conversion_start = datetime.datetime.now()
@@ -88,6 +92,7 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
                 qemu.checked_run("fsync " + str(results_xml))
                 boot_cheribsd.success("Creating JUnit XML ", results_xml, " took: ", datetime.datetime.now() - xml_conversion_start)
     except boot_cheribsd.CheriBSDCommandTimeout as e:
+        boot_cheribsd.failure("Timeout running tests: " + str(e), exit=False)
         qemu.sendintr()
         qemu.sendintr()
         # Try to cancel the running command and get back to having a sensible prompt
@@ -103,7 +108,7 @@ def run_noop_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace
             time.sleep(2)  # sleep two seconds to ensure the files exist
         junit_dir = Path(args.kyua_tests_output)
         try:
-            if shutil.which("kyua"):
+            if host_has_kyua:
                 boot_cheribsd.info("Converting kyua databases to JUNitXML in output directory ", junit_dir)
                 for host_kyua_db_path in junit_dir.glob("*.db"):
                     convert_kyua_db_to_junit_xml(host_kyua_db_path, host_kyua_db_path.with_suffix(".xml"))
@@ -157,6 +162,7 @@ def test_boot_setup_args(args: argparse.Namespace):
             (real_output_dir / "cmdline").write_text(str(sys.argv))
         args.smb_mount_directories.append(boot_cheribsd.SmbMount(real_output_dir, readonly=False, in_target="/kyua-results"))
 
+
 def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--bootstrap-kyua", action="store_true",
                         help="Install kyua using the /sbin/prepare-testsuite.sh script")
@@ -164,6 +170,7 @@ def add_args(parser: argparse.ArgumentParser):
                         help="Run tests for the given following Kyuafile(s)")
     parser.add_argument("--kyua-tests-output", default=str(Path(".").resolve() / "kyua-results"),
                         help="Copy the kyua results.db to the following directory (it will be mounted with SMB)")
+
 
 if __name__ == '__main__':
     # we don't need to setup ssh config/authorized_keys to test the boot
