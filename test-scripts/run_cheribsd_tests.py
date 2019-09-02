@@ -39,7 +39,7 @@ import shutil
 import time
 import sys
 from pathlib import Path
-from run_tests_common import boot_cheribsd, run_tests_main, junitparser
+from run_tests_common import boot_cheribsd, run_tests_main, junitparser, pexpect
 from kyua_db_to_junit_xml import convert_kyua_db_to_junit_xml, fixup_kyua_generated_junit_xml
 
 

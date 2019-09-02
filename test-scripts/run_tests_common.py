@@ -29,7 +29,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import pexpect
 import argparse
 import os
 import typing
@@ -42,9 +41,10 @@ assert (_junitparser_dir / "junitparser/__init__.py").exists()
 sys.path.insert(1, str(_junitparser_dir))
 sys.path.insert(1, str(_cheribuild_root))
 import junitparser
+import pexpect
 from pycheribuild import boot_cheribsd
 
-__all__ = ["run_tests_main", "boot_cheribsd", "junitparser"]
+__all__ = ["run_tests_main", "boot_cheribsd", "junitparser", "pexpect"]
 
 def run_tests_main(test_function: typing.Callable[[boot_cheribsd.CheriBSDInstance, argparse.Namespace], bool] = None, need_ssh=False,
                    test_setup_function: typing.Callable[[boot_cheribsd.CheriBSDInstance, argparse.Namespace], None] = None,
