@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/gastlygem/junitparser
+	branch = master
+	commit = 83d82be9f6a60ce9bf5780c513b86370b9c13509
+	parent = 5cb587fce417057afa1c7b7be422e809faf392b2
+	method = rebase
+	cmdver = 0.4.0
