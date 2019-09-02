@@ -285,13 +285,12 @@ class BuildSpec2006(CrossCompileProject):
             # "400.perlbench", # --- broken
             "401.bzip",       # 3 runs = 0:18:56 -> ~6mins per run
             # "403.gcc", # --- broken
-            # "429.mcf",      # Strange tag violation even after fixing realloc() and would use too much memor
-            "401.bzip",       # 3 runs = 0:18:56 -> ~6mins per run
+            # "429.mcf",      # Strange tag violation even after fixing realloc() and would use too much memory to run on 1GB FPGA
             "445.gobmk",      # 3 runs = 1:32:13 -> ~30mins per run
             "456.hmmer",      # 3 runs = 0:10:43 -> ~3:30mins per run
-            "458.sjeng",      # 3 runs = ???? ->
+            "458.sjeng",      # 3 runs = 0:30:46 -> ~10mins per run
             "462.libquantum", # 3 runs = 0:00:33 -> ~10s per run
-            "464.h264ref",    # 3 runs = 2:19:49 -> 45mins per run
+            "464.h264ref",    # 3 runs = 2:19:49 -> ~45mins per run
             "471.omnetpp",    # 3 runs = 0:05:54 -> ~2min per run
             "473.astar",      # 3 runs = 0:46:16 -> ~15 mins per run
             "483.xalanbmk",   # 3 runs = 0:00:56 -> ~20 secs per run"
