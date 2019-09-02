@@ -77,5 +77,10 @@ usr/lib/pam_permit.so.6
 usr/lib/pam_rootok.so
 usr/lib/pam_rootok.so.6
 
+# C++ runtime:
+usr/lib/libc++.so.1
+usr/lib/libcxxrt.so.1
+lib/libgcc_s.so.1
+
 usr/share/misc/termcap
 var/run/dhclient

@@ -11,3 +11,8 @@ usr/libcheri/libz.so.6
 # needed by /bin/sh & /bin/csh (if we included the purecap sh/csh)
 usr/libcheri/libedit.so.7
 usr/libcheri/libncursesw.so.8
+
+# C++ runtime:
+usr/libcheri/libc++.so.1
+usr/libcheri/libcxxrt.so.1
+usr/libcheri/libgcc_s.so.1
