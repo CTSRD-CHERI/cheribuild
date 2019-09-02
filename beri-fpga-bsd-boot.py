@@ -120,6 +120,8 @@ parser.add_argument('--jenkins-kernel-cpu-kind', type=str, choices=jenkins_cpus,
                     help="Which CPU the BITFILE is. Only needed if --jenkins-kernel is passed without --jenkins-bitfile")
 parser.add_argument('--jenkins-user', default='readonly', help='The username for jenkins authentication')
 parser.add_argument('--jenkins-password', default=None, help='The password for jenkins authentication')
+parser.add_argument('-k', '--ssh-key', type=str, metavar='SSHKEY', default=op.join(op.expanduser("~"),".ssh","id_rsa"),
+                    help="The ssh private key SSHKEY to use for ssh connection with the board.")
 parser.add_argument('-v', '--verbose', action='count', default=0,
         help="Increase verbosity level by adding more \"v\".")
 subcmds = parser.add_subparsers(dest='subcmd',metavar='sub-command',help="Individual sub-command help available by invoking it with -h or --help.")
