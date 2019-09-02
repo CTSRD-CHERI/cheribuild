@@ -37,10 +37,9 @@ import operator
 import shlex
 import shutil
 import time
-import pexpect
 import sys
 from pathlib import Path
-from run_tests_common import boot_cheribsd, run_tests_main
+from run_tests_common import boot_cheribsd, run_tests_main, junitparser
 from kyua_db_to_junit_xml import convert_kyua_db_to_junit_xml, fixup_kyua_generated_junit_xml
 
 
@@ -142,7 +141,6 @@ def cheribsd_setup_args(args: argparse.Namespace):
     args.use_smb_instead_of_ssh = True  # skip the ssh setup
     args.skip_ssh_setup = True
     if args.kyua_tests_files:
-        import junitparser  # ensure that we don't get an error later
         # flatten the list (https://stackoverflow.com/a/45323085/894271):
         args.kyua_tests_files = functools.reduce(operator.iconcat, args.kyua_tests_files, [])
         print(args.kyua_tests_files)

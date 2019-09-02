@@ -31,12 +31,11 @@
 #
 import pexpect
 import argparse
-import junitparser
 import os
 import shutil
 import subprocess
 from pathlib import Path
-from run_tests_common import *
+from run_tests_common import junitparser, run_tests_main, boot_cheribsd
 
 def output_to_junit_suite(xml, output_path, suite_name, good=True):
     suite = junitparser.TestSuite(suite_name)

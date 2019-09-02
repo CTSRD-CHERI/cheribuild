@@ -34,8 +34,7 @@ import argparse
 import os
 import subprocess
 from pathlib import Path
-from run_tests_common import *
-from junitparser import JUnitXml
+from run_tests_common import junitparser, run_tests_main, boot_cheribsd
 
 
 def setup_qtwebkit_test_environment(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
@@ -81,7 +80,7 @@ def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
         try:
             if not args.smoketest and tests_xml_path.exists():
                 # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
-                xml = JUnitXml.fromfile(str(tests_xml_path))
+                xml = junitparser.JUnitXml.fromfile(str(tests_xml_path))
                 xml.update_statistics()
                 xml.write()
         except:

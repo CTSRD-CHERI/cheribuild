@@ -43,9 +43,7 @@ from pathlib import Path
 from queue import Empty
 
 # To combine the test result xmls
-import junitparser
-
-from run_tests_common import *
+from run_tests_common import junitparser, run_tests_main, boot_cheribsd
 import run_remote_lit_test
 from run_remote_lit_test import mp_debug
 

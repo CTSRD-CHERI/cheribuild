@@ -31,7 +31,7 @@
 import sys
 import subprocess
 from pathlib import Path
-from run_tests_common import boot_cheribsd
+from run_tests_common import boot_cheribsd, junitparser
 
 
 def convert_kyua_db_to_junit_xml(db_file: Path, output_file: Path):
@@ -46,7 +46,6 @@ def convert_kyua_db_to_junit_xml(db_file: Path, output_file: Path):
 def fixup_kyua_generated_junit_xml(xml_file: Path):
     boot_cheribsd.info("Updating statistics in JUnit file ", xml_file)
     # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
-    import junitparser
     xml = junitparser.JUnitXml.fromfile(str(xml_file))
     xml.update_statistics()
     xml.write()

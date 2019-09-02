@@ -30,11 +30,10 @@
 # SUCH DAMAGE.
 #
 import argparse
-import junitparser
 import os
 import sys
 from pathlib import Path
-from run_tests_common import *
+from run_tests_common import junitparser, run_tests_main, boot_cheribsd
 
 LONG_NAME_FOR_BUILDDIR = "/build-dir-with-long-name-to-ensure-cwd-causes-buffer-overflow"
 
