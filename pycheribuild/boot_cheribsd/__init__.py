@@ -34,6 +34,7 @@
 # device.
 #
 import argparse
+import atexit
 import datetime
 import os
 import pexpect
@@ -676,6 +677,9 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--reuse-image", action="store_true")
     parser.add_argument("--keep-compressed-images", action="store_true", default=True, dest="keep_compressed_images")
     parser.add_argument("--no-keep-compressed-images", action="store_false", dest="keep_compressed_images")
+    parser.add_argument("--make-disk-image-copy", default=True, action="store_true", help="Make a copy of the disk image before running tests")
+    parser.add_argument("--no-make-disk-image-copy", action="store_false", dest="disk_image_copy")
+    parser.add_argument("--keep-disk-image-copy", default=False, action="store_true", help="Keep the copy of the disk image (if a copy was made)")
     parser.add_argument("--trap-on-unrepresentable", action="store_true", help="CHERI trap on unrepresentable caps instead of detagging")
     parser.add_argument("--ssh-key", default=default_ssh_key())
     parser.add_argument("--ssh-port", type=int, default=None)
@@ -810,6 +814,16 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace], 
     diskimg = None
     if args.disk_image:
         diskimg = str(maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images, args=args, what="kernel"))
+
+    # Allow running multiple jobs in parallel by making a copy of the disk image
+    if args.make_disk_image_copy:
+        str(os.getpid())
+        new_img = Path(diskimg).with_suffix(".img.runtests." + datetime.datetime.now().strftime("%Y%m%d%H%M%S") + ".pid" + str(os.getpid()))
+        assert not new_img.exists()
+        run_host_command(["cp", "-fv", diskimg, str(new_img)])
+        if not args.keep_disk_image_copy:
+            atexit.register(run_host_command, ["rm", "-fv", str(new_img)])
+        diskimg = str(new_img)
 
     boot_starttime = datetime.datetime.now()
     qemu = boot_cheribsd(args.qemu_cmd, kernel, diskimg, args.ssh_port, smb_dirs=args.smb_mount_directories,
