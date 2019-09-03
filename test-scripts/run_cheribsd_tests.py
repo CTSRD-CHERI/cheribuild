@@ -151,9 +151,12 @@ def cheribsd_setup_args(args: argparse.Namespace):
         if not test_output_dir.is_dir():
             boot_cheribsd.failure("Output directory does not exist: ", test_output_dir)
         # Create a timestamped directory:
-        args.timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        real_output_dir = (test_output_dir / args.timestamp).absolute()
-        args.kyua_tests_output = str(real_output_dir)
+        if args.kyua_tests_output_no_timestamped_subdir:
+            real_output_dir = test_output_dir.absolute()
+        else:
+            args.timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+            real_output_dir = (test_output_dir / args.timestamp).absolute()
+            args.kyua_tests_output = str(real_output_dir)
         boot_cheribsd.run_host_command(["mkdir", "-p", str(real_output_dir)])
         if not boot_cheribsd.PRETEND:
             (real_output_dir / "cmdline").write_text(str(sys.argv))
@@ -170,6 +173,8 @@ def add_args(parser: argparse.ArgumentParser):
                         help="Run tests for the given following Kyuafile(s)")
     parser.add_argument("--kyua-tests-output", default=str(Path(".").resolve() / "kyua-results"),
                         help="Copy the kyua results.db to the following directory (it will be mounted with SMB)")
+    parser.add_argument("--kyua-tests-output-no-timestamped-subdir", action="store_true",
+                        help="Don't create a timestamped subdirectory in the test output dir ")
 
 
 if __name__ == '__main__':
