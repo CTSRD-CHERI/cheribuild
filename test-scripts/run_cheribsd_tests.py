@@ -117,8 +117,8 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
         except Exception as e:
             boot_cheribsd.failure("Could not update stats in ", junit_dir, ": ", e, exit=False)
 
-    if args.interact:
-        boot_cheribsd.info("Skipping poweroff step since --interact was passed.")
+    if args.interact or args.skip_poweroff:
+        boot_cheribsd.info("Skipping poweroff step since --interact/--skip-poweroff was passed.")
         return True
 
     poweroff_start = datetime.datetime.now()
@@ -163,6 +163,9 @@ def cheribsd_setup_args(args: argparse.Namespace):
 def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--bootstrap-kyua", action="store_true",
                         help="Install kyua using the /sbin/prepare-testsuite.sh script")
+    parser.add_argument("--skip-poweroff", action="store_true",
+                        help="Don't run poweroff after tests (implicit with --interact). Without --interact this will"
+                             "almost certainly corrupt the disk image, so only pass this if you no longer need the image!")
     parser.add_argument("--kyua-tests-files", action="append", nargs=argparse.ZERO_OR_MORE, default=[],
                         help="Run tests for the given following Kyuafile(s)")
     parser.add_argument("--kyua-tests-output", default=str(Path(".").resolve() / "kyua-results"),
