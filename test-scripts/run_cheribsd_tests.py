@@ -123,7 +123,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
 
     poweroff_start = datetime.datetime.now()
     qemu.sendline("poweroff")
-    i = qemu.expect(["Uptime:", pexpect.TIMEOUT, pexpect.EOF] + boot_cheribsd.FATAL_ERROR_MESSAGES, timeout=120)
+    i = qemu.expect(["Uptime:", pexpect.TIMEOUT, pexpect.EOF] + boot_cheribsd.FATAL_ERROR_MESSAGES, timeout=240)
     if i != 0:
         boot_cheribsd.failure("Poweroff " + ("timed out" if i == 1 else "failed"))
         return False
