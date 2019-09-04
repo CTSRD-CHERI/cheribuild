@@ -9,13 +9,12 @@ It has been tested and should work on FreeBSD 10, 11 and 12.
 On Linux Ubuntu 16.04 and OpenSUSE Tubleweed are supported. Ubuntu 14.04 may also work but is no longer tested.
 MacOS 10.13 is also supported.
 
-# TL;DR
+# Basic usage
 
 If you want to start up a QEMU VM running CheriBSD run `cheribuild.py run -d` (-d means build all dependencies).
 If you would like the VM to have all userspace binaries to be built for CheriABI use `cheribuild.py run-purecap -d`.
 This will build the CHERI compiler, QEMU, CheriBSD, create a disk image and boot that in QEMU.
-By default this builds the 128-bit version of CheriBSD. If you would like to use the 256-bit
-version, run `cheribuild.py run -d --256`.
+By default this builds the 128-bit version of CheriBSD.
 
 By default `cheribuild.py` will clone all projects in `~/cheri`, use `~/cheri/build` for build directories
 and install into `~/cheri/output`. However, these directories are all configurable (see below for details).
@@ -33,8 +32,8 @@ It is also possible to run this script on a remote host by using the `remote-che
 
 `cheribuild.py [options...] targets...`
 
-Example: to build and run a 128-bit CheriBSD: `cheribuild.py --include-dependencies --128 run` and
-for a clean verbose build of 256-bit CheriBSD `cheribuild.py -v --clean --include-dependencies --256 run`
+Example: to build and run a CheriBSD: `cheribuild.py --include-dependencies run` and
+for a clean verbose build of LLVM `cheribuild.py -v --clean llvm`
 
 ## Available Targets
 
@@ -66,8 +65,7 @@ However, some targets (e.g. `all`, `sdk`) will always build their dependencies b
 ## Building the compiler and QEMU
 
 In order to run CheriBSD you will first need to compile QEMU (`cheribuild.py qemu`).
-This will build versions of QEMU both for 128 and 256-bit CHERI. You will also need to build
-LLVM (this includes a compiler and linker suitable for CHERI) using `cheribuild.py llvm`.
+You will also need to build LLVM (this includes a compiler and linker suitable for CHERI) using `cheribuild.py llvm`.
 It is now possible to target both 128 and 256-bit CHERI using the same clang binary by specifying
 `-mcpu=cheri128` or `-mcpu=256`. However, if you use cheribuild.py for building you won't have to care
 about this since the `--128` (the default) or `--256` flag for cheribuild.py will ensure the right
@@ -94,10 +92,8 @@ SSH public keys to the `/root/.ssh/authorized_keys` file in the CheriBSD image. 
 generate SSH host keys for the image so that those don't change everytime the image is rebuilt.
 A suitable `/etc/rc.conf` and `/etc/fstab` will also be added to this directory and can then be customized.
 
-The default path for the disk image is `~/cheri/output/cheri256-disk.img` for 256-bit CHERI and
- `~/cheri/output/cheri128-disk.img` for 128-bit.
- The pure-capability images will be installed to `~/cheri/output/purecap-cheri128-disk.img` and
- `~/cheri/output/purecap-cheri256-disk.img`.
+The default path for the disk image is `~/cheri/output/cheri128-disk.img` for 128-bit.
+The pure-capability images will be installed to `~/cheri/output/purecap-cheri128-disk.img`.
 
 ### CheriBSD SSH ports
 
