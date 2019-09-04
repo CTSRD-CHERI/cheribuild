@@ -30,6 +30,7 @@
 # SUCH DAMAGE.
 import sys
 import subprocess
+import tempfile
 from pathlib import Path
 from run_tests_common import boot_cheribsd, junitparser
 
@@ -46,16 +47,31 @@ def convert_kyua_db_to_junit_xml(db_file: Path, output_file: Path):
 def fixup_kyua_generated_junit_xml(xml_file: Path):
     boot_cheribsd.info("Updating statistics in JUnit file ", xml_file)
     # Process junit xml file with junitparser to update the number of tests, failures, total time, etc.
-    xml = junitparser.JUnitXml.fromfile(str(xml_file))
-    xml.update_statistics()
-    xml.write()
-    boot_cheribsd.run_host_command(["grep", "<testsuite", str(xml_file)])
+    orig_xml_bytes = xml_file.read_bytes()
+    orig_xml_str = xml_file.read_text("utf-8", errors='backslashreplace')
+    xml_str = orig_xml_str
+    for i in range(32):
+        if chr(i) not in ("\n", "\t"):
+            # Can't reference NULL character -> backslashescape instead
+            # xml_str = xml_str.replace(chr(i), "&#" + str(i) + ";")
+            xml_str = xml_str.replace(chr(i), "\\x" + format(i, '02x') + ";")
+    with tempfile.NamedTemporaryFile("wb") as tf:
+        # create a temporary file first to avoid clobbering the original one if we fail to parse it
+        tf.write(xml_str.encode("ascii", errors="xmlcharrefreplace"))
+        tf.flush()
+        xml = junitparser.JUnitXml.fromfile(tf.name)
+        xml.update_statistics()
+        # Now we can overwrite the input file
+        xml.write(str(xml_file))
+        boot_cheribsd.run_host_command(["grep", "<testsuite", str(xml_file)])
+
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("db", help="The database to convert")
     parser.add_argument("xml", nargs=argparse.OPTIONAL, help="The output file (or - for stdout). Defaults to the db file with suffix .xml")
+    parser.add_argument("--update-stats", action="store_true", help="Only update stats instead of parsing a kyua db")
     args = parser.parse_args()
     if not args.xml:
         output = Path(args.db).with_suffix(".xml")
@@ -63,4 +79,7 @@ if __name__ == "__main__":
         output = Path("/dev/stdout")
     else:
         output = Path(args.xml)
-    convert_kyua_db_to_junit_xml(Path(args.db), output)
+    if args.update_stats:
+        fixup_kyua_generated_junit_xml(Path(args.db))
+    else:
+        convert_kyua_db_to_junit_xml(Path(args.db), output)
