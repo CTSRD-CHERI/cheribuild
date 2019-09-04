@@ -325,6 +325,8 @@ class BuildSpec2006(CrossCompileProject):
         self.cross_warning_flags.append("-Wno-error=mips-cheri-prototypes")  # FIXME: h264 has this, but seeems to run fine
         self.cross_warning_flags.append("-Wno-unused-function")
         self.cross_warning_flags.append("-Wno-logical-op-parentheses") # so noisy in  xalanbmk
+        # The C++ benchmarks have narrowing errors if we compile with the default std (c++14)
+        self.CXXFLAGS.append("-std=gnu++98")
 
         config_file_text = config_file_text.replace("@HW_CPU@", self.hw_cpu)
         config_file_text = config_file_text.replace("@CONFIG_NAME@", self.config_name)
