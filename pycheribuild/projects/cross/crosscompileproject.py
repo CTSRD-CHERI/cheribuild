@@ -532,13 +532,19 @@ class CrossCompileMixin(MultiArchBaseMixin):
         else:
             suffix = self.build_configuration_suffix()
             assert isinstance(self, CrossCompileMixin)
-            # If we explicitly override the linkage model, encode it in the statcounters file
-            if self.force_static_linkage:
-                suffix += "-static"
-            elif self.force_dynamic_linkage:
-                suffix += "-dynamic"
-            if self.config.benchmark_lazy_binding:
-                suffix += "-lazybinding"
+            if self.config.benchmark_statcounters_suffix:
+                user_suffix = self.config.benchmark_statcounters_suffix
+                if not user_suffix.startswith("-"):
+                    user_suffix = "-" + user_suffix
+                suffix += user_suffix
+            else:
+                # If we explicitly override the linkage model, encode it in the statcounters file
+                if self.force_static_linkage:
+                    suffix += "-static"
+                elif self.force_dynamic_linkage:
+                    suffix += "-dynamic"
+                if self.config.benchmark_lazy_binding:
+                    suffix += "-lazybinding"
             self._statcounters_csv = self.target + "-statcounters{}-{}.csv".format(
                 suffix, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
             return self._statcounters_csv

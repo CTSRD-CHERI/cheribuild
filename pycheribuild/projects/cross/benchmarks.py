@@ -283,7 +283,8 @@ class BuildSpec2006(CrossCompileProject):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Worst case benchmarks: 471.omnetpp 483.xalancbmk 400.perlbench (which won't compile)
-        self.all_benchmark_list = [
+        # Approximate duration for 3 runs on the FPGA:
+        self.working_benchmark_list = [
             # "400.perlbench", # --- broken
             "401.bzip",       # 3 runs = 0:18:56 -> ~6mins per run
             # "403.gcc", # --- broken
@@ -295,16 +296,17 @@ class BuildSpec2006(CrossCompileProject):
             "464.h264ref",    # 3 runs = 2:19:49 -> ~45mins per run
             "471.omnetpp",    # 3 runs = 0:05:54 -> ~2min per run
             "473.astar",      # 3 runs = 0:46:16 -> ~15 mins per run
-            "483.xalanbmk",   # 3 runs = 0:00:56 -> ~20 secs per run"
+            "483.xalancbmk",   # 3 runs = 0:00:56 -> ~20 secs per run"
         ]
+        self.complete_benchmark_list = self.working_benchmark_list + ["400.perlbench", "403.gcc", "429.mcf"]
         # self.benchmark_list = ["456.hmmer"]
-        self.fast_list = ["471.omnetpp", "483.xalanbmk", "456.hmmer", "462.libquantum"]
+        self.fast_list = ["471.omnetpp", "483.xalancbmk", "456.hmmer", "462.libquantum"]
         if self.benchmark_override:
             self.benchmark_list = self.benchmark_override
         elif self.fast_benchmarks_only:
             self.benchmark_list = self.fast_list
         else:
-            self.benchmark_list = self.all_benchmark_list
+            self.benchmark_list = self.working_benchmark_list
 
     def compile(self, cwd: Path = None):
         self.makedirs(self.buildDir / "spec")
@@ -363,17 +365,24 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
         pass
 
     def create_tests_dir(self, output_dir: Path) -> Path:
-        self.run_cmd("tar", "-xvjf", self.buildDir / "spec/{}.cpu2006bundle.bz2".format(self.config_name),
-                     cwd=output_dir)
-        self.run_cmd("find", output_dir)
+        self.__check_valid_benchmark_list()
+        spec_archive = self.buildDir / "spec/{}.cpu2006bundle.bz2".format(self.config_name)
+        self.run_cmd("tar", "-xvjf", spec_archive, cwd=output_dir, runInPretendMode=spec_archive.exists())
         spec_root = output_dir / "benchspec/CPU2006"
         if spec_root.exists():
             for dir in spec_root.iterdir():
+                if dir.name.startswith("4") and "." in dir.name:
+                    # Delete all benchmark files for benchmarks that we won't run
+                    print(dir.name, self.benchmark_list)
+                    if dir.name not in self.benchmark_list:
+                        self.run_cmd("rm", "-rf", dir.resolve(), runInPretendMode=True)
+                        continue
                 # Copy run scripts for the benchmarks that we built
                 if (self.spec_run_scripts / dir.name).exists():
                     self.run_cmd("cp", "-av", self.spec_run_scripts / dir.name, str(spec_root) + "/")
         run_script = spec_root / "run_jenkins-bluehive.sh"
         self.installFile(self.spec_run_scripts / "run_jenkins-bluehive.sh", run_script, mode=0o755, printVerboseOnly=False)
+        self.run_cmd("find", output_dir, runInPretendMode=True)
         if not self.config.pretend:
             assert run_script.stat().st_mode & stat.S_IXUSR
 
@@ -437,23 +446,6 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh -b "{ben
 
     def run_benchmarks(self):
         # TODO: don't bother creating tempdir if --skip-copy is set
-
-
-        # Approximate duration for 3 runs on the FPGA:
-        # 400.perlbench	 --- broken
-        # 401.bzip: 0:18:56 -> ~6mins per run
-        # 403.gcc  --- broken
-        # 429.mcf
-        # 445.gobmk: 1:32:13 -> 30mins per run
-        # 456.hmmer: 0:10:43 -> ~3:30mins per run
-        # 458.sjeng
-        # 462.libquantum: 0:00:33 -> ~10s per run
-        # 464.h264ref: 2:19:49 -> 45mins per run
-        # 471.omnetpp: 0:05:54 -> ~2min per run
-        # 473.astar: 0:46:16 -> ~15 mins per run
-        # 483.xalanbmk: 0:00:56 -> ~20 secs per run
-
-
         with tempfile.TemporaryDirectory() as td:
             benchmarks_dir = self.create_tests_dir(Path(td))
             runbench_args = []
@@ -464,3 +456,16 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh -b "{ben
                                                            "-o", self.default_statcounters_csv_name,
                                                            "-b", commandline_to_str(self.benchmark_list),
                                                            self.bluehive_benchmark_script_archname])
+
+
+    def __check_valid_benchmark_list(self):
+        print("CHECKING")
+        for x in self.benchmark_list:
+            print(x, x in self.complete_benchmark_list)
+            if x not in self.complete_benchmark_list:
+                self.fatal("Benchmark", x, "is not a valid benchmark. Complete list:",
+                           " ".join(sorted(self.complete_benchmark_list)))
+
+    def process(self):
+        self.__check_valid_benchmark_list()
+        super().process()
