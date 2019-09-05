@@ -56,6 +56,9 @@ class DLMalloc(CrossCompileProject):
         cls.qmratio          = cls.addConfigOption("qmratio", kind=int,
                                                    help="Quarantine memory ratio threshold")
 
+        cls.qmmin            = cls.addConfigOption("qmmin", kind=int,
+                                                   help="Minimum amount quarantined to trigger a revocation based on ratio")
+
         cls.revoke           = cls.addBoolOption("revoke", help="Revoke quarantine before reusing")
 
         cls.consolidate_on_free = cls.addBoolOption("consolidate", default=True, help="Consolidate memory when quarantining")
@@ -86,6 +89,9 @@ class DLMalloc(CrossCompileProject):
 
         if self.qmratio :
             self.CFLAGS.append("-DDEFAULT_FREEBUF_PERCENT=%f" % self.qmratio)
+
+        if self.qmmin :
+            self.CFLAGS.append("-DDEFAULT_MIN_FREEBUFBYTES=%d" % self.qmmin)
 
         if self.consolidate_on_free :
             self.CFLAGS.append("-DCONSOLIDATE_ON_FREE=1")
