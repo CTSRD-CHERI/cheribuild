@@ -629,12 +629,12 @@ class CrossCompileMixin(MultiArchBaseMixin):
         elif self.config.benchmark_clean_boot:
             # use a bitfile from jenkins. TODO: add option for overriding
             if self.compiling_for_mips():
-                # TODO: use a MIPS kernel?
                 basic_args.append("--jenkins-bitfile=cheri128")
             else:
                 assert self.compiling_for_cheri()
                 basic_args.append("--jenkins-bitfile=cheri" + self.config.cheriBitsStr)
-            mfs_kernel = BuildCheriBsdMfsKernel.get_instance(self, self.config)
+            # TODO: allow using a plain MIPS kernel?
+            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(CrossCompileTarget.CHERI, self.config)
             if self.config.benchmark_with_debug_kernel:
                 kernel_config = mfs_kernel.fpga_kernconf
             else:
