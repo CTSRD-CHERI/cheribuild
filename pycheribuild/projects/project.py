@@ -148,7 +148,13 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     installDir = None
     # Whether to hide the options from the default --help output (only add to --help-hidden)
     hide_options_from_help = False
-    mips_build_hybrid = False  # whether to build MIPS binaries as hybrid ones
+    _mips_build_hybrid = None  # whether to build MIPS binaries as hybrid ones
+    @property
+    def mips_build_hybrid(self) -> bool:
+        if self._mips_build_hybrid is None:
+            return self.config.use_hybrid_sysroot_for_mips
+        else:
+            return self._mips_build_hybrid
     # To check that we don't create an crosscompile targets without a fixed target
     _should_not_be_instantiated = False
     __cached_deps = None  # type: typing.List[Target]

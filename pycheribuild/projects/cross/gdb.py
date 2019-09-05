@@ -83,7 +83,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self._linkage = Linkage.STATIC
         # In jenkins, we also want to be able to build a non- building the MIPS version of GDB
 
-        self.mips_build_hybrid = self.cheri_hybrid
+        self._mips_build_hybrid = self.cheri_hybrid
 
         super().__init__(config)
         assert not self.compiling_for_cheri(), "Should only build this as a static MIPS binary not CHERIABI"

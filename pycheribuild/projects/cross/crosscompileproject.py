@@ -65,7 +65,7 @@ def get_cheribsd_instance_for_install_dir(config: CheriConfig, project: "CrossCo
     from .cheribsd import BuildCHERIBSD
     cross_target = project.get_crosscompile_target(config)
     # If use_hybrid_sysroot_for_mips is set, install to rootfs128 instead of rootfs-mips
-    if project.compiling_for_mips() and (project.mips_build_hybrid or config.use_hybrid_sysroot_for_mips):
+    if project.compiling_for_mips() and project.mips_build_hybrid:
         cross_target = CrossCompileTarget.CHERI
     return BuildCHERIBSD.get_instance_for_cross_target(cross_target, config)
 
