@@ -59,12 +59,6 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
             qemu.checked_run("/sbin/prepare-testsuite.sh", timeout=20 * 60)
             qemu.checked_run("kyua help", timeout=60)
 
-        # The audit tests will runstart and and stop auditd for every test CASE if it's not already running
-        # This can take 2-5 minutes per test case and results in many hours wasted for "service auditd onestart"
-        if args.kyua_tests_files:
-            # Not checked since we don't care if it fails, worst case tests take much longer
-            qemu.run("service auditd onestart")
-
         for i, tests_file in enumerate(args.kyua_tests_files):
             # TODO: is the results file too big for tmpfs? No should be fine, only a few megabytes
             qemu.checked_run("rm -f /tmp/results.db")
