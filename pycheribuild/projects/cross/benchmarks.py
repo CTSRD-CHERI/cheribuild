@@ -243,6 +243,8 @@ class BuildSpec2006(CrossCompileProject):
         cls.ctsrd_evaluation_vendor = cls.addPathOption("ctsrd-evaluation-vendor",
                                                         default="/you/must/set --spec2006/ctsrd-evaluation-vendor config option",
                                                         help="Path to the CTSRD evaluation/vendor svn checkout")
+        cls.fast_benchmarks_only = cls.addBoolOption("fast-benchmarks-only", default=False)
+        cls.benchmark_override = cls.addConfigOption("benchmarks", default=[], kind=list, help="override the list of benchmarks to run")
 
     @property
     def config_name(self):
@@ -281,7 +283,7 @@ class BuildSpec2006(CrossCompileProject):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Worst case benchmarks: 471.omnetpp 483.xalancbmk 400.perlbench (which won't compile)
-        self.benchmark_list = [
+        self.all_benchmark_list = [
             # "400.perlbench", # --- broken
             "401.bzip",       # 3 runs = 0:18:56 -> ~6mins per run
             # "403.gcc", # --- broken
@@ -296,8 +298,13 @@ class BuildSpec2006(CrossCompileProject):
             "483.xalanbmk",   # 3 runs = 0:00:56 -> ~20 secs per run"
         ]
         # self.benchmark_list = ["456.hmmer"]
-        self.fast_list = ["471.omnetpp", "483.xalanbmk", "456.hmmer"]
-        #self.benchmark_list = self.fast_list
+        self.fast_list = ["471.omnetpp", "483.xalanbmk", "456.hmmer", "462.libquantum"]
+        if self.benchmark_override:
+            self.benchmark_list = self.benchmark_override
+        elif self.fast_benchmarks_only:
+            self.benchmark_list = self.fast_list
+        else:
+            self.benchmark_list = self.all_benchmark_list
 
     def compile(self, cwd: Path = None):
         self.makedirs(self.buildDir / "spec")
@@ -315,7 +322,8 @@ class BuildSpec2006(CrossCompileProject):
 
         config_file_text = self.readFile(self.spec_config_dir / "freebsd-cheribuild.cfg")
         # FIXME: this should really not be needed....
-        self.cross_warning_flags.append("-Werror=cheri-capability-misuse") # FIXME: cannot patch xalanbmk
+        self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse") # FIXME: cannot patch xalanbmk
+        self.cross_warning_flags.append("-Wno-error=implicit-function-declaration") # FIXME: cannot patch hmmr
         self.cross_warning_flags.append("-Wcheri") # FIXME: cannot patch xalanbmk
         self.cross_warning_flags.append("-Wno-c++11-narrowing") # FIXME: cannot patch xalanbmk
         self.cross_warning_flags.append("-Wno-undefined-bool-conversion")
