@@ -286,7 +286,7 @@ class BuildSpec2006(CrossCompileProject):
         # Approximate duration for 3 runs on the FPGA:
         self.working_benchmark_list = [
             # "400.perlbench", # --- broken
-            "401.bzip",       # 3 runs = 0:18:56 -> ~6mins per run
+            "401.bzip2",       # 3 runs = 0:18:56 -> ~6mins per run
             # "403.gcc", # --- broken
             # "429.mcf",      # Strange tag violation even after fixing realloc() and would use too much memory to run on 1GB FPGA
             "445.gobmk",      # 3 runs = 1:32:13 -> ~30mins per run
@@ -372,6 +372,7 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
         if spec_root.exists():
             for dir in spec_root.iterdir():
                 if dir.name.startswith("4") and "." in dir.name:
+                    assert dir.name in self.complete_benchmark_list, "Got unknown benchmark " + dir.name
                     # Delete all benchmark files for benchmarks that we won't run
                     print(dir.name, self.benchmark_list)
                     if dir.name not in self.benchmark_list:
@@ -451,7 +452,7 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh -b "{ben
             runbench_args = []
             # TODO: allow multiple and run all configurations?
             self.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
-                                    benchmark_script_args=["-d0", "-r3",
+                                    benchmark_script_args=["-d0", "-r5",
                                                            "-t", self.config_name,
                                                            "-o", self.default_statcounters_csv_name,
                                                            "-b", commandline_to_str(self.benchmark_list),
@@ -459,7 +460,6 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh -b "{ben
 
 
     def __check_valid_benchmark_list(self):
-        print("CHECKING")
         for x in self.benchmark_list:
             print(x, x in self.complete_benchmark_list)
             if x not in self.complete_benchmark_list:
