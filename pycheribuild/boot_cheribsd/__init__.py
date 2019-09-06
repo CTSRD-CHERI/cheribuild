@@ -816,7 +816,7 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace], 
         diskimg = str(maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images, args=args, what="kernel"))
 
     # Allow running multiple jobs in parallel by making a copy of the disk image
-    if args.make_disk_image_copy:
+    if diskimg is not None and args.make_disk_image_copy:
         str(os.getpid())
         new_img = Path(diskimg).with_suffix(".img.runtests." + datetime.datetime.now().strftime("%Y%m%d%H%M%S") + ".pid" + str(os.getpid()))
         assert not new_img.exists()
