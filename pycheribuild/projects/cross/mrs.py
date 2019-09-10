@@ -38,9 +38,8 @@ class MRS(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/ctsrd-cheri/mrs")
     appendCheriBitsToBuildDir = True
     supported_architectures = [CrossCompileTarget.CHERI]
-    defaultOptimizationLevel = ["-O2"]
-    default_build_type = BuildType.DEBUG
-    defaultCMakeBuildType = "Debug"
+
+    # set --mrs/build-type <type> to control build type, default is RelWithDebInfo
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
