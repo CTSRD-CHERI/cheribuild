@@ -76,6 +76,7 @@ class SNMalloc(CrossCompileCMakeProject):
         cls.revoke           = cls.addBoolOption("revoke", help="Revoke quarantine before reusing")
         cls.revoke_dry_run   = cls.addBoolOption("revoke-dry-run", help="Do everything but caprevoke()")
         cls.revoke_paranoia  = cls.addBoolOption("revoke-paranoia", help="Double-check the revoker")
+        cls.revoke_tput      = cls.addBoolOption("revoke-throughput", help="Optimize for throughput")
 
         # XXX misnamed now, but so be it
         cls.revoke_verbose   = cls.addBoolOption("revoke-verbose", help="Report revocation statistics")
@@ -105,6 +106,7 @@ class SNMalloc(CrossCompileCMakeProject):
         self.COMMON_FLAGS.append("-DSNMALLOC_REVOKE_QUARANTINE=%d"  % self.revoke          )
         self.COMMON_FLAGS.append("-DSNMALLOC_REVOKE_DRY_RUN=%d"     % self.revoke_dry_run  )
         self.COMMON_FLAGS.append("-DSNMALLOC_REVOKE_PARANOIA=%d"    % self.revoke_paranoia )
+        self.COMMON_FLAGS.append("-DSNMALLOC_REVOKE_THROUGHPUT=%d"  % self.revoke_tput     )
         self.COMMON_FLAGS.append("-DSNMALLOC_QUARANTINE_CHATTY=%d"  % self.revoke_verbose  )
         self.COMMON_FLAGS.append("-DSNMALLOC_DEFAULT_ZERO=%s" %
             ( "ZeroMem::YesZero" if self.zero else "ZeroMem::NoZero" ))
