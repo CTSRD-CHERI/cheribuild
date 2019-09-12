@@ -65,7 +65,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
     is_sdk_target = True
     defaultOptimizationLevel = ["-O2"]
     supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
-    mips_build_hybrid = True  # build MIPS binaries as CHERI hybrid so that the trap register number works
+    _mips_build_hybrid = True  # build MIPS binaries as CHERI hybrid so that the trap register number works
 
 
     @classmethod
