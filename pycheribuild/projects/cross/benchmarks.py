@@ -451,10 +451,11 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh -b "{ben
             benchmarks_dir = self.create_tests_dir(Path(td))
             runbench_args = []
             # TODO: allow multiple and run all configurations?
+            num_runs = 3
             self.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
-                                    # The benchmarks take a long time to run -> use a 12 hour timeout
-                                    extra_runbench_args=["--timeout", str(60 * 60 * 12)],
-                                    benchmark_script_args=["-d0", "-r5",
+                                    # The benchmarks take a long time to run -> allow up to a 3 hours per iteration
+                                    extra_runbench_args=["--timeout", str(60 * 60 * 3 * num_runs)],
+                                    benchmark_script_args=["-d1", "-r" + str(num_runs),
                                                            "-t", self.config_name,
                                                            "-o", self.default_statcounters_csv_name,
                                                            "-b", commandline_to_str(self.benchmark_list),
