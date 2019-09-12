@@ -140,8 +140,9 @@ class BuildMibench(CrossCompileProject):
             benchmark_dir = Path(td, self.bundle_dir.name)
             if not (benchmark_dir / "run_jenkins-bluehive.sh").exists():
                 self.fatal("Created invalid benchmark bundle...")
+            num_iterations = self.config.benchmark_iterations or 10
             self.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
-                                    benchmark_script_args=["-d1", "-r10", "-s", self.benchmark_size,
+                                    benchmark_script_args=["-d1", "-r" + str(num_iterations), "-s", self.benchmark_size,
                                                            "-o", self.default_statcounters_csv_name,
                                                            self.benchmark_version])
 
@@ -223,9 +224,10 @@ class BuildOlden(CrossCompileProject):
             self.run_cmd("find", benchmark_dir)
             if not (benchmark_dir / "run_jenkins-bluehive.sh").exists():
                 self.fatal("Created invalid benchmark bundle...")
+            num_iterations = self.config.benchmark_iterations or 15
             self.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
-                                    benchmark_script_args=["-d1", "-r15", "-o", self.default_statcounters_csv_name,
-                                                           self.test_arch_suffix])
+                                    benchmark_script_args=["-d1", "-r" + str(num_iterations), "-o",
+                                                           self.default_statcounters_csv_name, self.test_arch_suffix])
 
 class BuildSpec2006(CrossCompileProject):
     target = "spec2006"
@@ -449,13 +451,11 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh -b "{ben
         # TODO: don't bother creating tempdir if --skip-copy is set
         with tempfile.TemporaryDirectory() as td:
             benchmarks_dir = self.create_tests_dir(Path(td))
-            runbench_args = []
-            # TODO: allow multiple and run all configurations?
-            num_runs = 3
+            num_iterations = self.config.benchmark_iterations or 3
             self.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
                                     # The benchmarks take a long time to run -> allow up to a 3 hours per iteration
-                                    extra_runbench_args=["--timeout", str(60 * 60 * 3 * num_runs)],
-                                    benchmark_script_args=["-d1", "-r" + str(num_runs),
+                                    extra_runbench_args=["--timeout", str(60 * 60 * 3 * num_iterations)],
+                                    benchmark_script_args=["-d1", "-r" + str(num_iterations),
                                                            "-t", self.config_name,
                                                            "-o", self.default_statcounters_csv_name,
                                                            "-b", commandline_to_str(self.benchmark_list),

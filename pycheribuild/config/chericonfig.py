@@ -284,6 +284,9 @@ class CheriConfig(object):
                                                                 help="Run the benchmark with a kernel that has assertions enabled.")
         self.benchmark_lazy_binding = loader.addBoolOption("benchmark-lazy-binding", group=loader.benchmarkGroup,
                                                                 help="Run the benchmark without setting LD_BIND_NOW.")
+        self.benchmark_iterations = loader.addOption("benchmark-iterations", type=int, group=loader.benchmarkGroup,
+                                                     help="Override the number of iterations for the benchmark. "
+                                                          "Note: not all benchmarks support this option")
         self.benchmark_with_qemu = loader.addBoolOption("benchmark-with-qemu", group=loader.benchmarkGroup,
                                                          help="Run the benchmarks on QEMU instead of the FPGA (only useful to collect instruction counts or test the benchmarks)")
         self.shallow_clone = loader.addBoolOption("shallow-clone", default=True,
