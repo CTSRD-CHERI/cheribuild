@@ -51,6 +51,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
     # same for ld-cheri-elf.so (but do check for CHERI traps):
     qemu.run("/libexec/ld-cheri-elf.so.1 -h", cheri_trap_fatal=True)
 
+    tests_successful = True
     host_has_kyua = shutil.which("kyua") is not None
 
     try:
@@ -96,9 +97,11 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
         # Try to cancel the running command and get back to having a sensible prompt
         qemu.checked_run("pwd")
         time.sleep(10)
+        tests_successful = False
     except boot_cheribsd.CheriBSDCommandFailed as e:
         boot_cheribsd.failure("Failed to run: " + str(e), exit=False)
         boot_cheribsd.info("Trying to shut down cleanly")
+        tests_successful = False
 
     # Update the JUnit stats in the XML file
     if args.kyua_tests_files:
@@ -116,10 +119,11 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
                     fixup_kyua_generated_junit_xml(host_xml_path)
         except Exception as e:
             boot_cheribsd.failure("Could not update stats in ", junit_dir, ": ", e, exit=False)
+            tests_successful = False
 
     if args.interact or args.skip_poweroff:
         boot_cheribsd.info("Skipping poweroff step since --interact/--skip-poweroff was passed.")
-        return True
+        return tests_successful
 
     poweroff_start = datetime.datetime.now()
     qemu.sendline("poweroff")
@@ -134,7 +138,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
         boot_cheribsd.failure("QEMU didn't exit after shutdown!")
         return False
     boot_cheribsd.success("Poweroff took: ", datetime.datetime.now() - poweroff_start)
-    return True
+    return tests_successful
 
 
 def cheribsd_setup_args(args: argparse.Namespace):
