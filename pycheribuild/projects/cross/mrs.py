@@ -53,6 +53,7 @@ class MRS(CrossCompileCMakeProject):
         cls.clear_allocations = cls.addBoolOption("clear-allocations", help="zero out allocations made by malloc")
         cls.print_stats= cls.addBoolOption("print-stats", help="print heap statistics on exit")
         cls.sanitize = cls.addBoolOption("sanitize", help="behave more like a sanitizer")
+        cls.locks = cls.addBoolOption("locks", help="make mrs thread safe with locks")
 
         cls.just_interpose = cls.addBoolOption("just-interpose", help="just call the real functions")
         cls.just_bookkeeping = cls.addBoolOption("just-bookkeeping", help="just update data structures")
@@ -77,6 +78,8 @@ class MRS(CrossCompileCMakeProject):
             self.add_cmake_options(PRINT_STATS="ON")
         if self.sanitize:
             self.add_cmake_options(SANITIZE="ON")
+        if self.locks:
+            self.add_cmake_options(LOCKS="ON")
 
         if self.just_interpose:
             self.add_cmake_options(JUST_INTERPOSE="ON")
