@@ -589,10 +589,14 @@ def do_runbench(console,tgtdir,script,scriptargs,failstr="FAILED RUNNING BENCHMA
     console.expect_exact('#')
     console.sendline(runbenchcmd)
     panicstr = "KDB: enter: "
-    "/this/command/does/not/exist: Command not found."
-    idx = console.checked_expect("running benchmark", ["DONE RUNNING BENCHMARKS", ": Command not found.", badcmd + ": not found", failstr, panicstr], timeout)
+
+    expects = ["DONE RUNNING BENCHMARKS", ": Command not found.", badcmd + ": not found", failstr, panicstr]
+    idx = console.checked_expect("running benchmark", expects, timeout)
     if idx != 0:
         print("Failed to run benchmark")
+    if expects[idx] == panicstr:
+        print("Panic!  Extracting backtrace...")
+        console.sendline("bt")
 
 
 def get_jenkins_password():
