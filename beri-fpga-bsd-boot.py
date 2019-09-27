@@ -761,7 +761,7 @@ def main():
         tgtout = op.join(tgtdir,args.out_path)
         phaseprint("transfer benchmark")
         if not args.skip_copy:
-            do_scp(src=args.benchdir, dst="{}@{}:{}".format(args.user,args.target,tgtfs), port=ssh_port, key=args.ssh_key, timeout=1200)
+            do_scp(src=args.benchdir, dst="{}@{}:{}".format(args.user,args.target,tgtfs), port=ssh_port, key=args.ssh_key, timeout=2400)
             # Allow copying additional files to the fpga
             for extra_file in args.extra_input_files:
                 do_scp(src=extra_file, dst="{}@{}:{}".format(args.user, args.target, tgtfs), port=ssh_port, key=args.ssh_key)
