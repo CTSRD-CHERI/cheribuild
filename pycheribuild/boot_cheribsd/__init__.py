@@ -466,7 +466,7 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
-        i = child.expect([pexpect.TIMEOUT, STARTING_INIT, BOOT_FAILURE] + FATAL_ERROR_MESSAGES, timeout=5 * 60)
+        i = child.expect([pexpect.TIMEOUT, STARTING_INIT, BOOT_FAILURE] + FATAL_ERROR_MESSAGES, timeout=15 * 60)
         if i == 0:  # Timeout
             failure("timeout before booted: ", str(child))
         elif i != 1:  # start up scripts failed
