@@ -57,7 +57,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
     try:
         # potentially bootstrap kyua for later testing
         if args.bootstrap_kyua or args.kyua_tests_files:
-            qemu.checked_run("/sbin/prepare-testsuite.sh", timeout=20 * 60)
+            qemu.checked_run("/sbin/prepare-testsuite.sh", timeout=30 * 60)
             qemu.checked_run("kyua help", timeout=60)
 
         for i, tests_file in enumerate(args.kyua_tests_files):
