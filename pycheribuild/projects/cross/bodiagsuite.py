@@ -95,7 +95,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
             self.common_warning_flags.append("-Wno-unused-command-line-argument")
         if self.compiling_for_host():
             if [self.use_softboundcets, self.use_effectivesan, self.use_asan, self.use_valgrind].count(True) > 1:
-                self.fatal("Cannot use SoftBoundCETS,EffectiveSaan,ASAN and Valgrind are mutually exclusive options!")
+                self.fatal("SoftBoundCETS,EffectiveSaan,ASAN and Valgrind are mutually exclusive options!")
             if self.use_softboundcets:
                 self.COMMON_FLAGS.append("-fsoftboundcets")
                 self.COMMON_LDFLAGS.append("-lm")
@@ -107,7 +107,10 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
                 self.COMMON_LDFLAGS.append("-fuse-ld=lld")
             if self.use_effectivesan:
                 self.COMMON_FLAGS.append("-fsanitize=effective")
+                self.COMMON_FLAGS.extend(["-mllvm", "-effective-warnings"])
                 self.COMMON_LDFLAGS.append("-fsanitize=effective")
+                self.use_stack_protector = False
+                self.use_fortify_source = False
         if self.use_stack_protector:
             if self.use_effectivesan or self.use_softboundcets:
                 self.fatal("Stack protector should not be used with effectivesan/softboundcets")

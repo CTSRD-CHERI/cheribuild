@@ -288,17 +288,17 @@ class BuildSpec2006(CrossCompileProject):
         # Approximate duration for 3 runs on the FPGA:
         self.working_benchmark_list = [
             # "400.perlbench", # --- broken
-            "401.bzip2",       # 3 runs = 0:18:56 -> ~6mins per run
+            "401.bzip2",       # 3 runs = 0:10:33 -> ~3:30mins per run
             # "403.gcc", # --- broken
             # "429.mcf",      # Strange tag violation even after fixing realloc() and would use too much memory to run on 1GB FPGA
-            "445.gobmk",      # 3 runs = 1:32:13 -> ~30mins per run
-            "456.hmmer",      # 3 runs = 0:10:43 -> ~3:30mins per run
-            "458.sjeng",      # 3 runs = 0:30:46 -> ~10mins per run
-            "462.libquantum", # 3 runs = 0:00:33 -> ~10s per run
-            "464.h264ref",    # 3 runs = 2:19:49 -> ~45mins per run
-            "471.omnetpp",    # 3 runs = 0:05:54 -> ~2min per run
-            "473.astar",      # 3 runs = 0:46:16 -> ~15 mins per run
-            "483.xalancbmk",   # 3 runs = 0:00:56 -> ~20 secs per run"
+            "445.gobmk",      # 3 runs = 1:05:43 -> ~22mins per run
+            "456.hmmer",      # 3 runs = 0:05:50 -> ~2mins per run
+            "458.sjeng",      # 3 runs = 0:23:14 -> ~7mins per run
+            "462.libquantum", # 3 runs = 0:00:21 -> ~7s per run
+            "464.h264ref",    # 3 runs = 1:20:01 -> ~27mins per run
+            "471.omnetpp",    # 3 runs = 0:05:09 -> ~1:45min per run
+            "473.astar",      # 3 runs = 0:31:41  -> ~10:30 mins per run
+            "483.xalancbmk",   # 3 runs = 0:00:55 -> ~20 secs per run"
         ]
         self.complete_benchmark_list = self.working_benchmark_list + ["400.perlbench", "403.gcc", "429.mcf"]
         # self.benchmark_list = ["456.hmmer"]

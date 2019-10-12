@@ -213,6 +213,11 @@ class BuildQt5(BuildQtWithConfigureScript):
         # TODO: qtwebkit, but that won't cross-compile with QMAKE
         runCmd("perl", "init-repository", "--module-subset=essential", "-f", "--branch", cwd=self.sourceDir)
 
+    def process(self):
+        if not self.compiling_for_host():
+            self.fatal("This target is currently broken, use qtbase instead.")
+        super().process()
+
 
 class BuildQtBase(BuildQtWithConfigureScript):
     doNotAddToTargets = False  # Even though it ends in Base this is not a Base class
