@@ -12,6 +12,10 @@ from __future__ import unicode_literals
 from future.utils import with_metaclass
 from builtins import object
 from io import open
+try:
+    from html import escape  # python 3.x
+except ImportError:
+    from cgi import escape  # python 2.x
 
 try:
     import itertools.izip as zip
@@ -68,6 +72,8 @@ class Attr(object):
     def __get__(self, instance, cls):
         "Gets value from attribute, return None if attribute doesn't exist."
         value = instance._elem.attrib.get(self.name)
+        if value is not None:
+            return escape(value)
         return value
 
     def __set__(self, instance, value):
@@ -251,8 +257,9 @@ class JUnitXml(Element):
         elif other._elem.tag == "testsuite":
             suite = TestSuite()
             for case in other:
-                suite.add_testcase(case)
+                suite._add_testcase_no_update_stats(case)
             self.add_testsuite(suite)
+            self.update_statistics()
 
         return self
 
@@ -359,7 +366,7 @@ class TestSuite(Element):
             # Merge the two suites
             result = deepcopy(self)
             for case in other:
-                result.add_testcase(case)
+                result._add_testcase_no_update_stats(case)
             for suite in other.testsuites():
                 result.add_testsuite(suite)
             result.update_statistics()
@@ -373,7 +380,7 @@ class TestSuite(Element):
     def __iadd__(self, other):
         if self == other:
             for case in other:
-                self.add_testcase(case)
+                self._add_testcase_no_update_stats(case)
             for suite in other.testsuites():
                 self.add_testsuite(suite)
             self.update_statistics()
@@ -429,6 +436,13 @@ class TestSuite(Element):
         "Adds a testcase to the suite."
         self.append(testcase)
         self.update_statistics()
+
+    def _add_testcase_no_update_stats(self, testcase):
+        """
+        Adds a testcase to the suite (without updating stats).
+        For internal use only to avoid quadratic behaviour in merge.
+        """
+        self.append(testcase)
 
     def add_testsuite(self, suite):
         "Adds a testsuite inside current testsuite."
@@ -626,7 +640,8 @@ class TestCase(Element):
             if result is not None:
                 self.remove(result)
         # Then add current result
-        self.append(value)
+        if isinstance(value, Skipped) or isinstance(value, Failure) or isinstance(value, Error):
+            self.append(value)
 
     @property
     def system_out(self):
