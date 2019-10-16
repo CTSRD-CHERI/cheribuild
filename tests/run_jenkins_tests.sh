@@ -22,7 +22,7 @@ set -e
 set -x
 
 # Copy cheribuild to a temporary director
-if command -v git >/dev/null && [[ -z "FORCE_RUN" ]]; then
+if command -v git >/dev/null && [[ -z "$FORCE_RUN" ]]; then
     echo "GIT IS INSTALLED, copying to tempdir to avoid chowning files to root"
     if [[ -e ".git" ]]; then
         echo ".git already exists, cannot continue!"; exit 1
@@ -38,9 +38,9 @@ fi
 ./cheribuild.py --help-all > /dev/null
 $pytest_binary -v --junit-xml "../$test_prefix-results.xml" tests || echo "Some tests failed"
 # Remove all debug messages (contains ansi escape sequences and the Available targets message:)
-targets=$(./cheribuild.py --list-targets | grep -v Available | grep -v $(printf "\x1b"))
+targets=$(./cheribuild.py --list-targets | grep -v Available | grep -v "$(printf "\x1b")")
 # echo "targets=$targets"
 for i in $targets; do
-  WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=cheri128 -p $i > /dev/null;
-  WORKSPACE=/tmp ./jenkins-cheri-build.py --test --cpu=cheri128 -p $i > /dev/null;
+  WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=cheri128 -p "$i" > /dev/null;
+  WORKSPACE=/tmp ./jenkins-cheri-build.py --test --cpu=cheri128 -p "$i" > /dev/null;
 done
