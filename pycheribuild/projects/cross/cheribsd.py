@@ -1255,7 +1255,7 @@ class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
 
     @classmethod
     def get_installed_benchmark_kernel_path(cls, caller) -> Path:
-        return cls.installed_kernel_for_config(caller.onfig, cls.get_kernel_config(caller) + "_BENCHMARK")
+        return cls.installed_kernel_for_config(caller.config, cls.get_kernel_config(caller) + "_BENCHMARK")
 
     @staticmethod
     def installed_kernel_for_config(config: CheriConfig, kernconf: str) -> Path:
