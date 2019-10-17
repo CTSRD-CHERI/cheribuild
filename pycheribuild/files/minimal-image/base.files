@@ -55,6 +55,8 @@ lib/libc.so.7
 lib/libcrypt.so.5
 lib/libcrypto.so.111
 lib/libm.so.5
+# Commonly used (and tiny)
+usr/lib/libdl.so.1
 # needed by /bin/sh & /bin/csh
 lib/libedit.so.7
 lib/libncursesw.so.8

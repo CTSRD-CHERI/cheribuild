@@ -611,7 +611,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         statusUpdate("No benchmarks defined for target", self.target)
 
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
-                                 mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
+                                 mount_builddir=True, mount_sourcedir=False, mount_sysroot=False, mount_installdir=False,
                                  use_benchmark_kernel_by_default=False):
         # mount_sysroot may be needed for projects such as QtWebkit where the minimal image doesn't contain all the
         # necessary libraries
@@ -671,6 +671,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             cmd.extend(["--source-dir", self.sourceDir])
         if mount_sysroot and "--sysroot-dir" not in self.config.test_extra_args:
             cmd.extend(["--sysroot-dir", self.crossSysrootPath])
+        if mount_installdir:
+            if "--install-destdir" not in self.config.test_extra_args:
+                cmd.extend(["--install-destdir", self.destdir])
+            if "--install-prefix" not in self.config.test_extra_args:
+                cmd.extend(["--install-prefix", self.installPrefix])
         if disk_image_path and not test_native and "--disk-image" not in self.config.test_extra_args:
             cmd.extend(["--disk-image", disk_image_path])
         if self.config.tests_interact:

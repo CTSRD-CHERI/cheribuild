@@ -80,3 +80,10 @@ class BuildPython(CrossCompileAutotoolsProject):
             # self.configureEnvironment["ac_cv_file__dev_ptc+set"] = "set"
             # TODO: do I need to set? ac_sys_release=13.0
         super().configure(**kwargs)
+
+    def run_tests(self):
+        if self.compiling_for_host():
+            self.run_cmd(self.buildDir / "python.exe", "-m", "test", cwd=self.buildDir)
+        else:
+            self.run_cheribsd_test_script("run_python_tests.py", mount_installdir=True, mount_sourcedir=True,
+                                          mount_builddir=True)

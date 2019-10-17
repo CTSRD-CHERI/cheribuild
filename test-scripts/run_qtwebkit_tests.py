@@ -38,7 +38,7 @@ from run_tests_common import junitparser, run_tests_main, boot_cheribsd
 
 
 def setup_qtwebkit_test_environment(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
-    boot_cheribsd.set_ld_library_path(qemu)
+    boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
     boot_cheribsd.run_cheribsd_command(qemu, "export ICU_DATA=/sysroot/usr/local/share/icu/60.0.1")
     boot_cheribsd.run_cheribsd_command(qemu, "export LANG=en_US.UTF-8")
     boot_cheribsd.run_cheribsd_command(qemu, "echo '<h1>Hello World!</h1>' > /tmp/helloworld.html")

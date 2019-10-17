@@ -69,7 +69,7 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--ld-preload-path", required=False, default=None)
 
 def setup_juliet_test_environment(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
-    boot_cheribsd.set_ld_library_path(qemu)
+    boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
 
 def run_juliet_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
 
