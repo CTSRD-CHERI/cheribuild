@@ -250,8 +250,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     @classmethod
     def get_instance_for_cross_target(cls: "typing.Type[Type_T]", cross_target: CrossCompileTarget,
                                       config: CheriConfig) -> "Type_T":
-        target = targetManager.get_target(cls.target, cross_target, config)
+        # Also need to handle calling self.get_instance_for_cross_target() on a target-specific instance
+        # In that case cls.target returns e.g. foo-mips, etc and targetManager will always return the MIPS version
+        root_class = getattr(cls, "synthetic_base", cls)
+        target = targetManager.get_target(root_class.target, cross_target, config)
         result = target.get_or_create_project(cross_target, config)
+        assert isinstance(result, SimpleProject)
+        found_target = result.get_crosscompile_target(config)
+        if found_target is None:
+            found_target = CrossCompileTarget.NATIVE
+        assert found_target == cross_target, "Didn't find right instance? " + str(found_target) + " vs. " + str(cross_target)
         return result
 
     @classmethod
