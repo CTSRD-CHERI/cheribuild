@@ -47,7 +47,7 @@ from pathlib import Path
 
 class ComputedDefaultValue(object):
     def __init__(self, function: "typing.Callable[[CheriConfig, typing.Any], typing.Any]",
-                 asString: "typing.Union[str, typing.Callable[[typing.Any], str]"):
+                 asString: "typing.Union[str, typing.Callable[[typing.Any], str]]"):
         self.function = function
         self.asString = asString
 

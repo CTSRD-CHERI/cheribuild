@@ -563,7 +563,7 @@ class OSInfo(object):
 
     @classmethod
     def install_instructions(cls, name, is_lib, homebrew=None, apt=None, zypper=None, freebsd=None,
-                             cheribuild_target=None) -> "typing.Union[str, typing.Callable[str, []]":
+                             cheribuild_target=None) -> "typing.Union[str, typing.Callable[[], str]]":
         if cheribuild_target:
             return "Run `cheribuild.py " + cheribuild_target + "`"
         guessed_package = False
