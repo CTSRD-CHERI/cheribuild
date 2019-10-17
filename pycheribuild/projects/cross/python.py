@@ -29,6 +29,7 @@
 #
 
 from .crosscompileproject import *
+import os
 
 
 # XXXAR: duplicated from ICU4C should add a shared variant
@@ -59,13 +60,16 @@ class BuildPython(CrossCompileAutotoolsProject):
         self.configureArgs.append("--with-computed-gotos")
         if not self.compiling_for_host():
             self.configureArgs.append("--without-pymalloc")  # use system malloc
+            self.configureArgs.append("--without-doc-strings")  # should reduce size
             native_python = self.get_instance_for_cross_target(CrossCompileTarget.NATIVE,
                                                                self.config).installDir / "bin/python3"
             if not native_python.exists():
                 self.fatal("Native python3 doesn't exist, you must build the `python-native` target first.")
             self.add_configure_vars(
                 ac_cv_buggy_getaddrinfo="no",
-                PYTHON_FOR_BUILD=str(native_python),
+                # PYTHON_FOR_BUILD=str(native_python), # Doesn't work since that remove all flags, need to set PATH instead
+                # PYTHON_FOR_REGEN=str(native_python),
+                PATH=str(native_python.parent) + ":" + os.getenv("PATH"),
                 READELF=str(self.config.sdkBinDir / "llvm-readelf"),
                 AR=str(self.config.sdkBinDir / "llvm-ar"),
                 ac_cv_file__dev_ptmx="no",  # no /dev/ptmx file on cheribsd
