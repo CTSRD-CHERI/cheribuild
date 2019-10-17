@@ -586,7 +586,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
         runbench_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
 
         from ..cherisim import BuildCheriSim
-        sim_project = BuildCheriSim.get_instance(self, self.config)
+        sim_project = BuildCheriSim.get_instance(self)
         cherilibs_dir = Path(sim_project.sourceDir, "cherilibs")
         cheri_dir = Path(sim_project.sourceDir, "cheri")
         if not cheri_dir.exists() or not cherilibs_dir.exists():
@@ -604,7 +604,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                           "--qemu-ssh-port=" + str(qemu_ssh_socket.port)]
         else:
             from ..cherisim import BuildBeriCtl
-            basic_args = ["--berictl=" + str(BuildBeriCtl.getBuildDir(self, self.config) / "berictl")]
+            basic_args = ["--berictl=" + str(BuildBeriCtl.getBuildDir(self) / "berictl")]
 
         if self.config.benchmark_ld_preload:
             runbench_args.append("--extra-input-files=" + str(self.config.benchmark_ld_preload))
@@ -622,9 +622,9 @@ class CrossCompileMixin(MultiArchBaseMixin):
         if self.config.benchmark_with_qemu:
             # When benchmarking with QEMU we always spawn a new instance
             if self.config.benchmark_with_debug_kernel:
-                kernel_image = BuildCheriBsdMfsKernel.get_installed_kernel_path(self, self.config)
+                kernel_image = BuildCheriBsdMfsKernel.get_installed_kernel_path(self)
             else:
-                kernel_image = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self, self.config)
+                kernel_image = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self)
             basic_args.append("--kernel-img=" + str(kernel_image))
         elif self.config.benchmark_clean_boot:
             # use a bitfile from jenkins. TODO: add option for overriding

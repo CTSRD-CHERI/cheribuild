@@ -384,7 +384,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             # we need to find the installed Qt
             self.add_cmake_options(Qt5_DIR=self.crossSysrootPath / ("usr/local/" + self._crossCompileTarget.value) / "lib/cmake/Qt5")
             self.add_cmake_options(PNG_LIBRARIES="libqtlibpng.a")
-            self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.getSourceDir(self, config) / "src/3rdparty/libpng")
+            self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.getSourceDir(self) / "src/3rdparty/libpng")
             self.LDFLAGS.extend(["-lpthread"]) # Needed for DumpRenderTree
 
             # Pass CHERI capability size so we can pass this to the offlineasm ruby scripts
@@ -408,7 +408,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     def compile(self, **kwargs):
         # Generate the shared mime info cache to MASSIVELY speed up tests
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
-            mime_info_src = BuildQtBase.getSourceDir(self, self.config) / "src/corelib/mimetypes/mime/packages/freedesktop.org.xml"
+            mime_info_src = BuildQtBase.getSourceDir(self) / "src/corelib/mimetypes/mime/packages/freedesktop.org.xml"
             self.installFile(mime_info_src, Path(td, "mime/packages/freedesktop.org.xml"), force=True, printVerboseOnly=False)
             try:
                 runCmd("update-mime-database", "-V", Path(td, "mime"), cwd="/")

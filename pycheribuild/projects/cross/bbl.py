@@ -57,13 +57,13 @@ class BuildBBLFreeBSDWithDefaultOptionsRISCV(AutotoolsProject):
         if not self.host:
             self.fatal("Could not find riscv64-gcc XCC")
 
-        freebsdTarget = targetManager.get_target_raw("freebsd-with-default-options-riscv")
-        freebsdProject = freebsdTarget.get_or_create_project(None, config)
-        kernelPath = freebsdProject.get_installed_kernel_path(self, config)
+        from .cheribsd import BuildFreeBSDWithDefaultOptions
+        kernelPath = BuildFreeBSDWithDefaultOptions.get_installed_kernel_path(self,
+                                                                              cross_target=CrossCompileTarget.RISCV)
         self.configureArgs.extend([
             "--with-payload=" + str(kernelPath),
             "--host=" + self.host
         ])
 
-    def get_installed_kernel_path(self, caller, config):
+    def get_installed_kernel_path(self):
         return self.real_install_root_dir / self.host / "bin" / "bbl"

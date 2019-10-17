@@ -240,11 +240,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return _cached
 
     @classmethod
-    def get_instance(cls: "typing.Type[Type_T]", caller: "typing.Optional[SimpleProject]", config: CheriConfig) -> "Type_T":
+    def get_instance(cls: "typing.Type[Type_T]", caller: "typing.Optional[SimpleProject]",
+                     config: CheriConfig = None, cross_target: CrossCompileTarget = None) -> "Type_T":
         # TODO: assert that target manager has been initialized
-        cross_target = None
         if caller is not None:
-            cross_target = caller.get_crosscompile_target(config)
+            if config is None:
+                config = caller.config
+            if cross_target is None:
+                cross_target = caller.get_crosscompile_target(config)
+        else:
+            assert config is not None, "Need either caller or config argument!"
         return cls.get_instance_for_cross_target(cross_target, config)
 
     @classmethod
@@ -257,9 +262,15 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         result = target.get_or_create_project(cross_target, config)
         assert isinstance(result, SimpleProject)
         found_target = result.get_crosscompile_target(config)
+        from .cross.multiarchmixin import MultiArchBaseMixin
         if found_target is None:
-            found_target = CrossCompileTarget.NATIVE
-        assert found_target == cross_target, "Didn't find right instance? " + str(found_target) + " vs. " + str(cross_target)
+            assert not isinstance(result, MultiArchBaseMixin)
+        else:
+            assert isinstance(result, MultiArchBaseMixin)
+            # XXX: FIXME: add cross target to every call
+            if cross_target is not None:
+                assert found_target == cross_target, "Didn't find right instance? " + str(found_target) + " vs. " + str(
+                    cross_target)
         return result
 
     @classmethod
@@ -617,9 +628,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             use_benchmark_config_option = inspect.getattr_static(self.config, "use_minimal_benchmark_kernel")
             assert isinstance(use_benchmark_config_option, ConfigOptionBase)
             if use_benchmark_kernel_value or (use_benchmark_kernel_by_default and use_benchmark_config_option.is_default_value):
-                kernel_path = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self, self.config)
+                kernel_path = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self)
             else:
-                kernel_path = BuildCheriBsdMfsKernel.get_installed_kernel_path(self, self.config)
+                kernel_path = BuildCheriBsdMfsKernel.get_installed_kernel_path(self)
 
             if not kernel_path.exists():
                 cheribsd_image = "cheribsd{suffix}-cheri{suffix}-malta64-mfs-root-minimal-cheribuild-kernel.bz2".format(
@@ -1067,16 +1078,16 @@ class Project(SimpleProject):
 
     # TODO: remove these three
     @classmethod
-    def getSourceDir(cls, caller: "SimpleProject", config: CheriConfig):
-        return cls.get_instance(caller, config).sourceDir
+    def getSourceDir(cls, caller: "SimpleProject", config: CheriConfig=None, cross_target: CrossCompileTarget=None):
+        return cls.get_instance(caller, config, cross_target).sourceDir
 
     @classmethod
-    def getBuildDir(cls, caller: "SimpleProject", config: CheriConfig):
-        return cls.get_instance(caller, config).buildDir
+    def getBuildDir(cls, caller: "SimpleProject", config: CheriConfig=None, cross_target: CrossCompileTarget=None):
+        return cls.get_instance(caller, config, cross_target).buildDir
 
     @classmethod
-    def getInstallDir(cls, caller: "SimpleProject", config: CheriConfig):
-        return cls.get_instance(caller, config).real_install_root_dir
+    def getInstallDir(cls, caller: "SimpleProject", config: CheriConfig=None, cross_target: CrossCompileTarget=None):
+        return cls.get_instance(caller, config, cross_target).real_install_root_dir
 
     def build_configuration_suffix(self, target: CrossCompileTarget=None) -> str:
         """

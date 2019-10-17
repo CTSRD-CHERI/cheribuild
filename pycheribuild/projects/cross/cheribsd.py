@@ -115,7 +115,7 @@ def cheribsd_minimal_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
 
 def default_cross_toolchain_path(config: CheriConfig, proj: "BuildFreeBSD"):
     if proj.build_with_upstream_llvm:
-        return BuildUpstreamLLVM.getInstallDir(proj, config)
+        return BuildUpstreamLLVM.getInstallDir(proj)
     return config.sdkDir
 
 
@@ -233,12 +233,12 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
     add_custom_make_options = True
 
     @classmethod
-    def rootfsDir(cls, caller, config):
-        return cls.getInstallDir(caller, config)
+    def rootfsDir(cls, caller, config=None, cross_target: CrossCompileTarget = None):
+        return cls.getInstallDir(caller, config, cross_target)
 
     @classmethod
-    def get_installed_kernel_path(cls, caller, config):
-        return cls.rootfsDir(caller, config) / "boot/kernel/kernel"
+    def get_installed_kernel_path(cls, caller, config: CheriConfig = None, cross_target: CrossCompileTarget = None):
+        return cls.rootfsDir(caller, config, cross_target) / "boot/kernel/kernel"
 
     @classmethod
     def setupConfigOptions(cls, buildKernelWithClang: bool=True, bootstrap_toolchain=False,
@@ -1181,11 +1181,11 @@ class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
 
     def process(self):
         from ..disk_image import BuildMinimalCheriBSDDiskImage
-        minimal_image_instance = BuildMinimalCheriBSDDiskImage.get_instance(self, self.config)
+        minimal_image_instance = BuildMinimalCheriBSDDiskImage.get_instance(self)
         image = minimal_image_instance.diskImagePath
         # Re-use the same build directory as the CheriBSD target that was used for the disk image
         # This ensure that the kernel build tools can be found in the build directory
-        build_cheribsd_instance = minimal_image_instance.cheribsd_class.get_instance(self, self.config)
+        build_cheribsd_instance = minimal_image_instance.cheribsd_class.get_instance(self)
         kernconf = self._get_kernconf_to_build(build_cheribsd_instance)
         if self.config.clean:
             kernel_dir = build_cheribsd_instance.kernel_objdir(kernconf)
@@ -1229,7 +1229,7 @@ class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
 
     @property
     def crossbuild(self):
-        return BuildCHERIBSD.get_instance(self, self.config).crossbuild
+        return BuildCHERIBSD.get_instance(self).crossbuild
 
     def update(self):
         if not self.config.skipUpdate:
@@ -1237,7 +1237,8 @@ class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
         pass
 
     @classmethod
-    def get_kernel_config(cls, caller: SimpleProject, config) -> str:
+    def get_kernel_config(cls, caller: SimpleProject) -> str:
+        config = caller.config
         if caller.get_crosscompile_target(config) == CrossCompileTarget.MIPS and config.run_mips_tests_with_cheri_image:
             build_cheribsd = BuildCHERIBSD.get_instance_for_cross_target(CrossCompileTarget.CHERI, config)
         else:
@@ -1249,12 +1250,12 @@ class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
         return build_cheribsd.kernelConfig + "_MFS_ROOT"
 
     @classmethod
-    def get_installed_kernel_path(cls, caller, config) -> Path:
-        return cls.installed_kernel_for_config(config, cls.get_kernel_config(caller, config))
+    def get_installed_kernel_path(cls, caller) -> Path:
+        return cls.installed_kernel_for_config(caller.config, cls.get_kernel_config(caller))
 
     @classmethod
-    def get_installed_benchmark_kernel_path(cls, caller, config) -> Path:
-        return cls.installed_kernel_for_config(config, cls.get_kernel_config(caller, config) + "_BENCHMARK")
+    def get_installed_benchmark_kernel_path(cls, caller) -> Path:
+        return cls.installed_kernel_for_config(caller.onfig, cls.get_kernel_config(caller) + "_BENCHMARK")
 
     @staticmethod
     def installed_kernel_for_config(config: CheriConfig, kernconf: str) -> Path:
@@ -1397,7 +1398,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()
-        if not IS_FREEBSD and not self.remotePath and not self.rootfs_source_class.get_instance(self, self.config).crossbuild:
+        if not IS_FREEBSD and not self.remotePath and not self.rootfs_source_class.get_instance(self).crossbuild:
             configOption = "'--" + self.target + "/" + "remote-sdk-path'"
             self.fatal("Path to the remote SDK is not set, option", configOption,
                        "must be set to a path that scp understands (e.g. vica:~foo/cheri/output/sdk)")
@@ -1472,7 +1473,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
         if self.compiling_for_mips() and self.use_cheri_sysroot_for_mips:
             rootfs_target = self.rootfs_source_class.get_instance_for_cross_target(CrossCompileTarget.CHERI, self.config)
         else:
-            rootfs_target = self.rootfs_source_class.get_instance(self, self.config)
+            rootfs_target = self.rootfs_source_class.get_instance(self)
         rootfs_dir = rootfs_target.real_install_root_dir
         if not (rootfs_dir / "lib/libc.so.7").is_file():
             if self.compiling_for_mips() and not self.use_cheri_sysroot_for_mips:
@@ -1512,7 +1513,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
                 self.createSymlink(self.crossSysrootPath, unprefixed_sysroot)
 
         with self.asyncCleanDirectory(self.crossSysrootPath):
-            building_on_host = IS_FREEBSD or self.rootfs_source_class.get_instance(self, self.config).crossbuild
+            building_on_host = IS_FREEBSD or self.rootfs_source_class.get_instance(self).crossbuild
             if self.copy_remote_sysroot or not building_on_host:
                 self.copySysrootFromRemoteMachine()
             else:

@@ -392,9 +392,9 @@ make -C cheri cheri cheri_c
 make -C cheri cheri128 cheri128_c""")
 
     def process(self):
-        lemdir = BuildLem.getSourceDir(self, self.config)
-        ottdir = BuildOtt.getSourceDir(self, self.config)
-        linksemdir = BuildLinksem.getSourceDir(self, self.config)
+        lemdir = BuildLem.getSourceDir(self)
+        ottdir = BuildOtt.getSourceDir(self)
+        linksemdir = BuildLinksem.getSourceDir(self)
         with setEnv(LEMLIB= lemdir / "library",
                     PATH="{}:{}:".format(ottdir / "bin", lemdir / "bin") + os.environ["PATH"],
                     OCAMLPATH="{}:{}".format(lemdir / "ocaml-lib/local", linksemdir / "src/local")
@@ -432,9 +432,9 @@ make -C src USE_OCAMLBUILD=false local-install
         """)
 
     def process(self):
-        lemdir = BuildLem.getSourceDir(self, self.config)
-        ottdir = BuildOtt.getSourceDir(self, self.config)
-        # linksemdir = BuildLinkSem.getSourceDir(self, self.config)
+        lemdir = BuildLem.getSourceDir(self)
+        ottdir = BuildOtt.getSourceDir(self)
+        # linksemdir = BuildLinkSem.getSourceDir(self)
         with setEnv(LEMLIB= lemdir / "library",
                     PATH="{}:{}:".format(ottdir / "bin", lemdir / "bin") + os.environ["PATH"],
                     OCAMLPATH=lemdir / "ocaml-lib/local"):

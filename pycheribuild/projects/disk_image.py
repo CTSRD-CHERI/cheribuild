@@ -112,9 +112,9 @@ class _BuildDiskImageBase(SimpleProject):
         self.makefs_cmd = None  # type: typing.Optional[Path]
         self.mkimg_cmd = None  # type: typing.Optional[Path]
         self.install_cmd = None  # type: typing.Optional[Path]
-        self.source_project = source_class.get_instance(self, self.config)
+        self.source_project = source_class.get_instance(self)
         assert isinstance(self.source_project, BuildFreeBSD)
-        self.rootfsDir = self.source_project.getInstallDir(self, config)
+        self.rootfsDir = self.source_project.getInstallDir(self)
         assert self.rootfsDir is not None
         if (self.source_project.sourceDir / "lib/libc/gen/master.passwd").is_file():
             self.userGroupDbDir = self.source_project.sourceDir / "lib/libc/gen"

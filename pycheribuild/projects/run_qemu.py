@@ -241,9 +241,9 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
         super().__init__(config)
         if source_class is None and disk_image_class is not None:
             # noinspection PyProtectedMember
-            source_class = disk_image_class.get_instance(self, config).source_project
+            source_class = disk_image_class.get_instance(self).source_project
         self.source_class = source_class
-        self.currentKernel = source_class.get_installed_kernel_path(self, config)
+        self.currentKernel = source_class.get_installed_kernel_path(self)
         if hasattr(source_class, "rootfsDir"):
             self.rootfs_path = source_class.rootfsDir(self, config)
         if needs_disk_image:
@@ -307,7 +307,7 @@ class _RunMultiArchFreeBSDImage(MultiArchBaseMixin, AbstractLaunchFreeBSD):
             _hasPCI = False
             self.machineFlags = ["-M", "virt"]  # want VirtIO
             self.virtioDisk = True
-            self.currentKernel = BuildBBLFreeBSDWithDefaultOptionsRISCV(config).get_installed_kernel_path(self, config)
+            self.currentKernel = BuildBBLFreeBSDWithDefaultOptionsRISCV.get_instance(self).get_installed_kernel_path()
         elif xtarget == CrossCompileTarget.NATIVE or xtarget == CrossCompileTarget.I386:
             qemu_suffix = "x86_64" if xtarget == CrossCompileTarget.NATIVE else "i386"
             self.currentKernel = None  # boot from disk
@@ -363,7 +363,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
         super().__init__(config)
         # FIXME: these should be config options
         cherios = BuildCheriOS.get_instance(self, config)
-        self.currentKernel = BuildCheriOS.getBuildDir(self, config) / "boot/cherios.elf"
+        self.currentKernel = BuildCheriOS.getBuildDir(self) / "boot/cherios.elf"
         self.qemuBinary = BuildCheriOSQEMU.qemu_binary(self)
         self.diskImage = self.config.outputRoot / "cherios-disk.img"
         self._projectSpecificOptions = ["-no-reboot"]

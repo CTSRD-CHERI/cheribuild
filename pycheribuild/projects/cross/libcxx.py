@@ -64,10 +64,10 @@ class BuildLibunwind(CrossCompileCMakeProject):
         super().__init__(config)
         # Adding -ldl won't work: no libdl in /usr/libcheri
         self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)
-        self.lit_path = BuildCheriLLVM.getBuildDir(self, config) / "bin/llvm-lit"
+        self.lit_path = BuildCheriLLVM.getBuildDir(self) / "bin/llvm-lit"
         self.add_cmake_options(
             #  LLVM_CONFIG_PATH=self.compiler_dir / "llvm-config",
-            LLVM_PATH=BuildCheriLLVM.getSourceDir(self, config) / "llvm",
+            LLVM_PATH=BuildCheriLLVM.getSourceDir(self) / "llvm",
             LLVM_EXTERNAL_LIT=self.lit_path,
         )
 
@@ -77,10 +77,10 @@ class BuildLibunwind(CrossCompileCMakeProject):
         test_compiler_flags = commandline_to_str(self.default_compiler_flags)
         test_linker_flags = commandline_to_str(self.default_ldflags)
 
-        self.add_cmake_options(# LIBUNWIND_LIBCXX_PATH=BuildLibCXX.getSourceDir(self, self.config),
-                               LIBUNWIND_LIBCXX_PATH=self.repository.source_project.getSourceDir(self, self.config) / "libcxx",
+        self.add_cmake_options(# LIBUNWIND_LIBCXX_PATH=BuildLibCXX.getSourceDir(self),
+                               LIBUNWIND_LIBCXX_PATH=self.repository.source_project.getSourceDir(self) / "libcxx",
                                # Should use libc++ from sysroot
-                               # LIBUNWIND_LIBCXX_LIBRARY_PATH=BuildLibCXX.getBuildDir(self, self.config) / "lib",
+                               # LIBUNWIND_LIBCXX_LIBRARY_PATH=BuildLibCXX.getBuildDir(self) / "lib",
                                LIBUNWIND_LIBCXX_LIBRARY_PATH="",
                                LIBUNWIND_TEST_LINKER_FLAGS=test_linker_flags,
                                LIBUNWIND_TEST_COMPILER_FLAGS=test_compiler_flags,
@@ -148,7 +148,7 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.getInstallDir(self, config) / "lib",
+        self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.getInstallDir(self) / "lib",
                                CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
         if self.compiling_for_host():
             assert not self.baremetal
@@ -182,7 +182,7 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
                 runCmd("ctest", ".", "-VV", cwd=self.buildDir)
             else:
                 self.run_cheribsd_test_script("run_libcxxrt_tests.py",
-                                              "--libunwind-build-dir", BuildLibunwind.getBuildDir(self, self.config),
+                                              "--libunwind-build-dir", BuildLibunwind.getBuildDir(self),
                                               mount_builddir=True, mount_sysroot=True)
 
 
@@ -239,8 +239,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.add_cmake_options(
             CMAKE_INSTALL_RPATH_USE_LINK_PATH=True,  # Fix finding libunwind.so
             LIBCXX_INCLUDE_TESTS=True,
-            LLVM_PATH=BuildCheriLLVM.getSourceDir(self, config) / "llvm",
-            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, config) / "bin/llvm-lit",
+            LLVM_PATH=BuildCheriLLVM.getSourceDir(self) / "llvm",
+            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self) / "bin/llvm-lit",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
             LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
                           "/libcxx-test-results.xml --max-time 3600 --timeout 120 -s -vv" + self.libcxx_lit_jobs
@@ -252,13 +252,13 @@ class BuildLibCXX(CrossCompileCMakeProject):
             self.add_cmake_options(
                 LIBCXX_CXX_ABI="libcxxrt",
                 LIBCXX_CXX_ABI_LIBNAME="libcxxrt",
-                LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.getSourceDir(self, config) / "src",
-                LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.getBuildDir(self, config) / "lib",
+                LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.getSourceDir(self) / "src",
+                LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.getBuildDir(self) / "lib",
             )
             # use llvm libunwind when testing
             self.add_cmake_options(LIBCXX_STATIC_CXX_ABI_LIBRARY_NEEDS_UNWIND_LIBRARY=True,
                                    LIBCXX_CXX_ABI_UNWIND_LIBRARY="unwind",
-                                   LIBCXX_CXX_ABI_UNWIND_LIBRARY_PATH=BuildLibunwind.getBuildDir(self, config) / "lib")
+                                   LIBCXX_CXX_ABI_UNWIND_LIBRARY_PATH=BuildLibunwind.getBuildDir(self) / "lib")
 
         if not self.exceptions or self.baremetal:
             self.add_cmake_options(LIBCXX_ENABLE_EXCEPTIONS=False, LIBCXX_ENABLE_RTTI=False)
@@ -369,7 +369,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
         self.add_cmake_options(
             # LLVM_CONFIG_PATH=BuildCheriLLVM.buildDir / "bin/llvm-config",
             LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
-            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, config) / "bin/llvm-lit",
+            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=True,
             COMPILER_RT_BUILD_XRAY=False,
@@ -417,7 +417,7 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
         self.add_cmake_options(
             # LLVM_CONFIG_PATH=BuildCheriLLVM.buildDir / "bin/llvm-config",
             LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
-            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, config) / "bin/llvm-lit",
+            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=False,
             COMPILER_RT_BUILD_XRAY=False,

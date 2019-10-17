@@ -59,7 +59,7 @@ class BuildSoaap(CMakeProject):
     defaultInstallDir = install_to_soaap_dir
 
     def configure(self, **kwargs):
-        soaap_llvm = BuildSoaapLLVM.get_instance(self, self.config)
+        soaap_llvm = BuildSoaapLLVM.get_instance(self)
         print(soaap_llvm.configureArgs)
         build_shared_libs = any(x == "-DBUILD_SHARED_LIBS=ON" for x in soaap_llvm.configureArgs)
         self.add_cmake_options(LLVM_DIR=soaap_llvm.buildDir / "share/llvm/cmake")
