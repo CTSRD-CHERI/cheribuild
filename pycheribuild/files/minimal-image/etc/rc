@@ -60,11 +60,11 @@ export PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin
 
 setup_network() {
     if /sbin/ifconfig -l | grep "$1"; then
-        echo "ifconfig $@"
+        echo "ifconfig" "$@"
         /sbin/ifconfig "$@"
 
         echo "run dhclient on $1"
-        /sbin/dhclient $1
+        /sbin/dhclient "$1"
     fi
 }
 
