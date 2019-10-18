@@ -74,6 +74,10 @@ class BuildType(Enum):
     MINSIZEREL = "MinSizeRel"
     MINSIZERELWITHDEBINFO = "MinSizeRelWithDebInfo"
 
+    @property
+    def should_include_debug_info(self):
+        return self in (BuildType.DEBUG, BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO)
+
 
 class Linkage(Enum):
     DEFAULT = "default"

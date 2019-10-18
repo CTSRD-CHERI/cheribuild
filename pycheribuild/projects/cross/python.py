@@ -46,14 +46,14 @@ class BuildPython(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/cpython.git")
     gitBranch = "3.8"
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
-    default_build_type = BuildType.DEBUG
+    default_build_type = BuildType.RELWITHDEBINFO
     dependencies = python_dependencies
 
     # build_in_source_dir = True  # Cannot build out-of-source
 
     def configure(self, **kwargs):
         # maybe interesting:   --with(out)-pymalloc    disable/enable specialized mallocs
-        if self.cross_build_type == BuildType.DEBUG:
+        if self.cross_build_type.should_include_debug_info:
             self.configureArgs.append("--with-pydebug")
             # XXXAR: always add assertions?
             self.configureArgs.append("--with-assertions")
@@ -85,5 +85,6 @@ class BuildPython(CrossCompileAutotoolsProject):
         if self.compiling_for_host():
             self.run_cmd(self.buildDir / "python.exe", "-m", "test", cwd=self.buildDir)
         else:
+            # Python executes tons of system calls, hopefully using the benchmark kernel helps
             self.run_cheribsd_test_script("run_python_tests.py", mount_installdir=True, mount_sourcedir=True,
-                                          mount_builddir=True)
+                                          mount_builddir=True, use_benchmark_kernel_by_default=True)

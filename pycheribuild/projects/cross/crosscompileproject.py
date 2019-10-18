@@ -475,9 +475,9 @@ class CrossCompileMixin(MultiArchBaseMixin):
     @property
     def debugInfo(self):
         # Add debug info by default (to disable set --cross-build-type=Release
-        if self.cross_build_type == BuildType.DEBUG:
+        if self.cross_build_type == BuildType.DEFAULT:
             return self._debugInfo
-        return self.cross_build_type in (BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO, BuildType.DEBUG)
+        return self.cross_build_type.should_include_debug_info
 
     def linkage(self):
         if self._linkage == Linkage.DEFAULT:
