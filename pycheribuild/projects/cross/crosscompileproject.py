@@ -129,6 +129,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
     default_build_type = BuildType.DEFAULT
     dependencies = crosscompile_dependencies
     baremetal = False
+    rtems = False
     forceDefaultCC = False  # for some reason ICU binaries build during build crash -> fall back to /usr/bin/cc there
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
     _should_not_be_instantiated = True
@@ -899,7 +900,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             # TODO: can we use relative paths?
             self.configureArgs.append("--libdir=" + str(self.installPrefix) + "/libcheri")
 
-        if not self.baremetal:
+        if not self.baremetal and not self.rtems:
             CPPFLAGS = self.default_compiler_flags
             for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
                 assert key not in self.configureEnvironment
