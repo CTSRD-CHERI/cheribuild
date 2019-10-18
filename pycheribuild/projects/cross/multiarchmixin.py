@@ -38,7 +38,7 @@ class MultiArchBaseMixin(object):
     doNotAddToTargets = True
     CAN_TARGET_ALL_TARGETS = [CrossCompileTarget.CHERI, CrossCompileTarget.MIPS, CrossCompileTarget.NATIVE]
     # WARNING: baremetal CHERI probably doesn't work
-    CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.MIPS, CrossCompileTarget.CHERI]
+    CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.MIPS, CrossCompileTarget.CHERI, CrossCompileTarget.RISCV]
     CAN_TARGET_ALL_TARGETS_EXCEPT_CHERI = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
     CAN_TARGET_ALL_TARGETS_EXCEPT_NATIVE = [CrossCompileTarget.CHERI, CrossCompileTarget.MIPS]
     supported_architectures = CAN_TARGET_ALL_TARGETS # TODO: once risc-v works: list(CrossCompileTarget)
