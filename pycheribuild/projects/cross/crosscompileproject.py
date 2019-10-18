@@ -1,4 +1,5 @@
 #
+# Copyright (c) 2019 Hesham Almatary
 # Copyright (c) 2017 Alex Richardson
 # All rights reserved.
 #
@@ -89,6 +90,8 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
             return cheribsd_instance.installDir / project.path_in_rootfs[1:]
         if project.compiling_for_cheri():
             targetName = "cheri" + config.cheriBitsStr
+        elif project.compiling_for_riscv():
+            targetName = "riscv"
         else:
             assert project.compiling_for_mips()
             targetName = "mips"
@@ -212,6 +215,15 @@ class CrossCompileMixin(MultiArchBaseMixin):
                     self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
                 elif self.config.cheri_cap_table_abi:
                     self.COMMON_FLAGS.append("-cheri-cap-table-abi=" + self.config.cheri_cap_table_abi)
+            elif self.compiling_for_riscv():
+                self.targetTriple = "riscv64"
+                if self.baremetal:
+                    self.targetTriple += "-unknown-elf"
+                elif self.rtems:
+                    self.targetTriple += "-unknown-rtems6"
+                    self.COMMON_FLAGS.append("-D__rtems__")
+                else:
+                    self.targetTriple += "-unknown-unknown"
             else:
                 assert self.compiling_for_mips()
                 self.targetTriple = "mips64-unknown-freebsd13" if not self.baremetal else "mips64-qemu-elf"
@@ -352,6 +364,10 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 result.extend(["-Xclang", "-cheri-bounds=" + str(self.config.subobject_bounds)])
                 if self.config.subobject_debug:
                     result.extend(["-mllvm", "-cheri-subobject-bounds-clear-swperm=2"])
+        if self.compiling_for_riscv():
+            # TODO Use rv64gc as a default for RISC-V. Change cheribuild to handle different
+            # variants of -march and -mabi in the future
+            result.extend(["-march=rv64imafdc", "-mabi=lp64d"])
         else:
             assert self.compiling_for_mips()
             # TODO: should we use -mcpu=cheri128/256?
@@ -410,6 +426,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
             return result
         elif self.compiling_for_cheri():
             emulation = "elf64btsmip_cheri_fbsd" if not self.baremetal else "elf64btsmip_cheri"
+        elif self.compiling_for_riscv():
+            emulation = "elf64lriscv"
         elif self.compiling_for_mips():
             emulation = "elf64btsmip_fbsd" if not self.baremetal else "elf64btsmip"
         else:
