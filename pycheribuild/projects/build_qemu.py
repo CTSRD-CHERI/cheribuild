@@ -134,6 +134,8 @@ class BuildQEMUBase(AutotoolsProject):
                 self._extraCFlags += " -Werror=incompatible-pointer-types-discards-qualifiers"
                 # silence this warning that comes lots of times (it's fine on x86)
                 self._extraCFlags += " -Wno-address-of-packed-member"
+                self._extraCFlags += " -Wall -Wextra -Wno-sign-compare -Wno-unused-parameter" \
+                                     " -Wno-c11-extensions -Wno-missing-field-initializers"
             if self.lto and self.can_use_lto(ccinfo):
                 while True:  # add a loop so I can break early
                     statusUpdate("Compiling with Clang and LLD -> trying to build with LTO enabled")
