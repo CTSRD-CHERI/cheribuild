@@ -98,6 +98,13 @@ def run_tests_main(test_function: typing.Callable[[boot_cheribsd.CheriBSDInstanc
             boot_cheribsd.run_cheribsd_command(qemu, "mkdir -p '{}'".format(Path(args.build_dir).parent))
             boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sf /build '{}'".format(args.build_dir), timeout=60)
             boot_cheribsd.success("Mounted build directory using host path")
+        if should_mount_srcdir:
+            assert args.source_dir
+            # the host path might be too long and trigger the shell to emit a continuation line which really confuses
+            # the pexpect logic.
+            boot_cheribsd.run_cheribsd_command(qemu, "mkdir -p '{}'".format(Path(args.source_dir).parent))
+            boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sf /source '{}'".format(args.source_dir), timeout=60)
+            boot_cheribsd.success("Mounted source directory using host path")
         # Finally call the custom test setup function
         if test_setup_function:
             test_setup_function(qemu, args)
