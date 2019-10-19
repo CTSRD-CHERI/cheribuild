@@ -31,6 +31,8 @@
 #
 import argparse
 from run_tests_common import *
+from pathlib import Path
+
 
 def run_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running Python tests")
@@ -42,18 +44,18 @@ def run_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) ->
     qemu.checked_run("umount '{pfx}'".format(pfx=install_prefix))
     qemu.checked_run("rmdir '{pfx}' && mv '{pfx}.tmpfs' '{pfx}'".format(pfx=install_prefix))
     qemu.checked_run("cd /build && ./python.exe --version")
-    # run regression tests
+    # run basic sanity check:
+    qemu.checked_run("/build/python.exe -E -c 'import sys; sys.exit(0)'")
+    # Run the full test suite:
     qemu.checked_run("cd /build && ./python.exe -m test -v")
     return True
 
 
 def add_args(parser: argparse.ArgumentParser):
-    # parser.add_argument("--locale-files-dir", required=True)
     pass
 
 
 def adjust_args(args: argparse.Namespace):
-    # args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.locale_files_dir, readonly=True, in_target="/locale"))
     pass
 
 
