@@ -46,6 +46,7 @@ class BuildQEMUBase(AutotoolsProject):
     is_sdk_target = True
     skipGitSubmodules = True  # we don't need these
     can_build_with_asan = True
+    default_targets = "some-invalid-target"
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -61,6 +62,8 @@ class BuildQEMUBase(AutotoolsProject):
                                     help="Build a the graphical UI bits for QEMU (SDL,VNC)")
         cls.lto = cls.addBoolOption("use-lto", showHelp=True,
                                     help="Try to build QEMU with link-time optimization if possible", default=True)
+        cls.qemu_targets = cls.addConfigOption("targets",
+            showHelp=True, help="Build QEMU for the following targets", default=cls.default_targets)
 
     @classmethod
     def qemu_binary(cls, caller: SimpleProject):
@@ -206,7 +209,7 @@ class BuildQEMUBase(AutotoolsProject):
                                      "by setting --qemu/no-use-smbd")
 
         self.configureArgs.extend([
-            "--target-list=" + self._qemuTargets,
+            "--target-list=" + self.qemu_targets,
             "--disable-linux-user",
             "--disable-bsd-user",
             "--disable-xen",
@@ -240,6 +243,7 @@ class BuildQEMUBase(AutotoolsProject):
 class BuildQEMU(BuildQEMUBase):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git")
     gitBranch = "qemu-cheri"
+    default_targets = "cheri256-softmmu,cheri128-softmmu,cheri128magic-softmmu,mips64-softmmu"
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -248,7 +252,6 @@ class BuildQEMU(BuildQEMUBase):
         # Turn on unaligned loads/stores by default
         cls.unaligned = cls.addBoolOption("unaligned", showHelp=True, help="Permit un-aligned loads/stores",
                                           default=True)
-
         cls.statistics = cls.addBoolOption("statistics", showHelp=True, default=False,
                                            help="Collect statistics on out-of-bounds capability creation.")
         cls.legacy_registers = cls.addBoolOption("legacy-registers", showHelp=False,
@@ -266,7 +269,6 @@ class BuildQEMU(BuildQEMUBase):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
 
-        self._qemuTargets = "cheri256-softmmu,cheri128-softmmu,cheri128magic-softmmu,mips64-softmmu"
         if self.unaligned:
             self._extraCFlags += " -DCHERI_UNALIGNED"
         if self.legacy_registers:
@@ -282,7 +284,7 @@ class BuildQEMU(BuildQEMUBase):
 class BuildQEMURISCV(BuildQEMUBase):
     target = "qemu-riscv"
     projectName = "qemu-riscv"
-    _qemuTargets = "riscv64-softmmu"
+    default_targets = "riscv64-softmmu"
 
     @classmethod
     def qemu_binary(cls, caller: SimpleProject):
