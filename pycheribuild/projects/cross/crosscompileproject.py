@@ -521,7 +521,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
         self.info("Adding ASAN library depedencies to", dest_libdir)
         self.makedirs(dest_libdir)
         for lib in ("usr/lib/librt.so.1", "usr/lib/libexecinfo.so.1", "lib/libgcc_s.so.1", "lib/libelf.so.2"):
-            self.installFile(self.sdkSysroot / lib, dest_libdir / Path(lib).name, force=True, printVerboseOnly=False)
+            self.installFile(self.sdkSysroot / lib, dest_libdir / Path(lib).name, force=True, print_verbose_only=False)
 
     @property
     def default_statcounters_csv_name(self) -> str:

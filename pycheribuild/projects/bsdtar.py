@@ -42,4 +42,4 @@ class BuildBsdTar(CMakeProject):
         self.runMake("bsdtar")
 
     def install(self, **kwargs):
-        self.installFile(self.buildDir / "bin/bsdtar", self.installDir / "bin/bsdtar", printVerboseOnly=False)
+        self.installFile(self.buildDir / "bin/bsdtar", self.installDir / "bin/bsdtar", print_verbose_only=False)

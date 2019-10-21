@@ -44,7 +44,7 @@ class FileSystemUtils(object):
 
     def makedirs(self, path: Path):
         if not self.config.pretend and not path.is_dir():
-            printCommand("mkdir", "-p", path, printVerboseOnly=True)
+            printCommand("mkdir", "-p", path, print_verbose_only=True)
             os.makedirs(str(path), exist_ok=True)
 
     def _deleteDirectories(self, *dirs):
@@ -119,7 +119,7 @@ class FileSystemUtils(object):
                     all_entries = all_entries_new
                 all_entries = list(map(str, all_entries))
                 if all_entries:
-                    runCmd(["mv"] + all_entries + [tempdir], printVerboseOnly=True)
+                    runCmd(["mv"] + all_entries + [tempdir], print_verbose_only=True)
             else:
                 # rename the directory, create a new dir and then delete it in a background thread
                 runCmd("mv", path, tempdir)
@@ -133,10 +133,10 @@ class FileSystemUtils(object):
             deleterThread = FileSystemUtils.DeleterThread(self, tempdir)
         return ThreadJoiner(deleterThread)
 
-    def deleteFile(self, file: Path, printVerboseOnly=False):
+    def deleteFile(self, file: Path, print_verbose_only=False):
         if not file.is_file():
             return
-        printCommand("rm", "-f", file, printVerboseOnly=printVerboseOnly)
+        printCommand("rm", "-f", file, print_verbose_only=print_verbose_only)
         if self.config.pretend:
             return
         file.unlink()
@@ -171,7 +171,7 @@ class FileSystemUtils(object):
         :param noCommandPrint: don't ever print the echo commmand (even in verbose)
         """
         if not noCommandPrint:
-            printCommand("echo", contents, colour=AnsiColour.green, outputFile=file, printVerboseOnly=True)
+            printCommand("echo", contents, colour=AnsiColour.green, outputFile=file, print_verbose_only=True)
         if self.config.pretend:
             return
         if not overwrite and file.exists():
@@ -182,7 +182,7 @@ class FileSystemUtils(object):
         if mode:
             file.chmod(mode)
 
-    def createSymlink(self, src: Path, dest: Path, *, relative=True, cwd: Path = None, printVerboseOnly = True):
+    def createSymlink(self, src: Path, dest: Path, *, relative=True, cwd: Path = None, print_verbose_only = True):
         assert dest.is_absolute() or cwd is not None
         if not cwd:
             cwd = dest.parent
@@ -191,9 +191,9 @@ class FileSystemUtils(object):
                 src = os.path.relpath(str(src), str(dest.parent if dest.is_absolute() else cwd))
             if cwd is not None and cwd.is_dir():
                 dest = dest.relative_to(cwd)
-            runCmd("ln", "-fsn", src, dest, cwd=cwd, printVerboseOnly=printVerboseOnly)
+            runCmd("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only)
         else:
-            runCmd("ln", "-fsn", src, dest, cwd=cwd, printVerboseOnly=printVerboseOnly)
+            runCmd("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only)
 
     def moveFile(self, src: Path, dest: Path, force=False, createDirs=True):
         if not src.exists():
@@ -203,14 +203,14 @@ class FileSystemUtils(object):
             self.makedirs(dest.parent)
         runCmd(cmd + [src, dest])
 
-    def installFile(self, src: Path, dest: Path, *, force=False, createDirs=True, printVerboseOnly=True, mode=None):
+    def installFile(self, src: Path, dest: Path, *, force=False, createDirs=True, print_verbose_only=True, mode=None):
         if force:
-            printCommand("cp", "-f", src, dest, printVerboseOnly=printVerboseOnly)
+            printCommand("cp", "-f", src, dest, print_verbose_only=print_verbose_only)
         else:
-            printCommand("cp", src, dest, printVerboseOnly=printVerboseOnly)
+            printCommand("cp", src, dest, print_verbose_only=print_verbose_only)
         if self.config.pretend:
             if mode is not None:
-                printCommand("chmod", oct(mode), dest, printVerboseOnly=printVerboseOnly)
+                printCommand("chmod", oct(mode), dest, print_verbose_only=print_verbose_only)
             return
         assert not dest.is_dir(), "installFile: target is a directory and not a file: " + str(dest)
         if (dest.is_symlink() or dest.exists()) and force:
@@ -224,7 +224,7 @@ class FileSystemUtils(object):
         # noinspection PyArgumentList
         shutil.copy(str(src), str(dest), follow_symlinks=False)
         if mode is not None:
-            printCommand("chmod", oct(mode), dest, printVerboseOnly=printVerboseOnly)
+            printCommand("chmod", oct(mode), dest, print_verbose_only=print_verbose_only)
             if not self.config.pretend:
                 dest.chmod(mode)
 
@@ -250,7 +250,7 @@ class FileSystemUtils(object):
         # a prefixed tool was installed -> create link such as mips4-unknown-freebsd-ld -> ld
         if createUnprefixedLink:
             assert tool.name != toolName
-            runCmd("ln", "-fsn", tool.name, toolName, cwd=cwd, printVerboseOnly=True)
+            runCmd("ln", "-fsn", tool.name, toolName, cwd=cwd, print_verbose_only=True)
 
         for target in ("mips4-unknown-freebsd-", "cheri-unknown-freebsd-", "mips64-unknown-freebsd-"):
             link = tool.parent / (target + toolName)  # type: Path
@@ -258,4 +258,4 @@ class FileSystemUtils(object):
                 # if self.config.verbose:
                 #    print(coloured(AnsiColour.yellow, "Not overwriting", link, "because it is the target"))
                 continue
-            runCmd("ln", "-fsn", tool.name, target + toolName, cwd=cwd, printVerboseOnly=True)
+            runCmd("ln", "-fsn", tool.name, target + toolName, cwd=cwd, print_verbose_only=True)

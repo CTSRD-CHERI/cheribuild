@@ -299,10 +299,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # Duplicate all arguments instead of using **kwargs to get sensible code completion
     @staticmethod
     def run_cmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]"=None, timeout=None,
-           printVerboseOnly=False, runInPretendMode=False, raiseInPretendMode=False, no_print=False,
+           print_verbose_only=False, runInPretendMode=False, raiseInPretendMode=False, no_print=False,
            replace_env=False, **kwargs):
         return runCmd(*args, captureOutput=captureOutput, captureError=captureError, input=input, timeout=timeout,
-                      printVerboseOnly=printVerboseOnly, runInPretendMode=runInPretendMode,
+                      print_verbose_only=print_verbose_only, runInPretendMode=runInPretendMode,
                       raiseInPretendMode=raiseInPretendMode, no_print=no_print, replace_env=replace_env, **kwargs)
 
     @classmethod
@@ -590,7 +590,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 # error should already have printed above
                 break
             check_cmd = ["pkg-config", "--exists", package]
-            printCommand(check_cmd, printVerboseOnly=True)
+            printCommand(check_cmd, print_verbose_only=True)
             exit_code = subprocess.call(check_cmd)
             if exit_code != 0:
                 self.dependencyError("Required library", package, "is missing!", installInstructions=instructions)
@@ -992,7 +992,7 @@ class GitRepository(SourceRepository):
 
         # make sure we run git stash if we discover any local changes
         hasChanges = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
-                                captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout) > 1
+                                captureOutput=True, cwd=srcDir, print_verbose_only=True).stdout) > 1
 
         pullCmd = ["git", "pull"]
         has_autostash = False
@@ -1013,7 +1013,7 @@ class GitRepository(SourceRepository):
             if not has_autostash:
                 # TODO: ask if we should continue?
                 stashResult = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
-                                     captureOutput=True, cwd=srcDir, printVerboseOnly=True).stdout
+                                     captureOutput=True, cwd=srcDir, print_verbose_only=True).stdout
                 # print("stashResult =", stashResult)
                 if "No local changes to save" in stashResult.decode("utf-8"):
                     # print("NO REAL CHANGES")
@@ -1021,19 +1021,19 @@ class GitRepository(SourceRepository):
 
         if not skipSubmodules:
             pullCmd.append("--recurse-submodules")
-        runCmd(pullCmd + ["--rebase"], cwd=srcDir, printVerboseOnly=True)
+        runCmd(pullCmd + ["--rebase"], cwd=srcDir, print_verbose_only=True)
         if not skipSubmodules:
-            runCmd("git", "submodule", "update", "--recursive", cwd=srcDir, printVerboseOnly=True)
+            runCmd("git", "submodule", "update", "--recursive", cwd=srcDir, print_verbose_only=True)
         if hasChanges and not has_autostash:
-            runCmd("git", "stash", "pop", cwd=srcDir, printVerboseOnly=True)
+            runCmd("git", "stash", "pop", cwd=srcDir, print_verbose_only=True)
         if revision:
-            runCmd("git", "checkout", revision, cwd=srcDir, printVerboseOnly=True)
+            runCmd("git", "checkout", revision, cwd=srcDir, print_verbose_only=True)
 
         if srcDir.exists() and self.force_branch:
             assert initialBranch, "InitialBranch must be set if force_branch is true!"
             # TODO: move this to Project so it can also be used for other targets
             status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
-                            captureOutput=True, printVerboseOnly=True, cwd=srcDir, runInPretendMode=True)
+                            captureOutput=True, print_verbose_only=True, cwd=srcDir, runInPretendMode=True)
             if status.stdout.startswith(b"## ") and not status.stdout.startswith(b"## " + initialBranch.encode("utf-8") + b"..."):
                 current_branch = status.stdout[3:status.stdout.find(b"...")].strip()
                 warningMessage("You are trying to build the", current_branch.decode("utf-8"),
@@ -1158,7 +1158,7 @@ class Project(SimpleProject):
             try:
                 runCmd([compiler, "-fuse-ld=lld", "-xc", "-o", "/dev/null", "-"], runInPretendMode=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, raiseInPretendMode=True,
-                       input="int main() { return 0; }\n", printVerboseOnly=True)
+                       input="int main() { return 0; }\n", print_verbose_only=True)
                 statusUpdate(compiler, "supports -fuse-ld=lld, linking should be much faster!")
                 cls.__can_use_lld_map[compiler] = True
             except subprocess.CalledProcessError:

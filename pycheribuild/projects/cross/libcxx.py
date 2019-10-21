@@ -446,9 +446,9 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
         if self.compiling_for_cheri():
             # compatibility with older compilers
             self.createSymlink(self.real_install_root_dir / "lib" / libname,
-                               self.real_install_root_dir / "lib" / "libclang_rt.builtins-cheri.a", printVerboseOnly=False)
+                               self.real_install_root_dir / "lib" / "libclang_rt.builtins-cheri.a", print_verbose_only=False)
             self.createSymlink(self.real_install_root_dir / "lib" / libname,
-                               self.real_install_root_dir / "lib" / "libclang_rt.builtins-mips64.a", printVerboseOnly=False)
+                               self.real_install_root_dir / "lib" / "libclang_rt.builtins-mips64.a", print_verbose_only=False)
         # HACK: we don't really need libunwind but the toolchain pulls it in automatically
         # TODO: is there an easier way to create empty .a files?
         runCmd("ar", "rcv", self.installDir / "lib/libunwind.a", "/dev/null")

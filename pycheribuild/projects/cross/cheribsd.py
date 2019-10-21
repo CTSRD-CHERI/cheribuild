@@ -649,7 +649,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
                 return None
             # https://github.com/freebsd/freebsd/commit/1edb3ba87657e28b017dffbdc3d0b3a32999d933
             cmd = runCmd([bmake_binary] + bw_flags, env=args.env_vars, cwd=self.sourceDir,
-                         runInPretendMode=True, captureOutput=True, printVerboseOnly=True)
+                         runInPretendMode=True, captureOutput=True, print_verbose_only=True)
             lines = cmd.stdout.strip().split(b"\n")
             last_line = lines[-1].decode("utf-8").strip()
             if last_line.startswith("/") and cmd.returncode == 0:
@@ -1168,7 +1168,7 @@ class BuildCHERIBSD(BuildFreeBSD):
                     self.run_cmd("mv", old_build_dir, self.buildDir)
                 else:
                     self.cleanDirectory(old_build_dir, ensure_dir_exists=False)
-                self.createSymlink(self.buildDir, old_build_dir, cwd=old_build_dir.parent, printVerboseOnly=False)
+                self.createSymlink(self.buildDir, old_build_dir, cwd=old_build_dir.parent, print_verbose_only=False)
         super().process()
 
 
@@ -1221,11 +1221,11 @@ class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
             # runCmd("find", td)
             kernel_install_path = self.installed_kernel_for_config(self.config, kernconf)
             self.deleteFile(kernel_install_path)
-            self.installFile(Path(td, "boot/kernel/kernel"), kernel_install_path, force=True, printVerboseOnly=False)
+            self.installFile(Path(td, "boot/kernel/kernel"), kernel_install_path, force=True, print_verbose_only=False)
             if Path(td, "boot/kernel/kernel.full").exists():
                 fullkernel_install_path = kernel_install_path.with_name(kernel_install_path.name + ".full")
                 self.installFile(Path(td, "boot/kernel/kernel.full"), fullkernel_install_path, force=True,
-                                 printVerboseOnly=False)
+                                 print_verbose_only=False)
 
     @property
     def crossbuild(self):
@@ -1495,7 +1495,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
         print("Fixing absolute paths in symbolic links inside lib directory...")
         self.fixSymlinks()
         # create an archive to make it easier to copy the sysroot to another machine
-        self.deleteFile(self.sysroot_archive, printVerboseOnly=True)
+        self.deleteFile(self.sysroot_archive, print_verbose_only=True)
         runCmd("tar", "-czf", self.sysroot_archive, self.crossSysrootPath.name, cwd=self.crossSysrootPath.parent)
         print("Successfully populated sysroot")
 

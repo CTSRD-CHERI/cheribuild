@@ -44,14 +44,14 @@ class TemporarilyRemoveProgramsFromSdk(object):
         statusUpdate('Temporarily moving', self.programs, "from", self.config.sdkBinDir)
         for l in self.programs:
             if (self.config.sdkBinDir / l).exists():
-                runCmd("mv", "-f", l, l + ".backup", cwd=self.config.sdkBinDir, printVerboseOnly=True)
+                runCmd("mv", "-f", l, l + ".backup", cwd=self.config.sdkBinDir, print_verbose_only=True)
         return self
 
     def __exit__(self, *exc):
         statusUpdate('Restoring', self.programs, "in", self.config.sdkBinDir)
         for l in self.programs:
             if (self.config.sdkBinDir / (l + ".backup")).exists() or self.config.pretend:
-                runCmd("mv", "-f", l + ".backup", l, cwd=self.config.sdkBinDir, printVerboseOnly=True)
+                runCmd("mv", "-f", l + ".backup", l, cwd=self.config.sdkBinDir, print_verbose_only=True)
         return False
 
 

@@ -101,7 +101,7 @@ class BuildFreestandingSdk(SimpleProject):
                 self.createBuildtoolTargetSymlinks(sdkBinDir / tool)
             # For some reason CheriBSD does not build a cross ar, let's symlink the system one to the SDK bindir
             runCmd("ln", "-fsn", shutil.which("ar"), sdkBinDir / "ar",
-                   cwd=self.config.sdkDir / "bin", printVerboseOnly=True)
+                   cwd=self.config.sdkDir / "bin", print_verbose_only=True)
             self.createBuildtoolTargetSymlinks(sdkBinDir / "ar")
             # install ld as ld.bfd and add a symlink
             self.installFile(self.cheribsdBuildRoot / "tmp/usr/bin/ld", sdkBinDir / "ld.bfd")

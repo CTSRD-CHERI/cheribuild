@@ -409,7 +409,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         # Generate the shared mime info cache to MASSIVELY speed up tests
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
             mime_info_src = BuildQtBase.getSourceDir(self) / "src/corelib/mimetypes/mime/packages/freedesktop.org.xml"
-            self.installFile(mime_info_src, Path(td, "mime/packages/freedesktop.org.xml"), force=True, printVerboseOnly=False)
+            self.installFile(mime_info_src, Path(td, "mime/packages/freedesktop.org.xml"), force=True, print_verbose_only=False)
             try:
                 runCmd("update-mime-database", "-V", Path(td, "mime"), cwd="/")
             except:
@@ -419,8 +419,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             if not Path(td, "mime/mime.cache").exists():
                 fatalError("Could not generated shared-mime-info cache!")
             # install mime.cache and freedesktop.org.xml into the build dir for tests
-            self.installFile(mime_info_src, self.buildDir / "freedesktop.org.xml", force=True, printVerboseOnly=False)
-            self.installFile(Path(td, "mime/mime.cache"), self.buildDir / "mime.cache", force=True, printVerboseOnly=False)
+            self.installFile(mime_info_src, self.buildDir / "freedesktop.org.xml", force=True, print_verbose_only=False)
+            self.installFile(Path(td, "mime/mime.cache"), self.buildDir / "mime.cache", force=True, print_verbose_only=False)
             # TODO: get https://github.com/annulen/webkit-test-fonts to run the full testsuite
         if self.build_jsc_only:
             self.runMake("jsc")

@@ -493,7 +493,7 @@ class _BuildDiskImageBase(SimpleProject):
                    "-O", "qcow2",  # convert to qcow2 format
                    rawImg,  # input file
                    self.diskImagePath)  # output file
-            self.deleteFile(rawImg, printVerboseOnly=True)
+            self.deleteFile(rawImg, print_verbose_only=True)
             if self.config.verbose:
                 runCmd(qemuImgCommand, "info", self.diskImagePath)
 

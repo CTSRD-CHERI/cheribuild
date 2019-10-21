@@ -96,7 +96,7 @@ class GnuStepModule(AutotoolsProject):
             gnustepLibdir = Path("/invalid/path")
         else:
             gnustepLibdir = runCmd("gnustep-config", "--variable=GNUSTEP_SYSTEM_LIBRARIES",
-                                   captureOutput=True, printVerboseOnly=True, runInPretendMode=True).stdout.strip().decode("utf-8")
+                                   captureOutput=True, print_verbose_only=True, runInPretendMode=True).stdout.strip().decode("utf-8")
         # Just to confirm that we have set up the -rpath flag correctly
         expectedLibdir = self.installDir / "lib"
         if not expectedLibdir.is_dir():

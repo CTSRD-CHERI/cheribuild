@@ -85,7 +85,7 @@ class BuildQEMUBase(AutotoolsProject):
         self._extraCXXFlags = ""
         if shutil.which("pkg-config"):
             glibIncludes = runCmd("pkg-config", "--cflags-only-I", "glib-2.0", captureOutput=True,
-                                  printVerboseOnly=True, runInPretendMode=True).stdout.decode("utf-8").strip()
+                                  print_verbose_only=True, runInPretendMode=True).stdout.decode("utf-8").strip()
             self._extraCFlags += " " + glibIncludes
 
         # Disable some more unneeded things (we don't usually need the GUI frontends)
@@ -180,7 +180,7 @@ class BuildQEMUBase(AutotoolsProject):
             elif IS_MAC:
                 try:
                     prefix = runCmd("brew", "--prefix", "samba", captureOutput=True, runInPretendMode=True,
-                                    printVerboseOnly=True).stdout.decode("utf-8").strip()
+                                    print_verbose_only=True).stdout.decode("utf-8").strip()
                 except subprocess.CalledProcessError:
                     prefix = self.config.otherToolsDir
                 smbd_path = Path(prefix, "sbin/smbd")
@@ -230,7 +230,7 @@ class BuildQEMUBase(AutotoolsProject):
         # reset that directory by checking out the HEAD revision there
         # this is better than git reset --hard as we don't lose any other changes
         if (self.sourceDir / "po").is_dir() and not self.config.skipUpdate:
-            runCmd("git", "checkout", "HEAD", "po/", cwd=self.sourceDir, printVerboseOnly=True)
+            runCmd("git", "checkout", "HEAD", "po/", cwd=self.sourceDir, print_verbose_only=True)
         if (self.sourceDir / "pixman/pixman").exists():
             warningMessage(
                 "QEMU might build the broken pixman submodule, run `git submodule deinit -f pixman` to clean")

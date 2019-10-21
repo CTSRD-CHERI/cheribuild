@@ -28,13 +28,17 @@
 # SUCH DAMAGE.
 #
 import os
-from .project import *
-from ..utils import runCmd, setEnv, coloured, AnsiColour, commandline_to_str, printCommand, get_program_version, IS_LINUX
-from subprocess import CalledProcessError
 import shlex
 import shutil
+from subprocess import CalledProcessError
+from typing import Tuple, Dict, Any, Union
+
+from .project import *
+from ..utils import runCmd, setEnv, coloured, AnsiColour, commandline_to_str, get_program_version, IS_LINUX
+
 
 class OpamMixin(object):
+    config = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -91,13 +95,14 @@ class OpamMixin(object):
             return self.run_command_in_ocaml_env(command_list, **kwargs)
         except CalledProcessError:
             if ignoreErrors:
+                # noinspection PyUnresolvedReferences
                 self.verbose_print("Ignoring non-zero exit code from " + coloured(AnsiColour.yellow, commandline_to_str(command_list)))
             else:
                 raise
 
     def _run_in_ocaml_env_prepare(self, cwd=None) -> "Tuple[Dict[Any, Union[Union[str, int], Any]], Union[str, Any]]":
-        assert isinstance(self, SimpleProject)
         if cwd is None:
+            # noinspection PyUnresolvedReferences
             cwd = self.sourceDir if getattr(self, "sourceDir") else "/"
 
         self._ensure_correct_switch()
@@ -111,19 +116,19 @@ class OpamMixin(object):
             runCmd(self.opam_binary, "init", "--root=" + str(self.opamroot), "--no-setup", cwd="/", env=opam_env)
         return opam_env, cwd
 
-    def run_in_ocaml_env(self, command: str, cwd=None, printVerboseOnly=False, **kwargs):
+    def run_in_ocaml_env(self, command: str, cwd=None, print_verbose_only=False, **kwargs):
         opam_env, cwd = self._run_in_ocaml_env_prepare(cwd=cwd)
         script = "eval `opam config env`\n" + command + "\n"
         assert isinstance(self, Project)
-        return self.runShellScript(script, cwd=cwd, printVerboseOnly=printVerboseOnly, env=opam_env, **kwargs)
+        return self.runShellScript(script, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)
 
-    def run_command_in_ocaml_env(self, command: list, cwd=None, printVerboseOnly=False, **kwargs):
+    def run_command_in_ocaml_env(self, command: list, cwd=None, print_verbose_only=False, **kwargs):
         self._ensure_correct_switch()
         opam_env, cwd = self._run_in_ocaml_env_prepare(cwd=cwd)
         # for opam commands we don't need to prepend opam exec --
         if command[0] != self.opam_binary:
             command = [self.opam_binary, "exec", "--root=" + str(self.opamroot), "--"] + command
-        return runCmd(command, cwd=cwd, printVerboseOnly=printVerboseOnly, env=opam_env, **kwargs)
+        return runCmd(command, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)
 
 
 class Opam2(SimpleProject):
@@ -146,6 +151,7 @@ class Opam2(SimpleProject):
         else:
             self.fatal("This target is only implement for Linux x86_64, for others operating systems you will have"
                        " to install opam 2.0 manually")
+
 
 class BuildBubbleWrap(AutotoolsProject):
     projectName = "bubblewrap"
@@ -341,7 +347,7 @@ class OcamlProject(OpamMixin, Project):
         super().checkSystemDependencies()
         for pkg in self.needed_ocaml_packages:
             try:
-                self.run_in_ocaml_env("ocamlfind query " + shlex.quote(pkg), cwd="/", printVerboseOnly=True)
+                self.run_in_ocaml_env("ocamlfind query " + shlex.quote(pkg), cwd="/", print_verbose_only=True)
             except CalledProcessError:
                 self.dependencyError("missing opam package " + pkg,
                                      installInstructions="Try running `" + self._opam_cmd_str("install") + pkg + "`")
@@ -352,7 +358,7 @@ class OcamlProject(OpamMixin, Project):
     def process(self):
         try:
             # This is run before cloning so the source dir might not exist -> set CWD to /
-            self.run_in_ocaml_env("ocamlfind ocamlc -where", cwd="/", printVerboseOnly=True)
+            self.run_in_ocaml_env("ocamlfind ocamlc -where", cwd="/", print_verbose_only=True)
         except CalledProcessError as e:
             self.warning(e)
             self.warning("stderr was:", e.stderr)
@@ -379,9 +385,9 @@ class BuildSailFromSource(OcamlProject):
         super().checkSystemDependencies()
         try:
             # opam and ocamlfind don't agree for menhir
-            self.run_in_ocaml_env("ocamlfind query menhirLib", cwd="/", printVerboseOnly=True)
+            self.run_in_ocaml_env("ocamlfind query menhirLib", cwd="/", print_verbose_only=True)
         except CalledProcessError:
-            self.dependencyError("missing opam package " + pkg,
+            self.dependencyError("missing opam package menhirLib",
                                  installInstructions="Try running `opam install menhir`")
 
     def compile(self, cwd: Path = None):

@@ -124,8 +124,8 @@ def __filterEnv(env: dict) -> dict:
 
 
 def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remaining_args, outputFile=None,
-                 colour=AnsiColour.yellow, cwd=None, env=None, sep=" ", printVerboseOnly=False, **kwargs):
-    if not _cheriConfig or (_cheriConfig.quiet or (printVerboseOnly and not _cheriConfig.verbose)):
+                 colour=AnsiColour.yellow, cwd=None, env=None, sep=" ", print_verbose_only=False, **kwargs):
+    if not _cheriConfig or (_cheriConfig.quiet or (print_verbose_only and not _cheriConfig.verbose)):
         return
     # also allow passing a single string
     if not type(arg1) is str:
@@ -207,7 +207,7 @@ def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Pop
 
 
 def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]"=None, timeout=None,
-           printVerboseOnly=False, runInPretendMode=False, raiseInPretendMode=False, no_print=False,
+           print_verbose_only=False, runInPretendMode=False, raiseInPretendMode=False, no_print=False,
            replace_env=False, **kwargs):
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         cmdline = args[0]  # list with parameters was passed
@@ -216,7 +216,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
     cmdline = list(map(str, cmdline))  # ensure it's all strings so that subprocess can handle it
     # When running scripts from a noexec filesystem try to read the interpreter and run that
     if not no_print:
-        printCommand(cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), printVerboseOnly=printVerboseOnly)
+        printCommand(cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), print_verbose_only=print_verbose_only)
     if "cwd" in kwargs:
         kwargs["cwd"] = str(kwargs["cwd"])
     else:
@@ -309,7 +309,7 @@ class CompilerInfo(object):
                 return Path("/unknown/resource/dir")  # avoid failing in jenkins
             # pretend to compile an existing source file and capture the -resource-dir output
             cc1_cmd = runCmd(self.path, "-###", "-xc", "-c", "/dev/null",
-                             captureError=True, printVerboseOnly=True, runInPretendMode=True)
+                             captureError=True, print_verbose_only=True, runInPretendMode=True)
             resource_dir_pat = re.compile(b'"-cc1".+"-resource-dir" "([^"]+)"')
             self._resource_dir = Path(resource_dir_pat.search(cc1_cmd.stderr).group(1).decode("utf-8"))
         return self._resource_dir
@@ -357,7 +357,7 @@ def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
         try:
             # Use -v instead of --version to support both gcc and clang
             # Note: for clang-cpp/cpp we need to have stdin as devnull
-            versionCmd = runCmd(compiler, "-v", captureError=True, printVerboseOnly=True, runInPretendMode=True,
+            versionCmd = runCmd(compiler, "-v", captureError=True, print_verbose_only=True, runInPretendMode=True,
                                 stdin=subprocess.DEVNULL, captureOutput=True)
         except subprocess.CalledProcessError as e:
             stderr = e.stderr if e.stderr else b"FAILED: " + str(e).encode("utf-8")
@@ -615,7 +615,7 @@ class OSInfo(object):
 
 
 @contextlib.contextmanager
-def setEnv(*, printVerboseOnly=True, **environ):
+def setEnv(*, print_verbose_only=True, **environ):
     """
     Temporarily set the process environment variables.
 
@@ -631,7 +631,7 @@ def setEnv(*, printVerboseOnly=True, **environ):
     # make sure all environment variables are converted to string
     str_environ = dict((str(k),str(v)) for k,v in environ.items())
     for k, v in str_environ.items():
-        printCommand("export", k + "=" + v, printVerboseOnly=printVerboseOnly)
+        printCommand("export", k + "=" + v, print_verbose_only=print_verbose_only)
     os.environ.update(str_environ)
     try:
         yield
