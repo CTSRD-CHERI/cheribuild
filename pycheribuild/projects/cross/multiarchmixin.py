@@ -27,11 +27,14 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import shutil
+import typing
 
-from ...utils import getCompilerInfo, Type_T
 from ..project import SimpleProject, Project
-from ...targets import targetManager, MultiArchTargetAlias
 from ...config.chericonfig import CrossCompileTarget, CheriConfig
+from ...targets import targetManager, MultiArchTargetAlias
+from ...utils import getCompilerInfo, Type_T
+
 
 # A base class for all multi-arch projects (ensures that the appropriate -native/-cheri/-mips targets are added)
 class MultiArchBaseMixin(object):
@@ -41,8 +44,9 @@ class MultiArchBaseMixin(object):
     CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.MIPS, CrossCompileTarget.CHERI]
     CAN_TARGET_ALL_TARGETS_EXCEPT_CHERI = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
     CAN_TARGET_ALL_TARGETS_EXCEPT_NATIVE = [CrossCompileTarget.CHERI, CrossCompileTarget.MIPS]
-    supported_architectures = CAN_TARGET_ALL_TARGETS # TODO: once risc-v works: list(CrossCompileTarget)
-    # The architecture to build for if no --xmips/--xhost flag is passed (defaults to supported_architectures[0] if no match)
+    supported_architectures = CAN_TARGET_ALL_TARGETS  # TODO: once risc-v works: list(CrossCompileTarget)
+    # The architecture to build for if no --xmips/--xhost flag is passed (defaults to supported_architectures[0]
+    # if no match)
     default_architecture = None
     appendCheriBitsToBuildDir = True
     _crossCompileTarget = None  # type: CrossCompileTarget
@@ -70,7 +74,9 @@ class MultiArchBaseMixin(object):
         # Otherwise pick the best match:
         if default_target == CrossCompileTarget.CHERI and result == CrossCompileTarget.MIPS:
             # add this note for e.g. GDB:
-            cls._configure_status_message = "Cannot compile " + cls.target + " in CHERI purecap mode, building MIPS binaries instead"
+            # noinspection PyUnresolvedReferences
+            cls._configure_status_message = "Cannot compile " + cls.target + " in CHERI purecap mode," \
+                                                                             " building MIPS binaries instead"
         return result
 
     def __init__(self, config: CheriConfig, *args, **kwargs):
@@ -78,6 +84,7 @@ class MultiArchBaseMixin(object):
         assert isinstance(self, SimpleProject)
 
     def get_host_triple(self):
+        assert isinstance(self, SimpleProject)
         compiler = getCompilerInfo(self.config.clangPath if self.config.clangPath else shutil.which("cc"))
         return compiler.default_target
 
@@ -95,6 +102,7 @@ class MultiArchBaseMixin(object):
 
     @property
     def display_name(self):
+        # noinspection PyUnresolvedReferences
         return self.projectName + " (" + self._crossCompileTarget.value + ")"
 
     @classmethod
@@ -104,4 +112,4 @@ class MultiArchBaseMixin(object):
         for t in target.derived_targets:
             if t.target_arch == arch:
                 return t.projectClass
-        raise LookupError("Invalid arch " + str(arch) + " for class " + str(self))
+        raise LookupError("Invalid arch " + str(arch) + " for class " + str(cls))

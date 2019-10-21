@@ -47,8 +47,11 @@ env SSL_NO_VERIFY_PEER=1 pkg --config /etc/local-kyua-pkg/config/pkg.conf --opti
 
 echo 'Sucessfully installed kyua.'
 echo ''
+# shellcheck disable=SC2016
 echo 'To run tests execute `kyua test -k /path/to/Kyuafile` (e.g. /usr/tests/cheri/lib/Kyuafile)'
 echo ''
+# shellcheck disable=SC2016
 echo 'To debug a test failure run `kyua debug -k /path/to/Kyuafile TEST_NAME:TEST_FUNCTION`'
+# shellcheck disable=SC2016
 echo 'Example: `kyua debug -k /usr/tests/cheri/lib/libc/locale/Kyuafile mbtowc_test:mbtowc`'
 echo 'If GDB is installed as /usr/bin/gdb this will also give a backtrace on crash'
