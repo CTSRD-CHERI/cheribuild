@@ -32,8 +32,8 @@
 import argparse
 import os
 import sys
-import typing
 from pathlib import Path
+from typing import Callable
 
 _cheribuild_root = Path(__file__).parent.parent
 _junitparser_dir = Path(__file__).parent.parent / "3rdparty/junitparser"
@@ -47,13 +47,12 @@ from pycheribuild import boot_cheribsd
 __all__ = ["run_tests_main", "boot_cheribsd", "junitparser", "pexpect"]
 
 
-def run_tests_main(test_function: typing.Callable[[boot_cheribsd.CheriBSDInstance, argparse.Namespace], bool] = None,
-                   need_ssh=False, test_setup_function: typing.Callable[
-            [boot_cheribsd.CheriBSDInstance, argparse.Namespace], None] = None, should_mount_builddir=True,
-                   should_mount_srcdir=False, should_mount_sysroot=False, should_mount_installdir=False,
-                   argparse_setup_callback: typing.Callable[[argparse.ArgumentParser], None] = None,
-                   argparse_adjust_args_callback: typing.Callable[[argparse.Namespace], None] = None,
-                   build_dir_in_target="/build"):
+def run_tests_main(test_function: Callable[[boot_cheribsd.CheriBSDInstance, argparse.Namespace], bool] = None,
+                   need_ssh=False, should_mount_builddir=True, should_mount_srcdir=False, should_mount_sysroot=False,
+                   should_mount_installdir=False, build_dir_in_target="/build",
+                   test_setup_function: Callable[[boot_cheribsd.CheriBSDInstance, argparse.Namespace], None] = None,
+                   argparse_setup_callback: Callable[[argparse.ArgumentParser], None] = None,
+                   argparse_adjust_args_callback: Callable[[argparse.Namespace], None] = None):
     def default_add_cmdline_args(parser: argparse.ArgumentParser):
         parser.add_argument("--build-dir", required=should_mount_builddir)
         parser.add_argument("--source-dir", required=should_mount_srcdir)
