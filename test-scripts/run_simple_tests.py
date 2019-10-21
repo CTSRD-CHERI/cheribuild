@@ -30,7 +30,9 @@
 # SUCH DAMAGE.
 #
 import argparse
+
 from run_tests_common import *
+
 
 def run_simple_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running tests")
@@ -46,10 +48,12 @@ def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--ignore-cheri-trap", action="store_true", required=False, default=True,
                         help="Don't fail the tests when a CHERI trap happens (useful for BODiagSuite or similar)")
 
+
 def adjust_args(args: argparse.Namespace):
     # We don't support parallel jobs but are reusing libcxx infrastructure -> set the expected vars
     if not args.test_command:
         boot_cheribsd.failure("--test-command must be set!", exit=True)
+
 
 if __name__ == '__main__':
     # we don't need ssh running to execute the tests

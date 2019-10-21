@@ -31,8 +31,8 @@
 #
 import argparse
 import os
-import typing
 import sys
+import typing
 from pathlib import Path
 
 _cheribuild_root = Path(__file__).parent.parent
@@ -46,14 +46,14 @@ from pycheribuild import boot_cheribsd
 
 __all__ = ["run_tests_main", "boot_cheribsd", "junitparser", "pexpect"]
 
-def run_tests_main(test_function: typing.Callable[[boot_cheribsd.CheriBSDInstance, argparse.Namespace], bool] = None, need_ssh=False,
-                   test_setup_function: typing.Callable[[boot_cheribsd.CheriBSDInstance, argparse.Namespace], None] = None,
-                   should_mount_builddir=True, should_mount_srcdir=False, should_mount_sysroot=False,
-                   should_mount_installdir=False,
+
+def run_tests_main(test_function: typing.Callable[[boot_cheribsd.CheriBSDInstance, argparse.Namespace], bool] = None,
+                   need_ssh=False, test_setup_function: typing.Callable[
+            [boot_cheribsd.CheriBSDInstance, argparse.Namespace], None] = None, should_mount_builddir=True,
+                   should_mount_srcdir=False, should_mount_sysroot=False, should_mount_installdir=False,
                    argparse_setup_callback: typing.Callable[[argparse.ArgumentParser], None] = None,
                    argparse_adjust_args_callback: typing.Callable[[argparse.Namespace], None] = None,
                    build_dir_in_target="/build"):
-
     def default_add_cmdline_args(parser: argparse.ArgumentParser):
         parser.add_argument("--build-dir", required=should_mount_builddir)
         parser.add_argument("--source-dir", required=should_mount_srcdir)
@@ -73,18 +73,22 @@ def run_tests_main(test_function: typing.Callable[[boot_cheribsd.CheriBSDInstanc
             args.skip_ssh_setup = not args.__foce_ssh_setup
         if should_mount_builddir or args.build_dir:
             args.build_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.build_dir)))
-            args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.build_dir, readonly=False, in_target=build_dir_in_target))
+            args.smb_mount_directories.append(
+                boot_cheribsd.SmbMount(args.build_dir, readonly=False, in_target=build_dir_in_target))
         if should_mount_srcdir or args.source_dir:
             args.source_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.source_dir)))
-            args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.source_dir, readonly=True, in_target="/source"))
+            args.smb_mount_directories.append(
+                boot_cheribsd.SmbMount(args.source_dir, readonly=True, in_target="/source"))
         if should_mount_sysroot or args.sysroot_dir:
             args.source_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.sysroot_dir)))
-            args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.sysroot_dir, readonly=True, in_target="/sysroot"))
+            args.smb_mount_directories.append(
+                boot_cheribsd.SmbMount(args.sysroot_dir, readonly=True, in_target="/sysroot"))
         if should_mount_installdir or args.install_destdir:
             args.install_destdir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.install_destdir)))
             assert args.install_prefix and args.install_prefix[0] == "/"
-            args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.install_destdir + args.install_prefix,
-                                                                     readonly=True, in_target=args.install_prefix))
+            args.smb_mount_directories.append(
+                boot_cheribsd.SmbMount(args.install_destdir + args.install_prefix, readonly=True,
+                                       in_target=args.install_prefix))
         if argparse_adjust_args_callback:
             argparse_adjust_args_callback(args)
 
@@ -114,4 +118,3 @@ def run_tests_main(test_function: typing.Callable[[boot_cheribsd.CheriBSDInstanc
     boot_cheribsd.main(test_function=test_function, test_setup_function=default_setup_tests,
                        argparse_setup_callback=default_add_cmdline_args,
                        argparse_adjust_args_callback=default_setup_args)
-

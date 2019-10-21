@@ -30,8 +30,9 @@
 # SUCH DAMAGE.
 #
 import argparse
-from run_tests_common import *
 from pathlib import Path
+
+from run_tests_common import *
 
 
 def run_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:

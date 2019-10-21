@@ -30,8 +30,9 @@
 # SUCH DAMAGE.
 #
 import argparse
-import pexpect
+
 from run_tests_common import *
+
 
 def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     print("Running qtbase tests")
@@ -39,5 +40,6 @@ def run_qtbase_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
     # TODO: -o /path/to/file,xunitxml
     return True
 
+
 if __name__ == '__main__':
-    run_tests_main(test_function=run_qtbase_tests, need_ssh=False) # we don't need ssh running to execute the tests
+    run_tests_main(test_function=run_qtbase_tests, need_ssh=False)  # we don't need ssh running to execute the tests

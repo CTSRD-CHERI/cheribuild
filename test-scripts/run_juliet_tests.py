@@ -29,21 +29,20 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import pexpect
 import argparse
-import os
 import shutil
-import subprocess
 from pathlib import Path
+
 from run_tests_common import junitparser, run_tests_main, boot_cheribsd
+
 
 def output_to_junit_suite(xml, output_path, suite_name, good=True):
     suite = junitparser.TestSuite(suite_name)
 
     with open(output_path, "r") as output_file:
-        next(output_file) # skip first header
+        next(output_file)  # skip first header
         for line in output_file:
-            if line[0] == "=": # stop on next header
+            if line[0] == "=":  # stop on next header
                 break
 
             split = line.split()
@@ -52,11 +51,11 @@ def output_to_junit_suite(xml, output_path, suite_name, good=True):
 
             if exit_code == 124:
                 # timeout
-                case.result = junitparser.Error(split[1]) # TODO error on timeout?
+                case.result = junitparser.Error(split[1])  # TODO error on timeout?
             elif good and exit_code != 0:
                 # good run had bad exit code
                 case.result = junitparser.Failure(split[1])
-            elif not good and exit_code == 0: # TODO we usually? expect a cheri exception
+            elif not good and exit_code == 0:  # TODO we usually? expect a cheri exception
                 # bad run had good exit code
                 case.result = junitparser.Failure(split[1])
 
@@ -64,15 +63,17 @@ def output_to_junit_suite(xml, output_path, suite_name, good=True):
 
     xml.add_testsuite(suite)
 
+
 def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--testcase-timeout", required=False, default="1s")
     parser.add_argument("--ld-preload-path", required=False, default=None)
 
+
 def setup_juliet_test_environment(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
 
-def run_juliet_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
 
+def run_juliet_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     # args.ld_preload_path should be a path on the host
     if args.ld_preload_path:
 
@@ -91,7 +92,6 @@ def run_juliet_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
     else:
         run_command = "/build/juliet-run.sh {}".format(args.testcase_timeout)
 
-
     build_dir = Path(args.build_dir)
     boot_cheribsd.checked_run_cheribsd_command(qemu, run_command, ignore_cheri_trap=True, timeout=60000)
     xml = junitparser.JUnitXml()
@@ -101,7 +101,9 @@ def run_juliet_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namesp
 
     return True
 
+
 if __name__ == '__main__':
     # we don't need ssh running to execute the tests, but we need both host and source dir mounted
-    run_tests_main(test_function=run_juliet_tests, test_setup_function=setup_juliet_test_environment, argparse_setup_callback=add_args,
-                   need_ssh=False, should_mount_builddir=True, should_mount_srcdir=True, should_mount_sysroot=True)
+    run_tests_main(test_function=run_juliet_tests, test_setup_function=setup_juliet_test_environment,
+                   argparse_setup_callback=add_args, need_ssh=False, should_mount_builddir=True,
+                   should_mount_srcdir=True, should_mount_sysroot=True)

@@ -67,7 +67,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
     supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
     _mips_build_hybrid = True  # build MIPS binaries as CHERI hybrid so that the trap register number works
 
-
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)

@@ -30,7 +30,9 @@
 # SUCH DAMAGE.
 #
 import argparse
+
 from run_tests_common import *
+
 
 def run_postgres_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running PostgreSQL tests")
@@ -39,8 +41,8 @@ def run_postgres_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
     boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -s /locale /usr/share/locale")
     # check that the locale files exist
     boot_cheribsd.checked_run_cheribsd_command(qemu, "ls /usr/share/locale/C.UTF-8")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "cd '{}' && sh -xe ./run-postgres-tests.sh".format(qemu.smb_dirs[0].in_target),
-                                               timeout=240 * 60)
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "cd '{}' && sh -xe ./run-postgres-tests.sh".format(
+        qemu.smb_dirs[0].in_target), timeout=240 * 60)
     return True
 
 

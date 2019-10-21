@@ -33,9 +33,11 @@ import argparse
 import os
 import sys
 from pathlib import Path
+
 from run_tests_common import junitparser, run_tests_main, boot_cheribsd
 
 LONG_NAME_FOR_BUILDDIR = "/build-dir-with-long-name-to-ensure-cwd-causes-buffer-overflow"
+
 
 class BODiagTestsuite(object):
     def __init__(self, name: str, xml: "junitparser.JUnitXml"):
@@ -101,8 +103,8 @@ class BODiagTestsuite(object):
 
         signaled = os.WIFSIGNALED(exit_code)
         exited = os.WIFEXITED(exit_code)
-        testcase.system_out = "WIFSIGNALED={} WIFEXITED={}, WTERMSIG={}, WEXITSTATUS={} WCOREDUMP={}".format(
-            signaled, exited, os.WTERMSIG(exit_code), os.WEXITSTATUS(exit_code), os.WCOREDUMP(exit_code))
+        testcase.system_out = "WIFSIGNALED={} WIFEXITED={}, WTERMSIG={}, WEXITSTATUS={} WCOREDUMP={}".format(signaled,
+            exited, os.WTERMSIG(exit_code), os.WEXITSTATUS(exit_code), os.WCOREDUMP(exit_code))
         # -ok testcases are expected to run succesfully -> exit code zero
         if stem.endswith("-ok"):
             if not exited or os.WEXITSTATUS(exit_code) != 0:
@@ -123,24 +125,28 @@ class BODiagTestsuite(object):
                 testcase.result = junitparser.Error(message="INVALID OUTPUT FILE FOUND: " + o.name)
                 self.error_suite.add_testcase(testcase)
                 return
-            if exit_code == 1 and testcase.system_err and testcase.system_err.startswith("This test needs a CWD with length"):
+            if exit_code == 1 and testcase.system_err and testcase.system_err.startswith(
+                    "This test needs a CWD with length"):
                 testcase.result = junitparser.Skipped(message="This test needs a large working directory")
 
             # Handle tool-specific exit codes:
             if "effectivesan" in tools:
                 # We do not instruct EffectiveSan to terminate on first error:
                 if "BOUNDS ERROR:\n" not in testcase.system_err:
-                    testcase.result = junitparser.Failure(message="EffectiveSan did not detect a bounds error. Exit code " + exit_code_str)
+                    testcase.result = junitparser.Failure(
+                        message="EffectiveSan did not detect a bounds error. Exit code " + exit_code_str)
             elif "softboundcets" in tools:
                 # We do not instruct EffectiveSan to terminate on first error:
                 if "Softboundcets: Memory safety violation detected" not in testcase.system_err:
-                    testcase.result = junitparser.Failure(message="SoftBoundCETS did not detect a bounds error. Exit code " + exit_code_str)
+                    testcase.result = junitparser.Failure(
+                        message="SoftBoundCETS did not detect a bounds error. Exit code " + exit_code_str)
             else:
                 # Otherwise we assume that the test must be killed by a signal
                 if not signaled:
                     # test should fail with a signal: (162 for CHERI)
                     # TODO: for CHERI check that it was signal 34?
-                    testcase.result = junitparser.Failure(message="Expected test to be killed by a SIGNAL but got exit code " + exit_code_str)
+                    testcase.result = junitparser.Failure(
+                        message="Expected test to be killed by a SIGNAL but got exit code " + exit_code_str)
             suite.add_testcase(testcase)
 
 
@@ -181,7 +187,6 @@ def _create_junit_xml(builddir: Path, name, tools):
     xml.write(str(builddir / "test-results.xml"), pretty=True)
 
 
-
 def create_junit_xml(builddir, name, tools):
     _create_junit_xml(builddir, name, tools)
     test_output = Path(builddir, "test-results.xml")
@@ -202,8 +207,9 @@ def run_bodiagsuite(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
         boot_cheribsd.checked_run_cheribsd_command(qemu, "cd {} && mkdir -p run".format(LONG_NAME_FOR_BUILDDIR))
         # Don't log all the CHERI traps while running (should speed up the tests a bit and produce shorter logfiles)
         boot_cheribsd.run_cheribsd_command(qemu, "sysctl machdep.log_cheri_exceptions=0 || true")
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "{} -r -f {}/Makefile.bsd-run all".format(args.bmake_path, LONG_NAME_FOR_BUILDDIR),
-                                                   timeout=120*60, ignore_cheri_trap=True)
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "{} -r -f {}/Makefile.bsd-run all".format(args.bmake_path,
+                                                                                                   LONG_NAME_FOR_BUILDDIR),
+                                                   timeout=120 * 60, ignore_cheri_trap=True)
         # restore old behaviour
         boot_cheribsd.run_cheribsd_command(qemu, "sysctl machdep.log_cheri_exceptions=1 || true")
 
@@ -242,6 +248,7 @@ def main():
     # we don't need ssh running to execute the tests
     run_tests_main(test_function=run_bodiagsuite, need_ssh=False, should_mount_builddir=True,
                    argparse_setup_callback=add_args, build_dir_in_target=LONG_NAME_FOR_BUILDDIR)
+
 
 if __name__ == '__main__':
     main()

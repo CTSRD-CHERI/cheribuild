@@ -28,10 +28,9 @@
 # LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-import sys
-import subprocess
 import tempfile
 from pathlib import Path
+
 from run_tests_common import boot_cheribsd, junitparser
 
 
@@ -43,6 +42,7 @@ def convert_kyua_db_to_junit_xml(db_file: Path, output_file: Path):
         # TODO: xml escape the file?
         if not boot_cheribsd.PRETEND:
             fixup_kyua_generated_junit_xml(output_file)
+
 
 def fixup_kyua_generated_junit_xml(xml_file: Path):
     boot_cheribsd.info("Updating statistics in JUnit file ", xml_file)
@@ -68,9 +68,11 @@ def fixup_kyua_generated_junit_xml(xml_file: Path):
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("db", help="The database to convert")
-    parser.add_argument("xml", nargs=argparse.OPTIONAL, help="The output file (or - for stdout). Defaults to the db file with suffix .xml")
+    parser.add_argument("xml", nargs=argparse.OPTIONAL,
+                        help="The output file (or - for stdout). Defaults to the db file with suffix .xml")
     parser.add_argument("--update-stats", action="store_true", help="Only update stats instead of parsing a kyua db")
     args = parser.parse_args()
     if not args.xml:

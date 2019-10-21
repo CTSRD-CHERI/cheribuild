@@ -32,15 +32,16 @@
 import argparse
 import datetime
 import functools
-import os
 import operator
+import os
 import shlex
 import shutil
-import time
 import sys
+import time
 from pathlib import Path
-from run_tests_common import boot_cheribsd, run_tests_main, junitparser, pexpect
+
 from kyua_db_to_junit_xml import convert_kyua_db_to_junit_xml, fixup_kyua_generated_junit_xml
+from run_tests_common import boot_cheribsd, run_tests_main, pexpect
 
 
 def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
@@ -80,16 +81,19 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
 
             # run: kyua report-junit --results-file=test-results.db | vis -os > ${CPU}-${TEST_NAME}-test-results.xml
             # Not sure how much we gain by running it on the host instead.
-            # Converting the full test suite to xml can take over an hour (probably a lot faster without the vis -os pipe)
+            # Converting the full test suite to xml can take over an hour (probably a lot faster without the vis -os
+            # pipe)
             # TODO: should escape the XML file but that's probably faster on the host
             if host_has_kyua:
                 boot_cheribsd.info("KYUA installed on the host, no need to do slow conversion in QEMU")
             else:
                 xml_conversion_start = datetime.datetime.now()
-                qemu.checked_run("kyua report-junit --results-file=/tmp/results.db > /tmp/results.xml", timeout=200 * 60)
+                qemu.checked_run("kyua report-junit --results-file=/tmp/results.db > /tmp/results.xml",
+                                 timeout=200 * 60)
                 qemu.checked_run("cp -v /tmp/results.xml {}".format(results_xml))
                 qemu.checked_run("fsync " + str(results_xml))
-                boot_cheribsd.success("Creating JUnit XML ", results_xml, " took: ", datetime.datetime.now() - xml_conversion_start)
+                boot_cheribsd.success("Creating JUnit XML ", results_xml, " took: ",
+                                      datetime.datetime.now() - xml_conversion_start)
     except boot_cheribsd.CheriBSDCommandTimeout as e:
         boot_cheribsd.failure("Timeout running tests: " + str(e), exit=False)
         qemu.sendintr()
@@ -164,7 +168,8 @@ def cheribsd_setup_args(args: argparse.Namespace):
         boot_cheribsd.run_host_command(["mkdir", "-p", str(real_output_dir)])
         if not boot_cheribsd.PRETEND:
             (real_output_dir / "cmdline").write_text(str(sys.argv))
-        args.smb_mount_directories.append(boot_cheribsd.SmbMount(real_output_dir, readonly=False, in_target="/kyua-results"))
+        args.smb_mount_directories.append(
+            boot_cheribsd.SmbMount(real_output_dir, readonly=False, in_target="/kyua-results"))
 
 
 def add_args(parser: argparse.ArgumentParser):
@@ -172,7 +177,8 @@ def add_args(parser: argparse.ArgumentParser):
                         help="Install kyua using the /sbin/prepare-testsuite.sh script")
     parser.add_argument("--skip-poweroff", action="store_true",
                         help="Don't run poweroff after tests (implicit with --interact). Without --interact this will"
-                             "almost certainly corrupt the disk image, so only pass this if you no longer need the image!")
+                             "almost certainly corrupt the disk image, so only pass this if you no longer need the "
+                             "image!")
     parser.add_argument("--kyua-tests-files", action="append", nargs=argparse.ZERO_OR_MORE, default=[],
                         help="Run tests for the given following Kyuafile(s)")
     parser.add_argument("--kyua-tests-output", default=str(Path(".").resolve() / "kyua-results"),

@@ -29,11 +29,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import pexpect
 import argparse
-import os
-import subprocess
 from pathlib import Path
+
 from run_tests_common import junitparser, run_tests_main, boot_cheribsd
 
 
@@ -51,12 +49,20 @@ def setup_qtwebkit_test_environment(qemu: boot_cheribsd.CheriBSDInstance, args: 
     # New directory names:
     boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sf /usr/local/Qt-cheri /usr/local/mips")
     boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sf /usr/local/Qt-cheri /usr/local/cheri")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /source/LayoutTests/resources/Ahem.ttf /usr/local/Qt-cheri/lib/fonts")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /source/LayoutTests/fast/writing-mode/resources/DroidSansFallback-reduced.ttf /usr/local/Qt-cheri/lib/fonts")
+    boot_cheribsd.checked_run_cheribsd_command(qemu,
+                                               "cp /source/LayoutTests/resources/Ahem.ttf "
+                                               "/usr/local/Qt-cheri/lib/fonts")
+    boot_cheribsd.checked_run_cheribsd_command(qemu,
+                                               "cp "
+                                               "/source/LayoutTests/fast/writing-mode/resources/DroidSansFallback-reduced.ttf /usr/local/Qt-cheri/lib/fonts")
     boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /build/mime.cache /usr/share/mime")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /build/freedesktop.org.xml /usr/share/mime/packages/freedesktop.org.xml")
+    boot_cheribsd.checked_run_cheribsd_command(qemu,
+                                               "cp /build/freedesktop.org.xml "
+                                               "/usr/share/mime/packages/freedesktop.org.xml")
 
-    boot_cheribsd.success("To debug crashes run: `sysctl kern.corefile=/build/%N.%P.core; sysctl kern.coredump=1` and then run CHERI gdb on the host system.")
+    boot_cheribsd.success(
+        "To debug crashes run: `sysctl kern.corefile=/build/%N.%P.core; sysctl kern.coredump=1` and then run CHERI "
+        "gdb on the host system.")
 
     # copy the smaller files to /tmp to avoid the smbfs overhead
     boot_cheribsd.checked_run_cheribsd_command(qemu, "cp /build/bin/jsc.stripped /tmp/jsc")
@@ -69,11 +75,18 @@ def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
         # Check that jsc + dumprendertree work
         boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/jsc --help", timeout=1200)
         # Run a simple javascript loop
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/jsc -e 'for (i = 0; i < 10; i++) print(1 + i);'", timeout=1200)
+        boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/jsc -e 'for (i = 0; i < 10; i++) print(1 + i);'",
+                                                   timeout=1200)
         boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/DumpRenderTree -v /tmp/helloworld.html", timeout=1800)
-        boot_cheribsd.checked_run_cheribsd_command(qemu, "/tmp/DumpRenderTree -p --stdout /build/hello.png /tmp/helloworld.html", timeout=1800)
+        boot_cheribsd.checked_run_cheribsd_command(qemu,
+                                                   "/tmp/DumpRenderTree -p --stdout /build/hello.png "
+                                                   "/tmp/helloworld.html",
+                                                   timeout=1800)
         if not args.smoketest:
-            boot_cheribsd.checked_run_cheribsd_command(qemu, "/source/Tools/Scripts/run-layout-jsc -j /tmp/jsc -t /source/LayoutTests -r /build/results -x /build/results.xml", timeout=None)
+            boot_cheribsd.checked_run_cheribsd_command(qemu,
+                                                       "/source/Tools/Scripts/run-layout-jsc -j /tmp/jsc -t "
+                                                       "/source/LayoutTests -r /build/results -x /build/results.xml",
+                                                       timeout=None)
         return True
     finally:
         tests_xml_path = Path(args.build_dir, 'results.xml')
@@ -87,14 +100,16 @@ def run_qtwebkit_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Name
             boot_cheribsd.failure("Could not update JUnit XML", tests_xml_path, exit=False)
             return False
 
+
 def add_args(parser: argparse.ArgumentParser):
     parser.add_argument("--smoketest", action="store_true", required=False, default=True,
                         help="Don't run full jsc layout tests, only check that jsc and DumpRenderTree work")
     parser.add_argument("--full-test", action="store_false", required=False, dest="smoketest",
                         help="Don't run full jsc layout tests, only check that jsc and DumpRenderTree work")
 
+
 if __name__ == '__main__':
     # we don't need ssh running to execute the tests, but we need both host and source dir mounted
     run_tests_main(test_function=run_qtwebkit_tests, test_setup_function=setup_qtwebkit_test_environment,
-                   argparse_setup_callback=add_args,
-                   need_ssh=False, should_mount_builddir=True, should_mount_srcdir=True, should_mount_sysroot=True)
+                   argparse_setup_callback=add_args, need_ssh=False, should_mount_builddir=True,
+                   should_mount_srcdir=True, should_mount_sysroot=True)

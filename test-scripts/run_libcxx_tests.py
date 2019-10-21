@@ -42,10 +42,10 @@ from multiprocessing import Process, Queue, Barrier
 from pathlib import Path
 from queue import Empty
 
-# To combine the test result xmls
-from run_tests_common import junitparser, run_tests_main, boot_cheribsd
 import run_remote_lit_test
 from run_remote_lit_test import mp_debug
+# To combine the test result xmls
+from run_tests_common import junitparser, run_tests_main, boot_cheribsd
 
 
 def add_cmdline_args(parser: argparse.ArgumentParser):
@@ -79,8 +79,7 @@ def run_shard(q: Queue, barrier: Barrier, num, total, ssh_port_queue, kernel, di
         raise
 
 
-def libcxx_main(barrier: Barrier = None, mp_queue: Queue = None, ssh_port_queue: Queue = None,
-                shard_num: int = None):
+def libcxx_main(barrier: Barrier = None, mp_queue: Queue = None, ssh_port_queue: Queue = None, shard_num: int = None):
     def set_cmdline_args(args: argparse.Namespace):
         boot_cheribsd.info("Setting args:", args)
         if mp_queue:
@@ -98,10 +97,11 @@ def libcxx_main(barrier: Barrier = None, mp_queue: Queue = None, ssh_port_queue:
         with tempfile.TemporaryDirectory(prefix="cheribuild-libcxx-tests-") as tempdir:
             # TODO: do we need lit_extra_args=["-Denable_filesystem=False"]?
             # Some of the tests might fail on a SMBFS directory.
-            return run_remote_lit_test.run_remote_lit_tests("libcxx", qemu, args, tempdir, mp_q=mp_queue, barrier=barrier)
+            return run_remote_lit_test.run_remote_lit_tests("libcxx", qemu, args, tempdir, mp_q=mp_queue,
+                                                            barrier=barrier)
 
     try:
-        run_tests_main(test_function=run_libcxx_tests, need_ssh=True, # we need ssh running to execute the tests
+        run_tests_main(test_function=run_libcxx_tests, need_ssh=True,  # we need ssh running to execute the tests
                        argparse_setup_callback=add_cmdline_args, argparse_adjust_args_callback=set_cmdline_args)
     except Exception as e:
         if mp_queue:
@@ -128,12 +128,13 @@ def run_parallel(args: argparse.Namespace):
     processes = []
     # Extract the kernel + disk image in the main process to avoid race condition:
     kernel_path = boot_cheribsd.maybe_decompress(Path(args.kernel), True, True, args) if args.kernel else None
-    disk_image_path = boot_cheribsd.maybe_decompress(Path(args.disk_image), True, True, args) if args.disk_image else None
+    disk_image_path = boot_cheribsd.maybe_decompress(Path(args.disk_image), True, True,
+                                                     args) if args.disk_image else None
     for i in range(args.parallel_jobs):
         shard_num = i + 1
         boot_cheribsd.info(args)
-        p = Process(target=run_shard, args=(mp_q, mp_barrier, shard_num, args.parallel_jobs, ssh_port_queue,
-                                            kernel_path, disk_image_path, args.build_dir))
+        p = Process(target=run_shard, args=(
+        mp_q, mp_barrier, shard_num, args.parallel_jobs, ssh_port_queue, kernel_path, disk_image_path, args.build_dir))
         p.stage = run_remote_lit_test.MultiprocessStages.FINDING_SSH_PORT
         p.daemon = True  # kill process on parent exit
         p.name = "<LIBCXX test shard " + str(shard_num) + ">"
@@ -170,7 +171,8 @@ def run_parallel(args: argparse.Namespace):
                     error_suite.add_testcase(error_case)
                     result.add_testsuite(error_suite)
                 if processes[i].stage != run_remote_lit_test.MultiprocessStages.EXITED:
-                    error_msg = "ERROR: shard " + str(shard_num) + " did not exit cleanly! Was in stage: " + processes[i].stage.value
+                    error_msg = "ERROR: shard " + str(shard_num) + " did not exit cleanly! Was in stage: " + processes[
+                        i].stage.value
                     if hasattr(processes[i], "error_message"):
                         error_msg += "\nError message:\n" + processes[i].error_message
                     error_suite = junitparser.TestSuite(name="bad-exit-shard-" + str(shard_num))
@@ -190,6 +192,7 @@ def run_parallel(args: argparse.Namespace):
             print("Errors: ", result.errors)
             print("Skipped: ", result.skipped)
 
+
 def wait_or_terminate_all_shards(processes, max_time, timed_out):
     assert max_time > 0 or timed_out
     max_end_time = datetime.datetime.utcnow() + datetime.timedelta(seconds=max_time)
@@ -201,8 +204,8 @@ def wait_or_terminate_all_shards(processes, max_time, timed_out):
             try:
                 p.join(timeout=remaining_time.total_seconds())
             except:
-                boot_cheribsd.failure("Could not join job ", p.name, " in ", remaining_time.total_seconds(),
-                                      " seconds", exit=False)
+                boot_cheribsd.failure("Could not join job ", p.name, " in ", remaining_time.total_seconds(), " seconds",
+                                      exit=False)
                 timed_out = True
         if p.is_alive():
             boot_cheribsd.failure("Parallel job ", p.name, " did not exit cleanly!", exit=False)
@@ -244,7 +247,6 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
             # This seems to be happening in jenkins? Barrier should ensure that we can read without blocking!
             timed_out = True  # kill all child processes
             boot_cheribsd.failure("ERROR: Could not determine SSH port for one of the processes!", exit=False)
-
 
     # wait for the success/failure message from the process:
     # if the shard takes longer than 4 hours to run something went wrong
@@ -299,11 +301,13 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
                 mp_debug(args, "===> Shard ", shard_result[1], " reached next stage: ", shard_result[2])
                 if target_process.stage == run_remote_lit_test.MultiprocessStages.BOOTING_CHERIBSD:
                     not_booted_processes.remove(target_process)
-                    boot_cheribsd.success("Shard ", shard_result[1], " has booted successfully afer ", loop_start_time - start_time)
+                    boot_cheribsd.success("Shard ", shard_result[1], " has booted successfully afer ",
+                                          loop_start_time - start_time)
                     if len(not_booted_processes) == 0:
                         boot_cheribsd.success("All shards have booted succesfully. Releasing barrier (num_waiting = ",
                                               mp_barrier.n_waiting, ")")
-                        assert mp_barrier.n_waiting == len(processes), "{} != {}".format(mp_barrier.n_waiting, len(processes))
+                        assert mp_barrier.n_waiting == len(processes), "{} != {}".format(mp_barrier.n_waiting,
+                                                                                         len(processes))
                         mp_barrier.wait(timeout=10)
                         boot_cheribsd.success("Barrier has been released, tests should run now.")
                 # assert target_process.stage < shard_result[2], "STAGE WENT BACKWARDS?"
@@ -316,8 +320,7 @@ def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]
                     remaining_processes.remove(target_process)
                 if previous_stage != run_remote_lit_test.MultiprocessStages.RUNNING_TESTS:
                     boot_cheribsd.failure("===> FATAL: Shard ", target_process, " failed before running tests stage: ",
-                                          previous_stage, " -> Aborting all other shards",
-                                          exit=False)
+                                          previous_stage, " -> Aborting all other shards", exit=False)
                     timed_out = True
                     break
                 else:
@@ -374,6 +377,7 @@ def main():
         run_parallel(args)
     else:
         libcxx_main()
+
 
 if __name__ == '__main__':
     main()

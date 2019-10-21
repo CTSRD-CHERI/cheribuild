@@ -29,24 +29,25 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import pexpect
 import argparse
 import datetime
-import os
-import time
-import threading
 import multiprocessing
+import os
 import subprocess
 import sys
+import threading
+import time
 import typing
-from pathlib import Path
 from enum import Enum
+from pathlib import Path
+
 from run_tests_common import *
 
 KERNEL_PANIC = False
 COMPLETED = "COMPLETED"
 NEXT_STAGE = "NEXT_STAGE"
 FAILURE = "FAILURE"
+
 
 class MultiprocessStages(Enum):
     FINDING_SSH_PORT = "find free port for SSH"
@@ -57,7 +58,9 @@ class MultiprocessStages(Enum):
     FAILED = "failed"
     TIMED_OUT = "timed out"
 
+
 CURRENT_STAGE = MultiprocessStages.FINDING_SSH_PORT  # type: MultiprocessStages
+
 
 def mp_debug(cmdline_args: argparse.Namespace, *args, **kwargs):
     if cmdline_args.multiprocessing_debug:
@@ -65,7 +68,7 @@ def mp_debug(cmdline_args: argparse.Namespace, *args, **kwargs):
 
 
 def notify_main_process(cmdline_args: argparse.Namespace, stage: MultiprocessStages, mp_q: multiprocessing.Queue,
-                        barrier: "typing.Optional[multiprocessing.Barrier]"=None):
+                        barrier: "typing.Optional[multiprocessing.Barrier]" = None):
     if mp_q:
         global CURRENT_STAGE
         mp_debug(cmdline_args, "Next stage: ", CURRENT_STAGE, "->", stage)
@@ -77,6 +80,7 @@ def notify_main_process(cmdline_args: argparse.Namespace, stage: MultiprocessSta
         barrier.wait()
         mp_debug(cmdline_args, "Barrier released for stage ", stage)
         time.sleep(1)
+
 
 def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
     while not should_exit_event.wait(timeout=0.1):
@@ -92,8 +96,7 @@ def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
             boot_cheribsd.failure("GOT KERNEL PANIC!", exit=False)
             boot_cheribsd.debug_kernel_panic(qemu)
             global KERNEL_PANIC
-            KERNEL_PANIC = True
-            # TODO: tell lit to abort now....
+            KERNEL_PANIC = True  # TODO: tell lit to abort now....
         elif i == 2:
             boot_cheribsd.failure("GOT QEMU EOF!", exit=False)
             # QEMU exited?
@@ -122,13 +125,14 @@ def run_remote_lit_tests(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, a
         if mp_q:
             boot_cheribsd.failure("GOT EXCEPTION in shard ", args.internal_shard, ": ", sys.exc_info(), exit=False)
             e = sys.exc_info()[1]
-            mp_q.put((FAILURE, args.internal_shard, str(type(e)) + ": " +str(e)))
+            mp_q.put((FAILURE, args.internal_shard, str(type(e)) + ": " + str(e)))
         raise
 
 
-def run_remote_lit_tests_impl(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace, tempdir: str,
-                              mp_q: multiprocessing.Queue = None, barrier: multiprocessing.Barrier = None, llvm_lit_path: str = None, lit_extra_args: list = None) -> bool:
-    qemu.EXIT_ON_KERNEL_PANIC = False # since we run multiple threads we shouldn't use sys.exit()
+def run_remote_lit_tests_impl(testsuite: str, qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace,
+                              tempdir: str, mp_q: multiprocessing.Queue = None, barrier: multiprocessing.Barrier = None,
+                              llvm_lit_path: str = None, lit_extra_args: list = None) -> bool:
+    qemu.EXIT_ON_KERNEL_PANIC = False  # since we run multiple threads we shouldn't use sys.exit()
     boot_cheribsd.info("PID of QEMU: ", qemu.pid)
 
     if args.pretend and os.getenv("FAIL_TIMEOUT_BOOT") and args.internal_shard == 2:
@@ -167,11 +171,14 @@ Host cheribsd-test-instance
         c.write(config_contents.format(control_persist="yes"))
     Path(Path.home(), ".ssh/controlmasters").mkdir(exist_ok=True)
     boot_cheribsd.run_host_command(["cat", str(Path(tempdir, "config"))])
+
     # Check that the config file works:
 
     def check_ssh_connection(prefix):
         connection_test_start = datetime.datetime.utcnow()
-        boot_cheribsd.run_host_command(["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance", "-p", str(port), "--", "echo", "connection successful"], cwd=str(test_build_dir))
+        boot_cheribsd.run_host_command(
+            ["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance", "-p", str(port), "--", "echo",
+             "connection successful"], cwd=str(test_build_dir))
         connection_time = (datetime.datetime.utcnow() - connection_test_start).total_seconds()
         boot_cheribsd.success(prefix, " successful after ", connection_time, " seconds")
 
@@ -180,12 +187,14 @@ Host cheribsd-test-instance
     try:
         # Check that controlmaster worked by running ssh -O check
         boot_cheribsd.info("Checking if SSH control master is working.")
-        boot_cheribsd.run_host_command(["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance",
-                                        "-p", str(port), "-O", "check"], cwd=str(test_build_dir))
+        boot_cheribsd.run_host_command(
+            ["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance", "-p", str(port), "-O", "check"],
+            cwd=str(test_build_dir))
         check_ssh_connection("Second SSH connection (with controlmaster)")
         controlmaster_running = True
     except subprocess.CalledProcessError:
-        boot_cheribsd.failure("WARNING: Could not connect to ControlMaster SSH connection. Running tests will be slower", exit=False)
+        boot_cheribsd.failure(
+            "WARNING: Could not connect to ControlMaster SSH connection. Running tests will be slower", exit=False)
         with Path(tempdir, "config").open("w") as c:
             c.write(config_contents.format(control_persist="no"))
         check_ssh_connection("Second SSH connection (without controlmaster)")
@@ -196,9 +205,12 @@ Host cheribsd-test-instance
     if False:
         # slow executor using scp:
         executor = 'SSHExecutor("localhost", username="{user}", port={port})'.format(user=user, port=port)
-    executor = 'SSHExecutorWithNFSMount("cheribsd-test-instance", username="{user}", port={port}, nfs_dir="{host_dir}", ' \
+    executor = 'SSHExecutorWithNFSMount("cheribsd-test-instance", username="{user}", port={port}, nfs_dir="{' \
+               'host_dir}", ' \
                'path_in_target="/build/tmp", extra_ssh_flags=["-F", "{tempdir}/config", "-n", "-4"], ' \
-               'extra_scp_flags=["-F", "{tempdir}/config"])'.format(user=user, port=port, host_dir=str(test_build_dir / "tmp"), tempdir=tempdir)
+               'extra_scp_flags=["-F", "{tempdir}/config"])'.format(user=user, port=port,
+                                                                    host_dir=str(test_build_dir / "tmp"),
+                                                                    tempdir=tempdir)
     # TODO: I was previously passing -t -t to ssh. Is this actually needed?
     boot_cheribsd.success("Running", testsuite, "tests with executor", executor)
     notify_main_process(args, MultiprocessStages.RUNNING_TESTS, mp_q)
@@ -231,7 +243,7 @@ Host cheribsd-test-instance
     # Fixme starting lit at the same time does not work!
     # TODO: add the polling to the main thread instead of having another thread?
     # start the qemu output flushing thread so that we can see the kernel panic
-    qemu.flush_interval = 15 # flush the logfile every 15 seconds
+    qemu.flush_interval = 15  # flush the logfile every 15 seconds
     should_exit_event = threading.Event()
     t = threading.Thread(target=flush_thread, args=(qemu_logfile, qemu, should_exit_event))
     t.daemon = True
@@ -270,8 +282,9 @@ Host cheribsd-test-instance
         if controlmaster_running:
             boot_cheribsd.info("Terminating SSH controlmaster")
             try:
-                boot_cheribsd.run_host_command(["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance",
-                                                "-p", str(port), "-O", "exit"], cwd=str(test_build_dir))
+                boot_cheribsd.run_host_command(
+                    ["ssh", "-F", str(Path(tempdir, "config")), "cheribsd-test-instance", "-p", str(port), "-O",
+                     "exit"], cwd=str(test_build_dir))
             except subprocess.CalledProcessError:
                 boot_cheribsd.failure("Could not close SSH controlmaster connection.", exit=False)
         qemu.flush_interval = 0.1

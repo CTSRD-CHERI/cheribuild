@@ -31,6 +31,7 @@
 #
 import argparse
 import os
+
 from run_tests_common import *
 
 
@@ -61,7 +62,8 @@ def add_args(parser: argparse.ArgumentParser):
 
 def adjust_args(args: argparse.Namespace):
     args.build_dir = os.path.abspath(os.path.expandvars(os.path.expanduser(args.build_dir)))
-    args.smb_mount_directories.append(boot_cheribsd.SmbMount(args.libunwind_build_dir, readonly=True, in_target="/libunwind"))
+    args.smb_mount_directories.append(
+        boot_cheribsd.SmbMount(args.libunwind_build_dir, readonly=True, in_target="/libunwind"))
 
 
 if __name__ == '__main__':
