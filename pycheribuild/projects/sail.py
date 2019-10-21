@@ -246,7 +246,8 @@ class BuildSailCheriMips(ProjectUsingOpam):
 
     def __init__(self, config):
         super().__init__(config)
-        self._addRequiredSystemHeader("gmp.h", homebrew="gmp", apt="libgmp-dev")
+        # not always found in /usr/include
+        # self._addRequiredSystemHeader("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
