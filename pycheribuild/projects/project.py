@@ -389,8 +389,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             self.buildDir = self.sourceDir
 
 
-    def _addRequiredSystemTool(self, executable: str, installInstructions=None, freebsd: str=None, apt: str=None,
-                               zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
+    def addRequiredSystemTool(self, executable: str, installInstructions=None, freebsd: str=None, apt: str=None,
+                              zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
         if not installInstructions:
             installInstructions = OSInfo.install_instructions(executable, False, freebsd=freebsd, zypper=zypper, apt=apt,
                                                               homebrew=homebrew, cheribuild_target=cheribuild_target)
@@ -398,7 +398,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def _addRequiredPkgConfig(self, package: str, install_instructions=None, freebsd: str=None, apt: str = None,
                               zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
-        self._addRequiredSystemTool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config", )
+        self.addRequiredSystemTool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config", )
         if not install_instructions:
             install_instructions = OSInfo.install_instructions(package, True, freebsd=freebsd, zypper=zypper, apt=apt,
                                                                homebrew=homebrew, cheribuild_target=cheribuild_target)
@@ -406,7 +406,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def _addRequiredSystemHeader(self, header: str, install_instructions=None, freebsd: str=None, apt: str = None,
                               zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
-        self._addRequiredSystemTool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config", )
+        self.addRequiredSystemTool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config", )
         if not install_instructions:
             install_instructions = OSInfo.install_instructions(header, True, freebsd=freebsd, zypper=zypper, apt=apt,
                                                                homebrew=homebrew, cheribuild_target=cheribuild_target)
@@ -822,24 +822,24 @@ class MakeOptions(object):
     # noinspection PyProtectedMember
     def __infer_command(self) -> str:
         if self.kind == MakeCommandKind.DefaultMake:
-            self.__project._addRequiredSystemTool("make")
+            self.__project.addRequiredSystemTool("make")
             return "make"
         elif self.kind == MakeCommandKind.GnuMake:
             if IS_LINUX and not shutil.which("gmake"):
                 statusUpdate("Could not find `gmake` command, assuming `make` is GNU make")
-                self.__project._addRequiredSystemTool("make")
+                self.__project.addRequiredSystemTool("make")
                 return "make"
             else:
-                self.__project._addRequiredSystemTool("gmake", homebrew="make")
+                self.__project.addRequiredSystemTool("gmake", homebrew="make")
                 return "gmake"
         elif self.kind == MakeCommandKind.BsdMake:
             if IS_FREEBSD:
                 return "make"
             else:
-                self.__project._addRequiredSystemTool("bmake", homebrew="bmake", cheribuild_target="bmake")
+                self.__project.addRequiredSystemTool("bmake", homebrew="bmake", cheribuild_target="bmake")
                 return "bmake"
         elif self.kind == MakeCommandKind.Ninja:
-            self.__project._addRequiredSystemTool("ninja", homebrew="ninja", apt="ninja-build")
+            self.__project.addRequiredSystemTool("ninja", homebrew="ninja", apt="ninja-build")
             return "ninja"
         else:
             if self.__command is not None:
@@ -851,7 +851,7 @@ class MakeOptions(object):
         self.__command = str(value)
         # noinspection PyProtectedMember
         if not Path(value).is_absolute():
-            self.__project._addRequiredSystemTool(value, **kwargs)
+            self.__project.addRequiredSystemTool(value, **kwargs)
         self.__can_pass_j_flag = can_pass_j_flag
 
     @property
@@ -1261,10 +1261,10 @@ class Project(SimpleProject):
             if self.make_args.is_gnu_make and False:
                 # use compiledb instead of bear for gnu make
                 # https://blog.jetbrains.com/clion/2018/08/working-with-makefiles-in-clion-using-compilation-db/
-                self._addRequiredSystemTool("compiledb", installInstructions="Run `pip2 install --user compiledb``")
+                self.addRequiredSystemTool("compiledb", installInstructions="Run `pip2 install --user compiledb``")
                 self._compiledb_tool = "compiledb"
             else:
-                self._addRequiredSystemTool("bear", installInstructions="Run `cheribuild.py bear`")
+                self.addRequiredSystemTool("bear", installInstructions="Run `cheribuild.py bear`")
                 self._compiledb_tool = "bear"
         self._force_clean = False
         self._preventAssign = True
@@ -1584,7 +1584,7 @@ class CMakeProject(Project):
     def __init__(self, config, generator=Generator.Ninja):
         super().__init__(config)
         self.configureCommand = os.getenv("CMAKE_COMMAND", "cmake")
-        self._addRequiredSystemTool("cmake", homebrew="cmake", zypper="cmake", apt="cmake", freebsd="cmake")
+        self.addRequiredSystemTool("cmake", homebrew="cmake", zypper="cmake", apt="cmake", freebsd="cmake")
         # allow a -G flag in cmake-options to override the default generator (e.g. use makefiles for CLion)
         custom_generator = next((x for x in self.cmakeOptions if x.startswith("-G")), None)
         if custom_generator:

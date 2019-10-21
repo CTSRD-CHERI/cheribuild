@@ -56,8 +56,8 @@ class BuildLibObjC2(CMakeProject):
             "-DGNUSTEP_INSTALL_TYPE=NONE",
         ])
         # TODO: require libdispatch?
-        self._addRequiredSystemTool("clang")
-        self._addRequiredSystemTool("clang++")
+        self.addRequiredSystemTool("clang")
+        self.addRequiredSystemTool("clang++")
 
 
 class BuildGnuStep_Make(AutotoolsProject):

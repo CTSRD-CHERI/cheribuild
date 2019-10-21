@@ -107,7 +107,7 @@ class _BuildDiskImageBase(SimpleProject):
         # this means we can create a disk image without root privilege
         self.manifestFile = None  # type: Path
         self.extraFiles = []  # type: typing.List[Path]
-        self._addRequiredSystemTool("ssh-keygen")
+        self.addRequiredSystemTool("ssh-keygen")
 
         self.makefs_cmd = None  # type: typing.Optional[Path]
         self.mkimg_cmd = None  # type: typing.Optional[Path]
@@ -129,7 +129,7 @@ class _BuildDiskImageBase(SimpleProject):
         self.tmpdir = None  # type: Path
         self.file_templates = _AdditionalFileTemplates()
         if self.needs_special_pkg_repo:
-            self._addRequiredSystemTool("wget")  # Needed to recursively fetch the pkg repo
+            self.addRequiredSystemTool("wget")  # Needed to recursively fetch the pkg repo
 
     def addFileToImage(self, file: Path, *, baseDirectory: Path=None, user="root", group="wheel", mode=None,
                        path_in_target=None):
@@ -737,6 +737,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
 
     def makeImage(self):
         # update cheribsdbox link in case we stripped it:
+        # noinspection PyProtectedMember
         cheribsdbox_entry = self.mtree._mtree.get("./bin/cheribsdbox")
         if not cheribsdbox_entry:
             self.fatal("Could not find cheribsdbox entry in mtree file!")
@@ -751,6 +752,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                     self.fatal("Need at least one hardlink to cheribsdbox so that makefs can detect deduplicate. "
                                "This should have been created by cheribuild but something must have gone wrong")
             print("Relocating mtree path ./bin/cheribsdbox to use", cheribsdbox_path)
+            # noinspection PyProtectedMember
             for i in self.mtree._mtree.values():
                 if i.attributes.get("contents", None) == "./bin/cheribsdbox":
                     i.attributes["contents"] = cheribsdbox_path
@@ -882,11 +884,12 @@ class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
         return True
 
 def _default_freebsd_disk_image_name(config: CheriConfig, project: MultiArchBaseMixin):
-        suffix = project._crossCompileTarget.value if project._crossCompileTarget else "<TARGET>"
-        if project.compiling_for_mips():
-            if config.mips_float_abi == MipsFloatAbi.HARD:
-                suffix += "-hardfloat"
-        return config.outputRoot / ("freebsd-" + suffix + ".img")
+    xtarget = project.get_crosscompile_target(config)
+    suffix = xtarget.value if xtarget else "<TARGET>"
+    if project.compiling_for_mips():
+        if config.mips_float_abi == MipsFloatAbi.HARD:
+            suffix += "-hardfloat"
+    return config.outputRoot / ("freebsd-" + suffix + ".img")
 
 
 class BuildFreeBSDImage(_BuildMultiArchDiskImage):

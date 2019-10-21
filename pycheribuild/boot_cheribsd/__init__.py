@@ -48,7 +48,6 @@ import tempfile
 import traceback
 import typing
 from pathlib import Path
-from contextlib import closing
 from ..utils import find_free_port
 
 STARTING_INIT = "start_init: trying /sbin/init"
@@ -67,7 +66,7 @@ FATAL_ERROR_MESSAGES = [CHERI_TRAP]
 
 PRETEND = False
 MESSAGE_PREFIX = ""
-QEMU_LOGFILE = None # type: Optional[Path]
+QEMU_LOGFILE = None  # type: typing.Optional[Path]
 # To keep the port available until we start QEMU
 _SSH_SOCKET_PLACEHOLDER = None  # type: typing.Optional[socket.socket]
 
@@ -419,11 +418,11 @@ def start_dhclient(qemu: CheriBSDInstance):
     qemu.sendline("ifconfig le0 up && dhclient le0")
     i = qemu.expect([pexpect.TIMEOUT, "DHCPACK from 10.0.2.2", "dhclient already running"], timeout=120)
     if i == 0:  # Timeout
-        failure("timeout awaiting dhclient ", str(child))
+        failure("timeout awaiting dhclient ", str(qemu))
     if i == 1:
         i = qemu.expect([pexpect.TIMEOUT, "bound to"], timeout=120)
         if i == 0:  # Timeout
-            failure("timeout awaiting dhclient ", str(child))
+            failure("timeout awaiting dhclient ", str(qemu))
     success("===> le0 bound to QEMU networking")
     qemu.expect_exact(PROMPT_SH, timeout=30)
 
@@ -518,7 +517,7 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
             success("===> /etc/rc completed, got command prompt")
             # set up network (bluehive image tries to use atse0)
             if not have_dhclient:
-                start_dhclient(qemu)
+                start_dhclient(child)
             set_posix_sh_prompt(child)
         else:
             # If this was a failure of init we should get a debugger backtrace

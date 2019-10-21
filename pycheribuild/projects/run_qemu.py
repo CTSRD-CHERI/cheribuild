@@ -311,7 +311,7 @@ class _RunMultiArchFreeBSDImage(MultiArchBaseMixin, AbstractLaunchFreeBSD):
         elif xtarget == CrossCompileTarget.NATIVE or xtarget == CrossCompileTarget.I386:
             qemu_suffix = "x86_64" if xtarget == CrossCompileTarget.NATIVE else "i386"
             self.currentKernel = None  # boot from disk
-            self._addRequiredSystemTool("qemu-system-" + qemu_suffix)
+            self.addRequiredSystemTool("qemu-system-" + qemu_suffix)
             self.qemuBinary = Path(shutil.which("qemu-system-" + qemu_suffix) or "/could/not/find/qemu")
             self.machineFlags = []  # default CPU (and NOT -M malta!)
         # only QEMU-MIPS supports more than one SMB share

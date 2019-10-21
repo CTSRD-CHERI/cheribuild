@@ -74,8 +74,8 @@ class StartKDevelop(SimpleProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self._addRequiredSystemTool("cmake")
-        self._addRequiredSystemTool("qtpaths")
+        self.addRequiredSystemTool("cmake")
+        self.addRequiredSystemTool("qtpaths")
 
     def process(self):
         kdevelopBinary = BuildKDevelop.getInstallDir(self) / "bin/start-kdevelop.py"

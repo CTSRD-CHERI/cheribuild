@@ -58,7 +58,7 @@ def defaultKernelConfig(config: CheriConfig, project: "BuildFreeBSD"):
         cheri_bits = "128" if config.cheriBits == 128 else ""
         cheri_pure = "_PURECAP" if project.purecapKernel else ""
         return kernconf_name.format(bits=cheri_bits, pure=cheri_pure)
-    elif project.compiling_for_riscv() or project._crossCompileTarget == CrossCompileTarget.I386:
+    elif project.compiling_for_riscv() or project.get_crosscompile_target(config) == CrossCompileTarget.I386:
         return "GENERIC"  # TODO: what is the correct config
     else:
         assert False, "should be unreachable"
@@ -1384,7 +1384,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
         # GNU tar doesn't accept --include (and doesn't handle METALOG). bsdtar appears to be available
         # on FreeBSD and macOS by default. On Linux it is not always installed by default.
         self.bsdtar_cmd = "bsdtar"
-        self._addRequiredSystemTool("bsdtar", cheribuild_target="bsdtar", apt="bsdtar")
+        self.addRequiredSystemTool("bsdtar", cheribuild_target="bsdtar", apt="bsdtar")
         if self.compiling_for_cheri() and self.use_cheribsd_purecap_rootfs:
             self.rootfs_source_class = BuildCHERIBSDPurecap
 

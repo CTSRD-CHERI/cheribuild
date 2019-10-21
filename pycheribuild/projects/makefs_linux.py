@@ -45,7 +45,7 @@ class BuildMakefsOnLinux(Project):
         if IS_LINUX:
             self._addRequiredSystemHeader("bsd/bsd.h")
         if not IS_FREEBSD:
-            self._addRequiredSystemTool("bmake", homebrew="bmake", cheribuild_target="bmake")
+            self.addRequiredSystemTool("bmake", homebrew="bmake", cheribuild_target="bmake")
 
     def checkSystemDependencies(self):
         if IS_FREEBSD:

@@ -133,6 +133,7 @@ class Target(object):
         self.__project = None
         self._creating_project = False
 
+    # noinspection PyProtectedMember
     def __lt__(self, other: "Target"):
         # print(self, "__lt__", other)
         # if this target is one of the dependencies order it before

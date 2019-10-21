@@ -60,7 +60,7 @@ __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includ
            "warningMessage", "Type_T", "typing", "popen_handle_noexec", "extract_version", "get_program_version", # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latestClangTool", "SafeDict", # no-combine
            "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
-           "get_version_output", "classproperty", "find_free_port"]  # no-combine
+           "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection"]  # no-combine
 
 
 _TEST_MODE = False

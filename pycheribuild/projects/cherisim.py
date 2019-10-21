@@ -44,7 +44,7 @@ class BuildCheriSim(Project):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # TODO: move this to project
-        self._addRequiredSystemTool("dtc", apt="device-tree-compiler")
+        self.addRequiredSystemTool("dtc", apt="device-tree-compiler")
         self._addRequiredSystemHeader("mpfr.h", apt="libmpfr-dev")
         self.make_args.set(COP1="1" if self.build_fpu else "0")
         if self.build_cheri:

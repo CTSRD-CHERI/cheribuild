@@ -67,7 +67,7 @@ class BuildFreestandingSdk(SimpleProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         if IS_FREEBSD:
-            self._addRequiredSystemTool("ar")
+            self.addRequiredSystemTool("ar")
         self.cheribsdBuildRoot = None
 
     def installCMakeConfig(self):

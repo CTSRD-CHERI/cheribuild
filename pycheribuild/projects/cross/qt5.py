@@ -320,7 +320,7 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
             "--without-python", "--without-modules", "--without-lzma",
         ])
         if IS_MAC:
-            self._addRequiredSystemTool("glibtoolize", homebrew="libtool")
+            self.addRequiredSystemTool("glibtoolize", homebrew="libtool")
             self.configureEnvironment["LIBTOOLIZE"] = "glibtoolize"
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-capability-misuse"]  # FIXME: build with capability -Werror
 
@@ -346,8 +346,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                          # generator=BuildQtWebkit.Generator.Makefiles
                          generator=BuildQtWebkit.Generator.Ninja
                          )
-        self._addRequiredSystemTool("update-mime-database", homebrew="shared-mime-info", apt="shared-mime-info")
-        self._addRequiredSystemTool("ruby", apt="ruby")
+        self.addRequiredSystemTool("update-mime-database", homebrew="shared-mime-info", apt="shared-mime-info")
+        self.addRequiredSystemTool("ruby", apt="ruby")
         if not self.compiling_for_host():
             self._linkage = Linkage.STATIC  # currently dynamic doesn't work
 
@@ -398,7 +398,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             if not self.compiling_for_host():
                 self.add_cmake_options(QTWEBKIT_LINK_STATIC_ONLY=self.force_static_linkage)
 
-        self._addRequiredSystemTool("gperf")
+        self.addRequiredSystemTool("gperf")
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):

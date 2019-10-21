@@ -39,7 +39,7 @@ class OpamMixin(object):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         assert isinstance(self, SimpleProject)
-        self._addRequiredSystemTool("opam", homebrew="opam", cheribuild_target="opam-2.0")
+        self.addRequiredSystemTool("opam", homebrew="opam", cheribuild_target="opam-2.0")
         self.required_ocaml_version = "4.06.1"
         self.__using_correct_switch = False
         self.__ignore_switch_version = False
@@ -132,8 +132,8 @@ class Opam2(SimpleProject):
     def __init__(self, config):
         super().__init__(config)
         if IS_LINUX:
-            self._addRequiredSystemTool("wget")
-            self._addRequiredSystemTool("bwrap", cheribuild_target="bubblewrap")
+            self.addRequiredSystemTool("wget")
+            self.addRequiredSystemTool("bwrap", cheribuild_target="bubblewrap")
 
     def process(self):
         if IS_LINUX:
@@ -172,7 +172,7 @@ class BuildSailFromOpam(OpamMixin, SimpleProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self._addRequiredSystemTool("z3", homebrew="z3 --without-python@2 --with-python")
+        self.addRequiredSystemTool("z3", homebrew="z3 --without-python@2 --with-python")
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -332,9 +332,9 @@ class OcamlProject(OpamMixin, Project):
         super().__init__(config)
         # The homebrew version of ocaml doesn't seem compatible -> suggest --without-ocaml --without-aspcud
         # This avoids pulling in incompatible ocaml and the python@2 formula
-        # self._addRequiredSystemTool("opam", homebrew="opam --without-ocaml --without-camlp4 --without-aspcud")
-        self._addRequiredSystemTool("opam",
-            homebrew="Installing with hombrew generates a broken ocaml env, use this instead: "
+        # self.addRequiredSystemTool("opam", homebrew="opam --without-ocaml --without-camlp4 --without-aspcud")
+        self.addRequiredSystemTool("opam",
+                                   homebrew="Installing with hombrew generates a broken ocaml env, use this instead: "
                      "`wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sh -s /usr/local/bin`")
 
     def checkSystemDependencies(self):
@@ -373,7 +373,7 @@ class BuildSailFromSource(OcamlProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self._addRequiredSystemTool("z3", homebrew="z3 --without-python@2 --with-python")
+        self.addRequiredSystemTool("z3", homebrew="z3 --without-python@2 --with-python")
 
     def checkSystemDependencies(self):
         super().checkSystemDependencies()

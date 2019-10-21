@@ -68,10 +68,10 @@ class BuildQEMUBase(AutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self._addRequiredSystemTool("glibtoolize" if IS_MAC else "libtoolize", homebrew="libtool")
-        self._addRequiredSystemTool("autoreconf", homebrew="autoconf")
-        self._addRequiredSystemTool("aclocal", homebrew="automake")
-        self._addRequiredSystemTool("python2.7", installInstructions="QEMU needs Python 2.7 installed")
+        self.addRequiredSystemTool("glibtoolize" if IS_MAC else "libtoolize", homebrew="libtool")
+        self.addRequiredSystemTool("autoreconf", homebrew="autoconf")
+        self.addRequiredSystemTool("aclocal", homebrew="automake")
+        self.addRequiredSystemTool("python2.7", installInstructions="QEMU needs Python 2.7 installed")
 
         self._addRequiredPkgConfig("pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel", apt="libpixman-1-dev",
                                    freebsd="pixman")
@@ -189,8 +189,8 @@ class BuildQEMUBase(AutotoolsProject):
             if (self.config.otherToolsDir / "sbin/smbd").exists():
                 smbd_path = self.config.otherToolsDir / "sbin/smbd"
 
-            self._addRequiredSystemTool(smbd_path, cheribuild_target="samba", freebsd="samba48", apt="samba",
-                                        homebrew="samba")
+            self.addRequiredSystemTool(smbd_path, cheribuild_target="samba", freebsd="samba48", apt="samba",
+                                       homebrew="samba")
 
             self.configureArgs.append("--smbd=" + str(smbd_path))
             if not Path(smbd_path).exists():

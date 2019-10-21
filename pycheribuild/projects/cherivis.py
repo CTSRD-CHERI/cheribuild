@@ -67,10 +67,10 @@ class BuildCheriVis(Project):
     # TODO: allow external cheritrace
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self._addRequiredSystemTool("clang")
-        self._addRequiredSystemTool("clang++")
+        self.addRequiredSystemTool("clang")
+        self.addRequiredSystemTool("clang++")
         if IS_LINUX or IS_FREEBSD:
-            self._addRequiredSystemTool("gnustep-config", installInstructions=gnuStepInstallInstructions)
+            self.addRequiredSystemTool("gnustep-config", installInstructions=gnuStepInstallInstructions)
         self.gnustepMakefilesDir = None  # type: Path
         if IS_MAC:
             self.make_args.set_command("xcodebuild", can_pass_j_flag=False, installInstructions="Install XCode")
