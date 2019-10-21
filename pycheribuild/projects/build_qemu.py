@@ -254,9 +254,6 @@ class BuildQEMU(BuildQEMUBase):
                                           default=True)
         cls.statistics = cls.addBoolOption("statistics", showHelp=True, default=False,
                                            help="Collect statistics on out-of-bounds capability creation.")
-        cls.legacy_registers = cls.addBoolOption("legacy-registers", showHelp=False,
-                                                 help="Build QEMU with the special registers mapped into the GPRs",
-                                                 default=False)
 
     @classmethod
     def qemu_binary(cls, caller: SimpleProject):
@@ -271,8 +268,6 @@ class BuildQEMU(BuildQEMUBase):
 
         if self.unaligned:
             self._extraCFlags += " -DCHERI_UNALIGNED"
-        if self.legacy_registers:
-            self._extraCFlags += " -DCHERI_C0_NULL=0"
         if self.statistics:
             self._extraCFlags += " -DDO_CHERI_STATISTICS=1"
 
