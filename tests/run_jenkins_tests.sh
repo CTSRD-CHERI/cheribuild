@@ -2,20 +2,16 @@
 
 pytest_binary="python3 -m pytest"
 
-if [[ "$1" = "3.4.0" ]]; then
-    test_prefix="3.4.0"
-elif [[ "$1" = "3.5.0" ]]; then
-    test_prefix="3.5.0"
-elif [[ "$1" = "3.6" ]]; then
-    test_prefix="3.6"
-elif [[ "$1" = "rc" ]]; then
-    test_prefix="rc"
-elif [[ "$1" = "ubuntu" ]]; then
-    test_prefix="ubuntu"
-else
+
+case  $1  in
+  3.5.0|3.6.0|3.7.0|3.8.0|rc|ubuntu)
+    test_prefix=$1
+    ;;
+  *)
     echo "INVALID TARGET $1"
     exit 1
-fi
+    ;;
+esac
 
 _srcdir=../src
 set -e
