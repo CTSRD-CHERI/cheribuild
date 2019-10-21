@@ -369,7 +369,7 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
     def create_tests_dir(self, output_dir: Path) -> Path:
         self.__check_valid_benchmark_list()
         spec_archive = self.buildDir / "spec/{}.cpu2006bundle.bz2".format(self.config_name)
-        self.run_cmd("tar", "-xvjf", spec_archive, cwd=output_dir, runInPretendMode=spec_archive.exists())
+        self.run_cmd("tar", "-xvjf", spec_archive, cwd=output_dir, runInPretendMode=spec_archive.exists() and output_dir.exists(), raiseInPretendMode=False)
         spec_root = output_dir / "benchspec/CPU2006"
         if spec_root.exists():
             for dir in spec_root.iterdir():
