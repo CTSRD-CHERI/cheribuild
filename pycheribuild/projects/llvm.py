@@ -42,7 +42,6 @@ class BuildLLVMBase(CMakeProject):
     githubBaseUrl = "https://github.com/CTSRD-CHERI/"
     repository = GitRepository(githubBaseUrl + "llvm.git")
     no_default_sysroot = None
-    appendCheriBitsToBuildDir = True
     skip_cheri_symlinks = True
     doNotAddToTargets = True
     can_build_with_asan = True
@@ -137,8 +136,6 @@ class BuildLLVMBase(CMakeProject):
         # don't set LLVM_ENABLE_ASSERTIONS if it is defined in cmake-options
         if "LLVM_ENABLE_ASSERTIONS" not in "".join(self.cmakeOptions):
             self.add_cmake_options(LLVM_ENABLE_ASSERTIONS=self.enable_assertions)
-        if self.config.cheriBits == 128 and not self.config.unified_sdk:
-            self.add_cmake_options(LLVM_CHERI_IS_128=True)
         self.add_cmake_options(LLVM_LIT_ARGS="--max-time 3600 --timeout 300 -s -vv")
 
         if self.enable_lto:
@@ -227,7 +224,6 @@ class BuildLLVMBase(CMakeProject):
 
 
 class BuildLLVMMonoRepoBase(BuildLLVMBase):
-    appendCheriBitsToBuildDir = False
     doNotAddToTargets = True
     llvm_subdir = "llvm"
 

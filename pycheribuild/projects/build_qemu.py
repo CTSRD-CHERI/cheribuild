@@ -240,7 +240,6 @@ class BuildQEMUBase(AutotoolsProject):
 class BuildQEMU(BuildQEMUBase):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git")
     gitBranch = "qemu-cheri"
-    appendCheriBitsToBuildDir = True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -259,24 +258,15 @@ class BuildQEMU(BuildQEMUBase):
     @classmethod
     def qemu_binary(cls, caller: SimpleProject):
         binary_name = "qemu-system-cheri"
-        if caller.config.unified_sdk:
-            binary_name += caller.config.cheriBitsStr
-            if caller.config.cheriBits == 128 and cls.get_instance(caller, caller.config).magic128:
-                binary_name += "magic"
-
+        binary_name += caller.config.cheriBitsStr
+        if caller.config.cheriBits == 128 and cls.get_instance(caller, caller.config).magic128:
+            binary_name += "magic"
         return caller.config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
 
-        if self.config.unified_sdk:
-            self._qemuTargets = "cheri256-softmmu,cheri128-softmmu,cheri128magic-softmmu,mips64-softmmu"
-        else:
-            self._qemuTargets = "cheri-softmmu"
-            if config.cheriBits == 128:
-                # enable QEMU 128 bit capabilities
-                # https://github.com/CTSRD-CHERI/qemu/commit/40a7fc2823e2356fa5ffe1ee1d672f1d5ec39a12
-                self._extraCFlags += " -DCHERI_128=1" if not self.magic128 else " -DCHERI_MAGIC128=1"
+        self._qemuTargets = "cheri256-softmmu,cheri128-softmmu,cheri128magic-softmmu,mips64-softmmu"
         if self.unaligned:
             self._extraCFlags += " -DCHERI_UNALIGNED"
         if self.legacy_registers:
@@ -313,9 +303,7 @@ class BuildCheriOSQEMU(BuildQEMU):
         super().__init__(config)
         self._qemuTargets = "cheri256-softmmu,cheri128-softmmu"
 
-
     @classmethod
     def qemu_binary(cls, caller: SimpleProject):
-        assert caller.config.unified_sdk, "UPDATE PLS"
         binary_name = "qemu-system-cheri" + caller.config.cheriBitsStr
         return cls.get_instance(caller, caller.config).installDir / "bin" / binary_name

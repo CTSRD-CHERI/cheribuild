@@ -197,8 +197,6 @@ class CheriConfig(object):
         self.subobject_debug = loader.addBoolOption("subobject-debug", group=loader.crossCompileOptionsGroup,
             default=True, helpHidden=False, help="Clear software permission bit 2 when subobject bounds reduced size"
                                                  " (Note: this should be turned off for benchmarks!)")
-        self.unified_sdk = loader.addBoolOption("unified-sdk", help="Build a single SDK instead of separate 128"
-                                                " and 256 bits ones", default=True)
 
         self.clang_colour_diags = loader.addBoolOption("clang-colour-diags", "-clang-color-diags", default=True,
                                                        help="Force CHERI clang to emit coloured diagnostics")
@@ -388,7 +386,7 @@ class CheriConfig(object):
 
     @property
     def sdkDirectoryName(self):
-        return "sdk" if self.unified_sdk else "sdk" + self.cheriBitsStr
+        return "sdk"
 
     @property
     def sdkBinDir(self):

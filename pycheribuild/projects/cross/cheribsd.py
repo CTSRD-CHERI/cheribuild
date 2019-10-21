@@ -1503,14 +1503,6 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
         if self.config.skipBuildworld:
             statusUpdate("Not building sysroot because --skip-buildworld was passed")
             return
-        # prepare for a unified SDK that contains sysroot128/sysroot256
-        if not self.config.unified_sdk:
-            unprefixed_sysroot = self.config.crossSysrootPath.parent / "sysroot"
-            if unprefixed_sysroot.is_dir() and not unprefixed_sysroot.is_symlink():
-                self.cleanDirectory(unprefixed_sysroot)
-                if not self.config.pretend:
-                    unprefixed_sysroot.rmdir()
-                self.createSymlink(self.crossSysrootPath, unprefixed_sysroot)
 
         with self.asyncCleanDirectory(self.crossSysrootPath):
             building_on_host = IS_FREEBSD or self.rootfs_source_class.get_instance(self).crossbuild

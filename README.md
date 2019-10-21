@@ -321,8 +321,6 @@ optional arguments:
                         (default: 'False')
   --pass-k-to-make, -k  Pass the -k flag to make to continue after the first
                         error (default: 'False')
-  --no-unified-sdk      Do not build a single SDK instead of separate 128 and
-                        256 bits ones
   --no-clang-colour-diags
                         Do not force CHERI clang to emit coloured diagnostics
   --configure-only      Only run the configure step (skip build and install)

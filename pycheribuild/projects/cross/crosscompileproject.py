@@ -377,9 +377,18 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
     @property
     def default_compiler_flags(self):
+        result = []
+        if self.use_lto:
+            result.append("-flto")
+        if self.use_cfi:
+            if not self.use_lto:
+                self.fatal("Cannot use CFI without LTO!")
+            assert not self.compiling_for_cheri()
+            result.append("-fsanitize=cfi")
+            result.append("-fvisibility=hidden")
         if self.compiling_for_host():
-            return self.COMMON_FLAGS + self.compiler_warning_flags
-        result = self._essential_compiler_and_linker_flags + self.optimizationFlags
+            return result + self.COMMON_FLAGS + self.compiler_warning_flags
+        result += self._essential_compiler_and_linker_flags + self.optimizationFlags
         result += self.COMMON_FLAGS + self.compiler_warning_flags
         if self.config.csetbounds_stats:
             result.extend(["-mllvm", "-collect-csetbounds-output=" + str(self.csetbounds_stats_file),
@@ -405,6 +414,11 @@ class CrossCompileMixin(MultiArchBaseMixin):
         result = list(self.COMMON_LDFLAGS)
         if self.force_static_linkage:
             result.append("-static")
+        if self.use_lto:
+            result.append("-flto")
+        if self.use_cfi:
+            assert not self.compiling_for_cheri()
+            result.append("-fsanitize=cfi")
         if self.compiling_for_host():
             # return ["-fuse-ld=" + self.linker]
             return result
@@ -461,7 +475,10 @@ class CrossCompileMixin(MultiArchBaseMixin):
         assert issubclass(cls, SimpleProject)
         super().setupConfigOptions(**kwargs)
         cls._debugInfo = cls.addBoolOption("debug-info",
-            help="build with debug info by default (Note: this only affects --cross-build-type=DEFAULT)", default=True)
+            help="build with debug info by default (Note: this only affects --cross-build-type=DEFAULT)", default=True, )
+        cls.use_lto = cls.addBoolOption("use-lto", help="Build with LTO", default=False)
+        cls.use_cfi = cls.addBoolOption("use-cfi", help="Build with LTO", default=False, only_add_for_targets=[CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS])
+
         cls._optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
                                                      default=[])
         cls.cross_build_type = cls.addConfigOption("cross-build-type",

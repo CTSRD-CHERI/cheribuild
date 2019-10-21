@@ -1103,12 +1103,7 @@ class Project(SimpleProject):
         if target is None:
             target = self.get_crosscompile_target(config)
         if target is None:
-            # HACK since I can't make the class variable in BuildCheriLLVM dynamic
-            # TODO: remove once unified SDK is stable
-            append_bits = self.appendCheriBitsToBuildDir
-            if self.target in ("llvm", "qemu") and config.unified_sdk:
-                append_bits = False
-            result = "-" + config.cheriBitsStr if append_bits else ""
+            result = "-" + config.cheriBitsStr if self.appendCheriBitsToBuildDir else ""
         elif target == CrossCompileTarget.CHERI:
             result = "-" + config.cheri_bits_and_abi_str
         elif target == CrossCompileTarget.MIPS and self.mips_build_hybrid:
