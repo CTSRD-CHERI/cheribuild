@@ -75,7 +75,7 @@ class BuildLLVMBase(CMakeProject):
         super().__init__(config)
         self.cCompiler = config.clangPath
         self.cppCompiler = config.clangPlusPlusPath
-        # this must be added after checkSystemDependencies
+        # this must be added after check_system_dependencies
         link_jobs = 2 if self.enable_lto else 4
         if os.cpu_count() >= 24:
             link_jobs *= 2  # Increase number of link jobs for powerful servers
@@ -168,8 +168,8 @@ class BuildLLVMBase(CMakeProject):
             sudo apt-get install clang-3.8"""
         return "Try installing clang 3.8 or newer using your system package manager"
 
-    def checkSystemDependencies(self):
-        super().checkSystemDependencies()
+    def check_system_dependencies(self):
+        super().check_system_dependencies()
         # make sure we have at least version 3.8
         self.checkClangVersion(3, 8, installInstructions=self.clang38InstallHint())
 

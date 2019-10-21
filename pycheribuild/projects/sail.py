@@ -52,10 +52,10 @@ class OpamMixin(object):
     def opamroot(self):
         return self.config.sdkDir / "opamroot"
 
-    def checkSystemDependencies(self):
+    def check_system_dependencies(self):
         assert isinstance(self, SimpleProject)
         # noinspection PyUnresolvedReferences
-        super().checkSystemDependencies()
+        super().check_system_dependencies()
         opam_path = shutil.which("opam")
         if opam_path:
             opam_version = get_program_version(Path(opam_path), regex=b"(\\d+)\\.(\\d+)\\.?(\\d+)?")
@@ -357,8 +357,8 @@ class OcamlProject(OpamMixin, Project):
                                             "`wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh "
                                             "-O - | sh -s /usr/local/bin`")
 
-    def checkSystemDependencies(self):
-        super().checkSystemDependencies()
+    def check_system_dependencies(self):
+        super().check_system_dependencies()
         for pkg in self.needed_ocaml_packages:
             try:
                 self.run_in_ocaml_env("ocamlfind query " + shlex.quote(pkg), cwd="/", print_verbose_only=True)
@@ -398,8 +398,8 @@ class BuildSailFromSource(OcamlProject):
         super().__init__(config)
         self.addRequiredSystemTool("z3", homebrew="z3 --without-python@2 --with-python")
 
-    def checkSystemDependencies(self):
-        super().checkSystemDependencies()
+    def check_system_dependencies(self):
+        super().check_system_dependencies()
         try:
             # opam and ocamlfind don't agree for menhir
             self.run_in_ocaml_env("ocamlfind query menhirLib", cwd="/", print_verbose_only=True)

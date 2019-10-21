@@ -1396,8 +1396,8 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
         runCmd("cc", "-x", "c", "-", "-o", self.config.sdkDir / "bin/fixlinks", input=fixlinksSrc)
         runCmd(self.config.sdkDir / "bin/fixlinks", cwd=self.crossSysrootPath / "usr/lib")
 
-    def checkSystemDependencies(self):
-        super().checkSystemDependencies()
+    def check_system_dependencies(self):
+        super().check_system_dependencies()
         if not IS_FREEBSD and not self.remotePath and not self.rootfs_source_class.get_instance(self).crossbuild:
             configOption = "'--" + self.target + "/" + "remote-sdk-path'"
             self.fatal("Path to the remote SDK is not set, option", configOption,

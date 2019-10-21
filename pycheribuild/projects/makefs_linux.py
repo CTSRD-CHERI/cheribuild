@@ -47,10 +47,10 @@ class BuildMakefsOnLinux(Project):
         if not IS_FREEBSD:
             self.addRequiredSystemTool("bmake", homebrew="bmake", cheribuild_target="bmake")
 
-    def checkSystemDependencies(self):
+    def check_system_dependencies(self):
         if IS_FREEBSD:
             return  # not need on FreeBSD
-        super().checkSystemDependencies()
+        super().check_system_dependencies()
         if not Path("/usr/include/bsd/bsd.h").is_file():
             self.dependencyError("libbsd must be installed to compile makefs on linux")
 

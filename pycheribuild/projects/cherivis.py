@@ -84,9 +84,9 @@ class BuildCheriVis(Project):
         self.cheritrace_subproject.buildDir = self.sourceDir / "cheritrace/Build"
         self.cheritrace_subproject._installDir = "/this/path/does/not/exist"
 
-    def checkSystemDependencies(self):
-        super().checkSystemDependencies()
-        self.cheritrace_subproject.checkSystemDependencies()
+    def check_system_dependencies(self):
+        super().check_system_dependencies()
+        self.cheritrace_subproject.check_system_dependencies()
 
         # expectedCheritraceLib = str(self.config.sdkDir / "lib/libcheritrace.a")
         # cheritraceLib = Path(os.getenv("CHERITRACE_LIB") or expectedCheritraceLib)

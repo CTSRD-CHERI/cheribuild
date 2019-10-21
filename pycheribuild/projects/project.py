@@ -575,7 +575,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             installInstructions = installInstructions()
         self.fatal("Dependency for", self.target, "missing:", *args, fixitHint=installInstructions)
 
-    def checkSystemDependencies(self) -> None:
+    def check_system_dependencies(self) -> None:
         """
         Checks that all the system dependencies (required tool, etc) are available
         :return: Throws an error if dependencies are missing
@@ -1175,11 +1175,11 @@ class Project(SimpleProject):
         else:
             return False
 
-    def checkSystemDependencies(self):
+    def check_system_dependencies(self):
         # Check that the make command exists (this will also add it to the required system tools)
         if self.make_args.command is None:
             self.fatal("Make command not set!")
-        super().checkSystemDependencies()
+        super().check_system_dependencies()
 
     @classmethod
     def setupConfigOptions(cls, installDirectoryHelp="", **kwargs):
@@ -1511,7 +1511,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if not self.config.skipUpdate:
             self.update()
         if not self._systemDepsChecked:
-            self.checkSystemDependencies()
+            self.check_system_dependencies()
         assert self._systemDepsChecked, "self._systemDepsChecked must be set by now!"
 
         last_build_file = Path(self.buildDir, ".last_build_kind")
@@ -1669,12 +1669,12 @@ class CMakeProject(Project):
         assert cmd.is_absolute()
         return get_program_version(cmd, program_name=b"cmake")
 
-    def checkSystemDependencies(self):
+    def check_system_dependencies(self):
         if not Path(self.configureCommand).is_absolute():
             abspath = shutil.which(self.configureCommand)
             if abspath:
                 self.configureCommand = abspath
-        super().checkSystemDependencies()
+        super().check_system_dependencies()
         if self.__minimum_cmake_version:
             # try to find cmake 3.4 or newer
             versionComponents = self._get_cmake_version()

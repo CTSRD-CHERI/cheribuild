@@ -128,10 +128,10 @@ class BuildGnuStep_Gui(GnuStepModule):
     def __init__(self, config: CheriConfig):
         super().__init__(config, moduleName="gui")
 
-    def checkSystemDependencies(self):
+    def check_system_dependencies(self):
         # TODO check that libjpeg62-devel is not installed on opensuse, must use libjpeg8-devel
         # rpm -q libjpeg62-devel must not return 0
-        super().checkSystemDependencies()
+        super().check_system_dependencies()
 
 
 class BuildGnuStep_Back(GnuStepModule):

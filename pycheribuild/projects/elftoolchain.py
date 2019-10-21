@@ -81,8 +81,8 @@ class BuildElftoolchain(Project):
         cls.build_static = cls.addBoolOption("build-static", help="Try to link elftoolchain statically "
                                                                   "(needs patches on Linux)")
 
-    def checkSystemDependencies(self):
-        super().checkSystemDependencies()
+    def check_system_dependencies(self):
+        super().check_system_dependencies()
         if IS_MAC and not Path("/usr/local/opt/libarchive/lib").exists():
             self.dependencyError("libarchive is missing", installInstructions="Run `brew install libarchive`")
 

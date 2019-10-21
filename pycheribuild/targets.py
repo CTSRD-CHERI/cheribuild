@@ -65,7 +65,7 @@ class Target(object):
         project = self.get_or_create_project(None, config)
         with setEnv(PATH=config.dollarPathWithOtherTools):
             # make sure all system dependencies exist first
-            project.checkSystemDependencies()
+            project.check_system_dependencies()
 
     def create_project(self, config: CheriConfig) -> "SimpleProject":
         assert not self._creating_project
