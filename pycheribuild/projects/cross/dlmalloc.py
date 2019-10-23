@@ -53,7 +53,7 @@ class DLMalloc(CrossCompileProject):
         cls.qmabs            = cls.addConfigOption("qmabs", kind=int,
                                                    help="Quarantine memory absolute threshold")
 
-        cls.qmratio          = cls.addConfigOption("qmratio", kind=int,
+        cls.qmratio          = cls.addConfigOption("qmratio", kind=float,
                                                    help="Quarantine memory ratio threshold")
 
         cls.qmmin            = cls.addConfigOption("qmmin", kind=int,
