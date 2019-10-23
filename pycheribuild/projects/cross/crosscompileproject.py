@@ -210,7 +210,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 # This break e.g. compiler_rt: self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "cheri-qemu-elf-cheri" + self.config.cheriBitsStr
                 if self.should_use_extra_c_compat_flags():
                     self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
-                elif self.config.cheri_cap_table_abi:
+                if self.config.cheri_cap_table_abi:
                     self.COMMON_FLAGS.append("-cheri-cap-table-abi=" + self.config.cheri_cap_table_abi)
             else:
                 assert self.compiling_for_mips()
@@ -298,10 +298,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
         if not self.compiling_for_cheri():
             return []
         # Build with virtual address interpretation, data-dependent provenance and pcrelative captable ABI
-        return ["-cheri-uintcap=addr", "-Xclang", "-cheri-data-dependent-provenance",
-                "-cheri-cap-table-abi=pcrel"
-                # "-cheri-cap-table-abi=legacy" # for now
-                ]
+        return ["-cheri-uintcap=addr", "-Xclang", "-cheri-data-dependent-provenance"]
 
     @property
     def targetTripleWithVersion(self):
