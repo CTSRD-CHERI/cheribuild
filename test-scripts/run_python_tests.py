@@ -54,8 +54,7 @@ def run_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) ->
 
     if args.full_test:
         # Run the full test suite:
-        qemu.checked_run("cd /build && ./{} -m test -v".format(build_python_exe))
-
+        qemu.checked_run("cd /build && ./{} -m test -v --junit-xml=python-tests.xml".format(build_python_exe))
     return True
 
 

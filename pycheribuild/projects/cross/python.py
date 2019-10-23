@@ -28,9 +28,10 @@
 # SUCH DAMAGE.
 #
 
+import os
+
 from .crosscompileproject import *
 from ...utils import is_case_sensitive_dir
-import os
 
 
 # XXXAR: duplicated from ICU4C should add a shared variant
@@ -75,14 +76,15 @@ class BuildPython(CrossCompileAutotoolsProject):
                 self.fatal("Native python3 doesn't exist, you must build the `python-native` target first.")
             self.add_configure_vars(
                 ac_cv_buggy_getaddrinfo="no",
-                # PYTHON_FOR_BUILD=str(native_python), # Doesn't work since that remove all flags, need to set PATH instead
+                # Doesn't work since that remove all flags, need to set PATH instead
+                # PYTHON_FOR_BUILD=str(native_python),
                 # PYTHON_FOR_REGEN=str(native_python),
                 PATH=str(native_python.parent) + ":" + os.getenv("PATH"),
                 READELF=str(self.config.sdkBinDir / "llvm-readelf"),
                 AR=str(self.config.sdkBinDir / "llvm-ar"),
                 ac_cv_file__dev_ptmx="no",  # no /dev/ptmx file on cheribsd
                 ac_cv_file__dev_ptc="no",  # no /dev/ptc file on cheribsd
-            )
+                )
             # self.configureEnvironment["ac_cv_file__dev_ptmx+set"] = "set"
             # self.configureEnvironment["ac_cv_file__dev_ptc+set"] = "set"
             # TODO: do I need to set? ac_sys_release=13.0
@@ -96,8 +98,9 @@ class BuildPython(CrossCompileAutotoolsProject):
         # python build system adds .exe for case-insensitive dirs
         suffix = "" if is_case_sensitive_dir(self.buildDir) else ".exe"
         if self.compiling_for_host():
-            self.run_cmd(self.buildDir / ("python" + suffix), "-m", "test", cwd=self.buildDir)
+            self.run_cmd(self.buildDir / ("python" + suffix), "-m", "test", "-w", "--junit-xml=python-tests.xml",
+                         self.config.makeJFlag, cwd=self.buildDir)
         else:
             # Python executes tons of system calls, hopefully using the benchmark kernel helps
-            self.run_cheribsd_test_script("run_python_tests.py", "--buildexe-suffix=" + suffix, mount_installdir=True, mount_sourcedir=True,
-                                          mount_builddir=True, use_benchmark_kernel_by_default=True)
+            self.run_cheribsd_test_script("run_python_tests.py", "--buildexe-suffix=" + suffix, mount_installdir=True,
+                                          mount_sourcedir=True, use_benchmark_kernel_by_default=True)
