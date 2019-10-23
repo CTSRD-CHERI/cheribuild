@@ -55,12 +55,13 @@ else:
 
 
 # reduce the number of import statements per project  # no-combine
-__all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includeLocalFile", "CompilerInfo",  # no-combine
+__all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includeLocalFile", "CompilerInfo",   # no-combine
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
-           "warningMessage", "Type_T", "typing", "popen_handle_noexec", "extract_version", "get_program_version", # no-combine
-           "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latestClangTool", "SafeDict", # no-combine
+           "warningMessage", "Type_T", "typing", "popen_handle_noexec", "extract_version", "get_program_version",  # no-combine
+           "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latestClangTool", "SafeDict",  # no-combine
            "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
-           "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection"]  # no-combine
+           "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection", # no-combine
+           "is_case_sensitive_dir"]  # no-combine
 
 
 _TEST_MODE = False
@@ -505,6 +506,28 @@ def have_working_internet_connection():
     except Exception as ex:
         fatalError("Something went wrong  while checking for internet connection", ex)
         return False
+
+
+def is_case_sensitive_dir(d: Path):
+    if not d.exists():
+        # assume true for macos:
+        if IS_MAC:
+            return False
+        return True  # XXX: exception?
+    path_upper = d / "TestDirCaseSensitive"
+    path_lower = d / "testdircasesensitive"
+    if path_upper.exists():
+        path_upper.rmdir()
+    if path_lower.exists():
+        path_lower.rmdir()
+    path_upper.mkdir()
+    if path_lower.exists():
+        # Lowercase dir found -> case insensitive
+        path_lower.rmdir()
+        return False
+    path_upper.rmdir()
+    return True
+
 
 class OSInfo(object):
     IS_LINUX = sys.platform.startswith("linux")

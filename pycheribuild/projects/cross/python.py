@@ -29,6 +29,7 @@
 #
 
 from .crosscompileproject import *
+from ...utils import is_case_sensitive_dir
 import os
 
 
@@ -57,7 +58,13 @@ class BuildPython(CrossCompileAutotoolsProject):
             self.configureArgs.append("--with-pydebug")
             # XXXAR: always add assertions?
             self.configureArgs.append("--with-assertions")
-        self.configureArgs.append("--with-computed-gotos")
+
+        if self.compiling_for_cheri():
+            # computed gotos currently crash the compiler...
+            self.configureArgs.append("--without-computed-gotos")
+        else:
+            self.configureArgs.append("--with-computed-gotos")
+
         if not self.compiling_for_host():
             self.configureArgs.append("--without-pymalloc")  # use system malloc
             self.configureArgs.append("--without-doc-strings")  # should reduce size
@@ -81,10 +88,16 @@ class BuildPython(CrossCompileAutotoolsProject):
             # TODO: do I need to set? ac_sys_release=13.0
         super().configure(**kwargs)
 
+    def should_use_extra_c_compat_flags(self):
+        # Use -data-dependent provenance to avoid bitwise warnigns
+        return True
+
     def run_tests(self):
+        # python build system adds .exe for case-insensitive dirs
+        suffix = "" if is_case_sensitive_dir(self.buildDir) else ".exe"
         if self.compiling_for_host():
-            self.run_cmd(self.buildDir / "python.exe", "-m", "test", cwd=self.buildDir)
+            self.run_cmd(self.buildDir / ("python" + suffix), "-m", "test", cwd=self.buildDir)
         else:
             # Python executes tons of system calls, hopefully using the benchmark kernel helps
-            self.run_cheribsd_test_script("run_python_tests.py", mount_installdir=True, mount_sourcedir=True,
+            self.run_cheribsd_test_script("run_python_tests.py", "--buildexe-suffix=" + suffix, mount_installdir=True, mount_sourcedir=True,
                                           mount_builddir=True, use_benchmark_kernel_by_default=True)

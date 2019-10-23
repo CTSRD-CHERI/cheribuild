@@ -39,21 +39,32 @@ def run_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) ->
     boot_cheribsd.info("Running Python tests")
     # Need the library path for libpython.so
     boot_cheribsd.prepend_ld_library_path(qemu, "/build")
-    # copy python libs from smb to tmpfs:
-    install_prefix = Path(args.install_prefix)
-    qemu.checked_run("time cp -a '{pfx}' '{pfx}.tmpfs'".format(pfx=install_prefix))
-    qemu.checked_run("umount '{pfx}'".format(pfx=install_prefix))
-    qemu.checked_run("rmdir '{pfx}' && mv '{pfx}.tmpfs' '{pfx}'".format(pfx=install_prefix))
-    qemu.checked_run("cd /build && ./python.exe --version")
+    # When running the full test suite we want all python files in tmpfs:
+    if args.full_test:
+        # copy python libs from smb to tmpfs:
+        install_prefix = Path(args.install_prefix)
+        qemu.checked_run("time cp -a '{pfx}' '{pfx}.tmpfs'".format(pfx=install_prefix))
+        qemu.checked_run("umount '{pfx}'".format(pfx=install_prefix))
+        qemu.checked_run("rmdir '{pfx}' && mv '{pfx}.tmpfs' '{pfx}'".format(pfx=install_prefix))
+
     # run basic sanity check:
-    qemu.checked_run("/build/python.exe -E -c 'import sys; sys.exit(0)'")
-    # Run the full test suite:
-    qemu.checked_run("cd /build && ./python.exe -m test -v")
+    build_python_exe = "python" + args.buildexe_suffix
+    qemu.checked_run("/build/{} --version".format(build_python_exe))
+    qemu.checked_run("/build/{} -E -c 'import sys; sys.exit(0)'".format(build_python_exe))
+
+    if args.full_test:
+        # Run the full test suite:
+        qemu.checked_run("cd /build && ./{} -m test -v".format(build_python_exe))
+
     return True
 
 
 def add_args(parser: argparse.ArgumentParser):
-    pass
+    parser.add_argument("--buildexe-suffix", required=False, default="", help="Suffix for build executables")
+    parser.add_argument("--smoketest", action="store_false", required=False, dest="full_test",
+                        help="Don't run full python test suite, only check that a basic program works")
+    parser.add_argument("--full-test", action="store_true", required=False, dest="full_test", default=True,
+                        help="Run the full python test suite")
 
 
 def adjust_args(args: argparse.Namespace):
