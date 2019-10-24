@@ -66,10 +66,13 @@ class BuildPython(CrossCompileAutotoolsProject):
         else:
             self.configureArgs.append("--with-computed-gotos")
 
+        # fails to cross-compile and does weird stuff on host (uses wrong python version?)
+        self.configureArgs.append("--without-ensurepip")
+
+
         if not self.compiling_for_host():
             self.configureArgs.append("--without-pymalloc")  # use system malloc
             self.configureArgs.append("--without-doc-strings")  # should reduce size
-            self.configureArgs.append("--without-ensurepip")  # fails to cross-compile
             native_python = self.get_instance_for_cross_target(CrossCompileTarget.NATIVE,
                                                                self.config).installDir / "bin/python3"
             if not native_python.exists():
