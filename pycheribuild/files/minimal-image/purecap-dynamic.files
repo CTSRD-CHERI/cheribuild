@@ -1,18 +1,24 @@
 # rtld
 libexec/ld-cheri-elf.so.1
+
 # These are needed by postgres:
 usr/libcheri/libc.so.7
 usr/libcheri/libcrypt.so.5
 usr/libcheri/libm.so.5
-usr/libcheri/libstatcounters.so.3
-usr/libcheri/libthr.so.3
-usr/libcheri/libz.so.6
+
 # Commonly used (and tiny)
 usr/libcheri/libdl.so.1
 
 # needed by /bin/sh & /bin/csh (if we included the purecap sh/csh)
 usr/libcheri/libedit.so.7
 usr/libcheri/libncursesw.so.8
+
+usr/libcheri/libthr.so.3
+usr/libcheri/libutil.so.9
+usr/libcheri/libz.so.6
+
+# For benchmarks:
+usr/libcheri/libstatcounters.so.3
 
 # C++ runtime:
 usr/libcheri/libc++.so.1
