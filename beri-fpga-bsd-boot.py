@@ -672,6 +672,19 @@ def common_boot (kernel_img=args.kernel_img,addr=args.kernel_addr,bitfile=args.b
 #################
 
 def main():
+    if args.interact or args.subcmd == "console":
+        # Check that we have a TTY for these commands (otherwise we fail much later on when
+        # doing the actual interaction)
+        import tty
+        stdin_tty = os.isatty(sys.stdin.fileno())
+        if not stdin_tty:
+            sys.exit("--interact flag requires stdin to be a TTY")
+        stdout_tty = os.isatty(sys.stdout.fileno())
+        print("stdin tty attrs =", tty.tcgetattr(sys.stdin.fileno()))
+        print("stdout is a tty:", stdout_tty)
+        if stdout_tty:
+            print("stdout tty attrs =", tty.tcgetattr(sys.stdout.fileno()))
+
     ############
     # bitfile #
     ############
