@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/pexpect/pexpect.git
+	branch = master
+	commit = ecd3a19ee16723170f6ba583c92f0a0c51b02115
+	parent = 2fa5ce92f5a20ce948dc15146a3b7942282c03b5
+	method = rebase
+	cmdver = 0.4.0
