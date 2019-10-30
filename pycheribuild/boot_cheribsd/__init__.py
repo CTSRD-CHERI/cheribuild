@@ -51,12 +51,13 @@ from pathlib import Path
 _cheribuild_root = Path(__file__).parent.parent.parent
 _pexpect_dir = _cheribuild_root / "3rdparty/pexpect"
 assert (_pexpect_dir / "pexpect/__init__.py").exists()
-assert _pexpect_dir in sys.path, "pexpect dir not found in " + str(sys.path)
+assert str(_pexpect_dir.resolve()) in sys.path, str(_pexpect_dir) + " not found in " + str(sys.path)
 import pexpect
 from ..utils import find_free_port
 
 STARTING_INIT = "start_init: trying /sbin/init"
 BOOT_FAILURE = "Enter full pathname of shell or RETURN for /bin/sh"
+BOOT_FAILURE2 = "wait for /bin/sh on /etc/rc failed'"
 SHELL_OPEN = "exec /bin/sh"
 LOGIN = "login:"
 PROMPT = "root@.+:.+# "  # /bin/csh
@@ -120,6 +121,9 @@ class CheriBSDInstance(pexpect.spawn):
     def expect(self, pattern: list, timeout=-1, pretend_result=None, **kwargs):
         assert isinstance(pattern, list), "expected list and not " + str(pattern)
         return self._expect_and_handle_panic(pattern, timeout=timeout, **kwargs)
+
+    def expect_prompt(self, timeout=-1, **kwargs):
+        return self._expect_and_handle_panic([PROMPT], timeout=timeout, **kwargs)
 
     def expect_exact(self, pattern_list, timeout=-1, pretend_result=None, **kwargs):
         assert PANIC not in pattern_list
@@ -347,21 +351,21 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, 
         raise CheriBSDCommandFailed("error running '", cmd, "' (after '", runtime.total_seconds(), "s)")
 
 
-def setup_ssh(qemu: CheriBSDInstance, pubkey: Path):
-    run_cheribsd_command(qemu, "mkdir -p /root/.ssh")
+def setup_ssh_for_root_login(qemu: CheriBSDInstance, pubkey: Path):
+    # Ensure that we have permissions set up in a way so that ssh doesn't complain
+    qemu.run("mkdir -p /root/.ssh && chmod 700 /root /root/.ssh")
     ssh_pubkey_contents = pubkey.read_text(encoding="utf-8").strip()
     # Handle ssh-pubkeys that might be too long to send as a single line (write 150-char chunks instead):
     chunk_size = 150
     for part in (ssh_pubkey_contents[i:i + chunk_size] for i in range(0, len(ssh_pubkey_contents), chunk_size)):
-        run_cheribsd_command(qemu, "printf %s " + shlex.quote(part) + " >> /root/.ssh/authorized_keys")
+        qemu.run("printf %s " + shlex.quote(part) + " >> /root/.ssh/authorized_keys")
     # Add a final newline
-    run_cheribsd_command(qemu, "printf '\\n' >> /root/.ssh/authorized_keys")
-    run_cheribsd_command(qemu, "chmod 600 /root/.ssh/authorized_keys")
-    # Ensure that we have permissions set up in a way so that ssh doesn't complain
-    run_cheribsd_command(qemu, "chmod 700 /root /root/.ssh/")
-    run_cheribsd_command(qemu, "echo 'PermitRootLogin without-password' >> /etc/ssh/sshd_config")
+    qemu.run("printf '\\n' >> /root/.ssh/authorized_keys")
+    qemu.run("chmod 600 /root/.ssh/authorized_keys")
+    # Allow root login
+    qemu.run("echo 'PermitRootLogin without-password' >> /etc/ssh/sshd_config")
     # TODO: check for bluehive images without /sbin/service
-    run_cheribsd_command(qemu, "cat /root/.ssh/authorized_keys", expected_output="ssh-")
+    qemu.run("cat /root/.ssh/authorized_keys", expected_output="ssh-")
     checked_run_cheribsd_command(qemu, "grep -n PermitRootLogin /etc/ssh/sshd_config")
     qemu.sendline("service sshd restart")
     try:
@@ -373,7 +377,7 @@ def setup_ssh(qemu: CheriBSDInstance, pubkey: Path):
     success("===> SSH authorized_keys set up")
 
 
-def set_posix_sh_prompt(child):
+def _set_posix_sh_prompt(child):
     success("===> setting PS1")
     # Make the prompt match PROMPT
     child.sendline("export PS1=\"{}\"".format("root@qemu-test:~ \\\\$ "))
@@ -471,17 +475,20 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
         child.logfile = QEMU_LOGFILE.open("w")
     else:
         child.logfile_read = sys.stdout
+    boot_and_login(child, starttime=qemu_starttime, kernel_init_only=kernel_init_only)
+
+def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False) -> CheriBSDInstance:
     have_dhclient = False
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
-        i = child.expect([pexpect.TIMEOUT, STARTING_INIT, BOOT_FAILURE] + FATAL_ERROR_MESSAGES, timeout=15 * 60)
+        i = child.expect([pexpect.TIMEOUT, STARTING_INIT, BOOT_FAILURE, BOOT_FAILURE2] + FATAL_ERROR_MESSAGES, timeout=15 * 60)
         if i == 0:  # Timeout
             failure("timeout before booted: ", str(child))
         elif i != 1:  # start up scripts failed
             failure("start up scripts failed to run")
         userspace_starttime = datetime.datetime.now()
-        success("===> init running (kernel startup time: ", userspace_starttime - qemu_starttime, ")")
+        success("===> init running (kernel startup time: ", userspace_starttime - starttime, ")")
         if kernel_init_only:
             # To test kernel startup time
             return child
@@ -513,17 +520,17 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
                     success("===> started POSIX sh (PS1 already set)")
                 elif i == 2:  # POSIX sh without PS1
                     success("===> started POSIX sh (PS1 not set)")
-                    set_posix_sh_prompt(child)
+                    _set_posix_sh_prompt(child)
             if i == 2:  # /bin/sh prompt
                 success("===> got /sbin/sh prompt")
-                set_posix_sh_prompt(child)
+                _set_posix_sh_prompt(child)
         elif i == 2:  # shell started from /etc/rc:
             child.expect_exact(PROMPT_SH, timeout=30)
             success("===> /etc/rc completed, got command prompt")
             # set up network (bluehive image tries to use atse0)
             if not have_dhclient:
                 start_dhclient(child)
-            set_posix_sh_prompt(child)
+            _set_posix_sh_prompt(child)
         else:
             # If this was a failure of init we should get a debugger backtrace
             debug_kernel_panic(child)
@@ -547,15 +554,15 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     for dir in smb_dirs:
         # If we are mounting /build set kern.corefile to point there:
         if not dir.readonly and dir.in_target == "/build":
-            run_cheribsd_command(qemu, "sysctl kern.corefile=/build/%N.%P.core")
-    run_cheribsd_command(qemu, "sysctl kern.coredump=0")
+            qemu.run("sysctl kern.corefile=/build/%N.%P.core")
+    qemu.run("sysctl kern.coredump=0")
     # ensure that /usr/local exists and if not create it as a tmpfs (happens in the minimal image)
     # However, don't do it on the full image since otherwise we would install kyua to the tmpfs on /usr/local
     # We can differentiate the two by checking if /boot/kernel/kernel exists since it will be missing in the minimal image
-    run_cheribsd_command(qemu, "if [ ! -e /boot/kernel/kernel ]; then mkdir -p /usr/local && mount -t tmpfs -o size=300m tmpfs /usr/local; fi")
+    qemu.run("if [ ! -e /boot/kernel/kernel ]; then mkdir -p /usr/local && mount -t tmpfs -o size=300m tmpfs /usr/local; fi")
     # Or this: if [ "$(ls -A $DIR)" ]; then echo "Not Empty"; else echo "Empty"; fi
-    run_cheribsd_command(qemu, "if [ ! -e /opt ]; then mkdir -p /opt && mount -t tmpfs -o size=500m tmpfs /opt; fi")
-    run_cheribsd_command(qemu, "df -ih")
+    qemu.run("if [ ! -e /opt ]; then mkdir -p /opt && mount -t tmpfs -o size=500m tmpfs /opt; fi")
+    qemu.run("df -ih")
     info("\nWill transfer the following archives: ", test_archives)
 
     def do_scp(src, dst="/"):
@@ -587,12 +594,12 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
             run_host_command(["cp", "-v", str(lib.absolute()), str(smb_dirs[0].hostdir) + "/preload"])
             ld_preload_target_paths.append(str(Path(smb_dirs[0].in_target, "preload", lib.name)))
         else:
-            run_cheribsd_command(qemu, "mkdir -p /tmp/preload")
+            qemu.run("mkdir -p /tmp/preload")
             do_scp(str(lib), "/tmp/preload/" + lib.name)
             ld_preload_target_paths.append(str(Path("/tmp/preload", lib.name)))
 
     for index, d in enumerate(smb_dirs):
-        run_cheribsd_command(qemu, "mkdir -p '{}'".format(d.in_target))
+        qemu.run("mkdir -p '{}'".format(d.in_target))
         mount_command = "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu{} '{}'".format(index + 1, d.in_target)
         try:
             checked_run_cheribsd_command(qemu, mount_command, error_output="unable to open connection: syserr = Operation timed out", pretend_result=0)
@@ -608,9 +615,9 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     if test_archives:
         time.sleep(5)  # wait 5 seconds to make sure the disks have synced
     # See how much space we have after running scp
-    run_cheribsd_command(qemu, "df -h")
+    qemu.run("df -h")
     # ensure that /tmp is world-writable
-    run_cheribsd_command(qemu, "chmod 777 /tmp")
+    qemu.run("chmod 777 /tmp")
 
 
     for lib in ld_preload_target_paths:
@@ -662,7 +669,7 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
         else:
             success("===> Tests completed!")
         success("Running tests took ", testtime)
-        run_cheribsd_command(qemu, "df -h", expected_output="/opt")  # see how much space we have now
+        qemu.run("df -h", expected_output="/opt")  # see how much space we have now
         return True
     else:
         return failure("error after ", testtime, "while running tests : ", str(qemu), exit=False)
@@ -846,7 +853,7 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace], 
         try:
             if not args.skip_ssh_setup:
                 setup_ssh_starttime = datetime.datetime.now()
-                setup_ssh(qemu, Path(args.ssh_key))
+                setup_ssh_for_root_login(qemu, Path(args.ssh_key))
                 info("Setting up SSH took: ", datetime.datetime.now() - setup_ssh_starttime)
             tests_okay = runtests(qemu, args, test_archives=test_archives, test_function=test_function,
                                   test_setup_function=test_setup_function, test_ld_preload_files=test_ld_preload_files)
