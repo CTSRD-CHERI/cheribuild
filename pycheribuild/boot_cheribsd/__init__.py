@@ -37,17 +37,22 @@ import argparse
 import atexit
 import datetime
 import os
-import pexpect
 import shlex
 import shutil
 import socket
 import subprocess
 import sys
-import time
 import tempfile
+import time
 import traceback
 import typing
 from pathlib import Path
+
+_cheribuild_root = Path(__file__).parent.parent.parent
+_pexpect_dir = _cheribuild_root / "3rdparty/pexpect"
+assert (_pexpect_dir / "pexpect/__init__.py").exists()
+assert _pexpect_dir in sys.path, "pexpect dir not found in " + str(sys.path)
+import pexpect
 from ..utils import find_free_port
 
 STARTING_INIT = "start_init: trying /sbin/init"

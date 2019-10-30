@@ -36,9 +36,12 @@ from pathlib import Path
 from typing import Callable
 
 _cheribuild_root = Path(__file__).parent.parent
-_junitparser_dir = Path(__file__).parent.parent / "3rdparty/junitparser"
+_junitparser_dir = _cheribuild_root / "3rdparty/junitparser"
 assert (_junitparser_dir / "junitparser/__init__.py").exists()
+_pexpect_dir = _cheribuild_root / "3rdparty/pexpect"
+assert (_pexpect_dir / "pexpect/__init__.py").exists()
 sys.path.insert(1, str(_junitparser_dir))
+sys.path.insert(1, str(_pexpect_dir))
 sys.path.insert(1, str(_cheribuild_root))
 import junitparser
 import pexpect
