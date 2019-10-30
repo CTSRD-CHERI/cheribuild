@@ -36,7 +36,6 @@ import sys
 import string
 import os
 import signal
-import shlex
 import os.path as op
 import tempfile
 import datetime
@@ -493,11 +492,13 @@ def do_network_on(console: boot_cheribsd.CheriBSDInstance, args, timeout=300):
     if not args.use_qemu_instead_of_fpga:
         console.run('/usr/sbin/devctl enable {}'.format(ifc),
                     expected_output='{}: bpf attached'.format(ifc))
-    expected_ifconfig_output = None
+    console.run('/sbin/ifconfig {} up'.format(ifc), expected_output=expected_ifconfig_output)
     if ifc != "le0":
         # apparently the le0 driver doesn't print this message
-        expected_ifconfig_output = '{}: link state changed to UP'.format(ifc)
-    console.run('/sbin/ifconfig {} up'.format(ifc), expected_output=expected_ifconfig_output)
+        console.expect_exact('{}: link state changed to UP'.format(ifc))
+    # Send a newline to ensure a prompt:
+    console.sendline()
+    console.expect_prompt()
     # No longer needed? console.run('/sbin/ifconfig {} polling'.format(ifc))
     console.sendline('/sbin/dhclient {}'.format(ifc))
     console.expect(["turning network on","bound to .* -- renewal in .*"], timeout=60)
@@ -553,7 +554,7 @@ def do_runbench(console: boot_cheribsd.CheriBSDInstance,tgtdir,script,scriptargs
     panicstr = "KDB: enter: "
 
     expects = ["DONE RUNNING BENCHMARKS", ": Command not found.", badcmd + ": not found", failstr, panicstr]
-    idx = console.checked_expect("running benchmark", expects, timeout)
+    idx = console.expect(expects, timeout=timeout)
     if idx != 0:
         print("Failed to run benchmark")
     if expects[idx] == panicstr:
