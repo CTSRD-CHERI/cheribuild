@@ -27,6 +27,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import tempfile
+
 from .project import *
 from .cross.multiarchmixin import MultiArchBaseMixin
 from pathlib import Path
@@ -113,6 +115,13 @@ class LaunchCheriBSDOnFGPA(MultiArchBaseMixin, LaunchFPGABase):
             else:
                 kernel_config = mfs_kernel.fpga_kernconf
             self.currentKernel = mfs_kernel.installed_kernel_for_config(self.config, kernel_config)
-        super().process()
+        with tempfile.TemporaryDirectory() as kernel_image_tmpdir:
+            # Strip to kernel image to save some time when copying it to the FPGA booting
+            # TODO: move into beri-fpga-bsd-boot?
+            stripped_target = Path(kernel_image_tmpdir, self.currentKernel.name + ".stripped")
+            self.run_cmd(self.config.sdkBinDir / "llvm-strip", self.currentKernel, "-o", stripped_target)
+            self.run_cmd("du", "-h", self.currentKernel, stripped_target)
+            self.currentKernel = stripped_target
+            super().process()
 
 # TODO: boot purecap minimal disk image
