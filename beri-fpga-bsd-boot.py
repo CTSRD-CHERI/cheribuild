@@ -116,6 +116,8 @@ jenkins_cpus = ["mips", "cheri128", "cheri256"]
 jenkins_kernels = ["mfs-root-singleuser", "mfs-root-net", "mfs-root-smoketest", "mfs-root-benchmark-jenkins_bluehive", "mfs-root-jenkins_bluehive", "usbroot", "usbroot-benchmark", "nfsroot", "sdroot"]
 parser.add_argument('--jenkins-bitfile', type=str, choices=jenkins_cpus,
                     help="Download and flash latest jenkins bitfile for CPU")
+parser.add_argument('--experimental-jenkins-bitfile', type=str, choices=jenkins_cpus,
+                    help="Use the experimental Jenkins bitfile instead of the stable one")
 parser.add_argument('--jenkins-bitfile-job-number', type=str, default="lastSuccessfulBuild",
                     help="The job number to use when fetching the bitfile from jenkins (defaults to last successful build)")
 parser.add_argument('--jenkins-kernel', type=str, choices=jenkins_kernels,
@@ -602,6 +604,11 @@ def common_boot (kernel_img=args.kernel_img,addr=args.kernel_addr,bitfile=args.b
         bitfile_template = "https://ctsrd-build.cl.cam.ac.uk/job/CPU1-DE4-SYNTH/CPU={DE4_CPU},FLAGS=vanilla,FPU=noFPU," \
                            "TSTRUCT=0_256,cheri_dimm=1GB,label=altera/{bitfile_job_nr}/artifact/cheri/boards/" \
                            "terasic_de4/output_files/DE4_BERI.sof"
+        experimental_bifile_template = "https://ctsrd-build.cl.cam.ac.uk/job/CPU1-DE4-multi-synth_experimental/" \
+                                       "cheri={DE4_CPU},cheri_dimm=1GB,dcache=writethrough,invalidate=push,label=bionic,multi=2/" \
+                                       "{bitfile_job_nr}/artifact/cheri/boards/terasic_de4/output_files/DE4_BERI.sof"
+        if args.experimental_jenkins_bitfile:
+            bitfile_template = experimental_bifile_template
         image_template = None
         if args.use_qemu_instead_of_fpga:
             if args.jenkins_bitfile:
