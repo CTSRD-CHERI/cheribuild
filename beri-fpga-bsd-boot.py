@@ -116,7 +116,7 @@ jenkins_cpus = ["mips", "cheri128", "cheri256"]
 jenkins_kernels = ["mfs-root-singleuser", "mfs-root-net", "mfs-root-smoketest", "mfs-root-benchmark-jenkins_bluehive", "mfs-root-jenkins_bluehive", "usbroot", "usbroot-benchmark", "nfsroot", "sdroot"]
 parser.add_argument('--jenkins-bitfile', type=str, choices=jenkins_cpus,
                     help="Download and flash latest jenkins bitfile for CPU")
-parser.add_argument('--experimental-jenkins-bitfile', type=str, choices=jenkins_cpus,
+parser.add_argument('--experimental-jenkins-bitfile', action="store_true",
                     help="Use the experimental Jenkins bitfile instead of the stable one")
 parser.add_argument('--jenkins-bitfile-job-number', type=str, default="lastSuccessfulBuild",
                     help="The job number to use when fetching the bitfile from jenkins (defaults to last successful build)")
