@@ -383,9 +383,14 @@ def loadbin (img=args.kernel_img,addr=args.kernel_addr,cable_id=args.cable_id,be
 
 def boot_bsd_berictl(args) -> boot_cheribsd.CheriBSDInstance:
     # trigger boot
-    cmd = [args.berictl]
-    cmd += ['-c',str(args.cable_id)]
-    cmd += ['-j','boot']
+    unpause_cmd = [args.berictl, '-c', str(args.cable_id), '-j', 'resume']
+    hostcmdprint(" ".join(unpause_cmd))
+    unpause = MySpawn(" ".join(unpause_cmd), encoding="utf-8", logfile=logf, echo=False)
+    # boot.checked_expect("booting", pexpect.EOF)
+    unpause.wait()
+    unpause.close()
+
+    cmd = [args.berictl, '-c', str(args.cable_id), '-j', 'boot']
     hostcmdprint(" ".join(cmd))
     boot = MySpawn(" ".join(cmd), encoding="utf-8", logfile=logf, echo=False)
     boot.checked_expect("booting", pexpect.EOF)
