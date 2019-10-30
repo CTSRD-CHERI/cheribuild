@@ -321,15 +321,19 @@ class MySpawn(boot_cheribsd.CheriBSDInstance):
             exit(1)
 
 
-class MyCheriBSDSpawn(boot_cheribsd.CheriBSDInstance):
+class BeriCtlCheriBSDSpawn(boot_cheribsd.CheriBSDInstance):
     def interact(self, escape_character=chr(29),
             input_filter=None, output_filter=None):
         print("Interacting with console")
         # otherwise we get the output twice and weird bytes/str errors because __interact doesn't decode ...
         old_log = self.logfile
+        old_logfile_read = self.logfile_read
         self.logfile = None
+        self.logfile_read= None
+        self.sendline()
         super().interact(escape_character=escape_character, input_filter=input_filter, output_filter=output_filter)
         self.logfile = old_log
+        self.logfile_read = old_logfile_read
 
 
 def get_console (cable_id=args.cable_id,berictl=args.berictl) -> boot_cheribsd.CheriBSDInstance:
@@ -338,7 +342,7 @@ def get_console (cable_id=args.cable_id,berictl=args.berictl) -> boot_cheribsd.C
     cmd += ['-j','console']
     hostcmdprint(" ".join(cmd))
     # if we specify encoding=utf-8 then spawn only accepts bytes...
-    c = boot_cheribsd.CheriBSDInstance(" ".join(cmd), encoding="utf-8", echo=False, timeout=60)
+    c = BeriCtlCheriBSDSpawn(" ".join(cmd), encoding="utf-8", echo=False, timeout=60)
     return c
 
 def loadsof (bitfile=args.bitfile,cable_id=args.cable_id,berictl=args.berictl,timeout=30):
