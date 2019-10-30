@@ -100,9 +100,9 @@ class LaunchCheriBSDOnFGPA(MultiArchBaseMixin, LaunchFPGABase):
         mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(CrossCompileTarget.CHERI, self.config)
         # TODO: allow using a plain MIPS kernel?
         if self.benchmark_kernel:
-            kernel_config = mfs_kernel.fpga_kernconf
-        else:
             kernel_config = mfs_kernel.fpga_kernconf + "_BENCHMARK"
+        else:
+            kernel_config = mfs_kernel.fpga_kernconf
         self.currentKernel = mfs_kernel.installed_kernel_for_config(self.config, kernel_config)
         super().process()
 
