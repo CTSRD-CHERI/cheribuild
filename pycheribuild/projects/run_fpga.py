@@ -44,8 +44,6 @@ class LaunchFPGABase(SimpleProject):
                                                      help="Additional command line flags to pass to beri-fpga-bsd-boot")
         cls.extra_bootonly_options = cls.addConfigOption("extra-boot-options", default=[], kind=list, metavar="OPTIONS",
                                                          help="Additional command line flags to pass to the bootonly subcommand of beri-fpga-bsd-boot")
-        cls.benchmark_kernel = cls.addBoolOption("benchmark-kernel",
-                                                 help="Use the benchmark kernel instead of one with assertions enabled.")
         cls.attach_only = cls.addBoolOption("attach-only", help="Connect to console instead of booting.")
 
     def __init__(self, config: CheriConfig):
@@ -95,15 +93,26 @@ class LaunchCheriBSDOnFGPA(MultiArchBaseMixin, LaunchFPGABase):
     dependencies = ["cheribsd-mfs-root-kernel-cheri"]
     supported_architectures = [CrossCompileTarget.CHERI]
 
+
+    @classmethod
+    def setupConfigOptions(cls, **kwargs):
+        super().setupConfigOptions(**kwargs)
+        cls.benchmark_kernel = cls.addBoolOption("benchmark-kernel",
+                                                 help="Use the benchmark kernel instead of one with assertions enabled.")
+        cls.kernel_image = cls.addConfigOption("kernel-image", kind=Path, help="Override the kernel image to boot")
+
     def process(self):
         from .cross.cheribsd import BuildCheriBsdMfsKernel
         mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(CrossCompileTarget.CHERI, self.config)
         # TODO: allow using a plain MIPS kernel?
-        if self.benchmark_kernel:
-            kernel_config = mfs_kernel.fpga_kernconf + "_BENCHMARK"
+        if self.kernel_image:
+            self.currentKernel = self.kernel_image
         else:
-            kernel_config = mfs_kernel.fpga_kernconf
-        self.currentKernel = mfs_kernel.installed_kernel_for_config(self.config, kernel_config)
+            if self.benchmark_kernel:
+                kernel_config = mfs_kernel.fpga_kernconf + "_BENCHMARK"
+            else:
+                kernel_config = mfs_kernel.fpga_kernconf
+            self.currentKernel = mfs_kernel.installed_kernel_for_config(self.config, kernel_config)
         super().process()
 
 # TODO: boot purecap minimal disk image
