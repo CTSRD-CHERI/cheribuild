@@ -503,7 +503,7 @@ def do_network_on(console: boot_cheribsd.CheriBSDInstance, args, timeout=300):
     if not args.use_qemu_instead_of_fpga:
         console.run('/usr/sbin/devctl enable {}'.format(ifc),
                     expected_output='{}: bpf attached'.format(ifc))
-    console.run('/sbin/ifconfig {} up'.format(ifc), expected_output=expected_ifconfig_output)
+    console.run('/sbin/ifconfig {} up'.format(ifc))
     if ifc != "le0":
         # apparently the le0 driver doesn't print this message
         console.expect_exact('{}: link state changed to UP'.format(ifc))
