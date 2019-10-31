@@ -416,9 +416,11 @@ class FakeSpawn(object):
         pass
 
     def run(self, cmd, **kwargs):
+        # noinspection PyTypeChecker
         run_cheribsd_command(self, cmd, **kwargs)
 
     def checked_run(self, cmd, **kwargs):
+        # noinspection PyTypeChecker
         checked_run_cheribsd_command(self, cmd, **kwargs)
 
 

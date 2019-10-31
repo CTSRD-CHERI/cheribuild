@@ -319,6 +319,7 @@ class DefaultValueOnlyConfigOption(ConfigOptionBase):
 
 
 class CommandLineConfigOption(ConfigOptionBase):
+    # noinspection PyProtectedMember
     def __init__(self, name: str, shortname: str, default, valueType: "typing.Type", _owningClass,
                  _loader: ConfigLoaderBase, helpHidden: bool, group: argparse._ArgumentGroup,
                  _fallback_name: str=None, **kwargs):

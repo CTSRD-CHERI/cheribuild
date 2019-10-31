@@ -261,7 +261,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
             help="Don't remove the whole old rootfs directory.  This can speed up installing but may cause strange"
                  " errors so is off by default.")
 
-        cls.kernelConfig = cls.addConfigOption("kernel-config", default=defaultKernelConfig, kind=str,
+        cls.kernelConfig = cls.addConfigOption("kernel-config", default=defaultKernelConfig,
            metavar="CONFIG", showHelp=True, fallback_config_name="kernel-config",
            help="The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64 or CHERI128_MALTA64"
                 " depending on --cheri-bits)")

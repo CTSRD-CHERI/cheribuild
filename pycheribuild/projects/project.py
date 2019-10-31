@@ -298,7 +298,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     # Duplicate all arguments instead of using **kwargs to get sensible code completion
     @staticmethod
-    def run_cmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]"=None, timeout=None,
+    def run_cmd(*args, captureOutput=False, captureError=False, input: typing.Union[str, bytes] = None, timeout=None,
            print_verbose_only=False, runInPretendMode=False, raiseInPretendMode=False, no_print=False,
            replace_env=False, **kwargs):
         return runCmd(*args, captureOutput=captureOutput, captureError=captureError, input=input, timeout=timeout,
@@ -306,10 +306,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                       raiseInPretendMode=raiseInPretendMode, no_print=no_print, replace_env=replace_env, **kwargs)
 
     @classmethod
-    def addConfigOption(cls, name: str, default: "typing.Union[Type_T, typing.Callable[[], Type_T]]" = None,
-                        kind: "typing.Union[typing.Type[str], typing.Callable[[str], Type_T]]" = str, *,
-                        showHelp=False, shortname=None, _no_fallback_config_name: bool=False,
-                        only_add_for_targets: list = None, fallback_config_name: str=None, **kwargs) -> "Type_T":
+    def addConfigOption(cls, name: str, default: typing.Union[Type_T, typing.Callable[[], Type_T]] = None,
+                        kind: typing.Union[typing.Type[Type_T], typing.Callable[[str], Type_T]] = str, *,
+                        showHelp = False, shortname = None, _no_fallback_config_name: bool=False,
+                        only_add_for_targets: list = None, fallback_config_name: str=None, **kwargs) -> Type_T:
         if only_add_for_targets is not None:
             # Some config options only apply to certain targets -> add them to those targets and the generic one
             target = getattr(cls, "_crossCompileTarget")

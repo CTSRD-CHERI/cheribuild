@@ -43,16 +43,9 @@ from .colour import coloured, AnsiColour, statusUpdate, warningMessage
 from collections import namedtuple
 from pathlib import Path
 
-try:
-    import typing
-except ImportError:
-    typing = {}
+import typing
 
-if typing and hasattr(typing, "TypeVar"):
-    Type_T = typing.TypeVar("Type_T")
-else:
-    Type_T = {}
-
+Type_T = typing.TypeVar("Type_T")
 
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includeLocalFile", "CompilerInfo",   # no-combine
