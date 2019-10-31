@@ -32,6 +32,7 @@ import getpass
 import grp
 import json
 import os
+from typing import Optional
 from enum import Enum
 from collections import OrderedDict
 from pathlib import Path
@@ -170,17 +171,17 @@ class CheriConfig(object):
                                                          "With VALUE=-pcrel it will use /opt/cheriXXX-pcrel/$PROJECT")
 
         # Attributes for code completion:
-        self.verbose = None  # type: bool
-        self.debug_output = loader.addCommandLineOnlyBoolOption("debug-output", "vv", default=False, help="Extremely verbose output")
-        self.quiet = None  # type: bool
-        self.clean = None  # type: bool
-        self.force = None  # type: bool
-        self.write_logfile = None  # type: bool
-        self.skipUpdate = None  # type: bool
-        self.skipClone = None  # type: bool
-        self.skipConfigure = None  # type: bool
-        self.forceConfigure = None  # type: bool
-        self.force_update = None  # type: bool
+        self.verbose = None  # type: Optional[bool]
+        self.debug_output = loader.addCommandLineOnlyBoolOption("debug-output", "vv", help="Extremely verbose output")
+        self.quiet = None  # type: Optional[bool]
+        self.clean = None  # type: Optional[bool]
+        self.force = None  # type: Optional[bool]
+        self.write_logfile = None  # type: Optional[bool]
+        self.skipUpdate = None  # type: Optional[bool]
+        self.skipClone = None  # type: Optional[bool]
+        self.skipConfigure = None  # type: Optional[bool]
+        self.forceConfigure = None  # type: Optional[bool]
+        self.force_update = None  # type: Optional[bool]
         self.mips_float_abi = loader.addOption("mips-float-abi", default=MipsFloatAbi.SOFT, type=MipsFloatAbi,
                                                group=loader.crossCompileOptionsGroup,
                                                help="The floating point ABI to use for building MIPS+CHERI programs")
@@ -188,12 +189,12 @@ class CheriConfig(object):
                                                      group=loader.crossCompileOptionsGroup,
                                                      enum_choices=(Linkage.DYNAMIC, Linkage.STATIC),
                                                      help="Whether to link cross-compile projects static or dynamic by default")
-        self.csetbounds_stats = loader.addBoolOption("collect-csetbounds-stats", default=False,
+        self.csetbounds_stats = loader.addBoolOption("collect-csetbounds-stats",
                                                      group=loader.crossCompileOptionsGroup, helpHidden=True,
                                                      help="Whether to log CSetBounds statistics in csv format")
         self.subobject_bounds = loader.addOption("subobject-bounds", type=str, group=loader.crossCompileOptionsGroup,
             choices=("conservative", "subobject-safe", "aggressive", "very-aggressive", "everywhere-unsafe"),
-            helpHidden=False, help="Whether to add additional CSetBounds to subobject references/&-operator")
+            help="Whether to add additional CSetBounds to subobject references/&-operator")
         self.subobject_debug = loader.addBoolOption("subobject-debug", group=loader.crossCompileOptionsGroup,
             default=True, helpHidden=False, help="Clear software permission bit 2 when subobject bounds reduced size"
                                                  " (Note: this should be turned off for benchmarks!)")
@@ -217,20 +218,20 @@ class CheriConfig(object):
         self.trap_on_unrepresentable = loader.addBoolOption("trap-on-unrepresentable", default=False,
             help="Raise a CHERI exception when capabilities become unreprestable instead of detagging. Useful for "
                  "debugging, but deviates from the spec, and therefore off by default.")
-        self.includeDependencies = None  # type: bool
-        self.crossCompileTarget = None  # type: CrossCompileTarget
-        self.makeWithoutNice = None  # type: bool
+        self.includeDependencies = None  # type: Optional[bool]
+        self.crossCompileTarget = None  # type: Optional[CrossCompileTarget]
+        self.makeWithoutNice = None  # type: Optional[bool]
 
-        self.cheriBits = None  # type: int
-        self.makeJobs = None  # type: int
+        self.cheriBits = None  # type: Optional[int]
+        self.makeJobs = None  # type: Optional[int]
 
-        self.sourceRoot = None  # type: Path
-        self.outputRoot = None  # type: Path
-        self.buildRoot = None  # type: Path
+        self.sourceRoot = None  # type: Optional[Path]
+        self.outputRoot = None  # type: Optional[Path]
+        self.buildRoot = None  # type: Optional[Path]
         # Path to kernel/disk images (this is the same as outputRoot by default but different in Jenkins)
-        self.cheribsd_image_root = None  # type: Path
-        self.sdkDir = None  # type: Path
-        self.otherToolsDir = None  # type: Path
+        self.cheribsd_image_root = None  # type: Optional[Path]
+        self.sdkDir = None  # type: Optional[Path]
+        self.otherToolsDir = None  # type: Optional[Path]
         self.docker = loader.addBoolOption("docker", help="Run the build inside a docker container",
                                            group=loader.dockerGroup)
         self.docker_container = loader.addOption("docker-container", help="Name of the docker container to use",
