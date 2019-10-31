@@ -52,6 +52,7 @@ class MRS(CrossCompileCMakeProject):
         cls.bypass_quarantine = cls.addBoolOption("bypass-quarantine", help="MADV_FREE freed page-size allocations")
         cls.clear_allocations = cls.addBoolOption("clear-allocations", help="zero out allocations made by malloc")
         cls.print_stats= cls.addBoolOption("print-stats", help="print heap statistics on exit")
+        cls.print_caprevoke= cls.addBoolOption("print-caprevoke", help="print per-revocation statistics")
         cls.sanitize = cls.addBoolOption("sanitize", help="behave more like a sanitizer")
         cls.locks = cls.addBoolOption("locks", help="make mrs thread safe with locks")
         cls.concurrent_revocation_pass = cls.addBoolOption("concurrent-revocation-pass", help="enable a concurrent revocation pass before the stop-the-world pass")
@@ -77,6 +78,8 @@ class MRS(CrossCompileCMakeProject):
             self.add_cmake_options(CLEAR_ALLOCATIONS="ON")
         if self.print_stats:
             self.add_cmake_options(PRINT_STATS="ON")
+        if self.print_caprevoke:
+            self.add_cmake_options(PRINT_CAPREVOKE="ON")
         if self.sanitize:
             self.add_cmake_options(SANITIZE="ON")
         if self.locks:
