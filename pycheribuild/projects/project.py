@@ -307,7 +307,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def addConfigOption(cls, name: str, default: typing.Union[Type_T, typing.Callable[[], Type_T]] = None,
-                        kind: typing.Union[typing.Type[Type_T], typing.Callable[[str], Type_T]] = str, *,
+                        kind: typing.Union[Type_T, typing.Callable[[str], Type_T]] = str, *,
                         showHelp = False, shortname = None, _no_fallback_config_name: bool=False,
                         only_add_for_targets: list = None, fallback_config_name: str=None, **kwargs) -> Type_T:
         if only_add_for_targets is not None:
