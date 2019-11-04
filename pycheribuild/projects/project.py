@@ -456,8 +456,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             self.buildDir = self.sourceDir
         assert not hasattr(self, "gitBranch"), "gitBranch must not be used: " + self.__class__.__name__
 
-
-
     def addRequiredSystemTool(self, executable: str, installInstructions=None, freebsd: str=None, apt: str=None,
                               zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
         if not installInstructions:
