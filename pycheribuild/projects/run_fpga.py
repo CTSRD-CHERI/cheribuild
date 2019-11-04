@@ -56,13 +56,13 @@ class LaunchFPGABase(SimpleProject):
         if self.currentKernel is not None and not self.currentKernel.exists():
             self.dependencyError("Kernel is missing:", self.currentKernel,
                                  installInstructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
-        sim_project = BuildCheriSim.get_instance(self)
+        sim_project = BuildCheriSim.get_instance(self, cross_target=CrossCompileTarget.NATIVE)
         cherilibs_dir = Path(sim_project.sourceDir, "cherilibs")
         cheri_dir = Path(sim_project.sourceDir, "cheri")
         if not cheri_dir.exists() or not cherilibs_dir.exists():
             self.fatal("cheri-cpu repository missing. Run `cheribuild.py berictl` or `git clone {} {}`".format(
                 sim_project.repository.url, sim_project.sourceDir))
-        basic_args = ["--berictl=" + str(BuildBeriCtl.getBuildDir(self) / "berictl")]
+        basic_args = ["--berictl=" + str(BuildBeriCtl.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "berictl")]
 
         if self.extra_base_options:
             basic_args.extend(self.extra_base_options)

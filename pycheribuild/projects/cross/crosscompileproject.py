@@ -605,7 +605,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
         runbench_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
 
         from ..cherisim import BuildCheriSim
-        sim_project = BuildCheriSim.get_instance(self)
+        sim_project = BuildCheriSim.get_instance(self, cross_target=CrossCompileTarget.NATIVE)
         cherilibs_dir = Path(sim_project.sourceDir, "cherilibs")
         cheri_dir = Path(sim_project.sourceDir, "cheri")
         if not cheri_dir.exists() or not cherilibs_dir.exists():
@@ -623,7 +623,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                           "--qemu-ssh-port=" + str(qemu_ssh_socket.port)]
         else:
             from ..cherisim import BuildBeriCtl
-            basic_args = ["--berictl=" + str(BuildBeriCtl.getBuildDir(self) / "berictl")]
+            basic_args = ["--berictl=" + str(BuildBeriCtl.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "berictl")]
 
         if self.config.benchmark_ld_preload:
             runbench_args.append("--extra-input-files=" + str(self.config.benchmark_ld_preload))
