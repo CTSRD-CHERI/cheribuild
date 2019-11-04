@@ -273,16 +273,6 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
                 self.createSymlink(self.installDir / "bin/clang-cpp", self.installDir / "bin" / (prefix + "-clang-cpp"))
 
 
-# Add an alias target clang that builds llvm
-class BuildClang(TargetAlias):
-    target = "clang"
-    dependencies = ["llvm"]
-
-class BuildLLD(TargetAlias):
-    target = "lld"
-    dependencies = ["llvm"]
-
-
 class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository("https://github.com/llvm/llvm-project.git")
     projectName = "upstream-llvm-project"
@@ -306,78 +296,3 @@ class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
     def configure(self, **kwargs):
         self.add_cmake_options(LLVM_TARGETS_TO_BUILD="Mips")
         super().configure(**kwargs)
-
-
-# Keep around the build infrastructure for building the split repos for now:
-class BuildLLVMSplitRepoBase(BuildLLVMBase):
-    doNotAddToTargets = True
-
-    @classmethod
-    def setupConfigOptions(cls, includeLldRevision=True, includeLldbRevision=False, useDefaultSysroot=True):
-        super().setupConfigOptions(useDefaultSysroot=useDefaultSysroot)
-
-        def addToolOptions(name):
-            rev = cls.addConfigOption(name + "-git-revision", kind=str, metavar="REVISION",
-                                      help="The git revision for tools/" + name)
-            repo = cls.addConfigOption(name + "-repository", kind=str, metavar="REPOSITORY",
-                                       default=cls.githubBaseUrl + name + ".git",
-                                       help="The git repository for tools/" + name)
-            return repo, rev
-
-        cls.clangRepository, cls.clangRevision = addToolOptions("clang")
-        if includeLldRevision:  # not built yet
-            cls.lldRepository, cls.lldRevision = addToolOptions("lld")
-        if includeLldbRevision:  # not built yet
-            cls.lldbRepository, cls.lldbRevision = addToolOptions("lldb")
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.add_cmake_options(LLVM_TOOL_CLANG_BUILD="clang" in self.included_projects,
-                               LLVM_TOOL_LLDB_BUILD="lldb" in self.included_projects,
-                               LLVM_TOOL_LLD_BUILD="lld" in self.included_projects)
-
-    def update(self):
-        super().update()
-        if "clang" in self.included_projects:
-            GitRepository(self.clangRepository).updateRepo(self, srcDir=self.sourceDir / "tools/clang", revision=self.clangRevision, initialBranch="master"),
-        if "lld" in self.included_projects:
-            GitRepository(self.lldRepository).updateRepo(self, srcDir=self.sourceDir / "tools/lld", revision=self.lldRevision, initialBranch="master"),
-        if "lldb" in self.included_projects:  # Not yet usable
-            GitRepository(self.lldbRepository).updateRepo(self, srcDir=self.sourceDir / "tools/lldb", revision=self.lldbRevision, initialBranch="master"),
-
-
-class BuildUpstreamSplitRepoLLVM(BuildLLVMSplitRepoBase):
-    githubBaseUrl = "https://github.com/llvm-mirror/"
-    repository = GitRepository(githubBaseUrl + "llvm.git")
-    projectName = "upstream-llvm-separate-repos"
-
-    defaultInstallDir = ComputedDefaultValue(
-        function=lambda config, project: config.outputRoot / "upstream-llvm-split",
-        asString="$INSTALL_ROOT/upstream-llvm-split")
-    skip_misc_llvm_tools = False # Cannot skip these tools in upstream LLVM
-
-    @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(useDefaultSysroot=False)
-
-    def configure(self, **kwargs):
-        if not (self.sourceDir / "tools/clang/.git").exists():
-            self.fatal("Attempting to build LLVM split repos but the checkout is from the monorepo!")
-        super().configure(**kwargs)
-
-
-class BuildCheriSplitRepoLLVM(BuildLLVMSplitRepoBase):
-    githubBaseUrl = "https://github.com/CTSRD-CHERI/"
-    repository = GitRepository(githubBaseUrl + "llvm.git")
-    target = "llvm-separate-repos"
-    projectName = "llvm"
-    # install both split and merged CHERI LLVM to sdk for now
-    defaultInstallDir = CMakeProject._installToSDK
-    #defaultInstallDir = ComputedDefaultValue(
-    #    function=lambda config, project: config.outputRoot / "cheri-llvm-old-layout",
-    #    asString="$INSTALL_ROOT/cheri-llvm-old-layout")
-    skip_cheri_symlinks = False
-
-    @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(useDefaultSysroot=False)
