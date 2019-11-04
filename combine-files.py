@@ -151,26 +151,20 @@ addFilteredFile(scriptDir / "projects/cheri_afl.py")
 addFilteredFile(scriptDir / "projects/cross/multiarchmixin.py")
 addFilteredFile(scriptDir / "projects/cross/cheribsd.py")
 addFilteredFile(scriptDir / "projects/cross/crosscompileproject.py")
-addFilteredFile(scriptDir / "projects/cross/benchmarks.py")
-addFilteredFile(scriptDir / "projects/cross/bodiagsuite.py")
-addFilteredFile(scriptDir / "projects/cross/cheri_tests.py")
-addFilteredFile(scriptDir / "projects/cross/gdb.py")
-addFilteredFile(scriptDir / "projects/cross/libcxx.py")
-addFilteredFile(scriptDir / "projects/cross/postgres.py")
-addFilteredFile(scriptDir / "projects/cross/nginx.py")
-addFilteredFile(scriptDir / "projects/cross/llvm_test_suite.py")
-addFilteredFile(scriptDir / "projects/cross/newlib_baremetal.py")
-addFilteredFile(scriptDir / "projects/cross/sqlite.py")
-addFilteredFile(scriptDir / "projects/cross/qt5.py")
-addFilteredFile(scriptDir / "projects/cross/bbl.py")
-addFilteredFile(scriptDir / "projects/cross/rsync.py")
-addFilteredFile(scriptDir / "projects/cross/dlmalloc.py")
-addFilteredFile(scriptDir / "projects/cross/snmalloc.py")
-addFilteredFile(scriptDir / "projects/cross/libmemwalk.py")
-addFilteredFile(scriptDir / "projects/cross/simple_benchmark.py")
-addFilteredFile(scriptDir / "projects/cross/mrs.py")
-addFilteredFile(scriptDir / "projects/cross/python.py")
-addFilteredFile(scriptDir / "projects/cross/juliet_test_suite.py")
+
+# First three need to be in order, then add all others
+cross_files = [
+    (scriptDir / "projects/cross/multiarchmixin.py").resolve(),
+    (scriptDir / "projects/cross/cheribsd.py").resolve(),
+    (scriptDir / "projects/cross/crosscompileproject.py").resolve(),
+]
+for file in sorted((scriptDir / "projects/cross").glob("*.py")):
+    path = file.resolve()
+    if path not in cross_files:
+        cross_files.append(path)
+
+for file in cross_files:
+    addFilteredFile(file)
 
 # disk-image, sdk and run_qemu must come after cheribsd as they use CheriBSD.rootfsDir
 addFilteredFile(scriptDir / "projects/disk_image.py")
@@ -180,7 +174,6 @@ addFilteredFile(scriptDir / "projects/run_fpga.py")
 
 # this one should not be needed
 addFilteredFile(scriptDir / "projects/samba.py")
-
 
 # now make sure that all the projects were handled
 checkAllFilesUsed(scriptDir)
