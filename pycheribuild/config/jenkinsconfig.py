@@ -216,10 +216,10 @@ class JenkinsConfig(CheriConfig):
         self.crossCompileTarget = self.cpu
         if self.cpu == "cheri128":
             self.cheriBits = 128
-            self.crossCompileTarget = CrossCompileTarget.CHERI
+            self.crossCompileTarget = CrossCompileTarget.MIPS_CHERI_PURECAP
         elif self.cpu == "cheri256":
             self.cheriBits = 256
-            self.crossCompileTarget = CrossCompileTarget.CHERI
+            self.crossCompileTarget = CrossCompileTarget.MIPS_CHERI_PURECAP
         elif self.cpu in ("mips", "hybrid-cheri128", "hybrid-cheri256"): # MIPS with CHERI memcpy
             self.cheriBits = 9998
             if self.cpu == "mips" and self.sdk_cpu in ("cheri128", "cheri256"):

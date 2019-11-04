@@ -38,7 +38,7 @@ class SNMalloc(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/nwf/snmalloc")
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     appendCheriBitsToBuildDir = True
-    supported_architectures = [CrossCompileTarget.CHERI, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
+    supported_architectures = [CrossCompileTarget.MIPS_CHERI_PURECAP, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
     defaultOptimizationLevel = ["-O2"]
     default_build_type = BuildType.DEBUG
     defaultCMakeBuildType = "Debug"
@@ -55,7 +55,7 @@ class SNMalloc(CrossCompileCMakeProject):
         cls.pagemap_rederive = cls.addBoolOption("pagemap-rederive", help="Rederive internal pointers using the pagemap")
         cls.cheri_align      = cls.addBoolOption("cheri-align", help="Align sizes for CHERI bounds setting")
         cheri_bounds_default = False
-        if cls._crossCompileTarget == CrossCompileTarget.CHERI:
+        if cls._crossCompileTarget == CrossCompileTarget.MIPS_CHERI_PURECAP:
             cheri_bounds_default = True
         cls.cheri_bounds     = cls.addBoolOption("cheri-bounds", default=cheri_bounds_default, help="Set bounds on returned allocations")
 

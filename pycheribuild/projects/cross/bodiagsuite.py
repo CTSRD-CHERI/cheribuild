@@ -41,7 +41,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
                                old_urls=[b"https://github.com/nwf/bodiagsuite"])
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     appendCheriBitsToBuildDir = True
-    supported_architectures = [CrossCompileTarget.CHERI, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
+    supported_architectures = [CrossCompileTarget.MIPS_CHERI_PURECAP, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
     defaultOptimizationLevel = ["-O0"]
     default_build_type = BuildType.DEBUG
     default_use_asan = True

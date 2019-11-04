@@ -92,7 +92,7 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv {subcmd_and_arg
 class LaunchCheriBSDOnFGPA(MultiArchBaseMixin, LaunchFPGABase):
     projectName = "run-fpga"
     dependencies = ["cheribsd-mfs-root-kernel-cheri"]
-    supported_architectures = [CrossCompileTarget.CHERI]
+    supported_architectures = [CrossCompileTarget.MIPS_CHERI_PURECAP]
 
 
     @classmethod
@@ -104,7 +104,7 @@ class LaunchCheriBSDOnFGPA(MultiArchBaseMixin, LaunchFPGABase):
 
     def process(self):
         from .cross.cheribsd import BuildCheriBsdMfsKernel
-        mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(CrossCompileTarget.CHERI, self.config)
+        mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(CrossCompileTarget.MIPS_CHERI_PURECAP, self.config)
         # TODO: allow using a plain MIPS kernel?
         if self.kernel_image:
             self.currentKernel = self.kernel_image

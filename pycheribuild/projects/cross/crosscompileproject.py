@@ -65,7 +65,7 @@ def get_cheribsd_instance_for_install_dir(config: CheriConfig, project: "CrossCo
     cross_target = project.get_crosscompile_target(config)
     # If use_hybrid_sysroot_for_mips is set, install to rootfs128 instead of rootfs-mips
     if project.compiling_for_mips() and project.mips_build_hybrid:
-        cross_target = CrossCompileTarget.CHERI
+        cross_target = CrossCompileTarget.MIPS_CHERI_PURECAP
     return BuildCHERIBSD.get_instance_for_cross_target(cross_target, config)
 
 def _installDir(config: CheriConfig, project: "CrossCompileProject"):
@@ -240,7 +240,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                     self.destdir = self.sdkSysroot.parent
                     self._installPrefix = Path("/", self.targetTriple)
                 else:
-                    self._installPrefix = Path("/usr/local", self._crossCompileTarget.value)
+                    self._installPrefix = Path("/usr/local", self._crossCompileTarget.generic_suffix)
                     self.destdir = self._installDir
             elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
                 cheribsd_rootfs = get_cheribsd_instance_for_install_dir(self.config, self).installDir
@@ -286,7 +286,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
             if self.compiling_for_cheri():
                 suffix = "cheri" + self.config.cheriBitsStr
             else:
-                suffix = self._crossCompileTarget.value
+                suffix = self._crossCompileTarget.generic_suffix
             return self.config.sdkDir / "baremetal" / suffix / self.targetTriple
         return self.crossSysrootPath
 
@@ -653,7 +653,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 assert self.compiling_for_cheri()
                 basic_args.append("--jenkins-bitfile=cheri" + self.config.cheriBitsStr)
             # TODO: allow using a plain MIPS kernel?
-            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(CrossCompileTarget.CHERI, self.config)
+            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(CrossCompileTarget.MIPS_CHERI_PURECAP, self.config)
             if self.config.benchmark_with_debug_kernel:
                 kernel_config = mfs_kernel.fpga_kernconf
             else:

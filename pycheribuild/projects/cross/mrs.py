@@ -37,7 +37,7 @@ class MRS(CrossCompileCMakeProject):
     projectName = "mrs"
     repository = GitRepository("https://github.com/ctsrd-cheri/mrs")
     appendCheriBitsToBuildDir = True
-    supported_architectures = [CrossCompileTarget.CHERI]
+    supported_architectures = [CrossCompileTarget.MIPS_CHERI_PURECAP]
 
     # set --mrs/build-type <type> to control build type, default is RelWithDebInfo
 

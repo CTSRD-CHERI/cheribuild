@@ -334,7 +334,7 @@ class _BuildDiskImageBase(SimpleProject):
         if self.include_gdb:
             cross_target = self.source_project.get_crosscompile_target(self.config)
             # We always want to include the MIPS GDB for CHERI targets:
-            if cross_target == CrossCompileTarget.CHERI:
+            if cross_target == CrossCompileTarget.MIPS_CHERI_PURECAP:
                 cross_target = CrossCompileTarget.MIPS
             if cross_target not in BuildGDB.supported_architectures:
                 warningMessage("GDB cannot be built for architecture ", cross_target, " -> not addding it")
@@ -637,7 +637,7 @@ def _defaultDiskImagePath(config: CheriConfig, pfx, img_prefix=""):
 class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
     projectName = "disk-image-minimal"
     dependencies = ["qemu", "cheribsd-cheri"]  # TODO: include gdb?
-    supported_architectures = [CrossCompileTarget.CHERI]
+    supported_architectures = [CrossCompileTarget.MIPS_CHERI_PURECAP]
 
     class _MinimalFileTemplates(_AdditionalFileTemplates):
         def get_fstab_template(self):
@@ -670,7 +670,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                                                             help="Use the rootfs built by cheribsd-purecap instead")
 
     def __init__(self, config: CheriConfig):
-        self.cheribsd_class = BuildCHERIBSD.get_class_for_target(CrossCompileTarget.CHERI)  # type: typing.Type[BuildCHERIBSD]
+        self.cheribsd_class = BuildCHERIBSD.get_class_for_target(CrossCompileTarget.MIPS_CHERI_PURECAP)  # type: typing.Type[BuildCHERIBSD]
         if self.use_cheribsd_purecap_rootfs:
             self.cheribsd_class = BuildCHERIBSDPurecap
         super().__init__(config, source_class=self.cheribsd_class)
@@ -813,7 +813,7 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
     @classproperty
     def supported_architectures(cls):
         # FIXME:
-        return [CrossCompileTarget.CHERI]
+        return [CrossCompileTarget.MIPS_CHERI_PURECAP]
         # return cls._source_class.supported_architectures
 
     @classmethod
@@ -826,7 +826,7 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
         tmpfs_shortname = None
         extra_files_shortname = None
         disk_img_shortname = None
-        if cls._crossCompileTarget == CrossCompileTarget.CHERI:
+        if cls._crossCompileTarget == CrossCompileTarget.MIPS_CHERI_PURECAP:
             tmpfs_shortname = "-disable-tmpfs"
             disk_img_shortname = "-disk-image-path"
             extra_files_shortname = "-extra-files"
@@ -850,13 +850,13 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
     @property
     def needs_special_pkg_repo(self):
         tgt = self.crosscompile_target
-        return tgt == CrossCompileTarget.MIPS or tgt == CrossCompileTarget.CHERI
+        return tgt == CrossCompileTarget.MIPS or tgt == CrossCompileTarget.MIPS_CHERI_PURECAP
 
 
 class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
     projectName = "disk-image-purecap"
     dependencies = ["qemu", "cheribsd-purecap", "gdb-mips"]
-    supported_architectures = [CrossCompileTarget.CHERI]
+    supported_architectures = [CrossCompileTarget.MIPS_CHERI_PURECAP]
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -886,9 +886,9 @@ class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
         return True
 
 
-def _default_freebsd_disk_image_name(config: CheriConfig, project: MultiArchBaseMixin):
+def _default_freebsd_disk_image_name(config: CheriConfig, project: SimpleProject):
     xtarget = project.get_crosscompile_target(config)
-    suffix = xtarget.value if xtarget else "<TARGET>"
+    suffix = xtarget.generic_suffix if xtarget else "<TARGET>"
     if project.compiling_for_mips():
         if config.mips_float_abi == MipsFloatAbi.HARD:
             suffix += "-hardfloat"
@@ -902,7 +902,7 @@ class BuildFreeBSDImage(_BuildMultiArchDiskImage):
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         hostUsername = CheriConfig.get_user_name()
-        suffix = cls._crossCompileTarget.value if cls._crossCompileTarget else "<TARGET>"
+        suffix = cls._crossCompileTarget.generic_suffix if cls._crossCompileTarget else "<TARGET>"
         super().setupConfigOptions(defaultHostname="qemu-" + suffix + "-" + hostUsername, **kwargs)
         defaultDiskImagePath = ComputedDefaultValue(
                 function=_default_freebsd_disk_image_name, asString="$OUTPUT_ROOT/freebsd-" + suffix + " .img")

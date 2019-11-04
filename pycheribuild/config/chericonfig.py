@@ -53,18 +53,46 @@ class MyJsonEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-class CrossCompileTarget(Enum):
-    NATIVE = "native"
+class CPUArchitecture(Enum):
+    X86_64 = "x86_64"
     MIPS = "mips"
-    CHERI = "cheri"  # TODO: add 128 and 256
     RISCV = "riscv"
     I386 = "i386"
+    AARCH64 = "aarch64"
+
+
+class CrossCompileTarget(Enum):
+    NATIVE = ("native", CPUArchitecture.X86_64, False)  # XXX: should probably not harcode x86_64
+    MIPS = ("mips", CPUArchitecture.MIPS, False)
+    MIPS_CHERI_PURECAP = ("cheri", CPUArchitecture.MIPS, True)
+    RISCV = ("riscv", CPUArchitecture.RISCV, False)
+    I386 = ("i386", CPUArchitecture.I386, False)
+    AARCH64 = ("aarch64", CPUArchitecture.AARCH64, False)
 
     def get_index(self):
         for idx, value in enumerate(CrossCompileTarget):
             if self == value:
                 return idx
         assert False, "Should not be reachable"
+
+    def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, is_cheri_purecap: bool):
+        self.generic_suffix = suffix
+        self.cpu_architecture = cpu_architecture
+        # TODO: self.operating_system = ...
+        self.os_cheri_purecap = is_cheri_purecap
+
+    def build_suffix(self, config: "CheriConfig", *, build_hybrid=False):
+        if self is CrossCompileTarget.MIPS_CHERI_PURECAP:
+            result = "-" + config.cheri_bits_and_abi_str
+        elif self is CrossCompileTarget.MIPS and build_hybrid:
+            result = "-" + self.generic_suffix + "-hybrid" + config.cheri_bits_and_abi_str
+            if config.mips_float_abi == MipsFloatAbi.HARD:
+                result += "-hardfloat"
+        else:
+            result = "-" + self.generic_suffix
+        if config.cross_target_suffix:
+            result += "-" + config.cross_target_suffix
+        return self.generic_suffix
 
 
 class BuildType(Enum):
@@ -408,7 +436,7 @@ class CheriConfig(object):
             if self.mips_float_abi == MipsFloatAbi.HARD:
                 return self.sdkDir / "sysroot-mipshf"
             return self.sdkDir / "sysroot-mips"
-        elif cross_compile_target == CrossCompileTarget.CHERI:
+        elif cross_compile_target == CrossCompileTarget.MIPS_CHERI_PURECAP:
             return self.cheriSysrootDir
         elif cross_compile_target == CrossCompileTarget.RISCV:
             return self.sdkDir / "sysroot-riscv"

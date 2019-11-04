@@ -119,7 +119,7 @@ class ProjectSubclassDefinitionHook(type):
             for arch in supported_archs:
                 assert isinstance(arch, CrossCompileTarget)
                 # create a new class to ensure different build dirs and config name strings
-                new_name = targetName + "-" + arch.value
+                new_name = targetName + "-" + arch.generic_suffix
                 new_dict = cls.__dict__.copy()
                 new_dict["_crossCompileTarget"] = arch
                 new_dict["_should_not_be_instantiated"] = False  # unlike the subclass we can instantiate these
@@ -160,12 +160,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # However, if the output is just a plain text file don't attempt to do any line clearing
     _clearLineSequence = b"\x1b[2K\r" if sys.__stdout__.isatty() else b"\n"
 
-    CAN_TARGET_ALL_TARGETS = [CrossCompileTarget.CHERI, CrossCompileTarget.MIPS, CrossCompileTarget.NATIVE]
+    CAN_TARGET_ALL_TARGETS = [CrossCompileTarget.MIPS_CHERI_PURECAP, CrossCompileTarget.MIPS, CrossCompileTarget.NATIVE]
     CAN_TARGET_ONLY_NATIVE = [CrossCompileTarget.NATIVE]
     # WARNING: baremetal CHERI probably doesn't work
-    CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.MIPS, CrossCompileTarget.CHERI]
+    CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.MIPS, CrossCompileTarget.MIPS_CHERI_PURECAP]
     CAN_TARGET_ALL_TARGETS_EXCEPT_CHERI = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
-    CAN_TARGET_ALL_TARGETS_EXCEPT_NATIVE = [CrossCompileTarget.CHERI, CrossCompileTarget.MIPS]
+    CAN_TARGET_ALL_TARGETS_EXCEPT_NATIVE = [CrossCompileTarget.MIPS_CHERI_PURECAP, CrossCompileTarget.MIPS]
     supported_architectures = CAN_TARGET_ONLY_NATIVE
     # The architecture to build for if no --xmips/--xhost flag is passed (defaults to supported_architectures[0]
     # if no match)
@@ -315,7 +315,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             # otherwise pick the first supported arch:
             result = cls.supported_architectures[0]
         # Otherwise pick the best match:
-        if default_target == CrossCompileTarget.CHERI and result == CrossCompileTarget.MIPS:
+        if default_target == CrossCompileTarget.MIPS_CHERI_PURECAP and result == CrossCompileTarget.MIPS:
             # add this note for e.g. GDB:
             # noinspection PyUnresolvedReferences
             cls._configure_status_message = "Cannot compile " + cls.target + " in CHERI purecap mode," \
@@ -334,7 +334,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return self._crossCompileTarget == CrossCompileTarget.MIPS
 
     def compiling_for_cheri(self):
-        return self._crossCompileTarget == CrossCompileTarget.CHERI
+        return self._crossCompileTarget == CrossCompileTarget.MIPS_CHERI_PURECAP
 
     def compiling_for_host(self):
         return self._crossCompileTarget == CrossCompileTarget.NATIVE
@@ -346,7 +346,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def display_name(self):
         if self._crossCompileTarget is None:
             return self.projectName
-        return self.projectName + " (" + self._crossCompileTarget.value + ")"
+        return self.projectName + " (" + self._crossCompileTarget.build_suffix(self.config) + ")"
 
     @classmethod
     def get_class_for_target(cls: "typing.Type[Type_T]", arch: CrossCompileTarget) -> "typing.Type[Type_T]":
@@ -705,7 +705,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 freebsd_image = "freebsd-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
                 if xtarget == CrossCompileTarget.MIPS:
                     guessed_archive = cheribsd_image if self.config.run_mips_tests_with_cheri_image else freebsd_image
-                elif xtarget == CrossCompileTarget.CHERI:
+                elif xtarget == CrossCompileTarget.MIPS_CHERI_PURECAP:
                     guessed_archive = cheribsd_image
                 else:
                     self.fatal("Could not guess path to kernel image for CheriBSD")
@@ -753,7 +753,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             cmd.append("--trap-on-unrepresentable")
         if self.config.test_ld_preload:
             cmd.append("--test-ld-preload=" + str(self.config.test_ld_preload))
-            if xtarget == CrossCompileTarget.CHERI:
+            if xtarget == CrossCompileTarget.MIPS_CHERI_PURECAP:
                 cmd.append("--test-ld-preload-variable=LD_CHERI_PRELOAD")
             else:
                 cmd.append("--test-ld-preload-variable=LD_PRELOAD")
@@ -802,7 +802,7 @@ def _defaultBuildDir(config: CheriConfig, project: "Project"):
     # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
     assert isinstance(project, Project)
     target = project.get_crosscompile_target(config)
-    return project.buildDirForTarget(target)
+    return project.build_dir_for_target(target)
 
 
 class MakeCommandKind(Enum):
@@ -1190,29 +1190,18 @@ class Project(SimpleProject):
         config = self.config
         if target is None:
             target = self.get_crosscompile_target(config)
-        if target is None:
+        # targets that only support native don't need a suffix
+        if target is CrossCompileTarget.NATIVE and len(self.supported_architectures) == 1:
             result = "-" + config.cheriBitsStr if self.appendCheriBitsToBuildDir else ""
-        elif target == CrossCompileTarget.CHERI:
-            result = "-" + config.cheri_bits_and_abi_str
-        elif target == CrossCompileTarget.MIPS and self.mips_build_hybrid:
-            result = "-" + target.value + "-hybrid" + config.cheri_bits_and_abi_str
-            if config.mips_float_abi == MipsFloatAbi.HARD:
-                result += "-hardfloat"
-        else:
-            result = "-" + target.value
-        if config.cross_target_suffix:
-            result += "-" + config.cross_target_suffix
+        result = target.build_suffix(config, build_hybrid=self.mips_build_hybrid)
         if self.use_asan:
             result = "-asan" + result
         if self.build_dir_suffix:
             result = self.build_dir_suffix + result
         return result
 
-    def buildDirSuffix(self, target: CrossCompileTarget=None):
-        return self.build_configuration_suffix(target) + "-build"
-
-    def buildDirForTarget(self, target: CrossCompileTarget):
-        return self.config.buildRoot / (self.projectName.lower() + self.buildDirSuffix(target))
+    def build_dir_for_target(self, target: CrossCompileTarget):
+        return self.config.buildRoot / (self.projectName.lower() + self.build_configuration_suffix(target) + "-build")
 
     _installToSDK = ComputedDefaultValue(
         function=lambda config, project: config.sdkDir,
@@ -1274,7 +1263,7 @@ class Project(SimpleProject):
                                          help="Override default source directory for " + cls.projectName)
         if cls.can_build_with_asan:
             asan_default = ComputedDefaultValue(
-                function=lambda config, proj: False if proj.get_crosscompile_target(config) == CrossCompileTarget.CHERI else proj.default_use_asan,
+                function=lambda config, proj: False if proj.get_crosscompile_target(config) == CrossCompileTarget.MIPS_CHERI_PURECAP else proj.default_use_asan,
                 asString=str(cls.default_use_asan))
             cls.use_asan = cls.addBoolOption("use-asan", default=asan_default, help="Build with AddressSanitizer enabled")
         else:

@@ -41,7 +41,7 @@ class BuildCheriOS(CMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/cherios.git", default_branch="master")
     appendCheriBitsToBuildDir = True
     defaultInstallDir = lambda config, cls: config.outputRoot / ("cherios" + config.cheriBitsStr)
-    supported_architectures = [CrossCompileTarget.CHERI]
+    supported_architectures = [CrossCompileTarget.MIPS_CHERI_PURECAP]
 
     @classmethod
     def setupConfigOptions(cls, useDefaultSysroot=True):
