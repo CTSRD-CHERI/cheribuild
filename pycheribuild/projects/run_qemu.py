@@ -320,7 +320,7 @@ class _RunMultiArchFreeBSDImage(MultiArchBaseMixin, AbstractLaunchFreeBSD):
 
 class LaunchCheriBSD(AbstractLaunchFreeBSD):
     projectName = "run"
-    dependencies = ["qemu", "disk-image"]
+    dependencies = ["qemu", "disk-image-cheri"]
     supported_architectures = [CrossCompileTarget.CHERI]
 
     @classmethod

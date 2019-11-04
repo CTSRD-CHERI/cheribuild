@@ -776,6 +776,7 @@ class _X86FileTemplates(_AdditionalFileTemplates):
 class _BuildMultiArchDiskImage(MultiArchBaseMixin, _BuildDiskImageBase):
     doNotAddToTargets = True
     _source_class = None  # type: typing.Type[MultiArchBaseMixin]
+    _always_add_suffixed_targets = True
 
     @classproperty
     def default_architecture(cls):

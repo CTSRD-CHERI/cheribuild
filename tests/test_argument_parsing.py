@@ -483,7 +483,7 @@ def test_default_arch(base_name, expected):
 def test_default_arch(target: str, args: list, expected: str):
     # Check that the cheribsd build dir is correct
     config = _parse_arguments(args)
-    target = targetManager.get_target(target, None, config)
+    target = targetManager.get_target(target, None, config, caller="test_default_arch")
     builddir = target.get_or_create_project(None, config).buildDir
     assert isinstance(builddir, Path)
     assert builddir.name == expected

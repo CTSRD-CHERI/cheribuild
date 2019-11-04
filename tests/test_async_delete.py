@@ -15,6 +15,7 @@ class MockProject(Project):
     doNotAddToTargets = True
     projectName = "FAKE"
     target = "FAKE"
+    _should_not_be_instantiated = False
 
     def __init__(self, config: MockConfig, name: str):
         self.projectName = name

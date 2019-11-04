@@ -31,7 +31,7 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, skip_sdk=
     targetManager.reset()
     # print(real_targets)
     config = get_global_config()
-    real_targets = list(targetManager.get_target(t, None, config) for t in targets)
+    real_targets = list(targetManager.get_target(t, None, config, caller="_sort_targets") for t in targets)
     config.includeDependencies = add_dependencies
     config.skipSdk = skip_sdk
     for t in real_targets:
