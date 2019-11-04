@@ -336,8 +336,8 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
     def update(self):
         super().update()
         if "clang" in self.included_projects:
-            GitRepository(self.clangRepository).updateRepo(self, srcDir=self.sourceDir / "tools/clang", revision=self.clangRevision, initialBranch="master"),
+            GitRepository(self.clangRepository).update(self, src_dir=self.sourceDir / "tools/clang", revision=self.clangRevision, initial_branch="master"),
         if "lld" in self.included_projects:
-            GitRepository(self.lldRepository).updateRepo(self, srcDir=self.sourceDir / "tools/lld", revision=self.lldRevision, initialBranch="master"),
+            GitRepository(self.lldRepository).update(self, src_dir=self.sourceDir / "tools/lld", revision=self.lldRevision, initial_branch="master"),
         if "lldb" in self.included_projects:  # Not yet usable
-            GitRepository(self.lldbRepository).updateRepo(self, srcDir=self.sourceDir / "tools/lldb", revision=self.lldbRevision, initialBranch="master"),
+            GitRepository(self.lldbRepository).update(self, src_dir=self.sourceDir / "tools/lldb", revision=self.lldbRevision, initial_branch="master"),

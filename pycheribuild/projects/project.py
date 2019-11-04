@@ -51,9 +51,10 @@ from ..targets import Target, MultiArchTarget, MultiArchTargetAlias, targetManag
 from ..filesystemutils import FileSystemUtils
 from ..utils import *
 
-__all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies", # no-combine
+__all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
-           "CrossCompileTarget", "GitRepository", "ComputedDefaultValue", "commandline_to_str", "ReuseOtherProjectRepository"]  # no-combine
+           "CrossCompileTarget", "GitRepository", "ComputedDefaultValue", "commandline_to_str", # no-combine
+           "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository"]  # no-combine
 
 
 def flushStdio(stream):
@@ -917,13 +918,20 @@ class MakeOptions(object):
 
 
 class SourceRepository(object):
-    def ensureCloned(self, current_project: "Project", *, srcDir: Path, initialBranch=None,
-                     skipSubmodules=False):
+    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, initial_branch=None, skip_submodules=False):
         raise NotImplementedError
 
-    def updateRepo(self, current_project: "Project", *, srcDir: Path, revision=None, initialBranch=None,
-                     skipSubmodules=False):
+    def update(self, current_project: "Project", *, src_dir: Path, revision=None, initial_branch=None,
+               skip_submodules=False):
         raise NotImplementedError
+
+
+class ExternallyManagedSourceRepository(SourceRepository):
+    def ensure_cloned(self, current_project: "Project", **kwargs):
+        current_project.info("Not cloning repositiory since it is externally managed")
+
+    def update(self, current_project: "Project", *, src_dir: Path, **kwargs):
+        current_project.info("Not updating", src_dir, "since it is externally managed")
 
 
 class ReuseOtherProjectRepository(SourceRepository):
@@ -931,7 +939,7 @@ class ReuseOtherProjectRepository(SourceRepository):
         self.source_project = source_project
         self.subdirectory = subdirectory
 
-    def ensureCloned(self, current_project: "Project", *, srcDir: Path, initialBranch=None, skipSubmodules=False):
+    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, initial_branch=None, skip_submodules=False):
         if not self.source_project.getSourceDir(current_project, current_project.config).exists():
             current_project.fatal("Source repository for target", current_project.target, "does not exist.",
                                   fixitHint="This project uses the sources from the " + self.source_project.target +
@@ -939,10 +947,10 @@ class ReuseOtherProjectRepository(SourceRepository):
                                   "cheribuild.py " + self.source_project.target + "--no-skip-update --skip-configure " +
                                   "--skip-build --skip-install`")
 
-    def updateRepo(self, current_project: "Project", *, srcDir: Path, revision=None, initialBranch=None,
-                     skipSubmodules=False):
+    def update(self, current_project: "Project", *, src_dir: Path, revision=None, initial_branch=None,
+               skip_submodules=False):
         # TODO: allow updating the repo?
-        current_project.info("Not updating", srcDir, "since it reuses the repository for ", self.source_project.target)
+        current_project.info("Not updating", src_dir, "since it reuses the repository for ", self.source_project.target)
 
 
 class GitRepository(SourceRepository):
@@ -951,50 +959,50 @@ class GitRepository(SourceRepository):
         self.old_urls = old_urls
         self.force_branch = force_branch
 
-    def ensureCloned(self, current_project: "Project", *, srcDir: Path, initialBranch=None, skipSubmodules=False):
+    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, initial_branch=None, skip_submodules=False):
         # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
-        if not (srcDir / ".git").exists():
+        if not (src_dir / ".git").exists():
             if current_project.config.skipClone:
-                current_project.fatal("Sources for", str(srcDir), " missing!")
+                current_project.fatal("Sources for", str(src_dir), " missing!")
             assert isinstance(self.url, str), self.url
             assert not self.url.startswith("<"), "Invalid URL " + self.url
-            print(srcDir, "is not a git repository. Clone it from '" + self.url + "'?", end="")
+            print(src_dir, "is not a git repository. Clone it from '" + self.url + "'?", end="")
             if not current_project.queryYesNo(defaultResult=False):
-                current_project.fatal("Sources for", str(srcDir), " missing!")
+                current_project.fatal("Sources for", str(src_dir), " missing!")
             cloneCmd = ["git", "clone"]
             if current_project.config.shallow_clone:
                 # Note: we pass --no-single-branch since otherwise git fetch will not work with branches and
                 # the solution of running  `git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"`
                 # is not very intuitive. This increases the amount of data fetched but increases usability
                 cloneCmd.extend(["--depth", "1", "--no-single-branch"])
-            if not skipSubmodules:
+            if not skip_submodules:
                 cloneCmd.append("--recurse-submodules")
-            if initialBranch:
-                cloneCmd += ["--branch", initialBranch]
-            runCmd(cloneCmd + [self.url, srcDir], cwd="/")
+            if initial_branch:
+                cloneCmd += ["--branch", initial_branch]
+            runCmd(cloneCmd + [self.url, src_dir], cwd="/")
             # Could also do this but it seems to fetch more data than --no-single-branch
             # if self.config.shallow_clone:
-            #    runCmd(["git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"], cwd=srcDir)
+            #    runCmd(["git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"], cwd=src_dir)
 
 
-    def updateRepo(self, current_project: "Project", *, srcDir: Path, revision=None, initialBranch=None, skipSubmodules=False):
-        self.ensureCloned(current_project, srcDir=srcDir, initialBranch=initialBranch, skipSubmodules=skipSubmodules)
+    def update(self, current_project: "Project", *, src_dir: Path, revision=None, initial_branch=None, skip_submodules=False):
+        self.ensure_cloned(current_project, src_dir=src_dir, initial_branch=initial_branch, skip_submodules=skip_submodules)
         if current_project.skipUpdate:
             return
         # handle repositories that have moved
-        if srcDir.exists() and self.old_urls:
+        if src_dir.exists() and self.old_urls:
             # Update from the old url:
             for old_url in self.old_urls:
                 assert isinstance(old_url, bytes)
-                remote_url = runCmd("git", "remote", "get-url", "origin", captureOutput=True, cwd=srcDir).stdout.strip()
+                remote_url = runCmd("git", "remote", "get-url", "origin", captureOutput=True, cwd=src_dir).stdout.strip()
                 if remote_url == old_url:
                     warningMessage(current_project.projectName, "still points to old repository", remote_url)
                     if self.queryYesNo("Update to correct URL?"):
-                        runCmd("git", "remote", "set-url", "origin", self.url, runInPretendMode=True, cwd=srcDir)
+                        runCmd("git", "remote", "set-url", "origin", self.url, runInPretendMode=True, cwd=src_dir)
 
         # make sure we run git stash if we discover any local changes
         hasChanges = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
-                                captureOutput=True, cwd=srcDir, print_verbose_only=True).stdout) > 1
+                                captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
 
         pullCmd = ["git", "pull"]
         has_autostash = False
@@ -1005,43 +1013,43 @@ class GitRepository(SourceRepository):
             pullCmd.append("--autostash")
 
         if hasChanges:
-            print(coloured(AnsiColour.green, "Local changes detected in", srcDir))
+            print(coloured(AnsiColour.green, "Local changes detected in", src_dir))
             # TODO: add a config option to skip this query?
             if current_project.config.force_update:
-                statusUpdate("Updating", srcDir, "with autostash due to --force-update")
+                statusUpdate("Updating", src_dir, "with autostash due to --force-update")
             elif not current_project.queryYesNo("Stash the changes, update and reapply?", defaultResult=True, forceResult=True):
-                statusUpdate("Skipping update of", srcDir)
+                statusUpdate("Skipping update of", src_dir)
                 return
             if not has_autostash:
                 # TODO: ask if we should continue?
                 stashResult = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
-                                     captureOutput=True, cwd=srcDir, print_verbose_only=True).stdout
+                                     captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout
                 # print("stashResult =", stashResult)
                 if "No local changes to save" in stashResult.decode("utf-8"):
                     # print("NO REAL CHANGES")
                     hasChanges = False  # probably git diff showed something from a submodule
 
-        if not skipSubmodules:
+        if not skip_submodules:
             pullCmd.append("--recurse-submodules")
-        runCmd(pullCmd + ["--rebase"], cwd=srcDir, print_verbose_only=True)
-        if not skipSubmodules:
-            runCmd("git", "submodule", "update", "--recursive", cwd=srcDir, print_verbose_only=True)
+        runCmd(pullCmd + ["--rebase"], cwd=src_dir, print_verbose_only=True)
+        if not skip_submodules:
+            runCmd("git", "submodule", "update", "--recursive", cwd=src_dir, print_verbose_only=True)
         if hasChanges and not has_autostash:
-            runCmd("git", "stash", "pop", cwd=srcDir, print_verbose_only=True)
+            runCmd("git", "stash", "pop", cwd=src_dir, print_verbose_only=True)
         if revision:
-            runCmd("git", "checkout", revision, cwd=srcDir, print_verbose_only=True)
+            runCmd("git", "checkout", revision, cwd=src_dir, print_verbose_only=True)
 
-        if srcDir.exists() and self.force_branch:
-            assert initialBranch, "InitialBranch must be set if force_branch is true!"
+        if src_dir.exists() and self.force_branch:
+            assert initial_branch, "InitialBranch must be set if force_branch is true!"
             # TODO: move this to Project so it can also be used for other targets
             status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
-                            captureOutput=True, print_verbose_only=True, cwd=srcDir, runInPretendMode=True)
-            if status.stdout.startswith(b"## ") and not status.stdout.startswith(b"## " + initialBranch.encode("utf-8") + b"..."):
+                            captureOutput=True, print_verbose_only=True, cwd=src_dir, runInPretendMode=True)
+            if status.stdout.startswith(b"## ") and not status.stdout.startswith(b"## " + initial_branch.encode("utf-8") + b"..."):
                 current_branch = status.stdout[3:status.stdout.find(b"...")].strip()
                 warningMessage("You are trying to build the", current_branch.decode("utf-8"),
-                               "branch. You should be using", initialBranch)
-                if current_project.queryYesNo("Would you like to change to the " + initialBranch + " branch?", forceResult=False):
-                    runCmd("git", "checkout", initialBranch, cwd=srcDir)
+                               "branch. You should be using", initial_branch)
+                if current_project.queryYesNo("Would you like to change to the " + initial_branch + " branch?", forceResult=False):
+                    runCmd("git", "checkout", initial_branch, cwd=src_dir)
                 elif not current_project.queryYesNo("Are you sure you want to continue?", forceResult=False):
                     current_project.fatal("Wrong branch:", current_branch.decode("utf-8"))
 
@@ -1355,8 +1363,8 @@ class Project(SimpleProject):
     def update(self):
         if not self.repository and not self.config.skipUpdate:
             self.fatal("Cannot update", self.projectName, "as it is missing a repository source", fatalWhenPretending=True)
-        self.repository.updateRepo(self, srcDir=self.sourceDir, revision=self.gitRevision, initialBranch=self.gitBranch,
-                                   skipSubmodules=self.skipGitSubmodules)
+        self.repository.update(self, src_dir=self.sourceDir, revision=self.gitRevision, initial_branch=self.gitBranch,
+                               skip_submodules=self.skipGitSubmodules)
 
     _extra_git_clean_excludes = []
 

@@ -30,7 +30,7 @@
 import stat
 
 from .crosscompileproject import *
-from ..project import ReuseOtherProjectRepository
+from ..project import ExternallyManagedSourceRepository
 from ...config.loader import ConfigOptionBase
 from ...utils import setEnv, IS_FREEBSD, commandline_to_str, is_jenkins_build
 from pathlib import Path
@@ -233,7 +233,7 @@ class BuildSpec2006(CrossCompileProject):
     target = "spec2006"
     projectName = "spec2006"
     # No repository to clone (just hack around this):
-    repository = ReuseOtherProjectRepository(BuildOlden, ".")
+    repository = ExternallyManagedSourceRepository()
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     make_kind = MakeCommandKind.GnuMake
 

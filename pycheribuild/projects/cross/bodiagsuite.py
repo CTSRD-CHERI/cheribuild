@@ -30,9 +30,10 @@
 import shutil
 
 from .crosscompileproject import *
-from ..softboundscets import BuildSoftBoundCETS
+from ..softboundcets import BuildSoftBoundCETS
 from ..effectivesan import BuildEffectiveSan
-from ...utils import getCompilerInfo, runCmd, IS_FREEBSD
+from ...utils import getCompilerInfo, IS_FREEBSD
+
 
 class BuildBODiagSuite(CrossCompileCMakeProject):
     projectName = "bodiagsuite"
