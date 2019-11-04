@@ -307,9 +307,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def addConfigOption(cls, name: str, default: typing.Union[Type_T, typing.Callable[[], Type_T]] = None,
-                        kind: typing.Union[Type_T, typing.Callable[[str], Type_T]] = str, *,
-                        showHelp = False, shortname = None, _no_fallback_config_name: bool=False,
-                        only_add_for_targets: list = None, fallback_config_name: str=None, **kwargs) -> Type_T:
+                        kind: "typing.Union[typing.Type[Type_T], typing.Callable[[str], Type_T]]" = str, *,
+                        showHelp = False, shortname=None, _no_fallback_config_name: bool = False,
+                        only_add_for_targets: list = None, fallback_config_name: str = None, **kwargs) -> Type_T:
+        # Need a string annotation for kind to avoid https://github.com/python/typing/issues/266 which seems to affect
+        # the version of python in Ubuntu 16.04
         if only_add_for_targets is not None:
             # Some config options only apply to certain targets -> add them to those targets and the generic one
             target = getattr(cls, "_crossCompileTarget")
