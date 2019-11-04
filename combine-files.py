@@ -141,6 +141,11 @@ addFilteredFile(scriptDir / "projects/cherivis.py")
 addFilteredFile(scriptDir / "projects/gnustep.py")
 addFilteredFile(scriptDir / "projects/sail.py")
 addFilteredFile(scriptDir / "projects/soaap.py")
+addFilteredFile(scriptDir / "projects/effectivesan.py")
+addFilteredFile(scriptDir / "projects/softboundcets.py")
+addFilteredFile(scriptDir / "projects/valgrind.py")
+addFilteredFile(scriptDir / "projects/ninja.py")
+addFilteredFile(scriptDir / "projects/cheri_afl.py")
 
 # cross compilation targets
 addFilteredFile(scriptDir / "projects/cross/multiarchmixin.py")
@@ -158,11 +163,20 @@ addFilteredFile(scriptDir / "projects/cross/newlib_baremetal.py")
 addFilteredFile(scriptDir / "projects/cross/sqlite.py")
 addFilteredFile(scriptDir / "projects/cross/qt5.py")
 addFilteredFile(scriptDir / "projects/cross/bbl.py")
+addFilteredFile(scriptDir / "projects/cross/rsync.py")
+addFilteredFile(scriptDir / "projects/cross/dlmalloc.py")
+addFilteredFile(scriptDir / "projects/cross/snmalloc.py")
+addFilteredFile(scriptDir / "projects/cross/libmemwalk.py")
+addFilteredFile(scriptDir / "projects/cross/simple_benchmark.py")
+addFilteredFile(scriptDir / "projects/cross/mrs.py")
+addFilteredFile(scriptDir / "projects/cross/python.py")
+addFilteredFile(scriptDir / "projects/cross/juliet_test_suite.py")
 
 # disk-image, sdk and run_qemu must come after cheribsd as they use CheriBSD.rootfsDir
 addFilteredFile(scriptDir / "projects/disk_image.py")
 addFilteredFile(scriptDir / "projects/sdk.py")
 addFilteredFile(scriptDir / "projects/run_qemu.py")
+addFilteredFile(scriptDir / "projects/run_fpga.py")
 
 # this one should not be needed
 addFilteredFile(scriptDir / "projects/samba.py")
