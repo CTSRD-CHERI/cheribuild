@@ -135,19 +135,3 @@ class BuildGnuBinutils(AutotoolsProject):
         if not self.queryYesNo("Are you sure you want to build this code?", defaultResult=False, forceResult=True):
             return
         super().process()
-
-class BuildGPLv3Binutils(BuildGnuBinutils):
-    target = "gplv3-binutils"
-    projectName = "GPLv3-BinUtils"
-    # This is much faster to clone than the official repo
-    repository = GitRepository("https://github.com/arichardson/binutils-gdb.git")
-    gitBranch = "cheribsd"
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.projectName = ""
-        # self.configureArgs.append("--enable-gold")
-        del self.configureEnvironment["CFLAGS"]
-
-    def update(self):
-        AutotoolsProject.update(self)
