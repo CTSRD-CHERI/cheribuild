@@ -36,7 +36,7 @@ from ..llvm import BuildCheriLLVM
 from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
 from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str, IS_MAC
-from ..project import ReuseOtherProjectRepository
+from ..project import ReuseOtherProjectDefaultTargetRepository
 import os
 
 
@@ -51,7 +51,7 @@ installToCXXDir = ComputedDefaultValue(function=_cxx_install_dir, asString="$CHE
 
 class BuildLibunwind(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
-    repository = ReuseOtherProjectRepository(BuildCheriLLVM, subdirectory="libunwind")
+    repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="libunwind")
     defaultInstallDir = installToCXXDir
 
     @property
@@ -64,10 +64,10 @@ class BuildLibunwind(CrossCompileCMakeProject):
         super().__init__(config)
         # Adding -ldl won't work: no libdl in /usr/libcheri
         self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)
-        self.lit_path = BuildCheriLLVM.getBuildDir(self) / "bin/llvm-lit"
+        self.lit_path = BuildCheriLLVM.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/llvm-lit"
         self.add_cmake_options(
             #  LLVM_CONFIG_PATH=self.compiler_dir / "llvm-config",
-            LLVM_PATH=BuildCheriLLVM.getSourceDir(self) / "llvm",
+            LLVM_PATH=BuildCheriLLVM.getSourceDir(self, cross_target=CrossCompileTarget.NATIVE) / "llvm",
             LLVM_EXTERNAL_LIT=self.lit_path,
         )
 
@@ -188,7 +188,7 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
 
 class BuildLibCXX(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
-    repository = ReuseOtherProjectRepository(BuildCheriLLVM, subdirectory="libcxx")
+    repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="libcxx")
     defaultInstallDir = installToCXXDir
     dependencies = ["libcxxrt"]
 
@@ -214,7 +214,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
         cls.qemu_host = cls.addConfigOption("ssh-host", help="The QEMU SSH hostname to connect to for running tests",
                                             default=lambda c, p: "localhost")
         cls.qemu_port = cls.addConfigOption("ssh-port", help="The QEMU SSH port to connect to for running tests",
-                                            default=lambda c, p: LaunchCheriBSD.get_instance(p, c).sshForwardingPort)
+                                            default=lambda c, p: LaunchCheriBSD.get_instance(p, c, cross_target=CrossCompileTarget.CHERI).sshForwardingPort,
+                                            only_add_for_targets=[CrossCompileTarget.CHERI, CrossCompileTarget.MIPS])
         cls.qemu_user = cls.addConfigOption("ssh-user", default="root", help="The CheriBSD used for running tests")
 
         cls.test_jobs = cls.addConfigOption("parallel-test-jobs", help="Number of QEMU instances spawned to run tests "
@@ -239,8 +240,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.add_cmake_options(
             CMAKE_INSTALL_RPATH_USE_LINK_PATH=True,  # Fix finding libunwind.so
             LIBCXX_INCLUDE_TESTS=True,
-            LLVM_PATH=BuildCheriLLVM.getSourceDir(self) / "llvm",
-            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self) / "bin/llvm-lit",
+            LLVM_PATH=BuildCheriLLVM.getSourceDir(self, cross_target=CrossCompileTarget.NATIVE) / "llvm",
+            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/llvm-lit",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
             LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
                           "/libcxx-test-results.xml --max-time 3600 --timeout 120 -s -vv" + self.libcxx_lit_jobs
@@ -357,7 +358,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
 
 class BuildCompilerRt(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
-    repository = ReuseOtherProjectRepository(BuildCheriLLVM, subdirectory="compiler-rt")
+    repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="compiler-rt")
     projectName = "compiler-rt"
     crossInstallDir = CrossInstallDir.COMPILER_RESOURCE_DIR
     _check_install_dir_conflict = False
@@ -367,9 +368,8 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.add_cmake_options(
-            # LLVM_CONFIG_PATH=BuildCheriLLVM.buildDir / "bin/llvm-config",
             LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
-            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self) / "bin/llvm-lit",
+            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=True,
             COMPILER_RT_BUILD_XRAY=False,
@@ -400,7 +400,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
 
 class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
-    repository = ReuseOtherProjectRepository(BuildCheriLLVM, subdirectory="compiler-rt")
+    repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="compiler-rt")
     projectName = "compiler-rt-baremetal"
     crossInstallDir = CrossInstallDir.SDK
     dependencies = ["newlib-baremetal"]
@@ -415,9 +415,8 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
         if self.compiling_for_mips():
             self.add_cmake_options(COMPILER_RT_HAS_FPIC_FLAG=False)  # HACK: currently we build everything as -fno-pic
         self.add_cmake_options(
-            # LLVM_CONFIG_PATH=BuildCheriLLVM.buildDir / "bin/llvm-config",
             LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
-            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self) / "bin/llvm-lit",
+            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=False,
             COMPILER_RT_BUILD_XRAY=False,

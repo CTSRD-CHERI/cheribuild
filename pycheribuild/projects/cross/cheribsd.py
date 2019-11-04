@@ -36,7 +36,6 @@ import sys
 import tempfile
 
 from pathlib import Path
-from .multiarchmixin import MultiArchBaseMixin
 from ..project import *
 from ..llvm import BuildUpstreamLLVM
 from ...config.loader import ComputedDefaultValue
@@ -1178,7 +1177,7 @@ class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
     dependencies = ["disk-image-minimal"]
     # TODO: also support building a non-CHERI kernel... But that needs a plain MIPS disk-image-minimal first...
     supported_architectures = [CrossCompileTarget.CHERI]
-    default_architecture = CrossCompileTarget.CHERI
+    _always_add_suffixed_targets = True
 
     def process(self):
         from ..disk_image import BuildMinimalCheriBSDDiskImage
@@ -1241,7 +1240,7 @@ class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
     def get_kernel_config(cls, caller: SimpleProject) -> str:
         config = caller.config
         if caller.get_crosscompile_target(config) == CrossCompileTarget.MIPS and config.run_mips_tests_with_cheri_image:
-            build_cheribsd = BuildCHERIBSD.get_instance_for_cross_target(CrossCompileTarget.CHERI, config)
+            build_cheribsd = BuildCHERIBSD.get_instance_for_cross_target(CrossCompileTarget.CHERI, config, caller=caller)
         else:
             build_cheribsd = BuildCHERIBSD.get_instance(caller, config)
         return cls._get_kernconf_to_build(build_cheribsd)
@@ -1269,7 +1268,7 @@ class BuildCHERIBSDPurecap(BuildCHERIBSD):
     _config_inherits_from = "cheribsd"  # we want the CheriBSD config options as well
 
     # Set these variables to override the multi target magic and only support CHERI
-    supported_architectures = None # Only Cheri is supported
+    supported_architectures = [CrossCompileTarget.CHERI]  # Only Cheri is supported
     _crossCompileTarget = CrossCompileTarget.CHERI
     _should_not_be_instantiated = False
     build_dir_suffix = "-purecap"

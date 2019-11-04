@@ -29,11 +29,7 @@
 #
 
 from .crosscompileproject import *
-from ..project import ReuseOtherProjectRepository
-from ...config.loader import ConfigOptionBase
-from ...utils import setEnv, IS_FREEBSD, commandline_to_str, is_jenkins_build
 from pathlib import Path
-import inspect
 import tempfile
 
 

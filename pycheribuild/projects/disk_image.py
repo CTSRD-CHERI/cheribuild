@@ -34,7 +34,6 @@ import io
 import tempfile
 
 from .cross.cheribsd import BuildFreeBSD
-from .cross.multiarchmixin import MultiArchBaseMixin
 from .cross.gdb import BuildGDB
 from .cross.cheribsd import *
 from ..config.loader import ComputedDefaultValue
@@ -638,6 +637,7 @@ def _defaultDiskImagePath(config: CheriConfig, pfx, img_prefix=""):
 class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
     projectName = "disk-image-minimal"
     dependencies = ["qemu", "cheribsd-cheri"]  # TODO: include gdb?
+    supported_architectures = [CrossCompileTarget.CHERI]
 
     class _MinimalFileTemplates(_AdditionalFileTemplates):
         def get_fstab_template(self):
@@ -795,7 +795,6 @@ class _BuildMultiArchDiskImage(MultiArchBaseMixin, _BuildDiskImageBase):
         return tgt is None or tgt == CrossCompileTarget.NATIVE or tgt == CrossCompileTarget.I386
 
     def __init__(self, config: CheriConfig):
-        assert issubclass(self._source_class, MultiArchBaseMixin)
         # TODO: different extra-files directory
         super().__init__(config, source_class=self._source_class.get_class_for_target(self.get_crosscompile_target(config)))
         self.bigEndian = self.compiling_for_mips() or self.compiling_for_cheri()
@@ -852,9 +851,11 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
         tgt = self.crosscompile_target
         return tgt == CrossCompileTarget.MIPS or tgt == CrossCompileTarget.CHERI
 
+
 class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
     projectName = "disk-image-purecap"
     dependencies = ["qemu", "cheribsd-purecap", "gdb-mips"]
+    supported_architectures = [CrossCompileTarget.CHERI]
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -882,6 +883,7 @@ class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
     @property
     def needs_special_pkg_repo(self):
         return True
+
 
 def _default_freebsd_disk_image_name(config: CheriConfig, project: MultiArchBaseMixin):
     xtarget = project.get_crosscompile_target(config)

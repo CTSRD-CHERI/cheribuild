@@ -42,6 +42,7 @@ class BuildBBLFreeBSDWithDefaultOptionsRISCV(AutotoolsProject):
     defaultInstallDir = AutotoolsProject._installToSDK
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
+    supported_architectures = [CrossCompileTarget.RISCV]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

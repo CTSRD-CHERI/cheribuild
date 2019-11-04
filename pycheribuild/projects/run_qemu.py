@@ -320,7 +320,8 @@ class _RunMultiArchFreeBSDImage(MultiArchBaseMixin, AbstractLaunchFreeBSD):
 
 class LaunchCheriBSD(AbstractLaunchFreeBSD):
     projectName = "run"
-    dependencies = ["qemu", "disk-image-cheri"]
+    dependencies = ["qemu", "disk-image"]
+    supported_architectures = [CrossCompileTarget.CHERI]
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -329,12 +330,14 @@ class LaunchCheriBSD(AbstractLaunchFreeBSD):
                                    **kwargs)
 
     def __init__(self, config):
+        assert self.compiling_for_cheri()
         super().__init__(config, disk_image_class=BuildCheriBSDDiskImage)
 
 
 class LaunchCheriBSDPurecap(AbstractLaunchFreeBSD):
     projectName = "run-purecap"
     dependencies = ["qemu", "disk-image-purecap"]
+    supported_architectures = [CrossCompileTarget.CHERI]
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -349,6 +352,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
     target = "run-cherios"
     projectName = "run-cherios"
     dependencies = ["cherios-qemu", "cherios"]
+    supported_architectures = [CrossCompileTarget.CHERI]
     _forwardSSHPort = False
     _qemuUserNetworking = False
     hide_options_from_help = True
@@ -389,7 +393,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
         super().process()
 
 
-class LaunchFreeBSDMips(_RunMultiArchFreeBSDImage):
+class LaunchFreeBSD(_RunMultiArchFreeBSDImage):
     projectName = "run-freebsd"
     hide_options_from_help = True
     _source_class = BuildFreeBSDImage
@@ -416,6 +420,7 @@ class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
 class LaunchCheriBsdMfsRoot(AbstractLaunchFreeBSD):
     projectName = "run-minimal"
     dependencies = ["qemu", "cheribsd-mfs-root-kernel-cheri"]
+    supported_architectures = [CrossCompileTarget.CHERI]
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
@@ -439,6 +444,7 @@ class LaunchCheriBsdMinimal(AbstractLaunchFreeBSD):
     projectName = "run-minimal-with-disk-image"
     dependencies = ["qemu", "disk-image-minimal"]
     hide_options_from_help = True
+    supported_architectures = [CrossCompileTarget.CHERI]
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):

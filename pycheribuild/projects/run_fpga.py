@@ -30,7 +30,6 @@
 import tempfile
 
 from .project import *
-from .cross.multiarchmixin import MultiArchBaseMixin
 from pathlib import Path
 from .cherisim import BuildCheriSim, BuildBeriCtl
 from typing import Optional

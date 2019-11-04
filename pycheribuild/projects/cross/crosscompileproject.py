@@ -41,7 +41,6 @@ from pathlib import Path
 
 from ...config.loader import ComputedDefaultValue, ConfigOptionBase
 from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi, Linkage, BuildType
-from .multiarchmixin import MultiArchBaseMixin
 from ..llvm import BuildCheriLLVM
 from ..project import *
 from ...utils import *
@@ -117,6 +116,8 @@ def crosscompile_dependencies(cls: "typing.Type[CrossCompileProject]", config: C
         return ["cheribsd-sdk"] if cls.needs_cheribsd_sysroot(target) else ["freestanding-sdk"]
 
 
+# TODO: remove this:
+# noinspection PyUnresolvedReferences
 class CrossCompileMixin(MultiArchBaseMixin):
     doNotAddToTargets = True
     config = None  # type: CheriConfig
@@ -132,9 +133,13 @@ class CrossCompileMixin(MultiArchBaseMixin):
     _check_install_dir_conflict = True
     defaultOptimizationLevel = ("-O2",)
     can_build_with_asan = True
+    _always_add_suffixed_targets = True  # always add the suffixed target if there is only one
 
     # noinspection PyProtectedMember
-    _no_overwrite_allowed = MultiArchBaseMixin._no_overwrite_allowed + ("baremetal",)  # type: typing.Tuple[str]
+    @property
+    def _no_overwrite_allowed(self) -> "typing.Tuple[str]":
+        assert isinstance(self, SimpleProject)
+        return super()._no_overwrite_allowed + ("baremetal",)
 
     needs_mxcaptable_static = False     # E.g. for postgres which is just over the limit:
     #﻿warning: added 38010 entries to .cap_table but current maximum is 32768; try recompiling non-performance critical source files with -mllvm -mxcaptable
@@ -188,7 +193,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
         self.compiler_dir = self.config.sdkBinDir
         # Use the compiler from the build directory for native builds to get stddef.h (which will be deleted)
         if self.compiling_for_host():
-            llvm_build_dir = BuildCheriLLVM.get_instance(self, config).buildDir
+            llvm_build_dir = BuildCheriLLVM.get_instance(self).buildDir
             if (llvm_build_dir / "bin/clang").exists():
                 self.compiler_dir = llvm_build_dir / "bin"
 

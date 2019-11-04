@@ -64,6 +64,7 @@ class BuildJulietTestSuite(CrossCompileCMakeProject):
     def run_tests(self):
         pass
 
+
 class BuildJulietCWESubdir(CrossCompileCMakeProject):
     doNotAddToTargets = True
     cwe_number = None

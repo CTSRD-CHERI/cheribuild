@@ -179,7 +179,7 @@ class MultiArchTarget(Target):
 
     def _create_project(self, config: CheriConfig):
         from .projects.cross.crosscompileproject import CrossCompileMixin
-        from .projects.cross.multiarchmixin import MultiArchBaseMixin
+        from .projects.project import MultiArchBaseMixin
         assert issubclass(self.projectClass, CrossCompileMixin) or issubclass(self.projectClass, MultiArchBaseMixin)
         return self.projectClass(config)
 
@@ -194,8 +194,8 @@ class MultiArchTargetAlias(Target):
         super().__init__(name, projectClass)
         self.derived_targets = []  # type: typing.List[MultiArchTarget]
 
-
-    def get_real_target(self, cross_target: "typing.Optional[CrossCompileTarget]", config) -> MultiArchTarget:
+    def get_real_target(self, cross_target: "typing.Optional[CrossCompileTarget]", config,
+                        caller=None) -> MultiArchTarget:
         if cross_target is None:
             # Use the default target:
             cross_target = self.projectClass.get_crosscompile_target(config)
@@ -204,7 +204,7 @@ class MultiArchTargetAlias(Target):
         for tgt in self.derived_targets:
             if tgt.target_arch == cross_target:
                 return tgt
-        raise LookupError("Could not find target for " + str(cross_target))
+        raise LookupError("Could not find target for " + str(cross_target) + ", caller was " + str(caller))
 
     def get_or_create_project(self, cross_target: "typing.Optional[CrossCompileTarget]", config) -> "SimpleProject":
         # If there are any derived targets pick the right one based on the target_arch:
@@ -259,7 +259,8 @@ class TargetManager(object):
         # return the actual target without resolving MultiArchTargetAlias
         return self._allTargets[name]
 
-    def get_target(self, name: str, arch: "typing.Optional[CrossCompileTarget]", config: CheriConfig) -> Target:
+    def get_target(self, name: str, arch: "typing.Optional[CrossCompileTarget]", config: CheriConfig,
+                   caller: "SimpleProject") -> Target:
         target = self.get_target_raw(name)
         # print("get_target", name, arch, end="")
         if isinstance(target, MultiArchTargetAlias):
@@ -267,7 +268,7 @@ class TargetManager(object):
             # print(" raw_target:", target, " default arch = ", target.projectClass.default_architecture, end="")
             if arch is None and target.projectClass.default_architecture is not None:
                 arch = target.projectClass.default_architecture
-            target = target.get_real_target(arch, config)
+            target = target.get_real_target(arch, config, caller=caller)
         # print(" ->", target)
         return target
 
@@ -357,7 +358,7 @@ class TargetManager(object):
             if targetName not in self._allTargets:
                 sys.exit(coloured(AnsiColour.red, "Target", targetName, "does not exist. Valid choices are",
                                   ",".join(self.targetNames)))
-            explicitlyChosenTargets.append(self.get_target(targetName, None, config))
+            explicitlyChosenTargets.append(self.get_target(targetName, None, config, caller="cmdline parsing"))
         chosenTargets = self.get_all_targets(explicitlyChosenTargets, config)
         if config.verbose:
             print("Will execute the following targets:", " ".join(t.name for t in chosenTargets))

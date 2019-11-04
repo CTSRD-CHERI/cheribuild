@@ -49,8 +49,10 @@ from ..utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
-           "CrossCompileTarget", "GitRepository", "ComputedDefaultValue", "commandline_to_str", # no-combine
-           "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository"]  # no-combine
+           "CrossCompileTarget", "GitRepository", "ComputedDefaultValue", "commandline_to_str",  # no-combine
+           "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository", # no-combine
+           "MultiArchBaseMixin",  # TODO: remove  # no-combine
+           ]  # no-combine
 
 
 def flushStdio(stream):
@@ -103,14 +105,18 @@ class ProjectSubclassDefinitionHook(type):
         if cls.__dict__.get("dependenciesMustBeBuilt"):
             if not cls.dependencies:
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + targetName)
-        if hasattr(cls, "supported_architectures") and cls.supported_architectures is not None:
+        supported_archs = cls.supported_architectures
+        assert supported_archs, "Must not be empty: " + str(supported_archs)
+        assert isinstance(supported_archs, list)
+        # TODO: if len(cls.supported_architectures) > 1:
+        if cls._always_add_suffixed_targets or len(supported_archs) > 1:
             # Add a the target for the default architecture
             base_target = MultiArchTargetAlias(targetName, cls)
             targetManager.addTarget(base_target)
             # TODO: make this hold with CheriBSD
             # assert cls._crossCompileTarget is None, "Should not be set!"
             # assert cls._should_not_be_instantiated, "multiarch base classes should not be instantiated"
-            for arch in cls.supported_architectures:
+            for arch in supported_archs:
                 assert isinstance(arch, CrossCompileTarget)
                 # create a new class to ensure different build dirs and config name strings
                 new_name = targetName + "-" + arch.value
@@ -123,7 +129,10 @@ class ProjectSubclassDefinitionHook(type):
                 new_type = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
                 targetManager.addTarget(MultiArchTarget(new_name, new_type, arch, base_target))
         else:
+            assert len(supported_archs) == 1
             # Only one target is supported:
+            cls._crossCompileTarget = supported_archs[0]
+            cls._should_not_be_instantiated = False  # can be instantiated
             targetManager.addTarget(Target(targetName, cls))
         # print("Adding target", targetName, "with deps:", cls.dependencies)
 
@@ -145,14 +154,40 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # Whether to hide the options from the default --help output (only add to --help-hidden)
     hide_options_from_help = False
     _mips_build_hybrid = None  # whether to build MIPS binaries as hybrid ones
+    # Project subclasses will automatically have a target based on their name generated unless they add this:
+    doNotAddToTargets = True
+    # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
+    # However, if the output is just a plain text file don't attempt to do any line clearing
+    _clearLineSequence = b"\x1b[2K\r" if sys.__stdout__.isatty() else b"\n"
+
+    CAN_TARGET_ALL_TARGETS = [CrossCompileTarget.CHERI, CrossCompileTarget.MIPS, CrossCompileTarget.NATIVE]
+    CAN_TARGET_ONLY_NATIVE = [CrossCompileTarget.NATIVE]
+    # WARNING: baremetal CHERI probably doesn't work
+    CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.MIPS, CrossCompileTarget.CHERI]
+    CAN_TARGET_ALL_TARGETS_EXCEPT_CHERI = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
+    CAN_TARGET_ALL_TARGETS_EXCEPT_NATIVE = [CrossCompileTarget.CHERI, CrossCompileTarget.MIPS]
+    supported_architectures = CAN_TARGET_ONLY_NATIVE
+    # The architecture to build for if no --xmips/--xhost flag is passed (defaults to supported_architectures[0]
+    # if no match)
+    default_architecture = None
+    appendCheriBitsToBuildDir = True
+    _crossCompileTarget = None  # type: CrossCompileTarget
+    # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
+    # To check that we don't create an crosscompile targets without a fixed target
+    _should_not_be_instantiated = True
+    # To prevent non-suffixed targets in case the only target is not NATIVE
+    _always_add_suffixed_targets = False  # add a suffixed target even if only one variant is supported
+
+    @property
+    def _no_overwrite_allowed(self) -> "typing.Tuple[str]":
+        return "_crossCompileTarget",
+
     @property
     def mips_build_hybrid(self) -> bool:
         if self._mips_build_hybrid is None:
             return self.config.use_hybrid_sysroot_for_mips
         else:
             return self._mips_build_hybrid
-    # To check that we don't create an crosscompile targets without a fixed target
-    _should_not_be_instantiated = False
     __cached_deps = None  # type: typing.List[Target]
 
     @classmethod
@@ -179,8 +214,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             try:
                 dep_target = targetManager.get_target_raw(dep_name)
             except KeyError:
-                for x in targetManager.targets:
-                    print(x)
                 fatalError("Could not find target '", dep_name, "' for ", cls.__name__, sep="")
                 raise
             # Handle --include-dependencies with --skip-sdk is passed
@@ -246,51 +279,88 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 cross_target = caller.get_crosscompile_target(config)
         else:
             assert config is not None, "Need either caller or config argument!"
-        return cls.get_instance_for_cross_target(cross_target, config)
+
+        return cls.get_instance_for_cross_target(cross_target, config, caller=caller)
 
     @classmethod
     def get_instance_for_cross_target(cls: "typing.Type[Type_T]", cross_target: CrossCompileTarget,
-                                      config: CheriConfig) -> "Type_T":
+                                      config: CheriConfig, caller: "SimpleProject" = None) -> "Type_T":
         # Also need to handle calling self.get_instance_for_cross_target() on a target-specific instance
         # In that case cls.target returns e.g. foo-mips, etc and targetManager will always return the MIPS version
         root_class = getattr(cls, "synthetic_base", cls)
-        target = targetManager.get_target(root_class.target, cross_target, config)
+        target = targetManager.get_target(root_class.target, cross_target, config, caller=caller)
         result = target.get_or_create_project(cross_target, config)
         assert isinstance(result, SimpleProject)
         found_target = result.get_crosscompile_target(config)
-        from .cross.multiarchmixin import MultiArchBaseMixin
-        if found_target is None:
-            assert not isinstance(result, MultiArchBaseMixin)
-        else:
-            assert isinstance(result, MultiArchBaseMixin)
-            # XXX: FIXME: add cross target to every call
-            if cross_target is not None:
-                assert found_target == cross_target, "Didn't find right instance? " + str(found_target) + " vs. " + str(
-                    cross_target)
+        # XXX: FIXME: add cross target to every call
+        if cross_target is not None:
+            assert found_target == cross_target, "Didn't find right instance of " + str(cls) + ": " + str(
+                found_target) + " vs. " + str(cross_target) + ", caller was " + repr(caller)
         return result
 
     @classmethod
-    def get_crosscompile_target(cls, config: CheriConfig) -> "typing.Optional[CrossCompileTarget]":
-        return None  # XXX: does it make sense to return NATIVE instead? Will break stuff for little gain I guess
+    def get_crosscompile_target(cls, config: CheriConfig) -> CrossCompileTarget:
+        target = cls._crossCompileTarget
+        if target is not None:
+            return target
+        # Find the best match based on config.crossCompileTarget
+        default_target = config.crossCompileTarget
+        assert cls.supported_architectures, "Must not be empty"
+        # if we can build the default target (--xmips/--xhost) chose that
+        if default_target in cls.supported_architectures:
+            return default_target
+        # otherwise fall back to the default specified in the class
+        result = cls.default_architecture
+        if not result:
+            # otherwise pick the first supported arch:
+            result = cls.supported_architectures[0]
+        # Otherwise pick the best match:
+        if default_target == CrossCompileTarget.CHERI and result == CrossCompileTarget.MIPS:
+            # add this note for e.g. GDB:
+            # noinspection PyUnresolvedReferences
+            cls._configure_status_message = "Cannot compile " + cls.target + " in CHERI purecap mode," \
+                                                                             " building MIPS binaries instead"
+        return result
 
     @property
     def crosscompile_target(self):
         return self.get_crosscompile_target(self.config)
 
+    def get_host_triple(self):
+        compiler = getCompilerInfo(self.config.clangPath if self.config.clangPath else shutil.which("cc"))
+        return compiler.default_target
+
+    def compiling_for_mips(self):
+        return self._crossCompileTarget == CrossCompileTarget.MIPS
+
+    def compiling_for_cheri(self):
+        return self._crossCompileTarget == CrossCompileTarget.CHERI
+
+    def compiling_for_host(self):
+        return self._crossCompileTarget == CrossCompileTarget.NATIVE
+
+    def compiling_for_riscv(self):
+        return self._crossCompileTarget == CrossCompileTarget.RISCV
+
+    @property
+    def display_name(self):
+        if self._crossCompileTarget is None:
+            return self.projectName
+        return self.projectName + " (" + self._crossCompileTarget.value + ")"
+
+    @classmethod
+    def get_class_for_target(cls: "typing.Type[Type_T]", arch: CrossCompileTarget) -> "typing.Type[Type_T]":
+        target = targetManager.get_target_raw(cls.target)
+        assert isinstance(target, MultiArchTargetAlias)
+        for t in target.derived_targets:
+            if t.target_arch == arch:
+                return t.projectClass
+        raise LookupError("Invalid arch " + str(arch) + " for class " + str(cls))
+
     @property
     def crossSysrootPath(self):
         assert self.crosscompile_target is not None, "called from invalid class " + str(self.__class__)
         return self.config.get_sysroot_path(self.crosscompile_target, self.mips_build_hybrid)
-
-    # Project subclasses will automatically have a target based on their name generated unless they add this:
-    doNotAddToTargets = True
-
-    # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
-    # However, if the output is just a plain text file don't attempt to do any line clearing
-    _clearLineSequence = b"\x1b[2K\r" if sys.__stdout__.isatty() else b"\n"
-
-    __commandLineOptionGroup = None
-
 
     # Duplicate all arguments instead of using **kwargs to get sensible code completion
     @staticmethod
@@ -344,8 +414,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if name not in ["build-directory"]:
                 fallback_config_name = fallback_name_base + "/" + name
             elif synthetic_base is not None:
-                from .cross.multiarchmixin import MultiArchBaseMixin
-                assert issubclass(cls, MultiArchBaseMixin)
+                assert issubclass(cls, MultiArchBaseMixin), cls
                 # build-directory should only be inherited for the default target (e.g. cheribsd-cheri -> cheribsd):
                 if cls.default_architecture is not None and cls.default_architecture == cls._crossCompileTarget:
                     # Don't allow cheribsd-purecap/build-directory to fall back to cheribsd/build-directory
@@ -931,21 +1000,32 @@ class ExternallyManagedSourceRepository(SourceRepository):
 
 
 class ReuseOtherProjectRepository(SourceRepository):
-    def __init__(self, source_project: "typing.Type[Project]", subdirectory="."):
+    def __init__(self, source_project: "typing.Type[Project]", *, subdirectory=".",
+                 repo_for_target: CrossCompileTarget = None):
         self.source_project = source_project
         self.subdirectory = subdirectory
+        self.repo_for_target = repo_for_target
 
     def ensure_cloned(self, current_project: "Project", **kwargs):
-        if not self.source_project.getSourceDir(current_project, current_project.config).exists():
+        if not self.get_real_source_dir(current_project, current_project.config).exists():
             current_project.fatal("Source repository for target", current_project.target, "does not exist.",
                                   fixitHint="This project uses the sources from the " + self.source_project.target +
                                   "target so you will have to clone that first. Try running:\n\t`" +
                                   "cheribuild.py " + self.source_project.target + "--no-skip-update --skip-configure " +
                                   "--skip-build --skip-install`")
 
+    def get_real_source_dir(self, caller: SimpleProject, config: CheriConfig) -> Path:
+        return self.source_project.getSourceDir(caller, config, cross_target=self.repo_for_target) / self.subdirectory
+
     def update(self, current_project: "Project", *, src_dir: Path, **kwargs):
         # TODO: allow updating the repo?
         current_project.info("Not updating", src_dir, "since it reuses the repository for ", self.source_project.target)
+
+
+class ReuseOtherProjectDefaultTargetRepository(ReuseOtherProjectRepository):
+    def __init__(self, source_project: "typing.Type[Project]", *, subdirectory="."):
+        super().__init__(source_project, subdirectory=subdirectory,
+                         repo_for_target=source_project.supported_architectures[0])
 
 
 class GitRepository(SourceRepository):
@@ -1050,6 +1130,10 @@ class GitRepository(SourceRepository):
                     runCmd("git", "checkout", self.default_branch, cwd=src_dir)
                 elif not current_project.queryYesNo("Are you sure you want to continue?", force_result=False):
                     current_project.fatal("Wrong branch:", current_branch.decode("utf-8"))
+
+
+class MultiArchBaseMixin(object):
+    supported_architectures = SimpleProject.CAN_TARGET_ALL_TARGETS
 
 
 class Project(SimpleProject):
@@ -1240,7 +1324,7 @@ class Project(SimpleProject):
             # HACK: override the source directory (ignoring the setting from the JSON)
             # This should be done using a decorator that also changes defaultSourceDir so that we can
             # take the JSON into account
-            self.sourceDir = self.repository.source_project.getSourceDir(self, config) / self.repository.subdirectory
+            self.sourceDir = self.repository.get_real_source_dir(self, config)
             self.info("Overriding source directory for", self.target, "since it reuses the sources of",
                       self.repository.source_project.target, "->", self.sourceDir)
         super().__init__(config)
@@ -1269,7 +1353,9 @@ class Project(SimpleProject):
         self._force_clean = False
         self._preventAssign = True
 
-    _no_overwrite_allowed = ("configureArgs", "configureEnvironment", "make_args")
+    @property
+    def _no_overwrite_allowed(self) -> "typing.Iterable[str]":
+        return super()._no_overwrite_allowed + ("configureArgs", "configureEnvironment", "make_args")
 
     # Make sure that API is used properly
     def __setattr__(self, name, value):
@@ -1493,10 +1579,6 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     create = False
         if create:
             self.writeFile(target_file, cmakelists, overwrite=True)
-
-    @property
-    def display_name(self):
-        return self.projectName
 
     @property
     def csetbounds_stats_file(self) -> Path:
@@ -1749,4 +1831,4 @@ class TargetAliasWithDependencies(TargetAlias):
 
 
 class BuildAll(TargetAliasWithDependencies):
-    dependencies = ["qemu", "sdk", "disk-image-cheri", "run"]
+    dependencies = ["qemu", "sdk", "disk-image", "run"]

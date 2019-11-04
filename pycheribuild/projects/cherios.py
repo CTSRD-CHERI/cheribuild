@@ -27,11 +27,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import re
 
+from .llvm import BuildCheriOSLLVM
 from .project import *
 from ..utils import *
-from .llvm import BuildCheriOSLLVM
 
 
 class BuildCheriOS(CMakeProject):
@@ -42,6 +41,7 @@ class BuildCheriOS(CMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/cherios.git", default_branch="master")
     appendCheriBitsToBuildDir = True
     defaultInstallDir = lambda config, cls: config.outputRoot / ("cherios" + config.cheriBitsStr)
+    supported_architectures = [CrossCompileTarget.CHERI]
 
     @classmethod
     def setupConfigOptions(cls, useDefaultSysroot=True):
@@ -51,12 +51,13 @@ class BuildCheriOS(CMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.add_cmake_options(CHERI_SDK_DIR=BuildCheriOSLLVM.get_instance(self).installDir)
+        self.add_cmake_options(
+            CHERI_SDK_DIR=BuildCheriOSLLVM.get_instance(self, cross_target=CrossCompileTarget.NATIVE).installDir)
         self.add_cmake_options(BUILD_FOR_CHERI128=self.config.cheriBits == 128)
         self.add_cmake_options(BUILD_WITH_NET=self.build_net)
         self.add_cmake_options(SMP_CORES=self.smp_cores)
-        self.add_cmake_options(CMAKE_AR=BuildCheriOSLLVM.get_instance(self).installDir / "bin/llvm-ar")
-        self.add_cmake_options(CMAKE_RANLIB=BuildCheriOSLLVM.get_instance(self).installDir / "bin/llvm-ranlib")
+        self.add_cmake_options(CMAKE_AR=BuildCheriOSLLVM.get_instance(self, cross_target=CrossCompileTarget.NATIVE).installDir / "bin/llvm-ar")
+        self.add_cmake_options(CMAKE_RANLIB=BuildCheriOSLLVM.get_instance(self, cross_target=CrossCompileTarget.NATIVE).installDir / "bin/llvm-ranlib")
         self.set_minimum_cmake_version(3, 4)
 
     def install(self, **kwargs):

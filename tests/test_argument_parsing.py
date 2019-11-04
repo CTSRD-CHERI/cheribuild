@@ -198,6 +198,8 @@ def test_cross_compile_project_inherits():
                                      b' "qtbase-mips/build-directory": "/bar/foo"}')
     assertBuildDirsDifferent()
 
+
+# FIXME: cheribsd-cheri/kernel-config should use the cheribsd/kernel-config value
 def test_cheribsd_purecap_inherits_config_from_cheribsd():
     # Parse args once to ensure targetManager is initialized
     config = _parse_arguments(["--skip-configure"])
@@ -215,7 +217,6 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     # cheribsd-cheri is a synthetic class, but cheribsd-purecap inst:
     assert cheribsd_cheri.synthetic_base == cheribsd_class
     assert not hasattr(cheribsd_purecap, "synthetic_base")
-
 
     _parse_arguments(["--cheribsd-mips/build-tests"])
     assert not cheribsd_purecap.build_tests, "cheribsd-purecap build-tests should default to false"
