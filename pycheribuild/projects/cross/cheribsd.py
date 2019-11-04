@@ -54,6 +54,7 @@ def defaultKernelConfig(config: CheriConfig, project: "BuildFreeBSD"):
     elif project.compiling_for_cheri():
         # make sure we use a kernel with 128 bit CPU features selected
         # or a purecap kernel is selected
+        assert isinstance(project, BuildCHERIBSD)
         kernconf_name = "CHERI{bits}{pure}_MALTA64"
         cheri_bits = "128" if config.cheriBits == 128 else ""
         cheri_pure = "_PURECAP" if project.purecapKernel else ""
@@ -62,6 +63,7 @@ def defaultKernelConfig(config: CheriConfig, project: "BuildFreeBSD"):
         return "GENERIC"  # TODO: what is the correct config
     else:
         assert False, "should be unreachable"
+
 
 def freebsd_install_dir(config: CheriConfig, project: "BuildFreeBSD"):
     assert isinstance(project, BuildFreeBSD)
@@ -139,7 +141,6 @@ class BuildFreeBSDBase(Project):
         # "-DWITH_LIBCHERI_JEMALLOC"  # use jemalloc instead of -lmalloc_simple
     ]
 
-
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
@@ -200,11 +201,11 @@ class BuildFreeBSDBase(Project):
         # print detailed information about the failed target (including the command that was executed)
         self.make_args.add_flags("-de")
 
-    def runMake(self, makeTarget="", *, options: MakeOptions = None, parallel=True, **kwargs):
+    def runMake(self, make_target="", *, options: MakeOptions = None, parallel=True, **kwargs):
         # make behaves differently with -j1 and not j flags -> remove the j flag if j1 is requested
         if parallel and self.config.makeJobs == 1:
             parallel = False
-        super().runMake(makeTarget, options=options, cwd=self.sourceDir, parallel=parallel, **kwargs)
+        super().runMake(make_target, options=options, cwd=self.sourceDir, parallel=parallel, **kwargs)
 
     @property
     def jflag(self) -> list:

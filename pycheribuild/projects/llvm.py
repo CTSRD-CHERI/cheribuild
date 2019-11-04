@@ -27,15 +27,12 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from pathlib import Path
-import shutil
-
 import os
 import sys
 
 from .project import *
-from ..utils import *
 from ..config.loader import ComputedDefaultValue
+from ..utils import *
 
 
 class BuildLLVMBase(CMakeProject):
@@ -51,11 +48,12 @@ class BuildLLVMBase(CMakeProject):
         super().setupConfigOptions()
         if "included_projects" not in cls.__dict__:
             cls.included_projects = cls.addConfigOption("include-projects", default=["llvm", "clang", "lld"], kind=list,
-                                                         help="List of LLVM subprojects that should be built")
+                                                        help="List of LLVM subprojects that should be built")
 
         if useDefaultSysroot:
             cls.add_default_sysroot = cls.addBoolOption("add-default-sysroot", help="Set default sysroot and "
-                                                        "target triple to include cheribsd paths", )
+                                                                                    "target triple to include "
+                                                                                    "cheribsd paths", )
         else:
             cls.add_default_sysroot = False
 
@@ -66,7 +64,8 @@ class BuildLLVMBase(CMakeProject):
                                                          help="Don't build the clang static analyzer")
         if "skip_misc_llvm_tools" not in cls.__dict__:
             cls.skip_misc_llvm_tools = cls.addBoolOption("skip-unused-tools", default=True,
-                help="Don't build some of the LLVM tools that should not be needed by default (e.g. llvm-mca, llvm-pdbutil)")
+                                                         help="Don't build some of the LLVM tools that should not be "
+                                                              "needed by default (e.g. llvm-mca, llvm-pdbutil)")
         cls.build_everything = cls.addBoolOption("build-everything", default=False,
                                                  help="Also build documentation,examples and bindings")
 
@@ -79,7 +78,8 @@ class BuildLLVMBase(CMakeProject):
         if os.cpu_count() >= 24:
             link_jobs *= 2  # Increase number of link jobs for powerful servers
         # non-shared debug builds take lots of ram -> use only one parallel job
-        if self.cmakeBuildType.lower() in ("debug", "relwithdebinfo") and "-DBUILD_SHARED_LIBS=ON" not in self.cmakeOptions:
+        if self.cmakeBuildType.lower() in (
+                "debug", "relwithdebinfo") and "-DBUILD_SHARED_LIBS=ON" not in self.cmakeOptions:
             link_jobs = 1
         self.add_cmake_options(
             CMAKE_CXX_COMPILER=self.cppCompiler,
@@ -126,7 +126,8 @@ class BuildLLVMBase(CMakeProject):
                                        CMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Wl,--gdb-index")
         if self.add_default_sysroot:
             self.add_cmake_options(DEFAULT_SYSROOT=self.crossSysrootPath,
-                                   LLVM_DEFAULT_TARGET_TRIPLE="mips64c" + self.config.cheriBitsStr + "hybrid-unknown-freebsd")
+                                   LLVM_DEFAULT_TARGET_TRIPLE="mips64c" + self.config.cheriBitsStr +
+                                                              "hybrid-unknown-freebsd")
         # when making a debug or asserts build speed it up by building a release tablegen
         # Actually it seems like the time spent in CMake is longer than that spent running tablegen, disable for now
         self.add_cmake_options(LLVM_OPTIMIZED_TABLEGEN=False)
@@ -178,7 +179,8 @@ class BuildLLVMBase(CMakeProject):
         # noinspection PyTypeChecker
         versionStr = ".".join(map(str, info.version))
         if info.compiler == "apple-clang":
-            print("Compiler is apple clang", versionStr, " -- assuming it matches required version", "%d.%d" % (major, minor))
+            print("Compiler is apple clang", versionStr, " -- assuming it matches required version",
+                  "%d.%d" % (major, minor))
         elif info.compiler == "gcc":
             if info.version < (5, 0, 0):
                 warningMessage("GCC older than 5.0.0 will probably not work for compiling clang!")
@@ -201,16 +203,21 @@ class BuildLLVMBase(CMakeProject):
         if "clang" in self.included_projects:
             # create cc and c++ symlinks (expected by some build systems)
             self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang", toolName="cc", createUnprefixedLink=False)
-            self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang++", toolName="c++", createUnprefixedLink=False)
-            self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang-cpp", toolName="cpp", createUnprefixedLink=False)
+            self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang++", toolName="c++",
+                                               createUnprefixedLink=False)
+            self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang-cpp", toolName="cpp",
+                                               createUnprefixedLink=False)
 
         # Use the LLVM versions of ranlib and ar and nm
         if "llvm" in self.included_projects:
             for tool in ("ar", "ranlib", "nm", "objcopy", "readelf", "objdump", "strip"):
                 # TODO: also for objcopy soon so we don't need elftoolchain at all
-                self.createBuildtoolTargetSymlinks(self.installDir / ("bin/llvm-" + tool), toolName=tool, createUnprefixedLink=True)
-            self.createBuildtoolTargetSymlinks(self.installDir / "bin/llvm-symbolizer", toolName="addr2line", createUnprefixedLink=True)
-            self.createBuildtoolTargetSymlinks(self.installDir / "bin/llvm-cxxfilt", toolName="c++filt", createUnprefixedLink=True)
+                self.createBuildtoolTargetSymlinks(self.installDir / ("bin/llvm-" + tool), toolName=tool,
+                                                   createUnprefixedLink=True)
+            self.createBuildtoolTargetSymlinks(self.installDir / "bin/llvm-symbolizer", toolName="addr2line",
+                                               createUnprefixedLink=True)
+            self.createBuildtoolTargetSymlinks(self.installDir / "bin/llvm-cxxfilt", toolName="c++filt",
+                                               createUnprefixedLink=True)
 
         if "lld" in self.included_projects:
             self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld")
@@ -266,8 +273,10 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
         for cheri_bits in (128, 256):
             for abi in ("purecap", "n64"):
                 prefix = "cheribsd" + str(cheri_bits) + abi
-                config_file_contents = config_file_template.format(cheri_bits=cheri_bits, abi=abi, sdk_dir=self.installDir)
-                self.writeFile(self.installDir / "bin" / (prefix + ".cfg"), config_file_contents, overwrite=True, mode=0o644)
+                config_file_contents = config_file_template.format(cheri_bits=cheri_bits, abi=abi,
+                                                                   sdk_dir=self.installDir)
+                self.writeFile(self.installDir / "bin" / (prefix + ".cfg"), config_file_contents, overwrite=True,
+                               mode=0o644)
                 self.createSymlink(self.installDir / "bin/clang", self.installDir / "bin" / (prefix + "-clang"))
                 self.createSymlink(self.installDir / "bin/clang++", self.installDir / "bin" / (prefix + "-clang++"))
                 self.createSymlink(self.installDir / "bin/clang-cpp", self.installDir / "bin" / (prefix + "-clang-cpp"))
@@ -277,10 +286,9 @@ class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository("https://github.com/llvm/llvm-project.git")
     projectName = "upstream-llvm-project"
     target = "upstream-llvm"
-    defaultInstallDir = ComputedDefaultValue(
-        function=lambda config, project: config.outputRoot / "upstream-llvm",
-        asString="$INSTALL_ROOT/upstream-llvm")
-    skip_misc_llvm_tools = False # Cannot skip these tools in upstream LLVM
+    defaultInstallDir = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "upstream-llvm",
+                                             asString="$INSTALL_ROOT/upstream-llvm")
+    skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
 
 
 class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
@@ -288,10 +296,9 @@ class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
     gitBranch = "temporal"
     projectName = "cherios-llvm-project"
     target = "cherios-llvm"
-    defaultInstallDir = ComputedDefaultValue(
-        function=lambda config, project: config.outputRoot / "cherios-sdk",
-        asString="$INSTALL_ROOT/cherios-sdk")
-    skip_misc_llvm_tools = False # Cannot skip these tools in upstream LLVM
+    defaultInstallDir = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "cherios-sdk",
+                                             asString="$INSTALL_ROOT/cherios-sdk")
+    skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
 
     def configure(self, **kwargs):
         self.add_cmake_options(LLVM_TARGETS_TO_BUILD="Mips")

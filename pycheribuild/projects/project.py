@@ -359,13 +359,13 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                            _fallback_name=fallback_config_name, **kwargs)
 
     @classmethod
-    def addBoolOption(cls, name: str, *, shortname=None, default=False, only_add_for_targets: list=None, **kwargs):
+    def addBoolOption(cls, name: str, *, shortname=None, default=False, only_add_for_targets: list=None, **kwargs) -> bool:
         # noinspection PyTypeChecker
         return cls.addConfigOption(name, default=default, kind=bool, shortname=shortname, action="store_true",
                                    only_add_for_targets=only_add_for_targets, **kwargs)
 
     @classmethod
-    def addPathOption(cls, name: str, *, shortname=None, only_add_for_targets: list=None, **kwargs):
+    def addPathOption(cls, name: str, *, shortname=None, only_add_for_targets: list=None, **kwargs) -> Path:
         return cls.addConfigOption(name, kind=Path, shortname=shortname, only_add_for_targets=only_add_for_targets,
                                    **kwargs)
 
@@ -1282,11 +1282,11 @@ class Project(SimpleProject):
                                    self.__class__.__name__)
         self.__dict__[name] = value
 
-    def _get_make_commandline(self, makeTarget, make_command, options, parallel: bool=True, compilationDbName: str=None):
+    def _get_make_commandline(self, make_target, make_command, options, parallel: bool=True, compilationDbName: str=None):
         assert options is not None
         assert make_command is not None
-        if makeTarget:
-            allArgs = options.all_commandline_args + [makeTarget]
+        if make_target:
+            allArgs = options.all_commandline_args + [make_target]
         else:
             allArgs = options.all_commandline_args
         if parallel and options.can_pass_jflag:
@@ -1309,35 +1309,35 @@ class Project(SimpleProject):
                 allArgs.append("50")
         return allArgs
 
-    def get_make_commandline(self, makeTarget, make_command:str=None, options: MakeOptions=None,
+    def get_make_commandline(self, make_target, make_command:str=None, options: MakeOptions=None,
                              parallel: bool=True, compilationDbName: str=None) -> list:
         if not options:
             options = self.make_args
         if not make_command:
             make_command = self.make_args.command
-        return self._get_make_commandline(makeTarget, make_command, options, parallel, compilationDbName)
+        return self._get_make_commandline(make_target, make_command, options, parallel, compilationDbName)
 
-    def runMake(self, makeTarget="", *, make_command: str = None, options: MakeOptions=None, logfileName: str = None,
+    def runMake(self, make_target="", *, make_command: str = None, options: MakeOptions=None, logfileName: str = None,
                 cwd: Path = None, appendToLogfile=False, compilationDbName="compile_commands.json",
                 parallel: bool=True, stdoutFilter: "typing.Optional[typing.Callable[[bytes], None]]" = _default_stdout_filter) -> None:
         if not options:
             options = self.make_args
         if not make_command:
             make_command = self.make_args.command
-        allArgs = self._get_make_commandline(makeTarget, make_command, options, parallel=parallel,
+        allArgs = self._get_make_commandline(make_target, make_command, options, parallel=parallel,
                                              compilationDbName=compilationDbName)
         if not cwd:
             cwd = self.buildDir
         if not logfileName:
             logfileName = Path(make_command).name
-            if makeTarget:
-                logfileName += "." + makeTarget
+            if make_target:
+                logfileName += "." + make_target
 
         starttime = time.time()
         if not self.config.write_logfile and stdoutFilter == _default_stdout_filter:
             # if output isatty() (i.e. no logfile) ninja already filters the output -> don't slow this down by
             # adding a redundant filter in python
-            if make_command == "ninja" and makeTarget != "install":
+            if make_command == "ninja" and make_target != "install":
                 stdoutFilter = None
         if stdoutFilter is _default_stdout_filter:
             stdoutFilter = self._stdoutFilter
@@ -1348,7 +1348,7 @@ class Project(SimpleProject):
         if self.config.copy_compilation_db_to_source_dir and (self.buildDir / compilationDbName).exists():
             self.installFile(self.buildDir / compilationDbName, self.sourceDir / compilationDbName, force=True)
         # add a newline at the end in case it ended with a filtered line (no final newline)
-        print("Running", make_command, makeTarget, "took", time.time() - starttime, "seconds")
+        print("Running", make_command, make_target, "took", time.time() - starttime, "seconds")
 
     def update(self):
         if not self.repository and not self.config.skipUpdate:
@@ -1452,7 +1452,7 @@ class Project(SimpleProject):
         else:
             options = options.copy()
         options.env_vars.update(self.makeInstallEnv)
-        self.runMake(makeTarget=target, options=options, stdoutFilter=_stdoutFilter, cwd=cwd,
+        self.runMake(make_target=target, options=options, stdoutFilter=_stdoutFilter, cwd=cwd,
                      parallel=parallel, **kwargs)
 
     def install(self, _stdoutFilter=_default_stdout_filter):
