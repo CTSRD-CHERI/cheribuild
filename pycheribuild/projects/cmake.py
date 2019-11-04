@@ -34,8 +34,9 @@ from ..utils import *
 # Not really autotools but same sequence of commands (other than the script being call bootstrap instead of configure)
 class BuildCMake(AutotoolsProject):
     # repository = GitRepository("https://cmake.org/cmake.git")
-    repository = GitRepository("https://github.com/Kitware/CMake")  # a lot faster than the official repo
-    gitBranch = "release"  # track the stable release branch
+    repository = GitRepository("https://github.com/Kitware/CMake",  # a lot faster than the official repo
+                               # track the stable release branch
+                               default_branch="release")
     defaultInstallDir = AutotoolsProject._installToBootstrapTools
 
     def __init__(self, config: CheriConfig):

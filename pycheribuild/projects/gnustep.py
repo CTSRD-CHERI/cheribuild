@@ -42,7 +42,6 @@ class BuildLibObjC2(CMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        # self.gitBranch = "1.8.1"  # track the stable release branch
         self.configureArgs.extend([
             "-DCMAKE_C_COMPILER=clang",
             "-DCMAKE_CXX_COMPILER=clang++",

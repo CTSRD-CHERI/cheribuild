@@ -37,8 +37,7 @@ import os
 class BuildElftoolchain(Project):
     target = "elftoolchain"
     projectName = "elftoolchain"
-    gitBranch = "master"
-    repository = GitRepository("https://github.com/emaste/elftoolchain.git")
+    repository = GitRepository("https://github.com/emaste/elftoolchain.git", default_branch="master")
     defaultInstallDir = Project._installToSDK
     make_kind = MakeCommandKind.BsdMake
     is_sdk_target = True
@@ -48,7 +47,6 @@ class BuildElftoolchain(Project):
         # TODO: move this to project
         self.makedirs(self.buildDir)
         self.make_args.env_vars["MAKEOBJDIRPREFIX"] = self.buildDir
-        self.gitBranch = "master"
         self.makeArgs = ["WITH_TESTS=no", "-DNO_ROOT"]
         # TODO: build static?
         if self.build_static:

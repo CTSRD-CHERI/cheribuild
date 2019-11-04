@@ -189,8 +189,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
 
 class BuildQt5(BuildQtWithConfigureScript):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/qt5")
-    gitBranch = "5.10"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qt5", default_branch="5.10", force_branch=True)
     skipGitSubmodules = True  # init-repository does it for us
 
     @classmethod
@@ -221,8 +220,7 @@ class BuildQt5(BuildQtWithConfigureScript):
 
 class BuildQtBase(BuildQtWithConfigureScript):
     doNotAddToTargets = False  # Even though it ends in Base this is not a Base class
-    repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase")
-    gitBranch = "5.10"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase", default_branch="5.10", force_branch=True)
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.getSourceDir(project, config) / "qtbase",
         asString=lambda cls: "$SOURCE_ROOT/qt5" + cls.projectName.lower())
@@ -326,8 +324,8 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
 
 
 class BuildQtWebkit(CrossCompileCMakeProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/qtwebkit")
-    gitBranch = "qtwebkit-5.212-cheri"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qtwebkit",
+                               default_branch="qtwebkit-5.212-cheri", force_branch=True)
     dependencies = ["qtbase", "icu4c", "libxml2", "sqlite"]
     # webkit is massive if we include debug info
     default_build_type = BuildType.RELWITHDEBINFO

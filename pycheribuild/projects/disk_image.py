@@ -319,14 +319,14 @@ class _BuildDiskImageBase(SimpleProject):
             sshKeys = list(Path(os.path.expanduser("~/.ssh/")).glob("*.pub"))
             if len(sshKeys) > 0:
                 print("Found the following ssh keys:", list(map(str, sshKeys)))
-                if self.queryYesNo("Should they be added to /root/.ssh/authorized_keys?", defaultResult=True):
+                if self.queryYesNo("Should they be added to /root/.ssh/authorized_keys?", default_result=True):
                     contents = ""
                     for pubkey in sshKeys:
                         contents += self.readFile(pubkey)
                     self.createFileForImage("/root/.ssh/authorized_keys", contents=contents, mode=0o600)
                     if self.queryYesNo("Should this authorized_keys file be used by default? "
                                        "(You can always change them by editing/deleting '" +
-                                       str(authorizedKeys) + "')?", defaultResult=False):
+                                       str(authorizedKeys) + "')?"):
                         self.installFile(self.tmpdir / "root/.ssh/authorized_keys", authorizedKeys)
                         # SSHD complains and rejects all connections if /root or /root/.ssh is not 0700
                         runCmd("chmod", "0700", authorizedKeys.parent.parent, authorizedKeys.parent)
@@ -528,7 +528,7 @@ class _BuildDiskImageBase(SimpleProject):
             if not self.config.clean:
                 # with --clean always delete the image
                 print("An image already exists (" + str(self.diskImagePath) + "). ", end="")
-                if not self.queryYesNo("Overwrite?", defaultResult=True):
+                if not self.queryYesNo("Overwrite?", default_result=True):
                     return  # we are done here
             self.deleteFile(self.diskImagePath)
 
@@ -607,7 +607,7 @@ class _BuildDiskImageBase(SimpleProject):
             print("Found the following files in the rootfs that are not listed in METALOG:")
             for i in unlisted_files:
                 print("\t", i[1])
-            if self.queryYesNo("Should these files also be added to the image?", defaultResult=True, forceResult=True):
+            if self.queryYesNo("Should these files also be added to the image?", default_result=True, force_result=True):
                 for i in unlisted_files:
                     self.mtree.add_file(i[0], i[1], print_status=self.config.verbose)
 

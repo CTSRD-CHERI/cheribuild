@@ -34,8 +34,8 @@ import re
 
 
 class BuildPostgres(CrossCompileAutotoolsProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/postgres.git")
-    gitBranch = "96-cheri"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/postgres.git",
+                               default_branch="96-cheri", force_branch=True)
     # we have to build in the source directory, out-of-source is broken
     # build_in_source_dir = True
     make_kind = MakeCommandKind.GnuMake

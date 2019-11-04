@@ -45,8 +45,7 @@ def python_dependencies(cls: "typing.Type[CrossCompileProject]", config: CheriCo
 
 
 class BuildPython(CrossCompileAutotoolsProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/cpython.git")
-    gitBranch = "3.8"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/cpython.git", default_branch="3.8", force_branch=True)
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     default_build_type = BuildType.RELWITHDEBINFO
     dependencies = python_dependencies

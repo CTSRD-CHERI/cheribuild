@@ -32,8 +32,8 @@ from .qt5 import BuildQtWebkit
 from ...utils import runCmd, IS_FREEBSD
 
 class BuildSQLite(CrossCompileAutotoolsProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git")
-    gitBranch = "branch-3.19"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git",
+                               default_branch="branch-3.19", force_branch=True)
     crossInstallDir = CrossInstallDir.SDK
     defaultOptimizationLevel = ["-O2"]
 

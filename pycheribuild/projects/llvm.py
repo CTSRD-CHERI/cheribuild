@@ -292,8 +292,7 @@ class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
 
 
 class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-project.git", force_branch=True)
-    gitBranch = "temporal"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-project.git", force_branch=True, default_branch="temporal")
     projectName = "cherios-llvm-project"
     target = "cherios-llvm"
     defaultInstallDir = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "cherios-sdk",
@@ -336,8 +335,8 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
     def update(self):
         super().update()
         if "clang" in self.included_projects:
-            GitRepository(self.clangRepository).update(self, src_dir=self.sourceDir / "tools/clang", revision=self.clangRevision, initial_branch="master"),
+            GitRepository(self.clangRepository).update(self, src_dir=self.sourceDir / "tools/clang", revision=self.clangRevision),
         if "lld" in self.included_projects:
-            GitRepository(self.lldRepository).update(self, src_dir=self.sourceDir / "tools/lld", revision=self.lldRevision, initial_branch="master"),
+            GitRepository(self.lldRepository).update(self, src_dir=self.sourceDir / "tools/lld", revision=self.lldRevision),
         if "lldb" in self.included_projects:  # Not yet usable
-            GitRepository(self.lldbRepository).update(self, src_dir=self.sourceDir / "tools/lldb", revision=self.lldbRevision, initial_branch="master"),
+            GitRepository(self.lldbRepository).update(self, src_dir=self.sourceDir / "tools/lldb", revision=self.lldbRevision),

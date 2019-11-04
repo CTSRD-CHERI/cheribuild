@@ -39,8 +39,8 @@ from ..utils import *
 class BuildGnuBinutils(AutotoolsProject):
     target = "gnu-binutils"
     projectName = "gnu-binutils"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/binutils.git", force_branch=True)
-    gitBranch = "cheribsd"  # the default branch "cheri" won't work for cross-compiling
+    repository = GitRepository("https://github.com/CTSRD-CHERI/binutils.git", default_branch="cheribsd",
+                               force_branch=True)
     defaultInstallDir = AutotoolsProject._installToSDK
 
     @classmethod
@@ -132,6 +132,6 @@ class BuildGnuBinutils(AutotoolsProject):
     def process(self):
         self.warning("GNU binutils should only be built if you know what you are doing since the linker "
                      "is incredibly buggy and the assembler doesn't support all features that clang does.")
-        if not self.queryYesNo("Are you sure you want to build this code?", defaultResult=False, forceResult=True):
+        if not self.queryYesNo("Are you sure you want to build this code?"):
             return
         super().process()

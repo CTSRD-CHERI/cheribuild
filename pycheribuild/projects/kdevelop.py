@@ -44,20 +44,19 @@ class BuildLibKompareDiff2(CMakeProject):
 class BuildKDevplatform(CMakeProject):
     dependencies = ["libkomparediff2"]
     defaultCMakeBuildType = "Debug"
-    repository = GitRepository("https://github.com/arichardson/kdevplatform.git")
+    repository = GitRepository("https://github.com/arichardson/kdevplatform.git", default_branch="cheri")
     defaultInstallDir = CMakeProject._installToBootstrapTools
     appendCheriBitsToBuildDir = True
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.gitBranch = "cheri"
         self.add_cmake_options(BUILD_git=False)
 
 
 class BuildKDevelop(CMakeProject):
     dependencies = ["kdevplatform", "llvm"]
     defaultCMakeBuildType = "Debug"
-    repository = GitRepository("https://github.com/arichardson/kdevelop.git")
+    repository = GitRepository("https://github.com/arichardson/kdevelop.git", default_branch="cheri")
     defaultInstallDir = CMakeProject._installToBootstrapTools
     appendCheriBitsToBuildDir = True
 
@@ -65,7 +64,6 @@ class BuildKDevelop(CMakeProject):
         super().__init__(config)
         # Tell kdevelop to use the CHERI clang and install the wrapper script that sets the right environment variables
         self.add_cmake_options(LLVM_ROOT=self.config.sdkDir, INSTALL_KDEVELOP_LAUNCH_WRAPPER=True)
-        self.gitBranch = "cheri"
 
 
 class StartKDevelop(SimpleProject):

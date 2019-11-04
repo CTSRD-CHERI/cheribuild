@@ -178,9 +178,6 @@ REMS_OPAM_REPO = "https://github.com/rems-project/opam-repository.git"
 class BuildSailFromOpam(OpamMixin, SimpleProject):
     target = "sail-from-opam"
 
-    # repository = GitRepository("https://github.com/rems-project/sail")
-    # gitBranch = "sail2"
-
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.addRequiredSystemTool("z3", homebrew="z3 --without-python@2 --with-python")
@@ -388,8 +385,7 @@ class OcamlProject(OpamMixin, Project):
 
 class BuildSailFromSource(OcamlProject):
     target = "sail-from-source"
-    repository = GitRepository("https://github.com/rems-project/sail")
-    gitBranch = "sail2"
+    repository = GitRepository("https://github.com/rems-project/sail", default_branch="sail2")
     dependencies = ["lem", "ott", "linksem"]
     needed_ocaml_packages = OcamlProject.needed_ocaml_packages + ["zarith", "lem", "linksem"]
 

@@ -241,8 +241,8 @@ class BuildQEMUBase(AutotoolsProject):
 
 
 class BuildQEMU(BuildQEMUBase):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git")
-    gitBranch = "qemu-cheri"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-cheri",
+                               force_branch=True)
     default_targets = "cheri256-softmmu,cheri128-softmmu,cheri128magic-softmmu,mips64-softmmu"
 
     @classmethod
@@ -252,7 +252,7 @@ class BuildQEMU(BuildQEMUBase):
         # Turn on unaligned loads/stores by default
         cls.unaligned = cls.addBoolOption("unaligned", showHelp=True, help="Permit un-aligned loads/stores",
                                           default=True)
-        cls.statistics = cls.addBoolOption("statistics", showHelp=True, default=False,
+        cls.statistics = cls.addBoolOption("statistics", showHelp=True,
                                            help="Collect statistics on out-of-bounds capability creation.")
 
     @classmethod
@@ -265,7 +265,6 @@ class BuildQEMU(BuildQEMUBase):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-
         if self.unaligned:
             self._extraCFlags += " -DCHERI_UNALIGNED"
         if self.statistics:
@@ -275,6 +274,7 @@ class BuildQEMU(BuildQEMUBase):
         self.configureArgs.append("--disable-capstone")
         if self.debug_info:
             self._extraCFlags += " -DENABLE_CHERI_SANITIY_CHECKS=1"
+
 
 class BuildQEMURISCV(BuildQEMUBase):
     target = "qemu-riscv"
@@ -287,8 +287,7 @@ class BuildQEMURISCV(BuildQEMUBase):
 
 
 class BuildCheriOSQEMU(BuildQEMU):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", force_branch=True)
-    gitBranch = "cherios"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="cherios", force_branch=True)
     projectName = "cherios-qemu"
     target = "cherios-qemu"
     defaultInstallDir = ComputedDefaultValue(

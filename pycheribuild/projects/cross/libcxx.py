@@ -125,7 +125,7 @@ class BuildLibunwind(CrossCompileCMakeProject):
             else:
                 self.warning("Libunwind is included as part of the CheriBSD sysroot, this target only needs"
                              " to be run if you are testing new features in libunwind.")
-            if not self.queryYesNo("Continue anyway?", defaultResult=True):
+            if not self.queryYesNo("Continue anyway?", default_result=True):
                 return
         super().process()
 

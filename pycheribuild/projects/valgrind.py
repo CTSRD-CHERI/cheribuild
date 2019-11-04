@@ -35,8 +35,8 @@ from ..utils import runCmd, OSInfo
 # Install latest version of valgrind from source
 class BuildValgrind(AutotoolsProject):
     defaultInstallDir = Project._installToBootstrapTools
-    repository = GitRepository("git://sourceware.org/git/valgrind.git", force_branch=True)
-    gitBranch = "VALGRIND_3_14_BRANCH"
+    repository = GitRepository("git://sourceware.org/git/valgrind.git",
+                               default_branch="VALGRIND_3_14_BRANCH", force_branch=True)
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

@@ -28,27 +28,23 @@
 # SUCH DAMAGE.
 #
 import copy
-import io
+import errno
 import inspect
 import os
-import re
 import shlex
 import shutil
 import subprocess
 import sys
 import threading
 import time
-import errno
-import sys
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
-from copy import deepcopy
 
-from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase
 from ..config.chericonfig import CheriConfig, CrossCompileTarget, MipsFloatAbi
-from ..targets import Target, MultiArchTarget, MultiArchTargetAlias, targetManager
+from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase
 from ..filesystemutils import FileSystemUtils
+from ..targets import Target, MultiArchTarget, MultiArchTargetAlias, targetManager
 from ..utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
@@ -104,7 +100,6 @@ class ProjectSubclassDefinitionHook(type):
         if not targetName:
             sys.exit("target name is not set and cannot infer from class " + name +
                      " -- set projectName=, target= or doNotAddToTargets=True")
-
         if cls.__dict__.get("dependenciesMustBeBuilt"):
             if not cls.dependencies:
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + targetName)
@@ -390,6 +385,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if self.build_in_source_dir:
             self.verbose_print("Cannot build", self.projectName, "in a separate build dir, will build in", self.sourceDir)
             self.buildDir = self.sourceDir
+        assert not hasattr(self, "gitBranch"), "gitBranch must not be used: " + self.__class__.__name__
+
 
 
     def addRequiredSystemTool(self, executable: str, installInstructions=None, freebsd: str=None, apt: str=None,
@@ -415,20 +412,20 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                                                homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__requiredSystemHeaders[header] = install_instructions
 
-    def queryYesNo(self, message: str = "", *, defaultResult=False, forceResult=True, yesNoStr: str=None) -> bool:
+    def queryYesNo(self, message: str = "", *, default_result=False, force_result=True, yesNoStr: str=None) -> bool:
         if yesNoStr is None:
-            yesNoStr = " [Y]/n " if defaultResult else " y/[N] "
+            yesNoStr = " [Y]/n " if default_result else " y/[N] "
         if self.config.pretend:
-            print(message + yesNoStr, coloured(AnsiColour.green, "y" if forceResult else "n"), sep="")
-            return forceResult  # in pretend mode we always return true
+            print(message + yesNoStr, coloured(AnsiColour.green, "y" if force_result else "n"), sep="")
+            return force_result  # in pretend mode we always return true
         if self.config.force:
             # in force mode we always return the forced result without prompting the user
-            print(message + yesNoStr, coloured(AnsiColour.green, "y" if forceResult else "n"), sep="")
-            return forceResult
+            print(message + yesNoStr, coloured(AnsiColour.green, "y" if force_result else "n"), sep="")
+            return force_result
         if not sys.__stdin__.isatty():
-            return defaultResult  # can't get any input -> return the default
+            return default_result  # can't get any input -> return the default
         result = input(message + yesNoStr)
-        if defaultResult:
+        if default_result:
             return not result.startswith("n")  # if default is yes accept anything other than strings starting with "n"
         return str(result).lower().startswith("y")  # anything but y will be treated as false
 
@@ -847,7 +844,7 @@ class MakeOptions(object):
         else:
             if self.__command is not None:
                 return self.__command
-            self.fatal("Cannot infer path from CustomMakeTool. Set self.make_args.set_command(\"tool\")")
+            self.__project.fatal("Cannot infer path from CustomMakeTool. Set self.make_args.set_command(\"tool\")")
             raise RuntimeError()
 
     def set_command(self, value, can_pass_j_flag=True, **kwargs):
@@ -918,11 +915,10 @@ class MakeOptions(object):
 
 
 class SourceRepository(object):
-    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, initial_branch=None, skip_submodules=False):
+    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, skip_submodules=False):
         raise NotImplementedError
 
-    def update(self, current_project: "Project", *, src_dir: Path, revision=None, initial_branch=None,
-               skip_submodules=False):
+    def update(self, current_project: "Project", *, src_dir: Path, revision=None, skip_submodules=False):
         raise NotImplementedError
 
 
@@ -939,7 +935,7 @@ class ReuseOtherProjectRepository(SourceRepository):
         self.source_project = source_project
         self.subdirectory = subdirectory
 
-    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, initial_branch=None, skip_submodules=False):
+    def ensure_cloned(self, current_project: "Project", **kwargs):
         if not self.source_project.getSourceDir(current_project, current_project.config).exists():
             current_project.fatal("Source repository for target", current_project.target, "does not exist.",
                                   fixitHint="This project uses the sources from the " + self.source_project.target +
@@ -947,46 +943,47 @@ class ReuseOtherProjectRepository(SourceRepository):
                                   "cheribuild.py " + self.source_project.target + "--no-skip-update --skip-configure " +
                                   "--skip-build --skip-install`")
 
-    def update(self, current_project: "Project", *, src_dir: Path, revision=None, initial_branch=None,
-               skip_submodules=False):
+    def update(self, current_project: "Project", *, src_dir: Path, **kwargs):
         # TODO: allow updating the repo?
         current_project.info("Not updating", src_dir, "since it reuses the repository for ", self.source_project.target)
 
 
 class GitRepository(SourceRepository):
-    def __init__(self, url, *, old_urls: list=None, force_branch: bool=False):
+    def __init__(self, url, *, old_urls: typing.List[bytes] = None, default_branch: str = None,
+                 force_branch: bool = False):
         self.url = url
         self.old_urls = old_urls
+        self.default_branch = default_branch
         self.force_branch = force_branch
 
-    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, initial_branch=None, skip_submodules=False):
+    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, skip_submodules=False):
         # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
         if not (src_dir / ".git").exists():
             if current_project.config.skipClone:
                 current_project.fatal("Sources for", str(src_dir), " missing!")
             assert isinstance(self.url, str), self.url
             assert not self.url.startswith("<"), "Invalid URL " + self.url
-            print(src_dir, "is not a git repository. Clone it from '" + self.url + "'?", end="")
-            if not current_project.queryYesNo(defaultResult=False):
+            if not current_project.queryYesNo(
+                    str(src_dir) + "is not a git repository. Clone it from '" + self.url + "'?"):
                 current_project.fatal("Sources for", str(src_dir), " missing!")
-            cloneCmd = ["git", "clone"]
+            clone_cmd = ["git", "clone"]
             if current_project.config.shallow_clone:
                 # Note: we pass --no-single-branch since otherwise git fetch will not work with branches and
                 # the solution of running  `git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"`
                 # is not very intuitive. This increases the amount of data fetched but increases usability
-                cloneCmd.extend(["--depth", "1", "--no-single-branch"])
+                clone_cmd.extend(["--depth", "1", "--no-single-branch"])
             if not skip_submodules:
-                cloneCmd.append("--recurse-submodules")
-            if initial_branch:
-                cloneCmd += ["--branch", initial_branch]
-            runCmd(cloneCmd + [self.url, src_dir], cwd="/")
+                clone_cmd.append("--recurse-submodules")
+            if self.default_branch:
+                clone_cmd += ["--branch", self.default_branch]
+            runCmd(clone_cmd + [self.url, src_dir], cwd="/")
             # Could also do this but it seems to fetch more data than --no-single-branch
             # if self.config.shallow_clone:
             #    runCmd(["git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"], cwd=src_dir)
 
-
-    def update(self, current_project: "Project", *, src_dir: Path, revision=None, initial_branch=None, skip_submodules=False):
-        self.ensure_cloned(current_project, src_dir=src_dir, initial_branch=initial_branch, skip_submodules=skip_submodules)
+    def update(self, current_project: "Project", *, src_dir: Path, revision=None,
+               skip_submodules=False):
+        self.ensure_cloned(current_project, src_dir=src_dir, skip_submodules=skip_submodules)
         if current_project.skipUpdate:
             return
         # handle repositories that have moved
@@ -997,72 +994,71 @@ class GitRepository(SourceRepository):
                 remote_url = runCmd("git", "remote", "get-url", "origin", captureOutput=True, cwd=src_dir).stdout.strip()
                 if remote_url == old_url:
                     warningMessage(current_project.projectName, "still points to old repository", remote_url)
-                    if self.queryYesNo("Update to correct URL?"):
+                    if current_project.queryYesNo("Update to correct URL?"):
                         runCmd("git", "remote", "set-url", "origin", self.url, runInPretendMode=True, cwd=src_dir)
 
         # make sure we run git stash if we discover any local changes
-        hasChanges = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
+        has_changes = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
                                 captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
 
-        pullCmd = ["git", "pull"]
+        pull_cmd = ["git", "pull"]
         has_autostash = False
         git_version = get_program_version(Path(shutil.which("git"))) if shutil.which("git") else (0, 0, 0)
         # Use the autostash flag for Git >= 2.14 (https://stackoverflow.com/a/30209750/894271)
         if git_version >= (2, 14):
             has_autostash = True
-            pullCmd.append("--autostash")
+            pull_cmd.append("--autostash")
 
-        if hasChanges:
+        if has_changes:
             print(coloured(AnsiColour.green, "Local changes detected in", src_dir))
             # TODO: add a config option to skip this query?
             if current_project.config.force_update:
                 statusUpdate("Updating", src_dir, "with autostash due to --force-update")
-            elif not current_project.queryYesNo("Stash the changes, update and reapply?", defaultResult=True, forceResult=True):
+            elif not current_project.queryYesNo("Stash the changes, update and reapply?", default_result=True, force_result=True):
                 statusUpdate("Skipping update of", src_dir)
                 return
             if not has_autostash:
                 # TODO: ask if we should continue?
-                stashResult = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
+                stash_result = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
                                      captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout
-                # print("stashResult =", stashResult)
-                if "No local changes to save" in stashResult.decode("utf-8"):
+                # print("stash_result =", stash_result)
+                if "No local changes to save" in stash_result.decode("utf-8"):
                     # print("NO REAL CHANGES")
-                    hasChanges = False  # probably git diff showed something from a submodule
+                    has_changes = False  # probably git diff showed something from a submodule
 
         if not skip_submodules:
-            pullCmd.append("--recurse-submodules")
-        runCmd(pullCmd + ["--rebase"], cwd=src_dir, print_verbose_only=True)
+            pull_cmd.append("--recurse-submodules")
+        runCmd(pull_cmd + ["--rebase"], cwd=src_dir, print_verbose_only=True)
         if not skip_submodules:
             runCmd("git", "submodule", "update", "--recursive", cwd=src_dir, print_verbose_only=True)
-        if hasChanges and not has_autostash:
+        if has_changes and not has_autostash:
             runCmd("git", "stash", "pop", cwd=src_dir, print_verbose_only=True)
         if revision:
             runCmd("git", "checkout", revision, cwd=src_dir, print_verbose_only=True)
 
         if src_dir.exists() and self.force_branch:
-            assert initial_branch, "InitialBranch must be set if force_branch is true!"
+            assert self.default_branch, "default_branch must be set if force_branch is true!"
             # TODO: move this to Project so it can also be used for other targets
             status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
                             captureOutput=True, print_verbose_only=True, cwd=src_dir, runInPretendMode=True)
-            if status.stdout.startswith(b"## ") and not status.stdout.startswith(b"## " + initial_branch.encode("utf-8") + b"..."):
+            if status.stdout.startswith(b"## ") and not status.stdout.startswith(
+                    b"## " + self.default_branch.encode("utf-8") + b"..."):
                 current_branch = status.stdout[3:status.stdout.find(b"...")].strip()
                 warningMessage("You are trying to build the", current_branch.decode("utf-8"),
-                               "branch. You should be using", initial_branch)
-                if current_project.queryYesNo("Would you like to change to the " + initial_branch + " branch?", forceResult=False):
-                    runCmd("git", "checkout", initial_branch, cwd=src_dir)
-                elif not current_project.queryYesNo("Are you sure you want to continue?", forceResult=False):
+                               "branch. You should be using", self.default_branch)
+                if current_project.queryYesNo("Would you like to change to the " + self.default_branch + " branch?"):
+                    runCmd("git", "checkout", self.default_branch, cwd=src_dir)
+                elif not current_project.queryYesNo("Are you sure you want to continue?", force_result=False):
                     current_project.fatal("Wrong branch:", current_branch.decode("utf-8"))
 
 
 class Project(SimpleProject):
     repository = None  # type: SourceRepository
     gitRevision = None
-    gitBranch = ""
     skipGitSubmodules = False
     compileDBRequiresBear = True
     doNotAddToTargets = True
     build_dir_suffix = ""   # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
-
 
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / project.projectName.lower()),
@@ -1211,10 +1207,9 @@ class Project(SimpleProject):
         cls._installDir = cls.addPathOption("install-directory", metavar="DIR", help=installDirectoryHelp,
                                            default=cls.defaultInstallDir)
         if "repository" in cls.__dict__ and isinstance(cls.repository, GitRepository):
-            cls.gitRevision = cls.addConfigOption("git-revision", kind=str, help="The git revision to checkout prior to"
-                                                                                 " building. Useful if HEAD is broken for one project but you still"
-                                                                                 " want to update the other projects.",
-                                                  metavar="REVISION")
+            cls.gitRevision = cls.addConfigOption("git-revision", metavar="REVISION",
+                help="The git revision to checkout prior to building. Useful if HEAD is broken for one "
+                     "project but you still want to update the other projects.")
             # TODO: can argparse action be used to store to the class member directly?
             # seems like I can create a new action a pass a reference to the repository:
             #class FooAction(argparse.Action):
@@ -1363,7 +1358,7 @@ class Project(SimpleProject):
     def update(self):
         if not self.repository and not self.config.skipUpdate:
             self.fatal("Cannot update", self.projectName, "as it is missing a repository source", fatalWhenPretending=True)
-        self.repository.update(self, src_dir=self.sourceDir, revision=self.gitRevision, initial_branch=self.gitBranch,
+        self.repository.update(self, src_dir=self.sourceDir, revision=self.gitRevision,
                                skip_submodules=self.skipGitSubmodules)
 
     _extra_git_clean_excludes = []
@@ -1494,7 +1489,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             elif "Generated by cheribuild.py" not in existing_code:
                 print("A different CMakeLists.txt already exists. Contents:\n",
                       coloured(AnsiColour.green, existing_code), end="")
-                if not self.queryYesNo("Overwrite?", forceResult=False):
+                if not self.queryYesNo("Overwrite?", force_result=False):
                     create = False
         if create:
             self.writeFile(target_file, cmakelists, overwrite=True)
@@ -1528,7 +1523,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 if last_build_kind != self.build_configuration_suffix():
                     if not self.queryYesNo("Last build was for configuration" + last_build_kind +
                                            " but currently building" + self.build_configuration_suffix() +
-                                           ". Will clean before build. Continue?", forceResult=True, defaultResult=True):
+                                           ". Will clean before build. Continue?", force_result=True, default_result=True):
                         self.fatal("Cannot continue")
                         return
                     self._force_clean = True
