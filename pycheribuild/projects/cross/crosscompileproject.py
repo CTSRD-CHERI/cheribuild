@@ -128,7 +128,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
     _always_add_suffixed_targets = True  # always add the suffixed target if there is only one
 
     @classmethod
-    def dependencies(cls: "typing.Type[CrossCompileProject]", config: CheriConfig):
+    def dependencies(cls, config: CheriConfig):
         # TODO: can I avoid instantiating all cross-compile targets here? The hack below might work
         target = cls.get_crosscompile_target(config)
         result = target.target_info.toolchain_targets(config)
@@ -215,12 +215,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
                     self.COMMON_FLAGS.append("-fno-pic")
                     self.COMMON_FLAGS.append("-mno-abicalls")
 
-            if self.links_against_newlib_baremetal():
-                assert self.baremetal
-                # Currently we need these flags to build anything against newlib baremetal
-                self.COMMON_FLAGS.append("-D_GNU_SOURCE=1")  # needed for the locale functions
-                self.COMMON_FLAGS.append("-D_POSIX_MONOTONIC_CLOCK=1")  # pretend that we have a monotonic clock
-                self.COMMON_FLAGS.append("-D_POSIX_TIMERS=1")  # pretend that we have a monotonic clock
+            self.COMMON_FLAGS.extend(self.target_info.required_compile_flags(self))
+
             # Install to SDK if CHERIBSD_ROOTFS is the install dir but we are not building for CheriBSD
             if self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS and not self.target_info.is_cheribsd:
                 self.crossInstallDir = CrossInstallDir.SDK
@@ -279,10 +275,6 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 suffix = self._crossCompileTarget.generic_suffix
             return self.config.sdkDir / "baremetal" / suffix / self.targetTriple
         return self.crossSysrootPath
-
-    def links_against_newlib_baremetal(self):
-        # This needs to be fixed once we have RTEMS
-        return self.baremetal and self.projectName != "newlib-baremetal"
 
     def should_use_extra_c_compat_flags(self):
         # TODO: add a command-line option and default to true for

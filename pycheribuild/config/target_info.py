@@ -30,10 +30,12 @@
 import typing
 from abc import ABCMeta, abstractmethod, ABC
 from pathlib import Path
+
 from ..utils import IS_MAC, IS_FREEBSD, IS_LINUX, getCompilerInfo
 
 if typing.TYPE_CHECKING:
     from .chericonfig import CheriConfig, CrossCompileTarget
+    from ..projects.project import SimpleProject
 
 
 class TargetOperatingSystemInfo(object):
@@ -63,6 +65,14 @@ class TargetInfo(ABC):
 
     def base_sysroot_targets(self, config: "CheriConfig") -> typing.List[str]:
         """returns a list of targets that need to be built for a minimal sysroot"""
+        return []
+
+    def required_compile_flags(self, project: "SimpleProject") -> typing.List[str]:
+        """Flags that need to be passed to cc/c++/cpp in all cases"""
+        return []
+
+    def required_link_flags(self, project: "SimpleProject") -> typing.List[str]:
+        """Flags that need to be passed to cc/c++ for linking"""
         return []
 
     @property
@@ -212,7 +222,14 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
         assert False, "Other baremetal cases have not been tested yet!"
 
     def base_sysroot_targets(self, config: "CheriConfig") -> typing.List[str]:
-        return ["newlib-baremetal"]
+        return ["newlib", "compiler-rt-builtins"]
+
+    def required_compile_flags(self, project: "SimpleProject") -> typing.List[str]:
+        # Currently we need these flags to build anything against newlib baremetal
+        return [
+            "-D_GNU_SOURCE=1",  # needed for the locale functions
+            "-D_POSIX_TIMERS=1", "-D_POSIX_MONOTONIC_CLOCK=1",  # pretend that we have a monotonic clock
+            ]
 
     @property
     def is_baremetal(self):
