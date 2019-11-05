@@ -161,12 +161,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     _clearLineSequence = b"\x1b[2K\r" if sys.__stdout__.isatty() else b"\n"
 
     CAN_TARGET_ALL_TARGETS = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.CHERIBSD_MIPS, CrossCompileTarget.NATIVE]
-    CAN_TARGET_ONLY_NATIVE = [CrossCompileTarget.NATIVE]
-    # WARNING: baremetal CHERI probably doesn't work
-    CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.CHERIBSD_MIPS, CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
-    CAN_TARGET_ALL_TARGETS_EXCEPT_CHERI = [CrossCompileTarget.NATIVE, CrossCompileTarget.CHERIBSD_MIPS]
-    CAN_TARGET_ALL_TARGETS_EXCEPT_NATIVE = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.CHERIBSD_MIPS]
-    supported_architectures = CAN_TARGET_ONLY_NATIVE
+    CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64,
+                                        CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64_PURECAP]
+    # Default to NATIVE only
+    supported_architectures = [CrossCompileTarget.NATIVE]
     # The architecture to build for if no --xmips/--xhost flag is passed (defaults to supported_architectures[0]
     # if no match)
     _default_architecture = None
@@ -393,7 +391,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                         kind: "typing.Union[typing.Type[Type_T], typing.Callable[[str], Type_T]]" = str, *,
                         showHelp = False, shortname=None, _no_fallback_config_name: bool = False,
                         only_add_for_targets: "typing.List[CrossCompileTarget]" = None,
-                        fallback_config_name: str = None, **kwargs) -> Type_T:
+                        fallback_config_name: str = None, _allow_unknown_targets=False, **kwargs) -> Type_T:
         # Need a string annotation for kind to avoid https://github.com/python/typing/issues/266 which seems to affect
         # the version of python in Ubuntu 16.04
         if only_add_for_targets is not None:
@@ -401,9 +399,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             target = cls._crossCompileTarget
             assert target is not None
             # If we are adding to the base class or the target is not in
-            for t in only_add_for_targets:
-                assert any(t is x for x in cls.supported_architectures), \
-                    cls.__name__ + ": some of " + str(only_add_for_targets) + " not in " + str(cls.supported_architectures)
+            if not _allow_unknown_targets:
+                for t in only_add_for_targets:
+                    assert any(t is x for x in cls.supported_architectures), \
+                        cls.__name__ + ": some of " + str(only_add_for_targets) + " not in " + str(cls.supported_architectures)
             if target is not CrossCompileTarget.NONE and not any(x is target for x in only_add_for_targets):
                 return default
         configOptionKey = cls.target

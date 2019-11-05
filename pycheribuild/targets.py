@@ -204,7 +204,7 @@ class MultiArchTargetAlias(Target):
         for tgt in self.derived_targets:
             if tgt.target_arch is cross_target:
                 return tgt
-        raise LookupError("Could not find target for " + str(cross_target) + ", caller was " + str(caller))
+        raise LookupError("Could not find '" + self.name + "' target for " + str(cross_target) + ", caller was " + str(caller))
 
     def get_or_create_project(self, cross_target: "typing.Optional[CrossCompileTarget]", config) -> "SimpleProject":
         # If there are any derived targets pick the right one based on the target_arch:

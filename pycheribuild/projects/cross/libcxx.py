@@ -135,7 +135,6 @@ class BuildLibunwind(CrossCompileCMakeProject):
                                           "--llvm-lit-path", self.lit_path, mount_sysroot=True)
 
 
-
 class BuildLibCXXRT(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/libcxxrt.git")
     defaultInstallDir = installToCXXDir
@@ -143,8 +142,9 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.getInstallDir(self) / "lib",
-                               CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
+        if not self.baremetal:
+            self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.getInstallDir(self) / "lib",
+                                   CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
         if self.compiling_for_host():
             assert not self.baremetal
             self.add_cmake_options(BUILD_TESTS=True, TEST_LIBUNWIND=True)
@@ -171,6 +171,9 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
         # self.installFile(self.buildDir / "lib/libcxxrt.so", self.installDir / "usr/libcheri/libcxxrt.so", force=True)
 
     def run_tests(self):
+        if self.baremetal:
+            self.info("Baremetal tests not implemented")
+            return
         # TODO: this won't work on macOS
         with setEnv(LD_LIBRARY_PATH=self.buildDir / "lib"):
             if self.compiling_for_host():
@@ -202,9 +205,10 @@ class BuildLibCXX(CrossCompileCMakeProject):
                                                  help="The path used inside QEMU to refer to nfs-mounted-path")
         cls.qemu_host = cls.addConfigOption("ssh-host", help="The QEMU SSH hostname to connect to for running tests",
                                             default=lambda c, p: "localhost")
-        cls.qemu_port = cls.addConfigOption("ssh-port", help="The QEMU SSH port to connect to for running tests",
-                                            default=lambda c, p: LaunchCheriBSD.get_instance(p, c, cross_target=CrossCompileTarget.CHERIBSD_MIPS_PURECAP).sshForwardingPort,
-                                            only_add_for_targets=[CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.CHERIBSD_MIPS])
+        cls.qemu_port = cls.addConfigOption("ssh-port",
+            help="The QEMU SSH port to connect to for running tests", _allow_unknown_targets=True,
+            default=lambda c, p: LaunchCheriBSD.get_instance(p, c, cross_target=CrossCompileTarget.CHERIBSD_MIPS_PURECAP).sshForwardingPort,
+            only_add_for_targets=[CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.CHERIBSD_MIPS])
         cls.qemu_user = cls.addConfigOption("ssh-user", default="root", help="The CheriBSD used for running tests")
 
         cls.test_jobs = cls.addConfigOption("parallel-test-jobs", help="Number of QEMU instances spawned to run tests "
@@ -216,7 +220,6 @@ class BuildLibCXX(CrossCompileCMakeProject):
         if self.qemu_host:
             self.qemu_host = os.path.expandvars(self.qemu_host)
         self.libcxx_lit_jobs = ""
-
 
         if self.compiling_for_host():
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=True, LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False)
@@ -238,17 +241,18 @@ class BuildLibCXX(CrossCompileCMakeProject):
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
         self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
         # select libcxxrt as the runtime library (except on macos where this doesn't seem to work very well)
+        libcxxrt_class = BuildLibCXXRT if not self.baremetal else BuildLibCXXRTBaremetal
         if not (self.compiling_for_host() and IS_MAC):
             self.add_cmake_options(
                 LIBCXX_CXX_ABI="libcxxrt",
                 LIBCXX_CXX_ABI_LIBNAME="libcxxrt",
-                LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.getSourceDir(self) / "src",
-                LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.getBuildDir(self) / "lib",
-            )
-            # use llvm libunwind when testing
-            self.add_cmake_options(LIBCXX_STATIC_CXX_ABI_LIBRARY_NEEDS_UNWIND_LIBRARY=True,
-                                   LIBCXX_CXX_ABI_UNWIND_LIBRARY="unwind",
-                                   LIBCXX_CXX_ABI_UNWIND_LIBRARY_PATH=BuildLibunwind.getBuildDir(self) / "lib")
+                LIBCXX_CXX_ABI_INCLUDE_PATHS=libcxxrt_class.getSourceDir(self) / "src",
+                LIBCXX_CXX_ABI_LIBRARY_PATH=libcxxrt_class.getBuildDir(self) / "lib")
+            if not self.baremetal:
+                # use llvm libunwind when testing
+                self.add_cmake_options(LIBCXX_STATIC_CXX_ABI_LIBRARY_NEEDS_UNWIND_LIBRARY=True,
+                                       LIBCXX_CXX_ABI_UNWIND_LIBRARY="unwind",
+                                       LIBCXX_CXX_ABI_UNWIND_LIBRARY_PATH=BuildLibunwind.getBuildDir(self) / "lib")
 
         if not self.exceptions or self.baremetal:
             self.add_cmake_options(LIBCXX_ENABLE_EXCEPTIONS=False, LIBCXX_ENABLE_RTTI=False)
@@ -337,6 +341,9 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.add_cmake_options(LIBCXX_EXECUTOR=executor, LIBCXX_TARGET_INFO=target_info, LIBCXX_RUN_LONG_TESTS=False)
 
     def run_tests(self):
+        if self.baremetal:
+            self.info("Baremetal tests not implemented")
+            return
         if self.compiling_for_host():
             runCmd("ninja", "check-cxx", "-v", cwd=self.buildDir)
         else:
@@ -344,6 +351,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
             self.run_cheribsd_test_script("run_libcxx_tests.py", "--parallel-jobs", self.test_jobs,
                                           # long running test -> speed up by using a kernel without invariants
                                           use_benchmark_kernel_by_default=True)
+
 
 class BuildCompilerRt(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
@@ -395,7 +403,7 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
     dependencies = ["newlib-baremetal"]
     baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
-    _default_architecture = CrossCompileTarget.CHERIBSD_MIPS
+    _default_architecture = CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -452,7 +460,7 @@ class BuildLibCXXBaremetal(BuildLibCXX):
     baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
     crossInstallDir = CrossInstallDir.SDK
-    _default_architecture = CrossCompileTarget.CHERIBSD_MIPS
+    _default_architecture = CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64
     defaultCMakeBuildType = "Debug"
 
     def __init__(self, config: CheriConfig):
@@ -471,7 +479,7 @@ class BuildLibCXXRTBaremetal(BuildLibCXXRT):
     crossInstallDir = CrossInstallDir.SDK
     baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
-    _default_architecture = CrossCompileTarget.CHERIBSD_MIPS
+    _default_architecture = CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

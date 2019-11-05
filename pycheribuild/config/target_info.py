@@ -120,6 +120,22 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return self.target.cpu_architecture.value + common_suffix
 
 
+class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
+    def compiler_dir(self, config: "CheriConfig") -> Path:
+        # TODO: BuildUpstreamLLVM.installDir?
+        return config.sdkBinDir
+
+    def compiler_target(self, config: "CheriConfig"):
+        return ["llvm"]  # TODO: upstream-llvm???
+
+    def target_triple(self, config: "CheriConfig"):
+        if self.target.is_mips(include_purecap=True):
+            if self.target.is_cheri_purecap():
+                return "mips64c{}-qemu-elf-purecap".format(config.cheriBits)
+            return "mips64-qemu-elf"
+        assert False, "Other baremetal cases have not been tested yet!"
+
+
 class CheriBSDTargetInfo(FreeBSDTargetInfo):
     FREEBSD_VERSION = 13
 

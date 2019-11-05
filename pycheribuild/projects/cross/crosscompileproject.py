@@ -29,7 +29,6 @@
 #
 
 import datetime
-import inspect
 import os
 import pprint
 import re
@@ -41,7 +40,6 @@ from pathlib import Path
 from ..llvm import BuildCheriLLVM
 from ..project import *
 from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi, Linkage, BuildType
-from ...config.loader import ConfigOptionBase
 from ...utils import *
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget", "BuildType", # no-combine
@@ -691,17 +689,21 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
             if not (expected_path / libname).exists():
                 self.fatal("Cannot find", libname, "library in compiler dir", expected_path, "-- Compilation will fail!")
 
-        if self._check_install_dir_conflict and self.compiling_for_cheri() and any(
-                x.is_mips(include_purecap=False) for x in self.supported_architectures):
-            # Check that we are not installing to the same directory as MIPS to avoid conflicts
-            assert hasattr(self, "synthetic_base")
-            assert issubclass(self.synthetic_base, SimpleProject)
-            mips_instance = self.synthetic_base.get_instance_for_cross_target(CrossCompileTarget.CHERIBSD_MIPS, self.config)
-            xtarget = mips_instance.get_crosscompile_target(self.config)
-            assert xtarget.is_mips(include_purecap=False), xtarget
-            self.info(self.target, self.installDir)
-            self.info(mips_instance.target, mips_instance.installDir)
-            assert mips_instance.installDir != self.installDir, mips_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(mips_instance.installDir)
+        if self._check_install_dir_conflict:
+            xtarget = self._crossCompileTarget  # type: CrossCompileTarget
+            # If the conflicting target is also in supported_architectures, check for conficts:
+            if xtarget.check_conflict_with is not None and xtarget.check_conflict_with in self.supported_architectures:
+                # Check that we are not installing to the same directory as MIPS to avoid conflicts
+                assert hasattr(self, "synthetic_base")
+                assert issubclass(self.synthetic_base, SimpleProject)
+                other_instance = self.synthetic_base.get_instance_for_cross_target(xtarget.check_conflict_with,
+                                                                                  self.config, caller=self)
+                xtarget = other_instance.get_crosscompile_target(self.config)
+                if self.config.verbose:
+                    self.info(self.target, "install dir for", xtarget.name, "is", self.installDir)
+                    self.info(self.target, "install dir for", xtarget.check_conflict_with.name, "is", self.installDir)
+                assert mips_instance.installDir != self.installDir, \
+                    mips_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(mips_instance.installDir)
         super().process()
 
 

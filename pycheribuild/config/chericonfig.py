@@ -39,7 +39,7 @@ from collections import OrderedDict
 from pathlib import Path
 # Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
 from .loader import ConfigLoaderBase
-from .target_info import TargetInfo, CheriBSDTargetInfo, NativeTargetInfo, FreeBSDTargetInfo
+from .target_info import TargetInfo, CheriBSDTargetInfo, NativeTargetInfo, FreeBSDTargetInfo, NewlibBaremetalTargetInfo
 from ..utils import latestClangTool, warningMessage, statusUpdate, have_working_internet_connection
 
 
@@ -67,25 +67,29 @@ class CrossCompileTarget(Enum):
     NONE = ("invalid", None, False, None)  # Placeholder
     NATIVE = ("native", CPUArchitecture.X86_64, False, NativeTargetInfo)  # XXX: should probably not harcode x86_64
     CHERIBSD_MIPS = ("mips", CPUArchitecture.MIPS64, False, CheriBSDTargetInfo)
-    CHERIBSD_MIPS_PURECAP = ("cheri", CPUArchitecture.MIPS64, True, CheriBSDTargetInfo)
+    CHERIBSD_MIPS_PURECAP = ("cheri", CPUArchitecture.MIPS64, True, CheriBSDTargetInfo, CHERIBSD_MIPS)
+    BAREMETAL_NEWLIB_MIPS64 = ("mips", CPUArchitecture.MIPS64, False, NewlibBaremetalTargetInfo)
+    BAREMETAL_NEWLIB_MIPS64_PURECAP = ("purecap-mips", CPUArchitecture.MIPS64, True, NewlibBaremetalTargetInfo,
+                                       BAREMETAL_NEWLIB_MIPS64)
     FREEBSD_MIPS = ("mips-freebsd", CPUArchitecture.MIPS64, False, FreeBSDTargetInfo)
     RISCV = ("riscv", CPUArchitecture.RISCV64, False, FreeBSDTargetInfo)
     I386 = ("i386", CPUArchitecture.I386, False, FreeBSDTargetInfo)
     AARCH64 = ("aarch64", CPUArchitecture.AARCH64, False, FreeBSDTargetInfo)
 
     def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, is_cheri_purecap: bool,
-                 target_info_cls: "typing.Type[TargetInfo]"):
+                 target_info_cls: "typing.Type[TargetInfo]", check_conflict_with: "CrossCompileTarget" = None):
         self.generic_suffix = suffix
         self.cpu_architecture = cpu_architecture
         # TODO: self.operating_system = ...
         self._is_cheri_purecap = is_cheri_purecap
+        self.check_conflict_with = check_conflict_with  # Check that we don't reuse install-dir, etc for this target
         if target_info_cls is not None:
             self.target_info = target_info_cls(self)
 
     def build_suffix(self, config: "CheriConfig", *, build_hybrid=False):
         assert self is not CrossCompileTarget.NONE
         if self is CrossCompileTarget.CHERIBSD_MIPS_PURECAP:
-            result = "-" + config.cheri_bits_and_abi_str
+            result = ""  # only -128/-256 for legacy build dir compat
         elif self is CrossCompileTarget.CHERIBSD_MIPS:
             result = "-" + self.generic_suffix
             if build_hybrid:
@@ -94,6 +98,9 @@ class CrossCompileTarget(Enum):
                 result += "-hardfloat"
         else:
             result = "-" + self.generic_suffix
+
+        if self._is_cheri_purecap:
+            result += "-" + config.cheri_bits_and_abi_str
         if config.cross_target_suffix:
             result += "-" + config.cross_target_suffix
         return self.generic_suffix
@@ -146,8 +153,8 @@ class CrossCompileTarget(Enum):
                 return True
         return False
 
-    def __eq__(self, other):
-        raise NotImplementedError("Should not compare to CrossCompileTarget, use the is_foo() methods.")
+    # def __eq__(self, other):
+    #     raise NotImplementedError("Should not compare to CrossCompileTarget, use the is_foo() methods.")
 
 
 class BuildType(Enum):
