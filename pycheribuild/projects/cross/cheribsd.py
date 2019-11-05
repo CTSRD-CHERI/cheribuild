@@ -221,7 +221,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
     target = "freebsd"
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
     crossbuild = False
-    baremetal = True  # We are building the full OS so we don't need a sysroot
+    needs_sysroot = False  # We are building the full OS so we don't need a sysroot
     # Only CheriBSD can target CHERI, upstream FreeBSD won't work
     supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.CHERIBSD_MIPS]
 

@@ -38,7 +38,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/newlib")
     projectName = "newlib-baremetal"
     make_kind = MakeCommandKind.GnuMake
-    baremetal = True
+    needs_sysroot = False  # We are building newlib so we don't need a sysroot
     add_host_target_build_config_options = False
     defaultOptimizationLevel = ["-O2"]
     _configure_supports_libdir = False

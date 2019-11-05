@@ -230,7 +230,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                         break
             assert not isinstance(dep_target, MultiArchTargetAlias), "All targets should be fully resolved: " + cls.__name__
             if dep_target.projectClass is cls:
-                # print("Skipping self target:", dep_target)
+                assert False, "Found self as dependency:" + str(cls)
                 continue
             yield dep_target
 
@@ -294,7 +294,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         assert isinstance(result, SimpleProject)
         found_target = result.get_crosscompile_target(config)
         # XXX: FIXME: add cross target to every call
-        if cross_target is not None:
+        assert cross_target is not None
+        if cross_target is not CrossCompileTarget.NONE:
             assert found_target is cross_target, "Didn't find right instance of " + str(cls) + ": " + str(
                 found_target) + " vs. " + str(cross_target) + ", caller was " + repr(caller)
         return result
