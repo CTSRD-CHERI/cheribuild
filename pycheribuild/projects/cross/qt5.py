@@ -250,21 +250,20 @@ class BuildQtBase(BuildQtWithConfigureScript):
             self.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=True)
 
 
-def icu_dependencies(cls: "typing.Type[CrossCompileProject]", config: CheriConfig):
-    deps = crosscompile_dependencies(cls, config)
-    target = cls.get_crosscompile_target(config)
-    # ICU4C needs a native buid to cross-compile:
-    if not target.is_native():
-        deps.append("icu4c-native")
-    return deps
-
-
 # Webkit needs ICU (and recommended for QtBase too:
 class BuildICU4C(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/icu4c.git")
     crossInstallDir = CrossInstallDir.SDK
     make_kind = MakeCommandKind.GnuMake
-    dependencies = icu_dependencies
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig):
+        deps = super().dependencies(config)
+        target = cls.get_crosscompile_target(config)
+        # ICU4C needs a native buid to cross-compile:
+        if not target.is_native():
+            deps.append("icu4c-native")
+        return deps
 
     def __init__(self, config):
         super().__init__(config)

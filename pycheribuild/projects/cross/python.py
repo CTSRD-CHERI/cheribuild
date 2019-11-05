@@ -34,21 +34,19 @@ from .crosscompileproject import *
 from ...utils import is_case_sensitive_dir
 
 
-# XXXAR: duplicated from ICU4C should add a shared variant
-def python_dependencies(cls: "typing.Type[CrossCompileProject]", config: CheriConfig):
-    deps = crosscompile_dependencies(cls, config)
-    target = cls.get_crosscompile_target(config)
-    # python needs a native buid to cross-compile:
-    if not target.is_native():
-        deps.append("python-native")
-    return deps
-
-
 class BuildPython(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/cpython.git", default_branch="3.8", force_branch=True)
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     default_build_type = BuildType.RELWITHDEBINFO
-    dependencies = python_dependencies
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig):
+        deps = super().dependencies(config)
+        target = cls.get_crosscompile_target(config)
+        # python needs a native buid to cross-compile:
+        if not target.is_native():
+            deps.append("python-native")
+        return deps
 
     # build_in_source_dir = True  # Cannot build out-of-source
 

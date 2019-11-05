@@ -44,7 +44,7 @@ from ...utils import *
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget", "BuildType", # no-combine
            "CrossCompileProject", "CrossInstallDir", "MakeCommandKind", "Linkage", "Path",  # no-combine
-           "crosscompile_dependencies", "default_cross_install_dir",  # no-combine
+           "default_cross_install_dir",  # no-combine
            "_INVALID_INSTALL_DIR", "GitRepository", "commandline_to_str", "CrossCompileMixin"]  # no-combine
 
 
@@ -109,14 +109,6 @@ def _installDirMessage(project: "CrossCompileProject"):
     return "UNKNOWN"
 
 
-def crosscompile_dependencies(cls: "typing.Type[CrossCompileProject]", config: CheriConfig):
-    # TODO: can I avoid instantiating all cross-compile targets here? The hack below might work
-    target = cls.get_crosscompile_target(config)
-    result = target.target_info.toolchain_targets(config)
-    if cls.needs_sysroot:
-        result += target.target_info.base_sysroot_targets(config)
-    return result
-
 # TODO: remove this:
 # noinspection PyUnresolvedReferences
 class CrossCompileMixin(MultiArchBaseMixin):
@@ -126,7 +118,6 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
     defaultInstallDir = ComputedDefaultValue(function=default_cross_install_dir, asString=_installDirMessage)
     default_build_type = BuildType.DEFAULT
-    dependencies = crosscompile_dependencies
     needs_sysroot = True  # Most projects need a sysroot
     forceDefaultCC = False  # If true fall back to /usr/bin/cc there
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
@@ -135,6 +126,15 @@ class CrossCompileMixin(MultiArchBaseMixin):
     defaultOptimizationLevel = ("-O2",)
     can_build_with_asan = True
     _always_add_suffixed_targets = True  # always add the suffixed target if there is only one
+
+    @classmethod
+    def dependencies(cls: "typing.Type[CrossCompileProject]", config: CheriConfig):
+        # TODO: can I avoid instantiating all cross-compile targets here? The hack below might work
+        target = cls.get_crosscompile_target(config)
+        result = target.target_info.toolchain_targets(config)
+        if cls.needs_sysroot:
+            result += target.target_info.base_sysroot_targets(config)
+        return result
 
     # noinspection PyProtectedMember
     @property
