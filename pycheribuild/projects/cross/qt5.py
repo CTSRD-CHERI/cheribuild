@@ -265,8 +265,6 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     crossInstallDir = CrossInstallDir.SDK
     make_kind = MakeCommandKind.GnuMake
     dependencies = icu_dependencies
-    if IS_FREEBSD:
-        forceDefaultCC = True  # for some reason crashes on FreeBSD 11 if using clang40/ clang39
 
     def __init__(self, config):
         super().__init__(config)
