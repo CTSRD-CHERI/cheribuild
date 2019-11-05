@@ -45,7 +45,7 @@ class TargetInfo(ABC):
         self.target = target
 
     @abstractmethod
-    def compiler_target(self, config: "CheriConfig") -> typing.List[str]:
+    def toolchain_targets(self, config: "CheriConfig") -> typing.List[str]:
         """returns e.g. [llvm]/[upstream-llvm], or an empty list"""
         ...
 
@@ -60,6 +60,10 @@ class TargetInfo(ABC):
 
     @abstractmethod
     def c_preprocessor(self, config: "CheriConfig") -> Path: ...
+
+    def base_sysroot_targets(self, config: "CheriConfig") -> typing.List[str]:
+        """returns a list of targets that need to be built for a minimal sysroot"""
+        return []
 
 
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
@@ -80,7 +84,7 @@ class NativeTargetInfo(TargetInfo):
     def target_triple(self, config: "CheriConfig"):
         return getCompilerInfo(self.c_compiler(config)).default_target
 
-    def compiler_target(self, config: "CheriConfig"):
+    def toolchain_targets(self, config: "CheriConfig"):
         if config.use_sdk_clang_for_native_xbuild:
             return ["llvm"]
         return []  # use host tools -> no target needed
@@ -111,7 +115,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         # TODO: BuildUpstreamLLVM.installDir?
         return config.sdkBinDir
 
-    def compiler_target(self, config: "CheriConfig"):
+    def toolchain_targets(self, config: "CheriConfig"):
         return ["llvm"]  # TODO: upstream-llvm???
 
     def target_triple(self, config: "CheriConfig"):
@@ -119,14 +123,17 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         # TODO: do we need any special cases here?
         return self.target.cpu_architecture.value + common_suffix
 
+    def base_sysroot_targets(self, config: "CheriConfig") -> typing.List[str]:
+        return ["freebsd"]
+
 
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     def compiler_dir(self, config: "CheriConfig") -> Path:
         # TODO: BuildUpstreamLLVM.installDir?
         return config.sdkBinDir
 
-    def compiler_target(self, config: "CheriConfig"):
-        return ["llvm"]  # TODO: upstream-llvm???
+    def toolchain_targets(self, config: "CheriConfig"):
+        return ["llvm", "qemu", "gdb-native"]  # upstream-llvm??
 
     def target_triple(self, config: "CheriConfig"):
         if self.target.is_mips(include_purecap=True):
@@ -134,6 +141,9 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
                 return "mips64c{}-qemu-elf-purecap".format(config.cheriBits)
             return "mips64-qemu-elf"
         assert False, "Other baremetal cases have not been tested yet!"
+
+    def base_sysroot_targets(self, config: "CheriConfig") -> typing.List[str]:
+        return ["newlib-baremetal"]
 
 
 class CheriBSDTargetInfo(FreeBSDTargetInfo):
@@ -143,8 +153,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         # TODO: BuildLLVM.installDir?
         return config.sdkBinDir
 
-    def compiler_target(self, config: "CheriConfig"):
-        return ["llvm"]
+    def toolchain_targets(self, config: "CheriConfig"):
+        return ["llvm", "qemu", "gdb-native"]
 
     def target_triple(self, config: "CheriConfig"):
         if self.target.is_cheri_purecap():
@@ -152,4 +162,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             assert self.target.is_mips(include_purecap=True), "Only MIPS purecap is supported"
             return "mips64c{}-unknown-freebsd{}-purecap".format(config.cheriBits, self.FREEBSD_VERSION)
         return super().target_triple(config)
+
+    def base_sysroot_targets(self, config: "CheriConfig") -> typing.List[str]:
+        return ["cheribsd", "cheribsd-sysroot"]
 

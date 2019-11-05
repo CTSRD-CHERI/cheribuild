@@ -47,7 +47,7 @@ class BuildCheriBSDSdk(TargetAliasWithDependencies):
 
 class BuildSdk(TargetAliasWithDependencies):
     target = "sdk"
-    dependencies = ["cheribsd-sdk"] if IS_FREEBSD else ["freestanding-sdk"]
+    dependencies = ["cheribsd-sdk"]
     is_sdk_target = True
 
 

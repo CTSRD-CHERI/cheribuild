@@ -111,11 +111,8 @@ def _installDirMessage(project: "CrossCompileProject"):
 def crosscompile_dependencies(cls: "typing.Type[CrossCompileProject]", config: CheriConfig):
     # TODO: can I avoid instantiating all cross-compile targets here? The hack below might work
     target = cls.get_crosscompile_target(config)
-    if target.is_native():
-        return ["freestanding-sdk"] if config.use_sdk_clang_for_native_xbuild else []
-    else:
-        return ["cheribsd-sdk"] if cls.needs_cheribsd_sysroot(target) else ["freestanding-sdk"]
-
+    result = target.target_info.toolchain_targets(config) + target.target_info.base_sysroot_targets(config)
+    return result
 
 # TODO: remove this:
 # noinspection PyUnresolvedReferences
@@ -146,17 +143,6 @@ class CrossCompileMixin(MultiArchBaseMixin):
     #﻿warning: added 38010 entries to .cap_table but current maximum is 32768; try recompiling non-performance critical source files with -mllvm -mxcaptable
     # FIXME: postgres would work if I fixed captable to use the negative immediate values
     needs_mxcaptable_dynamic = False    # This might be true for Qt/QtWebkit
-
-    @classmethod
-    def needs_cheribsd_sysroot(cls, target: CrossCompileTarget):
-        # Native projects never need the cheribsd sysroot
-        if target.is_native():
-            return False
-        # Baremetal projects don't need cheribsd, they need newlib instead
-        if cls.baremetal:
-            return False
-        # Otherwise we assume we are targetting CheriBSD so we need the sysroot
-        return True
 
     @property
     def compiler_warning_flags(self):

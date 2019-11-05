@@ -193,11 +193,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return [t.name for t in cls.recursive_dependencies(config)]
 
     @classmethod
-    def needs_cheribsd_sysroot(cls, target: CrossCompileTarget):
-        # Only CrossCompileProjects will need the sysroot
-        return False
-
-    @classmethod
     def direct_dependencies(cls, config: CheriConfig) -> "typing.Generator[Target]":
         dependencies = cls.dependencies
         expected_build_arch = cls.get_crosscompile_target(config)
@@ -234,6 +229,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                         # print("Overriding with", tgt.name)
                         break
             assert not isinstance(dep_target, MultiArchTargetAlias), "All targets should be fully resolved: " + cls.__name__
+            if dep_target.projectClass is cls:
+                # print("Skipping self target:", dep_target)
+                continue
             yield dep_target
 
     def is_exact_instance(self, class_type: "typing.Type[Any]") -> bool:
