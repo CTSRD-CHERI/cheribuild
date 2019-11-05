@@ -155,7 +155,7 @@ def test_webkit_cached_deps():
         assert generic_target_names == expected
         _check_deps_cached([webkit_cheri, webkit_mips, webkit_native])
 
-    _check_generic(CrossCompileTarget.MIPS_CHERI_PURECAP,
+    _check_generic(CrossCompileTarget.CHERIBSD_MIPS_PURECAP,
                    ["icu4c-cheri", "icu4c-native", "libxml2-cheri", "qtbase-cheri", "sqlite-cheri"])
     _check_generic(CrossCompileTarget.MIPS,
                    ["icu4c-mips", "icu4c-native", "libxml2-mips", "qtbase-mips", "sqlite-mips"])

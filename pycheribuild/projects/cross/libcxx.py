@@ -214,8 +214,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
         cls.qemu_host = cls.addConfigOption("ssh-host", help="The QEMU SSH hostname to connect to for running tests",
                                             default=lambda c, p: "localhost")
         cls.qemu_port = cls.addConfigOption("ssh-port", help="The QEMU SSH port to connect to for running tests",
-                                            default=lambda c, p: LaunchCheriBSD.get_instance(p, c, cross_target=CrossCompileTarget.MIPS_CHERI_PURECAP).sshForwardingPort,
-                                            only_add_for_targets=[CrossCompileTarget.MIPS_CHERI_PURECAP, CrossCompileTarget.MIPS])
+                                            default=lambda c, p: LaunchCheriBSD.get_instance(p, c, cross_target=CrossCompileTarget.CHERIBSD_MIPS_PURECAP).sshForwardingPort,
+                                            only_add_for_targets=[CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.MIPS])
         cls.qemu_user = cls.addConfigOption("ssh-user", default="root", help="The CheriBSD used for running tests")
 
         cls.test_jobs = cls.addConfigOption("parallel-test-jobs", help="Number of QEMU instances spawned to run tests "
@@ -363,7 +363,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     crossInstallDir = CrossInstallDir.COMPILER_RESOURCE_DIR
     _check_install_dir_conflict = False
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_TARGETS
-    _default_architecture = CrossCompileTarget.MIPS_CHERI_PURECAP
+    _default_architecture = CrossCompileTarget.CHERIBSD_MIPS_PURECAP
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

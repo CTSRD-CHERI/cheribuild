@@ -160,12 +160,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # However, if the output is just a plain text file don't attempt to do any line clearing
     _clearLineSequence = b"\x1b[2K\r" if sys.__stdout__.isatty() else b"\n"
 
-    CAN_TARGET_ALL_TARGETS = [CrossCompileTarget.MIPS_CHERI_PURECAP, CrossCompileTarget.MIPS, CrossCompileTarget.NATIVE]
+    CAN_TARGET_ALL_TARGETS = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.MIPS, CrossCompileTarget.NATIVE]
     CAN_TARGET_ONLY_NATIVE = [CrossCompileTarget.NATIVE]
     # WARNING: baremetal CHERI probably doesn't work
-    CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.MIPS, CrossCompileTarget.MIPS_CHERI_PURECAP]
+    CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.MIPS, CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
     CAN_TARGET_ALL_TARGETS_EXCEPT_CHERI = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
-    CAN_TARGET_ALL_TARGETS_EXCEPT_NATIVE = [CrossCompileTarget.MIPS_CHERI_PURECAP, CrossCompileTarget.MIPS]
+    CAN_TARGET_ALL_TARGETS_EXCEPT_NATIVE = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.MIPS]
     supported_architectures = CAN_TARGET_ONLY_NATIVE
     # The architecture to build for if no --xmips/--xhost flag is passed (defaults to supported_architectures[0]
     # if no match)

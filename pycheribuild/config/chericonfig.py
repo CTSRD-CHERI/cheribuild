@@ -66,7 +66,7 @@ class CrossCompileTarget(Enum):
     NONE = ("invalid", None, False)  # Placeholder
     NATIVE = ("native", CPUArchitecture.X86_64, False)  # XXX: should probably not harcode x86_64
     MIPS = ("mips", CPUArchitecture.MIPS, False)
-    MIPS_CHERI_PURECAP = ("cheri", CPUArchitecture.MIPS, True)
+    CHERIBSD_MIPS_PURECAP = ("cheri", CPUArchitecture.MIPS, True)
     RISCV = ("riscv", CPUArchitecture.RISCV, False)
     I386 = ("i386", CPUArchitecture.I386, False)
     AARCH64 = ("aarch64", CPUArchitecture.AARCH64, False)
@@ -79,7 +79,7 @@ class CrossCompileTarget(Enum):
 
     def build_suffix(self, config: "CheriConfig", *, build_hybrid=False):
         assert self is not CrossCompileTarget.NONE
-        if self is CrossCompileTarget.MIPS_CHERI_PURECAP:
+        if self is CrossCompileTarget.CHERIBSD_MIPS_PURECAP:
             result = "-" + config.cheri_bits_and_abi_str
         elif self is CrossCompileTarget.MIPS:
             result = "-" + self.generic_suffix
@@ -101,7 +101,7 @@ class CrossCompileTarget(Enum):
     def is_mips(self, include_purecap: bool = None):
         if include_purecap is None:
             # Check that cases that want to handle both pass an explicit argument
-            assert self is not CrossCompileTarget.MIPS_CHERI_PURECAP, "Should check purecap cases first"
+            assert self is not CrossCompileTarget.CHERIBSD_MIPS_PURECAP, "Should check purecap cases first"
         if not include_purecap and self._is_cheri_purecap:
             return False
         return self.cpu_architecture is CPUArchitecture.MIPS

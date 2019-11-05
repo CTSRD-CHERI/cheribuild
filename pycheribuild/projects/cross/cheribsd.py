@@ -1002,7 +1002,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git")
     defaultInstallDir = cheribsd_install_dir
     appendCheriBitsToBuildDir = True
-    supported_architectures = [CrossCompileTarget.MIPS_CHERI_PURECAP, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
+    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
     is_sdk_target = True
     hide_options_from_help = False  # FreeBSD options are hidden, but this one should be visible
     crossbuild = True  # changes have been merged into master
@@ -1023,7 +1023,7 @@ class BuildCHERIBSD(BuildFreeBSD):
                                              help="Only build a sysroot instead of the full system. This will only "
                                                   "build the libraries and skip all binaries")
 
-        mips_and_purecap_mips = [CrossCompileTarget.MIPS, CrossCompileTarget.MIPS_CHERI_PURECAP]
+        mips_and_purecap_mips = [CrossCompileTarget.MIPS, CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
         cls.buildFpgaKernels = cls.addBoolOption("build-fpga-kernels", showHelp=True,
                                                  only_add_for_targets=mips_and_purecap_mips,
                                                  help="Also build kernels for the FPGA.")
@@ -1031,12 +1031,12 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                help="Path to an MFS root image to embed in the"
                                                     "kernel that will be booted from")
         cls.build_static = cls.addConfigOption("build-static",
-                                               only_add_for_targets=[CrossCompileTarget.MIPS_CHERI_PURECAP],
+                                               only_add_for_targets=[CrossCompileTarget.CHERIBSD_MIPS_PURECAP],
                                                help="Build all CHERI binaries as static instead of dynamically linked")
 
         # We also want to add this config option to the fake "cheribsd" target (to keep the config file manageable)
         cls.purecapKernel = cls.addBoolOption("pure-cap-kernel", showHelp=True,
-                                              only_add_for_targets=[CrossCompileTarget.MIPS_CHERI_PURECAP],
+                                              only_add_for_targets=[CrossCompileTarget.CHERIBSD_MIPS_PURECAP],
                                               help="Build kernel with pure capability ABI (probably won't work!)")
 
     def get_corresponding_sysroot(self):
@@ -1176,7 +1176,7 @@ class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
     projectName = "cheribsd-mfs-root-kernel"
     dependencies = ["disk-image-minimal"]
     # TODO: also support building a non-CHERI kernel... But that needs a plain MIPS disk-image-minimal first...
-    supported_architectures = [CrossCompileTarget.MIPS_CHERI_PURECAP]
+    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
     _always_add_suffixed_targets = True
 
     def process(self):
@@ -1240,7 +1240,7 @@ class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
     def get_kernel_config(cls, caller: SimpleProject) -> str:
         config = caller.config
         if caller.get_crosscompile_target(config).is_mips(include_purecap=False) and config.run_mips_tests_with_cheri_image:
-            build_cheribsd = BuildCHERIBSD.get_instance_for_cross_target(CrossCompileTarget.MIPS_CHERI_PURECAP, config, caller=caller)
+            build_cheribsd = BuildCHERIBSD.get_instance_for_cross_target(CrossCompileTarget.CHERIBSD_MIPS_PURECAP, config, caller=caller)
         else:
             build_cheribsd = BuildCHERIBSD.get_instance(caller, config)
         return cls._get_kernconf_to_build(build_cheribsd)
@@ -1268,8 +1268,8 @@ class BuildCHERIBSDPurecap(BuildCHERIBSD):
     _config_inherits_from = "cheribsd"  # we want the CheriBSD config options as well
 
     # Set these variables to override the multi target magic and only support CHERI
-    supported_architectures = [CrossCompileTarget.MIPS_CHERI_PURECAP]  # Only Cheri is supported
-    _crossCompileTarget = CrossCompileTarget.MIPS_CHERI_PURECAP
+    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]  # Only Cheri is supported
+    _crossCompileTarget = CrossCompileTarget.CHERIBSD_MIPS_PURECAP
     _should_not_be_instantiated = False
     build_dir_suffix = "-purecap"
 
@@ -1292,7 +1292,7 @@ class BuildCHERIBSDMinimal(BuildCHERIBSD):
 
     # Set these variables to override the multi target magic and only support CHERI
     #supported_architectures = None # Only Cheri is supported
-    #_crossCompileTarget = CrossCompileTarget.MIPS_CHERI_PURECAP
+    #_crossCompileTarget = CrossCompileTarget.CHERIBSD_MIPS_PURECAP
     _should_not_be_instantiated = False
     build_dir_suffix = "-minimal"
     defaultInstallDir = ComputedDefaultValue(function=cheribsd_minimal_install_dir,
@@ -1375,7 +1375,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
             return ["cheribsd-native"]
         return ["cheribsd"]
 
-    supported_architectures = [CrossCompileTarget.MIPS_CHERI_PURECAP, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
+    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
     rootfs_source_class = BuildCHERIBSD  # type: typing.Type[BuildCHERIBSD]
 
     def __init__(self, config: CheriConfig):
@@ -1470,7 +1470,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
         # only pack those files that are mentioned in METALOG
         archiveCmd.append("@METALOG")
         if self.compiling_for_mips(include_purecap=False) and self.use_cheri_sysroot_for_mips:
-            rootfs_target = self.rootfs_source_class.get_instance_for_cross_target(CrossCompileTarget.MIPS_CHERI_PURECAP, self.config)
+            rootfs_target = self.rootfs_source_class.get_instance_for_cross_target(CrossCompileTarget.CHERIBSD_MIPS_PURECAP, self.config)
         else:
             rootfs_target = self.rootfs_source_class.get_instance(self)
         rootfs_dir = rootfs_target.real_install_root_dir

@@ -65,7 +65,7 @@ def get_cheribsd_instance_for_install_dir(config: CheriConfig, project: "SimpleP
     cross_target = project.get_crosscompile_target(config)
     # If use_hybrid_sysroot_for_mips is set, install to rootfs128 instead of rootfs-mips
     if cross_target.is_mips(include_purecap=False) and project.mips_build_hybrid:
-        cross_target = CrossCompileTarget.MIPS_CHERI_PURECAP
+        cross_target = CrossCompileTarget.CHERIBSD_MIPS_PURECAP
     return BuildCHERIBSD.get_instance_for_cross_target(cross_target, config)
 
 
@@ -646,7 +646,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 assert self.compiling_for_cheri()
                 basic_args.append("--jenkins-bitfile=cheri" + self.config.cheriBitsStr)
             # TODO: allow using a plain MIPS kernel?
-            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(CrossCompileTarget.MIPS_CHERI_PURECAP, self.config)
+            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(CrossCompileTarget.CHERIBSD_MIPS_PURECAP, self.config)
             if self.config.benchmark_with_debug_kernel:
                 kernel_config = mfs_kernel.fpga_kernconf
             else:
