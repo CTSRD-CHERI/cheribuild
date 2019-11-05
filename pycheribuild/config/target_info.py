@@ -69,6 +69,26 @@ class TargetInfo(ABC):
     def is_baremetal(self):
         return False
 
+    @property
+    def is_newlib(self):
+        return False
+
+    @property
+    def is_freebsd(self):
+        return False
+
+    @property
+    def is_cheribsd(self):
+        return False
+
+    @property
+    def is_macos(self):
+        return False
+
+    @property
+    def is_linux(self):
+        return False
+
 
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     @abstractmethod
@@ -111,9 +131,25 @@ class NativeTargetInfo(TargetInfo):
             return config.sdkBinDir / "clang-cpp"
         return config.clangCppPath
 
+    @property
+    def is_freebsd(self):
+        return IS_FREEBSD
+
+    @property
+    def is_macos(self):
+        return IS_MAC
+
+    @property
+    def is_linux(self):
+        return IS_LINUX
+
 
 class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     FREEBSD_VERSION = 13
+
+    @property
+    def is_freebsd(self):
+        return True
 
     def compiler_dir(self, config: "CheriConfig") -> Path:
         # TODO: BuildUpstreamLLVM.installDir?
@@ -129,6 +165,35 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     def base_sysroot_targets(self, config: "CheriConfig") -> typing.List[str]:
         return ["freebsd"]
+
+
+class CheriBSDTargetInfo(FreeBSDTargetInfo):
+    FREEBSD_VERSION = 13
+
+    @property
+    def is_cheribsd(self):
+        return True
+
+    def compiler_dir(self, config: "CheriConfig") -> Path:
+        # TODO: BuildLLVM.installDir?
+        return config.sdkBinDir
+
+    def toolchain_targets(self, config: "CheriConfig"):
+        return ["llvm", "qemu", "gdb-native"]
+
+    def target_triple(self, config: "CheriConfig"):
+        if self.target.is_cheri_purecap():
+            # anything over 10 should use libc++ by default
+            assert self.target.is_mips(include_purecap=True), "Only MIPS purecap is supported"
+            return "mips64c{}-unknown-freebsd{}-purecap".format(config.cheriBits, self.FREEBSD_VERSION)
+        return super().target_triple(config)
+
+    def base_sysroot_targets(self, config: "CheriConfig") -> typing.List[str]:
+        if self.target.is_mips(include_purecap=False):
+            if config.use_hybrid_sysroot_for_mips:
+                return ["cheribsd-cheri", "cheribsd-sysroot-cheri"]
+            return ["cheribsd-mips", "cheribsd-sysroot-mips"]
+        return ["cheribsd", "cheribsd-sysroot"]
 
 
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
@@ -153,27 +218,6 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     def is_baremetal(self):
         return True
 
-class CheriBSDTargetInfo(FreeBSDTargetInfo):
-    FREEBSD_VERSION = 13
-
-    def compiler_dir(self, config: "CheriConfig") -> Path:
-        # TODO: BuildLLVM.installDir?
-        return config.sdkBinDir
-
-    def toolchain_targets(self, config: "CheriConfig"):
-        return ["llvm", "qemu", "gdb-native"]
-
-    def target_triple(self, config: "CheriConfig"):
-        if self.target.is_cheri_purecap():
-            # anything over 10 should use libc++ by default
-            assert self.target.is_mips(include_purecap=True), "Only MIPS purecap is supported"
-            return "mips64c{}-unknown-freebsd{}-purecap".format(config.cheriBits, self.FREEBSD_VERSION)
-        return super().target_triple(config)
-
-    def base_sysroot_targets(self, config: "CheriConfig") -> typing.List[str]:
-        if self.target.is_mips(include_purecap=False):
-            if config.use_hybrid_sysroot_for_mips:
-                return ["cheribsd-cheri", "cheribsd-sysroot-cheri"]
-            return ["cheribsd-mips", "cheribsd-sysroot-mips"]
-        return ["cheribsd", "cheribsd-sysroot"]
-
+    @property
+    def is_newlib(self):
+        return True

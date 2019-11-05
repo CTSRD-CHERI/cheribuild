@@ -362,8 +362,7 @@ class TargetManager(object):
                                   ",".join(self.targetNames)))
             explicitlyChosenTargets.append(self.get_target(targetName, CrossCompileTarget.NONE, config, caller="cmdline parsing"))
         chosenTargets = self.get_all_targets(explicitlyChosenTargets, config)
-        if config.verbose:
-            print("Will execute the following targets:", " ".join(t.name for t in chosenTargets))
+        print("Will execute the following targets:\n  ", "\n   ".join(t.name for t in chosenTargets))
         # now that the chosen targets have been resolved run them
         Target.instantiating_targets_should_warn = False  # Fine to instantiate Project() now
         return chosenTargets

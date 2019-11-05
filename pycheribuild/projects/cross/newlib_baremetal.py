@@ -113,7 +113,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
             # long double is the same as double
             newlib_cv_ldbl_eq_dbl="yes",
             LD_FOR_TARGET=str(bindir / "ld.lld"), LDFLAGS_FOR_TARGET="-fuse-ld=lld",
-        )
+            )
         self.configureArgs.extend([
             "--enable-malloc-debugging",
             "--enable-newlib-long-time_t",  # we want time_t to be long and not int!

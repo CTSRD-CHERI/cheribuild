@@ -726,6 +726,8 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
             self._cmakeTemplate = includeLocalFile("files/NativeToolchain.cmake.in")
             self.toolchainFile = self.buildDir / "NativeToolchain.cmake"
         else:
+            # Despite the name it should also work for baremetal newlib
+            assert self.target_info.is_cheribsd or (self.target_info.is_baremetal and self.target_info.is_newlib)
             self._cmakeTemplate = includeLocalFile("files/CheriBSDToolchain.cmake.in")
             self.toolchainFile = self.buildDir / "CheriBSDToolchain.cmake"
         self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self.toolchainFile)
