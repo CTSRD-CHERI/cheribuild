@@ -126,6 +126,9 @@ class BuildLibunwind(CrossCompileCMakeProject):
         super().process()
 
     def run_tests(self):
+        if self.baremetal:
+            self.info("Baremetal tests not implemented")
+            return
         if self.compiling_for_host():
             runCmd("ninja", "check-unwind", "-v", cwd=self.buildDir)
         else:
