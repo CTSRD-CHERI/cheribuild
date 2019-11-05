@@ -41,7 +41,7 @@ from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
 
-from ..config.chericonfig import CheriConfig, CrossCompileTarget, CPUArchitecture
+from ..config.chericonfig import CheriConfig, CrossCompileTarget, CPUArchitecture, TargetInfo
 from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase
 from ..filesystemutils import FileSystemUtils
 from ..targets import Target, MultiArchTarget, MultiArchTargetAlias, targetManager
@@ -49,7 +49,7 @@ from ..utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
-           "CrossCompileTarget", "CPUArchitecture", "GitRepository", "ComputedDefaultValue",  # no-combine
+           "CrossCompileTarget", "CPUArchitecture", "GitRepository", "ComputedDefaultValue", "TargetInfo", # no-combine
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
            "MultiArchBaseMixin",  # TODO: remove  # no-combine
            ]  # no-combine
@@ -318,12 +318,18 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # otherwise fall back to the default specified in the class
         result = cls.default_architecture
         # Otherwise pick the best match:
-        if default_target.is_cheri_purecap([CPUArchitecture.MIPS]):
+        if default_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
             # add this note for e.g. GDB:
             # noinspection PyUnresolvedReferences
             cls._configure_status_message = "Cannot compile " + cls.target + " in CHERI purecap mode," \
                                                                              " building MIPS binaries instead"
         return result
+
+    @property
+    def target_info(self) -> TargetInfo:
+        xtarget = self._crossCompileTarget
+        assert xtarget is not CrossCompileTarget.NONE
+        return xtarget.target_info
 
     @classproperty
     def default_architecture(cls) -> CrossCompileTarget:
@@ -723,7 +729,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 freebsd_image = "freebsd-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
                 if xtarget.is_mips(include_purecap=False):
                     guessed_archive = cheribsd_image if self.config.run_mips_tests_with_cheri_image else freebsd_image
-                elif xtarget.is_cheri_purecap([CPUArchitecture.MIPS]):
+                elif xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
                     guessed_archive = cheribsd_image
                 else:
                     self.fatal("Could not guess path to kernel image for CheriBSD")

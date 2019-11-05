@@ -39,6 +39,7 @@ from collections import OrderedDict
 from pathlib import Path
 # Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
 from .loader import ConfigLoaderBase
+from .target_info import TargetInfo, CheriBSDTargetInfo, NativeTargetInfo, FreeBSDTargetInfo
 from ..utils import latestClangTool, warningMessage, statusUpdate, have_working_internet_connection
 
 
@@ -56,26 +57,29 @@ class MyJsonEncoder(json.JSONEncoder):
 
 class CPUArchitecture(Enum):
     X86_64 = "x86_64"
-    MIPS = "mips"
-    RISCV = "riscv"
+    MIPS64 = "mips64"
+    RISCV64 = "riscv64"
     I386 = "i386"
     AARCH64 = "aarch64"
 
 
 class CrossCompileTarget(Enum):
-    NONE = ("invalid", None, False)  # Placeholder
-    NATIVE = ("native", CPUArchitecture.X86_64, False)  # XXX: should probably not harcode x86_64
-    CHERIBSD_MIPS = ("mips", CPUArchitecture.MIPS, False)
-    CHERIBSD_MIPS_PURECAP = ("cheri", CPUArchitecture.MIPS, True)
-    RISCV = ("riscv", CPUArchitecture.RISCV, False)
-    I386 = ("i386", CPUArchitecture.I386, False)
-    AARCH64 = ("aarch64", CPUArchitecture.AARCH64, False)
+    NONE = ("invalid", None, False, NativeTargetInfo)  # Placeholder
+    NATIVE = ("native", CPUArchitecture.X86_64, False, NativeTargetInfo)  # XXX: should probably not harcode x86_64
+    CHERIBSD_MIPS = ("mips", CPUArchitecture.MIPS64, False, CheriBSDTargetInfo)
+    CHERIBSD_MIPS_PURECAP = ("cheri", CPUArchitecture.MIPS64, True, CheriBSDTargetInfo)
+    FREEBSD_MIPS = ("mips-freebsd", CPUArchitecture.MIPS64, False, FreeBSDTargetInfo)
+    RISCV = ("riscv", CPUArchitecture.RISCV64, False, FreeBSDTargetInfo)
+    I386 = ("i386", CPUArchitecture.I386, False, FreeBSDTargetInfo)
+    AARCH64 = ("aarch64", CPUArchitecture.AARCH64, False, FreeBSDTargetInfo)
 
-    def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, is_cheri_purecap: bool):
+    def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, is_cheri_purecap: bool,
+                 target_info_cls: "typing.Type[TargetInfo]"):
         self.generic_suffix = suffix
         self.cpu_architecture = cpu_architecture
         # TODO: self.operating_system = ...
         self._is_cheri_purecap = is_cheri_purecap
+        self.target_info = target_info_cls(self)
 
     def build_suffix(self, config: "CheriConfig", *, build_hybrid=False):
         assert self is not CrossCompileTarget.NONE
@@ -104,10 +108,10 @@ class CrossCompileTarget(Enum):
             assert self is not CrossCompileTarget.CHERIBSD_MIPS_PURECAP, "Should check purecap cases first"
         if not include_purecap and self._is_cheri_purecap:
             return False
-        return self.cpu_architecture is CPUArchitecture.MIPS
+        return self.cpu_architecture is CPUArchitecture.MIPS64
 
-    def is_riscv(self, include_purecap=False):
-        return self.cpu_architecture is CPUArchitecture.RISCV
+    def is_riscv(self, include_purecap: bool = None):
+        return self.cpu_architecture is CPUArchitecture.RISCV64
 
     def is_aarch64(self):
         return self.cpu_architecture is CPUArchitecture.AARCH64

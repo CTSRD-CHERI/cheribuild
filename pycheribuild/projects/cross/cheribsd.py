@@ -1088,7 +1088,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         self.extra_kernels_with_mfs = []
         if self.buildFpgaKernels:
             if self._crossCompileTarget.is_mips(include_purecap=True):
-                if self._crossCompileTarget.is_cheri_purecap([CPUArchitecture.MIPS]):
+                if self._crossCompileTarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
                     if self.config.cheriBits == 128:
                         prefix = "CHERI128_DE4_"
                     elif self.config.cheriBits == 256:
@@ -1363,7 +1363,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
     @staticmethod
     def dependencies(cls: "BuildCheriBsdSysroot", config: CheriConfig):
         target = cls.get_crosscompile_target(config)  # type: CrossCompileTarget
-        if target.is_cheri_purecap([CPUArchitecture.MIPS]):
+        if target.is_cheri_purecap([CPUArchitecture.MIPS64]):
             # TODO: can't access this member here...
             # if cls.use_cheribsd_purecap_rootfs:
             #    return ["cheribsd-purecap"]
