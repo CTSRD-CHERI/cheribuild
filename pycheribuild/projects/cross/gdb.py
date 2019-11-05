@@ -65,14 +65,14 @@ class BuildGDB(CrossCompileAutotoolsProject):
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
     defaultOptimizationLevel = ["-O2"]
-    supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
+    supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.CHERIBSD_MIPS]
     _mips_build_hybrid = True  # build MIPS binaries as CHERI hybrid so that the trap register number works
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
         super().setupConfigOptions(**kwargs)
         cls.cheri_hybrid = cls.addBoolOption("use-cheri-hybrid", help="Build against a hybrid sysroot (required for faulting capability register number support)",
-                                             only_add_for_targets=[CrossCompileTarget.MIPS], default=True)
+                                             only_add_for_targets=[CrossCompileTarget.CHERIBSD_MIPS], default=True)
 
     def __init__(self, config: CheriConfig):
         self._compile_status_message = None

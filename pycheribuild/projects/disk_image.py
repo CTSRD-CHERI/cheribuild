@@ -335,7 +335,7 @@ class _BuildDiskImageBase(SimpleProject):
             cross_target = self.source_project.get_crosscompile_target(self.config)
             # We always want to include the MIPS GDB for CHERI targets (purecap doesn't work and would be slower):
             if cross_target.is_cheri_purecap([CPUArchitecture.MIPS]):
-                cross_target = CrossCompileTarget.MIPS
+                cross_target = CrossCompileTarget.CHERIBSD_MIPS
             if not any(x is cross_target for x in BuildGDB.supported_architectures):
                 warningMessage("GDB cannot be built for architecture ", cross_target, " -> not addding it")
             else:

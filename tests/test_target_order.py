@@ -157,7 +157,7 @@ def test_webkit_cached_deps():
 
     _check_generic(CrossCompileTarget.CHERIBSD_MIPS_PURECAP,
                    ["icu4c-cheri", "icu4c-native", "libxml2-cheri", "qtbase-cheri", "sqlite-cheri"])
-    _check_generic(CrossCompileTarget.MIPS,
+    _check_generic(CrossCompileTarget.CHERIBSD_MIPS,
                    ["icu4c-mips", "icu4c-native", "libxml2-mips", "qtbase-mips", "sqlite-mips"])
     _check_generic(CrossCompileTarget.NATIVE,
                    ["icu4c-native", "libxml2-native", "qtbase-native", "sqlite-native"])

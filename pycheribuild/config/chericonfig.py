@@ -81,7 +81,7 @@ class CrossCompileTarget(Enum):
         assert self is not CrossCompileTarget.NONE
         if self is CrossCompileTarget.CHERIBSD_MIPS_PURECAP:
             result = "-" + config.cheri_bits_and_abi_str
-        elif self is CrossCompileTarget.MIPS:
+        elif self is CrossCompileTarget.CHERIBSD_MIPS:
             result = "-" + self.generic_suffix
             if build_hybrid:
                 result += "-hybrid" + config.cheri_bits_and_abi_str

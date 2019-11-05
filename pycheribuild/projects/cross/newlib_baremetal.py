@@ -45,7 +45,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     _configure_supports_variables_on_cmdline = True
     crossInstallDir = CrossInstallDir.SDK
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
-    _default_architecture = CrossCompileTarget.MIPS
+    _default_architecture = CrossCompileTarget.CHERIBSD_MIPS
     # build_in_source_dir = True  # we have to build in the source directory
 
     @classmethod

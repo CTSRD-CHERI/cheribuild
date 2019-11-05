@@ -231,7 +231,7 @@ class JenkinsConfig(CheriConfig):
             else:
                 assert self.cpu == "mips"
                 self.use_hybrid_sysroot_for_mips = False
-            self.crossCompileTarget = CrossCompileTarget.MIPS
+            self.crossCompileTarget = CrossCompileTarget.CHERIBSD_MIPS
         elif self.cpu in ("x86", "x86_64", "amd64", "host", "native"):
             self.cheriBits = 9999
             self.crossCompileTarget = CrossCompileTarget.NATIVE

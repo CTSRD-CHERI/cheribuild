@@ -470,7 +470,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
             help="build with debug info by default (Note: this only affects --cross-build-type=DEFAULT)", default=True)
         cls.use_lto = cls.addBoolOption("use-lto", help="Build with LTO",)
         # cls.use_cfi = cls.addBoolOption("use-cfi", help="Build with CFI",
-        #                                 only_add_for_targets=[CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS])
+        #                                 only_add_for_targets=[CrossCompileTarget.NATIVE, CrossCompileTarget.CHERIBSD_MIPS])
         cls.use_cfi = False  # doesn't work yet
         cls._optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
                                                      default=[])
@@ -710,7 +710,7 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
             # Check that we are not installing to the same directory as MIPS to avoid conflicts
             assert hasattr(self, "synthetic_base")
             assert issubclass(self.synthetic_base, SimpleProject)
-            mips_instance = self.synthetic_base.get_instance_for_cross_target(CrossCompileTarget.MIPS, self.config)
+            mips_instance = self.synthetic_base.get_instance_for_cross_target(CrossCompileTarget.CHERIBSD_MIPS, self.config)
             xtarget = mips_instance.get_crosscompile_target(self.config)
             assert xtarget.is_mips(include_purecap=False), xtarget
             self.info(self.target, self.installDir)

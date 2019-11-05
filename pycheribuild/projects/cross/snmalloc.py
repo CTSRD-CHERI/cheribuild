@@ -38,7 +38,7 @@ class SNMalloc(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/nwf/snmalloc")
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     appendCheriBitsToBuildDir = True
-    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS]
+    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.NATIVE, CrossCompileTarget.CHERIBSD_MIPS]
     defaultOptimizationLevel = ["-O2"]
     default_build_type = BuildType.DEBUG
     defaultCMakeBuildType = "Debug"

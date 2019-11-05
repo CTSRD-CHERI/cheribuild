@@ -215,7 +215,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
                                             default=lambda c, p: "localhost")
         cls.qemu_port = cls.addConfigOption("ssh-port", help="The QEMU SSH port to connect to for running tests",
                                             default=lambda c, p: LaunchCheriBSD.get_instance(p, c, cross_target=CrossCompileTarget.CHERIBSD_MIPS_PURECAP).sshForwardingPort,
-                                            only_add_for_targets=[CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.MIPS])
+                                            only_add_for_targets=[CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.CHERIBSD_MIPS])
         cls.qemu_user = cls.addConfigOption("ssh-user", default="root", help="The CheriBSD used for running tests")
 
         cls.test_jobs = cls.addConfigOption("parallel-test-jobs", help="Number of QEMU instances spawned to run tests "
@@ -406,7 +406,7 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
     dependencies = ["newlib-baremetal"]
     baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
-    _default_architecture = CrossCompileTarget.MIPS
+    _default_architecture = CrossCompileTarget.CHERIBSD_MIPS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -463,7 +463,7 @@ class BuildLibCXXBaremetal(BuildLibCXX):
     baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
     crossInstallDir = CrossInstallDir.SDK
-    _default_architecture = CrossCompileTarget.MIPS
+    _default_architecture = CrossCompileTarget.CHERIBSD_MIPS
     defaultCMakeBuildType = "Debug"
 
     def __init__(self, config: CheriConfig):
@@ -482,7 +482,7 @@ class BuildLibCXXRTBaremetal(BuildLibCXXRT):
     crossInstallDir = CrossInstallDir.SDK
     baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
-    _default_architecture = CrossCompileTarget.MIPS
+    _default_architecture = CrossCompileTarget.CHERIBSD_MIPS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
