@@ -127,7 +127,6 @@ class CrossCompileMixin(MultiArchBaseMixin):
     defaultInstallDir = ComputedDefaultValue(function=default_cross_install_dir, asString=_installDirMessage)
     default_build_type = BuildType.DEFAULT
     dependencies = crosscompile_dependencies
-    baremetal = False
     needs_sysroot = True  # Most projects need a sysroot
     forceDefaultCC = False  # If true fall back to /usr/bin/cc there
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
@@ -147,6 +146,10 @@ class CrossCompileMixin(MultiArchBaseMixin):
     #﻿warning: added 38010 entries to .cap_table but current maximum is 32768; try recompiling non-performance critical source files with -mllvm -mxcaptable
     # FIXME: postgres would work if I fixed captable to use the negative immediate values
     needs_mxcaptable_dynamic = False    # This might be true for Qt/QtWebkit
+
+    @property
+    def baremetal(self):
+        return self.target_info.is_baremetal
 
     @property
     def compiler_warning_flags(self):
@@ -338,7 +341,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
             result.extend(["-mabi=n64", "-mcpu=beri"])
             if self.mips_build_hybrid:
                 result.append("-cheri=" + self.config.cheriBitsStr)
-        if not self.baremetal:
+        if self.needs_sysroot:
             result.append("--sysroot=" + str(self.sdkSysroot))
         result += ["-B" + str(self.config.sdkBinDir)]
         return result

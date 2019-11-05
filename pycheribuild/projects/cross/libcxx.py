@@ -401,7 +401,6 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
     projectName = "compiler-rt-baremetal"
     crossInstallDir = CrossInstallDir.SDK
     dependencies = ["newlib-baremetal"]
-    baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
     _default_architecture = CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64
 
@@ -457,7 +456,6 @@ class BuildLibCXXBaremetal(BuildLibCXX):
     dependencies = ["libcxxrt-baremetal"]
     projectName = "libcxx-baremetal"
     # target = "libcxx-baremetal"
-    baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
     crossInstallDir = CrossInstallDir.SDK
     _default_architecture = CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64
@@ -477,7 +475,6 @@ class BuildLibCXXRTBaremetal(BuildLibCXXRT):
     projectName = "libcxxrt-baremetal"
     dependencies = ["newlib-baremetal", "compiler-rt-baremetal"]
     crossInstallDir = CrossInstallDir.SDK
-    baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
     _default_architecture = CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64
 

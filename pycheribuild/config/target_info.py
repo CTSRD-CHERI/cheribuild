@@ -65,6 +65,10 @@ class TargetInfo(ABC):
         """returns a list of targets that need to be built for a minimal sysroot"""
         return []
 
+    @property
+    def is_baremetal(self):
+        return False
+
 
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     @abstractmethod
@@ -145,6 +149,9 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     def base_sysroot_targets(self, config: "CheriConfig") -> typing.List[str]:
         return ["newlib-baremetal"]
 
+    @property
+    def is_baremetal(self):
+        return True
 
 class CheriBSDTargetInfo(FreeBSDTargetInfo):
     FREEBSD_VERSION = 13
