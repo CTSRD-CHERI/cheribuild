@@ -65,7 +65,7 @@ class CPUArchitecture(Enum):
 class CrossCompileTarget(Enum):
     NONE = ("invalid", None, False)  # Placeholder
     NATIVE = ("native", CPUArchitecture.X86_64, False)  # XXX: should probably not harcode x86_64
-    MIPS = ("mips", CPUArchitecture.MIPS, False)
+    CHERIBSD_MIPS = ("mips", CPUArchitecture.MIPS, False)
     CHERIBSD_MIPS_PURECAP = ("cheri", CPUArchitecture.MIPS, True)
     RISCV = ("riscv", CPUArchitecture.RISCV, False)
     I386 = ("i386", CPUArchitecture.I386, False)

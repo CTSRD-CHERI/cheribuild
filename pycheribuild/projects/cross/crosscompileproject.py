@@ -130,7 +130,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
     default_build_type = BuildType.DEFAULT
     dependencies = crosscompile_dependencies
     baremetal = False
-    forceDefaultCC = False  # for some reason ICU binaries build during build crash -> fall back to /usr/bin/cc there
+    forceDefaultCC = False  # If true fall back to /usr/bin/cc there
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
     _should_not_be_instantiated = True
     _check_install_dir_conflict = True
@@ -452,7 +452,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
     def CPP(self):
         if not self.should_use_sdk_clang:
             if not self.should_use_sdk_clang:
-                return self.config.clangCppPath if not self.forceDefaultCC else Path("c++")
+                return self.config.clangCppPath if not self.forceDefaultCC else Path("cpp")
         return self.compiler_dir / "clang-cpp"
 
     @property
