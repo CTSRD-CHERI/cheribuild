@@ -163,7 +163,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     CAN_TARGET_ALL_CHERIBSD_TARGETS = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.CHERIBSD_MIPS]
     CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64,
                                         CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64_PURECAP]
-    CAN_TARGET_CHERIBSD_AND_BAREMETAL = CAN_TARGET_ALL_CHERIBSD_TARGETS + CAN_TARGET_ALL_BAREMETAL_TARGETS
+    CAN_TARGET_CHERIBSD_AND_BAREMETAL = [CrossCompileTarget.NATIVE] + CAN_TARGET_ALL_CHERIBSD_TARGETS + CAN_TARGET_ALL_BAREMETAL_TARGETS
     # Default to NATIVE only
     supported_architectures = [CrossCompileTarget.NATIVE]
     # The architecture to build for if no --xmips/--xhost flag is passed (defaults to supported_architectures[0]
