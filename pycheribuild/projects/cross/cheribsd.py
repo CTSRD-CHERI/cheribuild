@@ -1024,6 +1024,8 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                   "build the libraries and skip all binaries")
 
         mips_and_purecap_mips = [CrossCompileTarget.MIPS, CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
+        if issubclass(cls, BuildCHERIBSDPurecap):
+            mips_and_purecap_mips = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
         cls.buildFpgaKernels = cls.addBoolOption("build-fpga-kernels", showHelp=True,
                                                  only_add_for_targets=mips_and_purecap_mips,
                                                  help="Also build kernels for the FPGA.")

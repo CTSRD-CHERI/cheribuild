@@ -395,6 +395,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             target = cls._crossCompileTarget
             assert target is not None
             # If we are adding to the base class or the target is not in
+            for t in only_add_for_targets:
+                assert any(t is x for x in cls.supported_architectures), \
+                    cls.__name__ + ": some of " + str(only_add_for_targets) + " not in " + str(cls.supported_architectures)
             if target is not CrossCompileTarget.NONE and not any(x is target for x in only_add_for_targets):
                 return default
         configOptionKey = cls.target

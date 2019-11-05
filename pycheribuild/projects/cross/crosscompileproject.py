@@ -467,10 +467,11 @@ class CrossCompileMixin(MultiArchBaseMixin):
         assert issubclass(cls, SimpleProject)
         super().setupConfigOptions(**kwargs)
         cls._debugInfo = cls.addBoolOption("debug-info",
-            help="build with debug info by default (Note: this only affects --cross-build-type=DEFAULT)", default=True, )
-        cls.use_lto = cls.addBoolOption("use-lto", help="Build with LTO", default=False)
-        cls.use_cfi = cls.addBoolOption("use-cfi", help="Build with LTO", default=False, only_add_for_targets=[CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS])
-
+            help="build with debug info by default (Note: this only affects --cross-build-type=DEFAULT)", default=True)
+        cls.use_lto = cls.addBoolOption("use-lto", help="Build with LTO",)
+        # cls.use_cfi = cls.addBoolOption("use-cfi", help="Build with CFI",
+        #                                 only_add_for_targets=[CrossCompileTarget.NATIVE, CrossCompileTarget.MIPS])
+        cls.use_cfi = False  # doesn't work yet
         cls._optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
                                                      default=[])
         cls.cross_build_type = cls.addConfigOption("cross-build-type",
