@@ -447,7 +447,7 @@ def test_libcxxrt_dependency_path():
     pytest.param("freebsd", "freebsd-native"),
     pytest.param("newlib-baremetal", "newlib-baremetal-mips"),
     pytest.param("libcxxrt-baremetal", "libcxxrt-baremetal-mips"),
-    pytest.param("compiler-rt-baremetal", "compiler-rt-baremetal-mips"),
+    pytest.param("compiler-rt-baremetal", "compiler-rt-builtins-baremetal-mips"),
 ])
 def test_default_arch(base_name, expected):
     # The default target should be selected regardless of --xmips/--xhost/--128/--256 flags
@@ -461,6 +461,8 @@ def test_default_arch(base_name, expected):
 @pytest.mark.parametrize("target,args,expected", [
     pytest.param("cheribsd", ["--foo"],
                  "cheribsd-128-build"),
+    pytest.param("llvm", ["--foo"],
+                 "llvm-project-build"),
     pytest.param("cheribsd-purecap", ["--foo"],
                  "cheribsd-purecap-128-build"),
     # --subobject debug should not have any effect if subobject bounds is disabled

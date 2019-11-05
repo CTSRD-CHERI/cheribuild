@@ -1222,7 +1222,8 @@ class Project(SimpleProject):
         # targets that only support native don't need a suffix
         if target.is_native() and len(self.supported_architectures) == 1:
             result = "-" + config.cheriBitsStr if self.appendCheriBitsToBuildDir else ""
-        result = target.build_suffix(config, build_hybrid=self.mips_build_hybrid)
+        else:
+            result = target.build_suffix(config, build_hybrid=self.mips_build_hybrid)
         if self.use_asan:
             result = "-asan" + result
         if self.build_dir_suffix:
