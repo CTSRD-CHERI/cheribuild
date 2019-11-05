@@ -293,17 +293,6 @@ class CrossCompileMixin(MultiArchBaseMixin):
         return ["-cheri-uintcap=addr", "-Xclang", "-cheri-data-dependent-provenance"]
 
     @property
-    def targetTripleWithVersion(self):
-        # we need to append the FreeBSD version to pick up the correct C++ standard library
-        if self.compiling_for_host() or self.baremetal:
-            return self.targetTriple
-        else:
-            # anything over 10 should use libc++ by default
-            if self.targetTriple.endswith("-freebsd"):
-                return self.targetTriple + "13"
-            return self.targetTriple.replace("-freebsd-", "-freebsd13-")
-
-    @property
     def sizeof_void_ptr(self):
         return self._crossCompileTarget.pointer_size(self.config)
 
@@ -315,7 +304,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
         if self.compiling_for_host():
             return []  # no special flags should be needed
         # However, when cross compiling we need at least -target=
-        result = ["-target", self.targetTripleWithVersion]
+        result = ["-target", self.targetTriple]
         if self.baremetal:
             # Also the baremetal driver doesn't add -fPIC for CHERI
             if self.compiling_for_cheri():

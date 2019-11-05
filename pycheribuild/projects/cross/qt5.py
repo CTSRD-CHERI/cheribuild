@@ -86,7 +86,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         else:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
             compiler_flags = self.default_compiler_flags
-            linker_flags = self.default_ldflags + ["-target", self.targetTripleWithVersion]
+            linker_flags = self.default_ldflags + ["-target", self.targetTriple]
             assert self.force_static_linkage, "Currently only static linking is supported!"
 
             if self.compiling_for_cheri():
