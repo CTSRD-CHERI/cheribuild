@@ -42,7 +42,7 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, skip_sdk=
     return result
 
 freestanding_deps = ["llvm", "qemu", "gdb-native", "freestanding-sdk"]
-baremetal_deps = freestanding_deps + ["newlib-baremetal-mips", "compiler-rt-baremetal-mips", "libcxxrt-baremetal-mips",
+baremetal_deps = freestanding_deps + ["newlib-baremetal-mips", "compiler-rt-builtins-baremetal-mips", "libcxxrt-baremetal-mips",
                                       "libcxx-baremetal-mips", "baremetal-sdk"]
 cheribsd_sdk_deps = freestanding_deps + ["cheribsd-cheri", "cheribsd-sysroot-cheri", "cheribsd-sdk"]
 
@@ -62,8 +62,6 @@ def test_sdk(target_name, expected_list):
     pytest.param("freebsd", "freebsd-native"),
     pytest.param("gdb", "gdb-native"),
     pytest.param("libcxx", "libcxx-cheri"),
-    pytest.param("libcxx-baremetal", "libcxx-baremetal-mips"),
-    pytest.param("libcxxrt-baremetal", "libcxxrt-baremetal-mips"),
 ])
 def test_alias_resolving(target_name, expected_name):
     # test that we select the default target for multi projects:

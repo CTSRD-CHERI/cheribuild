@@ -54,6 +54,7 @@ class BuildLibunwind(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="libunwind")
     defaultInstallDir = installToCXXDir
+    supported_architectures = CrossCompileCMakeProject.CAN_TARGET_CHERIBSD_AND_BAREMETAL
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
