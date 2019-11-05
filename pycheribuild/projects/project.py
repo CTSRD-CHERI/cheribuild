@@ -469,6 +469,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+        assert self._crossCompileTarget is not None
+        assert self._crossCompileTarget is not CrossCompileTarget.NONE, "Placeholder class should not be instantiated: " + repr(self)
         assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
         assert self.__class__ in self.__configOptionsSet, "Forgot to call super().setupConfigOptions()? " + str(self.__class__)
         self.__requiredSystemTools = {}  # type: typing.Dict[str, typing.Any]
