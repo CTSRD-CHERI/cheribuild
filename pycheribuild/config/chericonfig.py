@@ -103,7 +103,7 @@ class CrossCompileTarget(Enum):
             result += "-" + config.cheri_bits_and_abi_str
         if config.cross_target_suffix:
             result += "-" + config.cross_target_suffix
-        return self.generic_suffix
+        return result
 
     def is_native(self):
         """returns true if we building for the curent host"""
