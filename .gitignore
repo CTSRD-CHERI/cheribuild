@@ -1,1 +1,3 @@
 Pipfile.lock
+/.pytest_cache/
+/tests/.cache/
