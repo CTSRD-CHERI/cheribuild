@@ -24,6 +24,7 @@ class MockProject(Project):
         self.buildDir = Path(config.sourceRoot, "build", name + "-build")
         self.installDir = config.sourceRoot / "install" / name  # type: Path
         self.repository = SourceRepository()
+        self._crossCompileTarget = CrossCompileTarget.NATIVE
         super().__init__(config)
 
     def _deleteDirectories(self, *dirs):

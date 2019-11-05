@@ -31,7 +31,7 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, skip_sdk=
     targetManager.reset()
     # print(real_targets)
     config = get_global_config()
-    real_targets = list(targetManager.get_target(t, None, config, caller="_sort_targets") for t in targets)
+    real_targets = list(targetManager.get_target(t, CrossCompileTarget.NONE, config, caller="_sort_targets") for t in targets)
     config.includeDependencies = add_dependencies
     config.skipSdk = skip_sdk
     for t in real_targets:
@@ -51,7 +51,7 @@ cheribsd_sdk_deps = freestanding_deps + ["cheribsd-cheri", "cheribsd-sysroot-che
     pytest.param("baremetal-sdk", baremetal_deps, id="baremetal-sdk"),
     # Ensure that cheribsd is added to deps even on Linux/Mac
     pytest.param("cheribsd-sdk", cheribsd_sdk_deps, id="cheribsd-sdk"),
-    pytest.param("sdk", (cheribsd_deps if IS_FREEBSD else freestanding_deps) + ["sdk"], id="sdk"),
+    pytest.param("sdk", cheribsd_sdk_deps + ["sdk"], id="sdk"),
 ])
 def test_sdk(target_name, expected_list):
     assert expected_list == _sort_targets([target_name])
@@ -89,8 +89,9 @@ def test_disk_image_comes_second_last():
 
 
 def test_all_run_deps():
-    assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm", "cheribsd-cheri", "gdb-native", "freestanding-sdk", "cheribsd-sysroot-cheri",
-                                                             "cheribsd-sdk", "gdb-mips", "disk-image-cheri", "run"]
+    assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm", "cheribsd-cheri", "gdb-native",
+                                                             "cheribsd-sysroot-cheri", "gdb-mips", "disk-image-cheri",
+                                                             "run"]
 
 
 def test_run_disk_image():

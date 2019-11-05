@@ -10,7 +10,7 @@ from unittest import TestCase
 from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader, JsonAndCommandLineConfigOption
 
 _loader = JsonAndCommandLineConfigLoader()
-from pycheribuild.projects.project import SimpleProject
+from pycheribuild.projects.project import SimpleProject, CrossCompileTarget
 
 SimpleProject._configLoader = _loader
 from pycheribuild.targets import targetManager, Target
@@ -112,9 +112,9 @@ def test_cross_compile_project_inherits():
     # Parse args once to ensure targetManager is initialized
     config = _parse_arguments(["--skip-configure"])
     qtbase_class = targetManager.get_target_raw("qtbase").projectClass
-    qtbase_default = targetManager.get_target_raw("qtbase").get_or_create_project(None, config)  # type: BuildQtBase
-    qtbase_native = targetManager.get_target_raw("qtbase-native").get_or_create_project(None, config)  # type: BuildQtBase
-    qtbase_mips = targetManager.get_target_raw("qtbase-mips").get_or_create_project(None, config)  # type: BuildQtBase
+    qtbase_default = targetManager.get_target_raw("qtbase").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildQtBase
+    qtbase_native = targetManager.get_target_raw("qtbase-native").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildQtBase
+    qtbase_mips = targetManager.get_target_raw("qtbase-mips").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildQtBase
 
     # Check that project name is the same:
     assert qtbase_default.projectName == qtbase_native.projectName
@@ -204,11 +204,11 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     # Parse args once to ensure targetManager is initialized
     config = _parse_arguments(["--skip-configure"])
     cheribsd_class = targetManager.get_target_raw("cheribsd").projectClass
-    cheribsd_default_tgt = targetManager.get_target_raw("cheribsd").get_or_create_project(None, config)  # type: BuildCHERIBSD
+    cheribsd_default_tgt = targetManager.get_target_raw("cheribsd").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildCHERIBSD
     assert cheribsd_default_tgt.target == "cheribsd-cheri"
-    cheribsd_mips = targetManager.get_target_raw("cheribsd-mips").get_or_create_project(None, config)  # type: BuildCHERIBSD
-    cheribsd_cheri = targetManager.get_target_raw("cheribsd-cheri").get_or_create_project(None, config)  # type: BuildCHERIBSD
-    cheribsd_purecap = targetManager.get_target_raw("cheribsd-purecap").get_or_create_project(None, config)  # type: BuildCHERIBSD
+    cheribsd_mips = targetManager.get_target_raw("cheribsd-mips").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildCHERIBSD
+    cheribsd_cheri = targetManager.get_target_raw("cheribsd-cheri").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildCHERIBSD
+    cheribsd_purecap = targetManager.get_target_raw("cheribsd-purecap").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildCHERIBSD
 
     # Check that project name is the same:
     assert cheribsd_mips.projectName == cheribsd_cheri.projectName
@@ -304,9 +304,9 @@ def test_kernconf():
 
     # check default values
     config = _parse_arguments([])
-    cheribsd_cheri = targetManager.get_target_raw("cheribsd-cheri").get_or_create_project(None, config)  # type: BuildCHERIBSD
-    freebsd_mips = targetManager.get_target_raw("freebsd-mips").get_or_create_project(None, config)  # type: BuildCHERIBSD
-    freebsd_native = targetManager.get_target_raw("freebsd-native").get_or_create_project(None, config)  # type: BuildCHERIBSD
+    cheribsd_cheri = targetManager.get_target_raw("cheribsd-cheri").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildCHERIBSD
+    freebsd_mips = targetManager.get_target_raw("freebsd-mips").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildCHERIBSD
+    freebsd_native = targetManager.get_target_raw("freebsd-native").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildCHERIBSD
     assert config.freebsd_kernconf is None
     attr = inspect.getattr_static(freebsd_mips, "kernelConfig")
     assert freebsd_mips.kernelConfig == "MALTA64"
@@ -383,7 +383,7 @@ def test_config_file_include():
         write_bytes(config_dir / "change-smb-dir.json",
             b'{ "run": { "smb-host-directory": "/some/path" }, "#include": "common.json" }')
         result = _get_config_with_include(config_dir, b'{ "run": { "ssh-forwarding-port": 12345 }, "#include": "change-smb-dir.json" }')
-        run_project = targetManager.get_target_raw("run").get_or_create_project(None, result)
+        run_project = targetManager.get_target_raw("run").get_or_create_project(CrossCompileTarget.NONE, result)
         assert run_project.custom_qemu_smb_mount == Path("/some/path")
         assert run_project.sshForwardingPort == 12345
 
@@ -416,30 +416,30 @@ def test_config_file_include():
 def test_libcxxrt_dependency_path():
     # Test that we pick the correct libunwind path when building libcxxrt
     def check_libunwind_path(path, target_name):
-        tgt = targetManager.get_target_raw(target_name).get_or_create_project(None, config)
+        tgt = targetManager.get_target_raw(target_name).get_or_create_project(CrossCompileTarget.NONE, config)
         for i in tgt.configureArgs:
             if i.startswith("-DLIBUNWIND_PATH="):
-                assert ("-DLIBUNWIND_PATH=" + str(path)) == i, tgt.configureArgs
+                assert i == ("-DLIBUNWIND_PATH=" + str(path)), tgt.configureArgs
                 return
         assert False, "Should have found -DLIBUNWIND_PATH= in " + str(tgt.configureArgs)
 
-    config = _parse_arguments(["--skip-configure",])
+    config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.buildRoot / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
-    check_libunwind_path(config.outputRoot / "rootfs128/opt/c++/lib", "libcxxrt-cheri")
-    check_libunwind_path(config.outputRoot / "rootfs-mips/opt/c++/lib", "libcxxrt-mips")
+    check_libunwind_path(config.outputRoot / "rootfs128/opt/cheri128/c++/lib", "libcxxrt-cheri")
+    check_libunwind_path(config.outputRoot / "rootfs128/opt/mips/c++/lib", "libcxxrt-mips")
     # Check the defaults:
     config = _parse_arguments(["--skip-configure", "--xhost"])
     check_libunwind_path(config.buildRoot / "libunwind-native-build/test-install-prefix/lib", "libcxxrt")
     check_libunwind_path(config.buildRoot / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
-    config = _parse_arguments(["--skip-configure", "--xmips"])
-    check_libunwind_path(config.outputRoot / "rootfs-mips/opt/c++/lib", "libcxxrt")
-    check_libunwind_path(config.outputRoot / "rootfs-mips/opt/c++/lib", "libcxxrt-mips")
+    config = _parse_arguments(["--skip-configure", "--xmips", "--no-use-hybrid-sysroot-for-mips"])
+    check_libunwind_path(config.outputRoot / "rootfs-mips/opt/mips/c++/lib", "libcxxrt")
+    check_libunwind_path(config.outputRoot / "rootfs-mips/opt/mips/c++/lib", "libcxxrt-mips")
     config = _parse_arguments(["--skip-configure", "--256"])
-    check_libunwind_path(config.outputRoot / "rootfs256/opt/c++/lib", "libcxxrt")
-    check_libunwind_path(config.outputRoot / "rootfs256/opt/c++/lib", "libcxxrt-cheri")
+    check_libunwind_path(config.outputRoot / "rootfs256/opt/cheri256/c++/lib", "libcxxrt")
+    check_libunwind_path(config.outputRoot / "rootfs256/opt/cheri256/c++/lib", "libcxxrt-cheri")
     config = _parse_arguments(["--skip-configure", "--128"])
-    check_libunwind_path(config.outputRoot / "rootfs128/opt/c++/lib", "libcxxrt")
-    check_libunwind_path(config.outputRoot / "rootfs128/opt/c++/lib", "libcxxrt-cheri")
+    check_libunwind_path(config.outputRoot / "rootfs128/opt/cheri128/c++/lib", "libcxxrt")
+    check_libunwind_path(config.outputRoot / "rootfs128/opt/cheri128/c++/lib", "libcxxrt-cheri")
 
 
 @pytest.mark.parametrize("base_name,expected", [
@@ -483,7 +483,7 @@ def test_default_arch(base_name, expected):
 def test_default_arch(target: str, args: list, expected: str):
     # Check that the cheribsd build dir is correct
     config = _parse_arguments(args)
-    target = targetManager.get_target(target, None, config, caller="test_default_arch")
-    builddir = target.get_or_create_project(None, config).buildDir
+    target = targetManager.get_target(target, CrossCompileTarget.NONE, config, caller="test_default_arch")
+    builddir = target.get_or_create_project(CrossCompileTarget.NONE, config).buildDir
     assert isinstance(builddir, Path)
     assert builddir.name == expected
