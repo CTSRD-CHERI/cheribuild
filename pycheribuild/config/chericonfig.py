@@ -71,12 +71,6 @@ class CrossCompileTarget(Enum):
     I386 = ("i386", CPUArchitecture.I386, False)
     AARCH64 = ("aarch64", CPUArchitecture.AARCH64, False)
 
-    def get_index(self):
-        for idx, value in enumerate(CrossCompileTarget):
-            if self is value:
-                return idx - 1  # return -1 for NONE
-        assert False, "Should not be reachable"
-
     def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, is_cheri_purecap: bool):
         self.generic_suffix = suffix
         self.cpu_architecture = cpu_architecture

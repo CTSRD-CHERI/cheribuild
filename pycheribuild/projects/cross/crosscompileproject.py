@@ -182,13 +182,6 @@ class CrossCompileMixin(MultiArchBaseMixin):
         self.host_warning_flags = []
         self.common_warning_flags = []
 
-        target_arch = inspect.getattr_static(self, "_crossCompileTarget")
-        if isinstance(target_arch, CrossCompileTarget):
-            # Should only be set for the foo-native/foo-cheri, etc. targets
-            assert hasattr(self, "synthetic_base")
-        else:
-            # This should be configurable on the command line
-            assert isinstance(target_arch, ConfigOptionBase)
         target_arch = self._crossCompileTarget
         # sanity check:
         assert target_arch is not None and target_arch is not CrossCompileTarget.NONE

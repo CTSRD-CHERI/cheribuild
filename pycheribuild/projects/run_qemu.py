@@ -273,6 +273,14 @@ class _RunMultiArchFreeBSDImage(MultiArchBaseMixin, AbstractLaunchFreeBSD):
     doNotAddToTargets = True
     _source_class = None
 
+    @classmethod
+    def get_cross_target_index(cls):
+        for idx, value in enumerate(cls.supported_architectures):
+            if cls._crossCompileTarget is value:
+                return idx
+        assert cls._crossCompileTarget is CrossCompileTarget.NONE
+        return -1  # return -1 for NONE
+
     @classproperty
     def default_architecture(cls):
         return cls._source_class.default_architecture
@@ -401,7 +409,7 @@ class LaunchFreeBSD(_RunMultiArchFreeBSDImage):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        add_to_port = cls._crossCompileTarget.get_index()
+        add_to_port = cls.get_cross_target_index()
         super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
                                    defaultSshPort=defaultSshForwardingPort() + 10 + add_to_port, **kwargs)
 
@@ -413,7 +421,7 @@ class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        add_to_port = 0 if cls._crossCompileTarget is None else cls._crossCompileTarget.get_index()
+        add_to_port = cls.get_cross_target_index()
         super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
                                    defaultSshPort=defaultSshForwardingPort() + 20 + add_to_port, **kwargs)
 
