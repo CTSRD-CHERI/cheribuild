@@ -31,11 +31,11 @@
 import shutil
 
 from .crosscompileproject import *
-from ...utils import getCompilerInfo, runCmd, IS_FREEBSD
+
 
 class MRS(CrossCompileCMakeProject):
     projectName = "mrs"
-    repository = GitRepository("https://github.com/ctsrd-cheri/mrs")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/mrs")
     appendCheriBitsToBuildDir = True
     supported_architectures = [CrossCompileTarget.MIPS_CHERI_PURECAP]
 
@@ -102,11 +102,11 @@ class MRS(CrossCompileCMakeProject):
             self.add_cmake_options(QUARANTINE_HIGHWATER=self.quarantine_highwater)
 
     def compile(self, **kwargs):
-      if self.build_target:
-        # self.runMake("libsnmallocshim.so", cwd=kwargs.get("cwd"))
-        self.runMake(self.build_target)
-      else:
-        return super().compile(**kwargs)
+        if self.build_target:
+            # self.runMake("libsnmallocshim.so", cwd=kwargs.get("cwd"))
+            self.runMake(self.build_target)
+        else:
+            return super().compile(**kwargs)
 
     def install(*args, **kwargs):
         pass
