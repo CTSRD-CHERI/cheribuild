@@ -49,16 +49,11 @@ def _cxx_install_dir(config: CheriConfig, project: SimpleProject):
 installToCXXDir = ComputedDefaultValue(function=lambda c, p: default_cross_install_dir(c, p, install_dir_name="c++"),
                                        asString="$CHERIBSD_ROOTFS/opt/c++")
 
+
 class BuildLibunwind(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="libunwind")
     defaultInstallDir = installToCXXDir
-
-    @property
-    def should_use_sdk_clang(self):
-        if self.compiling_for_host() and not self.config.use_sdk_clang_for_native_xbuild:
-            return False
-        return True
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -191,12 +186,6 @@ class BuildLibCXX(CrossCompileCMakeProject):
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="libcxx")
     defaultInstallDir = installToCXXDir
     dependencies = ["libcxxrt"]
-
-    @property
-    def should_use_sdk_clang(self):
-        if self.compiling_for_host() and not self.config.use_sdk_clang_for_native_xbuild:
-            return False
-        return True
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
