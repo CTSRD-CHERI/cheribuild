@@ -164,5 +164,9 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         return super().target_triple(config)
 
     def base_sysroot_targets(self, config: "CheriConfig") -> typing.List[str]:
+        if self.target.is_mips(include_purecap=False):
+            if config.use_hybrid_sysroot_for_mips:
+                return ["cheribsd-cheri", "cheribsd-sysroot-cheri"]
+            return ["cheribsd-mips", "cheribsd-sysroot-mips"]
         return ["cheribsd", "cheribsd-sysroot"]
 
