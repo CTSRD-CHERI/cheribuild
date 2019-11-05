@@ -49,7 +49,8 @@ class Target(object):
         self._benchmarks_have_run = False
         self._creating_project = False  # avoid cycles
 
-    def get_or_create_project(self, target_arch: "typing.Optional[CrossCompileTarget]", config) -> "SimpleProject":
+    def get_or_create_project(self, target_arch: "CrossCompileTarget", config) -> "SimpleProject":
+        assert target_arch is not None
         # Note: MultiArchTarget uses caller to select the right project (e.g. libcxxrt-native needs libunwind-native path)
         if self.__project is None:
             self.__project = self.create_project(config)
@@ -62,7 +63,7 @@ class Target(object):
     def checkSystemDeps(self, config: CheriConfig):
         if self._completed:
             return
-        project = self.get_or_create_project(None, config)
+        project = self.get_or_create_project(CrossCompileTarget.NONE, config)
         with setEnv(PATH=config.dollarPathWithOtherTools):
             # make sure all system dependencies exist first
             project.check_system_dependencies()
@@ -101,7 +102,7 @@ class Target(object):
             return
         # instantiate the project and run it
         starttime = time.time()
-        project = self.get_or_create_project(None, config)
+        project = self.get_or_create_project(self.projectClass.get_crosscompile_target(config), config)
         new_env = {"PATH": project.config.dollarPathWithOtherTools}
         if project.config.clang_colour_diags:
             new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
@@ -117,7 +118,7 @@ class Target(object):
             return
         # instantiate the project and run it
         starttime = time.time()
-        project = self.get_or_create_project(None, config)
+        project = self.get_or_create_project(self.projectClass.get_crosscompile_target(config), config)
         new_env = {"PATH": project.config.dollarPathWithOtherTools}
         if project.config.clang_colour_diags:
             new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
@@ -171,9 +172,9 @@ class Target(object):
 
 # XXX: can't call this CrossCompileTarget since that is already the name of the enum
 class MultiArchTarget(Target):
-    def __init__(self, name, projectClass, target_arch: "typing.Optional[CrossCompileTarget]",
-                 base_target: "MultiArchTargetAlias"):
+    def __init__(self, name, projectClass, target_arch: "CrossCompileTarget", base_target: "MultiArchTargetAlias"):
         super().__init__(name, projectClass)
+        assert target_arch is not None
         self.target_arch = target_arch
         base_target.derived_targets.append(self)
 
@@ -206,8 +207,9 @@ class MultiArchTargetAlias(Target):
                 return tgt
         raise LookupError("Could not find '" + self.name + "' target for " + str(cross_target) + ", caller was " + str(caller))
 
-    def get_or_create_project(self, cross_target: "typing.Optional[CrossCompileTarget]", config) -> "SimpleProject":
+    def get_or_create_project(self, cross_target: "CrossCompileTarget", config) -> "SimpleProject":
         # If there are any derived targets pick the right one based on the target_arch:
+        assert cross_target is not None
         assert self.derived_targets, "derived targets must not be empty"
         return self.get_real_target(cross_target, config).get_or_create_project(cross_target, config)
 
@@ -259,15 +261,12 @@ class TargetManager(object):
         # return the actual target without resolving MultiArchTargetAlias
         return self._allTargets[name]
 
-    def get_target(self, name: str, arch: "typing.Optional[CrossCompileTarget]", config: CheriConfig,
-                   caller: "SimpleProject") -> Target:
+    def get_target(self, name: str, arch: "CrossCompileTarget", config: CheriConfig, caller: "SimpleProject") -> Target:
+        assert arch is not None
         target = self.get_target_raw(name)
         # print("get_target", name, arch, end="")
         if isinstance(target, MultiArchTargetAlias):
             # Pick the default architecture if no arch was passed
-            # print(" raw_target:", target, " default arch = ", target.projectClass.default_architecture, end="")
-            if arch is None and target.projectClass.default_architecture is not None:
-                arch = target.projectClass.default_architecture
             target = target.get_real_target(arch, config, caller=caller)
         # print(" ->", target)
         return target
@@ -361,7 +360,7 @@ class TargetManager(object):
             if targetName not in self._allTargets:
                 sys.exit(coloured(AnsiColour.red, "Target", targetName, "does not exist. Valid choices are",
                                   ",".join(self.targetNames)))
-            explicitlyChosenTargets.append(self.get_target(targetName, None, config, caller="cmdline parsing"))
+            explicitlyChosenTargets.append(self.get_target(targetName, CrossCompileTarget.NONE, config, caller="cmdline parsing"))
         chosenTargets = self.get_all_targets(explicitlyChosenTargets, config)
         if config.verbose:
             print("Will execute the following targets:", " ".join(t.name for t in chosenTargets))

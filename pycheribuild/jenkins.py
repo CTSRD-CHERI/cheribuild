@@ -40,6 +40,7 @@ from pathlib import Path
 
 from .config.loader import ConfigLoaderBase, CommandLineConfigOption
 from .config.jenkinsconfig import JenkinsConfig, CrossCompileTarget, JenkinsAction
+from .config.target_info import TargetInfo
 from .projects.project import SimpleProject, Project
 # noinspection PyUnresolvedReferences
 from .projects import *  # make sure all projects are loaded so that targetManager gets populated
@@ -263,12 +264,18 @@ def _jenkins_main():
                 if not expected_clang.exists():
                     fatalError("--cheri-sdk-path specified but", expected_clang, "does not exist")
             else:
-                create_sdk_from_archives(cheriConfig, needs_cheribsd_sysroot=target.projectClass.needs_cheribsd_sysroot(cheriConfig.crossCompileTarget))
+                need_cheribsd_sysroot = False
+                deps = target.projectClass.recursive_dependencies(cheriConfig)
+                for d in deps:
+                    assert isinstance(d, Target)
+                    if d.name.startswith("cheribsd-sysroot"):
+                        need_cheribsd_sysroot = True
+                create_sdk_from_archives(cheriConfig, needs_cheribsd_sysroot=need_cheribsd_sysroot)
 
         Target.instantiating_targets_should_warn = False
         target.checkSystemDeps(cheriConfig)
         # need to set destdir after checkSystemDeps:
-        project = target.get_or_create_project(None, cheriConfig)
+        project = target.get_or_create_project(CrossCompileTarget.NONE, cheriConfig)
         assert project
         cross_target = project.get_crosscompile_target(cheriConfig)
         if cross_target is not None and cross_target != cheriConfig.crossCompileTarget:
