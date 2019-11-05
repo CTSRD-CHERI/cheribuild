@@ -1,4 +1,4 @@
-# `cheribuild.py` - A script to build CHERI-related software (**Requires Python 3.5+**)
+# `cheribuild.py` - A script to build CHERI-related software (**requires Python 3.5.2+**)
 
 This script automates all the steps required to build various [CHERI](http://www.chericpu.com)-related software.
 For example `cheribuild.py [options] sdk` will create a SDK that can be
