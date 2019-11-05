@@ -66,7 +66,7 @@ def freebsd_install_dir(config: CheriConfig, project: "BuildFreeBSD"):
     assert isinstance(project, BuildFreeBSD)
     target = project.get_crosscompile_target(config)
     if target.is_mips(include_purecap=True):
-        assert not target.is_cheri_purecap, "Should not reach this code!"
+        assert not target.is_cheri_purecap(), "Should not reach this code!"
         if config.mips_float_abi == MipsFloatAbi.HARD:
             return config.outputRoot / "freebsd-mipshf"
         return config.outputRoot / "freebsd-mips"
@@ -381,7 +381,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
         self._installPrefix = Path("/")
         self.kernelToolchainAlreadyBuilt = False
         for option in self.makeOptions:
-            if not self._crossCompileTarget.is_cheri_purecap and "CHERI_" in option:
+            if not self._crossCompileTarget.is_cheri_purecap() and "CHERI_" in option:
                 warningMessage("Not adding CHERI specific make option", option, "for", self.target,
                                " -- consider setting separate", self.target + "/make-options in the config file.")
                 continue
@@ -1086,7 +1086,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         self.extra_kernels_with_mfs = []
         if self.buildFpgaKernels:
             if self._crossCompileTarget.is_mips(include_purecap=True):
-                if self._crossCompileTarget.is_cheri_purecap:
+                if self._crossCompileTarget.is_cheri_purecap([CPUArchitecture.MIPS]):
                     if self.config.cheriBits == 128:
                         prefix = "CHERI128_DE4_"
                     elif self.config.cheriBits == 256:
@@ -1361,7 +1361,7 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
     @staticmethod
     def dependencies(cls: "BuildCheriBsdSysroot", config: CheriConfig):
         target = cls.get_crosscompile_target(config)  # type: CrossCompileTarget
-        if target.is_cheri_purecap:  # (CPUArchitecture.MIPS):
+        if target.is_cheri_purecap([CPUArchitecture.MIPS]):
             # TODO: can't access this member here...
             # if cls.use_cheribsd_purecap_rootfs:
             #    return ["cheribsd-purecap"]

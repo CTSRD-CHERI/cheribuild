@@ -32,6 +32,7 @@ import getpass
 import grp
 import json
 import os
+import typing
 from typing import Optional
 from enum import Enum
 from collections import OrderedDict
@@ -80,15 +81,16 @@ class CrossCompileTarget(Enum):
         self.generic_suffix = suffix
         self.cpu_architecture = cpu_architecture
         # TODO: self.operating_system = ...
-        self.is_cheri_purecap = is_cheri_purecap
+        self._is_cheri_purecap = is_cheri_purecap
 
     def build_suffix(self, config: "CheriConfig", *, build_hybrid=False):
         assert self is not CrossCompileTarget.NONE
         if self is CrossCompileTarget.MIPS_CHERI_PURECAP:
             result = "-" + config.cheri_bits_and_abi_str
         elif self is CrossCompileTarget.MIPS:
+            result = "-" + self.generic_suffix
             if build_hybrid:
-                result = "-" + self.generic_suffix + "-hybrid" + config.cheri_bits_and_abi_str
+                result += "-hybrid" + config.cheri_bits_and_abi_str
             if config.mips_float_abi == MipsFloatAbi.HARD:
                 result += "-hardfloat"
         else:
@@ -106,7 +108,7 @@ class CrossCompileTarget(Enum):
         if include_purecap is None:
             # Check that cases that want to handle both pass an explicit argument
             assert self is not CrossCompileTarget.MIPS_CHERI_PURECAP, "Should check purecap cases first"
-        if not include_purecap and self.is_cheri_purecap:
+        if not include_purecap and self._is_cheri_purecap:
             return False
         return self.cpu_architecture is CPUArchitecture.MIPS
 
@@ -126,13 +128,24 @@ class CrossCompileTarget(Enum):
         return self.is_i386() or self.is_x86_64()
 
     def pointer_size(self, config: "CheriConfig"):
-        if self.is_cheri_purecap:
+        if self._is_cheri_purecap:
             assert config.cheriBits in (128, 256), "No other cap size supported yet"
             return config.cheriBits / 8
         elif self.is_i386():
             return 4
         # all other architectures we support currently use 64-bit pointers
         return 8
+
+    def is_cheri_purecap(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None):
+        if valid_cpu_archs is None:
+            return self._is_cheri_purecap
+        if not self._is_cheri_purecap:
+            return False
+        # Purecap target, but must first check if one of the accepted architectures matches
+        for a in valid_cpu_archs:
+            if a is self.cpu_architecture:
+                return True
+        return False
 
     def __eq__(self, other):
         raise NotImplementedError("Should not compare to CrossCompileTarget, use the is_foo() methods.")
@@ -473,7 +486,7 @@ class CheriConfig(object):
         return self.sdkDir / ("sysroot" + self.cheri_bits_and_abi_str)
 
     def get_sysroot_path(self, cross_compile_target: CrossCompileTarget, use_hybrid_sysroot=False):
-        if cross_compile_target.is_cheri_purecap:
+        if cross_compile_target.is_cheri_purecap():
             return self.cheriSysrootDir
         if cross_compile_target.is_mips():
             if use_hybrid_sysroot or self.use_hybrid_sysroot_for_mips:

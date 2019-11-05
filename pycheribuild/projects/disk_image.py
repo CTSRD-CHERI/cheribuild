@@ -334,7 +334,7 @@ class _BuildDiskImageBase(SimpleProject):
         if self.include_gdb:
             cross_target = self.source_project.get_crosscompile_target(self.config)
             # We always want to include the MIPS GDB for CHERI targets (purecap doesn't work and would be slower):
-            if cross_target.is_cheri_purecap and cross_target.is_mips(include_purecap=True):
+            if cross_target.is_cheri_purecap([CPUArchitecture.MIPS]):
                 cross_target = CrossCompileTarget.MIPS
             if not any(x is cross_target for x in BuildGDB.supported_architectures):
                 warningMessage("GDB cannot be built for architecture ", cross_target, " -> not addding it")
@@ -825,7 +825,7 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
         tmpfs_shortname = None
         extra_files_shortname = None
         disk_img_shortname = None
-        if cls._crossCompileTarget.is_mips(include_purecap=True) and cls._crossCompileTarget.is_cheri_purecap:
+        if cls._crossCompileTarget.is_cheri_purecap([CPUArchitecture.MIPS]):
             tmpfs_shortname = "-disable-tmpfs"
             disk_img_shortname = "-disk-image-path"
             extra_files_shortname = "-extra-files"

@@ -64,7 +64,7 @@ def get_cheribsd_instance_for_install_dir(config: CheriConfig, project: "SimpleP
     from .cheribsd import BuildCHERIBSD
     cross_target = project.get_crosscompile_target(config)
     # If use_hybrid_sysroot_for_mips is set, install to rootfs128 instead of rootfs-mips
-    if not cross_target.is_cheri_purecap and cross_target.is_mips(include_purecap=False) and project.mips_build_hybrid:
+    if cross_target.is_mips(include_purecap=False) and project.mips_build_hybrid:
         cross_target = CrossCompileTarget.MIPS_CHERI_PURECAP
     return BuildCHERIBSD.get_instance_for_cross_target(cross_target, config)
 
@@ -718,7 +718,7 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
             assert issubclass(self.synthetic_base, SimpleProject)
             mips_instance = self.synthetic_base.get_instance_for_cross_target(CrossCompileTarget.MIPS, self.config)
             xtarget = mips_instance.get_crosscompile_target(self.config)
-            assert xtarget.is_mips and not xtarget.is_cheri_purecap, xtarget
+            assert xtarget.is_mips(include_purecap=False), xtarget
             self.info(self.target, self.installDir)
             self.info(mips_instance.target, mips_instance.installDir)
             assert mips_instance.installDir != self.installDir, mips_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(mips_instance.installDir)

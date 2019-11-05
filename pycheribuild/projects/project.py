@@ -318,7 +318,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # otherwise fall back to the default specified in the class
         result = cls.default_architecture
         # Otherwise pick the best match:
-        if default_target.is_cheri_purecap and result.is_mips(include_purecap=False):
+        if default_target.is_cheri_purecap([CPUArchitecture.MIPS]):
             # add this note for e.g. GDB:
             # noinspection PyUnresolvedReferences
             cls._configure_status_message = "Cannot compile " + cls.target + " in CHERI purecap mode," \
@@ -345,7 +345,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return self._crossCompileTarget.is_mips(include_purecap=include_purecap)
 
     def compiling_for_cheri(self):
-        return self._crossCompileTarget.is_cheri_purecap
+        return self._crossCompileTarget.is_cheri_purecap()
 
     def compiling_for_host(self):
         return self._crossCompileTarget.is_native()
@@ -720,7 +720,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 freebsd_image = "freebsd-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
                 if xtarget.is_mips(include_purecap=False):
                     guessed_archive = cheribsd_image if self.config.run_mips_tests_with_cheri_image else freebsd_image
-                elif xtarget.is_cheri_purecap and xtarget.is_mips(include_purecap=True):
+                elif xtarget.is_cheri_purecap([CPUArchitecture.MIPS]):
                     guessed_archive = cheribsd_image
                 else:
                     self.fatal("Could not guess path to kernel image for CheriBSD")
@@ -768,7 +768,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             cmd.append("--trap-on-unrepresentable")
         if self.config.test_ld_preload:
             cmd.append("--test-ld-preload=" + str(self.config.test_ld_preload))
-            if xtarget.is_cheri_purecap:
+            if xtarget.is_cheri_purecap():
                 cmd.append("--test-ld-preload-variable=LD_CHERI_PRELOAD")
             else:
                 cmd.append("--test-ld-preload-variable=LD_PRELOAD")
@@ -1281,7 +1281,7 @@ class Project(SimpleProject):
                                          help="Override default source directory for " + cls.projectName)
         if cls.can_build_with_asan:
             asan_default = ComputedDefaultValue(
-                function=lambda config, proj: False if proj.get_crosscompile_target(config).is_cheri_purecap else proj.default_use_asan,
+                function=lambda config, proj: False if proj.get_crosscompile_target(config).is_cheri_purecap() else proj.default_use_asan,
                 asString=str(cls.default_use_asan))
             cls.use_asan = cls.addBoolOption("use-asan", default=asan_default, help="Build with AddressSanitizer enabled")
         else:

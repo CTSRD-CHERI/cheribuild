@@ -54,7 +54,7 @@ class SNMalloc(CrossCompileCMakeProject):
         cls.pagemap_pointers = cls.addBoolOption("pagemap-pointers", help="Change pagemap data structure to store pointers")
         cls.pagemap_rederive = cls.addBoolOption("pagemap-rederive", help="Rederive internal pointers using the pagemap")
         cls.cheri_align      = cls.addBoolOption("cheri-align", help="Align sizes for CHERI bounds setting")
-        cheri_bounds_default = cls._crossCompileTarget.is_cheri_purecap
+        cheri_bounds_default = cls._crossCompileTarget.is_cheri_purecap()
         cls.cheri_bounds     = cls.addBoolOption("cheri-bounds", default=cheri_bounds_default, help="Set bounds on returned allocations")
 
         cls.quarantine       = cls.addBoolOption("quarantine", help="Quarantine deallocations")
