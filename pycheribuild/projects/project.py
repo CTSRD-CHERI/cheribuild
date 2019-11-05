@@ -1067,7 +1067,7 @@ class GitRepository(SourceRepository):
             assert isinstance(self.url, str), self.url
             assert not self.url.startswith("<"), "Invalid URL " + self.url
             if not current_project.queryYesNo(
-                    str(src_dir) + "is not a git repository. Clone it from '" + self.url + "'?"):
+                    str(src_dir) + " is not a git repository. Clone it from '" + self.url + "'?"):
                 current_project.fatal("Sources for", str(src_dir), " missing!")
             clone_cmd = ["git", "clone"]
             if current_project.config.shallow_clone:
