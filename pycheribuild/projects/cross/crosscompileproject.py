@@ -221,6 +221,9 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 self.COMMON_FLAGS.append("-D_GNU_SOURCE=1")  # needed for the locale functions
                 self.COMMON_FLAGS.append("-D_POSIX_MONOTONIC_CLOCK=1")  # pretend that we have a monotonic clock
                 self.COMMON_FLAGS.append("-D_POSIX_TIMERS=1")  # pretend that we have a monotonic clock
+            # Install to SDK if CHERIBSD_ROOTFS is the install dir but we are not building for CheriBSD
+            if self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS and not self.target_info.is_cheribsd:
+                self.crossInstallDir = CrossInstallDir.SDK
 
             if self.crossInstallDir in (CrossInstallDir.SDK, CrossInstallDir.BOOTSTRAP_TOOLS):
                 if self.baremetal:
