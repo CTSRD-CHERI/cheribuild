@@ -138,7 +138,15 @@ class BuildLibunwind(CrossCompileCMakeProject):
 class BuildLibCXXRT(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/libcxxrt.git")
     defaultInstallDir = installToCXXDir
-    dependencies = ["libunwind"]
+    supported_architectures = CrossCompileCMakeProject.CAN_TARGET_CHERIBSD_AND_BAREMETAL
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig):
+        result = super().dependencies(config)
+        # We don't have a working baremetal libunwind yet
+        if not cls.get_crosscompile_target(config).target_info.is_newlib:
+            result += ["libunwind"]
+        return result
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -188,6 +196,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="libcxx")
     defaultInstallDir = installToCXXDir
+    supported_architectures = CrossCompileCMakeProject.CAN_TARGET_CHERIBSD_AND_BAREMETAL
     dependencies = ["libcxxrt"]
 
     @classmethod
@@ -241,13 +250,12 @@ class BuildLibCXX(CrossCompileCMakeProject):
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
         self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
         # select libcxxrt as the runtime library (except on macos where this doesn't seem to work very well)
-        libcxxrt_class = BuildLibCXXRT if not self.baremetal else BuildLibCXXRTBaremetal
         if not (self.compiling_for_host() and IS_MAC):
             self.add_cmake_options(
                 LIBCXX_CXX_ABI="libcxxrt",
                 LIBCXX_CXX_ABI_LIBNAME="libcxxrt",
-                LIBCXX_CXX_ABI_INCLUDE_PATHS=libcxxrt_class.getSourceDir(self) / "src",
-                LIBCXX_CXX_ABI_LIBRARY_PATH=libcxxrt_class.getBuildDir(self) / "lib")
+                LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.getSourceDir(self) / "src",
+                LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.getBuildDir(self) / "lib")
             if not self.baremetal:
                 # use llvm libunwind when testing
                 self.add_cmake_options(LIBCXX_STATIC_CXX_ABI_LIBRARY_NEEDS_UNWIND_LIBRARY=True,
@@ -359,7 +367,6 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     projectName = "compiler-rt"
     crossInstallDir = CrossInstallDir.COMPILER_RESOURCE_DIR
     _check_install_dir_conflict = False
-    supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_TARGETS
     _default_architecture = CrossCompileTarget.CHERIBSD_MIPS_PURECAP
 
     def __init__(self, config: CheriConfig):
@@ -395,17 +402,18 @@ class BuildCompilerRt(CrossCompileCMakeProject):
                 self.warning("Did not install ubsan runtime", ubsan_runtime_path)
 
 
-class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
+class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="compiler-rt")
-    projectName = "compiler-rt-baremetal"
+    projectName = "compiler-rt-builtins"
     crossInstallDir = CrossInstallDir.SDK
-    dependencies = ["newlib-baremetal"]
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
     _default_architecture = CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+        assert self.target_info.is_baremetal, "No other targets supported yet"
+        assert self.target_info.is_newlib, "No other targets supported yet"
         # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")
         if self.compiling_for_mips(include_purecap=False):
@@ -449,35 +457,3 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
         runCmd("ar", "rcv", self.installDir / "lib/libunwind.a", "/dev/null")
         runCmd("ar", "dv", self.installDir / "lib/libunwind.a", "null")
         runCmd("ar", "t", self.installDir / "lib/libunwind.a")  # should be empty now
-
-
-class BuildLibCXXBaremetal(BuildLibCXX):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/libcxx.git")
-    dependencies = ["libcxxrt-baremetal"]
-    projectName = "libcxx-baremetal"
-    # target = "libcxx-baremetal"
-    supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
-    crossInstallDir = CrossInstallDir.SDK
-    _default_architecture = CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64
-    defaultCMakeBuildType = "Debug"
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-
-        # self.COMMON_FLAGS.append("-v")
-        # Seems to be necessary :(
-        # self.COMMON_FLAGS.extend(["-mxgot", "-mllvm", "-mxmxgot"])
-        self.COMMON_FLAGS.append("-O0")
-
-
-class BuildLibCXXRTBaremetal(BuildLibCXXRT):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/libcxxrt.git")
-    projectName = "libcxxrt-baremetal"
-    dependencies = ["newlib-baremetal", "compiler-rt-baremetal"]
-    crossInstallDir = CrossInstallDir.SDK
-    supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
-    _default_architecture = CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.COMMON_FLAGS.append("-Dsched_yield=abort")  # UNIPROCESSOR, should never happen

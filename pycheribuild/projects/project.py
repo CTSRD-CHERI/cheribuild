@@ -160,9 +160,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # However, if the output is just a plain text file don't attempt to do any line clearing
     _clearLineSequence = b"\x1b[2K\r" if sys.__stdout__.isatty() else b"\n"
 
-    CAN_TARGET_ALL_TARGETS = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.CHERIBSD_MIPS, CrossCompileTarget.NATIVE]
+    CAN_TARGET_ALL_CHERIBSD_TARGETS = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.CHERIBSD_MIPS]
     CAN_TARGET_ALL_BAREMETAL_TARGETS = [CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64,
                                         CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64_PURECAP]
+    CAN_TARGET_CHERIBSD_AND_BAREMETAL = CAN_TARGET_ALL_CHERIBSD_TARGETS + CAN_TARGET_ALL_BAREMETAL_TARGETS
     # Default to NATIVE only
     supported_architectures = [CrossCompileTarget.NATIVE]
     # The architecture to build for if no --xmips/--xhost flag is passed (defaults to supported_architectures[0]
@@ -228,9 +229,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                         dep_target = tgt
                         # print("Overriding with", tgt.name)
                         break
-            assert not isinstance(dep_target, MultiArchTargetAlias), "All targets should be fully resolved: " + cls.__name__
+            assert not isinstance(dep_target, MultiArchTargetAlias), "All targets should be fully resolved but got " \
+                                                                     + str(dep_target) + " in " + cls.__name__
             if dep_target.projectClass is cls:
-                assert False, "Found self as dependency:" + str(cls)
+                # assert False, "Found self as dependency:" + str(cls)
                 continue
             yield dep_target
 
@@ -1154,7 +1156,7 @@ class GitRepository(SourceRepository):
 
 
 class MultiArchBaseMixin(object):
-    supported_architectures = SimpleProject.CAN_TARGET_ALL_TARGETS
+    supported_architectures = [CrossCompileTarget.NATIVE] + SimpleProject.CAN_TARGET_ALL_CHERIBSD_TARGETS
 
 
 class Project(SimpleProject):
