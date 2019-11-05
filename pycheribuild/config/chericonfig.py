@@ -64,7 +64,7 @@ class CPUArchitecture(Enum):
 
 
 class CrossCompileTarget(Enum):
-    NONE = ("invalid", None, False, NativeTargetInfo)  # Placeholder
+    NONE = ("invalid", None, False, None)  # Placeholder
     NATIVE = ("native", CPUArchitecture.X86_64, False, NativeTargetInfo)  # XXX: should probably not harcode x86_64
     CHERIBSD_MIPS = ("mips", CPUArchitecture.MIPS64, False, CheriBSDTargetInfo)
     CHERIBSD_MIPS_PURECAP = ("cheri", CPUArchitecture.MIPS64, True, CheriBSDTargetInfo)
@@ -79,7 +79,8 @@ class CrossCompileTarget(Enum):
         self.cpu_architecture = cpu_architecture
         # TODO: self.operating_system = ...
         self._is_cheri_purecap = is_cheri_purecap
-        self.target_info = target_info_cls(self)
+        if target_info_cls is not None:
+            self.target_info = target_info_cls(self)
 
     def build_suffix(self, config: "CheriConfig", *, build_hybrid=False):
         assert self is not CrossCompileTarget.NONE
