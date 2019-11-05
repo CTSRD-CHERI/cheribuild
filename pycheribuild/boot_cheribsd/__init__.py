@@ -192,7 +192,7 @@ def decompress(archive: Path, force_decompression: bool, *, keep_archive=True, c
             return result
     info("Extracting ", archive)
     if keep_archive:
-        cmd = cmd + ["-k"]
+        cmd += ["-k"]
     run_host_command(cmd + [str(archive)])
     return result
 

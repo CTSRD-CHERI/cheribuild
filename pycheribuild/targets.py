@@ -194,15 +194,15 @@ class MultiArchTargetAlias(Target):
         super().__init__(name, projectClass)
         self.derived_targets = []  # type: typing.List[MultiArchTarget]
 
-    def get_real_target(self, cross_target: "typing.Optional[CrossCompileTarget]", config,
+    def get_real_target(self, cross_target: CrossCompileTarget, config,
                         caller=None) -> MultiArchTarget:
-        if cross_target is None:
+        assert cross_target is not None
+        if cross_target is CrossCompileTarget.NONE:
             # Use the default target:
             cross_target = self.projectClass.get_crosscompile_target(config)
-        assert cross_target is not None
         # find the correct derived project:
         for tgt in self.derived_targets:
-            if tgt.target_arch == cross_target:
+            if tgt.target_arch is cross_target:
                 return tgt
         raise LookupError("Could not find target for " + str(cross_target) + ", caller was " + str(caller))
 
@@ -218,16 +218,16 @@ class MultiArchTargetAlias(Target):
         return self.projectClass(config)
 
     def execute(self, config):
-        return self.get_real_target(None, config).execute(config)
+        return self.get_real_target(CrossCompileTarget.NONE, config).execute(config)
 
     def run_tests(self, config: "CheriConfig"):
-        return self.get_real_target(None, config).run_tests(config)
+        return self.get_real_target(CrossCompileTarget.NONE, config).run_tests(config)
 
     def run_benchmarks(self, config: "CheriConfig"):
-        return self.get_real_target(None, config).run_benchmarks(config)
+        return self.get_real_target(CrossCompileTarget.NONE, config).run_benchmarks(config)
 
     def checkSystemDeps(self, config: CheriConfig):
-        return self.get_real_target(None, config).checkSystemDeps(config)
+        return self.get_real_target(CrossCompileTarget.NONE, config).checkSystemDeps(config)
 
     def __repr__(self):
         return "<Cross target alias " + self.name + ">"
@@ -235,7 +235,7 @@ class MultiArchTargetAlias(Target):
 
 class TargetManager(object):
     def __init__(self):
-        self._allTargets = {}
+        self._allTargets = {}  # type: typing.Dict[str, Target]
 
     def addTarget(self, target: Target) -> None:
         self._allTargets[target.name] = target
@@ -255,7 +255,7 @@ class TargetManager(object):
     def targets(self) -> "typing.Iterable[Target]":
         return self._allTargets.values()
 
-    def get_target_raw(self, name: str):
+    def get_target_raw(self, name: str) -> Target:
         # return the actual target without resolving MultiArchTargetAlias
         return self._allTargets[name]
 
@@ -281,7 +281,7 @@ class TargetManager(object):
         possiblyMissingDependencies = functools.reduce(set.union, allDependencyNames, set())
         for dep in possiblyMissingDependencies:
             if dep not in data:
-                data[dep] = self._allTargets[dep].dependencies
+                data[dep] = self._allTargets[dep].get_dependencies(None)
 
         # do the actual sorting
         while True:
@@ -344,6 +344,9 @@ class TargetManager(object):
     def get_all_chosen_targets(self, config) -> "typing.Iterable[Target]":
         # check that all target dependencies are correct:
         for t in self._allTargets.values():
+            assert t.projectClass
+            if isinstance(t, MultiArchTargetAlias):
+                continue
             for dep in t.get_dependencies(config):
                 if dep.name not in self._allTargets:
                     sys.exit("Invalid dependency " + dep.name + " for " + t.projectClass.__name__)

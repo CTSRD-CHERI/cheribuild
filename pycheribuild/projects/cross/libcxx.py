@@ -36,18 +36,18 @@ from ..llvm import BuildCheriLLVM
 from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
 from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str, IS_MAC
-from ..project import ReuseOtherProjectDefaultTargetRepository
+from ..project import ReuseOtherProjectDefaultTargetRepository, SimpleProject
 import os
 
 
-def _cxx_install_dir(config: CheriConfig, project):
-    if project.get_crosscompile_target(config) == CrossCompileTarget.NATIVE:
+def _cxx_install_dir(config: CheriConfig, project: SimpleProject):
+    if project.get_crosscompile_target(config).is_native():
         return _INVALID_INSTALL_DIR
     return BuildCHERIBSD.rootfsDir(project, config) / "opt/c++"
 
 
-installToCXXDir = ComputedDefaultValue(function=_cxx_install_dir, asString="$CHERIBSD_ROOTFS/opt/c++")
-
+installToCXXDir = ComputedDefaultValue(function=lambda c, p: default_cross_install_dir(c, p, install_dir_name="c++"),
+                                       asString="$CHERIBSD_ROOTFS/opt/c++")
 
 class BuildLibunwind(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
@@ -285,7 +285,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         print("test_compile_flags:", test_compile_flags)
 
         if self.baremetal:
-            if self.compiling_for_mips():
+            if self.compiling_for_mips(include_purecap=False):
                 test_compile_flags += " -fno-pic -mno-abicalls"
             self.add_cmake_options(
                 LIBCXX_ENABLE_FILESYSTEM=False,
@@ -363,7 +363,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     crossInstallDir = CrossInstallDir.COMPILER_RESOURCE_DIR
     _check_install_dir_conflict = False
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_TARGETS
-    default_architecture = CrossCompileTarget.MIPS_CHERI_PURECAP
+    _default_architecture = CrossCompileTarget.MIPS_CHERI_PURECAP
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -384,7 +384,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
         if self.debugInfo:
             self.add_cmake_options(COMPILER_RT_DEBUG=True)
 
-        if self.compiling_for_mips() or self.compiling_for_cheri():
+        if self.compiling_for_mips(include_purecap=True):
             # self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH="mips")
             self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ONLY=True)
 
@@ -406,13 +406,13 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
     dependencies = ["newlib-baremetal"]
     baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
-    default_architecture = CrossCompileTarget.MIPS
+    _default_architecture = CrossCompileTarget.MIPS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")
-        if self.compiling_for_mips():
+        if self.compiling_for_mips(include_purecap=False):
             self.add_cmake_options(COMPILER_RT_HAS_FPIC_FLAG=False)  # HACK: currently we build everything as -fno-pic
         self.add_cmake_options(
             LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
@@ -429,7 +429,7 @@ class BuildCompilerRtBaremetal(CrossCompileCMakeProject):
         )
         if self.debugInfo:
             self.add_cmake_options(COMPILER_RT_DEBUG=True)
-        if self.compiling_for_mips() or self.compiling_for_cheri():
+        if self.compiling_for_mips(include_purecap=True):
             # self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH="mips")
             self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ONLY=True)
 
@@ -463,7 +463,7 @@ class BuildLibCXXBaremetal(BuildLibCXX):
     baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
     crossInstallDir = CrossInstallDir.SDK
-    default_architecture = CrossCompileTarget.MIPS
+    _default_architecture = CrossCompileTarget.MIPS
     defaultCMakeBuildType = "Debug"
 
     def __init__(self, config: CheriConfig):
@@ -482,7 +482,7 @@ class BuildLibCXXRTBaremetal(BuildLibCXXRT):
     crossInstallDir = CrossInstallDir.SDK
     baremetal = True
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
-    default_architecture = CrossCompileTarget.MIPS
+    _default_architecture = CrossCompileTarget.MIPS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

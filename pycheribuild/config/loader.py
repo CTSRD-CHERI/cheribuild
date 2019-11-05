@@ -212,7 +212,7 @@ class ConfigOptionBase(object):
         elif default is not None:
             if isinstance(default, Enum) or isinstance(valueType, _EnumArgparseType):
                 # allow append
-                if default == []:
+                if isinstance(default, list) and not default:
                     self.default_str = "[]"
                 else:
                     assert isinstance(valueType, _EnumArgparseType), "default is enum but value type isn't: " + str(valueType)

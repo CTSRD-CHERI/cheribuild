@@ -39,7 +39,7 @@ def python_dependencies(cls: "typing.Type[CrossCompileProject]", config: CheriCo
     deps = crosscompile_dependencies(cls, config)
     target = cls.get_crosscompile_target(config)
     # python needs a native buid to cross-compile:
-    if target != CrossCompileTarget.NATIVE:
+    if not target.is_native():
         deps.append("python-native")
     return deps
 

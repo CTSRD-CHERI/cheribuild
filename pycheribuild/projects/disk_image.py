@@ -333,10 +333,10 @@ class _BuildDiskImageBase(SimpleProject):
 
         if self.include_gdb:
             cross_target = self.source_project.get_crosscompile_target(self.config)
-            # We always want to include the MIPS GDB for CHERI targets:
-            if cross_target == CrossCompileTarget.MIPS_CHERI_PURECAP:
+            # We always want to include the MIPS GDB for CHERI targets (purecap doesn't work and would be slower):
+            if cross_target.is_cheri_purecap and cross_target.is_mips(include_purecap=True):
                 cross_target = CrossCompileTarget.MIPS
-            if cross_target not in BuildGDB.supported_architectures:
+            if not any(x is cross_target for x in BuildGDB.supported_architectures):
                 warningMessage("GDB cannot be built for architecture ", cross_target, " -> not addding it")
             else:
                 gdb_instance = BuildGDB.get_instance_for_cross_target(cross_target, self.config) # type: BuildGDB
@@ -775,11 +775,11 @@ class _X86FileTemplates(_AdditionalFileTemplates):
 
 class _BuildMultiArchDiskImage(MultiArchBaseMixin, _BuildDiskImageBase):
     doNotAddToTargets = True
-    _source_class = None  # type: typing.Type[MultiArchBaseMixin]
+    _source_class = None  # type: typing.Type[SimpleProject]
     _always_add_suffixed_targets = True
 
     @classproperty
-    def default_architecture(cls):
+    def default_architecture(cls) -> CrossCompileTarget:
         return cls._source_class.default_architecture
 
     @classproperty
@@ -792,14 +792,13 @@ class _BuildMultiArchDiskImage(MultiArchBaseMixin, _BuildDiskImageBase):
 
     @property
     def is_x86(self):
-        tgt = self.crosscompile_target
-        return tgt is None or tgt == CrossCompileTarget.NATIVE or tgt == CrossCompileTarget.I386
+        return self.crosscompile_target.is_any_x86()
 
     def __init__(self, config: CheriConfig):
         # TODO: different extra-files directory
         super().__init__(config, source_class=self._source_class.get_class_for_target(self.get_crosscompile_target(config)))
-        self.bigEndian = self.compiling_for_mips() or self.compiling_for_cheri()
-        if self.get_crosscompile_target(config) == CrossCompileTarget.RISCV:
+        self.bigEndian = self.compiling_for_mips(include_purecap=True)
+        if self.get_crosscompile_target(config).is_riscv():
             self.file_templates = _RISCVFileTemplates()
         elif self.is_x86:
             self.file_templates = _X86FileTemplates()
@@ -826,7 +825,7 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
         tmpfs_shortname = None
         extra_files_shortname = None
         disk_img_shortname = None
-        if cls._crossCompileTarget == CrossCompileTarget.MIPS_CHERI_PURECAP:
+        if cls._crossCompileTarget.is_mips(include_purecap=True) and cls._crossCompileTarget.is_cheri_purecap:
             tmpfs_shortname = "-disable-tmpfs"
             disk_img_shortname = "-disk-image-path"
             extra_files_shortname = "-extra-files"
@@ -849,8 +848,7 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
 
     @property
     def needs_special_pkg_repo(self):
-        tgt = self.crosscompile_target
-        return tgt == CrossCompileTarget.MIPS or tgt == CrossCompileTarget.MIPS_CHERI_PURECAP
+        return self.crosscompile_target.is_mips(include_purecap=True)
 
 
 class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
@@ -889,7 +887,7 @@ class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
 def _default_freebsd_disk_image_name(config: CheriConfig, project: SimpleProject):
     xtarget = project.get_crosscompile_target(config)
     suffix = xtarget.generic_suffix if xtarget else "<TARGET>"
-    if project.compiling_for_mips():
+    if project.compiling_for_mips(include_purecap=False):
         if config.mips_float_abi == MipsFloatAbi.HARD:
             suffix += "-hardfloat"
     return config.outputRoot / ("freebsd-" + suffix + ".img")
@@ -908,7 +906,7 @@ class BuildFreeBSDImage(_BuildMultiArchDiskImage):
                 function=_default_freebsd_disk_image_name, asString="$OUTPUT_ROOT/freebsd-" + suffix + " .img")
         cls.diskImagePath = cls.addPathOption("path", default=defaultDiskImagePath, showHelp=True,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image")
-        cls.disableTMPFS = cls._crossCompileTarget == CrossCompileTarget.MIPS  # MALTA64 doesn't include tmpfs
+        cls.disableTMPFS = cls._crossCompileTarget.is_mips()  # MALTA64 doesn't include tmpfs
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

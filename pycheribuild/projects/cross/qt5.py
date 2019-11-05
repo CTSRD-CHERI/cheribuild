@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import tempfile
+import typing
 
 from .crosscompileproject import *
 from ...config.loader import ComputedDefaultValue
@@ -47,13 +48,12 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
     default_build_type = BuildType.MINSIZERELWITHDEBINFO # Default to -Os with debug info:
 
-
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.configureCommand = self.sourceDir / "configure"
         if not self.compiling_for_host():
             self._linkage = Linkage.STATIC
-        if self.compiling_for_mips() and self.force_static_linkage:
+        if self.compiling_for_mips(include_purecap=False) and self.force_static_linkage:
             assert "-mxgot" in self.default_compiler_flags
 
     @classmethod
@@ -91,7 +91,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
             if self.compiling_for_cheri():
                 self.configureArgs.append("QMAKE_LIBDIR=" + str(self.crossSysrootPath / "usr/libcheri"))
-            elif self.compiling_for_mips():
+            elif self.compiling_for_mips(include_purecap=False):
                 # self.configureArgs.append("QMAKE_CXXFLAGS+=-stdlib=libc++")
                 pass
 
@@ -99,7 +99,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             linker_flags = filter(lambda s: not s.startswith("--sysroot"), linker_flags)
             compiler_flags = filter(lambda s: not s.startswith("--sysroot"), compiler_flags)
             cross_compile_prefix = self.targetTriple
-            if self.compiling_for_cheri() or self.compiling_for_mips():
+            if self.compiling_for_cheri() or self.compiling_for_mips(include_purecap=False):
                 cross_compile_prefix = "mips64-unknown-freebsd"
             self.configureArgs.extend([
                 "-device", "freebsd-generic-clang",
@@ -254,7 +254,7 @@ def icu_dependencies(cls: "typing.Type[CrossCompileProject]", config: CheriConfi
     deps = crosscompile_dependencies(cls, config)
     target = cls.get_crosscompile_target(config)
     # ICU4C needs a native buid to cross-compile:
-    if target != CrossCompileTarget.NATIVE:
+    if not target.is_native():
         deps.append("icu4c-native")
     return deps
 

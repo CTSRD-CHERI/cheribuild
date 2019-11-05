@@ -129,7 +129,7 @@ def get_sdk_archives(cheriConfig, needs_cheribsd_sysroot: bool) -> "typing.List[
         warningMessage("Neither full SDK archive", cheriConfig.sdkArchiveName, " nor clang archive", clang_archive_name,
                        "exists, will use only existing $WORKSPACE/cherisdk")
         return []
-    if cheriConfig.crossCompileTarget == CrossCompileTarget.NATIVE:
+    if cheriConfig.crossCompileTarget.is_native():
         # we need the LLVM builtin includes (should be part of the clang archive)
         clang_archive.required_globs.append("lib/clang/*/include/stddef.h")
         return [clang_archive]

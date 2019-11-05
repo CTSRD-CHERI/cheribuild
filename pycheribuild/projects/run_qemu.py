@@ -27,18 +27,14 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import datetime
 import socket
+from pathlib import Path
 
-from .cross.bbl import *
-from .cross.cheribsd import BuildFreeBSD
-from .cross.cheribsd import *
-from .cherios import BuildCheriOS
 from .build_qemu import BuildQEMU, BuildQEMURISCV, BuildCheriOSQEMU
-from .disk_image import BuildFreeBSDImage
+from .cherios import BuildCheriOS
+from .cross.bbl import *
 from .disk_image import *
 from .project import *
-from pathlib import Path
 from ..utils import IS_FREEBSD
 
 
@@ -272,9 +268,6 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             self._copyKernelImageFromRemoteHost()
         super().process()
 
-    def run_tests(self):
-        self.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.diskImage, kernel_path=self.currentKernel)
-
 
 class _RunMultiArchFreeBSDImage(MultiArchBaseMixin, AbstractLaunchFreeBSD):
     doNotAddToTargets = True
@@ -289,12 +282,12 @@ class _RunMultiArchFreeBSDImage(MultiArchBaseMixin, AbstractLaunchFreeBSD):
         return cls._source_class.supported_architectures
 
     @staticmethod
-    def dependencies(cls, config: CheriConfig):
+    def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig):
         xtarget = cls.get_crosscompile_target(config)
         result = []
-        if xtarget == CrossCompileTarget.RISCV:
+        if xtarget.is_riscv():
             result.append("qemu-riscv")
-        if xtarget == CrossCompileTarget.MIPS or xtarget == CrossCompileTarget.MIPS_CHERI_PURECAP:
+        if xtarget.is_mips(include_purecap=True):
             result.append("qemu")
         result.append(cls._source_class.get_class_for_target(xtarget).target)
         return result
@@ -302,20 +295,20 @@ class _RunMultiArchFreeBSDImage(MultiArchBaseMixin, AbstractLaunchFreeBSD):
     def __init__(self, config):
         xtarget = self.get_crosscompile_target(config)
         super().__init__(config, disk_image_class=self._source_class.get_class_for_target(xtarget))
-        if xtarget == CrossCompileTarget.RISCV:
+        if xtarget.is_riscv():
             self.qemuBinary = BuildQEMURISCV.qemu_binary(self)
             _hasPCI = False
             self.machineFlags = ["-M", "virt"]  # want VirtIO
             self.virtioDisk = True
             self.currentKernel = BuildBBLFreeBSDWithDefaultOptionsRISCV.get_instance(self).get_installed_kernel_path()
-        elif xtarget == CrossCompileTarget.NATIVE or xtarget == CrossCompileTarget.I386:
-            qemu_suffix = "x86_64" if xtarget == CrossCompileTarget.NATIVE else "i386"
+        elif xtarget.is_any_x86():
+            qemu_suffix = "x86_64" if xtarget.is_x86_64() else "i386"
             self.currentKernel = None  # boot from disk
             self.addRequiredSystemTool("qemu-system-" + qemu_suffix)
             self.qemuBinary = Path(shutil.which("qemu-system-" + qemu_suffix) or "/could/not/find/qemu")
             self.machineFlags = []  # default CPU (and NOT -M malta!)
         # only QEMU-MIPS supports more than one SMB share
-        self._provide_src_via_smb = self.compiling_for_mips() or self.compiling_for_cheri()
+        self._provide_src_via_smb = self.compiling_for_mips(include_purecap=True)
 
 
 class LaunchCheriBSD(AbstractLaunchFreeBSD):
@@ -333,6 +326,10 @@ class LaunchCheriBSD(AbstractLaunchFreeBSD):
         assert self.compiling_for_cheri()
         super().__init__(config, disk_image_class=BuildCheriBSDDiskImage)
 
+    def run_tests(self):
+        self.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.diskImage,
+                                      kernel_path=self.currentKernel)
+
 
 class LaunchCheriBSDPurecap(AbstractLaunchFreeBSD):
     projectName = "run-purecap"
@@ -346,6 +343,10 @@ class LaunchCheriBSDPurecap(AbstractLaunchFreeBSD):
 
     def __init__(self, config):
         super().__init__(config, disk_image_class=BuildCheriBSDPurecapDiskImage)
+
+    def run_tests(self):
+        self.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.diskImage,
+                                      kernel_path=self.currentKernel)
 
 
 class LaunchCheriOSQEMU(LaunchQEMUBase):
@@ -400,7 +401,7 @@ class LaunchFreeBSD(_RunMultiArchFreeBSDImage):
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
-        add_to_port = 0 if cls._crossCompileTarget is None else cls._crossCompileTarget.get_index()
+        add_to_port = cls._crossCompileTarget.get_index()
         super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
                                    defaultSshPort=defaultSshForwardingPort() + 10 + add_to_port, **kwargs)
 
@@ -432,7 +433,7 @@ class LaunchCheriBsdMfsRoot(AbstractLaunchFreeBSD):
         if self.config.use_minimal_benchmark_kernel:
             self.currentKernel = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self, self.config)
             if str(self.remoteKernelPath).endswith("MFS_ROOT"):
-                self.remoteKernelPath = self.remoteKernelPath + "_BENCHMARK"
+                self.remoteKernelPath += "_BENCHMARK"
         self.rootfs_path = BuildCHERIBSD.rootfsDir(self, config)
 
     def run_tests(self):

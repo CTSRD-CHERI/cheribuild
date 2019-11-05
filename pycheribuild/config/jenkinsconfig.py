@@ -38,7 +38,7 @@ from ..utils import defaultNumberOfMakeJobs, fatalError, IS_MAC, IS_LINUX, IS_FR
 
 
 def default_install_prefix(conf: "JenkinsConfig", unused):
-    if conf.crossCompileTarget == CrossCompileTarget.NATIVE:
+    if conf.crossCompileTarget.is_native():
         return "/opt/" + conf.targets[0]
     return "/opt/" + conf.cpu
 
@@ -238,7 +238,7 @@ class JenkinsConfig(CheriConfig):
         else:
             fatalError("CPU is not set to a valid value:", self.cpu)
 
-        if IS_MAC and self.crossCompileTarget == CrossCompileTarget.NATIVE:
+        if IS_MAC and self.crossCompileTarget.is_native():
             self.without_sdk = True  # cannot build macos binaries with lld
 
         if self.force_update:
@@ -246,7 +246,7 @@ class JenkinsConfig(CheriConfig):
             self.skipClone = False
 
         if self.without_sdk:
-            if not self.crossCompileTarget == CrossCompileTarget.NATIVE:
+            if not self.crossCompileTarget.is_native():
                 fatalError("The --without-sdk flag only works when building host binaries")
             self.sdkDir = self.outputRoot / str(self.installationPrefix).strip('/')
             # allow overriding the clang/clang++ paths with HOST_CC/HOST_CXX

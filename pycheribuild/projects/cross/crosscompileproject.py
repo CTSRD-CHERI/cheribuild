@@ -29,24 +29,24 @@
 #
 
 import datetime
-import os
 import inspect
+import os
 import pprint
 import re
-import shutil
 import shlex
 from builtins import issubclass
 from enum import Enum
 from pathlib import Path
 
-from ...config.loader import ComputedDefaultValue, ConfigOptionBase
-from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi, Linkage, BuildType
 from ..llvm import BuildCheriLLVM
 from ..project import *
+from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi, Linkage, BuildType
+from ...config.loader import ConfigOptionBase
 from ...utils import *
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget", "BuildType", # no-combine
-           "CrossCompileProject", "CrossInstallDir", "MakeCommandKind", "Linkage", "Path", "crosscompile_dependencies",  # no-combine
+           "CrossCompileProject", "CrossInstallDir", "MakeCommandKind", "Linkage", "Path",  # no-combine
+           "crosscompile_dependencies", "default_cross_install_dir",  # no-combine
            "_INVALID_INSTALL_DIR", "GitRepository", "commandline_to_str", "CrossCompileMixin"]  # no-combine
 
 class CrossInstallDir(Enum):
@@ -60,15 +60,16 @@ class CrossInstallDir(Enum):
 _INVALID_INSTALL_DIR = Path("/this/dir/should/be/overwritten/and/not/used/!!!!")
 
 
-def get_cheribsd_instance_for_install_dir(config: CheriConfig, project: "CrossCompileMixin") -> "BuildCHERIBSD":
+def get_cheribsd_instance_for_install_dir(config: CheriConfig, project: "SimpleProject") -> "BuildCHERIBSD":
     from .cheribsd import BuildCHERIBSD
     cross_target = project.get_crosscompile_target(config)
     # If use_hybrid_sysroot_for_mips is set, install to rootfs128 instead of rootfs-mips
-    if project.compiling_for_mips() and project.mips_build_hybrid:
+    if not cross_target.is_cheri_purecap and cross_target.is_mips(include_purecap=False) and project.mips_build_hybrid:
         cross_target = CrossCompileTarget.MIPS_CHERI_PURECAP
     return BuildCHERIBSD.get_instance_for_cross_target(cross_target, config)
 
-def _installDir(config: CheriConfig, project: "CrossCompileProject"):
+
+def default_cross_install_dir(config: CheriConfig, project: "CrossCompileProject", install_dir_name: str = None):
     assert isinstance(project, CrossCompileMixin)
     if project.crossInstallDir == CrossInstallDir.COMPILER_RESOURCE_DIR:
         return getCompilerInfo(config.sdkBinDir / "clang").get_resource_dir()
@@ -89,11 +90,13 @@ def _installDir(config: CheriConfig, project: "CrossCompileProject"):
         if project.compiling_for_cheri():
             targetName = "cheri" + config.cheriBitsStr
         else:
-            assert project.compiling_for_mips()
+            assert project.compiling_for_mips(include_purecap=False)
             targetName = "mips"
         if config.cross_target_suffix:
             targetName += "-" + config.cross_target_suffix
-        return Path(cheribsd_instance.installDir / "opt" / targetName / project.projectName.lower())
+        if install_dir_name is None:
+            install_dir_name = project.projectName.lower()
+        return Path(cheribsd_instance.installDir / "opt" / targetName / install_dir_name)
     elif project.crossInstallDir == CrossInstallDir.SDK:
         return project.sdkSysroot
     fatalError("Unknown install dir for", project.projectName)
@@ -110,7 +113,7 @@ def _installDirMessage(project: "CrossCompileProject"):
 def crosscompile_dependencies(cls: "typing.Type[CrossCompileProject]", config: CheriConfig):
     # TODO: can I avoid instantiating all cross-compile targets here? The hack below might work
     target = cls.get_crosscompile_target(config)
-    if target == CrossCompileTarget.NATIVE:
+    if target.is_native():
         return ["freestanding-sdk"] if config.use_sdk_clang_for_native_xbuild else []
     else:
         return ["cheribsd-sdk"] if cls.needs_cheribsd_sysroot(target) else ["freestanding-sdk"]
@@ -123,7 +126,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
     config = None  # type: CheriConfig
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
 
-    defaultInstallDir = ComputedDefaultValue(function=_installDir, asString=_installDirMessage)
+    defaultInstallDir = ComputedDefaultValue(function=default_cross_install_dir, asString=_installDirMessage)
     default_build_type = BuildType.DEFAULT
     dependencies = crosscompile_dependencies
     baremetal = False
@@ -149,7 +152,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
     @classmethod
     def needs_cheribsd_sysroot(cls, target: CrossCompileTarget):
         # Native projects never need the cheribsd sysroot
-        if target == CrossCompileTarget.NATIVE:
+        if target.is_native():
             return False
         # Baremetal projects don't need cheribsd, they need newlib instead
         if cls.baremetal:
@@ -188,8 +191,8 @@ class CrossCompileMixin(MultiArchBaseMixin):
             assert isinstance(target_arch, ConfigOptionBase)
         target_arch = self._crossCompileTarget
         # sanity check:
-        assert target_arch is not None
-        assert self.get_crosscompile_target(config) == target_arch
+        assert target_arch is not None and target_arch is not CrossCompileTarget.NONE
+        assert self.get_crosscompile_target(config) is target_arch
         self.compiler_dir = self.config.sdkBinDir
         # Use the compiler from the build directory for native builds to get stddef.h (which will be deleted)
         if self.compiling_for_host():
@@ -218,7 +221,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 if self.config.cheri_cap_table_abi:
                     self.COMMON_FLAGS.append("-cheri-cap-table-abi=" + self.config.cheri_cap_table_abi)
             else:
-                assert self.compiling_for_mips()
+                assert self.compiling_for_mips(include_purecap=False)
                 self.targetTriple = "mips64-unknown-freebsd13" if not self.baremetal else "mips64-qemu-elf"
                 self.COMMON_FLAGS.append("-integrated-as")
                 self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
@@ -318,13 +321,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
     @property
     def sizeof_void_ptr(self):
-        if self._crossCompileTarget in (CrossCompileTarget.MIPS, CrossCompileTarget.NATIVE):
-            return 8
-        elif self.config.cheriBits == 128:
-            return 16
-        else:
-            assert self.config.cheriBits == 256
-            return 32
+        return self._crossCompileTarget.pointer_size(self.config)
 
     @property
     def _essential_compiler_and_linker_flags(self):
@@ -355,7 +352,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                 if self.config.subobject_debug:
                     result.extend(["-mllvm", "-cheri-subobject-bounds-clear-swperm=2"])
         else:
-            assert self.compiling_for_mips()
+            assert self.compiling_for_mips(include_purecap=False)
             # TODO: should we use -mcpu=cheri128/256?
             result.extend(["-mabi=n64", "-mcpu=beri"])
             if self.mips_build_hybrid:
@@ -404,7 +401,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
             if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
                 result.append("-mxcaptable")
         # Do the same for MIPS to get even performance comparisons
-        if self.compiling_for_mips():
+        elif self.compiling_for_mips(include_purecap=False):
             if self.force_static_linkage and self.needs_mxcaptable_static:
                 result.extend(["-mxgot", "-mllvm", "-mxmxgot"])
             if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
@@ -426,7 +423,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
             return result
         elif self.compiling_for_cheri():
             emulation = "elf64btsmip_cheri_fbsd" if not self.baremetal else "elf64btsmip_cheri"
-        elif self.compiling_for_mips():
+        elif self.compiling_for_mips(include_purecap=False):
             emulation = "elf64btsmip_fbsd" if not self.baremetal else "elf64btsmip"
         else:
             self.fatal("Logic error!")
@@ -492,7 +489,10 @@ class CrossCompileMixin(MultiArchBaseMixin):
                                            default=Linkage.DEFAULT, kind=Linkage)
 
     @property
-    def debugInfo(self):
+    def debugInfo(self) -> bool:
+        force_debug_info = getattr(self, "_force_debug_info", None)
+        if force_debug_info is not None:
+            return force_debug_info
         # Add debug info by default (to disable set --cross-build-type=Release
         if self.cross_build_type == BuildType.DEFAULT:
             return self._debugInfo
@@ -516,13 +516,13 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
     @property
     def pkgconfig_dirs(self):
-        if self.compiling_for_mips():
-            return str(self.sdkSysroot / "usr/lib/pkgconfig") + ":" + \
-                   str(self.sdkSysroot / "usr/local/mips/lib/pkgconfig")
         if self.compiling_for_cheri():
             return str(self.sdkSysroot / "usr/libcheri/pkgconfig") + ":" + \
                    str(self.sdkSysroot / "usr/local/cheri/lib/pkgconfig") + ":" +\
                    str(self.sdkSysroot / "usr/local/cheri/libcheri/pkgconfig")
+        if self.compiling_for_mips(include_purecap=False):
+            return str(self.sdkSysroot / "usr/lib/pkgconfig") + ":" + \
+                   str(self.sdkSysroot / "usr/local/mips/lib/pkgconfig")
         return None
 
     def configure(self, **kwargs):
@@ -536,7 +536,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
     def copy_asan_dependencies(self, dest_libdir):
         # ASAN depends on libraries that are not included in the benchmark image by default:
-        assert self.compiling_for_mips() and self.use_asan
+        assert self.compiling_for_mips(include_purecap=False) and self.use_asan
         self.info("Adding ASAN library depedencies to", dest_libdir)
         self.makedirs(dest_libdir)
         for lib in ("usr/lib/librt.so.1", "usr/lib/libexecinfo.so.1", "lib/libgcc_s.so.1", "lib/libelf.so.2"):
@@ -647,7 +647,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
             basic_args.append("--kernel-img=" + str(kernel_image))
         elif self.config.benchmark_clean_boot:
             # use a bitfile from jenkins. TODO: add option for overriding
-            if self.compiling_for_mips():
+            if self.compiling_for_mips(include_purecap=False):
                 basic_args.append("--jenkins-bitfile=cheri128")
             else:
                 assert self.compiling_for_cheri()
@@ -685,7 +685,7 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
             self.runShellScript(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
 
     def process(self):
-        if self.use_asan and self.compiling_for_mips():
+        if self.use_asan and self.compiling_for_mips(include_purecap=False):
             # copy the ASAN lib into the right directory:
             resource_dir = getCompilerInfo(self.CC).get_resource_dir()
             statusUpdate("Copying ASAN libs to", resource_dir)
@@ -711,15 +711,17 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
             if not (expected_path / libname).exists():
                 self.fatal("Cannot find", libname, "library in compiler dir", expected_path, "-- Compilation will fail!")
 
-        if self._check_install_dir_conflict and self.compiling_for_cheri() and CrossCompileTarget.MIPS in self.supported_architectures:
+        if self._check_install_dir_conflict and self.compiling_for_cheri() and any(
+                x.is_mips(include_purecap=False) for x in self.supported_architectures):
             # Check that we are not installing to the same directory as MIPS to avoid conflicts
             assert hasattr(self, "synthetic_base")
+            assert issubclass(self.synthetic_base, SimpleProject)
             mips_instance = self.synthetic_base.get_instance_for_cross_target(CrossCompileTarget.MIPS, self.config)
-            assert mips_instance.get_crosscompile_target(self.config) == CrossCompileTarget.MIPS, mips_instance.get_crosscompile_target(self.config)
+            xtarget = mips_instance.get_crosscompile_target(self.config)
+            assert xtarget.is_mips and not xtarget.is_cheri_purecap, xtarget
             self.info(self.target, self.installDir)
             self.info(mips_instance.target, mips_instance.installDir)
             assert mips_instance.installDir != self.installDir, mips_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(mips_instance.installDir)
-
         super().process()
 
 
@@ -740,7 +742,7 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
             # no CMake equivalent for MinSizeRelWithDebInfo -> set minsizerel and force debug info
             if self.cross_build_type == BuildType.MINSIZERELWITHDEBINFO:
                 self.cmakeBuildType = BuildType.MINSIZEREL.value
-                self.debugInfo = True
+                self._force_debug_info = True
             else:
                 self.cmakeBuildType = self.cross_build_type.value
         super().__init__(config, generator)
@@ -801,7 +803,7 @@ endif()
 set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
 """
             processor = "CHERI (MIPS IV compatible) with {}-bit capabilities".format(self.config.cheriBitsStr)
-        elif self.compiling_for_mips():
+        elif self.compiling_for_mips(include_purecap=False):
             add_lib_suffix = "# no lib suffix for mips libraries"
             processor = "BERI (MIPS IV compatible)"
         else:

@@ -62,6 +62,7 @@ class CPUArchitecture(Enum):
 
 
 class CrossCompileTarget(Enum):
+    NONE = ("invalid", None, False)  # Placeholder
     NATIVE = ("native", CPUArchitecture.X86_64, False)  # XXX: should probably not harcode x86_64
     MIPS = ("mips", CPUArchitecture.MIPS, False)
     MIPS_CHERI_PURECAP = ("cheri", CPUArchitecture.MIPS, True)
@@ -71,21 +72,23 @@ class CrossCompileTarget(Enum):
 
     def get_index(self):
         for idx, value in enumerate(CrossCompileTarget):
-            if self == value:
-                return idx
+            if self is value:
+                return idx - 1  # return -1 for NONE
         assert False, "Should not be reachable"
 
     def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, is_cheri_purecap: bool):
         self.generic_suffix = suffix
         self.cpu_architecture = cpu_architecture
         # TODO: self.operating_system = ...
-        self.os_cheri_purecap = is_cheri_purecap
+        self.is_cheri_purecap = is_cheri_purecap
 
     def build_suffix(self, config: "CheriConfig", *, build_hybrid=False):
+        assert self is not CrossCompileTarget.NONE
         if self is CrossCompileTarget.MIPS_CHERI_PURECAP:
             result = "-" + config.cheri_bits_and_abi_str
-        elif self is CrossCompileTarget.MIPS and build_hybrid:
-            result = "-" + self.generic_suffix + "-hybrid" + config.cheri_bits_and_abi_str
+        elif self is CrossCompileTarget.MIPS:
+            if build_hybrid:
+                result = "-" + self.generic_suffix + "-hybrid" + config.cheri_bits_and_abi_str
             if config.mips_float_abi == MipsFloatAbi.HARD:
                 result += "-hardfloat"
         else:
@@ -93,6 +96,46 @@ class CrossCompileTarget(Enum):
         if config.cross_target_suffix:
             result += "-" + config.cross_target_suffix
         return self.generic_suffix
+
+    def is_native(self):
+        """returns true if we building for the curent host"""
+        return self is CrossCompileTarget.NATIVE
+
+    # Querying the CPU architecture:
+    def is_mips(self, include_purecap: bool = None):
+        if include_purecap is None:
+            # Check that cases that want to handle both pass an explicit argument
+            assert self is not CrossCompileTarget.MIPS_CHERI_PURECAP, "Should check purecap cases first"
+        if not include_purecap and self.is_cheri_purecap:
+            return False
+        return self.cpu_architecture is CPUArchitecture.MIPS
+
+    def is_riscv(self, include_purecap=False):
+        return self.cpu_architecture is CPUArchitecture.RISCV
+
+    def is_aarch64(self):
+        return self.cpu_architecture is CPUArchitecture.AARCH64
+
+    def is_i386(self):
+        return self.cpu_architecture is CPUArchitecture.I386
+
+    def is_x86_64(self):
+        return self.cpu_architecture is CPUArchitecture.X86_64
+
+    def is_any_x86(self):
+        return self.is_i386() or self.is_x86_64()
+
+    def pointer_size(self, config: "CheriConfig"):
+        if self.is_cheri_purecap:
+            assert config.cheriBits in (128, 256), "No other cap size supported yet"
+            return config.cheriBits / 8
+        elif self.is_i386():
+            return 4
+        # all other architectures we support currently use 64-bit pointers
+        return 8
+
+    def __eq__(self, other):
+        raise NotImplementedError("Should not compare to CrossCompileTarget, use the is_foo() methods.")
 
 
 class BuildType(Enum):
@@ -430,18 +473,18 @@ class CheriConfig(object):
         return self.sdkDir / ("sysroot" + self.cheri_bits_and_abi_str)
 
     def get_sysroot_path(self, cross_compile_target: CrossCompileTarget, use_hybrid_sysroot=False):
-        if cross_compile_target == CrossCompileTarget.MIPS:
+        if cross_compile_target.is_cheri_purecap:
+            return self.cheriSysrootDir
+        if cross_compile_target.is_mips():
             if use_hybrid_sysroot or self.use_hybrid_sysroot_for_mips:
                 return self.cheriSysrootDir
             if self.mips_float_abi == MipsFloatAbi.HARD:
                 return self.sdkDir / "sysroot-mipshf"
             return self.sdkDir / "sysroot-mips"
-        elif cross_compile_target == CrossCompileTarget.MIPS_CHERI_PURECAP:
-            return self.cheriSysrootDir
-        elif cross_compile_target == CrossCompileTarget.RISCV:
+        elif cross_compile_target.is_riscv():
             return self.sdkDir / "sysroot-riscv"
-        elif cross_compile_target == CrossCompileTarget.NATIVE:
-            return self.sdkDir / "sysroot-native"
+        elif cross_compile_target.is_x86_64():
+            return self.sdkDir / "sysroot-x86_64"
         else:
             assert False, "Invalid cross_compile_target: " + str(cross_compile_target)
 

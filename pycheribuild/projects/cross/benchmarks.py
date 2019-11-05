@@ -65,10 +65,10 @@ class BuildMibench(CrossCompileProject):
     def benchmark_version(self):
         if self.compiling_for_host():
             return "x86"
-        if self.compiling_for_mips():
-            return "mips-asan" if self.use_asan else "mips"
         if self.compiling_for_cheri():
             return "cheri" + self.config.cheriBitsStr
+        if self.compiling_for_mips(include_purecap=False):
+            return "mips-asan" if self.use_asan else "mips"
         raise ValueError("Unsupported target architecture!")
 
     def compile(self, **kwargs):
@@ -83,7 +83,7 @@ class BuildMibench(CrossCompileProject):
             self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(self.default_compiler_flags))
             self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
             self.make_args.set(VERSION=self.benchmark_version)
-            if self.compiling_for_mips():
+            if self.compiling_for_mips(include_purecap=False):
                 self.make_args.set(MIPS_SYSROOT=self.config.get_sysroot_path(CrossCompileTarget.MIPS))
             if self.compiling_for_cheri():
                 if self.config.cheriBits == 128:
@@ -94,7 +94,7 @@ class BuildMibench(CrossCompileProject):
             self.makedirs(self.buildDir / "bundle")
             self.make_args.set(BUNDLE_DIR=self.buildDir / self.bundle_dir)
             self.runMake("bundle_dump", cwd=self.sourceDir)
-            if self.compiling_for_mips() and self.use_asan:
+            if self.compiling_for_mips(include_purecap=False) and self.use_asan:
                 self.copy_asan_dependencies(self.buildDir / "bundle/lib")
 
     def _create_benchmark_dir(self, bench_dir: Path, *, keep_both_sizes: bool):
@@ -166,7 +166,7 @@ class BuildOlden(CrossCompileProject):
             self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
             if self.compiling_for_host():
                 self.runMake("x86")
-            if self.compiling_for_mips():
+            if self.compiling_for_mips(include_purecap=False):
                 self.runMake("mips-asan" if self.use_asan else "mips")
             if self.compiling_for_cheri():
                 if self.config.cheriBits == 128:
@@ -178,7 +178,7 @@ class BuildOlden(CrossCompileProject):
         # build directory.
         self.installFile(self.sourceDir / "run_jenkins-bluehive.sh",
                          self.buildDir / "bin/run_jenkins-bluehive.sh", force=True)
-        if self.compiling_for_mips() and self.use_asan:
+        if self.compiling_for_mips(include_purecap=False) and self.use_asan:
             self.copy_asan_dependencies(self.buildDir / "bin/lib")
 
     @property
@@ -188,7 +188,7 @@ class BuildOlden(CrossCompileProject):
         if self.compiling_for_cheri():
             return "cheri" + self.config.cheriBitsStr
         else:
-            assert self.compiling_for_mips(), "other arches not support"
+            assert self.compiling_for_mips(include_purecap=False), "other arches not supported"
             return "mips-asan" if self.use_asan else "mips"
 
     def install(self, **kwargs):
@@ -250,12 +250,12 @@ class BuildSpec2006(CrossCompileProject):
 
     @property
     def config_name(self):
-        if self.compiling_for_mips():
-            build_arch = "mips-" + self.linkage().value
+        if self.compiling_for_cheri():
+            build_arch = "cheri" + self.config.cheri_bits_and_abi_str + "-" + self.linkage().value
             float_abi = self.config.mips_float_abi.name.lower() + "fp"
             return "freebsd-" + build_arch + "-" + float_abi
-        elif self.compiling_for_cheri():
-            build_arch = "cheri" + self.config.cheri_bits_and_abi_str + "-" + self.linkage().value
+        elif self.compiling_for_mips(include_purecap=False):
+            build_arch = "mips-" + self.linkage().value
             float_abi = self.config.mips_float_abi.name.lower() + "fp"
             return "freebsd-" + build_arch + "-" + float_abi
         else:
@@ -264,7 +264,7 @@ class BuildSpec2006(CrossCompileProject):
 
     @property
     def hw_cpu(self):
-        if self.compiling_for_mips():
+        if self.compiling_for_mips(include_purecap=False):
             return "BERI"
         elif self.compiling_for_cheri():
             return "CHERI" + self.config.cheri_bits_and_abi_str
@@ -397,7 +397,7 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
             libdirs = []
             if self.compiling_for_cheri():
                 libdirs = ["usr/libcheri"]
-            elif self.compiling_for_mips():
+            elif self.compiling_for_mips(include_purecap=False):
                 libdirs = ["usr/lib", "lib"]
             for libdir in libdirs:
                 guess = Path(self.sdkSysroot, libdir, needed_lib)
@@ -445,7 +445,7 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh -b "{ben
         if self.compiling_for_cheri():
             return "cheri" + self.config.cheriBitsStr
         else:
-            assert self.compiling_for_mips(), "other arches not support"
+            assert self.compiling_for_mips(include_purecap=False), "other arches not support"
             return "mips-asan" if self.use_asan else "mips"
 
     def run_benchmarks(self):
