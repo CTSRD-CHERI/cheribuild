@@ -44,7 +44,7 @@ from time import sleep
 from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from pathlib import Path
 
-_cheribuild_root = Path(__file__).parent.resolve()
+_cheribuild_root = Path(__file__).resolve().parent
 _pexpect_dir = _cheribuild_root / "3rdparty/pexpect"
 assert (_pexpect_dir / "pexpect/__init__.py").exists()
 sys.path.insert(1, str(_pexpect_dir))
