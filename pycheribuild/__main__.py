@@ -50,29 +50,36 @@ from .projects import *  # make sure all projects are loaded so that targetManag
 from .projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
 
 
-def updateCheck():
-    from pathlib import Path
+DIRS_TO_CHECK_FOR_UPDATES = [Path(__file__).parent]
+
+
+def update_check():
+    for d in DIRS_TO_CHECK_FOR_UPDATES:
+        _update_check(d)
+
+
+def _update_check(d: Path):
     if not shutil.which("git"):
         return
     # Avoid update check if we don't have an internet connection
     if not have_working_internet_connection():
         return
     # check if new commits are available
-    projectDir = str(Path(__file__).parent)
-    subprocess.call(["git", "fetch"], cwd=projectDir, timeout=5)
-    output = subprocess.check_output(["git", "status", "-uno"], cwd=projectDir)
+    project_dir = str(d)
+    subprocess.call(["git", "fetch"], cwd=project_dir, timeout=5)
+    output = subprocess.check_output(["git", "status", "-uno"], cwd=project_dir)
     behindIndex = output.find(b"Your branch is behind ")
     if behindIndex > 0:
         msgEnd = output.find(b"\n  (use \"git pull\" to update your local branch)")
         if msgEnd > 0:
             output = output[behindIndex:msgEnd]
-        statusUpdate("Current CheriBuild checkout can be updated: ", output.decode("utf-8"))
+        statusUpdate("Current", d.name, "checkout can be updated: ", output.decode("utf-8"))
         if input("Would you like to update before continuing? y/[n] (Enter to skip) ").lower().startswith("y"):
             git_version = get_program_version(Path(shutil.which("git")))
             # Use the autostash flag for Git >= 2.14
             # https://stackoverflow.com/a/30209750/894271
             autostash_flag = ["--autostash"] if git_version >= (2, 14) else []
-            subprocess.check_call(["git", "pull", "--rebase"] + autostash_flag, cwd=projectDir)
+            subprocess.check_call(["git", "pull", "--rebase"] + autostash_flag, cwd=project_dir)
             os.execv(sys.argv[0], sys.argv)
 
 
@@ -210,7 +217,7 @@ def real_main():
     # Don't do the update check when tab-completing (otherwise it freezes)
     if "_ARGCOMPLETE" not in os.environ and not cheriConfig.skipUpdate:  # no-combine
         try:                                          # no-combine
-            updateCheck()                             # no-combine
+            update_check()                            # no-combine
         except Exception as e:                        # no-combine
             print("Failed to check for updates:", e)  # no-combine
     if CheribuildAction.PRINT_CHOSEN_TARGETS in cheriConfig.action:
@@ -224,6 +231,7 @@ def real_main():
     if CheribuildAction.BENCHMARK in cheriConfig.action:
         for target in targetManager.get_all_chosen_targets(cheriConfig):
             target.run_benchmarks(cheriConfig)
+
 
 def main():
     try:
