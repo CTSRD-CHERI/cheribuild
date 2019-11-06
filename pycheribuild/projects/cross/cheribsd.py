@@ -92,7 +92,7 @@ def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
     elif project.compiling_for_riscv():
         return config.outputRoot / "rootfs-riscv"
     else:
-        assert project.compiling_for_host()
+        assert project.crosscompile_target.is_x86_64()
         return config.outputRoot / "rootfs-x86"
 
 
@@ -113,7 +113,7 @@ def cheribsd_minimal_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
     elif project.compiling_for_riscv():
         return config.outputRoot / "rootfs-minimal-riscv"
     else:
-        assert project.compiling_for_host()
+        assert project.crosscompile_target.is_x86_64()
         return config.outputRoot / "rootfs-minimal-x86"
 
 
@@ -227,7 +227,8 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
     crossbuild = False
     needs_sysroot = False  # We are building the full OS so we don't need a sysroot
     # Only CheriBSD can target CHERI, upstream FreeBSD won't work
-    supported_architectures = [CrossCompileTarget.NATIVE, CrossCompileTarget.CHERIBSD_MIPS]
+    # TODO: test more architectures (e.g. RISCV)
+    supported_architectures = [CrossCompileTarget.FREEBSD_X86_64, CrossCompileTarget.FREEBSD_MIPS]
 
     defaultInstallDir = ComputedDefaultValue(function=freebsd_install_dir,
                                              asString="$INSTALL_ROOT/freebsd-{mips/x86}")
@@ -900,7 +901,7 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
 # Keep the old name
 class BuildFreeBSDX86AliasBinutils(TargetAlias):
     target = "freebsd-x86"
-    dependencies = ["freebsd-native"]
+    dependencies = ["freebsd-x86_64"]
 
 
 # Build FreeBSD with the default options (build the bundled clang instead of using the SDK one)
@@ -913,7 +914,8 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     add_custom_make_options = False
 
     # also try to support building for RISCV
-    supported_architectures = BuildFreeBSD.supported_architectures + [CrossCompileTarget.RISCV, CrossCompileTarget.I386]
+    supported_architectures = BuildFreeBSD.supported_architectures + [CrossCompileTarget.FREEBSD_RISCV,
+                                                                      CrossCompileTarget.FREEBSD_I386]
 
     @classmethod
     def setupConfigOptions(cls, installDirectoryHelp=None, **kwargs):
@@ -1015,7 +1017,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         })
     defaultInstallDir = cheribsd_install_dir
     appendCheriBitsToBuildDir = True
-    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.NATIVE,
+    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.CHERIBSD_X86_64,
                                CrossCompileTarget.CHERIBSD_MIPS, CrossCompileTarget.CHERIBSD_RISCV]
     is_sdk_target = True
     hide_options_from_help = False  # FreeBSD options are hidden, but this one should be visible
@@ -1397,7 +1399,8 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
             return ["cheribsd-native"]
         return ["cheribsd"]
 
-    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.NATIVE, CrossCompileTarget.CHERIBSD_MIPS]
+    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.CHERIBSD_X86_64,
+                               CrossCompileTarget.CHERIBSD_MIPS]
     rootfs_source_class = BuildCHERIBSD  # type: typing.Type[BuildCHERIBSD]
 
     def __init__(self, config: CheriConfig):

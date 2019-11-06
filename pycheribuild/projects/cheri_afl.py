@@ -61,8 +61,10 @@ class BuildAflCheriNinja(Project):
     def install(self, **kwargs):
         self.make_args.set(DESTDIR=self.config.sdkDir / "afl")
         self.runMake("install", options=self.make_args)
-        self.installFile(self.buildDir / "afl-fuzz", BuildCHERIBSD.rootfsDir(self, self.config) / "usr/local/bin/afl-fuzz")
-        pass
+        self.installFile(self.buildDir / "afl-fuzz",
+                         BuildCHERIBSD.rootfsDir(self, cross_target=CrossCompileTarget.CHERIBSD_MIPS_PURECAP) / "usr/local/bin/afl-fuzz")
+        self.installFile(self.buildDir / "afl-fuzz",
+                         BuildCHERIBSD.rootfsDir(self, cross_target=CrossCompileTarget.CHERIBSD_MIPS) / "usr/local/bin/afl-fuzz")
 
     def run_tests(self):
         # sysctl machdep.log_cheri_exceptions=0

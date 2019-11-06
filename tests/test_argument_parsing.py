@@ -306,7 +306,7 @@ def test_kernconf():
     config = _parse_arguments([])
     cheribsd_cheri = targetManager.get_target_raw("cheribsd-cheri").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildCHERIBSD
     freebsd_mips = targetManager.get_target_raw("freebsd-mips").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildCHERIBSD
-    freebsd_native = targetManager.get_target_raw("freebsd-native").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildCHERIBSD
+    freebsd_native = targetManager.get_target_raw("freebsd-x86_64").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildCHERIBSD
     assert config.freebsd_kernconf is None
     attr = inspect.getattr_static(freebsd_mips, "kernelConfig")
     assert freebsd_mips.kernelConfig == "MALTA64"
@@ -444,7 +444,7 @@ def test_libcxxrt_dependency_path():
 
 @pytest.mark.parametrize("base_name,expected", [
     pytest.param("cheribsd", "cheribsd-cheri"),
-    pytest.param("freebsd", "freebsd-native"),
+    pytest.param("freebsd", "freebsd-x86_64"),
     pytest.param("newlib-baremetal", "newlib-baremetal-mips"),
     pytest.param("libcxxrt-baremetal", "libcxxrt-baremetal-mips"),
     pytest.param("compiler-rt-baremetal", "compiler-rt-builtins-baremetal-mips"),

@@ -160,7 +160,8 @@ class BuildOlden(CrossCompileProject):
                     CHERI128_SDK=self.config.sdkDir,
                     CHERI256_SDK=self.config.sdkDir,
                     CHERI_SDK=self.config.sdkDir):
-            self.make_args.set(SYSROOT_DIRNAME=self.crossSysrootPath.name)
+            if not self.compiling_for_host():
+                self.make_args.set(SYSROOT_DIRNAME=self.crossSysrootPath.name)
             self.make_args.add_flags("-f", "Makefile.jenkins")
             self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(self.default_compiler_flags))
             self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
@@ -347,7 +348,7 @@ class BuildSpec2006(CrossCompileProject):
         config_file_text = config_file_text.replace("@CFLAGS@", commandline_to_str(self.default_compiler_flags + self.CFLAGS + ["-ggdb"]))
         config_file_text = config_file_text.replace("@CXXFLAGS@", commandline_to_str(self.default_compiler_flags + self.CXXFLAGS + ["-ggdb"]))
         config_file_text = config_file_text.replace("@LDFLAGS@", commandline_to_str(self.default_ldflags + self.LDFLAGS))
-        config_file_text = config_file_text.replace("@SYSROOT@", str(self.sdkSysroot))
+        config_file_text = config_file_text.replace("@SYSROOT@", str(self.sdkSysroot) if not self.compiling_for_host() else "/")
         config_file_text = config_file_text.replace("@SYS_BIN@", str(self.config.sdkBinDir))
 
         self.writeFile(self.buildDir / "spec/config/" / (self.config_name + ".cfg"), contents=config_file_text,

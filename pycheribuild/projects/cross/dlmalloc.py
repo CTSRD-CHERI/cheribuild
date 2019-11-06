@@ -121,7 +121,8 @@ class DLMalloc(CrossCompileProject):
         self.make_args.set(DEBUG=self.debug)
         self.make_args.set(CAPREVOKE=self.revoke)
         self.make_args.set(SRCDIR=self.sourceDir)
-        self.CFLAGS.append("--sysroot=%s" % self.sdkSysroot)
+        if not self.compiling_for_host():
+            self.CFLAGS.append("--sysroot=%s" % self.sdkSysroot)
         with setEnv(CHERI_SDK=self.config.sdkDir,
                     CC=self.config.sdkBinDir/"clang",
                     CFLAGS=commandline_to_str(self.default_compiler_flags + self.CFLAGS)):

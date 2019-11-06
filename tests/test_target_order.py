@@ -59,7 +59,7 @@ def test_sdk(target_name, expected_list):
 
 @pytest.mark.parametrize("target_name,expected_name", [
     pytest.param("cheribsd", "cheribsd-cheri"),
-    pytest.param("freebsd", "freebsd-native"),
+    pytest.param("freebsd", "freebsd-x86_64"),
     pytest.param("gdb", "gdb-native"),
     pytest.param("libcxx", "libcxx-cheri"),
 ])
@@ -93,8 +93,8 @@ def test_all_run_deps():
 
 
 def test_run_disk_image():
-    assert _sort_targets(["run", "disk-image", "run-freebsd-mips", "llvm", "disk-image-freebsd-native"]) == [
-                          "llvm", "disk-image-cheri", "disk-image-freebsd-native", "run", "run-freebsd-mips"]
+    assert _sort_targets(["run", "disk-image", "run-freebsd-mips", "llvm", "disk-image-freebsd-x86_64"]) == [
+                          "llvm", "disk-image-cheri", "disk-image-freebsd-x86_64", "run", "run-freebsd-mips"]
 
 
 def test_remove_duplicates():

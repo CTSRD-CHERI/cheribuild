@@ -118,7 +118,6 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
     defaultInstallDir = ComputedDefaultValue(function=default_cross_install_dir, asString=_installDirMessage)
     default_build_type = BuildType.DEFAULT
-    needs_sysroot = True  # Most projects need a sysroot
     forceDefaultCC = False  # If true fall back to /usr/bin/cc there
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
     _should_not_be_instantiated = True
@@ -127,13 +126,19 @@ class CrossCompileMixin(MultiArchBaseMixin):
     can_build_with_asan = True
     _always_add_suffixed_targets = True  # always add the suffixed target if there is only one
 
+    @classproperty
+    def needs_sysroot(cls):
+        assert issubclass(cls, SimpleProject)
+        return not cls._crossCompileTarget.is_native()  # Most projects need a sysroot (but not native)
+
+
     @classmethod
     def dependencies(cls, config: CheriConfig):
         # TODO: can I avoid instantiating all cross-compile targets here? The hack below might work
-        target = cls.get_crosscompile_target(config)
-        result = target.target_info.toolchain_targets(config)
+        target = cls.get_crosscompile_target(config) # type: CrossCompileTarget
+        result = target.target_info_cls.toolchain_targets(target, config)
         if cls.needs_sysroot:
-            result += target.target_info.base_sysroot_targets(config)
+            result += target.target_info_cls.base_sysroot_targets(target, config)
         return result
 
     # noinspection PyProtectedMember
@@ -215,7 +220,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
                     self.COMMON_FLAGS.append("-fno-pic")
                     self.COMMON_FLAGS.append("-mno-abicalls")
 
-            self.COMMON_FLAGS.extend(self.target_info.required_compile_flags(self))
+            self.COMMON_FLAGS.extend(self.target_info.required_compile_flags())
 
             # Install to SDK if CHERIBSD_ROOTFS is the install dir but we are not building for CheriBSD
             if self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS and not self.target_info.is_cheribsd:
@@ -267,14 +272,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
     @property
     def sdkSysroot(self) -> Path:
         assert isinstance(self, Project)
-        if self.baremetal:
-            # Install to mips/cheri128/cheri256 directory
-            if self.compiling_for_cheri():
-                suffix = "cheri" + self.config.cheriBitsStr
-            else:
-                suffix = self._crossCompileTarget.generic_suffix
-            return self.config.sdkDir / "baremetal" / suffix / self.targetTriple
-        return self.crossSysrootPath
+        return self.target_info.sysroot_dir
 
     def should_use_extra_c_compat_flags(self):
         # TODO: add a command-line option and default to true for
@@ -413,15 +411,15 @@ class CrossCompileMixin(MultiArchBaseMixin):
 
     @property
     def CC(self):
-        return self.target_info.c_compiler(self.config)
+        return self.target_info.c_compiler
 
     @property
     def CXX(self):
-        return self.target_info.cxx_compiler(self.config)
+        return self.target_info.cxx_compiler
 
     @property
     def CPP(self):
-        return self.target_info.c_preprocessor(self.config)
+        return self.target_info.c_preprocessor
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):

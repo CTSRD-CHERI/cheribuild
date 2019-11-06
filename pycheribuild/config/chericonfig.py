@@ -39,7 +39,7 @@ from collections import OrderedDict
 from pathlib import Path
 # Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
 from .loader import ConfigLoaderBase
-from .target_info import TargetInfo, CheriBSDTargetInfo, NativeTargetInfo, FreeBSDTargetInfo, NewlibBaremetalTargetInfo
+from .target_info import TargetInfo, CheriBSDTargetInfo, NativeTargetInfo, FreeBSDTargetInfo, NewlibBaremetalTargetInfo, CPUArchitecture
 from ..utils import latestClangTool, warningMessage, statusUpdate, have_working_internet_connection
 
 
@@ -55,27 +55,21 @@ class MyJsonEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-class CPUArchitecture(Enum):
-    X86_64 = "x86_64"
-    MIPS64 = "mips64"
-    RISCV64 = "riscv64"
-    I386 = "i386"
-    AARCH64 = "aarch64"
-
-
 class CrossCompileTarget(Enum):
     NONE = ("invalid", None, False, None)  # Placeholder
     NATIVE = ("native", CPUArchitecture.X86_64, False, NativeTargetInfo)  # XXX: should probably not harcode x86_64
     CHERIBSD_MIPS = ("mips", CPUArchitecture.MIPS64, False, CheriBSDTargetInfo)
     CHERIBSD_MIPS_PURECAP = ("cheri", CPUArchitecture.MIPS64, True, CheriBSDTargetInfo, CHERIBSD_MIPS)
     CHERIBSD_RISCV = ("riscv", CPUArchitecture.RISCV64, False, CheriBSDTargetInfo)
+    CHERIBSD_X86_64 = ("native", CPUArchitecture.X86_64, False, CheriBSDTargetInfo)
     BAREMETAL_NEWLIB_MIPS64 = ("baremetal-mips", CPUArchitecture.MIPS64, False, NewlibBaremetalTargetInfo)
     BAREMETAL_NEWLIB_MIPS64_PURECAP = ("baremetal-purecap-mips", CPUArchitecture.MIPS64, True, NewlibBaremetalTargetInfo,
                                        BAREMETAL_NEWLIB_MIPS64)
     FREEBSD_MIPS = ("mips", CPUArchitecture.MIPS64, False, FreeBSDTargetInfo)
-    RISCV = ("riscv", CPUArchitecture.RISCV64, False, FreeBSDTargetInfo)
-    I386 = ("i386", CPUArchitecture.I386, False, FreeBSDTargetInfo)
-    AARCH64 = ("aarch64", CPUArchitecture.AARCH64, False, FreeBSDTargetInfo)
+    FREEBSD_RISCV = ("riscv", CPUArchitecture.RISCV64, False, FreeBSDTargetInfo)
+    FREEBSD_I386 = ("i386", CPUArchitecture.I386, False, FreeBSDTargetInfo)
+    FREEBSD_AARCH64 = ("aarch64", CPUArchitecture.AARCH64, False, FreeBSDTargetInfo)
+    FREEBSD_X86_64 = ("x86_64", CPUArchitecture.X86_64, False, FreeBSDTargetInfo)
 
     def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, is_cheri_purecap: bool,
                  target_info_cls: "typing.Type[TargetInfo]", check_conflict_with: "CrossCompileTarget" = None):
@@ -84,8 +78,10 @@ class CrossCompileTarget(Enum):
         # TODO: self.operating_system = ...
         self._is_cheri_purecap = is_cheri_purecap
         self.check_conflict_with = check_conflict_with  # Check that we don't reuse install-dir, etc for this target
-        if target_info_cls is not None:
-            self.target_info = target_info_cls(self)
+        self.target_info_cls = target_info_cls
+
+    def create_target_info(self, project: "SimpleProject") -> TargetInfo:
+        return self.target_info_cls(self, project)
 
     def build_suffix(self, config: "CheriConfig", *, build_hybrid=False):
         assert self is not CrossCompileTarget.NONE

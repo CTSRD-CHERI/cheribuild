@@ -324,12 +324,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                                                              " building MIPS binaries instead"
         return result
 
-    @property
-    def target_info(self) -> TargetInfo:
-        xtarget = self._crossCompileTarget
-        assert xtarget is not CrossCompileTarget.NONE
-        return xtarget.target_info
-
     @classproperty
     def default_architecture(cls) -> CrossCompileTarget:
         result = cls._default_architecture
@@ -375,8 +369,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @property
     def crossSysrootPath(self):
-        assert self.crosscompile_target is not None, "called from invalid class " + str(self.__class__)
-        return self.config.get_sysroot_path(self.crosscompile_target, self.mips_build_hybrid)
+        assert self.target_info is not None, "called from invalid class " + str(self.__class__)
+        return self.target_info.sysroot_dir
 
     # Duplicate all arguments instead of using **kwargs to get sensible code completion
     @staticmethod
@@ -468,6 +462,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         cls.__configOptionsSet[cls] = True
 
     def __init__(self, config: CheriConfig):
+        self.target_info = self._crossCompileTarget.create_target_info(self)
         super().__init__(config)
         assert self._crossCompileTarget is not None
         assert self._crossCompileTarget is not CrossCompileTarget.NONE, "Placeholder class should not be instantiated: " + repr(self)
@@ -759,7 +754,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             cmd.extend(["--build-dir", self.buildDir])
         if mount_sourcedir and self.sourceDir and "--source-dir" not in self.config.test_extra_args:
             cmd.extend(["--source-dir", self.sourceDir])
-        if mount_sysroot and "--sysroot-dir" not in self.config.test_extra_args:
+        if mount_sysroot and "--sysroot-dir" not in self.config.test_extra_args and not self.compiling_for_host():
             cmd.extend(["--sysroot-dir", self.crossSysrootPath])
         if mount_installdir:
             if "--install-destdir" not in self.config.test_extra_args:
@@ -780,7 +775,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 cmd.append("--test-ld-preload-variable=LD_CHERI_PRELOAD")
             else:
                 cmd.append("--test-ld-preload-variable=LD_PRELOAD")
-
 
         cmd += list(script_args)
         if self.config.test_extra_args:

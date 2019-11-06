@@ -147,10 +147,7 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
     @classmethod
     def dependencies(cls, config: CheriConfig):
         result = super().dependencies(config)
-        # We don't have a working baremetal libunwind yet
-        if not cls.get_crosscompile_target(config).target_info.is_newlib:
-            result += ["libunwind"]
-        return result
+        return result + ["libunwind"]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

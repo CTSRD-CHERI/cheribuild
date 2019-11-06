@@ -28,10 +28,10 @@
 # SUCH DAMAGE.
 #
 
-from ...targets import targetManager
+import re
+
 from ..project import *
 
-import re
 
 # Using GCC not Clang, so can't use CrossCompileAutotoolsProject
 class BuildBBLFreeBSDWithDefaultOptionsRISCV(AutotoolsProject):
@@ -42,7 +42,7 @@ class BuildBBLFreeBSDWithDefaultOptionsRISCV(AutotoolsProject):
     defaultInstallDir = AutotoolsProject._installToSDK
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
-    supported_architectures = [CrossCompileTarget.RISCV]
+    supported_architectures = [CrossCompileTarget.FREEBSD_RISCV]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -60,7 +60,7 @@ class BuildBBLFreeBSDWithDefaultOptionsRISCV(AutotoolsProject):
 
         from .cheribsd import BuildFreeBSDWithDefaultOptions
         kernelPath = BuildFreeBSDWithDefaultOptions.get_installed_kernel_path(self,
-                                                                              cross_target=CrossCompileTarget.RISCV)
+                                                                              cross_target=CrossCompileTarget.FREEBSD_RISCV)
         self.configureArgs.extend([
             "--with-payload=" + str(kernelPath),
             "--host=" + self.host

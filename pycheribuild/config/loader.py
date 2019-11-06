@@ -56,7 +56,6 @@ class ComputedDefaultValue(object):
         self.asString = asString
 
     def __call__(self, config: "CheriConfig", obj: "SimpleProject"):
-        assert isinstance(obj, SimpleProject)
         return self.function(config, obj)
 
     def __repr__(self):

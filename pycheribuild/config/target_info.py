@@ -30,6 +30,7 @@
 import typing
 from abc import ABCMeta, abstractmethod, ABC
 from pathlib import Path
+from enum import Enum
 
 from ..utils import IS_MAC, IS_FREEBSD, IS_LINUX, getCompilerInfo
 
@@ -38,40 +39,59 @@ if typing.TYPE_CHECKING:
     from ..projects.project import SimpleProject
 
 
-class TargetOperatingSystemInfo(object):
-    pass
+class CPUArchitecture(Enum):
+    X86_64 = "x86_64"
+    MIPS64 = "mips64"
+    RISCV64 = "riscv64"
+    I386 = "i386"
+    AARCH64 = "aarch64"
 
 
 class TargetInfo(ABC):
-    def __init__(self, target: "CrossCompileTarget"):
+    def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
         self.target = target
+        self.project = project
 
+    @property
     @abstractmethod
-    def toolchain_targets(self, config: "CheriConfig") -> typing.List[str]:
+    def sdk_root_dir(self) -> Path: ...
+
+    @property
+    @abstractmethod
+    def sysroot_dir(self) -> Path: ...
+
+    @property
+    @abstractmethod
+    def target_triple(self) -> str: ...
+
+    @property
+    @abstractmethod
+    def c_compiler(self) -> Path: ...
+
+    @property
+    @abstractmethod
+    def cxx_compiler(self) -> Path: ...
+
+    @property
+    @abstractmethod
+    def c_preprocessor(self) -> Path: ...
+
+    @classmethod
+    @abstractmethod
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         """returns e.g. [llvm]/[upstream-llvm], or an empty list"""
         ...
 
-    @abstractmethod
-    def target_triple(self, config: "CheriConfig"): ...
-
-    @abstractmethod
-    def c_compiler(self, config: "CheriConfig") -> Path: ...
-
-    @abstractmethod
-    def cxx_compiler(self, config: "CheriConfig") -> Path: ...
-
-    @abstractmethod
-    def c_preprocessor(self, config: "CheriConfig") -> Path: ...
-
-    def base_sysroot_targets(self, config: "CheriConfig") -> typing.List[str]:
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         """returns a list of targets that need to be built for a minimal sysroot"""
         return []
 
-    def required_compile_flags(self, project: "SimpleProject") -> typing.List[str]:
+    def required_compile_flags(self) -> typing.List[str]:
         """Flags that need to be passed to cc/c++/cpp in all cases"""
         return []
 
-    def required_link_flags(self, project: "SimpleProject") -> typing.List[str]:
+    def required_link_flags(self) -> typing.List[str]:
         """Flags that need to be passed to cc/c++ for linking"""
         return []
 
@@ -101,45 +121,66 @@ class TargetInfo(ABC):
 
 
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
+    @property
     @abstractmethod
-    def compiler_dir(self, config: "CheriConfig") -> Path: ...
+    def compiler_dir(self) -> Path: ...
 
-    def c_compiler(self, config: "CheriConfig") -> Path:
-        return self.compiler_dir(config) / "clang"
+    @property
+    def c_compiler(self) -> Path:
+        return self.compiler_dir / "clang"
 
-    def cxx_compiler(self, config: "CheriConfig") -> Path:
-        return self.compiler_dir(config) / "clang++"
+    @property
+    def cxx_compiler(self) -> Path:
+        return self.compiler_dir / "clang++"
 
-    def c_preprocessor(self, config: "CheriConfig") -> Path:
-        return self.compiler_dir(config) / "clang-cpp"
+    @property
+    def c_preprocessor(self) -> Path:
+        return self.compiler_dir / "clang-cpp"
 
 
 class NativeTargetInfo(TargetInfo):
-    def target_triple(self, config: "CheriConfig"):
-        return getCompilerInfo(self.c_compiler(config)).default_target
+    @property
+    def sdk_root_dir(self):
+        raise ValueError("Should not be called for native")
 
-    def toolchain_targets(self, config: "CheriConfig"):
+    @property
+    def sysroot_dir(self):
+        raise ValueError("Should not be called for native")
+
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        raise ValueError("Should not be called for native")
+
+    @classmethod
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         if config.use_sdk_clang_for_native_xbuild:
             return ["llvm"]
         return []  # use host tools -> no target needed
 
-    def c_compiler(self, config: "CheriConfig") -> Path:
-        if config.use_sdk_clang_for_native_xbuild and not IS_MAC:
-            # SDK clang doesn't work for native builds on macos
-            return config.sdkBinDir / "clang"
-        return config.clangPath
+    @property
+    def target_triple(self):
+        return getCompilerInfo(self.c_compiler()).default_target
 
-    def cxx_compiler(self, config: "CheriConfig") -> Path:
-        if config.use_sdk_clang_for_native_xbuild and not IS_MAC:
+    @property
+    def c_compiler(self) -> Path:
+        if self.project.config.use_sdk_clang_for_native_xbuild and not IS_MAC:
             # SDK clang doesn't work for native builds on macos
-            return config.sdkBinDir / "clang++"
-        return config.clangPlusPlusPath
+            return self.project.config.sdkBinDir / "clang"
+        return self.project.config.clangPath
 
-    def c_preprocessor(self, config: "CheriConfig") -> Path:
-        if config.use_sdk_clang_for_native_xbuild and not IS_MAC:
+    @property
+    def cxx_compiler(self) -> Path:
+        if self.project.config.use_sdk_clang_for_native_xbuild and not IS_MAC:
             # SDK clang doesn't work for native builds on macos
-            return config.sdkBinDir / "clang-cpp"
-        return config.clangCppPath
+            return self.project.config.sdkBinDir / "clang++"
+        return self.project.config.clangPlusPlusPath
+
+    @property
+    def c_preprocessor(self) -> Path:
+        if self.project.config.use_sdk_clang_for_native_xbuild and not IS_MAC:
+            # SDK clang doesn't work for native builds on macos
+            return self.project.config.sdkBinDir / "clang-cpp"
+        return self.project.config.clangCppPath
 
     @property
     def is_freebsd(self):
@@ -158,22 +199,35 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     FREEBSD_VERSION = 13
 
     @property
+    def sdk_root_dir(self):
+        # FIXME: different SDK root dir?
+        return self.project.config.sdkDir
+
+    @property
+    def sysroot_dir(self):
+        return Path(self.sdk_root_dir, "sysroot-freebsd-" + self.target.cpu_architecture.value)
+
+    @property
     def is_freebsd(self):
         return True
 
-    def compiler_dir(self, config: "CheriConfig") -> Path:
-        # TODO: BuildUpstreamLLVM.installDir?
-        return config.sdkBinDir
+    @property
+    def compiler_dir(self) -> Path:
+        # TODO: BuildLLVM.installDir?
+        return self.sdk_root_dir / "bin"
 
-    def toolchain_targets(self, config: "CheriConfig"):
+    @classmethod
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         return ["llvm"]  # TODO: upstream-llvm???
 
-    def target_triple(self, config: "CheriConfig"):
+    @property
+    def target_triple(self):
         common_suffix = "-unknown-freebsd" + str(self.FREEBSD_VERSION)
         # TODO: do we need any special cases here?
         return self.target.cpu_architecture.value + common_suffix
 
-    def base_sysroot_targets(self, config: "CheriConfig") -> typing.List[str]:
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         return ["freebsd"]
 
 
@@ -181,25 +235,32 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     FREEBSD_VERSION = 13
 
     @property
+    def sdk_root_dir(self):
+        return self.project.config.sdkDir
+
+    @property
+    def sysroot_dir(self):
+        return self.project.config.get_sysroot_path(self.target, use_hybrid_sysroot=self.project.mips_build_hybrid)
+
+    @property
     def is_cheribsd(self):
         return True
 
-    def compiler_dir(self, config: "CheriConfig") -> Path:
-        # TODO: BuildLLVM.installDir?
-        return config.sdkBinDir
-
-    def toolchain_targets(self, config: "CheriConfig"):
-        return ["llvm", "qemu", "gdb-native"]
-
-    def target_triple(self, config: "CheriConfig"):
+    @property
+    def target_triple(self):
         if self.target.is_cheri_purecap():
             # anything over 10 should use libc++ by default
             assert self.target.is_mips(include_purecap=True), "Only MIPS purecap is supported"
             return "mips64c{}-unknown-freebsd{}-purecap".format(config.cheriBits, self.FREEBSD_VERSION)
-        return super().target_triple(config)
+        return super().target_triple
 
-    def base_sysroot_targets(self, config: "CheriConfig") -> typing.List[str]:
-        if self.target.is_mips(include_purecap=False):
+    @classmethod
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        return ["llvm", "qemu", "gdb-native"]
+
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        if target.is_mips(include_purecap=False):
             if config.use_hybrid_sysroot_for_mips:
                 return ["cheribsd-cheri", "cheribsd-sysroot-cheri"]
             return ["cheribsd-mips", "cheribsd-sysroot-mips"]
@@ -207,24 +268,41 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
 
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
-    def compiler_dir(self, config: "CheriConfig") -> Path:
-        # TODO: BuildUpstreamLLVM.installDir?
-        return config.sdkBinDir
+    @property
+    def sdk_root_dir(self) -> Path:
+        return self.project.config.sdkDir
 
-    def toolchain_targets(self, config: "CheriConfig"):
+    @property
+    def sysroot_dir(self) -> Path:
+        # Install to mips/cheri128/cheri256 directory
+        if self.target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+            suffix = "cheri" + self.project.config.cheriBitsStr
+        else:
+            suffix = self.target.generic_suffix
+        return self.project.config.sdkDir / "baremetal" / suffix / self.target_triple
+
+    @property
+    def compiler_dir(self) -> Path:
+        # TODO: BuildUpstreamLLVM.installDir?
+        return self.project.config.sdkBinDir
+
+    @classmethod
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         return ["llvm", "qemu", "gdb-native"]  # upstream-llvm??
 
-    def target_triple(self, config: "CheriConfig"):
+    @property
+    def target_triple(self):
         if self.target.is_mips(include_purecap=True):
             if self.target.is_cheri_purecap():
-                return "mips64c{}-qemu-elf-purecap".format(config.cheriBits)
+                return "mips64c{}-qemu-elf-purecap".format(self.project.config.cheriBits)
             return "mips64-qemu-elf"
         assert False, "Other baremetal cases have not been tested yet!"
 
-    def base_sysroot_targets(self, config: "CheriConfig") -> typing.List[str]:
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         return ["newlib", "compiler-rt-builtins"]
 
-    def required_compile_flags(self, project: "SimpleProject") -> typing.List[str]:
+    def required_compile_flags(self) -> typing.List[str]:
         # Currently we need these flags to build anything against newlib baremetal
         return [
             "-D_GNU_SOURCE=1",  # needed for the locale functions
