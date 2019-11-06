@@ -338,13 +338,13 @@ class BeriCtlCheriBSDSpawn(boot_cheribsd.CheriBSDInstance):
         self.logfile_read = old_logfile_read
 
 
-def get_console (cable_id=args.cable_id,berictl=args.berictl) -> boot_cheribsd.CheriBSDInstance:
+def get_console (cable_id=args.cable_id,berictl=args.berictl,logfile=None) -> boot_cheribsd.CheriBSDInstance:
     cmd = [berictl]
     cmd += ['-c',str(cable_id)]
     cmd += ['-j','console']
     hostcmdprint(" ".join(cmd))
     # if we specify encoding=utf-8 then spawn only accepts bytes...
-    c = BeriCtlCheriBSDSpawn(" ".join(cmd), encoding="utf-8", echo=False, timeout=60)
+    c = BeriCtlCheriBSDSpawn(" ".join(cmd), encoding="utf-8", echo=False, timeout=60, logfile=logfile)
     return c
 
 def loadsof (bitfile=args.bitfile,cable_id=args.cable_id,berictl=args.berictl,timeout=30):
