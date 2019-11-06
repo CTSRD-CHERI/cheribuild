@@ -265,7 +265,7 @@ def _jenkins_main():
                     fatalError("--cheri-sdk-path specified but", expected_clang, "does not exist")
             else:
                 need_cheribsd_sysroot = False
-                deps = target.projectClass.recursive_dependencies(cheriConfig)
+                deps = target.get_real_target(CrossCompileTarget.NONE, cheriConfig, caller="jenkins").projectClass.recursive_dependencies(cheriConfig)
                 for d in deps:
                     assert isinstance(d, Target)
                     if d.name.startswith("cheribsd-sysroot"):

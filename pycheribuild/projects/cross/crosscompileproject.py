@@ -135,7 +135,7 @@ class CrossCompileMixin(MultiArchBaseMixin):
     @classmethod
     def dependencies(cls, config: CheriConfig):
         # TODO: can I avoid instantiating all cross-compile targets here? The hack below might work
-        target = cls.get_crosscompile_target(config) # type: CrossCompileTarget
+        target = cls.get_crosscompile_target(config)  # type: CrossCompileTarget
         result = target.target_info_cls.toolchain_targets(target, config)
         if cls.needs_sysroot:
             result += target.target_info_cls.base_sysroot_targets(target, config)

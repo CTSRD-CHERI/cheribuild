@@ -49,6 +49,9 @@ class Target(object):
         self._benchmarks_have_run = False
         self._creating_project = False  # avoid cycles
 
+    def get_real_target(self, cross_target: CrossCompileTarget, config, caller=None) -> "Target":
+        return self
+
     def get_or_create_project(self, target_arch: "CrossCompileTarget", config) -> "SimpleProject":
         assert target_arch is not None
         # Note: MultiArchTarget uses caller to select the right project (e.g. libcxxrt-native needs libunwind-native path)

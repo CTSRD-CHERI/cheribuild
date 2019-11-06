@@ -198,7 +198,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         dependencies = cls.dependencies
         expected_build_arch = cls.get_crosscompile_target(config)
         assert expected_build_arch is not None
-        if expected_build_arch is CrossCompileTarget.NONE:
+        assert cls._crossCompileTarget is not None
+        if expected_build_arch is CrossCompileTarget.NONE or cls._crossCompileTarget is CrossCompileTarget.NONE:
             raise ValueError("Cannot call direct_dependencies() on a target alias")
         if callable(dependencies):
             if inspect.ismethod(dependencies):
@@ -251,6 +252,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if _cached is not None:
             return _cached
         result = []  # type: typing.List[Target]
+        assert cls._crossCompileTarget not in (None, CrossCompileTarget.NONE), cls
         for target in cls.direct_dependencies(config):
             if target not in result:
                 result.append(target)
