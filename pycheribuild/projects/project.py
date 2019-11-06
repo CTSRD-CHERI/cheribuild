@@ -477,9 +477,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         self.__requiredSystemHeaders = {}  # type: typing.Dict[str, typing.Any]
         self.__requiredPkgConfig = {}  # type: typing.Dict[str, typing.Any]
         self._systemDepsChecked = False
-        if self.build_in_source_dir:
-            self.verbose_print("Cannot build", self.projectName, "in a separate build dir, will build in", self.sourceDir)
-            self.buildDir = self.sourceDir
         assert not hasattr(self, "gitBranch"), "gitBranch must not be used: " + self.__class__.__name__
 
     def addRequiredSystemTool(self, executable: str, installInstructions=None, freebsd: str=None, apt: str=None,
@@ -1405,14 +1402,6 @@ class Project(SimpleProject):
                 assert issubclass(cls, CMakeProject), "Should be a CMakeProject: " + cls.__name__
 
     def __init__(self, config: CheriConfig):
-        if isinstance(self.repository, ReuseOtherProjectRepository):
-            # HACK: override the source directory (ignoring the setting from the JSON)
-            # This should be done using a decorator that also changes defaultSourceDir so that we can
-            # take the JSON into account
-            self.sourceDir = self.repository.get_real_source_dir(self, config)
-            self.info("Overriding source directory for", self.target, "since it reuses the sources of",
-                      self.repository.source_project.target, "->", self.sourceDir)
-        self.sourceDir = self.repository.get_real_source_dir(self, self.default_source_dir)
         super().__init__(config)
         # set up the install/build/source directories (allowing overrides from config file)
         assert isinstance(self.repository, SourceRepository), self.target + " repository member is wrong!"
@@ -1420,6 +1409,19 @@ class Project(SimpleProject):
             # TODO: remove this and use a custom argparse.Action subclass
             assert isinstance(self.repository, GitRepository)
             self.repository.url = self._repositoryUrl
+        if isinstance(self.repository, ReuseOtherProjectRepository):
+            # HACK: override the source directory (ignoring the setting from the JSON)
+            # This should be done using a decorator that also changes defaultSourceDir so that we can
+            # take the JSON into account
+            self.default_source_dir = self.repository.get_real_source_dir(self, self.default_source_dir)
+            self.info("Overriding source directory for", self.target, "since it reuses the sources of",
+                      self.repository.source_project.target, "->", self.default_source_dir)
+        self.sourceDir = self.repository.get_real_source_dir(self, self.default_source_dir)
+
+        if self.build_in_source_dir:
+            self.verbose_print("Cannot build", self.projectName, "in a separate build dir, will build in", self.sourceDir)
+            self.buildDir = self.sourceDir
+
         self.configureCommand = ""
         # non-assignable variables:
         self.configureArgs = []  # type: typing.List[str]
