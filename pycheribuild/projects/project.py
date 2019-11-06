@@ -52,7 +52,7 @@ __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "Target
            "CrossCompileTarget", "CPUArchitecture", "GitRepository", "ComputedDefaultValue", "TargetInfo", # no-combine
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
            "MultiArchBaseMixin",  # TODO: remove  # no-combine
-           ]  # no-combine
+           "TargetBranchInfo",]  # no-combine
 
 
 def flushStdio(stream):
@@ -1007,15 +1007,20 @@ class MakeOptions(object):
 
 
 class SourceRepository(object):
-    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, skip_submodules=False):
+    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, default_src_dir: Path,
+                      skip_submodules=False) -> None:
         raise NotImplementedError
 
-    def update(self, current_project: "Project", *, src_dir: Path, revision=None, skip_submodules=False):
+    def update(self, current_project: "Project", *, src_dir: Path, default_src_dir: Path = None, revision=None,
+               skip_submodules=False) -> None:
         raise NotImplementedError
+
+    def get_real_source_dir(self, caller: SimpleProject, default_src_dir: Path) -> Path:
+        return default_src_dir
 
 
 class ExternallyManagedSourceRepository(SourceRepository):
-    def ensure_cloned(self, current_project: "Project", **kwargs):
+    def ensure_cloned(self, current_project: "Project", src_dir: Path, **kwargs):
         current_project.info("Not cloning repositiory since it is externally managed")
 
     def update(self, current_project: "Project", *, src_dir: Path, **kwargs):
@@ -1029,16 +1034,18 @@ class ReuseOtherProjectRepository(SourceRepository):
         self.subdirectory = subdirectory
         self.repo_for_target = repo_for_target
 
-    def ensure_cloned(self, current_project: "Project", **kwargs):
-        if not self.get_real_source_dir(current_project, current_project.config).exists():
+    def ensure_cloned(self, current_project: "Project", **kwargs) -> None:
+        src = self.get_real_source_dir(current_project, current_project.config)
+        if not src.exists():
             current_project.fatal("Source repository for target", current_project.target, "does not exist.",
                                   fixitHint="This project uses the sources from the " + self.source_project.target +
                                   "target so you will have to clone that first. Try running:\n\t`" +
                                   "cheribuild.py " + self.source_project.target + "--no-skip-update --skip-configure " +
                                   "--skip-build --skip-install`")
 
-    def get_real_source_dir(self, caller: SimpleProject, config: CheriConfig) -> Path:
-        return self.source_project.getSourceDir(caller, config, cross_target=self.repo_for_target) / self.subdirectory
+    def get_real_source_dir(self, caller: SimpleProject, default_src_dir: Path) -> Path:
+        return self.source_project.getSourceDir(caller, caller.config,
+                                                cross_target=self.repo_for_target) / self.subdirectory
 
     def update(self, current_project: "Project", *, src_dir: Path, **kwargs):
         # TODO: allow updating the repo?
@@ -1051,24 +1058,39 @@ class ReuseOtherProjectDefaultTargetRepository(ReuseOtherProjectRepository):
                          repo_for_target=source_project.supported_architectures[0])
 
 
+# Use git-worktree to handle per-target branches:
+class TargetBranchInfo(object):
+    def __init__(self, branch: str, directory_name: str, url: str = None):
+        self.branch = branch
+        self.directory_name = directory_name
+        self.url = url
+
+
 class GitRepository(SourceRepository):
     def __init__(self, url, *, old_urls: typing.List[bytes] = None, default_branch: str = None,
-                 force_branch: bool = False):
+                 force_branch: bool = False,
+                 per_target_branches: typing.Dict[CrossCompileTarget, TargetBranchInfo] = None):
         self.url = url
         self.old_urls = old_urls
         self.default_branch = default_branch
         self.force_branch = force_branch
+        if per_target_branches is None:
+            per_target_branches = dict()
+        self.per_target_branches = per_target_branches
 
-    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, skip_submodules=False):
+    def ensure_cloned(self, current_project: "Project", *, src_dir: Path, default_src_dir: Path,
+                      skip_submodules=False) -> None:
+        if default_src_dir is None:
+            default_src_dir = src_dir
         # git-worktree creates a .git file instead of a .git directory so we can't use .is_dir()
-        if not (src_dir / ".git").exists():
+        if not (default_src_dir / ".git").exists():
             if current_project.config.skipClone:
-                current_project.fatal("Sources for", str(src_dir), " missing!")
+                current_project.fatal("Sources for", str(default_src_dir), " missing!")
             assert isinstance(self.url, str), self.url
             assert not self.url.startswith("<"), "Invalid URL " + self.url
             if not current_project.queryYesNo(
-                    str(src_dir) + " is not a git repository. Clone it from '" + self.url + "'?"):
-                current_project.fatal("Sources for", str(src_dir), " missing!")
+                    str(default_src_dir) + " is not a git repository. Clone it from '" + self.url + "'?"):
+                current_project.fatal("Sources for", str(default_src_dir), " missing!")
             clone_cmd = ["git", "clone"]
             if current_project.config.shallow_clone:
                 # Note: we pass --no-single-branch since otherwise git fetch will not work with branches and
@@ -1079,22 +1101,67 @@ class GitRepository(SourceRepository):
                 clone_cmd.append("--recurse-submodules")
             if self.default_branch:
                 clone_cmd += ["--branch", self.default_branch]
-            runCmd(clone_cmd + [self.url, src_dir], cwd="/")
+            runCmd(clone_cmd + [self.url, default_src_dir], cwd="/")
             # Could also do this but it seems to fetch more data than --no-single-branch
             # if self.config.shallow_clone:
             #    runCmd(["git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"], cwd=src_dir)
 
-    def update(self, current_project: "Project", *, src_dir: Path, revision=None,
+        if src_dir == default_src_dir:
+            return  # Nothing else to do
+
+        # Handle per-target overrides by adding a new git-worktree git-worktree
+        target_override = self.per_target_branches.get(current_project._crossCompileTarget, None)
+        assert target_override is not None, "Default src != src -> must have a per-target override"
+        if (src_dir / ".git").exists():
+            return
+        current_project.info("Creating git-worktree checkout of", default_src_dir, "with branch",
+                             target_override.branch, "for", src_dir)
+
+        # Find the first valid remote
+        per_target_url = target_override.url if target_override.url else self.url
+        remote_name = "origin"
+        remotes = runCmd(["git", "-C", default_src_dir, "remote", "-v"], captureOutput=True).stdout.decode(
+            "utf-8")  # type: str
+        for r in remotes.splitlines():
+            if per_target_url in r:
+                remote_name = r.split()[0].strip()
+        while True:
+            try:
+                url = runCmd(["git", "-C", default_src_dir, "remote", "get-url", remote_name],
+                              captureOutput=True).stdout.decode("utf-8").strip()
+            except subprocess.CalledProcessError as e:
+                current_project.warning("Could not determine URL for remote", remote_name, str(e))
+                url = None
+            if url == self.url:
+                break
+            current_project.info("URL '", url, "' for remote ", remote_name, " does not match expected url '",
+                                 self.url, "'", sep="")
+            if current_project.queryYesNo("Use this remote?"):
+                break
+            remote_name = input("Please enter the correct remote: ")
+        runCmd(["git", "worktree", "add", "--track", "-b", target_override.branch, src_dir,
+                remote_name + "/" + target_override.branch], cwd=default_src_dir)
+
+    def get_real_source_dir(self, caller: SimpleProject, default_src_dir: Path) -> Path:
+        target_override = self.per_target_branches.get(caller._crossCompileTarget, None)
+        if target_override is None:
+            return default_src_dir
+        return default_src_dir.with_name(target_override.directory_name)
+
+    def update(self, current_project: "Project", *, src_dir: Path, default_src_dir: Path = None, revision=None,
                skip_submodules=False):
-        self.ensure_cloned(current_project, src_dir=src_dir, skip_submodules=skip_submodules)
+        self.ensure_cloned(current_project, src_dir=src_dir, default_src_dir=default_src_dir,
+                           skip_submodules=skip_submodules)
         if current_project.skipUpdate:
             return
+
         # handle repositories that have moved
         if src_dir.exists() and self.old_urls:
             # Update from the old url:
             for old_url in self.old_urls:
                 assert isinstance(old_url, bytes)
-                remote_url = runCmd("git", "remote", "get-url", "origin", captureOutput=True, cwd=src_dir).stdout.strip()
+                remote_url = runCmd("git", "remote", "get-url", "origin", captureOutput=True,
+                                    cwd=src_dir).stdout.strip()
                 if remote_url == old_url:
                     warningMessage(current_project.projectName, "still points to old repository", remote_url)
                     if current_project.queryYesNo("Update to correct URL?"):
@@ -1102,7 +1169,7 @@ class GitRepository(SourceRepository):
 
         # make sure we run git stash if we discover any local changes
         has_changes = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
-                                captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
+                                 captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
 
         pull_cmd = ["git", "pull"]
         has_autostash = False
@@ -1117,13 +1184,14 @@ class GitRepository(SourceRepository):
             # TODO: add a config option to skip this query?
             if current_project.config.force_update:
                 statusUpdate("Updating", src_dir, "with autostash due to --force-update")
-            elif not current_project.queryYesNo("Stash the changes, update and reapply?", default_result=True, force_result=True):
+            elif not current_project.queryYesNo("Stash the changes, update and reapply?", default_result=True,
+                                                force_result=True):
                 statusUpdate("Skipping update of", src_dir)
                 return
             if not has_autostash:
                 # TODO: ask if we should continue?
                 stash_result = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
-                                     captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout
+                                      captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout
                 # print("stash_result =", stash_result)
                 if "No local changes to save" in stash_result.decode("utf-8"):
                     # print("NO REAL CHANGES")
@@ -1287,8 +1355,8 @@ class Project(SimpleProject):
     def setupConfigOptions(cls, installDirectoryHelp="", **kwargs):
         super().setupConfigOptions(**kwargs)
         # statusUpdate("Setting up config options for", cls, cls.target)
-        cls.sourceDir = cls.addPathOption("source-directory", metavar="DIR", default=cls.defaultSourceDir,
-                                          help="Override default source directory for " + cls.projectName)
+        cls.default_source_dir = cls.addPathOption("source-directory", metavar="DIR", default=cls.defaultSourceDir,
+                                                   help="Override default source directory for " + cls.projectName)
         cls.buildDir = cls.addPathOption("build-directory", metavar="DIR", default=cls.defaultBuildDir,
                                          help="Override default source directory for " + cls.projectName)
         if cls.can_build_with_asan:
@@ -1344,6 +1412,7 @@ class Project(SimpleProject):
             self.sourceDir = self.repository.get_real_source_dir(self, config)
             self.info("Overriding source directory for", self.target, "since it reuses the sources of",
                       self.repository.source_project.target, "->", self.sourceDir)
+        self.sourceDir = self.repository.get_real_source_dir(self, self.default_source_dir)
         super().__init__(config)
         # set up the install/build/source directories (allowing overrides from config file)
         assert isinstance(self.repository, SourceRepository), self.target + " repository member is wrong!"
@@ -1460,9 +1529,10 @@ class Project(SimpleProject):
 
     def update(self):
         if not self.repository and not self.config.skipUpdate:
-            self.fatal("Cannot update", self.projectName, "as it is missing a repository source", fatalWhenPretending=True)
-        self.repository.update(self, src_dir=self.sourceDir, revision=self.gitRevision,
-                               skip_submodules=self.skipGitSubmodules)
+            self.fatal("Cannot update", self.projectName, "as it is missing a repository source",
+                       fatalWhenPretending=True)
+        self.repository.update(self, src_dir=self.sourceDir, default_src_dir=self.default_source_dir,
+                               revision=self.gitRevision, skip_submodules=self.skipGitSubmodules)
 
     _extra_git_clean_excludes = []
 
@@ -1607,7 +1677,12 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if self.config.verbose:
             print(self.projectName, "directories: source=%s, build=%s, install=%s" %
                   (self.sourceDir, self.buildDir, self.installDir))
-        if not self.config.skipUpdate:
+        if self.config.skipUpdate:
+            # When --skip-update is set (or we don't have working internet) only check that the repository exists
+            if self.repository:
+                self.repository.ensure_cloned(self, src_dir=self.sourceDir, default_src_dir=self.default_source_dir,
+                                              skip_submodules=self.skipGitSubmodules)
+        else:
             self.update()
         if not self._systemDepsChecked:
             self.check_system_dependencies()

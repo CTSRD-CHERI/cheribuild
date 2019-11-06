@@ -68,10 +68,11 @@ class CrossCompileTarget(Enum):
     NATIVE = ("native", CPUArchitecture.X86_64, False, NativeTargetInfo)  # XXX: should probably not harcode x86_64
     CHERIBSD_MIPS = ("mips", CPUArchitecture.MIPS64, False, CheriBSDTargetInfo)
     CHERIBSD_MIPS_PURECAP = ("cheri", CPUArchitecture.MIPS64, True, CheriBSDTargetInfo, CHERIBSD_MIPS)
+    CHERIBSD_RISCV = ("riscv", CPUArchitecture.RISCV64, False, CheriBSDTargetInfo)
     BAREMETAL_NEWLIB_MIPS64 = ("baremetal-mips", CPUArchitecture.MIPS64, False, NewlibBaremetalTargetInfo)
     BAREMETAL_NEWLIB_MIPS64_PURECAP = ("baremetal-purecap-mips", CPUArchitecture.MIPS64, True, NewlibBaremetalTargetInfo,
                                        BAREMETAL_NEWLIB_MIPS64)
-    FREEBSD_MIPS = ("mips-freebsd", CPUArchitecture.MIPS64, False, FreeBSDTargetInfo)
+    FREEBSD_MIPS = ("mips", CPUArchitecture.MIPS64, False, FreeBSDTargetInfo)
     RISCV = ("riscv", CPUArchitecture.RISCV64, False, FreeBSDTargetInfo)
     I386 = ("i386", CPUArchitecture.I386, False, FreeBSDTargetInfo)
     AARCH64 = ("aarch64", CPUArchitecture.AARCH64, False, FreeBSDTargetInfo)

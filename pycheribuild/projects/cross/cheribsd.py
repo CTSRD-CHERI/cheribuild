@@ -89,6 +89,8 @@ def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
         if config.mips_float_abi == MipsFloatAbi.HARD:
             return config.outputRoot / "rootfs-mipshf"
         return config.outputRoot / "rootfs-mips"
+    elif project.compiling_for_riscv():
+        return config.outputRoot / "rootfs-riscv"
     else:
         assert project.compiling_for_host()
         return config.outputRoot / "rootfs-x86"
@@ -434,6 +436,11 @@ class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
                                                          BOOT=False)  # bootloaders won't link with LLD yet
             # DONT SET XAS!!! It prevents bfd from being built
             # self.cross_toolchain_config.set(XAS=cross_prefix + "clang " + target_flags)
+        elif self.compiling_for_riscv():
+            target_flags = ""
+            self.useExternalToolchainForWorld = True
+            self.useExternalToolchainForKernel = True
+            pass  # TODO: determine flags
         else:
             self.fatal("Invalid state, should have a cross env")
             sys.exit(1)
@@ -999,10 +1006,15 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
 class BuildCHERIBSD(BuildFreeBSD):
     projectName = "cheribsd"
     target = "cheribsd"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git", per_target_branches={
+        CrossCompileTarget.CHERIBSD_RISCV: TargetBranchInfo("riscv_cheri_clang", directory_name="cheribsd-riscv",
+                                                            # url="https://github.com/bsdjhb/cheribsd"
+                                                            )
+        })
     defaultInstallDir = cheribsd_install_dir
     appendCheriBitsToBuildDir = True
-    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.NATIVE, CrossCompileTarget.CHERIBSD_MIPS]
+    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.NATIVE,
+                               CrossCompileTarget.CHERIBSD_MIPS, CrossCompileTarget.CHERIBSD_RISCV]
     is_sdk_target = True
     hide_options_from_help = False  # FreeBSD options are hidden, but this one should be visible
     crossbuild = True  # changes have been merged into master
@@ -1059,7 +1071,7 @@ class BuildCHERIBSD(BuildFreeBSD):
                 "TARGET": "mips",
                 "TARGET_ARCH": config.mips_float_abi.freebsd_target_arch()
             }
-        # TODO: shouldwe  keep building a cheri kernel even with a mips userspace?
+        # TODO: should we build a cheri kernel even with a mips userspace?
         # self.kernelConfig = "MALTA64"
         super().__init__(config, archBuildFlags=archBuildFlags)
         if self.compiling_for_cheri():
@@ -1069,6 +1081,9 @@ class BuildCHERIBSD(BuildFreeBSD):
 
         # TODO: build with llvm binutils instead
         self.use_elftoolchain = True
+        if self.compiling_for_riscv():
+            self.make_args.set(CROSS_BINUTILS_PREFIX=str(self.config.sdkBinDir / "llvm-"))
+
         if self.use_elftoolchain:
             self.make_args.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
         else:
