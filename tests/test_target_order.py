@@ -42,7 +42,8 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, skip_sdk=
     return result
 
 freestanding_deps = ["llvm", "qemu", "gdb-native", "freestanding-sdk"]
-baremetal_deps = freestanding_deps + ["newlib-baremetal-mips", "compiler-rt-builtins-baremetal-mips", "libcxxrt-baremetal-mips",
+baremetal_deps = freestanding_deps + ["newlib-baremetal-mips", "compiler-rt-builtins-baremetal-mips",
+                                      "libunwind-baremetal-mips", "libcxxrt-baremetal-mips",
                                       "libcxx-baremetal-mips", "baremetal-sdk"]
 cheribsd_sdk_deps = freestanding_deps + ["cheribsd-cheri", "cheribsd-sysroot-cheri", "cheribsd-sdk"]
 
@@ -54,7 +55,7 @@ cheribsd_sdk_deps = freestanding_deps + ["cheribsd-cheri", "cheribsd-sysroot-che
     pytest.param("sdk", cheribsd_sdk_deps + ["sdk"], id="sdk"),
 ])
 def test_sdk(target_name, expected_list):
-    assert expected_list == _sort_targets([target_name])
+    assert _sort_targets([target_name]) == expected_list
 
 
 @pytest.mark.parametrize("target_name,expected_name", [
