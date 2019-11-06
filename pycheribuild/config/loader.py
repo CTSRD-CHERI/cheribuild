@@ -44,18 +44,24 @@ from ..colour import *
 from ..utils import typing, Type_T, fatalError
 from pathlib import Path
 
+if typing.TYPE_CHECKING:
+    from .chericonfig import CheriConfig
+    from ..projects.project import SimpleProject
+
 
 class ComputedDefaultValue(object):
-    def __init__(self, function: "typing.Callable[[CheriConfig, typing.Any], typing.Any]",
+    def __init__(self, function: "typing.Callable[[CheriConfig, SimpleProject], typing.Any]",
                  asString: "typing.Union[str, typing.Callable[[typing.Any], str]]"):
         self.function = function
         self.asString = asString
 
-    def __call__(self, config: "CheriConfig", cls):
-        return self.function(config, cls)
+    def __call__(self, config: "CheriConfig", obj: "SimpleProject"):
+        assert isinstance(obj, SimpleProject)
+        return self.function(config, obj)
 
     def __repr__(self):
         return "{ComputedDefault:" + str(self.asString) + "}"
+
 
 # From https://bugs.python.org/issue25061
 class _EnumArgparseType(object):
