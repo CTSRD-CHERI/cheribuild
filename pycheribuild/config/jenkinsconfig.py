@@ -258,7 +258,7 @@ class JenkinsConfig(CheriConfig):
             if not self.clangPlusPlusPath.exists():
                 fatalError("C++ compiler", self.clangPlusPlusPath, "does not exit. Pass --clang++-path or set $HOST_CXX")
             if not self.clangCppPath.exists():
-                fatalError("C pre-processor", self.clangCppPath, "does not exit. Pass --clang++-path or set $HOST_CPP")
+                fatalError("C pre-processor", self.clangCppPath, "does not exit. Pass --clang-cpp-path or set $HOST_CPP")
         else:
             # always use the CHERI clang built by jenkins to ensure we don't do x86 compilation
             self.clangPath = self.sdkBinDir / "clang"

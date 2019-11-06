@@ -437,6 +437,8 @@ def latestClangTool(basename: str):
             found_versioned_clang = (guess, version)
             break
     guess = shutil.which(basename)
+    if guess is None and basename == "clang-cpp":
+        guess = shutil.which("cpp")
     if guess:
         if found_versioned_clang[0] is None:
             return guess
