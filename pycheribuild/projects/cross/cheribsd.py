@@ -1083,21 +1083,24 @@ class BuildCHERIBSD(BuildFreeBSD):
         self.use_elftoolchain = True
         if self.compiling_for_riscv():
             self.make_args.set(CROSS_BINUTILS_PREFIX=str(self.config.sdkBinDir / "llvm-"))
-
+            self.use_elftoolchain = False
         if self.use_elftoolchain:
             self.make_args.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
         else:
             self.make_args.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=False)
-            self.make_args.set(XAR=config.sdkBinDir / "llvm-ar",
-                               XNM=config.sdkBinDir / "llvm-nm",
-                               XSIZE=config.sdkBinDir / "llvm-size",
-                               XSTRIP=config.sdkBinDir / "llvm-strip",
-                               XSTRINGS=config.sdkBinDir / "llvm-strings",
-                               XOBJCOPY=config.sdkBinDir / "llvm-objcopy",
-                               XRANLIB=config.sdkBinDir / "llvm-ranlib",
-                               # See https://bugs.llvm.org/show_bug.cgi?id=41707
-                               RANLIBFLAGS="", # llvm-ranlib doesn't support -D flag
-                               )
+            self.make_args.set(
+                XAS="/xas/should/not/be/used",
+                XAR=config.sdkBinDir / "llvm-ar",
+                # XLD
+                XNM=config.sdkBinDir / "llvm-nm",
+                XSIZE=config.sdkBinDir / "llvm-size",
+                XSTRIP=config.sdkBinDir / "llvm-strip",
+                XSTRINGS=config.sdkBinDir / "llvm-strings",
+                XOBJCOPY=config.sdkBinDir / "llvm-objcopy",
+                XRANLIB=config.sdkBinDir / "llvm-ranlib",
+                # See https://bugs.llvm.org/show_bug.cgi?id=41707
+                RANLIBFLAGS="", # llvm-ranlib doesn't support -D flag
+                )
 
         self.extra_kernels = []
         self.extra_kernels_with_mfs = []
