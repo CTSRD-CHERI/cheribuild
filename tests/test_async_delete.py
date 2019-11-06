@@ -1,6 +1,6 @@
 from pathlib import Path
 from unittest import TestCase
-from pycheribuild.projects.project import Project, CrossCompileTarget, SourceRepository
+from pycheribuild.projects.project import Project, CrossCompileTarget, ExternallyManagedSourceRepository
 from pycheribuild.utils import setCheriConfig, IS_LINUX
 from .setup_mock_chericonfig import setup_mock_chericonfig, MockConfig
 import os
@@ -16,16 +16,23 @@ class MockProject(Project):
     projectName = "FAKE"
     target = "FAKE"
     _should_not_be_instantiated = False
+    repository = ExternallyManagedSourceRepository()
 
     def __init__(self, config: MockConfig, name: str):
-        self.projectName = name
-        self.sourceDir = config.sourceRoot / "sources" / name  # type: Path
-        os.makedirs(str(self.sourceDir))
-        self.buildDir = Path(config.sourceRoot, "build", name + "-build")
-        self.installDir = config.sourceRoot / "install" / name  # type: Path
-        self.repository = SourceRepository()
         self._crossCompileTarget = CrossCompileTarget.NATIVE
+        self.projectName = name
+        expected_src = config.sourceRoot / "sources" / name  # type: Path
+        self.default_source_dir = expected_src
+        expected_install = config.sourceRoot / "install" / name  # type: Path
+        self._installDir = expected_install
+        expected_build = Path(config.sourceRoot, "build", name + "-build")  # type: Path
+        self.buildDir = expected_build
         super().__init__(config)
+        assert self.default_source_dir == expected_src
+        assert self.sourceDir == expected_src
+        assert self.buildDir == expected_build
+        assert self.installDir == expected_install
+        os.makedirs(str(self.sourceDir))
 
     def _deleteDirectories(self, *dirs):
         if self.config.sleep_before_delete:
@@ -50,16 +57,15 @@ class TestAsyncDelete(TestCase):
         self.assertEqual(self.tempRoot, self.config.sourceRoot)
         self.assertEqual(self.tempRoot / "build", self.config.buildRoot)
         self.project = MockProject(self.config, "foo")
-        self.assertTrue(self.project.sourceDir.exists())
+        assert self.project.sourceDir.exists(), self.project.sourceDir
 
     def tearDown(self):
         self._tempRoot.cleanup()
 
     def test_create_build_dir(self):
-
-        self.assertFalse(self.project.buildDir.exists())
+        assert not self.project.buildDir.exists(), self.project.buildDir
         self.project.clean()
-        self.assertTrue(self.project.buildDir.exists())
+        assert self.project.buildDir.exists(), self.project.buildDir
 
     def _checkStatTimesDifferent(self, path, message):
         stat = path.stat()
@@ -98,7 +104,7 @@ class TestAsyncDelete(TestCase):
             self._checkStatTimesSame(self.project.buildDir, "dir recreated")
 
     def _assertDirEmpty(self, path):
-        self.assertTrue(path.is_dir(), str(path) + "doesn't exist!")
+        assert path.is_dir(), str(path) + "doesn't exist!"
         self._assertNumFiles(path, 0)
 
     @staticmethod
@@ -116,32 +122,32 @@ class TestAsyncDelete(TestCase):
             self._assertDirEmpty(self.project.buildDir)  # build directory should be available immediately and be empty
             # should take 1 second before the deleting starts
             if tmpdirExpected:
-                self.assertTrue(moved_builddir.exists(), "tmpdir should exist")
+                assert moved_builddir.exists(), "tmpdir should exist"
                 self._assertNumFiles(moved_builddir, 1)
             else:
-                self.assertFalse(moved_builddir.exists())  # tempdir should be deleted now
+                assert not moved_builddir.exists()  # tempdir should be deleted now
         self._assertDirEmpty(self.project.buildDir)  # dir should still be empty
-        self.assertFalse(moved_builddir.exists())  # tempdir should be deleted now
+        assert not moved_builddir.exists()  # tempdir should be deleted now
 
     def test_async_delete_build_dir(self):
         subdir = self.project.buildDir / "subdir"
         moved_builddir = self.project.buildDir.with_suffix(".delete-me-pls")
         os.makedirs(str(subdir))
         self.config.sleep_before_delete = True
-        self.assertFalse(moved_builddir.exists())
+        assert not moved_builddir.exists()
 
         # default test: full build dir
         self._check_async_delete("non-empty buildir, no tmpdir", tmpdirExpected=True)
 
         # now check that it also works if the dir is empty, we just don't create a new dir
         self._assertDirEmpty(self.project.buildDir)
-        self.assertFalse(moved_builddir.exists())
+        assert not moved_builddir.exists()
         self._check_async_delete("empty buildir, no tmpdir", tmpdirExpected=False)
 
         # now check that it also works if the dir does not exist yet
         self._assertDirEmpty(self.project.buildDir)
         self.project.buildDir.rmdir()
-        self.assertFalse(self.project.buildDir.exists())
+        assert not self.project.buildDir.exists(), self.project.buildDir
         self._check_async_delete("missing build dir, no tmpdir", tmpdirExpected=False)
 
         # now try that it also works even if builddir and tempdir still exists (e.g. from a previous crashed run)
@@ -162,9 +168,8 @@ class TestAsyncDelete(TestCase):
         os.makedirs(str(moved_builddir / "subdir"))
         self.project.buildDir.rmdir()
         self._assertNumFiles(moved_builddir, 1)
-        self.assertFalse(self.project.buildDir.exists())
+        assert not self.project.buildDir.exists(), self.project.buildDir
         self._check_async_delete("missing builddir, tmpdir exists", tmpdirExpected=True)
-
 
     def test_async_delete_keep_root(self):
         subdir = self.project.buildDir / "subdir"
@@ -175,17 +180,17 @@ class TestAsyncDelete(TestCase):
         os.makedirs(str(subdir3))
         moved_builddir = self.project.buildDir.with_suffix(".delete-me-pls")
         self.config.sleep_before_delete = True
-        self.assertFalse(moved_builddir.exists())
+        assert not moved_builddir.exists()
 
         # default test: full build dir
         self._dump_dir_tree(self.config.sourceRoot / "build", "non-empty buildir, no tmpdir, keep root")
         with self.project.asyncCleanDirectory(self.project.buildDir, keepRoot=True):
             self._assertDirEmpty(self.project.buildDir)  # build directory should be available immediately and be empty
             # should take 1 second before the deleting starts
-            self.assertTrue(moved_builddir.exists(), "tmpdir should exist")
+            assert moved_builddir.exists(), "tmpdir should exist"
             self._assertNumFiles(moved_builddir, 3)
         self._assertDirEmpty(self.project.buildDir)  # dir should still be empty
-        self.assertFalse(moved_builddir.exists())  # tempdir should be deleted now
+        assert not moved_builddir.exists()  # tempdir should be deleted now
 
         # now try again with existing moved tempdir
         os.makedirs(str(moved_builddir / "subdir"))
@@ -196,12 +201,12 @@ class TestAsyncDelete(TestCase):
         with self.project.asyncCleanDirectory(self.project.buildDir, keepRoot=True):
             self._assertDirEmpty(self.project.buildDir)  # build directory should be available immediately and be empty
             # should take 1 second before the deleting starts
-            self.assertTrue(moved_builddir.exists(), "tmpdir should exist")
+            assert moved_builddir.exists(), "tmpdir should exist"
             self._assertNumFiles(moved_builddir, 3)
             self._assertNumFiles(self.project.buildDir, 0)
 
         self._assertDirEmpty(self.project.buildDir)  # dir should still be empty
-        self.assertFalse(moved_builddir.exists())  # tempdir should be deleted now
+        assert not moved_builddir.exists()  # tempdir should be deleted now
 
 
 
