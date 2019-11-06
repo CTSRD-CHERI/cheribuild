@@ -110,6 +110,8 @@ def cheribsd_minimal_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
         if config.mips_float_abi == MipsFloatAbi.HARD:
             return config.outputRoot / "rootfs-minimal-mipshf"
         return config.outputRoot / "rootfs-minimal-mips"
+    elif project.compiling_for_riscv():
+        return config.outputRoot / "rootfs-minimal-riscv"
     else:
         assert project.compiling_for_host()
         return config.outputRoot / "rootfs-minimal-x86"
