@@ -238,7 +238,7 @@ def _jenkins_main():
         target = targetManager.get_target_raw(cheriConfig.targets[0])
 
         for tgt in targetManager.targets:
-            cls = tgt.projectClass
+            cls = tgt._project_class
             if issubclass(cls, Project):
                 cls.defaultInstallDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
                 i = inspect.getattr_static(cls, "_installDir")
