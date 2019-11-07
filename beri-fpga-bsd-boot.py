@@ -345,6 +345,9 @@ def get_console (cable_id=args.cable_id,berictl=args.berictl,logfile=None) -> bo
     hostcmdprint(" ".join(cmd))
     # if we specify encoding=utf-8 then spawn only accepts bytes...
     c = BeriCtlCheriBSDSpawn(" ".join(cmd), encoding="utf-8", echo=False, timeout=60, logfile=logfile)
+    res = c.expect([pexpect.TIMEOUT, "Connecting to BERI UART"], timeout=30)
+    if res == 0 :
+        raise boot_cheribsd.CheriBSDCommandTimeout("timeout waiting for UART to attach")
     return c
 
 def loadsof (bitfile=args.bitfile,cable_id=args.cable_id,berictl=args.berictl,timeout=30):
