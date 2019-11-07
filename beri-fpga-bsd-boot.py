@@ -527,8 +527,10 @@ def do_network_off(console: boot_cheribsd.CheriBSDInstance, args):
 #    console.run('killall dhclient')
     # Note: If we devctl disable le0, we can't enable it anymore
     if not args.use_qemu_instead_of_fpga:
-        console.run('/usr/sbin/devctl disable {}'.format(ifc),
-                    expected_output='{}: detached'.format(ifc))
+        console.sendline('/usr/sbin/devctl disable {}'.format(ifc))
+        console.expect([ '{}: detached'.format(ifc),
+                         "Failed to disable {}: Device not configured".format(ifc)
+                       ])
 
 def get_board_ip_address(console: boot_cheribsd.CheriBSDInstance, args):
     assert not args.use_qemu_instead_of_fpga
