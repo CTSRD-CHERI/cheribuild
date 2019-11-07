@@ -385,6 +385,10 @@ def loadbin (img=args.kernel_img,addr=args.kernel_addr,cable_id=args.cable_id,be
     ldbin.close()
 
 def boot_bsd_berictl(args) -> boot_cheribsd.CheriBSDInstance:
+    # grab the console before booting; this should reduce the chance that we
+    # miss boot messages
+    console = get_console(args.cable_id,args.berictl)
+
     # trigger boot
     unpause_cmd = [args.berictl, '-c', str(args.cable_id), '-j', 'resume']
     hostcmdprint(" ".join(unpause_cmd))
@@ -399,8 +403,7 @@ def boot_bsd_berictl(args) -> boot_cheribsd.CheriBSDInstance:
     boot.checked_expect("booting", pexpect.EOF)
     boot.wait()
     boot.close()
-    # check for reaching of userspace
-    console = get_console(args.cable_id,args.berictl)
+
     return console
 
 def traceall (cable_id=args.cable_id,berictl=args.berictl):
