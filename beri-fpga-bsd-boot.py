@@ -734,7 +734,7 @@ def main():
         if args.skip_boot:
             if args.use_qemu_instead_of_fpga:
                 die("--skip-boot is not compatible with --use-qemu-instead-of-fpga")
-            console = get_console()
+            console = get_console(logfile=logf)
             assert isinstance(console, boot_cheribsd.CheriBSDInstance)
             phaseprint("turn network on")
             do_network_off(console, args)
