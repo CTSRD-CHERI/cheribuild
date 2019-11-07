@@ -35,6 +35,8 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, skip_sdk=
     config.includeDependencies = add_dependencies
     config.skipSdk = skip_sdk
     for t in real_targets:
+        if t._project_class._crossCompileTarget is CrossCompileTarget.NONE:
+            continue
         t.projectClass._cached_deps = None
         t.get_dependencies(config)  # ensure they have been cached
     result = list(t.name for t in targetManager.get_all_targets(real_targets, config))
@@ -120,21 +122,20 @@ def _check_deps_cached(classes):
         assert len(c._cached_dependencies()) > 0
 
 
-def test_webkit_cached_deps():
+def stest_webkit_cached_deps():
     # regression test for a bug in caching deps
     config = copy.copy(get_global_config())
     config.skipSdk = True
-    webkit_generic = targetManager.get_target_raw("qtwebkit").projectClass
     webkit_native = targetManager.get_target_raw("qtwebkit-native").projectClass
     webkit_cheri = targetManager.get_target_raw("qtwebkit-cheri").projectClass
     webkit_mips = targetManager.get_target_raw("qtwebkit-mips").projectClass
     # Check that the deps are not cached yet
-    _check_deps_not_cached((webkit_generic, webkit_native, webkit_cheri, webkit_mips))
+    _check_deps_not_cached((webkit_native, webkit_cheri, webkit_mips))
 
 
     cheri_target_names = list(sorted(webkit_cheri.allDependencyNames(config)))
     assert cheri_target_names == ["icu4c-cheri", "icu4c-native", "libxml2-cheri", "qtbase-cheri", "sqlite-cheri"]
-    _check_deps_not_cached([webkit_generic, webkit_native, webkit_mips])
+    _check_deps_not_cached([webkit_native, webkit_mips])
     _check_deps_cached([webkit_cheri])
 
     mips_target_names = list(sorted(webkit_mips.allDependencyNames(config)))
@@ -145,22 +146,7 @@ def test_webkit_cached_deps():
     native_target_names = list(sorted(webkit_native.allDependencyNames(config)))
     assert native_target_names == ["icu4c-native", "libxml2-native", "qtbase-native", "sqlite-native"]
     _check_deps_cached([webkit_cheri, webkit_mips, webkit_native])
-    _check_deps_not_cached([webkit_generic])
 
-    def _check_generic(cross_tgt, expected):
-        webkit_generic._cached_deps = None
-        _check_deps_not_cached([webkit_generic])
-        config.crossCompileTarget = cross_tgt
-        generic_target_names = list(sorted(webkit_generic.allDependencyNames(config)))
-        assert generic_target_names == expected
-        _check_deps_cached([webkit_cheri, webkit_mips, webkit_native])
-
-    _check_generic(CrossCompileTarget.CHERIBSD_MIPS_PURECAP,
-                   ["icu4c-cheri", "icu4c-native", "libxml2-cheri", "qtbase-cheri", "sqlite-cheri"])
-    _check_generic(CrossCompileTarget.CHERIBSD_MIPS,
-                   ["icu4c-mips", "icu4c-native", "libxml2-mips", "qtbase-mips", "sqlite-mips"])
-    _check_generic(CrossCompileTarget.NATIVE,
-                   ["icu4c-native", "libxml2-native", "qtbase-native", "sqlite-native"])
 
 def test_webkit_deps_2():
     assert _sort_targets(["qtwebkit-native"], add_dependencies=True, skip_sdk=True) == \
@@ -173,6 +159,7 @@ def test_webkit_deps_2():
                          ["qtbase-mips", "icu4c-native", "icu4c-mips", "libxml2-mips", "sqlite-mips", "qtwebkit-mips"]
     assert _sort_targets(["qtwebkit-cheri"], add_dependencies=True, skip_sdk=True) == \
                          ["qtbase-cheri", "icu4c-native", "icu4c-cheri", "libxml2-cheri", "sqlite-cheri", "qtwebkit-cheri"]
+
 
 # Check that libcxx deps with skip sdk pick the matching -native/-mips versions
 # Also the libcxx target should resolve to libcxx-cheri:

@@ -40,20 +40,25 @@ from .utils import *
 class Target(object):
     instantiating_targets_should_warn = True
 
-    def __init__(self, name, projectClass: "typing.Type[SimpleProject]"):
+    def __init__(self, name, _project_class: "typing.Type[SimpleProject]"):
         self.name = name
-        self.projectClass = projectClass
+        self._project_class = _project_class
         self.__project = None  # type: pycheribuild.project.SimpleProject
         self._completed = False
         self._tests_have_run = False
         self._benchmarks_have_run = False
         self._creating_project = False  # avoid cycles
 
+    @property
+    def projectClass(self) -> "typing.Type[SimpleProject]":
+        result = self._project_class
+        assert result._crossCompileTarget is not CrossCompileTarget.NONE
+        return result
+
     def get_real_target(self, cross_target: CrossCompileTarget, config, caller=None) -> "Target":
         return self
 
     def get_or_create_project(self, target_arch: "CrossCompileTarget", config) -> "SimpleProject":
-        assert target_arch is not None
         # Note: MultiArchTarget uses caller to select the right project (e.g. libcxxrt-native needs libunwind-native path)
         if self.__project is None:
             self.__project = self.create_project(config)
@@ -181,10 +186,15 @@ class MultiArchTarget(Target):
         self.target_arch = target_arch
         base_target.derived_targets.append(self)
 
+    @property
+    def projectClass(self) -> "typing.Type[SimpleProject]":
+        assert self.target_arch is not CrossCompileTarget.NONE
+        return self._project_class
+
     def _create_project(self, config: CheriConfig):
         from .projects.cross.crosscompileproject import CrossCompileMixin
         from .projects.project import MultiArchBaseMixin
-        assert issubclass(self.projectClass, CrossCompileMixin) or issubclass(self.projectClass, MultiArchBaseMixin)
+        assert issubclass(self._project_class, CrossCompileMixin) or issubclass(self._project_class, MultiArchBaseMixin)
         return self.projectClass(config)
 
     def __repr__(self):
@@ -198,12 +208,17 @@ class MultiArchTargetAlias(Target):
         super().__init__(name, projectClass)
         self.derived_targets = []  # type: typing.List[MultiArchTarget]
 
+    @property
+    def projectClass(self) -> "typing.Type[SimpleProject]":
+        raise ValueError("Should not be called!")
+
     def get_real_target(self, cross_target: CrossCompileTarget, config,
                         caller=None) -> MultiArchTarget:
         assert cross_target is not None
         if cross_target is CrossCompileTarget.NONE:
             # Use the default target:
-            cross_target = self.projectClass.get_crosscompile_target(config)
+            cross_target = self._project_class.get_crosscompile_target(config)
+        assert cross_target is not None and cross_target is not CrossCompileTarget.NONE
         # find the correct derived project:
         for tgt in self.derived_targets:
             if tgt.target_arch is cross_target:
@@ -214,7 +229,11 @@ class MultiArchTargetAlias(Target):
         # If there are any derived targets pick the right one based on the target_arch:
         assert cross_target is not None
         assert self.derived_targets, "derived targets must not be empty"
-        return self.get_real_target(cross_target, config).get_or_create_project(cross_target, config)
+        tgt = self.get_real_target(cross_target, config)
+        # Update the cross target
+        cross_target = tgt._project_class._crossCompileTarget
+        assert cross_target is not CrossCompileTarget.NONE
+        return tgt.get_or_create_project(cross_target, config)
 
     def _create_project(self, config: CheriConfig):
         from .projects.cross.crosscompileproject import CrossCompileMixin
@@ -250,7 +269,7 @@ class TargetManager(object):
         # RuntimeError: super(): empty __class__ cell
         # https://stackoverflow.com/questions/13126727/how-is-super-in-python-3-implemented/28605694#28605694
         for tgt in self._allTargets.values():
-            tgt.projectClass.setupConfigOptions()
+            tgt._project_class.setupConfigOptions()
 
     @property
     def targetNames(self):
@@ -346,7 +365,6 @@ class TargetManager(object):
     def get_all_chosen_targets(self, config) -> "typing.Iterable[Target]":
         # check that all target dependencies are correct:
         for t in self._allTargets.values():
-            assert t.projectClass
             if isinstance(t, MultiArchTargetAlias):
                 continue
             for dep in t.get_dependencies(config):

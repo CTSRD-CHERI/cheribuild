@@ -191,10 +191,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def allDependencyNames(cls, config: CheriConfig) -> "typing.List[str]":
+        assert cls._crossCompileTarget is not CrossCompileTarget.NONE
         return [t.name for t in cls.recursive_dependencies(config)]
 
     @classmethod
     def direct_dependencies(cls, config: CheriConfig) -> "typing.Generator[Target]":
+        assert cls._crossCompileTarget is not CrossCompileTarget.NONE
         dependencies = cls.dependencies
         expected_build_arch = cls.get_crosscompile_target(config)
         assert expected_build_arch is not None
@@ -211,7 +213,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if callable(dep_name):
                 dep_name = dep_name(cls, config)
             try:
-                dep_target = targetManager.get_target_raw(dep_name)
+                dep_target = targetManager.get_target(dep_name, arch=expected_build_arch, config=config, caller=cls)
             except KeyError:
                 fatalError("Could not find target '", dep_name, "' for ", cls.__name__, sep="")
                 raise
@@ -283,6 +285,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if cross_target is CrossCompileTarget.NONE:
                 cross_target = caller.get_crosscompile_target(config)
         else:
+            if cross_target is CrossCompileTarget.NONE:
+                cross_target = cls.get_crosscompile_target(config)
             assert config is not None, "Need either caller or config argument!"
 
         return cls.get_instance_for_cross_target(cross_target, config, caller=caller)
@@ -315,6 +319,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         assert cls.supported_architectures, "Must not be empty"
         # if we can build the default target (--xmips/--xhost) chose that
         if default_target in cls.supported_architectures:
+            assert default_target is not CrossCompileTarget.NONE
             return default_target
         # otherwise fall back to the default specified in the class
         result = cls.default_architecture
@@ -324,6 +329,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             # noinspection PyUnresolvedReferences
             cls._configure_status_message = "Cannot compile " + cls.target + " in CHERI purecap mode," \
                                                                              " building MIPS binaries instead"
+        assert result is not CrossCompileTarget.NONE
         return result
 
     @classproperty

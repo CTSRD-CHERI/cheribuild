@@ -111,7 +111,7 @@ def test_per_project_override():
 def test_cross_compile_project_inherits():
     # Parse args once to ensure targetManager is initialized
     config = _parse_arguments(["--skip-configure"])
-    qtbase_class = targetManager.get_target_raw("qtbase").projectClass
+    qtbase_class = targetManager.get_target_raw("qtbase")._project_class
     qtbase_default = targetManager.get_target_raw("qtbase").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildQtBase
     qtbase_native = targetManager.get_target_raw("qtbase-native").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildQtBase
     qtbase_mips = targetManager.get_target_raw("qtbase-mips").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildQtBase
@@ -203,7 +203,7 @@ def test_cross_compile_project_inherits():
 def test_cheribsd_purecap_inherits_config_from_cheribsd():
     # Parse args once to ensure targetManager is initialized
     config = _parse_arguments(["--skip-configure"])
-    cheribsd_class = targetManager.get_target_raw("cheribsd").projectClass
+    cheribsd_class = targetManager.get_target_raw("cheribsd")._project_class
     cheribsd_default_tgt = targetManager.get_target_raw("cheribsd").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildCHERIBSD
     assert cheribsd_default_tgt.target == "cheribsd-cheri"
     cheribsd_mips = targetManager.get_target_raw("cheribsd-mips").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildCHERIBSD
