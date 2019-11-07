@@ -694,7 +694,7 @@ def common_boot (kernel_img=args.kernel_img,addr=args.kernel_addr,bitfile=args.b
 #################
 
 def main():
-    if args.interact or args.subcmd == "console":
+    if getattr(args, "interact", False) or args.subcmd == "console":
         # Check that we have a TTY for these commands (otherwise we fail much later on when
         # doing the actual interaction)
         import tty
