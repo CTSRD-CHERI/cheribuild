@@ -50,12 +50,12 @@ class MRS(CrossCompileCMakeProject):
         cls.debug = cls.addBoolOption("debug", help="enable debug output")
         cls.offload_quarantine = cls.addBoolOption("offload-quarantine", help="process the quarantine in a separate worker thread")
         cls.bypass_quarantine = cls.addBoolOption("bypass-quarantine", help="MADV_FREE freed page-size allocations")
-        cls.clear_allocations = cls.addBoolOption("clear-allocations", help="zero out allocations made by malloc")
+        cls.clear_on_alloc= cls.addBoolOption("clear-on-alloc", help="zero regions during allocation")
+        cls.clear_on_free= cls.addBoolOption("clear-on-free", help="zero regions as they come out of quarantine")
         cls.print_stats= cls.addBoolOption("print-stats", help="print heap statistics on exit")
         cls.print_caprevoke= cls.addBoolOption("print-caprevoke", help="print per-revocation statistics")
-        cls.sanitize = cls.addBoolOption("sanitize", help="behave more like a sanitizer")
-        cls.locks = cls.addBoolOption("locks", help="make mrs thread safe with locks")
         cls.concurrent_revocation_pass = cls.addBoolOption("concurrent-revocation-pass", help="enable a concurrent revocation pass before the stop-the-world pass")
+        cls.revoke_on_free = cls.addBoolOption("revoke-on-free", help="perform revocation on free rather than during allocation routines")
 
         cls.just_interpose = cls.addBoolOption("just-interpose", help="just call the real functions")
         cls.just_bookkeeping = cls.addBoolOption("just-bookkeeping", help="just update data structures")
@@ -74,18 +74,18 @@ class MRS(CrossCompileCMakeProject):
             self.add_cmake_options(OFFLOAD_QUARANTINE="ON")
         if self.bypass_quarantine:
             self.add_cmake_options(BYPASS_QUARANTINE="ON")
-        if self.clear_allocations:
-            self.add_cmake_options(CLEAR_ALLOCATIONS="ON")
+        if self.clear_on_alloc:
+            self.add_cmake_options(CLEAR_ON_ALLOC="ON")
+        if self.clear_on_free:
+            self.add_cmake_options(CLEAR_ON_FREE="ON")
         if self.print_stats:
             self.add_cmake_options(PRINT_STATS="ON")
         if self.print_caprevoke:
             self.add_cmake_options(PRINT_CAPREVOKE="ON")
-        if self.sanitize:
-            self.add_cmake_options(SANITIZE="ON")
-        if self.locks:
-            self.add_cmake_options(LOCKS="ON")
         if self.concurrent_revocation_pass:
             self.add_cmake_options(CONCURRENT_REVOCATION_PASS="ON")
+        if self.revoke_on_free:
+            self.add_cmake_options(REVOKE_ON_FREE="ON")
 
         if self.just_interpose:
             self.add_cmake_options(JUST_INTERPOSE="ON")
