@@ -33,7 +33,7 @@ from ..config.loader import ComputedDefaultValue
 
 
 install_to_soaap_dir = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "soaap",
-                                            asString="$INSTALL_ROOT/soaap")
+                                            as_string="$INSTALL_ROOT/soaap")
 
 class BuildSoaapLLVM(BuildLLVMSplitRepoBase):
     target = "soaap-llvm"

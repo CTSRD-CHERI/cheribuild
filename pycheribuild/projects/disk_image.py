@@ -651,14 +651,14 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         hostUsername = CheriConfig.get_user_name()
         defaultHostname = ComputedDefaultValue(
             function=lambda conf, unused: "qemu-cheri" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
-            asString="qemu-cheri${CHERI_BITS}-" + hostUsername)
+            as_string="qemu-cheri${CHERI_BITS}-" + hostUsername)
 
         def _defaultMinimalDiskImagePath(conf, proj):
             return _defaultDiskImagePath(conf, conf.outputRoot, "minimal-")
 
         super().setupConfigOptions(defaultHostname=defaultHostname, extraFilesSuffix="-minimal", **kwargs)
         cls.diskImagePath = cls.addPathOption("path", default=ComputedDefaultValue(
-            function=_defaultMinimalDiskImagePath, asString="$OUTPUT_ROOT/minimal-cheri256-disk.img or "
+            function=_defaultMinimalDiskImagePath, as_string="$OUTPUT_ROOT/minimal-cheri256-disk.img or "
                                                             "$OUTPUT_ROOT/minimal-cheri128-disk.img depending on --cheri-bits."),
                                               metavar="IMGPATH", help="The output path for the QEMU disk image",
                                               showHelp=True)
@@ -823,7 +823,7 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
         hostUsername = CheriConfig.get_user_name()
         defaultHostname = ComputedDefaultValue(
             function=lambda conf, unused: "qemu-cheri" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
-            asString="qemu-cheri${CHERI_BITS}-" + hostUsername)
+            as_string="qemu-cheri${CHERI_BITS}-" + hostUsername)
 
         tmpfs_shortname = None
         extra_files_shortname = None
@@ -836,7 +836,7 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
         super().setupConfigOptions(extraFilesShortname=extra_files_shortname, defaultHostname=defaultHostname, **kwargs)
         defaultDiskImagePath = ComputedDefaultValue(
             function=lambda conf, proj: _defaultDiskImagePath(conf, conf.outputRoot),
-            asString="$OUTPUT_ROOT/cheri256-disk.img or $OUTPUT_ROOT/cheri128-disk.img depending on --cheri-bits.")
+            as_string="$OUTPUT_ROOT/cheri256-disk.img or $OUTPUT_ROOT/cheri128-disk.img depending on --cheri-bits.")
         cls.diskImagePath = cls.addPathOption("path", shortname=disk_img_shortname, default=defaultDiskImagePath,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image",
                                               showHelp=True)
@@ -864,12 +864,12 @@ class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
         hostUsername = CheriConfig.get_user_name()
         defaultHostname = ComputedDefaultValue(
             function=lambda conf, unused: "qemu-purecap" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
-            asString="qemu-purecap${CHERI_BITS}-" + hostUsername)
+            as_string="qemu-purecap${CHERI_BITS}-" + hostUsername)
         super().setupConfigOptions(defaultHostname=defaultHostname, **kwargs)
 
         defaultDiskImagePath = ComputedDefaultValue(
             function=lambda conf, proj: _defaultDiskImagePath(conf, conf.outputRoot, "purecap-"),
-            asString="$OUTPUT_ROOT/purecap-cheri256-disk.img or $OUTPUT_ROOT/purecap-cheri128-disk.img depending on --cheri-bits.")
+            as_string="$OUTPUT_ROOT/purecap-cheri256-disk.img or $OUTPUT_ROOT/purecap-cheri128-disk.img depending on --cheri-bits.")
         cls.diskImagePath = cls.addPathOption("path", default=defaultDiskImagePath,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image",
                                               showHelp=True)
@@ -906,7 +906,7 @@ class BuildFreeBSDImage(_BuildMultiArchDiskImage):
         suffix = cls._crossCompileTarget.generic_suffix if cls._crossCompileTarget else "<TARGET>"
         super().setupConfigOptions(defaultHostname="qemu-" + suffix + "-" + hostUsername, **kwargs)
         defaultDiskImagePath = ComputedDefaultValue(
-                function=_default_freebsd_disk_image_name, asString="$OUTPUT_ROOT/freebsd-" + suffix + " .img")
+                function=_default_freebsd_disk_image_name, as_string="$OUTPUT_ROOT/freebsd-" + suffix + " .img")
         cls.diskImagePath = cls.addPathOption("path", default=defaultDiskImagePath, showHelp=True,
                                               metavar="IMGPATH", help="The output path for the QEMU disk image")
         cls.disableTMPFS = cls._crossCompileTarget.is_mips()  # MALTA64 doesn't include tmpfs

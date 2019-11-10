@@ -49,17 +49,17 @@ if typing.TYPE_CHECKING:
     from ..projects.project import SimpleProject
 
 
-class ComputedDefaultValue(object):
-    def __init__(self, function: "typing.Callable[[CheriConfig, SimpleProject], typing.Any]",
-                 asString: "typing.Union[str, typing.Callable[[typing.Any], str]]"):
+class ComputedDefaultValue(typing.Generic[Type_T]):
+    def __init__(self, function: "typing.Callable[[CheriConfig, SimpleProject], Type_T]",
+                 as_string: "typing.Union[str, typing.Callable[[typing.Any], str]]"):
         self.function = function
-        self.asString = asString
+        self.as_string = as_string
 
-    def __call__(self, config: "CheriConfig", obj: "SimpleProject"):
+    def __call__(self, config: "CheriConfig", obj: "SimpleProject") -> Type_T:
         return self.function(config, obj)
 
     def __repr__(self):
-        return "{ComputedDefault:" + str(self.asString) + "}"
+        return "{ComputedDefault:" + str(self.as_string) + "}"
 
 
 # From https://bugs.python.org/issue25061
@@ -210,10 +210,10 @@ class ConfigOptionBase(object):
         self.default = default
         self.valueType = valueType
         if isinstance(default, ComputedDefaultValue):
-            if callable(default.asString):
-                self.default_str = default.asString(_owningClass)
+            if callable(default.as_string):
+                self.default_str = default.as_string(_owningClass)
             else:
-                self.default_str = str(default.asString)
+                self.default_str = str(default.as_string)
         elif default is not None:
             if isinstance(default, Enum) or isinstance(valueType, _EnumArgparseType):
                 # allow append

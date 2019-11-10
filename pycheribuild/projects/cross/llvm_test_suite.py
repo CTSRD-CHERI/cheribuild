@@ -43,7 +43,7 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
     projectName = "llvm-test-suite"
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / "llvm-test-suite"),
-        asString="$SOURCE_ROOT/llvm-test-suite")
+        as_string="$SOURCE_ROOT/llvm-test-suite")
 
     def _find_in_sdk_or_llvm_build_dir(self, name) -> Path:
         if (BuildCheriLLVM.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin" / name).exists():

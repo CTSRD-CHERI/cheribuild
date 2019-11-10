@@ -42,6 +42,9 @@ from .loader import ConfigLoaderBase
 from .target_info import TargetInfo, CheriBSDTargetInfo, NativeTargetInfo, FreeBSDTargetInfo, NewlibBaremetalTargetInfo, CPUArchitecture
 from ..utils import latestClangTool, warningMessage, statusUpdate, have_working_internet_connection
 
+if typing.TYPE_CHECKING:
+    from ..filesystemutils import FileSystemUtils
+
 
 # custom encoder to handle pathlib.Path objects
 class MyJsonEncoder(json.JSONEncoder):
@@ -383,7 +386,7 @@ class CheriConfig(object):
             help="Perform a shallow `git clone` when cloning new projects. This can save a lot of time for large"
             "repositories such as FreeBSD or LLVM. Use `git fetch --unshallow` to convert to a non-shallow clone")
 
-        self.targets = None  # type: list
+        self.targets = None  # type: typing.Optional[typing.List[str]]
         self.FS = None  # type: FileSystemUtils
         self.__optionalProperties = []
 

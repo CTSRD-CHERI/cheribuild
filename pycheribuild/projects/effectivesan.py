@@ -40,7 +40,7 @@ class BuildEffectiveSan(BuildLLVMMonoRepoBase):
     appendCheriBitsToBuildDir = False
     defaultInstallDir = ComputedDefaultValue(
         function=lambda config, project: config.outputRoot / "effectivesan",
-        asString="$INSTALL_ROOT/effectivesan")
+        as_string="$INSTALL_ROOT/effectivesan")
     skip_cheri_symlinks = True
     llvm_subdir = "llvm-4.0.1.src"
 

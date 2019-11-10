@@ -42,7 +42,7 @@ from enum import Enum
 from pathlib import Path
 
 from ..config.chericonfig import CheriConfig, CrossCompileTarget, CPUArchitecture, TargetInfo
-from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase
+from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase, DefaultValueOnlyConfigOption
 from ..filesystemutils import FileSystemUtils
 from ..targets import Target, MultiArchTarget, MultiArchTargetAlias, targetManager
 from ..utils import *
@@ -388,24 +388,13 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                       raiseInPretendMode=raiseInPretendMode, no_print=no_print, replace_env=replace_env, **kwargs)
 
     @classmethod
-    def addConfigOption(cls, name: str, default: typing.Union[Type_T, typing.Callable[[], Type_T]] = None,
-                        kind: "typing.Union[typing.Type[Type_T], typing.Callable[[str], Type_T]]" = str, *,
-                        showHelp = False, shortname=None, _no_fallback_config_name: bool = False,
+    def addConfigOption(cls, name: str, *, showHelp = False, shortname=None, _no_fallback_config_name: bool = False,
+                        kind: "typing.Union[typing.Type[Type_T], typing.Callable[[str], Type_T]]" = str,
+                        default: typing.Union[ComputedDefaultValue[Type_T], Type_T, typing.Callable[[], Type_T]] = None,
                         only_add_for_targets: "typing.List[CrossCompileTarget]" = None,
                         fallback_config_name: str = None, _allow_unknown_targets=False, **kwargs) -> Type_T:
         # Need a string annotation for kind to avoid https://github.com/python/typing/issues/266 which seems to affect
         # the version of python in Ubuntu 16.04
-        if only_add_for_targets is not None:
-            # Some config options only apply to certain targets -> add them to those targets and the generic one
-            target = cls._crossCompileTarget
-            assert target is not None
-            # If we are adding to the base class or the target is not in
-            if not _allow_unknown_targets:
-                for t in only_add_for_targets:
-                    assert any(t is x for x in cls.supported_architectures), \
-                        cls.__name__ + ": some of " + str(only_add_for_targets) + " not in " + str(cls.supported_architectures)
-            if target is not CrossCompileTarget.NONE and not any(x is target for x in only_add_for_targets):
-                return default
         configOptionKey = cls.target
         # if cls.target != cls.projectName.lower():
         #    self.fatal("Target name does not match project name:", cls.target, "vs", cls.projectName.lower())
@@ -429,6 +418,18 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             # base version is enough. They will still be included in --help-all
             helpHidden = True
             fallback_name_base = synthetic_base.target
+
+        if only_add_for_targets is not None:
+            # Some config options only apply to certain targets -> add them to those targets and the generic one
+            target = cls._crossCompileTarget
+            assert target is not None
+            # If we are adding to the base class or the target is not in
+            if not _allow_unknown_targets:
+                for t in only_add_for_targets:
+                    assert any(t is x for x in cls.supported_architectures), \
+                        cls.__name__ + ": some of " + str(only_add_for_targets) + " not in " + str(cls.supported_architectures)
+            if target is not CrossCompileTarget.NONE and target not in only_add_for_targets:
+                kwargs["option_cls"] = DefaultValueOnlyConfigOption
 
         # We don't want to inherit certain options from the non-target specific class since they should always be
         # set directly for that target. Currently the only such option is build-directory since sharing that would
@@ -1230,7 +1231,7 @@ class Project(SimpleProject):
 
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / project.projectName.lower()),
-        asString=lambda cls: "$SOURCE_ROOT/" + cls.projectName.lower())
+        as_string=lambda cls: "$SOURCE_ROOT/" + cls.projectName.lower())
 
     appendCheriBitsToBuildDir = False
     """ Whether to append -128/-256 to the computed build directory name"""
@@ -1244,7 +1245,7 @@ class Project(SimpleProject):
         return result
 
     defaultBuildDir = ComputedDefaultValue(
-        function=_defaultBuildDir, asString=lambda cls: cls.projectBuildDirHelpStr())
+        function=_defaultBuildDir, as_string=lambda cls: cls.projectBuildDirHelpStr())
 
     make_kind = MakeCommandKind.DefaultMake
     """
@@ -1296,10 +1297,10 @@ class Project(SimpleProject):
 
     _installToSDK = ComputedDefaultValue(
         function=lambda config, project: config.sdkDir,
-        asString="$INSTALL_ROOT/sdk")
+        as_string="$INSTALL_ROOT/sdk")
     _installToBootstrapTools = ComputedDefaultValue(
         function=lambda config, project: config.otherToolsDir,
-        asString="$INSTALL_ROOT/bootstrap")
+        as_string="$INSTALL_ROOT/bootstrap")
 
     default_use_asan = False
     can_build_with_asan = False
@@ -1355,7 +1356,7 @@ class Project(SimpleProject):
         if cls.can_build_with_asan:
             asan_default = ComputedDefaultValue(
                 function=lambda config, proj: False if proj.get_crosscompile_target(config).is_cheri_purecap() else proj.default_use_asan,
-                asString=str(cls.default_use_asan))
+                as_string=str(cls.default_use_asan))
             cls.use_asan = cls.addBoolOption("use-asan", default=asan_default, help="Build with AddressSanitizer enabled")
         else:
             cls.use_asan = False

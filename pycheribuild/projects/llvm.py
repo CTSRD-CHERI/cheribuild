@@ -287,7 +287,7 @@ class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
     projectName = "upstream-llvm-project"
     target = "upstream-llvm"
     defaultInstallDir = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "upstream-llvm",
-                                             asString="$INSTALL_ROOT/upstream-llvm")
+                                             as_string="$INSTALL_ROOT/upstream-llvm")
     skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
 
 
@@ -296,7 +296,7 @@ class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
     projectName = "cherios-llvm-project"
     target = "cherios-llvm"
     defaultInstallDir = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "cherios-sdk",
-                                             asString="$INSTALL_ROOT/cherios-sdk")
+                                             as_string="$INSTALL_ROOT/cherios-sdk")
     skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
 
     def configure(self, **kwargs):

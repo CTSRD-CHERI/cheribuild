@@ -71,7 +71,7 @@ class BuildCheriVis(Project):
         self.addRequiredSystemTool("clang++")
         if IS_LINUX or IS_FREEBSD:
             self.addRequiredSystemTool("gnustep-config", installInstructions=gnuStepInstallInstructions)
-        self.gnustepMakefilesDir = None  # type: Path
+        self.gnustepMakefilesDir = None  # type: typing.Optional[Path]
         if IS_MAC:
             self.make_args.set_command("xcodebuild", can_pass_j_flag=False, installInstructions="Install XCode")
             assert self.make_args.kind == MakeCommandKind.CustomMakeTool

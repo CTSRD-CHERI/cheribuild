@@ -117,7 +117,7 @@ class CrossCompileMixin(object):
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     supported_architectures = [CrossCompileTarget.NATIVE] + SimpleProject.CAN_TARGET_ALL_CHERIBSD_TARGETS
 
-    defaultInstallDir = ComputedDefaultValue(function=default_cross_install_dir, asString=_installDirMessage)
+    defaultInstallDir = ComputedDefaultValue(function=default_cross_install_dir, as_string=_installDirMessage)
     default_build_type = BuildType.DEFAULT
     forceDefaultCC = False  # If true fall back to /usr/bin/cc there
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called

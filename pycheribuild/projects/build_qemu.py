@@ -293,7 +293,7 @@ class BuildCheriOSQEMU(BuildQEMU):
     target = "cherios-qemu"
     defaultInstallDir = ComputedDefaultValue(
         function=lambda config, project: config.outputRoot / "cherios-sdk",
-        asString="$INSTALL_ROOT/cherios-sdk")
+        as_string="$INSTALL_ROOT/cherios-sdk")
     skip_misc_llvm_tools = False # Cannot skip these tools in upstream LLVM
 
     def __init__(self, config: CheriConfig):

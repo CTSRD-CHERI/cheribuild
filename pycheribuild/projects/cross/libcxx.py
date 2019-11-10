@@ -47,7 +47,7 @@ def _cxx_install_dir(config: CheriConfig, project: SimpleProject):
 
 
 installToCXXDir = ComputedDefaultValue(function=lambda c, p: default_cross_install_dir(c, p, install_dir_name="c++"),
-                                       asString="$CHERIBSD_ROOTFS/opt/c++")
+                                       as_string="$CHERIBSD_ROOTFS/opt/c++")
 
 
 class BuildLibunwind(CrossCompileCMakeProject):
