@@ -178,12 +178,6 @@ class CrossCompileMixin(object):
         assert target_arch is not None and target_arch is not CrossCompileTarget.NONE
         assert self.get_crosscompile_target(config) is target_arch
         self.compiler_dir = self.config.sdkBinDir
-        # Use the compiler from the build directory for native builds to get stddef.h (which will be deleted)
-        if self.compiling_for_host():
-            llvm_build_dir = BuildCheriLLVM.get_instance(self).buildDir
-            if (llvm_build_dir / "bin/clang").exists():
-                self.compiler_dir = llvm_build_dir / "bin"
-
         self.targetTriple = None
         # compiler flags:
         if self.compiling_for_host():
