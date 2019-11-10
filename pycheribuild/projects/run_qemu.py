@@ -439,7 +439,7 @@ class LaunchCheriBsdMfsRoot(AbstractLaunchFreeBSD):
     def __init__(self, config):
         super().__init__(config, source_class=BuildCheriBsdMfsKernel, needs_disk_image=False)
         if self.config.use_minimal_benchmark_kernel:
-            self.currentKernel = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self, self.config)
+            self.currentKernel = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self)
             if str(self.remoteKernelPath).endswith("MFS_ROOT"):
                 self.remoteKernelPath += "_BENCHMARK"
         self.rootfs_path = BuildCHERIBSD.rootfsDir(self, config)

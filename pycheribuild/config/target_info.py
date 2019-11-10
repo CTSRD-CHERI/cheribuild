@@ -159,7 +159,7 @@ class NativeTargetInfo(TargetInfo):
 
     @property
     def target_triple(self):
-        return getCompilerInfo(self.c_compiler()).default_target
+        return getCompilerInfo(self.c_compiler).default_target
 
     @property
     def c_compiler(self) -> Path:
@@ -251,7 +251,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         if self.target.is_cheri_purecap():
             # anything over 10 should use libc++ by default
             assert self.target.is_mips(include_purecap=True), "Only MIPS purecap is supported"
-            return "mips64c{}-unknown-freebsd{}-purecap".format(config.cheriBits, self.FREEBSD_VERSION)
+            return "mips64c{}-unknown-freebsd{}-purecap".format(self.project.config.cheriBits, self.FREEBSD_VERSION)
         return super().target_triple
 
     @classmethod

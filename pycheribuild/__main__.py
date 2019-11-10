@@ -29,11 +29,9 @@
 #
 import fcntl
 import os
-import shlex
 import shutil
 import subprocess
 import sys
-from pathlib import Path
 
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from .configloader import ConfigLoader here because that will only update the local copy!

@@ -438,8 +438,9 @@ def start_dhclient(qemu: CheriBSDInstance):
     qemu.expect_exact(PROMPT_SH, timeout=30)
 
 
-def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *, smb_dirs: typing.List[SmbMount]=None,
-                  kernel_init_only=False, trap_on_unrepresentable=False, skip_ssh_setup=False) -> CheriBSDInstance:
+def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *,
+                  smb_dirs: typing.List[SmbMount] = None, kernel_init_only=False, trap_on_unrepresentable=False,
+                  skip_ssh_setup=False) -> CheriBSDInstance:
     user_network_args = "user,id=net0,ipv6=off"
     if smb_dirs is None:
         smb_dirs = []
@@ -477,7 +478,8 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
         child.logfile = QEMU_LOGFILE.open("w")
     else:
         child.logfile_read = sys.stdout
-    boot_and_login(child, starttime=qemu_starttime, kernel_init_only=kernel_init_only)
+    return boot_and_login(child, starttime=qemu_starttime, kernel_init_only=kernel_init_only)
+
 
 def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False) -> CheriBSDInstance:
     have_dhclient = False
@@ -715,6 +717,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument('--test-ld-preload-variable', type=str, default=None,
                         help="The environment variable to set to LD_PRELOAD a library. should be set to either LD_PRELOAD or LD_CHERI_PRELOAD")
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60)
+    # noinspection PyTypeChecker
     parser.add_argument("--qemu-logfile", help="File to write all interactions with QEMU to", type=Path)
     parser.add_argument("--test-environment-only", action="store_true",
                         help="Setup mount paths + SSH for tests but don't actually run the tests (implies --interact)")
