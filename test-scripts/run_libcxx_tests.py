@@ -117,6 +117,8 @@ def libcxx_main(barrier: Barrier = None, mp_queue: Queue = None, ssh_port_queue:
 
 class LitShardProcess(Process):
     stage = None  # type: run_remote_lit_test.MultiprocessStages
+    ssh_port = -1
+    error_message = ""
 
 
 def run_parallel(args: argparse.Namespace):
@@ -222,12 +224,12 @@ def wait_or_terminate_all_shards(processes, max_time, timed_out):
             boot_cheribsd.failure("ERROR: Could not kill child process ", p.name, ", pid=", p.pid, exit=False)
 
 
-def dump_processes(processes: "typing.List[Process]"):
+def dump_processes(processes: "typing.List[LitShardProcess]"):
     for i, p in enumerate(processes):
         boot_cheribsd.info("Subprocess ", i + 1, " ", p, " -- current stage: ", p.stage.value)
 
 
-def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[Process]", mp_q: Queue, mp_barrier: Barrier,
+def run_parallel_impl(args: argparse.Namespace, processes: "typing.List[LitShardProcess]", mp_q: Queue, mp_barrier: Barrier,
                       ssh_port_queue: Queue):
     timed_out = False
     starttime = datetime.datetime.now()

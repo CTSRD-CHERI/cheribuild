@@ -783,6 +783,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if mount_sysroot and "--sysroot-dir" not in self.config.test_extra_args and not self.compiling_for_host():
             cmd.extend(["--sysroot-dir", self.crossSysrootPath])
         if mount_installdir:
+            assert isinstance(self, Project)
             if "--install-destdir" not in self.config.test_extra_args:
                 cmd.extend(["--install-destdir", self.destdir])
             if "--install-prefix" not in self.config.test_extra_args:
