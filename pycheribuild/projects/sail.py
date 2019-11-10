@@ -219,6 +219,7 @@ class BuildSailFromOpam(OpamMixin, SimpleProject):
             # reset the pin status even if the pinning failed
             self.run_opam_cmd("pin", "remove", "sail", "--no-action")
 
+        # noinspection PyUnreachableCode
         if False:
             self.run_opam_cmd("install", "-y", "--verbose", "sail")
             opamroot_sail_binary = self.opamroot / "4.06.0/bin/sail"

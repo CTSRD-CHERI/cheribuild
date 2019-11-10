@@ -257,7 +257,7 @@ class ConfigOptionBase(object):
             sys.exit()
         return result
 
-    def _loadOptionImpl(self, config: "CheriConfig", target_option_name) -> "typing.Optional[Any]":
+    def _loadOptionImpl(self, config: "CheriConfig", target_option_name) -> "typing.Optional[typing.Any]":
         # target_option_name may not be the same as self.fullOptionName if we are loading the fallback value
         raise NotImplementedError()
 

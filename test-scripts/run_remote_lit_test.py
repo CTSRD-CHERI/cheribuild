@@ -82,7 +82,7 @@ def notify_main_process(cmdline_args: argparse.Namespace, stage: MultiprocessSta
         time.sleep(1)
 
 
-def flush_thread(f, qemu: pexpect.spawn, should_exit_event: threading.Event):
+def flush_thread(f, qemu: boot_cheribsd.CheriBSDInstance, should_exit_event: threading.Event):
     while not should_exit_event.wait(timeout=0.1):
         if f:
             f.flush()

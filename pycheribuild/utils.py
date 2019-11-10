@@ -43,6 +43,8 @@ import typing
 from pathlib import Path
 
 from .colour import coloured, AnsiColour, statusUpdate, warningMessage
+if typing.TYPE_CHECKING:
+    from .config.chericonfig import CheriConfig
 
 Type_T = typing.TypeVar("Type_T")
 
@@ -393,16 +395,16 @@ def get_version_output(program: Path, command_args: tuple = None) -> "bytes":
 
 
 @functools.lru_cache(maxsize=20)
-def get_program_version(program: Path, command_args: tuple=None, componentKind:"typing.Type"=int, regex=None,
-                        program_name: bytes=None) -> "typing.Tuple[int, int, int]":
+def get_program_version(program: Path, command_args: tuple = None, component_kind: "typing.Type[Type_T]" = int,
+                        regex=None, program_name: bytes = None) -> "typing.Tuple[Type_T, Type_T, Type_T]":
     if program_name is None:
         program_name = program.name.encode("utf-8")
     stdout = get_version_output(program, command_args=command_args)
-    return extract_version(stdout, componentKind, regex, program_name)
+    return extract_version(stdout, component_kind, regex, program_name)
 
 
 # extract the version component from program output such as "git version 2.7.4"
-def extract_version(output: bytes, componentKind: "typing.Type[Type_T]" = int, regex: "typing.Pattern" = None,
+def extract_version(output: bytes, component_kind: "typing.Type[Type_T]" = int, regex: "typing.Pattern" = None,
                     program_name: bytes = b"") -> "typing.Tuple[Type_T, Type_T, Type_T]":
     if regex is None:
         prefix = program_name + b" " if program_name else b""
@@ -414,7 +416,7 @@ def extract_version(output: bytes, componentKind: "typing.Type[Type_T]" = int, r
         print(output)
         raise ValueError("Expected to match regex " + str(regex))
     # noinspection PyTypeChecker
-    return tuple(map(componentKind, match.groups()))
+    return tuple(map(component_kind, match.groups()))
 
 
 def latestClangTool(basename: str):

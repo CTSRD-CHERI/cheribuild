@@ -31,6 +31,7 @@
 from .utils import *
 from pathlib import Path
 from collections import OrderedDict
+import io
 import os
 import shlex
 import stat
@@ -49,7 +50,7 @@ class MtreeEntry(object):
         return self.attributes.get("type") == "file"
 
     @classmethod
-    def parse(cls, line: str, contents_root: Path=None) -> "MtreeEntry":
+    def parse(cls, line: str, contents_root: Path = None) -> "MtreeEntry":
         elements = shlex.split(line)
         path = elements[0]
         # Ensure that the path is normalized:

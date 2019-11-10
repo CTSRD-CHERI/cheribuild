@@ -238,7 +238,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 continue
             yield dep_target
 
-    def is_exact_instance(self, class_type: "typing.Type[Any]") -> bool:
+    def is_exact_instance(self, class_type: "typing.Type[typing.Any]") -> bool:
         if self.__class__ == class_type or getattr(self, "synthetic_base", object) == class_type:
             self.verbose_print(self, "is exact instance of", class_type)
             return True
@@ -361,7 +361,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @classproperty
     def needs_sysroot(cls):
-        assert issubclass(cls, SimpleProject)
         return not cls._crossCompileTarget.is_native()  # Most projects need a sysroot (but not native)
 
     def compiling_for_mips(self, include_purecap: bool):
@@ -841,7 +840,7 @@ def installDirNotSpecified(config: CheriConfig, project: "Project"):
     raise RuntimeError("installDirNotSpecified! dummy impl must not be called: " + str(project))
 
 
-def _defaultBuildDir(config: CheriConfig, project: "Project"):
+def _defaultBuildDir(config: CheriConfig, project: "SimpleProject"):
     # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
     assert isinstance(project, Project)
     target = project.get_crosscompile_target(config)

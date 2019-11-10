@@ -38,6 +38,7 @@ import sys
 import tempfile
 import time
 import traceback
+import typing
 from multiprocessing import Process, Queue, Barrier
 from pathlib import Path
 from queue import Empty

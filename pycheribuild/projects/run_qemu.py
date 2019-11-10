@@ -143,7 +143,7 @@ class LaunchQEMUBase(SimpleProject):
             logfileOptions = ["-D", self.logDir / filename]
 
         if self.cvtrace:
-            logfileOptions =+ ["-cheri-trace-format", "cvtrace"]
+            logfileOptions += ["-cheri-trace-format", "cvtrace"]
         # input("Press enter to continue")
         kernelFlags = ["-kernel", self.currentKernel] if self.currentKernel else []
         qemuCommand = [self.qemuBinary] + self.machineFlags + kernelFlags + [
