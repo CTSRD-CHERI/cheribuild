@@ -72,7 +72,8 @@ def _default_stdout_filter(arg: bytes):
 class ProjectSubclassDefinitionHook(type):
     def __init__(cls, name: str, bases, clsdict):
         super().__init__(name, bases, clsdict)
-        assert issubclass(cls, SimpleProject)
+        if typing.TYPE_CHECKING:
+            assert issubclass(cls, SimpleProject)
         if clsdict.get("doNotAddToTargets") is not None:
             if clsdict.get("doNotAddToTargets") is True:
                 return  # if doNotAddToTargets is defined within the class we skip it

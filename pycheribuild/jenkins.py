@@ -34,6 +34,8 @@ import pprint
 import shutil
 import subprocess
 import sys
+# noinspection PyUnresolvedReferences
+from pathlib import Path
 
 from .config.jenkinsconfig import JenkinsConfig, CrossCompileTarget, JenkinsAction
 from .config.loader import ConfigLoaderBase, CommandLineConfigOption
@@ -46,7 +48,9 @@ from .projects.project import SimpleProject, Project
 from .targets import targetManager, Target
 from .utils import *
 
+
 EXTRACT_SDK_TARGET = "extract-sdk"
+
 
 class JenkinsConfigLoader(ConfigLoaderBase):
     """
