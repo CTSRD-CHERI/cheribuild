@@ -46,7 +46,7 @@ from .projects.project import SimpleProject
 from .projects import *  # make sure all projects are loaded so that targetManager gets populated
 # noinspection PyUnresolvedReferences
 from .projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
-
+from pathlib import Path
 
 DIRS_TO_CHECK_FOR_UPDATES = [Path(__file__).parent]
 
