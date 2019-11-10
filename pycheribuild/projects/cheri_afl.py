@@ -27,9 +27,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .project import *
 from .cross.cheribsd import BuildCHERIBSD
-from ..utils import runCmd
+from .project import *
 
 
 class BuildAflCheriNinja(Project):

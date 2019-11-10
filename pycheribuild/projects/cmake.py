@@ -28,7 +28,6 @@
 # SUCH DAMAGE.
 #
 from .project import *
-from ..utils import *
 
 
 # Not really autotools but same sequence of commands (other than the script being call bootstrap instead of configure)

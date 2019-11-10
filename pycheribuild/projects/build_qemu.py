@@ -31,7 +31,6 @@ import os
 import shlex
 import shutil
 import subprocess
-from pathlib import Path
 
 from .project import *
 from ..config.loader import ComputedDefaultValue

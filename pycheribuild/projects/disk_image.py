@@ -28,19 +28,14 @@
 # SUCH DAMAGE.
 #
 import datetime
-import shlex
-import stat
 import io
-import tempfile
 
-from .cross.cheribsd import BuildFreeBSD
-from .cross.gdb import BuildGDB
 from .cross.cheribsd import *
-from ..config.loader import ComputedDefaultValue
-from ..config.chericonfig import MipsFloatAbi
+from .cross.gdb import BuildGDB
 from .project import *
-from ..utils import *
+from ..config.chericonfig import MipsFloatAbi
 from ..mtree import MtreeFile
+from ..utils import *
 
 # Notes:
 # Mount the filesystem of a BSD VM: guestmount -a /foo/bar.qcow2 -m /dev/sda1:/:ufstype=ufs2:ufs --ro /mnt/foo

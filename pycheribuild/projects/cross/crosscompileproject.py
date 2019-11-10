@@ -37,7 +37,6 @@ from builtins import issubclass
 from enum import Enum
 from pathlib import Path
 
-from ..llvm import BuildCheriLLVM
 from ..project import *
 from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi, Linkage, BuildType
 from ...utils import *

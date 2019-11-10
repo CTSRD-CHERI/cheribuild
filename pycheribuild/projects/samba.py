@@ -28,10 +28,11 @@
 # SUCH DAMAGE.
 #
 
-from .project import *
-from ..utils import runCmd, setEnv, coloured, AnsiColour, IS_MAC
 import os
 import shutil
+
+from .project import *
+from ..utils import setEnv, IS_MAC
 
 SMB_OUT_OF_SOURCE_BUILD_WORKS = False
 

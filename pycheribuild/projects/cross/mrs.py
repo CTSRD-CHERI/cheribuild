@@ -28,8 +28,6 @@
 # SUCH DAMAGE.
 #
 
-import shutil
-
 from .crosscompileproject import *
 
 

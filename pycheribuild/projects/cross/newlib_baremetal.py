@@ -27,11 +27,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import *
-from ...utils import statusUpdate, IS_MAC, runCmd
-from ...config.loader import ComputedDefaultValue
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
+from .crosscompileproject import *
+from ...utils import IS_MAC, runCmd
 
 
 class BuildNewlibBaremetal(CrossCompileAutotoolsProject):

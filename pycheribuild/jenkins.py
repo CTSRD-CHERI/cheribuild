@@ -30,24 +30,19 @@
 import argparse
 import inspect
 import os
-import shlex
+import pprint
+import shutil
 import subprocess
 import sys
-import shutil
-import pprint
 
-from pathlib import Path
-
-from .config.loader import ConfigLoaderBase, CommandLineConfigOption
 from .config.jenkinsconfig import JenkinsConfig, CrossCompileTarget, JenkinsAction
-from .config.target_info import TargetInfo
-from .projects.project import SimpleProject, Project
+from .config.loader import ConfigLoaderBase, CommandLineConfigOption
 # noinspection PyUnresolvedReferences
 from .projects import *  # make sure all projects are loaded so that targetManager gets populated
 # noinspection PyUnresolvedReferences
 from .projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
 from .projects.cross.crosscompileproject import CrossCompileMixin
-from .projects.cross.cheribsd import BuildFreeBSDBase
+from .projects.project import SimpleProject, Project
 from .targets import targetManager, Target
 from .utils import *
 

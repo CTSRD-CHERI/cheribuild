@@ -27,13 +27,13 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import functools
 import sys
 import time
-
 from collections import OrderedDict
+
 from .config.chericonfig import CheriConfig, CrossCompileTarget
 from .utils import *
+
 if typing.TYPE_CHECKING:
     from .projects.project import SimpleProject
 

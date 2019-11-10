@@ -27,10 +27,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import *
-from .cheribsd import BuildCHERIBSD
-from ...utils import fatalError, runCmd, IS_FREEBSD
 import re
+
+from .cheribsd import BuildCHERIBSD
+from .crosscompileproject import *
+from ...utils import IS_FREEBSD
 
 
 class BuildPostgres(CrossCompileAutotoolsProject):

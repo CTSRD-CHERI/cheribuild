@@ -28,7 +28,6 @@
 # SUCH DAMAGE.
 #
 from .project import *
-from ..utils import *
 
 
 class BuildCheriTrace(CMakeProject):

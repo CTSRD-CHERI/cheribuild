@@ -27,11 +27,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .project import *
-from ..utils import *
 from pathlib import Path
 
-import os
+from .project import *
+from ..utils import *
 
 
 class BuildElftoolchain(Project):

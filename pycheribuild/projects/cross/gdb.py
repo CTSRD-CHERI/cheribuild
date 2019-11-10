@@ -28,11 +28,11 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import *
-from ...utils import runCmd, statusUpdate, IS_MAC, warningMessage
-
 import os
 import shutil
+
+from .crosscompileproject import *
+from ...utils import runCmd, statusUpdate, IS_MAC
 
 
 class TemporarilyRemoveProgramsFromSdk(object):

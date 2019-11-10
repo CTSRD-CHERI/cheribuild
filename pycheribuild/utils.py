@@ -28,22 +28,21 @@
 # SUCH DAMAGE.
 #
 import contextlib
-import os
-import socket
 import functools
+import os
 import re
 import shlex
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
 import threading
 import traceback
-from .colour import coloured, AnsiColour, statusUpdate, warningMessage
-from collections import namedtuple
+import typing
 from pathlib import Path
 
-import typing
+from .colour import coloured, AnsiColour, statusUpdate, warningMessage
 
 Type_T = typing.TypeVar("Type_T")
 

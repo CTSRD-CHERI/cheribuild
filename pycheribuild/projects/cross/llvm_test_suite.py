@@ -28,12 +28,12 @@
 # SUCH DAMAGE.
 #
 
+from pathlib import Path
+
 from .crosscompileproject import *
-from .cheribsd import BuildCHERIBSD
 from ..llvm import BuildCheriLLVM
 from ...config.loader import ComputedDefaultValue
 from ...utils import statusUpdate
-from pathlib import Path
 
 
 class BuildLLVMTestSuite(CrossCompileCMakeProject):

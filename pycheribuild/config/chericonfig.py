@@ -27,19 +27,20 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import itertools
 import getpass
 import grp
 import json
 import os
 import typing
-from typing import Optional
-from enum import Enum
 from collections import OrderedDict
+from enum import Enum
 from pathlib import Path
+from typing import Optional
+
 # Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
 from .loader import ConfigLoaderBase
-from .target_info import TargetInfo, CheriBSDTargetInfo, NativeTargetInfo, FreeBSDTargetInfo, NewlibBaremetalTargetInfo, CPUArchitecture
+from .target_info import (TargetInfo, CheriBSDTargetInfo, NativeTargetInfo, FreeBSDTargetInfo,
+                          NewlibBaremetalTargetInfo, CPUArchitecture)
 from ..utils import latestClangTool, warningMessage, statusUpdate, have_working_internet_connection
 
 if typing.TYPE_CHECKING:

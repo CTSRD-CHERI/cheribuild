@@ -28,10 +28,8 @@
 # SUCH DAMAGE.
 #
 
-import shutil
-
 from .crosscompileproject import *
-from ...utils import getCompilerInfo, runCmd, IS_FREEBSD
+
 
 class SNMalloc(CrossCompileCMakeProject):
     projectName = "snmalloc"

@@ -27,11 +27,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import shutil
 
 from .crosscompileproject import *
 from ..project import ReuseOtherProjectRepository
-from ...utils import getCompilerInfo, runCmd, IS_FREEBSD
+
 
 class BuildJulietTestSuite(CrossCompileCMakeProject):
     projectName = "juliet-test-suite"

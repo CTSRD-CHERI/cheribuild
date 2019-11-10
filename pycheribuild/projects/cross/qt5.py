@@ -28,12 +28,12 @@
 # SUCH DAMAGE.
 #
 import tempfile
-import typing
+from pathlib import Path
 
 from .crosscompileproject import *
 from ...config.loader import ComputedDefaultValue
 from ...utils import commandline_to_str, runCmd, IS_FREEBSD, IS_MAC, fatalError, IS_LINUX, getCompilerInfo
-from pathlib import Path
+
 
 # This class is used to build qtbase and all of qt5
 class BuildQtWithConfigureScript(CrossCompileProject):

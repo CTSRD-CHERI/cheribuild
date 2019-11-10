@@ -28,12 +28,11 @@
 # SUCH DAMAGE.
 #
 import argparse
+import collections.abc
 import json
 import os
 import shlex
 import shutil
-import sys
-import collections.abc
 
 try:
     import argcomplete

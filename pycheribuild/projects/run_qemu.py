@@ -28,7 +28,6 @@
 # SUCH DAMAGE.
 #
 import socket
-from pathlib import Path
 
 from .build_qemu import BuildQEMU, BuildQEMURISCV, BuildCheriOSQEMU
 from .cherios import BuildCheriOS
