@@ -1058,7 +1058,7 @@ class ReuseOtherProjectRepository(SourceRepository):
                                   "cheribuild.py " + self.source_project.target + "--no-skip-update --skip-configure " +
                                   "--skip-build --skip-install`")
 
-    def get_real_source_dir(self, caller: SimpleProject, default_src_dir: Path) -> Path:
+    def get_real_source_dir(self, caller: SimpleProject, default_src_dir: typing.Optional[Path]) -> Path:
         return self.source_project.getSourceDir(caller, caller.config,
                                                 cross_target=self.repo_for_target) / self.subdirectory
 

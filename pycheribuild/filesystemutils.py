@@ -119,7 +119,7 @@ class FileSystemUtils(object):
                     all_entries = all_entries_new
                 all_entries = list(map(str, all_entries))
                 if all_entries:
-                    runCmd(["mv"] + all_entries + [tempdir], print_verbose_only=True)
+                    runCmd(["mv"] + all_entries + [str(tempdir)], print_verbose_only=True)
             else:
                 # rename the directory, create a new dir and then delete it in a background thread
                 runCmd("mv", path, tempdir)
@@ -201,7 +201,7 @@ class FileSystemUtils(object):
         cmd = ["mv", "-f"] if force else ["mv"]
         if createDirs and not dest.parent.exists():
             self.makedirs(dest.parent)
-        runCmd(cmd + [src, dest])
+        runCmd(cmd + [str(src), str(dest)])
 
     def installFile(self, src: Path, dest: Path, *, force=False, createDirs=True, print_verbose_only=True, mode=None):
         if force:

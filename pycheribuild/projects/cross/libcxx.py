@@ -74,7 +74,7 @@ class BuildLibunwind(CrossCompileCMakeProject):
         test_linker_flags = commandline_to_str(self.default_ldflags)
 
         self.add_cmake_options(# LIBUNWIND_LIBCXX_PATH=BuildLibCXX.getSourceDir(self),
-                               LIBUNWIND_LIBCXX_PATH=self.repository.get_real_source_dir(self, self.config) / "libcxx",
+                               LIBUNWIND_LIBCXX_PATH=self.repository.get_real_source_dir(self, None) / "libcxx",
                                # Should use libc++ from sysroot
                                # LIBUNWIND_LIBCXX_LIBRARY_PATH=BuildLibCXX.getBuildDir(self) / "lib",
                                LIBUNWIND_LIBCXX_LIBRARY_PATH="",

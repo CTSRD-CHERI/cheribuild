@@ -104,7 +104,7 @@ class _BuildDiskImageBase(SimpleProject):
         super().__init__(config)
         # make use of the mtree file created by make installworld
         # this means we can create a disk image without root privilege
-        self.manifestFile = None  # type: Path
+        self.manifestFile = None  # type: typing.Optional[Path]
         self.extraFiles = []  # type: typing.List[Path]
         self.addRequiredSystemTool("ssh-keygen")
 
@@ -125,7 +125,7 @@ class _BuildDiskImageBase(SimpleProject):
         self.input_METALOG = self.rootfsDir / "METALOG"
         self.input_METALOG_required = True
         # used during process to generated files
-        self.tmpdir = None  # type: Path
+        self.tmpdir = None  # type: typing.Optional[Path]
         self.file_templates = _AdditionalFileTemplates()
         if self.needs_special_pkg_repo:
             self.addRequiredSystemTool("wget")  # Needed to recursively fetch the pkg repo
@@ -799,7 +799,9 @@ class _BuildMultiArchDiskImage(_BuildDiskImageBase):
 
     def __init__(self, config: CheriConfig):
         # TODO: different extra-files directory
-        super().__init__(config, source_class=self._source_class.get_class_for_target(self.get_crosscompile_target(config)))
+        src_class = self._source_class.get_class_for_target(self.get_crosscompile_target(config))
+        assert issubclass(src_class, BuildFreeBSD)
+        super().__init__(config, source_class=src_class)
         self.bigEndian = self.compiling_for_mips(include_purecap=True)
         if self.get_crosscompile_target(config).is_riscv():
             self.file_templates = _RISCVFileTemplates()

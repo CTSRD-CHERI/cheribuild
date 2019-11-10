@@ -178,7 +178,7 @@ class ConfigLoaderBase(object):
 
     def addPathOption(self, name: str, shortname=None, **kwargs) -> Path:
         # we have to make sure we resolve this to an absolute path because otherwise steps where CWD is different fail!
-        return self.addOption(name, shortname, type=Path, **kwargs)
+        return self.addOption(name, shortname, type=lambda x: Path(x), **kwargs)
 
     def load(self):
         raise NotImplementedError()
