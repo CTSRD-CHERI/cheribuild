@@ -346,6 +346,23 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         compiler = getCompilerInfo(self.config.clangPath if self.config.clangPath else shutil.which("cc"))
         return compiler.default_target
 
+    @property
+    def CC(self):
+        return self.target_info.c_compiler
+
+    @property
+    def CXX(self):
+        return self.target_info.cxx_compiler
+
+    @property
+    def CPP(self):
+        return self.target_info.c_preprocessor
+
+    @classproperty
+    def needs_sysroot(cls):
+        assert issubclass(cls, SimpleProject)
+        return not cls._crossCompileTarget.is_native()  # Most projects need a sysroot (but not native)
+
     def compiling_for_mips(self, include_purecap: bool):
         return self._crossCompileTarget.is_mips(include_purecap=include_purecap)
 

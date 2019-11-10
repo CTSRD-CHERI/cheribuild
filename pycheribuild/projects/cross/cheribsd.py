@@ -509,7 +509,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def kernelMakeArgsForConfig(self, kernconf: str) -> MakeOptions:
         kernel_options = self.make_args.copy()
-        if self._crossCompileTarget.is_mips(include_purecap=True):
+        if self.compiling_for_mips(include_purecap=True):
             # Don't build kernel modules for MIPS
             kernel_options.set(NO_MODULES="yes")
         if self.useExternalToolchainForKernel:
@@ -1129,7 +1129,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         self.extra_kernels = []
         self.extra_kernels_with_mfs = []
         if self.buildFpgaKernels:
-            if self._crossCompileTarget.is_mips(include_purecap=True):
+            if self.compiling_for_mips(include_purecap=True):
                 if self._crossCompileTarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
                     if self.config.cheriBits == 128:
                         prefix = "CHERI128_DE4_"
@@ -1315,8 +1315,6 @@ class BuildCHERIBSDPurecap(BuildCHERIBSD):
 
     # Set these variables to override the multi target magic and only support CHERI
     supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]  # Only Cheri is supported
-    _crossCompileTarget = CrossCompileTarget.CHERIBSD_MIPS_PURECAP
-    _should_not_be_instantiated = False
     build_dir_suffix = "-purecap"
 
     defaultInstallDir = ComputedDefaultValue(function=cheribsd_purecap_install_dir,

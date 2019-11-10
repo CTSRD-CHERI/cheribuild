@@ -127,11 +127,6 @@ class CrossCompileMixin(object):
     can_build_with_asan = True
     _always_add_suffixed_targets = True  # always add the suffixed target if there is only one
 
-    @classproperty
-    def needs_sysroot(cls):
-        assert issubclass(cls, SimpleProject)
-        return not cls._crossCompileTarget.is_native()  # Most projects need a sysroot (but not native)
-
     @classmethod
     def dependencies(cls, config: CheriConfig):
         # TODO: can I avoid instantiating all cross-compile targets here? The hack below might work
@@ -408,18 +403,6 @@ class CrossCompileMixin(object):
             # TODO: always include the .a file?
             result += ["-Wl,--whole-archive", "-lstatcounters", "-Wl,--no-whole-archive"]
         return result
-
-    @property
-    def CC(self):
-        return self.target_info.c_compiler
-
-    @property
-    def CXX(self):
-        return self.target_info.cxx_compiler
-
-    @property
-    def CPP(self):
-        return self.target_info.c_preprocessor
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):
