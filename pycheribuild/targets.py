@@ -34,7 +34,8 @@ import time
 from collections import OrderedDict
 from .config.chericonfig import CheriConfig, CrossCompileTarget
 from .utils import *
-
+if typing.TYPE_CHECKING:
+    from .projects.project import SimpleProject
 
 
 class Target(object):
@@ -43,7 +44,7 @@ class Target(object):
     def __init__(self, name, _project_class: "typing.Type[SimpleProject]"):
         self.name = name
         self._project_class = _project_class
-        self.__project = None  # type: pycheribuild.project.SimpleProject
+        self.__project = None  # type: typing.Optional[SimpleProject]
         self._completed = False
         self._tests_have_run = False
         self._benchmarks_have_run = False
@@ -191,10 +192,8 @@ class MultiArchTarget(Target):
         assert self.target_arch is not CrossCompileTarget.NONE
         return self._project_class
 
-    def _create_project(self, config: CheriConfig):
-        from .projects.cross.crosscompileproject import CrossCompileMixin
-        from .projects.project import MultiArchBaseMixin
-        assert issubclass(self._project_class, CrossCompileMixin) or issubclass(self._project_class, MultiArchBaseMixin)
+    def _create_project(self, config: CheriConfig) -> "SimpleProject":
+        c = self.projectClass
         return self.projectClass(config)
 
     def __repr__(self):

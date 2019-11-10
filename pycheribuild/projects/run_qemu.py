@@ -269,9 +269,13 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
         super().process()
 
 
-class _RunMultiArchFreeBSDImage(MultiArchBaseMixin, AbstractLaunchFreeBSD):
+class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     doNotAddToTargets = True
     _source_class = None
+
+    @classproperty
+    def supported_architectures(cls):
+        return cls._source_class.supported_architectures
 
     @classmethod
     def get_cross_target_index(cls):

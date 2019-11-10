@@ -109,12 +109,13 @@ def _installDirMessage(project: "CrossCompileProject"):
     return "UNKNOWN"
 
 
-# TODO: remove this:
+# TODO: remove this class:
 # noinspection PyUnresolvedReferences
-class CrossCompileMixin(MultiArchBaseMixin):
+class CrossCompileMixin(object):
     doNotAddToTargets = True
     config = None  # type: CheriConfig
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+    supported_architectures = [CrossCompileTarget.NATIVE] + SimpleProject.CAN_TARGET_ALL_CHERIBSD_TARGETS
 
     defaultInstallDir = ComputedDefaultValue(function=default_cross_install_dir, asString=_installDirMessage)
     default_build_type = BuildType.DEFAULT
@@ -130,7 +131,6 @@ class CrossCompileMixin(MultiArchBaseMixin):
     def needs_sysroot(cls):
         assert issubclass(cls, SimpleProject)
         return not cls._crossCompileTarget.is_native()  # Most projects need a sysroot (but not native)
-
 
     @classmethod
     def dependencies(cls, config: CheriConfig):

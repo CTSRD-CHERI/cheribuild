@@ -51,9 +51,7 @@ __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "Target
            "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
            "CrossCompileTarget", "CPUArchitecture", "GitRepository", "ComputedDefaultValue", "TargetInfo", # no-combine
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
-           "MultiArchBaseMixin",  # TODO: remove  # no-combine
-           "TargetBranchInfo",]  # no-combine
-
+           "TargetBranchInfo"]  # no-combine
 
 def flushStdio(stream):
     while True:
@@ -1220,10 +1218,6 @@ class GitRepository(SourceRepository):
                     runCmd("git", "checkout", self.default_branch, cwd=src_dir)
                 elif not current_project.queryYesNo("Are you sure you want to continue?", force_result=False):
                     current_project.fatal("Wrong branch:", current_branch.decode("utf-8"))
-
-
-class MultiArchBaseMixin(object):
-    supported_architectures = [CrossCompileTarget.NATIVE] + SimpleProject.CAN_TARGET_ALL_CHERIBSD_TARGETS
 
 
 class Project(SimpleProject):

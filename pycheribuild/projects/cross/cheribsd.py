@@ -220,7 +220,7 @@ class BuildFreeBSDBase(Project):
         return None
 
 
-class BuildFreeBSD(MultiArchBaseMixin, BuildFreeBSDBase):
+class BuildFreeBSD(BuildFreeBSDBase):
     dependencies = ["llvm"]
     target = "freebsd"
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
@@ -1196,7 +1196,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         super().process()
 
 
-class BuildCheriBsdMfsKernel(MultiArchBaseMixin, SimpleProject):
+class BuildCheriBsdMfsKernel(SimpleProject):
     projectName = "cheribsd-mfs-root-kernel"
     dependencies = ["disk-image-minimal"]
     # TODO: also support building a non-CHERI kernel... But that needs a plain MIPS disk-image-minimal first...
@@ -1377,10 +1377,15 @@ class BuildCHERIBSDMinimal(BuildCHERIBSD):
         # TODO: install bin/sh? bin/csh?
 
 
-class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
+class BuildCheriBsdSysroot(SimpleProject):
     # TODO: could use this to build only cheribsd sysroot by extending build-cheribsd
     projectName = "cheribsd-sysroot"
     is_sdk_target = True
+    rootfs_source_class = BuildCHERIBSD  # type: typing.Type[BuildCHERIBSD]
+
+    @classproperty
+    def supported_architectures(cls):
+        return cls.rootfs_source_class.supported_architectures
 
     @staticmethod
     def dependencies(cls: "BuildCheriBsdSysroot", config: CheriConfig):
@@ -1398,10 +1403,6 @@ class BuildCheriBsdSysroot(MultiArchBaseMixin, SimpleProject):
         elif target.is_x86_64():
             return ["cheribsd-native"]
         return ["cheribsd"]
-
-    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.CHERIBSD_X86_64,
-                               CrossCompileTarget.CHERIBSD_MIPS]
-    rootfs_source_class = BuildCHERIBSD  # type: typing.Type[BuildCHERIBSD]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

@@ -769,14 +769,17 @@ class _RISCVFileTemplates(_AdditionalFileTemplates):
     def get_fstab_template(self):
         return includeLocalFile("files/riscv/fstab.in")
 
+
 class _X86FileTemplates(_AdditionalFileTemplates):
     def get_fstab_template(self):
         return includeLocalFile("files/x86/fstab.in")
 
-class _BuildMultiArchDiskImage(MultiArchBaseMixin, _BuildDiskImageBase):
+
+class _BuildMultiArchDiskImage(_BuildDiskImageBase):
     doNotAddToTargets = True
     _source_class = None  # type: typing.Type[SimpleProject]
     _always_add_suffixed_targets = True
+    supported_architectures = [CrossCompileTarget.NATIVE] + SimpleProject.CAN_TARGET_ALL_CHERIBSD_TARGETS
 
     @classproperty
     def default_architecture(cls) -> CrossCompileTarget:

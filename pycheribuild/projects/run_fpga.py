@@ -89,7 +89,7 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv {subcmd_and_arg
         self.runShellScript(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
 
 
-class LaunchCheriBSDOnFGPA(MultiArchBaseMixin, LaunchFPGABase):
+class LaunchCheriBSDOnFGPA(LaunchFPGABase):
     projectName = "run-fpga"
     dependencies = ["cheribsd-mfs-root-kernel-cheri"]
     supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
