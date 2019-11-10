@@ -559,10 +559,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             assert not os.path.relpath(str(builddir.resolve()), str(self.buildDir.resolve())).startswith(".."), builddir
         if self.crossbuild:
             # avoid rebuilding bmake and libbsd when crossbuilding:
-            return self.asyncCleanDirectory(builddir, keepRoot=not cleaning_kerneldir,
+            return self.async_clean_directory(builddir, keep_root=not cleaning_kerneldir,
                                             keep_dirs=["libbsd-install", "bmake-install"])
         else:
-            return self.asyncCleanDirectory(builddir)
+            return self.async_clean_directory(builddir)
 
     def _buildkernel(self, kernconf: str, mfs_root_image: Path = None):
         kernelMakeArgs = self.kernelMakeArgsForConfig(kernconf)
@@ -639,7 +639,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # make sure the old install is purged before building, otherwise we might get strange errors
             # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
             # We have to keep the rootfs directory in case it has been NFS mounted
-            self.cleanDirectory(self.installDir, keepRoot=True)
+            self.clean_directory(self.installDir, keep_root=True)
 
     def find_real_bmake_binary(self) -> Path:
         """return the path the bmake binary used for building. On FreeBSD this will generally be /usr/bin/make,
@@ -960,7 +960,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
         cls.worlds_only = cls.addBoolOption("worlds-only", help="Only build worlds (skip building kernels)")
         cls.kernels_only = cls.addBoolOption("kernels-only", help="Only build kernels (skip building worlds)",
                                              default=ComputedDefaultValue(
-                                                 function=lambda conf, cls: conf.skipBuildworld,
+                                                 function=lambda conf, proj: conf.skipBuildworld,
                                                  as_string="true if --skip-buildworld is set"))
 
         cls.jflag_in_subjobs = cls.addConfigOption("jflag-in-subjobs", help="Number of jobs in each world/kernel build",
@@ -1205,7 +1205,7 @@ class BuildCHERIBSD(BuildFreeBSD):
                 if not self.buildDir.exists() and old_build_dir.exists() and not self.config.clean:
                     self.run_cmd("mv", old_build_dir, self.buildDir)
                 else:
-                    self.cleanDirectory(old_build_dir, ensure_dir_exists=False)
+                    self.clean_directory(old_build_dir, ensure_dir_exists=False)
                 self.createSymlink(self.buildDir, old_build_dir, cwd=old_build_dir.parent, print_verbose_only=False)
         super().process()
 
@@ -1228,7 +1228,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         if self.config.clean:
             kernel_dir = build_cheribsd_instance.kernel_objdir(kernconf)
             if kernel_dir:
-                with self.asyncCleanDirectory(kernel_dir):
+                with self.async_clean_directory(kernel_dir):
                     self.verbose_print("Cleaning ", kernel_dir)
         self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=kernconf, image=image)
         # also build the benchmark kernel:
@@ -1552,7 +1552,7 @@ class BuildCheriBsdSysroot(SimpleProject):
             statusUpdate("Not building sysroot because --skip-buildworld was passed")
             return
 
-        with self.asyncCleanDirectory(self.crossSysrootPath):
+        with self.async_clean_directory(self.crossSysrootPath):
             building_on_host = IS_FREEBSD or self.rootfs_source_class.get_instance(self).crossbuild
             if self.copy_remote_sysroot or not building_on_host:
                 self.copySysrootFromRemoteMachine()

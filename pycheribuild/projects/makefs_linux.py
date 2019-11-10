@@ -60,7 +60,7 @@ class BuildMakefsOnLinux(Project):
 
     def clean(self):
         self.deleteFile(self.sourceDir / "builddir/.build_stamp")
-        self.cleanDirectory(self.sourceDir / "builddir")
+        self.clean_directory(self.sourceDir / "builddir")
         return super().clean()
 
     def install(self, **kwargs):

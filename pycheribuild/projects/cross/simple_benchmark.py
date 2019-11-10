@@ -39,7 +39,7 @@ class BuildSimpleCheriBenchmarks(CrossCompileCMakeProject):
     projectName = "simple-cheri-benchmarks"
 
     def create_test_dir(self, outdir: Path):
-        self.cleanDirectory(outdir)
+        self.clean_directory(outdir)
         for f in ("run_jenkins-bluehive.sh", "libqsort_default.so", "test_qsort_default", "test_qsort_static",
                   "benchmark_qsort", "malloc_bench_shared", "malloc_bench_static", "malloc_benchmark.sh",
                   "run_cheribsd.sh"):

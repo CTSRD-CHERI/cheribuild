@@ -47,20 +47,21 @@ class FileSystemUtils(object):
             printCommand("mkdir", "-p", path, print_verbose_only=True)
             os.makedirs(str(path), exist_ok=True)
 
-    def _deleteDirectories(self, *dirs):
+    def _delete_directories(self, *dirs):
         # http://stackoverflow.com/questions/5470939/why-is-shutil-rmtree-so-slow
         # shutil.rmtree(path) # this is slooooooooooooooooow for big trees
         runCmd("rm", "-rf", *dirs)
 
-    def cleanDirectory(self, path: Path, keepRoot=False, ensure_dir_exists=True) -> None:
+    def clean_directory(self, path: Path, keep_root=False, ensure_dir_exists=True) -> None:
         """ After calling this function path will be an empty directory
         :param path: the directory to delete
-        :param keepRoot: Whether to keep the root directory (e.g. for NFS exported mountpoints)
+        :param keep_root: Whether to keep the root directory (e.g. for NFS exported mountpoints)
+        :param ensure_dir_exists: Create the cleaned directory if it doesn't exist
         """
         if path.is_dir():
             # If the root dir is used e.g. as an NFS mount we mustn't remove it, but only the subdirectories
-            entries = list(map(str, path.iterdir())) if keepRoot else [path]
-            self._deleteDirectories(*entries)
+            entries = list(map(str, path.iterdir())) if keep_root else [path]
+            self._delete_directories(*entries)
         # always make sure the path exists
         if ensure_dir_exists:
             self.makedirs(path)
@@ -75,21 +76,23 @@ class FileSystemUtils(object):
             try:
                 if self.parent.config.verbose:
                     statusUpdate("Deleting", self.path, "asynchronously")
-                self.parent._deleteDirectories(self.path)
+                self.parent._delete_directories(self.path)
                 if self.parent.config.verbose:
                     statusUpdate("Async delete of", self.path, "finished")
             except Exception as e:
                 warningMessage("Could not remove directory", self.path, e)
 
-    def asyncCleanDirectory(self, path: Path, *, keepRoot=False, keep_dirs: list=None) -> ThreadJoiner:
+    def async_clean_directory(self, path: Path, *, keep_root=False, keep_dirs: list=None) -> ThreadJoiner:
         """
         Delete a directory in the background (e.g. deleting the cheribsd build directory delays the build
-        with self.asyncCleanDirectory("foo")
+        with self.async_clean_directory("foo")
             # foo has been moved to foo.tmp and foo is now and empty dir:
             do_something()
         # now foo.tpt no longer exists
         :param path: the directory to clean
-        :param keepRoot: currently not supported
+        :param keep_root: currently not supported
+        :param keep_dirs: list of directories to keep (e.g. for NFS mountpoints). The contents of those directories will
+        be deleted though.
         :return:
         """
         deleterThread = None
@@ -101,8 +104,8 @@ class FileSystemUtils(object):
         else:
             if tempdir.is_dir():
                 warningMessage("Previous async cleanup of ", path, "failed. Cleaning up now")
-                self._deleteDirectories(tempdir)
-            if keepRoot:
+                self._delete_directories(tempdir)
+            if keep_root:
                 # Move all subdirectories/files to a temp directory and delete that
                 self.makedirs(tempdir)
                 if not self.config.pretend:
@@ -126,7 +129,7 @@ class FileSystemUtils(object):
                 self.makedirs(path)
         if not self.config.pretend:
             assert path.is_dir()
-            if not (keep_dirs and keepRoot):
+            if not (keep_dirs and keep_root):
                 assert len(list(path.iterdir())) == 0, list(path.iterdir())
         if tempdir.is_dir() or self.config.pretend:
             # we now have an empty directory, start background deleter and return to caller

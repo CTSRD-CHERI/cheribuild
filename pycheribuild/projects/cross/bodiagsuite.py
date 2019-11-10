@@ -151,7 +151,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
         # Ensure the run directory exists
         self.makedirs(self.buildDir / "run")
         if self.config.clean:
-            self.cleanDirectory(self.buildDir / "run", keepRoot=False)
+            self.clean_directory(self.buildDir / "run", keep_root=False)
         testsuite_prefix = self.build_configuration_suffix()[1:]
         testsuite_prefix = testsuite_prefix.replace("-build", "")
         extra_args = ["--bmake-path", bmake, "--jobs", str(self.config.makeJobs)] if self.compiling_for_host() else []

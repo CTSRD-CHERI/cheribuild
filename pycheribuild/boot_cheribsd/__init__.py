@@ -393,6 +393,7 @@ def _set_posix_sh_prompt(child):
         failure("timeout after setting command prompt ", str(child))
     success("===> successfully set PS1")
 
+
 class FakeSpawn(object):
     pid = -1
     should_quit = False

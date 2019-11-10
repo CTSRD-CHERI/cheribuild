@@ -311,7 +311,7 @@ class BuildSpec2006(CrossCompileProject):
     def compile(self, cwd: Path = None):
         self.makedirs(self.buildDir / "spec")
         if not (self.buildDir / "spec/install.sh").exists():
-            self.cleanDirectory(self.buildDir / "spec")  # clean up partial builds
+            self.clean_directory(self.buildDir / "spec")  # clean up partial builds
             self.run_cmd("bsdtar", "xf", self.spec_iso, "-C", "spec", cwd=self.buildDir)
             self.run_cmd("chmod", "-R", "u+w", "spec/", cwd=self.buildDir)
             self.run_cmd(self.buildDir / "spec/install.sh", "-f", cwd=self.buildDir / "spec")
@@ -411,7 +411,7 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
 
         # To copy all of them:
         # self.run_cmd("cp", "-av", self.spec_run_scripts, output_dir / "benchspec/")
-        self.cleanDirectory(output_dir / "config", ensure_dir_exists=False)
+        self.clean_directory(output_dir / "config", ensure_dir_exists=False)
         if self.config.verbose:
             self.run_cmd("find", output_dir)
             self.run_cmd("du", "-h", output_dir)
@@ -424,7 +424,7 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
         #self.run_cmd("tar", "-xvjf", self.buildDir / "spec/{}.cpu2006bundle.bz2".format(self.config_name),
         #             cwd=self.buildDir / "test")
         #self.run_cmd("find", ".", cwd=self.buildDir / "test")
-        self.cleanDirectory(self.buildDir / "spec-test-dir")
+        self.clean_directory(self.buildDir / "spec-test-dir")
         benchmarks_dir = self.create_tests_dir(self.buildDir / "spec-test-dir")
         test_command = """
 export LD_LIBRARY_PATH=/sysroot/usr/lib:/sysroot/lib;

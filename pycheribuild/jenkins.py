@@ -185,7 +185,7 @@ def create_sdk_from_archives(cheriConfig, needs_cheribsd_sysroot=True):
     if any(not a.check_required_files(fatal=False) for a in archives):
         # if any of the required files is missing clean up and extract
         statusUpdate("Required files missing -> recreating SDK")
-        possiblyDeleteSdkJob = cheriConfig.FS.asyncCleanDirectory(cheriConfig.sdkDir)
+        possiblyDeleteSdkJob = cheriConfig.FS.async_clean_directory(cheriConfig.sdkDir)
     elif cheriConfig.sdkDir.exists() and all(a.archive.exists() for a in archives):
         for a in archives:
             if cheriConfig.sdkDir.stat().st_ctime < a.archive.stat().st_ctime:
@@ -193,7 +193,7 @@ def create_sdk_from_archives(cheriConfig, needs_cheribsd_sysroot=True):
                 msgkind("SDK archive", a.archive, "is newer than the existing SDK directory")
                 if not cheriConfig.keepSdkDir:
                     statusUpdate("Deleting old SDK and extracting archive")
-                    possiblyDeleteSdkJob = cheriConfig.FS.asyncCleanDirectory(cheriConfig.sdkDir)
+                    possiblyDeleteSdkJob = cheriConfig.FS.async_clean_directory(cheriConfig.sdkDir)
                 break
     # unpack the SDK if it has not been extracted yet:
     with possiblyDeleteSdkJob:
@@ -240,6 +240,7 @@ def _jenkins_main():
                 assert isinstance(i, CommandLineConfigOption)
                 # But don't change it if it was specified on the command line. Note: This also does the config
                 # inheritance: i.e. setting --cheribsd/install-dir will also affect cheribsd-cheri/cheribsd-mips
+                # noinspection PyTypeChecker
                 from_cmdline = i.loadOption(cheriConfig, cls, cls, return_none_if_default=True)
                 if from_cmdline is not None:
                     statusUpdate("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
@@ -291,7 +292,7 @@ def _jenkins_main():
                     print("   ", attr, "=", pprint.pformat(value, width=160, indent=8, compact=True), file=sys.stderr)
         # delete the install root:
         if JenkinsAction.BUILD in cheriConfig.action:
-            cleaningTask = cheriConfig.FS.asyncCleanDirectory(cheriConfig.outputRoot) if not cheriConfig.keepInstallDir else ThreadJoiner(None)
+            cleaningTask = cheriConfig.FS.async_clean_directory(cheriConfig.outputRoot) if not cheriConfig.keepInstallDir else ThreadJoiner(None)
             new_path = os.getenv("PATH", "")
             if not cheriConfig.without_sdk:
                 new_path = str(cheriConfig.sdkBinDir) + ":" + new_path
@@ -332,8 +333,8 @@ def _jenkins_main():
 def strip_binaries(cheriConfig: JenkinsConfig, directory: Path):
     statusUpdate("Tarball size before stripping ELF files:")
     runCmd("du", "-sh", directory)
-    for root, dirs, files in os.walk(str(directory)):
-        for file in files:
+    for root, dirs, filelist in os.walk(str(directory)):
+        for file in filelist:
             # Try to shrink the size by stripping all elf binaries
             filepath = Path(root, file)
             if filepath.is_symlink():
@@ -347,6 +348,7 @@ def strip_binaries(cheriConfig: JenkinsConfig, directory: Path):
                 warningMessage("Failed to detect type of file:", filepath, e)
     statusUpdate("Tarball size after stripping ELF files:")
     runCmd("du", "-sh", directory)
+
 
 def jenkins_main():
     try:

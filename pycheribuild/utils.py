@@ -92,7 +92,7 @@ else:
 IS_LINUX = sys.platform.startswith("linux")
 IS_FREEBSD = sys.platform.startswith("freebsd")
 IS_MAC = sys.platform.startswith("darwin")
-_cheriConfig = None  # type: CheriConfig
+_cheriConfig = None  # type: typing.Optional[CheriConfig]
 
 
 def is_jenkins_build() -> bool:
@@ -278,9 +278,10 @@ def commandline_to_str(args: "typing.Iterable[str]") -> str:
 
 
 class SocketAndPort(object):
-    def __init__(self, socket: socket.socket, port: int):
-        self.socket = socket
+    def __init__(self, sock: socket.socket, port: int):
+        self.socket = sock
         self.port = port
+
 
 def find_free_port() -> SocketAndPort:
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

@@ -546,7 +546,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
 
     # Based on https://stackoverflow.com/a/7205107/894271
     def merge_dict_recursive(self, a: dict, b: dict, included_file: Path, base_file: Path, path=None) -> dict:
-        "merges b into a"
+        """merges b into a"""
         if path is None:
             path = []
         for key in b:

@@ -125,7 +125,7 @@ class BuildCheriVis(Project):
     def clean(self):
         # doesn't seem to be possible to use a out of source build
         self.runMake("clean", cwd=self.sourceDir)
-        self.cleanDirectory(self.cheritrace_subproject.buildDir)
+        self.clean_directory(self.cheritrace_subproject.buildDir)
         return ThreadJoiner(None)   # can't be done async
 
     def compile(self, **kwargs):

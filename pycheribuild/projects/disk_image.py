@@ -124,12 +124,13 @@ class _BuildDiskImageBase(SimpleProject):
         self.file_templates = _AdditionalFileTemplates()
         if self.needs_special_pkg_repo:
             self.addRequiredSystemTool("wget")  # Needed to recursively fetch the pkg repo
+        self.hostname = os.path.expandvars(self.hostname)   # Expand env vars in hostname to allow $CHERI_BITS
 
-    def addFileToImage(self, file: Path, *, baseDirectory: Path=None, user="root", group="wheel", mode=None,
-                       path_in_target=None):
+    def add_file_to_image(self, file: Path, *, base_directory: Path = None, user="root", group="wheel", mode=None,
+                          path_in_target=None):
         if path_in_target is None:
-            assert baseDirectory is not None, "Either baseDirectory or path_in_target must be set!"
-            path_in_target = os.path.relpath(str(file), str(baseDirectory))
+            assert base_directory is not None, "Either base_directory or path_in_target must be set!"
+            path_in_target = os.path.relpath(str(file), str(base_directory))
         assert not str(path_in_target).startswith(".."), path_in_target
 
         if self.strip_binaries and file.exists():
@@ -169,7 +170,7 @@ class _BuildDiskImageBase(SimpleProject):
                 print("Generating /", pathInImage, " with the following contents:\n",
                       coloured(AnsiColour.green, contents), sep="", end="")
             self.writeFile(targetFile, contents, noCommandPrint=True, overwrite=False, mode=mode)
-        self.addFileToImage(targetFile, baseDirectory=baseDir)
+        self.add_file_to_image(targetFile, base_directory=baseDir)
 
     @staticmethod
     def _wget_fetch(what, where):
@@ -260,7 +261,6 @@ class _BuildDiskImageBase(SimpleProject):
 
         # enable ssh and set hostname
         # TODO: use separate file in /etc/rc.conf.d/ ?
-        self.hostname = os.path.expandvars(self.hostname)   # Expand env vars in hostname to allow $CHERI_BITS
         rcConfContents = self.file_templates.get_rc_conf_template().format(hostname=self.hostname)
         self.createFileForImage("/etc/rc.conf", contents=rcConfContents, showContentsByDefault=False)
 
@@ -343,7 +343,7 @@ class _BuildDiskImageBase(SimpleProject):
                     # self.info("Adding GDB binary from GDB build directory to image")
                 if gdb_binary.exists():
                     self.info("Adding GDB binary", gdb_binary, "to disk image")
-                    self.addFileToImage(gdb_binary, mode=0o755, path_in_target="usr/bin/gdb")
+                    self.add_file_to_image(gdb_binary, mode=0o755, path_in_target="usr/bin/gdb")
 
         if self.is_x86:
             self.createFileForImage("/boot/loader.conf", contents="console=\"comconsole\"\n", mode=0o644)
@@ -362,7 +362,7 @@ class _BuildDiskImageBase(SimpleProject):
                 with entropy_file.open("wb") as f:
                     random_data = os.urandom(4096)
                     f.write(random_data)
-            self.addFileToImage(entropy_file, baseDirectory=self.tmpdir)
+            self.add_file_to_image(entropy_file, base_directory=self.tmpdir)
 
     def add_all_files_in_dir(self, root_dir: Path):
         for root, dirnames, filenames in os.walk(str(root_dir)):
@@ -374,7 +374,7 @@ class _BuildDiskImageBase(SimpleProject):
                 if root_dir == self.extraFilesDir:
                     self.extraFiles.append(new_file)
                 else:
-                    self.addFileToImage(new_file, baseDirectory=root_dir)
+                    self.add_file_to_image(new_file, base_directory=root_dir)
 
     @property
     def is_x86(self):
@@ -568,11 +568,11 @@ class _BuildDiskImageBase(SimpleProject):
             self.manifestFile = self.tmpdir / "METALOG"
             self.prepareRootfs()
             # now add all the user provided files to the image:
-            # we have to make a copy as we modify self.extraFiles in self.addFileToImage()
+            # we have to make a copy as we modify self.extraFiles in self.add_file_to_image()
             for p in self.extraFiles.copy():
                 pathInImage = p.relative_to(self.extraFilesDir)
                 self.verbose_print("Adding user provided file /", pathInImage, " to disk image.", sep="")
-                self.addFileToImage(p, baseDirectory=self.extraFilesDir)
+                self.add_file_to_image(p, base_directory=self.extraFilesDir)
 
             # then walk the rootfs to see if any additional files should be added:
             if not os.getenv("_TEST_SKIP_METALOG"):
@@ -621,8 +621,8 @@ class _BuildDiskImageBase(SimpleProject):
                 runCmd("ssh-keygen", "-t", keyType,
                        "-N", "",  # no passphrase
                        "-f", str(privateKey))
-            self.addFileToImage(privateKey, baseDirectory=self.extraFilesDir, mode="0600")
-            self.addFileToImage(publicKey, baseDirectory=self.extraFilesDir, mode="0644")
+            self.add_file_to_image(privateKey, base_directory=self.extraFilesDir, mode="0600")
+            self.add_file_to_image(publicKey, base_directory=self.extraFilesDir, mode="0644")
 
 
 def _defaultDiskImagePath(config: CheriConfig, pfx, img_prefix=""):
@@ -693,7 +693,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             if file_path.is_dir():
                 self.mtree.add_dir(line, reference_dir=file_path, print_status=self.config.verbose)
             else:
-                self.addFileToImage(file_path, baseDirectory=self.rootfsDir)
+                self.add_file_to_image(file_path, base_directory=self.rootfsDir)
 
     def add_unlisted_files_to_metalog(self):
         # Now add all the files from *.files to the image:
@@ -710,7 +710,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             for i in ("cheritest", "cheriabitest"):
                 test_binary = self.rootfsDir / "bin" / i  # type: Path
                 if test_binary.exists():
-                    self.addFileToImage(test_binary, baseDirectory=self.rootfsDir)
+                    self.add_file_to_image(test_binary, base_directory=self.rootfsDir)
 
         # These dirs seem to be needed
         self.mtree.add_dir("var/db", print_status=self.config.verbose)

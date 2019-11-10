@@ -125,6 +125,7 @@ class ProjectSubclassDefinitionHook(type):
                 new_dict["doNotAddToTargets"] = True  # We are already adding it here
                 new_dict["target"] = new_name
                 new_dict["synthetic_base"] = cls  # We are already adding it here
+                # noinspection PyTypeChecker
                 new_type = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
                 targetManager.addTarget(MultiArchTarget(new_name, new_type, arch, base_target))
         else:
@@ -1574,7 +1575,7 @@ class Project(SimpleProject):
         elif self.buildDir == self.sourceDir:
             self.fatal("Cannot clean non-git source directories. Please override")
         else:
-            return self.asyncCleanDirectory(self.buildDir, keepRoot=True)
+            return self.async_clean_directory(self.buildDir, keep_root=True)
         return ThreadJoiner(None)
 
     def needsConfigure(self) -> bool:

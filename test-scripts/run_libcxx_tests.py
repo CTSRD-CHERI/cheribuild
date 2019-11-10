@@ -115,6 +115,10 @@ def libcxx_main(barrier: Barrier = None, mp_queue: Queue = None, ssh_port_queue:
         boot_cheribsd.info("Finished running ", " ".join(sys.argv))
 
 
+class LitShardProcess(Process):
+    stage = None  # type: run_remote_lit_test.MultiprocessStages
+
+
 def run_parallel(args: argparse.Namespace):
     if args.pretend:
         boot_cheribsd.PRETEND = True
@@ -126,7 +130,7 @@ def run_parallel(args: argparse.Namespace):
     mp_barrier = Barrier(parties=args.parallel_jobs + 1, timeout=4 * 60 * 60)
     mp_q = Queue()
     ssh_port_queue = Queue()
-    processes = []
+    processes = []  # type: typing.List[LitShardProcess]
     # Extract the kernel + disk image in the main process to avoid race condition:
     kernel_path = boot_cheribsd.maybe_decompress(Path(args.kernel), True, True, args) if args.kernel else None
     disk_image_path = boot_cheribsd.maybe_decompress(Path(args.disk_image), True, True,
@@ -134,8 +138,8 @@ def run_parallel(args: argparse.Namespace):
     for i in range(args.parallel_jobs):
         shard_num = i + 1
         boot_cheribsd.info(args)
-        p = Process(target=run_shard, args=(
-        mp_q, mp_barrier, shard_num, args.parallel_jobs, ssh_port_queue, kernel_path, disk_image_path, args.build_dir))
+        p = LitShardProcess(target=run_shard, args=(
+            mp_q, mp_barrier, shard_num, args.parallel_jobs, ssh_port_queue, kernel_path, disk_image_path, args.build_dir))
         p.stage = run_remote_lit_test.MultiprocessStages.FINDING_SSH_PORT
         p.daemon = True  # kill process on parent exit
         p.name = "<LIBCXX test shard " + str(shard_num) + ">"
