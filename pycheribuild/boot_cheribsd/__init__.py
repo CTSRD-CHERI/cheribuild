@@ -157,12 +157,21 @@ class CheriBSDInstance(pexpect.spawn):
         checked_run_cheribsd_command(self, cmd, timeout=timeout, ignore_cheri_trap=ignore_cheri_trap,
                                      error_output=error_output, **kwargs)
 
+
 def info(*args, **kwargs):
     print(MESSAGE_PREFIX, "\033[0;34m", *args, "\033[0m", file=sys.stderr, sep="", flush=True, **kwargs)
 
 
 def success(*args, **kwargs):
     print("\n", MESSAGE_PREFIX, "\033[0;32m", *args, "\033[0m", sep="", file=sys.stderr, flush=True, **kwargs)
+
+
+def print_cmd(*args, **kwargs):
+    args_str = " ".join((shlex.quote(i) for i in list(*args)))
+    if kwargs:
+        print("\033[0;33mRunning ", args_str, " with ", kwargs.copy(), "\033[0m", sep="", file=sys.stderr, flush=True)
+    else:
+        print("\033[0;33mRunning ", args_str, "\033[0m", sep="", file=sys.stderr, flush=True)
 
 
 # noinspection PyShadowingBuiltins
@@ -175,11 +184,7 @@ def failure(*args, exit=True, **kwargs):
 
 
 def run_host_command(*args, **kwargs):
-    args_str = " ".join((shlex.quote(i) for i in list(*args)))
-    if kwargs:
-        info("\033[0;33mRunning ", args_str, " with ", kwargs.copy(), "\033[0m")
-    else:
-        info("\033[0;33mRunning ", args_str, "\033[0m")
+    print_cmd(*args, **kwargs)
     if PRETEND:
         return
     subprocess.check_call(*args, **kwargs)

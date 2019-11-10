@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # PYTHON_ARGCOMPLETE_OK
-#-
+#
 # Copyright (c) 2017 Alexandre Joannou
 # Copyright (c) 2018 Alex Richardson
 # All rights reserved.
@@ -38,6 +38,7 @@ import os
 import signal
 import os.path as op
 import tempfile
+import subprocess
 import datetime
 from subprocess import Popen, PIPE, check_output, check_call, CalledProcessError
 from time import sleep
@@ -593,13 +594,12 @@ def get_jenkins_password():
 def download_file(url, outfile):
     if args.jenkins_user == "readonly" and not args.jenkins_password:
         args.jenkins_password = get_jenkins_password()
+    print("Downloading", url)
+    cmd = ["curl", "--create-dirs", "--output", str(outfile), "--anyauth", "--user"]
+    # don't print the password:
+    boot_cheribsd.print_cmd(cmd + ["*****:*****"])
+    subprocess.check_call(cmd + ["{user}:{pw}".format(user=args.jenkins_user, pw=args.jenkins_password)])
 
-    with open(outfile, 'wb') as f:
-        print("Downloading", url)
-        import requests
-        resp = requests.get(url, verify=False, auth=(args.jenkins_user, args.jenkins_password))
-        f.write(resp.content)
-        f.flush()
 
 def common_boot (kernel_img=args.kernel_img,addr=args.kernel_addr,bitfile=args.bitfile,cable_id=args.cable_id,
                  berictl=args.berictl, jenkins_bitfile=args.jenkins_bitfile, jenkins_kernel=args.jenkins_kernel,
