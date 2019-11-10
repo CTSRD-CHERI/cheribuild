@@ -66,7 +66,7 @@ class Target(object):
         assert self.__project is not None
         return self.__project
 
-    def get_dependencies(self, config) -> "typing.List[Target]":
+    def get_dependencies(self, config: CheriConfig) -> "typing.List[Target]":
         return self.projectClass.recursive_dependencies(config)
 
     def checkSystemDeps(self, config: CheriConfig):
@@ -291,27 +291,6 @@ class TargetManager(object):
             target = target.get_real_target(arch, config, caller=caller)
         # print(" ->", target)
         return target
-
-    def topologicalSort(self, targets: "typing.List[Target]") -> "typing.Iterable[typing.List[Target]]":
-        # based on http://rosettacode.org/wiki/Topological_sort#Python
-        data = dict((t.name, set(t.get_dependencies(None))) for t in targets)
-
-        # add all the targets that aren't included yet
-        allDependencyNames = [t.projectClass.allDependencyNames() for t in targets]
-        possiblyMissingDependencies = functools.reduce(set.union, allDependencyNames, set())
-        for dep in possiblyMissingDependencies:
-            if dep not in data:
-                data[dep] = self._allTargets[dep].get_dependencies(None)
-
-        # do the actual sorting
-        while True:
-            ordered = set(item for item, dep in data.items() if not dep)
-            if not ordered:
-                break
-            yield list(sorted(ordered))
-            data = {item: (dep - ordered) for item, dep in data.items()
-                    if item not in ordered}
-        assert not data, "A cyclic dependency exists amongst %r" % data
 
     @staticmethod
     def sort_in_dependency_order(targets: "typing.List[Target]") -> "typing.List[Target]":
