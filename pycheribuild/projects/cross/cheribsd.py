@@ -914,12 +914,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
                    cwd=self.sourceDir)
 
 
-# Keep the old name
-class BuildFreeBSDX86AliasBinutils(TargetAlias):
-    target = "freebsd-x86"
-    dependencies = ["freebsd-x86_64"]
-
-
 # Build FreeBSD with the default options (build the bundled clang instead of using the SDK one)
 # also don't add any of the default -DWITHOUT/DWITH_FOO options
 class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):

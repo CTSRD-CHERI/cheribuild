@@ -1920,6 +1920,7 @@ class AutotoolsProject(Project):
     def needsConfigure(self):
         return not (self.buildDir / "Makefile").exists()
 
+
 # A target that is just an alias for at least one other targets but does not force building of dependencies
 class TargetAlias(SimpleProject):
     doNotAddToTargets = True
