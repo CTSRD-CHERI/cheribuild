@@ -157,10 +157,12 @@ class ConfigLoaderBase(object):
                 kwargs["choices"] = tuple(t.name.lower() for t in kwargs["enum_choices"])
                 del kwargs["enum_choices"]
             elif "enum_choice_strings" in kwargs:
+                # noinspection PyTypeChecker
                 assert len(kwargs["enum_choice_strings"]) == len(list(x for x in type))
                 kwargs["choices"] = kwargs["enum_choice_strings"]
                 del kwargs["enum_choice_strings"]
             else:
+                # noinspection PyTypeChecker
                 kwargs["choices"] = tuple(t.name.lower() for t in type)
             type = _EnumArgparseType(type)
 

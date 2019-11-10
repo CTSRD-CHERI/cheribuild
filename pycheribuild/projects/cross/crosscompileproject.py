@@ -40,6 +40,8 @@ from pathlib import Path
 from ..project import *
 from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi, Linkage, BuildType
 from ...utils import *
+if typing.TYPE_CHECKING:
+    from .cheribsd import BuildCHERIBSD
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget", "BuildType", # no-combine
            "CrossCompileProject", "CrossInstallDir", "MakeCommandKind", "Linkage", "Path",  # no-combine
@@ -606,6 +608,7 @@ export PATH="$PATH:{cherilibs_dir}/tools:{cherilibs_dir}/tools/debug"
 exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbench_args}
         """.format(cheri_dir=cheri_dir, cherilibs_dir=cherilibs_dir, runbench_args=commandline_to_str(runbench_args),
                    basic_args=commandline_to_str(basic_args), cheribuild_path=cheribuild_path)
+        qemu_ssh_socket = None
         if self.config.benchmark_with_qemu:
             # Free the port that we reserved for QEMU before starting beri-fpga-bsd-boot.py
             qemu_ssh_socket.socket.close()

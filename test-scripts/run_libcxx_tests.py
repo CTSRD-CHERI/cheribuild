@@ -370,7 +370,7 @@ def main():
     parser.add_argument("--build-dir")  # needed later
     add_cmdline_args(parser)
     # Don't let this parser capture --help
-    args, remainder = parser.parse_known_args(filter(lambda x: x != "-h" and x != "--help", sys.argv))
+    args, remainder = parser.parse_known_args(list(filter(lambda x: x != "-h" and x != "--help", sys.argv)))
     # If parallel is set spawn N processes and use the lit --num-shards + --run-shard flags to split the work
     # Since a full run takes about 16 hours this should massively reduce the amount of time needed.
     if args.parallel_jobs and args.parallel_jobs != 1:

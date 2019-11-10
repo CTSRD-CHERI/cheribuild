@@ -28,8 +28,6 @@
 # SUCH DAMAGE.
 #
 
-from pathlib import Path
-
 from .crosscompileproject import *
 from ..llvm import BuildCheriLLVM
 from ...config.loader import ComputedDefaultValue

@@ -72,6 +72,7 @@ def _default_stdout_filter(arg: bytes):
 class ProjectSubclassDefinitionHook(type):
     def __init__(cls, name: str, bases, clsdict):
         super().__init__(name, bases, clsdict)
+        assert issubclass(cls, SimpleProject)
         if clsdict.get("doNotAddToTargets") is not None:
             if clsdict.get("doNotAddToTargets") is True:
                 return  # if doNotAddToTargets is defined within the class we skip it
@@ -468,7 +469,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                            _fallback_name=fallback_config_name, **kwargs)
 
     @classmethod
-    def addBoolOption(cls, name: str, *, shortname=None, default=False, only_add_for_targets: list=None, **kwargs) -> bool:
+    def addBoolOption(cls, name: str, *, shortname=None, only_add_for_targets: list=None,
+                      default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs) -> bool:
         # noinspection PyTypeChecker
         return cls.addConfigOption(name, default=default, kind=bool, shortname=shortname, action="store_true",
                                    only_add_for_targets=only_add_for_targets, **kwargs)

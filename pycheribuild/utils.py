@@ -384,10 +384,10 @@ def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
 
 # Cache the versions
 @functools.lru_cache(maxsize=20)
-def get_version_output(program: Path, command_args: tuple=None) -> "bytes":
+def get_version_output(program: Path, command_args: tuple = None) -> "bytes":
     if command_args is None:
         command_args = ["--version"]
-    prog = runCmd([program] + list(command_args), stdin=subprocess.DEVNULL,
+    prog = runCmd([str(program)] + list(command_args), stdin=subprocess.DEVNULL,
                   stderr=subprocess.STDOUT, captureOutput=True, runInPretendMode=True)
     return prog.stdout
 
@@ -402,7 +402,8 @@ def get_program_version(program: Path, command_args: tuple=None, componentKind:"
 
 
 # extract the version component from program output such as "git version 2.7.4"
-def extract_version(output: bytes, componentKind: "typing.Type"=int, regex: "typing.Pattern"=None, program_name: bytes=b"") -> "typing.Tuple[int, int, int]":
+def extract_version(output: bytes, componentKind: "typing.Type[Type_T]" = int, regex: "typing.Pattern" = None,
+                    program_name: bytes = b"") -> "typing.Tuple[Type_T, Type_T, Type_T]":
     if regex is None:
         prefix = program_name + b" " if program_name else b""
         regex = re.compile(prefix + b"version\\s+(\\d+)\\.(\\d+)\\.?(\\d+)?")
@@ -412,6 +413,7 @@ def extract_version(output: bytes, componentKind: "typing.Type"=int, regex: "typ
     if not match:
         print(output)
         raise ValueError("Expected to match regex " + str(regex))
+    # noinspection PyTypeChecker
     return tuple(map(componentKind, match.groups()))
 
 

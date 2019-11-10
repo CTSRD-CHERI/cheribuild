@@ -80,8 +80,8 @@ class LaunchQEMUBase(SimpleProject):
         super().__init__(config)
         self.qemuBinary = BuildQEMU.qemu_binary(self)
 
-        self.currentKernel = None  # type: Path
-        self.diskImage = None  # type: Path
+        self.currentKernel = None  # type: typing.Optional[Path]
+        self.diskImage = None  # type: typing.Optional[Path]
         self.virtioDisk = False
         self._projectSpecificOptions = []
         self.machineFlags = ["-M", "malta"]  # malta cpu
@@ -89,7 +89,7 @@ class LaunchQEMUBase(SimpleProject):
         if self.config.trap_on_unrepresentable:
             self.machineFlags.append("-cheri-c2e-on-unrepresentable")
         self._qemuUserNetworking = True
-        self.rootfs_path = None  # type: Path
+        self.rootfs_path = typing.Optional[None]  # type: Path
         self._after_disk_options = []
 
     def process(self):

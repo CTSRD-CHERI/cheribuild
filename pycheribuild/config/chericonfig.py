@@ -45,6 +45,7 @@ from ..utils import latestClangTool, warningMessage, statusUpdate, have_working_
 
 if typing.TYPE_CHECKING:
     from ..filesystemutils import FileSystemUtils
+    from ..projects.project import SimpleProject
 
 
 # custom encoder to handle pathlib.Path objects
@@ -388,7 +389,7 @@ class CheriConfig(object):
             "repositories such as FreeBSD or LLVM. Use `git fetch --unshallow` to convert to a non-shallow clone")
 
         self.targets = None  # type: typing.Optional[typing.List[str]]
-        self.FS = None  # type: FileSystemUtils
+        self.FS = None  # type: Optional[FileSystemUtils]
         self.__optionalProperties = []
 
     def load(self):

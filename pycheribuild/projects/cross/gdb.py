@@ -30,6 +30,7 @@
 
 import os
 import shutil
+import typing
 
 from .crosscompileproject import *
 from ...utils import runCmd, statusUpdate, IS_MAC

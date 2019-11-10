@@ -113,18 +113,6 @@ class BuildLibunwind(CrossCompileCMakeProject):
         self.add_cmake_options(LIBUNWIND_USE_COMPILER_RT=True)
         super().configure(**kwargs)
 
-    def process(self):
-        # TODO: update libcxxrt to always build against host/cheribsd version
-        if False:
-            if self.compiling_for_host():
-                self.warning("Libunwind should be provided by the host OS, are you sure you")
-            else:
-                self.warning("Libunwind is included as part of the CheriBSD sysroot, this target only needs"
-                             " to be run if you are testing new features in libunwind.")
-            if not self.queryYesNo("Continue anyway?", default_result=True):
-                return
-        super().process()
-
     def run_tests(self):
         if self.baremetal:
             self.info("Baremetal tests not implemented")

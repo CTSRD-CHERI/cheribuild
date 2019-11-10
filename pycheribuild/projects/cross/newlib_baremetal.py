@@ -28,7 +28,6 @@
 # SUCH DAMAGE.
 #
 import tempfile
-from pathlib import Path
 
 from .crosscompileproject import *
 from ...utils import IS_MAC, runCmd

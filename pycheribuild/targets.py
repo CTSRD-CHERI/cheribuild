@@ -212,7 +212,7 @@ class MultiArchTargetAlias(Target):
         raise ValueError("Should not be called!")
 
     def get_real_target(self, cross_target: CrossCompileTarget, config,
-                        caller=None) -> MultiArchTarget:
+                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> MultiArchTarget:
         assert cross_target is not None
         if cross_target is CrossCompileTarget.NONE:
             # Use the default target:
@@ -282,7 +282,8 @@ class TargetManager(object):
         # return the actual target without resolving MultiArchTargetAlias
         return self._allTargets[name]
 
-    def get_target(self, name: str, arch: "CrossCompileTarget", config: CheriConfig, caller: "SimpleProject") -> Target:
+    def get_target(self, name: str, arch: "CrossCompileTarget", config: CheriConfig,
+                   caller: "typing.Union[SimpleProject, str]") -> Target:
         assert arch is not None
         target = self.get_target_raw(name)
         # print("get_target", name, arch, end="")

@@ -202,9 +202,8 @@ Host cheribsd-test-instance
     if args.pretend:
         time.sleep(2.5)
 
-    if False:
-        # slow executor using scp:
-        executor = 'SSHExecutor("localhost", username="{user}", port={port})'.format(user=user, port=port)
+    # slow executor using scp:
+    # executor = 'SSHExecutor("localhost", username="{user}", port={port})'.format(user=user, port=port)
     executor = 'SSHExecutorWithNFSMount("cheribsd-test-instance", username="{user}", port={port}, ' \
                'nfs_dir="{host_dir}", path_in_target="/build/tmp",' \
                'extra_ssh_flags=["-F", "{tempdir}/config", "-n", "-4"], ' \
@@ -225,7 +224,7 @@ Host cheribsd-test-instance
         lit_cmd.append("--debug")
     # This does not work since it doesn't handle running ssh commands....
     lit_cmd.append("--timeout=120")  # 2 minutes max per test (in case there is an infinite loop)
-    xunit_file = None  # type: Path
+    xunit_file = None  # type: typing.Optional[Path]
     if args.xunit_output:
         lit_cmd.append("--xunit-xml-output")
         xunit_file = Path(args.xunit_output).absolute()
