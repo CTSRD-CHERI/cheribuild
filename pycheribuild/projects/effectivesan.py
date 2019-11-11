@@ -35,7 +35,7 @@ from ..utils import IS_LINUX
 
 # TODO: build from source
 class BuildEffectiveSan(BuildLLVMMonoRepoBase):
-    projectName = "EffectiveSan"
+    project_name = "EffectiveSan"
     repository = GitRepository("https://github.com/GJDuck/EffectiveSan")
     appendCheriBitsToBuildDir = False
     defaultInstallDir = ComputedDefaultValue(

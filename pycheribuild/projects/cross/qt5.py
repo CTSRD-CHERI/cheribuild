@@ -222,7 +222,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase", default_branch="5.10", force_branch=True)
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.getSourceDir(project, config) / "qtbase",
-        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.projectName.lower())
+        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())
 
     def __init__(self, config):
         super().__init__(config)
@@ -329,7 +329,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     crossInstallDir = CrossInstallDir.SDK
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.getSourceDir(project, config) / "qtwebkit",
-        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.projectName.lower())
+        as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())
     needs_mxcaptable_static = True  # Currently way over the limit
     needs_mxcaptable_dynamic = True  # Currently way over the limit
 

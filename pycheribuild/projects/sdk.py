@@ -53,7 +53,7 @@ class BuildSdk(TargetAliasWithDependencies):
 
 class BuildCheriCompressedCaps(CMakeProject):
     target = "cheri-compressed-cap"
-    projectName = "cheri-compressed-cap"
+    project_name = "cheri-compressed-cap"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheri-compressed-cap.git")
     defaultInstallDir = CMakeProject._installToSDK
 

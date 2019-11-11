@@ -117,8 +117,8 @@ def test_cross_compile_project_inherits():
     qtbase_mips = targetManager.get_target_raw("qtbase-mips").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildQtBase
 
     # Check that project name is the same:
-    assert qtbase_default.projectName == qtbase_native.projectName
-    assert qtbase_mips.projectName == qtbase_native.projectName
+    assert qtbase_default.project_name == qtbase_native.project_name
+    assert qtbase_mips.project_name == qtbase_native.project_name
     # These classes were generated:
     assert qtbase_native.synthetic_base == qtbase_class
     assert qtbase_mips.synthetic_base == qtbase_class
@@ -211,8 +211,8 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     cheribsd_purecap = targetManager.get_target_raw("cheribsd-purecap").get_or_create_project(CrossCompileTarget.NONE, config)  # type: BuildCHERIBSD
 
     # Check that project name is the same:
-    assert cheribsd_mips.projectName == cheribsd_cheri.projectName
-    assert cheribsd_cheri.projectName == cheribsd_purecap.projectName
+    assert cheribsd_mips.project_name == cheribsd_cheri.project_name
+    assert cheribsd_cheri.project_name == cheribsd_purecap.project_name
 
     # cheribsd-cheri is a synthetic class, but cheribsd-purecap inst:
     assert cheribsd_cheri.synthetic_base == cheribsd_class

@@ -48,7 +48,7 @@ from ..config.loader import ComputedDefaultValue
 
 class BuildSyzkaller(CrossCompileProject):
     dependencies = ["go", "cheribsd"]
-    projectName = "cheri-syzkaller"
+    project_name = "cheri-syzkaller"
     githubBaseUrl = "https://github.com/CTSRD-CHERI/"
     repository = GitRepository(githubBaseUrl + "cheri-syzkaller.git")
     # no_default_sysroot = None // probably useless??
@@ -142,7 +142,7 @@ class BuildSyzkaller(CrossCompileProject):
 
 
 class RunSyzkaller(SimpleProject):
-    projectName = "run-syzkaller"
+    project_name = "run-syzkaller"
 
     @classmethod
     def setupConfigOptions(cls, **kwargs):

@@ -33,7 +33,7 @@ class BuildLibMemwalk(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/zxombie/libmemwalk.git")
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     defaultCMakeBuildType = "Debug"
-    projectName = "libmemwalk"
+    project_name = "libmemwalk"
 
     def __init__(self, config: CheriConfig, *args, **kwargs):
         super().__init__(config, *args, **kwargs)

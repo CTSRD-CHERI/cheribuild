@@ -38,7 +38,7 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-test-suite.git")
     dependencies = ["llvm"]
     defaultCMakeBuildType = "Debug"
-    projectName = "llvm-test-suite"
+    project_name = "llvm-test-suite"
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / "llvm-test-suite"),
         as_string="$SOURCE_ROOT/llvm-test-suite")

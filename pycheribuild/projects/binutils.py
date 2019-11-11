@@ -36,7 +36,7 @@ from ..utils import *
 
 class BuildGnuBinutils(AutotoolsProject):
     target = "gnu-binutils"
-    projectName = "gnu-binutils"
+    project_name = "gnu-binutils"
     repository = GitRepository("https://github.com/CTSRD-CHERI/binutils.git", default_branch="cheribsd",
                                force_branch=True)
     defaultInstallDir = AutotoolsProject._installToSDK

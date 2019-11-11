@@ -33,7 +33,7 @@ from ..utils import *
 
 class BuildElftoolchain(Project):
     target = "elftoolchain"
-    projectName = "elftoolchain"
+    project_name = "elftoolchain"
     repository = GitRepository("https://github.com/emaste/elftoolchain.git", default_branch="master")
     defaultInstallDir = Project._installToSDK
     make_kind = MakeCommandKind.BsdMake

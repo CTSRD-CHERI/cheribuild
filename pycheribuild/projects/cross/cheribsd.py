@@ -917,7 +917,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 # Build FreeBSD with the default options (build the bundled clang instead of using the SDK one)
 # also don't add any of the default -DWITHOUT/DWITH_FOO options
 class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
-    projectName = "freebsd"
+    project_name = "freebsd"
     target = "freebsd-with-default-options"
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
     build_dir_suffix = "-default-options"
@@ -946,7 +946,7 @@ def jflag_for_universe(config: CheriConfig, proj):
 
 # Build all targets (to test my changes)
 class BuildFreeBSDUniverse(BuildFreeBSDBase):
-    projectName = "freebsd-universe"
+    project_name = "freebsd-universe"
     target = "freebsd-universe"
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
     # already in the project name:    build_dir_suffix = "universe"
@@ -1022,7 +1022,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
 
 
 class BuildCHERIBSD(BuildFreeBSD):
-    projectName = "cheribsd"
+    project_name = "cheribsd"
     target = "cheribsd"
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git", per_target_branches={
         CrossCompileTarget.CHERIBSD_RISCV: TargetBranchInfo("riscv_cheri_clang", directory_name="cheribsd-riscv",
@@ -1211,7 +1211,7 @@ class BuildCHERIBSD(BuildFreeBSD):
 
 
 class BuildCheriBsdMfsKernel(SimpleProject):
-    projectName = "cheribsd-mfs-root-kernel"
+    project_name = "cheribsd-mfs-root-kernel"
     dependencies = ["disk-image-minimal"]
     # TODO: also support building a non-CHERI kernel... But that needs a plain MIPS disk-image-minimal first...
     supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
@@ -1303,7 +1303,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 
 
 class BuildCHERIBSDPurecap(BuildCHERIBSD):
-    projectName = "cheribsd"  # reuse the same source dir
+    project_name = "cheribsd"  # reuse the same source dir
     target = "cheribsd-purecap"
     _config_inherits_from = "cheribsd"  # we want the CheriBSD config options as well
 
@@ -1324,7 +1324,7 @@ class BuildCHERIBSDPurecap(BuildCHERIBSD):
 
 
 class BuildCHERIBSDMinimal(BuildCHERIBSD):
-    projectName = "cheribsd"  # reuse the same source dir
+    project_name = "cheribsd"  # reuse the same source dir
     target = "cheribsd-minimal"
     _config_inherits_from = "cheribsd"  # we want the CheriBSD config options as well
 
@@ -1393,7 +1393,7 @@ class BuildCHERIBSDMinimal(BuildCHERIBSD):
 
 class BuildCheriBsdSysroot(SimpleProject):
     # TODO: could use this to build only cheribsd sysroot by extending build-cheribsd
-    projectName = "cheribsd-sysroot"
+    project_name = "cheribsd-sysroot"
     is_sdk_target = True
     rootfs_source_class = BuildCHERIBSD  # type: typing.Type[BuildCHERIBSD]
 

@@ -251,7 +251,7 @@ def _jenkins_main():
                 else:
                     cls._installDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
                     cls._check_install_dir_conflict = False
-                # print(project.projectClass.projectName, project.projectClass.installDir)
+                # print(project.projectClass.project_name, project.projectClass.installDir)
         if JenkinsAction.BUILD in cheriConfig.action:
             if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
                 assert cheriConfig.sdkDir == Path("/cheri-sdk"), cheriConfig.sdkDir
@@ -287,7 +287,7 @@ def _jenkins_main():
             project._installDir = cheriConfig.outputRoot
 
         if cheriConfig.debug_output:
-            statusUpdate("Configuration options for building", project.projectName, file=sys.stderr)
+            statusUpdate("Configuration options for building", project.project_name, file=sys.stderr)
             for attr in dir(project):
                 if attr.startswith("_"):
                     continue

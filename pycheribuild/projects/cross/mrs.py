@@ -32,7 +32,7 @@ from .crosscompileproject import *
 
 
 class MRS(CrossCompileCMakeProject):
-    projectName = "mrs"
+    project_name = "mrs"
     repository = GitRepository("https://github.com/CTSRD-CHERI/mrs")
     appendCheriBitsToBuildDir = True
     supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]

@@ -353,7 +353,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
 class BuildCompilerRt(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="compiler-rt")
-    projectName = "compiler-rt"
+    project_name = "compiler-rt"
     crossInstallDir = CrossInstallDir.COMPILER_RESOURCE_DIR
     _check_install_dir_conflict = False
     _default_architecture = CrossCompileTarget.CHERIBSD_MIPS_PURECAP
@@ -394,7 +394,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
 class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="compiler-rt")
-    projectName = "compiler-rt-builtins"
+    project_name = "compiler-rt-builtins"
     crossInstallDir = CrossInstallDir.SDK
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
     _default_architecture = CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64

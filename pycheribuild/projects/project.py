@@ -81,28 +81,28 @@ class ProjectSubclassDefinitionHook(type):
         elif name.endswith("Base"):
             fatalError("Found class name ending in Base (", name, ") but doNotAddToTargets was not defined", sep="")
 
-        projectName = None
-        if "projectName" in clsdict:
-            projectName = clsdict["projectName"]
+        project_name = None
+        if "project_name" in clsdict:
+            project_name = clsdict["project_name"]
         else:
             # fall back to name of target then infer from class name
             # if targetName:
-            #     projectName = targetName
+            #     project_name = targetName
             if name.startswith("Build"):
-                projectName = name[len("Build"):].replace("_", "-")
-            cls.projectName = projectName
+                project_name = name[len("Build"):].replace("_", "-")
+            cls.project_name = project_name
 
         # load "target" field first then check project name (as that might default to target)
         targetName = None
         if "target" in clsdict:
             targetName = clsdict["target"]
-        elif projectName:
-            targetName = projectName.lower()
+        elif project_name:
+            targetName = project_name.lower()
             cls.target = targetName
 
         if not targetName:
             sys.exit("target name is not set and cannot infer from class " + name +
-                     " -- set projectName=, target= or doNotAddToTargets=True")
+                     " -- set project_name=, target= or doNotAddToTargets=True")
         if cls.__dict__.get("dependenciesMustBeBuilt"):
             if not cls.dependencies:
                 sys.exit("PseudoTarget with no dependencies should not exist!! Target name = " + targetName)
@@ -144,7 +144,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     # These two class variables can be defined in subclasses to customize dependency ordering of targets
     target = ""  # type: str
-    projectName = None
+    project_name = None
     dependencies = []  # type: typing.List[str]
     dependenciesMustBeBuilt = False
     isAlias = False
@@ -381,8 +381,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     @property
     def display_name(self):
         if self._crossCompileTarget is CrossCompileTarget.NONE:
-            return self.projectName + " (target alias)"
-        return self.projectName + " (" + self._crossCompileTarget.build_suffix(self.config) + ")"
+            return self.project_name + " (target alias)"
+        return self.project_name + " (" + self._crossCompileTarget.build_suffix(self.config) + ")"
 
     @classmethod
     def get_class_for_target(cls: "typing.Type[Type_T]", arch: CrossCompileTarget) -> "typing.Type[Type_T]":
@@ -416,8 +416,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # Need a string annotation for kind to avoid https://github.com/python/typing/issues/266 which seems to affect
         # the version of python in Ubuntu 16.04
         configOptionKey = cls.target
-        # if cls.target != cls.projectName.lower():
-        #    self.fatal("Target name does not match project name:", cls.target, "vs", cls.projectName.lower())
+        # if cls.target != cls.project_name.lower():
+        #    self.fatal("Target name does not match project name:", cls.target, "vs", cls.project_name.lower())
 
         # Hide stuff like --foo/install-directory from --help
         helpHidden = not showHelp
@@ -463,8 +463,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 # build-directory should only be inherited for the default target (e.g. cheribsd-cheri -> cheribsd):
                 if cls.default_architecture is not None and cls.default_architecture is cls._crossCompileTarget:
                     # Don't allow cheribsd-purecap/build-directory to fall back to cheribsd/build-directory
-                    # but if the projectName is the same we can assume it's the same class:
-                    if cls.projectName == synthetic_base.projectName:
+                    # but if the project_name is the same we can assume it's the same class:
+                    if cls.project_name == synthetic_base.project_name:
                         fallback_config_name = fallback_name_base + "/" + name
         return cls._configLoader.addOption(configOptionKey + "/" + name, shortname, default=default, type=kind,
                                            _owningClass=cls, group=cls._commandLineOptionGroup, helpHidden=helpHidden,
@@ -1183,7 +1183,7 @@ class GitRepository(SourceRepository):
                 remote_url = runCmd("git", "remote", "get-url", "origin", captureOutput=True,
                                     cwd=src_dir).stdout.strip()
                 if remote_url == old_url:
-                    warningMessage(current_project.projectName, "still points to old repository", remote_url)
+                    warningMessage(current_project.project_name, "still points to old repository", remote_url)
                     if current_project.queryYesNo("Update to correct URL?"):
                         runCmd("git", "remote", "set-url", "origin", self.url, runInPretendMode=True, cwd=src_dir)
 
@@ -1252,15 +1252,15 @@ class Project(SimpleProject):
     build_dir_suffix = ""   # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
 
     defaultSourceDir = ComputedDefaultValue(
-        function=lambda config, project: Path(config.sourceRoot / project.projectName.lower()),
-        as_string=lambda cls: "$SOURCE_ROOT/" + cls.projectName.lower())
+        function=lambda config, project: Path(config.sourceRoot / project.project_name.lower()),
+        as_string=lambda cls: "$SOURCE_ROOT/" + cls.project_name.lower())
 
     appendCheriBitsToBuildDir = False
     """ Whether to append -128/-256 to the computed build directory name"""
 
     @classmethod
     def projectBuildDirHelpStr(cls):
-        result = "$BUILD_ROOT/" + cls.projectName.lower()
+        result = "$BUILD_ROOT/" + cls.project_name.lower()
         if cls.appendCheriBitsToBuildDir or hasattr(cls, "crossCompileTarget"):
             result += "-$TARGET"
         result += "-build"
@@ -1315,7 +1315,7 @@ class Project(SimpleProject):
         return result
 
     def build_dir_for_target(self, target: CrossCompileTarget):
-        return self.config.buildRoot / (self.projectName.lower() + self.build_configuration_suffix(target) + "-build")
+        return self.config.buildRoot / (self.project_name.lower() + self.build_configuration_suffix(target) + "-build")
 
     _installToSDK = ComputedDefaultValue(
         function=lambda config, project: config.sdkDir,
@@ -1372,9 +1372,9 @@ class Project(SimpleProject):
         super().setupConfigOptions(**kwargs)
         # statusUpdate("Setting up config options for", cls, cls.target)
         cls.default_source_dir = cls.addPathOption("source-directory", metavar="DIR", default=cls.defaultSourceDir,
-                                                   help="Override default source directory for " + cls.projectName)
+                                                   help="Override default source directory for " + cls.project_name)
         cls.buildDir = cls.addPathOption("build-directory", metavar="DIR", default=cls.defaultBuildDir,
-                                         help="Override default source directory for " + cls.projectName)
+                                         help="Override default source directory for " + cls.project_name)
         if cls.can_build_with_asan:
             asan_default = ComputedDefaultValue(
                 function=lambda config, proj: False if proj.get_crosscompile_target(config).is_cheri_purecap() else proj.default_use_asan,
@@ -1388,7 +1388,7 @@ class Project(SimpleProject):
                                            help="Override --skip-update/--no-skip-update for this target only ")
 
         if not installDirectoryHelp:
-            installDirectoryHelp = "Override default install directory for " + cls.projectName
+            installDirectoryHelp = "Override default install directory for " + cls.project_name
         cls._installDir = cls.addPathOption("install-directory", metavar="DIR", help=installDirectoryHelp,
                                            default=cls.defaultInstallDir)
         if "repository" in cls.__dict__ and isinstance(cls.repository, GitRepository):
@@ -1438,7 +1438,7 @@ class Project(SimpleProject):
         self.sourceDir = self.repository.get_real_source_dir(self, self.default_source_dir)
 
         if self.build_in_source_dir:
-            self.verbose_print("Cannot build", self.projectName, "in a separate build dir, will build in", self.sourceDir)
+            self.verbose_print("Cannot build", self.project_name, "in a separate build dir, will build in", self.sourceDir)
             self.buildDir = self.sourceDir
 
         self.configureCommand = ""
@@ -1550,7 +1550,7 @@ class Project(SimpleProject):
 
     def update(self):
         if not self.repository and not self.config.skipUpdate:
-            self.fatal("Cannot update", self.projectName, "as it is missing a repository source",
+            self.fatal("Cannot update", self.project_name, "as it is missing a repository source",
                        fatalWhenPretending=True)
         self.repository.update(self, src_dir=self.sourceDir, default_src_dir=self.default_source_dir,
                                revision=self.gitRevision, skip_submodules=self.skipGitSubmodules)
@@ -1559,7 +1559,7 @@ class Project(SimpleProject):
 
     def _git_clean_source_dir(self):
         # just use git clean for cleanup
-        warningMessage(self.projectName, "does not support out-of-source builds, using git clean to remove "
+        warningMessage(self.project_name, "does not support out-of-source builds, using git clean to remove "
                                          "build artifacts.")
         git_clean_cmd = ["git", "clean", "-dfx", "--exclude=.*", "--exclude=*.kdev4"] + self._extra_git_clean_excludes
         # Try to keep project files for IDEs and other dotfiles:
@@ -1673,7 +1673,7 @@ add_custom_target(cheribuild-verbose-j1 VERBATIM USES_TERMINAL COMMAND {command}
 
 add_custom_target(cheribuild-with-install VERBATIM USES_TERMINAL COMMAND {command} --skip-update {target})
 add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {target})
-""".format(command="${CLEAR_MAKEENV} " + sys.argv[0], project=self.projectName, target=self.target)
+""".format(command="${CLEAR_MAKEENV} " + sys.argv[0], project=self.project_name, target=self.target)
         target_file = self.sourceDir / "CMakeLists.txt"
         create = True
         if target_file.exists():
@@ -1696,7 +1696,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if self.generate_cmakelists:
             self._do_generate_cmakelists()
         if self.config.verbose:
-            print(self.projectName, "directories: source=%s, build=%s, install=%s" %
+            print(self.project_name, "directories: source=%s, build=%s, install=%s" %
                   (self.sourceDir, self.buildDir, self.installDir))
         if self.config.skipUpdate:
             # When --skip-update is set (or we don't have working internet) only check that the repository exists

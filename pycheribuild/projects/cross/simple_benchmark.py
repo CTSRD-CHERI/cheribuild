@@ -36,7 +36,7 @@ import tempfile
 class BuildSimpleCheriBenchmarks(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/arichardson/simple-cheri-benchmarks.git")
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
-    projectName = "simple-cheri-benchmarks"
+    project_name = "simple-cheri-benchmarks"
 
     def create_test_dir(self, outdir: Path):
         self.clean_directory(outdir)

@@ -278,7 +278,7 @@ class BuildQEMU(BuildQEMUBase):
 
 class BuildQEMURISCV(BuildQEMUBase):
     target = "qemu-riscv"
-    projectName = "qemu-riscv"
+    project_name = "qemu-riscv"
     default_targets = "riscv64-softmmu"
 
     @classmethod
@@ -288,7 +288,7 @@ class BuildQEMURISCV(BuildQEMUBase):
 
 class BuildCheriOSQEMU(BuildQEMU):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="cherios", force_branch=True)
-    projectName = "cherios-qemu"
+    project_name = "cherios-qemu"
     target = "cherios-qemu"
     defaultInstallDir = ComputedDefaultValue(
         function=lambda config, project: config.outputRoot / "cherios-sdk",

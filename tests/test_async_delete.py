@@ -13,14 +13,14 @@ import subprocess
 # noinspection PyTypeChecker
 class MockProject(Project):
     doNotAddToTargets = True
-    projectName = "FAKE"
+    project_name = "FAKE"
     target = "FAKE"
     _should_not_be_instantiated = False
     repository = ExternallyManagedSourceRepository()
 
     def __init__(self, config: MockConfig, name: str):
         self._crossCompileTarget = CrossCompileTarget.NATIVE
-        self.projectName = name
+        self.project_name = name
         expected_src = config.sourceRoot / "sources" / name  # type: Path
         self.default_source_dir = expected_src
         expected_install = config.sourceRoot / "install" / name  # type: Path

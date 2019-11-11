@@ -157,7 +157,7 @@ class Opam2(SimpleProject):
 
 
 class BuildBubbleWrap(AutotoolsProject):
-    projectName = "bubblewrap"
+    project_name = "bubblewrap"
     repository = GitRepository("https://github.com/projectatomic/bubblewrap")
     defaultInstallDir = AutotoolsProject._installToBootstrapTools
 
@@ -235,7 +235,7 @@ class BuildSail(TargetAliasWithDependencies):
 
 class BuildSailCheriMips(ProjectUsingOpam):
     target = "sail-cheri-mips"
-    projectName = "sail-cheri-mips"
+    project_name = "sail-cheri-mips"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-mips")
     dependencies = ["sail-from-opam"]
     defaultInstallDir = Project._installToSDK
@@ -270,7 +270,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
 
 class BuildSailRISCV(ProjectUsingOpam):
     target = "sail-riscv"
-    projectName = "sail-riscv"
+    project_name = "sail-riscv"
     repository = GitRepository("https://github.com/rems-project/sail-riscv")
     dependencies = ["sail-from-opam"]
     defaultInstallDir = Project._installToSDK
@@ -305,7 +305,7 @@ class BuildSailRISCV(ProjectUsingOpam):
 
 class BuildSailCheriRISCV(ProjectUsingOpam):
     target = "sail-cheri-riscv"
-    projectName = "sail-cheri-riscv"
+    project_name = "sail-cheri-riscv"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-riscv")
     dependencies = ["sail-from-opam"]
     defaultInstallDir = Project._installToSDK

@@ -36,7 +36,7 @@ from ...utils import getCompilerInfo, IS_FREEBSD
 
 
 class BuildBODiagSuite(CrossCompileCMakeProject):
-    projectName = "bodiagsuite"
+    project_name = "bodiagsuite"
     repository = GitRepository("https://github.com/CTSRD-CHERI/bodiagsuite",
                                old_urls=[b"https://github.com/nwf/bodiagsuite"])
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS

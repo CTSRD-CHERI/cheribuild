@@ -36,7 +36,7 @@ from .llvm import BuildLLVMMonoRepoBase
 #                                            as_string="$INSTALL_ROOT/soaap")
 
 class BuildSoftBoundCETS(BuildLLVMMonoRepoBase):
-    projectName = "SoftBoundCETS"
+    project_name = "SoftBoundCETS"
     repository = GitRepository("https://github.com/santoshn/SoftBoundCETS-3.9")
     appendCheriBitsToBuildDir = False
     defaultInstallDir = Path("/do/not/install")

@@ -630,7 +630,7 @@ def _defaultDiskImagePath(config: CheriConfig, pfx, img_prefix=""):
 
 
 class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
-    projectName = "disk-image-minimal"
+    project_name = "disk-image-minimal"
     dependencies = ["qemu", "cheribsd-cheri"]  # TODO: include gdb?
     supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
 
@@ -805,7 +805,7 @@ class _BuildMultiArchDiskImage(_BuildDiskImageBase):
 
 
 class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
-    projectName = "disk-image"
+    project_name = "disk-image"
     dependencies = ["qemu", "cheribsd-cheri", "gdb-mips"]
     _source_class = BuildCHERIBSD
 
@@ -852,7 +852,7 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
 
 
 class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
-    projectName = "disk-image-purecap"
+    project_name = "disk-image-purecap"
     dependencies = ["qemu", "cheribsd-purecap", "gdb-mips"]
     supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
 
@@ -915,7 +915,7 @@ class BuildFreeBSDImage(_BuildMultiArchDiskImage):
 
 
 class BuildFreeBSDWithDefaultOptionsDiskImage(BuildFreeBSDImage):
-    projectName = "disk-image-freebsd-with-default-options"
+    project_name = "disk-image-freebsd-with-default-options"
     _source_class = BuildFreeBSDWithDefaultOptions
     hide_options_from_help = True
 

@@ -32,7 +32,7 @@ from .crosscompileproject import *
 from ...utils import setEnv
 
 class DLMalloc(CrossCompileProject):
-    projectName = "dlmalloc"
+    project_name = "dlmalloc"
     repository = GitRepository("https://github.com/CTSRD-CHERI/dlmalloc_nonreuse")
     appendCheriBitsToBuildDir = True
     supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.NATIVE, CrossCompileTarget.CHERIBSD_MIPS]

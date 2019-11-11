@@ -37,7 +37,7 @@ install_to_soaap_dir = ComputedDefaultValue(function=lambda config, project: con
 
 class BuildSoaapLLVM(BuildLLVMSplitRepoBase):
     target = "soaap-llvm"
-    projectName = "soaap-llvm"
+    project_name = "soaap-llvm"
     githubBaseUrl = "https://github.com/CTSRD-SOAAP/"
     repository = GitRepository(githubBaseUrl + "llvm.git")
     no_default_sysroot = True

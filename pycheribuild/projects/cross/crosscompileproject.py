@@ -94,16 +94,16 @@ def default_cross_install_dir(config: CheriConfig, project: "Project", install_d
         if config.cross_target_suffix:
             targetName += "-" + config.cross_target_suffix
         if install_dir_name is None:
-            install_dir_name = project.projectName.lower()
+            install_dir_name = project.project_name.lower()
         return Path(cheribsd_instance.installDir / "opt" / targetName / install_dir_name)
     elif project.crossInstallDir == CrossInstallDir.SDK:
         return project.sdkSysroot
-    fatalError("Unknown install dir for", project.projectName)
+    fatalError("Unknown install dir for", project.project_name)
 
 
 def _installDirMessage(project: "CrossCompileProject"):
     if project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
-        return "$CHERIBSD_ROOTFS/opt/$TARGET/" + project.projectName.lower() + " or $CHERI_SDK for --xhost build"
+        return "$CHERIBSD_ROOTFS/opt/$TARGET/" + project.project_name.lower() + " or $CHERI_SDK for --xhost build"
     elif project.crossInstallDir == CrossInstallDir.SDK:
         return "$CHERI_SDK/sysroot for cross builds or $CHERI_SDK for --xhost build"
     return "UNKNOWN"

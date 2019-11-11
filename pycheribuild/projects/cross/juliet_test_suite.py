@@ -33,7 +33,7 @@ from ..project import ReuseOtherProjectRepository
 
 
 class BuildJulietTestSuite(CrossCompileCMakeProject):
-    projectName = "juliet-test-suite"
+    project_name = "juliet-test-suite"
     # TODO: move repo to CTSRD-CHERI
     repository = GitRepository("https://github.com/arichardson/juliet-test-suite-c.git")
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
@@ -95,21 +95,21 @@ class BuildJulietCWESubdir(CrossCompileCMakeProject):
         self.run_cheribsd_test_script("run_juliet_tests.py", *args, mount_sourcedir=True, mount_sysroot=True, mount_builddir=True)
 
 class BuildJulietCWE121(BuildJulietCWESubdir):
-    projectName = "juliet-cwe-121"
+    project_name = "juliet-cwe-121"
     cwe_number = 121
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite, subdirectory="testcases/CWE121_Stack_Based_Buffer_Overflow")
 
 class BuildJulietCWE126(BuildJulietCWESubdir):
-    projectName = "juliet-cwe-126"
+    project_name = "juliet-cwe-126"
     cwe_number = 126
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite, subdirectory="testcases/CWE126_Buffer_Overread")
 
 class BuildJulietCWE415(BuildJulietCWESubdir):
-    projectName = "juliet-cwe-415"
+    project_name = "juliet-cwe-415"
     cwe_number = 415
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite, subdirectory="testcases/CWE415_Double_Free")
 
 class BuildJulietCWE416(BuildJulietCWESubdir):
-    projectName = "juliet-cwe-416"
+    project_name = "juliet-cwe-416"
     cwe_number = 416
     repository = ReuseOtherProjectRepository(BuildJulietTestSuite, subdirectory="testcases/CWE416_Use_After_Free")

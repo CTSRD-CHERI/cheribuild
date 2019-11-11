@@ -32,7 +32,7 @@ from .crosscompileproject import *
 
 
 class SNMalloc(CrossCompileCMakeProject):
-    projectName = "snmalloc"
+    project_name = "snmalloc"
     repository = GitRepository("https://github.com/nwf/snmalloc")
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     appendCheriBitsToBuildDir = True

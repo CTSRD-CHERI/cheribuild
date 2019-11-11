@@ -35,7 +35,7 @@ from ..project import *
 
 # Using GCC not Clang, so can't use CrossCompileAutotoolsProject
 class BuildBBLFreeBSDWithDefaultOptionsRISCV(AutotoolsProject):
-    projectName = "bbl-freebsd-with-default-options-riscv"
+    project_name = "bbl-freebsd-with-default-options-riscv"
     target = "bbl-freebsd-with-default-options-riscv"
     dependencies = ["freebsd-with-default-options-riscv"]
     repository = GitRepository("https://github.com/jrtc27/riscv-pk.git")

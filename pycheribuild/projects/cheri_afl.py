@@ -32,7 +32,7 @@ from .project import *
 
 
 class BuildAflCheriNinja(Project):
-    projectName = "AFL-CHERI"
+    project_name = "AFL-CHERI"
     repository = GitRepository("https://github.com/CTSRD-CHERI/AFL-CHERI")
     defaultInstallDir = AutotoolsProject._installToSDK
     make_kind = MakeCommandKind.GnuMake

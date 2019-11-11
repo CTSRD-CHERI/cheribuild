@@ -35,14 +35,14 @@ class BuildCheriTests(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/arichardson/cheri-tests.git")
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     defaultCMakeBuildType = "RelWithDebInfo"
-    projectName = "cheri-tests"
+    project_name = "cheri-tests"
 
 
 class BuildRtldTests(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/arichardson/rtld-tests.git")
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     defaultCMakeBuildType = "Debug"
-    projectName = "rtld-tests"
+    project_name = "rtld-tests"
 
     def __init__(self, config: CheriConfig, *args, **kwargs):
         super().__init__(config, *args, **kwargs)

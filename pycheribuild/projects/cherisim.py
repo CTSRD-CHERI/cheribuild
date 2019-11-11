@@ -35,7 +35,7 @@ from ..utils import OSInfo, commandline_to_str
 
 class BuildCheriSim(Project):
     target = "cheri-sim"
-    projectName = "cheri-cpu"
+    project_name = "cheri-cpu"
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-cpu")
     defaultInstallDir = Project._installToSDK
     build_in_source_dir = True      # Needs to build in the source dir
