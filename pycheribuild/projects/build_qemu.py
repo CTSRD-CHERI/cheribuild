@@ -49,8 +49,8 @@ class BuildQEMUBase(AutotoolsProject):
     default_targets = "some-invalid-target"
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions()
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options()
         cls.debug_info = cls.addBoolOption("debug-info")
         cls.with_sanitizers = cls.addBoolOption("sanitizers", help="Build QEMU with ASAN/UBSAN (very slow)", default=False)
 
@@ -246,8 +246,8 @@ class BuildQEMU(BuildQEMUBase):
     default_targets = "cheri256-softmmu,cheri128-softmmu,cheri128magic-softmmu,mips64-softmmu"
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions()
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options()
         cls.magic128 = cls.addBoolOption("magic-128")
         # Turn on unaligned loads/stores by default
         cls.unaligned = cls.addBoolOption("unaligned", showHelp=True, help="Permit un-aligned loads/stores",

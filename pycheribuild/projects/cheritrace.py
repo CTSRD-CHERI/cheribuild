@@ -37,8 +37,8 @@ class BuildCheriTrace(CMakeProject):
     appendCheriBitsToBuildDir = True
 
     @classmethod
-    def setupConfigOptions(cls):
-        super().setupConfigOptions()
+    def setup_config_options(cls):
+        super().setup_config_options()
         cls.include_python_bindings = cls.addBoolOption("python-bindings")
 
     def __init__(self, config: CheriConfig):

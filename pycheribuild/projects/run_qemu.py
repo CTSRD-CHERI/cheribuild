@@ -51,8 +51,8 @@ class LaunchQEMUBase(SimpleProject):
     _hasPCI = True
 
     @classmethod
-    def setupConfigOptions(cls, sshPortShortname: "typing.Optional[str]", defaultSshPort: int=None, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, sshPortShortname: "typing.Optional[str]", defaultSshPort: int=None, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.extraOptions = cls.addConfigOption("extra-options", default=[], kind=list, metavar="QEMU_OPTIONS",
                                                help="Additional command line flags to pass to qemu-system-cheri")
         cls.logfile = cls.addPathOption("logfile", default=None, metavar="LOGFILE",
@@ -123,7 +123,7 @@ class LaunchQEMUBase(SimpleProject):
             if not self.isPortAvailable(monitorPort):
                 warningMessage("Cannot connect QEMU montitor to port", monitorPort)
                 self.printPortUsage(monitorPort)
-                if self.queryYesNo("Will connect the QEMU monitor to stdio instead. Continue?"):
+                if self.query_yes_no("Will connect the QEMU monitor to stdio instead. Continue?"):
                     monitorOptions = []
                 else:
                     self.fatal("Monitor port not available and stdio is not acceptable.")
@@ -222,8 +222,8 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
     _provide_src_via_smb = True
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         if not IS_FREEBSD:
             cls.remoteKernelPath = cls.addConfigOption("remote-kernel-path", showHelp=True,
                                                        help="Path to the FreeBSD kernel image on a remote host. "
@@ -328,8 +328,8 @@ class LaunchCheriBSD(AbstractLaunchFreeBSD):
     supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(sshPortShortname="-ssh-forwarding-port",
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(sshPortShortname="-ssh-forwarding-port",
                                    defaultSshPort=defaultSshForwardingPort(),
                                    **kwargs)
 
@@ -348,8 +348,8 @@ class LaunchCheriBSDPurecap(AbstractLaunchFreeBSD):
     supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(defaultSshPort=defaultSshForwardingPort() + 1, sshPortShortname=None,
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(defaultSshPort=defaultSshForwardingPort() + 1, sshPortShortname=None,
                                    useTelnetShortName=None, **kwargs)
 
     def __init__(self, config):
@@ -370,8 +370,8 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
     hide_options_from_help = True
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
                                    defaultSshPort=defaultSshForwardingPort() + 4,
                                    **kwargs)
 
@@ -399,7 +399,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
 
     def process(self):
         if not self.diskImage.exists():
-            if self.queryYesNo("CheriOS disk image is missing. Would you like to create a zero-filled 1MB image?"):
+            if self.query_yes_no("CheriOS disk image is missing. Would you like to create a zero-filled 1MB image?"):
                 size_flag = "bs=128m" if IS_MAC else "bs=128M"
                 runCmd("dd", "if=/dev/zero", "of=" + str(self.diskImage), size_flag, "count=1")
         super().process()
@@ -411,9 +411,9 @@ class LaunchFreeBSD(_RunMultiArchFreeBSDImage):
     _source_class = BuildFreeBSDImage
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
+    def setup_config_options(cls, **kwargs):
         add_to_port = cls.get_cross_target_index()
-        super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
+        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
                                    defaultSshPort=defaultSshForwardingPort() + 10 + add_to_port, **kwargs)
 
 
@@ -423,9 +423,9 @@ class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
     _source_class = BuildFreeBSDWithDefaultOptionsDiskImage
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
+    def setup_config_options(cls, **kwargs):
         add_to_port = cls.get_cross_target_index()
-        super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
+        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
                                    defaultSshPort=defaultSshForwardingPort() + 20 + add_to_port, **kwargs)
 
 
@@ -435,8 +435,8 @@ class LaunchCheriBsdMfsRoot(AbstractLaunchFreeBSD):
     supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
                                    defaultSshPort=defaultSshForwardingPort() + 8, **kwargs)
 
     def __init__(self, config):
@@ -459,8 +459,8 @@ class LaunchCheriBsdMinimal(AbstractLaunchFreeBSD):
     supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(sshPortShortname=None, useTelnetShortName=None,
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
                                    defaultSshPort=defaultSshForwardingPort() + 8, **kwargs)
 
     def __init__(self, config):

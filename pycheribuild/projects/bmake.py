@@ -46,4 +46,4 @@ class BuildBmake(AutotoolsProject):
         super().configure()
 
     def compile(self, **kwargs):
-        self.runWithLogfile(["sh", self.buildDir / "make-bootstrap.sh"], cwd=self.buildDir, logfileName="build.log")
+        self.run_with_logfile(["sh", self.buildDir / "make-bootstrap.sh"], cwd=self.buildDir, logfile_name="build.log")

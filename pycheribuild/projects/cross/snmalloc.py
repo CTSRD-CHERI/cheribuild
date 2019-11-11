@@ -42,8 +42,8 @@ class SNMalloc(CrossCompileCMakeProject):
     defaultCMakeBuildType = "Debug"
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
 
         cls.just_so          = cls.addBoolOption("just-so", help="Just build the .so shim")
         cls.debug            = cls.addBoolOption("debug", help="Turn on debugging features")

@@ -144,8 +144,8 @@ class BuildFreeBSDBase(Project):
         ]
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.makeOptions = cls.addConfigOption("build-options", default=cls.defaultExtraMakeOptions, kind=list,
                                               metavar="OPTIONS",
                                               help="Additional make options to be passed to make when building "
@@ -246,9 +246,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
         return cls.rootfsDir(caller, config, cross_target) / "boot/kernel/kernel"
 
     @classmethod
-    def setupConfigOptions(cls, buildKernelWithClang: bool = True, bootstrap_toolchain=False,
+    def setup_config_options(cls, buildKernelWithClang: bool = True, bootstrap_toolchain=False,
                            debug_info_by_default=True, **kwargs):
-        super().setupConfigOptions(add_common_cross_options=False, **kwargs)
+        super().setup_config_options(add_common_cross_options=False, **kwargs)
         if "subdirOverride" not in cls.__dict__:
             cls.subdirOverride = cls.addConfigOption("subdir-with-deps", kind=str, metavar="DIR", showHelp=False,
                                                      help="Only build subdir DIR instead of the full tree. This uses "
@@ -317,7 +317,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         cls.fastRebuild = cls.addBoolOption("fast",
                                             help="Skip some (usually) unnecessary build steps to speed up rebuilds")
 
-    def _stdoutFilter(self, line: bytes):
+    def _stdout_filter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
             if self._lastStdoutLineCanBeOverwritten:
                 sys.stdout.buffer.write(Project._clearLineSequence)
@@ -325,7 +325,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             flushStdio(sys.stdout)
             self._lastStdoutLineCanBeOverwritten = False
         elif line.startswith(b"===> "):  # new subdirectory
-            self._lineNotImportantStdoutFilter(line)
+            self._line_not_important_stdout_filter(line)
         elif line == b"--------------------------------------------------------------\n":
             return  # ignore separator around status updates
         elif line == b"\n":
@@ -337,7 +337,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         elif line.startswith(b"[Creating objdir") or line.startswith(b"[Creating nested objdir"):
             return  # ignore the WITH_AUTO_OBJ messages
         else:
-            self._showLineStdoutFilter(line)
+            self._show_line_stdout_filter(line)
 
     def __init__(self, config: CheriConfig, archBuildFlags: dict = None):
         super().__init__(config)
@@ -568,7 +568,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         kernelMakeArgs = self.kernelMakeArgsForConfig(kernconf)
         if self.debug_kernel:
             if "_BENCHMARK" in kernconf:
-                if not self.queryYesNo("Trying to build BENCHMARK kernel without optimization. Continue?"):
+                if not self.query_yes_no("Trying to build BENCHMARK kernel without optimization. Continue?"):
                     return
             kernelMakeArgs.set(COPTFLAGS="-O0 -DBOOTVERBOSE=2")
         if mfs_root_image:
@@ -928,8 +928,8 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
                                                                       CrossCompileTarget.FREEBSD_I386]
 
     @classmethod
-    def setupConfigOptions(cls, installDirectoryHelp=None, **kwargs):
-        super().setupConfigOptions(buildKernelWithClang=True, bootstrap_toolchain=True, debug_info_by_default=False)
+    def setup_config_options(cls, installDirectoryHelp=None, **kwargs):
+        super().setup_config_options(buildKernelWithClang=True, bootstrap_toolchain=True, debug_info_by_default=False)
 
     def addCrossBuildOptions(self):
         # Just try to build as much as possible (but using make.py)
@@ -953,9 +953,9 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
     defaultInstallDir = Path("/this/target/should/not/be/installed!")
 
     @classmethod
-    def setupConfigOptions(cls, buildKernelWithClang: bool = True, bootstrap_toolchain=False,
+    def setup_config_options(cls, buildKernelWithClang: bool = True, bootstrap_toolchain=False,
                            debug_info_by_default=True, **kwargs):
-        super().setupConfigOptions(add_common_cross_options=False, **kwargs)
+        super().setup_config_options(add_common_cross_options=False, **kwargs)
         cls.tinderbox = cls.addBoolOption("tinderbox", help="Use `make tinderbox` instead of `make universe`")
         cls.worlds_only = cls.addBoolOption("worlds-only", help="Only build worlds (skip building kernels)")
         cls.kernels_only = cls.addBoolOption("kernels-only", help="Only build kernels (skip building worlds)",
@@ -1004,7 +1004,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
         self.info("freebsd-universe is a compile-only target")
 
     # Don't filter lines here
-    _stdoutFilter = Project._showLineStdoutFilter
+    _stdout_filter = Project._show_line_stdout_filter
 
     def process(self):
         if not IS_FREEBSD:
@@ -1038,11 +1038,11 @@ class BuildCHERIBSD(BuildFreeBSD):
     crossbuild = True  # changes have been merged into master
 
     @classmethod
-    def setupConfigOptions(cls, installDirectoryHelp=None, **kwargs):
+    def setup_config_options(cls, installDirectoryHelp=None, **kwargs):
         if installDirectoryHelp is None:
             installDirectoryHelp = "Install directory for CheriBSD root file system (default: " \
                                    "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)"
-        super().setupConfigOptions(buildKernelWithClang=True, installDirectoryHelp=installDirectoryHelp)
+        super().setup_config_options(buildKernelWithClang=True, installDirectoryHelp=installDirectoryHelp)
         default_cheri_cc = ComputedDefaultValue(
             function=lambda config, unused: config.sdkDir / "bin/clang",
             as_string="${SDK_DIR}/bin/clang")
@@ -1315,8 +1315,8 @@ class BuildCHERIBSDPurecap(BuildCHERIBSD):
                                              as_string="$INSTALL_ROOT/rootfs-purecap{128/256}")
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
 
     def __init__(self, config):
         super().__init__(config)
@@ -1337,11 +1337,11 @@ class BuildCHERIBSDMinimal(BuildCHERIBSD):
                                              as_string="$INSTALL_ROOT/rootfs-minmal{128,256,-mips,-x86}")
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
+    def setup_config_options(cls, **kwargs):
         cls.subdirOverride = None  # "tools/cheribsdbox"
         cls.minimal = True
         cls.build_tests = False
-        super().setupConfigOptions(**kwargs)
+        super().setup_config_options(**kwargs)
 
     def __init__(self, config):
         super().__init__(config)
@@ -1445,8 +1445,8 @@ class BuildCheriBsdSysroot(SimpleProject):
                 sys.exit("Cannot continue...")
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.copy_remote_sysroot = cls.addBoolOption("copy-remote-sysroot", default=False,
                                                     help="Copy sysroot from remote server instead of from local "
                                                          "machine")
@@ -1484,7 +1484,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         self.remotePath = os.path.expandvars(self.remotePath)
         remoteSysrootArchive = self.remotePath + "/" + self.sysrootArchiveName
         statusUpdate("Will copy the sysroot files from ", remoteSysrootArchive, sep="")
-        if not self.queryYesNo("Continue?"):
+        if not self.query_yes_no("Continue?"):
             return
 
         # now copy the files

@@ -76,8 +76,8 @@ class _BuildDiskImageBase(SimpleProject):
         return False  # True for CheriBSD
 
     @classmethod
-    def setupConfigOptions(cls, *, defaultHostname, extraFilesShortname=None, extraFilesSuffix="", **kwargs):
-        super().setupConfigOptions()
+    def setup_config_options(cls, *, defaultHostname, extraFilesShortname=None, extraFilesSuffix="", **kwargs):
+        super().setup_config_options()
         cls.extraFilesDir = cls.addPathOption("extra-files",
             shortname=extraFilesShortname, showHelp=True,
             default=lambda config, project: (config.sourceRoot / ("extra-files" + extraFilesSuffix)),
@@ -313,12 +313,12 @@ class _BuildDiskImageBase(SimpleProject):
             sshKeys = list(Path(os.path.expanduser("~/.ssh/")).glob("*.pub"))
             if len(sshKeys) > 0:
                 print("Found the following ssh keys:", list(map(str, sshKeys)))
-                if self.queryYesNo("Should they be added to /root/.ssh/authorized_keys?", default_result=True):
+                if self.query_yes_no("Should they be added to /root/.ssh/authorized_keys?", default_result=True):
                     contents = ""
                     for pubkey in sshKeys:
                         contents += self.readFile(pubkey)
                     self.createFileForImage("/root/.ssh/authorized_keys", contents=contents, mode=0o600)
-                    if self.queryYesNo("Should this authorized_keys file be used by default? "
+                    if self.query_yes_no("Should this authorized_keys file be used by default? "
                                        "(You can always change them by editing/deleting '" +
                                        str(authorizedKeys) + "')?"):
                         self.installFile(self.tmpdir / "root/.ssh/authorized_keys", authorizedKeys)
@@ -461,8 +461,8 @@ class _BuildDiskImageBase(SimpleProject):
         except:
             warningMessage("makefs failed, if it reports an issue with METALOG report a bug (could be either cheribuild"
                            " or cheribsd) and attach the METALOG file.")
-            self.queryYesNo("About to delete the temporary directory. Copy any files you need before pressing enter.",
-                            yesNoStr="")
+            self.query_yes_no("About to delete the temporary directory. Copy any files you need before pressing enter.",
+                            yes_no_str="")
             raise
 
         if self.is_x86:
@@ -500,7 +500,7 @@ class _BuildDiskImageBase(SimpleProject):
         # noinspection PyAttributeOutsideInit
         self.remotePath = os.path.expandvars(self.remotePath)
         statusUpdate("Will copy the disk-image from ", self.remotePath, sep="")
-        if not self.queryYesNo("Continue?"):
+        if not self.query_yes_no("Continue?"):
             return
 
         self.copyRemoteFile(self.remotePath, self.diskImagePath)
@@ -522,7 +522,7 @@ class _BuildDiskImageBase(SimpleProject):
             if not self.config.clean:
                 # with --clean always delete the image
                 print("An image already exists (" + str(self.diskImagePath) + "). ", end="")
-                if not self.queryYesNo("Overwrite?", default_result=True):
+                if not self.query_yes_no("Overwrite?", default_result=True):
                     return  # we are done here
             self.deleteFile(self.diskImagePath)
 
@@ -601,7 +601,7 @@ class _BuildDiskImageBase(SimpleProject):
             print("Found the following files in the rootfs that are not listed in METALOG:")
             for i in unlisted_files:
                 print("\t", i[1])
-            if self.queryYesNo("Should these files also be added to the image?", default_result=True, force_result=True):
+            if self.query_yes_no("Should these files also be added to the image?", default_result=True, force_result=True):
                 for i in unlisted_files:
                     self.mtree.add_file(i[0], i[1], print_status=self.config.verbose)
 
@@ -642,7 +642,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             return includeLocalFile("files/minimal-image/etc/rc.conf.in")
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
+    def setup_config_options(cls, **kwargs):
         hostUsername = CheriConfig.get_user_name()
         defaultHostname = ComputedDefaultValue(
             function=lambda conf, unused: "qemu-cheri" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
@@ -651,7 +651,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         def _defaultMinimalDiskImagePath(conf, proj):
             return _defaultDiskImagePath(conf, conf.outputRoot, "minimal-")
 
-        super().setupConfigOptions(defaultHostname=defaultHostname, extraFilesSuffix="-minimal", **kwargs)
+        super().setup_config_options(defaultHostname=defaultHostname, extraFilesSuffix="-minimal", **kwargs)
         cls.diskImagePath = cls.addPathOption("path", default=ComputedDefaultValue(
             function=_defaultMinimalDiskImagePath, as_string="$OUTPUT_ROOT/minimal-cheri256-disk.img or "
                                                             "$OUTPUT_ROOT/minimal-cheri128-disk.img depending on --cheri-bits."),
@@ -816,7 +816,7 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
         # return cls._source_class.supported_architectures
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
+    def setup_config_options(cls, **kwargs):
         hostUsername = CheriConfig.get_user_name()
         defaultHostname = ComputedDefaultValue(
             function=lambda conf, unused: "qemu-cheri" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
@@ -830,7 +830,7 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
             disk_img_shortname = "-disk-image-path"
             extra_files_shortname = "-extra-files"
 
-        super().setupConfigOptions(extraFilesShortname=extra_files_shortname, defaultHostname=defaultHostname, **kwargs)
+        super().setup_config_options(extraFilesShortname=extra_files_shortname, defaultHostname=defaultHostname, **kwargs)
         defaultDiskImagePath = ComputedDefaultValue(
             function=lambda conf, proj: _defaultDiskImagePath(conf, conf.outputRoot),
             as_string="$OUTPUT_ROOT/cheri256-disk.img or $OUTPUT_ROOT/cheri128-disk.img depending on --cheri-bits.")
@@ -857,12 +857,12 @@ class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
     supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
+    def setup_config_options(cls, **kwargs):
         hostUsername = CheriConfig.get_user_name()
         defaultHostname = ComputedDefaultValue(
             function=lambda conf, unused: "qemu-purecap" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
             as_string="qemu-purecap${CHERI_BITS}-" + hostUsername)
-        super().setupConfigOptions(defaultHostname=defaultHostname, **kwargs)
+        super().setup_config_options(defaultHostname=defaultHostname, **kwargs)
 
         defaultDiskImagePath = ComputedDefaultValue(
             function=lambda conf, proj: _defaultDiskImagePath(conf, conf.outputRoot, "purecap-"),
@@ -898,10 +898,10 @@ class BuildFreeBSDImage(_BuildMultiArchDiskImage):
     _source_class = BuildFreeBSD
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
+    def setup_config_options(cls, **kwargs):
         hostUsername = CheriConfig.get_user_name()
         suffix = cls._crossCompileTarget.generic_suffix if cls._crossCompileTarget else "<TARGET>"
-        super().setupConfigOptions(defaultHostname="qemu-" + suffix + "-" + hostUsername, **kwargs)
+        super().setup_config_options(defaultHostname="qemu-" + suffix + "-" + hostUsername, **kwargs)
         defaultDiskImagePath = ComputedDefaultValue(
                 function=_default_freebsd_disk_image_name, as_string="$OUTPUT_ROOT/freebsd-" + suffix + " .img")
         cls.diskImagePath = cls.addPathOption("path", default=defaultDiskImagePath, showHelp=True,

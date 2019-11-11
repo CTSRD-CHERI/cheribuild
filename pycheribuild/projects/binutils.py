@@ -42,8 +42,8 @@ class BuildGnuBinutils(AutotoolsProject):
     defaultInstallDir = AutotoolsProject._installToSDK
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions()
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options()
         cls.fullInstall = cls.addBoolOption("install-all-tools", help="Whether to install all binutils tools instead"
                                                                       "of only as, ld and objdump")
 
@@ -96,17 +96,17 @@ class BuildGnuBinutils(AutotoolsProject):
         self.configureEnvironment["CFLAGS"] = cflags
 
     def compile(self, **kwargs):
-        self.runMake("all-ld", logfileName="build")
-        self.runMake("all-gas", logfileName="build")
-        self.runMake("all-binutils", logfileName="build")
+        self.runMake("all-ld", logfile_name="build")
+        self.runMake("all-gas", logfile_name="build")
+        self.runMake("all-binutils", logfile_name="build")
 
     def install(self, **kwargs):
         bindir = self.installDir / "bin"
         if not self.fullInstall:
             # we don't want to install all programs, as the rest comes from elftoolchain
-            self.runMake("install-gas", logfileName="install", appendToLogfile=True, parallel=False)
+            self.runMake("install-gas", logfile_name="install", append_to_logfile=True, parallel=False)
             self.deleteFile(bindir / "mips64-unknown-freebsd-ld")
-            self.runMake("install-ld", logfileName="install", appendToLogfile=True, parallel=False)
+            self.runMake("install-ld", logfile_name="install", append_to_logfile=True, parallel=False)
             # we also need the linker scripts so this is not enough:
             # self.installFile(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
             self.moveFile(bindir / "mips64-unknown-freebsd-ld", bindir / "mips64-unknown-freebsd-ld.bfd")
@@ -130,6 +130,6 @@ class BuildGnuBinutils(AutotoolsProject):
     def process(self):
         self.warning("GNU binutils should only be built if you know what you are doing since the linker "
                      "is incredibly buggy and the assembler doesn't support all features that clang does.")
-        if not self.queryYesNo("Are you sure you want to build this code?"):
+        if not self.query_yes_no("Are you sure you want to build this code?"):
             return
         super().process()

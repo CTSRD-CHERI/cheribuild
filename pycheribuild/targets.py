@@ -268,7 +268,7 @@ class TargetManager(object):
         # RuntimeError: super(): empty __class__ cell
         # https://stackoverflow.com/questions/13126727/how-is-super-in-python-3-implemented/28605694#28605694
         for tgt in self._allTargets.values():
-            tgt._project_class.setupConfigOptions()
+            tgt._project_class.setup_config_options()
 
     @property
     def targetNames(self):

@@ -61,8 +61,8 @@ class BuildSyzkaller(CrossCompileProject):
     supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS]
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.sysgen = cls.addBoolOption(
             "run-sysgen", showHelp=True,
             help="Rerun syz-extract and syz-sysgen to rebuild generated Go "
@@ -145,8 +145,8 @@ class RunSyzkaller(SimpleProject):
     project_name = "run-syzkaller"
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.syz_config = cls.addPathOption("syz-config", default=None,
                                            help="Path to the syzkaller configuration file to use.",
                                            showHelp=True)

@@ -189,8 +189,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
     dependencies = ["libcxxrt"]
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.only_compile_tests = cls.addBoolOption("only-compile-tests",
                                                    help="Don't attempt to run tests, only compile them")
         cls.exceptions = cls.addBoolOption("exceptions", default=True, help="Build with support for C++ exceptions")

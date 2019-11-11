@@ -124,8 +124,8 @@ class BuildPostgres(CrossCompileAutotoolsProject):
 
     def run_tests(self):
         if self.compiling_for_host():
-            self.runMake("check", cwd=self.buildDir / "src/test/regress", stdoutFilter=None)
-            # self.runMake("check", cwd=self.buildDir / "src/interfaces/ecpg/test", stdoutFilter=None)
+            self.runMake("check", cwd=self.buildDir / "src/test/regress", stdout_filter=None)
+            # self.runMake("check", cwd=self.buildDir / "src/interfaces/ecpg/test", stdout_filter=None)
         else:
             locale_dir = BuildCHERIBSD.rootfsDir(self, self.config) / "usr/share/locale"
             self.run_cheribsd_test_script("run_postgres_tests.py", "--smb-mount-directory",
@@ -135,6 +135,6 @@ class BuildPostgres(CrossCompileAutotoolsProject):
                                           use_benchmark_kernel_by_default=True)
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions()
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options()
         cls.enable_assertions = cls.addBoolOption("assertions", default=True, help="Build with assertions enabled")

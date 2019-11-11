@@ -45,7 +45,7 @@ class TestAsyncDelete(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.config = setup_mock_chericonfig(Path("/invalid/path"))
-        MockProject.setupConfigOptions()
+        MockProject.setup_config_options()
 
     def setUp(self):
         self._tempRoot = tempfile.TemporaryDirectory()

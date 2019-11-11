@@ -183,8 +183,8 @@ class BuildSailFromOpam(OpamMixin, SimpleProject):
         self.addRequiredSystemTool("z3", homebrew="z3 --without-python@2 --with-python")
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.use_git_version = cls.addBoolOption("use-git-version", showHelp=False,
                                                 help="Install sail from github instead of using the latest released "
                                                      "version")
@@ -248,8 +248,8 @@ class BuildSailCheriMips(ProjectUsingOpam):
         # self._addRequiredSystemHeader("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.with_trace_support = cls.addBoolOption("trace-support", showHelp=True,
                                                    help="Build sail-cheri-mips simulators with tracing support (they "
                                                         "will be slow but the traces are useful to debug failing "
@@ -282,8 +282,8 @@ class BuildSailRISCV(ProjectUsingOpam):
         self._addRequiredSystemHeader("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.with_trace_support = cls.addBoolOption("trace-support", showHelp=True,
                                                    help="Build sail-cheri-mips simulators with tracing support (they "
                                                         "will be slow but"
@@ -317,8 +317,8 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
         self._addRequiredSystemHeader("gmp.h", homebrew="gmp", apt="libgmp-dev")
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.with_trace_support = cls.addBoolOption("trace-support", showHelp=True,
                                                    help="Build sail-cheri-mips simulators with tracing support (they "
                                                         "will be slow but the traces are useful to debug failing "

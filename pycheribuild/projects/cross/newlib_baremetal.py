@@ -49,8 +49,8 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     # build_in_source_dir = True  # we have to build in the source directory
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.locale_support = cls.addBoolOption("locale-support", showHelp=False, help="Build with locale support")
 
     def __init__(self, config: CheriConfig):

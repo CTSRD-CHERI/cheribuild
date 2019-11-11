@@ -70,8 +70,8 @@ class BuildElftoolchain(Project):
             self.extraPrograms.append("ranlib")
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.build_ar = cls.addBoolOption("build-ar", default=True, help="build the ar/ranlib programs")
         cls.build_static = cls.addBoolOption("build-static", help="Try to link elftoolchain statically "
                                                                   "(needs patches on Linux)")
@@ -97,12 +97,12 @@ class BuildElftoolchain(Project):
             # To speed it up run make for the individual library directories instead and then for all the binaries
             first_call = True  # recreate logfile on first call, after that append
             for tgt in self.libTargets + self.programsToBuild:
-                self.runMake("obj", cwd=self.sourceDir / tgt, logfileName="build", appendToLogfile=not first_call)
-                self.runMake("all", cwd=self.sourceDir / tgt, logfileName="build", appendToLogfile=True)
+                self.runMake("obj", cwd=self.sourceDir / tgt, logfile_name="build", append_to_logfile=not first_call)
+                self.runMake("all", cwd=self.sourceDir / tgt, logfile_name="build", append_to_logfile=True)
                 first_call = False
         else:
             self.runMake("obj", cwd=self.sourceDir)
-            self.runMake("all", cwd=self.sourceDir, appendToLogfile=True)
+            self.runMake("all", cwd=self.sourceDir, append_to_logfile=True)
 
     def install(self, **kwargs):
         self.makedirs(self.installDir / "bin")
@@ -136,7 +136,7 @@ class BuildElftoolchain(Project):
             self.makedirs(self.installDir / i)
         firstCall = True  # recreate logfile on first call, after that append
         for tgt in self.programsToBuild:
-            self.runMakeInstall(cwd=self.sourceDir / tgt, logfileName="install", appendToLogfile=not firstCall,
+            self.runMakeInstall(cwd=self.sourceDir / tgt, logfile_name="install", append_to_logfile=not firstCall,
                                 parallel=False)
             firstCall = False
 

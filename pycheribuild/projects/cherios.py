@@ -44,8 +44,8 @@ class BuildCheriOS(CMakeProject):
     supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
 
     @classmethod
-    def setupConfigOptions(cls, useDefaultSysroot=True):
-        super().setupConfigOptions()
+    def setup_config_options(cls, useDefaultSysroot=True):
+        super().setup_config_options()
         cls.smp_cores = cls.addConfigOption("smp-cores", default=1, kind=int)
         cls.build_net = cls.addBoolOption("build-net", default=False)
 

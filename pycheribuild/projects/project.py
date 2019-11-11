@@ -485,7 +485,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     __configOptionsSet = dict()  # typing.Dict[Type, bool]
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
+    def setup_config_options(cls, **kwargs):
         # assert cls not in cls.__configOptionsSet, "Setup called twice?"
         cls.__configOptionsSet[cls] = True
 
@@ -495,7 +495,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         assert self._crossCompileTarget is not None
         assert self._crossCompileTarget is not CrossCompileTarget.NONE, "Placeholder class should not be instantiated: " + repr(self)
         assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
-        assert self.__class__ in self.__configOptionsSet, "Forgot to call super().setupConfigOptions()? " + str(self.__class__)
+        assert self.__class__ in self.__configOptionsSet, "Forgot to call super().setup_config_options()? " + str(self.__class__)
         self.__requiredSystemTools = {}  # type: typing.Dict[str, typing.Any]
         self.__requiredSystemHeaders = {}  # type: typing.Dict[str, typing.Any]
         self.__requiredPkgConfig = {}  # type: typing.Dict[str, typing.Any]
@@ -525,27 +525,27 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                                                homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__requiredSystemHeaders[header] = install_instructions
 
-    def queryYesNo(self, message: str = "", *, default_result=False, force_result=True, yesNoStr: str=None) -> bool:
-        if yesNoStr is None:
-            yesNoStr = " [Y]/n " if default_result else " y/[N] "
+    def query_yes_no(self, message: str = "", *, default_result=False, force_result=True, yes_no_str: str=None) -> bool:
+        if yes_no_str is None:
+            yes_no_str = " [Y]/n " if default_result else " y/[N] "
         if self.config.pretend:
-            print(message + yesNoStr, coloured(AnsiColour.green, "y" if force_result else "n"), sep="")
+            print(message + yes_no_str, coloured(AnsiColour.green, "y" if force_result else "n"), sep="")
             return force_result  # in pretend mode we always return true
         if self.config.force:
             # in force mode we always return the forced result without prompting the user
-            print(message + yesNoStr, coloured(AnsiColour.green, "y" if force_result else "n"), sep="")
+            print(message + yes_no_str, coloured(AnsiColour.green, "y" if force_result else "n"), sep="")
             return force_result
         if not sys.__stdin__.isatty():
             return default_result  # can't get any input -> return the default
-        result = input(message + yesNoStr)
+        result = input(message + yes_no_str)
         if default_result:
             return not result.startswith("n")  # if default is yes accept anything other than strings starting with "n"
         return str(result).lower().startswith("y")  # anything but y will be treated as false
 
     @staticmethod
-    def _handleStdErr(outfile, stream, fileLock, project: "Project"):
+    def _handle_stderr(outfile, stream, file_lock, project: "Project"):
         for errLine in stream:
-            with fileLock:
+            with file_lock:
                 try:
                     # noinspection PyProtectedMember
                     if project._lastStdoutLineCanBeOverwritten:
@@ -561,8 +561,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                     # ValueError: write to closed file
                     continue
 
-
-    def _lineNotImportantStdoutFilter(self, line: bytes):
+    def _line_not_important_stdout_filter(self, line: bytes):
         # by default we don't keep any line persistent, just have updating output
         if self._lastStdoutLineCanBeOverwritten:
             sys.stdout.buffer.write(Project._clearLineSequence)
@@ -571,90 +570,90 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         flushStdio(sys.stdout)
         self._lastStdoutLineCanBeOverwritten = True
 
-    def _showLineStdoutFilter(self, line: bytes):
+    def _show_line_stdout_filter(self, line: bytes):
         if self._lastStdoutLineCanBeOverwritten:
             sys.stdout.buffer.write(b"\n")
         sys.stdout.buffer.write(line)
         flushStdio(sys.stdout)
         self._lastStdoutLineCanBeOverwritten = False
 
-    def _stdoutFilter(self, line: bytes):
-        self._lineNotImportantStdoutFilter(line)
+    def _stdout_filter(self, line: bytes):
+        self._line_not_important_stdout_filter(line)
 
-    def runWithLogfile(self, args: "typing.Sequence[str]", logfileName: str, *, stdoutFilter=None, cwd: Path = None,
-                       env: dict = None, appendToLogfile=False) -> None:
+    def run_with_logfile(self, args: "typing.Sequence[str]", logfile_name: str, *, stdout_filter=None, cwd: Path = None,
+                       env: dict = None, append_to_logfile=False) -> None:
         """
         Runs make and logs the output
         config.quiet doesn't display anything, normal only status updates and config.verbose everything
-        :param appendToLogfile: whether to append to the logfile if it exists
+        :param append_to_logfile: whether to append to the logfile if it exists
         :param args: the command to run (e.g. ["make", "-j32"])
-        :param logfileName: the name of the logfile (e.g. "build.log")
+        :param logfile_name: the name of the logfile (e.g. "build.log")
         :param cwd the directory to run make in (defaults to self.buildDir)
-        :param stdoutFilter a filter to use for standard output (a function that takes a single bytes argument)
+        :param stdout_filter a filter to use for standard output (a function that takes a single bytes argument)
         :param env the environment to pass to make
         """
         printCommand(args, cwd=cwd, env=env)
         # make sure that env is either None or a os.environ with the updated entries entries
         if env:
-            newEnv = os.environ.copy()
+            new_env = os.environ.copy()
             env = {k: str(v) for k, v in env.items()}  # make sure everything is a string
-            newEnv.update(env)
+            new_env.update(env)
         else:
-            newEnv = None
-        assert not logfileName.startswith("/")
+            new_env = None
+        assert not logfile_name.startswith("/")
         if self.config.write_logfile:
-            logfilePath = self.buildDir / (logfileName + ".log")
-            print("Saving build log to", logfilePath)
+            logfile_path = self.buildDir / (logfile_name + ".log")
+            print("Saving build log to", logfile_path)
         else:
-            logfilePath = Path(os.devnull)
+            logfile_path = Path(os.devnull)
         if self.config.pretend:
             return
         if self.config.verbose:
-            stdoutFilter = None
+            stdout_filter = None
 
-        if self.config.write_logfile and logfilePath.is_file() and not appendToLogfile:
-            logfilePath.unlink()  # remove old logfile
+        if self.config.write_logfile and logfile_path.is_file() and not append_to_logfile:
+            logfile_path.unlink()  # remove old logfile
         args = list(map(str, args))  # make sure all arguments are strings
-        cmdStr = commandline_to_str(args)
+        cmd_str = commandline_to_str(args)
 
         if not self.config.write_logfile:
-            if stdoutFilter is None:
+            if stdout_filter is None:
                 # just run the process connected to the current stdout/stdin
-                check_call_handle_noexec(args, cwd=str(cwd), env=newEnv)
+                check_call_handle_noexec(args, cwd=str(cwd), env=new_env)
             else:
-                make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, env=newEnv)
-                self.__runProcessWithFilteredOutput(make, None, stdoutFilter, cmdStr)
+                make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, env=new_env)
+                self.__runProcessWithFilteredOutput(make, None, stdout_filter, cmd_str)
             return
 
         # open file in append mode
-        with logfilePath.open("ab") as logfile:
+        with logfile_path.open("ab") as logfile:
             # print the command and then the logfile
-            if appendToLogfile:
+            if append_to_logfile:
                 logfile.write(b"\n\n")
             if cwd:
                 logfile.write(("cd " + shlex.quote(str(cwd)) + " && ").encode("utf-8"))
-            logfile.write(cmdStr.encode("utf-8") + b"\n\n")
+            logfile.write(cmd_str.encode("utf-8") + b"\n\n")
             if self.config.quiet:
                 # a lot more efficient than filtering every line
-                check_call_handle_noexec(args, cwd=str(cwd), stdout=logfile, stderr=logfile, env=newEnv)
+                check_call_handle_noexec(args, cwd=str(cwd), stdout=logfile, stderr=logfile, env=new_env)
                 return
-            make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=newEnv)
-            self.__runProcessWithFilteredOutput(make, logfile, stdoutFilter, cmdStr)
+            make = popen_handle_noexec(args, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=new_env)
+            self.__runProcessWithFilteredOutput(make, logfile, stdout_filter, cmd_str)
 
     def __runProcessWithFilteredOutput(self, proc: subprocess.Popen, logfile: "typing.Optional[typing.IO]",
-                                       stdoutFilter: "typing.Callable[[bytes], None]", cmdStr: str):
+                                       stdout_filter: "typing.Callable[[bytes], None]", cmdStr: str):
         logfileLock = threading.Lock()  # we need a mutex so the logfile line buffer doesn't get messed up
         stderrThread = None
         if logfile:
             # use a thread to print stderr output and write it to logfile (not using a thread would block)
-            stderrThread = threading.Thread(target=self._handleStdErr, args=(logfile, proc.stderr, logfileLock, self))
+            stderrThread = threading.Thread(target=self._handle_stderr, args=(logfile, proc.stderr, logfileLock, self))
             stderrThread.start()
         for line in proc.stdout:
             with logfileLock:  # make sure we don't interleave stdout and stderr lines
                 if logfile:
                     logfile.write(line)
-                if stdoutFilter:
-                    stdoutFilter(line)
+                if stdout_filter:
+                    stdout_filter(line)
                 else:
                     sys.stdout.buffer.write(line)
                     flushStdio(sys.stdout)
@@ -673,7 +672,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             sys.stdout.buffer.write(remainingOut)
             if logfile:
                 logfile.write(remainingErr)
-        if stdoutFilter and self._lastStdoutLineCanBeOverwritten:
+        if stdout_filter and self._lastStdoutLineCanBeOverwritten:
             # add the final new line after the filtering
             sys.stdout.buffer.write(b"\n")
         if retcode:
@@ -1108,7 +1107,7 @@ class GitRepository(SourceRepository):
                 current_project.fatal("Sources for", str(default_src_dir), " missing!")
             assert isinstance(self.url, str), self.url
             assert not self.url.startswith("<"), "Invalid URL " + self.url
-            if not current_project.queryYesNo(
+            if not current_project.query_yes_no(
                     str(default_src_dir) + " is not a git repository. Clone it from '" + self.url + "'?"):
                 current_project.fatal("Sources for", str(default_src_dir), " missing!")
             clone_cmd = ["git", "clone"]
@@ -1156,7 +1155,7 @@ class GitRepository(SourceRepository):
                 break
             current_project.info("URL '", url, "' for remote ", remote_name, " does not match expected url '",
                                  self.url, "'", sep="")
-            if current_project.queryYesNo("Use this remote?"):
+            if current_project.query_yes_no("Use this remote?"):
                 break
             remote_name = input("Please enter the correct remote: ")
         runCmd(["git", "worktree", "add", "--track", "-b", target_override.branch, src_dir,
@@ -1184,7 +1183,7 @@ class GitRepository(SourceRepository):
                                     cwd=src_dir).stdout.strip()
                 if remote_url == old_url:
                     warningMessage(current_project.project_name, "still points to old repository", remote_url)
-                    if current_project.queryYesNo("Update to correct URL?"):
+                    if current_project.query_yes_no("Update to correct URL?"):
                         runCmd("git", "remote", "set-url", "origin", self.url, runInPretendMode=True, cwd=src_dir)
 
         # make sure we run git stash if we discover any local changes
@@ -1204,7 +1203,7 @@ class GitRepository(SourceRepository):
             # TODO: add a config option to skip this query?
             if current_project.config.force_update:
                 statusUpdate("Updating", src_dir, "with autostash due to --force-update")
-            elif not current_project.queryYesNo("Stash the changes, update and reapply?", default_result=True,
+            elif not current_project.query_yes_no("Stash the changes, update and reapply?", default_result=True,
                                                 force_result=True):
                 statusUpdate("Skipping update of", src_dir)
                 return
@@ -1237,9 +1236,9 @@ class GitRepository(SourceRepository):
                 current_branch = status.stdout[3:status.stdout.find(b"...")].strip()
                 warningMessage("You are trying to build the", current_branch.decode("utf-8"),
                                "branch. You should be using", self.default_branch)
-                if current_project.queryYesNo("Would you like to change to the " + self.default_branch + " branch?"):
+                if current_project.query_yes_no("Would you like to change to the " + self.default_branch + " branch?"):
                     runCmd("git", "checkout", self.default_branch, cwd=src_dir)
-                elif not current_project.queryYesNo("Are you sure you want to continue?", force_result=False):
+                elif not current_project.query_yes_no("Are you sure you want to continue?", force_result=False):
                     current_project.fatal("Wrong branch:", current_branch.decode("utf-8"))
 
 
@@ -1368,8 +1367,8 @@ class Project(SimpleProject):
         super().check_system_dependencies()
 
     @classmethod
-    def setupConfigOptions(cls, installDirectoryHelp="", **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, installDirectoryHelp="", **kwargs):
+        super().setup_config_options(**kwargs)
         # statusUpdate("Setting up config options for", cls, cls.target)
         cls.default_source_dir = cls.addPathOption("source-directory", metavar="DIR", default=cls.defaultSourceDir,
                                                    help="Override default source directory for " + cls.project_name)
@@ -1515,9 +1514,9 @@ class Project(SimpleProject):
             make_command = self.make_args.command
         return self._get_make_commandline(make_target, make_command, options, parallel, compilationDbName)
 
-    def runMake(self, make_target="", *, make_command: str = None, options: MakeOptions=None, logfileName: str = None,
-                cwd: Path = None, appendToLogfile=False, compilationDbName="compile_commands.json",
-                parallel: bool=True, stdoutFilter: "typing.Optional[typing.Callable[[bytes], None]]" = _default_stdout_filter) -> None:
+    def runMake(self, make_target="", *, make_command: str = None, options: MakeOptions=None, logfile_name: str = None,
+                cwd: Path = None, append_to_logfile=False, compilationDbName="compile_commands.json",
+                parallel: bool=True, stdout_filter: "typing.Optional[typing.Callable[[bytes], None]]" = _default_stdout_filter) -> None:
         if not options:
             options = self.make_args
         if not make_command:
@@ -1526,22 +1525,22 @@ class Project(SimpleProject):
                                              compilationDbName=compilationDbName)
         if not cwd:
             cwd = self.buildDir
-        if not logfileName:
-            logfileName = Path(make_command).name
+        if not logfile_name:
+            logfile_name = Path(make_command).name
             if make_target:
-                logfileName += "." + make_target
+                logfile_name += "." + make_target
 
         starttime = time.time()
-        if not self.config.write_logfile and stdoutFilter == _default_stdout_filter:
+        if not self.config.write_logfile and stdout_filter == _default_stdout_filter:
             # if output isatty() (i.e. no logfile) ninja already filters the output -> don't slow this down by
             # adding a redundant filter in python
             if make_command == "ninja" and make_target != "install":
-                stdoutFilter = None
-        if stdoutFilter is _default_stdout_filter:
-            stdoutFilter = self._stdoutFilter
+                stdout_filter = None
+        if stdout_filter is _default_stdout_filter:
+            stdout_filter = self._stdout_filter
         env = options.env_vars
-        self.runWithLogfile(allArgs, logfileName=logfileName, stdoutFilter=stdoutFilter, cwd=cwd, env=env,
-                            appendToLogfile=appendToLogfile)
+        self.run_with_logfile(allArgs, logfile_name=logfile_name, stdout_filter=stdout_filter, cwd=cwd, env=env,
+                            append_to_logfile=append_to_logfile)
         # if we create a compilation db, copy it to the source dir:
         if self.config.copy_compilation_db_to_source_dir and (self.buildDir / compilationDbName).exists():
             self.installFile(self.buildDir / compilationDbName, self.sourceDir / compilationDbName, force=True)
@@ -1606,8 +1605,8 @@ class Project(SimpleProject):
         if not Path(_configure_path).exists():
             self.fatal("Configure command ", _configure_path, "does not exist!")
         if _configure_path:
-            self.runWithLogfile([_configure_path] + self.configureArgs,
-                                logfileName="configure", cwd=cwd, env=self.configureEnvironment)
+            self.run_with_logfile([_configure_path] + self.configureArgs,
+                                logfile_name="configure", cwd=cwd, env=self.configureEnvironment)
 
     def compile(self, cwd: Path = None):
         if cwd is None:
@@ -1644,18 +1643,18 @@ class Project(SimpleProject):
             return self._installPrefix
         return self._installDir
 
-    def runMakeInstall(self, *, options: MakeOptions=None, target="install", _stdoutFilter=_default_stdout_filter, cwd=None,
+    def runMakeInstall(self, *, options: MakeOptions=None, target="install", _stdout_filter=_default_stdout_filter, cwd=None,
                        parallel=False, **kwargs):
         if options is None:
             options = self.make_args.copy()
         else:
             options = options.copy()
         options.env_vars.update(self.makeInstallEnv)
-        self.runMake(make_target=target, options=options, stdoutFilter=_stdoutFilter, cwd=cwd,
+        self.runMake(make_target=target, options=options, stdout_filter=_stdout_filter, cwd=cwd,
                      parallel=parallel, **kwargs)
 
-    def install(self, _stdoutFilter=_default_stdout_filter):
-        self.runMakeInstall(_stdoutFilter=_stdoutFilter)
+    def install(self, _stdout_filter=_default_stdout_filter):
+        self.runMakeInstall(_stdout_filter=_stdout_filter)
 
     def _do_generate_cmakelists(self):
         assert not isinstance(self, CMakeProject), self
@@ -1683,7 +1682,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             elif "Generated by cheribuild.py" not in existing_code:
                 print("A different CMakeLists.txt already exists. Contents:\n",
                       coloured(AnsiColour.green, existing_code), end="")
-                if not self.queryYesNo("Overwrite?", force_result=False):
+                if not self.query_yes_no("Overwrite?", force_result=False):
                     create = False
         if create:
             self.writeFile(target_file, cmakelists, overwrite=True)
@@ -1716,7 +1715,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             else:
                 last_build_kind = self.readFile(last_build_file)
                 if last_build_kind != self.build_configuration_suffix():
-                    if not self.queryYesNo("Last build was for configuration" + last_build_kind +
+                    if not self.query_yes_no("Last build was for configuration" + last_build_kind +
                                            " but currently building" + self.build_configuration_suffix() +
                                            ". Will clean before build. Continue?", force_result=True, default_result=True):
                         self.fatal("Cannot continue")
@@ -1769,8 +1768,8 @@ class CMakeProject(Project):
     defaultCMakeBuildType = "Release"
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.cmakeBuildType = cls.addConfigOption("build-type", default=cls.defaultCMakeBuildType, metavar="BUILD_TYPE",
                                                  help="The CMake build type (Debug, RelWithDebInfo, Release)")
         cls.cmakeOptions = cls.addConfigOption("cmake-options", default=[], kind=list, metavar="OPTIONS",
@@ -1825,7 +1824,7 @@ class CMakeProject(Project):
         # don't show the up-to date install lines
         if line.startswith(b"-- Up-to-date:"):
             return
-        self._showLineStdoutFilter(line)
+        self._show_line_stdout_filter(line)
 
     def needsConfigure(self) -> bool:
         if self.config.pretend and (self.config.forceConfigure or self.config.clean):
@@ -1850,10 +1849,10 @@ class CMakeProject(Project):
         if self.config.copy_compilation_db_to_source_dir and (self.buildDir / "compile_commands.json").exists():
             self.installFile(self.buildDir / "compile_commands.json", self.sourceDir / "compile_commands.json", force=True)
 
-    def install(self, _stdoutFilter="__DEFAULT__"):
-        if _stdoutFilter == "__DEFAULT__":
-            _stdoutFilter = self._cmakeInstallStdoutFilter
-        super().install(_stdoutFilter=_stdoutFilter)
+    def install(self, _stdout_filter="__DEFAULT__"):
+        if _stdout_filter == "__DEFAULT__":
+            _stdout_filter = self._cmakeInstallStdoutFilter
+        super().install(_stdout_filter=_stdout_filter)
 
     def _get_cmake_version(self):
         cmd = Path(self.configureCommand)
@@ -1897,8 +1896,8 @@ class AutotoolsProject(Project):
     _configure_supports_prefix = True
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.extraConfigureFlags = cls.addConfigOption("configure-options", default=[], kind=list, metavar="OPTIONS",
                                                       help="Additional command line options to pass to configure")
 

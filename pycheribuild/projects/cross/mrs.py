@@ -40,8 +40,8 @@ class MRS(CrossCompileCMakeProject):
     # set --mrs/build-type <type> to control build type, default is RelWithDebInfo
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
 
         cls.build_target= cls.addConfigOption("build-target", kind=str, help="specify a target to build, or all")
 

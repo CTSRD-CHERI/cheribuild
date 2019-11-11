@@ -55,8 +55,8 @@ class BuildCheriSim(Project):
         self.make_args.set(NOPRINTS="1") # This massively speeds up the simulator
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.build_fpu = cls.addBoolOption("fpu", default=True, help="include the FPU code")
         cls.build_cheri = cls.addBoolOption("cheri", default=True, help="include the CHERI code in the simulator. If false build BERI")
 

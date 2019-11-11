@@ -48,8 +48,8 @@ class BuildMibench(CrossCompileProject):
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.benchmark_size = cls.addConfigOption("benchmark-size", choices=("small", "large"), default="large",
                                                  kind=str, help="Size of benchmark input data to use")
 
@@ -236,8 +236,8 @@ class BuildSpec2006(CrossCompileProject):
     make_kind = MakeCommandKind.GnuMake
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.ctsrd_evaluation_trunk = cls.addPathOption("ctsrd-evaluation-trunk", default="/you/must/set --spec2006/ctsrd-evaluation-trunk config option",
                                                         help="Path to the CTSRD evaluation/trunk svn checkout")
         cls.ctsrd_evaluation_vendor = cls.addPathOption("ctsrd-evaluation-vendor",

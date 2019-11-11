@@ -43,14 +43,14 @@ class BuildJulietTestSuite(CrossCompileCMakeProject):
     default_build_type = BuildType.DEBUG
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
 
     def process(self):
         if self.cross_build_type != BuildType.DEBUG:
             self.warning("The Juliet test suite contains undefined behaviour that might be optimized away unless you compile"
                          " at -O0.")
-            if not self.queryYesNo("Are you sure you want to continue?"):
+            if not self.query_yes_no("Are you sure you want to continue?"):
                 self.fatal("Cannot continue.")
         super().process()
 
@@ -69,8 +69,8 @@ class BuildJulietCWESubdir(CrossCompileCMakeProject):
     cwe_number = None
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.testcase_timeout = cls.addConfigOption("testcase-timeout", kind=str)
         cls.ld_preload_path = cls.addConfigOption("ld-preload-path", kind=str)
 

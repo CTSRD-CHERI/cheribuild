@@ -64,8 +64,8 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
         return result
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.use_valgrind = cls.addBoolOption("use-valgrind", help="Run tests using valgrind (native only)",
                                              only_add_for_targets=[CrossCompileTarget.NATIVE])
         cls.use_stack_protector = cls.addBoolOption("use-stack-protector", help="Compile tests with stack-protector (non-CHERI only)")
@@ -129,7 +129,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
         if self.cross_build_type != BuildType.DEBUG:
             self.warning("BODiagsuite contains undefined behaviour that might be optimized away unless you compile"
                          " at -O0.")
-            if not self.queryYesNo("Are you sure you want to continue?"):
+            if not self.query_yes_no("Are you sure you want to continue?"):
                 self.fatal("Cannot continue.")
         super().process()
 

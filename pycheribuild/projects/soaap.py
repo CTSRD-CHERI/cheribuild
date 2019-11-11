@@ -48,9 +48,9 @@ class BuildSoaapLLVM(BuildLLVMSplitRepoBase):
     skip_cheri_symlinks = True
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
+    def setup_config_options(cls, **kwargs):
         cls.included_projects = ["llvm", "clang"]
-        super().setupConfigOptions(includeLldbRevision=False, includeLldRevision=False, useDefaultSysroot=False)
+        super().setup_config_options(includeLldbRevision=False, includeLldRevision=False, useDefaultSysroot=False)
 
 
 class BuildSoaap(CMakeProject):

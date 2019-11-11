@@ -39,8 +39,8 @@ class LaunchFPGABase(SimpleProject):
     doNotAddToTargets = True
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.extra_base_options = cls.addConfigOption("extra-options", default=[], kind=list, metavar="OPTIONS",
                                                      help="Additional command line flags to pass to beri-fpga-bsd-boot")
         cls.extra_bootonly_options = cls.addConfigOption("extra-boot-options", default=[], kind=list, metavar="OPTIONS",
@@ -96,8 +96,8 @@ class LaunchCheriBSDOnFGPA(LaunchFPGABase):
 
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.benchmark_kernel = cls.addBoolOption("benchmark-kernel",
                                                  help="Use the benchmark kernel instead of one with assertions enabled.")
         cls.kernel_image = cls.addConfigOption("kernel-image", kind=Path, help="Override the kernel image to boot")

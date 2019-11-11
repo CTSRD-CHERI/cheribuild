@@ -353,9 +353,9 @@ class CrossCompileMixin(object):
         return result
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
+    def setup_config_options(cls, **kwargs):
         assert issubclass(cls, SimpleProject)
-        super().setupConfigOptions(**kwargs)
+        super().setup_config_options(**kwargs)
         cls.use_lto = cls.addBoolOption("use-lto", help="Build with LTO",)
         # cls.use_cfi = cls.addBoolOption("use-cfi", help="Build with CFI",
         #                                 only_add_for_targets=[CrossCompileTarget.NATIVE, CrossCompileTarget.CHERIBSD_MIPS])
@@ -618,8 +618,8 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
     defaultCMakeBuildType = "RelWithDebInfo"  # default to O2
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
 
     def __init__(self, config: CheriConfig, generator: CMakeProject.Generator=CMakeProject.Generator.Ninja):
         if self.cross_build_type != BuildType.DEFAULT:

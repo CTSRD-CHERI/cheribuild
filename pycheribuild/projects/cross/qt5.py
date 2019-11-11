@@ -56,8 +56,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             assert "-mxgot" in self.default_compiler_flags
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.build_tests = cls.addBoolOption("build-tests", showHelp=True, help="build the Qt unit tests")
         cls.build_examples = cls.addBoolOption("build-examples", showHelp=True, help="build the Qt examples")
         cls.assertions = cls.addBoolOption("assertions", default=False, showHelp=True, help="Include assertions")
@@ -192,8 +192,8 @@ class BuildQt5(BuildQtWithConfigureScript):
     skipGitSubmodules = True  # init-repository does it for us
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.allModules = cls.addBoolOption("all-modules", showHelp=True,
                                           help="Build all modules (even those that don't make sense for CHERI)")
 
@@ -395,8 +395,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         self.addRequiredSystemTool("gperf")
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(**kwargs)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
         cls.build_jsc_only = cls.addBoolOption("build-jsc-only", showHelp=True, help="only build the JavaScript interpreter executable")
 
     def compile(self, **kwargs):

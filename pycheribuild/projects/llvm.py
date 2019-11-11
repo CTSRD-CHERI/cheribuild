@@ -44,8 +44,8 @@ class BuildLLVMBase(CMakeProject):
     can_build_with_asan = True
 
     @classmethod
-    def setupConfigOptions(cls, useDefaultSysroot=True):
-        super().setupConfigOptions()
+    def setup_config_options(cls, useDefaultSysroot=True):
+        super().setup_config_options()
         if "included_projects" not in cls.__dict__:
             cls.included_projects = cls.addConfigOption("include-projects", default=["llvm", "clang", "lld"], kind=list,
                                                         help="List of LLVM subprojects that should be built")
@@ -235,8 +235,8 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
     llvm_subdir = "llvm"
 
     @classmethod
-    def setupConfigOptions(cls, **kwargs):
-        super().setupConfigOptions(useDefaultSysroot=False)
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(useDefaultSysroot=False)
 
     def configure(self, **kwargs):
         if (self.sourceDir / "tools/clang/.git").exists():
@@ -309,8 +309,8 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
     doNotAddToTargets = True
 
     @classmethod
-    def setupConfigOptions(cls, includeLldRevision=True, includeLldbRevision=False, useDefaultSysroot=True):
-        super().setupConfigOptions(useDefaultSysroot=useDefaultSysroot)
+    def setup_config_options(cls, includeLldRevision=True, includeLldbRevision=False, useDefaultSysroot=True):
+        super().setup_config_options(useDefaultSysroot=useDefaultSysroot)
 
         def addToolOptions(name):
             rev = cls.addConfigOption(name + "-git-revision", kind=str, metavar="REVISION",
