@@ -56,7 +56,7 @@ class MockConfig(CheriConfig):
         self.sdkDir = self.outputRoot / "sdk"
         self.otherToolsDir = self.outputRoot / "other"
 
-        assert self._ensureRequiredPropertiesSet()
+        assert self._ensure_required_properties_set()
 
 
 def setup_mock_chericonfig(source_root: Path) -> MockConfig:

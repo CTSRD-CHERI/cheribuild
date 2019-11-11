@@ -143,4 +143,4 @@ class DefaultCheriConfig(CheriConfig):
         self.cheribsd_image_root = self.outputRoot  # TODO: allow this to be different?
         self._initializeDerivedPaths()
 
-        assert self._ensureRequiredPropertiesSet()
+        assert self._ensure_required_properties_set()

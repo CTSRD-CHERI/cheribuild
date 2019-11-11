@@ -69,10 +69,10 @@ class BuildMibench(CrossCompileProject):
         raise ValueError("Unsupported target architecture!")
 
     def compile(self, **kwargs):
-        with setEnv(MIPS_SDK=self.config.sdkDir,
-                    CHERI128_SDK=self.config.sdkDir,
-                    CHERI256_SDK=self.config.sdkDir,
-                    CHERI_SDK=self.config.sdkDir):
+        with setEnv(MIPS_SDK=self.target_info.sdk_root_dir,
+                    CHERI128_SDK=self.target_info.sdk_root_dir,
+                    CHERI256_SDK=self.target_info.sdk_root_dir,
+                    CHERI_SDK=self.target_info.sdk_root_dir):
             # We can't fall back to /usr/bin/ar here since that breaks on MacOS
             self.make_args.set(AR=str(self.sdk_bindir / "llvm-ar") + " rc")
             self.make_args.set(AR2=str(self.sdk_bindir / "llvm-ranlib"))
@@ -153,10 +153,10 @@ class BuildOlden(CrossCompileProject):
     build_in_source_dir = True
 
     def compile(self, **kwargs):
-        with setEnv(MIPS_SDK=self.config.sdkDir,
-                    CHERI128_SDK=self.config.sdkDir,
-                    CHERI256_SDK=self.config.sdkDir,
-                    CHERI_SDK=self.config.sdkDir):
+        with setEnv(MIPS_SDK=self.target_info.sdk_root_dir,
+                    CHERI128_SDK=self.target_info.sdk_root_dir,
+                    CHERI256_SDK=self.target_info.sdk_root_dir,
+                    CHERI_SDK=self.target_info.sdk_root_dir):
             if not self.compiling_for_host():
                 self.make_args.set(SYSROOT_DIRNAME=self.crossSysrootPath.name)
             self.make_args.add_flags("-f", "Makefile.jenkins")

@@ -264,7 +264,7 @@ class JenkinsConfig(CheriConfig):
 
         self._initializeDerivedPaths()
 
-        assert self._ensureRequiredPropertiesSet()
+        assert self._ensure_required_properties_set()
         if os.getenv("DEBUG") is not None:
             import pprint
             for k, v in self.__dict__.items():

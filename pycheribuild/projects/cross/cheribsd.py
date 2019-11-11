@@ -120,7 +120,7 @@ def default_cross_toolchain_path(config: CheriConfig, proj: SimpleProject):
     assert isinstance(proj, BuildFreeBSD)
     if proj.build_with_upstream_llvm:
         return BuildUpstreamLLVM.getInstallDir(proj)
-    return config.sdkDir
+    return config.cheri_sdk_dir
 
 
 class BuildFreeBSDBase(Project):
@@ -339,24 +339,26 @@ class BuildFreeBSD(BuildFreeBSDBase):
         else:
             self._show_line_stdout_filter(line)
 
-    def __init__(self, config: CheriConfig, archBuildFlags: dict = None):
+    @property
+    def arch_build_flags(self):
+        if self.compiling_for_mips(include_purecap=False):
+            # The following is broken: (https://github.com/CTSRD-CHERI/cheribsd/issues/102)
+            # "CPUTYPE=mips64",  # mipsfpu for hardware float
+            return {"TARGET": "mips", "TARGET_ARCH": config.mips_float_abi.freebsd_target_arch()}
+        elif self._crossCompileTarget.is_x86_64():
+            return {"TARGET": "amd64", "TARGET_ARCH": "amd64"}
+        elif self.compiling_for_riscv():
+            return {"TARGET": "riscv", "TARGET_ARCH": "riscv64"}
+        elif self._crossCompileTarget.is_i386():
+            return {"TARGET": "i386", "TARGET_ARCH": "i386"}
+        else:
+            assert False, "This should not be reached!"
+
+    def __init__(self, config: CheriConfig):
         super().__init__(config)
-        if archBuildFlags is None:
-            if self.compiling_for_mips(include_purecap=False):
-                # The following is broken: (https://github.com/CTSRD-CHERI/cheribsd/issues/102)
-                # "CPUTYPE=mips64",  # mipsfpu for hardware float
-                archBuildFlags = {"TARGET": "mips", "TARGET_ARCH": config.mips_float_abi.freebsd_target_arch()}
-            elif self._crossCompileTarget.is_x86_64():
-                archBuildFlags = {"TARGET": "amd64", "TARGET_ARCH": "amd64"}
-            elif self.compiling_for_riscv():
-                archBuildFlags = {"TARGET": "riscv", "TARGET_ARCH": "riscv64"}
-            elif self._crossCompileTarget.is_i386():
-                archBuildFlags = {"TARGET": "i386", "TARGET_ARCH": "i386"}
-            else:
-                assert False, "This should not be reached!"
         assert self.kernelConfig is not None
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
-        self.make_args.set(**archBuildFlags)
+        self.make_args.set(**self.arch_build_flags)
 
         if self.crossbuild:
             self.addCrossBuildOptions()
@@ -758,8 +760,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # Would be ideal, but it seems like there is too much that depends on non-posix flags
         # self.common_options.env_vars["POSIXLY_CORRECT"] = "1"
         # self.make_args.set(PATH=build_path)
-        # building without an external toolchain won't work:
-        self.crossToolchainRoot = self.config.sdkDir
 
         self.make_args.set_env(CC=self.CC, CXX=self.CXX, CPP=self.CPP)
 
@@ -1038,12 +1038,6 @@ class BuildCHERIBSD(BuildFreeBSD):
             installDirectoryHelp = "Install directory for CheriBSD root file system (default: " \
                                    "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)"
         super().setup_config_options(buildKernelWithClang=True, installDirectoryHelp=installDirectoryHelp)
-        default_cheri_cc = ComputedDefaultValue(
-            function=lambda config, unused: config.sdkDir / "bin/clang",
-            as_string="${SDK_DIR}/bin/clang")
-        cls.cheriCC = cls.addPathOption("cheri-cc", help="Override the compiler used to build CHERI code",
-                                        default=default_cheri_cc)
-
         cls.sysroot_only = cls.addBoolOption("sysroot-only", showHelp=True,
                                              help="Only build a sysroot instead of the full system. This will only "
                                                   "build the libraries and skip all binaries")
@@ -1071,22 +1065,26 @@ class BuildCHERIBSD(BuildFreeBSD):
             return None
         return self.config.get_sysroot_path(self.crosscompile_target, False)
 
+    @property
+    def arch_build_flags(self):
+        if self.compiling_for_cheri():
+            return {
+                "CHERI": self.config.cheriBitsStr,
+                "CHERI_CC": str(self.CC),
+                "CHERI_CXX": str(self.CXX),
+                "CHERI_LD": str(self.sdk_bindir / "ld.lld"),
+                "TARGET": "mips",
+                "TARGET_ARCH": self.config.mips_float_abi.freebsd_target_arch()
+                }
+        return super().arch_build_flags
+
     def __init__(self, config: CheriConfig):
         self.installAsRoot = os.getuid() == 0
-        self.cheriCXX = self.cheriCC.parent / "clang++"
-        archBuildFlags = None
-        if self.compiling_for_cheri():
-            archBuildFlags = {
-                "CHERI": config.cheriBitsStr,
-                "CHERI_CC": str(self.cheriCC),
-                "CHERI_CXX": str(self.cheriCXX),
-                "CHERI_LD": str(config.sdkBinDir / "ld.lld"),
-                "TARGET": "mips",
-                "TARGET_ARCH": config.mips_float_abi.freebsd_target_arch()
-                }
+        arch_build_flags = None
+
         # TODO: should we build a cheri kernel even with a mips userspace?
         # self.kernelConfig = "MALTA64"
-        super().__init__(config, archBuildFlags=archBuildFlags)
+        super().__init__(config)
         if self.compiling_for_cheri():
             if self.config.cheri_cap_table_abi:
                 self.cross_toolchain_config.set(CHERI_USE_CAP_TABLE=self.config.cheri_cap_table_abi)
@@ -1158,10 +1156,10 @@ class BuildCHERIBSD(BuildFreeBSD):
         super()._removeOldRootfs()
 
     def compile(self, **kwargs):
-        if not self.cheriCC.is_file():
-            self.fatal("CHERI CC does not exist: ", self.cheriCC)
-        if not self.cheriCXX.is_file():
-            self.fatal("CHERI CXX does not exist: ", self.cheriCXX)
+        if not self.CC.is_file():
+            self.fatal("CHERI CC does not exist: ", self.CC)
+        if not self.CXX.is_file():
+            self.fatal("CHERI CXX does not exist: ", self.CXX)
         if self.crossToolchainRoot:
             mipsCC = self.crossToolchainRoot / "bin/clang"
             if not mipsCC.is_file():
@@ -1421,20 +1419,21 @@ class BuildCheriBsdSysroot(SimpleProject):
         self.addRequiredSystemTool("bsdtar", cheribuild_target="bsdtar", apt="bsdtar")
         if self.compiling_for_cheri() and self.use_cheribsd_purecap_rootfs:
             self.rootfs_source_class = BuildCHERIBSDPurecap
+        self.install_dir = self.config.cheri_sdk_dir
 
     def fixSymlinks(self):
         # copied from the build_sdk.sh script
         # TODO: we could do this in python as well, but this method works
         # FIXME: should no longer be needed
-        fixlinksSrc = includeLocalFile("files/fixlinks.c")
-        runCmd("cc", "-x", "c", "-", "-o", self.config.sdkDir / "bin/fixlinks", input=fixlinksSrc)
-        runCmd(self.config.sdkDir / "bin/fixlinks", cwd=self.crossSysrootPath / "usr/lib")
+        fixlinks_src = includeLocalFile("files/fixlinks.c")
+        runCmd("cc", "-x", "c", "-", "-o", self.install_dir / "bin/fixlinks", input=fixlinks_src)
+        runCmd(self.install_dir / "bin/fixlinks", cwd=self.crossSysrootPath / "usr/lib")
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
         if not IS_FREEBSD and not self.remotePath and not self.rootfs_source_class.get_instance(self).crossbuild:
-            configOption = "'--" + self.target + "/" + "remote-sdk-path'"
-            self.fatal("Path to the remote SDK is not set, option", configOption,
+            config_option = "'--" + self.target + "/" + "remote-sdk-path'"
+            self.fatal("Path to the remote SDK is not set, option", config_option,
                        "must be set to a path that scp understands (e.g. vica:~foo/cheri/output/sdk)")
             if not self.config.pretend:
                 sys.exit("Cannot continue...")

@@ -397,7 +397,7 @@ class CheriConfig(object):
         else:
             assert False, "Invalid cross_compile_target: " + str(cross_compile_target)
 
-    def _ensureRequiredPropertiesSet(self) -> bool:
+    def _ensure_required_properties_set(self) -> bool:
         for key in self.__dict__.keys():
             if key in self.__optionalProperties:
                 continue
