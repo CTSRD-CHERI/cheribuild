@@ -158,7 +158,7 @@ class RunSyzkaller(SimpleProject):
         super().__init__(config)
 
         self.qemu_binary = BuildQEMU.qemu_binary(self)
-        self.syzkaller_binary = BuildSyzkaller.get_instance(self).syzkaller_binary()
+        self.syzkaller_binary = BuildSyzkaller.get_instance(self, cross_target=CrossCompileTarget.CHERIBSD_MIPS).syzkaller_binary()
         self.kernel_path = BuildCHERIBSDPurecap.get_installed_kernel_path(
             self, cross_target=CrossCompileTarget.CHERIBSD_MIPS_PURECAP)
         self.disk_image = BuildCheriBSDPurecapDiskImage.get_instance(
@@ -177,7 +177,7 @@ class RunSyzkaller(SimpleProject):
                 "target": "freebsd/mips64",
                 "http": ":10000",
                 "workdir": str(self.syz_workdir),
-                "syzkaller": str(BuildSyzkaller.get_instance(self).syzkaller_install_path().parent),
+                "syzkaller": str(BuildSyzkaller.get_instance(self, cross_target=CrossCompileTarget.CHERIBSD_MIPS).syzkaller_install_path().parent),
                 "sshkey": str(self.syz_ssh_key),
                 "sandbox": "none",
                 "procs": 1,

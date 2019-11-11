@@ -28,12 +28,12 @@
 # SUCH DAMAGE.
 #
 import stat
+import tempfile
+from pathlib import Path
 
 from .crosscompileproject import *
 from ..project import ExternallyManagedSourceRepository
 from ...utils import setEnv, commandline_to_str, is_jenkins_build
-from pathlib import Path
-import tempfile
 
 
 class BuildMibench(CrossCompileProject):
@@ -69,14 +69,18 @@ class BuildMibench(CrossCompileProject):
         raise ValueError("Unsupported target architecture!")
 
     def compile(self, **kwargs):
-        with setEnv(MIPS_SDK=self.target_info.sdk_root_dir,
-                    CHERI128_SDK=self.target_info.sdk_root_dir,
-                    CHERI256_SDK=self.target_info.sdk_root_dir,
-                    CHERI_SDK=self.target_info.sdk_root_dir):
+        new_env = dict()
+        if not self.compiling_for_host():
+            new_env = dict(MIPS_SDK=self.target_info.sdk_root_dir,
+                           CHERI128_SDK=self.target_info.sdk_root_dir,
+                           CHERI256_SDK=self.target_info.sdk_root_dir,
+                           CHERI_SDK=self.target_info.sdk_root_dir)
+        with setEnv(**new_env):
             # We can't fall back to /usr/bin/ar here since that breaks on MacOS
-            self.make_args.set(AR=str(self.sdk_bindir / "llvm-ar") + " rc")
-            self.make_args.set(AR2=str(self.sdk_bindir / "llvm-ranlib"))
-            self.make_args.set(RANLIB=str(self.sdk_bindir / "llvm-ranlib"))
+            if not self.compiling_for_host():
+                self.make_args.set(AR=str(self.sdk_bindir / "llvm-ar") + " rc")
+                self.make_args.set(AR2=str(self.sdk_bindir / "llvm-ranlib"))
+                self.make_args.set(RANLIB=str(self.sdk_bindir / "llvm-ranlib"))
             self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(self.default_compiler_flags))
             self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
             self.make_args.set(VERSION=self.benchmark_version)
@@ -153,10 +157,13 @@ class BuildOlden(CrossCompileProject):
     build_in_source_dir = True
 
     def compile(self, **kwargs):
-        with setEnv(MIPS_SDK=self.target_info.sdk_root_dir,
-                    CHERI128_SDK=self.target_info.sdk_root_dir,
-                    CHERI256_SDK=self.target_info.sdk_root_dir,
-                    CHERI_SDK=self.target_info.sdk_root_dir):
+        new_env = dict()
+        if not self.compiling_for_host():
+            new_env = dict(MIPS_SDK=self.target_info.sdk_root_dir,
+                           CHERI128_SDK=self.target_info.sdk_root_dir,
+                           CHERI256_SDK=self.target_info.sdk_root_dir,
+                           CHERI_SDK=self.target_info.sdk_root_dir)
+        with setEnv(**new_env):
             if not self.compiling_for_host():
                 self.make_args.set(SYSROOT_DIRNAME=self.crossSysrootPath.name)
             self.make_args.add_flags("-f", "Makefile.jenkins")
@@ -346,7 +353,7 @@ class BuildSpec2006(CrossCompileProject):
         config_file_text = config_file_text.replace("@CXXFLAGS@", commandline_to_str(self.default_compiler_flags + self.CXXFLAGS + ["-ggdb"]))
         config_file_text = config_file_text.replace("@LDFLAGS@", commandline_to_str(self.default_ldflags + self.LDFLAGS))
         config_file_text = config_file_text.replace("@SYSROOT@", str(self.sdk_sysroot) if not self.compiling_for_host() else "/")
-        config_file_text = config_file_text.replace("@SYS_BIN@", str(self.sdk_bindir))
+        config_file_text = config_file_text.replace("@SYS_BIN@", str(self.sdk_bindir) if not self.compiling_for_host() else "/")
 
         self.writeFile(self.buildDir / "spec/config/" / (self.config_name + ".cfg"), contents=config_file_text,
                        overwrite=True, noCommandPrint=False, mode=0o644)

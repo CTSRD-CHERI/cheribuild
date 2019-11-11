@@ -373,6 +373,7 @@ class CheriConfig(object):
         return self.cheri_sdk_dir
 
     def get_cheribsd_sysroot_path(self, cross_compile_target: CrossCompileTarget, use_hybrid_sysroot=False):
+        assert isinstance(cross_compile_target, CrossCompileTarget)
         assert issubclass(cross_compile_target.target_info_cls, CheriBSDTargetInfo), "Only valid for CheriBSD targets"
         if cross_compile_target.is_cheri_purecap():
             return self.cheri_sdk_dir / ("sysroot" + self.cheri_bits_and_abi_str)

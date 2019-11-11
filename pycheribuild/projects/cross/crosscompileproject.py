@@ -694,7 +694,7 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
         else:
             system_name = "Generic" if self.baremetal else "FreeBSD"
         self._prepareToolchainFile(
-            TOOLCHAIN_SDK_BINDIR=self.sdk_bindir,
+            TOOLCHAIN_SDK_BINDIR=self.sdk_bindir if not self.compiling_for_host() else self.config.cheri_sdk_bindir,
             TOOLCHAIN_COMPILER_BINDIR=self.CC.parent,
             TOOLCHAIN_TARGET_TRIPLE=self.target_info.target_triple,
             TOOLCHAIN_COMMON_FLAGS=self.default_compiler_flags,
