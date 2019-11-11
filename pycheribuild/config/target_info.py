@@ -146,19 +146,19 @@ class TargetInfo(ABC):
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     @property
     @abstractmethod
-    def compiler_dir(self) -> Path: ...
+    def _compiler_dir(self) -> Path: ...
 
     @property
     def c_compiler(self) -> Path:
-        return self.compiler_dir / "clang"
+        return self._compiler_dir / "clang"
 
     @property
     def cxx_compiler(self) -> Path:
-        return self.compiler_dir / "clang++"
+        return self._compiler_dir / "clang++"
 
     @property
     def c_preprocessor(self) -> Path:
-        return self.compiler_dir / "clang-cpp"
+        return self._compiler_dir / "clang-cpp"
 
     @property
     def essential_compiler_and_linker_flags(self) -> typing.List[str]:
@@ -167,7 +167,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         # And usually also --sysroot
         if self.project.needs_sysroot:
             result.append("--sysroot=" + str(self.sysroot_dir))
-        result += ["-B" + str(self.compiler_dir)]
+        result += ["-B" + str(self._compiler_dir)]
 
         if self.target.is_mips(include_purecap=True):
             # Floating point ABI:
@@ -280,7 +280,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
         return True
 
     @property
-    def compiler_dir(self) -> Path:
+    def _compiler_dir(self) -> Path:
         # TODO: BuildLLVM.installDir?
         return self.sdk_root_dir / "bin"
 
@@ -350,7 +350,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
         return self.config.sdkDir / "baremetal" / suffix / self.target_triple
 
     @property
-    def compiler_dir(self) -> Path:
+    def _compiler_dir(self) -> Path:
         # TODO: BuildUpstreamLLVM.installDir?
         return self.config.sdkBinDir
 
