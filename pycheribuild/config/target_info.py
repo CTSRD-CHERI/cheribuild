@@ -273,7 +273,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def sysroot_dir(self):
-        return Path(self.sdk_root_dir, "sysroot-freebsd-" + self.target.cpu_architecture.value)
+        return Path(self.sdk_root_dir, "sysroot-freebsd-" + str(self.target.cpu_architecture.value))
 
     @property
     def is_freebsd(self):

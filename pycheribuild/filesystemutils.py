@@ -139,7 +139,7 @@ class FileSystemUtils(object):
     def copy_directory(self, src_path: Path, dst_path: Path):
         printCommand("cp", "-r", src_path, dst_path, print_verbose_only=True)
         if not self.config.pretend:
-            shutil.copytree(src_path, dst_path)
+            shutil.copytree(str(src_path), str(dst_path))
 
     def deleteFile(self, file: Path, print_verbose_only=False):
         if not file.is_file():

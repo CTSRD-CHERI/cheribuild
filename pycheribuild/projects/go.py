@@ -56,7 +56,7 @@ class BuildGo(Project):
         self.pkgDir = self.sourceDir / "pkg"
         self.gorootDir = self.installDir / "go"
 
-    def buildDirForTarget(self, target: CrossCompileTarget):
+    def build_dir_for_target(self, target: CrossCompileTarget):
         return self.sourceDir / "pkg"
     
     def process(self):
@@ -73,7 +73,7 @@ class BuildGo(Project):
         self.run_cmd("bash clean.bash".split(), cwd=self.makeDir)
         return ThreadJoiner(None)
 
-    def install(self):
+    def install(self, **kwargs):
         # Move bin and pkg to goroot and link src dir
         self.clean_directory(self.gorootDir, ensure_dir_exists=True)
 
@@ -88,4 +88,4 @@ class BuildGo(Project):
     def run_tests(self):
         cmd = "bash run.bash --no-rebuild".split()
         self.run_cmd(cmd, cwd=self.makeDir)
-        
+

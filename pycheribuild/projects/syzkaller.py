@@ -139,6 +139,7 @@ class BuildSyzkaller(CrossCompileProject):
     def clean(self) -> ThreadJoiner:
         assert self.config.clean
         self._git_clean_source_dir()
+        return ThreadJoiner(None)
 
 
 class RunSyzkaller(SimpleProject):
@@ -162,7 +163,7 @@ class RunSyzkaller(SimpleProject):
         super().__init__(config)
 
         self.qemu_binary = BuildQEMU.qemu_binary(self)
-        self.syzkaller_binary = BuildSyzkaller.syzkaller_binary(self)
+        self.syzkaller_binary = BuildSyzkaller.get_instance(self).syzkaller_binary()
         self.kernel_path = BuildCHERIBSDPurecap.get_instance(
             None, config=config, cross_target=CrossCompileTarget.CHERIBSD_MIPS_PURECAP).get_installed_kernel_path(None, config=config)
 
@@ -182,7 +183,7 @@ class RunSyzkaller(SimpleProject):
                 "target": "freebsd/mips64",
                 "http": ":10000",
                 "workdir": str(self.syz_workdir),
-                "syzkaller": str(BuildSyzkaller.syzkaller_install_path(self).parent),
+                "syzkaller": str(BuildSyzkaller.get_instance(self).syzkaller_install_path().parent),
                 "sshkey": str(self.syz_ssh_key),
                 "sandbox": "none",
                 "procs": 1,
@@ -200,7 +201,7 @@ class RunSyzkaller(SimpleProject):
                 }
             }
             if not self.config.pretend:
-                with open(syz_config, "w+") as fp:
+                with syz_config.open("w+") as fp:
                     print("Emit syzkaller configuration to {}".format(syz_config))
                     json.dump(template, fp, indent=4)
 
