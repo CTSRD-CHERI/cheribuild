@@ -233,8 +233,7 @@ class FileSystemUtils(object):
         shutil.copy(str(src), str(dest), follow_symlinks=False)
         if mode is not None:
             printCommand("chmod", oct(mode), dest, print_verbose_only=print_verbose_only)
-            if not self.config.pretend:
-                dest.chmod(mode)
+            dest.chmod(mode)
 
     @staticmethod
     def createBuildtoolTargetSymlinks(tool: Path, toolName: str = None, createUnprefixedLink: bool = False,
