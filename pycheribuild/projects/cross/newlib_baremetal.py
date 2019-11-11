@@ -176,10 +176,10 @@ int main(int argc, char** argv) {
             test_exe = Path(td, "test.exe")
             # FIXME: CHERI helloworld
             compiler_flags = self.target_info.essential_compiler_and_linker_flags + self.COMMON_FLAGS + [
-                "-Wl,-T,qemu-malta.ld", "-Wl,-verbose", "--sysroot=" + str(self.sdkSysroot)]
+                "-Wl,-T,qemu-malta.ld", "-Wl,-verbose", "--sysroot=" + str(self.sdk_sysroot)]
             runCmd([self.config.sdkBinDir / "clang", "main.c", "-o", test_exe] + compiler_flags + ["-###"], cwd=td)
             runCmd([self.config.sdkBinDir / "clang", "main.c", "-o", test_exe] + compiler_flags, cwd=td)
             runCmd(self.config.sdkBinDir / "llvm-readobj", "-h", test_exe)
             from ..build_qemu import BuildQEMU
-            runCmd(self.sdkSysroot / "bin/run_with_qemu.py", "--qemu", BuildQEMU.qemu_binary(self),
+            runCmd(self.sdk_sysroot / "bin/run_with_qemu.py", "--qemu", BuildQEMU.qemu_binary(self),
                    "--timeout", "20", test_exe, "HELLO", "WORLD")

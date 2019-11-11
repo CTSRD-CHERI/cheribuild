@@ -87,7 +87,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
             self.configureArgs.extend(["--crossbuild=FreeBSD:12.0-CURRENT:mips",
                                        "--with-cc-opt=" + commandline_to_str(self.default_compiler_flags),
                                        "--with-ld-opt=" + commandline_to_str(self.default_ldflags),
-                                       "--sysroot=" + str(self.sdkSysroot),
+                                       "--sysroot=" + str(self.sdk_sysroot),
                                        ])
             self.configureEnvironment["CC_TEST_FLAGS"] = commandline_to_str(self.default_compiler_flags)
             self.configureEnvironment["NGX_TEST_LD_OPT"] = commandline_to_str(self.default_ldflags)

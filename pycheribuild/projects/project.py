@@ -379,6 +379,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return self._crossCompileTarget.is_riscv(include_purecap=False)
 
     @property
+    def triple_arch(self):
+        target_triple = self.target_info.target_triple
+        return target_triple[:target_triple.find("-")]
+
+    @property
+    def sdk_sysroot(self) -> Path:
+        assert isinstance(self, Project)
+        return self.target_info.sysroot_dir
+
+    @property
     def display_name(self):
         if self._crossCompileTarget is CrossCompileTarget.NONE:
             return self.project_name + " (target alias)"
@@ -511,7 +521,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def _addRequiredPkgConfig(self, package: str, install_instructions=None, freebsd: str=None, apt: str = None,
                               zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
-        self.addRequiredSystemTool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config", )
+        self.addRequiredSystemTool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config")
         if not install_instructions:
             install_instructions = OSInfo.install_instructions(package, True, freebsd=freebsd, zypper=zypper, apt=apt,
                                                                homebrew=homebrew, cheribuild_target=cheribuild_target)
@@ -519,7 +529,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def _addRequiredSystemHeader(self, header: str, install_instructions=None, freebsd: str=None, apt: str = None,
                               zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
-        self.addRequiredSystemTool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config", )
         if not install_instructions:
             install_instructions = OSInfo.install_instructions(header, True, freebsd=freebsd, zypper=zypper, apt=apt,
                                                                homebrew=homebrew, cheribuild_target=cheribuild_target)

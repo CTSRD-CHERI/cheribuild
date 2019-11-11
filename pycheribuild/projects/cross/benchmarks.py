@@ -345,7 +345,7 @@ class BuildSpec2006(CrossCompileProject):
         config_file_text = config_file_text.replace("@CFLAGS@", commandline_to_str(self.default_compiler_flags + self.CFLAGS + ["-ggdb"]))
         config_file_text = config_file_text.replace("@CXXFLAGS@", commandline_to_str(self.default_compiler_flags + self.CXXFLAGS + ["-ggdb"]))
         config_file_text = config_file_text.replace("@LDFLAGS@", commandline_to_str(self.default_ldflags + self.LDFLAGS))
-        config_file_text = config_file_text.replace("@SYSROOT@", str(self.sdkSysroot) if not self.compiling_for_host() else "/")
+        config_file_text = config_file_text.replace("@SYSROOT@", str(self.sdk_sysroot) if not self.compiling_for_host() else "/")
         config_file_text = config_file_text.replace("@SYS_BIN@", str(self.config.sdkBinDir))
 
         self.writeFile(self.buildDir / "spec/config/" / (self.config_name + ".cfg"), contents=config_file_text,
@@ -398,15 +398,15 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
             elif self.compiling_for_mips(include_purecap=False):
                 libdirs = ["usr/lib", "lib"]
             for libdir in libdirs:
-                guess = Path(self.sdkSysroot, libdir, needed_lib)
+                guess = Path(self.sdk_sysroot, libdir, needed_lib)
                 if guess.exists():
                     self.installFile(guess, spec_root / "lib" / needed_lib, print_verbose_only=False, force=True)
 
         # Add libcheri_caprevoke if it exists:
         if self.compiling_for_cheri():
             caprevoke = "libcheri_caprevoke.so.1"
-            if (self.sdkSysroot / "usr/libcheri" / caprevoke).exists():
-                self.installFile(self.sdkSysroot / "usr/libcheri" / caprevoke, spec_root / "lib" / caprevoke,
+            if (self.sdk_sysroot / "usr/libcheri" / caprevoke).exists():
+                self.installFile(self.sdk_sysroot / "usr/libcheri" / caprevoke, spec_root / "lib" / caprevoke,
                                  print_verbose_only=False, force=True)
 
         # To copy all of them:

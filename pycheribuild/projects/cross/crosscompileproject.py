@@ -38,7 +38,7 @@ from enum import Enum
 from pathlib import Path
 
 from ..project import *
-from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi, Linkage, BuildType
+from ...config.chericonfig import CrossCompileTarget, Linkage, BuildType
 from ...utils import *
 if typing.TYPE_CHECKING:
     from .cheribsd import BuildCHERIBSD
@@ -97,7 +97,7 @@ def default_cross_install_dir(config: CheriConfig, project: "Project", install_d
             install_dir_name = project.project_name.lower()
         return Path(cheribsd_instance.installDir / "opt" / targetName / install_dir_name)
     elif project.crossInstallDir == CrossInstallDir.SDK:
-        return project.sdkSysroot
+        return project.sdk_sysroot
     fatalError("Unknown install dir for", project.project_name)
 
 
@@ -213,7 +213,7 @@ class CrossCompileMixin(object):
 
             if self.crossInstallDir in (CrossInstallDir.SDK, CrossInstallDir.BOOTSTRAP_TOOLS):
                 if self.baremetal:
-                    self.destdir = self.sdkSysroot.parent
+                    self.destdir = self.sdk_sysroot.parent
                     self._installPrefix = Path("/", self.target_info.target_triple)
                 else:
                     self._installPrefix = Path("/usr/local", self._crossCompileTarget.generic_suffix)
@@ -249,16 +249,6 @@ class CrossCompileMixin(object):
         if self.use_asan and not self.compiling_for_cheri():
             self.COMMON_FLAGS.append("-fsanitize=address")
             self.COMMON_LDFLAGS.append("-fsanitize=address")
-
-    @property
-    def triple_arch(self):
-        target_triple = self.target_info.target_triple
-        return target_triple[:target_triple.find("-")]
-
-    @property
-    def sdkSysroot(self) -> Path:
-        assert isinstance(self, Project)
-        return self.target_info.sysroot_dir
 
     def should_use_extra_c_compat_flags(self):
         # TODO: add a command-line option and default to true for
@@ -396,12 +386,12 @@ class CrossCompileMixin(object):
     @property
     def pkgconfig_dirs(self):
         if self.compiling_for_cheri():
-            return str(self.sdkSysroot / "usr/libcheri/pkgconfig") + ":" + \
-                   str(self.sdkSysroot / "usr/local/cheri/lib/pkgconfig") + ":" +\
-                   str(self.sdkSysroot / "usr/local/cheri/libcheri/pkgconfig")
+            return str(self.sdk_sysroot / "usr/libcheri/pkgconfig") + ":" + \
+                   str(self.sdk_sysroot / "usr/local/cheri/lib/pkgconfig") + ":" +\
+                   str(self.sdk_sysroot / "usr/local/cheri/libcheri/pkgconfig")
         if self.compiling_for_mips(include_purecap=False):
-            return str(self.sdkSysroot / "usr/lib/pkgconfig") + ":" + \
-                   str(self.sdkSysroot / "usr/local/mips/lib/pkgconfig")
+            return str(self.sdk_sysroot / "usr/lib/pkgconfig") + ":" + \
+                   str(self.sdk_sysroot / "usr/local/mips/lib/pkgconfig")
         return None
 
     def configure(self, **kwargs):
@@ -419,7 +409,7 @@ class CrossCompileMixin(object):
         self.info("Adding ASAN library depedencies to", dest_libdir)
         self.makedirs(dest_libdir)
         for lib in ("usr/lib/librt.so.1", "usr/lib/libexecinfo.so.1", "lib/libgcc_s.so.1", "lib/libelf.so.2"):
-            self.installFile(self.sdkSysroot / lib, dest_libdir / Path(lib).name, force=True, print_verbose_only=False)
+            self.installFile(self.sdk_sysroot / lib, dest_libdir / Path(lib).name, force=True, print_verbose_only=False)
 
     @property
     def default_statcounters_csv_name(self) -> str:
@@ -570,14 +560,14 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
             resource_dir = getCompilerInfo(self.CC).get_resource_dir()
             statusUpdate("Copying ASAN libs to", resource_dir)
             expected_path = resource_dir / "lib/freebsd/"
-            asan_libdir_candidates = list((self.sdkSysroot / "usr/lib/clang").glob("*"))
+            asan_libdir_candidates = list((self.sdk_sysroot / "usr/lib/clang").glob("*"))
             versions = [a.name for a in asan_libdir_candidates]
             # Find the newest ASAN runtime library versions from the FreeBSD sysroot
             found_asan_lib = None
             from distutils.version import StrictVersion
             libname = "libclang_rt.asan-mips64.a"
             for version in reversed(sorted(versions, key=StrictVersion)):
-                asan_libs = self.sdkSysroot / "usr/lib/clang" / version / "lib/freebsd"
+                asan_libs = self.sdk_sysroot / "usr/lib/clang" / version / "lib/freebsd"
                 if (asan_libs / libname).exists():
                     found_asan_lib = asan_libs / libname
                     break
@@ -666,16 +656,16 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
             self.COMMON_FLAGS.append("-B" + str(self.config.sdkBinDir))
 
         if self.compiling_for_cheri():
-            if self._get_cmake_version() < (3, 9, 0) and not (self.sdkSysroot / "usr/local/lib/cheri").exists():
+            if self._get_cmake_version() < (3, 9, 0) and not (self.sdk_sysroot / "usr/local/lib/cheri").exists():
                 warningMessage("Workaround for missing custom lib suffix in CMake < 3.9")
-                self.makedirs(self.sdkSysroot / "usr/lib")
+                self.makedirs(self.sdk_sysroot / "usr/lib")
                 # create a /usr/lib/cheri -> /usr/libcheri symlink so that cmake can find the right libraries
-                self.createSymlink(Path("../libcheri"), self.sdkSysroot / "usr/lib/cheri", relative=True,
-                                   cwd=self.sdkSysroot / "usr/lib")
-                self.makedirs(self.sdkSysroot / "usr/local/cheri/lib")
-                self.makedirs(self.sdkSysroot / "usr/local/cheri/libcheri")
-                self.createSymlink(Path("../libcheri"), self.sdkSysroot / "usr/local/cheri/lib/cheri",
-                                   relative=True, cwd=self.sdkSysroot / "usr/local/cheri/lib")
+                self.createSymlink(Path("../libcheri"), self.sdk_sysroot / "usr/lib/cheri", relative=True,
+                                   cwd=self.sdk_sysroot / "usr/lib")
+                self.makedirs(self.sdk_sysroot / "usr/local/cheri/lib")
+                self.makedirs(self.sdk_sysroot / "usr/local/cheri/libcheri")
+                self.createSymlink(Path("../libcheri"), self.sdk_sysroot / "usr/local/cheri/lib/cheri",
+                                   relative=True, cwd=self.sdk_sysroot / "usr/local/cheri/lib")
             add_lib_suffix = """
 # cheri libraries are found in /usr/libcheri:
 if("${CMAKE_VERSION}" VERSION_LESS 3.9)
@@ -711,7 +701,7 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
             TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
             TOOLCHAIN_C_COMPILER=self.CC,
             TOOLCHAIN_CXX_COMPILER=self.CXX,
-            TOOLCHAIN_SYSROOT=self.sdkSysroot if not self.compiling_for_host() else None,
+            TOOLCHAIN_SYSROOT=self.sdk_sysroot if not self.compiling_for_host() else None,
             ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
             TOOLCHAIN_SYSTEM_PROCESSOR=processor,
             TOOLCHAIN_SYSTEM_NAME=system_name,

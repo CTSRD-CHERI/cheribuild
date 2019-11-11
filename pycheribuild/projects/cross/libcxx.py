@@ -98,7 +98,7 @@ class BuildLibunwind(CrossCompileCMakeProject):
             self.add_cmake_options(
                 LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
                               "/libunwind-test-results.xml --max-time 3600 --timeout 120 -s -vv -j1",
-                LIBUNWIND_TARGET_TRIPLE=self.target_info.target_triple, LIBUNWIND_SYSROOT=self.sdkSysroot)
+                LIBUNWIND_TARGET_TRIPLE=self.target_info.target_triple, LIBUNWIND_SYSROOT=self.sdk_sysroot)
 
             target_info = "libcxx.test.target_info.CheriBSDRemoteTI"
             # add the config options required for running tests:
@@ -263,7 +263,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         # TODO: do I even need the toolchain file to cross compile?
 
         self.add_cmake_options(LIBCXX_TARGET_TRIPLE=self.target_info.target_triple,
-                               LIBCXX_SYSROOT=self.sdkSysroot)
+                               LIBCXX_SYSROOT=self.sdk_sysroot)
 
         if self.compiling_for_cheri():
             # Ensure that we don't have failing tests due to cheri bugs
