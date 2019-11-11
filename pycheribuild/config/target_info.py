@@ -74,6 +74,14 @@ class TargetInfo(ABC):
 
     @property
     @abstractmethod
+    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
+        """
+        :return: flags such as -target + -mabi which are needed for both compiler and linker
+        """
+        ...
+
+    @property
+    @abstractmethod
     def c_preprocessor(self) -> Path: ...
 
     @classmethod
@@ -94,6 +102,10 @@ class TargetInfo(ABC):
     def required_link_flags(self) -> typing.List[str]:
         """Flags that need to be passed to cc/c++ for linking"""
         return []
+
+    @property
+    def config(self) -> "CheriConfig":
+        return self.project.config
 
     @property
     def is_baremetal(self):
@@ -119,6 +131,17 @@ class TargetInfo(ABC):
     def is_linux(self):
         return False
 
+    @property
+    def pointer_size(self):
+        if self.target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+            assert self.config.cheriBits in (128, 256), "No other cap size supported yet"
+            return self.config.cheriBits / 8
+        assert not self.target.is_cheri_purecap(), "RISC-V not handled yet"
+        if self.target.is_i386():
+            return 4
+        # all other architectures we support currently use 64-bit pointers
+        return 8
+
 
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     @property
@@ -136,6 +159,47 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     @property
     def c_preprocessor(self) -> Path:
         return self.compiler_dir / "clang-cpp"
+
+    @property
+    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
+        # However, when cross compiling we need at least -target=
+        result = ["-target", self.target_triple]
+        # And usually also --sysroot
+        if self.project.needs_sysroot:
+            result.append("--sysroot=" + str(self.sysroot_dir))
+        result += ["-B" + str(self.compiler_dir)]
+
+        if self.target.is_mips(include_purecap=True):
+            # Floating point ABI:
+            if self.is_baremetal:
+                # The baremetal driver doesn't add -fPIC for CHERI
+                if self.target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+                    result.append("-fPIC")
+                    # For now use soft-float to avoid compiler crashes
+                    result.append(MipsFloatAbi.SOFT.clang_float_flag())
+                else:
+                    # We don't have a softfloat library baremetal so always compile hard-float
+                    result.append(MipsFloatAbi.HARD.clang_float_flag())
+            else:
+                result.append(self.config.mips_float_abi.clang_float_flag())
+
+            # CPU flags (currently always BERI):
+            result.append("-mcpu=beri")
+            if self.target.is_cheri_purecap():
+                result.extend(["-mabi=purecap", "-mcpu=beri", "-cheri=" + self.config.cheriBitsStr])
+                if self.config.subobject_bounds:
+                    result.extend(["-Xclang", "-cheri-bounds=" + str(self.config.subobject_bounds)])
+                    if self.config.subobject_debug:
+                        result.extend(["-mllvm", "-cheri-subobject-bounds-clear-swperm=2"])
+            else:
+                assert self.target.is_mips(include_purecap=False)
+                # TODO: should we use -mcpu=cheri128/256?
+                result.extend(["-mabi=n64", "-mcpu=beri"])
+                if self.project.mips_build_hybrid:
+                    result.append("-cheri=" + self.config.cheriBitsStr)
+        else:
+            self.project.warning("Compiler flags might be wong, only native + MIPS checked so far")
+        return result
 
 
 class NativeTargetInfo(TargetInfo):
@@ -163,24 +227,24 @@ class NativeTargetInfo(TargetInfo):
 
     @property
     def c_compiler(self) -> Path:
-        if self.project.config.use_sdk_clang_for_native_xbuild and not IS_MAC:
+        if self.config.use_sdk_clang_for_native_xbuild and not IS_MAC:
             # SDK clang doesn't work for native builds on macos
-            return self.project.config.sdkBinDir / "clang"
-        return self.project.config.clangPath
+            return self.config.sdkBinDir / "clang"
+        return self.config.clangPath
 
     @property
     def cxx_compiler(self) -> Path:
-        if self.project.config.use_sdk_clang_for_native_xbuild and not IS_MAC:
+        if self.config.use_sdk_clang_for_native_xbuild and not IS_MAC:
             # SDK clang doesn't work for native builds on macos
-            return self.project.config.sdkBinDir / "clang++"
-        return self.project.config.clangPlusPlusPath
+            return self.config.sdkBinDir / "clang++"
+        return self.config.clangPlusPlusPath
 
     @property
     def c_preprocessor(self) -> Path:
-        if self.project.config.use_sdk_clang_for_native_xbuild and not IS_MAC:
+        if self.config.use_sdk_clang_for_native_xbuild and not IS_MAC:
             # SDK clang doesn't work for native builds on macos
-            return self.project.config.sdkBinDir / "clang-cpp"
-        return self.project.config.clangCppPath
+            return self.config.sdkBinDir / "clang-cpp"
+        return self.config.clangCppPath
 
     @property
     def is_freebsd(self):
@@ -194,6 +258,10 @@ class NativeTargetInfo(TargetInfo):
     def is_linux(self):
         return IS_LINUX
 
+    @property
+    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
+        return []  # default host compiler should not need any extra flags
+
 
 class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     FREEBSD_VERSION = 13
@@ -201,7 +269,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     @property
     def sdk_root_dir(self):
         # FIXME: different SDK root dir?
-        return self.project.config.sdkDir
+        return self.config.sdkDir
 
     @property
     def sysroot_dir(self):
@@ -236,11 +304,11 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
     @property
     def sdk_root_dir(self):
-        return self.project.config.sdkDir
+        return self.config.sdkDir
 
     @property
     def sysroot_dir(self):
-        return self.project.config.get_sysroot_path(self.target, use_hybrid_sysroot=self.project.mips_build_hybrid)
+        return self.config.get_sysroot_path(self.target, use_hybrid_sysroot=self.project.mips_build_hybrid)
 
     @property
     def is_cheribsd(self):
@@ -251,7 +319,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         if self.target.is_cheri_purecap():
             # anything over 10 should use libc++ by default
             assert self.target.is_mips(include_purecap=True), "Only MIPS purecap is supported"
-            return "mips64c{}-unknown-freebsd{}-purecap".format(self.project.config.cheriBits, self.FREEBSD_VERSION)
+            return "mips64c{}-unknown-freebsd{}-purecap".format(self.config.cheriBits, self.FREEBSD_VERSION)
         return super().target_triple
 
     @classmethod
@@ -270,21 +338,21 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     @property
     def sdk_root_dir(self) -> Path:
-        return self.project.config.sdkDir
+        return self.config.sdkDir
 
     @property
     def sysroot_dir(self) -> Path:
         # Install to mips/cheri128/cheri256 directory
         if self.target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            suffix = "cheri" + self.project.config.cheriBitsStr
+            suffix = "cheri" + self.config.cheriBitsStr
         else:
             suffix = self.target.generic_suffix
-        return self.project.config.sdkDir / "baremetal" / suffix / self.target_triple
+        return self.config.sdkDir / "baremetal" / suffix / self.target_triple
 
     @property
     def compiler_dir(self) -> Path:
         # TODO: BuildUpstreamLLVM.installDir?
-        return self.project.config.sdkBinDir
+        return self.config.sdkBinDir
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
@@ -294,7 +362,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     def target_triple(self):
         if self.target.is_mips(include_purecap=True):
             if self.target.is_cheri_purecap():
-                return "mips64c{}-qemu-elf-purecap".format(self.project.config.cheriBits)
+                return "mips64c{}-qemu-elf-purecap".format(self.config.cheriBits)
             return "mips64-qemu-elf"
         assert False, "Other baremetal cases have not been tested yet!"
 
@@ -409,15 +477,6 @@ class CrossCompileTarget(Enum):
 
     def is_any_x86(self):
         return self.is_i386() or self.is_x86_64()
-
-    def pointer_size(self, config: "CheriConfig"):
-        if self._is_cheri_purecap:
-            assert config.cheriBits in (128, 256), "No other cap size supported yet"
-            return config.cheriBits / 8
-        elif self.is_i386():
-            return 4
-        # all other architectures we support currently use 64-bit pointers
-        return 8
 
     def is_cheri_purecap(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None):
         if valid_cpu_archs is None:

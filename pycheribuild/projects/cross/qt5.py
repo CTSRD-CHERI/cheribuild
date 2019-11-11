@@ -85,7 +85,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         else:
             # make sure we use libc++ (only happens with mips64-unknown-freebsd10 and greater)
             compiler_flags = self.default_compiler_flags
-            linker_flags = self.default_ldflags + ["-target", self.targetTriple]
+            linker_flags = self.default_ldflags + ["-target", self.target_info.target_triple]
             assert self.force_static_linkage, "Currently only static linking is supported!"
 
             if self.compiling_for_cheri():
@@ -97,7 +97,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # The build system already passes these:
             linker_flags = filter(lambda s: not s.startswith("--sysroot"), linker_flags)
             compiler_flags = filter(lambda s: not s.startswith("--sysroot"), compiler_flags)
-            cross_compile_prefix = self.targetTriple
+            cross_compile_prefix = self.target_info.target_triple
             if self.compiling_for_cheri() or self.compiling_for_mips(include_purecap=False):
                 cross_compile_prefix = "mips64-unknown-freebsd"
             self.configureArgs.extend([
@@ -346,7 +346,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             self._linkage = Linkage.STATIC  # currently dynamic doesn't work
 
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-bitwise-operations", "-Wno-error=cheri-capability-misuse", "-Wno-error=format"]  # FIXME: build with capability -Werror
-        if self.debugInfo:
+        if self.include_debug_info:
             self.COMMON_FLAGS.append("-gline-tables-only") # otherwise too much debug info
         self.add_cmake_options(PORT="Qt", ENABLE_X11_TARGET=False,
                                ENABLE_OPENGL=False,

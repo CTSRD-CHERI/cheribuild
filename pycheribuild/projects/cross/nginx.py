@@ -77,7 +77,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
         return not (self.buildDir / "Makefile").exists()
 
     def configure(self):
-        if self.debugInfo:
+        if self.include_debug_info:
             self.configureArgs.append("--with-debug")
         self.configureArgs.extend(["--without-pcre",
                                    "--without-http_rewrite_module",
@@ -98,7 +98,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
             self.configureEnvironment["NGX_SIZEOF_size_t"] = "8"
             self.configureEnvironment["NGX_SIZEOF_off_t"] = "8"
             self.configureEnvironment["NGX_SIZEOF_time_t"] = "8"
-            self.configureEnvironment["NGX_SIZEOF_void_p"] = str(self.sizeof_void_ptr)
+            self.configureEnvironment["NGX_SIZEOF_void_p"] = str(self.target_info.pointer_size)
             self.configureEnvironment["NGX_HAVE_MAP_DEVZERO"] = "yes"
             self.configureEnvironment["NGX_HAVE_SYSVSHM"] = "yes"
             self.configureEnvironment["NGX_HAVE_MAP_ANON"] = "yes"

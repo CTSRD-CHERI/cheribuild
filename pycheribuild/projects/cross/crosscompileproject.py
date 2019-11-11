@@ -69,8 +69,7 @@ def get_cheribsd_instance_for_install_dir(config: CheriConfig, project: "SimpleP
     return BuildCHERIBSD.get_instance_for_cross_target(cross_target, config)
 
 
-def default_cross_install_dir(config: CheriConfig, project: "CrossCompileProject", install_dir_name: str = None):
-    assert isinstance(project, CrossCompileMixin)
+def default_cross_install_dir(config: CheriConfig, project: "Project", install_dir_name: str = None):
     if project.crossInstallDir == CrossInstallDir.COMPILER_RESOURCE_DIR:
         return getCompilerInfo(config.sdkBinDir / "clang").get_resource_dir()
 
@@ -163,7 +162,7 @@ class CrossCompileMixin(object):
     def __init__(self, config: CheriConfig, *args, **kwargs):
         super().__init__(config, *args, **kwargs)
         if self.cross_build_type in (BuildType.DEBUG, BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO):
-            assert self.debugInfo, "Need --" + self.target + "/debug-info if build-type is " + str(self.cross_build_type.value)
+            assert self.include_debug_info, "Need --" + self.target + "/debug-info if build-type is " + str(self.cross_build_type.value)
         # convert the tuples into mutable lists (this is needed to avoid modifying class variables)
         # See https://github.com/CTSRD-CHERI/cheribuild/issues/33
         self.defaultOptimizationLevel = list(self.defaultOptimizationLevel)
@@ -180,11 +179,9 @@ class CrossCompileMixin(object):
         assert target_arch is not None and target_arch is not CrossCompileTarget.NONE
         assert self.get_crosscompile_target(config) is target_arch
         self.compiler_dir = self.config.sdkBinDir
-        self.targetTriple = None
         # compiler flags:
         if self.compiling_for_host():
             self.COMMON_FLAGS = []
-            self.targetTriple = self.get_host_triple()
             if self._installDir == _INVALID_INSTALL_DIR:
                 self._installDir = self.buildDir / "test-install-prefix"
         else:
@@ -194,15 +191,12 @@ class CrossCompileMixin(object):
             self.COMMON_FLAGS.append("-ftls-model=initial-exec")
             # use *-*-freebsd13 to default to libc++
             if self.compiling_for_cheri():
-                self.targetTriple = "mips64c" + self.config.cheriBitsStr + ("-unknown-freebsd13-purecap" if not self.baremetal else "-qemu-elf-purecap")
-                # This break e.g. compiler_rt: self.targetTriple = "cheri-unknown-freebsd" if not self.baremetal else "cheri-qemu-elf-cheri" + self.config.cheriBitsStr
                 if self.should_use_extra_c_compat_flags():
                     self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
                 if self.config.cheri_cap_table_abi:
                     self.COMMON_FLAGS.append("-cheri-cap-table-abi=" + self.config.cheri_cap_table_abi)
             else:
                 assert self.compiling_for_mips(include_purecap=False)
-                self.targetTriple = "mips64-unknown-freebsd13" if not self.baremetal else "mips64-qemu-elf"
                 self.COMMON_FLAGS.append("-integrated-as")
                 self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
                 if not self.baremetal:
@@ -220,7 +214,7 @@ class CrossCompileMixin(object):
             if self.crossInstallDir in (CrossInstallDir.SDK, CrossInstallDir.BOOTSTRAP_TOOLS):
                 if self.baremetal:
                     self.destdir = self.sdkSysroot.parent
-                    self._installPrefix = Path("/", self.targetTriple)
+                    self._installPrefix = Path("/", self.target_info.target_triple)
                 else:
                     self._installPrefix = Path("/usr/local", self._crossCompileTarget.generic_suffix)
                     self.destdir = self._installDir
@@ -244,7 +238,7 @@ class CrossCompileMixin(object):
         statusUpdate(self.target, "INSTALLDIR = ", self._installDir, "INSTALL_PREFIX=", self._installPrefix,
                      "DESTDIR=", self.destdir)
 
-        if self.debugInfo:
+        if self.include_debug_info:
             self.COMMON_FLAGS.append("-ggdb")
         self.CFLAGS = []
         self.CXXFLAGS = []
@@ -258,7 +252,8 @@ class CrossCompileMixin(object):
 
     @property
     def triple_arch(self):
-        return self.targetTriple[:self.targetTriple.find("-")]
+        target_triple = self.target_info.target_triple
+        return target_triple[:target_triple.find("-")]
 
     @property
     def sdkSysroot(self) -> Path:
@@ -275,49 +270,6 @@ class CrossCompileMixin(object):
             return []
         # Build with virtual address interpretation, data-dependent provenance and pcrelative captable ABI
         return ["-cheri-uintcap=addr", "-Xclang", "-cheri-data-dependent-provenance"]
-
-    @property
-    def sizeof_void_ptr(self):
-        return self._crossCompileTarget.pointer_size(self.config)
-
-    @property
-    def _essential_compiler_and_linker_flags(self):
-        """
-        :return: flags such as -target + -mabi which are needed for both compiler and linker
-        """
-        if self.compiling_for_host():
-            return []  # no special flags should be needed
-        # However, when cross compiling we need at least -target=
-        result = ["-target", self.targetTriple]
-        if self.baremetal:
-            # Also the baremetal driver doesn't add -fPIC for CHERI
-            if self.compiling_for_cheri():
-                result.append("-fPIC")
-                # For now use soft-float to avoid compiler crashes
-                result.append(MipsFloatAbi.SOFT.clang_float_flag())
-            else:
-                # We don't have a softfloat library baremetal so always compile hard-float
-                result.append(MipsFloatAbi.HARD.clang_float_flag())
-        else:
-            result.append(self.config.mips_float_abi.clang_float_flag())
-
-        if self.compiling_for_cheri():
-            # TODO: should we use -mcpu=cheri128/256?
-            result.extend(["-mabi=purecap", "-mcpu=beri", "-cheri=" + self.config.cheriBitsStr])
-            if self.config.subobject_bounds:
-                result.extend(["-Xclang", "-cheri-bounds=" + str(self.config.subobject_bounds)])
-                if self.config.subobject_debug:
-                    result.extend(["-mllvm", "-cheri-subobject-bounds-clear-swperm=2"])
-        else:
-            assert self.compiling_for_mips(include_purecap=False)
-            # TODO: should we use -mcpu=cheri128/256?
-            result.extend(["-mabi=n64", "-mcpu=beri"])
-            if self.mips_build_hybrid:
-                result.append("-cheri=" + self.config.cheriBitsStr)
-        if self.needs_sysroot:
-            result.append("--sysroot=" + str(self.sdkSysroot))
-        result += ["-B" + str(self.config.sdkBinDir)]
-        return result
 
     @property
     def optimizationFlags(self):
@@ -344,7 +296,7 @@ class CrossCompileMixin(object):
             result.append("-fvisibility=hidden")
         if self.compiling_for_host():
             return result + self.COMMON_FLAGS + self.compiler_warning_flags
-        result += self._essential_compiler_and_linker_flags + self.optimizationFlags
+        result += self.target_info.essential_compiler_and_linker_flags + self.optimizationFlags
         result += self.COMMON_FLAGS + self.compiler_warning_flags
         if self.config.csetbounds_stats:
             result.extend(["-mllvm", "-collect-csetbounds-output=" + str(self.csetbounds_stats_file),
@@ -385,16 +337,16 @@ class CrossCompileMixin(object):
         else:
             self.fatal("Logic error!")
             return []
-        result += self._essential_compiler_and_linker_flags + [
+        result += self.target_info.essential_compiler_and_linker_flags + [
             "-Wl,-m" + emulation,
             "-fuse-ld=lld",  # TODO: use absolute path?
             # Should no longer be needed now that I added a hack for .eh_frame
             # "-Wl,-z,notext",  # needed so that LLD allows text relocations
         ]
-        if self.debugInfo:
+        if self.include_debug_info:
             # Add a gdb_index to massively speed up running GDB on CHERIBSD:
             result.append("-Wl,--gdb-index")
-        if self.config.withLibstatcounters:
+        if self.target_info.is_cheribsd and self.config.withLibstatcounters:
             # We need to include the constructor even if there is no reference to libstatcounters:
             # TODO: always include the .a file?
             result += ["-Wl,--whole-archive", "-lstatcounters", "-Wl,--no-whole-archive"]
@@ -404,8 +356,6 @@ class CrossCompileMixin(object):
     def setupConfigOptions(cls, **kwargs):
         assert issubclass(cls, SimpleProject)
         super().setupConfigOptions(**kwargs)
-        cls._debugInfo = cls.addBoolOption("debug-info",
-            help="build with debug info by default (Note: this only affects --cross-build-type=DEFAULT)", default=True)
         cls.use_lto = cls.addBoolOption("use-lto", help="Build with LTO",)
         # cls.use_cfi = cls.addBoolOption("use-cfi", help="Build with CFI",
         #                                 only_add_for_targets=[CrossCompileTarget.NATIVE, CrossCompileTarget.CHERIBSD_MIPS])
@@ -421,13 +371,10 @@ class CrossCompileMixin(object):
                                            default=Linkage.DEFAULT, kind=Linkage)
 
     @property
-    def debugInfo(self) -> bool:
+    def include_debug_info(self) -> bool:
         force_debug_info = getattr(self, "_force_debug_info", None)
         if force_debug_info is not None:
             return force_debug_info
-        # Add debug info by default (to disable set --cross-build-type=Release
-        if self.cross_build_type == BuildType.DEFAULT:
-            return self._debugInfo
         return self.cross_build_type.should_include_debug_info
 
     def linkage(self):
@@ -756,7 +703,7 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
         self._prepareToolchainFile(
             TOOLCHAIN_SDK_BINDIR=self.config.sdkBinDir,
             TOOLCHAIN_COMPILER_BINDIR=self.compiler_dir,
-            TOOLCHAIN_TARGET_TRIPLE=self.targetTriple,
+            TOOLCHAIN_TARGET_TRIPLE=self.target_info.target_triple,
             TOOLCHAIN_COMMON_FLAGS=self.default_compiler_flags,
             TOOLCHAIN_C_FLAGS=self.CFLAGS,
             TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
@@ -794,7 +741,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
         super().__init__(config)
         buildhost = self.get_host_triple()
         if not self.compiling_for_host() and self.add_host_target_build_config_options:
-            autotools_triple = self.targetTriple
+            autotools_triple = self.target_info.target_triple
             # Most scripts don't like the final -purecap component:
             autotools_triple = autotools_triple.replace("-purecap", "")
             # TODO: do we have to remove these too?

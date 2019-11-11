@@ -92,7 +92,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
                 # self.make_args.env_vars[k2] = str(v)
 
     def configure(self):
-        target_cflags = commandline_to_str(self._essential_compiler_and_linker_flags + self.COMMON_FLAGS)
+        target_cflags = commandline_to_str(self.target_info.essential_compiler_and_linker_flags + self.COMMON_FLAGS)
         bindir = self.config.sdkBinDir
 
         self.add_configure_vars(
@@ -148,8 +148,8 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
             self.configureArgs.append("--disable-newlib-mb")
             self.configureArgs.append("--disable-newlib-iconv")
 
-        # self.configureArgs.append("--host=" + self.targetTriple)
-        self.configureArgs.append("--target=" + self.targetTriple)
+        # won't work: self.configureArgs.append("--host=" + self.target_info.target_triple)
+        self.configureArgs.append("--target=" + self.target_info.target_triple)
         self.configureArgs.append("--disable-multilib")
         self.configureArgs.append("--with-newlib")
         super().configure()
@@ -158,7 +158,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
         super().install(**kwargs)
         if self.compiling_for_cheri():
             # create some symlinks to make the current CMakeProject infrastructure happy
-            root_dir = self.installDir / self.targetTriple
+            root_dir = self.installDir / self.target_info.target_triple
             self.makedirs(root_dir / "usr")
             self.createSymlink(root_dir / "lib", root_dir / "usr/libcheri")
             self.createSymlink(root_dir / "lib", root_dir / "libcheri")
@@ -175,7 +175,7 @@ int main(int argc, char** argv) {
 """, overwrite=True)
             test_exe = Path(td, "test.exe")
             # FIXME: CHERI helloworld
-            compiler_flags = self._essential_compiler_and_linker_flags + self.COMMON_FLAGS + [
+            compiler_flags = self.target_info.essential_compiler_and_linker_flags + self.COMMON_FLAGS + [
                 "-Wl,-T,qemu-malta.ld", "-Wl,-verbose", "--sysroot=" + str(self.sdkSysroot)]
             runCmd([self.config.sdkBinDir / "clang", "main.c", "-o", test_exe] + compiler_flags + ["-###"], cwd=td)
             runCmd([self.config.sdkBinDir / "clang", "main.c", "-o", test_exe] + compiler_flags, cwd=td)

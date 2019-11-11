@@ -98,7 +98,7 @@ class BuildLibunwind(CrossCompileCMakeProject):
             self.add_cmake_options(
                 LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
                               "/libunwind-test-results.xml --max-time 3600 --timeout 120 -s -vv -j1",
-                LIBUNWIND_TARGET_TRIPLE=self.targetTriple, LIBUNWIND_SYSROOT=self.sdkSysroot)
+                LIBUNWIND_TARGET_TRIPLE=self.target_info.target_triple, LIBUNWIND_SYSROOT=self.sdkSysroot)
 
             target_info = "libcxx.test.target_info.CheriBSDRemoteTI"
             # add the config options required for running tests:
@@ -262,7 +262,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
     def addCrossFlags(self):
         # TODO: do I even need the toolchain file to cross compile?
 
-        self.add_cmake_options(LIBCXX_TARGET_TRIPLE=self.targetTriple,
+        self.add_cmake_options(LIBCXX_TARGET_TRIPLE=self.target_info.target_triple,
                                LIBCXX_SYSROOT=self.sdkSysroot)
 
         if self.compiling_for_cheri():
@@ -371,10 +371,10 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             COMPILER_RT_BAREMETAL_BUILD=self.baremetal,
             # COMPILER_RT_DEFAULT_TARGET_ONLY=True,
             # BUILTIN_SUPPORTED_ARCH="mips64",
-            TARGET_TRIPLE=self.targetTriple,
+            TARGET_TRIPLE=self.target_info.target_triple,
             # LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=True,
         )
-        if self.debugInfo:
+        if self.include_debug_info:
             self.add_cmake_options(COMPILER_RT_DEBUG=True)
 
         if self.compiling_for_mips(include_purecap=True):
@@ -418,9 +418,9 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             COMPILER_RT_BAREMETAL_BUILD=self.baremetal,
             COMPILER_RT_DEFAULT_TARGET_ONLY=True,
             # BUILTIN_SUPPORTED_ARCH="mips64",
-            TARGET_TRIPLE=self.targetTriple,
+            TARGET_TRIPLE=self.target_info.target_triple,
         )
-        if self.debugInfo:
+        if self.include_debug_info:
             self.add_cmake_options(COMPILER_RT_DEBUG=True)
         if self.compiling_for_mips(include_purecap=True):
             # self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH="mips")
