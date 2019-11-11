@@ -1045,18 +1045,14 @@ class BuildCHERIBSD(BuildFreeBSD):
         mips_and_purecap_mips = [CompilationTargets.CHERIBSD_MIPS, CompilationTargets.CHERIBSD_MIPS_PURECAP]
         if issubclass(cls, BuildCHERIBSDPurecap):
             mips_and_purecap_mips = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
-        cls.buildFpgaKernels = cls.addBoolOption("build-fpga-kernels", showHelp=True,
+        cls.buildFpgaKernels = cls.addBoolOption("build-fpga-kernels", showHelp=True, _allow_unknown_targets=True,
                                                  only_add_for_targets=mips_and_purecap_mips,
                                                  help="Also build kernels for the FPGA.")
-        cls.mfs_root_image = cls.addPathOption("mfs-root-image", only_add_for_targets=mips_and_purecap_mips,
-                                               help="Path to an MFS root image to embed in the"
-                                                    "kernel that will be booted from")
-        cls.build_static = cls.addConfigOption("build-static",
-                                               only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP],
-                                               help="Build all CHERI binaries as static instead of dynamically linked")
+        cls.mfs_root_image = cls.addPathOption("mfs-root-image", help="Path to an MFS root image to be embedded in the"
+                                                                      " kernel for booting")
 
         # We also want to add this config option to the fake "cheribsd" target (to keep the config file manageable)
-        cls.purecapKernel = cls.addBoolOption("pure-cap-kernel", showHelp=True,
+        cls.purecapKernel = cls.addBoolOption("pure-cap-kernel", showHelp=True, _allow_unknown_targets=True,
                                               only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP],
                                               help="Build kernel with pure capability ABI (probably won't work!)")
 
@@ -1088,7 +1084,6 @@ class BuildCHERIBSD(BuildFreeBSD):
         if self.compiling_for_cheri():
             if self.config.cheri_cap_table_abi:
                 self.cross_toolchain_config.set(CHERI_USE_CAP_TABLE=self.config.cheri_cap_table_abi)
-            self.make_args.set_with_options(CHERI_SHARED_PROG=not self.build_static)
 
         # TODO: build with llvm binutils instead
         self.use_elftoolchain = True
