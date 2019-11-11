@@ -35,7 +35,7 @@ from enum import Enum
 from ..utils import IS_MAC, IS_FREEBSD, IS_LINUX, getCompilerInfo
 
 if typing.TYPE_CHECKING:
-    from .chericonfig import CheriConfig, CrossCompileTarget
+    from .chericonfig import CheriConfig
     from ..projects.project import SimpleProject
 
 
@@ -316,3 +316,119 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     @property
     def is_newlib(self):
         return True
+
+
+class Linkage(Enum):
+    DEFAULT = "default"
+    STATIC = "static"
+    DYNAMIC = "dynamic"
+
+
+class MipsFloatAbi(Enum):
+    SOFT = ("mips64", "-msoft-float")
+    HARD = ("mips64hf", "-mhard-float")
+
+    def freebsd_target_arch(self):
+        return self.value[0]
+
+    def clang_float_flag(self):
+        return self.value[1]
+
+
+class CrossCompileTarget(Enum):
+    NONE = ("invalid", None, False, None)  # Placeholder
+    NATIVE = ("native", CPUArchitecture.X86_64, False, NativeTargetInfo)  # XXX: should probably not harcode x86_64
+    CHERIBSD_MIPS = ("mips", CPUArchitecture.MIPS64, False, CheriBSDTargetInfo)
+    CHERIBSD_MIPS_PURECAP = ("cheri", CPUArchitecture.MIPS64, True, CheriBSDTargetInfo, CHERIBSD_MIPS)
+    CHERIBSD_RISCV = ("riscv", CPUArchitecture.RISCV64, False, CheriBSDTargetInfo)
+    CHERIBSD_X86_64 = ("native", CPUArchitecture.X86_64, False, CheriBSDTargetInfo)
+    BAREMETAL_NEWLIB_MIPS64 = ("baremetal-mips", CPUArchitecture.MIPS64, False, NewlibBaremetalTargetInfo)
+    BAREMETAL_NEWLIB_MIPS64_PURECAP = ("baremetal-purecap-mips", CPUArchitecture.MIPS64, True, NewlibBaremetalTargetInfo,
+                                       BAREMETAL_NEWLIB_MIPS64)
+    FREEBSD_MIPS = ("mips", CPUArchitecture.MIPS64, False, FreeBSDTargetInfo)
+    FREEBSD_RISCV = ("riscv", CPUArchitecture.RISCV64, False, FreeBSDTargetInfo)
+    FREEBSD_I386 = ("i386", CPUArchitecture.I386, False, FreeBSDTargetInfo)
+    FREEBSD_AARCH64 = ("aarch64", CPUArchitecture.AARCH64, False, FreeBSDTargetInfo)
+    FREEBSD_X86_64 = ("x86_64", CPUArchitecture.X86_64, False, FreeBSDTargetInfo)
+
+    def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, is_cheri_purecap: bool,
+                 target_info_cls: "typing.Type[TargetInfo]", check_conflict_with: "CrossCompileTarget" = None):
+        self.generic_suffix = suffix
+        self.cpu_architecture = cpu_architecture
+        # TODO: self.operating_system = ...
+        self._is_cheri_purecap = is_cheri_purecap
+        self.check_conflict_with = check_conflict_with  # Check that we don't reuse install-dir, etc for this target
+        self.target_info_cls = target_info_cls
+
+    def create_target_info(self, project: "SimpleProject") -> TargetInfo:
+        return self.target_info_cls(self, project)
+
+    def build_suffix(self, config: "CheriConfig", *, build_hybrid=False):
+        assert self is not CrossCompileTarget.NONE
+        if self is CrossCompileTarget.CHERIBSD_MIPS_PURECAP:
+            result = ""  # only -128/-256 for legacy build dir compat
+        elif self is CrossCompileTarget.CHERIBSD_MIPS:
+            result = "-" + self.generic_suffix
+            if build_hybrid:
+                result += "-hybrid" + config.cheri_bits_and_abi_str
+            if config.mips_float_abi == MipsFloatAbi.HARD:
+                result += "-hardfloat"
+        else:
+            result = "-" + self.generic_suffix
+
+        if self._is_cheri_purecap:
+            result += "-" + config.cheri_bits_and_abi_str
+        if config.cross_target_suffix:
+            result += "-" + config.cross_target_suffix
+        return result
+
+    def is_native(self):
+        """returns true if we building for the curent host"""
+        return self is CrossCompileTarget.NATIVE
+
+    # Querying the CPU architecture:
+    def is_mips(self, include_purecap: bool = None):
+        if include_purecap is None:
+            # Check that cases that want to handle both pass an explicit argument
+            assert self is not CrossCompileTarget.CHERIBSD_MIPS_PURECAP, "Should check purecap cases first"
+        if not include_purecap and self._is_cheri_purecap:
+            return False
+        return self.cpu_architecture is CPUArchitecture.MIPS64
+
+    def is_riscv(self, include_purecap: bool = None):
+        return self.cpu_architecture is CPUArchitecture.RISCV64
+
+    def is_aarch64(self):
+        return self.cpu_architecture is CPUArchitecture.AARCH64
+
+    def is_i386(self):
+        return self.cpu_architecture is CPUArchitecture.I386
+
+    def is_x86_64(self):
+        return self.cpu_architecture is CPUArchitecture.X86_64
+
+    def is_any_x86(self):
+        return self.is_i386() or self.is_x86_64()
+
+    def pointer_size(self, config: "CheriConfig"):
+        if self._is_cheri_purecap:
+            assert config.cheriBits in (128, 256), "No other cap size supported yet"
+            return config.cheriBits / 8
+        elif self.is_i386():
+            return 4
+        # all other architectures we support currently use 64-bit pointers
+        return 8
+
+    def is_cheri_purecap(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None):
+        if valid_cpu_archs is None:
+            return self._is_cheri_purecap
+        if not self._is_cheri_purecap:
+            return False
+        # Purecap target, but must first check if one of the accepted architectures matches
+        for a in valid_cpu_archs:
+            if a is self.cpu_architecture:
+                return True
+        return False
+
+    # def __eq__(self, other):
+    #     raise NotImplementedError("Should not compare to CrossCompileTarget, use the is_foo() methods.")

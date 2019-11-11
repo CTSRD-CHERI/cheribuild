@@ -41,7 +41,8 @@ from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
 
-from ..config.chericonfig import CheriConfig, CrossCompileTarget, CPUArchitecture, TargetInfo
+from ..config.chericonfig import CheriConfig
+from ..config.target_info import CrossCompileTarget, CPUArchitecture, TargetInfo
 from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase, DefaultValueOnlyConfigOption
 from ..filesystemutils import FileSystemUtils
 from ..targets import Target, MultiArchTarget, MultiArchTargetAlias, targetManager
