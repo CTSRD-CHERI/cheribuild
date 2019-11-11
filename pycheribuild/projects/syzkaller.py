@@ -160,11 +160,10 @@ class RunSyzkaller(SimpleProject):
 
         self.qemu_binary = BuildQEMU.qemu_binary(self)
         self.syzkaller_binary = BuildSyzkaller.get_instance(self).syzkaller_binary()
-        self.kernel_path = BuildCHERIBSDPurecap.get_instance(
-            None, config=config, cross_target=CrossCompileTarget.CHERIBSD_MIPS_PURECAP).get_installed_kernel_path(None, config=config)
-
+        self.kernel_path = BuildCHERIBSDPurecap.get_installed_kernel_path(
+            self, cross_target=CrossCompileTarget.CHERIBSD_MIPS_PURECAP)
         self.disk_image = BuildCheriBSDPurecapDiskImage.get_instance(
-            self, config, cross_target=CrossCompileTarget.CHERIBSD_MIPS_PURECAP).diskImagePath
+            self, cross_target=CrossCompileTarget.CHERIBSD_MIPS_PURECAP).diskImagePath
 
     def syzkaller_config(self):
         """ Get path of syzkaller configuration file to use. """
