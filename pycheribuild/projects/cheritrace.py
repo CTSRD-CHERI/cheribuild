@@ -45,7 +45,7 @@ class BuildCheriTrace(CMakeProject):
         super().__init__(config)
         self.addRequiredSystemTool("clang")
         self.addRequiredSystemTool("clang++")
-        self.llvmConfigPath = self.config.sdkDir / "bin/llvm-config"
+        self.llvmConfigPath = self.config.cheri_sdk_bindir / "llvm-config"
         self.add_cmake_options(
             LLVM_CONFIG=self.llvmConfigPath,
             CMAKE_C_COMPILER=self.config.clangPath,

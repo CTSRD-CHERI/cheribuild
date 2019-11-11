@@ -88,7 +88,7 @@ def test_skip_update():
 def test_per_project_override():
     config = _parse_arguments(["--skip-configure"])
     source_root = config.sourceRoot
-    assert config.sdkDir is not None
+    assert config.cheri_sdk_dir is not None
     assert BuildCheriBSDDiskImage.get_instance(None, config).extraFilesDir == source_root / "extra-files"
     _parse_arguments(["--disk-image/extra-files=/foo/bar"])
     assert BuildCheriBSDDiskImage.get_instance(None, config).extraFilesDir == Path("/foo/bar/")

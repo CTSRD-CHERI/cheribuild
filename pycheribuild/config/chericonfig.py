@@ -40,7 +40,7 @@ from typing import Optional
 
 # Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
 from .loader import ConfigLoaderBase
-from .target_info import CrossCompileTarget, MipsFloatAbi, Linkage
+from .target_info import CrossCompileTarget, MipsFloatAbi, Linkage, CheriBSDTargetInfo
 from ..utils import latestClangTool, warningMessage, statusUpdate, have_working_internet_connection
 
 if typing.TYPE_CHECKING:
@@ -205,7 +205,7 @@ class CheriConfig(object):
         self.buildRoot = None  # type: Optional[Path]
         # Path to kernel/disk images (this is the same as outputRoot by default but different in Jenkins)
         self.cheribsd_image_root = None  # type: Optional[Path]
-        self.sdkDir = None  # type: Optional[Path]
+        self.cheri_sdk_dir = None  # type: Optional[Path]
         self.otherToolsDir = None  # type: Optional[Path]
         self.docker = loader.addBoolOption("docker", help="Run the build inside a docker container",
                                            group=loader.dockerGroup)
@@ -365,10 +365,6 @@ class CheriConfig(object):
         return "sdk"
 
     @property
-    def cheri_sdk_dir(self):
-        return self.sdkDir
-
-    @property
     def cheri_sdk_bindir(self):
         return self.cheri_sdk_dir / "bin"
 
@@ -376,19 +372,20 @@ class CheriConfig(object):
     def qemu_bindir(self):
         return self.cheri_sdk_dir
 
-    def get_sysroot_path(self, cross_compile_target: CrossCompileTarget, use_hybrid_sysroot=False):
+    def get_cheribsd_sysroot_path(self, cross_compile_target: CrossCompileTarget, use_hybrid_sysroot=False):
+        assert issubclass(cross_compile_target.target_info_cls, CheriBSDTargetInfo), "Only valid for CheriBSD targets"
         if cross_compile_target.is_cheri_purecap():
-            return self.sdkDir / ("sysroot" + self.cheri_bits_and_abi_str)
+            return self.cheri_sdk_dir / ("sysroot" + self.cheri_bits_and_abi_str)
         if cross_compile_target.is_mips():
             if use_hybrid_sysroot or self.use_hybrid_sysroot_for_mips:
-                return self.sdkDir / ("sysroot" + self.cheri_bits_and_abi_str)
+                return self.cheri_sdk_dir / ("sysroot" + self.cheri_bits_and_abi_str)
             if self.mips_float_abi == MipsFloatAbi.HARD:
-                return self.sdkDir / "sysroot-mipshf"
-            return self.sdkDir / "sysroot-mips"
+                return self.cheri_sdk_dir / "sysroot-mipshf"
+            return self.cheri_sdk_dir / "sysroot-mips"
         elif cross_compile_target.is_riscv():
-            return self.sdkDir / "sysroot-riscv"
+            return self.cheri_sdk_dir / "sysroot-riscv"
         elif cross_compile_target.is_x86_64():
-            return self.sdkDir / "sysroot-x86_64"
+            return self.cheri_sdk_dir / "sysroot-x86_64"
         else:
             assert False, "Invalid cross_compile_target: " + str(cross_compile_target)
 
@@ -400,6 +397,11 @@ class CheriConfig(object):
             value = object.__getattribute__(self, key)
             if value is None:
                 raise RuntimeError("Required property " + key + " is not set!")
+        assert self.cheri_sdk_dir.is_absolute()
+        assert self.otherToolsDir.is_absolute()
+        assert self.outputRoot.is_absolute()
+        assert self.sourceRoot.is_absolute()
+        assert self.buildRoot.is_absolute()
         return True
 
     # FIXME: not sure why this is needed

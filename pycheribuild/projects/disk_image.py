@@ -422,12 +422,12 @@ class _BuildDiskImageBase(SimpleProject):
 
     def makeImage(self):
         # check that qemu-img exists before starting the potentially long-running makefs command
-        qemuImgCommand = self.config.sdkDir / "bin/qemu-img"
-        if not qemuImgCommand.is_file():
-            systemQemuImg = shutil.which("qemu-img")
-            if systemQemuImg:
+        qemu_img_command = self.config.qemu_bindir / "qemu-img"
+        if not qemu_img_command.is_file():
+            system_qemu_img = shutil.which("qemu-img")
+            if system_qemu_img:
                 print("qemu-img from CHERI SDK not found, falling back to system qemu-img")
-                qemuImgCommand = Path(systemQemuImg)
+                qemu_img_command = Path(system_qemu_img)
             else:
                 self.warning("qemu-img command was not found! Make sure to build target qemu first.")
 
@@ -474,22 +474,22 @@ class _BuildDiskImageBase(SimpleProject):
             self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
 
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
-        if not self.config.quiet and qemuImgCommand.exists():
-            runCmd(qemuImgCommand, "info", self.diskImagePath)
+        if not self.config.quiet and qemu_img_command.exists():
+            runCmd(qemu_img_command, "info", self.diskImagePath)
         if self.useQCOW2:
-            if not qemuImgCommand.exists():
+            if not qemu_img_command.exists():
                 self.fatal("Cannot create QCOW2 image without qemu-img command!")
             # create a qcow2 version from the raw image:
             rawImg = self.diskImagePath.with_suffix(".raw")
             runCmd("mv", "-f", self.diskImagePath, rawImg)
-            runCmd(qemuImgCommand, "convert",
+            runCmd(qemu_img_command, "convert",
                    "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
                    "-O", "qcow2",  # convert to qcow2 format
                    rawImg,  # input file
                    self.diskImagePath)  # output file
             self.deleteFile(rawImg, print_verbose_only=True)
             if self.config.verbose:
-                runCmd(qemuImgCommand, "info", self.diskImagePath)
+                runCmd(qemu_img_command, "info", self.diskImagePath)
 
     def copyFromRemoteHost(self):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")

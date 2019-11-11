@@ -53,7 +53,7 @@ class MockConfig(CheriConfig):
         self.sourceRoot = sourceRoot
         self.buildRoot = sourceRoot / "build"
         self.outputRoot = sourceRoot / "output"
-        self.sdkDir = self.outputRoot / "sdk"
+        self.cheri_sdk_dir = self.outputRoot / "sdk"
         self.otherToolsDir = self.outputRoot / "other"
 
         assert self._ensure_required_properties_set()

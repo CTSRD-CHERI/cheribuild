@@ -50,7 +50,7 @@ class OpamMixin(object):
 
     @property
     def opamroot(self):
-        return self.config.sdkDir / "opamroot"
+        return self.config.cheri_sdk_dir / "opamroot"
 
     def check_system_dependencies(self):
         assert isinstance(self, SimpleProject)
@@ -201,7 +201,7 @@ class BuildSailFromOpam(OpamMixin, SimpleProject):
             self.run_opam_cmd("update")
 
         if self.config.clean:
-            self.run_opam_cmd("uninstall", "--verbose", "sail", "--destdir=" + str(self.config.sdkDir / "sailprefix"))
+            self.run_opam_cmd("uninstall", "--verbose", "sail", "--destdir=" + str(self.config.cheri_sdk_dir / "sailprefix"))
             self.run_opam_cmd("uninstall", "--verbose", "sail")
 
         # ensure sail isn't pinned
@@ -212,9 +212,9 @@ class BuildSailFromOpam(OpamMixin, SimpleProject):
             self.run_opam_cmd("pin", "add", "sail", "https://github.com/rems-project/sail.git", "--verbose",
                               "--no-action")
         try:
-            self.run_opam_cmd("install", "-y", "--verbose", "sail", "--destdir=" + str(self.config.sdkDir))
+            self.run_opam_cmd("install", "-y", "--verbose", "sail", "--destdir=" + str(self.config.cheri_sdk_dir))
             # I bet this will not work as intended... Probably better to just uninstall and reinstall
-            self.run_opam_cmd("upgrade", "-y", "--verbose", "sail")  # "--destdir=" + str(self.config.sdkDir))
+            self.run_opam_cmd("upgrade", "-y", "--verbose", "sail")  # "--destdir=" + str(self.config.cheri_sdk_dir))
         finally:
             # reset the pin status even if the pinning failed
             self.run_opam_cmd("pin", "remove", "sail", "--no-action")
@@ -262,7 +262,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
         self.run_command_in_ocaml_env(cmd, cwd=self.sourceDir)
 
     def install(self, **kwargs):
-        self.make_args.set(INSTALL_DIR=self.config.sdkDir)
+        self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
         self.runMake("install")
 
 
@@ -294,7 +294,7 @@ class BuildSailRISCV(ProjectUsingOpam):
         self.run_command_in_ocaml_env(cmd, cwd=self.sourceDir)
 
     def install(self, **kwargs):
-        self.make_args.set(INSTALL_DIR=self.config.sdkDir)
+        self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
         # self.runMake("install")
         self.info("NO INSTALL TARGET YET")
 
@@ -327,7 +327,7 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
         self.run_command_in_ocaml_env(cmd, cwd=self.sourceDir)
 
     def install(self, **kwargs):
-        self.make_args.set(INSTALL_DIR=self.config.sdkDir)
+        self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
         # self.runMake("install")
         self.info("NO INSTALL TARGET YET")
 

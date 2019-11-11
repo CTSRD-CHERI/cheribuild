@@ -269,7 +269,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     @property
     def sdk_root_dir(self):
         # FIXME: different SDK root dir?
-        return self.config.sdkDir
+        return self.config.cheri_sdk_dir
 
     @property
     def sysroot_dir(self):
@@ -304,11 +304,11 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
     @property
     def sdk_root_dir(self):
-        return self.config.sdkDir
+        return self.config.cheri_sdk_dir
 
     @property
     def sysroot_dir(self):
-        return self.config.get_sysroot_path(self.target, use_hybrid_sysroot=self.project.mips_build_hybrid)
+        return self.config.get_cheribsd_sysroot_path(self.target, use_hybrid_sysroot=self.project.mips_build_hybrid)
 
     @property
     def is_cheribsd(self):
@@ -338,7 +338,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     @property
     def sdk_root_dir(self) -> Path:
-        return self.config.sdkDir
+        return self.config.cheri_sdk_dir
 
     @property
     def sysroot_dir(self) -> Path:
@@ -347,7 +347,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
             suffix = "cheri" + self.config.cheriBitsStr
         else:
             suffix = self.target.generic_suffix
-        return self.config.sdkDir / "baremetal" / suffix / self.target_triple
+        return self.config.cheri_sdk_dir / "baremetal" / suffix / self.target_triple
 
     @property
     def _compiler_dir(self) -> Path:

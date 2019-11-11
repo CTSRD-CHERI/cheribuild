@@ -86,7 +86,7 @@ class BuildCheriVis(Project):
         super().check_system_dependencies()
         self.cheritrace_subproject.check_system_dependencies()
 
-        # expectedCheritraceLib = str(self.config.sdkDir / "lib/libcheritrace.a")
+        # expectedCheritraceLib = str(self.config.cheri_sdk_dir / "lib/libcheritrace.a")
         # cheritraceLib = Path(os.getenv("CHERITRACE_LIB") or expectedCheritraceLib)
         # if not cheritraceLib.exists():
         #     self.fatal(cheritraceLib, "does not exist", fixitHint="Try running `cheribuild.py cheritrace` and if that"
@@ -145,7 +145,7 @@ class BuildCheriVis(Project):
     def install(self, **kwargs):
         if IS_MAC:
             # TODO: xcodebuild install?
-            runCmd("cp", "-aRv", self.sourceDir / "build/Release/CheriVis.app", self.config.sdkDir)
+            runCmd("cp", "-aRv", self.sourceDir / "build/Release/CheriVis.app", self.config.cheri_sdk_dir)
         else:
             self.runMake("install", cwd=self.sourceDir)
 

@@ -310,7 +310,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
         elif self.collect_test_binaries:
             executor = "CollectBinariesExecutor(\\\"{path}\\\", self)".format(path=self.collect_test_binaries)
         elif self.baremetal:
-            run_qemu_script = self.config.sdkDir / "baremetal/mips64-qemu-elf/bin/run_with_qemu.py"
+            run_qemu_script = self.target_info.sdk_root_dir / "baremetal/mips64-qemu-elf/bin/run_with_qemu.py"
             if not run_qemu_script.exists():
                 warningMessage("run_with_qemu.py is needed to run libcxx baremetal tests but could not find it:",
                                run_qemu_script, "does not exist")

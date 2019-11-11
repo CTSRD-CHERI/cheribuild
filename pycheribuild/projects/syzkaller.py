@@ -68,7 +68,7 @@ class BuildSyzkaller(CrossCompileProject):
         super().__init__(config)
 
         # self.gopath = source_base / gohome
-        self.goroot = config.sdkDir / "go"
+        self.goroot = config.cheri_sdk_dir / "go"
 
         repo_url = urlparse(self.repository.url)
         repo_path = repo_url.path.split(".")[0]
@@ -79,16 +79,16 @@ class BuildSyzkaller(CrossCompileProject):
         self.rootfs = config.outputRoot / ("rootfs" + config.cheri_bits_and_abi_str)
         self.cheribsd_include = self.rootfs / "usr" / "include"
 
-        self._newPath = (str(self.config.sdkDir.expanduser() / "bin") + ":" +
+        self._newPath = (str(self.config.cheri_sdk_dir / "bin") + ":" +
                          str(self.config.dollarPathWithOtherTools))
 
         self.cheribsd_dir = self.config.sourceRoot / "cheribsd"
 
     def syzkaller_install_path(self):
-        return self.config.sdkDir / "bin"
+        return self.config.cheri_sdk_bindir
 
     def syzkaller_binary(self):
-        return self.config.sdkDir / "bin" / "syz-manager"
+        return self.config.cheri_sdk_bindir / "syz-manager"
 
     def needsConfigure(self) -> bool:
         return False

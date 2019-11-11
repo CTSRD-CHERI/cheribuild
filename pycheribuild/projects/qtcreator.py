@@ -41,6 +41,6 @@ class BuildQtCreator(Project):
         self.addRequiredSystemTool("qmake")
         self.configureCommand = "qmake"
         self.configureArgs.extend(["-r", self.sourceDir / "qtcreator.pro"])
-        self.configureEnvironment["LLVM_INSTALL_DIR"] = str(self.config.sdkDir)
+        self.configureEnvironment["LLVM_INSTALL_DIR"] = str(self.config.cheri_sdk_dir)
         self.make_args.kind = MakeCommandKind.DefaultMake  # should also work with bsd make
         self.make_args.set(INSTALL_ROOT=str(self.installDir))

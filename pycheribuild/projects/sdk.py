@@ -72,21 +72,21 @@ class BuildFreestandingSdk(SimpleProject):
 
     def installCMakeConfig(self):
         date = datetime.datetime.now()
-        microVersion = str(date.year) + str(date.month) + str(date.day)
-        versionFile = includeLocalFile("files/CheriSDKConfigVersion.cmake.in")
-        versionFile.replace("@SDK_BUILD_DATE@", microVersion)
-        configFile = includeLocalFile("files/CheriSDKConfig.cmake")
-        cmakeConfigDir = self.config.sdkDir / "share/cmake/CheriSDK"
-        self.makedirs(cmakeConfigDir)
-        self.writeFile(cmakeConfigDir / "CheriSDKConfig.cmake", configFile, overwrite=True)
-        self.writeFile(cmakeConfigDir / "CheriSDKConfigVersion.cmake", versionFile, overwrite=True)
+        micro_version = str(date.year) + str(date.month) + str(date.day)
+        version_file = includeLocalFile("files/CheriSDKConfigVersion.cmake.in")
+        version_file.replace("@SDK_BUILD_DATE@", micro_version)
+        config_file = includeLocalFile("files/CheriSDKConfig.cmake")
+        cmake_config_dir = self.config.cheri_sdk_dir / "share/cmake/CheriSDK"
+        self.makedirs(cmake_config_dir)
+        self.writeFile(cmake_config_dir / "CheriSDKConfig.cmake", config_file, overwrite=True)
+        self.writeFile(cmake_config_dir / "CheriSDKConfigVersion.cmake", version_file, overwrite=True)
 
     def buildCheridis(self):
         # Compile the cheridis helper (TODO: add it to the LLVM repo instead?)
-        cheridisSrc = includeLocalFile("files/cheridis.c")
-        self.makedirs(self.config.sdkDir / "bin")
-        runCmd("cc", "-DLLVM_PATH=\"%s/\"" % str(self.config.sdkDir / "bin"), "-x", "c", "-",
-               "-o", self.config.sdkDir / "bin/cheridis", input=cheridisSrc)
+        cheridis_src = includeLocalFile("files/cheridis.c")
+        self.makedirs(self.config.cheri_sdk_bindir)
+        runCmd("cc", "-DLLVM_PATH=\"%s/\"" % str(self.config.cheri_sdk_bindir), "-x", "c", "-",
+               "-o", self.config.cheri_sdk_bindir / "cheridis", input=cheridis_src)
 
     def process(self):
         self.installCMakeConfig()
@@ -101,7 +101,7 @@ class BuildFreestandingSdk(SimpleProject):
                 self.createBuildtoolTargetSymlinks(cheri_sdk_bindir / tool)
             # For some reason CheriBSD does not build a cross ar, let's symlink the system one to the SDK bindir
             runCmd("ln", "-fsn", shutil.which("ar"), cheri_sdk_bindir / "ar",
-                   cwd=self.config.sdkDir / "bin", print_verbose_only=True)
+                   cwd=self.config.cheri_sdk_bindir, print_verbose_only=True)
             self.createBuildtoolTargetSymlinks(cheri_sdk_bindir / "ar")
             # install ld as ld.bfd and add a symlink
             self.installFile(self.cheribsdBuildRoot / "tmp/usr/bin/ld", cheri_sdk_bindir / "ld.bfd")
@@ -140,9 +140,9 @@ class BuildFreestandingSdk(SimpleProject):
         # install tools:
         for tool in binutilsBinaries:
             if (CHERITOOLS_OBJ / tool).is_file():
-                self.installFile(CHERITOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
+                self.installFile(CHERITOOLS_OBJ / tool, self.config.cheri_sdk_bindir / tool, force=True)
             elif (CHERIBOOTSTRAPTOOLS_OBJ / tool).is_file():
-                self.installFile(CHERIBOOTSTRAPTOOLS_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
+                self.installFile(CHERIBOOTSTRAPTOOLS_OBJ / tool, self.config.cheri_sdk_bindir / tool, force=True)
             else:
                 self.fatal("Required tool", tool, "is missing!")
 
@@ -152,7 +152,7 @@ class BuildFreestandingSdk(SimpleProject):
         # We must make this the same directory that contains ld for linking and
         # compiling to both work...
         # for tool in ("cc1", "cc1plus"):
-        #    self.installFile(CHERILIBEXEC_OBJ / tool, self.config.sdkDir / "bin" / tool, force=True)
+        #    self.installFile(CHERILIBEXEC_OBJ / tool, self.config.cheri_sdk_bindir / tool, force=True)
 
 
 # Replace the old binutils target by on that builds the required tools from GNU binutils and elftoolchain
@@ -175,10 +175,10 @@ class StartCheriSDKShell(SimpleProject):
     target = "sdk-shell"
 
     def process(self):
-        newManPath = str(self.config.sdkDir / "share/man") + ":" + os.getenv("MANPATH", "") + ":"
-        newPath = str(self.config.sdkDir / "bin") + ":" + str(self.config.dollarPathWithOtherTools)
+        new_man_path = str(self.config.cheri_sdk_dir / "share/man") + ":" + os.getenv("MANPATH", "") + ":"
+        new_path = str(self.config.cheri_sdk_bindir) + ":" + str(self.config.dollarPathWithOtherTools)
         shell = os.getenv("SHELL", "/bin/sh")
-        with setEnv(MANPATH=newManPath, PATH=newPath):
+        with setEnv(MANPATH=new_man_path, PATH=new_path):
             statusUpdate("Starting CHERI SDK shell... ", end="")
             try:
                 runCmd(shell)

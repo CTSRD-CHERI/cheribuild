@@ -144,7 +144,7 @@ class ConfigLoaderBase(object):
         return isinstance(value_type, type) and issubclass(value_type, Enum)
 
     def addOption(self, name: str, shortname=None, default=None,
-                  type: "typing.Union[typing.Type[str], typing.Callable[[str], Type_T]]"=str,
+                  type: "typing.Union[typing.Type[Type_T], typing.Callable[[str], Type_T]]" = str,
                   group=None, helpHidden=False, _owningClass: "typing.Type"=None, _fallback_name: str = None,
                   option_cls: "typing.Type[ConfigOptionBase]"=None, **kwargs) -> "Type_T":
         if option_cls is None:
@@ -304,7 +304,7 @@ class ConfigOptionBase(object):
                 print(coloured(AnsiColour.magenta, "Config option ", self.fullOptionName, " (", stringValue,
                                ") should be a list, got a string instead -> assuming the correct value is ",
                                result, sep=""))
-        if issubclass(self.valueType, Path):
+        if isinstance(self.valueType, type) and issubclass(self.valueType, Path):
             expanded = os.path.expanduser(os.path.expandvars(str(result)))
             # print("Expanding env vars in", result, "->", expanded, os.environ)
             result = Path(expanded).absolute()

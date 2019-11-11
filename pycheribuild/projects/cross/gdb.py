@@ -33,7 +33,6 @@ import shutil
 import typing
 
 from .crosscompileproject import *
-from ...config.target_info import TargetInfo
 from ...utils import runCmd, statusUpdate, IS_MAC
 
 
@@ -193,7 +192,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
     def compile(self, **kwargs):
         with TemporarilyRemoveProgramsFromSdk(["as", "ld", "objcopy", "objdump"], self.config,
-                                              self.config.cheri_sdk_bindir):
+                                              self.installDir):
             # also install objdump
             self.runMake(make_target="all-binutils", cwd=self.buildDir)
             self.runMake(make_target="all-gdb", cwd=self.buildDir)
@@ -208,8 +207,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
         bindir = self.installDir / "bin"
         if self.compiling_for_host():
             for util in binutils:
-                self.installFile(self.buildDir / "binutils" / util, self.config.cheri_sdk_bindir / ("g" + util))
+                self.installFile(self.buildDir / "binutils" / util, bindir / ("g" + util))
             # nm and c++filt have a different name in the build dir:
-            self.installFile(self.buildDir / "binutils/cxxfilt", self.config.cheri_sdk_bindir / "gc++filt")
-            self.installFile(self.buildDir / "binutils/nm-new", self.config.cheri_sdk_bindir / "gnm")
-            self.installFile(self.buildDir / "binutils/strip-new", self.config.cheri_sdk_bindir / "gstrip")
+            self.installFile(self.buildDir / "binutils/cxxfilt", bindir / "gc++filt")
+            self.installFile(self.buildDir / "binutils/nm-new", bindir / "gnm")
+            self.installFile(self.buildDir / "binutils/strip-new", bindir / "gstrip")

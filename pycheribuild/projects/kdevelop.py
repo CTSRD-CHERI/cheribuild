@@ -63,7 +63,7 @@ class BuildKDevelop(CMakeProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # Tell kdevelop to use the CHERI clang and install the wrapper script that sets the right environment variables
-        self.add_cmake_options(LLVM_ROOT=self.config.sdkDir, INSTALL_KDEVELOP_LAUNCH_WRAPPER=True)
+        self.add_cmake_options(LLVM_ROOT=self.config.cheri_sdk_dir, INSTALL_KDEVELOP_LAUNCH_WRAPPER=True)
 
 
 class StartKDevelop(SimpleProject):

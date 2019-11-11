@@ -1329,7 +1329,7 @@ class Project(SimpleProject):
         return self.config.buildRoot / (self.project_name.lower() + self.build_configuration_suffix(target) + "-build")
 
     _installToSDK = ComputedDefaultValue(
-        function=lambda config, project: config.sdkDir,
+        function=lambda config, project: config.cheri_sdk_dir,
         as_string="$INSTALL_ROOT/sdk")
     _installToBootstrapTools = ComputedDefaultValue(
         function=lambda config, project: config.otherToolsDir,

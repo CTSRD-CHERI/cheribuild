@@ -180,9 +180,9 @@ class JenkinsConfig(CheriConfig):
             os_suffix = "unknown-os"
         return self.workspace / ("qemu-" + os_suffix) / "bin"
 
-    def get_sysroot_path(self, cross_compile_target: CrossCompileTarget, use_hybrid_sysroot=False):
+    def get_cheribsd_sysroot_path(self, cross_compile_target: CrossCompileTarget, use_hybrid_sysroot=False):
         # TODO: currently we need this to be unprefixed since that is what the archives created by jenkins look like
-        return self.sdkDir / "sysroot"
+        return self.cheri_sdk_dir / "sysroot"
 
     def load(self):
         super().load()
@@ -203,11 +203,11 @@ class JenkinsConfig(CheriConfig):
         self.otherToolsDir = self.workspace / "bootstrap"
         # check for ctsrd/cheri-sdk-{cheri256,cheri128,mips} docker image
         if self.cheri_sdk_path is not None:
-            self.sdkDir = self.cheri_sdk_path
+            self.cheri_sdk_dir = self.cheri_sdk_path
         elif Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
-            self.sdkDir = Path("/cheri-sdk")
+            self.cheri_sdk_dir = Path("/cheri-sdk")
         else:
-            self.sdkDir = self.workspace / self.cheri_sdk_directory_name
+            self.cheri_sdk_dir = self.workspace / self.cheri_sdk_directory_name
         self.crossCompileTarget = self.cpu
         if self.cpu == "cheri128":
             self.cheriBits = 128
@@ -243,7 +243,7 @@ class JenkinsConfig(CheriConfig):
         if self.without_sdk:
             if not self.crossCompileTarget.is_native():
                 fatalError("The --without-sdk flag only works when building host binaries")
-            self.sdkDir = self.outputRoot / str(self.installationPrefix).strip('/')
+            self.cheri_sdk_dir = self.outputRoot / str(self.installationPrefix).strip('/')
             # allow overriding the clang/clang++ paths with HOST_CC/HOST_CXX
             self.clangPath = Path(os.getenv("HOST_CC", self.clangPath))
             self.clangPlusPlusPath = Path(os.getenv("HOST_CXX", self.clangPlusPlusPath))
