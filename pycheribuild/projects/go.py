@@ -28,15 +28,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
-from pathlib import Path
-import shutil
-
-import os
-import sys
-
 from .project import *
 from ..utils import *
-from ..config.loader import ComputedDefaultValue
 
 
 class BuildGo(Project):

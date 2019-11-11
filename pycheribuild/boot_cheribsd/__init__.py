@@ -117,6 +117,7 @@ def parse_smb_mount(arg: str):
 class CheriBSDInstance(pexpect.spawn):
     EXIT_ON_KERNEL_PANIC = True
     smb_dirs = None  # type: typing.List[SmbMount]
+    flush_interval = None
 
     def expect(self, pattern: list, timeout=-1, pretend_result=None, **kwargs):
         assert isinstance(pattern, list), "expected list and not " + str(pattern)

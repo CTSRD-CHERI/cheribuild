@@ -29,22 +29,18 @@
 # SUCH DAMAGE.
 #
 
-import shutil
-import tempfile
 import json
 import os
-import sys
-from pathlib import Path
 from urllib.parse import urlparse
 
-from .project import *
-from .cross.crosscompileproject import *
-from .cross.cheribsd import BuildCHERIBSDPurecap
 from .build_qemu import BuildQEMU
+from .cross.cheribsd import BuildCHERIBSDPurecap
+from .cross.crosscompileproject import *
 from .disk_image import BuildCheriBSDPurecapDiskImage
-from ..utils import *
+from .project import *
 from ..config.chericonfig import CrossCompileTarget
-from ..config.loader import ComputedDefaultValue
+from ..utils import *
+
 
 class BuildSyzkaller(CrossCompileProject):
     dependencies = ["go", "cheribsd"]
