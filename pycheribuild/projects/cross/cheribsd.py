@@ -57,6 +57,8 @@ def default_kernel_config(config: CheriConfig, project: SimpleProject) -> str:
         return "MALTA64"
     elif project.compiling_for_riscv() or project.get_crosscompile_target(config).is_any_x86():
         return "GENERIC"  # TODO: what is the correct config
+    elif project.crosscompile_target.is_aarch64():
+        return "GENERIC-UP"
     else:
         assert False, "should be unreachable"
 
@@ -120,7 +122,7 @@ def default_cross_toolchain_path(config: CheriConfig, proj: SimpleProject):
     assert isinstance(proj, BuildFreeBSD)
     if proj.build_with_upstream_llvm:
         return BuildUpstreamLLVM.getInstallDir(proj)
-    return config.cheri_sdk_dir
+    return proj.target_info.sdk_root_dir
 
 
 class BuildFreeBSDBase(Project):
@@ -345,12 +347,14 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # The following is broken: (https://github.com/CTSRD-CHERI/cheribsd/issues/102)
             # "CPUTYPE=mips64",  # mipsfpu for hardware float
             return {"TARGET": "mips", "TARGET_ARCH": self.config.mips_float_abi.freebsd_target_arch()}
-        elif self._crossCompileTarget.is_x86_64():
+        elif self.crosscompile_target.is_x86_64():
             return {"TARGET": "amd64", "TARGET_ARCH": "amd64"}
-        elif self.compiling_for_riscv():
+        elif self.crosscompile_target.is_riscv():
             return {"TARGET": "riscv", "TARGET_ARCH": "riscv64"}
-        elif self._crossCompileTarget.is_i386():
+        elif self.crosscompile_target.is_i386():
             return {"TARGET": "i386", "TARGET_ARCH": "i386"}
+        elif self.crosscompile_target.is_aarch64():
+            return {"TARGET": "arm64", "TARGET_ARCH": "aarch64"}
         else:
             assert False, "This should not be reached!"
 
@@ -430,9 +434,45 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.cross_toolchain_config.set(CHERI_SUBOBJECT_BOUNDS=self.config.subobject_bounds)
             self.cross_toolchain_config.set(CHERI_SUBOBJECT_BOUNDS_DEBUG="yes" if self.config.subobject_debug else "no")
 
-        # self.cross_toolchain_config.add(CROSS_COMPILER=Falses) # This sets too much, we want elftoolchain and binutils
         cross_prefix = str(self.crossToolchainRoot / "bin") + "/"  # needs to end with / for concatenation
-        if self._crossCompileTarget.is_any_x86():
+        target_flags = self._setup_arch_specific_options()
+        if target_flags:
+            self.cross_toolchain_config.set_env(XCFLAGS=target_flags)
+
+        self.externalToolchainCompiler = Path(cross_prefix + "clang")
+        # TODO: should I be setting this in the environment instead?
+        self.cross_toolchain_config.set_env(
+            XCC=cross_prefix + "clang",
+            XCXX=cross_prefix + "clang++",
+            XCPP=cross_prefix + "clang-cpp",
+            X_COMPILER_TYPE="clang",  # This is needed otherwise the build assumes it should build with $CC
+            XOBJDUMP=cross_prefix + "llvm-objdump",
+            OBJDUMP=cross_prefix + "llvm-objdump",
+            XOBJCOPY=cross_prefix + "llvm-objcopy",
+            XSTRIP=cross_prefix + "llvm-strip",
+            )
+        if self.linker_for_world == "bfd":
+            # self.cross_toolchain_config.set_env(XLDFLAGS="-fuse-ld=bfd")
+            target_flags += " -fuse-ld=bfd -Qunused-arguments"
+            # If WITH_LD_IS_LLD is set (e.g. by reading src.conf) the symlink ld -> ld.bfd in $BUILD_DIR/tmp/ won't be
+            # created and the build system will then fall back to using /usr/bin/ld which won't work!
+            self.cross_toolchain_config.set_with_options(LLD_IS_LD=False)
+            self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.bfd"),
+        else:
+            assert self.linker_for_world == "lld"
+            # TODO: we should have a better way of passing linker flags than adding them to XCFLAGS
+            linker_flags = "-fuse-ld=lld -Qunused-arguments"
+            # self.cross_toolchain_config.set_env(XLDFLAGS=linker_flags)
+            target_flags += " " + linker_flags
+            # Don't set XLD when using bfd since it will pick up ld.bfd from the build directory
+            self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.lld"),
+
+        if self.linker_for_kernel == "lld" and self.linker_for_world == "lld" and not self.compiling_for_host():
+            # When building freebsd x86 we need to build the 'as' binary
+            self.cross_toolchain_config.set_with_options(BINUTILS_BOOTSTRAP=False)
+
+    def _setup_arch_specific_options(self):
+        if self.crosscompile_target.is_any_x86():
             # target_flags = " -fuse-ld=lld -Wno-error=unused-command-line-argument -Wno-unused-command-line-argument"
             target_flags = ""
             self.useExternalToolchainForWorld = True
@@ -457,44 +497,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
             target_flags = ""
             self.useExternalToolchainForWorld = True
             self.useExternalToolchainForKernel = True
-            pass  # TODO: determine flags
+            # TODO: determine flags
         else:
             self.fatal("Invalid state, should have a cross env")
             sys.exit(1)
-
-        self.externalToolchainCompiler = Path(cross_prefix + "clang")
-        # TODO: should I be setting this in the environment instead?
-        self.cross_toolchain_config.set_env(
-            XCC=cross_prefix + "clang",
-            XCXX=cross_prefix + "clang++",
-            XCPP=cross_prefix + "clang-cpp",
-            X_COMPILER_TYPE="clang",  # This is needed otherwise the build assumes it should build with $CC
-            XOBJDUMP=cross_prefix + "llvm-objdump",
-            OBJDUMP=cross_prefix + "llvm-objdump",
-            XOBJCOPY=cross_prefix + "llvm-objcopy",
-            XSTRIP=cross_prefix + "llvm-strip",
-            )
-        if self.linker_for_world == "bfd":
-            # self.cross_toolchain_config.set_env(XLDFLAGS="-fuse-ld=bfd")
-            target_flags += " -fuse-ld=bfd -Qunused-arguments"
-            # If WITH_LD_IS_LLD is set (e.g. by reading src.conf) the symlink ld -> ld.bfd in $BUILD_DIR/tmp/ won't be
-            # created and the build system will then fall back to using /usr/bin/ld which won't work!
-            self.cross_toolchain_config.set_with_options(LLD_IS_LD=False)
-        else:
-            assert self.linker_for_world == "lld"
-            # TODO: we should have a better way of passing linker flags than adding them to XCFLAGS
-            linker_flags = "-fuse-ld=lld -Qunused-arguments"
-            # self.cross_toolchain_config.set_env(XLDFLAGS=linker_flags)
-            target_flags += " " + linker_flags
-            # Don't set XLD when using bfd since it will pick up ld.bfd from the build directory
-            self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.lld"),
-
-        if self.linker_for_kernel == "lld" and self.linker_for_world == "lld" and not self.compiling_for_host():
-            # When building freebsd x86 we need to build the as binary
-            self.cross_toolchain_config.set_with_options(BINUTILS_BOOTSTRAP=False)
-
-        if target_flags:
-            self.cross_toolchain_config.set_env(XCFLAGS=target_flags)
+        return target_flags
 
     @property
     def buildworldArgs(self) -> MakeOptions:
@@ -519,10 +526,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 self.fatal("Requested build of kernel with external toolchain, but", self.externalToolchainCompiler,
                            "doesn't exist!")
             # We can't use LLD for the kernel yet but there is a flag to experiment with it
-            if self.compiling_for_host():
-                cross_prefix = str(self.crossToolchainRoot / "bin") + "/"
-            else:
+            if self.compiling_for_mips(include_purecap=True):
                 cross_prefix = str(self.crossToolchainRoot / "bin/mips64-unknown-freebsd-")
+            else:
+                cross_prefix = str(self.crossToolchainRoot / "bin") + "/"
 
             kernel_options.update(self.cross_toolchain_config)
             fuse_ld_flag = "-fuse-ld=" + self.linker_for_kernel
