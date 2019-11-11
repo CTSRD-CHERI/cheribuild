@@ -138,7 +138,7 @@ class DefaultCheriConfig(CheriConfig):
         else:
             self.crossCompileTarget = CrossCompileTarget.CHERIBSD_MIPS_PURECAP
         # now set some generic derived config options
-        self.sdkDir = self.outputRoot / self.sdkDirectoryName  # qemu and binutils (and llvm/clang)
+        self.sdkDir = self.outputRoot / self.cheri_sdk_directory  # qemu and binutils (and llvm/clang)
         self.otherToolsDir = self.outputRoot / "bootstrap"
         self.cheribsd_image_root = self.outputRoot  # TODO: allow this to be different?
         self._initializeDerivedPaths()

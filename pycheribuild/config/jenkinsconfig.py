@@ -132,7 +132,7 @@ class JenkinsConfig(CheriConfig):
         loader.finalizeOptions(availableTargets)
 
     @property
-    def sdkDirectoryName(self):
+    def cheri_sdk_directory(self):
         return "cherisdk"
 
     @property
@@ -212,7 +212,7 @@ class JenkinsConfig(CheriConfig):
         elif Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
             self.sdkDir = Path("/cheri-sdk")
         else:
-            self.sdkDir = self.workspace / self.sdkDirectoryName
+            self.sdkDir = self.workspace / self.cheri_sdk_directory
         self.crossCompileTarget = self.cpu
         if self.cpu == "cheri128":
             self.cheriBits = 128

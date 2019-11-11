@@ -360,7 +360,7 @@ class CheriConfig(object):
         return result
 
     @property
-    def sdkDirectoryName(self):
+    def cheri_sdk_directory(self):
         return "sdk"
 
     @property
