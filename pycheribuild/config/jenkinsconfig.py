@@ -33,7 +33,8 @@ from enum import Enum
 from pathlib import Path
 
 from .loader import ConfigLoaderBase
-from .chericonfig import CheriConfig, CrossCompileTarget
+from .chericonfig import CheriConfig
+from .target_info import CompilationTargets, CrossCompileTarget
 from ..utils import defaultNumberOfMakeJobs, fatalError, IS_MAC, IS_LINUX, IS_FREEBSD
 
 
@@ -211,10 +212,10 @@ class JenkinsConfig(CheriConfig):
         self.crossCompileTarget = self.cpu
         if self.cpu == "cheri128":
             self.cheriBits = 128
-            self.crossCompileTarget = CrossCompileTarget.CHERIBSD_MIPS_PURECAP
+            self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
         elif self.cpu == "cheri256":
             self.cheriBits = 256
-            self.crossCompileTarget = CrossCompileTarget.CHERIBSD_MIPS_PURECAP
+            self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
         elif self.cpu in ("mips", "hybrid-cheri128", "hybrid-cheri256"): # MIPS with CHERI memcpy
             self.cheriBits = 9998
             if self.cpu == "mips" and self.sdk_cpu in ("cheri128", "cheri256"):
@@ -226,10 +227,10 @@ class JenkinsConfig(CheriConfig):
             else:
                 assert self.cpu == "mips"
                 self.use_hybrid_sysroot_for_mips = False
-            self.crossCompileTarget = CrossCompileTarget.CHERIBSD_MIPS
+            self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS
         elif self.cpu in ("x86", "x86_64", "amd64", "host", "native"):
             self.cheriBits = 9999
-            self.crossCompileTarget = CrossCompileTarget.NATIVE
+            self.crossCompileTarget = CompilationTargets.NATIVE
         else:
             fatalError("CPU is not set to a valid value:", self.cpu)
 

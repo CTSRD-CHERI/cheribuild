@@ -38,7 +38,7 @@ class BuildJulietTestSuite(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/arichardson/juliet-test-suite-c.git")
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     appendCheriBitsToBuildDir = True
-    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.NATIVE, CrossCompileTarget.CHERIBSD_MIPS]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS]
     defaultOptimizationLevel = ["-O0"]
     default_build_type = BuildType.DEBUG
 

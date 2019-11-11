@@ -60,9 +60,9 @@ class BuildLibunwind(CrossCompileCMakeProject):
         super().__init__(config)
         # Adding -ldl won't work: no libdl in /usr/libcheri
         self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)
-        self.lit_path = BuildCheriLLVM.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/llvm-lit"
+        self.lit_path = BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit"
         self.add_cmake_options(
-            LLVM_PATH=BuildCheriLLVM.getSourceDir(self, cross_target=CrossCompileTarget.NATIVE) / "llvm",
+            LLVM_PATH=BuildCheriLLVM.getSourceDir(self, cross_target=CompilationTargets.NATIVE) / "llvm",
             LLVM_EXTERNAL_LIT=self.lit_path,
             )
 
@@ -204,8 +204,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
                                             default=lambda c, p: "localhost")
         cls.qemu_port = cls.addConfigOption("ssh-port",
             help="The QEMU SSH port to connect to for running tests", _allow_unknown_targets=True,
-            default=lambda c, p: LaunchCheriBSD.get_instance(p, c, cross_target=CrossCompileTarget.CHERIBSD_MIPS_PURECAP).sshForwardingPort,
-            only_add_for_targets=[CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.CHERIBSD_MIPS])
+            default=lambda c, p: LaunchCheriBSD.get_instance(p, c, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).sshForwardingPort,
+            only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS])
         cls.qemu_user = cls.addConfigOption("ssh-user", default="root", help="The CheriBSD used for running tests")
 
         cls.test_jobs = cls.addConfigOption("parallel-test-jobs", help="Number of QEMU instances spawned to run tests "
@@ -229,8 +229,8 @@ class BuildLibCXX(CrossCompileCMakeProject):
         self.add_cmake_options(
             CMAKE_INSTALL_RPATH_USE_LINK_PATH=True,  # Fix finding libunwind.so
             LIBCXX_INCLUDE_TESTS=True,
-            LLVM_PATH=BuildCheriLLVM.getSourceDir(self, cross_target=CrossCompileTarget.NATIVE) / "llvm",
-            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/llvm-lit",
+            LLVM_PATH=BuildCheriLLVM.getSourceDir(self, cross_target=CompilationTargets.NATIVE) / "llvm",
+            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
             LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
                           "/libcxx-test-results.xml --max-time 3600 --timeout 120 -s -vv" + self.libcxx_lit_jobs
@@ -355,13 +355,13 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     project_name = "compiler-rt"
     crossInstallDir = CrossInstallDir.COMPILER_RESOURCE_DIR
     _check_install_dir_conflict = False
-    _default_architecture = CrossCompileTarget.CHERIBSD_MIPS_PURECAP
+    _default_architecture = CompilationTargets.CHERIBSD_MIPS_PURECAP
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.add_cmake_options(
-            LLVM_CONFIG_PATH=BuildCheriLLVM.getInstallDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/llvm-config",
-            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/llvm-lit",
+            LLVM_CONFIG_PATH=BuildCheriLLVM.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
+            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=True,
             COMPILER_RT_BUILD_XRAY=False,
@@ -396,7 +396,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     project_name = "compiler-rt-builtins"
     crossInstallDir = CrossInstallDir.SDK
     supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
-    _default_architecture = CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64
+    _default_architecture = CompilationTargets.BAREMETAL_NEWLIB_MIPS64
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -407,8 +407,8 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         if self.compiling_for_mips(include_purecap=False):
             self.add_cmake_options(COMPILER_RT_HAS_FPIC_FLAG=False)  # HACK: currently we build everything as -fno-pic
         self.add_cmake_options(
-            LLVM_CONFIG_PATH=BuildCheriLLVM.getInstallDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/llvm-config",
-            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/llvm-lit",
+            LLVM_CONFIG_PATH=BuildCheriLLVM.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
+            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=False,
             COMPILER_RT_BUILD_XRAY=False,

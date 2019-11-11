@@ -330,7 +330,7 @@ class _BuildDiskImageBase(SimpleProject):
             cross_target = self.source_project.get_crosscompile_target(self.config)
             # We always want to include the MIPS GDB for CHERI targets (purecap doesn't work and would be slower):
             if cross_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-                cross_target = CrossCompileTarget.CHERIBSD_MIPS
+                cross_target = CompilationTargets.CHERIBSD_MIPS
             if not any(x is cross_target for x in BuildGDB.supported_architectures):
                 warningMessage("GDB cannot be built for architecture ", cross_target, " -> not addding it")
             else:
@@ -632,7 +632,7 @@ def _defaultDiskImagePath(config: CheriConfig, pfx, img_prefix=""):
 class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
     project_name = "disk-image-minimal"
     dependencies = ["qemu", "cheribsd-cheri"]  # TODO: include gdb?
-    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
 
     class _MinimalFileTemplates(_AdditionalFileTemplates):
         def get_fstab_template(self):
@@ -665,7 +665,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                                                             help="Use the rootfs built by cheribsd-purecap instead")
 
     def __init__(self, config: CheriConfig):
-        self.cheribsd_class = BuildCHERIBSD.get_class_for_target(CrossCompileTarget.CHERIBSD_MIPS_PURECAP)  # type: typing.Type[BuildCHERIBSD]
+        self.cheribsd_class = BuildCHERIBSD.get_class_for_target(CompilationTargets.CHERIBSD_MIPS_PURECAP)  # type: typing.Type[BuildCHERIBSD]
         if self.use_cheribsd_purecap_rootfs:
             self.cheribsd_class = BuildCHERIBSDPurecap
         super().__init__(config, source_class=self.cheribsd_class)
@@ -774,7 +774,7 @@ class _BuildMultiArchDiskImage(_BuildDiskImageBase):
     doNotAddToTargets = True
     _source_class = None  # type: typing.Type[SimpleProject]
     _always_add_suffixed_targets = True
-    supported_architectures = [CrossCompileTarget.NATIVE] + SimpleProject.CAN_TARGET_ALL_CHERIBSD_TARGETS
+    supported_architectures = [CompilationTargets.NATIVE] + SimpleProject.CAN_TARGET_ALL_CHERIBSD_TARGETS
 
     @classproperty
     def default_architecture(cls) -> CrossCompileTarget:
@@ -812,7 +812,7 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
     @classproperty
     def supported_architectures(cls):
         # FIXME:
-        return [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
+        return [CompilationTargets.CHERIBSD_MIPS_PURECAP]
         # return cls._source_class.supported_architectures
 
     @classmethod
@@ -854,7 +854,7 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
 class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
     project_name = "disk-image-purecap"
     dependencies = ["qemu", "cheribsd-purecap", "gdb-mips"]
-    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
 
     @classmethod
     def setup_config_options(cls, **kwargs):

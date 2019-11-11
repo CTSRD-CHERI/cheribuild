@@ -31,7 +31,8 @@ import sys
 import time
 from collections import OrderedDict
 
-from .config.chericonfig import CheriConfig, CrossCompileTarget
+from .config.chericonfig import CheriConfig
+from .config.target_info import CompilationTargets, CrossCompileTarget
 from .utils import *
 
 if typing.TYPE_CHECKING:
@@ -53,7 +54,7 @@ class Target(object):
     @property
     def projectClass(self) -> "typing.Type[SimpleProject]":
         result = self._project_class
-        assert result._crossCompileTarget is not CrossCompileTarget.NONE
+        assert result._crossCompileTarget is not CompilationTargets.NONE
         return result
 
     def get_real_target(self, cross_target: CrossCompileTarget, config, caller=None) -> "Target":
@@ -72,7 +73,7 @@ class Target(object):
     def checkSystemDeps(self, config: CheriConfig):
         if self._completed:
             return
-        project = self.get_or_create_project(CrossCompileTarget.NONE, config)
+        project = self.get_or_create_project(CompilationTargets.NONE, config)
         with setEnv(PATH=config.dollarPathWithOtherTools):
             # make sure all system dependencies exist first
             project.check_system_dependencies()
@@ -189,7 +190,7 @@ class MultiArchTarget(Target):
 
     @property
     def projectClass(self) -> "typing.Type[SimpleProject]":
-        assert self.target_arch is not CrossCompileTarget.NONE
+        assert self.target_arch is not CompilationTargets.NONE
         return self._project_class
 
     def _create_project(self, config: CheriConfig) -> "SimpleProject":
@@ -214,10 +215,10 @@ class MultiArchTargetAlias(Target):
     def get_real_target(self, cross_target: CrossCompileTarget, config,
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> MultiArchTarget:
         assert cross_target is not None
-        if cross_target is CrossCompileTarget.NONE:
+        if cross_target is CompilationTargets.NONE:
             # Use the default target:
             cross_target = self._project_class.get_crosscompile_target(config)
-        assert cross_target is not None and cross_target is not CrossCompileTarget.NONE
+        assert cross_target is not None and cross_target is not CompilationTargets.NONE
         # find the correct derived project:
         for tgt in self.derived_targets:
             if tgt.target_arch is cross_target:
@@ -231,7 +232,7 @@ class MultiArchTargetAlias(Target):
         tgt = self.get_real_target(cross_target, config)
         # Update the cross target
         cross_target = tgt._project_class._crossCompileTarget
-        assert cross_target is not CrossCompileTarget.NONE
+        assert cross_target is not CompilationTargets.NONE
         return tgt.get_or_create_project(cross_target, config)
 
     def _create_project(self, config: CheriConfig):
@@ -241,16 +242,16 @@ class MultiArchTargetAlias(Target):
         return self.projectClass(config)
 
     def execute(self, config):
-        return self.get_real_target(CrossCompileTarget.NONE, config).execute(config)
+        return self.get_real_target(CompilationTargets.NONE, config).execute(config)
 
     def run_tests(self, config: "CheriConfig"):
-        return self.get_real_target(CrossCompileTarget.NONE, config).run_tests(config)
+        return self.get_real_target(CompilationTargets.NONE, config).run_tests(config)
 
     def run_benchmarks(self, config: "CheriConfig"):
-        return self.get_real_target(CrossCompileTarget.NONE, config).run_benchmarks(config)
+        return self.get_real_target(CompilationTargets.NONE, config).run_benchmarks(config)
 
     def checkSystemDeps(self, config: CheriConfig):
-        return self.get_real_target(CrossCompileTarget.NONE, config).checkSystemDeps(config)
+        return self.get_real_target(CompilationTargets.NONE, config).checkSystemDeps(config)
 
     def __repr__(self):
         return "<Cross target alias " + self.name + ">"
@@ -360,7 +361,7 @@ class TargetManager(object):
             if targetName not in self._allTargets:
                 sys.exit(coloured(AnsiColour.red, "Target", targetName, "does not exist. Valid choices are",
                                   ",".join(self.targetNames)))
-            explicitlyChosenTargets.append(self.get_target(targetName, CrossCompileTarget.NONE, config, caller="cmdline parsing"))
+            explicitlyChosenTargets.append(self.get_target(targetName, CompilationTargets.NONE, config, caller="cmdline parsing"))
         chosenTargets = self.get_all_targets(explicitlyChosenTargets, config)
         print("Will execute the following targets:\n  ", "\n   ".join(t.name for t in chosenTargets))
         # now that the chosen targets have been resolved run them

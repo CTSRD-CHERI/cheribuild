@@ -14,7 +14,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can"t do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
 from pycheribuild.config.loader import DefaultValueOnlyConfigLoader, ConfigLoaderBase
-from pycheribuild.projects.project import SimpleProject, CrossCompileTarget
+from pycheribuild.projects.project import CompilationTargets
 from pycheribuild.targets import targetManager
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # make sure all projects are loaded so that targetManager gets populated
@@ -31,11 +31,11 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, skip_sdk=
     targetManager.reset()
     # print(real_targets)
     config = get_global_config()
-    real_targets = list(targetManager.get_target(t, CrossCompileTarget.NONE, config, caller="_sort_targets") for t in targets)
+    real_targets = list(targetManager.get_target(t, CompilationTargets.NONE, config, caller="_sort_targets") for t in targets)
     config.includeDependencies = add_dependencies
     config.skipSdk = skip_sdk
     for t in real_targets:
-        if t._project_class._crossCompileTarget is CrossCompileTarget.NONE:
+        if t._project_class._crossCompileTarget is CompilationTargets.NONE:
             continue
         t.projectClass._cached_deps = None
         t.get_dependencies(config)  # ensure they have been cached

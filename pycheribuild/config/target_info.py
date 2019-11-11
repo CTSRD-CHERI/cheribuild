@@ -428,10 +428,10 @@ class CrossCompileTarget(object):
         return self.target_info_cls(self, project)
 
     def build_suffix(self, config: "CheriConfig", *, build_hybrid=False):
-        assert self is not CrossCompileTarget.NONE
-        if self is CrossCompileTarget.CHERIBSD_MIPS_PURECAP:
+        assert self is not CompilationTargets.NONE
+        if self is CompilationTargets.CHERIBSD_MIPS_PURECAP:
             result = ""  # only -128/-256 for legacy build dir compat
-        elif self is CrossCompileTarget.CHERIBSD_MIPS:
+        elif self is CompilationTargets.CHERIBSD_MIPS:
             result = "-" + self.generic_suffix
             if build_hybrid:
                 result += "-hybrid" + config.cheri_bits_and_abi_str
@@ -448,13 +448,13 @@ class CrossCompileTarget(object):
 
     def is_native(self):
         """returns true if we building for the curent host"""
-        return self is CrossCompileTarget.NATIVE
+        return self is CompilationTargets.NATIVE
 
     # Querying the CPU architecture:
     def is_mips(self, include_purecap: bool = None):
         if include_purecap is None:
             # Check that cases that want to handle both pass an explicit argument
-            assert self is not CrossCompileTarget.CHERIBSD_MIPS_PURECAP, "Should check purecap cases first"
+            assert self is not CompilationTargets.CHERIBSD_MIPS_PURECAP, "Should check purecap cases first"
         if not include_purecap and self._is_cheri_purecap:
             return False
         return self.cpu_architecture is CPUArchitecture.MIPS64
@@ -489,25 +489,27 @@ class CrossCompileTarget(object):
     #     raise NotImplementedError("Should not compare to CrossCompileTarget, use the is_foo() methods.")
 
 
-CrossCompileTarget.NONE = CrossCompileTarget("invalid", None, False, None)  # Placeholder
-# XXX: should probably not harcode x86_64
-CrossCompileTarget.NATIVE = CrossCompileTarget("native", CPUArchitecture.X86_64, False, NativeTargetInfo)
-# CheriBSD targets
-CrossCompileTarget.CHERIBSD_MIPS = CrossCompileTarget("mips", CPUArchitecture.MIPS64, False, CheriBSDTargetInfo)
-CrossCompileTarget.CHERIBSD_MIPS_PURECAP = CrossCompileTarget("cheri", CPUArchitecture.MIPS64, True, CheriBSDTargetInfo,
-                                                              CrossCompileTarget.CHERIBSD_MIPS)
-CrossCompileTarget.CHERIBSD_RISCV = CrossCompileTarget("riscv", CPUArchitecture.RISCV64, False, CheriBSDTargetInfo)
-CrossCompileTarget.CHERIBSD_X86_64 = CrossCompileTarget("native", CPUArchitecture.X86_64, False, CheriBSDTargetInfo)
-# Baremetal targets
-CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64 = CrossCompileTarget("baremetal-mips", CPUArchitecture.MIPS64, False,
-                                                                NewlibBaremetalTargetInfo)
-CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64_PURECAP = CrossCompileTarget("baremetal-purecap-mips",
-                                                                        CPUArchitecture.MIPS64, True,
-                                                                        NewlibBaremetalTargetInfo,
-                                                                        CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64)
-# FreeBSD targets
-CrossCompileTarget.FREEBSD_MIPS = CrossCompileTarget("mips", CPUArchitecture.MIPS64, False, FreeBSDTargetInfo)
-CrossCompileTarget.FREEBSD_RISCV = CrossCompileTarget("riscv", CPUArchitecture.RISCV64, False, FreeBSDTargetInfo)
-CrossCompileTarget.FREEBSD_I386 = CrossCompileTarget("i386", CPUArchitecture.I386, False, FreeBSDTargetInfo)
-CrossCompileTarget.FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, False, FreeBSDTargetInfo)
-CrossCompileTarget.FREEBSD_X86_64 = CrossCompileTarget("x86_64", CPUArchitecture.X86_64, False, FreeBSDTargetInfo)
+class CompilationTargets(object):
+    NONE = CrossCompileTarget("invalid", None, False, None)  # Placeholder
+
+    # XXX: should probably not harcode x86_64 for native
+    NATIVE = CrossCompileTarget("native", CPUArchitecture.X86_64, False, NativeTargetInfo)
+
+    # CheriBSD targets
+    CHERIBSD_MIPS = CrossCompileTarget("mips", CPUArchitecture.MIPS64, False, CheriBSDTargetInfo)
+    CHERIBSD_MIPS_PURECAP = CrossCompileTarget("cheri", CPUArchitecture.MIPS64, True, CheriBSDTargetInfo, CHERIBSD_MIPS)
+    CHERIBSD_RISCV = CrossCompileTarget("riscv", CPUArchitecture.RISCV64, False, CheriBSDTargetInfo)
+    CHERIBSD_X86_64 = CrossCompileTarget("native", CPUArchitecture.X86_64, False, CheriBSDTargetInfo)
+
+    # Baremetal targets
+    BAREMETAL_NEWLIB_MIPS64 = CrossCompileTarget("baremetal-mips", CPUArchitecture.MIPS64, False,
+                                                 NewlibBaremetalTargetInfo)
+    BAREMETAL_NEWLIB_MIPS64_PURECAP = CrossCompileTarget("baremetal-purecap-mips", CPUArchitecture.MIPS64, True,
+                                                         NewlibBaremetalTargetInfo, BAREMETAL_NEWLIB_MIPS64)
+
+    # FreeBSD targets
+    FREEBSD_MIPS = CrossCompileTarget("mips", CPUArchitecture.MIPS64, False, FreeBSDTargetInfo)
+    FREEBSD_RISCV = CrossCompileTarget("riscv", CPUArchitecture.RISCV64, False, FreeBSDTargetInfo)
+    FREEBSD_I386 = CrossCompileTarget("i386", CPUArchitecture.I386, False, FreeBSDTargetInfo)
+    FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, False, FreeBSDTargetInfo)
+    FREEBSD_X86_64 = CrossCompileTarget("x86_64", CPUArchitecture.X86_64, False, FreeBSDTargetInfo)

@@ -32,7 +32,8 @@ from enum import Enum
 from pathlib import Path
 
 from .loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader
-from .chericonfig import CheriConfig, CrossCompileTarget
+from .chericonfig import CheriConfig
+from .target_info import CompilationTargets
 from ..utils import defaultNumberOfMakeJobs
 
 class CheribuildAction(Enum):
@@ -131,12 +132,12 @@ class DefaultCheriConfig(CheriConfig):
         super().load()
         if self.crossCompileForHost:
             assert not self.crossCompileForMips
-            self.crossCompileTarget = CrossCompileTarget.NATIVE
+            self.crossCompileTarget = CompilationTargets.NATIVE
         elif self.crossCompileForMips:
             assert not self.crossCompileForHost
-            self.crossCompileTarget = CrossCompileTarget.CHERIBSD_MIPS
+            self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS
         else:
-            self.crossCompileTarget = CrossCompileTarget.CHERIBSD_MIPS_PURECAP
+            self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
         # now set some generic derived config options
         self.cheri_sdk_dir = self.outputRoot / self.cheri_sdk_directory_name  # qemu and binutils (and llvm/clang)
         self.otherToolsDir = self.outputRoot / "bootstrap"

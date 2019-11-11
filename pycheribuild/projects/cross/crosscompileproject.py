@@ -38,14 +38,15 @@ from enum import Enum
 from pathlib import Path
 
 from ..project import *
-from ...config.chericonfig import CrossCompileTarget, Linkage, BuildType
+from ...config.chericonfig import BuildType
+from ...config.target_info import CrossCompileTarget, Linkage, CompilationTargets
 from ...utils import *
 if typing.TYPE_CHECKING:
     from .cheribsd import BuildCHERIBSD
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget", "BuildType", # no-combine
            "CrossCompileProject", "CrossInstallDir", "MakeCommandKind", "Linkage", "Path",  # no-combine
-           "default_cross_install_dir",  # no-combine
+           "default_cross_install_dir", "CompilationTargets",  # no-combine
            "_INVALID_INSTALL_DIR", "GitRepository", "commandline_to_str", "CrossCompileMixin"]  # no-combine
 
 
@@ -65,7 +66,7 @@ def get_cheribsd_instance_for_install_dir(config: CheriConfig, project: "SimpleP
     cross_target = project.get_crosscompile_target(config)
     # If use_hybrid_sysroot_for_mips is set, install to rootfs128 instead of rootfs-mips
     if cross_target.is_mips(include_purecap=False) and project.mips_build_hybrid:
-        cross_target = CrossCompileTarget.CHERIBSD_MIPS_PURECAP
+        cross_target = CompilationTargets.CHERIBSD_MIPS_PURECAP
     return BuildCHERIBSD.get_instance_for_cross_target(cross_target, config)
 
 
@@ -119,7 +120,7 @@ class CrossCompileMixin(object):
     doNotAddToTargets = True
     config = None  # type: CheriConfig
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
-    supported_architectures = [CrossCompileTarget.NATIVE] + SimpleProject.CAN_TARGET_ALL_CHERIBSD_TARGETS
+    supported_architectures = [CompilationTargets.NATIVE] + SimpleProject.CAN_TARGET_ALL_CHERIBSD_TARGETS
 
     # noinspection PyTypeChecker
     defaultInstallDir = ComputedDefaultValue(function=default_cross_install_dir, as_string=_installDirMessage)
@@ -180,7 +181,7 @@ class CrossCompileMixin(object):
 
         target_arch = self._crossCompileTarget
         # sanity check:
-        assert target_arch is not None and target_arch is not CrossCompileTarget.NONE
+        assert target_arch is not None and target_arch is not CompilationTargets.NONE
         assert self.get_crosscompile_target(config) is target_arch
         # compiler flags:
         if self.compiling_for_host():
@@ -351,7 +352,7 @@ class CrossCompileMixin(object):
         super().setup_config_options(**kwargs)
         cls.use_lto = cls.addBoolOption("use-lto", help="Build with LTO",)
         # cls.use_cfi = cls.addBoolOption("use-cfi", help="Build with CFI",
-        #                                 only_add_for_targets=[CrossCompileTarget.NATIVE, CrossCompileTarget.CHERIBSD_MIPS])
+        #                                 only_add_for_targets=[CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS])
         cls.use_cfi = False  # doesn't work yet
         cls._optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
                                                      default=[])
@@ -477,7 +478,7 @@ class CrossCompileMixin(object):
         runbench_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
 
         from ..cherisim import BuildCheriSim
-        sim_project = BuildCheriSim.get_instance(self, cross_target=CrossCompileTarget.NATIVE)
+        sim_project = BuildCheriSim.get_instance(self, cross_target=CompilationTargets.NATIVE)
         cherilibs_dir = Path(sim_project.sourceDir, "cherilibs")
         cheri_dir = Path(sim_project.sourceDir, "cheri")
         if not cheri_dir.exists() or not cherilibs_dir.exists():
@@ -495,7 +496,7 @@ class CrossCompileMixin(object):
                           "--qemu-ssh-port=" + str(qemu_ssh_socket.port)]
         else:
             from ..cherisim import BuildBeriCtl
-            basic_args = ["--berictl=" + str(BuildBeriCtl.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "berictl")]
+            basic_args = ["--berictl=" + str(BuildBeriCtl.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "berictl")]
 
         if self.config.benchmark_ld_preload:
             runbench_args.append("--extra-input-files=" + str(self.config.benchmark_ld_preload))
@@ -525,7 +526,7 @@ class CrossCompileMixin(object):
                 assert self.compiling_for_cheri()
                 basic_args.append("--jenkins-bitfile=cheri" + self.config.cheriBitsStr)
             # TODO: allow using a plain MIPS kernel?
-            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(CrossCompileTarget.CHERIBSD_MIPS_PURECAP, self.config)
+            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(CompilationTargets.CHERIBSD_MIPS_PURECAP, self.config)
             if self.config.benchmark_with_debug_kernel:
                 kernel_config = mfs_kernel.fpga_kernconf
             else:

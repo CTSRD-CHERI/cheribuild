@@ -281,7 +281,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         for idx, value in enumerate(cls.supported_architectures):
             if cls._crossCompileTarget is value:
                 return idx
-        assert cls._crossCompileTarget is CrossCompileTarget.NONE
+        assert cls._crossCompileTarget is CompilationTargets.NONE
         return -1  # return -1 for NONE
 
     @classproperty
@@ -325,7 +325,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
 class LaunchCheriBSD(AbstractLaunchFreeBSD):
     project_name = "run"
     dependencies = ["qemu", "disk-image-cheri"]
-    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -345,7 +345,7 @@ class LaunchCheriBSD(AbstractLaunchFreeBSD):
 class LaunchCheriBSDPurecap(AbstractLaunchFreeBSD):
     project_name = "run-purecap"
     dependencies = ["qemu", "disk-image-purecap"]
-    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -364,7 +364,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
     target = "run-cherios"
     project_name = "run-cherios"
     dependencies = ["cherios-qemu", "cherios"]
-    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
     _forwardSSHPort = False
     _qemuUserNetworking = False
     hide_options_from_help = True
@@ -432,7 +432,7 @@ class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
 class LaunchCheriBsdMfsRoot(AbstractLaunchFreeBSD):
     project_name = "run-minimal"
     dependencies = ["qemu", "cheribsd-mfs-root-kernel-cheri"]
-    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -456,7 +456,7 @@ class LaunchCheriBsdMinimal(AbstractLaunchFreeBSD):
     project_name = "run-minimal-with-disk-image"
     dependencies = ["qemu", "disk-image-minimal"]
     hide_options_from_help = True
-    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
 
     @classmethod
     def setup_config_options(cls, **kwargs):

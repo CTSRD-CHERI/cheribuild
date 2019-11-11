@@ -42,7 +42,7 @@ class BuildBBLFreeBSDWithDefaultOptionsRISCV(AutotoolsProject):
     defaultInstallDir = AutotoolsProject._installToSDK
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
-    supported_architectures = [CrossCompileTarget.FREEBSD_RISCV]
+    supported_architectures = [CompilationTargets.FREEBSD_RISCV]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -60,7 +60,7 @@ class BuildBBLFreeBSDWithDefaultOptionsRISCV(AutotoolsProject):
 
         from .cheribsd import BuildFreeBSDWithDefaultOptions
         kernelPath = BuildFreeBSDWithDefaultOptions.get_installed_kernel_path(self,
-                                                                              cross_target=CrossCompileTarget.FREEBSD_RISCV)
+                                                                              cross_target=CompilationTargets.FREEBSD_RISCV)
         self.configureArgs.extend([
             "--with-payload=" + str(kernelPath),
             "--host=" + self.host

@@ -56,13 +56,13 @@ class LaunchFPGABase(SimpleProject):
         if self.currentKernel is not None and not self.currentKernel.exists():
             self.dependencyError("Kernel is missing:", self.currentKernel,
                                  installInstructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
-        sim_project = BuildCheriSim.get_instance(self, cross_target=CrossCompileTarget.NATIVE)
+        sim_project = BuildCheriSim.get_instance(self, cross_target=CompilationTargets.NATIVE)
         cherilibs_dir = Path(sim_project.sourceDir, "cherilibs")
         cheri_dir = Path(sim_project.sourceDir, "cheri")
         if not cheri_dir.exists() or not cherilibs_dir.exists():
             self.fatal("cheri-cpu repository missing. Run `cheribuild.py berictl` or `git clone {} {}`".format(
                 sim_project.repository.url, sim_project.sourceDir))
-        basic_args = ["--berictl=" + str(BuildBeriCtl.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "berictl")]
+        basic_args = ["--berictl=" + str(BuildBeriCtl.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "berictl")]
 
         if self.extra_base_options:
             basic_args.extend(self.extra_base_options)
@@ -92,7 +92,7 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv {subcmd_and_arg
 class LaunchCheriBSDOnFGPA(LaunchFPGABase):
     project_name = "run-fpga"
     dependencies = ["cheribsd-mfs-root-kernel-cheri"]
-    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
 
 
     @classmethod
@@ -104,7 +104,7 @@ class LaunchCheriBSDOnFGPA(LaunchFPGABase):
 
     def process(self):
         from .cross.cheribsd import BuildCheriBsdMfsKernel
-        mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(CrossCompileTarget.CHERIBSD_MIPS_PURECAP, self.config)
+        mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(CompilationTargets.CHERIBSD_MIPS_PURECAP, self.config)
         # TODO: allow using a plain MIPS kernel?
         if self.kernel_image:
             self.currentKernel = self.kernel_image

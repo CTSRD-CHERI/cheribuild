@@ -44,9 +44,9 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
         as_string="$SOURCE_ROOT/llvm-test-suite")
 
     def _find_in_sdk_or_llvm_build_dir(self, name) -> Path:
-        if (BuildCheriLLVM.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin" / name).exists():
-            return BuildCheriLLVM.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin" / name
-        return BuildCheriLLVM.getInstallDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin" / name
+        if (BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin" / name).exists():
+            return BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin" / name
+        return BuildCheriLLVM.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin" / name
 
     def __init__(self, config):
         super().__init__(config)

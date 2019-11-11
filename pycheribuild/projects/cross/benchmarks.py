@@ -85,7 +85,7 @@ class BuildMibench(CrossCompileProject):
             self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
             self.make_args.set(VERSION=self.benchmark_version)
             if self.compiling_for_mips(include_purecap=False):
-                self.make_args.set(MIPS_SYSROOT=self.config.get_cheribsd_sysroot_path(CrossCompileTarget.CHERIBSD_MIPS))
+                self.make_args.set(MIPS_SYSROOT=self.config.get_cheribsd_sysroot_path(CompilationTargets.CHERIBSD_MIPS))
             if self.compiling_for_cheri():
                 if self.config.cheriBits == 128:
                     self.make_args.set(VERSION="cheri128", CHERI128_SYSROOT=self.sdk_sysroot)

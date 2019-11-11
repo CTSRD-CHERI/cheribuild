@@ -1,6 +1,6 @@
 from pathlib import Path
 from unittest import TestCase
-from pycheribuild.projects.project import Project, CrossCompileTarget, ExternallyManagedSourceRepository
+from pycheribuild.projects.project import Project, CompilationTargets, ExternallyManagedSourceRepository
 from pycheribuild.utils import setCheriConfig, IS_LINUX
 from .setup_mock_chericonfig import setup_mock_chericonfig, MockConfig
 import os
@@ -19,7 +19,7 @@ class MockProject(Project):
     repository = ExternallyManagedSourceRepository()
 
     def __init__(self, config: MockConfig, name: str):
-        self._crossCompileTarget = CrossCompileTarget.NATIVE
+        self._crossCompileTarget = CompilationTargets.NATIVE
         self.project_name = name
         expected_src = config.sourceRoot / "sources" / name  # type: Path
         self.default_source_dir = expected_src

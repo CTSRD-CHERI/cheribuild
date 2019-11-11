@@ -41,7 +41,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
                                old_urls=[b"https://github.com/nwf/bodiagsuite"])
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     appendCheriBitsToBuildDir = True
-    supported_architectures = [CrossCompileTarget.CHERIBSD_MIPS_PURECAP, CrossCompileTarget.NATIVE, CrossCompileTarget.CHERIBSD_MIPS]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS]
     defaultOptimizationLevel = ["-O0"]
     default_build_type = BuildType.DEBUG
     default_use_asan = True
@@ -67,27 +67,27 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.use_valgrind = cls.addBoolOption("use-valgrind", help="Run tests using valgrind (native only)",
-                                             only_add_for_targets=[CrossCompileTarget.NATIVE])
+                                             only_add_for_targets=[CompilationTargets.NATIVE])
         cls.use_stack_protector = cls.addBoolOption("use-stack-protector", help="Compile tests with stack-protector (non-CHERI only)")
         cls.use_fortify_source = cls.addBoolOption("use-fortify-source", help="Compile tests with _DFORTIFY_SOURCE=2 (no effect on FreeBSD)")
-        cls.use_softboundcets = cls.addBoolOption("use-softboundcets", help="Compile tests with SoftBoundCETS (native only)", only_add_for_targets=[CrossCompileTarget.NATIVE])
-        cls.use_effectivesan = cls.addBoolOption("use-effectivesan", help="Compile tests with EffectiveSan (native only)", only_add_for_targets=[CrossCompileTarget.NATIVE])
+        cls.use_softboundcets = cls.addBoolOption("use-softboundcets", help="Compile tests with SoftBoundCETS (native only)", only_add_for_targets=[CompilationTargets.NATIVE])
+        cls.use_effectivesan = cls.addBoolOption("use-effectivesan", help="Compile tests with EffectiveSan (native only)", only_add_for_targets=[CompilationTargets.NATIVE])
 
 
     @property
     def CC(self):
         if self.use_effectivesan:
-            return BuildEffectiveSan.getInstallDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/clang"
+            return BuildEffectiveSan.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang"
         if self.use_softboundcets:
-            return BuildSoftBoundCETS.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/clang"
+            return BuildSoftBoundCETS.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang"
         return super().CC
 
     @property
     def CXX(self):
         if self.use_effectivesan:
-            return BuildEffectiveSan.getInstallDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/clang++"
+            return BuildEffectiveSan.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang++"
         if self.use_softboundcets:
-            return BuildSoftBoundCETS.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/clang++"
+            return BuildSoftBoundCETS.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang++"
         return super().CXX
 
     def __init__(self, config: CheriConfig, *args, **kwargs):

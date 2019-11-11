@@ -1,7 +1,8 @@
 from pathlib import Path
 from enum import Enum
 from pycheribuild.utils import setCheriConfig
-from pycheribuild.config.chericonfig import CrossCompileTarget, MipsFloatAbi, CheriConfig
+from pycheribuild.config.chericonfig import CheriConfig
+from pycheribuild.config.target_info import CompilationTargets, CrossCompileTarget
 from pycheribuild.config.loader import ConfigLoaderBase, DefaultValueOnlyConfigLoader
 from pycheribuild.projects.project import SimpleProject
 from pycheribuild.targets import Target
@@ -39,7 +40,7 @@ class MockConfig(CheriConfig):
         self.includeDependencies = False
         self.create_compilation_db = False
         self.copy_compilation_db_to_source_dir = False
-        self.crossCompileTarget = CrossCompileTarget.CHERIBSD_MIPS_PURECAP
+        self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
         self.cheriBits = 256
         self.makeJobs = 2
         self.makeWithoutNice = True
