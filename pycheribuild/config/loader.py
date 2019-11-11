@@ -179,7 +179,7 @@ class ConfigLoaderBase(object):
 
     def addPathOption(self, name: str, shortname=None, **kwargs) -> Path:
         # we have to make sure we resolve this to an absolute path because otherwise steps where CWD is different fail!
-        return self.addOption(name, shortname, type=lambda x: Path(x), **kwargs)
+        return self.addOption(name, shortname, type=Path, **kwargs)
 
     def load(self):
         raise NotImplementedError()
@@ -304,7 +304,7 @@ class ConfigOptionBase(object):
                 print(coloured(AnsiColour.magenta, "Config option ", self.fullOptionName, " (", stringValue,
                                ") should be a list, got a string instead -> assuming the correct value is ",
                                result, sep=""))
-        if self.valueType == Path:
+        if issubclass(self.valueType, Path):
             expanded = os.path.expanduser(os.path.expandvars(str(result)))
             # print("Expanding env vars in", result, "->", expanded, os.environ)
             result = Path(expanded).absolute()
