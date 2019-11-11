@@ -29,8 +29,8 @@
 #
 import typing
 from abc import ABCMeta, abstractmethod, ABC
-from pathlib import Path
 from enum import Enum
+from pathlib import Path
 
 from ..utils import IS_MAC, IS_FREEBSD, IS_LINUX, getCompilerInfo
 
@@ -48,6 +48,8 @@ class CPUArchitecture(Enum):
 
 
 class TargetInfo(ABC):
+    shortname = None
+
     def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
         self.target = target
         self.project = project
@@ -203,6 +205,8 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
 
 
 class NativeTargetInfo(TargetInfo):
+    shortname = "native"
+
     @property
     def sdk_root_dir(self):
         raise ValueError("Should not be called for native")
@@ -264,6 +268,7 @@ class NativeTargetInfo(TargetInfo):
 
 
 class FreeBSDTargetInfo(_ClangBasedTargetInfo):
+    shortname = "FreeBSD"
     FREEBSD_VERSION = 13
 
     @property
@@ -300,6 +305,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
 
 class CheriBSDTargetInfo(FreeBSDTargetInfo):
+    shortname = "CheriBSD"
     FREEBSD_VERSION = 13
 
     @property
@@ -336,6 +342,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
 
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
+    shortname = "Newlib"
     @property
     def sdk_root_dir(self) -> Path:
         return self.config.cheri_sdk_dir
@@ -403,24 +410,13 @@ class MipsFloatAbi(Enum):
         return self.value[1]
 
 
-class CrossCompileTarget(Enum):
-    NONE = ("invalid", None, False, None)  # Placeholder
-    NATIVE = ("native", CPUArchitecture.X86_64, False, NativeTargetInfo)  # XXX: should probably not harcode x86_64
-    CHERIBSD_MIPS = ("mips", CPUArchitecture.MIPS64, False, CheriBSDTargetInfo)
-    CHERIBSD_MIPS_PURECAP = ("cheri", CPUArchitecture.MIPS64, True, CheriBSDTargetInfo, CHERIBSD_MIPS)
-    CHERIBSD_RISCV = ("riscv", CPUArchitecture.RISCV64, False, CheriBSDTargetInfo)
-    CHERIBSD_X86_64 = ("native", CPUArchitecture.X86_64, False, CheriBSDTargetInfo)
-    BAREMETAL_NEWLIB_MIPS64 = ("baremetal-mips", CPUArchitecture.MIPS64, False, NewlibBaremetalTargetInfo)
-    BAREMETAL_NEWLIB_MIPS64_PURECAP = ("baremetal-purecap-mips", CPUArchitecture.MIPS64, True, NewlibBaremetalTargetInfo,
-                                       BAREMETAL_NEWLIB_MIPS64)
-    FREEBSD_MIPS = ("mips", CPUArchitecture.MIPS64, False, FreeBSDTargetInfo)
-    FREEBSD_RISCV = ("riscv", CPUArchitecture.RISCV64, False, FreeBSDTargetInfo)
-    FREEBSD_I386 = ("i386", CPUArchitecture.I386, False, FreeBSDTargetInfo)
-    FREEBSD_AARCH64 = ("aarch64", CPUArchitecture.AARCH64, False, FreeBSDTargetInfo)
-    FREEBSD_X86_64 = ("x86_64", CPUArchitecture.X86_64, False, FreeBSDTargetInfo)
-
+class CrossCompileTarget(object):
     def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, is_cheri_purecap: bool,
                  target_info_cls: "typing.Type[TargetInfo]", check_conflict_with: "CrossCompileTarget" = None):
+        if target_info_cls is None:
+            self.name = suffix
+        else:
+            self.name = target_info_cls.shortname + suffix
         self.generic_suffix = suffix
         self.cpu_architecture = cpu_architecture
         # TODO: self.operating_system = ...
@@ -491,3 +487,27 @@ class CrossCompileTarget(Enum):
 
     # def __eq__(self, other):
     #     raise NotImplementedError("Should not compare to CrossCompileTarget, use the is_foo() methods.")
+
+
+CrossCompileTarget.NONE = CrossCompileTarget("invalid", None, False, None)  # Placeholder
+# XXX: should probably not harcode x86_64
+CrossCompileTarget.NATIVE = CrossCompileTarget("native", CPUArchitecture.X86_64, False, NativeTargetInfo)
+# CheriBSD targets
+CrossCompileTarget.CHERIBSD_MIPS = CrossCompileTarget("mips", CPUArchitecture.MIPS64, False, CheriBSDTargetInfo)
+CrossCompileTarget.CHERIBSD_MIPS_PURECAP = CrossCompileTarget("cheri", CPUArchitecture.MIPS64, True, CheriBSDTargetInfo,
+                                                              CrossCompileTarget.CHERIBSD_MIPS)
+CrossCompileTarget.CHERIBSD_RISCV = CrossCompileTarget("riscv", CPUArchitecture.RISCV64, False, CheriBSDTargetInfo)
+CrossCompileTarget.CHERIBSD_X86_64 = CrossCompileTarget("native", CPUArchitecture.X86_64, False, CheriBSDTargetInfo)
+# Baremetal targets
+CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64 = CrossCompileTarget("baremetal-mips", CPUArchitecture.MIPS64, False,
+                                                                NewlibBaremetalTargetInfo)
+CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64_PURECAP = CrossCompileTarget("baremetal-purecap-mips",
+                                                                        CPUArchitecture.MIPS64, True,
+                                                                        NewlibBaremetalTargetInfo,
+                                                                        CrossCompileTarget.BAREMETAL_NEWLIB_MIPS64)
+# FreeBSD targets
+CrossCompileTarget.FREEBSD_MIPS = CrossCompileTarget("mips", CPUArchitecture.MIPS64, False, FreeBSDTargetInfo)
+CrossCompileTarget.FREEBSD_RISCV = CrossCompileTarget("riscv", CPUArchitecture.RISCV64, False, FreeBSDTargetInfo)
+CrossCompileTarget.FREEBSD_I386 = CrossCompileTarget("i386", CPUArchitecture.I386, False, FreeBSDTargetInfo)
+CrossCompileTarget.FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, False, FreeBSDTargetInfo)
+CrossCompileTarget.FREEBSD_X86_64 = CrossCompileTarget("x86_64", CPUArchitecture.X86_64, False, FreeBSDTargetInfo)
