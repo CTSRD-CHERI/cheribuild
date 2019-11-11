@@ -132,7 +132,7 @@ class JenkinsConfig(CheriConfig):
         loader.finalizeOptions(availableTargets)
 
     @property
-    def cheri_sdk_directory(self):
+    def cheri_sdk_directory_name(self):
         return "cherisdk"
 
     @property
@@ -180,11 +180,6 @@ class JenkinsConfig(CheriConfig):
             os_suffix = "unknown-os"
         return self.workspace / ("qemu-" + os_suffix) / "bin"
 
-    @property
-    def cheriSysrootDir(self):
-        # TODO: currently we need this to be unprefixed since that is what the archives created by jenkins look like
-        return self.sdkDir / "sysroot"
-
     def get_sysroot_path(self, cross_compile_target: CrossCompileTarget, use_hybrid_sysroot=False):
         # TODO: currently we need this to be unprefixed since that is what the archives created by jenkins look like
         return self.sdkDir / "sysroot"
@@ -212,7 +207,7 @@ class JenkinsConfig(CheriConfig):
         elif Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
             self.sdkDir = Path("/cheri-sdk")
         else:
-            self.sdkDir = self.workspace / self.cheri_sdk_directory
+            self.sdkDir = self.workspace / self.cheri_sdk_directory_name
         self.crossCompileTarget = self.cpu
         if self.cpu == "cheri128":
             self.cheriBits = 128

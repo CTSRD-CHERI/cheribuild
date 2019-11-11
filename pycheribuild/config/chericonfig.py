@@ -32,6 +32,7 @@ import grp
 import json
 import os
 import typing
+import warnings
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
@@ -360,27 +361,32 @@ class CheriConfig(object):
         return result
 
     @property
-    def cheri_sdk_directory(self):
+    def cheri_sdk_directory_name(self) -> str:
         return "sdk"
 
     @property
+    def cheri_sdk_dir(self):
+        return self.sdkDir
+
+    @property
     def sdkBinDir(self):
-        return self.sdkDir / "bin"
+        warnings.warn('Use cheri_sdk_bindir instead.', DeprecationWarning)
+        return self.cheri_sdk_bindir
+
+    @property
+    def cheri_sdk_bindir(self):
+        return self.cheri_sdk_dir / "bin"
 
     @property
     def qemu_bindir(self):
-        return self.sdkBinDir
-
-    @property
-    def cheriSysrootDir(self):
-        return self.sdkDir / ("sysroot" + self.cheri_bits_and_abi_str)
+        return self.cheri_sdk_dir
 
     def get_sysroot_path(self, cross_compile_target: CrossCompileTarget, use_hybrid_sysroot=False):
         if cross_compile_target.is_cheri_purecap():
-            return self.cheriSysrootDir
+            return self.sdkDir / ("sysroot" + self.cheri_bits_and_abi_str)
         if cross_compile_target.is_mips():
             if use_hybrid_sysroot or self.use_hybrid_sysroot_for_mips:
-                return self.cheriSysrootDir
+                return self.sdkDir / ("sysroot" + self.cheri_bits_and_abi_str)
             if self.mips_float_abi == MipsFloatAbi.HARD:
                 return self.sdkDir / "sysroot-mipshf"
             return self.sdkDir / "sysroot-mips"

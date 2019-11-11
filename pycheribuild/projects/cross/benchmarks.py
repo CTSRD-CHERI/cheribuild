@@ -84,10 +84,10 @@ class BuildMibench(CrossCompileProject):
                 self.make_args.set(MIPS_SYSROOT=self.config.get_sysroot_path(CrossCompileTarget.CHERIBSD_MIPS))
             if self.compiling_for_cheri():
                 if self.config.cheriBits == 128:
-                    self.make_args.set(VERSION="cheri128", CHERI128_SYSROOT=self.config.cheriSysrootDir)
+                    self.make_args.set(VERSION="cheri128", CHERI128_SYSROOT=self.sdk_sysroot)
                 else:
                     assert self.config.cheriBits == 256
-                    self.make_args.set(VERSION="cheri256", CHERI256_SYSROOT=self.config.cheriSysrootDir)
+                    self.make_args.set(VERSION="cheri256", CHERI256_SYSROOT=self.sdk_sysroot)
             self.makedirs(self.buildDir / "bundle")
             self.make_args.set(BUNDLE_DIR=self.buildDir / self.bundle_dir)
             self.runMake("bundle_dump", cwd=self.sourceDir)

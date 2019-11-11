@@ -81,8 +81,6 @@ class BuildGnuBinutils(AutotoolsProject):
             "--disable-gprof",
             "--disable-gold",
             "--disable-nls",
-            # TODO: --with-sysroot doesn't work properly so we need to tell clang not to pass the --sysroot option
-            "--with-sysroot=" + str(self.config.cheriSysrootDir),  # as we pass --sysroot to clang we need this option
             "--disable-info",
             #  "--program-prefix=cheri-unknown-freebsd-",
             "MAKEINFO=missing",  # don't build docs, this will fail on recent Linux systems
