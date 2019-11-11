@@ -43,7 +43,7 @@ try_run() {
 export _TEST_SKIP_METALOG=1
 
 
-while read local_ref local_sha remote_ref remote_sha
+while read -r local_ref local_sha remote_ref remote_sha
 do
 	if [ "$local_sha" = $z40 ]
 	then
@@ -77,14 +77,14 @@ do
 		fi
 
 		# Check for WIP commit
-		commit=`git rev-list -n 1 --grep '^WIP' "$range"`
+		commit=$(git rev-list -n 1 --grep '^WIP' "$range")
 		if [ -n "$commit" ]
 		then
 			echo >&2 "Found WIP commit in $local_ref, not pushing"
 			exit 1
 		fi
 		# Check for rebase commit
-		commit=`git rev-list -n 1 --grep '^rebase' "$range"`
+		commit=$(git rev-list -n 1 --grep '^rebase' "$range")
 		if [ -n "$commit" ]
 		then
 			echo >&2 "Found rebase commit $commit in $local_ref, not pushing"
