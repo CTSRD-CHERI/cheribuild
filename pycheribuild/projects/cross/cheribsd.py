@@ -436,8 +436,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
         cross_prefix = str(self.crossToolchainRoot / "bin") + "/"  # needs to end with / for concatenation
         target_flags = self._setup_arch_specific_options()
-        if target_flags:
-            self.cross_toolchain_config.set_env(XCFLAGS=target_flags)
 
         self.externalToolchainCompiler = Path(cross_prefix + "clang")
         # TODO: should I be setting this in the environment instead?
@@ -466,6 +464,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
             target_flags += " " + linker_flags
             # Don't set XLD when using bfd since it will pick up ld.bfd from the build directory
             self.cross_toolchain_config.set_env(XLD=cross_prefix + "ld.lld"),
+
+        if target_flags:
+            self.cross_toolchain_config.set_env(XCFLAGS=target_flags)
 
         if self.linker_for_kernel == "lld" and self.linker_for_world == "lld" and not self.compiling_for_host():
             # When building freebsd x86 we need to build the 'as' binary
