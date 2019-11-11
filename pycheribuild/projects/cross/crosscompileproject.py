@@ -597,8 +597,8 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
                 if self.config.verbose:
                     self.info(self.target, "install dir for", xtarget.name, "is", self.installDir)
                     self.info(self.target, "install dir for", xtarget.check_conflict_with.name, "is", self.installDir)
-                assert mips_instance.installDir != self.installDir, \
-                    mips_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(mips_instance.installDir)
+                assert other_instance.installDir != self.installDir, \
+                    mips_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(other_instance.installDir)
         super().process()
 
 
