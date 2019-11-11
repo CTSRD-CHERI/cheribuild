@@ -55,7 +55,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
                                       # "-Wno-extended-offsetof",
                                       "-Wno-format-pedantic",
                                       ])
-            self.configureEnvironment["AR"] = str(self.config.sdkBinDir / "cheri-unknown-freebsd-ar")
+            self.configureEnvironment["AR"] = str(self.sdk_bindir / "cheri-unknown-freebsd-ar")
         # The makefile expects the current working directory to be the source dir. Therefore we add -f $build/Makefile
         # This is also in the makefile generated in the source dir but it doesn't work with multiple build dirs
         self.make_args.add_flags("-f", self.buildDir / "Makefile")

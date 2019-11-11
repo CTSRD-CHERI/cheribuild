@@ -165,11 +165,11 @@ class JenkinsConfig(CheriConfig):
 
     @property
     def qemu_bindir(self):
-        for i in self.sdkBinDir.glob("qemu-system-*"):
+        for i in self.cheri_sdk_bindir.glob("qemu-system-*"):
             if self.verbose:
                 print("Found QEMU binary", i, "in SDK dir -> using that for QEMU binaries")
-            # If one qemu-system-foo exists in the sdkBinDir use that instead of $WORKSPACE/qemu-<OS>
-            return self.sdkBinDir
+            # If one qemu-system-foo exists in the cheri_sdk_bindir use that instead of $WORKSPACE/qemu-<OS>
+            return self.cheri_sdk_bindir
         if IS_LINUX:
             os_suffix = "linux"
         elif IS_FREEBSD:
@@ -255,12 +255,12 @@ class JenkinsConfig(CheriConfig):
             if not self.clangCppPath.exists():
                 fatalError("C pre-processor", self.clangCppPath, "does not exit. Pass --clang-cpp-path or set $HOST_CPP")
         else:
-            # always use the CHERI clang built by jenkins to ensure we don't do x86 compilation
-            self.clangPath = self.sdkBinDir / "clang"
-            self.clangPlusPlusPath = self.sdkBinDir / "clang++"
+            # always use the CHERI clang built by jenkins
+            self.clangPath = self.cheri_sdk_bindir / "clang"
+            self.clangPlusPlusPath = self.cheri_sdk_bindir / "clang++"
 
         if self.cheri_sdk_path is not None:
-            assert self.sdkBinDir == self.cheri_sdk_path / "bin"
+            assert self.cheri_sdk_bindir == self.cheri_sdk_path / "bin"
 
         self._initializeDerivedPaths()
 

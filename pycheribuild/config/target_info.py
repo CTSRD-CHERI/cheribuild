@@ -229,21 +229,21 @@ class NativeTargetInfo(TargetInfo):
     def c_compiler(self) -> Path:
         if self.config.use_sdk_clang_for_native_xbuild and not IS_MAC:
             # SDK clang doesn't work for native builds on macos
-            return self.config.sdkBinDir / "clang"
+            return self.config.cheri_sdk_bindir / "clang"
         return self.config.clangPath
 
     @property
     def cxx_compiler(self) -> Path:
         if self.config.use_sdk_clang_for_native_xbuild and not IS_MAC:
             # SDK clang doesn't work for native builds on macos
-            return self.config.sdkBinDir / "clang++"
+            return self.config.cheri_sdk_bindir / "clang++"
         return self.config.clangPlusPlusPath
 
     @property
     def c_preprocessor(self) -> Path:
         if self.config.use_sdk_clang_for_native_xbuild and not IS_MAC:
             # SDK clang doesn't work for native builds on macos
-            return self.config.sdkBinDir / "clang-cpp"
+            return self.config.cheri_sdk_bindir / "clang-cpp"
         return self.config.clangCppPath
 
     @property
@@ -352,7 +352,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     @property
     def _compiler_dir(self) -> Path:
         # TODO: BuildUpstreamLLVM.installDir?
-        return self.config.sdkBinDir
+        return self.config.cheri_sdk_bindir
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:

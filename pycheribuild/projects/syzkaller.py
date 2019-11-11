@@ -101,8 +101,7 @@ class BuildSyzkaller(CrossCompileProject):
             TARGETARCH="mips64",
             GOROOT=self.goroot.expanduser(),
             GOPATH=self.gopath.expanduser(),
-            CC=self.config.sdkBinDir.expanduser() / "clang",
-            CXX=self.config.sdkBinDir.expanduser() / "clang++")
+            CC=self.CC, CXX=self.CXX)
         if self.sysgen:
             self.generate()
 

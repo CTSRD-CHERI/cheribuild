@@ -369,11 +369,6 @@ class CheriConfig(object):
         return self.sdkDir
 
     @property
-    def sdkBinDir(self):
-        warnings.warn('Use cheri_sdk_bindir instead.', DeprecationWarning)
-        return self.cheri_sdk_bindir
-
-    @property
     def cheri_sdk_bindir(self):
         return self.cheri_sdk_dir / "bin"
 

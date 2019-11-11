@@ -74,7 +74,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             # postgres can't find readline on FreeBSD:
             self.COMMON_FLAGS.append("-I/usr/include/edit")
         if not self.compiling_for_host():
-            self.configureEnvironment["AR"] = str(self.config.sdkBinDir / "cheri-unknown-freebsd-ar")
+            self.configureEnvironment["AR"] = str(self.sdk_bindir / "llvm-ar")
             # tell postgres configure that %zu works in printf()
             self.configureEnvironment["PRINTF_SIZE_T_SUPPORT"] = "yes"
             # currently we can only build static:

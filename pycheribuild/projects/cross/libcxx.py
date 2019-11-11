@@ -360,7 +360,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.add_cmake_options(
-            LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
+            LLVM_CONFIG_PATH=BuildCheriLLVM.getInstallDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/llvm-config",
             LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=True,
@@ -407,7 +407,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         if self.compiling_for_mips(include_purecap=False):
             self.add_cmake_options(COMPILER_RT_HAS_FPIC_FLAG=False)  # HACK: currently we build everything as -fno-pic
         self.add_cmake_options(
-            LLVM_CONFIG_PATH=self.config.sdkBinDir / "llvm-config",
+            LLVM_CONFIG_PATH=BuildCheriLLVM.getInstallDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/llvm-config",
             LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=False,

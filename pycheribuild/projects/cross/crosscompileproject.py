@@ -74,7 +74,7 @@ def default_cross_install_dir(config: CheriConfig, project: "Project", install_d
         compiler_for_resource_dir = project.CC
         # For the NATIVE variant we want to install to CHERI clang:
         if project.compiling_for_host():
-            compiler_for_resource_dir = config.sdkBinDir / "clang"
+            compiler_for_resource_dir = config.cheri_sdk_bindir / "clang"
         return getCompilerInfo(compiler_for_resource_dir).get_resource_dir()
 
     if project.compiling_for_host():
@@ -743,7 +743,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             self.configureArgs.extend(["--host=" + autotools_triple, "--target=" + autotools_triple,
                                        "--build=" + buildhost])
 
-    def add_configure_env_arg(self, arg: str, value: str):
+    def add_configure_env_arg(self, arg: str, value: "typing.Union[str,Path]"):
         if not value:
             return
         assert not isinstance(value, list), ("Wrong type:", type(value))

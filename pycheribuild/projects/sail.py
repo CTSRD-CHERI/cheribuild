@@ -224,7 +224,7 @@ class BuildSailFromOpam(OpamMixin, SimpleProject):
             self.run_opam_cmd("install", "-y", "--verbose", "sail")
             opamroot_sail_binary = self.opamroot / "4.06.0/bin/sail"
             runCmd(opamroot_sail_binary, "-v")
-            self.createSymlink(opamroot_sail_binary, self.config.sdkBinDir / opamroot_sail_binary.name)
+            self.createSymlink(opamroot_sail_binary, self.config.cheri_sdk_bindir / opamroot_sail_binary.name)
 
 
 class BuildSail(TargetAliasWithDependencies):

@@ -166,9 +166,9 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.configureEnvironment["CXXFLAGS_FOR_BUILD"] = "-g"
 
         if not self.compiling_for_host():
-            self.add_configure_env_arg("AR", self.config.sdkBinDir / "ar")
-            self.add_configure_env_arg("RANLIB", self.config.sdkBinDir / "ranlib")
-            self.add_configure_env_arg("NM", self.config.sdkBinDir / "nm")
+            self.add_configure_env_arg("AR", self.sdk_bindir / "ar")
+            self.add_configure_env_arg("RANLIB", self.sdk_bindir / "ranlib")
+            self.add_configure_env_arg("NM", self.sdk_bindir / "nm")
         # TODO: do I need these:
         """(cd $obj; env INSTALL="/usr/bin/install -c "  INSTALL_DATA="install   -m 0644"  INSTALL_LIB="install    -m 444"  INSTALL_PROGRAM="install    -m 555"  INSTALL_SCRIPT="install   -m 555"   PYTHON="${PYTHON}" SHELL=/bin/sh CONFIG_SHELL=/bin/sh CONFIG_SITE=/usr/ports/Templates/config.site ../configure ${CONFIGURE_ARGS} )"""
 
@@ -192,7 +192,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
         super().configure()
 
     def compile(self, **kwargs):
-        with TemporarilyRemoveProgramsFromSdk(["as", "ld", "objcopy", "objdump"], self.config, self.config.sdkBinDir):
+        with TemporarilyRemoveProgramsFromSdk(["as", "ld", "objcopy", "objdump"], self.config,
+                                              self.config.cheri_sdk_bindir):
             # also install objdump
             self.runMake(make_target="all-binutils", cwd=self.buildDir)
             self.runMake(make_target="all-gdb", cwd=self.buildDir)
@@ -207,8 +208,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
         bindir = self.installDir / "bin"
         if self.compiling_for_host():
             for util in binutils:
-                self.installFile(self.buildDir / "binutils" / util, self.config.sdkBinDir / ("g" + util))
+                self.installFile(self.buildDir / "binutils" / util, self.config.cheri_sdk_bindir / ("g" + util))
             # nm and c++filt have a different name in the build dir:
-            self.installFile(self.buildDir / "binutils/cxxfilt", self.config.sdkBinDir / "gc++filt")
-            self.installFile(self.buildDir / "binutils/nm-new", self.config.sdkBinDir / "gnm")
-            self.installFile(self.buildDir / "binutils/strip-new", self.config.sdkBinDir / "gstrip")
+            self.installFile(self.buildDir / "binutils/cxxfilt", self.config.cheri_sdk_bindir / "gc++filt")
+            self.installFile(self.buildDir / "binutils/nm-new", self.config.cheri_sdk_bindir / "gnm")
+            self.installFile(self.buildDir / "binutils/strip-new", self.config.cheri_sdk_bindir / "gstrip")

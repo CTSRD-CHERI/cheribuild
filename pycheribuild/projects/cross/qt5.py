@@ -102,7 +102,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 cross_compile_prefix = "mips64-unknown-freebsd"
             self.configureArgs.extend([
                 "-device", "freebsd-generic-clang",
-                "-device-option", "CROSS_COMPILE={}/{}-".format(self.config.sdkBinDir, cross_compile_prefix),
+                "-device-option", "CROSS_COMPILE={}/{}-".format(self.sdk_bindir, cross_compile_prefix),
                 "-device-option", "COMPILER_FLAGS=" + commandline_to_str(compiler_flags),
                 "-device-option", "LINKER_FLAGS=" + commandline_to_str(linker_flags),
                 "-sysroot", self.crossSysrootPath,
@@ -366,8 +366,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                                ENABLE_WEBKIT2=False,  # needs QtQuick
                                )
         # Use llvm-{ar,ranlib} because elftoolchain's versions truncate libWebCore.a
-        self.add_cmake_options(CMAKE_AR=self.config.sdkBinDir / "llvm-ar")
-        self.add_cmake_options(CMAKE_RANLIB=self.config.sdkBinDir / "llvm-ranlib")
+        self.add_cmake_options(CMAKE_AR=self.config.cheri_sdk_bindir / "llvm-ar")
+        self.add_cmake_options(CMAKE_RANLIB=self.config.cheri_sdk_bindir / "llvm-ranlib")
         self.add_cmake_options(ENABLE_JIT=False,  # Not supported on MIPS
                                QT_STATIC_BUILD=True,  # we always build qt static for now
                                QT_BUNDLED_PNG=True,  # use libpng from Qt
@@ -426,10 +426,10 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         if not self.build_jsc_only:
             dump_render_tree = self.buildDir / "bin/DumpRenderTree" # type: Path
             if dump_render_tree.is_file():
-                runCmd(self.config.sdkBinDir / "llvm-strip", "-o", dump_render_tree.with_suffix(".stripped"), dump_render_tree)
+                runCmd(self.config.cheri_sdk_bindir / "llvm-strip", "-o", dump_render_tree.with_suffix(".stripped"), dump_render_tree)
         jsc = self.buildDir / "bin/jsc" # type: Path
         if jsc.is_file():
-            runCmd(self.config.sdkBinDir / "llvm-strip", "-o", jsc.with_suffix(".stripped"), jsc)
+            runCmd(self.config.cheri_sdk_bindir / "llvm-strip", "-o", jsc.with_suffix(".stripped"), jsc)
         self.info("Not installing qtwebit since it uses too much space. If you really want this run `ninja install`")
 
     def run_tests(self):

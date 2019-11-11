@@ -153,32 +153,33 @@ def get_sdk_archives(cheriConfig, needs_cheribsd_sysroot: bool) -> "typing.List[
         return [clang_archive, sysroot_archive]
 
 
-def extract_sdk_archives(cheriConfig, archives: "typing.List[SdkArchive]"):
-    if cheriConfig.sdkBinDir.is_dir():
-        statusUpdate(cheriConfig.sdkBinDir, "already exists, not extracting SDK archives")
+def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "typing.List[SdkArchive]"):
+    if cheri_config.cheri_sdk_bindir.is_dir():
+        statusUpdate(cheri_config.cheri_sdk_bindir, "already exists, not extracting SDK archives")
         return
 
-    cheriConfig.FS.makedirs(cheriConfig.sdkDir)
+    cheri_config.FS.makedirs(cheri_config.sdkDir)
     for archive in archives:
         archive.extract()
 
-    if not cheriConfig.sdkBinDir.exists():
+    if not cheri_config.cheri_sdk_bindir.exists():
         fatalError("SDK bin dir does not exist after extracting sysroot archives!")
 
     # Use llvm-ar/llvm-ranlib or the host ar/ranlib if they ar/ranlib are missing from archive
     for tool in ("ar", "ranlib", "nm"):
-        if not (cheriConfig.sdkBinDir / tool).exists():
+        if not (cheri_config.cheri_sdk_bindir / tool).exists():
             # If llvm-ar/ranlib/nm exists use that
-            if (cheriConfig.sdkBinDir / ("llvm-" + tool)).exists():
-                cheriConfig.FS.createSymlink(cheriConfig.sdkBinDir / ("llvm-" + tool),
-                                             cheriConfig.sdkBinDir / tool, relative=True)
+            if (cheri_config.cheri_sdk_bindir / ("llvm-" + tool)).exists():
+                cheri_config.FS.createSymlink(cheri_config.cheri_sdk_bindir / ("llvm-" + tool),
+                                              cheri_config.cheri_sdk_bindir / tool, relative=True)
             else:
                 # otherwise fall back to the /usr/bin version
-                cheriConfig.FS.createSymlink(Path(shutil.which(tool)), cheriConfig.sdkBinDir / tool, relative=False)
-            cheriConfig.FS.createBuildtoolTargetSymlinks(cheriConfig.sdkBinDir / tool)
-    if not (cheriConfig.sdkBinDir / "ld").exists():
+                cheri_config.FS.createSymlink(Path(shutil.which(tool)), cheri_config.cheri_sdk_bindir / tool, relative=False)
+            cheri_config.FS.createBuildtoolTargetSymlinks(cheri_config.cheri_sdk_bindir / tool)
+    if not (cheri_config.cheri_sdk_bindir / "ld").exists():
         statusUpdate("Adding missing $SDK/ld link to ld.lld")
-        cheriConfig.FS.createSymlink(cheriConfig.sdkBinDir / "ld.lld", cheriConfig.sdkBinDir / "ld", relative=True)
+        cheri_config.FS.createSymlink(cheri_config.cheri_sdk_bindir / "ld.lld",
+                                      cheri_config.cheri_sdk_bindir / "ld", relative=True)
 
 
 def create_sdk_from_archives(cheriConfig, needs_cheribsd_sysroot=True):
@@ -214,7 +215,7 @@ def _jenkins_main():
     targetManager.registerCommandLineOptions()
     cheriConfig.load()
     if cheriConfig.verbose:
-        # json = cheriConfig.getOptionsJSON()  # make sure all config options are loaded
+        # json = cheri_config.getOptionsJSON()  # make sure all config options are loaded
         # pprint.pprint(configLoader.options)
         pass
     setCheriConfig(cheriConfig)
@@ -260,7 +261,7 @@ def _jenkins_main():
                 assert cheriConfig.clangPath.exists(), cheriConfig.clangPath
                 assert cheriConfig.clangPlusPlusPath.exists(), cheriConfig.clangPlusPlusPath
             elif cheriConfig.cheri_sdk_path:
-                expected_clang = cheriConfig.sdkBinDir / "clang"
+                expected_clang = cheriConfig.cheri_sdk_bindir / "clang"
                 if not expected_clang.exists():
                     fatalError("--cheri-sdk-path specified but", expected_clang, "does not exist")
             else:
@@ -299,7 +300,7 @@ def _jenkins_main():
             cleaningTask = cheriConfig.FS.async_clean_directory(cheriConfig.outputRoot) if not cheriConfig.keepInstallDir else ThreadJoiner(None)
             new_path = os.getenv("PATH", "")
             if not cheriConfig.without_sdk:
-                new_path = str(cheriConfig.sdkBinDir) + ":" + new_path
+                new_path = str(cheriConfig.cheri_sdk_bindir) + ":" + new_path
             with setEnv(PATH=new_path):
                 with cleaningTask:
                     target.execute(cheriConfig)
@@ -347,7 +348,7 @@ def strip_binaries(cheriConfig: JenkinsConfig, directory: Path):
                 with filepath.open("rb") as f:
                     if f.read(4) == b"\x7fELF":
                         # self.verbose_print("Stripping ELF binary", filepath)
-                        runCmd(cheriConfig.sdkBinDir / "llvm-strip", filepath)
+                        runCmd(cheriConfig.cheri_sdk_bindir / "llvm-strip", filepath)
             except Exception as e:
                 warningMessage("Failed to detect type of file:", filepath, e)
     statusUpdate("Tarball size after stripping ELF files:")

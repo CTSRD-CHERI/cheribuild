@@ -118,7 +118,7 @@ class LaunchCheriBSDOnFGPA(LaunchFPGABase):
             # Strip to kernel image to save some time when copying it to the FPGA booting
             # TODO: move into beri-fpga-bsd-boot?
             stripped_target = Path(kernel_image_tmpdir, self.currentKernel.name + ".stripped")
-            self.run_cmd(self.config.sdkBinDir / "llvm-strip", self.currentKernel, "-o", stripped_target)
+            self.run_cmd(self.config.cheri_sdk_bindir / "llvm-strip", self.currentKernel, "-o", stripped_target)
             self.run_cmd("du", "-h", self.currentKernel, stripped_target)
             self.currentKernel = stripped_target
             super().process()

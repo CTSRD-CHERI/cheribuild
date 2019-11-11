@@ -93,12 +93,12 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
 
     def configure(self):
         target_cflags = commandline_to_str(self.target_info.essential_compiler_and_linker_flags + self.COMMON_FLAGS)
-        bindir = self.config.sdkBinDir
+        bindir = self.sdk_bindir
 
         self.add_configure_vars(
-            AS_FOR_TARGET=str(bindir / "clang"),  # + target_cflags,
-            CC_FOR_TARGET=str(bindir / "clang"),  # + target_cflags,
-            CXX_FOR_TARGET=str(bindir / "clang++"),  # + target_cflags,
+            AS_FOR_TARGET=str(self.CC),  # + target_cflags,
+            CC_FOR_TARGET=str(self.CC),  # + target_cflags,
+            CXX_FOR_TARGET=str(self.CXX),  # + target_cflags,
             AR_FOR_TARGET=bindir / "ar", STRIP_FOR_TARGET=bindir / "strip",
             OBJCOPY_FOR_TARGET=bindir / "objcopy", RANLIB_FOR_TARGET=bindir / "ranlib",
             OBJDUMP_FOR_TARGET=bindir / "llvm-objdump",
@@ -177,9 +177,9 @@ int main(int argc, char** argv) {
             # FIXME: CHERI helloworld
             compiler_flags = self.target_info.essential_compiler_and_linker_flags + self.COMMON_FLAGS + [
                 "-Wl,-T,qemu-malta.ld", "-Wl,-verbose", "--sysroot=" + str(self.sdk_sysroot)]
-            runCmd([self.config.sdkBinDir / "clang", "main.c", "-o", test_exe] + compiler_flags + ["-###"], cwd=td)
-            runCmd([self.config.sdkBinDir / "clang", "main.c", "-o", test_exe] + compiler_flags, cwd=td)
-            runCmd(self.config.sdkBinDir / "llvm-readobj", "-h", test_exe)
+            runCmd([self.sdk_bindir / "clang", "main.c", "-o", test_exe] + compiler_flags + ["-###"], cwd=td)
+            runCmd([self.sdk_bindir / "clang", "main.c", "-o", test_exe] + compiler_flags, cwd=td)
+            runCmd(self.sdk_bindir / "llvm-readobj", "-h", test_exe)
             from ..build_qemu import BuildQEMU
             runCmd(self.sdk_sysroot / "bin/run_with_qemu.py", "--qemu", BuildQEMU.qemu_binary(self),
                    "--timeout", "20", test_exe, "HELLO", "WORLD")
