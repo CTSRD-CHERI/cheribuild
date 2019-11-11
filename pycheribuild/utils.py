@@ -495,6 +495,7 @@ def have_working_internet_connection():
     host = "8.8.8.8"
     port = 53
     timeout = 3
+    x = None
     try:
         x = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         x.settimeout(timeout)
@@ -505,6 +506,9 @@ def have_working_internet_connection():
     except Exception as ex:
         fatalError("Something went wrong  while checking for internet connection", ex)
         return False
+    finally:
+        if x:
+            x.close()
 
 
 def is_case_sensitive_dir(d: Path):
