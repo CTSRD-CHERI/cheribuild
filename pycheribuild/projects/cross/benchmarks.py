@@ -74,9 +74,9 @@ class BuildMibench(CrossCompileProject):
                     CHERI256_SDK=self.config.sdkDir,
                     CHERI_SDK=self.config.sdkDir):
             # We can't fall back to /usr/bin/ar here since that breaks on MacOS
-            self.make_args.set(AR=str(self.config.sdkBinDir / "ar") + " rc")
-            self.make_args.set(AR2=str(self.config.sdkBinDir / "ranlib"))
-            self.make_args.set(RANLIB=str(self.config.sdkBinDir / "ranlib"))
+            self.make_args.set(AR=str(self.sdk_bindir / "llvm-ar") + " rc")
+            self.make_args.set(AR2=str(self.sdk_bindir / "llvm-ranlib"))
+            self.make_args.set(RANLIB=str(self.sdk_bindir / "llvm-ranlib"))
             self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(self.default_compiler_flags))
             self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
             self.make_args.set(VERSION=self.benchmark_version)
@@ -346,7 +346,7 @@ class BuildSpec2006(CrossCompileProject):
         config_file_text = config_file_text.replace("@CXXFLAGS@", commandline_to_str(self.default_compiler_flags + self.CXXFLAGS + ["-ggdb"]))
         config_file_text = config_file_text.replace("@LDFLAGS@", commandline_to_str(self.default_ldflags + self.LDFLAGS))
         config_file_text = config_file_text.replace("@SYSROOT@", str(self.sdk_sysroot) if not self.compiling_for_host() else "/")
-        config_file_text = config_file_text.replace("@SYS_BIN@", str(self.config.sdkBinDir))
+        config_file_text = config_file_text.replace("@SYS_BIN@", str(self.sdk_bindir))
 
         self.writeFile(self.buildDir / "spec/config/" / (self.config_name + ".cfg"), contents=config_file_text,
                        overwrite=True, noCommandPrint=False, mode=0o644)

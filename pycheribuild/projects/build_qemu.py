@@ -283,7 +283,7 @@ class BuildQEMURISCV(BuildQEMUBase):
 
     @classmethod
     def qemu_binary(cls, caller: SimpleProject):
-        return caller.config.sdkBinDir / "qemu-system-riscv64"
+        return caller.config.qemu_bindir / "qemu-system-riscv64"
 
 
 class BuildCheriOSQEMU(BuildQEMU):

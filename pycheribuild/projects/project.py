@@ -385,8 +385,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @property
     def sdk_sysroot(self) -> Path:
-        assert isinstance(self, Project)
         return self.target_info.sysroot_dir
+
+    @property
+    def sdk_bindir(self) -> Path:
+        return self.target_info.sdk_root_dir / "bin"
 
     @property
     def display_name(self):

@@ -256,8 +256,6 @@ class BuildSailCheriMips(ProjectUsingOpam):
                                                         "tests)")
 
     def compile(self, cwd: Path = None):
-        # self.make_args.set(SAIL_DIR=self.config.sdkBinDir)
-        # self.make_args.set(SAIL_DIR=self.config.sdkDir / "share/sail", SAIL=self.config.sdkBinDir / "sail")
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
         cmd = [self.make_args.command, self.config.makeJFlag, "all"] + self.make_args.all_commandline_args
@@ -290,8 +288,6 @@ class BuildSailRISCV(ProjectUsingOpam):
                                                         "the traces are useful to debug failing tests)")
 
     def compile(self, cwd: Path = None):
-        # self.make_args.set(SAIL_DIR=self.config.sdkBinDir)
-        # self.make_args.set(SAIL_DIR=self.config.sdkDir / "share/sail", SAIL=self.config.sdkBinDir / "sail")
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
         cmd = [self.make_args.command, self.config.makeJFlag, "opam-build"] + self.make_args.all_commandline_args
@@ -325,8 +321,6 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
                                                         "tests)")
 
     def compile(self, cwd: Path = None):
-        # self.make_args.set(SAIL_DIR=self.config.sdkBinDir)
-        # self.make_args.set(SAIL_DIR=self.config.sdkDir / "share/sail", SAIL=self.config.sdkBinDir / "sail")
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
         cmd = [self.make_args.command, self.config.makeJFlag, "opam-build"] + self.make_args.all_commandline_args

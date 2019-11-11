@@ -121,8 +121,8 @@ class DLMalloc(CrossCompileProject):
         self.make_args.set(SRCDIR=self.sourceDir)
         if not self.compiling_for_host():
             self.CFLAGS.append("--sysroot=%s" % self.sdk_sysroot)
-        with setEnv(CHERI_SDK=self.config.sdkDir,
-                    CC=self.config.sdkBinDir/"clang",
+        with setEnv(CHERI_SDK=self.target_info.sdk_root_dir,
+                    CC=self.CC,
                     CFLAGS=commandline_to_str(self.default_compiler_flags + self.CFLAGS)):
             if self.just_so :
                 self.runMake("libdlmalloc_nonreuse.so", cwd=self.buildDir)

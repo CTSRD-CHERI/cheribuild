@@ -71,7 +71,11 @@ def get_cheribsd_instance_for_install_dir(config: CheriConfig, project: "SimpleP
 
 def default_cross_install_dir(config: CheriConfig, project: "Project", install_dir_name: str = None):
     if project.crossInstallDir == CrossInstallDir.COMPILER_RESOURCE_DIR:
-        return getCompilerInfo(config.sdkBinDir / "clang").get_resource_dir()
+        compiler_for_resource_dir = project.CC
+        # For the NATIVE variant we want to install to CHERI clang:
+        if project.compiling_for_host():
+            compiler_for_resource_dir = config.sdkBinDir / "clang"
+        return getCompilerInfo(compiler_for_resource_dir).get_resource_dir()
 
     if project.compiling_for_host():
         if project.crossInstallDir == CrossInstallDir.SDK:
@@ -178,7 +182,6 @@ class CrossCompileMixin(object):
         # sanity check:
         assert target_arch is not None and target_arch is not CrossCompileTarget.NONE
         assert self.get_crosscompile_target(config) is target_arch
-        self.compiler_dir = self.config.sdkBinDir
         # compiler flags:
         if self.compiling_for_host():
             self.COMMON_FLAGS = []
@@ -455,7 +458,7 @@ class CrossCompileMixin(object):
                 with file.open("rb") as f:
                     if f.read(4) == b"\x7fELF":
                         self.verbose_print("Stripping ELF binary", file)
-                        runCmd(self.config.sdkBinDir / "llvm-strip", file)
+                        runCmd(self.sdk_bindir / "llvm-strip", file)
         self.run_cmd("du", "-sh", benchmark_dir)
 
     def run_fpga_benchmark(self, benchmarks_dir: Path, *, output_file: str = None, benchmark_script: str = None,
@@ -653,7 +656,7 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
 
     def configure(self, **kwargs):
         if not self.compiling_for_host():
-            self.COMMON_FLAGS.append("-B" + str(self.config.sdkBinDir))
+            self.COMMON_FLAGS.append("-B" + str(self.sdk_bindir))
 
         if self.compiling_for_cheri():
             if self._get_cmake_version() < (3, 9, 0) and not (self.sdk_sysroot / "usr/local/lib/cheri").exists():
@@ -691,8 +694,8 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
         else:
             system_name = "Generic" if self.baremetal else "FreeBSD"
         self._prepareToolchainFile(
-            TOOLCHAIN_SDK_BINDIR=self.config.sdkBinDir,
-            TOOLCHAIN_COMPILER_BINDIR=self.compiler_dir,
+            TOOLCHAIN_SDK_BINDIR=self.sdk_bindir,
+            TOOLCHAIN_COMPILER_BINDIR=self.CC.parent,
             TOOLCHAIN_TARGET_TRIPLE=self.target_info.target_triple,
             TOOLCHAIN_COMMON_FLAGS=self.default_compiler_flags,
             TOOLCHAIN_C_FLAGS=self.CFLAGS,
@@ -793,7 +796,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
 
             if not self.compiling_for_host():
                 self.set_prog_with_args("CPP", self.CPP, CPPFLAGS)
-                self.add_configure_env_arg("LD", str(self.compiler_dir / "ld.lld"))
+                self.add_configure_env_arg("LD", str(self.sdk_bindir / "ld.lld"))
 
         # remove all empty items from environment:
         env = {k: v for k, v in self.configureEnvironment.items() if v}

@@ -33,26 +33,28 @@ import shutil
 import typing
 
 from .crosscompileproject import *
+from ...config.target_info import TargetInfo
 from ...utils import runCmd, statusUpdate, IS_MAC
 
 
 class TemporarilyRemoveProgramsFromSdk(object):
-    def __init__(self, programs: "typing.List[str]", config: CheriConfig):
+    def __init__(self, programs: "typing.List[str]", config: CheriConfig, sdk_bindir: Path):
         self.programs = programs
         self.config = config
+        self.sdk_bindir = sdk_bindir
 
     def __enter__(self):
-        statusUpdate('Temporarily moving', self.programs, "from", self.config.sdkBinDir)
+        statusUpdate('Temporarily moving', self.programs, "from", self.sdk_bindir)
         for l in self.programs:
-            if (self.config.sdkBinDir / l).exists():
-                runCmd("mv", "-f", l, l + ".backup", cwd=self.config.sdkBinDir, print_verbose_only=True)
+            if (self.sdk_bindir / l).exists():
+                runCmd("mv", "-f", l, l + ".backup", cwd=self.sdk_bindir, print_verbose_only=True)
         return self
 
     def __exit__(self, *exc):
-        statusUpdate('Restoring', self.programs, "in", self.config.sdkBinDir)
+        statusUpdate('Restoring', self.programs, "in", self.sdk_bindir)
         for l in self.programs:
-            if (self.config.sdkBinDir / (l + ".backup")).exists() or self.config.pretend:
-                runCmd("mv", "-f", l + ".backup", l, cwd=self.config.sdkBinDir, print_verbose_only=True)
+            if (self.sdk_bindir / (l + ".backup")).exists() or self.config.pretend:
+                runCmd("mv", "-f", l + ".backup", l, cwd=self.sdk_bindir, print_verbose_only=True)
         return False
 
 
@@ -72,8 +74,10 @@ class BuildGDB(CrossCompileAutotoolsProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.cheri_hybrid = cls.addBoolOption("use-cheri-hybrid", help="Build against a hybrid sysroot (required for faulting capability register number support)",
-                                             only_add_for_targets=[CrossCompileTarget.CHERIBSD_MIPS], default=True)
+        cls.cheri_hybrid = cls.addBoolOption(
+            "use-cheri-hybrid", only_add_for_targets=[CrossCompileTarget.CHERIBSD_MIPS], default=True,
+            help="Build against a hybrid sysroot (required for faulting capability register number support)",
+            )
 
     def __init__(self, config: CheriConfig):
         self._compile_status_message = None
@@ -94,7 +98,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.configureArgs.extend([
             "--disable-nls",
             "--enable-tui",
-            "--disable-ld", # "--enable-ld",
+            "--disable-ld",  # "--enable-ld",
             "--enable-64-bit-bfd",
             "--without-gnu-as",
             "--with-separate-debug-dir=/usr/lib/debug",
@@ -123,7 +127,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.common_warning_flags.extend([
             "-Wno-mismatched-tags",
             "-Wno-unknown-warning-option",  # caused by the build passing -Wshadow=local
-        ])
+            ])
         self.CXXFLAGS.append("-Wno-mismatched-tags")
         # TODO: we should fix this:
         self.cross_warning_flags.append("-Wno-error=implicit-function-declaration")
@@ -188,7 +192,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
         super().configure()
 
     def compile(self, **kwargs):
-        with TemporarilyRemoveProgramsFromSdk(["as", "ld", "objcopy", "objdump"], self.config):
+        with TemporarilyRemoveProgramsFromSdk(["as", "ld", "objcopy", "objdump"], self.config, self.config.sdkBinDir):
             # also install objdump
             self.runMake(make_target="all-binutils", cwd=self.buildDir)
             self.runMake(make_target="all-gdb", cwd=self.buildDir)
@@ -200,6 +204,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
         # Also install most of the other tools in case they work better than elftoolchain
         # TODO: also build upstream ld.bfd?
         binutils = ("objdump", "objcopy", "addr2line", "readelf", "ar", "ranlib", "size", "strings")
+        bindir = self.installDir / "bin"
         if self.compiling_for_host():
             for util in binutils:
                 self.installFile(self.buildDir / "binutils" / util, self.config.sdkBinDir / ("g" + util))

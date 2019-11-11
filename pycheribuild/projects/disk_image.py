@@ -140,7 +140,7 @@ class _BuildDiskImageBase(SimpleProject):
                     self.verbose_print("Stripping ELF binary", file)
                     stripped_path = self.tmpdir / path_in_target
                     self.makedirs(stripped_path.parent)
-                    runCmd(self.config.sdkBinDir / "llvm-strip", file, "-o", stripped_path)
+                    runCmd(self.sdk_bindir / "llvm-strip", file, "-o", stripped_path)
                     # runCmd("file", stripped_path)
                     file = stripped_path
 

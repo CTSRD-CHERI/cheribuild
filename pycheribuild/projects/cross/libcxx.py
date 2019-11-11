@@ -62,10 +62,9 @@ class BuildLibunwind(CrossCompileCMakeProject):
         self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)
         self.lit_path = BuildCheriLLVM.getBuildDir(self, cross_target=CrossCompileTarget.NATIVE) / "bin/llvm-lit"
         self.add_cmake_options(
-            #  LLVM_CONFIG_PATH=self.compiler_dir / "llvm-config",
             LLVM_PATH=BuildCheriLLVM.getSourceDir(self, cross_target=CrossCompileTarget.NATIVE) / "llvm",
             LLVM_EXTERNAL_LIT=self.lit_path,
-        )
+            )
 
     def configure(self, **kwargs):
         # TODO: should share some code with libcxx

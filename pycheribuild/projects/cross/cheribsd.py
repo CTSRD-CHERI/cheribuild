@@ -751,7 +751,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def addCrossBuildOptions(self):
         # we also need to ensure that our SDK build tools are being picked up first
-        # build_path = str(self.config.sdkBinDir) + ":" + str(self.crossBinDir)
+        # build_path = str(self.sdk_bindir) + ":" + str(self.crossBinDir)
         # self.make_args.env_vars["PATH"] = build_path
 
         # Tell glibc functions to be POSIX compatible
@@ -761,18 +761,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # building without an external toolchain won't work:
         self.crossToolchainRoot = self.config.sdkDir
 
-        # Force use of clang for the build tools (the build system can't deal with GCC as the host compiler for now):
-        if not getCompilerInfo(self.config.clangPath).is_clang:
-            self.make_args.set_env(CC=self.config.sdkBinDir / "clang", CXX=self.config.sdkBinDir / "clang++")
-        else:
-            self.make_args.set_env(CC=str(self.config.clangPath), CXX=str(self.config.clangPlusPlusPath))
+        self.make_args.set_env(CC=self.CC, CXX=self.CXX, CPP=self.CPP)
 
         # we don't build elftoolchain during buildworld so for the kernel we need to set these variables
-        self.make_args.set_env(XOBJDUMP=self.config.sdkBinDir / "llvm-objdump")
-        # TODO: use llvm-objcopy?
-        self.make_args.set_env(OBJCOPY=self.config.sdkBinDir / "objcopy")
+        self.make_args.set_env(XOBJDUMP=self.sdk_bindir / "llvm-objdump")
+        self.make_args.set_env(OBJCOPY=self.sdk_bindir / "llvm-objcopy")
         # This is not actually the path to the strip binary but rather a flag to install
-        # self.make_args.env_vars["STRIP"] = self.config.sdkBinDir / "strip"
+        # self.make_args.env_vars["STRIP"] = self.sdk_bindir / "strip"
 
         # don't build all the bootstrap tools (just pretend we are running freebsd 42):
         # self.make_args.env_vars["OSRELDATE"] = "4204345"
@@ -804,13 +799,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.make_args.set_with_options(DEBUG_FILES=False)
 
         if self.compiling_for_host():
-            cross_binutils_prefix = str(self.config.sdkBinDir) + "/"
+            cross_binutils_prefix = str(self.sdk_bindir) + "/"
             self.make_args.set_with_options(BHYVE=False,
                                             # seems to be missing some include paths which appears to work on freebsd
                                             CTF=False)  # can't crossbuild ctfconvert yet
             self.make_args.set_with_options(BOOT=True)
         else:
-            cross_binutils_prefix = str(self.config.sdkBinDir) + "/mips64-unknown-freebsd-"
+            cross_binutils_prefix = str(self.sdk_bindir) + "/mips64-unknown-freebsd-"
             self.make_args.set_with_options(BOOT=False)
         # This should no longer be necessary since we can bootstrap elftoolchain
         # self.make_args.set_env(CROSS_BINUTILS_PREFIX=cross_binutils_prefix)
@@ -1100,7 +1095,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         # TODO: build with llvm binutils instead
         self.use_elftoolchain = True
         if self.compiling_for_riscv():
-            self.make_args.set(CROSS_BINUTILS_PREFIX=str(self.config.sdkBinDir / "llvm-"))
+            self.make_args.set(CROSS_BINUTILS_PREFIX=str(self.sdk_bindir / "llvm-"))
             self.use_elftoolchain = False
         if self.use_elftoolchain:
             self.make_args.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
@@ -1108,14 +1103,14 @@ class BuildCHERIBSD(BuildFreeBSD):
             self.make_args.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=False)
             self.make_args.set(
                 XAS="/xas/should/not/be/used",
-                XAR=config.sdkBinDir / "llvm-ar",
+                XAR=self.sdk_bindir / "llvm-ar",
                 # XLD
-                XNM=config.sdkBinDir / "llvm-nm",
-                XSIZE=config.sdkBinDir / "llvm-size",
-                XSTRIP=config.sdkBinDir / "llvm-strip",
-                XSTRINGS=config.sdkBinDir / "llvm-strings",
-                XOBJCOPY=config.sdkBinDir / "llvm-objcopy",
-                XRANLIB=config.sdkBinDir / "llvm-ranlib",
+                XNM=self.sdk_bindir / "llvm-nm",
+                XSIZE=self.sdk_bindir / "llvm-size",
+                XSTRIP=self.sdk_bindir / "llvm-strip",
+                XSTRINGS=self.sdk_bindir / "llvm-strings",
+                XOBJCOPY=self.sdk_bindir / "llvm-objcopy",
+                XRANLIB=self.sdk_bindir / "llvm-ranlib",
                 # See https://bugs.llvm.org/show_bug.cgi?id=41707
                 RANLIBFLAGS="",  # llvm-ranlib doesn't support -D flag
                 )
