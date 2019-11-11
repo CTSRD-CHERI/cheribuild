@@ -186,16 +186,16 @@ class RunSyzkaller(SimpleProject):
                 "image": str(self.disk_image),
                 "type": "qemu",
                 "vm": {
-	            "qemu": str(self.qemu_binary),
-	            "qemu_args": "-M malta -device virtio-rng-pci -D syz-trace.log",
-	            "kernel": str(self.kernel_path),
-	            "image_device": "drive index=0,media=disk,format=raw,file=",
-	            "count": 1,
-	            "cpu": 1,
-	            "mem": 2048,
-	            "timeout": 60
+                    "qemu": str(self.qemu_binary),
+                    "qemu_args": "-M malta -device virtio-rng-pci -D syz-trace.log",
+                    "kernel": str(self.kernel_path),
+                    "image_device": "drive index=0,media=disk,format=raw,file=",
+                    "count": 1,
+                    "cpu": 1,
+                    "mem": 2048,
+                    "timeout": 60
+                    }
                 }
-            }
             if not self.config.pretend:
                 with syz_config.open("w+") as fp:
                     print("Emit syzkaller configuration to {}".format(syz_config))
