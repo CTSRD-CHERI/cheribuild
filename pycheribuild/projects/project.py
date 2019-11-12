@@ -367,16 +367,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return not cls._crossCompileTarget.is_native()  # Most projects need a sysroot (but not native)
 
     def compiling_for_mips(self, include_purecap: bool):
-        return self._crossCompileTarget.is_mips(include_purecap=include_purecap)
+        return self.crosscompile_target.is_mips(include_purecap=include_purecap)
 
     def compiling_for_cheri(self):
-        return self._crossCompileTarget.is_cheri_purecap()
+        return self.crosscompile_target.is_cheri_purecap()
 
     def compiling_for_host(self):
-        return self._crossCompileTarget.is_native()
+        return self.crosscompile_target.is_native()
 
     def compiling_for_riscv(self):
-        return self._crossCompileTarget.is_riscv(include_purecap=False)
+        return self.crosscompile_target.is_riscv(include_purecap=False)
 
     @property
     def triple_arch(self):

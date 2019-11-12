@@ -334,8 +334,8 @@ class LaunchCheriBSD(AbstractLaunchFreeBSD):
                                    **kwargs)
 
     def __init__(self, config):
-        assert self.compiling_for_cheri()
         super().__init__(config, disk_image_class=BuildCheriBSDDiskImage)
+        assert self.compiling_for_cheri()
 
     def run_tests(self):
         self.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.diskImage,
