@@ -120,7 +120,7 @@ class _BuildDiskImageBase(SimpleProject):
         else:
             self.userGroupDbDir = self.source_project.sourceDir / "etc"
         self.crossBuildImage = self.source_project.crossbuild
-        self.minimumImageSize = "1g",  # minimum image size = 1GB
+        self.minimumImageSize = "1g"  # minimum image size = 1GB
         self.mtree = MtreeFile()
         self.input_METALOG = self.rootfsDir / "METALOG"
         self.input_METALOG_required = True
