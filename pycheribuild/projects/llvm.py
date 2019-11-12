@@ -84,7 +84,7 @@ class BuildLLVMBase(CMakeProject):
         self.add_cmake_options(
             CMAKE_CXX_COMPILER=self.cppCompiler,
             CMAKE_C_COMPILER=self.cCompiler,
-            LLVM_PARALLEL_LINK_JOBS=link_jobs,  # anything more causes too much I/O
+            LLVM_PARALLEL_LINK_JOBS=link_jobs,  # anything more causes too much I/O + memory usage
         )
         if self.use_asan:
             # Use asan+ubsan
@@ -155,21 +155,20 @@ class BuildLLVMBase(CMakeProject):
                 self.add_cmake_options(LLVM_ENABLE_LTO="Thin")
 
     @staticmethod
-    def clang38InstallHint():
+    def clang_install_hint():
         if IS_FREEBSD:
-            return "Try running `pkg install clang38`"
-        if OSInfo.isUbuntu():
-            return """Try following the instructions on http://askubuntu.com/questions/735201/installing-clang-3-8-on-ubuntu-14-04-3:
-            wget -O - http://llvm.org/apt/llvm-snapshot.gpg.key|sudo apt-key add -
-            sudo apt-add-repository "deb http://llvm.org/apt/trusty/ llvm-toolchain-trusty-3.8 main"
-            sudo apt-get update
-            sudo apt-get install clang-3.8"""
+            return "Try running `pkg install llvm`"
+        if OSInfo.isUbuntu() or OSInfo.isDebian():
+            return """Try running:
+sudo apt install software-properties-common
+sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
+"""
         return "Try installing clang 3.8 or newer using your system package manager"
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
         # make sure we have at least version 3.8
-        self.checkClangVersion(3, 8, installInstructions=self.clang38InstallHint())
+        self.checkClangVersion(3, 8, installInstructions=self.clang_install_hint())
 
     def checkClangVersion(self, major: int, minor: int, patch=0, installInstructions=None):
         if not self.cCompiler or not self.cppCompiler:
@@ -187,7 +186,7 @@ class BuildLLVMBase(CMakeProject):
         elif info.compiler != "clang" or info.version < (major, minor, patch):
             self.dependencyError(self.cCompiler, "version", versionStr,
                                  "is not supported. Clang version %d.%d or newer is required." % (major, minor),
-                                 installInstructions=self.clang38InstallHint())
+                                 installInstructions=self.clang_install_hint())
 
     def install(self, **kwargs):
         super().install()
