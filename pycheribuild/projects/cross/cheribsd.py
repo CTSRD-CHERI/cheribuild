@@ -237,6 +237,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                                              as_string="$INSTALL_ROOT/freebsd-{mips/x86}")
     hide_options_from_help = True  # hide this for now (only show cheribsd)
     add_custom_make_options = True
+    use_llvm_binutils = False
 
     @classmethod
     def rootfsDir(cls, caller, config=None, cross_target: CrossCompileTarget = CompilationTargets.NONE):
@@ -434,21 +435,35 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.cross_toolchain_config.set(CHERI_SUBOBJECT_BOUNDS=self.config.subobject_bounds)
             self.cross_toolchain_config.set(CHERI_SUBOBJECT_BOUNDS_DEBUG="yes" if self.config.subobject_debug else "no")
 
+        cross_bindir = self.crossToolchainRoot / "bin"
         cross_prefix = str(self.crossToolchainRoot / "bin") + "/"  # needs to end with / for concatenation
         target_flags = self._setup_arch_specific_options()
 
         self.externalToolchainCompiler = Path(cross_prefix + "clang")
         # TODO: should I be setting this in the environment instead?
         self.cross_toolchain_config.set_env(
-            XCC=cross_prefix + "clang",
-            XCXX=cross_prefix + "clang++",
-            XCPP=cross_prefix + "clang-cpp",
+            XCC=cross_bindir / "clang",
+            XCXX=cross_bindir / "clang++",
+            XCPP=cross_bindir / "clang-cpp",
             X_COMPILER_TYPE="clang",  # This is needed otherwise the build assumes it should build with $CC
-            XOBJDUMP=cross_prefix + "llvm-objdump",
-            OBJDUMP=cross_prefix + "llvm-objdump",
-            XOBJCOPY=cross_prefix + "llvm-objcopy",
-            XSTRIP=cross_prefix + "llvm-strip",
             )
+        if not self.use_llvm_binutils:
+            self.cross_toolchain_config.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
+        else:
+            self.cross_toolchain_config.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=False)
+            self.cross_toolchain_config.set(
+                XAS="/xas/should/not/be/used",
+                XAR=cross_bindir / "llvm-ar",
+                # XLD
+                XNM=cross_bindir / "llvm-nm",
+                XSIZE=cross_bindir / "llvm-size",
+                XSTRIP=cross_bindir / "llvm-strip",
+                XSTRINGS=cross_bindir / "llvm-strings",
+                XOBJCOPY=cross_bindir / "llvm-objcopy",
+                XRANLIB=cross_bindir / "llvm-ranlib",
+                # See https://bugs.llvm.org/show_bug.cgi?id=41707
+                RANLIBFLAGS="",  # llvm-ranlib doesn't support -D flag
+                )
         if self.linker_for_world == "bfd":
             # self.cross_toolchain_config.set_env(XLDFLAGS="-fuse-ld=bfd")
             target_flags += " -fuse-ld=bfd -Qunused-arguments"
@@ -1039,6 +1054,8 @@ class BuildCHERIBSD(BuildFreeBSD):
     is_sdk_target = True
     hide_options_from_help = False  # FreeBSD options are hidden, but this one should be visible
     crossbuild = True  # changes have been merged into master
+    use_llvm_binutils = True
+
 
     @classmethod
     def setup_config_options(cls, installDirectoryHelp=None, **kwargs):
@@ -1093,28 +1110,9 @@ class BuildCHERIBSD(BuildFreeBSD):
             if self.config.cheri_cap_table_abi:
                 self.cross_toolchain_config.set(CHERI_USE_CAP_TABLE=self.config.cheri_cap_table_abi)
 
-        # TODO: build with llvm binutils instead
-        self.use_elftoolchain = True
         if self.compiling_for_riscv():
             self.make_args.set(CROSS_BINUTILS_PREFIX=str(self.sdk_bindir / "llvm-"))
-            self.use_elftoolchain = False
-        if self.use_elftoolchain:
-            self.make_args.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
-        else:
-            self.make_args.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=False)
-            self.make_args.set(
-                XAS="/xas/should/not/be/used",
-                XAR=self.sdk_bindir / "llvm-ar",
-                # XLD
-                XNM=self.sdk_bindir / "llvm-nm",
-                XSIZE=self.sdk_bindir / "llvm-size",
-                XSTRIP=self.sdk_bindir / "llvm-strip",
-                XSTRINGS=self.sdk_bindir / "llvm-strings",
-                XOBJCOPY=self.sdk_bindir / "llvm-objcopy",
-                XRANLIB=self.sdk_bindir / "llvm-ranlib",
-                # See https://bugs.llvm.org/show_bug.cgi?id=41707
-                RANLIBFLAGS="",  # llvm-ranlib doesn't support -D flag
-                )
+            self.use_llvm_binutils = True
 
         self.extra_kernels = []
         self.extra_kernels_with_mfs = []
