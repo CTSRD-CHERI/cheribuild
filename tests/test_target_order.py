@@ -90,7 +90,7 @@ def test_disk_image_comes_second_last():
 
 
 def test_all_run_deps():
-    assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm", "cheribsd-cheri", "gdb-native",
+    assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm", "gdb-native", "cheribsd-cheri",
                                                              "cheribsd-sysroot-cheri", "gdb-mips", "disk-image-cheri",
                                                              "run"]
 

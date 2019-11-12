@@ -225,7 +225,6 @@ class BuildFreeBSDBase(Project):
 
 
 class BuildFreeBSD(BuildFreeBSDBase):
-    dependencies = ["llvm"]
     target = "freebsd"
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
     crossbuild = False
@@ -465,6 +464,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 # See https://bugs.llvm.org/show_bug.cgi?id=41707
                 RANLIBFLAGS="",  # llvm-ranlib doesn't support -D flag
                 )
+        # However, we do want to install the host tools
+        self.cross_toolchain_config.set_with_options(TOOLCHAIN=True)
+
         if self.linker_for_world == "bfd":
             # self.cross_toolchain_config.set_env(XLDFLAGS="-fuse-ld=bfd")
             target_flags += " -fuse-ld=bfd -Qunused-arguments"

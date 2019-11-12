@@ -177,7 +177,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # To check that we don't create an crosscompile targets without a fixed target
     _should_not_be_instantiated = True
     # To prevent non-suffixed targets in case the only target is not NATIVE
-    _always_add_suffixed_targets = False  # add a suffixed target even if only one variant is supported
+    _always_add_suffixed_targets = False  # add a suffixed target only if more than one variant is supported
 
     @property
     def _no_overwrite_allowed(self) -> "typing.Tuple[str]":
@@ -1268,6 +1268,15 @@ class Project(SimpleProject):
 
     appendCheriBitsToBuildDir = False
     """ Whether to append -128/-256 to the computed build directory name"""
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig):
+        # TODO: can I avoid instantiating all cross-compile targets here? The hack below might work
+        target = cls.get_crosscompile_target(config)  # type: CrossCompileTarget
+        result = target.target_info_cls.toolchain_targets(target, config)
+        if cls.needs_sysroot:
+            result += target.target_info_cls.base_sysroot_targets(target, config)
+        return result
 
     @classmethod
     def projectBuildDirHelpStr(cls):

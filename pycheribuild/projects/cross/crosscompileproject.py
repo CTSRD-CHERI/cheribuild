@@ -131,16 +131,6 @@ class CrossCompileMixin(object):
     _check_install_dir_conflict = True
     defaultOptimizationLevel = ("-O2",)
     can_build_with_asan = True
-    _always_add_suffixed_targets = True  # always add the suffixed target if there is only one
-
-    @classmethod
-    def dependencies(cls, config: CheriConfig):
-        # TODO: can I avoid instantiating all cross-compile targets here? The hack below might work
-        target = cls.get_crosscompile_target(config)  # type: CrossCompileTarget
-        result = target.target_info_cls.toolchain_targets(target, config)
-        if cls.needs_sysroot:
-            result += target.target_info_cls.base_sysroot_targets(target, config)
-        return result
 
     # noinspection PyProtectedMember
     @property
