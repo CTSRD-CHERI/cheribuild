@@ -348,7 +348,11 @@ class CheriConfig(object):
 
     @property
     def cheri_bits_and_abi_str(self):
-        result = str(self.cheriBits)
+        return str(self.cheriBits) + self.cheri_configuration_str
+
+    @property
+    def cheri_configuration_str(self):
+        result = ""
         if self.cheri_cap_table_abi != self.DEFAULT_CAP_TABLE_ABI:
             result += "-" + str(self.cheri_cap_table_abi)
         if self.subobject_bounds is not None and self.subobject_bounds != self.DEFAULT_SUBOBJECT_BOUNDS:

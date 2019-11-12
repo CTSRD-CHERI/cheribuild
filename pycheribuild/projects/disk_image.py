@@ -70,6 +70,7 @@ class _BuildDiskImageBase(SimpleProject):
     strip_binaries = False  # True by default for minimal disk-image
     bigEndian = True # True for MIPS
     is_minimal = False  # To allow building a much smaller image
+    default_disk_image_path = None
 
     @property
     def needs_special_pkg_repo(self):
@@ -93,6 +94,9 @@ class _BuildDiskImageBase(SimpleProject):
                                 help="Use a directory in /tmp for recursive wget operations;"
                                       "of interest in rare cases, like extra-files on smbfs.")
         cls.include_gdb = cls.addBoolOption("include-gdb", default=True, help="Include GDB in the disk image (if it exists)")
+        assert cls.default_disk_image_path is not None
+        cls.diskImagePath = cls.addPathOption("path", default=cls.default_disk_image_path, metavar="IMGPATH",
+                                              help="The output path for the QEMU disk image", showHelp=True)
         cls.disableTMPFS = None
 
     def __init__(self, config, source_class: "typing.Type[BuildFreeBSD]"):
@@ -629,6 +633,10 @@ def _defaultDiskImagePath(config: CheriConfig, pfx, img_prefix=""):
     return pfx / (img_prefix + "cheri" + config.cheri_bits_and_abi_str + "-disk.img")
 
 
+def _defaultMinimalDiskImagePath(conf, proj):
+    return _defaultDiskImagePath(conf, conf.outputRoot, "minimal-")
+
+
 class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
     project_name = "disk-image-minimal"
     dependencies = ["qemu", "cheribsd-cheri"]  # TODO: include gdb?
@@ -641,6 +649,10 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         def get_rc_conf_template(self):
             return includeLocalFile("files/minimal-image/etc/rc.conf.in")
 
+    default_disk_image_path = ComputedDefaultValue(function=_defaultMinimalDiskImagePath,
+        as_string="$OUTPUT_ROOT/minimal-cheri256-disk.img or $OUTPUT_ROOT/minimal-cheri128-disk.img depending "
+                  "on --cheri-bits.")
+
     @classmethod
     def setup_config_options(cls, **kwargs):
         hostUsername = CheriConfig.get_user_name()
@@ -648,15 +660,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             function=lambda conf, unused: "qemu-cheri" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
             as_string="qemu-cheri${CHERI_BITS}-" + hostUsername)
 
-        def _defaultMinimalDiskImagePath(conf, proj):
-            return _defaultDiskImagePath(conf, conf.outputRoot, "minimal-")
-
         super().setup_config_options(defaultHostname=defaultHostname, extraFilesSuffix="-minimal", **kwargs)
-        cls.diskImagePath = cls.addPathOption("path", default=ComputedDefaultValue(
-            function=_defaultMinimalDiskImagePath, as_string="$OUTPUT_ROOT/minimal-cheri256-disk.img or "
-                                                            "$OUTPUT_ROOT/minimal-cheri128-disk.img depending on --cheri-bits."),
-                                              metavar="IMGPATH", help="The output path for the QEMU disk image",
-                                              showHelp=True)
         cls.strip_binaries = cls.addBoolOption("strip", default=True,
                                                help="strip ELF files to reduce size of generated image")
         cls.include_cheritest = cls.addBoolOption("include-cheritest", default=True,
@@ -674,7 +678,6 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         self.input_METALOG = self.rootfsDir / "cheribsdbox.mtree"
         self.file_templates = BuildMinimalCheriBSDDiskImage._MinimalFileTemplates()
         self.is_minimal = True
-
 
     @property
     def needs_special_pkg_repo(self):
@@ -770,10 +773,9 @@ class _X86FileTemplates(_AdditionalFileTemplates):
         return includeLocalFile("files/x86/fstab.in")
 
 
-class _BuildMultiArchDiskImage(_BuildDiskImageBase):
+class BuildMultiArchDiskImage(_BuildDiskImageBase):
     doNotAddToTargets = True
     _source_class = None  # type: typing.Type[SimpleProject]
-    _always_add_suffixed_targets = True
     supported_architectures = [CompilationTargets.NATIVE] + SimpleProject.CAN_TARGET_ALL_CHERIBSD_TARGETS
 
     @classproperty
@@ -804,10 +806,15 @@ class _BuildMultiArchDiskImage(_BuildDiskImageBase):
             self.file_templates = _X86FileTemplates()
 
 
-class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
+class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
     project_name = "disk-image"
     dependencies = ["qemu", "cheribsd-cheri", "gdb-mips"]
     _source_class = BuildCHERIBSD
+    _always_add_suffixed_targets = True  # preparation for future multi-target support
+
+    default_disk_image_path = ComputedDefaultValue(
+        function=lambda conf, proj: _defaultDiskImagePath(conf, conf.outputRoot),
+        as_string="$OUTPUT_ROOT/cheri256-disk.img or $OUTPUT_ROOT/cheri128-disk.img depending on --cheri-bits.")
 
     @classproperty
     def supported_architectures(cls):
@@ -831,12 +838,6 @@ class BuildCheriBSDDiskImage(_BuildMultiArchDiskImage):
             extra_files_shortname = "-extra-files"
 
         super().setup_config_options(extraFilesShortname=extra_files_shortname, defaultHostname=defaultHostname, **kwargs)
-        defaultDiskImagePath = ComputedDefaultValue(
-            function=lambda conf, proj: _defaultDiskImagePath(conf, conf.outputRoot),
-            as_string="$OUTPUT_ROOT/cheri256-disk.img or $OUTPUT_ROOT/cheri128-disk.img depending on --cheri-bits.")
-        cls.diskImagePath = cls.addPathOption("path", shortname=disk_img_shortname, default=defaultDiskImagePath,
-                                              metavar="IMGPATH", help="The output path for the QEMU disk image",
-                                              showHelp=True)
         cls.disableTMPFS = cls.addBoolOption("disable-tmpfs", shortname=tmpfs_shortname,
                                              help="Don't make /tmp a TMPFS mount in the CHERIBSD system image."
                                                   " This is a workaround in case TMPFS is not working correctly")
@@ -855,6 +856,10 @@ class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
     project_name = "disk-image-purecap"
     dependencies = ["qemu", "cheribsd-purecap", "gdb-mips"]
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
+    default_disk_image_path = ComputedDefaultValue(
+        function=lambda conf, proj: _defaultDiskImagePath(conf, conf.outputRoot, "purecap-"),
+        as_string="$OUTPUT_ROOT/purecap-cheri256-disk.img or $OUTPUT_ROOT/purecap-cheri128-disk.img depending on "
+                  "--cheri-bits.")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -863,13 +868,6 @@ class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
             function=lambda conf, unused: "qemu-purecap" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
             as_string="qemu-purecap${CHERI_BITS}-" + hostUsername)
         super().setup_config_options(defaultHostname=defaultHostname, **kwargs)
-
-        defaultDiskImagePath = ComputedDefaultValue(
-            function=lambda conf, proj: _defaultDiskImagePath(conf, conf.outputRoot, "purecap-"),
-            as_string="$OUTPUT_ROOT/purecap-cheri256-disk.img or $OUTPUT_ROOT/purecap-cheri128-disk.img depending on --cheri-bits.")
-        cls.diskImagePath = cls.addPathOption("path", default=defaultDiskImagePath,
-                                              metavar="IMGPATH", help="The output path for the QEMU disk image",
-                                              showHelp=True)
         cls.disableTMPFS = cls.addBoolOption("disable-tmpfs",
                                              help="Don't make /tmp a TMPFS mount in the CHERIBSD system image."
                                                   " This is a workaround in case TMPFS is not working correctly")
@@ -893,19 +891,18 @@ def _default_freebsd_disk_image_name(config: CheriConfig, project: SimpleProject
     return config.outputRoot / ("freebsd-" + suffix + ".img")
 
 
-class BuildFreeBSDImage(_BuildMultiArchDiskImage):
+class BuildFreeBSDImage(BuildMultiArchDiskImage):
     target = "disk-image-freebsd"
     _source_class = BuildFreeBSD
+
+    default_disk_image_path = ComputedDefaultValue(function=_default_freebsd_disk_image_name,
+                                                   as_string="$OUTPUT_ROOT/freebsd-$SUFFIX.img")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
         hostUsername = CheriConfig.get_user_name()
         suffix = cls._crossCompileTarget.generic_suffix if cls._crossCompileTarget else "<TARGET>"
         super().setup_config_options(defaultHostname="qemu-" + suffix + "-" + hostUsername, **kwargs)
-        defaultDiskImagePath = ComputedDefaultValue(
-                function=_default_freebsd_disk_image_name, as_string="$OUTPUT_ROOT/freebsd-" + suffix + " .img")
-        cls.diskImagePath = cls.addPathOption("path", default=defaultDiskImagePath, showHelp=True,
-                                              metavar="IMGPATH", help="The output path for the QEMU disk image")
         cls.disableTMPFS = cls._crossCompileTarget.is_mips()  # MALTA64 doesn't include tmpfs
 
     def __init__(self, config: CheriConfig):
