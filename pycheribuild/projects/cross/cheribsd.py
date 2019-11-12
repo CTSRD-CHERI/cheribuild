@@ -344,7 +344,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     @property
     def arch_build_flags(self):
-        if self.compiling_for_mips(include_purecap=False):
+        if self.compiling_for_mips(include_purecap=True):
             # The following is broken: (https://github.com/CTSRD-CHERI/cheribsd/issues/102)
             # "CPUTYPE=mips64",  # mipsfpu for hardware float
             return {"TARGET": "mips", "TARGET_ARCH": self.config.mips_float_abi.freebsd_target_arch()}
@@ -1088,16 +1088,10 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     @property
     def arch_build_flags(self):
-        if self.compiling_for_cheri():
-            return {
-                "CHERI": self.config.cheriBitsStr,
-                "CHERI_CC": str(self.CC),
-                "CHERI_CXX": str(self.CXX),
-                "CHERI_LD": str(self.sdk_bindir / "ld.lld"),
-                "TARGET": "mips",
-                "TARGET_ARCH": self.config.mips_float_abi.freebsd_target_arch()
-                }
-        return super().arch_build_flags
+        result = super().arch_build_flags
+        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+            result["CHERI"] = self.config.cheriBitsStr
+        return result
 
     def __init__(self, config: CheriConfig):
         self.installAsRoot = os.getuid() == 0
