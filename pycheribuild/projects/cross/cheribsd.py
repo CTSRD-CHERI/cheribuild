@@ -43,9 +43,10 @@ from ...utils import *
 
 def default_kernel_config(config: CheriConfig, project: SimpleProject) -> str:
     assert isinstance(project, BuildFreeBSD)
-    if project.compiling_for_host():
+    xtarget = project.crosscompile_target
+    if xtarget.is_x86_64() or xtarget.is_i386():
         return "GENERIC"
-    elif project.compiling_for_cheri():
+    elif xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
         # make sure we use a kernel with 128 bit CPU features selected
         # or a purecap kernel is selected
         assert isinstance(project, BuildCHERIBSD)
@@ -53,11 +54,11 @@ def default_kernel_config(config: CheriConfig, project: SimpleProject) -> str:
         cheri_bits = "128" if config.cheriBits == 128 else ""
         cheri_pure = "_PURECAP" if project.purecapKernel else ""
         return kernconf_name.format(bits=cheri_bits, pure=cheri_pure)
-    elif project.compiling_for_mips(include_purecap=False):
+    elif xtarget.is_mips(include_purecap=False):
         return "MALTA64"
-    elif project.compiling_for_riscv() or project.get_crosscompile_target(config).is_any_x86():
+    elif xtarget.is_riscv():
         return "GENERIC"  # TODO: what is the correct config
-    elif project.crosscompile_target.is_aarch64():
+    elif xtarget.is_aarch64():
         return "GENERIC-UP"
     else:
         assert False, "should be unreachable"
