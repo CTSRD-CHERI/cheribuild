@@ -86,7 +86,8 @@ class _BuildDiskImageBase(SimpleProject):
                  "'$SOURCE_ROOT/extra-files" + extraFilesSuffix + "')", metavar="DIR")
         cls.hostname = cls.addConfigOption("hostname", showHelp=True, default=defaultHostname, metavar="HOSTNAME",
                                            help="The hostname to use for the QEMU image")
-        cls.useQCOW2 = cls.addBoolOption("use-qcow2", help="Convert the disk image to QCOW2 format instead of raw")
+        if "useQCOW2" not in cls.__dict__:
+            cls.useQCOW2 = cls.addBoolOption("use-qcow2", help="Convert the disk image to QCOW2 format instead of raw")
         if not IS_FREEBSD:
             cls.remotePath = cls.addConfigOption("remote-path", showHelp=True, metavar="PATH", help="The path on the "
                                                  "remote FreeBSD machine from where to copy the disk image")
@@ -349,10 +350,10 @@ class _BuildDiskImageBase(SimpleProject):
                     self.info("Adding GDB binary", gdb_binary, "to disk image")
                     self.add_file_to_image(gdb_binary, mode=0o755, path_in_target="usr/bin/gdb")
 
+        loader_conf_contents = "beastie_disable=\"yes\"\n"
         if self.is_x86:
-            self.createFileForImage("/boot/loader.conf", contents="console=\"comconsole\"\n", mode=0o644)
-
-
+            loader_conf_contents += "console=\"comconsole\"\n"
+        self.createFileForImage("/boot/loader.conf", contents=loader_conf_contents, mode=0o644)
 
         # Avoid long boot time on first start due to missing entropy:
         # for i in ("boot/entropy", "entropy"):
@@ -424,17 +425,7 @@ class _BuildDiskImageBase(SimpleProject):
                 ], cwd=self.rootfsDir)
         self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
 
-    def makeImage(self):
-        # check that qemu-img exists before starting the potentially long-running makefs command
-        qemu_img_command = self.config.qemu_bindir / "qemu-img"
-        if not qemu_img_command.is_file():
-            system_qemu_img = shutil.which("qemu-img")
-            if system_qemu_img:
-                print("qemu-img from CHERI SDK not found, falling back to system qemu-img")
-                qemu_img_command = Path(system_qemu_img)
-            else:
-                self.warning("qemu-img command was not found! Make sure to build target qemu first.")
-
+    def make_rootfs_image(self, rootfs_img: Path):
         # write out the manifest file:
         self.mtree.write(self.manifestFile)
         # print(self.manifestFile.read_text())
@@ -469,31 +460,42 @@ class _BuildDiskImageBase(SimpleProject):
                             yes_no_str="")
             raise
 
+    def make_disk_image(self) -> Path:
         if self.is_x86:
             if not self.mkimg_cmd:
                 self.fatal("Missing freebsd mkimg command! Should be found in FreeBSD build dir")
             root_partition = self.diskImagePath.with_suffix(".partition.img")
-            self.moveFile(self.diskImagePath, root_partition, force=True)
+            self.make_rootfs_image(root_partition)
             self.build_gpt_image(root_partition)
             self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
-
-        # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
-        if not self.config.quiet and qemu_img_command.exists():
-            runCmd(qemu_img_command, "info", self.diskImagePath)
-        if self.useQCOW2:
-            if not qemu_img_command.exists():
-                self.fatal("Cannot create QCOW2 image without qemu-img command!")
-            # create a qcow2 version from the raw image:
-            rawImg = self.diskImagePath.with_suffix(".raw")
-            runCmd("mv", "-f", self.diskImagePath, rawImg)
-            runCmd(qemu_img_command, "convert",
-                   "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
-                   "-O", "qcow2",  # convert to qcow2 format
-                   rawImg,  # input file
-                   self.diskImagePath)  # output file
-            self.deleteFile(rawImg, print_verbose_only=True)
-            if self.config.verbose:
+        else:
+            self.make_rootfs_image(self.diskImagePath)
+            # check that qemu-img exists before starting the potentially long-running makefs command
+            qemu_img_command = self.config.qemu_bindir / "qemu-img"
+            if not qemu_img_command.is_file():
+                system_qemu_img = shutil.which("qemu-img")
+                if system_qemu_img:
+                    print("qemu-img from CHERI SDK not found, falling back to system qemu-img")
+                    qemu_img_command = Path(system_qemu_img)
+                else:
+                    self.warning("qemu-img command was not found! Make sure to build target qemu first.")
+            # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
+            if not self.config.quiet and qemu_img_command.exists():
                 runCmd(qemu_img_command, "info", self.diskImagePath)
+            if self.useQCOW2:
+                if not qemu_img_command.exists():
+                    self.fatal("Cannot create QCOW2 image without qemu-img command!")
+                # create a qcow2 version from the raw image:
+                rawImg = self.diskImagePath.with_suffix(".raw")
+                runCmd("mv", "-f", self.diskImagePath, rawImg)
+                runCmd(qemu_img_command, "convert",
+                       "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
+                       "-O", "qcow2",  # convert to qcow2 format
+                       rawImg,  # input file
+                       self.diskImagePath)  # output file
+                self.deleteFile(rawImg, print_verbose_only=True)
+                if self.config.verbose:
+                    runCmd(qemu_img_command, "info", self.diskImagePath)
 
     def copyFromRemoteHost(self):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
@@ -584,7 +586,7 @@ class _BuildDiskImageBase(SimpleProject):
                 self.add_unlisted_files_to_metalog()
 
             # finally create the disk image
-            self.makeImage()
+            self.make_disk_image()
         self.tmpdir = None
         self.manifestFile = None
 
@@ -733,7 +735,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         self.createFileForImage("/etc/rc", showContentsByDefault=False,
                                 contents=includeLocalFile("files/minimal-image/etc/rc"))
 
-    def makeImage(self):
+    def make_rootfs_image(self, rootfs_img: Path):
         # update cheribsdbox link in case we stripped it:
         # noinspection PyProtectedMember
         cheribsdbox_entry = self.mtree._mtree.get("./bin/cheribsdbox")
@@ -760,7 +762,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             self.mtree.write(sys.stderr)
         if self.config.verbose:
             runCmd("du", "-ah", self.tmpdir)
-        super().makeImage()
+        super().make_rootfs_image(rootfs_img)
 
 
 class _RISCVFileTemplates(_AdditionalFileTemplates):
