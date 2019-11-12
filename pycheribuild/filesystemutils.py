@@ -142,9 +142,9 @@ class FileSystemUtils(object):
             shutil.copytree(str(src_path), str(dst_path))
 
     def deleteFile(self, file: Path, print_verbose_only=False):
+        printCommand("rm", "-f", file, print_verbose_only=print_verbose_only)
         if not file.is_file():
             return
-        printCommand("rm", "-f", file, print_verbose_only=print_verbose_only)
         if self.config.pretend:
             return
         file.unlink()
