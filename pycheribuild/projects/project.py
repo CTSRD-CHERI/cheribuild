@@ -45,7 +45,7 @@ from ..config.chericonfig import CheriConfig
 from ..config.target_info import CrossCompileTarget, CPUArchitecture, TargetInfo, CompilationTargets
 from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase, DefaultValueOnlyConfigOption
 from ..filesystemutils import FileSystemUtils
-from ..targets import Target, MultiArchTarget, MultiArchTargetAlias, targetManager
+from ..targets import Target, MultiArchTarget, MultiArchTargetAlias, Target, targetManager
 from ..utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
@@ -400,10 +400,21 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     @classmethod
     def get_class_for_target(cls: "typing.Type[Type_T]", arch: CrossCompileTarget) -> "typing.Type[Type_T]":
         target = targetManager.get_target_raw(cls.target)
-        assert isinstance(target, MultiArchTargetAlias)
-        for t in target.derived_targets:
-            if t.target_arch is arch:
-                return t.projectClass
+        if isinstance(target, MultiArchTarget):
+            # check for exact match
+            if target.target_arch is arch:
+                return target.projectClass
+            # Otherwise fall back to the target alias and find the matching one
+            target = target.base_target
+        if isinstance(target, MultiArchTargetAlias):
+            for t in target.derived_targets:
+                if t.target_arch is arch:
+                    return t.projectClass
+        elif isinstance(target, Target):
+            # single architecture target
+            result = target.projectClass
+            if arch is CompilationTargets.NONE or result._crossCompileTarget is arch:
+                return result
         raise LookupError("Invalid arch " + str(arch) + " for class " + str(cls))
 
     @property

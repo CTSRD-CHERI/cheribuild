@@ -186,6 +186,7 @@ class MultiArchTarget(Target):
         super().__init__(name, projectClass)
         assert target_arch is not None
         self.target_arch = target_arch
+        self.base_target = base_target
         base_target.derived_targets.append(self)
 
     @property
