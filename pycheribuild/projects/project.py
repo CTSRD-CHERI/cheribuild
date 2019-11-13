@@ -565,6 +565,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             return not result.startswith("n")  # if default is yes accept anything other than strings starting with "n"
         return str(result).lower().startswith("y")  # anything but y will be treated as false
 
+    def ask_for_confirmation(self, message: str, error_message="Cannot continue.", default_result=True, **kwargs):
+        if not self.query_yes_no(message, default_result=default_result, **kwargs):
+            self.fatal(error_message)
+
     @staticmethod
     def _handle_stderr(outfile, stream, file_lock, project: "Project"):
         for errLine in stream:
@@ -1261,8 +1265,9 @@ class GitRepository(SourceRepository):
                                "branch. You should be using", self.default_branch)
                 if current_project.query_yes_no("Would you like to change to the " + self.default_branch + " branch?"):
                     runCmd("git", "checkout", self.default_branch, cwd=src_dir)
-                elif not current_project.query_yes_no("Are you sure you want to continue?", force_result=False):
-                    current_project.fatal("Wrong branch:", current_branch.decode("utf-8"))
+                else:
+                    current_project.ask_for_confirmation("Are you sure you want to continue?", force_result=False,
+                                                         error_message="Wrong branch: " + current_branch.decode("utf-8"))
 
 
 class Project(SimpleProject):

@@ -50,8 +50,7 @@ class BuildJulietTestSuite(CrossCompileCMakeProject):
         if self.cross_build_type != BuildType.DEBUG:
             self.warning("The Juliet test suite contains undefined behaviour that might be optimized away unless you compile"
                          " at -O0.")
-            if not self.query_yes_no("Are you sure you want to continue?"):
-                self.fatal("Cannot continue.")
+            self.ask_for_confirmation("Are you sure you want to continue?")
         super().process()
 
     def configure(self, **kwargs):
