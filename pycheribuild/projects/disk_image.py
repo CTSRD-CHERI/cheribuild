@@ -65,7 +65,7 @@ class _AdditionalFileTemplates(object):
 
 class _BuildDiskImageBase(SimpleProject):
     doNotAddToTargets = True
-    diskImagePath = None  # type: Path
+    disk_image_path = None  # type: Path
     _freebsd_build_class = None
     strip_binaries = False  # True by default for minimal disk-image
     bigEndian = True # True for MIPS
@@ -96,7 +96,7 @@ class _BuildDiskImageBase(SimpleProject):
                                       "of interest in rare cases, like extra-files on smbfs.")
         cls.include_gdb = cls.add_bool_option("include-gdb", default=True, help="Include GDB in the disk image (if it exists)")
         assert cls.default_disk_image_path is not None
-        cls.diskImagePath = cls.add_path_option("path", default=cls.default_disk_image_path, metavar="IMGPATH",
+        cls.disk_image_path = cls.add_path_option("path", default=cls.default_disk_image_path, metavar="IMGPATH",
                                               help="The output path for the QEMU disk image", show_help=True)
         cls.disableTMPFS = None
 
@@ -399,7 +399,7 @@ class _BuildDiskImageBase(SimpleProject):
         # mkimg -s bsd -b ${src}/boot/boot -p freebsd-ufs:=${img}.s1a -o ${img}.s1
         # mkimg -a 1 -s mbr -b ${src}/boot/boot0sio -p freebsd:=${img}.s1 -o ${img}
         # rm -f ${src}/etc/fstab
-        s1_path = self.diskImagePath.with_suffix(".s1.img")
+        s1_path = self.disk_image_path.with_suffix(".s1.img")
         self.run_mkimg(["-s", "bsd",
                         "-f", "raw",  # raw disk image instead of qcow2
                         "-b", self.rootfsDir / "boot/boot",  # bootload (MBR)
@@ -410,7 +410,7 @@ class _BuildDiskImageBase(SimpleProject):
                         "-f", "raw",  # raw disk image instead of qcow2
                         "-b", self.rootfsDir / "boot/boot0sio",  # bootload (MBR)
                         "-p", "freebsd:=" + str(s1_path),  # rootfs
-                        "-o", self.diskImagePath  # output file
+                        "-o", self.disk_image_path  # output file
                         ], cwd=self.rootfsDir)
         self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
         self.deleteFile(s1_path)  # no need to keep the partition now that we have built the full image
@@ -423,7 +423,7 @@ class _BuildDiskImageBase(SimpleProject):
                         "-b", self.rootfsDir / "boot/pmbr",  # bootload (MBR)
                         "-p", "freebsd-boot:=" + str(self.rootfsDir / "boot/gptboot"),  # gpt boot partition
                         "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
-                        "-o", self.diskImagePath  # output file
+                        "-o", self.disk_image_path  # output file
                         ], cwd=self.rootfsDir)
         self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
 
@@ -463,16 +463,16 @@ class _BuildDiskImageBase(SimpleProject):
                             yes_no_str="")
             raise
 
-    def make_disk_image(self) -> Path:
+    def make_disk_image(self):
         if self.is_x86:
             if not self.mkimg_cmd:
                 self.fatal("Missing freebsd mkimg command! Should be found in FreeBSD build dir")
-            root_partition = self.diskImagePath.with_suffix(".partition.img")
+            root_partition = self.disk_image_path.with_suffix(".partition.img")
             self.make_rootfs_image(root_partition)
             self.build_gpt_image(root_partition)
             self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
         else:
-            self.make_rootfs_image(self.diskImagePath)
+            self.make_rootfs_image(self.disk_image_path)
             # check that qemu-img exists before starting the potentially long-running makefs command
             qemu_img_command = self.config.qemu_bindir / "qemu-img"
             if not qemu_img_command.is_file():
@@ -484,21 +484,21 @@ class _BuildDiskImageBase(SimpleProject):
                     self.warning("qemu-img command was not found! Make sure to build target qemu first.")
             # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
             if not self.config.quiet and qemu_img_command.exists():
-                runCmd(qemu_img_command, "info", self.diskImagePath)
+                runCmd(qemu_img_command, "info", self.disk_image_path)
             if self.useQCOW2:
                 if not qemu_img_command.exists():
                     self.fatal("Cannot create QCOW2 image without qemu-img command!")
                 # create a qcow2 version from the raw image:
-                rawImg = self.diskImagePath.with_suffix(".raw")
-                runCmd("mv", "-f", self.diskImagePath, rawImg)
+                raw_img = self.disk_image_path.with_suffix(".raw")
+                runCmd("mv", "-f", self.disk_image_path, raw_img)
                 runCmd(qemu_img_command, "convert",
                        "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
                        "-O", "qcow2",  # convert to qcow2 format
-                       rawImg,  # input file
-                       self.diskImagePath)  # output file
-                self.deleteFile(rawImg, print_verbose_only=True)
+                       raw_img,  # input file
+                       self.disk_image_path)  # output file
+                self.deleteFile(raw_img, print_verbose_only=True)
                 if self.config.verbose:
-                    runCmd(qemu_img_command, "info", self.diskImagePath)
+                    runCmd(qemu_img_command, "info", self.disk_image_path)
 
     def copyFromRemoteHost(self):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
@@ -512,7 +512,7 @@ class _BuildDiskImageBase(SimpleProject):
         if not self.query_yes_no("Continue?"):
             return
 
-        self.copyRemoteFile(self.remotePath, self.diskImagePath)
+        self.copyRemoteFile(self.remotePath, self.disk_image_path)
 
     def process(self):
         if not IS_FREEBSD and self.crossBuildImage:
@@ -529,18 +529,18 @@ class _BuildDiskImageBase(SimpleProject):
         return default
 
     def __process(self):
-        if self.diskImagePath.is_dir():
+        if self.disk_image_path.is_dir():
             # Given a directory, derive the default file name inside it
-            self.diskImagePath = _defaultDiskImagePath(self.config, self.diskImagePath)
+            self.disk_image_path = _defaultDiskImagePath(self.config, self.disk_image_path)
 
-        if self.diskImagePath.is_file():
+        if self.disk_image_path.is_file():
             # only show prompt if we can actually input something to stdin
             if not self.config.clean:
                 # with --clean always delete the image
-                print("An image already exists (" + str(self.diskImagePath) + "). ", end="")
+                print("An image already exists (" + str(self.disk_image_path) + "). ", end="")
                 if not self.query_yes_no("Overwrite?", default_result=True):
                     return  # we are done here
-            self.deleteFile(self.diskImagePath)
+            self.deleteFile(self.disk_image_path)
 
         # we can only build disk images on FreeBSD, so copy the file if we aren't
         if not IS_FREEBSD and not self.crossBuildImage:
@@ -563,7 +563,7 @@ class _BuildDiskImageBase(SimpleProject):
 
         if not self.makefs_cmd or not self.makefs_cmd.exists():
             self.fatal("Missing makefs command! Should be found in FreeBSD build dir (or set $MAKEFS_CMD)")
-        statusUpdate("Disk image will be saved to", self.diskImagePath)
+        statusUpdate("Disk image will be saved to", self.disk_image_path)
         statusUpdate("Disk image root fs is", self.rootfsDir)
         statusUpdate("Extra files for the disk image will be copied from", self.extraFilesDir)
 

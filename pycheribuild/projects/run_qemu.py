@@ -242,7 +242,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
         if hasattr(source_class, "rootfsDir"):
             self.rootfs_path = source_class.rootfsDir(self, config)
         if needs_disk_image:
-            self.diskImage = disk_image_class.get_instance(self, config).diskImagePath
+            self.diskImage = disk_image_class.get_instance(self, config).disk_image_path
         self.needsRemoteKernelCopy = True
         # no need to copy from remote host if we were crossbuilding
         if IS_FREEBSD or source_class.get_instance(self, config).crossbuild:

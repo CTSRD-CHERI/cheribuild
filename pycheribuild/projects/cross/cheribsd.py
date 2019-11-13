@@ -1213,7 +1213,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     def process(self):
         from ..disk_image import BuildMinimalCheriBSDDiskImage
         minimal_image_instance = BuildMinimalCheriBSDDiskImage.get_instance(self)
-        image = minimal_image_instance.diskImagePath
+        image = minimal_image_instance.disk_image_path
         # Re-use the same build directory as the CheriBSD target that was used for the disk image
         # This ensure that the kernel build tools can be found in the build directory
         build_cheribsd_instance = minimal_image_instance.cheribsd_class.get_instance(self)

@@ -162,7 +162,7 @@ class RunSyzkaller(SimpleProject):
         self.kernel_path = BuildCHERIBSDPurecap.get_installed_kernel_path(
             self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP)
         self.disk_image = BuildCheriBSDPurecapDiskImage.get_instance(
-            self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).diskImagePath
+            self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).disk_image_path
 
     def syzkaller_config(self):
         """ Get path of syzkaller configuration file to use. """
