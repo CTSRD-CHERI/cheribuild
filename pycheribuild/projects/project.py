@@ -444,19 +444,19 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                       raiseInPretendMode=raiseInPretendMode, no_print=no_print, replace_env=replace_env, **kwargs)
 
     @classmethod
-    def addConfigOption(cls, name: str, *, showHelp = False, shortname=None, _no_fallback_config_name: bool = False,
+    def addConfigOption(cls, name: str, *, show_help=False, shortname=None, _no_fallback_config_name: bool = False,
                         kind: "typing.Union[typing.Type[Type_T], typing.Callable[[str], Type_T]]" = str,
                         default: typing.Union[ComputedDefaultValue[Type_T], Type_T, typing.Callable[[], Type_T]] = None,
                         only_add_for_targets: "typing.List[CrossCompileTarget]" = None,
                         fallback_config_name: str = None, _allow_unknown_targets=False, **kwargs) -> Type_T:
         # Need a string annotation for kind to avoid https://github.com/python/typing/issues/266 which seems to affect
         # the version of python in Ubuntu 16.04
-        configOptionKey = cls.target
+        config_option_key = cls.target
         # if cls.target != cls.project_name.lower():
         #    self.fatal("Target name does not match project name:", cls.target, "vs", cls.project_name.lower())
 
         # Hide stuff like --foo/install-directory from --help
-        helpHidden = not showHelp
+        help_hidden = not show_help
 
         # check that the group was defined in the current class not a superclass
         if "_commandLineOptionGroup" not in cls.__dict__:
@@ -468,11 +468,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         fallback_name_base = getattr(cls, "_config_inherits_from", None)
         synthetic_base = getattr(cls, "synthetic_base", None)
         if cls.hide_options_from_help:
-            helpHidden = True
+            help_hidden = True
         if synthetic_base is not None:
             # Don't show the help options for qtbase-mips/qtbase-native/qtbase-cheri in default --help output, the
             # base version is enough. They will still be included in --help-all
-            helpHidden = True
+            help_hidden = True
             fallback_name_base = synthetic_base.target
 
         if only_add_for_targets is not None:
@@ -502,8 +502,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                     # but if the project_name is the same we can assume it's the same class:
                     if cls.project_name == synthetic_base.project_name:
                         fallback_config_name = fallback_name_base + "/" + name
-        return cls._configLoader.addOption(configOptionKey + "/" + name, shortname, default=default, type=kind,
-                                           _owningClass=cls, group=cls._commandLineOptionGroup, helpHidden=helpHidden,
+        return cls._configLoader.addOption(config_option_key + "/" + name, shortname, default=default, type=kind,
+                                           _owningClass=cls, group=cls._commandLineOptionGroup, helpHidden=help_hidden,
                                            _fallback_name=fallback_config_name, **kwargs)
 
     @classmethod

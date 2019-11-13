@@ -185,7 +185,7 @@ class BuildSailFromOpam(OpamMixin, SimpleProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.use_git_version = cls.addBoolOption("use-git-version", showHelp=False,
+        cls.use_git_version = cls.addBoolOption("use-git-version", show_help=False,
                                                 help="Install sail from github instead of using the latest released "
                                                      "version")
 
@@ -250,7 +250,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.with_trace_support = cls.addBoolOption("trace-support", showHelp=True,
+        cls.with_trace_support = cls.addBoolOption("trace-support", show_help=True,
                                                    help="Build sail-cheri-mips simulators with tracing support (they "
                                                         "will be slow but the traces are useful to debug failing "
                                                         "tests)")
@@ -282,7 +282,7 @@ class BuildSailRISCV(ProjectUsingOpam):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.with_trace_support = cls.addBoolOption("trace-support", showHelp=True,
+        cls.with_trace_support = cls.addBoolOption("trace-support", show_help=True,
                                                    help="Build sail-cheri-mips simulators with tracing support (they "
                                                         "will be slow but"
                                                         "the traces are useful to debug failing tests)")
@@ -315,7 +315,7 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.with_trace_support = cls.addBoolOption("trace-support", showHelp=True,
+        cls.with_trace_support = cls.addBoolOption("trace-support", show_help=True,
                                                    help="Build sail-cheri-mips simulators with tracing support (they "
                                                         "will be slow but the traces are useful to debug failing "
                                                         "tests)")

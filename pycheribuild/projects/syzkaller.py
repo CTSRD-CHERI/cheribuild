@@ -60,7 +60,7 @@ class BuildSyzkaller(CrossCompileProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.sysgen = cls.addBoolOption(
-            "run-sysgen", showHelp=True,
+            "run-sysgen", show_help=True,
             help="Rerun syz-extract and syz-sysgen to rebuild generated Go "
             "syscall descriptions.")
 
@@ -145,12 +145,12 @@ class RunSyzkaller(SimpleProject):
         super().setup_config_options(**kwargs)
         cls.syz_config = cls.addPathOption("syz-config", default=None,
                                            help="Path to the syzkaller configuration file to use.",
-                                           showHelp=True)
-        cls.syz_ssh_key = cls.addPathOption("ssh-privkey", showHelp=True,
+                                           show_help=True)
+        cls.syz_ssh_key = cls.addPathOption("ssh-privkey", show_help=True,
             default=lambda config, project: (config.sourceRoot / "extra-files" / "syzkaller_id_rsa"),
             help="A directory with additional files that will be added to the image (default: "
                  "'$SOURCE_ROOT/extra-files/syzkaller_id_rsa')", metavar="syzkaller_id_rsa")
-        cls.syz_workdir = cls.addPathOption("workdir", showHelp=True,
+        cls.syz_workdir = cls.addPathOption("workdir", show_help=True,
             default=lambda config, project: (config.outputRoot / "syzkaller-workdir"),
             help="Working directory for syzkaller output.", metavar="DIR")
 

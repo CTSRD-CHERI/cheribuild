@@ -80,16 +80,16 @@ class _BuildDiskImageBase(SimpleProject):
     def setup_config_options(cls, *, defaultHostname, extraFilesShortname=None, extraFilesSuffix="", **kwargs):
         super().setup_config_options()
         cls.extraFilesDir = cls.addPathOption("extra-files",
-            shortname=extraFilesShortname, showHelp=True,
+            shortname=extraFilesShortname, show_help=True,
             default=lambda config, project: (config.sourceRoot / ("extra-files" + extraFilesSuffix)),
             help="A directory with additional files that will be added to the image (default: "
                  "'$SOURCE_ROOT/extra-files" + extraFilesSuffix + "')", metavar="DIR")
-        cls.hostname = cls.addConfigOption("hostname", showHelp=True, default=defaultHostname, metavar="HOSTNAME",
+        cls.hostname = cls.addConfigOption("hostname", show_help=True, default=defaultHostname, metavar="HOSTNAME",
                                            help="The hostname to use for the QEMU image")
         if "useQCOW2" not in cls.__dict__:
             cls.useQCOW2 = cls.addBoolOption("use-qcow2", help="Convert the disk image to QCOW2 format instead of raw")
         if not IS_FREEBSD:
-            cls.remotePath = cls.addConfigOption("remote-path", showHelp=True, metavar="PATH", help="The path on the "
+            cls.remotePath = cls.addConfigOption("remote-path", show_help=True, metavar="PATH", help="The path on the "
                                                  "remote FreeBSD machine from where to copy the disk image")
         cls.wget_via_tmp = cls.addBoolOption("wget-via-tmp",
                                 help="Use a directory in /tmp for recursive wget operations;"
@@ -97,7 +97,7 @@ class _BuildDiskImageBase(SimpleProject):
         cls.include_gdb = cls.addBoolOption("include-gdb", default=True, help="Include GDB in the disk image (if it exists)")
         assert cls.default_disk_image_path is not None
         cls.diskImagePath = cls.addPathOption("path", default=cls.default_disk_image_path, metavar="IMGPATH",
-                                              help="The output path for the QEMU disk image", showHelp=True)
+                                              help="The output path for the QEMU disk image", show_help=True)
         cls.disableTMPFS = None
 
     def __init__(self, config, source_class: "typing.Type[BuildFreeBSD]"):
