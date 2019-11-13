@@ -374,7 +374,7 @@ class CheriConfig(object):
 
     @property
     def qemu_bindir(self):
-        return self.cheri_sdk_dir
+        return self.cheri_sdk_bindir
 
     def get_cheribsd_sysroot_path(self, cross_compile_target: CrossCompileTarget, use_hybrid_sysroot=False):
         assert isinstance(cross_compile_target, CrossCompileTarget)

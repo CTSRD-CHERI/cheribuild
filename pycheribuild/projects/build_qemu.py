@@ -87,9 +87,9 @@ class BuildQEMUBase(AutotoolsProject):
         self._extraLDFlags = ""
         self._extraCXXFlags = ""
         if shutil.which("pkg-config"):
-            glibIncludes = runCmd("pkg-config", "--cflags-only-I", "glib-2.0", captureOutput=True,
+            glib_includes = runCmd("pkg-config", "--cflags-only-I", "glib-2.0", captureOutput=True,
                                   print_verbose_only=True, runInPretendMode=True).stdout.decode("utf-8").strip()
-            self._extraCFlags += " " + glibIncludes
+            self._extraCFlags += " " + glib_includes
 
         # Disable some more unneeded things (we don't usually need the GUI frontends)
         if not self.gui:
