@@ -40,6 +40,7 @@ import time
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
+from typing import Union, Callable
 
 from ..config.chericonfig import CheriConfig
 from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase, DefaultValueOnlyConfigOption
@@ -445,8 +446,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def add_config_option(cls, name: str, *, show_help=False, shortname=None, _no_fallback_config_name: bool = False,
-                          kind: "typing.Union[typing.Type[Type_T], typing.Callable[[str], Type_T]]" = str,
-                          default: typing.Union[ComputedDefaultValue[Type_T], Type_T, typing.Callable[[], Type_T]] = None,
+                          kind: "Union[typing.Type[Type_T], Callable[[str], Type_T]]" = str,
+                          default: "Union[ComputedDefaultValue[Type_T], Type_T, Callable[[], Type_T]]" = None,
                           only_add_for_targets: "typing.List[CrossCompileTarget]" = None,
                           fallback_config_name: str = None, _allow_unknown_targets=False, **kwargs) -> Type_T:
         # Need a string annotation for kind to avoid https://github.com/python/typing/issues/266 which seems to affect
@@ -483,7 +484,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if not _allow_unknown_targets:
                 for t in only_add_for_targets:
                     assert any(t is x for x in cls.supported_architectures), \
-                        cls.__name__ + ": some of " + str(only_add_for_targets) + " not in " + str(cls.supported_architectures)
+                        cls.__name__ + ": some of " + str(only_add_for_targets) + " not in " + str(
+                            cls.supported_architectures)
             if target is not CompilationTargets.NONE and target not in only_add_for_targets:
                 kwargs["option_cls"] = DefaultValueOnlyConfigOption
 
