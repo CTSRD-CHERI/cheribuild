@@ -441,11 +441,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
         self.externalToolchainCompiler = Path(cross_prefix + "clang")
         # TODO: should I be setting this in the environment instead?
+        xcc = self.CC
+        xccinfo = getCompilerInfo(xcc)
+        if not xccinfo.is_clang:
+            self.ask_for_confirmation("Cross compiler is not clang, are you sure you want to continue?")
         self.cross_toolchain_config.set_env(
-            XCC=cross_bindir / "clang",
-            XCXX=cross_bindir / "clang++",
-            XCPP=cross_bindir / "clang-cpp",
-            X_COMPILER_TYPE="clang",  # This is needed otherwise the build assumes it should build with $CC
+            XCC=self.CC, XCXX=self.CXX, XCPP=self.CPP,
+            X_COMPILER_TYPE=xccinfo.compiler,  # This is needed otherwise the build assumes it should build with $CC
             )
         if not self.use_llvm_binutils:
             self.cross_toolchain_config.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
@@ -787,7 +789,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # self.common_options.env_vars["POSIXLY_CORRECT"] = "1"
         # self.make_args.set(PATH=build_path)
 
-        self.make_args.set_env(CC=self.CC, CXX=self.CXX, CPP=self.CPP)
+        self.make_args.set_env(CC=self.host_CC, CXX=self.host_CXX, CPP=self.host_CPP)
 
         # we don't build elftoolchain during buildworld so for the kernel we need to set these variables
         self.make_args.set_env(XOBJDUMP=self.sdk_bindir / "llvm-objdump")
