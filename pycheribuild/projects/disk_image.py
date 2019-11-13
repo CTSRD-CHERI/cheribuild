@@ -442,19 +442,20 @@ class _BuildDiskImageBase(SimpleProject):
             runCmd([self.makefs_cmd] + debug_options + extra_flags + [
                 "-Z",  # sparse file output
                 # For the minimal image 2mb of free space and 1k inodes should be enough
-                # For the larger images we need a lot more space (kyua needs around 400MB and the test might create big files)
+                # For the larger images we need a lot more space (kyua needs around 400MB and the test might create
+                # big files)
                 "-b", "2m" if self.is_minimal else "1g",  # kyua needs a lot of space -> at least 1g
-                "-f", "1k" if self.is_minimal else "200k",  # minimum 1024 free inodes for minimal, otherwise at least 1M
+                "-f", "1k" if self.is_minimal else "200k",
+                # minimum 1024 free inodes for minimal, otherwise at least 1M
                 "-R", "4m",  # round up size to the next 4m multiple
                 "-M", self.minimumImageSize,
                 "-B", "be" if self.bigEndian else "le",  # byte order
-                "-N", self.userGroupDbDir,  # use master.passwd from the cheribsd source not the current systems passwd file
+                "-N", self.userGroupDbDir,
+                # use master.passwd from the cheribsd source not the current systems passwd file
                 # which makes sure that the numeric UID values are correct
-                self.diskImagePath,  # output file
+                rootfs_img,  # output file
                 self.manifestFile,  # use METALOG as the manifest for the disk image
-                # extra directories:
-                # self.rootfsDir  # directory tree to use for the image
-            ], cwd=self.rootfsDir)
+                ], cwd=self.rootfsDir)
         except:
             warningMessage("makefs failed, if it reports an issue with METALOG report a bug (could be either cheribuild"
                            " or cheribsd) and attach the METALOG file.")
