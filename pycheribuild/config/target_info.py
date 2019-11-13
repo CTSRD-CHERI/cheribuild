@@ -510,13 +510,14 @@ class CompilationTargets(object):
     # CheriBSD targets
     CHERIBSD_MIPS = CrossCompileTarget("mips", CPUArchitecture.MIPS64, False, CheriBSDTargetInfo)
     CHERIBSD_MIPS_PURECAP = CrossCompileTarget("cheri", CPUArchitecture.MIPS64, True, CheriBSDTargetInfo, CHERIBSD_MIPS)
-    CHERIBSD_RISCV = CrossCompileTarget("riscv", CPUArchitecture.RISCV64, False, CheriBSDTargetInfo)
+    CHERIBSD_RISCV = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, False, CheriBSDTargetInfo)
+    CHERIBSD_RISCV_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, True, CheriBSDTargetInfo)
     CHERIBSD_X86_64 = CrossCompileTarget("native", CPUArchitecture.X86_64, False, CheriBSDTargetInfo)
 
     # Baremetal targets
     BAREMETAL_NEWLIB_MIPS64 = CrossCompileTarget("baremetal-mips", CPUArchitecture.MIPS64, False,
                                                  NewlibBaremetalTargetInfo)
-    BAREMETAL_NEWLIB_MIPS64_PURECAP = CrossCompileTarget("baremetal-purecap-mips", CPUArchitecture.MIPS64, True,
+    BAREMETAL_NEWLIB_MIPS64_PURECAP = CrossCompileTarget("baremetal-mips-purecap", CPUArchitecture.MIPS64, True,
                                                          NewlibBaremetalTargetInfo, BAREMETAL_NEWLIB_MIPS64)
 
     # FreeBSD targets
