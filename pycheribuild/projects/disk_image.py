@@ -110,7 +110,6 @@ class _BuildDiskImageBase(SimpleProject):
 
         self.makefs_cmd = None  # type: typing.Optional[Path]
         self.mkimg_cmd = None  # type: typing.Optional[Path]
-        self.install_cmd = None  # type: typing.Optional[Path]
         self.source_project = source_class.get_instance(self)
         assert isinstance(self.source_project, BuildFreeBSD)
         self.rootfsDir = self.source_project.getInstallDir(self)
@@ -542,23 +541,18 @@ class _BuildDiskImageBase(SimpleProject):
         makefs_xtool = freebsd_builddir / "tmp/usr/sbin/makefs"
         if makefs_xtool.exists():
             self.makefs_cmd = str(makefs_xtool)
-        install_xtool = freebsd_builddir / "tmp/legacy/usr/bin/install"
-        if install_xtool.exists():
-            self.install_cmd = str(install_xtool)
         mkimg_xtool = freebsd_builddir / "tmp/usr/bin/mkimg"
         if mkimg_xtool.exists():
             self.mkimg_cmd = str(mkimg_xtool)
 
         # On FreeBSD we can use /usr/bin/makefs and /usr/bin/install (assuming FreeBSD version is new enough)
         if IS_FREEBSD:
-            if not self.install_cmd:
-                self.install_cmd = shutil.which("install")
             if not self.makefs_cmd:
                 self.makefs_cmd = shutil.which("makefs")
             if not self.mkimg_cmd:
                 self.mkimg_cmd = shutil.which("mkimg")
 
-        if not self.makefs_cmd or not self.install_cmd:
+        if not self.makefs_cmd:
             self.fatal("Missing freebsd-install or freebsd-makefs command! Should be found in FreeBSD build dir")
         statusUpdate("Disk image will be saved to", self.diskImagePath)
         statusUpdate("Disk image root fs is", self.rootfsDir)
