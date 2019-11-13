@@ -384,6 +384,11 @@ class _BuildDiskImageBase(SimpleProject):
     def is_x86(self):
         return False
 
+    def run_mkimg(self, cmd: list, **kwargs):
+        if not self.mkimg_cmd:
+            self.fatal("Missing mkimg command! Should be found in FreeBSD build dir (or set $MKIMG_CMD)")
+        self.run_cmd([self.mkimg_cmd] + cmd, **kwargs)
+
     def build_mbr_image(self, root_partition: Path):  # FIXME: doesn't actually work
         assert self.is_x86
         # See mk_nogeli_mbr_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
@@ -395,33 +400,31 @@ class _BuildDiskImageBase(SimpleProject):
         # mkimg -a 1 -s mbr -b ${src}/boot/boot0sio -p freebsd:=${img}.s1 -o ${img}
         # rm -f ${src}/etc/fstab
         s1_path = self.diskImagePath.with_suffix(".s1.img")
-        runCmd([self.mkimg_cmd,
-                "-s", "bsd",
-                "-f", "raw",  # raw disk image instead of qcow2
-                "-b", self.rootfsDir / "boot/boot",  # bootload (MBR)
-                "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
-                "-o", s1_path  # output file
-                ], cwd=self.rootfsDir)
-        runCmd([self.mkimg_cmd, "-a", "1", "-s", "mbr",
-                "-f", "raw",  # raw disk image instead of qcow2
-                "-b", self.rootfsDir / "boot/boot0sio",  # bootload (MBR)
-                "-p", "freebsd:=" + str(s1_path),  # rootfs
-                "-o", self.diskImagePath  # output file
-                ], cwd=self.rootfsDir)
+        self.run_mkimg(["-s", "bsd",
+                        "-f", "raw",  # raw disk image instead of qcow2
+                        "-b", self.rootfsDir / "boot/boot",  # bootload (MBR)
+                        "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
+                        "-o", s1_path  # output file
+                        ], cwd=self.rootfsDir)
+        self.run_mkimg(["-a", "1", "-s", "mbr",
+                        "-f", "raw",  # raw disk image instead of qcow2
+                        "-b", self.rootfsDir / "boot/boot0sio",  # bootload (MBR)
+                        "-p", "freebsd:=" + str(s1_path),  # rootfs
+                        "-o", self.diskImagePath  # output file
+                        ], cwd=self.rootfsDir)
         self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
         self.deleteFile(s1_path)  # no need to keep the partition now that we have built the full image
 
     def build_gpt_image(self, root_partition: Path):
         assert self.is_x86
         # See mk_nogeli_gpt_ufs_legacy in tools/boot/rootgen.sh in FreeBSD
-        runCmd([self.mkimg_cmd,
-                "-s", "gpt",  # use GUID Partition Table (GPT)
-                # "-f", "raw",  # raw disk image instead of qcow2
-                "-b", self.rootfsDir / "boot/pmbr",  # bootload (MBR)
-                "-p", "freebsd-boot:=" + str(self.rootfsDir / "boot/gptboot"),  # gpt boot partition
-                "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
-                "-o", self.diskImagePath  # output file
-                ], cwd=self.rootfsDir)
+        self.run_mkimg(["-s", "gpt",  # use GUID Partition Table (GPT)
+                        # "-f", "raw",  # raw disk image instead of qcow2
+                        "-b", self.rootfsDir / "boot/pmbr",  # bootload (MBR)
+                        "-p", "freebsd-boot:=" + str(self.rootfsDir / "boot/gptboot"),  # gpt boot partition
+                        "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
+                        "-o", self.diskImagePath  # output file
+                        ], cwd=self.rootfsDir)
         self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
 
     def make_rootfs_image(self, rootfs_img: Path):
@@ -536,24 +539,22 @@ class _BuildDiskImageBase(SimpleProject):
             self.copyFromRemoteHost()
             return
 
+        self.makefs_cmd = os.getenv("MAKEFS_CMD")
+        self.mkimg_cmd = os.getenv("MKIMG_CMD")
+
         # Try to find makefs and install in the freebsd build dir
         freebsd_builddir = self.source_project.objdir
-        makefs_xtool = freebsd_builddir / "tmp/usr/sbin/makefs"
-        if makefs_xtool.exists():
-            self.makefs_cmd = str(makefs_xtool)
-        mkimg_xtool = freebsd_builddir / "tmp/usr/bin/mkimg"
-        if mkimg_xtool.exists():
-            self.mkimg_cmd = str(mkimg_xtool)
-
-        # On FreeBSD we can use /usr/bin/makefs and /usr/bin/install (assuming FreeBSD version is new enough)
-        if IS_FREEBSD:
-            if not self.makefs_cmd:
-                self.makefs_cmd = shutil.which("makefs")
-            if not self.mkimg_cmd:
-                self.mkimg_cmd = shutil.which("mkimg")
+        if not self.makefs_cmd:
+            makefs_xtool = freebsd_builddir / "tmp/usr/sbin/makefs"
+            if makefs_xtool.exists():
+                self.makefs_cmd = str(makefs_xtool)
+        if not self.mkimg_cmd:
+            mkimg_xtool = freebsd_builddir / "tmp/usr/bin/mkimg"
+            if mkimg_xtool.exists():
+                self.mkimg_cmd = str(mkimg_xtool)
 
         if not self.makefs_cmd:
-            self.fatal("Missing freebsd-install or freebsd-makefs command! Should be found in FreeBSD build dir")
+            self.fatal("Missing makefs command! Should be found in FreeBSD build dir (or set $MAKEFS_CMD)")
         statusUpdate("Disk image will be saved to", self.diskImagePath)
         statusUpdate("Disk image root fs is", self.rootfsDir)
         statusUpdate("Extra files for the disk image will be copied from", self.extraFilesDir)
