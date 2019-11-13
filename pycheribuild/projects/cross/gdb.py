@@ -157,10 +157,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
         if self.make_args.command == "gmake":
             self.configureEnvironment["MAKE"] = "gmake"
 
-        self.hostCC = os.getenv("HOST_CC", str(config.clangPath))
-        self.hostCXX = os.getenv("HOST_CXX", str(config.clangPlusPlusPath))
-        self.configureEnvironment["CC_FOR_BUILD"] = self.hostCC
-        self.configureEnvironment["CXX_FOR_BUILD"] = self.hostCXX
+        self.configureEnvironment["CC_FOR_BUILD"] = os.getenv("HOST_CC", str(self.host_CC))
+        self.configureEnvironment["CXX_FOR_BUILD"] = os.getenv("HOST_CXX", str(self.host_CXX))
         self.configureEnvironment["CFLAGS_FOR_BUILD"] = "-g"
         self.configureEnvironment["CXXFLAGS_FOR_BUILD"] = "-g"
 

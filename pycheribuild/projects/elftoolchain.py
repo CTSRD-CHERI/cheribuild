@@ -54,7 +54,7 @@ class BuildElftoolchain(Project):
         # as we want the build tools to be statically linked but e.g. libarchive might not be available
         # as a static library (e.g. on openSUSE)
         self.make_args.set(SHLIB_MAJOR="", SHLIB_FULLVERSION="",  # don't build shared libraries
-                           CC=str(self.config.clangPath))
+                           CC=str(self.CC))
         self.make_args.set(MK_MAN="no")
 
         if not self.config.verbose:

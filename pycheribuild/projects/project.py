@@ -347,7 +347,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return self.get_crosscompile_target(self.config)
 
     def get_host_triple(self):
-        compiler = getCompilerInfo(self.config.clangPath if self.config.clangPath else shutil.which("cc"))
+        compiler = getCompilerInfo(self.host_CC)
         return compiler.default_target
 
     @property
@@ -361,6 +361,18 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     @property
     def CPP(self):
         return self.target_info.c_preprocessor
+
+    @property
+    def host_CC(self):
+        return TargetInfo.host_c_compiler(self.config)
+
+    @property
+    def host_CXX(self):
+        return TargetInfo.host_cxx_compiler(self.config)
+
+    @property
+    def host_CPP(self):
+        return TargetInfo.host_c_preprocessor(self.config)
 
     @classproperty
     def needs_sysroot(cls):

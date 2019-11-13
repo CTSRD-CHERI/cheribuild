@@ -144,6 +144,27 @@ class TargetInfo(ABC):
         # all other architectures we support currently use 64-bit pointers
         return 8
 
+    @staticmethod
+    def host_c_compiler(config: "CheriConfig") -> Path:
+        if config.use_sdk_clang_for_native_xbuild and not IS_MAC:
+            # SDK clang doesn't work for native builds on macos
+            return config.cheri_sdk_bindir / "clang"
+        return config.clangPath
+
+    @staticmethod
+    def host_cxx_compiler(config: "CheriConfig") -> Path:
+        if config.use_sdk_clang_for_native_xbuild and not IS_MAC:
+            # SDK clang doesn't work for native builds on macos
+            return config.cheri_sdk_bindir / "clang++"
+        return config.clangPlusPlusPath
+
+    @staticmethod
+    def host_c_preprocessor(config: "CheriConfig") -> Path:
+        if config.use_sdk_clang_for_native_xbuild and not IS_MAC:
+            # SDK clang doesn't work for native builds on macos
+            return config.cheri_sdk_bindir / "clang-cpp"
+        return config.clangCppPath
+
 
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     @property
@@ -231,24 +252,15 @@ class NativeTargetInfo(TargetInfo):
 
     @property
     def c_compiler(self) -> Path:
-        if self.config.use_sdk_clang_for_native_xbuild and not IS_MAC:
-            # SDK clang doesn't work for native builds on macos
-            return self.config.cheri_sdk_bindir / "clang"
-        return self.config.clangPath
+        return self.host_c_compiler(self.config)
 
     @property
     def cxx_compiler(self) -> Path:
-        if self.config.use_sdk_clang_for_native_xbuild and not IS_MAC:
-            # SDK clang doesn't work for native builds on macos
-            return self.config.cheri_sdk_bindir / "clang++"
-        return self.config.clangPlusPlusPath
+        return self.host_cxx_compiler(self.config)
 
     @property
     def c_preprocessor(self) -> Path:
-        if self.config.use_sdk_clang_for_native_xbuild and not IS_MAC:
-            # SDK clang doesn't work for native builds on macos
-            return self.config.cheri_sdk_bindir / "clang-cpp"
-        return self.config.clangCppPath
+        return self.host_c_preprocessor(self.config)
 
     @property
     def is_freebsd(self):

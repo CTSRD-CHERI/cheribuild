@@ -108,8 +108,8 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
             CCASFLAGS_FOR_TARGET=target_cflags,
             FLAGS_FOR_TARGET=target_cflags,
             # Some build tools are needed:
-            CC_FOR_BUILD=self.config.clangPath,
-            CXX_FOR_BUILD=self.config.clangPlusPlusPath,
+            CC_FOR_BUILD=self.host_CC,
+            CXX_FOR_BUILD=self.host_CXX,
             # long double is the same as double
             newlib_cv_ldbl_eq_dbl="yes",
             LD_FOR_TARGET=str(bindir / "ld.lld"), LDFLAGS_FOR_TARGET="-fuse-ld=lld",

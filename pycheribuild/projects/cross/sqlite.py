@@ -42,11 +42,8 @@ class BuildSQLite(CrossCompileAutotoolsProject):
         if not self.compiling_for_host():
             if BuildQtWebkit.get_instance(self, config).force_static_linkage:
                 self._linkage = Linkage.STATIC  # make sure it works with webkit
-            if IS_FREEBSD:
-                # For some reason using clang39/clang40 to crossbuild is broken on FreeBSD 11
-                self.configureEnvironment["BUILD_CC"] = "/usr/bin/cc"
-            else:
-                self.configureEnvironment["BUILD_CC"] = self.config.clangPath
+
+            self.configureEnvironment["BUILD_CC"] = self.CC
             self.configureEnvironment["BUILD_CFLAGS"] = "-integrated-as"
             self.configureArgs.extend([
                 "--disable-amalgamation",  # don't concatenate sources

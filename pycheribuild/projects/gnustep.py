@@ -69,8 +69,8 @@ class BuildGnuStep_Make(AutotoolsProject):
             "--with-layout=fhs",  # more traditional file system layout
             "--with-library-combo=ng-gnu-gnu",  # use the new libobjc2 that supports ARC
             "--enable-objc-nonfragile-abi",  # not sure if required but given in install guide
-            "CC=" + str(self.config.clangPath),
-            "CXX=" + str(self.config.clangPlusPlusPath),
+            "CC=" + str(self.CC),
+            "CXX=" + str(self.CXX),
             "LDFLAGS=-Wl,-rpath," + str(self.installDir / "lib")  # add rpath, otherwise everything breaks
         ])
 

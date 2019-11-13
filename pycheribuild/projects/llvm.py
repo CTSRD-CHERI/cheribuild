@@ -71,8 +71,8 @@ class BuildLLVMBase(CMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.cCompiler = config.clangPath
-        self.cppCompiler = config.clangPlusPlusPath
+        self.cCompiler = self.CC
+        self.cppCompiler = self.CXX
         # this must be added after check_system_dependencies
         link_jobs = 2 if self.enable_lto else 4
         if os.cpu_count() >= 24:

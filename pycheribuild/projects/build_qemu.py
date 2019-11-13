@@ -127,7 +127,7 @@ class BuildQEMUBase(AutotoolsProject):
             self.configureArgs.extend(["--disable-linux-aio", "--disable-kvm"])
 
     def configure(self, **kwargs):
-        compiler = self.config.clangPath
+        compiler = self.CC
         if compiler:
             ccinfo = getCompilerInfo(compiler)
             if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
@@ -218,8 +218,8 @@ class BuildQEMUBase(AutotoolsProject):
             "--disable-werror",
             "--disable-pie",  # no need to build as PIE (this just slows down QEMU)
             "--extra-cflags=" + self._extraCFlags,
-            "--cxx=" + str(self.config.clangPlusPlusPath),
-            "--cc=" + str(self.config.clangPath),
+            "--cxx=" + str(self.CXX),
+            "--cc=" + str(self.CPP),
         ])
         if self._extraLDFlags:
             self.configureArgs.append("--extra-ldflags=" + self._extraLDFlags.strip())
