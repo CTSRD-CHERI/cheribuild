@@ -48,7 +48,7 @@ from .projects import *  # make sure all projects are loaded so that targetManag
 from .projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
 from pathlib import Path
 
-DIRS_TO_CHECK_FOR_UPDATES = [Path(__file__).parent]
+DIRS_TO_CHECK_FOR_UPDATES = [Path(__file__).parent.parent]
 
 
 def update_check():
