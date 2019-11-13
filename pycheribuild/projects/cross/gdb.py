@@ -157,8 +157,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
         if self.make_args.command == "gmake":
             self.configureEnvironment["MAKE"] = "gmake"
 
-        self.configureEnvironment["CC_FOR_BUILD"] = os.getenv("HOST_CC", str(self.host_CC))
-        self.configureEnvironment["CXX_FOR_BUILD"] = os.getenv("HOST_CXX", str(self.host_CXX))
+        self.configureEnvironment["CC_FOR_BUILD"] = str(self.host_CC)
+        self.configureEnvironment["CXX_FOR_BUILD"] = str(self.host_CXX)
         self.configureEnvironment["CFLAGS_FOR_BUILD"] = "-g"
         self.configureEnvironment["CXXFLAGS_FOR_BUILD"] = "-g"
 
@@ -166,20 +166,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.add_configure_env_arg("AR", self.sdk_bindir / "ar")
             self.add_configure_env_arg("RANLIB", self.sdk_bindir / "ranlib")
             self.add_configure_env_arg("NM", self.sdk_bindir / "nm")
-        # TODO: do I need these:
-        """(cd $obj; env INSTALL="/usr/bin/install -c "  INSTALL_DATA="install   -m 0644"  INSTALL_LIB="install    -m 444"  INSTALL_PROGRAM="install    -m 555"  INSTALL_SCRIPT="install   -m 555"   PYTHON="${PYTHON}" SHELL=/bin/sh CONFIG_SHELL=/bin/sh CONFIG_SITE=/usr/ports/Templates/config.site ../configure ${CONFIGURE_ARGS} )"""
-
-    @property
-    def CC(self):
-        if IS_MAC and self.compiling_for_host():
-            return shutil.which("gcc")  # For some reason it fails when using /usr/bin/cc
-        return super().CC
-
-    @property
-    def CXX(self):
-        if IS_MAC and self.compiling_for_host():
-            return shutil.which("g++")  # For some reason it fails when using /usr/bin/c++
-        return super().CXX
 
     def configure(self, **kwargs):
         if self.compiling_for_host() and IS_MAC:
