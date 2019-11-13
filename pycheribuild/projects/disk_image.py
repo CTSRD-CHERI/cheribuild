@@ -385,7 +385,7 @@ class _BuildDiskImageBase(SimpleProject):
         return False
 
     def run_mkimg(self, cmd: list, **kwargs):
-        if not self.mkimg_cmd:
+        if not self.mkimg_cmd or not self.mkimg_cmd.exists():
             self.fatal("Missing mkimg command! Should be found in FreeBSD build dir (or set $MKIMG_CMD)")
         self.run_cmd([self.mkimg_cmd] + cmd, **kwargs)
 
@@ -520,6 +520,13 @@ class _BuildDiskImageBase(SimpleProject):
         else:
             self.__process()
 
+    @staticmethod
+    def path_from_env(var, default=None) -> typing.Optional[Path]:
+        s = os.getenv(var)
+        if s:
+            return Path(s)
+        return default
+
     def __process(self):
         if self.diskImagePath.is_dir():
             # Given a directory, derive the default file name inside it
@@ -539,21 +546,21 @@ class _BuildDiskImageBase(SimpleProject):
             self.copyFromRemoteHost()
             return
 
-        self.makefs_cmd = os.getenv("MAKEFS_CMD")
-        self.mkimg_cmd = os.getenv("MKIMG_CMD")
+        self.makefs_cmd = self.path_from_env("MAKEFS_CMD")
+        self.mkimg_cmd = self.path_from_env("MKIMG_CMD")
 
         # Try to find makefs and install in the freebsd build dir
         freebsd_builddir = self.source_project.objdir
         if not self.makefs_cmd:
             makefs_xtool = freebsd_builddir / "tmp/usr/sbin/makefs"
             if makefs_xtool.exists():
-                self.makefs_cmd = str(makefs_xtool)
+                self.makefs_cmd = makefs_xtool
         if not self.mkimg_cmd:
             mkimg_xtool = freebsd_builddir / "tmp/usr/bin/mkimg"
             if mkimg_xtool.exists():
-                self.mkimg_cmd = str(mkimg_xtool)
+                self.mkimg_cmd = mkimg_xtool
 
-        if not self.makefs_cmd:
+        if not self.makefs_cmd or not self.makefs_cmd.exists():
             self.fatal("Missing makefs command! Should be found in FreeBSD build dir (or set $MAKEFS_CMD)")
         statusUpdate("Disk image will be saved to", self.diskImagePath)
         statusUpdate("Disk image root fs is", self.rootfsDir)
