@@ -46,8 +46,8 @@ class BuildCheriOS(CMakeProject):
     @classmethod
     def setup_config_options(cls, useDefaultSysroot=True):
         super().setup_config_options()
-        cls.smp_cores = cls.addConfigOption("smp-cores", default=1, kind=int)
-        cls.build_net = cls.addBoolOption("build-net", default=False)
+        cls.smp_cores = cls.add_config_option("smp-cores", default=1, kind=int)
+        cls.build_net = cls.add_bool_option("build-net", default=False)
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

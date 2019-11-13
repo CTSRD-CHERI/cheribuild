@@ -190,25 +190,25 @@ class BuildLibCXX(CrossCompileCMakeProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.only_compile_tests = cls.addBoolOption("only-compile-tests",
+        cls.only_compile_tests = cls.add_bool_option("only-compile-tests",
                                                    help="Don't attempt to run tests, only compile them")
-        cls.exceptions = cls.addBoolOption("exceptions", default=True, help="Build with support for C++ exceptions")
-        cls.collect_test_binaries = cls.addPathOption("collect-test-binaries", metavar="TEST_PATH",
+        cls.exceptions = cls.add_bool_option("exceptions", default=True, help="Build with support for C++ exceptions")
+        cls.collect_test_binaries = cls.add_path_option("collect-test-binaries", metavar="TEST_PATH",
                                                       help="Instead of running tests copy them to $TEST_PATH")
-        cls.nfs_mounted_path = cls.addPathOption("nfs-mounted-path", metavar="PATH", help="Use a PATH as a directory"
+        cls.nfs_mounted_path = cls.add_path_option("nfs-mounted-path", metavar="PATH", help="Use a PATH as a directory"
                                                                                           "that is NFS mounted inside QEMU instead of using scp to copy "
                                                                                           "individual tests")
-        cls.nfs_path_in_qemu = cls.addPathOption("nfs-mounted-path-in-qemu", metavar="PATH",
+        cls.nfs_path_in_qemu = cls.add_path_option("nfs-mounted-path-in-qemu", metavar="PATH",
                                                  help="The path used inside QEMU to refer to nfs-mounted-path")
-        cls.qemu_host = cls.addConfigOption("ssh-host", help="The QEMU SSH hostname to connect to for running tests",
+        cls.qemu_host = cls.add_config_option("ssh-host", help="The QEMU SSH hostname to connect to for running tests",
                                             default=lambda c, p: "localhost")
-        cls.qemu_port = cls.addConfigOption("ssh-port",
+        cls.qemu_port = cls.add_config_option("ssh-port",
             help="The QEMU SSH port to connect to for running tests", _allow_unknown_targets=True,
             default=lambda c, p: LaunchCheriBSD.get_instance(p, c, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).sshForwardingPort,
             only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS])
-        cls.qemu_user = cls.addConfigOption("ssh-user", default="root", help="The CheriBSD used for running tests")
+        cls.qemu_user = cls.add_config_option("ssh-user", default="root", help="The CheriBSD used for running tests")
 
-        cls.test_jobs = cls.addConfigOption("parallel-test-jobs", help="Number of QEMU instances spawned to run tests "
+        cls.test_jobs = cls.add_config_option("parallel-test-jobs", help="Number of QEMU instances spawned to run tests "
                                                                        "(default: number of build jobs (-j flag) / 2)",
                                             default=lambda c, p: c.makeJobs / 2, kind=int)
 

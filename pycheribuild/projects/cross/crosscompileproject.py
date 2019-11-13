@@ -340,17 +340,17 @@ class CrossCompileMixin(object):
     def setup_config_options(cls, **kwargs):
         assert issubclass(cls, SimpleProject)
         super().setup_config_options(**kwargs)
-        cls.use_lto = cls.addBoolOption("use-lto", help="Build with LTO",)
-        # cls.use_cfi = cls.addBoolOption("use-cfi", help="Build with CFI",
+        cls.use_lto = cls.add_bool_option("use-lto", help="Build with LTO",)
+        # cls.use_cfi = cls.add_bool_option("use-cfi", help="Build with CFI",
         #                                 only_add_for_targets=[CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS])
         cls.use_cfi = False  # doesn't work yet
-        cls._optimizationFlags = cls.addConfigOption("optimization-flags", kind=list, metavar="OPTIONS",
+        cls._optimizationFlags = cls.add_config_option("optimization-flags", kind=list, metavar="OPTIONS",
                                                      default=[])
-        cls.cross_build_type = cls.addConfigOption("cross-build-type",
+        cls.cross_build_type = cls.add_config_option("cross-build-type",
             help="Optimization+debuginfo defaults (supports the same values as CMake plus 'DEFAULT' which does not pass"
                  " any additional flags to the configure script). Note: The overrides the CMake --build-type option.",
             default=cls.default_build_type, kind=BuildType, enum_choice_strings=[t.value for t in BuildType])
-        cls._linkage = cls.addConfigOption("linkage", help="Build static or dynamic (default means for host=dynamic,"
+        cls._linkage = cls.add_config_option("linkage", help="Build static or dynamic (default means for host=dynamic,"
                                                           " CHERI/MIPS=<value of option --cross-compile-linkage>)",
                                            default=Linkage.DEFAULT, kind=Linkage)
 

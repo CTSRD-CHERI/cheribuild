@@ -137,4 +137,4 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options()
-        cls.enable_assertions = cls.addBoolOption("assertions", default=True, help="Build with assertions enabled")
+        cls.enable_assertions = cls.add_bool_option("assertions", default=True, help="Build with assertions enabled")

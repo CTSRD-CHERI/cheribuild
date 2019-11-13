@@ -42,10 +42,10 @@ from enum import Enum
 from pathlib import Path
 
 from ..config.chericonfig import CheriConfig
-from ..config.target_info import CrossCompileTarget, CPUArchitecture, TargetInfo, CompilationTargets
 from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase, DefaultValueOnlyConfigOption
+from ..config.target_info import CrossCompileTarget, CPUArchitecture, TargetInfo, CompilationTargets
 from ..filesystemutils import FileSystemUtils
-from ..targets import Target, MultiArchTarget, MultiArchTargetAlias, Target, targetManager
+from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, targetManager
 from ..utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
@@ -444,11 +444,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                       raiseInPretendMode=raiseInPretendMode, no_print=no_print, replace_env=replace_env, **kwargs)
 
     @classmethod
-    def addConfigOption(cls, name: str, *, show_help=False, shortname=None, _no_fallback_config_name: bool = False,
-                        kind: "typing.Union[typing.Type[Type_T], typing.Callable[[str], Type_T]]" = str,
-                        default: typing.Union[ComputedDefaultValue[Type_T], Type_T, typing.Callable[[], Type_T]] = None,
-                        only_add_for_targets: "typing.List[CrossCompileTarget]" = None,
-                        fallback_config_name: str = None, _allow_unknown_targets=False, **kwargs) -> Type_T:
+    def add_config_option(cls, name: str, *, show_help=False, shortname=None, _no_fallback_config_name: bool = False,
+                          kind: "typing.Union[typing.Type[Type_T], typing.Callable[[str], Type_T]]" = str,
+                          default: typing.Union[ComputedDefaultValue[Type_T], Type_T, typing.Callable[[], Type_T]] = None,
+                          only_add_for_targets: "typing.List[CrossCompileTarget]" = None,
+                          fallback_config_name: str = None, _allow_unknown_targets=False, **kwargs) -> Type_T:
         # Need a string annotation for kind to avoid https://github.com/python/typing/issues/266 which seems to affect
         # the version of python in Ubuntu 16.04
         config_option_key = cls.target
@@ -507,15 +507,15 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                            _fallback_name=fallback_config_name, **kwargs)
 
     @classmethod
-    def addBoolOption(cls, name: str, *, shortname=None, only_add_for_targets: list=None,
-                      default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs) -> bool:
+    def add_bool_option(cls, name: str, *, shortname=None, only_add_for_targets: list = None,
+                        default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs) -> bool:
         # noinspection PyTypeChecker
-        return cls.addConfigOption(name, default=default, kind=bool, shortname=shortname, action="store_true",
+        return cls.add_config_option(name, default=default, kind=bool, shortname=shortname, action="store_true",
                                    only_add_for_targets=only_add_for_targets, **kwargs)
 
     @classmethod
-    def addPathOption(cls, name: str, *, shortname=None, only_add_for_targets: list=None, **kwargs) -> Path:
-        return cls.addConfigOption(name, kind=Path, shortname=shortname, only_add_for_targets=only_add_for_targets,
+    def add_path_option(cls, name: str, *, shortname=None, only_add_for_targets: list = None, **kwargs) -> Path:
+        return cls.add_config_option(name, kind=Path, shortname=shortname, only_add_for_targets=only_add_for_targets,
                                    **kwargs)
 
     __configOptionsSet = dict()  # typing.Dict[Type, bool]
@@ -1419,28 +1419,28 @@ class Project(SimpleProject):
     def setup_config_options(cls, installDirectoryHelp="", **kwargs):
         super().setup_config_options(**kwargs)
         # statusUpdate("Setting up config options for", cls, cls.target)
-        cls.default_source_dir = cls.addPathOption("source-directory", metavar="DIR", default=cls.defaultSourceDir,
+        cls.default_source_dir = cls.add_path_option("source-directory", metavar="DIR", default=cls.defaultSourceDir,
                                                    help="Override default source directory for " + cls.project_name)
-        cls.buildDir = cls.addPathOption("build-directory", metavar="DIR", default=cls.defaultBuildDir,
+        cls.buildDir = cls.add_path_option("build-directory", metavar="DIR", default=cls.defaultBuildDir,
                                          help="Override default source directory for " + cls.project_name)
         if cls.can_build_with_asan:
             asan_default = ComputedDefaultValue(
                 function=lambda config, proj: False if proj.get_crosscompile_target(config).is_cheri_purecap() else proj.default_use_asan,
                 as_string=str(cls.default_use_asan))
-            cls.use_asan = cls.addBoolOption("use-asan", default=asan_default, help="Build with AddressSanitizer enabled")
+            cls.use_asan = cls.add_bool_option("use-asan", default=asan_default, help="Build with AddressSanitizer enabled")
         else:
             cls.use_asan = False
-        cls.skipUpdate = cls.addBoolOption("skip-update",
+        cls.skipUpdate = cls.add_bool_option("skip-update",
                                            default=ComputedDefaultValue(lambda config, proj: config.skipUpdate,
                                                                         "the value of the global --skip-update option"),
                                            help="Override --skip-update/--no-skip-update for this target only ")
 
         if not installDirectoryHelp:
             installDirectoryHelp = "Override default install directory for " + cls.project_name
-        cls._installDir = cls.addPathOption("install-directory", metavar="DIR", help=installDirectoryHelp,
+        cls._installDir = cls.add_path_option("install-directory", metavar="DIR", help=installDirectoryHelp,
                                            default=cls.defaultInstallDir)
         if "repository" in cls.__dict__ and isinstance(cls.repository, GitRepository):
-            cls.gitRevision = cls.addConfigOption("git-revision", metavar="REVISION",
+            cls.gitRevision = cls.add_config_option("git-revision", metavar="REVISION",
                 help="The git revision to checkout prior to building. Useful if HEAD is broken for one "
                      "project but you still want to update the other projects.")
             # TODO: can argparse action be used to store to the class member directly?
@@ -1453,7 +1453,7 @@ class Project(SimpleProject):
             # def __call__(self, parser, namespace, values, option_string=None):
             #     print('%r %r %r' % (namespace, values, option_string))
             #     setattr(namespace, self.dest, values)
-            cls._repositoryUrl = cls.addConfigOption("repository", kind=str, help="The URL of the git repository",
+            cls._repositoryUrl = cls.add_config_option("repository", kind=str, help="The URL of the git repository",
                                                     default=cls.repository.url, metavar="REPOSITORY")
         if "generate_cmakelists" not in cls.__dict__:
             # Make sure not to dereference a parent class descriptor here -> use getattr_static
@@ -1462,7 +1462,7 @@ class Project(SimpleProject):
             if not isinstance(option, bool):
                 assert option is None or isinstance(option, ConfigOptionBase)
                 assert not issubclass(cls, CMakeProject), "generate_cmakelists option needed -> should not be a CMakeProject"
-                cls.generate_cmakelists = cls.addBoolOption("generate-cmakelists",
+                cls.generate_cmakelists = cls.add_bool_option("generate-cmakelists",
                                                         help="Generate a CMakeLists.txt that just calls cheribuild. "
                                                              "Useful for IDEs that only support CMake")
             else:
@@ -1819,9 +1819,9 @@ class CMakeProject(Project):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.cmakeBuildType = cls.addConfigOption("build-type", default=cls.defaultCMakeBuildType, metavar="BUILD_TYPE",
+        cls.cmakeBuildType = cls.add_config_option("build-type", default=cls.defaultCMakeBuildType, metavar="BUILD_TYPE",
                                                  help="The CMake build type (Debug, RelWithDebInfo, Release)")
-        cls.cmakeOptions = cls.addConfigOption("cmake-options", default=[], kind=list, metavar="OPTIONS",
+        cls.cmakeOptions = cls.add_config_option("cmake-options", default=[], kind=list, metavar="OPTIONS",
                                                help="Additional command line options to pass to CMake")
 
     def __init__(self, config, generator=Generator.Ninja):
@@ -1947,7 +1947,7 @@ class AutotoolsProject(Project):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.extraConfigureFlags = cls.addConfigOption("configure-options", default=[], kind=list, metavar="OPTIONS",
+        cls.extraConfigureFlags = cls.add_config_option("configure-options", default=[], kind=list, metavar="OPTIONS",
                                                       help="Additional command line options to pass to configure")
 
     """

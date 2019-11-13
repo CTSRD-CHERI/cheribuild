@@ -51,7 +51,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.locale_support = cls.addBoolOption("locale-support", show_help=False, help="Build with locale support")
+        cls.locale_support = cls.add_bool_option("locale-support", show_help=False, help="Build with locale support")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

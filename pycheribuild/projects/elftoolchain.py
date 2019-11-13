@@ -72,8 +72,8 @@ class BuildElftoolchain(Project):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.build_ar = cls.addBoolOption("build-ar", default=True, help="build the ar/ranlib programs")
-        cls.build_static = cls.addBoolOption("build-static", help="Try to link elftoolchain statically "
+        cls.build_ar = cls.add_bool_option("build-ar", default=True, help="build the ar/ranlib programs")
+        cls.build_static = cls.add_bool_option("build-static", help="Try to link elftoolchain statically "
                                                                   "(needs patches on Linux)")
 
     def check_system_dependencies(self):

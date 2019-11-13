@@ -70,8 +70,8 @@ class BuildJulietCWESubdir(CrossCompileCMakeProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.testcase_timeout = cls.addConfigOption("testcase-timeout", kind=str)
-        cls.ld_preload_path = cls.addConfigOption("ld-preload-path", kind=str)
+        cls.testcase_timeout = cls.add_config_option("testcase-timeout", kind=str)
+        cls.ld_preload_path = cls.add_config_option("ld-preload-path", kind=str)
 
     def configure(self, **kwargs):
         self.add_cmake_options(PLACE_OUTPUT_IN_TOPLEVEL_DIR=False)

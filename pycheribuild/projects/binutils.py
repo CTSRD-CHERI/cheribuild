@@ -44,7 +44,7 @@ class BuildGnuBinutils(AutotoolsProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options()
-        cls.fullInstall = cls.addBoolOption("install-all-tools", help="Whether to install all binutils tools instead"
+        cls.fullInstall = cls.add_bool_option("install-all-tools", help="Whether to install all binutils tools instead"
                                                                       "of only as, ld and objdump")
 
     def __init__(self, config: CheriConfig):

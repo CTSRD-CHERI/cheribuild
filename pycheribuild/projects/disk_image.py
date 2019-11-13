@@ -79,24 +79,24 @@ class _BuildDiskImageBase(SimpleProject):
     @classmethod
     def setup_config_options(cls, *, defaultHostname, extraFilesShortname=None, extraFilesSuffix="", **kwargs):
         super().setup_config_options()
-        cls.extraFilesDir = cls.addPathOption("extra-files",
+        cls.extraFilesDir = cls.add_path_option("extra-files",
             shortname=extraFilesShortname, show_help=True,
             default=lambda config, project: (config.sourceRoot / ("extra-files" + extraFilesSuffix)),
             help="A directory with additional files that will be added to the image (default: "
                  "'$SOURCE_ROOT/extra-files" + extraFilesSuffix + "')", metavar="DIR")
-        cls.hostname = cls.addConfigOption("hostname", show_help=True, default=defaultHostname, metavar="HOSTNAME",
+        cls.hostname = cls.add_config_option("hostname", show_help=True, default=defaultHostname, metavar="HOSTNAME",
                                            help="The hostname to use for the QEMU image")
         if "useQCOW2" not in cls.__dict__:
-            cls.useQCOW2 = cls.addBoolOption("use-qcow2", help="Convert the disk image to QCOW2 format instead of raw")
+            cls.useQCOW2 = cls.add_bool_option("use-qcow2", help="Convert the disk image to QCOW2 format instead of raw")
         if not IS_FREEBSD:
-            cls.remotePath = cls.addConfigOption("remote-path", show_help=True, metavar="PATH", help="The path on the "
+            cls.remotePath = cls.add_config_option("remote-path", show_help=True, metavar="PATH", help="The path on the "
                                                  "remote FreeBSD machine from where to copy the disk image")
-        cls.wget_via_tmp = cls.addBoolOption("wget-via-tmp",
+        cls.wget_via_tmp = cls.add_bool_option("wget-via-tmp",
                                 help="Use a directory in /tmp for recursive wget operations;"
                                       "of interest in rare cases, like extra-files on smbfs.")
-        cls.include_gdb = cls.addBoolOption("include-gdb", default=True, help="Include GDB in the disk image (if it exists)")
+        cls.include_gdb = cls.add_bool_option("include-gdb", default=True, help="Include GDB in the disk image (if it exists)")
         assert cls.default_disk_image_path is not None
-        cls.diskImagePath = cls.addPathOption("path", default=cls.default_disk_image_path, metavar="IMGPATH",
+        cls.diskImagePath = cls.add_path_option("path", default=cls.default_disk_image_path, metavar="IMGPATH",
                                               help="The output path for the QEMU disk image", show_help=True)
         cls.disableTMPFS = None
 
@@ -663,11 +663,11 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             as_string="qemu-cheri${CHERI_BITS}-" + hostUsername)
 
         super().setup_config_options(defaultHostname=defaultHostname, extraFilesSuffix="-minimal", **kwargs)
-        cls.strip_binaries = cls.addBoolOption("strip", default=True,
+        cls.strip_binaries = cls.add_bool_option("strip", default=True,
                                                help="strip ELF files to reduce size of generated image")
-        cls.include_cheritest = cls.addBoolOption("include-cheritest", default=True,
+        cls.include_cheritest = cls.add_bool_option("include-cheritest", default=True,
                                                   help="Also add cheritest/cheriabitest to the disk image")
-        cls.use_cheribsd_purecap_rootfs = cls.addBoolOption("use-cheribsd-purecap-rootfs", default=False,
+        cls.use_cheribsd_purecap_rootfs = cls.add_bool_option("use-cheribsd-purecap-rootfs", default=False,
                                                             help="Use the rootfs built by cheribsd-purecap instead")
 
     def __init__(self, config: CheriConfig):
@@ -840,7 +840,7 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
             extra_files_shortname = "-extra-files"
 
         super().setup_config_options(extraFilesShortname=extra_files_shortname, defaultHostname=defaultHostname, **kwargs)
-        cls.disableTMPFS = cls.addBoolOption("disable-tmpfs", shortname=tmpfs_shortname,
+        cls.disableTMPFS = cls.add_bool_option("disable-tmpfs", shortname=tmpfs_shortname,
                                              help="Don't make /tmp a TMPFS mount in the CHERIBSD system image."
                                                   " This is a workaround in case TMPFS is not working correctly")
 
@@ -870,7 +870,7 @@ class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
             function=lambda conf, unused: "qemu-purecap" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
             as_string="qemu-purecap${CHERI_BITS}-" + hostUsername)
         super().setup_config_options(defaultHostname=defaultHostname, **kwargs)
-        cls.disableTMPFS = cls.addBoolOption("disable-tmpfs",
+        cls.disableTMPFS = cls.add_bool_option("disable-tmpfs",
                                              help="Don't make /tmp a TMPFS mount in the CHERIBSD system image."
                                                   " This is a workaround in case TMPFS is not working correctly")
 

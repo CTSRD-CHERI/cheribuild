@@ -41,11 +41,11 @@ class LaunchFPGABase(SimpleProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.extra_base_options = cls.addConfigOption("extra-options", default=[], kind=list, metavar="OPTIONS",
+        cls.extra_base_options = cls.add_config_option("extra-options", default=[], kind=list, metavar="OPTIONS",
                                                      help="Additional command line flags to pass to beri-fpga-bsd-boot")
-        cls.extra_bootonly_options = cls.addConfigOption("extra-boot-options", default=[], kind=list, metavar="OPTIONS",
+        cls.extra_bootonly_options = cls.add_config_option("extra-boot-options", default=[], kind=list, metavar="OPTIONS",
                                                          help="Additional command line flags to pass to the bootonly subcommand of beri-fpga-bsd-boot")
-        cls.attach_only = cls.addBoolOption("attach-only", help="Connect to console instead of booting.")
+        cls.attach_only = cls.add_bool_option("attach-only", help="Connect to console instead of booting.")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -98,9 +98,9 @@ class LaunchCheriBSDOnFGPA(LaunchFPGABase):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.benchmark_kernel = cls.addBoolOption("benchmark-kernel",
+        cls.benchmark_kernel = cls.add_bool_option("benchmark-kernel",
                                                  help="Use the benchmark kernel instead of one with assertions enabled.")
-        cls.kernel_image = cls.addConfigOption("kernel-image", kind=Path, help="Override the kernel image to boot")
+        cls.kernel_image = cls.add_config_option("kernel-image", kind=Path, help="Override the kernel image to boot")
 
     def process(self):
         from .cross.cheribsd import BuildCheriBsdMfsKernel

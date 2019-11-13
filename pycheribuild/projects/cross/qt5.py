@@ -58,11 +58,11 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.build_tests = cls.addBoolOption("build-tests", show_help=True, help="build the Qt unit tests")
-        cls.build_examples = cls.addBoolOption("build-examples", show_help=True, help="build the Qt examples")
-        cls.assertions = cls.addBoolOption("assertions", default=False, show_help=True, help="Include assertions")
-        cls.minimal = cls.addBoolOption("minimal", show_help=True, help="Don't build QtWidgets or QtGui, etc")
-        cls.optimized_debug_build = cls.addBoolOption("optimized-debug-build",
+        cls.build_tests = cls.add_bool_option("build-tests", show_help=True, help="build the Qt unit tests")
+        cls.build_examples = cls.add_bool_option("build-examples", show_help=True, help="build the Qt examples")
+        cls.assertions = cls.add_bool_option("assertions", default=False, show_help=True, help="Include assertions")
+        cls.minimal = cls.add_bool_option("minimal", show_help=True, help="Don't build QtWidgets or QtGui, etc")
+        cls.optimized_debug_build = cls.add_bool_option("optimized-debug-build",
                                                       help="Don't build with -Os instead of -O0 for debug info builds")
 
     def configure(self, **kwargs):
@@ -194,7 +194,7 @@ class BuildQt5(BuildQtWithConfigureScript):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.allModules = cls.addBoolOption("all-modules", show_help=True,
+        cls.allModules = cls.add_bool_option("all-modules", show_help=True,
                                           help="Build all modules (even those that don't make sense for CHERI)")
 
     def configure(self, **kwargs):
@@ -397,7 +397,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.build_jsc_only = cls.addBoolOption("build-jsc-only", show_help=True, help="only build the JavaScript interpreter executable")
+        cls.build_jsc_only = cls.add_bool_option("build-jsc-only", show_help=True, help="only build the JavaScript interpreter executable")
 
     def compile(self, **kwargs):
         # Generate the shared mime info cache to MASSIVELY speed up tests

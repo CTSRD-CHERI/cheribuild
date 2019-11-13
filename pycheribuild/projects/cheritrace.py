@@ -39,7 +39,7 @@ class BuildCheriTrace(CMakeProject):
     @classmethod
     def setup_config_options(cls):
         super().setup_config_options()
-        cls.include_python_bindings = cls.addBoolOption("python-bindings")
+        cls.include_python_bindings = cls.add_bool_option("python-bindings")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

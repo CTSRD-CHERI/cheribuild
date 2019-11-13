@@ -73,7 +73,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.cheri_hybrid = cls.addBoolOption(
+        cls.cheri_hybrid = cls.add_bool_option(
             "use-cheri-hybrid", only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS], default=True,
             help="Build against a hybrid sysroot (required for faulting capability register number support)",
             )

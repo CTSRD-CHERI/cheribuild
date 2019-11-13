@@ -51,18 +51,18 @@ class BuildQEMUBase(AutotoolsProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options()
-        cls.debug_info = cls.addBoolOption("debug-info")
-        cls.with_sanitizers = cls.addBoolOption("sanitizers", help="Build QEMU with ASAN/UBSAN (very slow)", default=False)
+        cls.debug_info = cls.add_bool_option("debug-info")
+        cls.with_sanitizers = cls.add_bool_option("sanitizers", help="Build QEMU with ASAN/UBSAN (very slow)", default=False)
 
-        cls.use_smbd = cls.addBoolOption("use-smbd", show_help=False, default=True,
+        cls.use_smbd = cls.add_bool_option("use-smbd", show_help=False, default=True,
                                          help="Don't require SMB support when building QEMU (warning: most --test "
                                               "targets will fail without smbd support)")
 
-        cls.gui = cls.addBoolOption("gui", show_help=True, default=False,
+        cls.gui = cls.add_bool_option("gui", show_help=True, default=False,
                                     help="Build a the graphical UI bits for QEMU (SDL,VNC)")
-        cls.lto = cls.addBoolOption("use-lto", show_help=True,
+        cls.lto = cls.add_bool_option("use-lto", show_help=True,
                                     help="Try to build QEMU with link-time optimization if possible", default=True)
-        cls.qemu_targets = cls.addConfigOption("targets",
+        cls.qemu_targets = cls.add_config_option("targets",
             show_help=True, help="Build QEMU for the following targets", default=cls.default_targets)
 
     @classmethod
@@ -248,11 +248,11 @@ class BuildQEMU(BuildQEMUBase):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options()
-        cls.magic128 = cls.addBoolOption("magic-128")
+        cls.magic128 = cls.add_bool_option("magic-128")
         # Turn on unaligned loads/stores by default
-        cls.unaligned = cls.addBoolOption("unaligned", show_help=True, help="Permit un-aligned loads/stores",
+        cls.unaligned = cls.add_bool_option("unaligned", show_help=True, help="Permit un-aligned loads/stores",
                                           default=True)
-        cls.statistics = cls.addBoolOption("statistics", show_help=True,
+        cls.statistics = cls.add_bool_option("statistics", show_help=True,
                                            help="Collect statistics on out-of-bounds capability creation.")
 
     @classmethod

@@ -53,24 +53,24 @@ class LaunchQEMUBase(SimpleProject):
     @classmethod
     def setup_config_options(cls, sshPortShortname: "typing.Optional[str]", defaultSshPort: int=None, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.extraOptions = cls.addConfigOption("extra-options", default=[], kind=list, metavar="QEMU_OPTIONS",
+        cls.extraOptions = cls.add_config_option("extra-options", default=[], kind=list, metavar="QEMU_OPTIONS",
                                                help="Additional command line flags to pass to qemu-system-cheri")
-        cls.logfile = cls.addPathOption("logfile", default=None, metavar="LOGFILE",
+        cls.logfile = cls.add_path_option("logfile", default=None, metavar="LOGFILE",
                                         help="The logfile that QEMU should use.")
-        cls.logDir = cls.addPathOption("log-directory", default=None, metavar="DIR",
+        cls.logDir = cls.add_path_option("log-directory", default=None, metavar="DIR",
                                        help="If set QEMU will log to a timestamped file in this directory. Will be "
                                             "ignored if the 'logfile' option is set")
-        cls.useTelnet = cls.addConfigOption("monitor-over-telnet", kind=int, metavar="PORT", show_help=True,
+        cls.useTelnet = cls.add_config_option("monitor-over-telnet", kind=int, metavar="PORT", show_help=True,
                                             help="If set, the QEMU monitor will be reachable by connecting to localhost"
                                                  "at $PORT via telnet instead of using CTRL+A,C")
 
-        cls.custom_qemu_smb_mount = cls.addPathOption("smb-host-directory", default=None, metavar="DIR",
+        cls.custom_qemu_smb_mount = cls.add_path_option("smb-host-directory", default=None, metavar="DIR",
                                                       help="If set QEMU will provide this directory over smb with the "
                                                             "name //10.0.2.4/qemu for use with mount_smbfs")
-        cls.cvtrace = cls.addBoolOption("cvtrace", help="Use binary trace output instead of textual")
+        cls.cvtrace = cls.add_bool_option("cvtrace", help="Use binary trace output instead of textual")
         # TODO: -s will no longer work, not sure anyone uses it though
         if cls._forwardSSHPort:
-            cls.sshForwardingPort = cls.addConfigOption("ssh-forwarding-port", shortname=sshPortShortname, kind=int,
+            cls.sshForwardingPort = cls.add_config_option("ssh-forwarding-port", shortname=sshPortShortname, kind=int,
                                                         default=defaultSshPort, metavar="PORT", show_help=True,
                                                         help="The port on localhost to forward to the QEMU ssh port. "
                                                              "You can then use `ssh root@localhost -p $PORT` connect "
@@ -225,10 +225,10 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         if not IS_FREEBSD:
-            cls.remoteKernelPath = cls.addConfigOption("remote-kernel-path", show_help=True,
+            cls.remoteKernelPath = cls.add_config_option("remote-kernel-path", show_help=True,
                                                        help="Path to the FreeBSD kernel image on a remote host. "
                                                             "Needed because FreeBSD cannot be cross-compiled.")
-            cls.skipKernelUpdate = cls.addBoolOption("skip-kernel-update", show_help=True,
+            cls.skipKernelUpdate = cls.add_bool_option("skip-kernel-update", show_help=True,
                                                      help="Don't update the kernel from the remote host")
 
     def __init__(self, config: CheriConfig, source_class: type(BuildFreeBSD)=None,

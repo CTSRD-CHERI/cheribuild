@@ -66,12 +66,12 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.use_valgrind = cls.addBoolOption("use-valgrind", help="Run tests using valgrind (native only)",
+        cls.use_valgrind = cls.add_bool_option("use-valgrind", help="Run tests using valgrind (native only)",
                                              only_add_for_targets=[CompilationTargets.NATIVE])
-        cls.use_stack_protector = cls.addBoolOption("use-stack-protector", help="Compile tests with stack-protector (non-CHERI only)")
-        cls.use_fortify_source = cls.addBoolOption("use-fortify-source", help="Compile tests with _DFORTIFY_SOURCE=2 (no effect on FreeBSD)")
-        cls.use_softboundcets = cls.addBoolOption("use-softboundcets", help="Compile tests with SoftBoundCETS (native only)", only_add_for_targets=[CompilationTargets.NATIVE])
-        cls.use_effectivesan = cls.addBoolOption("use-effectivesan", help="Compile tests with EffectiveSan (native only)", only_add_for_targets=[CompilationTargets.NATIVE])
+        cls.use_stack_protector = cls.add_bool_option("use-stack-protector", help="Compile tests with stack-protector (non-CHERI only)")
+        cls.use_fortify_source = cls.add_bool_option("use-fortify-source", help="Compile tests with _DFORTIFY_SOURCE=2 (no effect on FreeBSD)")
+        cls.use_softboundcets = cls.add_bool_option("use-softboundcets", help="Compile tests with SoftBoundCETS (native only)", only_add_for_targets=[CompilationTargets.NATIVE])
+        cls.use_effectivesan = cls.add_bool_option("use-effectivesan", help="Compile tests with EffectiveSan (native only)", only_add_for_targets=[CompilationTargets.NATIVE])
 
 
     @property

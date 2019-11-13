@@ -43,33 +43,33 @@ class DLMalloc(CrossCompileProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
 
-        cls.just_so          = cls.addBoolOption("just-so", help="Just build the .so shim")
-        cls.debug            = cls.addBoolOption("debug", help="Turn on debugging features")
+        cls.just_so          = cls.add_bool_option("just-so", help="Just build the .so shim")
+        cls.debug            = cls.add_bool_option("debug", help="Turn on debugging features")
 
-        cls.cheri_set_bounds = cls.addBoolOption("cheri-bounds", default=True, help="Set bounds on allocations")
+        cls.cheri_set_bounds = cls.add_bool_option("cheri-bounds", default=True, help="Set bounds on allocations")
 
-        cls.qmabs            = cls.addConfigOption("qmabs", kind=int,
+        cls.qmabs            = cls.add_config_option("qmabs", kind=int,
                                                    help="Quarantine memory absolute threshold")
 
-        cls.qmratio          = cls.addConfigOption("qmratio", kind=float,
+        cls.qmratio          = cls.add_config_option("qmratio", kind=float,
                                                    help="Quarantine memory ratio threshold")
 
-        cls.qmmin            = cls.addConfigOption("qmmin", kind=int,
+        cls.qmmin            = cls.add_config_option("qmmin", kind=int,
                                                    help="Minimum amount quarantined to trigger a revocation based on ratio")
 
-        cls.revoke           = cls.addBoolOption("revoke", help="Revoke quarantine before reusing")
+        cls.revoke           = cls.add_bool_option("revoke", help="Revoke quarantine before reusing")
 
-        cls.consolidate_on_free = cls.addBoolOption("consolidate", default=True, help="Consolidate memory when quarantining")
+        cls.consolidate_on_free = cls.add_bool_option("consolidate", default=True, help="Consolidate memory when quarantining")
 
-        cls.zero_memory      = cls.addBoolOption("zero-memory", help="Zero allocated memory")
+        cls.zero_memory      = cls.add_bool_option("zero-memory", help="Zero allocated memory")
 
-        cls.stats_at_exit    = cls.addBoolOption("stats-at-exit", default=True, help="print statistics on exit")
+        cls.stats_at_exit    = cls.add_bool_option("stats-at-exit", default=True, help="print statistics on exit")
 
-        cls.unmap_support    = cls.addBoolOption("unmap-support", default=True, help="support for unmapping")
+        cls.unmap_support    = cls.add_bool_option("unmap-support", default=True, help="support for unmapping")
 
-        cls.unmap_threshold  = cls.addConfigOption("unmap-threshold", kind=int,
+        cls.unmap_threshold  = cls.add_config_option("unmap-threshold", kind=int,
                                                    help="Threshold (in pages) at which interior pages of quanantined chunks are unmapped")
-        cls.quar_unsafe      = cls.addBoolOption("unsafe-quarantine",
+        cls.quar_unsafe      = cls.add_bool_option("unsafe-quarantine",
                                                  help="Don't isolate quarantine structures")
 
     def __init__(self, config: CheriConfig, *args, **kwargs):

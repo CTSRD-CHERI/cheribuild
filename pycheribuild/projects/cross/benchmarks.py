@@ -50,7 +50,7 @@ class BuildMibench(CrossCompileProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.benchmark_size = cls.addConfigOption("benchmark-size", choices=("small", "large"), default="large",
+        cls.benchmark_size = cls.add_config_option("benchmark-size", choices=("small", "large"), default="large",
                                                  kind=str, help="Size of benchmark input data to use")
 
     @property
@@ -245,13 +245,13 @@ class BuildSpec2006(CrossCompileProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.ctsrd_evaluation_trunk = cls.addPathOption("ctsrd-evaluation-trunk", default="/you/must/set --spec2006/ctsrd-evaluation-trunk config option",
+        cls.ctsrd_evaluation_trunk = cls.add_path_option("ctsrd-evaluation-trunk", default="/you/must/set --spec2006/ctsrd-evaluation-trunk config option",
                                                         help="Path to the CTSRD evaluation/trunk svn checkout")
-        cls.ctsrd_evaluation_vendor = cls.addPathOption("ctsrd-evaluation-vendor",
+        cls.ctsrd_evaluation_vendor = cls.add_path_option("ctsrd-evaluation-vendor",
                                                         default="/you/must/set --spec2006/ctsrd-evaluation-vendor config option",
                                                         help="Path to the CTSRD evaluation/vendor svn checkout")
-        cls.fast_benchmarks_only = cls.addBoolOption("fast-benchmarks-only", default=False)
-        cls.benchmark_override = cls.addConfigOption("benchmarks", default=[], kind=list, help="override the list of benchmarks to run")
+        cls.fast_benchmarks_only = cls.add_bool_option("fast-benchmarks-only", default=False)
+        cls.benchmark_override = cls.add_config_option("benchmarks", default=[], kind=list, help="override the list of benchmarks to run")
 
     @property
     def config_name(self):

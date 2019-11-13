@@ -47,26 +47,26 @@ class BuildLLVMBase(CMakeProject):
     def setup_config_options(cls, useDefaultSysroot=True):
         super().setup_config_options()
         if "included_projects" not in cls.__dict__:
-            cls.included_projects = cls.addConfigOption("include-projects", default=["llvm", "clang", "lld"], kind=list,
+            cls.included_projects = cls.add_config_option("include-projects", default=["llvm", "clang", "lld"], kind=list,
                                                         help="List of LLVM subprojects that should be built")
 
         if useDefaultSysroot:
-            cls.add_default_sysroot = cls.addBoolOption("add-default-sysroot", help="Set default sysroot and "
+            cls.add_default_sysroot = cls.add_bool_option("add-default-sysroot", help="Set default sysroot and "
                                                                                     "target triple to include "
                                                                                     "cheribsd paths", )
         else:
             cls.add_default_sysroot = False
 
-        cls.enable_assertions = cls.addBoolOption("assertions", help="build with assertions enabled", default=True)
-        cls.enable_lto = cls.addBoolOption("enable-lto", help="build with LTO enabled (experimental)")
+        cls.enable_assertions = cls.add_bool_option("assertions", help="build with assertions enabled", default=True)
+        cls.enable_lto = cls.add_bool_option("enable-lto", help="build with LTO enabled (experimental)")
         if "skip_static_analyzer" not in cls.__dict__:
-            cls.skip_static_analyzer = cls.addBoolOption("skip-static-analyzer", default=True,
+            cls.skip_static_analyzer = cls.add_bool_option("skip-static-analyzer", default=True,
                                                          help="Don't build the clang static analyzer")
         if "skip_misc_llvm_tools" not in cls.__dict__:
-            cls.skip_misc_llvm_tools = cls.addBoolOption("skip-unused-tools", default=True,
+            cls.skip_misc_llvm_tools = cls.add_bool_option("skip-unused-tools", default=True,
                                                          help="Don't build some of the LLVM tools that should not be "
                                                               "needed by default (e.g. llvm-mca, llvm-pdbutil)")
-        cls.build_everything = cls.addBoolOption("build-everything", default=False,
+        cls.build_everything = cls.add_bool_option("build-everything", default=False,
                                                  help="Also build documentation,examples and bindings")
 
     def __init__(self, config: CheriConfig):
@@ -312,9 +312,9 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
         super().setup_config_options(useDefaultSysroot=useDefaultSysroot)
 
         def addToolOptions(name):
-            rev = cls.addConfigOption(name + "-git-revision", kind=str, metavar="REVISION",
+            rev = cls.add_config_option(name + "-git-revision", kind=str, metavar="REVISION",
                                       help="The git revision for tools/" + name)
-            repo = cls.addConfigOption(name + "-repository", kind=str, metavar="REPOSITORY",
+            repo = cls.add_config_option(name + "-repository", kind=str, metavar="REPOSITORY",
                                        default=cls.githubBaseUrl + name + ".git",
                                        help="The git repository for tools/" + name)
             return repo, rev

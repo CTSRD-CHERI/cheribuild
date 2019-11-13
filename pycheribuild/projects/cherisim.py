@@ -57,8 +57,8 @@ class BuildCheriSim(Project):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.build_fpu = cls.addBoolOption("fpu", default=True, help="include the FPU code")
-        cls.build_cheri = cls.addBoolOption("cheri", default=True, help="include the CHERI code in the simulator. If false build BERI")
+        cls.build_fpu = cls.add_bool_option("fpu", default=True, help="include the FPU code")
+        cls.build_cheri = cls.add_bool_option("cheri", default=True, help="include the CHERI code in the simulator. If false build BERI")
 
     def clean(self):
         self.runMake("clean", parallel=False, cwd=self.sourceDir)

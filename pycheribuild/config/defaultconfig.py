@@ -66,22 +66,22 @@ class DefaultCheriConfig(CheriConfig):
         self.getConfigOption = loader.addOption("get-config-option", type=str, metavar="KEY", group=loader.actionGroup,
                                                 help="Print the value of config option KEY and exit")
         # boolean flags
-        self.quiet = loader.addBoolOption("quiet", "q", help="Don't show stdout of the commands that are executed")
-        self.verbose = loader.addBoolOption("verbose", "v", help="Print all commmands that are executed")
-        self.clean = loader.addBoolOption("clean", "c", help="Remove the build directory before build")
-        self.force = loader.addBoolOption("force", "f", help="Don't prompt for user input but use the default action")
-        self.write_logfile = loader.addBoolOption("logfile", help="Don't write a logfile for the build steps", default=False)
-        self.skipUpdate = loader.addBoolOption("skip-update", help="Skip the git pull step")
+        self.quiet = loader.add_bool_option("quiet", "q", help="Don't show stdout of the commands that are executed")
+        self.verbose = loader.add_bool_option("verbose", "v", help="Print all commmands that are executed")
+        self.clean = loader.add_bool_option("clean", "c", help="Remove the build directory before build")
+        self.force = loader.add_bool_option("force", "f", help="Don't prompt for user input but use the default action")
+        self.write_logfile = loader.add_bool_option("logfile", help="Don't write a logfile for the build steps", default=False)
+        self.skipUpdate = loader.add_bool_option("skip-update", help="Skip the git pull step")
         self.skipClone = False
-        self.force_update = loader.addBoolOption("force-update", help="Always update (with autostash) even if there "
+        self.force_update = loader.add_bool_option("force-update", help="Always update (with autostash) even if there "
                                                                       "are uncommitted changes")
-        self.skipConfigure = loader.addBoolOption("skip-configure", help="Skip the configure step",
+        self.skipConfigure = loader.add_bool_option("skip-configure", help="Skip the configure step",
                                                   group=loader.configureGroup)
-        self.forceConfigure = loader.addBoolOption("reconfigure", "-force-configure",
+        self.forceConfigure = loader.add_bool_option("reconfigure", "-force-configure",
                                                    group=loader.configureGroup,
                                                    help="Always run the configure step, even for CMake projects with a "
                                                         "valid cache.")
-        self.includeDependencies = loader.addBoolOption("include-dependencies", "d",
+        self.includeDependencies = loader.add_bool_option("include-dependencies", "d",
                                                         help="Also build the dependencies "
                                                              "of targets passed on the command line. Targets passed on the"
                                                              "command line will be reordered and processed in an order that "
@@ -104,26 +104,26 @@ class DefaultCheriConfig(CheriConfig):
         self.copy_compilation_db_to_source_dir = loader.addCommandLineOnlyBoolOption("compilation-db-in-source-dir",
             help="Generate a compile_commands.json and also copy it to the source directory")
 
-        self.crossCompileForMips = loader.addBoolOption("cross-compile-for-mips", "-xmips", group=loader.crossCompileGroup,
+        self.crossCompileForMips = loader.add_bool_option("cross-compile-for-mips", "-xmips", group=loader.crossCompileGroup,
                                                         help="Make cross compile projects target MIPS hybrid ABI "
                                                              "instead of CheriABI")
-        self.crossCompileForHost = loader.addBoolOption("cross-compile-for-host", "-xhost", group=loader.crossCompileGroup,
+        self.crossCompileForHost = loader.add_bool_option("cross-compile-for-host", "-xhost", group=loader.crossCompileGroup,
                                                         help="Make cross compile projects target the host system and "
                                                              "use cheri clang to compile (tests that we didn't break x86)")
 
-        self.makeWithoutNice = loader.addBoolOption("make-without-nice", help="Run make/ninja without nice(1)")
+        self.makeWithoutNice = loader.add_bool_option("make-without-nice", help="Run make/ninja without nice(1)")
 
         self.makeJobs = loader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
                                          help="Number of jobs to use for compiling")
 
         # configurable paths
-        self.sourceRoot = loader.addPathOption("source-root",
+        self.sourceRoot = loader.add_path_option("source-root",
             default=Path(os.path.expanduser("~/cheri")), group=loader.pathGroup,
             help="The directory to store all sources")
-        self.outputRoot = loader.addPathOption("output-root",
+        self.outputRoot = loader.add_path_option("output-root",
             default=lambda p, cls: (p.sourceRoot / "output"), group=loader.pathGroup,
             help="The directory to store all output (default: '<SOURCE_ROOT>/output')")
-        self.buildRoot = loader.addPathOption("build-root",
+        self.buildRoot = loader.add_path_option("build-root",
             default=lambda p, cls: (p.sourceRoot / "build"), group=loader.pathGroup,
             help="The directory for all the builds (default: '<SOURCE_ROOT>/build')")
         loader.finalizeOptions(availableTargets)
