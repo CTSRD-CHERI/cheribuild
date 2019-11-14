@@ -219,7 +219,7 @@ class BuildQEMUBase(AutotoolsProject):
             "--disable-pie",  # no need to build as PIE (this just slows down QEMU)
             "--extra-cflags=" + self._extraCFlags,
             "--cxx=" + str(self.CXX),
-            "--cc=" + str(self.CPP),
+            "--cc=" + str(self.CC),
         ])
         if self._extraLDFlags:
             self.configureArgs.append("--extra-ldflags=" + self._extraLDFlags.strip())
