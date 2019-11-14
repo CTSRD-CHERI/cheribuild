@@ -39,6 +39,13 @@ class BuildGo(Project):
     skip_cheri_symlinks = True
     native_install_dir = DefaultInstallDir.CHERI_SDK
 
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.go_bootstrap = cls.add_path_option(
+            "bootstrap-toolchain", show_help=True,
+            help="Path to alternate go bootstrap toolchain.")
+
     def __init__(self, config: CheriConfig):
         super().__init__(config)
 
@@ -50,20 +57,23 @@ class BuildGo(Project):
 
     def build_dir_for_target(self, target: CrossCompileTarget):
         return self.sourceDir / "pkg"
-    
-    def process(self):
-        if not self.config.skipUpdate:
-            self.update()
+
+    def compile(self):
         env = {
             "GOROOT_FINAL": self.gorootDir,
         }
+        if self.go_bootstrap:
+            env["GOROOT_BOOTSTRAP"] = self.go_bootstrap
+
         cmd = "bash make.bash".split()
+        if self.config.verbose:
+            cmd += ["-v"]
         self.run_cmd(cmd, cwd=self.makeDir, env=env)
-        self.install()
 
     def clean(self) -> ThreadJoiner:
         self.run_cmd("bash clean.bash".split(), cwd=self.makeDir)
-        return ThreadJoiner(None)
+        joiner = super().clean()
+        return joiner
 
     def install(self, **kwargs):
         # Move bin and pkg to goroot and link src dir
