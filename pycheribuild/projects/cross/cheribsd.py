@@ -178,7 +178,9 @@ class BuildFreeBSDBase(Project):
         if self.crossbuild:
             # Use the script that I added for building on Linux/MacOS:
             self.make_args.set_command(self.sourceDir / "tools/build/make.py")
-            # self._addRequiredSystemHeader("archive.h", apt="libarchive-dev", homebrew="libarchive")
+
+        # if not IS_FREEBSD:
+        #     self._addRequiredSystemHeader("archive.h", apt="libarchive-dev", homebrew="libarchive")
 
         self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
         # TODO: once we have merged the latest upstream changes use MAKEOBJDIR instead to get a more sane hierarchy
@@ -453,6 +455,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.cross_toolchain_config.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
         else:
             self.cross_toolchain_config.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=False)
+            # Note: the STRIP variable contains the flag to be passed to install for stripping, whereas install reads
+            # the stripbin environment variable to determine the path to strip
+            self.cross_toolchain_config.set_env(STRIPBIN=cross_bindir / "llvm-strip")
             self.cross_toolchain_config.set(
                 XAS="/xas/should/not/be/used",
                 XAR=cross_bindir / "llvm-ar",
@@ -460,6 +465,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 XNM=cross_bindir / "llvm-nm",
                 XSIZE=cross_bindir / "llvm-size",
                 XSTRIP=cross_bindir / "llvm-strip",
+                XSTRIPBIN=cross_bindir / "llvm-strip",
                 XSTRINGS=cross_bindir / "llvm-strings",
                 XOBJCOPY=cross_bindir / "llvm-objcopy",
                 XRANLIB=cross_bindir / "llvm-ranlib",
