@@ -234,8 +234,6 @@ class BuildQEMUBase(AutotoolsProject):
         # this is better than git reset --hard as we don't lose any other changes
         if (self.sourceDir / "po").is_dir() and not self.config.skipUpdate:
             self.run_cmd("git", "checkout", "HEAD", "po/", cwd=self.sourceDir, print_verbose_only=True)
-        if "[submodule \"slirp\"]" in self.readFile(self.sourceDir / ".gitmodules"):
-            self.run_cmd("git", "submodule", "update", "slirp")
         if (self.sourceDir / "pixman/pixman").exists():
             warningMessage(
                 "QEMU might build the broken pixman submodule, run `git submodule deinit -f pixman` to clean")
