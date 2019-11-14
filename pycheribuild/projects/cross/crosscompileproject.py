@@ -80,7 +80,7 @@ def default_cross_install_dir(config: CheriConfig, project: "Project", install_d
 
     if project.compiling_for_host():
         if project.crossInstallDir == CrossInstallDir.SDK:
-            return config.cheri_sdk_bindir
+            return config.cheri_sdk_dir
         elif project.crossInstallDir == CrossInstallDir.BOOTSTRAP_TOOLS:
             return config.otherToolsDir
         elif project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
