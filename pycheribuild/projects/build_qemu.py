@@ -31,6 +31,7 @@ import os
 import shlex
 import shutil
 import subprocess
+import sys
 
 from .project import *
 from ..config.loader import ComputedDefaultValue
@@ -74,7 +75,6 @@ class BuildQEMUBase(AutotoolsProject):
         self.addRequiredSystemTool("glibtoolize" if IS_MAC else "libtoolize", homebrew="libtool")
         self.addRequiredSystemTool("autoreconf", homebrew="autoconf")
         self.addRequiredSystemTool("aclocal", homebrew="automake")
-        self.addRequiredSystemTool("python2.7", installInstructions="QEMU needs Python 2.7 installed")
 
         self._addRequiredPkgConfig("pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel", apt="libpixman-1-dev",
                                    freebsd="pixman")
@@ -97,9 +97,8 @@ class BuildQEMUBase(AutotoolsProject):
             if IS_MAC:
                 self.configureArgs.append("--disable-cocoa")
 
-        python_path = shutil.which("python2.7") or shutil.which("python2") or ""
-        # QEMU needs python 2.7 for building:
-        self.configureArgs.append("--python=" + python_path)
+        # QEMU now builds with python3
+        self.configureArgs.append("--python=" + sys.executable)
         if self.debug_info:
             self.configureArgs.extend(["--enable-debug", "--enable-debug-tcg"])
         else:
@@ -216,6 +215,7 @@ class BuildQEMUBase(AutotoolsProject):
             "--disable-docs",
             "--disable-rdma",
             "--disable-werror",
+            "--enable-slirp",  # needed for SMB
             "--disable-pie",  # no need to build as PIE (this just slows down QEMU)
             "--extra-cflags=" + self._extraCFlags,
             "--cxx=" + str(self.CXX),
