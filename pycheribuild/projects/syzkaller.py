@@ -101,6 +101,7 @@ class BuildSyzkaller(CrossCompileProject):
         self.make_args.set_env(
             HOSTARCH="amd64",
             TARGETARCH="mips64",
+            TARGETOS="freebsd",
             GOROOT=self.goroot.expanduser(),
             GOPATH=self.gopath.expanduser(),
             CC=self.CC, CXX=self.CXX,
@@ -137,6 +138,7 @@ class BuildSyzkaller(CrossCompileProject):
         self.make_args.set_env(
             HOSTARCH="amd64",
             TARGETARCH="mips64",
+            TARGETOS="freebsd",
             GOROOT=self.goroot.expanduser(),
             GOPATH=self.gopath.expanduser(),
             CC=self.CC, CXX=self.CXX,
