@@ -103,13 +103,13 @@ class BuildSyzkaller(CrossCompileProject):
             TARGETARCH="mips64",
             GOROOT=self.goroot.expanduser(),
             GOPATH=self.gopath.expanduser(),
-            CC=self.CC, CXX=self.CXX)
+            CC=self.CC, CXX=self.CXX,
+            PATH=self._newPath)
         if self.sysgen:
             self.generate()
 
         self.make_args.set_env(CFLAGS=" ".join(cflags))
-        with setEnv(PATH=self._newPath):
-            self.runMake(parallel=False, cwd=self.gosrc)
+        self.runMake(parallel=False, cwd=self.gosrc)
 
     def generate(self, **kwargs):
         with setEnv(PATH=self._newPath, SOURCEDIR=self.cheribsd_dir):
@@ -134,9 +134,17 @@ class BuildSyzkaller(CrossCompileProject):
                     self.installFile(fpath, syz_remote_install / fname, mode=0o755)
 
     def clean(self) -> ThreadJoiner:
-        assert self.config.clean
-        self._git_clean_source_dir()
-        return ThreadJoiner(None)
+        self.make_args.set_env(
+            HOSTARCH="amd64",
+            TARGETARCH="mips64",
+            GOROOT=self.goroot.expanduser(),
+            GOPATH=self.gopath.expanduser(),
+            CC=self.CC, CXX=self.CXX,
+            PATH=self._newPath)
+
+        self.runMake("clean", parallel=False, cwd=self.gosrc)
+        joiner = super().clean()
+        return joiner
 
 
 class RunSyzkaller(SimpleProject):
