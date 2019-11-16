@@ -162,11 +162,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
     # However, if the output is just a plain text file don't attempt to do any line clearing
     _clearLineSequence = b"\x1b[2K\r" if sys.__stdout__.isatty() else b"\n"
-
-    CAN_TARGET_ALL_CHERIBSD_TARGETS = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS]
-    CAN_TARGET_ALL_BAREMETAL_TARGETS = [CompilationTargets.BAREMETAL_NEWLIB_MIPS64,
-                                        CompilationTargets.BAREMETAL_NEWLIB_MIPS64_PURECAP]
-    CAN_TARGET_CHERIBSD_AND_BAREMETAL = [CompilationTargets.NATIVE] + CAN_TARGET_ALL_CHERIBSD_TARGETS + CAN_TARGET_ALL_BAREMETAL_TARGETS
     # Default to NATIVE only
     supported_architectures = [CompilationTargets.NATIVE]
     # The architecture to build for if no --xmips/--xhost flag is passed (defaults to supported_architectures[0]

@@ -54,7 +54,7 @@ class BuildLibunwind(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="libunwind")
     defaultInstallDir = installToCXXDir
-    supported_architectures = CrossCompileCMakeProject.CAN_TARGET_CHERIBSD_AND_BAREMETAL
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -129,7 +129,7 @@ class BuildLibunwind(CrossCompileCMakeProject):
 class BuildLibCXXRT(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/libcxxrt.git")
     defaultInstallDir = installToCXXDir
-    supported_architectures = CrossCompileCMakeProject.CAN_TARGET_CHERIBSD_AND_BAREMETAL
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
 
     @classmethod
     def dependencies(cls, config: CheriConfig):
@@ -184,7 +184,7 @@ class BuildLibCXX(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="libcxx")
     defaultInstallDir = installToCXXDir
-    supported_architectures = CrossCompileCMakeProject.CAN_TARGET_CHERIBSD_AND_BAREMETAL
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
     dependencies = ["libcxxrt"]
 
     @classmethod
@@ -395,7 +395,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="compiler-rt")
     project_name = "compiler-rt-builtins"
     crossInstallDir = CrossInstallDir.SDK
-    supported_architectures = CrossCompileAutotoolsProject.CAN_TARGET_ALL_BAREMETAL_TARGETS
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
     _default_architecture = CompilationTargets.BAREMETAL_NEWLIB_MIPS64
 
     def __init__(self, config: CheriConfig):

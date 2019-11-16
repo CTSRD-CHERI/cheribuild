@@ -428,7 +428,8 @@ class CrossCompileTarget(object):
         if target_info_cls is None:
             self.name = suffix
         else:
-            self.name = target_info_cls.shortname + suffix
+            assert not suffix.startswith("-"), suffix
+            self.name = target_info_cls.shortname + "-" + suffix
         self.generic_suffix = suffix
         self.cpu_architecture = cpu_architecture
         # TODO: self.operating_system = ...
@@ -532,3 +533,8 @@ class CompilationTargets(object):
     FREEBSD_I386 = CrossCompileTarget("i386", CPUArchitecture.I386, False, FreeBSDTargetInfo)
     FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, False, FreeBSDTargetInfo)
     FREEBSD_X86_64 = CrossCompileTarget("x86_64", CPUArchitecture.X86_64, False, FreeBSDTargetInfo)
+
+    # TODO: test RISCV
+    ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = [CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS, NATIVE]
+    ALL_SUPPORTED_BAREMETAL_TARGETS = [BAREMETAL_NEWLIB_MIPS64, BAREMETAL_NEWLIB_MIPS64_PURECAP]
+    ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS = ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + ALL_SUPPORTED_BAREMETAL_TARGETS

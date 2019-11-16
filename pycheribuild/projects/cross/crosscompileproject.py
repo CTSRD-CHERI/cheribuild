@@ -120,7 +120,7 @@ class CrossCompileMixin(object):
     doNotAddToTargets = True
     config = None  # type: CheriConfig
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
-    supported_architectures = [CompilationTargets.NATIVE] + SimpleProject.CAN_TARGET_ALL_CHERIBSD_TARGETS
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
 
     # noinspection PyTypeChecker
     defaultInstallDir = ComputedDefaultValue(function=default_cross_install_dir, as_string=_installDirMessage)

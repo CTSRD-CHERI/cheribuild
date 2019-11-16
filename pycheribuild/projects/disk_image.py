@@ -781,7 +781,6 @@ class _X86FileTemplates(_AdditionalFileTemplates):
 class BuildMultiArchDiskImage(_BuildDiskImageBase):
     doNotAddToTargets = True
     _source_class = None  # type: typing.Type[SimpleProject]
-    supported_architectures = [CompilationTargets.NATIVE] + SimpleProject.CAN_TARGET_ALL_CHERIBSD_TARGETS
 
     @classproperty
     def default_architecture(cls) -> CrossCompileTarget:
