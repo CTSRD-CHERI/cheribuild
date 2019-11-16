@@ -91,16 +91,9 @@ def default_cross_install_dir(config: CheriConfig, project: "Project", install_d
         if hasattr(project, "path_in_rootfs"):
             assert project.path_in_rootfs.startswith("/"), project.path_in_rootfs
             return cheribsd_instance.installDir / project.path_in_rootfs[1:]
-        if project.compiling_for_cheri():
-            targetName = "cheri" + config.cheriBitsStr
-        else:
-            assert project.compiling_for_mips(include_purecap=False)
-            targetName = "mips"
-        if config.cross_target_suffix:
-            targetName += "-" + config.cross_target_suffix
         if install_dir_name is None:
             install_dir_name = project.project_name.lower()
-        return Path(cheribsd_instance.installDir / "opt" / targetName / install_dir_name)
+        return Path(cheribsd_instance.installDir / "opt" / project.target_info.install_prefix_dirname / install_dir_name)
     elif project.crossInstallDir == CrossInstallDir.SDK:
         return project.sdk_sysroot
     fatalError("Unknown install dir for", project.project_name)
@@ -148,6 +141,12 @@ class CrossCompileMixin(object):
         return self.target_info.is_baremetal
 
     @property
+    def rootfs_dir(self):
+        assert self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS
+        assert self.cheribsd_rootfs == self.destdir
+        return self.cheribsd_rootfs
+
+    @property
     def compiler_warning_flags(self):
         if self.compiling_for_host():
             return self.common_warning_flags + self.host_warning_flags
@@ -189,18 +188,18 @@ class CrossCompileMixin(object):
                     self.destdir = self.sdk_sysroot.parent
                     self._installPrefix = Path("/", self.target_info.target_triple)
                 else:
-                    self._installPrefix = Path("/usr/local", self._crossCompileTarget.generic_suffix)
+                    self._installPrefix = Path("/usr/local", self.crosscompile_target.generic_suffix)
                     self.destdir = self._installDir
             elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
-                cheribsd_rootfs = get_cheribsd_instance_for_install_dir(self.config, self).installDir
-                relative_to_rootfs = os.path.relpath(str(self._installDir), str(cheribsd_rootfs))
+                self.cheribsd_rootfs = get_cheribsd_instance_for_install_dir(self.config, self).installDir
+                relative_to_rootfs = os.path.relpath(str(self._installDir), str(self.cheribsd_rootfs))
                 if relative_to_rootfs.startswith(os.path.pardir):
                     self.verbose_print("Custom install dir", self._installDir, "-> using / as install prefix")
                     self._installPrefix = Path("/")
                     self.destdir = self._installDir
                 else:
                     self._installPrefix = Path("/", relative_to_rootfs)
-                    self.destdir = cheribsd_rootfs
+                    self.destdir = self.cheribsd_rootfs
             elif self.crossInstallDir == CrossInstallDir.COMPILER_RESOURCE_DIR:
                 self._installPrefix = self._installDir
                 self.destdir = None
@@ -365,23 +364,12 @@ class CrossCompileMixin(object):
     def force_dynamic_linkage(self) -> bool:
         return self.linkage() == Linkage.DYNAMIC
 
-    @property
-    def pkgconfig_dirs(self):
-        if self.compiling_for_cheri():
-            return str(self.sdk_sysroot / "usr/libcheri/pkgconfig") + ":" + \
-                   str(self.sdk_sysroot / "usr/local/cheri/lib/pkgconfig") + ":" +\
-                   str(self.sdk_sysroot / "usr/local/cheri/libcheri/pkgconfig")
-        if self.compiling_for_mips(include_purecap=False):
-            return str(self.sdk_sysroot / "usr/lib/pkgconfig") + ":" + \
-                   str(self.sdk_sysroot / "usr/local/mips/lib/pkgconfig")
-        return None
-
     def configure(self, **kwargs):
         env = dict()
         if hasattr(self, "_configure_status_message"):
             statusUpdate(self._configure_status_message)
         if not self.compiling_for_host():
-            env.update(PKG_CONFIG_LIBDIR=self.pkgconfig_dirs, PKG_CONFIG_SYSROOT_DIR=self.crossSysrootPath)
+            env.update(PKG_CONFIG_LIBDIR=self.target_info.pkgconfig_dirs, PKG_CONFIG_SYSROOT_DIR=self.crossSysrootPath)
         with setEnv(**env):
             super().configure(**kwargs)
 
@@ -637,37 +625,48 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
         if not self.compiling_for_host():
             self.COMMON_FLAGS.append("-B" + str(self.sdk_bindir))
 
-        if self.compiling_for_cheri():
+        if self.crosscompile_target.is_cheri_purecap():
             if self._get_cmake_version() < (3, 9, 0) and not (self.sdk_sysroot / "usr/local/lib/cheri").exists():
                 warningMessage("Workaround for missing custom lib suffix in CMake < 3.9")
                 self.makedirs(self.sdk_sysroot / "usr/lib")
                 # create a /usr/lib/cheri -> /usr/libcheri symlink so that cmake can find the right libraries
                 self.createSymlink(Path("../libcheri"), self.sdk_sysroot / "usr/lib/cheri", relative=True,
-                                   cwd=self.sdk_sysroot / "usr/lib")
+                    cwd=self.sdk_sysroot / "usr/lib")
                 self.makedirs(self.sdk_sysroot / "usr/local/cheri/lib")
                 self.makedirs(self.sdk_sysroot / "usr/local/cheri/libcheri")
                 self.createSymlink(Path("../libcheri"), self.sdk_sysroot / "usr/local/cheri/lib/cheri",
-                                   relative=True, cwd=self.sdk_sysroot / "usr/local/cheri/lib")
+                    relative=True, cwd=self.sdk_sysroot / "usr/local/cheri/lib")
             add_lib_suffix = """
 # cheri libraries are found in /usr/libcheri:
 if("${CMAKE_VERSION}" VERSION_LESS 3.9)
   # message(STATUS "CMAKE < 3.9 HACK to find libcheri libraries")
   # need to create a <sysroot>/usr/lib/cheri -> <sysroot>/usr/libcheri symlink 
   set(CMAKE_LIBRARY_ARCHITECTURE "cheri")
-  set(CMAKE_SYSTEM_LIBRARY_PATH "${CMAKE_FIND_ROOT_PATH}/usr/libcheri;${CMAKE_FIND_ROOT_PATH}/usr/local/cheri/lib;${CMAKE_FIND_ROOT_PATH}/usr/local/cheri/libcheri")
+  set(CMAKE_SYSTEM_LIBRARY_PATH "${CMAKE_FIND_ROOT_PATH}/usr/libcheri;${
+  CMAKE_FIND_ROOT_PATH}/usr/local/cheri/lib;${CMAKE_FIND_ROOT_PATH}/usr/local/cheri/libcheri")
 else()
     set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
 endif()
 set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
 """
-            processor = "CHERI (MIPS IV compatible) with {}-bit capabilities".format(self.config.cheriBitsStr)
-        elif self.compiling_for_mips(include_purecap=False):
-            add_lib_suffix = "# no lib suffix for mips libraries"
-            processor = "BERI (MIPS IV compatible)"
         else:
-            add_lib_suffix = None
-            processor = None
+            if self.compiling_for_host():
+                add_lib_suffix = None
+            else:
+                add_lib_suffix = "# no lib suffix needed for non-purecap"
 
+        # FIXME: move this to target_info!
+        if self.compiling_for_mips(include_purecap=True):
+            if self.crosscompile_target.is_cheri_purecap():
+                processor = "CHERI (MIPS IV compatible) with {}-bit capabilities".format(self.config.cheriBitsStr)
+            else:
+                processor = "BERI (MIPS IV compatible)"
+        elif self.crosscompile_target.is_native():
+            processor = None
+        else:
+            processor = self.crosscompile_target.cpu_architecture.value
+
+        # FIXME: move this to target_info!
         if self.compiling_for_host():
             system_name = None
         else:
@@ -687,9 +686,9 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
             ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
             TOOLCHAIN_SYSTEM_PROCESSOR=processor,
             TOOLCHAIN_SYSTEM_NAME=system_name,
-            TOOLCHAIN_PKGCONFIG_DIRS=self.pkgconfig_dirs,
+            TOOLCHAIN_PKGCONFIG_DIRS=self.target_info.pkgconfig_dirs if not self.compiling_for_host() else None,
             TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
-        )
+            )
 
         if self.generator == CMakeProject.Generator.Ninja:
             # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934

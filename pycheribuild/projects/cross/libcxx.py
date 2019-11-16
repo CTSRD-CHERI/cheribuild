@@ -40,10 +40,10 @@ from ..project import ReuseOtherProjectDefaultTargetRepository, SimpleProject
 import os
 
 
-def _cxx_install_dir(config: CheriConfig, project: SimpleProject):
+def _cxx_install_dir(config: CheriConfig, project: "Project"):
     if project.get_crosscompile_target(config).is_native():
         return _INVALID_INSTALL_DIR
-    return BuildCHERIBSD.rootfsDir(project, config) / "opt/c++"
+    return project.rootfs_dir / "opt/c++"
 
 
 installToCXXDir = ComputedDefaultValue(function=lambda c, p: default_cross_install_dir(c, p, install_dir_name="c++"),

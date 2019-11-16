@@ -769,6 +769,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         script_dir = Path("/this/will/not/work/when/using/remote-cheribuild.py")
         xtarget = self.crosscompile_target
         test_native = xtarget.is_native()
+        # Only supported for CheriBSD-MIPS right now:
+        if not test_native and (not self.target_info.is_cheribsd or not xtarget.is_mips(include_purecap=True)):
+            self.warning("Test scripts currently only work for CheriBSD-MIPS! Needs updating for RISCV")
+            return
         if kernel_path is None and not test_native and "--kernel" not in self.config.test_extra_args:
             from .cross.cheribsd import BuildCheriBsdMfsKernel
             # Use the benchmark kernel by default if the parameter is set and the user didn't pass

@@ -110,6 +110,21 @@ class TargetInfo(ABC):
         return []
 
     @property
+    def pkgconfig_dirs(self) -> str:
+        return ""  # whatever the default is
+
+    @property
+    def install_prefix_dirname(self):
+        """The name of the root directory to install to: i.e. for CheriBSD /usr/local/cheri or /usr/local/mips"""
+        if self.target.is_cheri_purecap():
+            result = "cheri"
+        else:
+            result = self.target.generic_suffix
+        if self.config.cross_target_suffix:
+            result += "-" + self.config.cross_target_suffix
+        return result
+
+    @property
     def config(self) -> "CheriConfig":
         return self.project.config
 
@@ -277,6 +292,11 @@ class NativeTargetInfo(TargetInfo):
         return self.host_cxx_compiler(self.config)
 
     @property
+    def linker(self) -> Path:
+        # Should rarely be needed
+        return self.c_compiler.parent / "ld"
+
+    @property
     def c_preprocessor(self) -> Path:
         return self.host_c_preprocessor(self.config)
 
@@ -333,6 +353,10 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         return ["freebsd"]
 
+    @property
+    def pkgconfig_dirs(self) -> str:
+        return str(self.sysroot_dir / "usr/local/lib/pkgconfig")
+
 
 class CheriBSDTargetInfo(FreeBSDTargetInfo):
     shortname = "CheriBSD"
@@ -369,6 +393,18 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                 return ["cheribsd-cheri", "cheribsd-sysroot-cheri"]
             return ["cheribsd-mips", "cheribsd-sysroot-mips"]
         return ["cheribsd", "cheribsd-sysroot"]
+
+    @property
+    def local_install_root(self) -> Path:
+        return self.sysroot_dir / "usr/local" / self.install_prefix_dirname
+
+    @property
+    def pkgconfig_dirs(self) -> str:
+        if self.target.is_cheri_purecap():
+            return str(self.sysroot_dir / "usr/libcheri/pkgconfig") + ":" + \
+                   str(self.local_install_root / "lib/pkgconfig") + ":" + \
+                   str(self.local_install_root / "libcheri/pkgconfig")
+        return str(self.sysroot_dir / "usr/lib/pkgconfig") + ":" + str(self.local_install_root / "lib/pkgconfig")
 
 
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):

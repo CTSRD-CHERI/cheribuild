@@ -61,6 +61,9 @@ class BuildSimpleCheriBenchmarks(CrossCompileCMakeProject):
                                       "--test-timeout", str(120 * 60), mount_builddir=True)
 
     def run_benchmarks(self):
+        if not self.compiling_for_mips(include_purecap=True):
+            self.warning("Cannot run these benchmarks for non-MIPS yet")
+            return
         with tempfile.TemporaryDirectory() as td:
             benchmarks_dir = self.create_test_dir(Path(td))
             self.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,

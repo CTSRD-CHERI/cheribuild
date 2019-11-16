@@ -112,7 +112,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
             CXX_FOR_BUILD=self.host_CXX,
             # long double is the same as double
             newlib_cv_ldbl_eq_dbl="yes",
-            LD_FOR_TARGET=str(self.target_info.linker), LDFLAGS_FOR_TARGET="-fuse-ld=" + str(linker),
+            LD_FOR_TARGET=str(self.target_info.linker), LDFLAGS_FOR_TARGET="-fuse-ld=" + str(self.target_info.linker),
             )
         self.configureArgs.extend([
             "--enable-malloc-debugging",

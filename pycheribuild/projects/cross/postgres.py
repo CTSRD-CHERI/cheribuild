@@ -127,7 +127,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             self.runMake("check", cwd=self.buildDir / "src/test/regress", stdout_filter=None)
             # self.runMake("check", cwd=self.buildDir / "src/interfaces/ecpg/test", stdout_filter=None)
         else:
-            locale_dir = BuildCHERIBSD.rootfsDir(self, self.config) / "usr/share/locale"
+            locale_dir = self.rootfs_dir / "usr/share/locale"
             self.run_cheribsd_test_script("run_postgres_tests.py", "--smb-mount-directory",
                                           str(self.installDir) + ":" + str(self.installPrefix),
                                           "--locale-files-dir", locale_dir, mount_builddir=False,

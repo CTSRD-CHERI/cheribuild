@@ -46,6 +46,9 @@ class BuildMibench(CrossCompileProject):
     build_in_source_dir = True
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
+    # The makefiles here can't support any other other tagets:
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS,
+                               CompilationTargets.NATIVE]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -136,6 +139,9 @@ class BuildMibench(CrossCompileProject):
                                       "--test-timeout", str(120 * 60), mount_builddir=True)
 
     def run_benchmarks(self):
+        if not self.compiling_for_mips(include_purecap=True):
+            self.fatal("Cannot run these benchmarks for non-MIPS yet")
+            return
         with tempfile.TemporaryDirectory() as td:
             self._create_benchmark_dir(Path(td), keep_both_sizes=False)
             benchmark_dir = Path(td, self.bundle_dir.name)
@@ -147,6 +153,7 @@ class BuildMibench(CrossCompileProject):
                                                            "-o", self.default_statcounters_csv_name,
                                                            self.benchmark_version])
 
+
 class BuildOlden(CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/olden")
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
@@ -155,6 +162,9 @@ class BuildOlden(CrossCompileProject):
     make_kind = MakeCommandKind.BsdMake
     # and we have to build in the source directory
     build_in_source_dir = True
+    # The makefiles here can't support any other other tagets:
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS,
+                               CompilationTargets.NATIVE]
 
     def compile(self, **kwargs):
         new_env = dict()
@@ -223,6 +233,9 @@ class BuildOlden(CrossCompileProject):
                                       mount_builddir=True)
 
     def run_benchmarks(self):
+        if not self.compiling_for_mips(include_purecap=True):
+            self.fatal("Cannot run these benchmarks for non-MIPS yet")
+            return
         with tempfile.TemporaryDirectory() as td:
             self._create_benchmark_dir(Path(td))
             benchmark_dir = Path(td, "bin")
@@ -233,6 +246,7 @@ class BuildOlden(CrossCompileProject):
             self.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
                                     benchmark_script_args=["-d1", "-r" + str(num_iterations), "-o",
                                                            self.default_statcounters_csv_name, self.test_arch_suffix])
+
 
 class BuildSpec2006(CrossCompileProject):
     target = "spec2006"
@@ -425,8 +439,9 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
         return output_dir / "benchspec/CPU2006/"
 
     def run_tests(self):
-        if self.compiling_for_host():
-            self.fatal("running host tests is not implemented yet")
+        if not self.compiling_for_mips(include_purecap=True):
+            self.fatal("Cannot run these benchmarks for non-MIPS yet")
+            return
         # self.makedirs(self.buildDir / "test")
         #self.run_cmd("tar", "-xvjf", self.buildDir / "spec/{}.cpu2006bundle.bz2".format(self.config_name),
         #             cwd=self.buildDir / "test")
@@ -450,10 +465,13 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh -b "{ben
         if self.compiling_for_cheri():
             return "cheri" + self.config.cheriBitsStr
         else:
-            assert self.compiling_for_mips(include_purecap=False), "other arches not support"
+            assert self.compiling_for_mips(include_purecap=False), "other arches not supported"
             return "mips-asan" if self.use_asan else "mips"
 
     def run_benchmarks(self):
+        if not self.compiling_for_mips(include_purecap=True):
+            self.fatal("Cannot run these benchmarks for non-MIPS yet")
+            return
         # TODO: don't bother creating tempdir if --skip-copy is set
         with tempfile.TemporaryDirectory() as td:
             benchmarks_dir = self.create_tests_dir(Path(td))
