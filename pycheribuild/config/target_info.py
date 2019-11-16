@@ -129,6 +129,11 @@ class TargetInfo(ABC):
         return self.project.config
 
     @property
+    def must_link_statically(self):
+        """E.g. for baremetal target infos we have to link statically (and add the -static linker flag)"""
+        return False
+
+    @property
     def is_baremetal(self):
         return False
 
@@ -421,6 +426,10 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
         else:
             suffix = self.target.generic_suffix
         return self.config.cheri_sdk_dir / "baremetal" / suffix / self.target_triple
+
+    @property
+    def must_link_statically(self):
+        return True  # only static linking works
 
     @property
     def _compiler_dir(self) -> Path:

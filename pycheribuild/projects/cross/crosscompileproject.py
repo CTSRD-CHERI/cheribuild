@@ -349,6 +349,8 @@ class CrossCompileMixin(object):
         return self.cross_build_type.should_include_debug_info
 
     def linkage(self):
+        if self.target_info.must_link_statically:
+            return Linkage.STATIC
         if self._linkage == Linkage.DEFAULT:
             if self.compiling_for_host():
                 return Linkage.DEFAULT  # whatever the project chooses as a default
