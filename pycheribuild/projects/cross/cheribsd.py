@@ -457,14 +457,16 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.cross_toolchain_config.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=False)
             # Note: the STRIP variable contains the flag to be passed to install for stripping, whereas install reads
             # the stripbin environment variable to determine the path to strip
-            self.cross_toolchain_config.set_env(STRIPBIN=cross_bindir / "llvm-strip")
+            # TODO: self.cross_toolchain_config.set_env(STRIPBIN=cross_bindir / "llvm-strip")
+            # We currently still need elftoolchain strip
+            self.cross_toolchain_config.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
+
             self.cross_toolchain_config.set(
                 XAS="/xas/should/not/be/used",
                 XAR=cross_bindir / "llvm-ar",
                 # XLD
                 XNM=cross_bindir / "llvm-nm",
                 XSIZE=cross_bindir / "llvm-size",
-                XSTRIP=cross_bindir / "llvm-strip",
                 XSTRIPBIN=cross_bindir / "llvm-strip",
                 XSTRINGS=cross_bindir / "llvm-strings",
                 XOBJCOPY=cross_bindir / "llvm-objcopy",
