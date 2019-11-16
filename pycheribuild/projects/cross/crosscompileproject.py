@@ -303,19 +303,18 @@ class CrossCompileMixin(object):
             result.append("-fsanitize=cfi")
         if self.compiling_for_host():
             return result
-        elif self.compiling_for_cheri():
-            emulation = "elf64btsmip_cheri_fbsd" if not self.baremetal else "elf64btsmip_cheri"
-        elif self.compiling_for_mips(include_purecap=False):
-            emulation = "elf64btsmip_fbsd" if not self.baremetal else "elf64btsmip"
-        else:
-            self.fatal("Logic error!")
-            return []
+
+        # Should work fine without linker emulation (the linker should infer it from input files)
+        # if self.compiling_for_cheri():
+        #     emulation = "elf64btsmip_cheri_fbsd" if not self.baremetal else "elf64btsmip_cheri"
+        # elif self.compiling_for_mips(include_purecap=False):
+        #     emulation = "elf64btsmip_fbsd" if not self.baremetal else "elf64btsmip"
+        # result.append("-Wl,-m" + emulation)
         result += self.target_info.essential_compiler_and_linker_flags + [
-            "-Wl,-m" + emulation,
             "-fuse-ld=" + str(self.target_info.linker),
             # Should no longer be needed now that I added a hack for .eh_frame
             # "-Wl,-z,notext",  # needed so that LLD allows text relocations
-        ]
+            ]
         if self.include_debug_info:
             # Add a gdb_index to massively speed up running GDB on CHERIBSD:
             result.append("-Wl,--gdb-index")
