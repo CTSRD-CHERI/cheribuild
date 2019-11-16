@@ -562,10 +562,10 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
                 assert issubclass(self.synthetic_base, SimpleProject)
                 other_instance = self.synthetic_base.get_instance_for_cross_target(xtarget.check_conflict_with,
                                                                                   self.config, caller=self)
-                xtarget = other_instance.get_crosscompile_target(self.config)
                 if self.config.verbose:
                     self.info(self.target, "install dir for", xtarget.name, "is", self.installDir)
-                    self.info(self.target, "install dir for", xtarget.check_conflict_with.name, "is", self.installDir)
+                    other_xtarget = other_instance.get_crosscompile_target(self.config)
+                    self.info(self.target, "install dir for", other_xtarget.name, "is", self.installDir)
                 assert other_instance.installDir != self.installDir, \
                     mips_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(other_instance.installDir)
         super().process()
