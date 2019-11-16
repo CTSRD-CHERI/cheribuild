@@ -395,7 +395,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="compiler-rt")
     project_name = "compiler-rt-builtins"
     crossInstallDir = CrossInstallDir.SDK
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS
     _default_architecture = CompilationTargets.BAREMETAL_NEWLIB_MIPS64
 
     def __init__(self, config: CheriConfig):
