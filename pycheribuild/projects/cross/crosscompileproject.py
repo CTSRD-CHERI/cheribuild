@@ -143,7 +143,6 @@ class CrossCompileMixin(object):
     @property
     def rootfs_dir(self):
         assert self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS
-        assert self.cheribsd_rootfs == self.destdir
         return self.cheribsd_rootfs
 
     @property
