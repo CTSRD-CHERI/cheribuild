@@ -40,7 +40,7 @@ from typing import Optional
 
 # Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
 from .loader import ConfigLoaderBase
-from .target_info import CrossCompileTarget, MipsFloatAbi, Linkage, CheriBSDTargetInfo
+from .target_info import CrossCompileTarget, MipsFloatAbi, Linkage, CheriBSDTargetInfo, CompilationTargets
 from ..utils import latestClangTool, warningMessage, statusUpdate, have_working_internet_connection
 
 if typing.TYPE_CHECKING:
@@ -348,10 +348,9 @@ class CheriConfig(object):
 
     @property
     def cheri_bits_and_abi_str(self):
-        return str(self.cheriBits) + self.cheri_configuration_str
+        return str(self.cheriBits) + self.cheri_configuration_str(CompilationTargets.CHERIBSD_MIPS_PURECAP)
 
-    @property
-    def cheri_configuration_str(self):
+    def cheri_configuration_str(self, xtarget: CrossCompileTarget):
         result = ""
         if self.cheri_cap_table_abi != self.DEFAULT_CAP_TABLE_ABI:
             result += "-" + str(self.cheri_cap_table_abi)
@@ -360,7 +359,7 @@ class CheriConfig(object):
             # TODO: this suffix should not be added. However, it's useful for me right now...
             if not self.subobject_debug:
                 result += "-subobject-nodebug"
-        if self.mips_float_abi == MipsFloatAbi.HARD:
+        if xtarget.is_mips(include_purecap=True) and self.mips_float_abi == MipsFloatAbi.HARD:
             result += "-hardfloat"
         return result
 

@@ -443,14 +443,14 @@ class CrossCompileTarget(object):
         assert self is not CompilationTargets.NONE
         if self is CompilationTargets.CHERIBSD_MIPS_PURECAP:
             result = ""  # only -128/-256 for legacy build dir compat
-        elif self is CompilationTargets.CHERIBSD_MIPS:
+        else:
             result = "-" + self.generic_suffix
+
+        if self is CompilationTargets.CHERIBSD_MIPS:
             if build_hybrid:
                 result += "-hybrid" + config.cheri_bits_and_abi_str
             if config.mips_float_abi == MipsFloatAbi.HARD:
                 result += "-hardfloat"
-        else:
-            result = "-" + self.generic_suffix
 
         if self._is_cheri_purecap:
             result += "-" + config.cheri_bits_and_abi_str
@@ -496,6 +496,12 @@ class CrossCompileTarget(object):
             if a is self.cpu_architecture:
                 return True
         return False
+
+    def __repr__(self):
+        result = self.target_info_cls.__name__ + "(" + self.cpu_architecture.name
+        if self._is_cheri_purecap:
+            result += " purecap"
+        return result + ")"
 
     # def __eq__(self, other):
     #     raise NotImplementedError("Should not compare to CrossCompileTarget, use the is_foo() methods.")

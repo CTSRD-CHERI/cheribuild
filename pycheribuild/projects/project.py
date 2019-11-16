@@ -212,6 +212,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 dependencies = cls.dependencies(config)
             else:
                 dependencies = dependencies(cls, config)
+        assert isinstance(dependencies, list), "Expected a list and not " + str(type(dependencies))
         for dep_name in dependencies:
             if callable(dep_name):
                 dep_name = dep_name(cls, config)

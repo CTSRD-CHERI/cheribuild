@@ -1400,22 +1400,15 @@ class BuildCheriBsdSysroot(SimpleProject):
     def supported_architectures(cls):
         return cls.rootfs_source_class.supported_architectures
 
-    @staticmethod
-    def dependencies(cls: "BuildCheriBsdSysroot", config: CheriConfig):
+    @classmethod
+    def dependencies(cls, config: CheriConfig):
         target = cls.get_crosscompile_target(config)  # type: CrossCompileTarget
         if target.is_cheri_purecap([CPUArchitecture.MIPS64]):
             # TODO: can't access this member here...
             # if cls.use_cheribsd_purecap_rootfs:
             #    return ["cheribsd-purecap"]
-            return ["cheribsd-cheri"]
-        elif target.is_mips():
-            # TODO: can't access this member here...
-            # if cls.use_cheri_sysroot_for_mips:
-            #     return ["cheribsd-cheri"]
-            return ["cheribsd-mips"]
-        elif target.is_x86_64():
-            return ["cheribsd-native"]
-        return ["cheribsd"]
+            pass
+        return [cls.rootfs_source_class.target]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -1425,7 +1418,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         self.addRequiredSystemTool("bsdtar", cheribuild_target="bsdtar", apt="bsdtar")
         if self.compiling_for_cheri() and self.use_cheribsd_purecap_rootfs:
             self.rootfs_source_class = BuildCHERIBSDPurecap
-        self.install_dir = self.config.cheri_sdk_dir
+        self.install_dir = self.target_info.sdk_root_dir
 
     def fixSymlinks(self):
         # copied from the build_sdk.sh script
@@ -1447,25 +1440,17 @@ class BuildCheriBsdSysroot(SimpleProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.copy_remote_sysroot = cls.add_bool_option("copy-remote-sysroot", default=False,
-                                                    help="Copy sysroot from remote server instead of from local "
-                                                         "machine")
-        cls.remotePath = cls.add_config_option("remote-sdk-path", show_help=True, metavar="PATH", help="The path to "
-                                                                                                    "the CHERI SDK on "
-                                                                                                    "the remote "
-                                                                                                    "FreeBSD machine "
-                                                                                                    "(e.g. "
-                                                                                                    "vica:~foo/cheri/output/sdk)")
-        cls.use_cheri_sysroot_for_mips = cls.add_bool_option("use-cheri-sysroot-for-mips", default=False,
-                                                           help="Create the MIPS sysroot using the files from hybrid "
-                                                                "CHERI libraries (note: binaries build from this "
-                                                                "sysroot will only work on the matching CHERI 128/256 "
-                                                                "architecture)",
-                                                           only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS])
-        cls.use_cheribsd_purecap_rootfs = cls.add_bool_option("use-cheribsd-purecap-rootfs", default=False,
-                                                            help="Use the rootfs built by cheribsd-purecap instead")
+        cls.copy_remote_sysroot = cls.add_bool_option("copy-remote-sysroot",
+            help="Copy sysroot from remote server instead of from local machine")
+        cls.remotePath = cls.add_config_option("remote-sdk-path", show_help=True, metavar="PATH",
+            help="The path to the CHERI SDK on the remote FreeBSD machine (e.g. vica:~foo/cheri/output/sdk)")
+        cls.use_cheri_sysroot_for_mips = cls.add_bool_option("use-cheri-sysroot-for-mips",
+            help="Create the MIPS sysroot using the files from hybrid CHERI libraries (note: binaries build from this "
+                 "sysroot will only work on the matching CHERI 128/256 architecture)")
+        cls.use_cheribsd_purecap_rootfs = cls.add_bool_option("use-cheribsd-purecap-rootfs",
+            help="Use the rootfs built by cheribsd-purecap instead")
         cls.install_dir_override = cls.add_path_option("install-directory",
-                                                     help="Override for the sysroot install directory")
+            help="Override for the sysroot install directory")
 
     @property
     def crossSysrootPath(self) -> Path:
