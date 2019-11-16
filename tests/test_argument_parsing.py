@@ -425,7 +425,7 @@ def test_libcxxrt_dependency_path():
 
     config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.buildRoot / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
-    check_libunwind_path(config.outputRoot / "rootfs128/opt/cheri128/c++/lib", "libcxxrt-cheri")
+    check_libunwind_path(config.outputRoot / "rootfs128/opt/cheri/c++/lib", "libcxxrt-cheri")
     check_libunwind_path(config.outputRoot / "rootfs128/opt/mips/c++/lib", "libcxxrt-mips")
     # Check the defaults:
     config = _parse_arguments(["--skip-configure", "--xhost"])
@@ -435,11 +435,11 @@ def test_libcxxrt_dependency_path():
     check_libunwind_path(config.outputRoot / "rootfs-mips/opt/mips/c++/lib", "libcxxrt")
     check_libunwind_path(config.outputRoot / "rootfs-mips/opt/mips/c++/lib", "libcxxrt-mips")
     config = _parse_arguments(["--skip-configure", "--256"])
-    check_libunwind_path(config.outputRoot / "rootfs256/opt/cheri256/c++/lib", "libcxxrt")
-    check_libunwind_path(config.outputRoot / "rootfs256/opt/cheri256/c++/lib", "libcxxrt-cheri")
+    check_libunwind_path(config.outputRoot / "rootfs256/opt/cheri/c++/lib", "libcxxrt")
+    check_libunwind_path(config.outputRoot / "rootfs256/opt/cheri/c++/lib", "libcxxrt-cheri")
     config = _parse_arguments(["--skip-configure", "--128"])
-    check_libunwind_path(config.outputRoot / "rootfs128/opt/cheri128/c++/lib", "libcxxrt")
-    check_libunwind_path(config.outputRoot / "rootfs128/opt/cheri128/c++/lib", "libcxxrt-cheri")
+    check_libunwind_path(config.outputRoot / "rootfs128/opt/cheri/c++/lib", "libcxxrt")
+    check_libunwind_path(config.outputRoot / "rootfs128/opt/cheri/c++/lib", "libcxxrt-cheri")
 
 
 @pytest.mark.parametrize("base_name,expected", [
