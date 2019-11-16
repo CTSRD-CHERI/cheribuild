@@ -31,6 +31,7 @@ from .crosscompileproject import *
 from .qt5 import BuildQtWebkit
 from ...utils import runCmd, IS_FREEBSD
 
+
 class BuildSQLite(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git",
                                default_branch="branch-3.19", force_branch=True)
@@ -43,8 +44,8 @@ class BuildSQLite(CrossCompileAutotoolsProject):
             if BuildQtWebkit.get_instance(self, config).force_static_linkage:
                 self._linkage = Linkage.STATIC  # make sure it works with webkit
 
-            self.configureEnvironment["BUILD_CC"] = self.CC
-            self.configureEnvironment["BUILD_CFLAGS"] = "-integrated-as"
+            self.configureEnvironment["BUILD_CC"] = self.host_CC
+            # self.configureEnvironment["BUILD_CFLAGS"] = "-integrated-as"
             self.configureArgs.extend([
                 "--disable-amalgamation",  # don't concatenate sources
                 "--disable-tcl",

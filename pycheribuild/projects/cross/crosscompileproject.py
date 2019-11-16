@@ -173,34 +173,13 @@ class CrossCompileMixin(object):
         # sanity check:
         assert target_arch is not None and target_arch is not CompilationTargets.NONE
         assert self.get_crosscompile_target(config) is target_arch
+        assert isinstance(target_arch, CrossCompileTarget)
         # compiler flags:
+        self.COMMON_FLAGS = self.target_info.required_compile_flags()
         if self.compiling_for_host():
-            self.COMMON_FLAGS = []
             if self._installDir == _INVALID_INSTALL_DIR:
                 self._installDir = self.buildDir / "test-install-prefix"
         else:
-            self.COMMON_FLAGS = ["-integrated-as", "-pipe", "-G0"]
-            # clang currently gets the TLS model wrong:
-            # https://github.com/CTSRD-CHERI/cheribsd/commit/f863a7defd1bdc797712096b6778940cfa30d901
-            self.COMMON_FLAGS.append("-ftls-model=initial-exec")
-            # use *-*-freebsd13 to default to libc++
-            if self.compiling_for_cheri():
-                if self.should_use_extra_c_compat_flags():
-                    self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
-                if self.config.cheri_cap_table_abi:
-                    self.COMMON_FLAGS.append("-cheri-cap-table-abi=" + self.config.cheri_cap_table_abi)
-            else:
-                assert self.compiling_for_mips(include_purecap=False)
-                self.COMMON_FLAGS.append("-integrated-as")
-                self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
-                if not self.baremetal:
-                    self.COMMON_FLAGS.append("-stdlib=libc++")
-                else:
-                    self.COMMON_FLAGS.append("-fno-pic")
-                    self.COMMON_FLAGS.append("-mno-abicalls")
-
-            self.COMMON_FLAGS.extend(self.target_info.required_compile_flags())
-
             # Install to SDK if CHERIBSD_ROOTFS is the install dir but we are not building for CheriBSD
             if self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS and not self.target_info.is_cheribsd:
                 self.crossInstallDir = CrossInstallDir.SDK
@@ -227,6 +206,17 @@ class CrossCompileMixin(object):
                 self.destdir = None
             else:
                 assert self._installPrefix and self.destdir, "both must be set!"
+
+        if target_arch.is_cheri_purecap([CPUArchitecture.MIPS64]) and self.force_static_linkage:
+            # clang currently gets the TLS model wrong:
+            # https://github.com/CTSRD-CHERI/cheribsd/commit/f863a7defd1bdc797712096b6778940cfa30d901
+            self.COMMON_FLAGS.append("-ftls-model=initial-exec")
+            # TODO: remove the data-depedent provenance flag:
+            if self.should_use_extra_c_compat_flags():
+                self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
+
+        # We might be setting too many flags, ignore this (for now)
+        self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
 
         assert self.installDir, "must be set"
         statusUpdate(self.target, "INSTALLDIR = ", self._installDir, "INSTALL_PREFIX=", self._installPrefix,
@@ -312,7 +302,6 @@ class CrossCompileMixin(object):
             assert not self.compiling_for_cheri()
             result.append("-fsanitize=cfi")
         if self.compiling_for_host():
-            # return ["-fuse-ld=" + self.linker]
             return result
         elif self.compiling_for_cheri():
             emulation = "elf64btsmip_cheri_fbsd" if not self.baremetal else "elf64btsmip_cheri"
@@ -323,7 +312,7 @@ class CrossCompileMixin(object):
             return []
         result += self.target_info.essential_compiler_and_linker_flags + [
             "-Wl,-m" + emulation,
-            "-fuse-ld=lld",  # TODO: use absolute path?
+            "-fuse-ld=" + str(self.target_info.linker),
             # Should no longer be needed now that I added a hack for .eh_frame
             # "-Wl,-z,notext",  # needed so that LLD allows text relocations
         ]
@@ -787,7 +776,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
 
             if not self.compiling_for_host():
                 self.set_prog_with_args("CPP", self.CPP, CPPFLAGS)
-                self.add_configure_env_arg("LD", str(self.sdk_bindir / "ld.lld"))
+                self.add_configure_env_arg("LD", self.target_info.linker)
 
         # remove all empty items from environment:
         env = {k: v for k, v in self.configureEnvironment.items() if v}

@@ -76,6 +76,10 @@ class TargetInfo(ABC):
 
     @property
     @abstractmethod
+    def linker(self) -> Path: ...
+
+    @property
+    @abstractmethod
     def essential_compiler_and_linker_flags(self) -> typing.List[str]:
         """
         :return: flags such as -target + -mabi which are needed for both compiler and linker
@@ -184,15 +188,21 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         return self._compiler_dir / "clang-cpp"
 
     @property
+    def linker(self) -> Path:
+        return self._compiler_dir / "ld.lld"
+
+    @property
     def essential_compiler_and_linker_flags(self) -> typing.List[str]:
         # However, when cross compiling we need at least -target=
-        result = ["-target", self.target_triple]
+        result = ["-target", self.target_triple, "-pipe"]
         # And usually also --sysroot
         if self.project.needs_sysroot:
             result.append("--sysroot=" + str(self.sysroot_dir))
         result += ["-B" + str(self._compiler_dir)]
 
         if self.target.is_mips(include_purecap=True):
+            result.append("-integrated-as")
+            result.append("-G0")  # no small objects in GOT optimization
             # Floating point ABI:
             if self.is_baremetal:
                 # The baremetal driver doesn't add -fPIC for CHERI
@@ -203,8 +213,12 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 else:
                     # We don't have a softfloat library baremetal so always compile hard-float
                     result.append(MipsFloatAbi.HARD.clang_float_flag())
+                    result.append("-fno-pic")
+                    result.append("-mno-abicalls")
             else:
                 result.append(self.config.mips_float_abi.clang_float_flag())
+                # always use libc++
+                result.append("-stdlib=libc++")
 
             # CPU flags (currently always BERI):
             result.append("-mcpu=beri")
@@ -214,12 +228,16 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                     result.extend(["-Xclang", "-cheri-bounds=" + str(self.config.subobject_bounds)])
                     if self.config.subobject_debug:
                         result.extend(["-mllvm", "-cheri-subobject-bounds-clear-swperm=2"])
+                if self.config.cheri_cap_table_abi:
+                    result.append("-cheri-cap-table-abi=" + self.config.cheri_cap_table_abi)
             else:
                 assert self.target.is_mips(include_purecap=False)
                 # TODO: should we use -mcpu=cheri128/256?
                 result.extend(["-mabi=n64", "-mcpu=beri"])
                 if self.project.mips_build_hybrid:
                     result.append("-cheri=" + self.config.cheriBitsStr)
+                # always use libc++
+                result.append("-stdlib=libc++")
         else:
             self.project.warning("Compiler flags might be wong, only native + MIPS checked so far")
         return result

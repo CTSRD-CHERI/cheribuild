@@ -502,7 +502,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def _setup_arch_specific_options(self):
         if self.crosscompile_target.is_any_x86():
-            # target_flags = " -fuse-ld=lld -Wno-error=unused-command-line-argument -Wno-unused-command-line-argument"
             target_flags = ""
             self.useExternalToolchainForWorld = True
             self.useExternalToolchainForKernel = True
@@ -561,8 +560,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 cross_prefix = str(self.crossToolchainRoot / "bin") + "/"
 
             kernel_options.update(self.cross_toolchain_config)
-            fuse_ld_flag = "-fuse-ld=" + self.linker_for_kernel
             linker = cross_prefix + "ld." + self.linker_for_kernel
+            fuse_ld_flag = "-fuse-ld=" + linker
             kernel_options.remove_var("LDFLAGS")
             kernel_options.set(LD=linker, XLD=linker, HACK_EXTRA_FLAGS="-shared " + fuse_ld_flag,
                                TRAMP_LDFLAGS=fuse_ld_flag)
