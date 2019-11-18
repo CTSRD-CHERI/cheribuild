@@ -42,6 +42,7 @@ class BuildLLVMBase(CMakeProject):
     skip_cheri_symlinks = True
     doNotAddToTargets = True
     can_build_with_asan = True
+    is_large_source_repository = True
 
     @classmethod
     def setup_config_options(cls, useDefaultSysroot=True):

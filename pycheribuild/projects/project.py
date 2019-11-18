@@ -1286,6 +1286,10 @@ class GitRepository(SourceRepository):
 
 class Project(SimpleProject):
     repository = None  # type: SourceRepository
+    # is_large_source_repository can be set to true to set some git config options to speed up operations:
+    # Ideally this would be a flag in GitRepository, but that will not work with inheritance (since some
+    # subclasses use different repositories and they would all have to set that flag again). Annoying for LLVM/FreeBSD
+    is_large_source_repository = False
     gitRevision = None
     skipGitSubmodules = False
     compileDBRequiresBear = True
@@ -1604,13 +1608,18 @@ class Project(SimpleProject):
                        fatalWhenPretending=True)
         self.repository.update(self, src_dir=self.sourceDir, default_src_dir=self.default_source_dir,
                                revision=self.gitRevision, skip_submodules=self.skipGitSubmodules)
+        if self.is_large_source_repository and (self.sourceDir / ".git").exists():
+            # This is a large repository, tell git to do whatever it can to speed up operations (new in 2.24):
+            # https://git-scm.com/docs/git-config#Documentation/git-config.txt-featuremanyFiles
+            self.run_cmd("git", "config", "--local", "feature.manyFiles", "true", cwd=self.sourceDir,
+                print_verbose_only=True)
 
     _extra_git_clean_excludes = []
 
     def _git_clean_source_dir(self):
         # just use git clean for cleanup
         warningMessage(self.project_name, "does not support out-of-source builds, using git clean to remove "
-                                         "build artifacts.")
+                                          "build artifacts.")
         git_clean_cmd = ["git", "clean", "-dfx", "--exclude=.*", "--exclude=*.kdev4"] + self._extra_git_clean_excludes
         # Try to keep project files for IDEs and other dotfiles:
         runCmd(git_clean_cmd, cwd=self.sourceDir)

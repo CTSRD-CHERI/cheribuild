@@ -133,6 +133,7 @@ class BuildFreeBSDBase(Project):
     crossbuild = None
     skipBuildworld = False
     use_external_toolchain = False
+    is_large_source_repository = True
 
     defaultExtraMakeOptions = [
         # "-DWITHOUT_HTML",  # should not be needed
