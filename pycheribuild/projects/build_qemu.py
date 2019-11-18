@@ -215,7 +215,6 @@ class BuildQEMUBase(AutotoolsProject):
             "--disable-docs",
             "--disable-rdma",
             "--disable-werror",
-            "--enable-slirp",  # needed for SMB
             "--disable-pie",  # no need to build as PIE (this just slows down QEMU)
             "--extra-cflags=" + self._extraCFlags,
             "--cxx=" + str(self.CXX),
