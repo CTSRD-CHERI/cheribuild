@@ -64,7 +64,6 @@ class BuildGDB(CrossCompileAutotoolsProject):
                                old_urls=[b'https://github.com/bsdjhb/gdb.git'])
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
-    defaultOptimizationLevel = ["-O2"]
     supported_architectures = [CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS]
     _mips_build_hybrid = True  # build MIPS binaries as CHERI hybrid so that the trap register number works
     native_install_dir = CrossCompileAutotoolsProject._installToSDK

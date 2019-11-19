@@ -38,7 +38,6 @@ from ...utils import commandline_to_str, runCmd, IS_FREEBSD, IS_MAC, fatalError,
 class BuildQtWithConfigureScript(CrossCompileProject):
     crossInstallDir = CrossInstallDir.SDK
     doNotAddToTargets = True
-    defaultOptimizationLevel = ["-O2"]
     add_host_target_build_config_options = False
     # Should not be needed, but it seems like some of the tests are broken otherwise
     make_kind = MakeCommandKind.GnuMake

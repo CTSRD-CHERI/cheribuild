@@ -36,7 +36,6 @@ class DLMalloc(CrossCompileProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/dlmalloc_nonreuse")
     appendCheriBitsToBuildDir = True
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS]
-    defaultOptimizationLevel = ["-O2"]
     make_kind = MakeCommandKind.GnuMake
 
     @classmethod

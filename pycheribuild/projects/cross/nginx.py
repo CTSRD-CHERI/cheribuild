@@ -37,7 +37,6 @@ class BuildNginx(CrossCompileAutotoolsProject):
     # build_in_source_dir = True
     make_kind = MakeCommandKind.GnuMake
     add_host_target_build_config_options = False
-    defaultOptimizationLevel = ["-O2"]
     # custom configure script -> no --libdir
     _configure_supports_libdir = False
     _configure_supports_variables_on_cmdline = False

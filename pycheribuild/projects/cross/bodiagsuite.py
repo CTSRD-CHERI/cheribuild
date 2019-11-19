@@ -46,7 +46,6 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
     default_build_type = BuildType.DEBUG
     default_use_asan = True
     # _FORTIFY_SOURCE only works with GCC on Linux
-    forceDefaultCC = True
 
     @property
     def build_dir_suffix(self):

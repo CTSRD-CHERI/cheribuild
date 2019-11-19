@@ -48,6 +48,7 @@ class BuildQEMUBase(AutotoolsProject):
     skipGitSubmodules = True  # we don't need these
     can_build_with_asan = True
     default_targets = "some-invalid-target"
+    lto_by_default = True
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -61,8 +62,6 @@ class BuildQEMUBase(AutotoolsProject):
 
         cls.gui = cls.add_bool_option("gui", show_help=True, default=False,
                                     help="Build a the graphical UI bits for QEMU (SDL,VNC)")
-        cls.lto = cls.add_bool_option("use-lto", show_help=True,
-                                    help="Try to build QEMU with link-time optimization if possible", default=True)
         cls.qemu_targets = cls.add_config_option("targets",
             show_help=True, help="Build QEMU for the following targets", default=cls.default_targets)
 
@@ -109,9 +108,9 @@ class BuildQEMUBase(AutotoolsProject):
             self.warning("Option --qemu/sanitizers is deprecated, use --qemu/use-asan instead")
         if self.with_sanitizers or self.use_asan:
             self.configureArgs.append("--enable-sanitizers")
-            if self.lto:
+            if self.use_lto:
                 self.info("Disabling LTO for ASAN instrumented builds")
-            self.lto = False
+            self.use_lto = False
 
         # Having symbol information is useful for debugging and profiling
         self.configureArgs.append("--disable-strip")
@@ -138,7 +137,7 @@ class BuildQEMUBase(AutotoolsProject):
                 self._extraCFlags += " -Wno-address-of-packed-member"
                 self._extraCFlags += " -Wall -Wextra -Wno-sign-compare -Wno-unused-parameter" \
                                      " -Wno-c11-extensions -Wno-missing-field-initializers"
-            if self.lto and self.can_use_lto(ccinfo):
+            if self.use_lto and self.can_use_lto(ccinfo):
                 while True:  # add a loop so I can break early
                     statusUpdate("Compiling with Clang and LLD -> trying to build with LTO enabled")
                     if ccinfo.compiler != "apple-clang":

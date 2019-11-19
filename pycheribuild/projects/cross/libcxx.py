@@ -36,7 +36,7 @@ from ..llvm import BuildCheriLLVM
 from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
 from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str, IS_MAC
-from ..project import ReuseOtherProjectDefaultTargetRepository, SimpleProject
+from ..project import ReuseOtherProjectDefaultTargetRepository
 import os
 
 

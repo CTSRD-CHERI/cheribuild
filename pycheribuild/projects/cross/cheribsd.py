@@ -122,7 +122,7 @@ def cheribsd_minimal_install_dir(config: CheriConfig, project: SimpleProject):
 def default_cross_toolchain_path(config: CheriConfig, proj: SimpleProject):
     assert isinstance(proj, BuildFreeBSD)
     if proj.build_with_upstream_llvm:
-        return BuildUpstreamLLVM.getInstallDir(proj)
+        return BuildUpstreamLLVM.getInstallDir(proj, cross_target=CompilationTargets.NATIVE)
     return proj.target_info.sdk_root_dir
 
 

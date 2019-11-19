@@ -37,7 +37,6 @@ class SNMalloc(CrossCompileCMakeProject):
     crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
     appendCheriBitsToBuildDir = True
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS]
-    defaultOptimizationLevel = ["-O2"]
     default_build_type = BuildType.DEBUG
     defaultCMakeBuildType = "Debug"
 

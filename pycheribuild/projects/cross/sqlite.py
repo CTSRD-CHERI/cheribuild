@@ -36,7 +36,6 @@ class BuildSQLite(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git",
                                default_branch="branch-3.19", force_branch=True)
     crossInstallDir = CrossInstallDir.SDK
-    defaultOptimizationLevel = ["-O2"]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

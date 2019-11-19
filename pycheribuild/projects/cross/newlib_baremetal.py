@@ -40,7 +40,6 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     make_kind = MakeCommandKind.GnuMake
     needs_sysroot = False  # We are building newlib so we don't need a sysroot
     add_host_target_build_config_options = False
-    defaultOptimizationLevel = ["-O2"]
     _configure_supports_libdir = False
     _configure_supports_variables_on_cmdline = True
     crossInstallDir = CrossInstallDir.SDK

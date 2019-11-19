@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import copy
+import datetime
 import errno
 import inspect
 import os
@@ -42,7 +43,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Union, Callable
 
-from ..config.chericonfig import CheriConfig
+from ..config.chericonfig import CheriConfig, Linkage
 from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase, DefaultValueOnlyConfigOption
 from ..config.target_info import CrossCompileTarget, CPUArchitecture, TargetInfo, CompilationTargets
 from ..filesystemutils import FileSystemUtils
@@ -1415,6 +1416,8 @@ class Project(SimpleProject):
             self.fatal("Make command not set!")
         super().check_system_dependencies()
 
+    lto_by_default = False  # Don't default to LTO
+
     @classmethod
     def setup_config_options(cls, installDirectoryHelp="", **kwargs):
         super().setup_config_options(**kwargs)
@@ -1467,6 +1470,33 @@ class Project(SimpleProject):
                                                              "Useful for IDEs that only support CMake")
             else:
                 assert issubclass(cls, CMakeProject), "Should be a CMakeProject: " + cls.__name__
+
+        cls.use_lto = cls.add_bool_option("use-lto", help="Build with link-time optimization (LTO)",
+            default=cls.lto_by_default)
+        # cls.use_cfi = cls.add_bool_option("use-cfi", help="Build with CFI",
+        #                                 only_add_for_targets=[CompilationTargets.NATIVE,
+        #                                 CompilationTargets.CHERIBSD_MIPS])
+        cls.use_cfi = False  # doesn't work yet
+        cls._linkage = cls.add_config_option("linkage", default=Linkage.DEFAULT, kind=Linkage,
+            help="Build static or dynamic (or use the project default)")
+
+    def linkage(self):
+        if self.target_info.must_link_statically:
+            return Linkage.STATIC
+        if self._linkage == Linkage.DEFAULT:
+            if self.compiling_for_host():
+                return Linkage.DEFAULT  # whatever the project chooses as a default
+            else:
+                return self.config.crosscompile_linkage  # either force static or force dynamic
+        return self._linkage
+
+    @property
+    def force_static_linkage(self) -> bool:
+        return self.linkage() == Linkage.STATIC
+
+    @property
+    def force_dynamic_linkage(self) -> bool:
+        return self.linkage() == Linkage.DYNAMIC
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -1744,6 +1774,164 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
     @property
     def csetbounds_stats_file(self) -> Path:
         return self.buildDir / "csetbounds-stats.csv"
+        
+    def strip_elf_files(self, benchmark_dir):
+        """
+        Strip all ELF binaries to reduce the size of the benchmark directory
+        :param benchmark_dir: The directory containing multiple ELF binaries
+        """
+        assert isinstance(self, Project) and isinstance(self, CrossCompileMixin)
+        self.info("Stripping all ELF files in", benchmark_dir)
+        self.run_cmd("du", "-sh", benchmark_dir)
+        for root, dirnames, filenames in os.walk(str(benchmark_dir)):
+            for filename in filenames:
+                file = Path(root, filename)
+                if file.suffix == ".dump":
+                    # TODO: make this an error since we should have deleted them
+                    self.warning("Will copy a .dump file to the FPGA:", file)
+                # Try to reduce the amount of copied data
+                with file.open("rb") as f:
+                    if f.read(4) == b"\x7fELF":
+                        self.verbose_print("Stripping ELF binary", file)
+                        runCmd(self.sdk_bindir / "llvm-strip", file)
+        self.run_cmd("du", "-sh", benchmark_dir)
+        
+    @property
+    def default_statcounters_csv_name(self) -> str:
+        assert isinstance(self, Project)
+        # Only compute it once since we encode seconds in the file name:
+        if hasattr(self, "_statcounters_csv"):
+            return self._statcounters_csv
+        else:
+            suffix = self.build_configuration_suffix()
+            assert isinstance(self, CrossCompileMixin)
+            if self.config.benchmark_statcounters_suffix:
+                user_suffix = self.config.benchmark_statcounters_suffix
+                if not user_suffix.startswith("-"):
+                    user_suffix = "-" + user_suffix
+                suffix += user_suffix
+            else:
+                # If we explicitly override the linkage model, encode it in the statcounters file
+                if self.force_static_linkage:
+                    suffix += "-static"
+                elif self.force_dynamic_linkage:
+                    suffix += "-dynamic"
+                if self.config.benchmark_lazy_binding:
+                    suffix += "-lazybinding"
+            self._statcounters_csv = self.target + "-statcounters{}-{}.csv".format(
+                suffix, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+            return self._statcounters_csv
+        
+    def copy_asan_dependencies(self, dest_libdir):
+        # ASAN depends on libraries that are not included in the benchmark image by default:
+        assert self.compiling_for_mips(include_purecap=False) and self.use_asan
+        self.info("Adding ASAN library depedencies to", dest_libdir)
+        self.makedirs(dest_libdir)
+        for lib in ("usr/lib/librt.so.1", "usr/lib/libexecinfo.so.1", "lib/libgcc_s.so.1", "lib/libelf.so.2"):
+            self.installFile(self.sdk_sysroot / lib, dest_libdir / Path(lib).name, force=True, print_verbose_only=False)
+
+    def run_fpga_benchmark(self, benchmarks_dir: Path, *, output_file: str = None, benchmark_script: str = None,
+                           benchmark_script_args: list = None, extra_runbench_args: list = None):
+        assert benchmarks_dir is not None
+        assert output_file is not None, "output_file must be set to a valid value"
+        assert isinstance(self, Project) and isinstance(self, CrossCompileMixin)
+        self.strip_elf_files(benchmarks_dir)
+        for root, dirnames, filenames in os.walk(str(benchmarks_dir)):
+            for filename in filenames:
+                file = Path(root, filename)
+                if file.suffix == ".dump":
+                    # TODO: make this an error since we should have deleted them
+                    self.warning("Will copy a .dump file to the FPGA:", file)
+
+        runbench_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
+
+        from .cherisim import BuildCheriSim, BuildBeriCtl
+        sim_project = BuildCheriSim.get_instance(self, cross_target=CompilationTargets.NATIVE)
+        cherilibs_dir = Path(sim_project.sourceDir, "cherilibs")
+        cheri_dir = Path(sim_project.sourceDir, "cheri")
+        if not cheri_dir.exists() or not cherilibs_dir.exists():
+            self.fatal("cheri-cpu repository missing. Run `cheribuild.py berictl` or `git clone {} {}`".format(
+                sim_project.repository.url, sim_project.sourceDir))
+
+        if self.config.benchmark_with_qemu:
+            from .build_qemu import BuildQEMU
+            qemu_path = BuildQEMU.qemu_binary(self)
+            qemu_ssh_socket = find_free_port()
+            if not qemu_path.exists():
+                self.fatal("QEMU binary", qemu_path, "doesn't exist")
+            basic_args = ["--use-qemu-instead-of-fpga",
+                          "--qemu-path=" + str(qemu_path),
+                          "--qemu-ssh-port=" + str(qemu_ssh_socket.port)]
+        else:
+            basic_args = ["--berictl=" + str(
+                BuildBeriCtl.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "berictl")]
+
+        if self.config.benchmark_ld_preload:
+            runbench_args.append("--extra-input-files=" + str(self.config.benchmark_ld_preload))
+            env_var = "LD_CHERI_PRELOAD" if self.compiling_for_cheri() else "LD_PRELOAD"
+            pre_cmd = "export {}={};".format(env_var,
+                shlex.quote("/tmp/benchdir/" + self.config.benchmark_ld_preload.name))
+            runbench_args.append("--pre-command=" + pre_cmd)
+        if self.config.benchmark_fpga_extra_args:
+            basic_args.extend(self.config.benchmark_fpga_extra_args)
+        if self.config.benchmark_extra_args:
+            runbench_args.extend(self.config.benchmark_extra_args)
+        if self.config.tests_interact:
+            runbench_args.append("--interact")
+
+        from .cross.cheribsd import BuildCheriBsdMfsKernel
+        if self.config.benchmark_with_qemu:
+            # When benchmarking with QEMU we always spawn a new instance
+            if self.config.benchmark_with_debug_kernel:
+                kernel_image = BuildCheriBsdMfsKernel.get_installed_kernel_path(self)
+            else:
+                kernel_image = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self)
+            basic_args.append("--kernel-img=" + str(kernel_image))
+        elif self.config.benchmark_clean_boot:
+            # use a bitfile from jenkins. TODO: add option for overriding
+            if self.compiling_for_mips(include_purecap=False):
+                basic_args.append("--jenkins-bitfile=cheri128")
+            else:
+                assert self.compiling_for_cheri()
+                basic_args.append("--jenkins-bitfile=cheri" + self.config.cheriBitsStr)
+            # TODO: allow using a plain MIPS kernel?
+            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(
+                CompilationTargets.CHERIBSD_MIPS_PURECAP, self.config)
+            if self.config.benchmark_with_debug_kernel:
+                kernel_config = mfs_kernel.fpga_kernconf
+            else:
+                kernel_config = mfs_kernel.fpga_kernconf + "_BENCHMARK"
+            basic_args.append(
+                "--kernel-img=" + str(mfs_kernel.installed_kernel_for_config(self.config, kernel_config)))
+        else:
+            runbench_args.append("--skip-boot")
+        if benchmark_script:
+            runbench_args.append("--script-name=" + benchmark_script)
+        if benchmark_script_args:
+            runbench_args.append("--script-args=" + commandline_to_str(benchmark_script_args))
+        if extra_runbench_args:
+            runbench_args.extend(extra_runbench_args)
+
+        cheribuild_path = Path(__file__).parent.parent.parent.parent
+        beri_fpga_bsd_boot_script = """
+set +x
+source "{cheri_dir}/setup.sh"
+set -x
+export PATH="$PATH:{cherilibs_dir}/tools:{cherilibs_dir}/tools/debug"
+exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbench_args}
+        """.format(cheri_dir=cheri_dir, cherilibs_dir=cherilibs_dir,
+            runbench_args=commandline_to_str(runbench_args),
+            basic_args=commandline_to_str(basic_args), cheribuild_path=cheribuild_path)
+        qemu_ssh_socket = None
+        if self.config.benchmark_with_qemu:
+            # Free the port that we reserved for QEMU before starting beri-fpga-bsd-boot.py
+            qemu_ssh_socket.socket.close()
+            self.run_cmd(
+                [cheribuild_path / "beri-fpga-bsd-boot.py"] + basic_args + ["-vvvvv", "runbench"] + runbench_args)
+        else:
+            self.runShellScript(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
+
+    _check_install_dir_conflict = True
 
     def process(self):
         if self.generate_cmakelists:
@@ -1751,6 +1939,50 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if self.config.verbose:
             print(self.project_name, "directories: source=%s, build=%s, install=%s" %
                   (self.sourceDir, self.buildDir, self.installDir))
+
+        if self.use_asan and self.compiling_for_mips(include_purecap=False):
+            # copy the ASAN lib into the right directory:
+            resource_dir = getCompilerInfo(self.CC).get_resource_dir()
+            statusUpdate("Copying ASAN libs to", resource_dir)
+            expected_path = resource_dir / "lib/freebsd/"
+            asan_libdir_candidates = list((self.sdk_sysroot / "usr/lib/clang").glob("*"))
+            versions = [a.name for a in asan_libdir_candidates]
+            # Find the newest ASAN runtime library versions from the FreeBSD sysroot
+            found_asan_lib = None
+            from distutils.version import StrictVersion
+            libname = "libclang_rt.asan-mips64.a"
+            for version in reversed(sorted(versions, key=StrictVersion)):
+                asan_libs = self.sdk_sysroot / "usr/lib/clang" / version / "lib/freebsd"
+                if (asan_libs / libname).exists():
+                    found_asan_lib = asan_libs / libname
+                    break
+            if not found_asan_lib:
+                self.fatal("Cannot find", libname, "library in sysroot dirs", asan_libdir_candidates, "-- Compilation will fail!")
+                found_asan_lib = Path("/some/invalid/path/to/lib")
+            self.makedirs(expected_path)
+            runCmd("cp", "-av", found_asan_lib.parent, expected_path.parent)
+            # For some reason they are 644 so we can't overwrite for the next build unless we chmod first
+            runCmd("chmod", "-R", "u+w", expected_path.parent)
+            if not (expected_path / libname).exists():
+                self.fatal("Cannot find", libname, "library in compiler dir", expected_path, "-- Compilation will fail!")
+
+        if self._check_install_dir_conflict:
+            xtarget = self._crossCompileTarget  # type: CrossCompileTarget
+            # If the conflicting target is also in supported_architectures, check for conficts:
+            if xtarget.check_conflict_with is not None and xtarget.check_conflict_with in self.supported_architectures:
+                # Check that we are not installing to the same directory as MIPS to avoid conflicts
+                assert hasattr(self, "synthetic_base")
+                assert issubclass(self.synthetic_base, SimpleProject)
+                other_instance = self.synthetic_base.get_instance_for_cross_target(xtarget.check_conflict_with,
+                                                                                  self.config, caller=self)
+                if self.config.verbose:
+                    self.info(self.target, "install dir for", xtarget.name, "is", self.installDir)
+                    other_xtarget = other_instance.get_crosscompile_target(self.config)
+                    self.info(self.target, "install dir for", other_xtarget.name, "is", self.installDir)
+                assert other_instance.installDir != self.installDir, \
+                    mips_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(other_instance.installDir)
+
+
         if self.config.skipUpdate:
             # When --skip-update is set (or we don't have working internet) only check that the repository exists
             if self.repository:

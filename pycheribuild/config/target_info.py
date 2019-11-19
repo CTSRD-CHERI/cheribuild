@@ -44,7 +44,7 @@ class CPUArchitecture(Enum):
     MIPS64 = "mips64"
     RISCV64 = "riscv64"
     I386 = "i386"
-    AARCH64 = "aarch64"
+    AARCH64 = "arm64"
 
 
 class TargetInfo(ABC):
