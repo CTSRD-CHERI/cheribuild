@@ -1496,10 +1496,10 @@ class BuildCheriBsdSysroot(SimpleProject):
         bsdtar_path = shutil.which(str(self.bsdtar_cmd))
         if not bsdtar_path:
             bsdtar_path = str(self.bsdtar_cmd)
-        archiveCmd = [bsdtar_path, "cf", "-", "--include=./lib/", "--include=./usr/include/",
-                      "--include=./usr/lib/", "--include=./usr/libdata/", "--include=./usr/libcheri"]
+        tar_cmd = [bsdtar_path, "cf", "-", "--include=./lib/", "--include=./usr/include/",
+                   "--include=./usr/lib/", "--include=./usr/libdata/", "--include=./usr/libcheri"]
         # only pack those files that are mentioned in METALOG
-        archiveCmd.append("@METALOG")
+        tar_cmd.append("@METALOG")
         if self.compiling_for_mips(include_purecap=False) and self.use_cheri_sysroot_for_mips:
             rootfs_target = self.rootfs_source_class.get_instance_for_cross_target(
                 CompilationTargets.CHERIBSD_MIPS_PURECAP, self.config)
@@ -1514,10 +1514,10 @@ class BuildCheriBsdSysroot(SimpleProject):
             else:
                 fixit = "Run `cheribuild.py " + rootfs_target.target + "` first"
             self.fatal("Sysroot source directory", rootfs_dir, "does not contain libc.so.7", fixitHint=fixit)
-        printCommand(archiveCmd, cwd=rootfs_dir)
+        printCommand(tar_cmd, cwd=rootfs_dir)
         if not self.config.pretend:
             tar_cwd = str(rootfs_dir)
-            with subprocess.Popen(archiveCmd, stdout=subprocess.PIPE, cwd=tar_cwd) as tar:
+            with subprocess.Popen(tar_cmd, stdout=subprocess.PIPE, cwd=tar_cwd) as tar:
                 runCmd(["tar", "xf", "-"], stdin=tar.stdout, cwd=self.crossSysrootPath)
         if not (self.crossSysrootPath / "lib/libc.so.7").is_file():
             self.fatal(self.crossSysrootPath, "is missing the libc library, install seems to have failed!")
