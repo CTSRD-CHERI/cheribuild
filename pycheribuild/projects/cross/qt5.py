@@ -358,7 +358,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         self.add_cmake_options(PORT="Qt", ENABLE_X11_TARGET=False,
                                ENABLE_OPENGL=False,
                                USE_LIBHYPHEN=False,  # we don't have libhyphen
-                               DEVELOPER_MODE=True, # needed to enable DumpRenderTree and ImageDiff
+                               DEVELOPER_MODE=True,  # needed to enable DumpRenderTree and ImageDiff
                                ENABLE_VIDEO=False,  # probably depends on lots of stuff
                                ENABLE_XSLT=False,  # 1 less library to build
                                USE_GSTREAMER=False,  # needs all the glib+gtk crap

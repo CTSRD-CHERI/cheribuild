@@ -1780,7 +1780,6 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         Strip all ELF binaries to reduce the size of the benchmark directory
         :param benchmark_dir: The directory containing multiple ELF binaries
         """
-        assert isinstance(self, Project) and isinstance(self, CrossCompileMixin)
         self.info("Stripping all ELF files in", benchmark_dir)
         self.run_cmd("du", "-sh", benchmark_dir)
         for root, dirnames, filenames in os.walk(str(benchmark_dir)):
@@ -1804,7 +1803,6 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             return self._statcounters_csv
         else:
             suffix = self.build_configuration_suffix()
-            assert isinstance(self, CrossCompileMixin)
             if self.config.benchmark_statcounters_suffix:
                 user_suffix = self.config.benchmark_statcounters_suffix
                 if not user_suffix.startswith("-"):
@@ -1834,7 +1832,6 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                            benchmark_script_args: list = None, extra_runbench_args: list = None):
         assert benchmarks_dir is not None
         assert output_file is not None, "output_file must be set to a valid value"
-        assert isinstance(self, Project) and isinstance(self, CrossCompileMixin)
         self.strip_elf_files(benchmarks_dir)
         for root, dirnames, filenames in os.walk(str(benchmarks_dir)):
             for filename in filenames:
