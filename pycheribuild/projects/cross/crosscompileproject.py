@@ -313,7 +313,7 @@ class CrossCompileMixin(object):
             # Should no longer be needed now that I added a hack for .eh_frame
             # "-Wl,-z,notext",  # needed so that LLD allows text relocations
             ]
-        if self.include_debug_info:
+        if self.include_debug_info and not ".bfd" in self.target_info.linker.name:
             # Add a gdb_index to massively speed up running GDB on CHERIBSD:
             result.append("-Wl,--gdb-index")
         if self.target_info.is_cheribsd and self.config.withLibstatcounters:
