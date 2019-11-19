@@ -367,8 +367,6 @@ class CrossCompileMixin(object):
 
     def configure(self, **kwargs):
         env = dict()
-        if hasattr(self, "_configure_status_message"):
-            statusUpdate(self._configure_status_message)
         if not self.compiling_for_host():
             env.update(PKG_CONFIG_LIBDIR=self.target_info.pkgconfig_dirs, PKG_CONFIG_SYSROOT_DIR=self.crossSysrootPath)
         with setEnv(**env):

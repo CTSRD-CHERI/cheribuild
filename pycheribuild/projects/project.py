@@ -322,12 +322,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             return default_target
         # otherwise fall back to the default specified in the class
         result = cls.default_architecture
-        # Otherwise pick the best match:
-        if default_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            # add this note for e.g. GDB:
-            # noinspection PyUnresolvedReferences
-            cls._configure_status_message = "Cannot compile " + cls.target + " in CHERI purecap mode," \
-                                                                             " building MIPS binaries instead"
         assert result is not CompilationTargets.NONE
         return result
 
