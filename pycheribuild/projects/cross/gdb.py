@@ -28,8 +28,6 @@
 # SUCH DAMAGE.
 #
 
-import os
-import shutil
 import typing
 
 from .crosscompileproject import *
@@ -69,24 +67,25 @@ class BuildGDB(CrossCompileAutotoolsProject):
     defaultOptimizationLevel = ["-O2"]
     supported_architectures = [CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS]
     _mips_build_hybrid = True  # build MIPS binaries as CHERI hybrid so that the trap register number works
+    native_install_dir = CrossCompileAutotoolsProject._installToSDK
 
     @classmethod
     def setup_config_options(cls, **kwargs):
+        # Install to the CHERI SDK for native builds (must be done before calling super().setup_config_options)
+        if cls._crossCompileTarget is CompilationTargets.NATIVE:
+            cls.defaultInstallDir = cls.native_install_dir
         super().setup_config_options(**kwargs)
-        cls.cheri_hybrid = cls.add_bool_option(
-            "use-cheri-hybrid", only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS], default=True,
-            help="Build against a hybrid sysroot (required for faulting capability register number support)",
-            )
+        cls.cheri_hybrid = True
+        if cls._crossCompileTarget is CompilationTargets.CHERIBSD_MIPS:
+            cls.cheri_hybrid = cls.add_bool_option("use-cheri-hybrid", default=True,
+                help="Build against a hybrid sysroot (required for faulting capability register number support)")
 
     def __init__(self, config: CheriConfig):
         self._compile_status_message = None
-        if self.compiling_for_host():
-            self.crossInstallDir = CrossInstallDir.SDK
-        else:
+        if not self.compiling_for_host():
             # We always want to build the MIPS binary static so we can just scp it over to QEMU
             self._linkage = Linkage.STATIC
-        # In jenkins, we also want to be able to build a non- building the MIPS version of GDB
-
+        # In jenkins, we also want to be able to build a non-CHERI MIPS version of GDB
         self._mips_build_hybrid = self.cheri_hybrid
 
         super().__init__(config)
