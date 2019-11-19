@@ -91,33 +91,6 @@ class BuildFreestandingSdk(SimpleProject):
     def process(self):
         self.installCMakeConfig()
         self.buildCheridis()
-        if False and IS_FREEBSD:
-            binutilsBinaries = "addr2line as brandelf nm objcopy objdump size strings strip".split()
-            toolsToSymlink = binutilsBinaries
-            cheri_sdk_bindir = self.config.cheri_sdk_bindir
-            # When building on FreeBSD we also copy the MIPS GCC and related tools
-            self.copyCrossToolsFromCheriBSD(binutilsBinaries)
-            for tool in set(toolsToSymlink):
-                self.createBuildtoolTargetSymlinks(cheri_sdk_bindir / tool)
-            # For some reason CheriBSD does not build a cross ar, let's symlink the system one to the SDK bindir
-            runCmd("ln", "-fsn", shutil.which("ar"), cheri_sdk_bindir / "ar",
-                   cwd=self.config.cheri_sdk_bindir, print_verbose_only=True)
-            self.createBuildtoolTargetSymlinks(cheri_sdk_bindir / "ar")
-            # install ld as ld.bfd and add a symlink
-            self.installFile(self.cheribsdBuildRoot / "tmp/usr/bin/ld", cheri_sdk_bindir / "ld.bfd")
-            self.createBuildtoolTargetSymlinks(cheri_sdk_bindir / "ld.bfd")
-            # TODO: should we really be installing this as unprefixed ld?
-            self.createSymlink(cheri_sdk_bindir / "ld.bfd", cheri_sdk_bindir / "ld")
-            self.createBuildtoolTargetSymlinks(cheri_sdk_bindir / "ld")
-            # we should no longer need GCC:
-            return
-            # Copy GCC and G++ for MIPS64:
-            # for tool in ("gcc", "g++", "gcov"):
-            #     self.installFile(self.cheribsdBuildRoot / "tmp/usr/bin" / tool,
-            #                      cheri_sdk_bindir / ("mips64-unknown-freebsd-" + tool), force=True)
-            #     # If we install these tools unprefixed we will break everything!
-            #     if (cheri_sdk_bindir / tool).exists():
-            #         (cheri_sdk_bindir / tool).unlink()
 
     def copyCrossToolsFromCheriBSD(self, binutilsBinaries: "typing.List[str]"):
         # if we pass a string starting with a slash to Path() it will reset to that absolute path

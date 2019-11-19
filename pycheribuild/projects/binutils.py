@@ -116,14 +116,18 @@ class BuildGnuBinutils(AutotoolsProject):
             super().install()
             installedTools = "addr2line ranlib strip ar nm readelf as objcopy size c++filt objdump strings".split()
             # create links for ld:
-            self.createBuildtoolTargetSymlinks(bindir / "ld.bfd")
+            self.create_triple_prefixed_symlinks(bindir / "ld.bfd")
         for tool in installedTools:
             prefixedName = "mips64-unknown-freebsd-" + tool
             if not (bindir / prefixedName).is_file():
                 self.fatal("Binutils binary", prefixedName, "is missing!")
             # create the right symlinks to the tool (ld -> mips64-unknown-elf-ld, etc)
             # Also symlink cheri-unknown-freebsd-ld -> ld (and the other targets)
-            self.createBuildtoolTargetSymlinks(bindir / prefixedName, toolName=tool, createUnprefixedLink=True)
+            self.create_triple_prefixed_symlinks(bindir / prefixedName, tool_name=tool, create_unprefixed_link=True)
+
+    @property
+    def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
+        return ["cheri-unknown-freebsd-"]  # compat only
 
     def process(self):
         self.warning("GNU binutils should only be built if you know what you are doing since the linker "

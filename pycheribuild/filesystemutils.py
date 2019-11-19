@@ -235,34 +235,36 @@ class FileSystemUtils(object):
             printCommand("chmod", oct(mode), dest, print_verbose_only=print_verbose_only)
             dest.chmod(mode)
 
-    @staticmethod
-    def createBuildtoolTargetSymlinks(tool: Path, toolName: str = None, createUnprefixedLink: bool = False,
-                                      cwd: str = None):
+    @property
+    def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
+        raise ValueError("Must override triple_prefixes_for_binaries to use create_triple_prefixed_symlinks!")
+
+    def create_triple_prefixed_symlinks(self, tool_path: Path, tool_name: str = None,
+                                        create_unprefixed_link: bool = False, cwd: str = None):
         """
         Create mips4-unknown-freebsd, cheri-unknown-freebsd and mips64-unknown-freebsd prefixed symlinks
         for build tools like clang, ld, etc.
-        :param createUnprefixedLink: whether to create a symlink toolName -> tool.name
-        (in case the real tool is prefixed)
+        :param create_unprefixed_link: whether to create a symlink tool_name -> tool_path.name
+        (in case the real tool_path is prefixed)
         :param cwd: the working directory
-        :param tool: the binary for which the symlinks will be created
-        :param toolName: the unprefixed name of the tool (defaults to tool.name) such as e.g. "ld", "ar"
+        :param tool_path: the binary for which the symlinks will be created
+        :param tool_name: the unprefixed name of the tool_path (defaults to tool_path.name) such as e.g. "ld", "ar"
         """
-        # if the actual tool we are linking to make sure we link to the destinations so we don't create symlink loops
-        cwd = cwd or tool.parent  # set cwd before resolving potential symlink
-        if not toolName:
-            toolName = tool.name
-        if not tool.is_file():
-            fatalError("Attempting to create symlink to non-existent build tool:", tool)
+        cwd = cwd or tool_path.parent  # set cwd before resolving potential symlink
+        if not tool_name:
+            tool_name = tool_path.name
+        if not tool_path.is_file():
+            fatalError("Attempting to create symlink to non-existent build tool_path:", tool_path)
 
-        # a prefixed tool was installed -> create link such as mips4-unknown-freebsd-ld -> ld
-        if createUnprefixedLink:
-            assert tool.name != toolName
-            runCmd("ln", "-fsn", tool.name, toolName, cwd=cwd, print_verbose_only=True)
+        # a prefixed tool_path was installed -> create link such as mips4-unknown-freebsd-ld -> ld
+        if create_unprefixed_link:
+            assert tool_path.name != tool_name
+            runCmd("ln", "-fsn", tool_path.name, tool_name, cwd=cwd, print_verbose_only=True)
 
-        for target in ("mips4-unknown-freebsd-", "cheri-unknown-freebsd-", "mips64-unknown-freebsd-"):
-            link = tool.parent / (target + toolName)  # type: Path
-            if link == tool:  # happens for binutils, where prefixed tools are installed
+        for target in self.triple_prefixes_for_binaries:
+            link = tool_path.parent / (target + tool_name)  # type: Path
+            if link == tool_path:  # happens for binutils, where prefixed tools are installed
                 # if self.config.verbose:
                 #    print(coloured(AnsiColour.yellow, "Not overwriting", link, "because it is the target"))
                 continue
-            runCmd("ln", "-fsn", tool.name, target + toolName, cwd=cwd, print_verbose_only=True)
+            runCmd("ln", "-fsn", tool_path.name, target + tool_name, cwd=cwd, print_verbose_only=True)

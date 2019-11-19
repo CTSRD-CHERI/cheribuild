@@ -348,11 +348,17 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         return ["llvm"]  # TODO: upstream-llvm???
 
+    @classmethod
+    def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", include_version: bool):
+        common_suffix = "-unknown-freebsd"
+        if include_version:
+            common_suffix += str(cls.FREEBSD_VERSION)
+        # TODO: do we need any special cases here?
+        return target.cpu_architecture.value + common_suffix
+
     @property
     def target_triple(self):
-        common_suffix = "-unknown-freebsd" + str(self.FREEBSD_VERSION)
-        # TODO: do we need any special cases here?
-        return self.target.cpu_architecture.value + common_suffix
+        return self.triple_for_target(self.target, self.config, include_version=True)
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
@@ -379,13 +385,14 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     def is_cheribsd(self):
         return True
 
-    @property
-    def target_triple(self):
-        if self.target.is_cheri_purecap():
+    @classmethod
+    def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", include_version):
+        if target.is_cheri_purecap():
             # anything over 10 should use libc++ by default
-            assert self.target.is_mips(include_purecap=True), "Only MIPS purecap is supported"
-            return "mips64c{}-unknown-freebsd{}-purecap".format(self.config.cheriBits, self.FREEBSD_VERSION)
-        return super().target_triple
+            assert target.is_mips(include_purecap=True), "Only MIPS purecap is supported"
+            return "mips64c{}-unknown-freebsd{}-purecap".format(config.cheriBits,
+                cls.FREEBSD_VERSION if include_version else "")
+        return super().triple_for_target(target, config, include_version)
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:

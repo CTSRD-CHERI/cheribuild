@@ -98,7 +98,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             linker_flags = filter(lambda s: not s.startswith("--sysroot"), linker_flags)
             compiler_flags = filter(lambda s: not s.startswith("--sysroot"), compiler_flags)
             cross_compile_prefix = self.target_info.target_triple
-            if self.compiling_for_cheri() or self.compiling_for_mips(include_purecap=False):
+            if self.compiling_for_mips(include_purecap=True):
                 cross_compile_prefix = "mips64-unknown-freebsd"
             self.configureArgs.extend([
                 "-device", "freebsd-generic-clang",

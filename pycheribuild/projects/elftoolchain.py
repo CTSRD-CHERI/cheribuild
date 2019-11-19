@@ -147,13 +147,17 @@ class BuildElftoolchain(Project):
                 self.deleteFile(self.installDir / "bin" / ("mips64-unknown-freebsd-" + prog))
                 self.deleteFile(self.installDir / "bin" / ("mips4-unknown-freebsd-" + prog))
             else:
-                self.createBuildtoolTargetSymlinks(self.installDir / "bin" / prog)
+                self.create_triple_prefixed_symlinks(self.installDir / "bin" / prog)
         # if we didn't build ar/ranlib add symlinks to the versions in /usr/bin
         if not self.build_ar:
             self.createSymlink(Path("/usr/bin/ar"), self.installDir / "bin/ar", relative=False)
-            self.createBuildtoolTargetSymlinks(self.installDir / "bin/ar")
+            self.create_triple_prefixed_symlinks(self.installDir / "bin/ar")
             self.createSymlink(Path("/usr/bin/ranlib"), self.installDir / "bin/ranlib", relative=False)
-            self.createBuildtoolTargetSymlinks(self.installDir / "bin/ranlib")
+            self.create_triple_prefixed_symlinks(self.installDir / "bin/ranlib")
+
+    @property
+    def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
+        return ["cheri-unknown-freebsd-"]  # compat only
 
     def process(self):
         # work around bug in latest bmake that assumes metamode support

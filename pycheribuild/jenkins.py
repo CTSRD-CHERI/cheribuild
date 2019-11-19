@@ -175,7 +175,6 @@ def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "typing.List[Sdk
             else:
                 # otherwise fall back to the /usr/bin version
                 cheri_config.FS.createSymlink(Path(shutil.which(tool)), cheri_config.cheri_sdk_bindir / tool, relative=False)
-            cheri_config.FS.createBuildtoolTargetSymlinks(cheri_config.cheri_sdk_bindir / tool)
     if not (cheri_config.cheri_sdk_bindir / "ld").exists():
         statusUpdate("Adding missing $SDK/ld link to ld.lld")
         cheri_config.FS.createSymlink(cheri_config.cheri_sdk_bindir / "ld.lld",

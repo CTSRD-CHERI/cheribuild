@@ -32,6 +32,7 @@ import sys
 
 from .project import *
 from ..config.loader import ComputedDefaultValue
+from ..config.target_info import CheriBSDTargetInfo
 from ..utils import *
 
 
@@ -48,13 +49,14 @@ class BuildLLVMBase(CMakeProject):
     def setup_config_options(cls, useDefaultSysroot=True):
         super().setup_config_options()
         if "included_projects" not in cls.__dict__:
-            cls.included_projects = cls.add_config_option("include-projects", default=["llvm", "clang", "lld"], kind=list,
-                                                        help="List of LLVM subprojects that should be built")
+            cls.included_projects = cls.add_config_option("include-projects", default=["llvm", "clang", "lld"],
+                kind=list,
+                help="List of LLVM subprojects that should be built")
 
         if useDefaultSysroot:
             cls.add_default_sysroot = cls.add_bool_option("add-default-sysroot", help="Set default sysroot and "
-                                                                                    "target triple to include "
-                                                                                    "cheribsd paths", )
+                                                                                      "target triple to include "
+                                                                                      "cheribsd paths", )
         else:
             cls.add_default_sysroot = False
 
@@ -62,13 +64,13 @@ class BuildLLVMBase(CMakeProject):
         cls.enable_lto = cls.add_bool_option("enable-lto", help="build with LTO enabled (experimental)")
         if "skip_static_analyzer" not in cls.__dict__:
             cls.skip_static_analyzer = cls.add_bool_option("skip-static-analyzer", default=True,
-                                                         help="Don't build the clang static analyzer")
+                help="Don't build the clang static analyzer")
         if "skip_misc_llvm_tools" not in cls.__dict__:
             cls.skip_misc_llvm_tools = cls.add_bool_option("skip-unused-tools", default=True,
-                                                         help="Don't build some of the LLVM tools that should not be "
-                                                              "needed by default (e.g. llvm-mca, llvm-pdbutil)")
+                help="Don't build some of the LLVM tools that should not be "
+                     "needed by default (e.g. llvm-mca, llvm-pdbutil)")
         cls.build_everything = cls.add_bool_option("build-everything", default=False,
-                                                 help="Also build documentation,examples and bindings")
+            help="Also build documentation,examples and bindings")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -86,12 +88,13 @@ class BuildLLVMBase(CMakeProject):
             CMAKE_CXX_COMPILER=self.cppCompiler,
             CMAKE_C_COMPILER=self.cCompiler,
             LLVM_PARALLEL_LINK_JOBS=link_jobs,  # anything more causes too much I/O + memory usage
-        )
+            )
         if self.use_asan:
             # Use asan+ubsan
             self.add_cmake_options(LLVM_USE_SANITIZER="Address;Undefined")
 
-        # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
+        # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for
+        # libunwind/libcxx)
         self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
 
         # Install the llvm binutils symlinks since they now seem to work fine.
@@ -107,28 +110,28 @@ class BuildLLVMBase(CMakeProject):
                 LLVM_INCLUDE_DOCS=False,
                 # This saves some CMake time since it is used as a sub-project
                 LLVM_INCLUDE_BENCHMARKS=False,
-            )
+                )
         if self.skip_static_analyzer:
             # save some build time by skipping the static analyzer
             self.add_cmake_options(CLANG_ENABLE_STATIC_ANALYZER=False,
-                                   CLANG_ENABLE_ARCMT=False,   # also need to disable ARCMT to disable static analyzer
-                                   CLANG_ANALYZER_ENABLE_Z3_SOLVER=False, # and this also needs to be set
-                                   )
+                CLANG_ENABLE_ARCMT=False,  # also need to disable ARCMT to disable static analyzer
+                CLANG_ANALYZER_ENABLE_Z3_SOLVER=False,  # and this also needs to be set
+                )
         if self.skip_misc_llvm_tools:
             self.add_cmake_options(LLVM_TOOL_LLVM_MCA_BUILD=False,
-                                   LLVM_TOOL_LLVM_EXEGESIS_BUILD=False,
-                                   LLVM_TOOL_LLVM_RC_BUILD=False,
-                                   )
+                LLVM_TOOL_LLVM_EXEGESIS_BUILD=False,
+                LLVM_TOOL_LLVM_RC_BUILD=False,
+                )
         if self.canUseLLd(self.cCompiler):
             self.add_cmake_options(LLVM_ENABLE_LLD=True)
             # Add GDB index to speed up debugging
             if self.cmakeBuildType.lower() == "debug" or self.cmakeBuildType.lower() == "relwithdebinfo":
                 self.add_cmake_options(CMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld -Wl,--gdb-index",
-                                       CMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Wl,--gdb-index")
+                    CMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Wl,--gdb-index")
         if self.add_default_sysroot:
             self.add_cmake_options(DEFAULT_SYSROOT=self.crossSysrootPath,
-                                   LLVM_DEFAULT_TARGET_TRIPLE="mips64c" + self.config.cheriBitsStr +
-                                                              "hybrid-unknown-freebsd")
+                LLVM_DEFAULT_TARGET_TRIPLE="mips64c" + self.config.cheriBitsStr +
+                                           "hybrid-unknown-freebsd")
         # when making a debug or asserts build speed it up by building a release tablegen
         # Actually it seems like the time spent in CMake is longer than that spent running tablegen, disable for now
         self.add_cmake_options(LLVM_OPTIMIZED_TABLEGEN=False)
@@ -180,14 +183,14 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         versionStr = ".".join(map(str, info.version))
         if info.compiler == "apple-clang":
             print("Compiler is apple clang", versionStr, " -- assuming it matches required version",
-                  "%d.%d" % (major, minor))
+                "%d.%d" % (major, minor))
         elif info.compiler == "gcc":
             if info.version < (5, 0, 0):
                 warningMessage("GCC older than 5.0.0 will probably not work for compiling clang!")
         elif info.compiler != "clang" or info.version < (major, minor, patch):
             self.dependencyError(self.cCompiler, "version", versionStr,
-                                 "is not supported. Clang version %d.%d or newer is required." % (major, minor),
-                                 installInstructions=self.clang_install_hint())
+                "is not supported. Clang version %d.%d or newer is required." % (major, minor),
+                installInstructions=self.clang_install_hint())
 
     def install(self, **kwargs):
         super().install()
@@ -198,36 +201,36 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         if "clang" in self.included_projects:
             llvmBinaries += ["clang", "clang++", "clang-cpp"]
         for tool in llvmBinaries:
-            self.createBuildtoolTargetSymlinks(self.installDir / "bin" / tool)
+            self.create_triple_prefixed_symlinks(self.installDir / "bin" / tool)
 
         if "clang" in self.included_projects:
             # create cc and c++ symlinks (expected by some build systems)
-            self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang", toolName="cc", createUnprefixedLink=False)
-            self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang++", toolName="c++",
-                                               createUnprefixedLink=False)
-            self.createBuildtoolTargetSymlinks(self.installDir / "bin/clang-cpp", toolName="cpp",
-                                               createUnprefixedLink=False)
+            self.create_triple_prefixed_symlinks(self.installDir / "bin/clang", tool_name="cc",
+                create_unprefixed_link=False)
+            self.create_triple_prefixed_symlinks(self.installDir / "bin/clang++", tool_name="c++",
+                create_unprefixed_link=False)
+            self.create_triple_prefixed_symlinks(self.installDir / "bin/clang-cpp", tool_name="cpp",
+                create_unprefixed_link=False)
 
         # Use the LLVM versions of ranlib and ar and nm
         if "llvm" in self.included_projects:
             for tool in ("ar", "ranlib", "nm", "objcopy", "readelf", "objdump", "strip"):
-                # TODO: also for objcopy soon so we don't need elftoolchain at all
-                self.createBuildtoolTargetSymlinks(self.installDir / ("bin/llvm-" + tool), toolName=tool,
-                                                   createUnprefixedLink=True)
-            self.createBuildtoolTargetSymlinks(self.installDir / "bin/llvm-symbolizer", toolName="addr2line",
-                                               createUnprefixedLink=True)
-            self.createBuildtoolTargetSymlinks(self.installDir / "bin/llvm-cxxfilt", toolName="c++filt",
-                                               createUnprefixedLink=True)
+                self.create_triple_prefixed_symlinks(self.installDir / ("bin/llvm-" + tool), tool_name=tool,
+                    create_unprefixed_link=True)
+            self.create_triple_prefixed_symlinks(self.installDir / "bin/llvm-symbolizer", tool_name="addr2line",
+                create_unprefixed_link=True)
+            self.create_triple_prefixed_symlinks(self.installDir / "bin/llvm-cxxfilt", tool_name="c++filt",
+                create_unprefixed_link=True)
 
         if "lld" in self.included_projects:
-            self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld")
+            self.create_triple_prefixed_symlinks(self.installDir / "bin/ld.lld")
             if IS_MAC:
                 self.deleteFile(self.installDir / "bin/ld", print_verbose_only=True)
                 # lld will call the mach-o linker when invoked as ld -> need to create a shell script instead
                 script = "#!/bin/sh\nexec " + str(self.installDir / "bin/ld.lld") + " \"$@\"\n"
                 self.writeFile(self.installDir / "bin/ld", script, overwrite=True, mode=0o755)
-            self.createBuildtoolTargetSymlinks(self.installDir / "bin/ld.lld", toolName="ld",
-                                               createUnprefixedLink=not IS_MAC)
+            self.create_triple_prefixed_symlinks(self.installDir / "bin/ld.lld", tool_name="ld",
+                create_unprefixed_link=not IS_MAC)
 
 
 class BuildLLVMMonoRepoBase(BuildLLVMBase):
@@ -274,12 +277,26 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
             for abi in ("purecap", "n64"):
                 prefix = "cheribsd" + str(cheri_bits) + abi
                 config_file_contents = config_file_template.format(cheri_bits=cheri_bits, abi=abi,
-                                                                   sdk_dir=self.installDir)
+                    sdk_dir=self.installDir)
                 self.writeFile(self.installDir / "bin" / (prefix + ".cfg"), config_file_contents, overwrite=True,
-                               mode=0o644)
+                    mode=0o644)
                 self.createSymlink(self.installDir / "bin/clang", self.installDir / "bin" / (prefix + "-clang"))
                 self.createSymlink(self.installDir / "bin/clang++", self.installDir / "bin" / (prefix + "-clang++"))
                 self.createSymlink(self.installDir / "bin/clang-cpp", self.installDir / "bin" / (prefix + "-clang-cpp"))
+
+    @property
+    def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
+        triples = [
+            "cheri-unknown-freebsd",  # for compat
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS, self.config, include_version=True),
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS, self.config, include_version=False),
+            # Only create CHERI128 symlinks for now:
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_PURECAP, self.config,
+                include_version=False).replace(self.config.cheriBitsStr, "128"),
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_PURECAP, self.config,
+                include_version=True).replace(self.config.cheriBitsStr, "128"),
+            ]
+        return [x + "-" for x in triples]
 
 
 class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
@@ -287,16 +304,17 @@ class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
     project_name = "upstream-llvm-project"
     target = "upstream-llvm"
     defaultInstallDir = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "upstream-llvm",
-                                             as_string="$INSTALL_ROOT/upstream-llvm")
+        as_string="$INSTALL_ROOT/upstream-llvm")
     skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
 
 
 class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-project.git", force_branch=True, default_branch="temporal")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-project.git", force_branch=True,
+        default_branch="temporal")
     project_name = "cherios-llvm-project"
     target = "cherios-llvm"
     defaultInstallDir = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "cherios-sdk",
-                                             as_string="$INSTALL_ROOT/cherios-sdk")
+        as_string="$INSTALL_ROOT/cherios-sdk")
     skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
 
     def configure(self, **kwargs):
@@ -314,10 +332,10 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
 
         def addToolOptions(name):
             rev = cls.add_config_option(name + "-git-revision", kind=str, metavar="REVISION",
-                                      help="The git revision for tools/" + name)
+                help="The git revision for tools/" + name)
             repo = cls.add_config_option(name + "-repository", kind=str, metavar="REPOSITORY",
-                                       default=cls.githubBaseUrl + name + ".git",
-                                       help="The git repository for tools/" + name)
+                default=cls.githubBaseUrl + name + ".git",
+                help="The git repository for tools/" + name)
             return repo, rev
 
         cls.clangRepository, cls.clangRevision = addToolOptions("clang")
@@ -329,14 +347,17 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.add_cmake_options(LLVM_TOOL_CLANG_BUILD="clang" in self.included_projects,
-                               LLVM_TOOL_LLDB_BUILD="lldb" in self.included_projects,
-                               LLVM_TOOL_LLD_BUILD="lld" in self.included_projects)
+            LLVM_TOOL_LLDB_BUILD="lldb" in self.included_projects,
+            LLVM_TOOL_LLD_BUILD="lld" in self.included_projects)
 
     def update(self):
         super().update()
         if "clang" in self.included_projects:
-            GitRepository(self.clangRepository).update(self, src_dir=self.sourceDir / "tools/clang", revision=self.clangRevision),
+            GitRepository(self.clangRepository).update(self, src_dir=self.sourceDir / "tools/clang",
+                revision=self.clangRevision),
         if "lld" in self.included_projects:
-            GitRepository(self.lldRepository).update(self, src_dir=self.sourceDir / "tools/lld", revision=self.lldRevision),
+            GitRepository(self.lldRepository).update(self, src_dir=self.sourceDir / "tools/lld",
+                revision=self.lldRevision),
         if "lldb" in self.included_projects:  # Not yet usable
-            GitRepository(self.lldbRepository).update(self, src_dir=self.sourceDir / "tools/lldb", revision=self.lldbRevision),
+            GitRepository(self.lldbRepository).update(self, src_dir=self.sourceDir / "tools/lldb",
+                revision=self.lldbRevision),
