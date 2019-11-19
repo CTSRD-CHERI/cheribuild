@@ -334,6 +334,12 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     needs_mxcaptable_static = True  # Currently way over the limit
     needs_mxcaptable_dynamic = True  # Currently way over the limit
 
+    @property
+    def llvm_binutils_dir(self) -> Path:
+        if self.compiling_for_host():
+            return self.config.cheri_sdk_bindir  # Use the CHERI SDK for native
+        return self.target_info.sdk_root_dir / "bin"
+
     def __init__(self, config: CheriConfig):
         # There is a bug in the cmake ninja generator that makes it use a response file for linking
         # WebCore but not actually generating it
@@ -367,8 +373,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                                ENABLE_WEBKIT2=False,  # needs QtQuick
                                )
         # Use llvm-{ar,ranlib} because elftoolchain's versions truncate libWebCore.a
-        self.add_cmake_options(CMAKE_AR=self.config.cheri_sdk_bindir / "llvm-ar")
-        self.add_cmake_options(CMAKE_RANLIB=self.config.cheri_sdk_bindir / "llvm-ranlib")
+        self.add_cmake_options(CMAKE_AR=self.llvm_binutils_dir / "llvm-ar")
+        self.add_cmake_options(CMAKE_RANLIB=self.llvm_binutils_dir / "llvm-ranlib")
         self.add_cmake_options(ENABLE_JIT=False,  # Not supported on MIPS
                                QT_STATIC_BUILD=True,  # we always build qt static for now
                                QT_BUNDLED_PNG=True,  # use libpng from Qt
@@ -427,10 +433,10 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         if not self.build_jsc_only:
             dump_render_tree = self.buildDir / "bin/DumpRenderTree" # type: Path
             if dump_render_tree.is_file():
-                runCmd(self.config.cheri_sdk_bindir / "llvm-strip", "-o", dump_render_tree.with_suffix(".stripped"), dump_render_tree)
-        jsc = self.buildDir / "bin/jsc" # type: Path
+                runCmd(self.llvm_binutils_dir / "llvm-strip", "-o", dump_render_tree.with_suffix(".stripped"), dump_render_tree)
+        jsc = self.buildDir / "bin/jsc"  # type: Path
         if jsc.is_file():
-            runCmd(self.config.cheri_sdk_bindir / "llvm-strip", "-o", jsc.with_suffix(".stripped"), jsc)
+            runCmd(self.llvm_binutils_dir / "llvm-strip", "-o", jsc.with_suffix(".stripped"), jsc)
         self.info("Not installing qtwebit since it uses too much space. If you really want this run `ninja install`")
 
     def run_tests(self):
