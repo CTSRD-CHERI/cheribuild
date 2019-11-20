@@ -200,7 +200,9 @@ class BuildSailFromOpam(OpamMixin, SimpleProject):
         if not self.config.skipUpdate:
             self.run_opam_cmd("update")
 
-        if self.config.clean:
+        if self.config.clean or True:
+            if not self.config.clean:
+                self.info("opam --destdir does not work with update -> doing full reinstall instead of update")
             self.run_opam_cmd("uninstall", "--verbose", "sail", "--destdir=" + str(self.config.cheri_sdk_dir / "sailprefix"))
             self.run_opam_cmd("uninstall", "--verbose", "sail")
 
