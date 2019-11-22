@@ -79,6 +79,7 @@ class BuildQEMUBase(AutotoolsProject):
                                    freebsd="pixman")
         self._addRequiredPkgConfig("glib-2.0", homebrew="glib", zypper="glib2-devel", apt="libglib2.0-dev",
                                    freebsd="glib")
+        self.addRequiredSystemTool("gsed", homebrew="gnu-sed")
 
         # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
         # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
@@ -123,6 +124,9 @@ class BuildQEMUBase(AutotoolsProject):
 
         else:
             self.configureArgs.extend(["--disable-linux-aio", "--disable-kvm"])
+
+        if self.config.verbose:
+            self.make_args.set(V=1)
 
     def configure(self, **kwargs):
         compiler = self.CC
@@ -225,6 +229,9 @@ class BuildQEMUBase(AutotoolsProject):
             self.configureArgs.append("--extra-cxxflags=" + self._extraCXXFlags.strip())
 
         super().configure(**kwargs)
+
+    def run_tests(self):
+        self.runMake("check", cwd=self.buildDir)
 
     def update(self):
         # the build sometimes modifies the po/ subdirectory
