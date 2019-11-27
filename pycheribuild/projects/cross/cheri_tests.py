@@ -30,24 +30,26 @@
 
 from .crosscompileproject import *
 
+if False:
+    # FIXME: move to CheriBSD
+    class BuildCheriTests(CrossCompileCMakeProject):
+        repository = GitRepository("https://github.com/arichardson/cheri-tests.git")
+        native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+        cross_install_dir = DefaultInstallDir.ROOTFS
+        defaultCMakeBuildType = "RelWithDebInfo"
+        project_name = "cheri-tests"
 
-class BuildCheriTests(CrossCompileCMakeProject):
-    repository = GitRepository("https://github.com/arichardson/cheri-tests.git")
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.ROOTFS
-    defaultCMakeBuildType = "RelWithDebInfo"
-    project_name = "cheri-tests"
 
 
-class BuildRtldTests(CrossCompileCMakeProject):
-    repository = GitRepository("https://github.com/arichardson/rtld-tests.git")
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.ROOTFS
-    defaultCMakeBuildType = "Debug"
-    project_name = "rtld-tests"
+    class BuildRtldTests(CrossCompileCMakeProject):
+        repository = GitRepository("https://github.com/arichardson/rtld-tests.git")
+        native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+        cross_install_dir = DefaultInstallDir.ROOTFS
+        defaultCMakeBuildType = "Debug"
+        project_name = "rtld-tests"
 
-    def __init__(self, config: CheriConfig, *args, **kwargs):
-        super().__init__(config, *args, **kwargs)
-        self._linkage = Linkage.DYNAMIC
-        assert not self.force_static_linkage
-        assert self.force_dynamic_linkage
+        def __init__(self, config: CheriConfig, *args, **kwargs):
+            super().__init__(config, *args, **kwargs)
+            self._linkage = Linkage.DYNAMIC
+            assert not self.force_static_linkage
+            assert self.force_dynamic_linkage
