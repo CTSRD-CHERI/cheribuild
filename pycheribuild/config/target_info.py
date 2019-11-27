@@ -55,6 +55,16 @@ class TargetInfo(ABC):
         self.project = project
 
     @property
+    def cmake_processor_id(self):
+        # FIXME: move this to target_info!
+        if self.target.is_mips(include_purecap=True):
+            if self.target.is_cheri_purecap():
+                return "CHERI (MIPS IV compatible) with {}-bit capabilities".format(self.config.cheriBitsStr)
+            else:
+                return "BERI (MIPS IV compatible)"
+        return self.target.cpu_architecture.value
+
+    @property
     @abstractmethod
     def sdk_root_dir(self) -> Path: ...
 

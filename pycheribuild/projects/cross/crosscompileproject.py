@@ -28,11 +28,9 @@
 # SUCH DAMAGE.
 #
 
-import datetime
 import os
 import pprint
 import re
-import shlex
 from builtins import issubclass
 from enum import Enum
 from pathlib import Path
@@ -41,6 +39,7 @@ from ..project import *
 from ...config.chericonfig import BuildType
 from ...config.target_info import CrossCompileTarget, Linkage, CompilationTargets
 from ...utils import *
+
 if typing.TYPE_CHECKING:
     from .cheribsd import BuildCHERIBSD
 
@@ -212,14 +211,16 @@ class CrossCompileMixin(object):
                 self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
 
         # We might be setting too many flags, ignore this (for now)
-        self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
+        if not self.compiling_for_host():
+            self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
 
         assert self.installDir, "must be set"
         statusUpdate(self.target, "INSTALLDIR = ", self._installDir, "INSTALL_PREFIX=", self._installPrefix,
                      "DESTDIR=", self.destdir)
 
         if self.include_debug_info:
-            self.COMMON_FLAGS.append("-ggdb")
+            if not self.target_info.is_macos:
+                self.COMMON_FLAGS.append("-ggdb")
         self.CFLAGS = []
         self.CXXFLAGS = []
         self.ASMFLAGS = []
@@ -368,20 +369,17 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
                 self.cmakeBuildType = self.cross_build_type.value
         super().__init__(config, generator)
         # This must come first:
-        if self.compiling_for_host():
-            self._cmakeTemplate = includeLocalFile("files/NativeToolchain.cmake.in")
-            self.toolchainFile = self.buildDir / "NativeToolchain.cmake"
-        else:
+        if not self.compiling_for_host():
             # Despite the name it should also work for baremetal newlib
             assert self.target_info.is_cheribsd or (self.target_info.is_baremetal and self.target_info.is_newlib)
             self._cmakeTemplate = includeLocalFile("files/CheriBSDToolchain.cmake.in")
             self.toolchainFile = self.buildDir / "CheriBSDToolchain.cmake"
-        self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self.toolchainFile)
+            self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self.toolchainFile)
         # The toolchain files need at least CMake 3.6
         self.set_minimum_cmake_version(3, 7)
 
-    def _prepareToolchainFile(self, **kwargs):
-        configuredTemplate = self._cmakeTemplate
+    def _prepare_toolchain_file(self, **kwargs):
+        configured_template = self._cmakeTemplate
         for key, value in kwargs.items():
             if value is None:
                 continue
@@ -391,12 +389,12 @@ class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
                 strval = commandline_to_str(value)
             else:
                 strval = str(value)
-            assert "@" + key + "@" in configuredTemplate, key
-            configuredTemplate = configuredTemplate.replace("@" + key + "@", strval)
+            assert "@" + key + "@" in configured_template, key
+            configured_template = configured_template.replace("@" + key + "@", strval)
         # work around jenkins paths that might contain @[0-9]+ in the path:
-        configured_jenkins_workaround = re.sub(r"@\d+", "", configuredTemplate)
+        configured_jenkins_workaround = re.sub(r"@\d+", "", configured_template)
         assert "@" not in configured_jenkins_workaround, configured_jenkins_workaround
-        self.writeFile(contents=configuredTemplate, file=self.toolchainFile, overwrite=True)
+        self.writeFile(contents=configured_template, file=self.toolchainFile, overwrite=True)
 
     def configure(self, **kwargs):
         if not self.compiling_for_host():
@@ -432,42 +430,51 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
             else:
                 add_lib_suffix = "# no lib suffix needed for non-purecap"
 
-        # FIXME: move this to target_info!
-        if self.compiling_for_mips(include_purecap=True):
-            if self.crosscompile_target.is_cheri_purecap():
-                processor = "CHERI (MIPS IV compatible) with {}-bit capabilities".format(self.config.cheriBitsStr)
-            else:
-                processor = "BERI (MIPS IV compatible)"
-        elif self.crosscompile_target.is_native():
-            processor = None
-        else:
-            processor = self.crosscompile_target.cpu_architecture.value
-
-        # FIXME: move this to target_info!
+        # TODO: always avoid the toolchain file?
         if self.compiling_for_host():
-            system_name = None
+            self.add_cmake_options(
+                CMAKE_C_COMPILER=self.CC,
+                CMAKE_CXX_COMPILER=self.CXX,
+                CMAKE_ASM_COMPILER=self.CC,  # Compile assembly files with the default compiler
+                CMAKE_C_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CFLAGS),
+                CMAKE_CXX_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CXXFLAGS),
+                CMAKE_ASM_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.ASMFLAGS),
+                )
+            custom_ldflags = commandline_to_str(self.LDFLAGS + self.default_ldflags)
+            if custom_ldflags:
+                self.add_cmake_options(
+                    CMAKE_EXE_LINKER_FLAGS_INIT=custom_ldflags,
+                    CMAKE_SHARED_LINKER_FLAGS_INIT=custom_ldflags,
+                    CMAKE_MODULE_LINKER_FLAGS_INIT=custom_ldflags)
         else:
+            # CMAKE_CROSSCOMPILING will be set when we change CMAKE_SYSTEM_NAME:
+            # This means we may not need the toolchain file at all
+            # https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html
             system_name = "Generic" if self.baremetal else "FreeBSD"
-        self._prepareToolchainFile(
-            TOOLCHAIN_SDK_BINDIR=self.sdk_bindir if not self.compiling_for_host() else self.config.cheri_sdk_bindir,
-            TOOLCHAIN_COMPILER_BINDIR=self.CC.parent,
-            TOOLCHAIN_TARGET_TRIPLE=self.target_info.target_triple,
-            TOOLCHAIN_COMMON_FLAGS=self.default_compiler_flags,
-            TOOLCHAIN_C_FLAGS=self.CFLAGS,
-            TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
-            TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
-            TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
-            TOOLCHAIN_C_COMPILER=self.CC,
-            TOOLCHAIN_CXX_COMPILER=self.CXX,
-            TOOLCHAIN_SYSROOT=self.sdk_sysroot if not self.compiling_for_host() else None,
-            ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
-            TOOLCHAIN_SYSTEM_PROCESSOR=processor,
-            TOOLCHAIN_SYSTEM_NAME=system_name,
-            TOOLCHAIN_PKGCONFIG_DIRS=self.target_info.pkgconfig_dirs if not self.compiling_for_host() else None,
-            TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
-            )
-
-        if self.generator == CMakeProject.Generator.Ninja:
+            self._prepare_toolchain_file(
+                TOOLCHAIN_SDK_BINDIR=self.sdk_bindir if not self.compiling_for_host() else self.config.cheri_sdk_bindir,
+                TOOLCHAIN_COMPILER_BINDIR=self.CC.parent,
+                TOOLCHAIN_TARGET_TRIPLE=self.target_info.target_triple,
+                TOOLCHAIN_COMMON_FLAGS=self.default_compiler_flags,
+                TOOLCHAIN_C_FLAGS=self.CFLAGS,
+                TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
+                TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
+                TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
+                TOOLCHAIN_C_COMPILER=self.CC,
+                TOOLCHAIN_CXX_COMPILER=self.CXX,
+                TOOLCHAIN_SYSROOT=self.sdk_sysroot,
+                ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
+                TOOLCHAIN_SYSTEM_PROCESSOR=self.target_info.cmake_processor_id,
+                TOOLCHAIN_SYSTEM_NAME=system_name,
+                TOOLCHAIN_PKGCONFIG_DIRS=self.target_info.pkgconfig_dirs,
+                TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
+                )
+        if self.force_static_linkage:
+            self.add_cmake_options(
+                CMAKE_SHARED_LIBRARY_SUFFIX=".a",
+                CMAKE_FIND_LIBRARY_SUFFIXES=".a",
+                CMAKE_EXTRA_SHARED_LIBRARY_SUFFIXES=".a")
+        if not self.compiling_for_host() and self.generator == CMakeProject.Generator.Ninja:
             # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
             # TODO: remove once it has been fixed
             self.add_cmake_options(CMAKE_BUILD_WITH_INSTALL_RPATH=True)
