@@ -44,7 +44,7 @@ class BuildSoaapLLVM(BuildLLVMSplitRepoBase):
     appendCheriBitsToBuildDir = False
     skip_misc_llvm_tools = False
     skip_static_analyzer = False
-    defaultInstallDir = install_to_soaap_dir
+    _default_install_dir_fn = install_to_soaap_dir
     skip_cheri_symlinks = True
 
     @classmethod
@@ -56,7 +56,7 @@ class BuildSoaapLLVM(BuildLLVMSplitRepoBase):
 class BuildSoaap(CMakeProject):
     dependencies = ["soaap-llvm"]
     repository = GitRepository("https://github.com/CTSRD-SOAAP/soaap")
-    defaultInstallDir = install_to_soaap_dir
+    _default_install_dir_fn = install_to_soaap_dir
 
     def configure(self, **kwargs):
         soaap_llvm = BuildSoaapLLVM.get_instance(self)

@@ -36,7 +36,7 @@ class BuildJulietTestSuite(CrossCompileCMakeProject):
     project_name = "juliet-test-suite"
     # TODO: move repo to CTSRD-CHERI
     repository = GitRepository("https://github.com/arichardson/juliet-test-suite-c.git")
-    crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+    default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     appendCheriBitsToBuildDir = True
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
     defaultOptimizationLevel = ["-O0"]
@@ -56,8 +56,8 @@ class BuildJulietTestSuite(CrossCompileCMakeProject):
     def configure(self, **kwargs):
         pass
 
-    def install(*args, **kwargs):
-        pass
+    def install(self, *args, **kwargs):
+        self.fatal("Should not be called")
 
     def run_tests(self):
         pass
@@ -66,6 +66,7 @@ class BuildJulietTestSuite(CrossCompileCMakeProject):
 class BuildJulietCWESubdir(CrossCompileCMakeProject):
     doNotAddToTargets = True
     cwe_number = None
+    default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -78,9 +79,8 @@ class BuildJulietCWESubdir(CrossCompileCMakeProject):
         self.createSymlink(self.sourceDir / "../../CMakeLists.txt", self.sourceDir / "CMakeLists.txt")
         super().configure(**kwargs)
 
-    def install(self, **kwargs):
-        self.info("No need to install!")
-        pass
+    def install(self, *args, **kwargs):
+        self.fatal("Should not be called")
 
     def run_tests(self):
         args = []

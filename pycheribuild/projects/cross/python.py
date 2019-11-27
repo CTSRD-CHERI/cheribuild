@@ -36,7 +36,8 @@ from ...utils import is_case_sensitive_dir
 
 class BuildPython(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/cpython.git", default_branch="3.8", force_branch=True)
-    crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS
     default_build_type = BuildType.RELWITHDEBINFO
 
     @classmethod

@@ -40,7 +40,7 @@ from ..utils import *
 
 class BuildQEMUBase(AutotoolsProject):
     repository = GitRepository("https://github.com/qemu/qemu.git")
-    defaultInstallDir = AutotoolsProject._installToSDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
     # QEMU will not work with BSD make, need GNU make
     make_kind = MakeCommandKind.GnuMake
     doNotAddToTargets = True
@@ -295,7 +295,7 @@ class BuildCheriOSQEMU(BuildQEMU):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="cherios", force_branch=True)
     project_name = "cherios-qemu"
     target = "cherios-qemu"
-    defaultInstallDir = ComputedDefaultValue(
+    _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.outputRoot / "cherios-sdk",
         as_string="$INSTALL_ROOT/cherios-sdk")
     skip_misc_llvm_tools = False # Cannot skip these tools in upstream LLVM

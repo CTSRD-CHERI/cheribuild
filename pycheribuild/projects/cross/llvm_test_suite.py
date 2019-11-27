@@ -42,6 +42,7 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / "llvm-test-suite"),
         as_string="$SOURCE_ROOT/llvm-test-suite")
+    default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
 
     def _find_in_sdk_or_llvm_build_dir(self, name) -> Path:
         if (BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin" / name).exists():
@@ -61,6 +62,3 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
             self.add_cmake_options(TEST_SUITE_HOST_CC="/usr/bin/cc")
             # we want to link against libc++ not libstdc++ (and for some reason we need to specify libgcc_eh too
             self.add_cmake_options(TEST_SUITE_CXX_LIBRARY="-lc++;-lgcc_eh")
-
-    def install(self, **kwargs):
-        statusUpdate("No install step for llvm-test-suite")

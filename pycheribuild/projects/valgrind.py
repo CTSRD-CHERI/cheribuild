@@ -34,7 +34,7 @@ from ..utils import runCmd, OSInfo
 
 # Install latest version of valgrind from source
 class BuildValgrind(AutotoolsProject):
-    defaultInstallDir = Project._installToBootstrapTools
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     repository = GitRepository("git://sourceware.org/git/valgrind.git",
                                default_branch="VALGRIND_3_14_BRANCH", force_branch=True)
 

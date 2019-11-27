@@ -33,7 +33,7 @@ from ..utils import runCmd
 
 class BuildNinja(Project):
     repository = GitRepository("https://github.com/ninja-build/ninja")
-    defaultInstallDir = AutotoolsProject._installToBootstrapTools
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     def configure(self, **kwargs):
         pass

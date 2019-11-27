@@ -40,20 +40,20 @@ from ..project import ReuseOtherProjectDefaultTargetRepository
 import os
 
 
-def _cxx_install_dir(config: CheriConfig, project: "Project"):
-    if project.get_crosscompile_target(config).is_native():
-        return _INVALID_INSTALL_DIR
-    return project.rootfs_dir / "opt/c++"
+# A base class to set the default installation directory
+class _CxxRuntimeCMakeProject(CrossCompileCMakeProject):
+    doNotAddToTargets = True
+    cross_install_dir = DefaultInstallDir.SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+
+    @property
+    def _rootfs_install_dir_name(self):
+        return "c++"
 
 
-installToCXXDir = ComputedDefaultValue(function=lambda c, p: default_cross_install_dir(c, p, install_dir_name="c++"),
-                                       as_string="$CHERIBSD_ROOTFS/opt/c++")
-
-
-class BuildLibunwind(CrossCompileCMakeProject):
+class BuildLibunwind(_CxxRuntimeCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="libunwind")
-    defaultInstallDir = installToCXXDir
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
 
     def __init__(self, config: CheriConfig):
@@ -129,9 +129,8 @@ class BuildLibunwind(CrossCompileCMakeProject):
                                           "--llvm-lit-path", self.lit_path, mount_sysroot=True)
 
 
-class BuildLibCXXRT(CrossCompileCMakeProject):
+class BuildLibCXXRT(_CxxRuntimeCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/libcxxrt.git")
-    defaultInstallDir = installToCXXDir
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
 
     @classmethod
@@ -183,10 +182,9 @@ class BuildLibCXXRT(CrossCompileCMakeProject):
                                               mount_builddir=True, mount_sysroot=True)
 
 
-class BuildLibCXX(CrossCompileCMakeProject):
+class BuildLibCXX(_CxxRuntimeCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="libcxx")
-    defaultInstallDir = installToCXXDir
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS
     dependencies = ["libcxxrt"]
 
@@ -356,7 +354,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="compiler-rt")
     project_name = "compiler-rt"
-    crossInstallDir = CrossInstallDir.COMPILER_RESOURCE_DIR
+    default_install_dir = DefaultInstallDir.COMPILER_RESOURCE_DIR
     _check_install_dir_conflict = False
     _default_architecture = CompilationTargets.CHERIBSD_MIPS_PURECAP
 
@@ -397,7 +395,8 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="compiler-rt")
     project_name = "compiler-rt-builtins"
-    crossInstallDir = CrossInstallDir.SDK
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.SYSROOT
     supported_architectures = CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS
     _default_architecture = CompilationTargets.BAREMETAL_NEWLIB_MIPS64
 

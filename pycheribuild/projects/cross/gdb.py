@@ -57,7 +57,8 @@ class TemporarilyRemoveProgramsFromSdk(object):
 
 class BuildGDB(CrossCompileAutotoolsProject):
     path_in_rootfs = "/usr/local"  # Always install gdb as /usr/local/bin/gdb
-    crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+    native_install_dir = DefaultInstallDir.CHERI_SDK
+    cross_install_dir = DefaultInstallDir.ROOTFS
     repository = GitRepository("https://github.com/CTSRD-CHERI/gdb.git",
                                # Branch name is changed for every major GDB release:
                                default_branch="mips_cheri-8.3", force_branch=True,
@@ -66,13 +67,9 @@ class BuildGDB(CrossCompileAutotoolsProject):
     is_sdk_target = True
     supported_architectures = [CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS]
     _mips_build_hybrid = True  # build MIPS binaries as CHERI hybrid so that the trap register number works
-    native_install_dir = CrossCompileAutotoolsProject._installToSDK
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        # Install to the CHERI SDK for native builds (must be done before calling super().setup_config_options)
-        if cls._crossCompileTarget is CompilationTargets.NATIVE:
-            cls.defaultInstallDir = cls.native_install_dir
         super().setup_config_options(**kwargs)
         cls.cheri_hybrid = True
         if cls._crossCompileTarget is CompilationTargets.CHERIBSD_MIPS:

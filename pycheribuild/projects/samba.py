@@ -36,12 +36,10 @@ from ..utils import setEnv, IS_MAC
 
 SMB_OUT_OF_SOURCE_BUILD_WORKS = False
 
+
 # Install samba from source (e.g. on MacOS where the builtin smbd is not usable by QEMU
 class BuildSamba(Project):
-    # if IS_MAC:
-    #     defaultInstallDir = "/opt/samba"
-    # else:
-    defaultInstallDir = Project._installToBootstrapTools
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     # TODO: the out-of source build doesn't work with bundled krb5
     if SMB_OUT_OF_SOURCE_BUILD_WORKS:
         make_kind = MakeCommandKind.CustomMakeTool

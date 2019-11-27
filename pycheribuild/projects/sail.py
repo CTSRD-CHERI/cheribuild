@@ -159,7 +159,7 @@ class Opam2(SimpleProject):
 class BuildBubbleWrap(AutotoolsProject):
     project_name = "bubblewrap"
     repository = GitRepository("https://github.com/projectatomic/bubblewrap")
-    defaultInstallDir = AutotoolsProject._installToBootstrapTools
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     def __init__(self, config):
         super().__init__(config)
@@ -238,7 +238,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
     project_name = "sail-cheri-mips"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-mips")
     dependencies = ["sail-from-opam"]
-    defaultInstallDir = Project._installToSDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
 
@@ -271,7 +271,7 @@ class BuildSailRISCV(ProjectUsingOpam):
     project_name = "sail-riscv"
     repository = GitRepository("https://github.com/rems-project/sail-riscv")
     dependencies = ["sail-from-opam"]
-    defaultInstallDir = Project._installToSDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
 
@@ -304,7 +304,7 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
     project_name = "sail-cheri-riscv"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-riscv")
     dependencies = ["sail-from-opam"]
-    defaultInstallDir = Project._installToSDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
 
@@ -335,7 +335,7 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
 # Old way of installing sail:
 class OcamlProject(OpamMixin, Project):
     doNotAddToTargets = True
-    defaultInstallDir = Project._installToSDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True
     make_kind = MakeCommandKind.GnuMake
     needed_ocaml_packages = ["ocamlbuild"]

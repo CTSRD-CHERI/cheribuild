@@ -258,7 +258,7 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     target = "llvm"
     skip_cheri_symlinks = False
     is_sdk_target = True
-    defaultInstallDir = CMakeProject._installToSDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
 
     def install(self, **kwargs):
         super().install(**kwargs)
@@ -303,7 +303,7 @@ class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository("https://github.com/llvm/llvm-project.git")
     project_name = "upstream-llvm-project"
     target = "upstream-llvm"
-    defaultInstallDir = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "upstream-llvm",
+    _default_install_dir_fn = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "upstream-llvm",
         as_string="$INSTALL_ROOT/upstream-llvm")
     skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
 
@@ -313,7 +313,7 @@ class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
         default_branch="temporal")
     project_name = "cherios-llvm-project"
     target = "cherios-llvm"
-    defaultInstallDir = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "cherios-sdk",
+    _default_install_dir_fn = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "cherios-sdk",
         as_string="$INSTALL_ROOT/cherios-sdk")
     skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
 

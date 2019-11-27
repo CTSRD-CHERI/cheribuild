@@ -42,7 +42,7 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     add_host_target_build_config_options = False
     _configure_supports_libdir = False
     _configure_supports_variables_on_cmdline = True
-    crossInstallDir = CrossInstallDir.SDK
+    cross_install_dir = DefaultInstallDir.SYSROOT
     supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_MIPS64,
                                CompilationTargets.BAREMETAL_NEWLIB_MIPS64_PURECAP]
     # build_in_source_dir = True  # we have to build in the source directory

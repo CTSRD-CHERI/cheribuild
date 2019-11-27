@@ -29,9 +29,11 @@
 
 from .crosscompileproject import *
 
+
 class BuildLibMemwalk(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/zxombie/libmemwalk.git")
-    crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS
     defaultCMakeBuildType = "Debug"
     project_name = "libmemwalk"
 

@@ -236,7 +236,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
     # TODO: test more architectures (e.g. RISCV)
     supported_architectures = [CompilationTargets.FREEBSD_X86_64, CompilationTargets.FREEBSD_MIPS]
 
-    defaultInstallDir = ComputedDefaultValue(function=freebsd_install_dir,
+    _default_install_dir_fn = ComputedDefaultValue(function=freebsd_install_dir,
                                              as_string="$INSTALL_ROOT/freebsd-{mips/x86}")
     hide_options_from_help = True  # hide this for now (only show cheribsd)
     add_custom_make_options = True
@@ -981,7 +981,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
     target = "freebsd-universe"
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
     # already in the project name:    build_dir_suffix = "universe"
-    defaultInstallDir = Path("/this/target/should/not/be/installed!")
+    default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
 
     @classmethod
     def setup_config_options(cls, buildKernelWithClang: bool = True, bootstrap_toolchain=False,
@@ -1060,7 +1060,7 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                             # url="https://github.com/bsdjhb/cheribsd"
                                                             )
         })
-    defaultInstallDir = cheribsd_install_dir
+    _default_install_dir_fn = cheribsd_install_dir
     appendCheriBitsToBuildDir = True
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_X86_64,
                                CompilationTargets.CHERIBSD_MIPS, CompilationTargets.CHERIBSD_RISCV]
@@ -1312,7 +1312,7 @@ class BuildCHERIBSDPurecap(BuildCHERIBSD):
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]  # Only Cheri is supported
     build_dir_suffix = "-purecap"
 
-    defaultInstallDir = ComputedDefaultValue(function=cheribsd_purecap_install_dir,
+    _default_install_dir_fn = ComputedDefaultValue(function=cheribsd_purecap_install_dir,
                                              as_string="$INSTALL_ROOT/rootfs-purecap{128/256}")
 
     @classmethod
@@ -1332,7 +1332,7 @@ class BuildCHERIBSDMinimal(BuildCHERIBSD):
     # Set these variables to override the multi target magic and only support CHERI
     _should_not_be_instantiated = False
     build_dir_suffix = "-minimal"
-    defaultInstallDir = ComputedDefaultValue(function=cheribsd_minimal_install_dir,
+    _default_install_dir_fn = ComputedDefaultValue(function=cheribsd_minimal_install_dir,
                                              as_string="$INSTALL_ROOT/rootfs-minmal{128,256,-mips,-x86}")
 
     @classmethod

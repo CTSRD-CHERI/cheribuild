@@ -32,4 +32,4 @@ from .project import *
 
 class BuildBear(CMakeProject):
     repository = GitRepository("https://github.com/rizsotto/Bear.git")
-    defaultInstallDir = CMakeProject._installToBootstrapTools
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS

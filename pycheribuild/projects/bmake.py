@@ -33,7 +33,7 @@ from ..utils import IS_FREEBSD
 
 class BuildBmake(AutotoolsProject):
     repository = GitRepository("https://github.com/arichardson/bmake.git")
-    defaultInstallDir = AutotoolsProject._installToBootstrapTools
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     def configure(self, **kwargs):
         self.configureArgs.append("--with-default-sys-path=" + str(self.installDir / "share/mk"))

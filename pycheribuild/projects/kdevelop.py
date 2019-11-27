@@ -35,7 +35,7 @@ from ..utils import *
 class BuildLibKompareDiff2(CMakeProject):
     defaultCMakeBuildType = "Debug"
     repository = GitRepository("git://anongit.kde.org/libkomparediff2.git")
-    defaultInstallDir = CMakeProject._installToBootstrapTools
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -45,7 +45,7 @@ class BuildKDevplatform(CMakeProject):
     dependencies = ["libkomparediff2"]
     defaultCMakeBuildType = "Debug"
     repository = GitRepository("https://github.com/arichardson/kdevplatform.git", default_branch="cheri")
-    defaultInstallDir = CMakeProject._installToBootstrapTools
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     appendCheriBitsToBuildDir = True
 
     def __init__(self, config: CheriConfig):
@@ -57,7 +57,7 @@ class BuildKDevelop(CMakeProject):
     dependencies = ["kdevplatform", "llvm"]
     defaultCMakeBuildType = "Debug"
     repository = GitRepository("https://github.com/arichardson/kdevelop.git", default_branch="cheri")
-    defaultInstallDir = CMakeProject._installToBootstrapTools
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     appendCheriBitsToBuildDir = True
 
     def __init__(self, config: CheriConfig):

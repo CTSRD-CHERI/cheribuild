@@ -36,7 +36,8 @@ from ...utils import commandline_to_str, runCmd, IS_FREEBSD, IS_MAC, fatalError,
 
 # This class is used to build qtbase and all of qt5
 class BuildQtWithConfigureScript(CrossCompileProject):
-    crossInstallDir = CrossInstallDir.SDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
+    cross_install_dir = DefaultInstallDir.SYSROOT
     doNotAddToTargets = True
     add_host_target_build_config_options = False
     # Should not be needed, but it seems like some of the tests are broken otherwise
@@ -252,7 +253,8 @@ class BuildQtBase(BuildQtWithConfigureScript):
 # Webkit needs ICU (and recommended for QtBase too:
 class BuildICU4C(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/icu4c.git")
-    crossInstallDir = CrossInstallDir.SDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
+    cross_install_dir = DefaultInstallDir.SYSROOT
     make_kind = MakeCommandKind.GnuMake
 
     @classmethod
@@ -298,7 +300,8 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 # it also needs libxml2
 class BuildLibXml2(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/libxml2")
-    crossInstallDir = CrossInstallDir.SDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
+    cross_install_dir = DefaultInstallDir.SYSROOT
     make_kind = MakeCommandKind.GnuMake
 
     def __init__(self, config):
@@ -327,7 +330,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     # webkit is massive if we include debug info
     default_build_type = BuildType.RELWITHDEBINFO
 
-    crossInstallDir = CrossInstallDir.SDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
+    cross_install_dir = DefaultInstallDir.SYSROOT
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: BuildQt5.getSourceDir(project, config) / "qtwebkit",
         as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())

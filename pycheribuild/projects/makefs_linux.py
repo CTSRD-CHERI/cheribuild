@@ -36,7 +36,7 @@ from pathlib import Path
 class BuildMakefsOnLinux(Project):
     project_name = "makefs-linux"
     repository = GitRepository("https://github.com/Engil/makefs.git")
-    defaultInstallDir = Project._installToBootstrapTools
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     build_in_source_dir = True  # out of source builds don't work
     make_kind = MakeCommandKind.GnuMake
 

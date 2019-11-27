@@ -39,7 +39,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
     project_name = "bodiagsuite"
     repository = GitRepository("https://github.com/CTSRD-CHERI/bodiagsuite",
                                old_urls=[b"https://github.com/nwf/bodiagsuite"])
-    crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+    default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     appendCheriBitsToBuildDir = True
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS]
     defaultOptimizationLevel = ["-O0"]
@@ -136,8 +136,8 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
         # TODO: add this copy to the CMakeLists.txt
         self.installFile(self.sourceDir / "Makefile.bsd-run", self.buildDir / "Makefile.bsd-run", force=True)
 
-    def install(*args, **kwargs):
-        pass
+    def install(self, *args, **kwargs):
+        self.fatal("Should not be called")
 
     def run_tests(self):
         bmake = shutil.which("bmake")

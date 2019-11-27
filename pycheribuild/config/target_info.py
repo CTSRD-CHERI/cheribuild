@@ -32,11 +32,11 @@ from abc import ABCMeta, abstractmethod, ABC
 from enum import Enum
 from pathlib import Path
 
-from ..utils import IS_MAC, IS_FREEBSD, IS_LINUX, getCompilerInfo
+from ..utils import IS_MAC, IS_FREEBSD, IS_LINUX, getCompilerInfo, classproperty
 
 if typing.TYPE_CHECKING:
     from .chericonfig import CheriConfig
-    from ..projects.project import SimpleProject
+    from ..projects.project import SimpleProject, Project
 
 
 class CPUArchitecture(Enum):
@@ -145,7 +145,10 @@ class TargetInfo(ABC):
         """E.g. for baremetal target infos we have to link statically (and add the -static linker flag)"""
         return False
 
-    @property
+    def get_rootfs_target(self) -> "Project":
+        raise RuntimeError("Should not be called for " + self.project.target)
+
+    @classproperty
     def is_baremetal(self):
         return False
 
@@ -380,6 +383,10 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def pkgconfig_dirs(self) -> str:
         return str(self.sysroot_dir / "usr/local/lib/pkgconfig")
 
+    def get_rootfs_target(self) -> "Project":
+        from ..projects.cross.cheribsd import BuildFreeBSD
+        return BuildFreeBSD.get_instance(self.project)
+
 
 class CheriBSDTargetInfo(FreeBSDTargetInfo):
     shortname = "CheriBSD"
@@ -429,6 +436,11 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                    str(self.local_install_root / "lib/pkgconfig") + ":" + \
                    str(self.local_install_root / "libcheri/pkgconfig")
         return str(self.sysroot_dir / "usr/lib/pkgconfig") + ":" + str(self.local_install_root / "lib/pkgconfig")
+
+    def get_rootfs_target(self) -> "Project":
+        from ..projects.cross.cheribsd import BuildCHERIBSD
+        # Install the purecap targets into the hybrid rootfs: (not BuildCheribsdPurecap)
+        return BuildCHERIBSD.get_instance(self.project)
 
 
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
@@ -485,6 +497,10 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     @property
     def is_newlib(self):
         return True
+
+    def get_rootfs_target(self) -> "Project":
+        from ..projects.cross.newlib_baremetal import BuildNewlibBaremetal
+        return BuildNewlibBaremetal.get_instance(self.project)
 
 
 class Linkage(Enum):

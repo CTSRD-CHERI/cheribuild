@@ -33,7 +33,7 @@ from .project import *
 class BuildQtCreator(Project):
     dependencies = ["llvm"]
     repository = GitRepository("https://code.qt.io/qt-creator/qt-creator.git")
-    defaultInstallDir = Project._installToSDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
     appendCheriBitsToBuildDir = True
 
     def __init__(self, config: CheriConfig):

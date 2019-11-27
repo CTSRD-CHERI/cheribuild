@@ -41,6 +41,8 @@ class BuildNginx(CrossCompileAutotoolsProject):
     _configure_supports_libdir = False
     _configure_supports_variables_on_cmdline = False
     _configure_understands_enable_static = False
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

@@ -39,7 +39,7 @@ import sys
 import threading
 import time
 from collections import OrderedDict
-from enum import Enum
+from enum import Enum, auto
 from pathlib import Path
 from typing import Union, Callable
 
@@ -54,7 +54,7 @@ __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "Target
            "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
            "CrossCompileTarget", "CPUArchitecture", "GitRepository", "ComputedDefaultValue", "TargetInfo", # no-combine
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
-           "TargetBranchInfo", "CompilationTargets"]  # no-combine
+           "TargetBranchInfo", "CompilationTargets", "DefaultInstallDir"]  # no-combine
 
 def flushStdio(stream):
     while True:
@@ -1279,6 +1279,80 @@ class GitRepository(SourceRepository):
                                                          error_message="Wrong branch: " + current_branch.decode("utf-8"))
 
 
+class DefaultInstallDir(Enum):
+    DO_NOT_INSTALL = auto()
+    IN_BUILD_DIRECTORY = auto()
+    ROOTFS = auto()
+    COMPILER_RESOURCE_DIR = auto()
+    SYSROOT = auto()
+    CHERI_SDK = auto()
+    BOOTSTRAP_TOOLS = auto()
+    CUSTOM_INSTALL_DIR = auto()
+    SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE = auto()
+
+
+_INVALID_INSTALL_DIR = Path("/this/dir/should/be/overwritten/and/not/used/!!!!")
+_DO_NOT_INSTALL_PATH = Path("/this/project/should/not/be/installed!!!!")
+
+
+# noinspection PyProtectedMember
+def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Path:
+    install_dir = project.get_default_install_dir_kind()
+    if install_dir == DefaultInstallDir.DO_NOT_INSTALL:
+        return _DO_NOT_INSTALL_PATH
+    elif install_dir == DefaultInstallDir.IN_BUILD_DIRECTORY:
+        return project.buildDir / "test-install-prefix"
+    elif install_dir == DefaultInstallDir.ROOTFS:
+        assert not project.compiling_for_host(), "Should not use DefaultInstallDir.ROOTFS for native builds!"
+        rootfs_target = project.target_info.get_rootfs_target()
+        if hasattr(project, "path_in_rootfs"):
+            assert project.path_in_rootfs.startswith("/"), project.path_in_rootfs
+            return rootfs_target.installDir / project.path_in_rootfs[1:]
+        return Path(
+            rootfs_target.installDir / "opt" / project.target_info.install_prefix_dirname /
+            project._rootfs_install_dir_name)
+    elif install_dir == DefaultInstallDir.COMPILER_RESOURCE_DIR:
+        compiler_for_resource_dir = project.CC
+        # For the NATIVE variant we want to install to CHERI clang:
+        if project.compiling_for_host():
+            compiler_for_resource_dir = config.cheri_sdk_bindir / "clang"
+        return getCompilerInfo(compiler_for_resource_dir).get_resource_dir()
+    elif install_dir == DefaultInstallDir.SYSROOT:
+        return project.sdk_sysroot
+    elif install_dir == DefaultInstallDir.CHERI_SDK:
+        assert project.compiling_for_host(), "CHERI_SDK is only a valid install dir for native, " \
+                                             "use SYSROOT/ROOTFS for cross"
+        return config.cheri_sdk_dir
+    elif install_dir == DefaultInstallDir.BOOTSTRAP_TOOLS:
+        assert project.compiling_for_host(), "BOOTSTRAP_TOOLS is only a valid install dir for native, " \
+                                             "use SYSROOT/ROOTS for cross"
+        return config.otherToolsDir
+    elif install_dir == DefaultInstallDir.CUSTOM_INSTALL_DIR:
+        return _INVALID_INSTALL_DIR
+    project.fatal("Unknown install dir for", project.project_name)
+
+
+def _default_install_dir_str(project: "Project"):
+    install_dir = project.get_default_install_dir_kind()
+    if install_dir == DefaultInstallDir.DO_NOT_INSTALL:
+        return "Should not be installed"
+    elif install_dir == DefaultInstallDir.IN_BUILD_DIRECTORY:
+        return "$BUILD_DIR/test-install-prefix"
+    elif install_dir == DefaultInstallDir.ROOTFS:
+        return "The rootfs for this target"
+    elif install_dir == DefaultInstallDir.COMPILER_RESOURCE_DIR:
+        return "The compiler resource directory"
+    elif install_dir == DefaultInstallDir.SYSROOT:
+        return "The sysroot for this target"
+    elif install_dir == DefaultInstallDir.CHERI_SDK:
+        return "The CHERI SDK directory"
+    elif install_dir == DefaultInstallDir.BOOTSTRAP_TOOLS:
+        return "The bootstap tools directory"
+    elif install_dir == DefaultInstallDir.CUSTOM_INSTALL_DIR:
+        return "custom install directory"
+    fatalError("Unknown install dir for", project.project_name)
+
+
 class Project(SimpleProject):
     repository = None  # type: SourceRepository
     # is_large_source_repository can be set to true to set some git config options to speed up operations:
@@ -1366,18 +1440,42 @@ class Project(SimpleProject):
     def build_dir_for_target(self, target: CrossCompileTarget):
         return self.config.buildRoot / (self.project_name.lower() + self.build_configuration_suffix(target) + "-build")
 
-    _installToSDK = ComputedDefaultValue(
-        function=lambda config, project: config.cheri_sdk_dir,
-        as_string="$INSTALL_ROOT/sdk")
-    _installToBootstrapTools = ComputedDefaultValue(
-        function=lambda config, project: config.otherToolsDir,
-        as_string="$INSTALL_ROOT/bootstrap")
-
     default_use_asan = False
     can_build_with_asan = False
 
-    defaultInstallDir = installDirNotSpecified
-    """ The default installation directory (will probably be set to _installToSDK or _installToBootstrapTools) """
+    @classmethod
+    def get_default_install_dir_kind(cls):
+        if cls.default_install_dir is not None:
+            assert cls.native_install_dir is None, "default_install_dir and native_install_dir are mutually " \
+                                                       "exclusive"
+            assert cls.cross_install_dir is None, "default_install_dir and cross_install_dir are mutually exclusive"
+            install_dir = cls.default_install_dir
+        else:
+            if cls._crossCompileTarget.is_native():
+                install_dir = cls.native_install_dir
+            else:
+                install_dir = cls.cross_install_dir
+        if install_dir is None and cls._default_install_dir_fn is Project._default_install_dir_fn:
+            raise RuntimeError("native_install_dir/cross_install_dir/_default_install_dir_fn not specified for " + cls.target)
+        if install_dir == DefaultInstallDir.SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE:
+            if cls._crossCompileTarget is not CompilationTargets.NONE and cls._crossCompileTarget.target_info_cls.is_baremetal:
+                install_dir = DefaultInstallDir.SYSROOT
+            else:
+                install_dir = DefaultInstallDir.ROOTFS
+        return install_dir
+
+    default_install_dir = None  # type: typing.Optional[DefaultInstallDir]
+    # To provoide different install locations when cross-compiling and when native
+    native_install_dir = None  # type: typing.Optional[DefaultInstallDir]
+    cross_install_dir = None  # type: typing.Optional[DefaultInstallDir]
+    # For more precise control over the install dir it is possible to provide a callback function
+    _default_install_dir_fn = ComputedDefaultValue(function=_default_install_dir_handler,
+        as_string=_default_install_dir_str)
+    """ The default installation directory """
+
+    @property
+    def _rootfs_install_dir_name(self):
+        return self.project_name.lower()
 
     # useful for cross compile projects that use a prefix and DESTDIR
     _installPrefix = None
@@ -1441,7 +1539,7 @@ class Project(SimpleProject):
         if not installDirectoryHelp:
             installDirectoryHelp = "Override default install directory for " + cls.project_name
         cls._installDir = cls.add_path_option("install-directory", metavar="DIR", help=installDirectoryHelp,
-                                           default=cls.defaultInstallDir)
+                                           default=cls._default_install_dir_fn)
         if "repository" in cls.__dict__ and isinstance(cls.repository, GitRepository):
             cls.gitRevision = cls.add_config_option("git-revision", metavar="REVISION",
                 help="The git revision to checkout prior to building. Useful if HEAD is broken for one "
@@ -1537,6 +1635,38 @@ class Project(SimpleProject):
                 self._compiledb_tool = "bear"
         self._force_clean = False
         self._preventAssign = True
+
+        # Setup destdir and installprefix:
+        if not self.compiling_for_host():
+            install_dir_kind = self.get_default_install_dir_kind()
+            # Install to SDK if CHERIBSD_ROOTFS is the install dir but we are not building for CheriBSD
+            if install_dir_kind == DefaultInstallDir.SYSROOT:
+                if self.target_info.is_baremetal:
+                    self.destdir = self.sdk_sysroot.parent
+                    self._installPrefix = Path("/", self.target_info.target_triple)
+                else:
+                    self._installPrefix = Path("/usr/local", self.crosscompile_target.generic_suffix)
+                    self.destdir = self._installDir
+            elif install_dir_kind == DefaultInstallDir.ROOTFS:
+                self.rootfs_path = self.target_info.get_rootfs_target().installDir
+                relative_to_rootfs = os.path.relpath(str(self._installDir), str(self.rootfs_path))
+                if relative_to_rootfs.startswith(os.path.pardir):
+                    self.verbose_print("Custom install dir", self._installDir, "-> using / as install prefix")
+                    self._installPrefix = Path("/")
+                    self.destdir = self._installDir
+                else:
+                    self._installPrefix = Path("/", relative_to_rootfs)
+                    self.destdir = self.rootfs_path
+            elif install_dir_kind in (None, DefaultInstallDir.DO_NOT_INSTALL, DefaultInstallDir.COMPILER_RESOURCE_DIR):
+                self._installPrefix = self._installDir
+                self.destdir = None
+            else:
+                assert self._installPrefix and self.destdir is not None, "both must be set!"
+
+    @property
+    def rootfs_dir(self):
+        assert self.get_default_install_dir_kind() == DefaultInstallDir.ROOTFS
+        return self.rootfs_path
 
     @property
     def _no_overwrite_allowed(self) -> "typing.Iterable[str]":
@@ -1962,8 +2092,8 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
             runCmd("chmod", "-R", "u+w", expected_path.parent)
             if not (expected_path / libname).exists():
                 self.fatal("Cannot find", libname, "library in compiler dir", expected_path, "-- Compilation will fail!")
-
-        if self._check_install_dir_conflict:
+        install_dir_kind = self.get_default_install_dir_kind()
+        if install_dir_kind != DefaultInstallDir.DO_NOT_INSTALL and self._check_install_dir_conflict:
             xtarget = self._crossCompileTarget  # type: CrossCompileTarget
             # If the conflicting target is also in supported_architectures, check for conficts:
             if xtarget.check_conflict_with is not None and xtarget.check_conflict_with in self.supported_architectures:
@@ -1977,8 +2107,7 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
                     other_xtarget = other_instance.get_crosscompile_target(self.config)
                     self.info(self.target, "install dir for", other_xtarget.name, "is", self.installDir)
                 assert other_instance.installDir != self.installDir, \
-                    mips_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(other_instance.installDir)
-
+                    other_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(other_instance.installDir)
 
         if self.config.skipUpdate:
             # When --skip-update is set (or we don't have working internet) only check that the repository exists
@@ -2030,7 +2159,10 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
                 self.compile()
             if not self.config.skipInstall:
                 statusUpdate("Installing", self.display_name, "... ")
-                self.install()
+                if install_dir_kind == DefaultInstallDir.DO_NOT_INSTALL:
+                    self.info("Not installing", self.target, "since install dir is set to DO_NOT_INSTALL")
+                else:
+                    self.install()
 
 
 class CMakeProject(Project):

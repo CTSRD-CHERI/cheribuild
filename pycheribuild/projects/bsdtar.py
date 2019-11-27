@@ -32,7 +32,7 @@ from .project import *
 
 class BuildBsdTar(CMakeProject):
     repository = GitRepository("https://github.com/libarchive/libarchive.git")
-    defaultInstallDir = CMakeProject._installToBootstrapTools
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     def configure(self, **kwargs):
         self.add_cmake_options(ENABLE_TAR_SHARED=False)

@@ -45,11 +45,11 @@ from pathlib import Path
 
 if typing.TYPE_CHECKING:
     from .chericonfig import CheriConfig
-    from ..projects.project import SimpleProject
+    from ..projects.project import SimpleProject, Project
 
 
 class ComputedDefaultValue(typing.Generic[Type_T]):
-    def __init__(self, function: "typing.Callable[[CheriConfig, SimpleProject], Type_T]",
+    def __init__(self, function: "typing.Callable[[CheriConfig, typing.Union[SimpleProject, Project]], Type_T]",
                  as_string: "typing.Union[str, typing.Callable[[typing.Any], str]]"):
         self.function = function
         self.as_string = as_string

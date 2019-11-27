@@ -34,7 +34,7 @@ from .project import *
 class BuildAflCheriNinja(Project):
     project_name = "AFL-CHERI"
     repository = GitRepository("https://github.com/CTSRD-CHERI/AFL-CHERI")
-    defaultInstallDir = AutotoolsProject._installToSDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
     make_kind = MakeCommandKind.GnuMake
 
     defaultBuildDir = Project.defaultSourceDir  # we have to build in the source directory

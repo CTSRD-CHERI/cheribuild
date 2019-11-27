@@ -35,7 +35,8 @@ from ...utils import runCmd, IS_FREEBSD
 class BuildSQLite(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git",
                                default_branch="branch-3.19", force_branch=True)
-    crossInstallDir = CrossInstallDir.SDK
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.SYSROOT
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

@@ -36,7 +36,7 @@ class BuildCMake(AutotoolsProject):
     repository = GitRepository("https://github.com/Kitware/CMake",  # a lot faster than the official repo
                                # track the stable release branch
                                default_branch="release")
-    defaultInstallDir = AutotoolsProject._installToBootstrapTools
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config, configureScript="bootstrap")

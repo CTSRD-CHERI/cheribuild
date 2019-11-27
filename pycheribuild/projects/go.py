@@ -38,7 +38,7 @@ class BuildGo(Project):
     no_default_sysroot = None
     appendCheriBitsToBuildDir = True
     skip_cheri_symlinks = True
-    defaultInstallDir = Project._installToSDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

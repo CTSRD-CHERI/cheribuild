@@ -37,7 +37,7 @@ class BuildCheriSim(Project):
     target = "cheri-sim"
     project_name = "cheri-cpu"
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-cpu")
-    defaultInstallDir = Project._installToSDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True      # Needs to build in the source dir
     make_kind = MakeCommandKind.GnuMake
 
@@ -86,7 +86,7 @@ class BuildCheriSim(Project):
 class BuildBeriCtl(Project):
     target = "berictl"
     repository = ReuseOtherProjectRepository(source_project=BuildCheriSim, subdirectory="cherilibs/tools/debug")
-    defaultInstallDir = Project._installToSDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True      # Needs to build in the source dir
     make_kind = MakeCommandKind.GnuMake
 

@@ -34,7 +34,7 @@ import os
 from urllib.parse import urlparse
 
 from .build_qemu import BuildQEMU
-from .cross.cheribsd import BuildCHERIBSDPurecap
+from .cross.cheribsd import BuildCHERIBSDPurecap, BuildCHERIBSD
 from .cross.crosscompileproject import *
 from .disk_image import BuildCheriBSDPurecapDiskImage
 from .project import *
@@ -55,6 +55,7 @@ class BuildSyzkaller(CrossCompileProject):
     # is_sdk_target = True
     # _mips_build_hybrid = True
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS]
+    default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -65,6 +66,9 @@ class BuildSyzkaller(CrossCompileProject):
             "syscall descriptions.")
 
     def __init__(self, config):
+        self._installPrefix = config.cheri_sdk_dir
+        self._installDir = config.cheri_sdk_dir
+        self.destdir = ""
         super().__init__(config)
 
         # self.gopath = source_base / gohome
@@ -82,7 +86,7 @@ class BuildSyzkaller(CrossCompileProject):
         self._newPath = (str(self.config.cheri_sdk_dir / "bin") + ":" +
                          str(self.config.dollarPathWithOtherTools))
 
-        self.cheribsd_dir = self.config.sourceRoot / "cheribsd"
+        self.cheribsd_dir = BuildCHERIBSD.getSourceDir(self)
 
     def syzkaller_install_path(self):
         return self.config.cheri_sdk_bindir

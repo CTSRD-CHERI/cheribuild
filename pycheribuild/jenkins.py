@@ -239,7 +239,7 @@ def _jenkins_main():
         for tgt in targetManager.targets:
             cls = tgt._project_class
             if issubclass(cls, Project):
-                cls.defaultInstallDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
+                cls._default_install_dir_fn = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
                 i = inspect.getattr_static(cls, "_installDir")
                 assert isinstance(i, CommandLineConfigOption)
                 # But don't change it if it was specified on the command line. Note: This also does the config

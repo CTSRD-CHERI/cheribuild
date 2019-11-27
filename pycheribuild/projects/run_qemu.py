@@ -311,7 +311,8 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
             _hasPCI = False
             self.machineFlags = ["-M", "virt"]  # want VirtIO
             self.virtioDisk = True
-            self.currentKernel = BuildBBLFreeBSDWithDefaultOptionsRISCV.get_instance(self).get_installed_kernel_path()
+            # XXX: CompilationTargets.NATIVE is not correct but currently the easiest way to get it to work
+            self.currentKernel = BuildBBLFreeBSDWithDefaultOptionsRISCV.get_instance(self, cross_target=CompilationTargets.NATIVE).get_installed_kernel_path()
         elif xtarget.is_any_x86():
             qemu_suffix = "x86_64" if xtarget.is_x86_64() else "i386"
             self.currentKernel = None  # boot from disk

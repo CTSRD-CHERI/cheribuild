@@ -39,10 +39,10 @@ class BuildBBLFreeBSDWithDefaultOptionsRISCV(AutotoolsProject):
     target = "bbl-freebsd-with-default-options-riscv"
     dependencies = ["freebsd-with-default-options-riscv"]
     repository = GitRepository("https://github.com/jrtc27/riscv-pk.git")
-    defaultInstallDir = AutotoolsProject._installToSDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
-    supported_architectures = [CompilationTargets.FREEBSD_RISCV]
+    supported_architectures = [CompilationTargets.NATIVE]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

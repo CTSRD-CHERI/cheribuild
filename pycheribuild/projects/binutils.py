@@ -39,7 +39,7 @@ class BuildGnuBinutils(AutotoolsProject):
     project_name = "gnu-binutils"
     repository = GitRepository("https://github.com/CTSRD-CHERI/binutils.git", default_branch="cheribsd",
                                force_branch=True)
-    defaultInstallDir = AutotoolsProject._installToSDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
 
     @classmethod
     def setup_config_options(cls, **kwargs):

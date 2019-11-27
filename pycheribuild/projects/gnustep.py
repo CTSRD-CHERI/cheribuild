@@ -38,7 +38,7 @@ from pathlib import Path
 
 class BuildLibObjC2(CMakeProject):
     repository = GitRepository("https://github.com/gnustep/libobjc2.git")
-    defaultInstallDir = CMakeProject._installToBootstrapTools
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -61,7 +61,7 @@ class BuildLibObjC2(CMakeProject):
 
 class BuildGnuStep_Make(AutotoolsProject):
     repository = GitRepository("https://github.com/gnustep/tools-make.git")
-    defaultInstallDir = AutotoolsProject._installToBootstrapTools
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -78,7 +78,7 @@ class BuildGnuStep_Make(AutotoolsProject):
 # FIXME: do we need to source Makefiles/GNUstep.sh before building?
 class GnuStepModule(AutotoolsProject):
     doNotAddToTargets = True
-    defaultInstallDir = AutotoolsProject._installToBootstrapTools
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     build_in_source_dir = True  # out of source builds don't seem to work!
 
     def __init__(self, config: CheriConfig, moduleName: str):

@@ -38,7 +38,8 @@ from ...utils import setEnv, commandline_to_str, is_jenkins_build
 
 class BuildMibench(CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/mibench")
-    crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS
     project_name = "mibench"
     # Needs bsd make to build
     make_kind = MakeCommandKind.BsdMake
@@ -156,7 +157,8 @@ class BuildMibench(CrossCompileProject):
 
 class BuildOlden(CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/olden")
-    crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS
     project_name = "olden"
     # Needs bsd make to build
     make_kind = MakeCommandKind.BsdMake
@@ -253,7 +255,8 @@ class BuildSpec2006(CrossCompileProject):
     project_name = "spec2006"
     # No repository to clone (just hack around this):
     repository = ExternallyManagedSourceRepository()
-    crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS
     make_kind = MakeCommandKind.GnuMake
 
     @classmethod

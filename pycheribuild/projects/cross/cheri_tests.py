@@ -33,14 +33,16 @@ from .crosscompileproject import *
 
 class BuildCheriTests(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/arichardson/cheri-tests.git")
-    crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS
     defaultCMakeBuildType = "RelWithDebInfo"
     project_name = "cheri-tests"
 
 
 class BuildRtldTests(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/arichardson/rtld-tests.git")
-    crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS
     defaultCMakeBuildType = "Debug"
     project_name = "rtld-tests"
 

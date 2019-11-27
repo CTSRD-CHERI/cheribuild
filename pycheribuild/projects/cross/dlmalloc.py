@@ -31,12 +31,16 @@
 from .crosscompileproject import *
 from ...utils import setEnv
 
+
 class DLMalloc(CrossCompileProject):
     project_name = "dlmalloc"
     repository = GitRepository("https://github.com/CTSRD-CHERI/dlmalloc_nonreuse")
     appendCheriBitsToBuildDir = True
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS]
     make_kind = MakeCommandKind.GnuMake
+    native_install_dir = DefaultInstallDir.CHERI_SDK
+    cross_install_dir = DefaultInstallDir.SYSROOT
+
 
     @classmethod
     def setup_config_options(cls, **kwargs):

@@ -32,7 +32,7 @@ import os
 import pprint
 import re
 from builtins import issubclass
-from enum import Enum
+from enum import Enum, auto
 from pathlib import Path
 
 from ..project import *
@@ -44,65 +44,8 @@ if typing.TYPE_CHECKING:
     from .cheribsd import BuildCHERIBSD
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget", "BuildType", # no-combine
-           "CrossCompileProject", "MakeCommandKind", "Linkage", "Path",  # no-combine
-           "default_cross_install_dir", "CompilationTargets", "_INVALID_INSTALL_DIR", "CrossInstallDir", # no-combine
-           "GitRepository", "commandline_to_str", "CrossCompileMixin"]  # no-combine
-
-
-class CrossInstallDir(Enum):
-    NONE = 0
-    CHERIBSD_ROOTFS = 1
-    SDK = 2
-    COMPILER_RESOURCE_DIR = 3
-    BOOTSTRAP_TOOLS = 4
-
-
-_INVALID_INSTALL_DIR = Path("/this/dir/should/be/overwritten/and/not/used/!!!!")
-
-def get_cheribsd_instance_for_install_dir(config: CheriConfig, project: "SimpleProject") -> "BuildCHERIBSD":
-    from .cheribsd import BuildCHERIBSD
-    cross_target = project.get_crosscompile_target(config)
-    # If use_hybrid_sysroot_for_mips is set, install to rootfs128 instead of rootfs-mips
-    if cross_target.is_mips(include_purecap=False) and project.mips_build_hybrid:
-        cross_target = CompilationTargets.CHERIBSD_MIPS_PURECAP
-    return BuildCHERIBSD.get_instance_for_cross_target(cross_target, config)
-
-
-def default_cross_install_dir(config: CheriConfig, project: "Project", install_dir_name: str = None):
-    if project.crossInstallDir == CrossInstallDir.COMPILER_RESOURCE_DIR:
-        compiler_for_resource_dir = project.CC
-        # For the NATIVE variant we want to install to CHERI clang:
-        if project.compiling_for_host():
-            compiler_for_resource_dir = config.cheri_sdk_bindir / "clang"
-        return getCompilerInfo(compiler_for_resource_dir).get_resource_dir()
-
-    if project.compiling_for_host():
-        if project.crossInstallDir == CrossInstallDir.SDK:
-            return config.cheri_sdk_dir
-        elif project.crossInstallDir == CrossInstallDir.BOOTSTRAP_TOOLS:
-            return config.otherToolsDir
-        elif project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
-            return _INVALID_INSTALL_DIR
-        return _INVALID_INSTALL_DIR
-    if project.crossInstallDir in (CrossInstallDir.CHERIBSD_ROOTFS, CrossInstallDir.BOOTSTRAP_TOOLS):
-        cheribsd_instance = get_cheribsd_instance_for_install_dir(config, project)
-        if hasattr(project, "path_in_rootfs"):
-            assert project.path_in_rootfs.startswith("/"), project.path_in_rootfs
-            return cheribsd_instance.installDir / project.path_in_rootfs[1:]
-        if install_dir_name is None:
-            install_dir_name = project.project_name.lower()
-        return Path(cheribsd_instance.installDir / "opt" / project.target_info.install_prefix_dirname / install_dir_name)
-    elif project.crossInstallDir == CrossInstallDir.SDK:
-        return project.sdk_sysroot
-    fatalError("Unknown install dir for", project.project_name)
-
-
-def _installDirMessage(project: "CrossCompileProject"):
-    if project.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
-        return "$CHERIBSD_ROOTFS/opt/$TARGET/" + project.project_name.lower() + " or $CHERI_SDK for --xhost build"
-    elif project.crossInstallDir == CrossInstallDir.SDK:
-        return "$CHERI_SDK/sysroot for cross builds or $CHERI_SDK for --xhost build"
-    return "UNKNOWN"
+           "CrossCompileProject", "MakeCommandKind", "Linkage", "Path", "DefaultInstallDir", # no-combine
+           "CompilationTargets", "GitRepository", "commandline_to_str", "CrossCompileMixin"]  # no-combine
 
 
 # TODO: remove this class:
@@ -110,11 +53,11 @@ def _installDirMessage(project: "CrossCompileProject"):
 class CrossCompileMixin(object):
     doNotAddToTargets = True
     config = None  # type: CheriConfig
-    crossInstallDir = CrossInstallDir.CHERIBSD_ROOTFS
+#    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY  # fake install inside the build directory
+#    cross_install_dir = DefaultInstallDir.ROOTFS
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
 
     # noinspection PyTypeChecker
-    defaultInstallDir = ComputedDefaultValue(function=default_cross_install_dir, as_string=_installDirMessage)
     default_build_type = BuildType.DEFAULT
     forceDefaultCC = False  # If true fall back to /usr/bin/cc there
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
@@ -136,11 +79,6 @@ class CrossCompileMixin(object):
     @property
     def baremetal(self):
         return self.target_info.is_baremetal
-
-    @property
-    def rootfs_dir(self):
-        assert self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS
-        return self.cheribsd_rootfs
 
     @property
     def compiler_warning_flags(self):
@@ -171,37 +109,6 @@ class CrossCompileMixin(object):
         assert isinstance(target_arch, CrossCompileTarget)
         # compiler flags:
         self.COMMON_FLAGS = self.target_info.required_compile_flags()
-        if self.compiling_for_host():
-            if self._installDir == _INVALID_INSTALL_DIR:
-                self._installDir = self.buildDir / "test-install-prefix"
-        else:
-            # Install to SDK if CHERIBSD_ROOTFS is the install dir but we are not building for CheriBSD
-            if self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS and not self.target_info.is_cheribsd:
-                self.crossInstallDir = CrossInstallDir.SDK
-
-            if self.crossInstallDir in (CrossInstallDir.SDK, CrossInstallDir.BOOTSTRAP_TOOLS):
-                if self.baremetal:
-                    self.destdir = self.sdk_sysroot.parent
-                    self._installPrefix = Path("/", self.target_info.target_triple)
-                else:
-                    self._installPrefix = Path("/usr/local", self.crosscompile_target.generic_suffix)
-                    self.destdir = self._installDir
-            elif self.crossInstallDir == CrossInstallDir.CHERIBSD_ROOTFS:
-                self.cheribsd_rootfs = get_cheribsd_instance_for_install_dir(self.config, self).installDir
-                relative_to_rootfs = os.path.relpath(str(self._installDir), str(self.cheribsd_rootfs))
-                if relative_to_rootfs.startswith(os.path.pardir):
-                    self.verbose_print("Custom install dir", self._installDir, "-> using / as install prefix")
-                    self._installPrefix = Path("/")
-                    self.destdir = self._installDir
-                else:
-                    self._installPrefix = Path("/", relative_to_rootfs)
-                    self.destdir = self.cheribsd_rootfs
-            elif self.crossInstallDir == CrossInstallDir.COMPILER_RESOURCE_DIR:
-                self._installPrefix = self._installDir
-                self.destdir = None
-            else:
-                assert self._installPrefix and self.destdir, "both must be set!"
-
         if target_arch.is_cheri_purecap([CPUArchitecture.MIPS64]) and self.force_static_linkage:
             # clang currently gets the TLS model wrong:
             # https://github.com/CTSRD-CHERI/cheribsd/commit/f863a7defd1bdc797712096b6778940cfa30d901

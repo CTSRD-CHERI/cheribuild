@@ -35,7 +35,7 @@ class BuildElftoolchain(Project):
     target = "elftoolchain"
     project_name = "elftoolchain"
     repository = GitRepository("https://github.com/emaste/elftoolchain.git", default_branch="master")
-    defaultInstallDir = Project._installToSDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
     make_kind = MakeCommandKind.BsdMake
     is_sdk_target = True
 

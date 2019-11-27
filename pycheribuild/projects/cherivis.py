@@ -53,7 +53,7 @@ def gnuStepInstallInstructions():
 class BuildCheriVis(Project):
     repository = GitRepository("https://github.com/CTSRD-CHERI/CheriVis.git")
     appendCheriBitsToBuildDir = True
-    defaultInstallDir = Project._installToSDK
+    native_install_dir = DefaultInstallDir.CHERI_SDK
     # dependencies = ["cheritrace"]
     if IS_MAC:
         build_in_source_dir = True
