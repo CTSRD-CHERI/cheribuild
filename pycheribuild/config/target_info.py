@@ -44,7 +44,7 @@ class CPUArchitecture(Enum):
     MIPS64 = "mips64"
     RISCV64 = "riscv64"
     I386 = "i386"
-    AARCH64 = "arm64"
+    AARCH64 = "aarch64"
 
 
 class TargetInfo(ABC):
@@ -62,6 +62,8 @@ class TargetInfo(ABC):
                 return "CHERI (MIPS IV compatible) with {}-bit capabilities".format(self.config.cheriBitsStr)
             else:
                 return "BERI (MIPS IV compatible)"
+        if self.target.is_aarch64():
+            return "ARM64"
         return self.target.cpu_architecture.value
 
     @property
