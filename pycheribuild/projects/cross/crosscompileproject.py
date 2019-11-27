@@ -53,8 +53,8 @@ __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProj
 class CrossCompileMixin(object):
     doNotAddToTargets = True
     config = None  # type: CheriConfig
-#    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY  # fake install inside the build directory
-#    cross_install_dir = DefaultInstallDir.ROOTFS
+    #    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY  # fake install inside the build directory
+    #    cross_install_dir = DefaultInstallDir.ROOTFS
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
 
     # noinspection PyTypeChecker

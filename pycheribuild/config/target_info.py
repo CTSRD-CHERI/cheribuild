@@ -439,12 +439,17 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
     def get_rootfs_target(self) -> "Project":
         from ..projects.cross.cheribsd import BuildCHERIBSD
+        xtarget = CompilationTargets.NONE
         # Install the purecap targets into the hybrid rootfs: (not BuildCheribsdPurecap)
-        return BuildCHERIBSD.get_instance(self.project)
+        # CHERIBSD_MIPS_PURECAP returns rootfs128, not the purecap one!
+        if self.config.use_hybrid_sysroot_for_mips and self.target.is_mips(include_purecap=True):
+            xtarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
+        return BuildCHERIBSD.get_instance(self.project, cross_target=xtarget)
 
 
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     shortname = "Newlib"
+
     @property
     def sdk_root_dir(self) -> Path:
         return self.config.cheri_sdk_dir

@@ -1,6 +1,6 @@
 from pathlib import Path
 from unittest import TestCase
-from pycheribuild.projects.project import Project, CompilationTargets, ExternallyManagedSourceRepository
+from pycheribuild.projects.project import Project, CompilationTargets, ExternallyManagedSourceRepository, DefaultInstallDir
 from pycheribuild.utils import setCheriConfig, IS_LINUX
 from .setup_mock_chericonfig import setup_mock_chericonfig, MockConfig
 import os
@@ -16,6 +16,7 @@ class MockProject(Project):
     project_name = "FAKE"
     target = "FAKE"
     _should_not_be_instantiated = False
+    default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     repository = ExternallyManagedSourceRepository()
 
     def __init__(self, config: MockConfig, name: str):
