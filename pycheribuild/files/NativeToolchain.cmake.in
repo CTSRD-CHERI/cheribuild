@@ -43,7 +43,8 @@ set(CMAKE_CXX_COMPILER_TARGET "@TOOLCHAIN_TARGET_TRIPLE@")
 
 set(CMAKE_ASM_COMPILER "@TOOLCHAIN_C_COMPILER@")
 set(CMAKE_ASM_COMPILER_TARGET "@TOOLCHAIN_TARGET_TRIPLE@")
-if (NOT "@TOOLCHAIN_C_COMPILER@" STREQUAL "cc")
+# https://gitlab.kitware.com/cmake/cmake/issues/18575
+if (CMAKE_VERSION VERSION_LESS "3.13")
     set(CMAKE_ASM_COMPILER_ID "Clang")  # for some reason CMake doesn't detect this automatically
 endif()
 
