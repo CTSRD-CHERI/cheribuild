@@ -390,7 +390,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             self.add_cmake_options(Qt5_DIR=self.crossSysrootPath / ("usr/local/" + self._crossCompileTarget.generic_suffix) / "lib/cmake/Qt5")
             self.add_cmake_options(PNG_LIBRARIES="libqtlibpng.a")
             self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.getSourceDir(self) / "src/3rdparty/libpng")
-            self.LDFLAGS.extend(["-lpthread"]) # Needed for DumpRenderTree
+            if self.force_static_linkage:
+                self.LDFLAGS.append("-pthread")  # Needed for DumpRenderTree when linking statically
 
             # Pass CHERI capability size so we can pass this to the offlineasm ruby scripts
             if self.compiling_for_cheri():
