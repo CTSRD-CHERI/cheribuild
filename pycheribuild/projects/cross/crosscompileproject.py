@@ -32,7 +32,7 @@ import os
 import pprint
 import re
 from builtins import issubclass
-from enum import Enum, auto
+from enum import Enum
 from pathlib import Path
 
 from ..project import *

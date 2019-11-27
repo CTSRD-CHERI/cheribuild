@@ -39,7 +39,7 @@ import sys
 import threading
 import time
 from collections import OrderedDict
-from enum import Enum, auto
+from enum import Enum
 from pathlib import Path
 from typing import Union, Callable
 
@@ -1280,15 +1280,15 @@ class GitRepository(SourceRepository):
 
 
 class DefaultInstallDir(Enum):
-    DO_NOT_INSTALL = auto()
-    IN_BUILD_DIRECTORY = auto()
-    ROOTFS = auto()
-    COMPILER_RESOURCE_DIR = auto()
-    SYSROOT = auto()
-    CHERI_SDK = auto()
-    BOOTSTRAP_TOOLS = auto()
-    CUSTOM_INSTALL_DIR = auto()
-    SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE = auto()
+    DO_NOT_INSTALL = "Should not be installed"
+    IN_BUILD_DIRECTORY = "$BUILD_DIR/test-install-prefix"
+    ROOTFS = "The rootfs for this target"
+    COMPILER_RESOURCE_DIR = "The compiler resource directory"
+    SYSROOT = "The sysroot for this target"
+    CHERI_SDK = "The CHERI SDK directory"
+    BOOTSTRAP_TOOLS = "The bootstap tools directory"
+    CUSTOM_INSTALL_DIR = "Custom install directory"
+    SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE = "Sysroot for baremetal projects, rootfs otherwise"
 
 
 _INVALID_INSTALL_DIR = Path("/this/dir/should/be/overwritten/and/not/used/!!!!")
@@ -1334,23 +1334,8 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
 
 def _default_install_dir_str(project: "Project"):
     install_dir = project.get_default_install_dir_kind()
-    if install_dir == DefaultInstallDir.DO_NOT_INSTALL:
-        return "Should not be installed"
-    elif install_dir == DefaultInstallDir.IN_BUILD_DIRECTORY:
-        return "$BUILD_DIR/test-install-prefix"
-    elif install_dir == DefaultInstallDir.ROOTFS:
-        return "The rootfs for this target"
-    elif install_dir == DefaultInstallDir.COMPILER_RESOURCE_DIR:
-        return "The compiler resource directory"
-    elif install_dir == DefaultInstallDir.SYSROOT:
-        return "The sysroot for this target"
-    elif install_dir == DefaultInstallDir.CHERI_SDK:
-        return "The CHERI SDK directory"
-    elif install_dir == DefaultInstallDir.BOOTSTRAP_TOOLS:
-        return "The bootstap tools directory"
-    elif install_dir == DefaultInstallDir.CUSTOM_INSTALL_DIR:
-        return "custom install directory"
-    fatalError("Unknown install dir for", project.project_name)
+    return install_dir.value
+    # fatalError("Unknown install dir for", project.project_name)
 
 
 class Project(SimpleProject):
