@@ -2088,7 +2088,7 @@ class CMakeProject(Project):
         if self.config.create_compilation_db:
             self.configureArgs.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
             # Don't add the user provided options here, add them in configure() so that they are put last
-        self.__minimum_cmake_version = tuple()
+        self.__minimum_cmake_version = (3, 7)
 
     def add_cmake_options(self, **kwargs):
         for option, value in kwargs.items():
@@ -2098,6 +2098,7 @@ class CMakeProject(Project):
                 continue
             if isinstance(value, bool):
                 value = "ON" if value else "OFF"
+            assert value is not None
             self.configureArgs.append("-D" + option + "=" + str(value))
 
     def set_minimum_cmake_version(self, major, minor):
