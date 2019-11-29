@@ -37,7 +37,7 @@ from ...utils import statusUpdate
 class BuildLLVMTestSuite(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/llvm-test-suite.git")
     dependencies = ["llvm"]
-    defaultCMakeBuildType = "Debug"
+    default_build_type = BuildType.DEBUG
     project_name = "llvm-test-suite"
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / "llvm-test-suite"),

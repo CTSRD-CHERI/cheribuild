@@ -53,9 +53,7 @@ class BuildQEMUBase(AutotoolsProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options()
-        cls.debug_info = cls.add_bool_option("debug-info")
         cls.with_sanitizers = cls.add_bool_option("sanitizers", help="Build QEMU with ASAN/UBSAN (very slow)", default=False)
-
         cls.use_smbd = cls.add_bool_option("use-smbd", show_help=False, default=True,
                                          help="Don't require SMB support when building QEMU (warning: most --test "
                                               "targets will fail without smbd support)")
@@ -83,7 +81,7 @@ class BuildQEMUBase(AutotoolsProject):
 
         # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
         # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
-        self._extraCFlags = "-DCONFIG_DEBUG_TCG=1" if self.debug_info else "-O3"
+        self._extraCFlags = "-DCONFIG_DEBUG_TCG=1" if self.build_type == BuildType.DEBUG else "-O3"
         self._extraLDFlags = ""
         self._extraCXXFlags = ""
         if shutil.which("pkg-config"):
@@ -99,7 +97,7 @@ class BuildQEMUBase(AutotoolsProject):
 
         # QEMU now builds with python3
         self.configureArgs.append("--python=" + sys.executable)
-        if self.debug_info:
+        if self.build_type == BuildType.DEBUG:
             self.configureArgs.extend(["--enable-debug", "--enable-debug-tcg"])
         else:
             # Try to optimize as much as possible:
@@ -277,7 +275,7 @@ class BuildQEMU(BuildQEMUBase):
 
         # the capstone disassembler doesn't support CHERI instructions:
         self.configureArgs.append("--disable-capstone")
-        if self.debug_info:
+        if self.build_type == BuildType.DEBUG:
             self._extraCFlags += " -DENABLE_CHERI_SANITIY_CHECKS=1"
 
 

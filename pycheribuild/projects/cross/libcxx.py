@@ -116,7 +116,7 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
         super().configure(**kwargs)
 
     def run_tests(self):
-        if self.baremetal:
+        if self.target_info.is_baremetal:
             self.info("Baremetal tests not implemented")
             return
         if self.compiling_for_host():
@@ -140,11 +140,11 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        if not self.baremetal:
+        if not self.target_info.is_baremetal:
             self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.getInstallDir(self) / "lib",
                                    CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
         if self.compiling_for_host():
-            assert not self.baremetal
+            assert not self.target_info.is_baremetal
             self.add_cmake_options(BUILD_TESTS=True, TEST_LIBUNWIND=True)
             if OSInfo.isUbuntu():
                 self.add_cmake_options(COMPARE_TEST_OUTPUT_TO_SYSTEM_OUTPUT=False)
@@ -159,7 +159,7 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
                                    DISABLE_EXCEPTIONS_RTTI=False,
                                    NO_UNWIND_LIBRARY=False)
             self.add_cmake_options(COMPARE_TEST_OUTPUT_TO_SYSTEM_OUTPUT=False)
-            if not self.baremetal:
+            if not self.target_info.is_baremetal:
                 self.add_cmake_options(BUILD_TESTS=True, TEST_LIBUNWIND=True)
 
     def install(self, **kwargs):
@@ -169,7 +169,7 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
         # self.installFile(self.buildDir / "lib/libcxxrt.so", self.installDir / "usr/libcheri/libcxxrt.so", force=True)
 
     def run_tests(self):
-        if self.baremetal:
+        if self.target_info.is_baremetal:
             self.info("Baremetal tests not implemented")
             return
         # TODO: this won't work on macOS
@@ -245,13 +245,13 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
                 LIBCXX_CXX_ABI_LIBNAME="libcxxrt",
                 LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.getSourceDir(self) / "src",
                 LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.getBuildDir(self) / "lib")
-            if not self.baremetal:
+            if not self.target_info.is_baremetal:
                 # use llvm libunwind when testing
                 self.add_cmake_options(LIBCXX_STATIC_CXX_ABI_LIBRARY_NEEDS_UNWIND_LIBRARY=True,
                                        LIBCXX_CXX_ABI_UNWIND_LIBRARY="unwind",
                                        LIBCXX_CXX_ABI_UNWIND_LIBRARY_PATH=BuildLibunwind.getBuildDir(self) / "lib")
 
-        if not self.exceptions or self.baremetal:
+        if not self.exceptions or self.target_info.is_baremetal:
             self.add_cmake_options(LIBCXX_ENABLE_EXCEPTIONS=False, LIBCXX_ENABLE_RTTI=False)
         else:
             self.add_cmake_options(LIBCXX_ENABLE_EXCEPTIONS=True, LIBCXX_ENABLE_RTTI=True)
@@ -274,7 +274,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         test_linker_flags = commandline_to_str(self.default_ldflags)
         print("test_compile_flags:", test_compile_flags)
 
-        if self.baremetal:
+        if self.target_info.is_baremetal:
             if self.compiling_for_mips(include_purecap=False):
                 test_compile_flags += " -fno-pic -mno-abicalls"
             self.add_cmake_options(
@@ -295,22 +295,22 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         self.add_cmake_options(
             LIBCXX_ENABLE_SHARED=False,  # not yet
             LIBCXX_ENABLE_STATIC=True,
-            LIBCXX_ENABLE_THREADS=not self.baremetal,  # no threads on baremetal newlib
+            LIBCXX_ENABLE_THREADS=not self.target_info.is_baremetal,  # no threads on baremetal newlib
             # baremetal the -fPIC build doesn't work for some reason (runs out of CALL16 relocations)
             # Not sure how this can happen since LLD includes multigot
-            LIBCXX_BUILD_POSITION_DEPENDENT=self.baremetal,
+            LIBCXX_BUILD_POSITION_DEPENDENT=self.target_info.is_baremetal,
 
             LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=False,  # not yet
             LIBCXX_INCLUDE_BENCHMARKS=False,
             LIBCXX_INCLUDE_DOCS=False,
             # When cross compiling we link the ABI library statically (except baremetal since that doens;t have it yet)
-            LIBCXX_ENABLE_STATIC_ABI_LIBRARY=not self.baremetal,
+            LIBCXX_ENABLE_STATIC_ABI_LIBRARY=not self.target_info.is_baremetal,
         )
         if self.only_compile_tests:
             executor = "CompileOnlyExecutor()"
         elif self.collect_test_binaries:
             executor = "CollectBinariesExecutor(\\\"{path}\\\", self)".format(path=self.collect_test_binaries)
-        elif self.baremetal:
+        elif self.target_info.is_baremetal:
             run_qemu_script = self.target_info.sdk_root_dir / "baremetal/mips64-qemu-elf/bin/run_with_qemu.py"
             if not run_qemu_script.exists():
                 warningMessage("run_with_qemu.py is needed to run libcxx baremetal tests but could not find it:",
@@ -330,7 +330,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             self.libcxx_lit_jobs = " -j1" # We can only run one job here since we are using scp
             executor = "SSHExecutor('{host}', username='{user}', port={port}, config=self)".format(
                 host=self.qemu_host, user=self.qemu_user, port=self.qemu_port)
-        if self.baremetal:
+        if self.target_info.is_baremetal:
             target_info = "libcxx.test.target_info.BaremetalNewlibTI"
         else:
             target_info = "libcxx.test.target_info.CheriBSDRemoteTI"
@@ -338,7 +338,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         self.add_cmake_options(LIBCXX_EXECUTOR=executor, LIBCXX_TARGET_INFO=target_info, LIBCXX_RUN_LONG_TESTS=False)
 
     def run_tests(self):
-        if self.baremetal:
+        if self.target_info.is_baremetal:
             self.info("Baremetal tests not implemented")
             return
         if self.compiling_for_host():
@@ -368,13 +368,13 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             COMPILER_RT_BUILD_XRAY=False,
             COMPILER_RT_BUILD_LIBFUZZER=True,
             COMPILER_RT_BUILD_PROFILE=False,
-            COMPILER_RT_BAREMETAL_BUILD=self.baremetal,
+            COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal,
             # COMPILER_RT_DEFAULT_TARGET_ONLY=True,
             # BUILTIN_SUPPORTED_ARCH="mips64",
             TARGET_TRIPLE=self.target_info.target_triple,
             # LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=True,
         )
-        if self.include_debug_info:
+        if self.should_include_debug_info:
             self.add_cmake_options(COMPILER_RT_DEBUG=True)
 
         if self.compiling_for_mips(include_purecap=True):
@@ -416,12 +416,12 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             COMPILER_RT_BUILD_XRAY=False,
             COMPILER_RT_BUILD_LIBFUZZER=False,
             COMPILER_RT_BUILD_PROFILE=False,
-            COMPILER_RT_BAREMETAL_BUILD=self.baremetal,
+            COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal,
             COMPILER_RT_DEFAULT_TARGET_ONLY=True,
             # BUILTIN_SUPPORTED_ARCH="mips64",
             TARGET_TRIPLE=self.target_info.target_triple,
         )
-        if self.include_debug_info:
+        if self.should_include_debug_info:
             self.add_cmake_options(COMPILER_RT_DEBUG=True)
         if self.compiling_for_mips(include_purecap=True):
             # self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH="mips")

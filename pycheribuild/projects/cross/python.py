@@ -53,7 +53,7 @@ class BuildPython(CrossCompileAutotoolsProject):
 
     def configure(self, **kwargs):
         # maybe interesting:   --with(out)-pymalloc    disable/enable specialized mallocs
-        if self.cross_build_type.should_include_debug_info:
+        if self.should_include_debug_info:
             self.configureArgs.append("--with-pydebug")
             # XXXAR: always add assertions?
             self.configureArgs.append("--with-assertions")

@@ -39,7 +39,6 @@ class SNMalloc(CrossCompileCMakeProject):
     appendCheriBitsToBuildDir = True
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS]
     default_build_type = BuildType.DEBUG
-    defaultCMakeBuildType = "Debug"
 
     @classmethod
     def setup_config_options(cls, **kwargs):

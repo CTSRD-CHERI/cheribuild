@@ -43,7 +43,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Union, Callable
 
-from ..config.chericonfig import CheriConfig, Linkage
+from ..config.chericonfig import CheriConfig, Linkage, BuildType
 from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase, DefaultValueOnlyConfigOption
 from ..config.target_info import CrossCompileTarget, CPUArchitecture, TargetInfo, CompilationTargets
 from ..filesystemutils import FileSystemUtils
@@ -54,7 +54,7 @@ __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "Target
            "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
            "CrossCompileTarget", "CPUArchitecture", "GitRepository", "ComputedDefaultValue", "TargetInfo", # no-combine
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
-           "TargetBranchInfo", "CompilationTargets", "DefaultInstallDir"]  # no-combine
+           "TargetBranchInfo", "CompilationTargets", "DefaultInstallDir", "BuildType"]  # no-combine
 
 def flushStdio(stream):
     while True:
@@ -1426,7 +1426,10 @@ class Project(SimpleProject):
         return self.config.buildRoot / (self.project_name.lower() + self.build_configuration_suffix(target) + "-build")
 
     default_use_asan = False
-    can_build_with_asan = False
+
+    @classproperty
+    def can_build_with_asan(self):
+        return not self._crossCompileTarget.is_cheri_purecap()
 
     @classmethod
     def get_default_install_dir_kind(cls):
@@ -1500,6 +1503,7 @@ class Project(SimpleProject):
         super().check_system_dependencies()
 
     lto_by_default = False  # Don't default to LTO
+    default_build_type = BuildType.DEFAULT
 
     @classmethod
     def setup_config_options(cls, installDirectoryHelp="", **kwargs):
@@ -1563,6 +1567,11 @@ class Project(SimpleProject):
         cls._linkage = cls.add_config_option("linkage", default=Linkage.DEFAULT, kind=Linkage,
             help="Build static or dynamic (or use the project default)")
 
+        cls.build_type = cls.add_config_option("build-type",
+            help="Optimization+debuginfo defaults (supports the same values as CMake (as well as 'DEFAULT' which"
+                 " does not pass any additional flags to the configure command).",
+            default=cls.default_build_type, kind=BuildType, enum_choice_strings=[t.value for t in BuildType])
+
     def linkage(self):
         if self.target_info.must_link_statically:
             return Linkage.STATIC
@@ -1580,6 +1589,114 @@ class Project(SimpleProject):
     @property
     def force_dynamic_linkage(self) -> bool:
         return self.linkage() == Linkage.DYNAMIC
+
+    _force_debug_info = None  # Override the debug info setting from --build-type
+
+    @property
+    def should_include_debug_info(self) -> bool:
+        if self._force_debug_info is not None:
+            return self._force_debug_info
+        return self.build_type.should_include_debug_info
+
+    def should_use_extra_c_compat_flags(self):
+        # TODO: add a command-line option and default to true for
+        return self.compiling_for_cheri() and self.target_info.is_baremetal
+
+    @property
+    def extra_c_compat_flags(self):
+        if not self.compiling_for_cheri():
+            return []
+        # Build with virtual address interpretation, data-dependent provenance and pcrelative captable ABI
+        return ["-cheri-uintcap=addr", "-Xclang", "-cheri-data-dependent-provenance"]
+
+    @property
+    def optimization_flags(self):
+        cbt = self.build_type
+        if cbt == BuildType.DEFAULT:
+            return []
+        elif cbt == BuildType.DEBUG:
+            return ["-O0"]
+        elif cbt in (BuildType.RELEASE, BuildType.RELWITHDEBINFO):
+            return ["-O2"]
+        elif cbt in (BuildType.MINSIZEREL, BuildType.MINSIZERELWITHDEBINFO):
+            return ["-Os"]
+
+    needs_mxcaptable_static = False     # E.g. for postgres which is just over the limit:
+    needs_mxcaptable_dynamic = False    # This might be true for Qt/QtWebkit
+
+    @property
+    def compiler_warning_flags(self):
+        if self.compiling_for_host():
+            return self.common_warning_flags + self.host_warning_flags
+        else:
+            return self.common_warning_flags + self.cross_warning_flags
+
+    @property
+    def default_compiler_flags(self):
+        result = []
+        if self.use_lto:
+            result.append("-flto")
+        if self.use_cfi:
+            if not self.use_lto:
+                self.fatal("Cannot use CFI without LTO!")
+            assert not self.compiling_for_cheri()
+            result.append("-fsanitize=cfi")
+            result.append("-fvisibility=hidden")
+        if self.compiling_for_host():
+            return result + self.COMMON_FLAGS + self.compiler_warning_flags
+        result += self.target_info.essential_compiler_and_linker_flags + self.optimization_flags
+        result += self.COMMON_FLAGS + self.compiler_warning_flags
+        if self.config.csetbounds_stats:
+            result.extend(["-mllvm", "-collect-csetbounds-output=" + str(self.csetbounds_stats_file),
+                           "-mllvm", "-collect-csetbounds-stats=csv",
+                           # "-Xclang", "-cheri-bounds=everywhere-unsafe"])
+                           "-Xclang", "-cheri-bounds=aggressive"])
+        # Add mxcaptable for projects that need it
+        if self.compiling_for_cheri() and self.config.cheri_cap_table_abi != "legacy":
+            if self.force_static_linkage and self.needs_mxcaptable_static:
+                result.append("-mxcaptable")
+            if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
+                result.append("-mxcaptable")
+        # Do the same for MIPS to get even performance comparisons
+        elif self.compiling_for_mips(include_purecap=False):
+            if self.force_static_linkage and self.needs_mxcaptable_static:
+                result.extend(["-mxgot", "-mllvm", "-mxmxgot"])
+            if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
+                result.extend(["-mxgot", "-mllvm", "-mxmxgot"])
+        return result
+
+    @property
+    def default_ldflags(self):
+        result = list(self.COMMON_LDFLAGS)
+        if self.force_static_linkage:
+            result.append("-static")
+        if self.use_lto:
+            result.append("-flto")
+        if self.use_cfi:
+            assert not self.compiling_for_cheri()
+            result.append("-fsanitize=cfi")
+        if self.compiling_for_host():
+            return result
+
+        # Should work fine without linker emulation (the linker should infer it from input files)
+        # if self.compiling_for_cheri():
+        #     emulation = "elf64btsmip_cheri_fbsd" if not self.target_info.is_baremetal else "elf64btsmip_cheri"
+        # elif self.compiling_for_mips(include_purecap=False):
+        #     emulation = "elf64btsmip_fbsd" if not self.target_info.is_baremetal else "elf64btsmip"
+        # result.append("-Wl,-m" + emulation)
+        result += self.target_info.essential_compiler_and_linker_flags + [
+            "-fuse-ld=" + str(self.target_info.linker),
+            # Should no longer be needed now that I added a hack for .eh_frame
+            # "-Wl,-z,notext",  # needed so that LLD allows text relocations
+            ]
+        if self.should_include_debug_info and not ".bfd" in self.target_info.linker.name:
+            # Add a gdb_index to massively speed up running GDB on CHERIBSD:
+            result.append("-Wl,--gdb-index")
+        if self.target_info.is_cheribsd and self.config.withLibstatcounters:
+            # We need to include the constructor even if there is no reference to libstatcounters:
+            # TODO: always include the .a file?
+            result += ["-Wl,--whole-archive", "-lstatcounters", "-Wl,--no-whole-archive"]
+        return result
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -1647,6 +1764,47 @@ class Project(SimpleProject):
                 self.destdir = None
             else:
                 assert self._installPrefix and self.destdir is not None, "both must be set!"
+
+        # convert the tuples into mutable lists (this is needed to avoid modifying class variables)
+        # See https://github.com/CTSRD-CHERI/cheribuild/issues/33
+        self.cross_warning_flags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
+                                    "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types",
+                                    "-Werror=mips-cheri-prototypes", "-Werror=cheri-bitwise-operations"]
+        # Make underaligned capability loads/stores an error and require an explicit cast:
+        self.cross_warning_flags.append("-Werror=pass-failed")
+        self.host_warning_flags = []
+        self.common_warning_flags = []
+        target_arch = self.crosscompile_target
+        # compiler flags:
+        self.COMMON_FLAGS = self.target_info.required_compile_flags()
+        if target_arch.is_cheri_purecap([CPUArchitecture.MIPS64]) and self.force_static_linkage:
+            # clang currently gets the TLS model wrong:
+            # https://github.com/CTSRD-CHERI/cheribsd/commit/f863a7defd1bdc797712096b6778940cfa30d901
+            self.COMMON_FLAGS.append("-ftls-model=initial-exec")
+            # TODO: remove the data-depedent provenance flag:
+            if self.should_use_extra_c_compat_flags():
+                self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
+
+        # We might be setting too many flags, ignore this (for now)
+        if not self.compiling_for_host():
+            self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
+
+        assert self.installDir, "must be set"
+        statusUpdate(self.target, "INSTALLDIR = ", self._installDir, "INSTALL_PREFIX=", self._installPrefix,
+            "DESTDIR=", self.destdir)
+
+        if self.should_include_debug_info:
+            if not self.target_info.is_macos:
+                self.COMMON_FLAGS.append("-ggdb")
+        self.CFLAGS = []
+        self.CXXFLAGS = []
+        self.ASMFLAGS = []
+        self.LDFLAGS = []
+        self.COMMON_LDFLAGS = []
+        # Don't build CHERI with ASAN since that doesn't work or make much sense
+        if self.use_asan and not self.compiling_for_cheri():
+            self.COMMON_FLAGS.append("-fsanitize=address")
+            self.COMMON_LDFLAGS.append("-fsanitize=address")
 
     @property
     def rootfs_dir(self):
@@ -1804,8 +1962,13 @@ class Project(SimpleProject):
         if not Path(_configure_path).exists():
             self.fatal("Configure command ", _configure_path, "does not exist!")
         if _configure_path:
-            self.run_with_logfile([_configure_path] + self.configureArgs,
-                                logfile_name="configure", cwd=cwd, env=self.configureEnvironment)
+            env = dict()
+            if not self.compiling_for_host():
+                env.update(PKG_CONFIG_LIBDIR=self.target_info.pkgconfig_dirs,
+                    PKG_CONFIG_SYSROOT_DIR=self.crossSysrootPath)
+            with setEnv(**env):
+                self.run_with_logfile([_configure_path] + self.configureArgs,
+                    logfile_name="configure", cwd=cwd, env=self.configureEnvironment)
 
     def compile(self, cwd: Path = None):
         if cwd is None:
@@ -2165,13 +2328,11 @@ class CMakeProject(Project):
         Ninja = 1
         Makefiles = 2
 
-    defaultCMakeBuildType = "Release"
+    default_build_type = BuildType.RELWITHDEBINFO
 
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.cmakeBuildType = cls.add_config_option("build-type", default=cls.defaultCMakeBuildType, metavar="BUILD_TYPE",
-                                                 help="The CMake build type (Debug, RelWithDebInfo, Release)")
         cls.cmakeOptions = cls.add_config_option("cmake-options", default=[], kind=list, metavar="OPTIONS",
                                                help="Additional command line options to pass to CMake")
 
@@ -2200,7 +2361,7 @@ class CMakeProject(Project):
                 self.configureArgs.append("-GUnix Makefiles")
             self.make_args.kind = MakeCommandKind.DefaultMake
 
-        self.configureArgs.append("-DCMAKE_BUILD_TYPE=" + self.cmakeBuildType)
+        self.configureArgs.append("-DCMAKE_BUILD_TYPE=" + self.build_type.value)
         # TODO: do it always?
         if self.config.create_compilation_db:
             self.configureArgs.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")

@@ -88,7 +88,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         if self.force_static_linkage:
             self.add_configure_env_arg("LDFLAGS_EX", "-static")
             self.COMMON_FLAGS.append("-DDISABLE_LOADABLE_MODULES=1")
-        if self.include_debug_info:
+        if self.should_include_debug_info:
             self.configureArgs.append("--enable-debug")
         else:
             self.configureArgs.append("--disable-debug")

@@ -36,7 +36,7 @@ if False:
         repository = GitRepository("https://github.com/arichardson/cheri-tests.git")
         native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
         cross_install_dir = DefaultInstallDir.ROOTFS
-        defaultCMakeBuildType = "RelWithDebInfo"
+        default_build_type = BuildType.RELWITHDEBINFO
         project_name = "cheri-tests"
 
 
@@ -45,7 +45,7 @@ if False:
         repository = GitRepository("https://github.com/arichardson/rtld-tests.git")
         native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
         cross_install_dir = DefaultInstallDir.ROOTFS
-        defaultCMakeBuildType = "Debug"
+        default_build_type = BuildType.DEBUG
         project_name = "rtld-tests"
 
         def __init__(self, config: CheriConfig, *args, **kwargs):

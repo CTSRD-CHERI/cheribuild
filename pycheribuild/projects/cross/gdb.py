@@ -78,7 +78,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         self._compile_status_message = None
-        if not self.compiling_for_host():
+        if not self._crossCompileTarget.is_native():
             # We always want to build the MIPS binary static so we can just scp it over to QEMU
             self._linkage = Linkage.STATIC
         # In jenkins, we also want to be able to build a non-CHERI MIPS version of GDB

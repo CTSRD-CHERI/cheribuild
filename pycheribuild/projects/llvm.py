@@ -44,6 +44,9 @@ class BuildLLVMBase(CMakeProject):
     doNotAddToTargets = True
     can_build_with_asan = True
     is_large_source_repository = True
+    # Linking all the debug info takes forever
+    default_build_type = BuildType.RELEASE
+
 
     @classmethod
     def setup_config_options(cls, useDefaultSysroot=True):
@@ -80,10 +83,9 @@ class BuildLLVMBase(CMakeProject):
         link_jobs = 2 if self.enable_lto else 4
         if os.cpu_count() >= 24:
             link_jobs *= 2  # Increase number of link jobs for powerful servers
-        # non-shared debug builds take lots of ram -> use only one parallel job
-        if self.cmakeBuildType.lower() in (
-                "debug", "relwithdebinfo") and "-DBUILD_SHARED_LIBS=ON" not in self.cmakeOptions:
-            link_jobs = 1
+        # non-shared debug builds take lots of ram -> use fewer parallel jobs
+        if self.should_include_debug_info and "-DBUILD_SHARED_LIBS=ON" not in self.cmakeOptions:
+            link_jobs //= 4
         self.add_cmake_options(
             CMAKE_CXX_COMPILER=self.cppCompiler,
             CMAKE_C_COMPILER=self.cCompiler,
@@ -125,9 +127,11 @@ class BuildLLVMBase(CMakeProject):
         if self.canUseLLd(self.cCompiler):
             self.add_cmake_options(LLVM_ENABLE_LLD=True)
             # Add GDB index to speed up debugging
-            if self.cmakeBuildType.lower() == "debug" or self.cmakeBuildType.lower() == "relwithdebinfo":
+            if self.should_include_debug_info:
                 self.add_cmake_options(CMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld -Wl,--gdb-index",
                     CMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld -Wl,--gdb-index")
+                # This should also speed up link time:
+                self.add_cmake_options(LLVM_USE_SPLIT_DWARF=True)
         if self.add_default_sysroot:
             self.add_cmake_options(DEFAULT_SYSROOT=self.crossSysrootPath,
                 LLVM_DEFAULT_TARGET_TRIPLE="mips64c" + self.config.cheriBitsStr +

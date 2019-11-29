@@ -33,7 +33,7 @@ from ..utils import *
 
 # doesn't seem to be part of distro packages
 class BuildLibKompareDiff2(CMakeProject):
-    defaultCMakeBuildType = "Debug"
+    default_build_type = BuildType.DEBUG
     repository = GitRepository("git://anongit.kde.org/libkomparediff2.git")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
@@ -43,7 +43,7 @@ class BuildLibKompareDiff2(CMakeProject):
 
 class BuildKDevplatform(CMakeProject):
     dependencies = ["libkomparediff2"]
-    defaultCMakeBuildType = "Debug"
+    default_build_type = BuildType.DEBUG
     repository = GitRepository("https://github.com/arichardson/kdevplatform.git", default_branch="cheri")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     appendCheriBitsToBuildDir = True
@@ -55,7 +55,7 @@ class BuildKDevplatform(CMakeProject):
 
 class BuildKDevelop(CMakeProject):
     dependencies = ["kdevplatform", "llvm"]
-    defaultCMakeBuildType = "Debug"
+    default_build_type = BuildType.DEBUG
     repository = GitRepository("https://github.com/arichardson/kdevelop.git", default_branch="cheri")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
     appendCheriBitsToBuildDir = True

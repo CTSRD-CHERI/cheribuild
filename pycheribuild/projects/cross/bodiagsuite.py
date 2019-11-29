@@ -42,7 +42,6 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     appendCheriBitsToBuildDir = True
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS]
-    defaultOptimizationLevel = ["-O0"]
     default_build_type = BuildType.DEBUG
     default_use_asan = True
     # _FORTIFY_SOURCE only works with GCC on Linux
@@ -125,7 +124,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
             assert "-fsoftboundcets" in self.default_compiler_flags
             assert "-lsoftboundcets_rt" in self.default_ldflags
         # FIXME: add option to disable FORTIFY_SOURCE
-        if self.cross_build_type != BuildType.DEBUG:
+        if self.build_type != BuildType.DEBUG:
             self.warning("BODiagsuite contains undefined behaviour that might be optimized away unless you compile"
                          " at -O0.")
             self.ask_for_confirmation("Are you sure you want to continue?")

@@ -39,7 +39,6 @@ class BuildJulietTestSuite(CrossCompileCMakeProject):
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     appendCheriBitsToBuildDir = True
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
-    defaultOptimizationLevel = ["-O0"]
     default_build_type = BuildType.DEBUG
 
     @classmethod
@@ -47,7 +46,7 @@ class BuildJulietTestSuite(CrossCompileCMakeProject):
         super().setup_config_options(**kwargs)
 
     def process(self):
-        if self.cross_build_type != BuildType.DEBUG:
+        if self.build_type != BuildType.DEBUG:
             self.warning("The Juliet test suite contains undefined behaviour that might be optimized away unless you compile"
                          " at -O0.")
             self.ask_for_confirmation("Are you sure you want to continue?")

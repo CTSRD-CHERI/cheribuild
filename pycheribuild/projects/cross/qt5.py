@@ -137,20 +137,20 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         # Seems like I need to define PNG_READ_GAMMA_SUPPORTED
         self.configureArgs.append("-qt-libpng")
 
-        print("TYPE:", self.cross_build_type)
+        print("TYPE:", self.build_type)
         # TODO: once we update to qt 5.12 add this:
         # self.configureArgs.append("-gdb-index")
-        if self.cross_build_type == BuildType.DEBUG:
+        if self.build_type == BuildType.DEBUG:
             self.configureArgs.append("-debug")
             # optimize-debug needs GCC
             # self.configureArgs.append("-optimize-debug")
         else:
-            assert self.cross_build_type in (BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO,
+            assert self.build_type in (BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO,
                                              BuildType.MINSIZEREL, BuildType.RELEASE)
             self.configureArgs.append("-release")
-            if self.cross_build_type in (BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO):
+            if self.build_type in (BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO):
                 self.configureArgs.append("-force-debug-info")
-            if self.cross_build_type in (BuildType.MINSIZEREL, BuildType.MINSIZERELWITHDEBINFO):
+            if self.build_type in (BuildType.MINSIZEREL, BuildType.MINSIZERELWITHDEBINFO):
                 self.configureArgs.append("-optimize-size")  # Use -Os, otherwise it will use -O3
 
         if self.assertions:
@@ -252,7 +252,13 @@ class BuildQtBase(BuildQtWithConfigureScript):
 
 # Webkit needs ICU (and recommended for QtBase too:
 class BuildICU4C(CrossCompileAutotoolsProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/icu4c.git")
+    if True:
+        repository = GitRepository("https://github.com/CTSRD-CHERI/icu4c.git")
+    else:
+        repository = GitRepository("https://github.com/CTSRD-CHERI/icu.git", default_branch="maint/maint-66", force_branch=True)
+        project_name = "icu"
+        target = "icu4c"
+        build_dir_suffix = "4c"
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.SYSROOT
     make_kind = MakeCommandKind.GnuMake
@@ -271,6 +277,8 @@ class BuildICU4C(CrossCompileAutotoolsProject):
         if not self.compiling_for_host() and BuildQtWebkit.get_instance(self, config).force_static_linkage:
             self._linkage = Linkage.STATIC  # make sure it works with webkit
         self.configureCommand = self.sourceDir / "source/configure"
+        if (self.sourceDir / "icu4c").exists():
+            self.configureCommand = self.sourceDir / "icu4c/source/configure"
         self.configureArgs.extend(["--disable-plugins", "--disable-dyload",
                                    "--disable-tests",
                                    "--disable-samples"])
@@ -357,7 +365,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             self._linkage = Linkage.STATIC  # currently dynamic doesn't work
 
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-bitwise-operations", "-Wno-error=cheri-capability-misuse", "-Wno-error=format"]  # FIXME: build with capability -Werror
-        if self.include_debug_info:
+        if self.should_include_debug_info:
             self.COMMON_FLAGS.append("-gline-tables-only") # otherwise too much debug info
         self.add_cmake_options(PORT="Qt", ENABLE_X11_TARGET=False,
                                ENABLE_OPENGL=False,

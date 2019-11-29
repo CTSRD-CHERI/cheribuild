@@ -52,206 +52,9 @@ __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProj
 # noinspection PyUnresolvedReferences
 class CrossCompileMixin(object):
     doNotAddToTargets = True
-    config = None  # type: CheriConfig
-    #    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY  # fake install inside the build directory
-    #    cross_install_dir = DefaultInstallDir.ROOTFS
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
-
-    # noinspection PyTypeChecker
-    default_build_type = BuildType.DEFAULT
-    forceDefaultCC = False  # If true fall back to /usr/bin/cc there
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
     _should_not_be_instantiated = True
-    defaultOptimizationLevel = ("-O2",)
-    can_build_with_asan = True
-
-    # noinspection PyProtectedMember
-    @property
-    def _no_overwrite_allowed(self) -> "typing.Tuple[str]":
-        assert isinstance(self, SimpleProject)
-        return super()._no_overwrite_allowed + ("baremetal",)
-
-    needs_mxcaptable_static = False     # E.g. for postgres which is just over the limit:
-    #﻿warning: added 38010 entries to .cap_table but current maximum is 32768; try recompiling non-performance critical source files with -mllvm -mxcaptable
-    # FIXME: postgres would work if I fixed captable to use the negative immediate values
-    needs_mxcaptable_dynamic = False    # This might be true for Qt/QtWebkit
-
-    @property
-    def baremetal(self):
-        return self.target_info.is_baremetal
-
-    @property
-    def compiler_warning_flags(self):
-        if self.compiling_for_host():
-            return self.common_warning_flags + self.host_warning_flags
-        else:
-            return self.common_warning_flags + self.cross_warning_flags
-
-    def __init__(self, config: CheriConfig, *args, **kwargs):
-        super().__init__(config, *args, **kwargs)
-        if self.cross_build_type in (BuildType.DEBUG, BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO):
-            assert self.include_debug_info, "Need --" + self.target + "/debug-info if build-type is " + str(self.cross_build_type.value)
-        # convert the tuples into mutable lists (this is needed to avoid modifying class variables)
-        # See https://github.com/CTSRD-CHERI/cheribuild/issues/33
-        self.defaultOptimizationLevel = list(self.defaultOptimizationLevel)
-        self.cross_warning_flags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
-                                    "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types",
-                                    "-Werror=mips-cheri-prototypes", "-Werror=cheri-bitwise-operations"]
-        # Make underaligned capability loads/stores an error and require an explicit cast:
-        self.cross_warning_flags.append("-Werror=pass-failed")
-        self.host_warning_flags = []
-        self.common_warning_flags = []
-
-        target_arch = self._crossCompileTarget
-        # sanity check:
-        assert target_arch is not None and target_arch is not CompilationTargets.NONE
-        assert self.get_crosscompile_target(config) is target_arch
-        assert isinstance(target_arch, CrossCompileTarget)
-        # compiler flags:
-        self.COMMON_FLAGS = self.target_info.required_compile_flags()
-        if target_arch.is_cheri_purecap([CPUArchitecture.MIPS64]) and self.force_static_linkage:
-            # clang currently gets the TLS model wrong:
-            # https://github.com/CTSRD-CHERI/cheribsd/commit/f863a7defd1bdc797712096b6778940cfa30d901
-            self.COMMON_FLAGS.append("-ftls-model=initial-exec")
-            # TODO: remove the data-depedent provenance flag:
-            if self.should_use_extra_c_compat_flags():
-                self.COMMON_FLAGS.extend(self.extra_c_compat_flags)  # include cap-table-abi flags
-
-        # We might be setting too many flags, ignore this (for now)
-        if not self.compiling_for_host():
-            self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
-
-        assert self.installDir, "must be set"
-        statusUpdate(self.target, "INSTALLDIR = ", self._installDir, "INSTALL_PREFIX=", self._installPrefix,
-                     "DESTDIR=", self.destdir)
-
-        if self.include_debug_info:
-            if not self.target_info.is_macos:
-                self.COMMON_FLAGS.append("-ggdb")
-        self.CFLAGS = []
-        self.CXXFLAGS = []
-        self.ASMFLAGS = []
-        self.LDFLAGS = []
-        self.COMMON_LDFLAGS = []
-        # Don't build CHERI with ASAN since that doesn't work or make much sense
-        if self.use_asan and not self.compiling_for_cheri():
-            self.COMMON_FLAGS.append("-fsanitize=address")
-            self.COMMON_LDFLAGS.append("-fsanitize=address")
-
-    def should_use_extra_c_compat_flags(self):
-        # TODO: add a command-line option and default to true for
-        return self.compiling_for_cheri() and self.baremetal
-
-    @property
-    def extra_c_compat_flags(self):
-        if not self.compiling_for_cheri():
-            return []
-        # Build with virtual address interpretation, data-dependent provenance and pcrelative captable ABI
-        return ["-cheri-uintcap=addr", "-Xclang", "-cheri-data-dependent-provenance"]
-
-    @property
-    def optimizationFlags(self):
-        cbt = self.cross_build_type
-        if cbt == BuildType.DEFAULT:
-            return self.defaultOptimizationLevel + self._optimizationFlags
-        elif cbt == BuildType.DEBUG:
-            return ["-O0"] + self._optimizationFlags
-        elif cbt in (BuildType.RELEASE, BuildType.RELWITHDEBINFO):
-            return ["-O2"] + self._optimizationFlags
-        elif cbt in (BuildType.MINSIZEREL, BuildType.MINSIZERELWITHDEBINFO):
-            return ["-Os"] + self._optimizationFlags
-
-    @property
-    def default_compiler_flags(self):
-        result = []
-        if self.use_lto:
-            result.append("-flto")
-        if self.use_cfi:
-            if not self.use_lto:
-                self.fatal("Cannot use CFI without LTO!")
-            assert not self.compiling_for_cheri()
-            result.append("-fsanitize=cfi")
-            result.append("-fvisibility=hidden")
-        if self.compiling_for_host():
-            return result + self.COMMON_FLAGS + self.compiler_warning_flags
-        result += self.target_info.essential_compiler_and_linker_flags + self.optimizationFlags
-        result += self.COMMON_FLAGS + self.compiler_warning_flags
-        if self.config.csetbounds_stats:
-            result.extend(["-mllvm", "-collect-csetbounds-output=" + str(self.csetbounds_stats_file),
-                           "-mllvm", "-collect-csetbounds-stats=csv",
-                           # "-Xclang", "-cheri-bounds=everywhere-unsafe"])
-                           "-Xclang", "-cheri-bounds=aggressive"])
-        # Add mxcaptable for projects that need it
-        if self.compiling_for_cheri() and self.config.cheri_cap_table_abi != "legacy":
-            if self.force_static_linkage and self.needs_mxcaptable_static:
-                result.append("-mxcaptable")
-            if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
-                result.append("-mxcaptable")
-        # Do the same for MIPS to get even performance comparisons
-        elif self.compiling_for_mips(include_purecap=False):
-            if self.force_static_linkage and self.needs_mxcaptable_static:
-                result.extend(["-mxgot", "-mllvm", "-mxmxgot"])
-            if self.force_dynamic_linkage and self.needs_mxcaptable_dynamic:
-                result.extend(["-mxgot", "-mllvm", "-mxmxgot"])
-        return result
-
-    @property
-    def default_ldflags(self):
-        result = list(self.COMMON_LDFLAGS)
-        if self.force_static_linkage:
-            result.append("-static")
-        if self.use_lto:
-            result.append("-flto")
-        if self.use_cfi:
-            assert not self.compiling_for_cheri()
-            result.append("-fsanitize=cfi")
-        if self.compiling_for_host():
-            return result
-
-        # Should work fine without linker emulation (the linker should infer it from input files)
-        # if self.compiling_for_cheri():
-        #     emulation = "elf64btsmip_cheri_fbsd" if not self.baremetal else "elf64btsmip_cheri"
-        # elif self.compiling_for_mips(include_purecap=False):
-        #     emulation = "elf64btsmip_fbsd" if not self.baremetal else "elf64btsmip"
-        # result.append("-Wl,-m" + emulation)
-        result += self.target_info.essential_compiler_and_linker_flags + [
-            "-fuse-ld=" + str(self.target_info.linker),
-            # Should no longer be needed now that I added a hack for .eh_frame
-            # "-Wl,-z,notext",  # needed so that LLD allows text relocations
-            ]
-        if self.include_debug_info and not ".bfd" in self.target_info.linker.name:
-            # Add a gdb_index to massively speed up running GDB on CHERIBSD:
-            result.append("-Wl,--gdb-index")
-        if self.target_info.is_cheribsd and self.config.withLibstatcounters:
-            # We need to include the constructor even if there is no reference to libstatcounters:
-            # TODO: always include the .a file?
-            result += ["-Wl,--whole-archive", "-lstatcounters", "-Wl,--no-whole-archive"]
-        return result
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        assert issubclass(cls, SimpleProject)
-        super().setup_config_options(**kwargs)
-        cls._optimizationFlags = cls.add_config_option("optimization-flags", kind=list, metavar="OPTIONS",
-                                                     default=[])
-        cls.cross_build_type = cls.add_config_option("cross-build-type",
-            help="Optimization+debuginfo defaults (supports the same values as CMake plus 'DEFAULT' which does not pass"
-                 " any additional flags to the configure script). Note: The overrides the CMake --build-type option.",
-            default=cls.default_build_type, kind=BuildType, enum_choice_strings=[t.value for t in BuildType])
-
-    @property
-    def include_debug_info(self) -> bool:
-        force_debug_info = getattr(self, "_force_debug_info", None)
-        if force_debug_info is not None:
-            return force_debug_info
-        return self.cross_build_type.should_include_debug_info
-
-    def configure(self, **kwargs):
-        env = dict()
-        if not self.compiling_for_host():
-            env.update(PKG_CONFIG_LIBDIR=self.target_info.pkgconfig_dirs, PKG_CONFIG_SYSROOT_DIR=self.crossSysrootPath)
-        with setEnv(**env):
-            super().configure(**kwargs)
 
 
 class CrossCompileProject(CrossCompileMixin, Project):
@@ -260,20 +63,17 @@ class CrossCompileProject(CrossCompileMixin, Project):
 
 class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
     doNotAddToTargets = True  # only used as base class
-    defaultCMakeBuildType = "RelWithDebInfo"  # default to O2
 
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
 
     def __init__(self, config: CheriConfig, generator: CMakeProject.Generator=CMakeProject.Generator.Ninja):
-        if self.cross_build_type != BuildType.DEFAULT:
+        if self.build_type != BuildType.DEFAULT:
             # no CMake equivalent for MinSizeRelWithDebInfo -> set minsizerel and force debug info
-            if self.cross_build_type == BuildType.MINSIZERELWITHDEBINFO:
-                self.cmakeBuildType = BuildType.MINSIZEREL.value
+            if self.build_type == BuildType.MINSIZERELWITHDEBINFO:
+                self.build_type = BuildType.MINSIZEREL
                 self._force_debug_info = True
-            else:
-                self.cmakeBuildType = self.cross_build_type.value
         super().__init__(config, generator)
         # This must come first:
         if not self.compiling_for_host():
@@ -357,7 +157,7 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
             # CMAKE_CROSSCOMPILING will be set when we change CMAKE_SYSTEM_NAME:
             # This means we may not need the toolchain file at all
             # https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html
-            system_name = "Generic" if self.baremetal else "FreeBSD"
+            system_name = "Generic" if self.target_info.is_baremetal else "FreeBSD"
             self._prepare_toolchain_file(
                 TOOLCHAIN_SDK_BINDIR=self.sdk_bindir if not self.compiling_for_host() else self.config.cheri_sdk_bindir,
                 TOOLCHAIN_COMPILER_BINDIR=self.CC.parent,
@@ -385,7 +185,7 @@ set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
             # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
             # TODO: remove once it has been fixed
             self.add_cmake_options(CMAKE_BUILD_WITH_INSTALL_RPATH=True)
-        if self.baremetal and not self.compiling_for_host():
+        if self.target_info.is_baremetal and not self.compiling_for_host():
             self.add_cmake_options(CMAKE_EXE_LINKER_FLAGS="-Wl,-T,qemu-malta.ld")
         # TODO: BUILD_SHARED_LIBS=OFF?
         super().configure(**kwargs)
@@ -450,7 +250,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             # TODO: can we use relative paths?
             self.configureArgs.append("--libdir=" + str(self.installPrefix) + "/libcheri")
 
-        if not self.baremetal:
+        if not self.target_info.is_baremetal:
             CPPFLAGS = self.default_compiler_flags
             for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
                 assert key not in self.configureEnvironment
@@ -458,8 +258,8 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             self.set_prog_with_args("CC", self.CC, CPPFLAGS + self.CFLAGS)
             self.set_prog_with_args("CXX", self.CXX, CPPFLAGS + self.CXXFLAGS)
             # self.add_configure_env_arg("CPPFLAGS", commandline_to_str(CPPFLAGS))
-            self.add_configure_env_arg("CFLAGS", commandline_to_str(self.optimizationFlags + self.compiler_warning_flags))
-            self.add_configure_env_arg("CXXFLAGS", commandline_to_str(self.optimizationFlags + self.compiler_warning_flags))
+            self.add_configure_env_arg("CFLAGS", commandline_to_str(self.default_compiler_flags))
+            self.add_configure_env_arg("CXXFLAGS", commandline_to_str(self.default_compiler_flags))
             # this one seems to work:
             self.add_configure_env_arg("LDFLAGS", commandline_to_str(self.LDFLAGS + self.default_ldflags))
 
