@@ -47,7 +47,6 @@ class BuildSyzkaller(CrossCompileProject):
     githubBaseUrl = "https://github.com/CTSRD-CHERI/"
     repository = GitRepository(githubBaseUrl + "cheri-syzkaller.git")
     # no_default_sysroot = None // probably useless??
-    appendCheriBitsToBuildDir = True
     # skip_cheri_symlinks = True // llvm target only, useless here
     make_kind = MakeCommandKind.GnuMake
 

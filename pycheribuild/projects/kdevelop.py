@@ -46,7 +46,6 @@ class BuildKDevplatform(CMakeProject):
     default_build_type = BuildType.DEBUG
     repository = GitRepository("https://github.com/arichardson/kdevplatform.git", default_branch="cheri")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    appendCheriBitsToBuildDir = True
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -58,7 +57,6 @@ class BuildKDevelop(CMakeProject):
     default_build_type = BuildType.DEBUG
     repository = GitRepository("https://github.com/arichardson/kdevelop.git", default_branch="cheri")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
-    appendCheriBitsToBuildDir = True
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

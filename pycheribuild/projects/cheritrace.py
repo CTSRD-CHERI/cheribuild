@@ -34,7 +34,7 @@ class BuildCheriTrace(CMakeProject):
     dependencies = ["llvm"]
     repository = GitRepository("https://github.com/CTSRD-CHERI/cheritrace.git")
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    appendCheriBitsToBuildDir = True
+    append_cheri_bits_to_native_build_dir = True
 
     @classmethod
     def setup_config_options(cls):

@@ -35,13 +35,13 @@ from ..config.loader import ComputedDefaultValue
 install_to_soaap_dir = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "soaap",
                                             as_string="$INSTALL_ROOT/soaap")
 
+
 class BuildSoaapLLVM(BuildLLVMSplitRepoBase):
     target = "soaap-llvm"
     project_name = "soaap-llvm"
     githubBaseUrl = "https://github.com/CTSRD-SOAAP/"
     repository = GitRepository(githubBaseUrl + "llvm.git")
     no_default_sysroot = True
-    appendCheriBitsToBuildDir = False
     skip_misc_llvm_tools = False
     skip_static_analyzer = False
     _default_install_dir_fn = install_to_soaap_dir

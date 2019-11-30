@@ -34,7 +34,6 @@ class BuildQtCreator(Project):
     dependencies = ["llvm"]
     repository = GitRepository("https://code.qt.io/qt-creator/qt-creator.git")
     native_install_dir = DefaultInstallDir.CHERI_SDK
-    appendCheriBitsToBuildDir = True
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

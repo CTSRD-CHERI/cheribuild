@@ -39,7 +39,6 @@ from .llvm import BuildLLVMMonoRepoBase
 class BuildSoftBoundCETS(BuildLLVMMonoRepoBase):
     project_name = "SoftBoundCETS"
     repository = GitRepository("https://github.com/santoshn/SoftBoundCETS-3.9")
-    appendCheriBitsToBuildDir = False
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     skip_cheri_symlinks = True
     llvm_subdir = "llvm-3.9"

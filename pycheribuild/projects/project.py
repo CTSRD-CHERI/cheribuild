@@ -169,7 +169,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # The architecture to build for if no --xmips/--xhost flag is passed (defaults to supported_architectures[0]
     # if no match)
     _default_architecture = None
-    appendCheriBitsToBuildDir = True
+    append_cheri_bits_to_native_build_dir = False
+    """ Whether to append -128/-256 to the computed native build directory name"""
+
     _crossCompileTarget = CompilationTargets.NONE  # type: CrossCompileTarget
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
     # To check that we don't create an crosscompile targets without a fixed target
@@ -1355,9 +1357,6 @@ class Project(SimpleProject):
         function=lambda config, project: Path(config.sourceRoot / project.project_name.lower()),
         as_string=lambda cls: "$SOURCE_ROOT/" + cls.project_name.lower())
 
-    appendCheriBitsToBuildDir = False
-    """ Whether to append -128/-256 to the computed build directory name"""
-
     @classmethod
     def dependencies(cls, config: CheriConfig):
         # TODO: can I avoid instantiating all cross-compile targets here? The hack below might work
@@ -1414,7 +1413,7 @@ class Project(SimpleProject):
             target = self.get_crosscompile_target(config)
         # targets that only support native don't need a suffix
         if target.is_native() and len(self.supported_architectures) == 1:
-            result = "-" + config.cheriBitsStr if self.appendCheriBitsToBuildDir else ""
+            result = "-" + config.cheriBitsStr if self.append_cheri_bits_to_native_build_dir else ""
         else:
             result = target.build_suffix(config, build_hybrid=self.mips_build_hybrid)
         if self.use_asan:

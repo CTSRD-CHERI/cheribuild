@@ -37,7 +37,6 @@ class BuildJulietTestSuite(CrossCompileCMakeProject):
     # TODO: move repo to CTSRD-CHERI
     repository = GitRepository("https://github.com/arichardson/juliet-test-suite-c.git")
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
-    appendCheriBitsToBuildDir = True
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
     default_build_type = BuildType.DEBUG
 

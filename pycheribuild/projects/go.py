@@ -36,7 +36,6 @@ class BuildGo(Project):
     githubBaseUrl = "https://github.com/CTSRD-CHERI/"
     repository = GitRepository(githubBaseUrl + "freebsd-mips-go.git")
     no_default_sysroot = None
-    appendCheriBitsToBuildDir = True
     skip_cheri_symlinks = True
     native_install_dir = DefaultInstallDir.CHERI_SDK
 

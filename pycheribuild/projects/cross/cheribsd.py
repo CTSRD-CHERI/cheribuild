@@ -1061,7 +1061,6 @@ class BuildCHERIBSD(BuildFreeBSD):
                                                             )
         })
     _default_install_dir_fn = cheribsd_install_dir
-    appendCheriBitsToBuildDir = True
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_X86_64,
                                CompilationTargets.CHERIBSD_MIPS, CompilationTargets.CHERIBSD_RISCV]
     is_sdk_target = True

@@ -33,11 +33,11 @@ from .project import *
 from .llvm import BuildLLVMMonoRepoBase
 from ..utils import IS_LINUX
 
+
 # TODO: build from source
 class BuildEffectiveSan(BuildLLVMMonoRepoBase):
     project_name = "EffectiveSan"
     repository = GitRepository("https://github.com/GJDuck/EffectiveSan")
-    appendCheriBitsToBuildDir = False
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.outputRoot / "effectivesan",
         as_string="$INSTALL_ROOT/effectivesan")
