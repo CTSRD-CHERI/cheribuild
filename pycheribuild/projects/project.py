@@ -169,8 +169,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # The architecture to build for if no --xmips/--xhost flag is passed (defaults to supported_architectures[0]
     # if no match)
     _default_architecture = None
-    append_cheri_bits_to_native_build_dir = False
-    """ Whether to append -128/-256 to the computed native build directory name"""
 
     _crossCompileTarget = CompilationTargets.NONE  # type: CrossCompileTarget
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
@@ -1351,8 +1349,10 @@ class Project(SimpleProject):
     skipGitSubmodules = False
     compileDBRequiresBear = True
     doNotAddToTargets = True
+
     build_dir_suffix = ""   # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
     add_build_dir_suffix_for_native = False  # Whether to add -native to the native build dir
+    append_cheri_bits_to_native_build_dir = False  #  Whether to append -128/-256 to the computed native build directory name
 
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / project.project_name.lower()),
@@ -1413,10 +1413,12 @@ class Project(SimpleProject):
         if target is CompilationTargets.NONE:
             target = self.get_crosscompile_target(config)
         # targets that only support native don't need a suffix
-        if target.is_native() and self.add_build_dir_suffix_for_native:
-            result = "-" + config.cheriBitsStr if self.append_cheri_bits_to_native_build_dir else ""
+        if target.is_native() and not self.add_build_dir_suffix_for_native:
+            result = ""
         else:
             result = target.build_suffix(config, build_hybrid=self.mips_build_hybrid)
+        if target.is_native() and self.append_cheri_bits_to_native_build_dir:
+            result = "-" + config.cheriBitsStr
         if self.use_asan:
             result = "-asan" + result
         if self.build_dir_suffix:
