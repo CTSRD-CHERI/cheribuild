@@ -48,8 +48,8 @@ __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProj
            "CompilationTargets", "GitRepository", "commandline_to_str", "CrossCompileMixin"]  # no-combine
 
 
-# TODO: remove this class:
-# noinspection PyUnresolvedReferences
+# This mixin sets supported_architectures to ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS and thereby
+# avoids repeating this for every target than can be cross-built
 class CrossCompileMixin(object):
     doNotAddToTargets = True
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS
@@ -63,132 +63,6 @@ class CrossCompileProject(CrossCompileMixin, Project):
 
 class CrossCompileCMakeProject(CrossCompileMixin, CMakeProject):
     doNotAddToTargets = True  # only used as base class
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-
-    def __init__(self, config: CheriConfig, generator: CMakeProject.Generator=CMakeProject.Generator.Ninja):
-        if self.build_type != BuildType.DEFAULT:
-            # no CMake equivalent for MinSizeRelWithDebInfo -> set minsizerel and force debug info
-            if self.build_type == BuildType.MINSIZERELWITHDEBINFO:
-                self.build_type = BuildType.MINSIZEREL
-                self._force_debug_info = True
-        super().__init__(config, generator)
-        # This must come first:
-        if not self.compiling_for_host():
-            # Despite the name it should also work for baremetal newlib
-            assert self.target_info.is_cheribsd or (self.target_info.is_baremetal and self.target_info.is_newlib)
-            self._cmakeTemplate = includeLocalFile("files/CheriBSDToolchain.cmake.in")
-            self.toolchainFile = self.buildDir / "CheriBSDToolchain.cmake"
-            self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self.toolchainFile)
-        # The toolchain files need at least CMake 3.6
-        self.set_minimum_cmake_version(3, 7)
-
-    def _prepare_toolchain_file(self, **kwargs):
-        configured_template = self._cmakeTemplate
-        for key, value in kwargs.items():
-            if value is None:
-                continue
-            if isinstance(value, bool):
-                strval = "1" if value else "0"
-            elif isinstance(value, list):
-                strval = commandline_to_str(value)
-            else:
-                strval = str(value)
-            assert "@" + key + "@" in configured_template, key
-            configured_template = configured_template.replace("@" + key + "@", strval)
-        # work around jenkins paths that might contain @[0-9]+ in the path:
-        configured_jenkins_workaround = re.sub(r"@\d+", "", configured_template)
-        assert "@" not in configured_jenkins_workaround, configured_jenkins_workaround
-        self.writeFile(contents=configured_template, file=self.toolchainFile, overwrite=True)
-
-    def configure(self, **kwargs):
-        if not self.compiling_for_host():
-            self.COMMON_FLAGS.append("-B" + str(self.sdk_bindir))
-
-        if self.crosscompile_target.is_cheri_purecap():
-            if self._get_cmake_version() < (3, 9, 0) and not (self.sdk_sysroot / "usr/local/lib/cheri").exists():
-                warningMessage("Workaround for missing custom lib suffix in CMake < 3.9")
-                self.makedirs(self.sdk_sysroot / "usr/lib")
-                # create a /usr/lib/cheri -> /usr/libcheri symlink so that cmake can find the right libraries
-                self.createSymlink(Path("../libcheri"), self.sdk_sysroot / "usr/lib/cheri", relative=True,
-                    cwd=self.sdk_sysroot / "usr/lib")
-                self.makedirs(self.sdk_sysroot / "usr/local/cheri/lib")
-                self.makedirs(self.sdk_sysroot / "usr/local/cheri/libcheri")
-                self.createSymlink(Path("../libcheri"), self.sdk_sysroot / "usr/local/cheri/lib/cheri",
-                    relative=True, cwd=self.sdk_sysroot / "usr/local/cheri/lib")
-            add_lib_suffix = """
-# cheri libraries are found in /usr/libcheri:
-if("${CMAKE_VERSION}" VERSION_LESS 3.9)
-  # message(STATUS "CMAKE < 3.9 HACK to find libcheri libraries")
-  # need to create a <sysroot>/usr/lib/cheri -> <sysroot>/usr/libcheri symlink 
-  set(CMAKE_LIBRARY_ARCHITECTURE "cheri")
-  set(CMAKE_SYSTEM_LIBRARY_PATH "${CMAKE_FIND_ROOT_PATH}/usr/libcheri;${
-  CMAKE_FIND_ROOT_PATH}/usr/local/cheri/lib;${CMAKE_FIND_ROOT_PATH}/usr/local/cheri/libcheri")
-else()
-    set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
-endif()
-set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
-"""
-        else:
-            if self.compiling_for_host():
-                add_lib_suffix = None
-            else:
-                add_lib_suffix = "# no lib suffix needed for non-purecap"
-
-        # TODO: always avoid the toolchain file?
-        if self.compiling_for_host():
-            self.add_cmake_options(
-                CMAKE_C_COMPILER=self.CC,
-                CMAKE_CXX_COMPILER=self.CXX,
-                CMAKE_ASM_COMPILER=self.CC,  # Compile assembly files with the default compiler
-                CMAKE_C_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CFLAGS),
-                CMAKE_CXX_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CXXFLAGS),
-                CMAKE_ASM_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.ASMFLAGS),
-                )
-            custom_ldflags = commandline_to_str(self.LDFLAGS + self.default_ldflags)
-            if custom_ldflags:
-                self.add_cmake_options(
-                    CMAKE_EXE_LINKER_FLAGS_INIT=custom_ldflags,
-                    CMAKE_SHARED_LINKER_FLAGS_INIT=custom_ldflags,
-                    CMAKE_MODULE_LINKER_FLAGS_INIT=custom_ldflags)
-        else:
-            # CMAKE_CROSSCOMPILING will be set when we change CMAKE_SYSTEM_NAME:
-            # This means we may not need the toolchain file at all
-            # https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html
-            system_name = "Generic" if self.target_info.is_baremetal else "FreeBSD"
-            self._prepare_toolchain_file(
-                TOOLCHAIN_SDK_BINDIR=self.sdk_bindir if not self.compiling_for_host() else self.config.cheri_sdk_bindir,
-                TOOLCHAIN_COMPILER_BINDIR=self.CC.parent,
-                TOOLCHAIN_TARGET_TRIPLE=self.target_info.target_triple,
-                TOOLCHAIN_COMMON_FLAGS=self.default_compiler_flags,
-                TOOLCHAIN_C_FLAGS=self.CFLAGS,
-                TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
-                TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
-                TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
-                TOOLCHAIN_C_COMPILER=self.CC,
-                TOOLCHAIN_CXX_COMPILER=self.CXX,
-                TOOLCHAIN_SYSROOT=self.sdk_sysroot,
-                ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
-                TOOLCHAIN_SYSTEM_PROCESSOR=self.target_info.cmake_processor_id,
-                TOOLCHAIN_SYSTEM_NAME=system_name,
-                TOOLCHAIN_PKGCONFIG_DIRS=self.target_info.pkgconfig_dirs,
-                TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
-                )
-        if self.force_static_linkage:
-            self.add_cmake_options(
-                CMAKE_SHARED_LIBRARY_SUFFIX=".a",
-                CMAKE_FIND_LIBRARY_SUFFIXES=".a",
-                CMAKE_EXTRA_SHARED_LIBRARY_SUFFIXES=".a")
-        if not self.compiling_for_host() and self.generator == CMakeProject.Generator.Ninja:
-            # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
-            # TODO: remove once it has been fixed
-            self.add_cmake_options(CMAKE_BUILD_WITH_INSTALL_RPATH=True)
-        if self.target_info.is_baremetal and not self.compiling_for_host():
-            self.add_cmake_options(CMAKE_EXE_LINKER_FLAGS="-Wl,-T,qemu-malta.ld")
-        # TODO: BUILD_SHARED_LIBS=OFF?
-        super().configure(**kwargs)
 
 
 class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
