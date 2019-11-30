@@ -1352,6 +1352,7 @@ class Project(SimpleProject):
     compileDBRequiresBear = True
     doNotAddToTargets = True
     build_dir_suffix = ""   # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
+    add_build_dir_suffix_for_native = False  # Whether to add -native to the native build dir
 
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / project.project_name.lower()),
@@ -1369,7 +1370,7 @@ class Project(SimpleProject):
     @classmethod
     def projectBuildDirHelpStr(cls):
         result = "$BUILD_ROOT/" + cls.project_name.lower()
-        if cls.appendCheriBitsToBuildDir or hasattr(cls, "crossCompileTarget"):
+        if cls._crossCompileTarget is not CompilationTargets.NATIVE or cls.add_build_dir_suffix_for_native:
             result += "-$TARGET"
         result += "-build"
         return result
@@ -1412,7 +1413,7 @@ class Project(SimpleProject):
         if target is CompilationTargets.NONE:
             target = self.get_crosscompile_target(config)
         # targets that only support native don't need a suffix
-        if target.is_native() and len(self.supported_architectures) == 1:
+        if target.is_native() and self.add_build_dir_suffix_for_native:
             result = "-" + config.cheriBitsStr if self.append_cheri_bits_to_native_build_dir else ""
         else:
             result = target.build_suffix(config, build_hybrid=self.mips_build_hybrid)
