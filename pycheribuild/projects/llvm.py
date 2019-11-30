@@ -86,11 +86,7 @@ class BuildLLVMBase(CMakeProject):
         # non-shared debug builds take lots of ram -> use fewer parallel jobs
         if self.should_include_debug_info and "-DBUILD_SHARED_LIBS=ON" not in self.cmakeOptions:
             link_jobs //= 4
-        self.add_cmake_options(
-            CMAKE_CXX_COMPILER=self.cppCompiler,
-            CMAKE_C_COMPILER=self.cCompiler,
-            LLVM_PARALLEL_LINK_JOBS=link_jobs,  # anything more causes too much I/O + memory usage
-            )
+        self.add_cmake_options(LLVM_PARALLEL_LINK_JOBS=link_jobs)  # anything more causes too much I/O + memory usage
         if self.use_asan:
             # Use asan+ubsan
             self.add_cmake_options(LLVM_USE_SANITIZER="Address;Undefined")

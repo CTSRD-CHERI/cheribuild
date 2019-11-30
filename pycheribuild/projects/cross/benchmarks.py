@@ -55,7 +55,7 @@ class BuildMibench(CrossCompileProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.benchmark_size = cls.add_config_option("benchmark-size", choices=("small", "large"), default="large",
-                                                 kind=str, help="Size of benchmark input data to use")
+                                                   kind=str, help="Size of benchmark input data to use")
 
     @property
     def bundle_dir(self):

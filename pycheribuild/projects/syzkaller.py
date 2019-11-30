@@ -38,7 +38,6 @@ from .cross.cheribsd import BuildCHERIBSDPurecap, BuildCHERIBSD
 from .cross.crosscompileproject import *
 from .disk_image import BuildCheriBSDPurecapDiskImage
 from .project import *
-from ..config.chericonfig import CrossCompileTarget
 from ..utils import *
 
 

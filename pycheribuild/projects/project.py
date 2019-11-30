@@ -2368,7 +2368,7 @@ class CMakeProject(Project):
                 self.build_type = BuildType.MINSIZEREL
                 self._force_debug_info = True
 
-        self.configureArgs.append("-DCMAKE_BUILD_TYPE=" + self.build_type.value)
+        self.configureArgs.append("-DCMAKE_BUILD_TYPE=" + str(self.build_type.value))
         # TODO: always generate it?
         if self.config.create_compilation_db:
             self.configureArgs.append("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
@@ -2464,23 +2464,21 @@ class CMakeProject(Project):
         else:
             add_lib_suffix = "# no lib suffix needed for non-purecap"
 
+        custom_ldflags = self.default_ldflags + self.LDFLAGS
+        self.add_cmake_options(
+            CMAKE_C_COMPILER=self.CC,
+            CMAKE_CXX_COMPILER=self.CXX,
+            CMAKE_ASM_COMPILER=self.CC,  # Compile assembly files with the default compiler
+            # All of these should be commandlines not CMake lists:
+            CMAKE_C_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CFLAGS),
+            CMAKE_CXX_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CXXFLAGS),
+            CMAKE_ASM_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.ASMFLAGS),
+            CMAKE_EXE_LINKER_FLAGS_INIT=commandline_to_str(custom_ldflags + self.target_info.additional_executable_link_flags),
+            CMAKE_SHARED_LINKER_FLAGS_INIT=commandline_to_str(custom_ldflags + self.target_info.additional_shared_library_link_flags),
+            CMAKE_MODULE_LINKER_FLAGS_INIT=commandline_to_str(custom_ldflags + self.target_info.additional_shared_library_link_flags),
+            )
         # TODO: always avoid the toolchain file?
-        if self.compiling_for_host():
-            self.add_cmake_options(
-                CMAKE_C_COMPILER=self.CC,
-                CMAKE_CXX_COMPILER=self.CXX,
-                CMAKE_ASM_COMPILER=self.CC,  # Compile assembly files with the default compiler
-                CMAKE_C_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CFLAGS),
-                CMAKE_CXX_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CXXFLAGS),
-                CMAKE_ASM_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.ASMFLAGS),
-                )
-            custom_ldflags = commandline_to_str(self.LDFLAGS + self.default_ldflags)
-            if custom_ldflags:
-                self.add_cmake_options(
-                    CMAKE_EXE_LINKER_FLAGS_INIT=custom_ldflags,
-                    CMAKE_SHARED_LINKER_FLAGS_INIT=custom_ldflags,
-                    CMAKE_MODULE_LINKER_FLAGS_INIT=custom_ldflags)
-        else:
+        if not self.compiling_for_host():
             # CMAKE_CROSSCOMPILING will be set when we change CMAKE_SYSTEM_NAME:
             # This means we may not need the toolchain file at all
             # https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html
@@ -2504,7 +2502,6 @@ class CMakeProject(Project):
                 TOOLCHAIN_PKGCONFIG_DIRS=self.target_info.pkgconfig_dirs,
                 TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
                 )
-        if not self.compiling_for_host():
             # TODO: set CMAKE_STRIP, CMAKE_NM, CMAKE_OBJDUMP, CMAKE_READELF, CMAKE_DLLTOOL, CMAKE_DLLTOOL, CMAKE_ADDR2LINE
             self.add_cmake_options(
                 _CMAKE_TOOLCHAIN_LOCATION=self.target_info.sdk_root_dir / "bin",
@@ -2519,10 +2516,9 @@ class CMakeProject(Project):
             # Ninja can't change the RPATH when installing: https://gitlab.kitware.com/cmake/cmake/issues/13934
             # TODO: remove once it has been fixed
             self.add_cmake_options(CMAKE_BUILD_WITH_INSTALL_RPATH=True)
-        if self.target_info.is_baremetal and not self.compiling_for_host():
-            self.add_cmake_options(CMAKE_EXE_LINKER_FLAGS="-Wl,-T,qemu-malta.ld")
         # TODO: BUILD_SHARED_LIBS=OFF?
 
+        # Add the options from the config file:
         self.configureArgs.extend(self.cmakeOptions)
         # make sure we get a completely fresh cache when --reconfigure is passed:
         cmakeCache = self.buildDir / "CMakeCache.txt"

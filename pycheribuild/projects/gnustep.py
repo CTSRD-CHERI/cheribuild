@@ -43,8 +43,6 @@ class BuildLibObjC2(CMakeProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.configureArgs.extend([
-            "-DCMAKE_C_COMPILER=clang",
-            "-DCMAKE_CXX_COMPILER=clang++",
             "-DCMAKE_ASM_COMPILER=clang",
             "-DCMAKE_ASM_COMPILER_ID=Clang",  # For some reason CMake doesn't detect the ASM compiler ID for clang
             "-DCMAKE_ASM_FLAGS=-c",  # required according to docs when using clang as ASM compiler

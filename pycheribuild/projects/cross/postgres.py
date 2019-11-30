@@ -29,7 +29,6 @@
 #
 import re
 
-from .cheribsd import BuildCHERIBSD
 from .crosscompileproject import *
 from ...utils import IS_FREEBSD
 

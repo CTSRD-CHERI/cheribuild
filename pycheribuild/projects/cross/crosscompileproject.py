@@ -30,18 +30,12 @@
 
 import os
 import pprint
-import re
-from builtins import issubclass
-from enum import Enum
 from pathlib import Path
 
 from ..project import *
 from ...config.chericonfig import BuildType
 from ...config.target_info import CrossCompileTarget, Linkage, CompilationTargets
 from ...utils import *
-
-if typing.TYPE_CHECKING:
-    from .cheribsd import BuildCHERIBSD
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget", "BuildType", # no-combine
            "CrossCompileProject", "MakeCommandKind", "Linkage", "Path", "DefaultInstallDir", # no-combine

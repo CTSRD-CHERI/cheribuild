@@ -195,7 +195,6 @@ class MultiArchTarget(Target):
         return self._project_class
 
     def _create_project(self, config: CheriConfig) -> "SimpleProject":
-        c = self.projectClass
         return self.projectClass(config)
 
     def __repr__(self):

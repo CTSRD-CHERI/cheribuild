@@ -30,7 +30,6 @@
 import os
 import subprocess
 import datetime
-import shutil
 
 from .cross.cheribsd import BuildCHERIBSD
 from .project import *

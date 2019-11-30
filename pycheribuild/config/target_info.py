@@ -99,6 +99,16 @@ class TargetInfo(ABC):
         ...
 
     @property
+    def additional_executable_link_flags(self):
+        """Additional linker flags that need to be passed when building an executable (e.g. custom linker script)"""
+        return []
+
+    @property
+    def additional_shared_library_link_flags(self):
+        """Additional linker flags that need to be passed when building an shared library (e.g. custom linker script)"""
+        return []
+
+    @property
     @abstractmethod
     def c_preprocessor(self) -> Path: ...
 
@@ -494,6 +504,11 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
             "-D_GNU_SOURCE=1",  # needed for the locale functions
             "-D_POSIX_TIMERS=1", "-D_POSIX_MONOTONIC_CLOCK=1",  # pretend that we have a monotonic clock
             ]
+
+    @property
+    def additional_executable_link_flags(self):
+        """Additional linker flags that need to be passed when building an executable (e.g. custom linker script)"""
+        return ["-Wl,-T,qemu-malta.ld"]
 
     @property
     def is_baremetal(self):
