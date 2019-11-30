@@ -2401,8 +2401,7 @@ class CMakeProject(Project):
         assert "@" not in configured_jenkins_workaround, configured_jenkins_workaround
         self.writeFile(contents=configured_template, file=self.toolchainFile, overwrite=True)
 
-
-    def add_cmake_options(self, **kwargs):
+    def add_cmake_options(self, *, _include_empty_vars=False, **kwargs):
         for option, value in kwargs.items():
             if any(x.startswith("-D" + option) for x in self.cmakeOptions):
                 self.info("Not using default value of '", value, "' for CMake option '", option,
@@ -2410,6 +2409,8 @@ class CMakeProject(Project):
                 continue
             if isinstance(value, bool):
                 value = "ON" if value else "OFF"
+            if not str(value) and not _include_empty_vars:
+                continue
             assert value is not None
             self.configureArgs.append("-D" + option + "=" + str(value))
 
