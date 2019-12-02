@@ -35,7 +35,7 @@ import sys
 
 from .project import *
 from ..config.loader import ComputedDefaultValue
-from ..utils import *
+from ..utils import getCompilerInfo
 
 
 class BuildQEMUBase(AutotoolsProject):
@@ -69,7 +69,7 @@ class BuildQEMUBase(AutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.addRequiredSystemTool("glibtoolize" if IS_MAC else "libtoolize", homebrew="libtool")
+        self.addRequiredSystemTool("glibtoolize" if self.target_info.is_macos else "libtoolize", homebrew="libtool")
         self.addRequiredSystemTool("autoreconf", homebrew="autoconf")
         self.addRequiredSystemTool("aclocal", homebrew="automake")
 
@@ -77,7 +77,8 @@ class BuildQEMUBase(AutotoolsProject):
                                    freebsd="pixman")
         self._addRequiredPkgConfig("glib-2.0", homebrew="glib", zypper="glib2-devel", apt="libglib2.0-dev",
                                    freebsd="glib")
-        self.addRequiredSystemTool("gsed", homebrew="gnu-sed")
+        # Tests require GNU sed
+        self.addRequiredSystemTool("sed" if self.target_info.is_linux else "gsed", homebrew="gnu-sed", freebsd="gsed")
 
         # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
         # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
@@ -85,14 +86,14 @@ class BuildQEMUBase(AutotoolsProject):
         self._extraLDFlags = ""
         self._extraCXXFlags = ""
         if shutil.which("pkg-config"):
-            glib_includes = runCmd("pkg-config", "--cflags-only-I", "glib-2.0", captureOutput=True,
-                                  print_verbose_only=True, runInPretendMode=True).stdout.decode("utf-8").strip()
+            glib_includes = self.run_cmd("pkg-config", "--cflags-only-I", "glib-2.0", captureOutput=True,
+                                         print_verbose_only=True, runInPretendMode=True).stdout.decode("utf-8").strip()
             self._extraCFlags += " " + glib_includes
 
         # Disable some more unneeded things (we don't usually need the GUI frontends)
         if not self.gui:
             self.configureArgs.extend(["--disable-vnc", "--disable-sdl", "--disable-gtk", "--disable-opengl"])
-            if IS_MAC:
+            if self.target_info.is_macos:
                 self.configureArgs.append("--disable-cocoa")
 
         # QEMU now builds with python3
@@ -114,13 +115,7 @@ class BuildQEMUBase(AutotoolsProject):
         # Having symbol information is useful for debugging and profiling
         self.configureArgs.append("--disable-strip")
 
-        if IS_LINUX:
-            # "--enable-libnfs", # version on Ubuntu 14.04 is too old? is it needed?
-            # self.configureArgs += ["--enable-kvm", "--enable-linux-aio", "--enable-vte", "--enable-sdl",
-            #                        "--with-sdlabi=2.0", "--enable-virtfs"]
-            self.configureArgs.extend(["--disable-stack-protector"])  # seems to be broken on some Ubuntu 14.04 systems
-
-        else:
+        if not self.target_info.is_linux:
             self.configureArgs.extend(["--disable-linux-aio", "--disable-kvm"])
 
         if self.config.verbose:
@@ -141,7 +136,7 @@ class BuildQEMUBase(AutotoolsProject):
                                      " -Wno-c11-extensions -Wno-missing-field-initializers"
             if self.use_lto and self.can_use_lto(ccinfo):
                 while True:  # add a loop so I can break early
-                    statusUpdate("Compiling with Clang and LLD -> trying to build with LTO enabled")
+                    self.info("Compiling with Clang and LLD -> trying to build with LTO enabled")
                     if ccinfo.compiler != "apple-clang":
                         # For non apple-clang compilers we need to use llvm binutils:
                         version_suffix = ""
@@ -171,19 +166,19 @@ class BuildQEMUBase(AutotoolsProject):
                         thinlto_cache_flag = "-cache_path_lto,"
                     self._extraLDFlags += " -Wl," + thinlto_cache_flag + str(self.buildDir / "thinlto-cache")
 
-                    statusUpdate("Building with LTO -> QEMU should be faster")
+                    self.info("Building with LTO -> QEMU should be faster")
                     break
         self._extraCFlags += " -Wall"
         # This would have cought some problems in the past
         self._extraCFlags += " -Werror=return-type"
         if self.use_smbd:
             smbd_path = "/usr/sbin/smbd"
-            if IS_FREEBSD:
+            if self.target_info.is_freebsd:
                 smbd_path = "/usr/local/sbin/smbd"
-            elif IS_MAC:
+            elif self.target_info.is_macos:
                 try:
-                    prefix = runCmd("brew", "--prefix", "samba", captureOutput=True, runInPretendMode=True,
-                                    print_verbose_only=True).stdout.decode("utf-8").strip()
+                    prefix = self.run_cmd("brew", "--prefix", "samba", captureOutput=True, runInPretendMode=True,
+                                          print_verbose_only=True).stdout.decode("utf-8").strip()
                 except subprocess.CalledProcessError:
                     prefix = self.config.otherToolsDir
                 smbd_path = Path(prefix, "sbin/smbd")
@@ -197,12 +192,12 @@ class BuildQEMUBase(AutotoolsProject):
 
             self.configureArgs.append("--smbd=" + str(smbd_path))
             if not Path(smbd_path).exists():
-                if IS_MAC:
+                if self.target_info.is_macos:
                     # QEMU user networking expects a smbd that accepts the same flags and config files as the samba.org
                     # sources but the macos /usr/sbin/smbd is incompatible with that:
-                    warningMessage("QEMU usermode samba shares require the samba.org smbd. You will need to build it from "
-                                   "source (using `cheribuild.py samba`) since the /usr/sbin/smbd shipped by MacOS is "
-                                   "incompatible with QEMU")
+                    self.warning("QEMU user-mode samba shares require the samba.org smbd. You will need to build it "
+                                 "from source (using `cheribuild.py samba`) since the /usr/sbin/smbd shipped by MacOS"
+                                 " is incompatible with QEMU")
                 self.fatal("Could not find smbd -> QEMU SMB shares networking will not work",
                            fixitHint="Either install samba using the system package manager or with cheribuild. "
                                      "If you really don't need QEMU host shares you can disable the samba dependency "
@@ -238,8 +233,7 @@ class BuildQEMUBase(AutotoolsProject):
         if (self.sourceDir / "po").is_dir() and not self.config.skipUpdate:
             self.run_cmd("git", "checkout", "HEAD", "po/", cwd=self.sourceDir, print_verbose_only=True)
         if (self.sourceDir / "pixman/pixman").exists():
-            warningMessage(
-                "QEMU might build the broken pixman submodule, run `git submodule deinit -f pixman` to clean")
+            self.warning("QEMU might build the broken pixman submodule, run `git submodule deinit -f pixman` to clean")
         super().update()
 
 
