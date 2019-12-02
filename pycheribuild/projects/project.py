@@ -2055,7 +2055,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
     @property
     def csetbounds_stats_file(self) -> Path:
         return self.buildDir / "csetbounds-stats.csv"
-        
+
     def strip_elf_files(self, benchmark_dir):
         """
         Strip all ELF binaries to reduce the size of the benchmark directory
@@ -2075,7 +2075,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                         self.verbose_print("Stripping ELF binary", file)
                         runCmd(self.sdk_bindir / "llvm-strip", file)
         self.run_cmd("du", "-sh", benchmark_dir)
-        
+
     @property
     def default_statcounters_csv_name(self) -> str:
         assert isinstance(self, Project)
@@ -2100,7 +2100,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             self._statcounters_csv = self.target + "-statcounters{}-{}.csv".format(
                 suffix, datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
             return self._statcounters_csv
-        
+
     def copy_asan_dependencies(self, dest_libdir):
         # ASAN depends on libraries that are not included in the benchmark image by default:
         assert self.compiling_for_mips(include_purecap=False) and self.use_asan
@@ -2508,7 +2508,14 @@ class CMakeProject(Project):
             self.add_cmake_options(
                 _CMAKE_TOOLCHAIN_LOCATION=self.target_info.sdk_root_dir / "bin",
                 CMAKE_LINKER=self.target_info.linker)
-            
+
+        if self.target_info.additional_executable_link_flags:
+            self.add_cmake_options(
+                CMAKE_REQUIRED_LINK_OPTIONS=commandline_to_str(self.target_info.additional_executable_link_flags))
+            # TODO: if this doesn't work we can set CMAKE_TRY_COMPILE_TARGET_TYPE to build a static lib instead
+            # https://cmake.org/cmake/help/git-master/variable/CMAKE_TRY_COMPILE_TARGET_TYPE.html
+            if False:  # XXX: we should have everything set up correctly so this should no longer be needed
+                self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")
         if self.force_static_linkage:
             self.add_cmake_options(
                 CMAKE_SHARED_LIBRARY_SUFFIX=".a",
