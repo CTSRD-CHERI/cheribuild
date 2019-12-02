@@ -306,7 +306,7 @@ class NativeTargetInfo(TargetInfo):
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         if config.use_sdk_clang_for_native_xbuild:
-            return ["llvm"]
+            return ["llvm-native"]
         return []  # use host tools -> no target needed
 
     @property
@@ -371,7 +371,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["llvm"]  # TODO: upstream-llvm???
+        return ["llvm-native"]  # TODO: upstream-llvm???
 
     @classmethod
     def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", include_version: bool):
@@ -425,7 +425,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["llvm", "qemu", "gdb-native"]
+        return ["llvm-native", "qemu", "gdb-native"]
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
@@ -484,7 +484,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["llvm", "qemu", "gdb-native"]  # upstream-llvm??
+        return ["llvm-native", "qemu", "gdb-native"]  # upstream-llvm??
 
     @property
     def target_triple(self):

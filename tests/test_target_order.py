@@ -43,11 +43,13 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, skip_sdk=
     # print("result = ", result)
     return result
 
-freestanding_deps = ["llvm", "qemu", "gdb-native", "freestanding-sdk"]
+
+freestanding_deps = ["llvm-native", "qemu", "gdb-native", "freestanding-sdk"]
 baremetal_deps = freestanding_deps + ["newlib-baremetal-mips", "compiler-rt-builtins-baremetal-mips",
                                       "libunwind-baremetal-mips", "libcxxrt-baremetal-mips",
                                       "libcxx-baremetal-mips", "baremetal-sdk"]
 cheribsd_sdk_deps = freestanding_deps + ["cheribsd-cheri", "cheribsd-sysroot-cheri", "cheribsd-sdk"]
+
 
 @pytest.mark.parametrize("target_name,expected_list", [
     pytest.param("freestanding-sdk", freestanding_deps, id="freestanding-sdk"),
@@ -55,7 +57,7 @@ cheribsd_sdk_deps = freestanding_deps + ["cheribsd-cheri", "cheribsd-sysroot-che
     # Ensure that cheribsd is added to deps even on Linux/Mac
     pytest.param("cheribsd-sdk", cheribsd_sdk_deps, id="cheribsd-sdk"),
     pytest.param("sdk", cheribsd_sdk_deps + ["sdk"], id="sdk"),
-])
+    ])
 def test_sdk(target_name, expected_list):
     assert _sort_targets([target_name]) == expected_list
 
@@ -65,7 +67,7 @@ def test_sdk(target_name, expected_list):
     pytest.param("freebsd", "freebsd-x86_64"),
     pytest.param("gdb", "gdb-native"),
     pytest.param("libcxx", "libcxx-cheri"),
-])
+    ])
 def test_alias_resolving(target_name, expected_name):
     # test that we select the default target for multi projects:
     assert _sort_targets([target_name]) == [expected_name]
