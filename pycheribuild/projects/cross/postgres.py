@@ -46,10 +46,6 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS
 
-    @property
-    def needs_mxcaptable_dynamic(self):
-        return self.compiling_for_cheri() and self.config.cheriBits == 256
-
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         if self.enable_assertions:
