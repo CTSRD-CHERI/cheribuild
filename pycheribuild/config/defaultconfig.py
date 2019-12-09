@@ -36,6 +36,7 @@ from .chericonfig import CheriConfig
 from .target_info import CompilationTargets
 from ..utils import defaultNumberOfMakeJobs
 
+
 class CheribuildAction(Enum):
     BUILD = ("--build", "Run (usually build+install) chosen targets (default)")
     TEST = ("--test", "Run tests for the passed targets instead of building them", "--run-tests")
@@ -56,6 +57,7 @@ class CheribuildAction(Enum):
             actions = [self]
         if actions:
             self.actions = actions
+
 
 class DefaultCheriConfig(CheriConfig):
     def __init__(self, loader: ConfigLoaderBase, availableTargets: list):
@@ -115,6 +117,10 @@ class DefaultCheriConfig(CheriConfig):
 
         self.makeJobs = loader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
                                          help="Number of jobs to use for compiling")
+
+        self.wait_for_debugger = loader.add_bool_option("wait-for-debugger", group=loader.run_group,
+                                                        help="Start QEMU in the 'wait for a debugger' state when"
+                                                             "launching CheriBSD,FreeBSD, etc.")
 
         # configurable paths
         self.sourceRoot = loader.add_path_option("source-root",

@@ -197,6 +197,29 @@ class LaunchQEMUBase(SimpleProject):
         if self._hasPCI:
             qemuCommand += ["-device", "virtio-rng-pci"]
 
+        if self.config.wait_for_debugger:
+            self.info("QEMU is waiting for GDB to attach (using `target remote :1234`)."
+                      " Once connected enter 'continue\\n' to continue booting")
+            gdb_cmd = BuildGDB.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/gdb"
+            launch_cmd = [
+                gdb_cmd,
+                self.currentKernel,
+                # Set the sysroot to ensure that the .debug file is loaded from $SYSROOT/usr/lib/debug/boot/kernel
+                "--init-eval-command=set sysroot " + str(self.rootfs_path),
+                # Once the file has been loaded set a breakpoint on panic() and connect to the remote host
+                "--eval-command=break panic",
+                "--eval-command=target remote localhost:1234",
+                "--eval-command=continue",
+                ]
+            self.info("To start and connect GDB run the following command in another terminal:\n"
+                "\t", coloured(AnsiColour.red, commandline_to_str(launch_cmd)))
+            self.info("Launching QEMU in suspended state...")
+            # TODO: control tmux to do this automatically?
+            # See e.g. https://github.com/tmux-python/libtmux/
+            qemuCommand += ["-gdb", "tcp::1234",  # wait for gdb on localhost:1234
+                            "-S"  # freeze CPU at startup (use 'c' to start execution)
+                            ]
+
         runCmd(qemuCommand, stdout=sys.stdout, stderr=sys.stderr)  # even with --quiet we want stdout here
 
     @staticmethod
