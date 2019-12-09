@@ -118,10 +118,6 @@ class DefaultCheriConfig(CheriConfig):
         self.makeJobs = loader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
                                          help="Number of jobs to use for compiling")
 
-        self.wait_for_debugger = loader.add_bool_option("wait-for-debugger", group=loader.run_group,
-                                                        help="Start QEMU in the 'wait for a debugger' state when"
-                                                             "launching CheriBSD,FreeBSD, etc.")
-
         # configurable paths
         self.sourceRoot = loader.add_path_option("source-root",
             default=Path(os.path.expanduser("~/cheri")), group=loader.pathGroup,

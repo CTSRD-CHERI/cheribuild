@@ -220,6 +220,11 @@ class CheriConfig(object):
         self.copy_compilation_db_to_source_dir = None  # False for jenkins, an option for cheribuild
 
 
+        # Run QEMU options
+        self.wait_for_debugger = loader.add_bool_option("wait-for-debugger", group=loader.run_group,
+                                                        help="Start QEMU in the 'wait for a debugger' state when"
+                                                             "launching CheriBSD,FreeBSD, etc.")
+
         # Test options:
         self.test_ssh_key = loader.add_path_option("test-ssh-key", default=os.path.expanduser("~/.ssh/id_ed25519.pub"),
                                                  help="The SSH key to used to connect to the QEMU instance when running"
