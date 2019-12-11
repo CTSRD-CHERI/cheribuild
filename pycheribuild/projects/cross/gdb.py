@@ -127,12 +127,12 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.cross_warning_flags.append("-Wno-error=implicit-function-declaration")
         self.cross_warning_flags.append("-Wno-error=format")
         self.cross_warning_flags.append("-Wno-error=incompatible-pointer-types")
+        self.configureArgs.append("--enable-targets=all")
         if self.compiling_for_host():
             self.LDFLAGS.append("-L/usr/local/lib")
-            self.configureArgs.append("--enable-targets=all")
             self.configureArgs.append("--with-expat")
         else:
-            self.configureArgs.extend(["--without-python", "--enable-targets=mips64-unknown-freebsd",
+            self.configureArgs.extend(["--without-python",
 
                                        "--without-expat", "--without-libunwind-ia64",])
             self.configureEnvironment.update(gl_cv_func_gettimeofday_clobber="no",
