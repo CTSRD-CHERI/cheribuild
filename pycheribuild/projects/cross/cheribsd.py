@@ -234,7 +234,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
     needs_sysroot = False  # We are building the full OS so we don't need a sysroot
     # Only CheriBSD can target CHERI, upstream FreeBSD won't work
     # TODO: test more architectures (e.g. RISCV)
-    supported_architectures = [CompilationTargets.FREEBSD_X86_64, CompilationTargets.FREEBSD_MIPS]
+    supported_architectures = [CompilationTargets.FREEBSD_X86_64, CompilationTargets.FREEBSD_MIPS,
+                               CompilationTargets.FREEBSD_RISCV]
 
     _default_install_dir_fn = ComputedDefaultValue(function=freebsd_install_dir,
                                              as_string="$INSTALL_ROOT/freebsd-{mips/x86}")
@@ -253,7 +254,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     @classmethod
     def setup_config_options(cls, buildKernelWithClang: bool = True, bootstrap_toolchain=False,
-                           debug_info_by_default=True, **kwargs):
+                             use_upstream_llvm: bool = None, debug_info_by_default=True, **kwargs):
         super().setup_config_options(add_common_cross_options=False, **kwargs)
         if "subdirOverride" not in cls.__dict__:
             cls.subdirOverride = cls.add_config_option("subdir-with-deps", kind=str, metavar="DIR", show_help=False,
@@ -285,6 +286,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                  " depending on --cheri-bits)")  # type: str
 
         if bootstrap_toolchain:
+            assert not use_upstream_llvm
             cls.use_external_toolchain = False
             cls.build_with_upstream_llvm = False
             cls.crossToolchainRoot = None
@@ -294,14 +296,16 @@ class BuildFreeBSD(BuildFreeBSDBase):
             cls.linker_for_world = "should-not-be-used"
         else:
             cls.use_external_toolchain = True
-            cls.build_with_upstream_llvm = cls.add_bool_option("compile-with-cheribuild-upstream-llvm", show_help=True,
-                                                             help="Compile with the Clang version built by the "
-                                                                  "`cheribuild.py upstream-llvm` target")
-            defaultExternalToolchain = ComputedDefaultValue(function=default_cross_toolchain_path,
+            if use_upstream_llvm is not None:
+                cls.build_with_upstream_llvm = use_upstream_llvm
+            else:
+                cls.build_with_upstream_llvm = cls.add_bool_option("compile-with-cheribuild-upstream-llvm", show_help=True,
+                    default=True, help="Compile with the Clang version built by the `cheribuild.py upstream-llvm` target")
+            default_external_toolchain = ComputedDefaultValue(function=default_cross_toolchain_path,
                                                             as_string="$CHERI_SDK_DIR")
             cls.crossToolchainRoot = cls.add_path_option("cross-toolchain",
                                                        help="Path to the mips64-unknown-freebsd-* tools",
-                                                       default=defaultExternalToolchain)
+                                                       default=default_external_toolchain)
             # override in CheriBSD
             cls.useExternalToolchainForKernel = cls.add_bool_option("use-external-toolchain-for-kernel", show_help=True,
                                                                   help="build the kernel with the external toolchain",
@@ -425,6 +429,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if self.compiling_for_riscv():
                 self.make_args.set(CROSS_TOOLCHAIN="riscv64-gcc")
             return
+
+        # For RISCV the makefile check fails unless we set CROSS_TOOLCHAIN_PREFIX (even though we provide all the tools)
+        if self.compiling_for_riscv():
+            self.make_args.set(CROSS_TOOLCHAIN_PREFIX=str(self.crossToolchainRoot / "bin/llvm-"))
+
         self.cross_toolchain_config.set_with_options(
             # TODO: should we have an option to include a compiler in the target system?
             GCC=False, CLANG=False, LLD=False,  # Take a long time and not needed in the target system
@@ -952,10 +961,18 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     # also try to support building for RISCV
     supported_architectures = BuildFreeBSD.supported_architectures + [CompilationTargets.FREEBSD_RISCV,
                                                                       CompilationTargets.FREEBSD_I386]
+    if not IS_FREEBSD:
+        crossbuild = True
+        dependencies = ["upstream-llvm"]
 
     @classmethod
     def setup_config_options(cls, installDirectoryHelp=None, **kwargs):
-        super().setup_config_options(buildKernelWithClang=True, bootstrap_toolchain=True, debug_info_by_default=False)
+        if IS_FREEBSD:
+            kwargs["bootstrap_toolchain"] = True
+        if not IS_FREEBSD:
+            kwargs["bootstrap_toolchain"] = False
+            kwargs["use_upstream_llvm"] = True
+        super().setup_config_options(**kwargs)
 
     def addCrossBuildOptions(self):
         # Just try to build as much as possible (but using make.py)
@@ -979,8 +996,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
 
     @classmethod
-    def setup_config_options(cls, buildKernelWithClang: bool = True, bootstrap_toolchain=False,
-                           debug_info_by_default=True, **kwargs):
+    def setup_config_options(cls, **kwargs):
         super().setup_config_options(add_common_cross_options=False, **kwargs)
         cls.tinderbox = cls.add_bool_option("tinderbox", help="Use `make tinderbox` instead of `make universe`")
         cls.worlds_only = cls.add_bool_option("worlds-only", help="Only build worlds (skip building kernels)")
@@ -1069,7 +1085,8 @@ class BuildCHERIBSD(BuildFreeBSD):
         if installDirectoryHelp is None:
             installDirectoryHelp = "Install directory for CheriBSD root file system (default: " \
                                    "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)"
-        super().setup_config_options(buildKernelWithClang=True, installDirectoryHelp=installDirectoryHelp)
+        super().setup_config_options(buildKernelWithClang=True, installDirectoryHelp=installDirectoryHelp,
+                                     use_upstream_llvm=False)
         cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=True,
                                              help="Only build a sysroot instead of the full system. This will only "
                                                   "build the libraries and skip all binaries")
