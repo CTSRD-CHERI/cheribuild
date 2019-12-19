@@ -131,7 +131,7 @@ class OpamMixin(object):
         # for opam commands we don't need to prepend opam exec --
         if command[0] != self.opam_binary:
             command = [self.opam_binary, "exec", "--root=" + str(self.opamroot), "--"] + command
-        return runCmd(command, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)
+        return self.run_cmd(command, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)
 
 
 class Opam2(SimpleProject):
@@ -266,6 +266,28 @@ class BuildSailCheriMips(ProjectUsingOpam):
     def install(self, **kwargs):
         self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
         self.runMake("install")
+
+
+class RunSailShell(OpamMixin, SimpleProject):
+    target = "sail-env"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-mips")
+    dependencies = ["sail-from-opam"]
+    native_install_dir = DefaultInstallDir.CHERI_SDK
+
+    def process(self):
+        shell = os.getenv("SHELL", "bash")
+        self.info("Starting sail shell (using {})... ".format(shell))
+        import subprocess
+        try:
+            with setEnv(PATH=str(self.config.cheri_sdk_bindir) + ":" + os.getenv("PATH", ""),
+                        PS1="SAIL ENV:\\w> "):
+                self.run_cmd("which", "sail")
+                self.run_command_in_ocaml_env([shell, "--verbose", "--norc", "-i"], cwd=os.getcwd())
+        except subprocess.CalledProcessError as e:
+            if e.returncode == 130:
+                return  # User pressed Ctrl+D to exit shell, don't print an error
+            raise
+
 
 
 class BuildSailRISCV(ProjectUsingOpam):
