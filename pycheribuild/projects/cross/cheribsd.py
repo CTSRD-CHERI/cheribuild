@@ -188,7 +188,6 @@ class BuildFreeBSDBase(Project):
         # self.common_options.env_vars = {"MAKEOBJDIR": str(self.buildDir)}
         self.make_args.set(
             DB_FROM_SRC=True,  # don't use the system passwd file
-            # NO_WERROR=True,  # make sure we don't fail if clang introduces a new warning
             NO_CLEAN=True,  # don't clean, we have the --clean flag for that
             I_REALLY_MEAN_NO_CLEAN=True,  # Also skip the useless delete-old step
             NO_ROOT=True,  # use this even if current user is root, as without it the METALOG file is not created
@@ -379,6 +378,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if self.use_external_toolchain:
                 self.useExternalToolchainForWorld = True
                 self.useExternalToolchainForKernel = True
+
+        if self.build_with_upstream_llvm:
+            # make sure we don't fail if clang introduces a new warning
+            self.make_args.set(NO_WERROR=True)
 
         # external toolchain options:
         self._setup_cross_toolchain_config()
