@@ -382,7 +382,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.build_with_upstream_llvm:
             # make sure we don't fail if clang introduces a new warning
             self.make_args.set(NO_WERROR=True)
-            self.make_args.set(WERROR="") # fix kernel build
+            self.make_args.set(WERROR="")  # fix kernel build
 
         # external toolchain options:
         self._setup_cross_toolchain_config()
@@ -966,7 +966,6 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
                                                                       CompilationTargets.FREEBSD_I386]
     if not IS_FREEBSD:
         crossbuild = True
-        dependencies = ["upstream-llvm"]
 
     @classmethod
     def setup_config_options(cls, installDirectoryHelp=None, **kwargs):
