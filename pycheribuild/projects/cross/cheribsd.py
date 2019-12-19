@@ -962,8 +962,7 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     add_custom_make_options = False
 
     # also try to support building for RISCV
-    supported_architectures = BuildFreeBSD.supported_architectures + [CompilationTargets.FREEBSD_RISCV,
-                                                                      CompilationTargets.FREEBSD_I386]
+    supported_architectures = BuildFreeBSD.supported_architectures + [CompilationTargets.FREEBSD_I386]
     if not IS_FREEBSD:
         crossbuild = True
 

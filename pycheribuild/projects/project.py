@@ -112,6 +112,7 @@ class ProjectSubclassDefinitionHook(type):
         supported_archs = cls.supported_architectures
         assert supported_archs, "Must not be empty: " + str(supported_archs)
         assert isinstance(supported_archs, list)
+        assert len(set(supported_archs)) == len(supported_archs), "Duplicates in supported archs for " + cls.__name__ + ": " + str(supported_archs)
         # TODO: if len(cls.supported_architectures) > 1:
         if cls._always_add_suffixed_targets or len(supported_archs) > 1:
             # Add a the target for the default architecture
