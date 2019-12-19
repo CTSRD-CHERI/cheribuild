@@ -368,10 +368,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+        if self.crossToolchainRoot:
+            # override the cross toolchain
+            self.target_info._sdk_root_dir = self.crossToolchainRoot
         assert self.kernelConfig is not None
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
         self.make_args.set(**self.arch_build_flags)
-
         if self.crossbuild:
             self.addCrossBuildOptions()
             if self.use_external_toolchain:
@@ -379,7 +381,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 self.useExternalToolchainForKernel = True
 
         # external toolchain options:
-        self.externalToolchainCompiler = None
         self._setup_cross_toolchain_config()
 
         if self.compiling_for_host() and not self.build_with_upstream_llvm:
@@ -451,10 +452,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         cross_prefix = str(self.crossToolchainRoot / "bin") + "/"  # needs to end with / for concatenation
         target_flags = self._setup_arch_specific_options()
 
-        self.externalToolchainCompiler = Path(cross_prefix + "clang")
         # TODO: should I be setting this in the environment instead?
-        xcc = self.CC
-        xccinfo = getCompilerInfo(xcc)
+        xccinfo = getCompilerInfo(self.CC)
         if not xccinfo.is_clang:
             self.ask_for_confirmation("Cross compiler is not clang, are you sure you want to continue?")
         self.cross_toolchain_config.set_env(
@@ -548,8 +547,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.auto_obj:
             result.set_with_options(AUTO_OBJ=True)
         if self.useExternalToolchainForWorld:
-            if not self.externalToolchainCompiler.exists():
-                self.fatal("Requested build of world with external toolchain, but", self.externalToolchainCompiler,
+            if not self.CC.exists():
+                self.fatal("Requested build of world with external toolchain, but", self.CC,
                            "doesn't exist!")
             result.update(self.cross_toolchain_config)
         return result
@@ -560,8 +559,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # Don't build kernel modules for MIPS
             kernel_options.set(NO_MODULES="yes")
         if self.useExternalToolchainForKernel:
-            if not self.externalToolchainCompiler.exists():
-                self.fatal("Requested build of kernel with external toolchain, but", self.externalToolchainCompiler,
+            if not self.CC.exists():
+                self.fatal("Requested build of kernel with external toolchain, but", self.CC,
                            "doesn't exist!")
             # We can't use LLD for the kernel yet but there is a flag to experiment with it
             if self.compiling_for_mips(include_purecap=True):

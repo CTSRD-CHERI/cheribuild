@@ -351,10 +351,17 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     shortname = "FreeBSD"
     FREEBSD_VERSION = 13
 
+    def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
+        super().__init__(target, project)
+        self._sdk_root_dir = None
+
     @property
     def sdk_root_dir(self):
-        # FIXME: different SDK root dir?
-        return self.config.cheri_sdk_dir
+        if self._sdk_root_dir is not None:
+            return self._sdk_root_dir
+        from ..projects.llvm import BuildUpstreamLLVM
+        self._sdk_root_dir = BuildUpstreamLLVM.getInstallDir(self.project, cross_target=CompilationTargets.NATIVE)
+        return self._sdk_root_dir
 
     @property
     def sysroot_dir(self):
@@ -371,7 +378,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["llvm-native"]  # TODO: upstream-llvm???
+        return ["upstream-llvm"]
 
     @classmethod
     def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", include_version: bool):
