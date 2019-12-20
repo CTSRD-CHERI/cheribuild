@@ -144,6 +144,8 @@ bootonly = subcmds.add_parser('bootonly', help="Boot KIMAGE on BITFILE.",
                               formatter_class=ArgumentDefaultsHelpFormatter)
 bootonly.add_argument('-i', '--interact', action='store_true', default=False,
                     help="Get an interactive session once logged in.")
+bootonly.add_argument('--skip-bitfile', action='store_true', default=False,
+                    help="Skip feeding the bitfile to the FPGA")
 
 # runbench
 runbench = subcmds.add_parser('runbench', help="Boot KIMAGE on BITFILE, scp BENCHDIR over, run SCRIPT and scp OUTPATH back.",
@@ -175,6 +177,8 @@ runbench.add_argument('--skip-boot', action='store_true', default=False,
                          "bitfile and the kernel.")
 runbench.add_argument('--skip-copy', action='store_true', default=False,
                     help="Assume that benchmark files are already on the FPGA -> skip the scp phase.")
+runbench.add_argument('--skip-bitfile', action='store_true', default=False,
+                    help="Skip feeding the bitfile to the FPGA")
 runbench.add_argument('--lazy-binding', action='store_true', default=False, help="Allow the benchmarks to run without LD_BIND_NOW")
 runbench.add_argument('-i', '--interact', action='store_true', default=False,
                     help="Get an interactive session once done running SCRIPT and outputs are transfered.")
@@ -603,7 +607,7 @@ def download_file(url, outfile):
 
 def common_boot (kernel_img=args.kernel_img,addr=args.kernel_addr,bitfile=args.bitfile,cable_id=args.cable_id,
                  berictl=args.berictl, jenkins_bitfile=args.jenkins_bitfile, jenkins_kernel=args.jenkins_kernel,
-                 stop_after_bitfile=False):
+                 stop_after_bitfile=False,skip_bitfile=False):
 
     bitfile_job_nr = args.jenkins_bitfile_job_number
     kernel_job_nr = args.jenkins_kernel_job_number
@@ -676,11 +680,12 @@ def common_boot (kernel_img=args.kernel_img,addr=args.kernel_addr,bitfile=args.b
                 bitfile = outfile
             # Do the real boot now (hack to keep the rest of the function inside this with statement)
             return common_boot(kernel_img=kernel_img, addr=addr, bitfile=bitfile, cable_id=cable_id, berictl=berictl,
-                               jenkins_kernel=None, jenkins_bitfile=None)
+                               jenkins_kernel=None, jenkins_bitfile=None, skip_bitfile=skip_bitfile)
 
     # Loading bitfile onto the board
-    phaseprint("loading bitfile")
-    loadsof(bitfile,cable_id,berictl,160)
+    if not skip_bitfile:
+        phaseprint("loading bitfile")
+        loadsof(bitfile,cable_id,berictl,160)
     if stop_after_bitfile:
         return None
     # Loading kernel image onto the board
@@ -721,7 +726,7 @@ def main():
     # bootonly #
     ############
     if args.subcmd == "bootonly":
-        console = common_boot()
+        console = common_boot(skip_bitfile=args.skip_bitfile)
         assert isinstance(console, boot_cheribsd.CheriBSDInstance)
         if args.interact:
             console.interact()
@@ -742,7 +747,7 @@ def main():
             do_network_off(console, args)
             do_network_on(console, args)
         else:
-            console = common_boot()
+            console = common_boot(skip_bitfile=args.skip_bitfile)
             assert isinstance(console, boot_cheribsd.CheriBSDInstance)
             if not args.use_qemu_instead_of_fpga:
                 print("Sleeping for 20 seconds to ensure FPGA is ready")
