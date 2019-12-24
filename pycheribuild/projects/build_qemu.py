@@ -121,7 +121,8 @@ class BuildQEMUBase(AutotoolsProject):
         if self.config.verbose:
             self.make_args.set(V=1)
 
-    def configure(self, **kwargs):
+    def setup(self):
+        super().setup()
         compiler = self.CC
         if compiler:
             ccinfo = getCompilerInfo(compiler)
@@ -220,8 +221,6 @@ class BuildQEMUBase(AutotoolsProject):
             self.configureArgs.append("--extra-ldflags=" + self._extraLDFlags.strip())
         if self._extraCXXFlags:
             self.configureArgs.append("--extra-cxxflags=" + self._extraCXXFlags.strip())
-
-        super().configure(**kwargs)
 
     def run_tests(self):
         self.runMake("check", cwd=self.buildDir)

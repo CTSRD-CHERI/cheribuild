@@ -47,8 +47,8 @@ class BuildGnuBinutils(AutotoolsProject):
         cls.fullInstall = cls.add_bool_option("install-all-tools", help="Whether to install all binutils tools instead"
                                                                       "of only as, ld and objdump")
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         # http://marcelog.github.io/articles/cross_freebsd_compiler_in_linux.html
 
         # If we don't use a patched binutils version on linux we get an ld binary that is

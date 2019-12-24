@@ -97,6 +97,11 @@ class Target(object):
         starttime = time.time()
         assert self.__project is not None, "Should have been initialized in checkSystemDeps()"
         project = self.__project
+        # noinspection PyProtectedMember
+        assert not self.__project._setup_called, str(self._project_class) + ".setup() should not have been called yet."
+        self.__project.setup()
+        # noinspection PyProtectedMember
+        assert self.__project._setup_called, str(self._project_class) + ": forgot to call super().setup()?"
         new_env = {"PATH": project.config.dollarPathWithOtherTools}
         if project.config.clang_colour_diags:
             new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
@@ -113,6 +118,9 @@ class Target(object):
         # instantiate the project and run it
         starttime = time.time()
         project = self.get_or_create_project(self.projectClass.get_crosscompile_target(config), config)
+        # noinspection PyProtectedMember
+        if not project._setup_called:
+            project.setup()
         new_env = {"PATH": project.config.dollarPathWithOtherTools}
         if project.config.clang_colour_diags:
             new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
@@ -129,6 +137,9 @@ class Target(object):
         # instantiate the project and run it
         starttime = time.time()
         project = self.get_or_create_project(self.projectClass.get_crosscompile_target(config), config)
+        # noinspection PyProtectedMember
+        if not project._setup_called:
+            project.setup()
         new_env = {"PATH": project.config.dollarPathWithOtherTools}
         if project.config.clang_colour_diags:
             new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"

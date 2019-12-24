@@ -531,7 +531,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         self.__requiredSystemHeaders = {}  # type: typing.Dict[str, typing.Any]
         self.__requiredPkgConfig = {}  # type: typing.Dict[str, typing.Any]
         self._systemDepsChecked = False
+        self._setup_called = False
         assert not hasattr(self, "gitBranch"), "gitBranch must not be used: " + self.__class__.__name__
+
+    def setup(self):
+        """
+        Class setup that is run just before process()/run_tests/run_benchmarks. This ensures that all dependent targets
+        have been built before and therefore querying e.g. the target compiler will work correctly.
+        """
+        assert not self._setup_called, "Should only be called once"
+        self._setup_called = True
 
     def addRequiredSystemTool(self, executable: str, installInstructions=None, freebsd: str=None, apt: str=None,
                               zypper: str=None, homebrew: str=None, cheribuild_target: str=None):

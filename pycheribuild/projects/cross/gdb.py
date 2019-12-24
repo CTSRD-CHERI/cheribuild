@@ -86,7 +86,10 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
         super().__init__(config)
         assert not self.compiling_for_cheri(), "Should only build this as a static MIPS binary not CHERIABI"
-        installRoot = self.installDir if self.compiling_for_host() else self.installPrefix
+
+    def setup(self):
+        super().setup()
+        install_root = self.installDir if self.compiling_for_host() else self.installPrefix
         # See https://github.com/bsdjhb/kdbg/blob/master/gdb/build
         # ./configure flags
         self.configureArgs.extend([
@@ -96,12 +99,12 @@ class BuildGDB(CrossCompileAutotoolsProject):
             "--enable-64-bit-bfd",
             "--without-gnu-as",
             "--with-separate-debug-dir=/usr/lib/debug",
-            "--mandir=" + str(installRoot / "man"),
-            "--infodir=" + str(installRoot / "info"),
+            "--mandir=" + str(install_root / "man"),
+            "--infodir=" + str(install_root / "info"),
             # "--disable-sim",
             "--disable-werror",
             "MAKEINFO=/bin/false",
-            "--with-gdb-datadir=" + str(installRoot / "share/gdb"),
+            "--with-gdb-datadir=" + str(install_root / "share/gdb"),
             "--disable-libstdcxx",
             "--with-guile=no",
             ])
@@ -132,9 +135,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.LDFLAGS.append("-L/usr/local/lib")
             self.configureArgs.append("--with-expat")
         else:
-            self.configureArgs.extend(["--without-python",
-
-                                       "--without-expat", "--without-libunwind-ia64",])
+            self.configureArgs.extend(["--without-python", "--without-expat", "--without-libunwind-ia64"])
             self.configureEnvironment.update(gl_cv_func_gettimeofday_clobber="no",
                                              lt_cv_sys_max_cmd_len="262144",
                                              # The build system run CC without any flags to detect dependency style...

@@ -75,10 +75,8 @@ class BuildLLVMBase(CMakeProject):
         cls.build_everything = cls.add_bool_option("build-everything", default=False,
             help="Also build documentation,examples and bindings")
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.cCompiler = self.CC
-        self.cppCompiler = self.CXX
+    def setup(self):
+        super().setup()
         # this must be added after check_system_dependencies
         link_jobs = 2 if self.enable_lto else 4
         if os.cpu_count() >= 24:
@@ -120,7 +118,7 @@ class BuildLLVMBase(CMakeProject):
                 LLVM_TOOL_LLVM_EXEGESIS_BUILD=False,
                 LLVM_TOOL_LLVM_RC_BUILD=False,
                 )
-        if self.canUseLLd(self.cCompiler):
+        if self.canUseLLd(self.CC):
             self.add_cmake_options(LLVM_ENABLE_LLD=True)
             # Add GDB index to speed up debugging
             if self.should_include_debug_info:
@@ -144,7 +142,7 @@ class BuildLLVMBase(CMakeProject):
         self.add_cmake_options(LLVM_LIT_ARGS="--max-time 3600 --timeout 300 -s -vv")
 
         if self.enable_lto:
-            ccinfo = getCompilerInfo(self.cCompiler)
+            ccinfo = getCompilerInfo(self.CC)
             llvm_ar = ccinfo.get_matching_binutil("llvm-ar")
             llvm_ranlib = ccinfo.get_matching_binutil("llvm-ranlib")
             lld = ccinfo.get_matching_binutil("ld.lld")
@@ -154,7 +152,7 @@ class BuildLLVMBase(CMakeProject):
                 self.add_cmake_options(CMAKE_AR=llvm_ar, CMAKE_RANLIB=llvm_ranlib, LLVM_USE_LINKER=lld)
                 # we are passing an explicit linker path -> cannot use LLVM_ENABLE_LLD
                 self.add_cmake_options(LLVM_ENABLE_LLD=False)
-                if not self.canUseLLd(self.cCompiler):
+                if not self.canUseLLd(self.CC):
                     warningMessage("LLD not found for LTO build, it may fail.")
                 self.add_cmake_options(LLVM_ENABLE_LTO="Thin")
 
@@ -172,23 +170,20 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
     def check_system_dependencies(self):
         super().check_system_dependencies()
         # make sure we have at least version 3.8
-        self.checkClangVersion(3, 8, installInstructions=self.clang_install_hint())
+        self.check_compiler_version(3, 8, installInstructions=self.clang_install_hint())
 
-    def checkClangVersion(self, major: int, minor: int, patch=0, installInstructions=None):
-        if not self.cCompiler or not self.cppCompiler:
-            self.dependencyError("Could not find clang", installInstructions=installInstructions)
-            return
-        info = getCompilerInfo(self.cCompiler)
+    def check_compiler_version(self, major: int, minor: int, patch=0, installInstructions=None):
+        info = getCompilerInfo(self.CC)
         # noinspection PyTypeChecker
-        versionStr = ".".join(map(str, info.version))
+        version_str = ".".join(map(str, info.version))
         if info.compiler == "apple-clang":
-            print("Compiler is apple clang", versionStr, " -- assuming it matches required version",
+            self.info("Compiler is apple clang", version_str, " -- assuming it matches required version",
                 "%d.%d" % (major, minor))
         elif info.compiler == "gcc":
             if info.version < (5, 0, 0):
-                warningMessage("GCC older than 5.0.0 will probably not work for compiling clang!")
+                self.warning("GCC older than 5.0.0 will probably not work for compiling clang!")
         elif info.compiler != "clang" or info.version < (major, minor, patch):
-            self.dependencyError(self.cCompiler, "version", versionStr,
+            self.dependencyError(self.CC, "version", version_str,
                 "is not supported. Clang version %d.%d or newer is required." % (major, minor),
                 installInstructions=self.clang_install_hint())
 
@@ -197,10 +192,10 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         if self.skip_cheri_symlinks:
             return
         # create a symlink for the target
-        llvmBinaries = "llvm-mc llvm-objdump llvm-readobj llvm-size llc".split()
+        llvm_binaries = "llvm-mc llvm-objdump llvm-readobj llvm-size llc".split()
         if "clang" in self.included_projects:
-            llvmBinaries += ["clang", "clang++", "clang-cpp"]
-        for tool in llvmBinaries:
+            llvm_binaries += ["clang", "clang++", "clang-cpp"]
+        for tool in llvm_binaries:
             self.create_triple_prefixed_symlinks(self.installDir / "bin" / tool)
 
         if "clang" in self.included_projects:
@@ -346,8 +341,8 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
         if includeLldbRevision:  # not built yet
             cls.lldbRepository, cls.lldbRevision = addToolOptions("lldb")
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         self.add_cmake_options(LLVM_TOOL_CLANG_BUILD="clang" in self.included_projects,
             LLVM_TOOL_LLDB_BUILD="lldb" in self.included_projects,
             LLVM_TOOL_LLD_BUILD="lld" in self.included_projects)
