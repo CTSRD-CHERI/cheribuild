@@ -1819,6 +1819,19 @@ class Project(SimpleProject):
             self.COMMON_FLAGS.append("-fsanitize=address")
             self.COMMON_LDFLAGS.append("-fsanitize=address")
 
+    def setup(self):
+        super().setup()
+        if not self.compiling_for_host():
+            # We need to set the PKG_CONFIG variables both when configuring and when running make since some projects
+            # (e.g. GDB) run the configure scripts lazily during the make all stage. If we don't set PKG_CONFIG_*
+            # these configure steps will find the libraries on the host instead and cause the build to fail
+            pkg_config_args = dict(
+                PKG_CONFIG_LIBDIR=self.target_info.pkgconfig_dirs,
+                PKG_CONFIG_SYSROOT_DIR=self.target_info.sysroot_dir
+                )
+            self.configureEnvironment.update(pkg_config_args)
+            self.make_args.set_env(**pkg_config_args)
+
     @property
     def rootfs_dir(self):
         assert self.get_default_install_dir_kind() == DefaultInstallDir.ROOTFS
@@ -1905,7 +1918,7 @@ class Project(SimpleProject):
             stdout_filter = self._stdout_filter
         env = options.env_vars
         self.run_with_logfile(allArgs, logfile_name=logfile_name, stdout_filter=stdout_filter, cwd=cwd, env=env,
-                            append_to_logfile=append_to_logfile)
+                              append_to_logfile=append_to_logfile)
         # if we create a compilation db, copy it to the source dir:
         if self.config.copy_compilation_db_to_source_dir and (self.buildDir / compilationDbName).exists():
             self.installFile(self.buildDir / compilationDbName, self.sourceDir / compilationDbName, force=True)
@@ -1975,13 +1988,8 @@ class Project(SimpleProject):
         if not Path(_configure_path).exists():
             self.fatal("Configure command ", _configure_path, "does not exist!")
         if _configure_path:
-            env = dict()
-            if not self.compiling_for_host():
-                env.update(PKG_CONFIG_LIBDIR=self.target_info.pkgconfig_dirs,
-                    PKG_CONFIG_SYSROOT_DIR=self.crossSysrootPath)
-            with setEnv(**env):
-                self.run_with_logfile([_configure_path] + self.configureArgs,
-                    logfile_name="configure", cwd=cwd, env=self.configureEnvironment)
+            self.run_with_logfile([_configure_path] + self.configureArgs, logfile_name="configure", cwd=cwd,
+                env=self.configureEnvironment)
 
     def compile(self, cwd: Path = None):
         if cwd is None:

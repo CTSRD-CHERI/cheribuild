@@ -163,6 +163,10 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.add_configure_env_arg("RANLIB", self.sdk_bindir / "ranlib")
             self.add_configure_env_arg("NM", self.sdk_bindir / "nm")
 
+        # Some of the configure scripts are invoked lazily (during the make invocation instead of from ./configure)
+        # Therefore we need to set all the enviroment variables when compiling, too.
+        self.make_args.set_env(**self.configureEnvironment)
+
     def configure(self, **kwargs):
         if self.compiling_for_host() and IS_MAC:
             self.configureEnvironment.clear()
