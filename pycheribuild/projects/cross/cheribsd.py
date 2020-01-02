@@ -174,18 +174,19 @@ class BuildFreeBSDBase(Project):
             if cross is not True:
                 cls.crossbuild = cls.add_bool_option("crossbuild", help="Try to compile FreeBSD on non-FreeBSD machines")
 
-    def setup(self):
-        super().setup()
+    def __init__(self, config):
+        super().__init__(config)
+
+        self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
+        # TODO: once we have merged the latest upstream changes use MAKEOBJDIR instead to get a more sane hierarchy
+        # self.common_options.env_vars = {"MAKEOBJDIR": str(self.buildDir)}
+
         if self.crossbuild:
             # Use the script that I added for building on Linux/MacOS:
             self.make_args.set_command(self.sourceDir / "tools/build/make.py")
 
         # if not IS_FREEBSD:
         #     self._addRequiredSystemHeader("archive.h", apt="libarchive-dev", homebrew="libarchive")
-
-        self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
-        # TODO: once we have merged the latest upstream changes use MAKEOBJDIR instead to get a more sane hierarchy
-        # self.common_options.env_vars = {"MAKEOBJDIR": str(self.buildDir)}
         self.make_args.set(
             DB_FROM_SRC=True,  # don't use the system passwd file
             NO_CLEAN=True,  # don't clean, we have the --clean flag for that
@@ -282,7 +283,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             assert not use_upstream_llvm
             cls.use_external_toolchain = False
             cls.build_with_upstream_llvm = False
-            cls.crossToolchainRoot = None
+            cls.cross_toolchain_root = None
             cls.useExternalToolchainForKernel = False
             cls.useExternalToolchainForWorld = False
             cls.linker_for_kernel = "should-not-be-used"
@@ -297,7 +298,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     help="Compile with the Clang version built by the `cheribuild.py upstream-llvm` target")
             default_external_toolchain = ComputedDefaultValue(function=default_cross_toolchain_path,
                 as_string="$CHERI_SDK_DIR")
-            cls.crossToolchainRoot = cls.add_path_option("cross-toolchain",
+            cls.cross_toolchain_root = cls.add_path_option("cross-toolchain",
                 help="Path to the mips64-unknown-freebsd-* tools", default=default_external_toolchain)
             # override in CheriBSD
             cls.useExternalToolchainForKernel = cls.add_bool_option("use-external-toolchain-for-kernel", show_help=True,
@@ -359,12 +360,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def setup(self):
         super().setup()
-
-        if self.crossToolchainRoot:
-            # override the cross toolchain
-            self.target_info._sdk_root_dir = self.crossToolchainRoot
-        assert self.kernelConfig is not None
-        self.make_args.set(**self.arch_build_flags)
         if self.crossbuild:
             assert not IS_FREEBSD
             assert self.use_external_toolchain
@@ -379,10 +374,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
         # external toolchain options:
         self._setup_cross_toolchain_config()
-
-        if self.compiling_for_host() and not self.build_with_upstream_llvm:
-            self.warning("DISABLING openmp to work around clang crash")
-            self.make_args.set_with_options(OPENMP=False)  # causes clang crash
 
         if self.addDebugInfoFlag:
             self.make_args.set(DEBUG_FLAGS="-g")
@@ -402,8 +393,20 @@ class BuildFreeBSD(BuildFreeBSDBase):
         #     # seems like it should speed up the build significantly
         #     self.common_options.add(AUTO_OBJ=True)
 
-        # build only part of the tree
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        self.destdir = self.installDir
+        self._installPrefix = Path("/")
+        self.kernelToolchainAlreadyBuilt = False
+        self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
+        if self.cross_toolchain_root:
+            # override the cross toolchain
+            self.target_info._sdk_root_dir = self.cross_toolchain_root
+        assert self.kernelConfig is not None
+        self.make_args.set(**self.arch_build_flags)
+
         if self.subdirOverride:
+            # build only part of the tree
             self.make_args.set(SUBDIR_OVERRIDE=self.subdirOverride)
 
         for option in self.makeOptions:
@@ -418,13 +421,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
             else:
                 self.make_args.add_flags(option)
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.destdir = self.installDir
-        self._installPrefix = Path("/")
-        self.kernelToolchainAlreadyBuilt = False
-        self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
-
     def _setup_cross_toolchain_config(self):
         if not self.use_external_toolchain:
             # Building FreeBSD for RISC-V requires an external GCC:
@@ -434,7 +430,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
         # For RISCV the makefile check fails unless we set CROSS_TOOLCHAIN_PREFIX (even though we provide all the tools)
         if self.compiling_for_riscv():
-            self.make_args.set(CROSS_TOOLCHAIN_PREFIX=str(self.crossToolchainRoot / "bin/llvm-"))
+            self.make_args.set(CROSS_TOOLCHAIN_PREFIX=str(self.cross_toolchain_root / "bin/llvm-"))
 
         self.cross_toolchain_config.set_with_options(
             # TODO: should we have an option to include a compiler in the target system?
@@ -449,8 +445,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.cross_toolchain_config.set(CHERI_SUBOBJECT_BOUNDS=self.config.subobject_bounds)
             self.cross_toolchain_config.set(CHERI_SUBOBJECT_BOUNDS_DEBUG="yes" if self.config.subobject_debug else "no")
 
-        cross_bindir = self.crossToolchainRoot / "bin"
-        cross_prefix = str(self.crossToolchainRoot / "bin") + "/"  # needs to end with / for concatenation
+        cross_bindir = self.cross_toolchain_root / "bin"
+        cross_prefix = str(self.cross_toolchain_root / "bin") + "/"  # needs to end with / for concatenation
         target_flags = self._setup_arch_specific_options()
 
         # TODO: should I be setting this in the environment instead?
@@ -565,9 +561,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
                            "doesn't exist!")
             # We can't use LLD for the kernel yet but there is a flag to experiment with it
             if self.compiling_for_mips(include_purecap=True):
-                cross_prefix = str(self.crossToolchainRoot / "bin/mips64-unknown-freebsd-")
+                cross_prefix = str(self.cross_toolchain_root / "bin/mips64-unknown-freebsd-")
             else:
-                cross_prefix = str(self.crossToolchainRoot / "bin") + "/"
+                cross_prefix = str(self.cross_toolchain_root / "bin") + "/"
 
             kernel_options.update(self.cross_toolchain_config)
             linker = cross_prefix + "ld." + self.linker_for_kernel
@@ -1167,8 +1163,8 @@ class BuildCHERIBSD(BuildFreeBSD):
             self.fatal("CHERI CC does not exist: ", self.CC)
         if not self.CXX.is_file():
             self.fatal("CHERI CXX does not exist: ", self.CXX)
-        if self.crossToolchainRoot:
-            mipsCC = self.crossToolchainRoot / "bin/clang"
+        if self.cross_toolchain_root:
+            mipsCC = self.cross_toolchain_root / "bin/clang"
             if not mipsCC.is_file():
                 self.fatal("MIPS toolchain specified but", mipsCC, "is missing.")
         super().compile(mfs_root_image=self.mfs_root_image, sysroot_only=self.sysroot_only, **kwargs)
