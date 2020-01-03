@@ -30,14 +30,13 @@
 
 import re
 
+from .cheribsd import *
 from ..project import *
 
 
 # Using GCC not Clang, so can't use CrossCompileAutotoolsProject
-class BuildBBLFreeBSDWithDefaultOptionsRISCV(AutotoolsProject):
-    project_name = "bbl-freebsd-with-default-options-riscv"
-    target = "bbl-freebsd-with-default-options-riscv"
-    dependencies = ["freebsd-with-default-options-riscv"]
+class BuildBBLBase(AutotoolsProject):
+    doNotAddToTargets = True
     repository = GitRepository("https://github.com/jrtc27/riscv-pk.git")
     native_install_dir = DefaultInstallDir.CHERI_SDK
     make_kind = MakeCommandKind.GnuMake
@@ -59,9 +58,8 @@ class BuildBBLFreeBSDWithDefaultOptionsRISCV(AutotoolsProject):
             self.fatal("Could not find riscv64-gcc XCC")
 
     def configure(self, **kwargs):
-        from .cheribsd import BuildFreeBSDWithDefaultOptions
-        kernel_path = BuildFreeBSDWithDefaultOptions.get_installed_kernel_path(self,
-            cross_target=CompilationTargets.FREEBSD_RISCV)
+        kernel_path = self.freebsd_class.get_installed_kernel_path(self,
+            cross_target=self.cross_target)
         self.configureArgs.extend([
             "--with-payload=" + str(kernel_path),
             "--host=" + self.host
@@ -70,3 +68,23 @@ class BuildBBLFreeBSDWithDefaultOptionsRISCV(AutotoolsProject):
 
     def get_installed_kernel_path(self):
         return self.real_install_root_dir / self.host / "bin" / "bbl"
+
+class BuildBBLFreeBSDRISCV(BuildBBLBase):
+    project_name = "bbl-freebsd-riscv"
+    target = "bbl-freebsd-riscv"
+    dependencies = ["freebsd-riscv"]
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        self.freebsd_class = BuildFreeBSD
+        self.cross_target = CompilationTargets.FREEBSD_RISCV
+
+class BuildBBLFreeBSDWithDefaultOptionsRISCV(BuildBBLBase):
+    project_name = "bbl-freebsd-with-default-options-riscv"
+    target = "bbl-freebsd-with-default-options-riscv"
+    dependencies = ["freebsd-with-default-options-riscv"]
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        self.freebsd_class = BuildFreeBSDWithDefaultOptions
+        self.cross_target = CompilationTargets.FREEBSD_RISCV
