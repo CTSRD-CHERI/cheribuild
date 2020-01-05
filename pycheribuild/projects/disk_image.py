@@ -562,7 +562,9 @@ class _BuildDiskImageBase(SimpleProject):
                 self.mkimg_cmd = mkimg_xtool
 
         if not self.makefs_cmd or not self.makefs_cmd.exists():
-            self.fatal("Missing makefs command! Should be found in FreeBSD build dir (or set $MAKEFS_CMD)")
+            self.fatal(
+                "Missing makefs command ('{}')! Should be found in FreeBSD build dir (or set $MAKEFS_CMD)".format(
+                    self.makefs_cmd))
         statusUpdate("Disk image will be saved to", self.disk_image_path)
         statusUpdate("Disk image root fs is", self.rootfsDir)
         statusUpdate("Extra files for the disk image will be copied from", self.extraFilesDir)
