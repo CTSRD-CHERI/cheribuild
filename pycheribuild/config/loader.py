@@ -146,8 +146,9 @@ class ConfigLoaderBase(object):
 
     def addOption(self, name: str, shortname=None, default=None,
                   type: "typing.Union[typing.Type[Type_T], typing.Callable[[str], Type_T]]" = str,
-                  group=None, helpHidden=False, _owningClass: "typing.Type"=None, _fallback_name: str = None,
-                  option_cls: "typing.Type[ConfigOptionBase]"=None, **kwargs) -> "Type_T":
+                  group=None, helpHidden=False, _owningClass: "typing.Type"=None,
+                  _fallback_names: "typing.List[str]" = None, option_cls: "typing.Type[ConfigOptionBase]"=None,
+                  **kwargs) -> "Type_T":
         if option_cls is None:
             option_cls = self.__option_cls
 
@@ -168,7 +169,7 @@ class ConfigLoaderBase(object):
             type = _EnumArgparseType(type)
 
         result = option_cls(name, shortname, default, type, _owningClass, _loader=self, group=group,
-                            helpHidden=helpHidden, _fallback_name=_fallback_name, **kwargs)
+                            helpHidden=helpHidden, _fallback_names=_fallback_names, **kwargs)
         assert name not in self.options  # make sure we don't add duplicate options
         self.options[name] = result
         # noinspection PyTypeChecker
@@ -206,7 +207,7 @@ class ConfigLoaderBase(object):
 
 class ConfigOptionBase(object):
     def __init__(self, name: str, shortname: str, default, valueType: "typing.Type", _owningClass=None,
-                 _loader: ConfigLoaderBase=None, _fallback_name: str=None):
+                 _loader: ConfigLoaderBase=None, _fallback_names: "typing.List[str]"=None):
         self.name = name
         self.shortname = shortname
         self.default = default
@@ -230,19 +231,22 @@ class ConfigOptionBase(object):
         self._cached = None
         self._loader = _loader
         self._owningClass = _owningClass  # if none it means the global CheriConfig is the class containing this option
-        self._fallback_name = _fallback_name  # for targets such as gdb-mips, etc
+        self._fallback_names = _fallback_names  # for targets such as gdb-mips, etc
         self._is_default_value = False
 
     def loadOption(self, config: "CheriConfig", instance: "typing.Optional[SimpleProject]", owner: "typing.Type",
                    return_none_if_default=False):
         result = self._loadOptionImpl(config, self.fullOptionName)
         # fall back from --qtbase-mips/foo to --qtbase/foo
-        if result is None and self._fallback_name is not None:
-            fallback_option = self._loader.options.get(self._fallback_name)
-            assert fallback_option is not None, "Could not find option " + self._fallback_name
-            result = fallback_option._loadOptionImpl(config, self.fullOptionName)
-            if result is not None and config.verbose:
-                print("Using fallback config option value", self._fallback_name, "for", self.name, "->", result)
+        if result is None and self._fallback_names is not None:
+            for fallback_name in self._fallback_names:
+                fallback_option = self._loader.options.get(fallback_name)
+                assert fallback_option is not None, "Could not find option " + fallback_name
+                result = fallback_option._loadOptionImpl(config, self.fullOptionName)
+                if result is not None:
+                    if config.verbose:
+                        print("Using fallback config option value", fallback_name, "for", self.name, "->", result)
+                    break
 
         if result is None:  # If no option is set fall back to the default
             if return_none_if_default:
@@ -329,8 +333,8 @@ class CommandLineConfigOption(ConfigOptionBase):
     # noinspection PyProtectedMember
     def __init__(self, name: str, shortname: str, default, valueType: "typing.Type", _owningClass,
                  _loader: ConfigLoaderBase, helpHidden: bool, group: argparse._ArgumentGroup,
-                 _fallback_name: str=None, **kwargs):
-        super().__init__(name, shortname, default, valueType, _owningClass, _loader, _fallback_name)
+                 _fallback_names: "typing.List[str]" = None, **kwargs):
+        super().__init__(name, shortname, default, valueType, _owningClass, _loader, _fallback_names)
         # hide obscure options unless --help-hidden/--help/all is passed
         if helpHidden and not self._loader.showAllHelp:
             kwargs["help"] = argparse.SUPPRESS

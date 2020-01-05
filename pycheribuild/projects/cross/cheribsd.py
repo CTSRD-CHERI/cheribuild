@@ -274,7 +274,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                  " errors so is off by default.")
 
         cls.kernelConfig = cls.add_config_option(
-            "kernel-config", metavar="CONFIG", show_help=True, fallback_config_name="kernel-config",
+            "kernel-config", metavar="CONFIG", show_help=True, extra_fallback_config_names=["kernel-config"],
             default=ComputedDefaultValue(function=default_kernel_config, as_string="target-dependent default"),
             help="The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64 or CHERI128_MALTA64"
                  " depending on --cheri-bits)")  # type: str

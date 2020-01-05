@@ -442,7 +442,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                           kind: "Union[typing.Type[Type_T], Callable[[str], Type_T]]" = str,
                           default: "Union[ComputedDefaultValue[Type_T], Type_T, Callable[[], Type_T]]" = None,
                           only_add_for_targets: "typing.List[CrossCompileTarget]" = None,
-                          fallback_config_name: str = None, _allow_unknown_targets=False, **kwargs) -> Type_T:
+                          extra_fallback_config_names: "typing.List[str]" = None,
+                          _allow_unknown_targets=False, **kwargs) -> Type_T:
         # Need a string annotation for kind to avoid https://github.com/python/typing/issues/266 which seems to affect
         # the version of python in Ubuntu 16.04
         config_option_key = cls.target
@@ -485,9 +486,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # We don't want to inherit certain options from the non-target specific class since they should always be
         # set directly for that target. Currently the only such option is build-directory since sharing that would
         # break the build in most cases.
-        if not _no_fallback_config_name and fallback_name_base and fallback_config_name is None:
+        fallback_config_names = []
+        if not _no_fallback_config_name and fallback_name_base:
             if name not in ["build-directory"]:
-                fallback_config_name = fallback_name_base + "/" + name
+                fallback_config_names.append(fallback_name_base + "/" + name)
             elif synthetic_base is not None:
                 assert name == "build-directory"
                 assert issubclass(cls, SimpleProject), cls
@@ -496,22 +498,24 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                     # Don't allow cheribsd-purecap/build-directory to fall back to cheribsd/build-directory
                     # but if the project_name is the same we can assume it's the same class:
                     if cls.project_name == synthetic_base.project_name:
-                        fallback_config_name = fallback_name_base + "/" + name
+                        fallback_config_names.append(fallback_name_base + "/" + name)
+        if extra_fallback_config_names:
+            fallback_config_names.extend(extra_fallback_config_names)
         return cls._configLoader.addOption(config_option_key + "/" + name, shortname, default=default, type=kind,
                                            _owningClass=cls, group=cls._commandLineOptionGroup, helpHidden=help_hidden,
-                                           _fallback_name=fallback_config_name, **kwargs)
+                                           _fallback_names=fallback_config_names, **kwargs)
 
     @classmethod
     def add_bool_option(cls, name: str, *, shortname=None, only_add_for_targets: list = None,
                         default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs) -> bool:
         # noinspection PyTypeChecker
         return cls.add_config_option(name, default=default, kind=bool, shortname=shortname, action="store_true",
-                                   only_add_for_targets=only_add_for_targets, **kwargs)
+                                     only_add_for_targets=only_add_for_targets, **kwargs)
 
     @classmethod
     def add_path_option(cls, name: str, *, shortname=None, only_add_for_targets: list = None, **kwargs) -> Path:
         return cls.add_config_option(name, kind=Path, shortname=shortname, only_add_for_targets=only_add_for_targets,
-                                   **kwargs)
+                                     **kwargs)
 
     __configOptionsSet = dict()  # typing.Dict[Type, bool]
 

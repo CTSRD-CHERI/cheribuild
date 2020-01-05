@@ -20,7 +20,7 @@ from pycheribuild.projects import *  # make sure all projects are loaded so that
 from pycheribuild.projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
 from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage
 from pycheribuild.projects.cross.qt5 import BuildQtBase
-from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD
+from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD, BuildFreeBSD
 import pytest
 import re
 
@@ -301,14 +301,13 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
 
 def test_kernconf():
     # Parse args once to ensure targetManager is initialized
-
     # check default values
     config = _parse_arguments([])
     cheribsd_cheri = targetManager.get_target_raw("cheribsd-cheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
-    freebsd_mips = targetManager.get_target_raw("freebsd-mips").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
-    freebsd_native = targetManager.get_target_raw("freebsd-x86_64").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    cheribsd_mips = targetManager.get_target_raw("cheribsd-mips").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    freebsd_mips = targetManager.get_target_raw("freebsd-mips").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildFreeBSD
+    freebsd_native = targetManager.get_target_raw("freebsd-x86_64").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildFreeBSD
     assert config.freebsd_kernconf is None
-    attr = inspect.getattr_static(freebsd_mips, "kernelConfig")
     assert freebsd_mips.kernelConfig == "MALTA64"
     assert cheribsd_cheri.kernelConfig == "CHERI128_MALTA64"
     assert freebsd_native.kernelConfig == "GENERIC"
@@ -328,6 +327,13 @@ def test_kernconf():
     assert freebsd_mips.kernelConfig == "LINT"
     assert cheribsd_cheri.kernelConfig == "SOMETHING"
     assert freebsd_native.kernelConfig == "LINT"
+
+    config = _parse_arguments(["--kernconf=GENERIC", "--cheribsd/kernel-config=SOMETHING_ELSE"])
+    assert config.freebsd_kernconf == "GENERIC"
+    assert cheribsd_cheri.kernelConfig == "SOMETHING_ELSE"
+    assert cheribsd_mips.kernelConfig == "SOMETHING_ELSE"
+    assert freebsd_mips.kernelConfig == "GENERIC"
+    assert freebsd_native.kernelConfig == "GENERIC"
 
 
 def test_duplicate_key():
