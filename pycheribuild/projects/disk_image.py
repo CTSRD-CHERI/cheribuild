@@ -640,14 +640,16 @@ def _defaultDiskImagePath(config: CheriConfig, pfx, img_prefix=""):
     return pfx / (img_prefix + "cheri" + config.cheri_bits_and_abi_str + "-disk.img")
 
 
-def _defaultMinimalDiskImagePath(conf, proj):
+def _defaultMinimalDiskImagePath(conf, proj: Project):
+    if proj.compiling_for_mips(include_purecap=False):
+        return conf.outputRoot / "minimal-mips-disk.img"
     return _defaultDiskImagePath(conf, conf.outputRoot, "minimal-")
 
 
 class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
     project_name = "disk-image-minimal"
     dependencies = ["qemu", "cheribsd-cheri"]  # TODO: include gdb?
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS]
 
     class _MinimalFileTemplates(_AdditionalFileTemplates):
         def get_fstab_template(self):
@@ -710,7 +712,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         self.verbose_print("Adding files from rootfs to minimal image:")
         files_to_add = [includeLocalFile("files/minimal-image/base.files"),
                         includeLocalFile("files/minimal-image/etc.files")]
-        if (self.rootfsDir / "usr/libcheri/libc.so.7").exists():
+        if self.compiling_for_cheri() and (self.rootfsDir / "usr/libcheri/libc.so.7").exists():
             files_to_add.append(includeLocalFile("files/minimal-image/purecap-dynamic.files"))
 
         for files_list in files_to_add:
