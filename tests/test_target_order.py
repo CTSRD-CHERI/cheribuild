@@ -124,7 +124,7 @@ def _check_deps_cached(classes):
         assert len(c._cached_dependencies()) > 0
 
 
-def stest_webkit_cached_deps():
+def test_webkit_cached_deps():
     # regression test for a bug in caching deps
     config = copy.copy(get_global_config())
     config.skipSdk = True
@@ -134,7 +134,6 @@ def stest_webkit_cached_deps():
     # Check that the deps are not cached yet
     _check_deps_not_cached((webkit_native, webkit_cheri, webkit_mips))
 
-
     cheri_target_names = list(sorted(webkit_cheri.allDependencyNames(config)))
     assert cheri_target_names == ["icu4c-cheri", "icu4c-native", "libxml2-cheri", "qtbase-cheri", "sqlite-cheri"]
     _check_deps_not_cached([webkit_native, webkit_mips])
@@ -143,7 +142,7 @@ def stest_webkit_cached_deps():
     mips_target_names = list(sorted(webkit_mips.allDependencyNames(config)))
     assert mips_target_names == ["icu4c-mips", "icu4c-native", "libxml2-mips", "qtbase-mips", "sqlite-mips"]
     _check_deps_cached([webkit_cheri, webkit_mips])
-    _check_deps_not_cached([webkit_generic, webkit_native])
+    _check_deps_not_cached([webkit_native])
 
     native_target_names = list(sorted(webkit_native.allDependencyNames(config)))
     assert native_target_names == ["icu4c-native", "libxml2-native", "qtbase-native", "sqlite-native"]
