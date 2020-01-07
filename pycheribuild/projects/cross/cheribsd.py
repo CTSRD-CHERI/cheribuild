@@ -360,6 +360,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def setup(self):
         super().setup()
+
+    def _setup_make_args(self):
+        # Same as setup() but can be called multiple times.
+        if self._setup_make_args_called:
+            return
+        # Must be called after __init__() to ensure that CHERI LLVM/upstream LLVM have been built
+        # before querying the compiler.
         if self.crossbuild:
             assert not IS_FREEBSD
             assert self.use_external_toolchain
@@ -392,9 +399,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # if self.auto_obj:
         #     # seems like it should speed up the build significantly
         #     self.common_options.add(AUTO_OBJ=True)
+        self._setup_make_args_called = True
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+        self._setup_make_args_called = False
         self.destdir = self.installDir
         self._installPrefix = Path("/")
         self.kernelToolchainAlreadyBuilt = False
@@ -539,6 +548,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     @property
     def buildworld_args(self) -> MakeOptions:
+        self._setup_make_args()  # ensure make args are complete
         result = self.make_args.copy()
         # FIXME: once it works for buildkernel remove here
         if self.auto_obj:
@@ -551,6 +561,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         return result
 
     def kernel_make_args_for_config(self, kernconf: str) -> MakeOptions:
+        self._setup_make_args()  # ensure make args are complete
         kernel_options = self.make_args.copy()
         if self.compiling_for_mips(include_purecap=True):
             # Don't build kernel modules for MIPS
@@ -1206,6 +1217,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         super().process()
 
 
+# FIXME: this should inherit from BuildCheriBSD to avoid
 class BuildCheriBsdMfsKernel(SimpleProject):
     project_name = "cheribsd-mfs-root-kernel"
     dependencies = ["disk-image-minimal"]
@@ -1314,8 +1326,8 @@ class BuildCHERIBSDPurecap(BuildCHERIBSD):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
 
-    def setup(self):
-        super().setup()
+    def __init__(self, config):
+        super().__init__(config)
         self.make_args.set_with_options(CHERI_PURE=True)
 
 
