@@ -73,6 +73,8 @@ class BuildLLVMBase(CMakeProject):
                      "needed by default (e.g. llvm-mca, llvm-pdbutil)")
         cls.build_everything = cls.add_bool_option("build-everything", default=False,
             help="Also build documentation,examples and bindings")
+        cls.use_llvm_cxx = cls.add_bool_option("use-tree-cxx", default=False,
+            help="Use in-tree, not host, C++ runtime")
 
     def setup(self):
         super().setup()
@@ -112,6 +114,13 @@ class BuildLLVMBase(CMakeProject):
                 LLVM_INCLUDE_DOCS=False,
                 # This saves some CMake time since it is used as a sub-project
                 LLVM_INCLUDE_BENCHMARKS=False,
+                )
+        if self.use_llvm_cxx:
+            self.included_projects += ["libcxx", "libcxxabi", "compiler-rt", "libunwind"]
+            self.add_cmake_options(
+                LIBCXXABI_USE_LLVM_UNWINDER=True,
+                CLANG_DEFAULT_CXX_STDLIB="libc++",
+                CLANG_DEFAULT_RTLIB="compiler-rt",
                 )
         if self.skip_static_analyzer:
             # save some build time by skipping the static analyzer
