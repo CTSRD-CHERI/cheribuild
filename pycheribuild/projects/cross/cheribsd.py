@@ -956,6 +956,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
                    cwd=self.sourceDir)
 
 
+class BuildFreeBSDGFE(BuildFreeBSD):
+    project_name = "freebsd-gfe"
+    target = "freebsd-gfe"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git", default_branch="freebsd-head")
+    supported_architectures = [CompilationTargets.FREEBSD_RISCV]
+
+
 # Build FreeBSD with the default options (build the bundled clang instead of using the SDK one)
 # also don't add any of the default -DWITHOUT/DWITH_FOO options
 class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
