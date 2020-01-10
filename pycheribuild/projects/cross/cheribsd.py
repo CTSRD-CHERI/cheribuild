@@ -568,6 +568,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.compiling_for_mips(include_purecap=True):
             # Don't build kernel modules for MIPS
             kernel_options.set(NO_MODULES="yes")
+        # XXX: Work around https://bugs.llvm.org/show_bug.cgi?id=44351
+        if self.compiling_for_riscv():
+            kernel_options.set(WITHOUT_MODULES="malo")
         if self.useExternalToolchainForKernel:
             if not self.CC.exists():
                 self.fatal("Requested build of kernel with external toolchain, but", self.CC,
