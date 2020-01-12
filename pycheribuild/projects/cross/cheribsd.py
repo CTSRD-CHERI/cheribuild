@@ -578,11 +578,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 self.fatal("Requested build of kernel with external toolchain, but", self.CC,
                            "doesn't exist!")
             # We can't use LLD for the kernel yet but there is a flag to experiment with it
-            if self.compiling_for_mips(include_purecap=True):
-                cross_prefix = str(self.cross_toolchain_root / "bin/mips64-unknown-freebsd-")
-            else:
-                cross_prefix = str(self.cross_toolchain_root / "bin") + "/"
-
+            cross_prefix = str(self.cross_toolchain_root / "bin") + "/"  # must end with a '/' !
             kernel_options.update(self.cross_toolchain_config)
             linker = cross_prefix + "ld." + self.linker_for_kernel
             fuse_ld_flag = "-fuse-ld=" + linker
