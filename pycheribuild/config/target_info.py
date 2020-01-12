@@ -266,7 +266,8 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 result.append("-stdlib=libc++")
 
             # CPU flags (currently always BERI):
-            result.append("-mcpu=beri")
+            if self.is_cheribsd:
+                result.append("-mcpu=beri")
             if self.target.is_cheri_purecap():
                 result.extend(["-mabi=purecap", "-mcpu=beri", "-cheri=" + self.config.cheriBitsStr])
                 if self.config.subobject_bounds:

@@ -527,7 +527,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # DONT SET XAS!!! It prevents bfd from being built
             # self.cross_toolchain_config.set(XAS="/usr/bin/as")
         elif self.compiling_for_mips(include_purecap=True):
-            target_flags = " -integrated-as -fcolor-diagnostics -mcpu=beri"
+            target_flags = " -integrated-as -fcolor-diagnostics"
+            if self.target_info.is_cheribsd:
+                target_flags += " -mcpu=beri"
             if self.compiling_for_cheri() and self.config.cheri_cap_table_abi == "legacy":
                 target_flags += " -DCHERIABI_LEGACY_SUPPORT"
             # for some reason this is not inferred....
