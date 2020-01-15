@@ -525,7 +525,7 @@ def do_network_on(console: boot_cheribsd.CheriBSDInstance, args, timeout=300):
     console.expect_prompt()
     # No longer needed? console.run('/sbin/ifconfig {} polling'.format(ifc))
     console.sendline('/sbin/dhclient {}'.format(ifc))
-    console.expect(["bound to .* -- renewal in .*\."], timeout=60)
+    console.expect(["bound to .* -- renewal in .*\."], timeout=240)
     console.expect_prompt()
 
 def do_network_off(console: boot_cheribsd.CheriBSDInstance, args):
