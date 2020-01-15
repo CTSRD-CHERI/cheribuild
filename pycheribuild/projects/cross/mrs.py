@@ -51,7 +51,7 @@ class MRS(CrossCompileCMakeProject):
         cls.clear_on_free= cls.add_bool_option("clear-on-free", help="zero regions as they come out of quarantine")
         cls.print_stats= cls.add_bool_option("print-stats", help="print heap statistics on exit")
         cls.print_caprevoke= cls.add_bool_option("print-caprevoke", help="print per-revocation statistics")
-        cls.concurrent_revocation_pass = cls.add_bool_option("concurrent-revocation-pass", help="enable a concurrent revocation pass before the stop-the-world pass")
+        cls.concurrent_revocation_passes = cls.add_config_option("concurrent-revocation-passes", kind=int, help="enable N concurrent revocation passes before the stop-the-world pass")
         cls.revoke_on_free = cls.add_bool_option("revoke-on-free", help="perform revocation on free rather than during allocation routines")
 
         cls.just_interpose = cls.add_bool_option("just-interpose", help="just call the real functions")
@@ -79,8 +79,6 @@ class MRS(CrossCompileCMakeProject):
             self.add_cmake_options(PRINT_STATS="ON")
         if self.print_caprevoke:
             self.add_cmake_options(PRINT_CAPREVOKE="ON")
-        if self.concurrent_revocation_pass:
-            self.add_cmake_options(CONCURRENT_REVOCATION_PASS="ON")
         if self.revoke_on_free:
             self.add_cmake_options(REVOKE_ON_FREE="ON")
 
@@ -97,6 +95,8 @@ class MRS(CrossCompileCMakeProject):
             self.add_cmake_options(QUARANTINE_RATIO=self.quarantine_ratio)
         if self.quarantine_highwater:
             self.add_cmake_options(QUARANTINE_HIGHWATER=self.quarantine_highwater)
+        if self.concurrent_revocation_passes:
+            self.add_cmake_options(CONCURRENT_REVOCATION_PASSES=self.concurrent_revocation_passes)
 
     def compile(self, **kwargs):
         if self.build_target:
