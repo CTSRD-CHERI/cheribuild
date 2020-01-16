@@ -165,6 +165,8 @@ class RunSyzkaller(SimpleProject):
         cls.syz_workdir = cls.add_path_option("workdir", show_help=True,
             default=lambda config, project: (config.outputRoot / "syzkaller-workdir"),
             help="Working directory for syzkaller output.", metavar="DIR")
+        cls.syz_debug = cls.add_bool_option("debug",
+            help="Run syz-manager in debug mode, requires manual startup of the VM.")
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -183,6 +185,10 @@ class RunSyzkaller(SimpleProject):
         else:
             self.makedirs(self.syz_workdir)
             syz_config = self.syz_workdir / "syzkaller-config.json"
+            vm_type = "qemu"
+            if self.syz_debug:
+                # Run in debug mode
+                vm_type = "none"
 
             template = {
                 "name": "cheribsd-n64",
@@ -194,7 +200,7 @@ class RunSyzkaller(SimpleProject):
                 "sandbox": "none",
                 "procs": 1,
                 "image": str(self.disk_image),
-                "type": "qemu",
+                "type": vm_type,
                 "vm": {
                     "qemu": str(self.qemu_binary),
                     "qemu_args": "-M malta -device virtio-rng-pci -D syz-trace.log",
