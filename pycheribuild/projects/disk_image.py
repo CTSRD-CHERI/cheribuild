@@ -636,14 +636,23 @@ class _BuildDiskImageBase(SimpleProject):
             self.add_file_to_image(publicKey, base_directory=self.extraFilesDir, mode="0644")
 
 
-def _defaultDiskImagePath(config: CheriConfig, pfx, img_prefix=""):
-    return pfx / (img_prefix + "cheri" + config.cheri_bits_and_abi_str + "-disk.img")
+def _default_disk_image_name(config: CheriConfig, directory: Path, project: SimpleProject, img_prefix=""):
+    # old name for cheribsd:
+    if project.compiling_for_cheri() and project.compiling_for_mips(include_purecap=True):
+        # Backwards compat (no prefix for MIPS + Cheri):
+        if img_prefix == "cheribsd-":
+            img_prefix = ""
+        return directory / (img_prefix + "cheri" + config.cheri_bits_and_abi_str + "-disk.img")
+    xtarget = project.get_crosscompile_target(config)
+    suffix = xtarget.generic_suffix if xtarget else "<TARGET>"
+    if project.compiling_for_mips(include_purecap=False):
+        if config.mips_float_abi == MipsFloatAbi.HARD:
+            suffix += "-hardfloat"
+    return config.outputRoot / (img_prefix + suffix + ".img")
 
 
-def _defaultMinimalDiskImagePath(conf, proj: Project):
-    if proj.compiling_for_mips(include_purecap=False):
-        return conf.outputRoot / "minimal-mips-disk.img"
-    return _defaultDiskImagePath(conf, conf.outputRoot, "minimal-")
+def _default_freebsd_disk_image_name(config: CheriConfig, project: SimpleProject):
+    return _default_disk_image_name(config, config.outputRoot, project, "freebsd-")
 
 
 class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
@@ -658,7 +667,8 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         def get_rc_conf_template(self):
             return includeLocalFile("files/minimal-image/etc/rc.conf.in")
 
-    default_disk_image_path = ComputedDefaultValue(function=_defaultMinimalDiskImagePath,
+    default_disk_image_path = ComputedDefaultValue(
+        function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "minimal-"),
         as_string="$OUTPUT_ROOT/minimal-cheri256-disk.img or $OUTPUT_ROOT/minimal-cheri128-disk.img depending "
                   "on --cheri-bits.")
 
@@ -821,14 +831,8 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
     _always_add_suffixed_targets = True  # preparation for future multi-target support
 
     default_disk_image_path = ComputedDefaultValue(
-        function=lambda conf, proj: _defaultDiskImagePath(conf, conf.outputRoot),
+        function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "cheribsd-"),
         as_string="$OUTPUT_ROOT/cheri256-disk.img or $OUTPUT_ROOT/cheri128-disk.img depending on --cheri-bits.")
-
-    @classproperty
-    def supported_architectures(cls):
-        # FIXME:
-        return [CompilationTargets.CHERIBSD_MIPS_PURECAP]
-        # return cls._source_class.supported_architectures
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -865,7 +869,7 @@ class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
     dependencies = ["qemu", "cheribsd-purecap", "gdb-mips"]
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
     default_disk_image_path = ComputedDefaultValue(
-        function=lambda conf, proj: _defaultDiskImagePath(conf, conf.outputRoot, "purecap-"),
+        function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "purecap-"),
         as_string="$OUTPUT_ROOT/purecap-cheri256-disk.img or $OUTPUT_ROOT/purecap-cheri128-disk.img depending on "
                   "--cheri-bits.")
 
@@ -888,15 +892,6 @@ class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
     @property
     def needs_special_pkg_repo(self):
         return True
-
-
-def _default_freebsd_disk_image_name(config: CheriConfig, project: SimpleProject):
-    xtarget = project.get_crosscompile_target(config)
-    suffix = xtarget.generic_suffix if xtarget else "<TARGET>"
-    if project.compiling_for_mips(include_purecap=False):
-        if config.mips_float_abi == MipsFloatAbi.HARD:
-            suffix += "-hardfloat"
-    return config.outputRoot / ("freebsd-" + suffix + ".img")
 
 
 class BuildFreeBSDImage(BuildMultiArchDiskImage):

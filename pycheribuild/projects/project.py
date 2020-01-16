@@ -2653,4 +2653,4 @@ class TargetAliasWithDependencies(TargetAlias):
 
 
 class BuildAll(TargetAliasWithDependencies):
-    dependencies = ["qemu", "sdk", "disk-image-cheri", "run"]
+    dependencies = ["qemu", "sdk", "disk-image-cheri", "run-cheri"]

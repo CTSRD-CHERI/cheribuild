@@ -81,25 +81,25 @@ def test_reordering():
 
 
 def test_run_comes_last():
-    assert _sort_targets(["run", "disk-image"]) == ["disk-image-cheri", "run"]
+    assert _sort_targets(["run", "disk-image"]) == ["disk-image-cheri", "run-cheri"]
 
 
 def test_disk_image_comes_second_last():
-    assert _sort_targets(["run", "disk-image"]) == ["disk-image-cheri", "run"]
-    assert _sort_targets(["run", "disk-image", "cheribsd"]) == ["cheribsd-cheri", "disk-image-cheri", "run"]
-    assert _sort_targets(["run", "gdb-mips", "disk-image", "cheribsd"]) == ["cheribsd-cheri", "gdb-mips", "disk-image-cheri", "run"]
-    assert _sort_targets(["run", "disk-image", "postgres", "cheribsd"]) == ["cheribsd-cheri", "postgres-cheri", "disk-image-cheri", "run"]
+    assert _sort_targets(["run", "disk-image"]) == ["disk-image-cheri", "run-cheri"]
+    assert _sort_targets(["run", "disk-image", "cheribsd"]) == ["cheribsd-cheri", "disk-image-cheri", "run-cheri"]
+    assert _sort_targets(["run", "gdb-mips", "disk-image", "cheribsd"]) == ["cheribsd-cheri", "gdb-mips", "disk-image-cheri", "run-cheri"]
+    assert _sort_targets(["run", "disk-image", "postgres", "cheribsd"]) == ["cheribsd-cheri", "postgres-cheri", "disk-image-cheri", "run-cheri"]
 
 
 def test_all_run_deps():
     assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm-native", "gdb-native", "cheribsd-cheri",
                                                              "cheribsd-sysroot-cheri", "gdb-mips", "disk-image-cheri",
-                                                             "run"]
+                                                             "run-cheri"]
 
 
 def test_run_disk_image():
     assert _sort_targets(["run", "disk-image", "run-freebsd-mips", "llvm", "disk-image-freebsd-x86_64"]) == [
-                          "llvm-native", "disk-image-cheri", "disk-image-freebsd-x86_64", "run", "run-freebsd-mips"]
+                          "llvm-native", "disk-image-cheri", "disk-image-freebsd-x86_64", "run-cheri", "run-freebsd-mips"]
 
 
 def test_remove_duplicates():
