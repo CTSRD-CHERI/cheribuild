@@ -47,6 +47,8 @@ class SNMalloc(CrossCompileCMakeProject):
         cls.debug            = cls.add_bool_option("debug", help="Turn on debugging features")
         cls.stats            = cls.add_bool_option("stats", help="Turn on statistics tracking")
 
+        cls.check_client     = cls.add_bool_option("check-client", help="Don't accept malformed input to free")
+
         cls.pagemap_pointers = cls.add_bool_option("pagemap-pointers", help="Change pagemap data structure to store pointers")
         cls.pagemap_rederive = cls.add_bool_option("pagemap-rederive", help="Rederive internal pointers using the pagemap")
         cls.cheri_align      = cls.add_bool_option("cheri-align", help="Align sizes for CHERI bounds setting")
@@ -119,6 +121,9 @@ class SNMalloc(CrossCompileCMakeProject):
 
         if not self.debug:
             self.COMMON_FLAGS.append("-DNDEBUG")
+
+        if self.check_client:
+            self.COMMON_FLAGS.append("-DCHECK_CLIENT")
 
     def compile(self, **kwargs):
       if self.just_so:
