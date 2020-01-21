@@ -43,7 +43,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     _always_add_suffixed_targets = True
     is_sdk_target = False
     freebsd_class = None
-    cross_install_dir = DefaultInstallDir.CHERI_SDK
+    cross_install_dir = DefaultInstallDir.ROOTFS
 
     @classmethod
     def dependencies(cls, config: CheriConfig):
@@ -58,12 +58,12 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         kernel_path = self.freebsd_class.get_installed_kernel_path(self, cross_target=self.crosscompile_target)
         self.configureArgs.extend([
             "--with-payload=" + str(kernel_path),
-            "--host=" + self.get_host_triple()
+            "--host=" + self.target_info.target_triple
             ])
         super().configure(**kwargs)
 
     def get_installed_kernel_path(self):
-        return self.real_install_root_dir / self.get_host_triple() / "bin" / "bbl"
+        return self.real_install_root_dir / self.target_info.target_triple / "bin" / "bbl"
 
 
 class BuildBBLFreeBSDRISCV(BuildBBLBase):
