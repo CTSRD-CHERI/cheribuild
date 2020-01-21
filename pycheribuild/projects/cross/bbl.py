@@ -32,59 +32,57 @@ import re
 
 from .cheribsd import *
 from ..project import *
+from .crosscompileproject import CrossCompileAutotoolsProject
 
 
 # Using GCC not Clang, so can't use CrossCompileAutotoolsProject
-class BuildBBLBase(AutotoolsProject):
+class BuildBBLBase(CrossCompileAutotoolsProject):
     doNotAddToTargets = True
     repository = GitRepository("https://github.com/jrtc27/riscv-pk.git")
-    native_install_dir = DefaultInstallDir.CHERI_SDK
     make_kind = MakeCommandKind.GnuMake
-    is_sdk_target = True
-    supported_architectures = [CompilationTargets.NATIVE]
+    _always_add_suffixed_targets = True
+    is_sdk_target = False
+    freebsd_class = None
+    cross_install_dir = DefaultInstallDir.CHERI_SDK
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig):
+        xtarget = cls.get_crosscompile_target(config)
+        result = [cls.freebsd_class.get_class_for_target(xtarget).target]
+        return result
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        # Extract tool prefix via toolchain's XCC
-        cross_toolchain_mk = Path("/usr/local/share/toolchains/riscv64-gcc.mk")
-        self.host = ""
-        if cross_toolchain_mk.exists():
-            with cross_toolchain_mk.open("r") as f:
-                for l in f:
-                    if l[:4] == "XCC=":
-                        self.host = re.sub(r".*/(.*)-.*", r"\1", l[4:]).strip()
-                        break
-        if not self.host:
-            self.fatal("Could not find riscv64-gcc XCC")
 
     def configure(self, **kwargs):
-        kernel_path = self.freebsd_class.get_installed_kernel_path(self,
-            cross_target=self.cross_target)
+        kernel_path = self.freebsd_class.get_installed_kernel_path(self, cross_target=self.crosscompile_target)
         self.configureArgs.extend([
             "--with-payload=" + str(kernel_path),
-            "--host=" + self.host
+            "--host=" + self.get_host_triple()
             ])
         super().configure(**kwargs)
 
     def get_installed_kernel_path(self):
-        return self.real_install_root_dir / self.host / "bin" / "bbl"
+        return self.real_install_root_dir / self.get_host_triple() / "bin" / "bbl"
+
 
 class BuildBBLFreeBSDRISCV(BuildBBLBase):
-    project_name = "bbl-freebsd-riscv"
-    target = "bbl-freebsd-riscv"
-    dependencies = ["freebsd-riscv"]
+    project_name = "bbl-freebsd"
+    target = "bbl-freebsd"
+    supported_architectures = [CompilationTargets.FREEBSD_RISCV]
+    freebsd_class = BuildFreeBSD
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.freebsd_class = BuildFreeBSD
-        self.cross_target = CompilationTargets.FREEBSD_RISCV
 
 class BuildBBLFreeBSDWithDefaultOptionsRISCV(BuildBBLBase):
-    project_name = "bbl-freebsd-with-default-options-riscv"
-    target = "bbl-freebsd-with-default-options-riscv"
-    dependencies = ["freebsd-with-default-options-riscv"]
+    project_name = "bbl-freebsd-with-default-options"
+    target = "bbl-freebsd-with-default-options"
+    supported_architectures = [CompilationTargets.FREEBSD_RISCV]
+    freebsd_class = BuildFreeBSDWithDefaultOptions
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        self.freebsd_class = BuildFreeBSDWithDefaultOptions
-        self.cross_target = CompilationTargets.FREEBSD_RISCV
+
+class BuildBBLCheriBSDRISCV(BuildBBLBase):
+    project_name = "bbl-cheribsd"
+    target = "bbl-cheribsd"
+    supported_architectures = [CompilationTargets.CHERIBSD_RISCV]
+    freebsd_class = BuildCHERIBSD
+

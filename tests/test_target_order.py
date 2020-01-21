@@ -1,5 +1,5 @@
-import sys
 import copy
+import sys
 
 try:
     import typing
@@ -13,7 +13,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can"t do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
-from pycheribuild.config.loader import DefaultValueOnlyConfigLoader, ConfigLoaderBase
 from pycheribuild.projects.project import CompilationTargets
 from pycheribuild.targets import targetManager
 # noinspection PyUnresolvedReferences
@@ -161,6 +160,18 @@ def test_webkit_deps_2():
     assert _sort_targets(["qtwebkit-cheri"], add_dependencies=True, skip_sdk=True) == \
                          ["qtbase-cheri", "icu4c-native", "icu4c-cheri", "libxml2-cheri", "sqlite-cheri", "qtwebkit-cheri"]
 
+
+def test_riscv():
+    assert _sort_targets(["bbl-cheribsd-riscv64", "cheribsd-riscv64"], add_dependencies=False, skip_sdk=False) == \
+                         ["cheribsd-riscv64", "bbl-cheribsd-riscv64"]
+    assert _sort_targets(["run-riscv64"], add_dependencies=True, skip_sdk=True) == \
+                         ["bbl-cheribsd-riscv64", "disk-image-riscv64", "run-riscv64"]
+    assert _sort_targets(["disk-image-riscv64"], add_dependencies=True, skip_sdk=False) == \
+           ["qemu", "llvm-native", "gdb-native", "cheribsd-riscv64", "cheribsd-sysroot-riscv64", "gdb-riscv64",
+            "disk-image-riscv64"]
+    assert _sort_targets(["run-riscv64"], add_dependencies=True, skip_sdk=False) == \
+           ["llvm-native", "qemu", "gdb-native", "cheribsd-riscv64", "bbl-cheribsd-riscv64",
+           "cheribsd-sysroot-riscv64", "gdb-riscv64", "disk-image-riscv64", "run-riscv64"]
 
 # Check that libcxx deps with skip sdk pick the matching -native/-mips versions
 # Also the libcxx target should resolve to libcxx-cheri:

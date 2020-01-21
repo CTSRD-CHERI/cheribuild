@@ -252,7 +252,12 @@ class BuildQEMU(BuildQEMUBase):
                                            help="Collect statistics on out-of-bounds capability creation.")
 
     @classmethod
-    def qemu_binary(cls, caller: SimpleProject):
+    def qemu_binary(cls, caller: SimpleProject, xtarget: CrossCompileTarget=None):
+        if xtarget is None:
+            xtarget = caller.get_crosscompile_target(caller.config)
+        if xtarget.is_riscv():
+            binary_name = "qemu-system-riscv64"
+            return caller.config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
         binary_name = "qemu-system-cheri"
         binary_name += caller.config.cheriBitsStr
         if caller.config.cheriBits == 128 and cls.get_instance(caller, cross_target=CompilationTargets.NATIVE).magic128:
@@ -272,16 +277,6 @@ class BuildQEMU(BuildQEMUBase):
             self._extraCFlags += " -DENABLE_CHERI_SANITIY_CHECKS=1"
 
 
-class BuildQEMURISCV(BuildQEMUBase):
-    target = "qemu-riscv"
-    project_name = "qemu-riscv"
-    default_targets = "riscv64-softmmu"
-
-    @classmethod
-    def qemu_binary(cls, caller: SimpleProject):
-        return caller.config.qemu_bindir / "qemu-system-riscv64"
-
-
 class BuildCheriOSQEMU(BuildQEMU):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="cherios", force_branch=True)
     project_name = "cherios-qemu"
@@ -296,7 +291,7 @@ class BuildCheriOSQEMU(BuildQEMU):
         self._qemuTargets = "cheri256-softmmu,cheri128-softmmu"
 
     @classmethod
-    def qemu_binary(cls, caller: SimpleProject):
+    def qemu_binary(cls, caller: SimpleProject, xtarget=None):
         binary_name = "qemu-system-cheri" + caller.config.cheriBitsStr
         return cls.get_instance(caller, caller.config,
                                 cross_target=CompilationTargets.NATIVE).installDir / "bin" / binary_name

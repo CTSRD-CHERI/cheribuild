@@ -29,7 +29,7 @@
 #
 import socket
 
-from .build_qemu import BuildQEMU, BuildQEMURISCV, BuildCheriOSQEMU
+from .build_qemu import BuildQEMU, BuildCheriOSQEMU
 from .cherios import BuildCheriOS
 from .cross.bbl import *
 from .disk_image import *
@@ -293,6 +293,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
 class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     doNotAddToTargets = True
     _source_class = None
+    _bbl_class = None
 
     @classproperty
     def supported_architectures(cls):
@@ -314,13 +315,14 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     def supported_architectures(cls):
         return cls._source_class.supported_architectures
 
-    @staticmethod
+    @classmethod
     def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig):
         xtarget = cls.get_crosscompile_target(config)
         result = []
-        if xtarget.is_riscv():
-            result.append("qemu-riscv")
-        if xtarget.is_mips(include_purecap=True):
+        # RISCV needs BBL to run:
+        if xtarget.is_riscv(include_purecap=True):
+            result.append(cls._bbl_class.get_class_for_target(xtarget).target)
+        if xtarget.is_mips(include_purecap=True) or xtarget.is_riscv(include_purecap=True):
             result.append("qemu")
         result.append(cls._source_class.get_class_for_target(xtarget).target)
         return result
@@ -329,12 +331,10 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         xtarget = self.get_crosscompile_target(config)
         super().__init__(config, disk_image_class=self._source_class.get_class_for_target(xtarget))
         if xtarget.is_riscv():
-            self.qemuBinary = BuildQEMURISCV.qemu_binary(self)
             _hasPCI = False
             self.machineFlags = ["-M", "virt"]  # want VirtIO
             self.virtioDisk = True
-            # XXX: CompilationTargets.NATIVE is not correct but currently the easiest way to get it to work
-            self.currentKernel = BuildBBLFreeBSDWithDefaultOptionsRISCV.get_instance(self, cross_target=CompilationTargets.NATIVE).get_installed_kernel_path()
+            self.currentKernel = self._bbl_class.get_instance(self).get_installed_kernel_path()
         elif xtarget.is_any_x86():
             qemu_suffix = "x86_64" if xtarget.is_x86_64() else "i386"
             self.currentKernel = None  # boot from disk
@@ -347,8 +347,8 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
 
 class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
     project_name = "run"
-    dependencies = ["qemu", "disk-image-cheri"]
     _source_class = BuildCheriBSDDiskImage
+    _bbl_class = BuildBBLCheriBSDRISCV
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -432,6 +432,7 @@ class LaunchFreeBSD(_RunMultiArchFreeBSDImage):
     project_name = "run-freebsd"
     hide_options_from_help = True
     _source_class = BuildFreeBSDImage
+    _bbl_class = BuildBBLFreeBSDRISCV
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -444,6 +445,7 @@ class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
     project_name = "run-freebsd-with-default-options"
     hide_options_from_help = True
     _source_class = BuildFreeBSDWithDefaultOptionsDiskImage
+    _bbl_class = BuildBBLFreeBSDWithDefaultOptionsRISCV
 
     @classmethod
     def setup_config_options(cls, **kwargs):

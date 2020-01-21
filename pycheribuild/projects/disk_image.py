@@ -804,7 +804,7 @@ class BuildMultiArchDiskImage(_BuildDiskImageBase):
     def supported_architectures(cls):
         return cls._source_class.supported_architectures
 
-    @staticmethod
+    @classmethod
     def dependencies(cls, config: CheriConfig):
         return ["qemu", cls._source_class.get_class_for_target(cls.get_crosscompile_target(config)).target]
 
@@ -826,13 +826,24 @@ class BuildMultiArchDiskImage(_BuildDiskImageBase):
 
 class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
     project_name = "disk-image"
-    dependencies = ["qemu", "cheribsd-cheri", "gdb-mips"]
     _source_class = BuildCHERIBSD
     _always_add_suffixed_targets = True  # preparation for future multi-target support
 
     default_disk_image_path = ComputedDefaultValue(
         function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "cheribsd-"),
         as_string="$OUTPUT_ROOT/cheri256-disk.img or $OUTPUT_ROOT/cheri128-disk.img depending on --cheri-bits.")
+
+    @classmethod
+    def dependencies(cls, config):
+        xtarget = cls.get_crosscompile_target(config)
+        result = super().dependencies(config)
+        # RISCV needs BBL to run:
+        if xtarget.is_riscv(include_purecap=True):
+            result.append("gdb-riscv64")
+            pass
+        if xtarget.is_mips(include_purecap=True):
+            result.append("gdb-mips")
+        return result
 
     @classmethod
     def setup_config_options(cls, **kwargs):

@@ -1076,11 +1076,11 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
 class BuildCHERIBSD(BuildFreeBSD):
     project_name = "cheribsd"
     target = "cheribsd"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git", per_target_branches={
-        CompilationTargets.CHERIBSD_RISCV: TargetBranchInfo("riscv_cheri_clang", directory_name="cheribsd-riscv",
-                                                            # url="https://github.com/bsdjhb/cheribsd"
-                                                            )
-        })
+    repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git",
+        # per_target_branches={
+        #     CompilationTargets.CHERIBSD_RISCV: TargetBranchInfo("riscv_cheri_clang", directory_name="cheribsd-riscv")
+        # }
+        )
     _default_install_dir_fn = cheribsd_install_dir
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_X86_64,
                                CompilationTargets.CHERIBSD_MIPS, CompilationTargets.CHERIBSD_RISCV]
