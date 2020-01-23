@@ -49,7 +49,9 @@ usr/sbin/service
 #   libpam.so.6 => /usr/lib/libpam.so.6 (0x40e12000)
 #   libbsm.so.3 => /usr/lib/libbsm.so.3 (0x40e53000)
 # We obviously need RTLD:
-libexec/ld-elf.so.1
+#   XXX BFG for now we need either ld-elf or ld-cheri-elf or both - whichever
+#   are present seem to end up in METALOG anyway
+# libexec/ld-elf.so.1
 # Now the libraries for cheribsdbox and benchmark binaries:
 lib/libc.so.7
 lib/libcrypt.so.5
