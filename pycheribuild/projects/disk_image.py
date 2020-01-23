@@ -728,6 +728,14 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         for files_list in files_to_add:
             self.process_files_list(files_list)
 
+        # At least one runtime linker must be present - they will be included in
+        # METALOG so we don't need to add manually
+        ld_elf_path = self.rootfsDir / "libexec/ld-elf.so.1"
+        ld_cheri_elf_path = self.rootfsDir / "libexec/ld-cheri-elf.so.1"
+        if not ld_elf_path.exists() and not ld_cheri_elf_path.exists():
+            self.fatal("runtime linker not present in rootfs at", ld_elf_path,
+                    "or", ld_cheri_elf_path)
+
         if self.include_cheritest:
             for i in ("cheritest", "cheriabitest"):
                 test_binary = self.rootfsDir / "bin" / i  # type: Path

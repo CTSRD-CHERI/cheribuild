@@ -49,8 +49,7 @@ usr/sbin/service
 #   libpam.so.6 => /usr/lib/libpam.so.6 (0x40e12000)
 #   libbsm.so.3 => /usr/lib/libbsm.so.3 (0x40e53000)
 # We obviously need RTLD:
-#   XXX BFG for now we need either ld-elf or ld-cheri-elf or both - whichever
-#   are present seem to end up in METALOG anyway
+# but we check for its presence in Python and it is added via METALOG
 # libexec/ld-elf.so.1
 # Now the libraries for cheribsdbox and benchmark binaries:
 lib/libc.so.7
