@@ -1,5 +1,5 @@
-# rtld
-libexec/ld-cheri-elf.so.1
+# rtld is added from the python code:
+# libexec/ld-cheri-elf.so.1
 
 # These are needed by postgres:
 usr/libcheri/libc.so.7

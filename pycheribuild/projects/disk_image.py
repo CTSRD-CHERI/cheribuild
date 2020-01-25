@@ -144,7 +144,7 @@ class _BuildDiskImageBase(SimpleProject):
                     self.verbose_print("Stripping ELF binary", file)
                     stripped_path = self.tmpdir / path_in_target
                     self.makedirs(stripped_path.parent)
-                    runCmd(self.sdk_bindir / "llvm-strip", file, "-o", stripped_path)
+                    self.run_cmd(self.sdk_bindir / "llvm-strip", file, "-o", stripped_path, print_verbose_only=True)
                     # runCmd("file", stripped_path)
                     file = stripped_path
 
@@ -731,10 +731,15 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         # At least one runtime linker must be present - they will be included in
         # METALOG so we don't need to add manually
         ld_elf_path = self.rootfsDir / "libexec/ld-elf.so.1"
-        ld_cheri_elf_path = self.rootfsDir / "libexec/ld-cheri-elf.so.1"
-        if not ld_elf_path.exists() and not ld_cheri_elf_path.exists():
-            self.fatal("runtime linker not present in rootfs at", ld_elf_path,
-                    "or", ld_cheri_elf_path)
+        if ld_elf_path.exists():
+            self.add_file_to_image(ld_elf_path, base_directory=self.rootfsDir)
+        else:
+            self.fatal("default ABI runtime linker not present in rootfs at", ld_elf_path)
+        # Add all compat ABI runtime linkers that we find in the rootfs:
+        for rtld_basename in ("ld-elf32.so.1", "ld-elf64.so.1", "ld-cheri-elf.so.1"):
+            rtld_path = self.rootfsDir / "libexec" / rtld_basename
+            if rtld_path.exists():
+                self.add_file_to_image(rtld_path, base_directory=self.rootfsDir)
 
         if self.include_cheritest:
             for i in ("cheritest", "cheriabitest"):

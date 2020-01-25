@@ -48,9 +48,9 @@ usr/sbin/service
 #   libz.so.6 => /lib/libz.so.6 (0x40dc2000)
 #   libpam.so.6 => /usr/lib/libpam.so.6 (0x40e12000)
 #   libbsm.so.3 => /usr/lib/libbsm.so.3 (0x40e53000)
-# We obviously need RTLD:
-# but we check for its presence in Python and it is added via METALOG
+# Note: rtld is added from the python code:
 # libexec/ld-elf.so.1
+
 # Now the libraries for cheribsdbox and benchmark binaries:
 lib/libc.so.7
 lib/libcrypt.so.5
