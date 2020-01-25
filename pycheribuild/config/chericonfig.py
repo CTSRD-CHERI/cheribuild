@@ -224,6 +224,8 @@ class CheriConfig(object):
         self.wait_for_debugger = loader.add_bool_option("wait-for-debugger", group=loader.run_group,
                                                         help="Start QEMU in the 'wait for a debugger' state when"
                                                              "launching CheriBSD,FreeBSD, etc.")
+        self.run_under_gdb = loader.add_bool_option("run-under-gdb", group=loader.run_group,
+            help="Run tests/benchmarks under GDB. Note: currently most targets ignore this flag.")
 
         # Test options:
         self.test_ssh_key = loader.add_path_option("test-ssh-key", default=os.path.expanduser("~/.ssh/id_ed25519.pub"),
