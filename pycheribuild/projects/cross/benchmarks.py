@@ -29,7 +29,6 @@
 #
 import stat
 import tempfile
-from pathlib import Path
 
 from .crosscompileproject import *
 from ..project import ExternallyManagedSourceRepository
@@ -454,12 +453,11 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
         test_command = """
 export LD_LIBRARY_PATH=/sysroot/usr/lib:/sysroot/lib;
 export LD_CHERI_LIBRARY_PATH=/sysroot/usr/libcheri;
-cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh -b "{bench_list}" -t {config} -d0 -r1 {arch}""".format(
+cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_flags} -b "{bench_list}" -t {config} -d0 -r1 {arch}""".format(
             config=self.config_name, bench_list=" ".join(self.benchmark_list),
-            arch=self.bluehive_benchmark_script_archname)
+            arch=self.bluehive_benchmark_script_archname, debug_flags="-g" if self.config.run_under_gdb else "")
         self.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
-                                      "--test-timeout", str(120 * 60),
-                                      mount_builddir=True, mount_sysroot=True)
+                                      "--test-timeout", str(120 * 60), mount_builddir=True, mount_sysroot=True)
 
     @property
     def bluehive_benchmark_script_archname(self):
@@ -479,14 +477,17 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh -b "{ben
         with tempfile.TemporaryDirectory() as td:
             benchmarks_dir = self.create_tests_dir(Path(td))
             num_iterations = self.config.benchmark_iterations or 3
+            benchmark_args = ["-d1", "-r" + str(num_iterations),
+                              "-t", self.config_name,
+                              "-o", self.default_statcounters_csv_name,
+                              "-b", commandline_to_str(self.benchmark_list),
+                              self.bluehive_benchmark_script_archname]
+            if self.config.run_under_gdb:
+                benchmark_args.insert(0, "-g")
             self.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
                                     # The benchmarks take a long time to run -> allow up to a 3 hours per iteration
                                     extra_runbench_args=["--timeout", str(60 * 60 * 3 * num_iterations)],
-                                    benchmark_script_args=["-d1", "-r" + str(num_iterations),
-                                                           "-t", self.config_name,
-                                                           "-o", self.default_statcounters_csv_name,
-                                                           "-b", commandline_to_str(self.benchmark_list),
-                                                           self.bluehive_benchmark_script_archname])
+                                    benchmark_script_args=benchmark_args)
 
 
     def __check_valid_benchmark_list(self):
