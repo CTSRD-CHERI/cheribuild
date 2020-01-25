@@ -289,7 +289,11 @@ class _BuildDiskImageBase(SimpleProject):
 
         # Add a script to launch gdb, run a program and get a backtrace:
         self.createFileForImage("/usr/bin/gdb-run.sh", contents=includeLocalFile("files/cheribsd/gdb-run.sh"),
-                                mode=0o755, showContentsByDefault=False)
+            mode=0o755, showContentsByDefault=False)
+        # And another one for non-interactive use:
+        self.createFileForImage("/usr/bin/gdb-run-noninteractive.sh",
+            contents=includeLocalFile("files/cheribsd/gdb-run-noninteractive.sh"),
+            mode=0o755, showContentsByDefault=False)
 
         # Add a script to turn of network and stop running services:
         self.createFileForImage("/usr/bin/prepare-benchmark-environment.sh",
