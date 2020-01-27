@@ -407,7 +407,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self._setup_make_args_called = False
         self.destdir = self.installDir
         self._installPrefix = Path("/")
-        self.kernelToolchainAlreadyBuilt = False
+        self.kernel_toolchain_exists = False
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
         if self.cross_toolchain_root:
             # override the cross toolchain
@@ -627,18 +627,16 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if "MFS_ROOT" not in kernconf:
                 warningMessage("Attempting to build an MFS_ROOT kernel but kernel config name sounds wrong")
         # needKernelToolchain = not self.useExternalToolchainForKernel
-        dontNeedKernelToolchain = self.useExternalToolchainForKernel and self.linker_for_kernel == "lld"
-        if not dontNeedKernelToolchain and not self.kernelToolchainAlreadyBuilt:
+        if not self.kernel_toolchain_exists:
             # we might need to build GCC to build the kernel:
             kernel_toolchain_opts = self.make_args.copy()
             # Don't build a compiler if we are using and external toolchain (only build config, etc)
             if self.use_external_toolchain:
                 kernel_toolchain_opts.set_with_options(LLD_BOOTSTRAP=False, CLANG=False, CLANG_BOOTSTRAP=False)
-                kernel_toolchain_opts.set_with_options(GCC_BOOTSTRAP=self.useExternalToolchainForKernel)
             if self.auto_obj:
                 kernel_toolchain_opts.set_with_options(AUTO_OBJ=True)
             self.runMake("kernel-toolchain", options=kernel_toolchain_opts)
-            self.kernelToolchainAlreadyBuilt = True
+            self.kernel_toolchain_exists = True
         self.runMake("buildkernel", options=kernelMakeArgs,
                      compilationDbName="compile_commands_" + self.kernelConfig + ".json")
 
@@ -673,7 +671,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if self.fastRebuild:
                 build_args.set(WORLDFAST=True)
             self.runMake("buildworld", options=build_args)
-            self.kernelToolchainAlreadyBuilt = True  # includes the necessary tools for kernel-toolchain
+            self.kernel_toolchain_exists = True  # includes the necessary tools for kernel-toolchain
         if not self.subdirOverride:
             for i in ("USBROOT", "NFSROOT", "MDROOT"):
                 if ("_" + i) in self.kernelConfig:
