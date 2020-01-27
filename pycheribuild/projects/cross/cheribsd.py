@@ -393,9 +393,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.make_args.set_with_options(MAN=self.with_manpages)
             # we want to build makefs for the disk image (makefs depends on libnetbsd which will not be
             # bootstrapped on FreeBSD)
-            # XXX: Currently makefs does not bootstrap for upstream FreeBSD
-            if self.target_info.is_cheribsd:
-                self.make_args.set(LOCAL_XTOOL_DIRS="lib/libnetbsd usr.sbin/makefs usr.bin/mkimg")
+            # TODO: upstream a patch to bootstrap them by default
+            self.make_args.set(LOCAL_XTOOL_DIRS="lib/libnetbsd usr.sbin/makefs usr.bin/mkimg")
 
         # doesn't appear to work for buildkernel
         # if self.auto_obj:
