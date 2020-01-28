@@ -32,9 +32,11 @@ import shlex
 import shutil
 import subprocess
 import sys
+from types import SimpleNamespace
 
 from .project import *
 from ..config.loader import ComputedDefaultValue
+from ..config.target_info import NewlibBaremetalTargetInfo
 from ..utils import getCompilerInfo
 
 
@@ -271,10 +273,27 @@ class BuildQEMU(BuildQEMUBase):
         if self.statistics:
             self._extraCFlags += " -DDO_CHERI_STATISTICS=1"
 
-        # the capstone disassembler doesn't support CHERI instructions:
-        self.configureArgs.append("--disable-capstone")
+    def setup(self):
+        super().setup()
         if self.build_type == BuildType.DEBUG:
             self._extraCFlags += " -DENABLE_CHERI_SANITIY_CHECKS=1"
+        # the capstone disassembler doesn't support CHERI instructions:
+        self.configureArgs.append("--disable-capstone")
+        # Get all the required compilation flags for the TCG tests
+        fake_project = SimpleNamespace()
+        fake_project.config = self.config
+        fake_project.needs_sysroot = False
+        fake_project.mips_build_hybrid = False
+        fake_project.warning = self.warning
+        fake_project.target = "qemu-tcg-tests"
+        tgt_info_mips = NewlibBaremetalTargetInfo(CompilationTargets.BAREMETAL_NEWLIB_MIPS64, fake_project)
+        tgt_info_riscv64 = NewlibBaremetalTargetInfo(CompilationTargets.BAREMETAL_NEWLIB_RISCV64, fake_project)
+        self.configureArgs.extend([
+            "--cross-cc-mips=" + str(tgt_info_mips.c_compiler),
+            "--cross-cc-cflags-mips=" + commandline_to_str(tgt_info_mips.essential_compiler_and_linker_flags).replace("=", " "),
+            "--cross-cc-riscv64=" + str(tgt_info_riscv64.c_compiler),
+            "--cross-cc-cflags-riscv64=" + commandline_to_str(tgt_info_riscv64.essential_compiler_and_linker_flags).replace("=", " ")
+        ])
 
 
 class BuildCheriOSQEMU(BuildQEMU):
