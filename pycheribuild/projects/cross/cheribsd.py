@@ -626,9 +626,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             kernelMakeArgs.set(MFS_IMAGE=mfs_root_image)
             if "MFS_ROOT" not in kernconf:
                 warningMessage("Attempting to build an MFS_ROOT kernel but kernel config name sounds wrong")
-        # needKernelToolchain = not self.useExternalToolchainForKernel
         if not self.kernel_toolchain_exists:
-            # we might need to build GCC to build the kernel:
             kernel_toolchain_opts = kernelMakeArgs.copy()
             # Don't build a compiler if we are using and external toolchain (only build config, etc)
             if self.use_external_toolchain:
