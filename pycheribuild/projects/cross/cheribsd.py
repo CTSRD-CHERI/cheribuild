@@ -629,7 +629,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # needKernelToolchain = not self.useExternalToolchainForKernel
         if not self.kernel_toolchain_exists:
             # we might need to build GCC to build the kernel:
-            kernel_toolchain_opts = self.make_args.copy()
+            kernel_toolchain_opts = kernelMakeArgs.copy()
             # Don't build a compiler if we are using and external toolchain (only build config, etc)
             if self.use_external_toolchain:
                 kernel_toolchain_opts.set_with_options(LLD_BOOTSTRAP=False, CLANG=False, CLANG_BOOTSTRAP=False)
