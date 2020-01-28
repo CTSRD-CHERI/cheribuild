@@ -134,6 +134,7 @@ class BuildFreeBSDBase(Project):
     skipBuildworld = False
     use_external_toolchain = False
     is_large_source_repository = True
+    has_installsysroot_target = False
 
     defaultExtraMakeOptions = [
         # "-DWITHOUT_HTML",  # should not be needed
@@ -178,8 +179,8 @@ class BuildFreeBSDBase(Project):
         super().__init__(config)
 
         self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
-        # TODO: once we have merged the latest upstream changes use MAKEOBJDIR instead to get a more sane hierarchy
-        # self.common_options.env_vars = {"MAKEOBJDIR": str(self.buildDir)}
+        # TODO? Avoid lots of nested child directories by using MAKEOBJDIR instead of MAKEOBJDIRPREFIX
+        # self.make_args.env_vars = {"MAKEOBJDIR": str(self.buildDir)}
 
         if self.crossbuild:
             # Use the script that I added for building on Linux/MacOS:
@@ -779,13 +780,22 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 except subprocess.CalledProcessError:
                     warningMessage("Failed to run either target _compiler-metadata or "
                                    "_build_metadata, build system has changed!")
+            # By default also create a sysroot when installing world
+            installsysroot_args = install_world_args.copy()
+            # No need for the files in /usr/share and the METALOG file
+            installsysroot_args.set(NO_SHARE=True, METALOG="/dev/null")
             if sysroot_only:
-                self.runMake("installsysroot", options=install_world_args)
+                if not self.has_installsysroot_target:
+                    self.fatal("Can't use installsysroot here")
+                self.runMake("installsysroot", options=installsysroot_args)
                 # Don't try to install the kernel if we are only building a sysroot
                 return
             else:
                 self.runMake("installworld", options=install_world_args)
                 self.runMake("distribution", options=install_world_args)
+                if self.has_installsysroot_target:
+                    installsysroot_args.set_env(DESTDIR=self.target_info.sysroot_dir)
+                    self.runMake("installsysroot", options=installsysroot_args)
 
         if skip_kernel:
             return
@@ -1083,6 +1093,8 @@ class BuildCHERIBSD(BuildFreeBSD):
     hide_options_from_help = False  # FreeBSD options are hidden, but this one should be visible
     crossbuild = True  # changes have been merged into master
     use_llvm_binutils = True
+    has_installsysroot_target = True
+    _mips_build_hybrid = False
 
     @classmethod
     def setup_config_options(cls, installDirectoryHelp=None, **kwargs):
@@ -1561,6 +1573,6 @@ class BuildCheriBsdSysroot(SimpleProject):
                     runCmd("ar", "rc", libgcc_eh)
 
 
-class BuildCheriBsdAndSysroot(TargetAlias):
+class BuildCheriBsdAndSysroot(TargetAliasWithDependencies):
     target = "cheribsd-with-sysroot"
-    dependencies = ["cheribsd-cheri", "cheribsd-sysroot-cheri"]
+    dependencies = ["cheribsd-cheri"]

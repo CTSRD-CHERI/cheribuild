@@ -284,6 +284,9 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                     result.append("-cheri=" + self.config.cheriBitsStr)
                 # always use libc++
                 result.append("-stdlib=libc++")
+        if self.target.is_riscv(include_purecap=True):
+            # don't add anything yet
+            pass
         else:
             self.project.warning("Compiler flags might be wong, only native + MIPS checked so far")
         return result
@@ -439,8 +442,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         if target.is_mips(include_purecap=False):
             if config.use_hybrid_sysroot_for_mips:
-                return ["cheribsd-cheri", "cheribsd-sysroot-cheri"]
-            return ["cheribsd-mips", "cheribsd-sysroot-mips"]
+                return ["cheribsd-cheri"]
+            return ["cheribsd-mips"]
         return ["cheribsd", "cheribsd-sysroot"]
 
     @property
@@ -471,6 +474,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     @property
     def sdk_root_dir(self) -> Path:
         return self.config.cheri_sdk_dir
+        return self.config.cheri_sdk_dir
 
     @property
     def sysroot_dir(self) -> Path:
@@ -500,6 +504,10 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
             if self.target.is_cheri_purecap():
                 return "mips64c{}-qemu-elf-purecap".format(self.config.cheriBits)
             return "mips64-qemu-elf"
+        if self.target.is_riscv(include_purecap=True):
+            if self.target.is_cheri_purecap():
+                return "riscv64-none-none-purecap"
+            return "riscv64-none-none"
         assert False, "Other baremetal cases have not been tested yet!"
 
     @classmethod
@@ -652,7 +660,10 @@ class CompilationTargets(object):
                                                  NewlibBaremetalTargetInfo)
     BAREMETAL_NEWLIB_MIPS64_PURECAP = CrossCompileTarget("baremetal-mips-purecap", CPUArchitecture.MIPS64, True,
                                                          NewlibBaremetalTargetInfo, BAREMETAL_NEWLIB_MIPS64)
-
+    BAREMETAL_NEWLIB_RISCV64 = CrossCompileTarget("baremetal-riscv64", CPUArchitecture.RISCV64, False,
+                                                 NewlibBaremetalTargetInfo)
+    BAREMETAL_NEWLIB_RISCV64_PURECAP = CrossCompileTarget("baremetal-riscv64-purecap", CPUArchitecture.RISCV64, True,
+                                                          NewlibBaremetalTargetInfo, BAREMETAL_NEWLIB_RISCV64)
     # FreeBSD targets
     FREEBSD_MIPS = CrossCompileTarget("mips", CPUArchitecture.MIPS64, False, FreeBSDTargetInfo)
     FREEBSD_RISCV = CrossCompileTarget("riscv", CPUArchitecture.RISCV64, False, FreeBSDTargetInfo)
