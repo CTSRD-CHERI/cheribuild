@@ -285,8 +285,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 # always use libc++
                 result.append("-stdlib=libc++")
         if self.target.is_riscv(include_purecap=True):
-            # don't add anything yet
-            pass
+            result.append("-mno-relax")  # Linker relaxations are not supported with clang+lld
         else:
             self.project.warning("Compiler flags might be wong, only native + MIPS checked so far")
         return result
@@ -597,29 +596,34 @@ class CrossCompileTarget(object):
         """returns true if we building for the curent host"""
         return self is CompilationTargets.NATIVE
 
-    # Querying the CPU architecture:
-    def is_mips(self, include_purecap: bool = None):
+    def _check_arch(self, arch: CPUArchitecture, include_purecap: bool):
+        if self.cpu_architecture is not arch:
+            return False
         if include_purecap is None:
             # Check that cases that want to handle both pass an explicit argument
-            assert self is not CompilationTargets.CHERIBSD_MIPS_PURECAP, "Should check purecap cases first"
+            assert not self._is_cheri_purecap, "Should check purecap cases first"
         if not include_purecap and self._is_cheri_purecap:
             return False
-        return self.cpu_architecture is CPUArchitecture.MIPS64
+        return True
+
+    # Querying the CPU architecture:
+    def is_mips(self, include_purecap: bool = None):
+        return self._check_arch(CPUArchitecture.MIPS64, include_purecap)
 
     def is_riscv(self, include_purecap: bool = None):
-        return self.cpu_architecture is CPUArchitecture.RISCV64
+        return self._check_arch(CPUArchitecture.RISCV64, include_purecap)
 
-    def is_aarch64(self):
-        return self.cpu_architecture is CPUArchitecture.AARCH64
+    def is_aarch64(self, include_purecap: bool = None):
+        return self._check_arch(CPUArchitecture.AARCH64, include_purecap)
 
-    def is_i386(self):
-        return self.cpu_architecture is CPUArchitecture.I386
+    def is_i386(self, include_purecap: bool = None):
+        return self._check_arch(CPUArchitecture.I386, include_purecap)
 
-    def is_x86_64(self):
-        return self.cpu_architecture is CPUArchitecture.X86_64
+    def is_x86_64(self, include_purecap: bool = None):
+        return self._check_arch(CPUArchitecture.X86_64, include_purecap)
 
-    def is_any_x86(self):
-        return self.is_i386() or self.is_x86_64()
+    def is_any_x86(self, include_purecap: bool = None):
+        return self.is_i386(include_purecap) or self.is_x86_64(include_purecap)
 
     def is_cheri_purecap(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None):
         if valid_cpu_archs is None:

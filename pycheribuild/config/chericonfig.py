@@ -386,7 +386,7 @@ class CheriConfig(object):
         assert issubclass(cross_compile_target.target_info_cls, CheriBSDTargetInfo), "Only valid for CheriBSD targets"
         if use_hybrid_sysroot is None:
             use_hybrid_sysroot = self.use_hybrid_sysroot_for_mips
-        if cross_compile_target.is_mips():
+        if cross_compile_target.is_mips(include_purecap=True):
             if cross_compile_target.is_cheri_purecap() or use_hybrid_sysroot:
                 return self.cheri_sdk_dir / ("sysroot" + self.cheri_bits_and_abi_str)
             if self.mips_float_abi == MipsFloatAbi.HARD:
