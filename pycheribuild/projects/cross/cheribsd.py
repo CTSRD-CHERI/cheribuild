@@ -629,6 +629,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 warningMessage("Attempting to build an MFS_ROOT kernel but kernel config name sounds wrong")
         if not self.kernel_toolchain_exists:
             kernel_toolchain_opts = kernelMakeArgs.copy()
+            # The kernel seems to use LDFLAGS and ignore XLDFLAGS. Ensure we don't pass those flags when building host
+            # binaries
+            kernel_toolchain_opts.remove_var("LDFLAGS")
+            kernel_toolchain_opts.remove_var("LD")
+            kernel_toolchain_opts.set_env(LDFLAGS="")
             # Don't build a compiler if we are using and external toolchain (only build config, etc)
             if self.use_external_toolchain:
                 kernel_toolchain_opts.set_with_options(LLD_BOOTSTRAP=False, CLANG=False, CLANG_BOOTSTRAP=False)
