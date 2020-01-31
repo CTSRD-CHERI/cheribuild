@@ -443,7 +443,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             if config.use_hybrid_sysroot_for_mips:
                 return ["cheribsd-cheri"]
             return ["cheribsd-mips"]
-        return ["cheribsd", "cheribsd-sysroot"]
+        return ["cheribsd"]
 
     @property
     def local_install_root(self) -> Path:

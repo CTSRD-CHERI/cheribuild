@@ -47,7 +47,7 @@ freestanding_deps = ["llvm-native", "qemu", "gdb-native", "freestanding-sdk"]
 baremetal_deps = freestanding_deps + ["newlib-baremetal-mips", "compiler-rt-builtins-baremetal-mips",
                                       "libunwind-baremetal-mips", "libcxxrt-baremetal-mips",
                                       "libcxx-baremetal-mips", "baremetal-sdk"]
-cheribsd_sdk_deps = freestanding_deps + ["cheribsd-cheri", "cheribsd-sysroot-cheri", "cheribsd-sdk"]
+cheribsd_sdk_deps = freestanding_deps + ["cheribsd-cheri", "cheribsd-sdk"]
 
 
 @pytest.mark.parametrize("target_name,expected_list", [
@@ -76,7 +76,7 @@ def test_reordering():
     # GDB is a cross compiled project so cheribsd should be built first
     assert _sort_targets(["cheribsd", "gdb-mips"]) == ["cheribsd-cheri", "gdb-mips"]
     assert _sort_targets(["gdb-mips", "cheribsd"]) == ["cheribsd-cheri", "gdb-mips"]
-    assert _sort_targets(["gdb-mips", "cheribsd-sysroot-cheri"]) == ["cheribsd-sysroot-cheri", "gdb-mips"]
+    assert _sort_targets(["gdb-mips", "cheribsd-cheri"]) == ["cheribsd-cheri", "gdb-mips"]
 
 
 def test_run_comes_last():
@@ -92,7 +92,7 @@ def test_disk_image_comes_second_last():
 
 def test_all_run_deps():
     assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm-native", "gdb-native", "cheribsd-cheri",
-                                                             "cheribsd-sysroot-cheri", "gdb-mips", "disk-image-cheri",
+                                                             "gdb-mips", "disk-image-cheri",
                                                              "run-cheri"]
 
 
@@ -167,11 +167,11 @@ def test_riscv():
     assert _sort_targets(["run-riscv64"], add_dependencies=True, skip_sdk=True) == \
                          ["bbl-cheribsd-riscv64", "disk-image-riscv64", "run-riscv64"]
     assert _sort_targets(["disk-image-riscv64"], add_dependencies=True, skip_sdk=False) == \
-           ["qemu", "llvm-native", "gdb-native", "cheribsd-riscv64", "cheribsd-sysroot-riscv64", "gdb-riscv64",
+           ["qemu", "llvm-native", "gdb-native", "cheribsd-riscv64", "gdb-riscv64",
             "disk-image-riscv64"]
     assert _sort_targets(["run-riscv64"], add_dependencies=True, skip_sdk=False) == \
            ["llvm-native", "qemu", "gdb-native", "cheribsd-riscv64", "bbl-cheribsd-riscv64",
-           "cheribsd-sysroot-riscv64", "gdb-riscv64", "disk-image-riscv64", "run-riscv64"]
+            "gdb-riscv64", "disk-image-riscv64", "run-riscv64"]
 
 # Check that libcxx deps with skip sdk pick the matching -native/-mips versions
 # Also the libcxx target should resolve to libcxx-cheri:
