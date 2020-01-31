@@ -572,6 +572,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             kernel_options.set(NO_MODULES="yes")
         # XXX: Work around https://bugs.llvm.org/show_bug.cgi?id=44351
         if self.compiling_for_riscv():
+            kernel_options.set(NO_MODULES="yes")  # FIXME: remove
             kernel_options.set(WITHOUT_MODULES="malo")
         if self.useExternalToolchainForKernel:
             if not self.CC.exists():
