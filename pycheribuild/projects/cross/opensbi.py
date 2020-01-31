@@ -29,7 +29,7 @@
 #
 
 from ..project import *
-from ...utils import IS_MAC
+from ...utils import IS_MAC, classproperty
 
 
 def opensbi_install_dir(config: CheriConfig, project: SimpleProject):
@@ -44,11 +44,16 @@ class BuildOpenSBI(Project):
     repository = GitRepository("https://github.com/CTSRD-CHERI/opensbi")
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     default_build_type = BuildType.RELWITHDEBINFO
-    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
+    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP]
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
     _default_install_dir_fn = ComputedDefaultValue(function=opensbi_install_dir,
                                                    as_string="$SDK_ROOT/opensbi/riscv{32,64}{c,}")
+
+    @classproperty
+    def needs_sysroot(cls):
+        return False  # we can build without a sysroot
 
     def __init__(self, config):
         super().__init__(config)
@@ -87,12 +92,24 @@ class BuildOpenSBI(Project):
         self.makedirs(self.installDir)
         self.runMakeInstall(cwd=self.sourceDir)
 
-    @property
-    def _fw_jump_path(self) -> str:
+    @staticmethod
+    def _fw_jump_path() -> str:
         return "platform/qemu/virt/firmware/fw_jump.elf"
 
-    def get_nocap_bios(self, caller) -> Path:
-        return self.getInstallDir(caller, cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64) / self._fw_jump_path
+    @classmethod
+    def get_nocap_instance(cls, caller, cpu_arch=CPUArchitecture.RISCV64) -> "BuildOpenSBI":
+        assert cpu_arch == CPUArchitecture.RISCV64, "RISCV32 not supported yet"
+        return cls.get_instance(caller, cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64)
 
-    def get_purecap_bios(self, caller):
-        return self.get_instance(caller, cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP) / self._fw_jump_path
+    @classmethod
+    def get_purecap_instance(cls, caller, cpu_arch=CPUArchitecture.RISCV64) -> "BuildOpenSBI":
+        assert cpu_arch == CPUArchitecture.RISCV64, "RISCV32 not supported yet"
+        return cls.get_instance(caller, cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP)
+
+    @classmethod
+    def get_nocap_bios(cls, caller) -> Path:
+        return cls.get_nocap_instance(caller).installDir / cls._fw_jump_path()
+
+    @classmethod
+    def get_purecap_bios(cls, caller):
+        return cls.get_purecap_instance(caller).installDir / cls._fw_jump_path()

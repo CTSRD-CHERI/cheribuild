@@ -32,6 +32,7 @@ import socket
 from .build_qemu import BuildQEMU, BuildCheriOSQEMU
 from .cherios import BuildCheriOS
 from .cross.bbl import *
+from .cross.opensbi import BuildOpenSBI
 from .disk_image import *
 from .project import *
 from ..utils import IS_FREEBSD
@@ -319,9 +320,13 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig):
         xtarget = cls.get_crosscompile_target(config)
         result = []
-        # RISCV needs BBL to run:
+        # RISCV needs OpenSBI to run:
+        # Note: QEMU 4.2+ embeds opensbi, but we want a version with CHERI support:
         if xtarget.is_riscv(include_purecap=True):
-            result.append(cls._bbl_class.get_class_for_target(xtarget).target)
+            if xtarget.is_cheri_purecap():
+                result.append("opensbi-baremetal-riscv64-purecap")
+            else:
+                result.append("opensbi-baremetal-riscv64")
         if xtarget.is_mips(include_purecap=True) or xtarget.is_riscv(include_purecap=True):
             result.append("qemu")
         result.append(cls._source_class.get_class_for_target(xtarget).target)
@@ -330,11 +335,22 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     def __init__(self, config):
         xtarget = self.get_crosscompile_target(config)
         super().__init__(config, disk_image_class=self._source_class.get_class_for_target(xtarget))
+        self.useBblForBoot = False  # uncomment if you really think this is a good idea.
         if xtarget.is_riscv():
             _hasPCI = False
             self.machineFlags = ["-M", "virt"]  # want VirtIO
             self.virtioDisk = True
-            self.currentKernel = self._bbl_class.get_instance(self).get_installed_kernel_path()
+            if self.useBblForBoot:
+                self.machineFlags += ["-bios", "none"]
+                self.currentKernel = self._bbl_class.get_instance(self).get_installed_kernel_path()
+            else:
+                if self.crosscompile_target.is_cheri_purecap():
+                    fw_jump = BuildOpenSBI.get_purecap_bios(self)
+                else:
+                    # TODO: always use purecap bios for CheriBSD
+                    fw_jump = BuildOpenSBI.get_nocap_bios(self)
+                self.machineFlags += ["-bios", fw_jump]
+                assert self.currentKernel is not None
         elif xtarget.is_any_x86():
             qemu_suffix = "x86_64" if xtarget.is_x86_64() else "i386"
             self.currentKernel = None  # boot from disk

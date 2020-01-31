@@ -90,6 +90,11 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     def get_installed_kernel_path(self):
         return self.real_install_root_dir / self.target_info.target_triple / "bin" / "bbl"
 
+    def process(self):
+        if not self.query_yes_no("Are you really sure you want to use BBL??? OpenSBI works much better with QEMU"):
+            return
+        super().process()
+
 
 class BuildBBLFreeBSDRISCV(BuildBBLBase):
     project_name = "bbl-freebsd"
