@@ -57,7 +57,7 @@ def default_kernel_config(config: CheriConfig, project: SimpleProject) -> str:
     elif xtarget.is_mips(include_purecap=False):
         return "MALTA64"
     elif xtarget.is_riscv():
-        return "GENERIC"  # TODO: what is the correct config
+        return "QEMU"  # default to the QEMU config
     elif xtarget.is_aarch64():
         return "GENERIC-UP"
     else:
