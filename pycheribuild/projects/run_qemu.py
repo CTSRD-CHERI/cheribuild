@@ -321,13 +321,6 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig):
         xtarget = cls.get_crosscompile_target(config)
         result = []
-        # RISCV needs OpenSBI to run:
-        # Note: QEMU 4.2+ embeds opensbi, but we want a version with CHERI support:
-        if xtarget.is_riscv(include_purecap=True):
-            if xtarget.is_cheri_purecap():
-                result.append("opensbi-baremetal-riscv64-purecap")
-            else:
-                result.append("opensbi-baremetal-riscv64")
         if xtarget.is_mips(include_purecap=True) or xtarget.is_riscv(include_purecap=True):
             result.append("qemu")
         result.append(cls._source_class.get_class_for_target(xtarget).target)
@@ -372,6 +365,19 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         if add_to_port != 0:  # 1 is used by run-purecap
             add_to_port += 1
         super().setup_config_options(defaultSshPort=defaultSshForwardingPort(add_to_port), **kwargs)
+
+    @classmethod
+    def dependencies(cls, config: CheriConfig):
+        result = super().dependencies(config)
+        # RISCV needs OpenSBI to run:
+        # Note: QEMU 4.2+ embeds opensbi, but we want a version with CHERI support:
+        xtarget = cls.get_crosscompile_target(config)
+        if xtarget.is_riscv(include_purecap=True):
+            if xtarget.is_cheri_purecap():
+                result.append("opensbi-baremetal-riscv64-purecap")
+            else:
+                result.append("opensbi-baremetal-riscv64")
+        return result
 
     def __init__(self, config):
         super().__init__(config)
