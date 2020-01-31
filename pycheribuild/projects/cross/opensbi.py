@@ -32,14 +32,23 @@ from ..project import *
 from ...utils import IS_MAC
 
 
+def opensbi_install_dir(config: CheriConfig, project: SimpleProject):
+    dir_name = project.crosscompile_target.cpu_architecture.value
+    if project.crosscompile_target.is_cheri_purecap():
+        dir_name += "c"
+    return config.cheri_sdk_dir / "opensbi" / dir_name
+
+
 class BuildOpenSBI(Project):
-    target = "opensbi-qemu"
+    target = "opensbi"
     repository = GitRepository("https://github.com/CTSRD-CHERI/opensbi")
-    default_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     default_build_type = BuildType.RELWITHDEBINFO
     supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
+    _default_install_dir_fn = ComputedDefaultValue(function=opensbi_install_dir,
+                                                   as_string="$SDK_ROOT/opensbi/riscv{32,64}{c,}")
 
     def __init__(self, config):
         super().__init__(config)
@@ -53,8 +62,8 @@ class BuildOpenSBI(Project):
         compflags = " " + commandline_to_str(self.target_info.essential_compiler_and_linker_flags)
         compflags += " -Qunused-arguments"  # -mstrict-align -no-pie
         self.make_args.set(PLATFORM="qemu/virt",
-            O=self.buildDir, # output dir
-            I=self.installDir, # install dir
+            O=self.buildDir,  # output dir
+            I=self.installDir,  # install dir
             CROSS_COMPILE=str(self.sdk_bindir) + "/",
             CC=str(self.CC) + compflags,
             CXX=str(self.CXX) + compflags,
@@ -75,4 +84,15 @@ class BuildOpenSBI(Project):
         self.runMake(parallel=False, cwd=self.sourceDir)
 
     def install(self, **kwargs):
+        self.makedirs(self.installDir)
         self.runMakeInstall(cwd=self.sourceDir)
+
+    @property
+    def _fw_jump_path(self) -> str:
+        return "platform/qemu/virt/firmware/fw_jump.elf"
+
+    def get_nocap_bios(self, caller) -> Path:
+        return self.getInstallDir(caller, cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64) / self._fw_jump_path
+
+    def get_purecap_bios(self, caller):
+        return self.get_instance(caller, cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP) / self._fw_jump_path
