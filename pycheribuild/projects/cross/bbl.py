@@ -38,6 +38,10 @@ from ..project import *
 class BuildBBLBase(CrossCompileAutotoolsProject):
     doNotAddToTargets = True
     repository = GitRepository("https://github.com/CTSRD-CHERI/riscv-pk",
+        force_branch=True, default_branch="cheri",  # Compilation fixes for clang
+        per_target_branches={
+            CompilationTargets.CHERIBSD_RISCV_PURECAP: TargetBranchInfo("cheri_purecap", "bbl-cheribsd-purecap")
+            },
         old_urls=[b"https://github.com/jrtc27/riscv-pk.git"])
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
