@@ -27,17 +27,15 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import os
 import sys
 
 from .crosscompileproject import *
-from .cheribsd import BuildCHERIBSD
 from ..build_qemu import BuildQEMU
 from ..llvm import BuildCheriLLVM
-from ..run_qemu import LaunchCheriBSD
-from ...config.loader import ComputedDefaultValue
-from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str, IS_MAC
 from ..project import ReuseOtherProjectDefaultTargetRepository
-import os
+from ..run_qemu import LaunchCheriBSD
+from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str, IS_MAC
 
 
 # A base class to set the default installation directory

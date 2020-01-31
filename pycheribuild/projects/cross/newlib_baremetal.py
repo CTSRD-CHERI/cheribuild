@@ -30,11 +30,15 @@
 import tempfile
 
 from .crosscompileproject import *
+from ..project import *
 from ...utils import IS_MAC, runCmd
 
 
 class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/newlib")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/newlib",
+        per_target_branches={
+            CompilationTargets.BAREMETAL_NEWLIB_RISCV64: TargetBranchInfo("p1_release", "newlib-riscv")
+            })
     target = "newlib"
     project_name = "newlib-baremetal"
     make_kind = MakeCommandKind.GnuMake
@@ -44,7 +48,8 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     _configure_supports_variables_on_cmdline = True
     cross_install_dir = DefaultInstallDir.SYSROOT
     supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_MIPS64,
-                               CompilationTargets.BAREMETAL_NEWLIB_MIPS64_PURECAP]
+                               CompilationTargets.BAREMETAL_NEWLIB_MIPS64_PURECAP,
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
     # build_in_source_dir = True  # we have to build in the source directory
 
     @classmethod

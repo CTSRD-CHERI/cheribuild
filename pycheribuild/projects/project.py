@@ -1776,7 +1776,8 @@ class Project(SimpleProject):
                 else:
                     self._installPrefix = Path("/", relative_to_rootfs)
                     self.destdir = self.rootfs_path
-            elif install_dir_kind in (None, DefaultInstallDir.DO_NOT_INSTALL, DefaultInstallDir.COMPILER_RESOURCE_DIR):
+            elif install_dir_kind in (None, DefaultInstallDir.DO_NOT_INSTALL, DefaultInstallDir.COMPILER_RESOURCE_DIR,
+                                      DefaultInstallDir.IN_BUILD_DIRECTORY):
                 self._installPrefix = self._installDir
                 self.destdir = None
             else:
