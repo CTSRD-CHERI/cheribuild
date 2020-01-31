@@ -295,6 +295,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     doNotAddToTargets = True
     _source_class = None
     _bbl_class = None
+    _qemu_riscv_bios = "default"
 
     @classproperty
     def supported_architectures(cls):
@@ -333,9 +334,13 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         return result
 
     def __init__(self, config):
-        xtarget = self.get_crosscompile_target(config)
-        super().__init__(config, disk_image_class=self._source_class.get_class_for_target(xtarget))
+        super().__init__(config,
+            disk_image_class=self._source_class.get_class_for_target(self.get_crosscompile_target(config)))
         self.useBblForBoot = False  # uncomment if you really think this is a good idea.
+
+    def setup(self):
+        super().setup()
+        xtarget = self.crosscompile_target
         if xtarget.is_riscv():
             _hasPCI = False
             self.machineFlags = ["-M", "virt"]  # want VirtIO
@@ -344,12 +349,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
                 self.machineFlags += ["-bios", "none"]
                 self.currentKernel = self._bbl_class.get_instance(self).get_installed_kernel_path()
             else:
-                if self.crosscompile_target.is_cheri_purecap():
-                    fw_jump = BuildOpenSBI.get_purecap_bios(self)
-                else:
-                    # TODO: always use purecap bios for CheriBSD
-                    fw_jump = BuildOpenSBI.get_nocap_bios(self)
-                self.machineFlags += ["-bios", fw_jump]
+                self.machineFlags += ["-bios", self._qemu_riscv_bios]
                 assert self.currentKernel is not None
         elif xtarget.is_any_x86():
             qemu_suffix = "x86_64" if xtarget.is_x86_64() else "i386"
@@ -375,6 +375,12 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
 
     def __init__(self, config):
         super().__init__(config)
+        if self.crosscompile_target.is_cheri_purecap():
+            fw_jump = BuildOpenSBI.get_purecap_bios(self)
+        else:
+            # TODO: always use purecap bios for CheriBSD
+            fw_jump = BuildOpenSBI.get_nocap_bios(self)
+        self._qemu_riscv_bios = fw_jump
 
     def run_tests(self):
         self.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.diskImage,
