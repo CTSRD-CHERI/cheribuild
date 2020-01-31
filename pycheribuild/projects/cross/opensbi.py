@@ -66,7 +66,7 @@ class BuildOpenSBI(Project):
         super().setup()
         compflags = " " + commandline_to_str(self.target_info.essential_compiler_and_linker_flags)
         compflags += " -Qunused-arguments"  # -mstrict-align -no-pie
-        self.make_args.set(PLATFORM="qemu/virt",
+        self.make_args.set(
             O=self.buildDir,  # output dir
             I=self.installDir,  # install dir
             CROSS_COMPILE=str(self.sdk_bindir) + "/",
@@ -85,12 +85,32 @@ class BuildOpenSBI(Project):
         if self.config.verbose:
             self.make_args.set(V=True)
 
+    @property
+    def all_platforms(self):
+        platforms_dir = self.sourceDir / "platform"
+        self.info(list(platforms_dir.glob("**/config.mk")))
+        all_platforms = []
+        for c in platforms_dir.glob("**/config.mk"):
+            relpath = str(c.parent.relative_to(platforms_dir))
+            print(relpath)
+            if relpath != "template":
+                all_platforms.append(relpath)
+        if "qemu/virt" not in all_platforms:
+            self.fatal("qemu/virt platform missing?")
+        return all_platforms
+
     def compile(self, **kwargs):
-        self.runMake(parallel=False, cwd=self.sourceDir)
+        args = self.make_args.copy()
+        for platform in self.all_platforms:
+            args.set(PLATFORM=platform)
+            self.runMake(parallel=False, cwd=self.sourceDir, options=args)
 
     def install(self, **kwargs):
         self.makedirs(self.installDir)
-        self.runMakeInstall(cwd=self.sourceDir)
+        args = self.make_args.copy()
+        for platform in self.all_platforms:
+            args.set(PLATFORM=platform)
+            self.runMakeInstall(cwd=self.sourceDir, options=args)
 
     @staticmethod
     def _fw_jump_path() -> str:
