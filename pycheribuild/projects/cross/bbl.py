@@ -28,17 +28,17 @@
 # SUCH DAMAGE.
 #
 
-import re
-
 from .cheribsd import *
-from ..project import *
 from .crosscompileproject import CrossCompileAutotoolsProject
+from .gdb import BuildGDB
+from ..project import *
 
 
 # Using GCC not Clang, so can't use CrossCompileAutotoolsProject
 class BuildBBLBase(CrossCompileAutotoolsProject):
     doNotAddToTargets = True
-    repository = GitRepository("https://github.com/jrtc27/riscv-pk.git")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/riscv-pk",
+        old_urls=[b"https://github.com/jrtc27/riscv-pk.git"])
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
     is_sdk_target = False
@@ -48,19 +48,40 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     @classmethod
     def dependencies(cls, config: CheriConfig):
         xtarget = cls.get_crosscompile_target(config)
-        result = [cls.freebsd_class.get_class_for_target(xtarget).target]
+        # We need GNU objcopy which is installed by gdb-native
+        result = [cls.freebsd_class.get_class_for_target(xtarget).target, "gdb-native"]
         return result
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+        self.COMMON_LDFLAGS.extend(["-nostartfiles", "-nostdlib", "-static"])
+        self.COMMON_FLAGS.append("-nostdlib")
 
     def configure(self, **kwargs):
         kernel_path = self.freebsd_class.get_installed_kernel_path(self, cross_target=self.crosscompile_target)
-        self.configureArgs.extend([
-            "--with-payload=" + str(kernel_path),
-            "--host=" + self.target_info.target_triple
-            ])
+        if self.crosscompile_target.is_cheri_purecap(valid_cpu_archs=[CPUArchitecture.RISCV64]):
+            self.configureArgs.append("--with-abi=l64pc128")
+        else:
+            self.configureArgs.append("--with-abi=lp64")
+
+        if self.target_info.is_cheribsd:
+            # Enable CHERI extensions
+            self.configureArgs.append("--with-arch=rv64imafdcxcheri")
+        else:
+            self.configureArgs.append("--with-arch=rv64imafdc")
+        # BBL build uses weird objcopy flags and therefore requires
+        self.add_configure_and_make_env_arg("OBJCOPY",
+            BuildGDB.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/gobjcopy")
+        self.add_configure_and_make_env_arg("READELF", self.sdk_bindir / "llvm-readelf")
+        self.add_configure_and_make_env_arg("RANLIB", self.sdk_bindir / "llvm-ranlib")
+        self.add_configure_and_make_env_arg("AR", self.sdk_bindir / "llvm-ar")
+
+        # Add the kernel as a payload:
+        self.configureArgs.append("--with-payload=" + str(kernel_path))
         super().configure(**kwargs)
+
+    def compile(self, cwd: Path = None):
+        self.runMake("bbl")
 
     def get_installed_kernel_path(self):
         return self.real_install_root_dir / self.target_info.target_triple / "bin" / "bbl"

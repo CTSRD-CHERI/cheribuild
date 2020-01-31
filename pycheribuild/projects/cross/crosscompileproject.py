@@ -81,6 +81,10 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             self.configureArgs.extend(["--host=" + autotools_triple, "--target=" + autotools_triple,
                                        "--build=" + buildhost])
 
+    def add_configure_and_make_env_arg(self, arg: str, value: "typing.Union[str,Path]"):
+        self.add_configure_env_arg(arg, value)
+        self.make_args.set_env(**{arg: str(value)})
+
     def add_configure_env_arg(self, arg: str, value: "typing.Union[str,Path]"):
         if not value:
             return
