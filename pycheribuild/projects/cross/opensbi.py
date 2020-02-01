@@ -100,15 +100,15 @@ class BuildOpenSBI(Project):
         return all_platforms
 
     def compile(self, **kwargs):
-        args = self.make_args.copy()
         for platform in self.all_platforms:
+            args = self.make_args.copy()
             args.set(PLATFORM=platform)
             self.runMake(parallel=False, cwd=self.sourceDir, options=args)
 
     def install(self, **kwargs):
         self.makedirs(self.installDir)
-        args = self.make_args.copy()
         for platform in self.all_platforms:
+            args = self.make_args.copy()
             args.set(PLATFORM=platform)
             self.runMakeInstall(cwd=self.sourceDir, options=args)
 
