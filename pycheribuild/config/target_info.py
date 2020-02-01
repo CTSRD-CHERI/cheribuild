@@ -284,7 +284,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                     result.append("-cheri=" + self.config.cheriBitsStr)
                 # always use libc++
                 result.append("-stdlib=libc++")
-        if self.target.is_riscv(include_purecap=True):
+        elif self.target.is_riscv(include_purecap=True):
             result.append("-mno-relax")  # Linker relaxations are not supported with clang+lld
         else:
             self.project.warning("Compiler flags might be wong, only native + MIPS checked so far")
