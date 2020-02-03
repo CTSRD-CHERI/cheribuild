@@ -165,13 +165,13 @@ def test_riscv():
     assert _sort_targets(["bbl-cheribsd-riscv64", "cheribsd-riscv64"], add_dependencies=False, skip_sdk=False) == \
                          ["cheribsd-riscv64", "bbl-cheribsd-riscv64"]
     assert _sort_targets(["run-riscv64"], add_dependencies=True, skip_sdk=True) == \
-                         ["bbl-cheribsd-riscv64", "disk-image-riscv64", "run-riscv64"]
+                         ["opensbi-baremetal-riscv64", "disk-image-riscv64", "run-riscv64"]
     assert _sort_targets(["disk-image-riscv64"], add_dependencies=True, skip_sdk=False) == \
            ["qemu", "llvm-native", "gdb-native", "cheribsd-riscv64", "gdb-riscv64",
             "disk-image-riscv64"]
     assert _sort_targets(["run-riscv64"], add_dependencies=True, skip_sdk=False) == \
-           ["llvm-native", "qemu", "gdb-native", "cheribsd-riscv64", "bbl-cheribsd-riscv64",
-            "gdb-riscv64", "disk-image-riscv64", "run-riscv64"]
+           ["qemu", "llvm-native", "gdb-native", "cheribsd-riscv64", "gdb-riscv64",
+            "opensbi-baremetal-riscv64", "disk-image-riscv64", "run-riscv64"]
 
 # Check that libcxx deps with skip sdk pick the matching -native/-mips versions
 # Also the libcxx target should resolve to libcxx-cheri:
