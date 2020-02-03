@@ -82,8 +82,6 @@ class BuildQEMUBase(AutotoolsProject):
         # Tests require GNU sed
         self.addRequiredSystemTool("sed" if self.target_info.is_linux else "gsed", homebrew="gnu-sed", freebsd="gsed")
 
-        # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
-        # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
         self._extraCFlags = "-DCONFIG_DEBUG_TCG=1" if self.build_type == BuildType.DEBUG else "-O3"
         self._extraLDFlags = ""
         self._extraCXXFlags = ""
@@ -131,6 +129,8 @@ class BuildQEMUBase(AutotoolsProject):
             if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
                 # Turn implicit function declaration into an error -Wimplicit-function-declaration
                 self._extraCFlags += " -Werror=implicit-function-declaration"
+                self._extraCFlags += " -Werror=incompatible-pointer-types"
+                self._extraCFlags += " -Werror=return-type"
                 # Also make discarding const an error:
                 self._extraCFlags += " -Werror=incompatible-pointer-types-discards-qualifiers"
                 # silence this warning that comes lots of times (it's fine on x86)
@@ -213,6 +213,8 @@ class BuildQEMUBase(AutotoolsProject):
             "--disable-xen",
             "--disable-docs",
             "--disable-rdma",
+            # there are some -Wdeprected-declarations, etc. warnings with new libraries/compilers and it builds
+            # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
             "--disable-werror",
             "--disable-pie",  # no need to build as PIE (this just slows down QEMU)
             "--extra-cflags=" + self._extraCFlags,
@@ -279,21 +281,23 @@ class BuildQEMU(BuildQEMUBase):
             self._extraCFlags += " -DENABLE_CHERI_SANITIY_CHECKS=1"
         # the capstone disassembler doesn't support CHERI instructions:
         self.configureArgs.append("--disable-capstone")
-        # Get all the required compilation flags for the TCG tests
-        fake_project = SimpleNamespace()
-        fake_project.config = self.config
-        fake_project.needs_sysroot = False
-        fake_project.mips_build_hybrid = False
-        fake_project.warning = self.warning
-        fake_project.target = "qemu-tcg-tests"
-        tgt_info_mips = NewlibBaremetalTargetInfo(CompilationTargets.BAREMETAL_NEWLIB_MIPS64, fake_project)
-        tgt_info_riscv64 = NewlibBaremetalTargetInfo(CompilationTargets.BAREMETAL_NEWLIB_RISCV64, fake_project)
-        self.configureArgs.extend([
-            "--cross-cc-mips=" + str(tgt_info_mips.c_compiler),
-            "--cross-cc-cflags-mips=" + commandline_to_str(tgt_info_mips.essential_compiler_and_linker_flags).replace("=", " "),
-            "--cross-cc-riscv64=" + str(tgt_info_riscv64.c_compiler),
-            "--cross-cc-cflags-riscv64=" + commandline_to_str(tgt_info_riscv64.essential_compiler_and_linker_flags).replace("=", " ")
-        ])
+        # TODO: tests:
+        if False:
+            # Get all the required compilation flags for the TCG tests
+            fake_project = SimpleNamespace()
+            fake_project.config = self.config
+            fake_project.needs_sysroot = False
+            fake_project.mips_build_hybrid = False
+            fake_project.warning = self.warning
+            fake_project.target = "qemu-tcg-tests"
+            tgt_info_mips = NewlibBaremetalTargetInfo(CompilationTargets.BAREMETAL_NEWLIB_MIPS64, fake_project)
+            tgt_info_riscv64 = NewlibBaremetalTargetInfo(CompilationTargets.BAREMETAL_NEWLIB_RISCV64, fake_project)
+            self.configureArgs.extend([
+                "--cross-cc-mips=" + str(tgt_info_mips.c_compiler),
+                "--cross-cc-cflags-mips=" + commandline_to_str(tgt_info_mips.essential_compiler_and_linker_flags).replace("=", " "),
+                "--cross-cc-riscv64=" + str(tgt_info_riscv64.c_compiler),
+                "--cross-cc-cflags-riscv64=" + commandline_to_str(tgt_info_riscv64.essential_compiler_and_linker_flags).replace("=", " ")
+                ])
 
 
 class BuildCheriOSQEMU(BuildQEMU):
