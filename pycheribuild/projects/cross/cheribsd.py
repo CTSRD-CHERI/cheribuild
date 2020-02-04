@@ -853,6 +853,15 @@ class BuildFreeBSD(BuildFreeBSDBase):
         else:
             self.make_args.set_with_options(BOOT=False)
 
+    def libcompat_name(self) -> str:
+        if self.crosscompile_target.is_cheri_purecap():
+            return "lib64"
+        elif self.crosscompile_target.is_cheri_hybrid():
+            return "libcheri"
+        self.warning("Unknown libcompat for target", self.target)
+        self.info("Will use default buildenv target")
+        return ""
+
     def process(self):
         if not IS_FREEBSD:
             if not self.crossbuild:
@@ -871,7 +880,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             for subdir in self.explicit_subdirs_only:
                 self.build_and_install_subdir(args, subdir)
 
-        elif self.config.buildenv or self.config.libcheri_buildenv:
+        elif self.config.buildenv or self.config.libcompat_buildenv:
             args = self.buildworld_args
             args.remove_flag("-s")  # buildenv should not be silent
             if "bash" in os.getenv("SHELL", ""):
@@ -880,15 +889,15 @@ class BuildFreeBSD(BuildFreeBSDBase):
             else:
                 args.set(BUILDENV_SHELL="/bin/sh")
             buildenv_target = "buildenv"
-            if self.compiling_for_cheri() and self.config.libcheri_buildenv:
-                buildenv_target = "libcheribuildenv"
+            if self.config.libcompat_buildenv:
+                buildenv_target = self.libcompat_name() + "buildenv"
             runCmd([self.make_args.command] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
                    cwd=self.sourceDir)
         else:
             super().process()
 
     def build_and_install_subdir(self, make_args, subdir, skip_build=False, skip_clean=None, skip_install=None,
-                                 install_to_internal_sysroot=True, libcheri_only=False, noncheri_only=False):
+                                 install_to_internal_sysroot=True, libcompat_only=False, noncheri_only=False):
         is_lib = subdir.startswith("lib/") or "/lib/" in subdir or subdir.endswith("/lib")
         make_in_subdir = "make -C \"" + subdir + "\" "
         if skip_clean is None:
@@ -921,7 +930,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if install_to_sysroot_cmd:
                 install_to_sysroot_cmd += " &&  "
             install_cmd = install_to_sysroot_cmd + make_in_subdir + "install"
-        if self.compiling_for_cheri() and not is_lib:
+        if self.crosscompile_target.is_cheri_purecap() and not is_lib:
             # for non-library targets we need to set WANT_CHERI=pure in the environment to get the binary
             # to build as a CHERI binary
             if any("WITH_CHERI_PURE" in x for x in make_args.all_commandline_args):
@@ -934,19 +943,20 @@ class BuildFreeBSD(BuildFreeBSDBase):
             clean=make_in_subdir + "clean" if not skip_clean else "echo \"  Skipping make clean\"",
             install=install_cmd, colour_diags=colour_diags)
         make_args.set(BUILDENV_SHELL="sh -ex -c '" + build_cmd + "' || exit 1")
-        # If --libcheri-buildenv was passed skip the MIPS lib
-        is_cheri_lib = self.compiling_for_cheri() and is_lib
-        if is_cheri_lib and (self.config.libcheri_buildenv or libcheri_only):
-            statusUpdate("Skipping MIPS build of", subdir, "since --libcheri-buildenv was passed.")
+        # If --libcompat-buildenv was passed skip the MIPS lib
+        has_libcompat = self.has_cheri_support() and is_lib  # TODO: handle lib32
+        if has_libcompat and (self.config.libcompat_buildenv or libcompat_only):
+            statusUpdate("Skipping default ABI build of", subdir, "since --libcompat-buildenv was passed.")
         else:
             statusUpdate("Building", subdir, "using buildenv target")
             runCmd([self.make_args.command] + make_args.all_commandline_args + ["buildenv"], env=make_args.env_vars,
                    cwd=self.sourceDir)
-        # If we are building a library we want to build both the CHERI and the mips version (unless the
-        # user explicitly specified --libcheri-buildenv)
-        if is_cheri_lib and not noncheri_only:
-            statusUpdate("Building", subdir, "using libcheribuildenv target")
-            runCmd([self.make_args.command] + make_args.all_commandline_args + ["libcheribuildenv"],
+        # If we are building a library, we want to build both the CHERI and the mips version (unless the
+        # user explicitly specified --libcompat-buildenv)
+        if has_libcompat and not noncheri_only:
+            compat_buildenv_target = self.libcompat_name() + "buildenv"
+            statusUpdate("Building", subdir, "using", compat_buildenv_target, "target")
+            runCmd([self.make_args.command] + make_args.all_commandline_args + [compat_buildenv_target],
                    env=make_args.env_vars,
                    cwd=self.sourceDir)
 

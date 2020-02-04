@@ -130,8 +130,8 @@ class CheriConfig(object):
         self.buildenv = loader.addCommandLineOnlyBoolOption("buildenv", group=loader.freebsdGroup,
                                                             help="Open a shell with the right environment for building"
                                                                  " the project. Currently only works for FreeBSD/CheriBSD")
-        self.libcheri_buildenv = loader.addCommandLineOnlyBoolOption("libcheri-buildenv", group=loader.freebsdGroup,
-             help="Open a shell with the right environment for building CHERI libraries. Currently only works for CheriBSD")
+        self.libcompat_buildenv = loader.addCommandLineOnlyBoolOption("libcompat-buildenv", "-libcheri-buildenv", group=loader.freebsdGroup,
+             help="Open a shell with the right environment for building compat libraries.")
 
         self.cheri_cap_table_abi = loader.addOption("cap-table-abi", helpHidden=True, default="pcrel",
                                                     choices=("pcrel", "plt", "legacy", "fn-desc"),

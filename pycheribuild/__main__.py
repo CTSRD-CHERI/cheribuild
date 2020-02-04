@@ -204,7 +204,7 @@ def real_main():
         cheriConfig.targets = allTargetNames
     if not cheriConfig.targets:
         # Make --libcheri-buildenv and --buildenv without any targets imply cheribsd
-        if cheriConfig.libcheri_buildenv or cheriConfig.buildenv:
+        if cheriConfig.libcompat_buildenv or cheriConfig.buildenv:
             cheriConfig.targets.append("cheribsd")
         else:
             fatalError("At least one target name is required (see --list-targets).")
