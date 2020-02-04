@@ -82,6 +82,8 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
 
         # Add the kernel as a payload:
         self.configureArgs.append("--with-payload=" + str(kernel_path))
+        # Tag bits only in the 0xc region:
+        self.configureArgs.append("--with-mem-start=0xc0000000")
         super().configure(**kwargs)
 
     def compile(self, cwd: Path = None):
