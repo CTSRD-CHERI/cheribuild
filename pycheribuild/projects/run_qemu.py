@@ -314,10 +314,6 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     def default_architecture(cls):
         return cls._source_class.default_architecture
 
-    @classproperty
-    def supported_architectures(cls):
-        return cls._source_class.supported_architectures
-
     @classmethod
     def dependencies(cls: "typing.Type[_RunMultiArchFreeBSDImage]", config: CheriConfig):
         xtarget = cls.get_crosscompile_target(config)

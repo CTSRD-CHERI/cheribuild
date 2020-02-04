@@ -676,6 +676,8 @@ class CrossCompileTarget(object):
         result = self.target_info_cls.__name__ + "(" + self.cpu_architecture.name
         if self._is_cheri_purecap:
             result += " purecap"
+        if self._is_cheri_hybrid:
+            result += " hybrid"
         return result + ")"
 
     # def __eq__(self, other):

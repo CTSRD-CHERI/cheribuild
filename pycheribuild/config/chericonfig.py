@@ -275,7 +275,7 @@ class CheriConfig(object):
 
         self.targets = None  # type: typing.Optional[typing.List[str]]
         self.FS = None  # type: Optional[FileSystemUtils]
-        self.__optionalProperties = []
+        self.__optionalProperties = ["crossCompileTarget"]
 
     def load(self):
         self.loader.load()

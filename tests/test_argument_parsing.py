@@ -216,7 +216,7 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
 
     # cheribsd-cheri is a synthetic class, but cheribsd-purecap inst:
     assert cheribsd_cheri.synthetic_base == cheribsd_class
-    assert not hasattr(cheribsd_purecap, "synthetic_base")
+    assert hasattr(cheribsd_purecap, "synthetic_base")
 
     _parse_arguments(["--cheribsd-mips-nocheri/build-tests"])
     assert not cheribsd_purecap.build_tests, "cheribsd-purecap build-tests should default to false"

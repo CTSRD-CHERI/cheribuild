@@ -90,6 +90,12 @@ def test_disk_image_comes_second_last():
     assert _sort_targets(["run", "disk-image", "postgres", "cheribsd"]) == ["cheribsd-cheri", "postgres-cheri", "disk-image-mips-hybrid", "run-mips-hybrid"]
 
 
+def test_cheribsd_default_aliases():
+    assert _sort_targets(["run"]) == ["run-mips-hybrid"]
+    assert _sort_targets(["disk-image"]) == ["disk-image-mips-hybrid"]
+    assert _sort_targets(["cheribsd"]) == ["cheribsd-cheri"]
+
+
 def test_all_run_deps():
     assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm-native", "gdb-native", "cheribsd-cheri",
                                                              "gdb-mips-hybrid", "disk-image-mips-hybrid",

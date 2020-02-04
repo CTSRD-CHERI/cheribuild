@@ -40,7 +40,7 @@ class MockConfig(CheriConfig):
         self.includeDependencies = False
         self.create_compilation_db = False
         self.copy_compilation_db_to_source_dir = False
-        self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
+        self.crossCompileTarget = None
         self.cheriBits = 256
         self.makeJobs = 2
         self.makeWithoutNice = True

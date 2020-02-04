@@ -1099,6 +1099,12 @@ class BuildCHERIBSD(BuildFreeBSD):
                 return base_target + "-cheri"
         return base_target + "-" + xtarget.generic_suffix
 
+    @property
+    def build_dir_suffix(self):
+        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+            return "-purecap"
+        return super().build_dir_suffix
+
     @classmethod
     def setup_config_options(cls, installDirectoryHelp=None, **kwargs):
         if installDirectoryHelp is None:
