@@ -606,7 +606,8 @@ class CrossCompileTarget(object):
 
         if self.cpu_architecture is CPUArchitecture.MIPS64:
             if self._is_cheri_hybrid:
-                result += "-hybrid" + config.cheri_bits_and_abi_str
+                assert result.endswith("hybrid")
+                result += config.cheri_bits_and_abi_str
             if config.mips_float_abi == MipsFloatAbi.HARD:
                 result += "-hardfloat"
 
