@@ -214,6 +214,9 @@ class BuildFreeBSDBase(Project):
     def get_corresponding_sysroot(self) -> "typing.Optional[Path]":
         return None
 
+    def has_cheri_support(self):
+        return self.crosscompile_target.is_cheri_hybrid() or self.crosscompile_target.is_cheri_purecap()
+
 
 class BuildFreeBSD(BuildFreeBSDBase):
     target = "freebsd"
@@ -516,14 +519,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # self.cross_toolchain_config.set(XAS="/usr/bin/as")
         elif self.compiling_for_mips(include_purecap=True):
             target_flags = " -integrated-as -fcolor-diagnostics"
-            if self.target_info.is_cheribsd:
+            if self.has_cheri_support():
                 target_flags += " -mcpu=beri"
-            if self.compiling_for_cheri() and self.config.cheri_cap_table_abi == "legacy":
-                target_flags += " -DCHERIABI_LEGACY_SUPPORT"
-            # for some reason this is not inferred....
-            # if self.crossbuild:
-            #     # For some reason STRINGS is not set
-            #     self.cross_toolchain_config.set(STRINGS="strings")
             self.cross_toolchain_config.set_with_options(RESCUE=False,  # Won't compile with CHERI clang yet
                                                          BOOT=False)  # bootloaders won't link with LLD yet
             # DONT SET XAS!!! It prevents bfd from being built
@@ -1134,10 +1131,6 @@ class BuildCHERIBSD(BuildFreeBSD):
             return None
         return self.config.get_cheribsd_sysroot_path(self.crosscompile_target)
 
-    def compiling_for_cheri(self):
-        # FIXME: for now return true for hybrid CHERI
-        return super().compiling_for_cheri() or self.crosscompile_target.is_cheri_hybrid()
-
     @property
     def arch_build_flags(self):
         result = super().arch_build_flags
@@ -1149,7 +1142,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         self.installAsRoot = os.getuid() == 0
         super().__init__(config)
 
-        if self.compiling_for_cheri():
+        if self.has_cheri_support():
             if self.config.cheri_cap_table_abi:
                 self.cross_toolchain_config.set(CHERI_USE_CAP_TABLE=self.config.cheri_cap_table_abi)
 
@@ -1282,7 +1275,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     def fpga_kernconf(self):
         if self.compiling_for_mips(include_purecap=False):
             return "BERI_DE4_MFS_ROOT"
-        elif self.compiling_for_cheri():
+        elif self.has_cheri_support():
             return "CHERI128_DE4_MFS_ROOT" if self.config.cheriBits == 128 else "CHERI_DE4_MFS_ROOT"
         else:
             self.fatal("Invalid ARCH")
