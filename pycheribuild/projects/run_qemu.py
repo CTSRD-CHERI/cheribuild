@@ -78,8 +78,9 @@ class LaunchQEMUBase(SimpleProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.qemuBinary = BuildQEMU.qemu_binary(self)
-
+        self.qemuBinary = None  # type: typing.Optional[Path]
+        if self.compiling_for_mips(include_purecap=True) or self.compiling_for_riscv(include_purecap=True):
+            self.qemuBinary = BuildQEMU.qemu_binary(self)
         self.currentKernel = None  # type: typing.Optional[Path]
         self.diskImage = None  # type: typing.Optional[Path]
         self.virtioDisk = False
@@ -359,6 +360,13 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
     _source_class = BuildCheriBSDDiskImage
     _bbl_class = BuildBBLCheriBSDRISCV
 
+    @staticmethod
+    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
+        # backwards compatibility:
+        if xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
+            return base_target + "-purecap"
+        return base_target + "-" + xtarget.generic_suffix
+
     @classmethod
     def setup_config_options(cls, **kwargs):
         add_to_port = cls.get_cross_target_index()
@@ -387,24 +395,6 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
             # TODO: always use purecap bios for CheriBSD
             fw_jump = BuildOpenSBI.get_nocap_bios(self)
         self._qemu_riscv_bios = fw_jump
-
-    def run_tests(self):
-        self.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.diskImage,
-                                      kernel_path=self.currentKernel)
-
-
-class LaunchCheriBSDPurecap(AbstractLaunchFreeBSD):
-    project_name = "run-purecap"
-    dependencies = ["qemu", "disk-image-purecap"]
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(defaultSshPort=defaultSshForwardingPort(1), sshPortShortname=None,
-                                   useTelnetShortName=None, **kwargs)
-
-    def __init__(self, config):
-        super().__init__(config, disk_image_class=BuildCheriBSDPurecapDiskImage)
 
     def run_tests(self):
         self.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.diskImage,

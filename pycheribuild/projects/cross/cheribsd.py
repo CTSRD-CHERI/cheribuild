@@ -332,13 +332,17 @@ class BuildFreeBSD(BuildFreeBSDBase):
     @property
     def arch_build_flags(self):
         if self.compiling_for_mips(include_purecap=True):
-            # The following is broken: (https://github.com/CTSRD-CHERI/cheribsd/issues/102)
-            # "CPUTYPE=mips64",  # mipsfpu for hardware float
-            return {"TARGET": "mips", "TARGET_ARCH": self.config.mips_float_abi.freebsd_target_arch()}
+            target_arch = self.config.mips_float_abi.freebsd_target_arch()
+            if self.crosscompile_target.is_cheri_purecap():
+                target_arch += "c"  # build purecap
+            return {"TARGET": "mips", "TARGET_ARCH": target_arch}
         elif self.crosscompile_target.is_x86_64():
             return {"TARGET": "amd64", "TARGET_ARCH": "amd64"}
-        elif self.crosscompile_target.is_riscv():
-            return {"TARGET": "riscv", "TARGET_ARCH": "riscv64"}
+        elif self.crosscompile_target.is_riscv(include_purecap=True):
+            target_arch = "riscv64"  # TODO: allow building softfloat?
+            if self.crosscompile_target.is_cheri_purecap():
+                target_arch += "c"  # build purecap
+            return {"TARGET": "riscv", "TARGET_ARCH": target_arch}
         elif self.crosscompile_target.is_i386():
             return {"TARGET": "i386", "TARGET_ARCH": "i386"}
         elif self.crosscompile_target.is_aarch64():
@@ -421,13 +425,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def _setup_cross_toolchain_config(self):
         if not self.use_external_toolchain:
-            # Building FreeBSD for RISC-V requires an external GCC:
-            if self.compiling_for_riscv():
-                self.make_args.set(CROSS_TOOLCHAIN="riscv64-gcc")
             return
 
         # For RISCV the makefile check fails unless we set CROSS_TOOLCHAIN_PREFIX (even though we provide all the tools)
-        if self.compiling_for_riscv():
+        if self.compiling_for_riscv(include_purecap=True):
             self.make_args.set(CROSS_TOOLCHAIN_PREFIX=str(self.cross_toolchain_root / "bin/llvm-"))
 
         self.cross_toolchain_config.set_with_options(
@@ -527,7 +528,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                                                          BOOT=False)  # bootloaders won't link with LLD yet
             # DONT SET XAS!!! It prevents bfd from being built
             # self.cross_toolchain_config.set(XAS=cross_prefix + "clang " + target_flags)
-        elif self.compiling_for_riscv():
+        elif self.compiling_for_riscv(include_purecap=True):
             target_flags = ""
             self.useExternalToolchainForWorld = True
             self.useExternalToolchainForKernel = True
@@ -558,7 +559,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # Don't build kernel modules for MIPS
             kernel_options.set(NO_MODULES="yes")
         # XXX: Work around https://bugs.llvm.org/show_bug.cgi?id=44351
-        if self.compiling_for_riscv():
+        if self.compiling_for_riscv(include_purecap=True):
             kernel_options.set(NO_MODULES="yes")  # FIXME: remove
             kernel_options.set_with_options(CTF=False)  # FIXME: restore once debugged
             kernel_options.set(WITHOUT_MODULES="malo")
@@ -1080,8 +1081,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
                                CompilationTargets.CHERIBSD_RISCV_NO_CHERI, CompilationTargets.CHERIBSD_RISCV_HYBRID,
                                CompilationTargets.CHERIBSD_X86_64,
-                               # TODO: remove cheribsd-purecap target and add:
-                               # CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_RISCV_PURECAP,
+                               CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_RISCV_PURECAP,
                                ]
     is_sdk_target = True
     hide_options_from_help = False  # FreeBSD options are hidden, but this one should be visible
@@ -1112,8 +1112,6 @@ class BuildCHERIBSD(BuildFreeBSD):
 
         mips_and_purecap_mips = [CompilationTargets.CHERIBSD_MIPS_NO_CHERI, CompilationTargets.CHERIBSD_MIPS_HYBRID,
                                  CompilationTargets.CHERIBSD_MIPS_PURECAP]
-        if issubclass(cls, BuildCHERIBSDPurecap):
-            mips_and_purecap_mips = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
         cls.buildFpgaKernels = cls.add_bool_option("build-fpga-kernels", show_help=True, _allow_unknown_targets=True,
                                                  only_add_for_targets=mips_and_purecap_mips,
                                                  help="Also build kernels for the FPGA.")
@@ -1144,11 +1142,12 @@ class BuildCHERIBSD(BuildFreeBSD):
     def __init__(self, config: CheriConfig):
         self.installAsRoot = os.getuid() == 0
         super().__init__(config)
+
         if self.compiling_for_cheri():
             if self.config.cheri_cap_table_abi:
                 self.cross_toolchain_config.set(CHERI_USE_CAP_TABLE=self.config.cheri_cap_table_abi)
 
-        if self.compiling_for_riscv():
+        if self.compiling_for_riscv(include_purecap=True):
             self.make_args.set(CROSS_BINUTILS_PREFIX=str(self.sdk_bindir / "llvm-"))
             self.use_llvm_binutils = True
 
@@ -1336,23 +1335,6 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         return config.cheribsd_image_root / ("kernel" + config.cheri_bits_and_abi_str + "." + kernconf)
 
 
-class BuildCHERIBSDPurecap(BuildCHERIBSD):
-    project_name = "cheribsd"  # reuse the same source dir
-    target = "cheribsd-purecap"
-    _config_inherits_from = "cheribsd"  # we want the CheriBSD config options as well
-
-    # Set these variables to override the multi target magic and only support CHERI
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]  # Only Cheri is supported
-    build_dir_suffix = "-purecap"
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        super().setup_config_options(**kwargs)
-
-    def __init__(self, config):
-        super().__init__(config)
-        self.make_args.set_with_options(CHERI_PURE=True)
-
 # def cheribsd_minimal_install_dir(config: CheriConfig, project: SimpleProject):
 #     assert isinstance(project, BuildCHERIBSD)
 #     if project.compiling_for_mips(include_purecap=False):
@@ -1462,8 +1444,6 @@ class BuildCheriBsdSysroot(SimpleProject):
         # on FreeBSD and macOS by default. On Linux it is not always installed by default.
         self.bsdtar_cmd = "bsdtar"
         self.addRequiredSystemTool("bsdtar", cheribuild_target="bsdtar", apt="bsdtar")
-        if self.compiling_for_cheri() and self.use_cheribsd_purecap_rootfs:
-            self.rootfs_source_class = BuildCHERIBSDPurecap
         self.install_dir = self.target_info.sdk_root_dir
 
     def fixSymlinks(self):

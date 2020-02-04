@@ -482,7 +482,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     def get_rootfs_target(self) -> "Project":
         from ..projects.cross.cheribsd import BuildCHERIBSD
         xtarget = CompilationTargets.NONE
-        # Install the purecap targets into the hybrid rootfs: (not BuildCheribsdPurecap)
+        # Install the purecap targets into the hybrid rootfs:
         if self.target.is_cheri_purecap([CPUArchitecture.MIPS64]):
             xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
         elif self.target.is_cheri_purecap([CPUArchitecture.RISCV64]):

@@ -642,12 +642,13 @@ class _BuildDiskImageBase(SimpleProject):
 
 def _default_disk_image_name(config: CheriConfig, directory: Path, project: SimpleProject, img_prefix=""):
     # old name for cheribsd:
-    if project.compiling_for_cheri() and project.compiling_for_mips(include_purecap=True):
-        # Backwards compat (no prefix for MIPS + Cheri):
-        if img_prefix == "cheribsd-":
-            img_prefix = ""
-        return directory / (img_prefix + "cheri" + config.cheri_bits_and_abi_str + "-disk.img")
     xtarget = project.get_crosscompile_target(config)
+    if xtarget.is_mips(include_purecap=True):
+        # Backwards compat (different prefix for hybrid+purecap images):
+        if xtarget.is_cheri_hybrid():
+            return directory / ("cheri" + config.cheri_bits_and_abi_str + "-disk.img")
+        if xtarget.is_cheri_purecap():
+            return directory / ("purecap-" + config.cheri_bits_and_abi_str + "-disk.img")
     suffix = xtarget.generic_suffix if xtarget else "<TARGET>"
     if project.compiling_for_mips(include_purecap=False):
         if config.mips_float_abi == MipsFloatAbi.HARD:
@@ -694,9 +695,11 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                                                             help="Use the rootfs built by cheribsd-purecap instead")
 
     def __init__(self, config: CheriConfig):
-        self.cheribsd_class = BuildCHERIBSD.get_class_for_target(CompilationTargets.CHERIBSD_MIPS_HYBRID)  # type: typing.Type[BuildCHERIBSD]
+        rootfs_target = CompilationTargets.CHERIBSD_MIPS_HYBRID
         if self.use_cheribsd_purecap_rootfs:
-            self.cheribsd_class = BuildCHERIBSDPurecap
+            rootfs_target = CompilationTargets.CHERIBSD_MIPS_PURECAP
+        self.cheribsd_class = BuildCHERIBSD.get_class_for_target(rootfs_target)  # type: typing.Type[BuildCHERIBSD]
+
         super().__init__(config, source_class=self.cheribsd_class)
         self.minimumImageSize = "20m"  # let's try to shrink the image size
         # The base input is only cheribsdbox and all the symlinks
@@ -837,7 +840,7 @@ class BuildMultiArchDiskImage(_BuildDiskImageBase):
         assert issubclass(src_class, BuildFreeBSD)
         super().__init__(config, source_class=src_class)
         self.bigEndian = self.compiling_for_mips(include_purecap=True)
-        if self.get_crosscompile_target(config).is_riscv():
+        if self.get_crosscompile_target(config).is_riscv(include_purecap=True):
             self.file_templates = _RISCVFileTemplates()
         elif self.is_x86:
             self.file_templates = _X86FileTemplates()
@@ -850,7 +853,14 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
 
     default_disk_image_path = ComputedDefaultValue(
         function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "cheribsd-"),
-        as_string="$OUTPUT_ROOT/cheri256-disk.img or $OUTPUT_ROOT/cheri128-disk.img depending on --cheri-bits.")
+        as_string="$OUTPUT_ROOT/$arch_prefix-disk.img.")
+
+    @staticmethod
+    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
+        # backwards compatibility:
+        if xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
+            return base_target + "-purecap"
+        return base_target + "-" + xtarget.generic_suffix
 
     @classmethod
     def dependencies(cls, config):
@@ -890,41 +900,10 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.minimumImageSize = "256m"  # let's try to shrink the image size
-        # self.needs_special_pkg_repo = self.source_project.buildTests
 
     @property
     def needs_special_pkg_repo(self):
         return self.crosscompile_target.is_mips(include_purecap=True)
-
-
-class BuildCheriBSDPurecapDiskImage(_BuildDiskImageBase):
-    project_name = "disk-image-purecap"
-    dependencies = ["qemu", "cheribsd-purecap", "gdb-mips-hybrid"]
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
-    default_disk_image_path = ComputedDefaultValue(
-        function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "purecap-"),
-        as_string="$OUTPUT_ROOT/purecap-cheri256-disk.img or $OUTPUT_ROOT/purecap-cheri128-disk.img depending on "
-                  "--cheri-bits.")
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        hostUsername = CheriConfig.get_user_name()
-        defaultHostname = ComputedDefaultValue(
-            function=lambda conf, unused: "qemu-purecap" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
-            as_string="qemu-purecap${CHERI_BITS}-" + hostUsername)
-        super().setup_config_options(defaultHostname=defaultHostname, **kwargs)
-        cls.disableTMPFS = cls.add_bool_option("disable-tmpfs",
-                                             help="Don't make /tmp a TMPFS mount in the CHERIBSD system image."
-                                                  " This is a workaround in case TMPFS is not working correctly")
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config, source_class=BuildCHERIBSDPurecap)
-        self.minimumImageSize = "256m"  # let's try to shrink the image size
-        # self.needs_special_pkg_repo = self.source_project.buildTests
-
-    @property
-    def needs_special_pkg_repo(self):
-        return True
 
 
 class BuildFreeBSDImage(BuildMultiArchDiskImage):

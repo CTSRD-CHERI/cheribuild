@@ -259,13 +259,14 @@ class BuildQEMU(BuildQEMUBase):
     def qemu_binary(cls, caller: SimpleProject, xtarget: CrossCompileTarget=None):
         if xtarget is None:
             xtarget = caller.get_crosscompile_target(caller.config)
-        if xtarget.is_riscv():
+        if xtarget.is_riscv(include_purecap=True):
             binary_name = "qemu-system-riscv64"
-            return caller.config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
-        binary_name = "qemu-system-cheri"
-        binary_name += caller.config.cheriBitsStr
-        if caller.config.cheriBits == 128 and cls.get_instance(caller, cross_target=CompilationTargets.NATIVE).magic128:
-            binary_name += "magic"
+        else:
+            assert xtarget.is_mips(include_purecap=True)
+            binary_name = "qemu-system-cheri"
+            binary_name += caller.config.cheriBitsStr
+            if caller.config.cheriBits == 128 and cls.get_instance(caller, cross_target=CompilationTargets.NATIVE).magic128:
+               binary_name += "magic"
         return caller.config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
 
     def __init__(self, config: CheriConfig):

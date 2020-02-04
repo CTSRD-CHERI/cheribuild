@@ -34,9 +34,9 @@ import os
 from urllib.parse import urlparse
 
 from .build_qemu import BuildQEMU
-from .cross.cheribsd import BuildCHERIBSDPurecap, BuildCHERIBSD
+from .cross.cheribsd import BuildCHERIBSD
 from .cross.crosscompileproject import *
-from .disk_image import BuildCheriBSDPurecapDiskImage
+from .disk_image import BuildCheriBSDDiskImage
 from .project import *
 from ..utils import *
 
@@ -172,9 +172,9 @@ class RunSyzkaller(SimpleProject):
 
         self.qemu_binary = BuildQEMU.qemu_binary(self)
         self.syzkaller_binary = BuildSyzkaller.get_instance(self, cross_target=CompilationTargets.CHERIBSD_MIPS_NO_CHERI).syzkaller_binary()
-        self.kernel_path = BuildCHERIBSDPurecap.get_installed_kernel_path(
+        self.kernel_path = BuildCHERIBSD.get_installed_kernel_path(
             self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP)
-        self.disk_image = BuildCheriBSDPurecapDiskImage.get_instance(
+        self.disk_image = BuildCheriBSDDiskImage.get_instance(
             self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).disk_image_path
 
     def syzkaller_config(self):

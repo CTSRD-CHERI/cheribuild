@@ -381,8 +381,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def compiling_for_host(self):
         return self.crosscompile_target.is_native()
 
-    def compiling_for_riscv(self):
-        return self.crosscompile_target.is_riscv(include_purecap=False)
+    def compiling_for_riscv(self, include_purecap: bool):
+        return self.crosscompile_target.is_riscv(include_purecap=include_purecap)
 
     @property
     def triple_arch(self):
