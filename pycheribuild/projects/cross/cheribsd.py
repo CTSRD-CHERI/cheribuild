@@ -307,8 +307,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
             default=True)
         cls.with_manpages = cls.add_bool_option("with-manpages", help="Also install manpages. This is off by default"
                                                                       " since they can just be read from the host.")
-        cls.fastRebuild = cls.add_bool_option("fast",
-                                            help="Skip some (usually) unnecessary build steps to speed up rebuilds")
+        cls.fast_rebuild = cls.add_bool_option("fast",
+            help="Skip some (usually) unnecessary build steps to speed up rebuilds")
 
     def _stdout_filter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
@@ -659,7 +659,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             return  # We are done after building the sysroot
 
         if not self.config.skipBuildworld:
-            if self.fastRebuild:
+            if self.fast_rebuild:
                 build_args.set(WORLDFAST=True)
             self.runMake("buildworld", options=build_args)
             self.kernel_toolchain_exists = True  # includes the necessary tools for kernel-toolchain
