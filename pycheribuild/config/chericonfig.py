@@ -332,7 +332,7 @@ class CheriConfig(object):
 
     def _initializeDerivedPaths(self):
         # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
-        os.environ["CHERI_BITS"] = self.cheriBitsStr
+        os.environ["CHERI_BITS"] = self.cheri_bits_str
         os.environ["CHERI_CAPTABLE_ABI"] = self.cheri_cap_table_abi
 
     @property
@@ -344,7 +344,7 @@ class CheriConfig(object):
         return "-j" + str(self.makeJobs)
 
     @property
-    def cheriBitsStr(self):
+    def cheri_bits_str(self):
         return str(self.cheriBits)
 
     @property

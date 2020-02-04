@@ -1145,7 +1145,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     def arch_build_flags(self):
         result = super().arch_build_flags
         if self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.MIPS64]) or self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            result["CHERI"] = self.config.cheriBitsStr
+            result["CHERI"] = self.config.cheri_bits_str
         return result
 
     def __init__(self, config: CheriConfig):
@@ -1240,7 +1240,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         # Create a symlink from the new build directory name to the old build directory name.
 
         if self.compiling_for_mips(include_purecap=False) and self.crosscompile_target.is_cheri_hybrid() and self.config.cheri_cap_table_abi == self.config.DEFAULT_CAP_TABLE_ABI:
-            old_build_dir = Path(self.config.buildRoot, "cheribsd-" + self.config.cheriBitsStr + "-build")
+            old_build_dir = Path(self.config.buildRoot, "cheribsd-" + self.config.cheri_bits_str + "-build")
             if not old_build_dir.is_symlink():
                 self.info("Updating old build directory name:")
                 if not self.buildDir.exists() and old_build_dir.exists() and not self.config.clean:

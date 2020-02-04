@@ -66,7 +66,7 @@ class BuildMibench(CrossCompileProject):
         if self.compiling_for_host():
             return "x86"
         if self.compiling_for_cheri():
-            return "cheri" + self.config.cheriBitsStr
+            return "cheri" + self.config.cheri_bits_str
         if self.compiling_for_mips(include_purecap=False):
             return "mips-asan" if self.use_asan else "mips"
         raise ValueError("Unsupported target architecture!")
@@ -202,7 +202,7 @@ class BuildOlden(CrossCompileProject):
         if self.compiling_for_host():
             return "x86"
         if self.compiling_for_cheri():
-            return "cheri" + self.config.cheriBitsStr
+            return "cheri" + self.config.cheri_bits_str
         else:
             assert self.compiling_for_mips(include_purecap=False), "other arches not supported"
             return "mips-asan" if self.use_asan else "mips"
@@ -464,7 +464,7 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_f
         if self.compiling_for_host():
             return "x86"
         if self.compiling_for_cheri():
-            return "cheri" + self.config.cheriBitsStr
+            return "cheri" + self.config.cheri_bits_str
         else:
             assert self.compiling_for_mips(include_purecap=False), "other arches not supported"
             return "mips-asan" if self.use_asan else "mips"

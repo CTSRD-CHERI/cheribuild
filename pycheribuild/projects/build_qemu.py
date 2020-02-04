@@ -264,7 +264,7 @@ class BuildQEMU(BuildQEMUBase):
         else:
             assert xtarget.is_mips(include_purecap=True)
             binary_name = "qemu-system-cheri"
-            binary_name += caller.config.cheriBitsStr
+            binary_name += caller.config.cheri_bits_str
             if caller.config.cheriBits == 128 and cls.get_instance(caller, cross_target=CompilationTargets.NATIVE).magic128:
                binary_name += "magic"
         return caller.config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
@@ -315,6 +315,6 @@ class BuildCheriOSQEMU(BuildQEMU):
 
     @classmethod
     def qemu_binary(cls, caller: SimpleProject, xtarget=None):
-        binary_name = "qemu-system-cheri" + caller.config.cheriBitsStr
+        binary_name = "qemu-system-cheri" + caller.config.cheri_bits_str
         return cls.get_instance(caller, caller.config,
                                 cross_target=CompilationTargets.NATIVE).installDir / "bin" / binary_name

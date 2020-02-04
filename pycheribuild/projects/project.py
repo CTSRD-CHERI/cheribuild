@@ -797,7 +797,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
             if not kernel_path.exists():
                 cheribsd_image = "cheribsd{suffix}-cheri{suffix}-malta64-mfs-root-minimal-cheribuild-kernel.bz2".format(
-                        suffix="" if self.config.cheriBits == 256 else self.config.cheriBitsStr)
+                        suffix="" if self.config.cheriBits == 256 else self.config.cheri_bits_str)
                 freebsd_image = "freebsd-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
                 if xtarget.is_mips(include_purecap=False):
                     guessed_archive = cheribsd_image if self.config.run_mips_tests_with_cheri_image else freebsd_image
@@ -1432,7 +1432,7 @@ class Project(SimpleProject):
         else:
             result = target.build_suffix(config)
         if target.is_native() and self.append_cheri_bits_to_native_build_dir:
-            result = "-" + config.cheriBitsStr
+            result = "-" + config.cheri_bits_str
         if self.use_asan:
             result = "-asan" + result
         if self.build_dir_suffix:
@@ -2194,7 +2194,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 basic_args.append("--jenkins-bitfile=cheri128")
             else:
                 assert self.compiling_for_cheri()
-                basic_args.append("--jenkins-bitfile=cheri" + self.config.cheriBitsStr)
+                basic_args.append("--jenkins-bitfile=cheri" + self.config.cheri_bits_str)
             # TODO: allow using a plain MIPS kernel?
             mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(
                 CompilationTargets.CHERIBSD_MIPS_HYBRID, self.config)

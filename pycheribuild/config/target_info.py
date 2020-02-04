@@ -59,7 +59,7 @@ class TargetInfo(ABC):
         # FIXME: move this to target_info!
         if self.target.is_mips(include_purecap=True):
             if self.target.is_cheri_purecap():
-                return "CHERI (MIPS IV compatible) with {}-bit capabilities".format(self.config.cheriBitsStr)
+                return "CHERI (MIPS IV compatible) with {}-bit capabilities".format(self.config.cheri_bits_str)
             else:
                 return "BERI (MIPS IV compatible)"
         if self.target.is_aarch64():
@@ -277,7 +277,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             if self.is_cheribsd:
                 result.append("-mcpu=beri")
             if self.target.is_cheri_purecap():
-                result.extend(["-mabi=purecap", "-mcpu=beri", "-cheri=" + self.config.cheriBitsStr])
+                result.extend(["-mabi=purecap", "-mcpu=beri", "-cheri=" + self.config.cheri_bits_str])
                 if self.config.subobject_bounds:
                     result.extend(["-Xclang", "-cheri-bounds=" + str(self.config.subobject_bounds)])
                     if self.config.subobject_debug:
@@ -289,7 +289,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 # TODO: should we use -mcpu=cheri128/256?
                 result.extend(["-mabi=n64", "-mcpu=beri"])
                 if self.target.is_cheri_hybrid():
-                    result.append("-cheri=" + self.config.cheriBitsStr)
+                    result.append("-cheri=" + self.config.cheri_bits_str)
                 # always use libc++
                 result.append("-stdlib=libc++")
         elif self.target.is_riscv(include_purecap=True):
@@ -445,9 +445,13 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", include_version):
         if target.is_cheri_purecap():
             # anything over 10 should use libc++ by default
-            assert target.is_mips(include_purecap=True), "Only MIPS purecap is supported"
-            return "mips64c{}-unknown-freebsd{}-purecap".format(config.cheriBits,
-                cls.FREEBSD_VERSION if include_version else "")
+            if target.is_mips(include_purecap=True):
+                return "mips64c{}-unknown-freebsd{}-purecap".format(config.cheriBits,
+                    cls.FREEBSD_VERSION if include_version else "")
+            elif target.is_riscv(include_purecap=True):
+                return "riscv64-unknown-freebsd{}".format(cls.FREEBSD_VERSION if include_version else "")
+            else:
+                assert False, "Unsuported purecap target" + str(cls)
         return super().triple_for_target(target, config, include_version)
 
     @classmethod
@@ -501,7 +505,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     def sysroot_dir(self) -> Path:
         # Install to mips/cheri128/cheri256 directory
         if self.target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            suffix = "cheri" + self.config.cheriBitsStr
+            suffix = "cheri" + self.config.cheri_bits_str
         else:
             suffix = self.target.generic_suffix
         return self.config.cheri_sdk_dir / "baremetal" / suffix / self.target_triple
@@ -719,7 +723,9 @@ class CompilationTargets(object):
     FREEBSD_X86_64 = CrossCompileTarget("x86_64", CPUArchitecture.X86_64, FreeBSDTargetInfo)
 
     # TODO: test RISCV
-    ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = [CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI, NATIVE]
+    ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = [CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI,
+                                               CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI,
+                                               NATIVE]
     ALL_SUPPORTED_BAREMETAL_TARGETS = [BAREMETAL_NEWLIB_MIPS64, BAREMETAL_NEWLIB_MIPS64_PURECAP,
                                        BAREMETAL_NEWLIB_RISCV64]
     ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS = ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \

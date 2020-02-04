@@ -67,7 +67,7 @@ class LaunchFPGABase(SimpleProject):
         if self.extra_base_options:
             basic_args.extend(self.extra_base_options)
         # use a bitfile from jenkins. TODO: add option for overriding
-        basic_args.append("--jenkins-bitfile=cheri" + self.config.cheriBitsStr)
+        basic_args.append("--jenkins-bitfile=cheri" + self.config.cheri_bits_str)
         basic_args.append("--kernel-img=" + str(self.currentKernel))
 
         bootonly_args = ["--interact"]
