@@ -114,7 +114,7 @@ def test_cross_compile_project_inherits():
     qtbase_class = targetManager.get_target_raw("qtbase")._project_class
     qtbase_default = targetManager.get_target_raw("qtbase").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildQtBase
     qtbase_native = targetManager.get_target_raw("qtbase-native").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildQtBase
-    qtbase_mips = targetManager.get_target_raw("qtbase-mips").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildQtBase
+    qtbase_mips = targetManager.get_target_raw("qtbase-mips-hybrid").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildQtBase
 
     # Check that project name is the same:
     assert qtbase_default.project_name == qtbase_native.project_name
@@ -136,7 +136,7 @@ def test_cross_compile_project_inherits():
     assert qtbase_mips.build_tests, "qtbase-mips should inherit build-tests from qtbase(default)"
 
     # But target-specific ones should override
-    _parse_arguments(["--qtbase/build-tests", "--qtbase-mips/no-build-tests"])
+    _parse_arguments(["--qtbase/build-tests", "--qtbase-mips-hybrid/no-build-tests"])
     assert qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline"
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
@@ -153,18 +153,18 @@ def test_cross_compile_project_inherits():
     assert qtbase_mips.build_tests, "qtbase-mips should inherit build-tests from qtbase(default)"
 
     # But target-specific ones should override
-    _parse_config_file_and_args(b'{"qtbase/build-tests": true, "qtbase-mips/build-tests": false }')
+    _parse_config_file_and_args(b'{"qtbase/build-tests": true, "qtbase-mips-hybrid/build-tests": false }')
     assert qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline"
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
 
     # And that cmdline still overrides JSON:
-    _parse_config_file_and_args(b'{"qtbase/build-tests": true }', "--qtbase-mips/no-build-tests")
+    _parse_config_file_and_args(b'{"qtbase/build-tests": true }', "--qtbase-mips-hybrid/no-build-tests")
     assert qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline"
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a false override for build-tests"
     # But if a per-target option is set in the json that still overrides the default set on the cmdline
-    _parse_config_file_and_args(b'{"qtbase-mips/build-tests": false }', "--qtbase/build-tests")
+    _parse_config_file_and_args(b'{"qtbase-mips-hybrid/build-tests": false }', "--qtbase/build-tests")
     assert qtbase_default.build_tests, "qtbase(default) build-tests should be set on cmdline"
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a JSON false override for build-tests"
@@ -192,10 +192,10 @@ def test_cross_compile_project_inherits():
     assertBuildDirsDifferent()
 
     # Should not inherit from the default one:
-    _parse_arguments(["--qtbase/build-directory=/foo/bar", "--qtbase-mips/build-directory=/bar/foo"])
+    _parse_arguments(["--qtbase/build-directory=/foo/bar", "--qtbase-mips-hybrid/build-directory=/bar/foo"])
     assertBuildDirsDifferent()
     _parse_config_file_and_args(b'{"qtbase/build-directory": "/foo/bar",'
-                                     b' "qtbase-mips/build-directory": "/bar/foo"}')
+                                b' "qtbase-mips-hybrid/build-directory": "/bar/foo"}')
     assertBuildDirsDifferent()
 
 
@@ -206,7 +206,7 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     cheribsd_class = targetManager.get_target_raw("cheribsd")._project_class
     cheribsd_default_tgt = targetManager.get_target_raw("cheribsd").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
     assert cheribsd_default_tgt.target == "cheribsd-cheri"
-    cheribsd_mips = targetManager.get_target_raw("cheribsd-mips").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    cheribsd_mips = targetManager.get_target_raw("cheribsd-mips-nocheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
     cheribsd_cheri = targetManager.get_target_raw("cheribsd-cheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
     cheribsd_purecap = targetManager.get_target_raw("cheribsd-purecap").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
 
@@ -218,15 +218,18 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     assert cheribsd_cheri.synthetic_base == cheribsd_class
     assert not hasattr(cheribsd_purecap, "synthetic_base")
 
-    _parse_arguments(["--cheribsd-mips/build-tests"])
+    _parse_arguments(["--cheribsd-mips-nocheri/build-tests"])
     assert not cheribsd_purecap.build_tests, "cheribsd-purecap build-tests should default to false"
     assert not cheribsd_cheri.build_tests, "cheribsd-cheri build-tests should default to false"
+    assert cheribsd_mips.build_tests, "cheribsd-mips-nocheri build-tests should be set on cmdline"
     _parse_arguments(["--cheribsd-purecap/build-tests"])
     assert cheribsd_purecap.build_tests, "cheribsd-purecap build-tests should be set on cmdline"
     assert not cheribsd_cheri.build_tests, "cheribsd-cheri build-tests should default to false"
+    assert not cheribsd_mips.build_tests, "cheribsd-mips-nocheri build-tests should default to false"
     _parse_arguments(["--cheribsd-cheri/build-tests"])
     assert not cheribsd_purecap.build_tests, "cheribsd-purecap build-tests should default to false"
     assert cheribsd_cheri.build_tests, "cheribsd-cheri build-tests should be set on cmdline"
+    assert not cheribsd_mips.build_tests, "cheribsd-mips-nocheri build-tests should default to false"
 
     # If the base cheribsd option is set but no per-target one use both cheribsd-cheri and cheribsd-purecap should inherit basic one:
     _parse_arguments(["--cheribsd/build-tests"])
@@ -304,7 +307,7 @@ def test_kernconf():
     # check default values
     config = _parse_arguments([])
     cheribsd_cheri = targetManager.get_target_raw("cheribsd-cheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
-    cheribsd_mips = targetManager.get_target_raw("cheribsd-mips").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    cheribsd_mips = targetManager.get_target_raw("cheribsd-mips-nocheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
     freebsd_mips = targetManager.get_target_raw("freebsd-mips").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildFreeBSD
     freebsd_native = targetManager.get_target_raw("freebsd-x86_64").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildFreeBSD
     assert config.freebsd_kernconf is None
@@ -432,15 +435,15 @@ def test_libcxxrt_dependency_path():
     config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.buildRoot / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
     check_libunwind_path(config.outputRoot / "rootfs128/opt/cheri/c++/lib", "libcxxrt-cheri")
-    check_libunwind_path(config.outputRoot / "rootfs128/opt/mips/c++/lib", "libcxxrt-mips-hybrid")
+    check_libunwind_path(config.outputRoot / "rootfs128/opt/mips-hybrid/c++/lib", "libcxxrt-mips-hybrid")
     # Check the defaults:
     config = _parse_arguments(["--skip-configure", "--xhost"])
     check_libunwind_path(config.buildRoot / "libunwind-native-build/test-install-prefix/lib", "libcxxrt")
     check_libunwind_path(config.buildRoot / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
     config = _parse_arguments(["--skip-configure", "--xmips", "--no-use-hybrid-sysroot-for-mips"])
-    check_libunwind_path(config.outputRoot / "rootfs128/opt/mips/c++/lib", "libcxxrt")
-    check_libunwind_path(config.outputRoot / "rootfs128/opt/mips/c++/lib", "libcxxrt-mips-hybrid")
-    check_libunwind_path(config.outputRoot / "rootfs-mips/opt/mips/c++/lib", "libcxxrt-mips-nocheri")
+    check_libunwind_path(config.outputRoot / "rootfs128/opt/mips-hybrid/c++/lib", "libcxxrt")
+    check_libunwind_path(config.outputRoot / "rootfs128/opt/mips-hybrid/c++/lib", "libcxxrt-mips-hybrid")
+    check_libunwind_path(config.outputRoot / "rootfs-mips/opt/mips-nocheri/c++/lib", "libcxxrt-mips-nocheri")
     config = _parse_arguments(["--skip-configure", "--256"])
     check_libunwind_path(config.outputRoot / "rootfs256/opt/cheri/c++/lib", "libcxxrt")
     check_libunwind_path(config.outputRoot / "rootfs256/opt/cheri/c++/lib", "libcxxrt-cheri")
@@ -467,7 +470,7 @@ def test_default_arch(base_name, expected):
 
 @pytest.mark.parametrize("target,args,expected", [
     pytest.param("cheribsd", ["--foo"],
-                 "cheribsd-128-build"),
+                 "cheribsd-mips-hybrid128-build"),
     pytest.param("llvm", ["--foo"],
                  "llvm-project-build"),
     pytest.param("cheribsd-purecap", ["--foo"],
@@ -481,13 +484,13 @@ def test_default_arch(base_name, expected):
                  "cheribsd-purecap-128-subobject-safe-subobject-nodebug-build"),
     # No change for pcrel:
     pytest.param("cheribsd", ["--cap-table-abi=pcrel", "--subobject-bounds=conservative"],
-                 "cheribsd-128-build"),
+                 "cheribsd-mips-hybrid128-build"),
     # plt should be encoded
     pytest.param("cheribsd", ["--cap-table-abi=plt", "--subobject-bounds=conservative"],
-                 "cheribsd-128-plt-build"),
+                 "cheribsd-mips-hybrid128-plt-build"),
     # everything
     pytest.param("cheribsd-purecap", ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
-                 "cheribsd-purecap-128-plt-aggressive-hardfloat-build"),
+                 "cheribsd-purecap-hardfloat-128-plt-aggressive-hardfloat-build"),
 ])
 def test_default_arch(target: str, args: list, expected: str):
     # Check that the cheribsd build dir is correct
