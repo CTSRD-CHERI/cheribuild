@@ -335,7 +335,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     def setup(self):
         super().setup()
         xtarget = self.crosscompile_target
-        if xtarget.is_riscv():
+        if xtarget.is_riscv(include_purecap=True):
             _hasPCI = False
             self.machineFlags = ["-M", "virt"]  # want VirtIO
             self.virtioDisk = True

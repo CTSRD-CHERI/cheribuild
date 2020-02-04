@@ -68,14 +68,14 @@ def default_kernel_config(config: CheriConfig, project: SimpleProject) -> str:
 def freebsd_install_dir(config: CheriConfig, project: SimpleProject):
     assert isinstance(project, BuildFreeBSD)
     target = project.get_crosscompile_target(config)
-    if target.is_mips(include_purecap=True):
-        assert not target.is_cheri_purecap(), "Should not reach this code!"
+    assert not target.is_cheri_purecap(), "Should not reach this code!"
+    if target.is_mips(include_purecap=False):
         if config.mips_float_abi == MipsFloatAbi.HARD:
             return config.outputRoot / "freebsd-mipshf"
         return config.outputRoot / "freebsd-mips"
     elif target.is_x86_64():
         return config.outputRoot / "freebsd-x86"
-    elif target.is_riscv():
+    elif target.is_riscv(include_purecap=False):
         return config.outputRoot / "freebsd-riscv"
     elif target.is_i386():
         return config.outputRoot / "freebsd-i386"
