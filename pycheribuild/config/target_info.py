@@ -285,6 +285,15 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 # always use libc++
                 result.append("-stdlib=libc++")
         elif self.target.is_riscv(include_purecap=True):
+            assert self.target.cpu_architecture == CPUArchitecture.RISCV64
+            # Use the insane RISC-V arch string to enable CHERI
+            arch_string = "rv64imafdc"
+            if self.target.is_cheri_purecap():
+                arch_string += "xcheri"
+                result.append("-mabi=l64pc128d")  # 64-bit double-precision hard-float + purecap
+            else:
+                result.append("-mabi=lp64d")  # 64-bit double-precision hard-float
+            result.append("-march=" + arch_string)  # XXX: any more xfoo extensions?
             result.append("-mno-relax")  # Linker relaxations are not supported with clang+lld
         else:
             self.project.warning("Compiler flags might be wong, only native + MIPS checked so far")
