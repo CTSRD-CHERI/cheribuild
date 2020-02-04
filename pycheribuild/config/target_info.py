@@ -194,7 +194,9 @@ class TargetInfo(ABC):
         if self.target.is_cheri_purecap([CPUArchitecture.MIPS64]):
             assert self.config.cheriBits in (128, 256), "No other cap size supported yet"
             return self.config.cheriBits / 8
-        assert not self.target.is_cheri_purecap(), "RISC-V not handled yet"
+        if self.target.is_cheri_purecap([CPUArchitecture.RISCV64]):
+            return 16
+        assert not self.target.is_cheri_purecap(), "Other purecap not handled yet"
         if self.target.is_i386():
             return 4
         # all other architectures we support currently use 64-bit pointers
