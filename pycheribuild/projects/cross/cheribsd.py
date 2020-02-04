@@ -106,21 +106,6 @@ def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
         return config.outputRoot / "rootfs-x86"
 
 
-def cheribsd_minimal_install_dir(config: CheriConfig, project: SimpleProject):
-    assert isinstance(project, BuildCHERIBSD)
-    if project.compiling_for_cheri():
-        return config.outputRoot / ("rootfs-minimal" + config.cheri_bits_and_abi_str)
-    elif project.compiling_for_mips(include_purecap=False):
-        if config.mips_float_abi == MipsFloatAbi.HARD:
-            return config.outputRoot / "rootfs-minimal-mipshf"
-        return config.outputRoot / "rootfs-minimal-mips"
-    elif project.compiling_for_riscv():
-        return config.outputRoot / "rootfs-minimal-riscv"
-    else:
-        assert project.crosscompile_target.is_x86_64()
-        return config.outputRoot / "rootfs-minimal-x86"
-
-
 def default_cross_toolchain_path(config: CheriConfig, proj: SimpleProject):
     assert isinstance(proj, BuildFreeBSD)
     if proj.build_with_upstream_llvm:
@@ -1368,71 +1353,87 @@ class BuildCHERIBSDPurecap(BuildCHERIBSD):
         super().__init__(config)
         self.make_args.set_with_options(CHERI_PURE=True)
 
-
-class BuildCHERIBSDMinimal(BuildCHERIBSD):
-    project_name = "cheribsd"  # reuse the same source dir
-    target = "cheribsd-minimal"
-    _config_inherits_from = "cheribsd"  # we want the CheriBSD config options as well
-
-    # Set these variables to override the multi target magic and only support CHERI
-    _should_not_be_instantiated = False
-    build_dir_suffix = "-minimal"
-    _default_install_dir_fn = ComputedDefaultValue(function=cheribsd_minimal_install_dir,
-                                             as_string="$INSTALL_ROOT/rootfs-minmal{128,256,-mips,-x86}")
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        cls.subdirOverride = None  # "tools/cheribsdbox"
-        cls.minimal = True
-        cls.build_tests = False
-        super().setup_config_options(**kwargs)
-
-    def __init__(self, config):
-        super().__init__(config)
-        if self.compiling_for_cheri():
-            self.make_args.set_with_options(CHERI_PURE=True)
-        self.make_args.set_with_options(INCLUDES=False, PROFILE=False, MAN=False, KERBEROS=False)
-        # Avoid building as many libraries as possible
-        self.make_args.set_with_options(PMC=False, RADIUS_SUPPORT=False, SENDMAIL=False, TELNET=False, TESTS=False,
-                                        TESTS_SUPPORT=False, UNBOUND=False, USB=False, OFED=False, ZFS=False,
-                                        NIS=False, NAND=False, CUSE=False, DIALOG=False, FILE=False, GPIO=False,
-                                        GSSAPI=False, KERBEROS_SUPPORT=False, LDNS=False, TOOLCHAIN=False,
-                                        BLUETOOTH=False, BSNMP=False, AMD=False, AT=False)
-        self.make_args.set(NO_SHARE=True)
-        # TODO: ICONV=False?
-        self.needed_shlibs = ("lib/libc", "lib/libthr", "lib/libutil", "lib/libz", "lib/libutil",
-                              "lib/libstatcounters", "lib/libxo", "lib/libedit", "lib/ncurses")
-        self.sysroot_only = True
-
-    def compile(self, **kwargs):
-        args_without_subdir_override = self.buildworld_args
-        # subdir-override seems to break if we don't build toolchain first
-        args_without_subdir_override.remove_var("SUBDIR_OVERRIDE")
-        self.runMake("kernel-toolchain", options=args_without_subdir_override)
-        super().compile(**kwargs)
-        self.build_and_install_subdir(args_without_subdir_override, "tools/cheribsdbox",
-                                      skip_build=False, skip_install=True, install_to_internal_sysroot=True)
-        for i in self.needed_shlibs:
-            self.build_and_install_subdir(args_without_subdir_override, i, skip_build=False,
-                                          skip_install=True, install_to_internal_sysroot=True)
-
-    def install(self, **kwargs):
-        self.makedirs(self.installDir)
-        for i in ("bin", "sbin", "usr/sbin", "usr/bin", "lib", "usr/lib", "usr/libcheri"):
-            self.makedirs(self.installDir / i)
-        # install all the needed libs
-        args = self.installworld_args
-        args.remove_var("SUBDIR_OVERRIDE")
-        for i in self.needed_shlibs:
-            self.build_and_install_subdir(args, i, skip_build=True, skip_clean=True, skip_install=False)
-        for i in ["lib/libpam"]:
-            # only needed as non-CheriABI libs:
-            self.build_and_install_subdir(args, i, skip_build=True, skip_clean=True, skip_install=False,
-                                          noncheri_only=True)
-
-        self.build_and_install_subdir(args, "tools/cheribsdbox", skip_build=True, skip_clean=True,
-                                      skip_install=False, install_to_internal_sysroot=False)
-        # TODO: install bin/sh? bin/csh?
+# def cheribsd_minimal_install_dir(config: CheriConfig, project: SimpleProject):
+#     assert isinstance(project, BuildCHERIBSD)
+#     if project.compiling_for_mips(include_purecap=False):
+#         if project.crosscompile_target.is_cheri_hybrid():
+#             return config.outputRoot / ("rootfs-minimal" + config.cheri_bits_and_abi_str)
+#         if config.mips_float_abi == MipsFloatAbi.HARD:
+#             return config.outputRoot / "rootfs-minimal-mipshf"
+#         return config.outputRoot / "rootfs-minimal-mips"
+#     elif project.compiling_for_riscv(include_purecap=False):
+#         if project.crosscompile_target.is_cheri_hybrid():
+#             return config.outputRoot / ("rootfs-minimal-riscv64" + config.cheri_bits_and_abi_str)
+#         return config.outputRoot / "rootfs-minimal-riscv64"
+#     else:
+#         assert project.crosscompile_target.is_x86_64()
+#         return config.outputRoot / "rootfs-minimal-x86"
+#
+#
+# class BuildCHERIBSDMinimal(BuildCHERIBSD):
+#     project_name = "cheribsd"  # reuse the same source dir
+#     target = "cheribsd-minimal"
+#     _config_inherits_from = "cheribsd"  # we want the CheriBSD config options as well
+#
+#     # Set these variables to override the multi target magic and only support CHERI
+#     _should_not_be_instantiated = False
+#     build_dir_suffix = "-minimal"
+#     _default_install_dir_fn = ComputedDefaultValue(function=cheribsd_minimal_install_dir,
+#                                              as_string="$INSTALL_ROOT/rootfs-minmal{128,256,-mips,-x86}")
+#
+#     @classmethod
+#     def setup_config_options(cls, **kwargs):
+#         cls.subdirOverride = None  # "tools/cheribsdbox"
+#         cls.minimal = True
+#         cls.build_tests = False
+#         super().setup_config_options(**kwargs)
+#
+#     def __init__(self, config):
+#         super().__init__(config)
+#         if self.compiling_for_cheri():
+#             self.make_args.set_with_options(CHERI_PURE=True)
+#         self.make_args.set_with_options(INCLUDES=False, PROFILE=False, MAN=False, KERBEROS=False)
+#         # Avoid building as many libraries as possible
+#         self.make_args.set_with_options(PMC=False, RADIUS_SUPPORT=False, SENDMAIL=False, TELNET=False, TESTS=False,
+#                                         TESTS_SUPPORT=False, UNBOUND=False, USB=False, OFED=False, ZFS=False,
+#                                         NIS=False, NAND=False, CUSE=False, DIALOG=False, FILE=False, GPIO=False,
+#                                         GSSAPI=False, KERBEROS_SUPPORT=False, LDNS=False, TOOLCHAIN=False,
+#                                         BLUETOOTH=False, BSNMP=False, AMD=False, AT=False)
+#         self.make_args.set(NO_SHARE=True)
+#         # TODO: ICONV=False?
+#         self.needed_shlibs = ("lib/libc", "lib/libthr", "lib/libutil", "lib/libz", "lib/libutil",
+#                               "lib/libstatcounters", "lib/libxo", "lib/libedit", "lib/ncurses")
+#         self.sysroot_only = True
+#
+#     def compile(self, **kwargs):
+#         args_without_subdir_override = self.buildworld_args
+#         # subdir-override seems to break if we don't build toolchain first
+#         args_without_subdir_override.remove_var("SUBDIR_OVERRIDE")
+#         self.runMake("kernel-toolchain", options=args_without_subdir_override)
+#         super().compile(**kwargs)
+#         self.build_and_install_subdir(args_without_subdir_override, "tools/cheribsdbox",
+#                                       skip_build=False, skip_install=True, install_to_internal_sysroot=True)
+#         for i in self.needed_shlibs:
+#             self.build_and_install_subdir(args_without_subdir_override, i, skip_build=False,
+#                                           skip_install=True, install_to_internal_sysroot=True)
+#
+#     def install(self, **kwargs):
+#         self.makedirs(self.installDir)
+#         for i in ("bin", "sbin", "usr/sbin", "usr/bin", "lib", "usr/lib", "usr/libcheri"):
+#             self.makedirs(self.installDir / i)
+#         # install all the needed libs
+#         args = self.installworld_args
+#         args.remove_var("SUBDIR_OVERRIDE")
+#         for i in self.needed_shlibs:
+#             self.build_and_install_subdir(args, i, skip_build=True, skip_clean=True, skip_install=False)
+#         for i in ["lib/libpam"]:
+#             # only needed as non-CheriABI libs:
+#             self.build_and_install_subdir(args, i, skip_build=True, skip_clean=True, skip_install=False,
+#                                           noncheri_only=True)
+#
+#         self.build_and_install_subdir(args, "tools/cheribsdbox", skip_build=True, skip_clean=True,
+#                                       skip_install=False, install_to_internal_sysroot=False)
+#         # TODO: install bin/sh? bin/csh?
 
 
 class BuildCheriBsdSysroot(SimpleProject):
