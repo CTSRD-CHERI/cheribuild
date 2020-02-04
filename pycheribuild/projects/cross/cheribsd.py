@@ -776,9 +776,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
             installsysroot_args = install_world_args.copy()
             # No need for the files in /usr/share and the METALOG file
             installsysroot_args.set(NO_SHARE=True, METALOG="/dev/null")
+            installsysroot_args.set_env(DESTDIR=self.target_info.sysroot_dir)
             if sysroot_only:
                 if not self.has_installsysroot_target:
                     self.fatal("Can't use installsysroot here")
+                if is_jenkins_build():
+                    # Install to the install dir in jenkins, but the sysroot otherwise
+                    installsysroot_args.set_env(DESTDIR=self.installDir)
                 self.runMake("installsysroot", options=installsysroot_args)
                 # Don't try to install the kernel if we are only building a sysroot
                 return
