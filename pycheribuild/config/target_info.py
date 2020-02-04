@@ -62,7 +62,7 @@ class TargetInfo(ABC):
                 return "CHERI (MIPS IV compatible) with {}-bit capabilities".format(self.config.cheri_bits_str)
             else:
                 return "BERI (MIPS IV compatible)"
-        if self.target.is_aarch64():
+        if self.target.is_aarch64(include_purecap=True):
             return "ARM64"
         return self.target.cpu_architecture.value
 
@@ -195,6 +195,7 @@ class TargetInfo(ABC):
             assert self.config.cheriBits in (128, 256), "No other cap size supported yet"
             return self.config.cheriBits / 8
         if self.target.is_cheri_purecap([CPUArchitecture.RISCV64]):
+            assert self.config.cheriBits == 128, "For now setting cheribits != 128 may break stuff"
             return 16
         assert not self.target.is_cheri_purecap(), "Other purecap not handled yet"
         if self.target.is_i386():
