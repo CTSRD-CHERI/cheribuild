@@ -47,8 +47,8 @@ class BuildMibench(CrossCompileProject):
     # Keep the old bundles when cleaning
     _extra_git_clean_excludes = ["--exclude=*-bundle"]
     # The makefiles here can't support any other other tagets:
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS,
-                               CompilationTargets.NATIVE]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
+                               CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.NATIVE]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -88,7 +88,7 @@ class BuildMibench(CrossCompileProject):
             self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
             self.make_args.set(VERSION=self.benchmark_version)
             if self.compiling_for_mips(include_purecap=False):
-                self.make_args.set(MIPS_SYSROOT=self.config.get_cheribsd_sysroot_path(CompilationTargets.CHERIBSD_MIPS))
+                self.make_args.set(MIPS_SYSROOT=self.sdk_sysroot)
             if self.compiling_for_cheri():
                 if self.config.cheriBits == 128:
                     self.make_args.set(VERSION="cheri128", CHERI128_SYSROOT=self.sdk_sysroot)
@@ -164,8 +164,8 @@ class BuildOlden(CrossCompileProject):
     # and we have to build in the source directory
     build_in_source_dir = True
     # The makefiles here can't support any other other tagets:
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS,
-                               CompilationTargets.NATIVE]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
+                               CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.NATIVE]
 
     def compile(self, **kwargs):
         new_env = dict()

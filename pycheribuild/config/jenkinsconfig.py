@@ -181,7 +181,7 @@ class JenkinsConfig(CheriConfig):
             os_suffix = "unknown-os"
         return self.workspace / ("qemu-" + os_suffix) / "bin"
 
-    def get_cheribsd_sysroot_path(self, cross_compile_target: CrossCompileTarget, use_hybrid_sysroot=None):
+    def get_cheribsd_sysroot_path(self, cross_compile_target: CrossCompileTarget):
         # TODO: currently we need this to be unprefixed since that is what the archives created by jenkins look like
         return self.cheri_sdk_dir / "sysroot"
 
@@ -222,12 +222,11 @@ class JenkinsConfig(CheriConfig):
                 self.cpu = "hybrid-" + self.sdk_cpu
             if self.cpu.startswith("hybrid-cheri"):
                 self.cheriBits = int(self.cpu[len("hybrid-cheri"):])
-                self.use_hybrid_sysroot_for_mips = True
                 self.run_mips_tests_with_cheri_image = True
+                self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
             else:
                 assert self.cpu == "mips"
-                self.use_hybrid_sysroot_for_mips = False
-            self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS
+                self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_NO_CHERI
         elif self.cpu in ("x86", "x86_64", "amd64", "host", "native"):
             self.cheriBits = 9999
             self.crossCompileTarget = CompilationTargets.NATIVE

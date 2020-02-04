@@ -287,7 +287,6 @@ class BuildQEMU(BuildQEMUBase):
             fake_project = SimpleNamespace()
             fake_project.config = self.config
             fake_project.needs_sysroot = False
-            fake_project.mips_build_hybrid = False
             fake_project.warning = self.warning
             fake_project.target = "qemu-tcg-tests"
             tgt_info_mips = NewlibBaremetalTargetInfo(CompilationTargets.BAREMETAL_NEWLIB_MIPS64, fake_project)

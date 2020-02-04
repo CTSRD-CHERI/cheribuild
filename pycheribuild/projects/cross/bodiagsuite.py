@@ -40,7 +40,6 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/bodiagsuite",
                                old_urls=[b"https://github.com/nwf/bodiagsuite"])
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS]
     default_build_type = BuildType.DEBUG
     default_use_asan = True
     # _FORTIFY_SOURCE only works with GCC on Linux

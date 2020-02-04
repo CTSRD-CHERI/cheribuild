@@ -124,7 +124,11 @@ class ProjectSubclassDefinitionHook(type):
             for arch in supported_archs:
                 assert isinstance(arch, CrossCompileTarget)
                 # create a new class to ensure different build dirs and config name strings
-                new_name = targetName + "-" + arch.generic_suffix
+                if hasattr(cls, "custom_target_name"):
+                    assert callable(cls.custom_target_name)
+                    new_name = cls.custom_target_name(targetName, arch)
+                else:
+                    new_name = targetName + "-" + arch.generic_suffix
                 new_dict = cls.__dict__.copy()
                 new_dict["_crossCompileTarget"] = arch
                 new_dict["_should_not_be_instantiated"] = False  # unlike the subclass we can instantiate these
@@ -159,7 +163,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     installDir = None
     # Whether to hide the options from the default --help output (only add to --help-hidden)
     hide_options_from_help = False
-    _mips_build_hybrid = None  # whether to build MIPS binaries as hybrid ones
     # Project subclasses will automatically have a target based on their name generated unless they add this:
     doNotAddToTargets = True
     # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
@@ -182,12 +185,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def _no_overwrite_allowed(self) -> "typing.Tuple[str]":
         return "_crossCompileTarget",
 
-    @property
-    def mips_build_hybrid(self) -> bool:
-        if self._mips_build_hybrid is None:
-            return self.config.use_hybrid_sysroot_for_mips
-        else:
-            return self._mips_build_hybrid
     __cached_deps = None  # type: typing.List[Target]
 
     @classmethod
@@ -377,6 +374,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def compiling_for_cheri(self):
         return self.crosscompile_target.is_cheri_purecap()
+
+    def compiling_for_cheri_hybrid(self):
+        return self.crosscompile_target.is_cheri_hybrid()
 
     def compiling_for_host(self):
         return self.crosscompile_target.is_native()
@@ -1430,7 +1430,7 @@ class Project(SimpleProject):
         if target.is_native() and not self.add_build_dir_suffix_for_native:
             result = ""
         else:
-            result = target.build_suffix(config, build_hybrid=self.mips_build_hybrid)
+            result = target.build_suffix(config)
         if target.is_native() and self.append_cheri_bits_to_native_build_dir:
             result = "-" + config.cheriBitsStr
         if self.use_asan:
@@ -1579,7 +1579,7 @@ class Project(SimpleProject):
             default=cls.lto_by_default)
         # cls.use_cfi = cls.add_bool_option("use-cfi", help="Build with CFI",
         #                                 only_add_for_targets=[CompilationTargets.NATIVE,
-        #                                 CompilationTargets.CHERIBSD_MIPS])
+        #                                 CompilationTargets.CHERIBSD_MIPS_NO_CHERI])
         cls.use_cfi = False  # doesn't work yet
         cls._linkage = cls.add_config_option("linkage", default=Linkage.DEFAULT, kind=Linkage,
             help="Build static or dynamic (or use the project default)")
@@ -2654,4 +2654,4 @@ class TargetAliasWithDependencies(TargetAlias):
 
 
 class BuildAll(TargetAliasWithDependencies):
-    dependencies = ["qemu", "sdk", "disk-image-cheri", "run-cheri"]
+    dependencies = ["qemu", "sdk", "disk-image-mips-hybrid", "run-mips-hybrid"]

@@ -65,25 +65,19 @@ class BuildGDB(CrossCompileAutotoolsProject):
                                old_urls=[b'https://github.com/bsdjhb/gdb.git'])
     make_kind = MakeCommandKind.GnuMake
     is_sdk_target = True
-    supported_architectures = [CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS,
-                               CompilationTargets.CHERIBSD_RISCV]
-    _mips_build_hybrid = True  # build MIPS binaries as CHERI hybrid so that the trap register number works
+    supported_architectures = [CompilationTargets.NATIVE,
+                               CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_RISCV_HYBRID,
+                               CompilationTargets.CHERIBSD_MIPS_NO_CHERI, CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.cheri_hybrid = True
-        if cls._crossCompileTarget.is_mips(include_purecap=True):
-            cls.cheri_hybrid = cls.add_bool_option("use-cheri-hybrid", default=True, _no_fallback_config_name=True,
-                help="Build against a hybrid sysroot (required for faulting capability register number support)")
 
     def __init__(self, config: CheriConfig):
         self._compile_status_message = None
         if not self._crossCompileTarget.is_native():
             # We always want to build the MIPS binary static so we can just scp it over to QEMU
             self._linkage = Linkage.STATIC
-        # In jenkins, we also want to be able to build a non-CHERI MIPS version of GDB
-        self._mips_build_hybrid = self.cheri_hybrid
 
         super().__init__(config)
         assert not self.compiling_for_cheri(), "Should only build this as a static MIPS binary not CHERIABI"

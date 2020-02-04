@@ -137,7 +137,7 @@ class DefaultCheriConfig(CheriConfig):
             self.crossCompileTarget = CompilationTargets.NATIVE
         elif self.crossCompileForMips:
             assert not self.crossCompileForHost
-            self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS
+            self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
         else:
             self.crossCompileTarget = CompilationTargets.NONE
         # now set some generic derived config options

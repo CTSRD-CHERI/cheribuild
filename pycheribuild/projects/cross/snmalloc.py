@@ -36,7 +36,6 @@ class SNMalloc(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/nwf/snmalloc")
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS]
     default_build_type = BuildType.DEBUG
 
     @classmethod

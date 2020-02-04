@@ -115,6 +115,6 @@ class BuildBBLFreeBSDWithDefaultOptionsRISCV(BuildBBLBase):
 class BuildBBLCheriBSDRISCV(BuildBBLBase):
     project_name = "bbl-cheribsd"
     target = "bbl-cheribsd"
-    supported_architectures = [CompilationTargets.CHERIBSD_RISCV]
+    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_HYBRID, CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
     freebsd_class = BuildCHERIBSD
 

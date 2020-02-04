@@ -111,10 +111,6 @@ class CheriConfig(object):
                                                                         " the first error")
         self.withLibstatcounters = loader.add_bool_option("with-libstatcounters", group=loader.crossCompileOptionsGroup,
                                                         help="Link cross compiled CHERI project with libstatcounters.")
-        self.use_hybrid_sysroot_for_mips = loader.add_bool_option("use-hybrid-sysroot-for-mips",
-            group=loader.crossCompileOptionsGroup, default=True,
-            help="Build and install MIPS binaries against the hybrid sysroot instead of using a sysroot built without "
-                 "CHERI support. Do not unset this option when building benchmarks since memcpy will be slower!")
         self.skipBuildworld = loader.add_bool_option("skip-buildworld", "-skip-world", group=loader.freebsdGroup,
                                                    help="Skip the buildworld step when building FreeBSD or CheriBSD")
         self.freebsd_kernconf = loader.addOption("kernel-config", "-kernconf", group=loader.freebsdGroup, helpHidden=True,
@@ -381,21 +377,19 @@ class CheriConfig(object):
     def qemu_bindir(self):
         return self.cheri_sdk_bindir
 
-    def get_cheribsd_sysroot_path(self, cross_compile_target: CrossCompileTarget, use_hybrid_sysroot=None):
+    def get_cheribsd_sysroot_path(self, cross_compile_target: CrossCompileTarget):
         assert isinstance(cross_compile_target, CrossCompileTarget)
         assert issubclass(cross_compile_target.target_info_cls, CheriBSDTargetInfo), "Only valid for CheriBSD targets"
-        if use_hybrid_sysroot is None:
-            use_hybrid_sysroot = self.use_hybrid_sysroot_for_mips
         if cross_compile_target.is_mips(include_purecap=True):
-            if cross_compile_target.is_cheri_purecap() or use_hybrid_sysroot:
+            if cross_compile_target.is_cheri_purecap() or cross_compile_target.is_cheri_hybrid():
                 return self.cheri_sdk_dir / ("sysroot" + self.cheri_bits_and_abi_str)
             if self.mips_float_abi == MipsFloatAbi.HARD:
                 return self.cheri_sdk_dir / "sysroot-mipshf"
             return self.cheri_sdk_dir / "sysroot-mips"
-        elif cross_compile_target.is_riscv():
-            if cross_compile_target.is_cheri_purecap():
-                return self.cheri_sdk_dir / ("sysroot-riscv-c" + self.cheri_bits_and_abi_str)
-            return self.cheri_sdk_dir / "sysroot-riscv"
+        elif cross_compile_target.is_riscv(include_purecap=True):
+            if cross_compile_target.is_cheri_purecap() or cross_compile_target.is_cheri_hybrid():
+                return self.cheri_sdk_dir / ("sysroot-riscv64c" + self.cheri_bits_and_abi_str)
+            return self.cheri_sdk_dir / "sysroot-riscv64"
         elif cross_compile_target.is_x86_64():
             return self.cheri_sdk_dir / "sysroot-x86_64"
         else:

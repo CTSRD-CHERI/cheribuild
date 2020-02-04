@@ -255,7 +255,7 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     is_sdk_target = True
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS
-    supported_architectures = [CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS]
+    supported_architectures = [CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS_NO_CHERI]
 
     def install(self, **kwargs):
         super().install(**kwargs)
@@ -285,8 +285,8 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
         triples = [
             "cheri-unknown-freebsd",  # for compat
-            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS, self.config, include_version=True),
-            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS, self.config, include_version=False),
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_NO_CHERI, self.config, include_version=True),
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_NO_CHERI, self.config, include_version=False),
             # Only create CHERI128 symlinks for now:
             CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_PURECAP, self.config,
                 include_version=False).replace(self.config.cheriBitsStr, "128"),

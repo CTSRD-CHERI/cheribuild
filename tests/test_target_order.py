@@ -74,31 +74,31 @@ def test_alias_resolving(target_name, expected_name):
 
 def test_reordering():
     # GDB is a cross compiled project so cheribsd should be built first
-    assert _sort_targets(["cheribsd", "gdb-mips"]) == ["cheribsd-cheri", "gdb-mips"]
-    assert _sort_targets(["gdb-mips", "cheribsd"]) == ["cheribsd-cheri", "gdb-mips"]
-    assert _sort_targets(["gdb-mips", "cheribsd-cheri"]) == ["cheribsd-cheri", "gdb-mips"]
+    assert _sort_targets(["cheribsd", "gdb-mips-hybrid"]) == ["cheribsd-cheri", "gdb-mips-hybrid"]
+    assert _sort_targets(["gdb-mips-hybrid", "cheribsd"]) == ["cheribsd-cheri", "gdb-mips-hybrid"]
+    assert _sort_targets(["gdb-mips-hybrid", "cheribsd-cheri"]) == ["cheribsd-cheri", "gdb-mips-hybrid"]
 
 
 def test_run_comes_last():
-    assert _sort_targets(["run", "disk-image"]) == ["disk-image-cheri", "run-cheri"]
+    assert _sort_targets(["run", "disk-image"]) == ["disk-image-mips-hybrid", "run-mips-hybrid"]
 
 
 def test_disk_image_comes_second_last():
-    assert _sort_targets(["run", "disk-image"]) == ["disk-image-cheri", "run-cheri"]
-    assert _sort_targets(["run", "disk-image", "cheribsd"]) == ["cheribsd-cheri", "disk-image-cheri", "run-cheri"]
-    assert _sort_targets(["run", "gdb-mips", "disk-image", "cheribsd"]) == ["cheribsd-cheri", "gdb-mips", "disk-image-cheri", "run-cheri"]
-    assert _sort_targets(["run", "disk-image", "postgres", "cheribsd"]) == ["cheribsd-cheri", "postgres-cheri", "disk-image-cheri", "run-cheri"]
+    assert _sort_targets(["run", "disk-image"]) == ["disk-image-mips-hybrid", "run-mips-hybrid"]
+    assert _sort_targets(["run", "disk-image", "cheribsd"]) == ["cheribsd-cheri", "disk-image-mips-hybrid", "run-mips-hybrid"]
+    assert _sort_targets(["run", "gdb-mips-hybrid", "disk-image", "cheribsd"]) == ["cheribsd-cheri", "gdb-mips-hybrid", "disk-image-mips-hybrid", "run-mips-hybrid"]
+    assert _sort_targets(["run", "disk-image", "postgres", "cheribsd"]) == ["cheribsd-cheri", "postgres-cheri", "disk-image-mips-hybrid", "run-mips-hybrid"]
 
 
 def test_all_run_deps():
     assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm-native", "gdb-native", "cheribsd-cheri",
-                                                             "gdb-mips", "disk-image-cheri",
-                                                             "run-cheri"]
+                                                             "gdb-mips-hybrid", "disk-image-mips-hybrid",
+                                                             "run-mips-hybrid"]
 
 
 def test_run_disk_image():
     assert _sort_targets(["run", "disk-image", "run-freebsd-mips", "llvm", "disk-image-freebsd-x86_64"]) == [
-                          "llvm-native", "disk-image-cheri", "disk-image-freebsd-x86_64", "run-cheri", "run-freebsd-mips"]
+                          "llvm-native", "disk-image-mips-hybrid", "disk-image-freebsd-x86_64", "run-mips-hybrid", "run-freebsd-mips"]
 
 
 def test_remove_duplicates():
@@ -108,9 +108,9 @@ def test_remove_duplicates():
 def test_minimal_run():
     # Check that we build the mfs root first
     assert _sort_targets(["disk-image-minimal", "cheribsd-mfs-root-kernel", "run-minimal"]) == \
-                         ["disk-image-minimal-cheri", "cheribsd-mfs-root-kernel-cheri", "run-minimal"]
+                         ["disk-image-minimal-mips-hybrid", "cheribsd-mfs-root-kernel-mips-hybrid", "run-minimal"]
     assert _sort_targets(["cheribsd-mfs-root-kernel", "disk-image-minimal", "run-minimal"]) == \
-                         ["disk-image-minimal-cheri", "cheribsd-mfs-root-kernel-cheri", "run-minimal"]
+                         ["disk-image-minimal-mips-hybrid", "cheribsd-mfs-root-kernel-mips-hybrid", "run-minimal"]
 
 
 def _check_deps_not_cached(classes):
@@ -129,7 +129,7 @@ def test_webkit_cached_deps():
     config.skipSdk = True
     webkit_native = targetManager.get_target_raw("qtwebkit-native").projectClass
     webkit_cheri = targetManager.get_target_raw("qtwebkit-cheri").projectClass
-    webkit_mips = targetManager.get_target_raw("qtwebkit-mips").projectClass
+    webkit_mips = targetManager.get_target_raw("qtwebkit-mips-hybrid").projectClass
     # Check that the deps are not cached yet
     _check_deps_not_cached((webkit_native, webkit_cheri, webkit_mips))
 
@@ -139,7 +139,7 @@ def test_webkit_cached_deps():
     _check_deps_cached([webkit_cheri])
 
     mips_target_names = list(sorted(webkit_mips.allDependencyNames(config)))
-    assert mips_target_names == ["icu4c-mips", "icu4c-native", "libxml2-mips", "qtbase-mips", "sqlite-mips"]
+    assert mips_target_names == ["icu4c-mips-hybrid", "icu4c-native", "libxml2-mips-hybrid", "qtbase-mips-hybrid", "sqlite-mips-hybrid"]
     _check_deps_cached([webkit_cheri, webkit_mips])
     _check_deps_not_cached([webkit_native])
 
@@ -155,8 +155,8 @@ def test_webkit_deps_2():
     assert _sort_targets(["qtwebkit-native"], add_dependencies=True, skip_sdk=False) == \
                          ["qtbase-native", "icu4c-native", "libxml2-native", "sqlite-native", "qtwebkit-native"]
 
-    assert _sort_targets(["qtwebkit-mips"], add_dependencies=True, skip_sdk=True) == \
-                         ["qtbase-mips", "icu4c-native", "icu4c-mips", "libxml2-mips", "sqlite-mips", "qtwebkit-mips"]
+    assert _sort_targets(["qtwebkit-mips-hybrid"], add_dependencies=True, skip_sdk=True) == \
+                         ["qtbase-mips-hybrid", "icu4c-native", "icu4c-mips-hybrid", "libxml2-mips-hybrid", "sqlite-mips-hybrid", "qtwebkit-mips-hybrid"]
     assert _sort_targets(["qtwebkit-cheri"], add_dependencies=True, skip_sdk=True) == \
                          ["qtbase-cheri", "icu4c-native", "icu4c-cheri", "libxml2-cheri", "sqlite-cheri", "qtwebkit-cheri"]
 
@@ -177,7 +177,8 @@ def test_riscv():
 # Also the libcxx target should resolve to libcxx-cheri:
 @pytest.mark.parametrize("suffix,expected_suffix", [
     pytest.param("-native", "-native", id="native"),
-    pytest.param("-mips", "-mips", id="mips"),
+    pytest.param("-mips-nocheri", "-mips-nocheri", id="mips-nocheri"),
+    pytest.param("-mips-hybrid", "-mips-hybrid", id="mips-hybrid"),
     pytest.param("-cheri", "-cheri", id="cheri"),
     # no suffix should resolve to the -cheri targets:
     pytest.param("", "-cheri", id="no suffix"),

@@ -203,8 +203,8 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
                                             default=lambda c, p: "localhost")
         cls.qemu_port = cls.add_config_option("ssh-port",
             help="The QEMU SSH port to connect to for running tests", _allow_unknown_targets=True,
-            default=lambda c, p: LaunchCheriBSD.get_instance(p, c, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).sshForwardingPort,
-            only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS])
+            default=lambda c, p: LaunchCheriBSD.get_instance(p, c, cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID).sshForwardingPort,
+            only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_MIPS_NO_CHERI])
         cls.qemu_user = cls.add_config_option("ssh-user", default="root", help="The CheriBSD used for running tests")
 
         cls.test_jobs = cls.add_config_option("parallel-test-jobs", help="Number of QEMU instances spawned to run tests "

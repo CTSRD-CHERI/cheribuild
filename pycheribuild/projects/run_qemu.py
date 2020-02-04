@@ -484,8 +484,8 @@ class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
 
 class LaunchCheriBsdMfsRoot(AbstractLaunchFreeBSD):
     project_name = "run-minimal"
-    dependencies = ["qemu", "cheribsd-mfs-root-kernel-cheri"]
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
+    dependencies = ["qemu", "cheribsd-mfs-root-kernel"]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -511,7 +511,7 @@ class LaunchCheriBsdMinimal(AbstractLaunchFreeBSD):
     project_name = "run-minimal-with-disk-image"
     dependencies = ["qemu", "disk-image-minimal"]
     hide_options_from_help = True
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID]
 
     @classmethod
     def setup_config_options(cls, **kwargs):

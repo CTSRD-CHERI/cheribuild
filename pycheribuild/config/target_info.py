@@ -68,27 +68,33 @@ class TargetInfo(ABC):
 
     @property
     @abstractmethod
-    def sdk_root_dir(self) -> Path: ...
+    def sdk_root_dir(self) -> Path:
+        ...
 
     @property
     @abstractmethod
-    def sysroot_dir(self) -> Path: ...
+    def sysroot_dir(self) -> Path:
+        ...
 
     @property
     @abstractmethod
-    def target_triple(self) -> str: ...
+    def target_triple(self) -> str:
+        ...
 
     @property
     @abstractmethod
-    def c_compiler(self) -> Path: ...
+    def c_compiler(self) -> Path:
+        ...
 
     @property
     @abstractmethod
-    def cxx_compiler(self) -> Path: ...
+    def cxx_compiler(self) -> Path:
+        ...
 
     @property
     @abstractmethod
-    def linker(self) -> Path: ...
+    def linker(self) -> Path:
+        ...
 
     @property
     @abstractmethod
@@ -110,7 +116,8 @@ class TargetInfo(ABC):
 
     @property
     @abstractmethod
-    def c_preprocessor(self) -> Path: ...
+    def c_preprocessor(self) -> Path:
+        ...
 
     @classmethod
     @abstractmethod
@@ -218,7 +225,8 @@ class TargetInfo(ABC):
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     @property
     @abstractmethod
-    def _compiler_dir(self) -> Path: ...
+    def _compiler_dir(self) -> Path:
+        ...
 
     @property
     def c_compiler(self) -> Path:
@@ -280,7 +288,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 assert self.target.is_mips(include_purecap=False)
                 # TODO: should we use -mcpu=cheri128/256?
                 result.extend(["-mabi=n64", "-mcpu=beri"])
-                if self.project.mips_build_hybrid:
+                if self.target.is_cheri_hybrid():
                     result.append("-cheri=" + self.config.cheriBitsStr)
                 # always use libc++
                 result.append("-stdlib=libc++")
@@ -427,7 +435,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
     @property
     def sysroot_dir(self):
-        return self.config.get_cheribsd_sysroot_path(self.target, use_hybrid_sysroot=self.project.mips_build_hybrid)
+        return self.config.get_cheribsd_sysroot_path(self.target)
 
     @property
     def is_cheribsd(self):
@@ -448,10 +456,15 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        if target.is_mips(include_purecap=False):
-            if config.use_hybrid_sysroot_for_mips:
+        # Purecap (currently) builds against the hybrid sysroot:
+        if target.is_cheri_purecap():
+            if target.is_mips(include_purecap=True):
                 return ["cheribsd-cheri"]
-            return ["cheribsd-mips"]
+            elif target.is_riscv(include_purecap=True):
+                return ["cheribsd-riscv64-hybrid"]
+            else:
+                assert False, "Logic error"
+        # Otherwise pick the matching sysroot
         return ["cheribsd"]
 
     @property
@@ -470,9 +483,10 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         from ..projects.cross.cheribsd import BuildCHERIBSD
         xtarget = CompilationTargets.NONE
         # Install the purecap targets into the hybrid rootfs: (not BuildCheribsdPurecap)
-        # CHERIBSD_MIPS_PURECAP returns rootfs128, not the purecap one!
-        if self.config.use_hybrid_sysroot_for_mips and self.target.is_mips(include_purecap=True):
-            xtarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
+        if self.target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+            xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
+        elif self.target.is_cheri_purecap([CPUArchitecture.RISCV64]):
+            xtarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
         return BuildCHERIBSD.get_instance(self.project, cross_target=xtarget)
 
 
@@ -481,7 +495,6 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def sdk_root_dir(self) -> Path:
-        return self.config.cheri_sdk_dir
         return self.config.cheri_sdk_dir
 
     @property
@@ -565,8 +578,8 @@ class MipsFloatAbi(Enum):
 
 
 class CrossCompileTarget(object):
-    def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, is_cheri_purecap: bool,
-                 target_info_cls: "typing.Type[TargetInfo]", check_conflict_with: "CrossCompileTarget" = None):
+    def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "typing.Type[TargetInfo]", *,
+                 is_cheri_purecap=False, is_cheri_hybrid=False, check_conflict_with: "CrossCompileTarget" = None):
         if target_info_cls is None:
             self.name = suffix
         else:
@@ -576,21 +589,23 @@ class CrossCompileTarget(object):
         self.cpu_architecture = cpu_architecture
         # TODO: self.operating_system = ...
         self._is_cheri_purecap = is_cheri_purecap
+        self._is_cheri_hybrid = is_cheri_hybrid
+        assert not (is_cheri_purecap and is_cheri_hybrid), "Can't be both hybrid and purecap"
         self.check_conflict_with = check_conflict_with  # Check that we don't reuse install-dir, etc for this target
         self.target_info_cls = target_info_cls
 
     def create_target_info(self, project: "SimpleProject") -> TargetInfo:
         return self.target_info_cls(self, project)
 
-    def build_suffix(self, config: "CheriConfig", *, build_hybrid=False):
+    def build_suffix(self, config: "CheriConfig"):
         assert self is not CompilationTargets.NONE
         if self is CompilationTargets.CHERIBSD_MIPS_PURECAP:
             result = ""  # only -128/-256 for legacy build dir compat
         else:
             result = "-" + self.generic_suffix
 
-        if self is CompilationTargets.CHERIBSD_MIPS:
-            if build_hybrid:
+        if self.cpu_architecture is CPUArchitecture.MIPS64:
+            if self._is_cheri_hybrid:
                 result += "-hybrid" + config.cheri_bits_and_abi_str
             if config.mips_float_abi == MipsFloatAbi.HARD:
                 result += "-hardfloat"
@@ -645,6 +660,17 @@ class CrossCompileTarget(object):
                 return True
         return False
 
+    def is_cheri_hybrid(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None):
+        if valid_cpu_archs is None:
+            return self._is_cheri_hybrid
+        if not self._is_cheri_hybrid:
+            return False
+        # Purecap target, but must first check if one of the accepted architectures matches
+        for a in valid_cpu_archs:
+            if a is self.cpu_architecture:
+                return True
+        return False
+
     def __repr__(self):
         result = self.target_info_cls.__name__ + "(" + self.cpu_architecture.name
         if self._is_cheri_purecap:
@@ -656,36 +682,42 @@ class CrossCompileTarget(object):
 
 
 class CompilationTargets(object):
-    NONE = CrossCompileTarget("invalid", None, False, None)  # Placeholder
+    NONE = CrossCompileTarget("invalid", None, None)  # Placeholder
 
     # XXX: should probably not harcode x86_64 for native
-    NATIVE = CrossCompileTarget("native", CPUArchitecture.X86_64, False, NativeTargetInfo)
+    NATIVE = CrossCompileTarget("native", CPUArchitecture.X86_64, NativeTargetInfo)
 
-    # CheriBSD targets
-    CHERIBSD_MIPS = CrossCompileTarget("mips", CPUArchitecture.MIPS64, False, CheriBSDTargetInfo)
-    CHERIBSD_MIPS_PURECAP = CrossCompileTarget("cheri", CPUArchitecture.MIPS64, True, CheriBSDTargetInfo, CHERIBSD_MIPS)
-    CHERIBSD_RISCV = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, False, CheriBSDTargetInfo)
-    CHERIBSD_RISCV_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, True, CheriBSDTargetInfo)
-    CHERIBSD_X86_64 = CrossCompileTarget("native", CPUArchitecture.X86_64, False, CheriBSDTargetInfo)
+    CHERIBSD_MIPS_NO_CHERI = CrossCompileTarget("mips-nocheri", CPUArchitecture.MIPS64, CheriBSDTargetInfo)
+    CHERIBSD_MIPS_HYBRID = CrossCompileTarget("mips-hybrid", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
+        is_cheri_hybrid=True, check_conflict_with=CHERIBSD_MIPS_NO_CHERI)
+    CHERIBSD_MIPS_PURECAP = CrossCompileTarget("cheri", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
+        is_cheri_purecap=True, check_conflict_with=CHERIBSD_MIPS_NO_CHERI)
+
+    CHERIBSD_RISCV_NO_CHERI = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriBSDTargetInfo)
+    CHERIBSD_RISCV_HYBRID = CrossCompileTarget("riscv64-hybrid", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
+        is_cheri_hybrid=True, check_conflict_with=CHERIBSD_RISCV_NO_CHERI)
+    CHERIBSD_RISCV_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
+        is_cheri_purecap=True, check_conflict_with=CHERIBSD_RISCV_HYBRID)
+    CHERIBSD_X86_64 = CrossCompileTarget("native", CPUArchitecture.X86_64, CheriBSDTargetInfo)
 
     # Baremetal targets
-    BAREMETAL_NEWLIB_MIPS64 = CrossCompileTarget("baremetal-mips", CPUArchitecture.MIPS64, False,
-                                                 NewlibBaremetalTargetInfo)
-    BAREMETAL_NEWLIB_MIPS64_PURECAP = CrossCompileTarget("baremetal-mips-purecap", CPUArchitecture.MIPS64, True,
-                                                         NewlibBaremetalTargetInfo, BAREMETAL_NEWLIB_MIPS64)
-    BAREMETAL_NEWLIB_RISCV64 = CrossCompileTarget("baremetal-riscv64", CPUArchitecture.RISCV64, False,
-                                                 NewlibBaremetalTargetInfo)
-    BAREMETAL_NEWLIB_RISCV64_PURECAP = CrossCompileTarget("baremetal-riscv64-purecap", CPUArchitecture.RISCV64, True,
-                                                          NewlibBaremetalTargetInfo, BAREMETAL_NEWLIB_RISCV64)
+    BAREMETAL_NEWLIB_MIPS64 = CrossCompileTarget("baremetal-mips", CPUArchitecture.MIPS64, NewlibBaremetalTargetInfo)
+    BAREMETAL_NEWLIB_MIPS64_PURECAP = CrossCompileTarget("baremetal-mips-purecap", CPUArchitecture.MIPS64,
+        NewlibBaremetalTargetInfo, is_cheri_purecap=True, check_conflict_with=BAREMETAL_NEWLIB_MIPS64)
+    BAREMETAL_NEWLIB_RISCV64 = CrossCompileTarget("baremetal-riscv64", CPUArchitecture.RISCV64,
+        NewlibBaremetalTargetInfo, check_conflict_with=BAREMETAL_NEWLIB_MIPS64)
+    BAREMETAL_NEWLIB_RISCV64_PURECAP = CrossCompileTarget("baremetal-riscv64-purecap", CPUArchitecture.RISCV64,
+        NewlibBaremetalTargetInfo, is_cheri_purecap=True, check_conflict_with=BAREMETAL_NEWLIB_RISCV64)
     # FreeBSD targets
-    FREEBSD_MIPS = CrossCompileTarget("mips", CPUArchitecture.MIPS64, False, FreeBSDTargetInfo)
-    FREEBSD_RISCV = CrossCompileTarget("riscv", CPUArchitecture.RISCV64, False, FreeBSDTargetInfo)
-    FREEBSD_I386 = CrossCompileTarget("i386", CPUArchitecture.I386, False, FreeBSDTargetInfo)
-    FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, False, FreeBSDTargetInfo)
-    FREEBSD_X86_64 = CrossCompileTarget("x86_64", CPUArchitecture.X86_64, False, FreeBSDTargetInfo)
+    FREEBSD_MIPS = CrossCompileTarget("mips", CPUArchitecture.MIPS64, FreeBSDTargetInfo)
+    FREEBSD_RISCV = CrossCompileTarget("riscv", CPUArchitecture.RISCV64, FreeBSDTargetInfo)
+    FREEBSD_I386 = CrossCompileTarget("i386", CPUArchitecture.I386, FreeBSDTargetInfo)
+    FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, FreeBSDTargetInfo)
+    FREEBSD_X86_64 = CrossCompileTarget("x86_64", CPUArchitecture.X86_64, FreeBSDTargetInfo)
 
     # TODO: test RISCV
-    ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = [CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS, NATIVE]
+    ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = [CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI, NATIVE]
     ALL_SUPPORTED_BAREMETAL_TARGETS = [BAREMETAL_NEWLIB_MIPS64, BAREMETAL_NEWLIB_MIPS64_PURECAP,
                                        BAREMETAL_NEWLIB_RISCV64]
-    ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS = ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + ALL_SUPPORTED_BAREMETAL_TARGETS
+    ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS = ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
+                                                            ALL_SUPPORTED_BAREMETAL_TARGETS
