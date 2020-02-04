@@ -2197,7 +2197,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 basic_args.append("--jenkins-bitfile=cheri" + self.config.cheriBitsStr)
             # TODO: allow using a plain MIPS kernel?
             mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(
-                CompilationTargets.CHERIBSD_MIPS_PURECAP, self.config)
+                CompilationTargets.CHERIBSD_MIPS_HYBRID, self.config)
             if self.config.benchmark_with_debug_kernel:
                 kernel_config = mfs_kernel.fpga_kernconf
             else:

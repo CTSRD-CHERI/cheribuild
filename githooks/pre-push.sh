@@ -63,7 +63,8 @@ do
 		try_run ./cheribuild.py -p __run_everything__ --freebsd/crossbuild --test
 		try_run ./cheribuild.py -p __run_everything__ --freebsd/crossbuild --benchmark
 		# Regression for --benchmark-clean-boot:
-		try_run ./cheribuild.py mibench-mips --benchmark --benchmark-clean-boot -p
+		try_run ./cheribuild.py mibench-mips-nocheri --benchmark --benchmark-clean-boot -p
+		try_run ./cheribuild.py mibench-mips-hybrid --benchmark --benchmark-clean-boot -p
 		try_run ./cheribuild.py --help
 		try_run ./jenkins-cheri-build.py --help
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=cheri128 -p libcxx
