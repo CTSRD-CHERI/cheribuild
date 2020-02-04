@@ -337,7 +337,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.compiling_for_mips(include_purecap=True):
             target_arch = self.config.mips_float_abi.freebsd_target_arch()
             if self.crosscompile_target.is_cheri_purecap():
-                target_arch += "c"  # build purecap
+                target_arch += "c" + self.config.cheri_bits_str  # build purecap
             return {"TARGET": "mips", "TARGET_ARCH": target_arch}
         elif self.crosscompile_target.is_x86_64():
             return {"TARGET": "amd64", "TARGET_ARCH": "amd64"}
