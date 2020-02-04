@@ -334,7 +334,6 @@ class CheriConfig(object):
         # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
         os.environ["CHERI_BITS"] = self.cheriBitsStr
         os.environ["CHERI_CAPTABLE_ABI"] = self.cheri_cap_table_abi
-        self.sysrootArchiveName = "cheri-sysroot" + self.cheri_bits_and_abi_str + ".tar.gz"
 
     @property
     def dollarPathWithOtherTools(self) -> str:
