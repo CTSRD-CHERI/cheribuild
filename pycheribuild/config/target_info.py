@@ -299,7 +299,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             assert self.target.cpu_architecture == CPUArchitecture.RISCV64
             # Use the insane RISC-V arch string to enable CHERI
             arch_string = "rv64imafdc"
-            if self.target.is_cheri_purecap() or self.target.is_cheri_hybrid():
+            if self.target.is_hybrid_or_purecap_cheri():
                 arch_string += "xcheri"
             result.append("-march=" + arch_string)  # XXX: any more xfoo extensions?
             if self.target.is_cheri_purecap():
@@ -679,6 +679,9 @@ class CrossCompileTarget(object):
             if a is self.cpu_architecture:
                 return True
         return False
+
+    def is_hybrid_or_purecap_cheri(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None):
+        return self.is_cheri_purecap(valid_cpu_archs) or self.is_cheri_hybrid(valid_cpu_archs)
 
     def __repr__(self):
         result = self.target_info_cls.__name__ + "(" + self.cpu_architecture.name

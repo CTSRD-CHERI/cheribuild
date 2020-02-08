@@ -47,7 +47,7 @@ def default_kernel_config(config: CheriConfig, project: SimpleProject) -> str:
     if xtarget.is_any_x86():
         return "GENERIC"
     elif xtarget.is_mips(include_purecap=True):
-        if xtarget.is_cheri_purecap() or xtarget.is_cheri_hybrid():
+        if xtarget.is_hybrid_or_purecap_cheri():
             # make sure we use a kernel with 128 bit CPU features selected
             # or a purecap kernel is selected
             assert isinstance(project, BuildCHERIBSD)
@@ -58,7 +58,7 @@ def default_kernel_config(config: CheriConfig, project: SimpleProject) -> str:
         return "MALTA64"
     elif xtarget.is_riscv(include_purecap=True):
         # TODO: purecap/hybrid kernel
-        if xtarget.is_cheri_hybrid() or xtarget.is_cheri_purecap():
+        if xtarget.is_hybrid_or_purecap_cheri():
             return "CHERI_SPIKE"
         return "QEMU"  # default to the QEMU config
     elif xtarget.is_aarch64(include_purecap=True):
@@ -217,7 +217,7 @@ class BuildFreeBSDBase(Project):
         return None
 
     def has_cheri_support(self):
-        return self.crosscompile_target.is_cheri_hybrid() or self.crosscompile_target.is_cheri_purecap()
+        return self.crosscompile_target.is_hybrid_or_purecap_cheri()
 
 
 class BuildFreeBSD(BuildFreeBSDBase):
@@ -1150,7 +1150,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     @property
     def arch_build_flags(self):
         result = super().arch_build_flags
-        if self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.MIPS64]) or self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+        if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.MIPS64]):
             result["CHERI"] = self.config.cheri_bits_str
         return result
 

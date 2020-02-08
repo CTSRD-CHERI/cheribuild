@@ -871,7 +871,7 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
             result.append("gdb-riscv64")
             pass
         if xtarget.is_mips(include_purecap=True):
-            if xtarget.is_cheri_hybrid() or xtarget.is_cheri_purecap():
+            if xtarget.is_hybrid_or_purecap_cheri():
                 result.append("gdb-mips-hybrid")
             else:
                 result.append("gdb-mips-nocheri")
