@@ -59,7 +59,7 @@ def default_kernel_config(config: CheriConfig, project: SimpleProject) -> str:
     elif xtarget.is_riscv(include_purecap=True):
         # TODO: purecap/hybrid kernel
         if xtarget.is_hybrid_or_purecap_cheri():
-            return "CHERI_SPIKE"
+            return "CHERI_QEMU"
         return "QEMU"  # default to the QEMU config
     elif xtarget.is_aarch64(include_purecap=True):
         return "GENERIC-UP"
