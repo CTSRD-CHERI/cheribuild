@@ -386,8 +386,10 @@ class CheriConfig(object):
                 return self.cheri_sdk_dir / "sysroot-mipshf"
             return self.cheri_sdk_dir / "sysroot-mips"
         elif cross_compile_target.is_riscv(include_purecap=True):
-            if cross_compile_target.is_cheri_purecap() or cross_compile_target.is_cheri_hybrid():
+            if cross_compile_target.is_cheri_purecap():
                 return self.cheri_sdk_dir / ("sysroot-riscv64c" + self.cheri_bits_and_abi_str)
+            if cross_compile_target.is_cheri_hybrid():
+                return self.cheri_sdk_dir / ("sysroot-riscv64c" + self.cheri_bits_and_abi_str + "-hybrid")
             return self.cheri_sdk_dir / "sysroot-riscv64"
         elif cross_compile_target.is_x86_64():
             return self.cheri_sdk_dir / "sysroot-x86_64"
