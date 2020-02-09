@@ -38,22 +38,20 @@ from ..project import *
 class BuildBBLBase(CrossCompileAutotoolsProject):
     doNotAddToTargets = True
     repository = GitRepository("https://github.com/CTSRD-CHERI/riscv-pk",
-        force_branch=True, default_branch="cheri",  # Compilation fixes for clang
-        per_target_branches={
-            CompilationTargets.CHERIBSD_RISCV_PURECAP: TargetBranchInfo("cheri_purecap", "bbl-cheribsd-purecap")
-            },
+        force_branch=True, default_branch="cheri_purecap",  # Compilation fixes for clang and support for CHERI
         old_urls=[b"https://github.com/jrtc27/riscv-pk.git"])
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
     is_sdk_target = False
-    freebsd_class = None
+    kernel_class = None
     cross_install_dir = DefaultInstallDir.ROOTFS
+    without_payload = False
 
     @classmethod
     def dependencies(cls, config: CheriConfig):
         xtarget = cls.get_crosscompile_target(config)
         # We need GNU objcopy which is installed by gdb-native
-        result = [cls.freebsd_class.get_class_for_target(xtarget).target, "gdb-native"]
+        result = [cls.kernel_class.get_class_for_target(xtarget).target, "gdb-native"]
         return result
 
     def __init__(self, config: CheriConfig):
@@ -62,28 +60,34 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         self.COMMON_FLAGS.append("-nostdlib")
 
     def configure(self, **kwargs):
-        kernel_path = self.freebsd_class.get_installed_kernel_path(self, cross_target=self.crosscompile_target)
-        if self.crosscompile_target.is_cheri_purecap(valid_cpu_archs=[CPUArchitecture.RISCV64]):
+        if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+            # We have to build a purecap if we want to support CHERI
             self.configureArgs.append("--with-abi=l64pc128")
-        else:
-            self.configureArgs.append("--with-abi=lp64")
-
-        if self.target_info.is_cheribsd:
             # Enable CHERI extensions
             self.configureArgs.append("--with-arch=rv64imafdcxcheri")
+            # Tag bits only in the 0xc region:
+            self.configureArgs.append("--with-mem-start=0xc0000000")
         else:
+            self.configureArgs.append("--with-abi=lp64")
             self.configureArgs.append("--with-arch=rv64imafdc")
-        # BBL build uses weird objcopy flags and therefore requires
+
+        # BBL build uses weird objcopy flags and therefore requires GNU objcopy which we can get from GDB
         self.add_configure_and_make_env_arg("OBJCOPY",
             BuildGDB.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/gobjcopy")
+        # Otherwise use LLVM tools
         self.add_configure_and_make_env_arg("READELF", self.sdk_bindir / "llvm-readelf")
         self.add_configure_and_make_env_arg("RANLIB", self.sdk_bindir / "llvm-ranlib")
         self.add_configure_and_make_env_arg("AR", self.sdk_bindir / "llvm-ar")
 
-        # Add the kernel as a payload:
-        self.configureArgs.append("--with-payload=" + str(kernel_path))
-        # Tag bits only in the 0xc region:
-        self.configureArgs.append("--with-mem-start=0xc0000000")
+        if self.without_payload:
+            # Build an OpenSBI fw_jump style BBL
+            assert self.kernel_class is None
+            self.configureArgs.append("--without-payload")
+        else:
+            # Add the kernel as a payload:
+            assert self.kernel_class is not None
+            kernel_path = self.kernel_class.get_installed_kernel_path(self, cross_target=self.crosscompile_target)
+            self.configureArgs.append("--with-payload=" + str(kernel_path))
         super().configure(**kwargs)
 
     def compile(self, cwd: Path = None):
@@ -92,29 +96,46 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     def get_installed_kernel_path(self):
         return self.real_install_root_dir / self.target_info.target_triple / "bin" / "bbl"
 
-    def process(self):
-        if not self.query_yes_no("Are you really sure you want to use BBL??? OpenSBI works much better with QEMU"):
-            return
-        super().process()
+
+def bbl_no_payload_install_dir(config: CheriConfig, project: SimpleProject):
+    return config.cheri_sdk_dir / "bbl" / project.crosscompile_target.generic_suffix
 
 
-class BuildBBLFreeBSDRISCV(BuildBBLBase):
-    project_name = "bbl-freebsd"
-    target = "bbl-freebsd"
-    supported_architectures = [CompilationTargets.FREEBSD_RISCV]
-    freebsd_class = BuildFreeBSD
+# Build BBL without an embedded payload
+class BuildBBLNoPayload(BuildBBLBase):
+    target = "bbl"
+    project_name = "bbl"
+    without_payload = True
+    # For some reason BBL needs a sysroot, so we use the CheriBSD one
+    dependencies = ["cheribsd"]
+    cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
+    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_PURECAP, CompilationTargets.CHERIBSD_RISCV_HYBRID,
+                               CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
+
+    _default_install_dir_fn = ComputedDefaultValue(function=bbl_no_payload_install_dir,
+                                                   as_string="$SDK_ROOT/bbl/riscv{32,64}{c,-hybrid}")
 
 
-class BuildBBLFreeBSDWithDefaultOptionsRISCV(BuildBBLBase):
-    project_name = "bbl-freebsd-with-default-options"
-    target = "bbl-freebsd-with-default-options"
-    supported_architectures = [CompilationTargets.FREEBSD_RISCV]
-    freebsd_class = BuildFreeBSDWithDefaultOptions
-
-
-class BuildBBLCheriBSDRISCV(BuildBBLBase):
-    project_name = "bbl-cheribsd"
-    target = "bbl-cheribsd"
-    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_HYBRID, CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
-    freebsd_class = BuildCHERIBSD
+# class BuildBBLFreeBSDRISCV(BuildBBLBase):
+#     project_name = "bbl"  # reuse same source dir
+#     target = "bbl-freebsd"
+#     build_dir_suffix = "freebsd"
+#     supported_architectures = [CompilationTargets.FREEBSD_RISCV]
+#     kernel_class = BuildFreeBSD
+#
+#
+# class BuildBBLFreeBSDWithDefaultOptionsRISCV(BuildBBLBase):
+#     project_name = "bbl"  # reuse same source dir
+#     target = "bbl-freebsd-with-default-options"
+#     build_dir_suffix = "freebsd-with-default-options"
+#     supported_architectures = [CompilationTargets.FREEBSD_RISCV]
+#     kernel_class = BuildFreeBSDWithDefaultOptions
+#
+#
+# class BuildBBLCheriBSDRISCV(BuildBBLBase):
+#     project_name = "bbl"  # reuse same source dir
+#     target = "bbl-cheribsd"
+#     build_dir_suffix = "cheribsd"
+#     supported_architectures = [CompilationTargets.CHERIBSD_RISCV_HYBRID, CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
+#     kernel_class = BuildCHERIBSD
 

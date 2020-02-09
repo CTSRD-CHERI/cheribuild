@@ -295,7 +295,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
 class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     doNotAddToTargets = True
     _source_class = None
-    _bbl_class = None
+    _bbl_class = BuildBBLNoPayload
     _qemu_riscv_bios = "default"
 
     @classproperty
@@ -354,7 +354,6 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
 class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
     project_name = "run"
     _source_class = BuildCheriBSDDiskImage
-    _bbl_class = BuildBBLCheriBSDRISCV
 
     @staticmethod
     def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
@@ -446,7 +445,6 @@ class LaunchFreeBSD(_RunMultiArchFreeBSDImage):
     project_name = "run-freebsd"
     hide_options_from_help = True
     _source_class = BuildFreeBSDImage
-    _bbl_class = BuildBBLFreeBSDRISCV
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -459,7 +457,6 @@ class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
     project_name = "run-freebsd-with-default-options"
     hide_options_from_help = True
     _source_class = BuildFreeBSDWithDefaultOptionsDiskImage
-    _bbl_class = BuildBBLFreeBSDWithDefaultOptionsRISCV
 
     @classmethod
     def setup_config_options(cls, **kwargs):
