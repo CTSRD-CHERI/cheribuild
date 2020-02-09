@@ -1257,13 +1257,17 @@ class BuildCHERIBSD(BuildFreeBSD):
         super().process()
 
 
-# FIXME: this should inherit from BuildCheriBSD to avoid
+# FIXME: this should inherit from BuildCheriBSD to avoid subtle problems
 class BuildCheriBsdMfsKernel(SimpleProject):
     project_name = "cheribsd-mfs-root-kernel"
     dependencies = ["disk-image-minimal"]
     # TODO: also support building a non-CHERI kernel... But that needs a plain MIPS disk-image-minimal first...
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID]
     _always_add_suffixed_targets = True
+
+    @classproperty
+    def supported_architectures(cls):
+        from ..disk_image import BuildMinimalCheriBSDDiskImage
+        return list(BuildMinimalCheriBSDDiskImage.supported_architectures)
 
     def process(self):
         from ..disk_image import BuildMinimalCheriBSDDiskImage
@@ -1273,6 +1277,9 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         # This ensure that the kernel build tools can be found in the build directory
         build_cheribsd_instance = minimal_image_instance.cheribsd_class.get_instance(self)
         kernconf = self._get_kernconf_to_build(build_cheribsd_instance)
+        # TODO: add the benchmark ones for RISCV
+        has_benchmark_kernel = build_cheribsd_instance.crosscompile_target.is_mips(include_purecap=True)
+
         if self.config.clean:
             kernel_dir = build_cheribsd_instance.kernel_objdir(kernconf)
             if kernel_dir:
@@ -1280,18 +1287,21 @@ class BuildCheriBsdMfsKernel(SimpleProject):
                     self.verbose_print("Cleaning ", kernel_dir)
         self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=kernconf, image=image)
         # also build the benchmark kernel:
-        self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=kernconf + "_BENCHMARK", image=image)
+        if has_benchmark_kernel:
+            self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=kernconf + "_BENCHMARK", image=image)
 
         if build_cheribsd_instance.buildFpgaKernels:
             prefix = self.fpga_kernconf
             self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=prefix, image=image)
-            self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=prefix + "_BENCHMARK", image=image)
+            if has_benchmark_kernel:
+                self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=prefix + "_BENCHMARK", image=image)
 
     @property
     def fpga_kernconf(self):
+        assert not self.compiling_for_riscv(include_purecap=True), "This case is not handled yet"
         if self.compiling_for_mips(include_purecap=False):
             return "BERI_DE4_MFS_ROOT"
-        elif self.has_cheri_support():
+        elif self.crosscompile_target.is_hybrid_or_purecap_cheri():
             return "CHERI128_DE4_MFS_ROOT" if self.config.cheriBits == 128 else "CHERI_DE4_MFS_ROOT"
         else:
             self.fatal("Invalid ARCH")
@@ -1305,7 +1315,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
             # noinspection PyProtectedMember
             build_cheribsd._installkernel(kernconf=kernconf, destdir=td)
             # runCmd("find", td)
-            kernel_install_path = self.installed_kernel_for_config(self.config, kernconf)
+            kernel_install_path = self.installed_kernel_for_config(self.config, kernconf, self.crosscompile_target)
             self.deleteFile(kernel_install_path)
             self.installFile(Path(td, "boot/kernel/kernel"), kernel_install_path, force=True, print_verbose_only=False)
             if Path(td, "boot/kernel/kernel.full").exists():
@@ -1335,19 +1345,25 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 
     @classmethod
     def _get_kernconf_to_build(cls, build_cheribsd: BuildCHERIBSD):
-        return build_cheribsd.kernelConfig + "_MFS_ROOT"
+        xtarget = build_cheribsd.crosscompile_target
+        if xtarget.is_mips(include_purecap=True):
+            return build_cheribsd.kernelConfig + "_MFS_ROOT"
+        elif xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+            # Use the SPIKE MFSROOT kernel config by default
+            return "CHERI_SPIKE"
+        return build_cheribsd.kernelConfig
 
     @classmethod
-    def get_installed_kernel_path(cls, caller) -> Path:
+    def get_installed_kernel_path(cls, caller, xtarget: CrossCompileTarget=None) -> Path:
         return cls.installed_kernel_for_config(caller.config, cls.get_kernel_config(caller))
 
     @classmethod
-    def get_installed_benchmark_kernel_path(cls, caller) -> Path:
-        return cls.installed_kernel_for_config(caller.config, cls.get_kernel_config(caller) + "_BENCHMARK")
+    def get_installed_benchmark_kernel_path(cls, caller, xtarget: CrossCompileTarget=None) -> Path:
+        return cls.installed_kernel_for_config(caller.config, cls.get_kernel_config(caller) + "_BENCHMARK", xtarget)
 
     @staticmethod
-    def installed_kernel_for_config(config: CheriConfig, kernconf: str) -> Path:
-        return config.cheribsd_image_root / ("kernel" + config.cheri_bits_and_abi_str + "." + kernconf)
+    def installed_kernel_for_config(config: CheriConfig, kernconf: str, xtarget: CrossCompileTarget) -> Path:
+        return config.cheribsd_image_root / ("kernel" + xtarget.build_suffix(config) + "." + kernconf)
 
 
 # def cheribsd_minimal_install_dir(config: CheriConfig, project: SimpleProject):
