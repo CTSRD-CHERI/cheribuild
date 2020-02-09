@@ -828,6 +828,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                     prefix = "{" + ",".join(libdirs) + "}/"
                 self.fatal("Could not find required library '", prefix + library_basename, "' in rootfs ",
                     self.rootfsDir, sep="")
+                continue
             self.add_file_to_image(full_lib_path, base_directory=self.rootfsDir)
 
     def prepareRootfs(self):
