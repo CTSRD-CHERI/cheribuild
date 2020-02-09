@@ -372,7 +372,7 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
     @classmethod
     def dependencies(cls, config: CheriConfig):
         result = super().dependencies(config)
-        # RISCV needs OpenSBI to run:
+        # RISCV needs OpenSBI/BBL to run:
         # Note: QEMU 4.2+ embeds opensbi, for CHERI, we have to use BBL (for now):
         xtarget = cls.get_crosscompile_target(config)
         # if xtarget.is_riscv(include_purecap=True):
@@ -386,15 +386,16 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
 
     def __init__(self, config):
         super().__init__(config)
-        if False:
-            if self.crosscompile_target.is_cheri_purecap():
-                fw_jump = BuildOpenSBI.get_purecap_bios(self)
+        if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+            if False:
+                if self.crosscompile_target.is_cheri_purecap():
+                    fw_jump = BuildOpenSBI.get_purecap_bios(self)
+                else:
+                    # TODO: always use purecap bios for CheriBSD
+                    fw_jump = BuildOpenSBI.get_nocap_bios(self)
             else:
-                # TODO: always use purecap bios for CheriBSD
-                fw_jump = BuildOpenSBI.get_nocap_bios(self)
-        else:
-            fw_jump = BuildBBLNoPayload.get_installed_kernel_path(self)
-        self._qemu_riscv_bios = fw_jump
+                fw_jump = BuildBBLNoPayload.get_installed_kernel_path(self)
+            self._qemu_riscv_bios = fw_jump
 
     def run_tests(self):
         self.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.diskImage,
