@@ -28,6 +28,8 @@
 # SUCH DAMAGE.
 #
 
+from .cross.bbl import BuildBBLNoPayload
+from .cross.cheribsd import BuildCheriBsdMfsKernel
 from .project import *
 
 
@@ -37,6 +39,7 @@ class BuildCheriSpike(AutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/riscv-isa-sim",
         default_branch="cheri", force_branch=True)
     native_install_dir = DefaultInstallDir.CHERI_SDK
+    default_build_type = BuildType.RELEASE
 
     def __init__(self, config):
         super().__init__(config)
@@ -47,3 +50,24 @@ class BuildCheriSpike(AutotoolsProject):
     @classmethod
     def get_simulator_binary(cls, caller):
         return cls.getInstallDir(caller, cross_target=CompilationTargets.NATIVE) / "bin/spike"
+
+
+class RunCheriSpikeBase(SimpleProject):
+    doNotAddToTargets = True
+    _bbl_class = BuildBBLNoPayload
+    _source_class = None
+    @classmethod
+    def dependencies(cls, config):
+        return [cls._source_class.target, cls._bbl_class.target, BuildCheriSpike.target]
+
+    def process(self):
+        kernel = self._source_class.get_installed_kernel_path(self)
+        self.run_cmd([BuildCheriSpike.get_simulator_binary(self), "+payload=" + str(kernel),
+            self._bbl_class.get_installed_kernel_path(self)])
+
+
+class RunCheriBsdSpike(RunCheriSpikeBase):
+    target = "run-spike"
+    _source_class = BuildCheriBsdMfsKernel
+    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_PURECAP, CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+                               CompilationTargets.CHERIBSD_RISCV_HYBRID]

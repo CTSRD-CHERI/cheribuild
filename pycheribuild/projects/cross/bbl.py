@@ -96,8 +96,10 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     def install(self, **kwargs):
         self.installFile(self.buildDir / "bbl", self.real_install_root_dir / "bbl")
 
-    def get_installed_kernel_path(self):
-        return self.real_install_root_dir / "bin" / "bbl"
+    @classmethod
+    def get_installed_kernel_path(cls, caller, config: CheriConfig = None,
+                                  cross_target: CrossCompileTarget = CompilationTargets.NONE):
+        return cls.get_instance(caller, config=config, cross_target=cross_target).real_install_root_dir / "bbl"
 
 
 def bbl_no_payload_install_dir(config: CheriConfig, project: SimpleProject):

@@ -262,7 +262,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             # noinspection PyProtectedMember
             source_class = disk_image_class.get_instance(self).source_project
         self.source_class = source_class
-        self.currentKernel = source_class.get_installed_kernel_path(self)
+        self.currentKernel = source_class.get_installed_kernel_path(self, )
         if hasattr(source_class, "rootfsDir"):
             self.rootfs_path = source_class.rootfsDir(self, config)
         if needs_disk_image:
@@ -337,7 +337,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
             self.virtioDisk = True
             if self.useBblForBoot:
                 self.machineFlags += ["-bios", "none"]
-                self.currentKernel = self._bbl_class.get_instance(self).get_installed_kernel_path()
+                self.currentKernel = self._bbl_class.get_installed_kernel_path(self)
             else:
                 self.machineFlags += ["-bios", self._qemu_riscv_bios]
                 assert self.currentKernel is not None

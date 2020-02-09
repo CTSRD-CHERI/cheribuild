@@ -2203,7 +2203,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             else:
                 kernel_config = mfs_kernel.fpga_kernconf + "_BENCHMARK"
             basic_args.append(
-                "--kernel-img=" + str(mfs_kernel.installed_kernel_for_config(self.config, kernel_config)))
+                "--kernel-img=" + str(mfs_kernel.installed_kernel_for_config(self, kernel_config)))
         else:
             runbench_args.append("--skip-boot")
         if benchmark_script:

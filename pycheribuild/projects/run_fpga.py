@@ -113,7 +113,7 @@ class LaunchCheriBSDOnFGPA(LaunchFPGABase):
                 kernel_config = mfs_kernel.fpga_kernconf + "_BENCHMARK"
             else:
                 kernel_config = mfs_kernel.fpga_kernconf
-            self.currentKernel = mfs_kernel.installed_kernel_for_config(self.config, kernel_config)
+            self.currentKernel = mfs_kernel.installed_kernel_for_config(self, kernel_config)
         with tempfile.TemporaryDirectory() as kernel_image_tmpdir:
             # Strip to kernel image to save some time when copying it to the FPGA booting
             # TODO: move into beri-fpga-bsd-boot?

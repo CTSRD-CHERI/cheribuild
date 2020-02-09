@@ -1315,7 +1315,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
             # noinspection PyProtectedMember
             build_cheribsd._installkernel(kernconf=kernconf, destdir=td)
             # runCmd("find", td)
-            kernel_install_path = self.installed_kernel_for_config(self.config, kernconf, self.crosscompile_target)
+            kernel_install_path = self.installed_kernel_for_config(self, kernconf)
             self.deleteFile(kernel_install_path)
             self.installFile(Path(td, "boot/kernel/kernel"), kernel_install_path, force=True, print_verbose_only=False)
             if Path(td, "boot/kernel/kernel.full").exists():
@@ -1336,7 +1336,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     def get_kernel_config(cls, caller: SimpleProject) -> str:
         config = caller.config
         xtarget = caller.get_crosscompile_target(config)
-        if xtarget.is_mips(include_purecap=True) and xtarget.is_cheri_purecap() or config.run_mips_tests_with_cheri_image:
+        if xtarget.is_mips(include_purecap=True) and (xtarget.is_hybrid_or_purecap_cheri() or config.run_mips_tests_with_cheri_image):
             build_cheribsd = BuildCHERIBSD.get_instance_for_cross_target(CompilationTargets.CHERIBSD_MIPS_HYBRID,
                 config, caller=caller)
         else:
@@ -1354,16 +1354,22 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         return build_cheribsd.kernelConfig
 
     @classmethod
-    def get_installed_kernel_path(cls, caller, xtarget: CrossCompileTarget=None) -> Path:
-        return cls.installed_kernel_for_config(caller.config, cls.get_kernel_config(caller))
+    def get_installed_kernel_path(cls, caller: SimpleProject, config: CheriConfig = None,
+                                  cross_target: CrossCompileTarget = None) -> Path:
+        return cls.installed_kernel_for_config(caller, cls.get_kernel_config(caller), config, cross_target)
 
     @classmethod
-    def get_installed_benchmark_kernel_path(cls, caller, xtarget: CrossCompileTarget=None) -> Path:
-        return cls.installed_kernel_for_config(caller.config, cls.get_kernel_config(caller) + "_BENCHMARK", xtarget)
+    def get_installed_benchmark_kernel_path(cls, caller, config: CheriConfig = None, cross_target: CrossCompileTarget=None) -> Path:
+        return cls.installed_kernel_for_config(caller, cls.get_kernel_config(caller) + "_BENCHMARK", config, cross_target)
 
     @staticmethod
-    def installed_kernel_for_config(config: CheriConfig, kernconf: str, xtarget: CrossCompileTarget) -> Path:
-        return config.cheribsd_image_root / ("kernel" + xtarget.build_suffix(config) + "." + kernconf)
+    def installed_kernel_for_config(caller: SimpleProject, kernconf: str, config: CheriConfig = None,
+                                    cross_target: CrossCompileTarget = None) -> Path:
+        if config is None:
+            config = caller.config
+        if cross_target is None:
+            cross_target = caller.crosscompile_target
+        return config.cheribsd_image_root / ("kernel" + cross_target.build_suffix(config) + "." + kernconf)
 
 
 # def cheribsd_minimal_install_dir(config: CheriConfig, project: SimpleProject):
