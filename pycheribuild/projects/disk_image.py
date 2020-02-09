@@ -68,7 +68,6 @@ class _BuildDiskImageBase(SimpleProject):
     disk_image_path = None  # type: Path
     _freebsd_build_class = None
     strip_binaries = False  # True by default for minimal disk-image
-    bigEndian = True # True for MIPS
     is_minimal = False  # To allow building a much smaller image
     default_disk_image_path = None
 
@@ -129,6 +128,8 @@ class _BuildDiskImageBase(SimpleProject):
         if self.needs_special_pkg_repo:
             self.addRequiredSystemTool("wget")  # Needed to recursively fetch the pkg repo
         self.hostname = os.path.expandvars(self.hostname)   # Expand env vars in hostname to allow $CHERI_BITS
+        # MIPS needs big-endian disk images
+        self.big_endian = self.compiling_for_mips(include_purecap=True)
 
     def add_file_to_image(self, file: Path, *, base_directory: Path = None, user="root", group="wheel", mode=None,
                           path_in_target=None):
@@ -453,7 +454,7 @@ class _BuildDiskImageBase(SimpleProject):
                 # minimum 1024 free inodes for minimal, otherwise at least 1M
                 "-R", "4m",  # round up size to the next 4m multiple
                 "-M", self.minimumImageSize,
-                "-B", "be" if self.bigEndian else "le",  # byte order
+                "-B", "be" if self.big_endian else "le",  # byte order
                 "-N", self.userGroupDbDir,
                 # use master.passwd from the cheribsd source not the current systems passwd file
                 # which makes sure that the numeric UID values are correct
@@ -908,7 +909,6 @@ class BuildMultiArchDiskImage(_BuildDiskImageBase):
         src_class = self._source_class.get_class_for_target(self.get_crosscompile_target(config))
         assert issubclass(src_class, BuildFreeBSD)
         super().__init__(config, source_class=src_class)
-        self.bigEndian = self.compiling_for_mips(include_purecap=True)
         if self.get_crosscompile_target(config).is_riscv(include_purecap=True):
             self.file_templates = _RISCVFileTemplates()
         elif self.is_x86:
