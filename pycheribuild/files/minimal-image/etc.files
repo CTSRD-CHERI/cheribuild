@@ -9,7 +9,6 @@ etc/spwd.db
 # Other config files:
 
 etc/defaults/rc.conf
-etc/devd.conf
 etc/gettytab
 etc/hosts
 etc/login.conf
@@ -33,7 +32,6 @@ etc/rc.d/NETWORKING
 etc/rc.d/SERVERS
 etc/rc.d/cleanvar
 etc/rc.d/defaultroute
-etc/rc.d/devd
 etc/rc.d/dhclient
 etc/rc.d/fsck
 etc/rc.d/hostname

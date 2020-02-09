@@ -664,7 +664,9 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
     project_name = "disk-image-minimal"
     dependencies = ["qemu", "cheribsd"]  # TODO: include gdb?
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
-                               # TODO: CompilationTargets.CHERIBSD_MIPS_PURECAP,
+                               CompilationTargets.CHERIBSD_MIPS_PURECAP,
+                               CompilationTargets.CHERIBSD_RISCV_PURECAP, CompilationTargets.CHERIBSD_RISCV_HYBRID,
+                               CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
                                ]
 
     class _MinimalFileTemplates(_AdditionalFileTemplates):
@@ -695,17 +697,23 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                                                             help="Use the rootfs built by cheribsd-purecap instead")
 
     def __init__(self, config: CheriConfig):
-        rootfs_target = CompilationTargets.CHERIBSD_MIPS_HYBRID
-        if self.use_cheribsd_purecap_rootfs:
-            rootfs_target = CompilationTargets.CHERIBSD_MIPS_PURECAP
-        self.cheribsd_class = BuildCHERIBSD.get_class_for_target(rootfs_target)  # type: typing.Type[BuildCHERIBSD]
-
+        self.rootfs_xtarget = self.get_crosscompile_target(config)
+        if self.rootfs_xtarget.is_cheri_hybrid([CPUArchitecture.MIPS64]) and self.use_cheribsd_purecap_rootfs:
+            self.rootfs_xtarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
+        if self.rootfs_xtarget.is_cheri_hybrid([CPUArchitecture.RISCV64]) and self.use_cheribsd_purecap_rootfs:
+            self.rootfs_xtarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
+        self.cheribsd_class = BuildCHERIBSD.get_class_for_target(self.rootfs_xtarget)  # type: typing.Type[BuildCHERIBSD]
+        assert self.cheribsd_class.get_crosscompile_target(config) == self.rootfs_xtarget
         super().__init__(config, source_class=self.cheribsd_class)
         self.minimumImageSize = "20m"  # let's try to shrink the image size
         # The base input is only cheribsdbox and all the symlinks
         self.input_METALOG = self.rootfsDir / "cheribsdbox.mtree"
         self.file_templates = BuildMinimalCheriBSDDiskImage._MinimalFileTemplates()
         self.is_minimal = True
+        self.have_cplusplus_support = True
+        # C++ runtime not available for RISC-V purecap due to https://github.com/CTSRD-CHERI/llvm-project/issues/379
+        if self.rootfs_xtarget.is_cheri_purecap([CPUArchitecture.RISCV64]):
+            self.have_cplusplus_support = False
 
     @property
     def needs_special_pkg_repo(self):
@@ -731,8 +739,8 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         self.verbose_print("Adding files from rootfs to minimal image:")
         files_to_add = [includeLocalFile("files/minimal-image/base.files"),
                         includeLocalFile("files/minimal-image/etc.files")]
-        if self.compiling_for_cheri() and (self.rootfsDir / "usr/libcheri/libc.so.7").exists():
-            files_to_add.append(includeLocalFile("files/minimal-image/purecap-dynamic.files"))
+        if self.have_cplusplus_support:
+            files_to_add.append(includeLocalFile("files/minimal-image/need-cplusplus.files"))
 
         for files_list in files_to_add:
             self.process_files_list(files_list)
@@ -743,12 +751,21 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         if ld_elf_path.exists():
             self.add_file_to_image(ld_elf_path, base_directory=self.rootfsDir)
         else:
-            self.fatal("default ABI runtime linker not present in rootfs at", ld_elf_path)
+            self.warning("default ABI runtime linker not present in rootfs at", ld_elf_path)
+            if not self.query_yes_no("Are you sure you want to continue?"):
+                self.fatal("Cannot continue")
+                return
         # Add all compat ABI runtime linkers that we find in the rootfs:
         for rtld_basename in ("ld-elf32.so.1", "ld-elf64.so.1", "ld-cheri-elf.so.1"):
             rtld_path = self.rootfsDir / "libexec" / rtld_basename
             if rtld_path.exists():
                 self.add_file_to_image(rtld_path, base_directory=self.rootfsDir)
+
+        self.add_required_libraries(["lib", "usr/lib"])
+        # Add compat libraries (may not exist if it was built with -DWITHOUT_LIB64, etc.)
+        for libcompat_dir in ("usr/libcheri", "usr/lib64", "usr/lib32"):
+            if (self.rootfsDir / libcompat_dir).exists():
+                self.add_required_libraries([libcompat_dir])
 
         if self.include_cheritest:
             for i in ("cheritest", "cheriabitest"):
@@ -761,6 +778,57 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         self.mtree.add_dir("var/empty", print_status=self.config.verbose)
 
         self.verbose_print("Not adding unlisted files to METALOG since we are building a minimal image")
+
+    def add_required_libraries(self, libdirs: "typing.List[str]"):
+        required_libs = [
+            "libc.so.7",
+            "libcrypt.so.5",
+            "libm.so.5",
+            "libthr.so.3",
+            "libutil.so.9",
+            "libz.so.6",
+            # Commonly used (and tiny)
+            "libdl.so.1",
+            # needed by /bin/sh & /bin/csh (if we included the purecap sh/csh)
+            "libedit.so.7",
+            "libncursesw.so.8",
+            "libxo.so.0",
+            "libz.so.6",
+            ]
+        # additional cheribsdbox dependencies (PAM+SSL+BSM)
+        # We don't know what ABI cheribsdbox is built for so let's just add the libraries for all ABIs
+        required_libs += [
+            "libbsm.so.3",
+            "libcrypto.so.111",
+            "libssl.so.111",
+            # PAM libraries (we should only need pam_permit/pam_rootok)
+            "libpam.so.6",
+            "pam_permit.so",
+            "pam_permit.so.6",
+            "pam_rootok.so",
+            "pam_rootok.so.6",
+            ]
+        if self.rootfs_xtarget.is_mips(include_purecap=True):
+            # Needed for most benchmarks (MIPS-only):
+            required_libs.append("libstatcounters.so.3")
+
+        if self.have_cplusplus_support:
+            required_libs += ["libc++.so.1", "libcxxrt.so.1", "libgcc_s.so.1"]
+
+        for library_basename in required_libs:
+            full_lib_path = None
+            for library_dir in libdirs:
+                guess = self.rootfsDir / library_dir / library_basename
+                if guess.exists():
+                    full_lib_path = guess
+            if full_lib_path is None:
+                if len(libdirs) == 1:
+                    prefix = libdirs[0] + "/"
+                else:
+                    prefix = "{" + ",".join(libdirs) + "}/"
+                self.fatal("Could not find required library '", prefix + library_basename, "' in rootfs ",
+                    self.rootfsDir, sep="")
+            self.add_file_to_image(full_lib_path, base_directory=self.rootfsDir)
 
     def prepareRootfs(self):
         super().prepareRootfs()
