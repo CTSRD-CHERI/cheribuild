@@ -464,15 +464,20 @@ def defaultNumberOfMakeJobs():
 
 def fatalError(*args, sep=" ", fixitHint=None, fatalWhenPretending=False):
     # we ignore fatal errors when simulating a run
+    def maybe_add_space(msg) -> tuple:
+        if sep == "":
+            return msg, " "
+        return (msg, )
+
     if _cheriConfig and _cheriConfig.pretend:
-        print(coloured(AnsiColour.red, ("Potential fatal error:",) + args, sep=sep), file=sys.stderr)
+        print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:") + args, sep=sep), file=sys.stderr)
         if fixitHint:
             print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr)
         if fatalWhenPretending:
             traceback.print_stack()
             sys.exit(3)
     else:
-        print(coloured(AnsiColour.red, ("Fatal error:",) + args, sep=sep), file=sys.stderr)
+        print(coloured(AnsiColour.red, maybe_add_space("Fatal error:") + args, sep=sep), file=sys.stderr)
         if fixitHint:
             print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr)
         sys.exit(3)
