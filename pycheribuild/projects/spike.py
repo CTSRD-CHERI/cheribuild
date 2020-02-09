@@ -41,7 +41,9 @@ class BuildCheriSpike(AutotoolsProject):
     def __init__(self, config):
         super().__init__(config)
         self.addRequiredSystemTool("dtc", apt="device-tree-compiler", homebrew="dtc")
-        self._installDir = self._installDir / "spike"
         self.configureArgs.append("--enable-cheri")
         self.configureArgs.append("--disable-rvfi-dii")
 
+    @classmethod
+    def get_simulator_binary(cls, caller):
+        return cls.getInstallDir(caller, cross_target=CompilationTargets.NATIVE) / "bin/spike"
