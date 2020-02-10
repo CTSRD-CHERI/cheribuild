@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import sys
 
 from .cross.bbl import BuildBBLNoPayload
 from .cross.cheribsd import BuildCheriBsdMfsKernel
@@ -71,7 +72,8 @@ class RunCheriSpikeBase(SimpleProject):
     def process(self):
         kernel = self._source_class.get_installed_kernel_path(self)
         self.run_cmd([BuildCheriSpike.get_simulator_binary(self), "+payload=" + str(kernel),
-            self._bbl_class.get_installed_kernel_path(self)])
+            self._bbl_class.get_installed_kernel_path(self)],
+            stdout=sys.stdout, stderr=sys.stderr)  # We always want output even with --quiet
 
 
 class RunCheriBsdSpike(RunCheriSpikeBase):
