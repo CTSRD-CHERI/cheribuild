@@ -29,6 +29,7 @@
 #
 import fcntl
 import os
+import signal
 import shutil
 import subprocess
 import sys
@@ -232,14 +233,22 @@ def real_main():
 
 
 def main():
+    error = False
     try:
+        os.setpgrp()  # create new process group, become its leader
         real_main()
     except KeyboardInterrupt:
+        error = True
         sys.exit("Exiting due to Ctrl+C")
     except subprocess.CalledProcessError as err:
+        error = True
         cwd = (". Working directory was ", err.cwd) if hasattr(err, "cwd") else ()
         fatalError("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code ",
                    err.returncode, *cwd, fatalWhenPretending=True, sep="")
+    finally:
+        if error:
+            signal.signal(signal.SIGTERM, signal.SIG_IGN)
+            os.killpg(0, signal.SIGTERM)  # Tell all child processes to exit
 
 
 if __name__ == "__main__":
