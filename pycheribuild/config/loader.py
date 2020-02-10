@@ -544,7 +544,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 if not stripped.startswith("#") and not stripped.startswith("//"):
                     json_lines.append(line)
             # print("".join(jsonLines))
-            result = json.loads("".join(json_lines), object_pairs_hook=dict_raise_on_duplicates, encoding="utf-8")
+            result = json.loads("".join(json_lines), object_pairs_hook=dict_raise_on_duplicates)
             if self._parsedArgs and self._parsedArgs.verbose is True:
                 print("Parsed", config_path, "as", coloured(AnsiColour.cyan, json.dumps(result)))
             return result
