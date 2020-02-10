@@ -33,6 +33,7 @@ import os
 import re
 import shlex
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -201,9 +202,17 @@ def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Pop
         raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8"))
 
 
+# https://stackoverflow.com/a/15257702/894271
+def _become_tty_foreground_process():
+    os.setpgrp()
+    hdlr = signal.signal(signal.SIGTTOU, signal.SIG_IGN)
+    tty = os.open('/dev/tty', os.O_RDWR)
+    os.tcsetpgrp(tty, os.getpgrp())
+    signal.signal(signal.SIGTTOU, hdlr)
+
 def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]"=None, timeout=None,
            print_verbose_only=False, runInPretendMode=False, raiseInPretendMode=False, no_print=False,
-           replace_env=False, **kwargs):
+           replace_env=False, run_in_background=False, **kwargs):
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         cmdline = args[0]  # list with parameters was passed
     else:
@@ -245,9 +254,11 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
             kwargs["env"] = new_env
         else:
             kwargs["env"] = dict((k, str(v)) for k, v in kwargs["env"].items())
-    with popen_handle_noexec(cmdline, **kwargs) as process:
+    with popen_handle_noexec(cmdline, **kwargs, preexec_fn=_become_tty_foreground_process) as process:
         try:
             stdout, stderr = process.communicate(input, timeout=timeout)
+        except KeyboardInterrupt:
+            process.send_signal(signal.SIGINT)
         except subprocess.TimeoutExpired:
             process.kill()
             stdout, stderr = process.communicate()
