@@ -9,6 +9,14 @@ It has been tested and should work on FreeBSD 10, 11 and 12.
 On Linux Ubuntu 16.04 and OpenSUSE Tubleweed are supported. Ubuntu 14.04 may also work but is no longer tested.
 MacOS 10.13 is also supported.
 
+# Pre-Build Setup
+
+If you are building Cheri on a Debian/ Ubuntu based machine, please install the below packages:
+
+```shell
+apt-get install libtool pkg-config clang bison cmake ninja-build samba flex texinfo libarchive-dev libglib2.0-dev libpixman-1-dev libarchive-dev bsdtar libbz2-dev
+```
+
 # Basic usage
 
 If you want to start up a QEMU VM running CheriBSD run `cheribuild.py run -d` (-d means build all dependencies).
