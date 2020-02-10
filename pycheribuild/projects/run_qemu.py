@@ -225,7 +225,7 @@ class LaunchQEMUBase(SimpleProject):
                             "-S"  # freeze CPU at startup (use 'c' to start execution)
                             ]
 
-        runCmd(qemuCommand, stdout=sys.stdout, stderr=sys.stderr)  # even with --quiet we want stdout here
+        runCmd(qemuCommand, stdout=sys.stdout, stderr=sys.stderr, give_tty_control=True)  # even with --quiet we want stdout here
 
     @staticmethod
     def printPortUsage(port: int):

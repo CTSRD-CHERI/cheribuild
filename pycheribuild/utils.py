@@ -212,7 +212,7 @@ def _become_tty_foreground_process():
 
 def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]"=None, timeout=None,
            print_verbose_only=False, runInPretendMode=False, raiseInPretendMode=False, no_print=False,
-           replace_env=False, run_in_background=False, **kwargs):
+           replace_env=False, give_tty_control=False, **kwargs):
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         cmdline = args[0]  # list with parameters was passed
     else:
@@ -254,7 +254,9 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
             kwargs["env"] = new_env
         else:
             kwargs["env"] = dict((k, str(v)) for k, v in kwargs["env"].items())
-    with popen_handle_noexec(cmdline, **kwargs, preexec_fn=_become_tty_foreground_process) as process:
+    if give_tty_control:
+        kwargs["preexec_fn"] = _become_tty_foreground_process
+    with popen_handle_noexec(cmdline, **kwargs) as process:
         try:
             stdout, stderr = process.communicate(input, timeout=timeout)
         except KeyboardInterrupt:

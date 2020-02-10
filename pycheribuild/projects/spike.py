@@ -72,7 +72,7 @@ class RunCheriSpikeBase(SimpleProject):
     def process(self):
         kernel = self._source_class.get_installed_kernel_path(self)
         self.run_cmd([BuildCheriSpike.get_simulator_binary(self), "+payload=" + str(kernel),
-            self._bbl_class.get_installed_kernel_path(self)],
+            self._bbl_class.get_installed_kernel_path(self)], give_tty_control=True,
             stdout=sys.stdout, stderr=sys.stderr)  # We always want output even with --quiet
 
 
