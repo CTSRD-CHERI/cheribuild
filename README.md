@@ -14,7 +14,7 @@ MacOS 10.13 is also supported.
 If you are building Cheri on a Debian/ Ubuntu based machine, please install the below packages:
 
 ```shell
-apt-get install libtool pkg-config clang bison libgtk2.0-dev cmake ninja-build samba flex
+apt-get install libtool pkg-config clang bison cmake ninja-build samba flex texinfo libarchive-dev libglib2.0-dev libpixman-1-dev libarchive-dev bsdtar libbz2-dev
 ```
 
 # Basic usage
