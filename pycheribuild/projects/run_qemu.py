@@ -214,6 +214,10 @@ class LaunchQEMUBase(SimpleProject):
                 ]
             self.info("To start and connect GDB run the following command in another terminal:\n"
                 "\t", coloured(AnsiColour.red, commandline_to_str(launch_cmd)))
+            self.info("If you would like to debug /sbin/init (or any other statically linked program) run this inside GDB:")
+            self.info(coloured(AnsiColour.red, "\tadd-symbol-file -o 0", str(self.rootfs_path / "sbin/init")))
+            self.info("For dynamically linked programs you will have to add libraries at the correct offset. For example:")
+            self.info(coloured(AnsiColour.red, "\tadd-symbol-file -o 0x40212000", str(self.rootfs_path / "lib/libc.so.7")))
             self.info("Launching QEMU in suspended state...")
             # TODO: control tmux to do this automatically?
             # See e.g. https://github.com/tmux-python/libtmux/
