@@ -76,8 +76,8 @@ def _default_stdout_filter(arg: bytes):
 class ProjectSubclassDefinitionHook(type):
     def __init__(cls, name: str, bases, clsdict):
         super().__init__(name, bases, clsdict)
-        if typing.TYPE_CHECKING:
-            assert issubclass(cls, SimpleProject)
+        if typing.TYPE_CHECKING:   # no-combine
+            assert issubclass(cls, SimpleProject)   # no-combine
         if clsdict.get("doNotAddToTargets") is not None:
             if clsdict.get("doNotAddToTargets") is True:
                 return  # if doNotAddToTargets is defined within the class we skip it
@@ -1652,7 +1652,7 @@ class Project(SimpleProject):
     def default_compiler_flags(self):
         result = []
         if self.use_lto:
-            result.append("-flto")
+            result.extend(self._lto_compiler_flags)
         if self.use_cfi:
             if not self.use_lto:
                 self.fatal("Cannot use CFI without LTO!")
@@ -1685,10 +1685,10 @@ class Project(SimpleProject):
     @property
     def default_ldflags(self):
         result = list(self.COMMON_LDFLAGS)
+        if self.use_lto:
+            result.extend(self._lto_linker_flags)
         if self.force_static_linkage:
             result.append("-static")
-        if self.use_lto:
-            result.append("-flto")
         if self.use_cfi:
             assert not self.compiling_for_cheri()
             result.append("-fsanitize=cfi")
@@ -1824,6 +1824,9 @@ class Project(SimpleProject):
             self.COMMON_FLAGS.append("-fsanitize=address")
             self.COMMON_LDFLAGS.append("-fsanitize=address")
 
+        self._lto_linker_flags = []
+        self._lto_compiler_flags = []
+
     def setup(self):
         super().setup()
         if not self.compiling_for_host():
@@ -1836,6 +1839,48 @@ class Project(SimpleProject):
                 )
             self.configureEnvironment.update(pkg_config_args)
             self.make_args.set_env(**pkg_config_args)
+        if self.use_lto:
+            self.add_lto_build_options(getCompilerInfo(self.CC))
+
+    def set_lto_binutils(self, ar, ranlib, nm, ld):
+        raise NotImplementedError()
+
+    def add_lto_build_options(self, ccinfo: CompilerInfo, prefer_thinlto: bool = True) -> bool:
+        compiler = ccinfo.path
+        if not self.can_use_lto(ccinfo):
+            return False
+        self.info("Trying to build with LTO enabled")
+        if ccinfo.compiler == "clang":
+            # For non apple-clang compilers we need to use llvm binutils:
+            version_suffix = ""
+            if compiler.name.startswith("clang"):
+                version_suffix = compiler.name[len("clang"):]
+            llvm_ar = ccinfo.get_matching_binutil("llvm-ar")
+            llvm_ranlib = ccinfo.get_matching_binutil("llvm-ranlib")
+            llvm_nm = ccinfo.get_matching_binutil("llvm-nm")
+            lld = ccinfo.get_matching_binutil("ld.lld")
+            # Find lld with the correct version (it must match the version of clang otherwise it breaks!)
+            self._lto_linker_flags.append("-fuse-ld=" + shlex.quote(str(lld)))
+            if not llvm_ar or not llvm_ranlib or not llvm_nm:
+                self.warning("Could not find llvm-{ar,ranlib,nm}" + version_suffix,
+                    "-> disabling LTO (resulting binary will be a bit slower)")
+                return False
+            self.set_lto_binutils(ar=llvm_ar, ranlib=llvm_ranlib, nm=llvm_nm, ld=lld)
+        if prefer_thinlto:
+            self._lto_compiler_flags.append("-flto=thin")
+            self._lto_linker_flags.append("-flto=thin")
+            if self.canUseLLd(ccinfo.path):
+                thinlto_cache_flag = "--thinlto-cache-dir="
+            else:
+                # Apple ld uses a different flag for the thinlto cache dir
+                assert ccinfo.compiler == "apple-clang"
+                thinlto_cache_flag = "-cache_path_lto,"
+            self._lto_linker_flags.append("-Wl," + thinlto_cache_flag + str(self.buildDir / "thinlto-cache"))
+        else:
+            self._lto_compiler_flags.append("-flto")
+            self._lto_linker_flags.append("-flto")
+        self.info("Building with LTO")
+        return True
 
     @property
     def rootfs_dir(self):
@@ -2448,6 +2493,10 @@ class CMakeProject(Project):
             return
         self._show_line_stdout_filter(line)
 
+    def set_lto_binutils(self, ar, ranlib, nm, ld):
+        # LD is never invoked directly, so the -fuse-ld= flag is sufficient
+        self.add_cmake_options(CMAKE_AR=ar, CMAKE_RANLIB=ranlib)
+
     def needsConfigure(self) -> bool:
         if self.config.pretend and (self.config.forceConfigure or self.config.clean):
             return True
@@ -2633,6 +2682,12 @@ class AutotoolsProject(Project):
 
     def needsConfigure(self):
         return not (self.buildDir / "Makefile").exists()
+
+    def set_lto_binutils(self, ar, ranlib, nm, ld):
+        self.configureEnvironment.update(NM=nm, AR=ar, RANLIB=ranlib, LD=ld)
+        # self.make_args.env_vars.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
+        self.make_args.set(NM=nm, AR=ar, RANLIB=ranlib, LD=ld)
+        self.make_args.env_vars.update(NM=nm, AR=ar, RANLIB=ranlib, LD=ld)
 
 
 # A target that is just an alias for at least one other targets but does not force building of dependencies

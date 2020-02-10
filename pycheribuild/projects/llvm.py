@@ -141,20 +141,18 @@ class BuildLLVMBase(CMakeProject):
             self.add_cmake_options(LLVM_ENABLE_ASSERTIONS=self.enable_assertions)
         self.add_cmake_options(LLVM_LIT_ARGS="--max-time 3600 --timeout 300 -s -vv")
 
-        if self.enable_lto:
-            ccinfo = getCompilerInfo(self.CC)
-            llvm_ar = ccinfo.get_matching_binutil("llvm-ar")
-            llvm_ranlib = ccinfo.get_matching_binutil("llvm-ranlib")
-            lld = ccinfo.get_matching_binutil("ld.lld")
-            if not llvm_ar or not llvm_ranlib or not lld:
-                self.warning("Could not find all required binutils to enable LTO")
-            elif ccinfo.is_clang and ccinfo.compiler != "apple-clang":
-                self.add_cmake_options(CMAKE_AR=llvm_ar, CMAKE_RANLIB=llvm_ranlib, LLVM_USE_LINKER=lld)
-                # we are passing an explicit linker path -> cannot use LLVM_ENABLE_LLD
-                self.add_cmake_options(LLVM_ENABLE_LLD=False)
-                if not self.canUseLLd(self.CC):
-                    warningMessage("LLD not found for LTO build, it may fail.")
-                self.add_cmake_options(LLVM_ENABLE_LTO="Thin")
+    def set_lto_binutils(self, ar, ranlib, nm, ld):
+        super().set_lto_binutils(ar=ar, ranlib=ranlib, nm=nm, ld=ld)
+        # we are passing an explicit linker path -> cannot use LLVM_ENABLE_LLD
+        self.add_cmake_options(LLVM_USE_LINKER=ld)
+        self.add_cmake_options(LLVM_ENABLE_LLD=False)
+
+    def add_lto_build_options(self, ccinfo: CompilerInfo, prefer_thinlto: bool = True) -> bool:
+        if not super().add_lto_build_options(ccinfo, prefer_thinlto):
+            return False # can't use LTO
+        if self.canUseLLd(self.CC) and prefer_thinlto:
+            self.add_cmake_options(LLVM_ENABLE_LTO="Thin")
+
 
     @staticmethod
     def clang_install_hint():

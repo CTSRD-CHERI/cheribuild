@@ -82,13 +82,14 @@ class BuildQEMUBase(AutotoolsProject):
         # Tests require GNU sed
         self.addRequiredSystemTool("sed" if self.target_info.is_linux else "gsed", homebrew="gnu-sed", freebsd="gsed")
 
-        self._extraCFlags = "-DCONFIG_DEBUG_TCG=1" if self.build_type == BuildType.DEBUG else "-O3"
-        self._extraLDFlags = ""
-        self._extraCXXFlags = ""
+        if self.build_type == BuildType.DEBUG:
+            self.COMMON_FLAGS.append("-DCONFIG_DEBUG_TCG=1")
+        else:
+            self.COMMON_FLAGS.append("-O3")
         if shutil.which("pkg-config"):
             glib_includes = self.run_cmd("pkg-config", "--cflags-only-I", "glib-2.0", captureOutput=True,
                                          print_verbose_only=True, runInPretendMode=True).stdout.decode("utf-8").strip()
-            self._extraCFlags += " " + glib_includes
+            self.COMMON_FLAGS.extend(shlex.split(glib_includes))
 
         # Disable some more unneeded things (we don't usually need the GUI frontends)
         if not self.gui:
@@ -124,56 +125,21 @@ class BuildQEMUBase(AutotoolsProject):
     def setup(self):
         super().setup()
         compiler = self.CC
-        if compiler:
-            ccinfo = getCompilerInfo(compiler)
-            if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
-                # Turn implicit function declaration into an error -Wimplicit-function-declaration
-                self._extraCFlags += " -Werror=implicit-function-declaration"
-                self._extraCFlags += " -Werror=incompatible-pointer-types"
-                self._extraCFlags += " -Werror=return-type"
-                # Also make discarding const an error:
-                self._extraCFlags += " -Werror=incompatible-pointer-types-discards-qualifiers"
-                # silence this warning that comes lots of times (it's fine on x86)
-                self._extraCFlags += " -Wno-address-of-packed-member"
-                self._extraCFlags += " -Wall -Wextra -Wno-sign-compare -Wno-unused-parameter" \
-                                     " -Wno-c11-extensions -Wno-missing-field-initializers"
-            if self.use_lto and self.can_use_lto(ccinfo):
-                while True:  # add a loop so I can break early
-                    self.info("Compiling with Clang and LLD -> trying to build with LTO enabled")
-                    if ccinfo.compiler != "apple-clang":
-                        # For non apple-clang compilers we need to use llvm binutils:
-                        version_suffix = ""
-                        if compiler.name.startswith("clang"):
-                            version_suffix = compiler.name[len("clang"):]
-                        llvm_ar = ccinfo.get_matching_binutil("llvm-ar")
-                        llvm_ranlib = ccinfo.get_matching_binutil("llvm-ranlib")
-                        llvm_nm = ccinfo.get_matching_binutil("llvm-nm")
-                        lld = ccinfo.get_matching_binutil("ld.lld")
-                        # Find lld with the correct version (it must match the version of clang otherwise it breaks!)
-                        self._extraLDFlags += " -fuse-ld=" + shlex.quote(str(lld))
-                        if not llvm_ar or not llvm_ranlib or not llvm_nm:
-                            self.warning("Could not find llvm-{ar,ranlib,nm}" + version_suffix,
-                                         "-> disabling LTO (qemu will be a bit slower)")
-                            break
-                        self.configureEnvironment.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
-                        # self.make_args.env_vars.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
-                        self.make_args.set(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
-                    self._extraCFlags += " -flto=thin"
-                    self._extraCXXFlags += " -flto=thin"
-                    self._extraLDFlags += " -flto=thin"
-                    if self.canUseLLd(ccinfo.path):
-                        thinlto_cache_flag = "--thinlto-cache-dir="
-                    else:
-                        # Apple ld uses a different flag for the thinlto cache dir
-                        assert ccinfo.compiler == "apple-clang"
-                        thinlto_cache_flag = "-cache_path_lto,"
-                    self._extraLDFlags += " -Wl," + thinlto_cache_flag + str(self.buildDir / "thinlto-cache")
-
-                    self.info("Building with LTO -> QEMU should be faster")
-                    break
-        self._extraCFlags += " -Wall"
+        ccinfo = getCompilerInfo(compiler)
+        if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
+            # Turn implicit function declaration into an error -Wimplicit-function-declaration
+            self.CFLAGS.extend(["-Werror=implicit-function-declaration",
+                                      "-Werror=incompatible-pointer-types",
+                                      # Also make discarding const an error:
+                                      "-Werror=incompatible-pointer-types-discards-qualifiers",
+                                      # silence this warning that comes lots of times (it's fine on x86)
+                                      "-Wno-address-of-packed-member",
+                                      "-Wextra", "-Wno-sign-compare", "-Wno-unused-parameter",
+                                      "-Wno-c11-extension", "-Wno-missing-field-initializers",
+                                      ])
+        self.COMMON_FLAGS.append("-Wall")
         # This would have cought some problems in the past
-        self._extraCFlags += " -Werror=return-type"
+        self.CFLAGS.append("-Werror=return-type")
         if self.use_smbd:
             smbd_path = "/usr/sbin/smbd"
             if self.target_info.is_freebsd:
@@ -217,14 +183,16 @@ class BuildQEMUBase(AutotoolsProject):
             # with -Werror by default but we don't want the build to fail because of that -> add -Wno-error
             "--disable-werror",
             "--disable-pie",  # no need to build as PIE (this just slows down QEMU)
-            "--extra-cflags=" + self._extraCFlags,
+            "--extra-cflags=" + commandline_to_str(self.default_compiler_flags + self.CFLAGS),
             "--cxx=" + str(self.CXX),
             "--cc=" + str(self.CC),
-        ])
-        if self._extraLDFlags:
-            self.configureArgs.append("--extra-ldflags=" + self._extraLDFlags.strip())
-        if self._extraCXXFlags:
-            self.configureArgs.append("--extra-cxxflags=" + self._extraCXXFlags.strip())
+            ])
+        ldflags = self.default_ldflags + self.LDFLAGS
+        if ldflags:
+            self.configureArgs.append("--extra-ldflags=" + commandline_to_str(ldflags))
+        cxxflags = self.default_compiler_flags + self.CXXFLAGS
+        if cxxflags:
+            self.configureArgs.append("--extra-cxxflags=" + commandline_to_str(cxxflags))
 
     def run_tests(self):
         self.runMake("check", cwd=self.buildDir)
@@ -272,14 +240,14 @@ class BuildQEMU(BuildQEMUBase):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         if self.unaligned:
-            self._extraCFlags += " -DCHERI_UNALIGNED"
+            self.COMMON_FLAGS.append("-DCHERI_UNALIGNED")
         if self.statistics:
-            self._extraCFlags += " -DDO_CHERI_STATISTICS=1"
+            self.COMMON_FLAGS.append("-DDO_CHERI_STATISTICS=1")
 
     def setup(self):
         super().setup()
         if self.build_type == BuildType.DEBUG:
-            self._extraCFlags += " -DENABLE_CHERI_SANITIY_CHECKS=1"
+            self.COMMON_FLAGS.append("-DENABLE_CHERI_SANITIY_CHECKS=1")
         # the capstone disassembler doesn't support CHERI instructions:
         self.configureArgs.append("--disable-capstone")
         # TODO: tests:
@@ -307,7 +275,7 @@ class BuildCheriOSQEMU(BuildQEMU):
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.outputRoot / "cherios-sdk",
         as_string="$INSTALL_ROOT/cherios-sdk")
-    skip_misc_llvm_tools = False # Cannot skip these tools in upstream LLVM
+    skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
