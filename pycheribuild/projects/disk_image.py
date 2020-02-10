@@ -937,8 +937,10 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
         result = super().dependencies(config)
         # RISCV needs BBL to run:
         if xtarget.is_riscv(include_purecap=True):
-            result.append("gdb-riscv64")
-            pass
+            if xtarget.is_hybrid_or_purecap_cheri():
+                result.append("gdb-riscv64-hybrid")
+            else:
+                result.append("gdb-riscv64")
         if xtarget.is_mips(include_purecap=True):
             if xtarget.is_hybrid_or_purecap_cheri():
                 result.append("gdb-mips-hybrid")
