@@ -43,8 +43,8 @@ import typing
 from pathlib import Path
 
 from .colour import coloured, AnsiColour, statusUpdate, warningMessage
-if typing.TYPE_CHECKING:
-    from .config.chericonfig import CheriConfig
+if typing.TYPE_CHECKING:   # no-combine
+    from .config.chericonfig import CheriConfig    # no-combine
 
 Type_T = typing.TypeVar("Type_T")
 

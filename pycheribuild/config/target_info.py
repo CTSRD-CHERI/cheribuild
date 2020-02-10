@@ -34,9 +34,9 @@ from pathlib import Path
 
 from ..utils import IS_MAC, IS_FREEBSD, IS_LINUX, getCompilerInfo, classproperty
 
-if typing.TYPE_CHECKING:
-    from .chericonfig import CheriConfig
-    from ..projects.project import SimpleProject, Project
+if typing.TYPE_CHECKING:    # no-combine
+    from .chericonfig import CheriConfig    # no-combine
+    from ..projects.project import SimpleProject, Project    # no-combine
 
 
 class CPUArchitecture(Enum):
@@ -733,6 +733,8 @@ class CompilationTargets(object):
     ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = [CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI,
                                                CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI,
                                                NATIVE]
+    ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS = [CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI, CHERIBSD_MIPS_PURECAP,
+                                           CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID,CHERIBSD_RISCV_NO_CHERI]
     ALL_SUPPORTED_BAREMETAL_TARGETS = [BAREMETAL_NEWLIB_MIPS64, BAREMETAL_NEWLIB_MIPS64_PURECAP,
                                        BAREMETAL_NEWLIB_RISCV64]
     ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS = ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \

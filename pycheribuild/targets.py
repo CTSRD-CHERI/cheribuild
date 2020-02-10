@@ -35,8 +35,8 @@ from .config.chericonfig import CheriConfig
 from .config.target_info import CompilationTargets, CrossCompileTarget
 from .utils import *
 
-if typing.TYPE_CHECKING:
-    from .projects.project import SimpleProject
+if typing.TYPE_CHECKING:   # no-combine
+    from .projects.project import SimpleProject   # no-combine
 
 
 class Target(object):

@@ -114,6 +114,7 @@ addFilteredFile(scriptDir / "colour.py")
 addFilteredFile(scriptDir / "utils.py")
 addFilteredFile(scriptDir / "mtree.py")
 addFilteredFile(scriptDir / "config/loader.py")
+addFilteredFile(scriptDir / "config/target_info.py")
 addFilteredFile(scriptDir / "config/chericonfig.py")
 addFilteredFile(scriptDir / "config/defaultconfig.py")
 addFilteredFile(scriptDir / "targets.py")
@@ -125,7 +126,6 @@ addFilteredFile(scriptDir / "projects/build_qemu.py")
 addFilteredFile(scriptDir / "projects/binutils.py")
 addFilteredFile(scriptDir / "projects/llvm.py")
 
-addFilteredFile(scriptDir / "projects/awk.py")
 addFilteredFile(scriptDir / "projects/bmake.py")
 addFilteredFile(scriptDir / "projects/bsdtar.py")
 addFilteredFile(scriptDir / "projects/cmake.py")
@@ -139,6 +139,7 @@ addFilteredFile(scriptDir / "projects/kdevelop.py")
 addFilteredFile(scriptDir / "projects/bear.py")
 addFilteredFile(scriptDir / "projects/cherivis.py")
 addFilteredFile(scriptDir / "projects/gnustep.py")
+addFilteredFile(scriptDir / "projects/go.py")
 addFilteredFile(scriptDir / "projects/sail.py")
 addFilteredFile(scriptDir / "projects/soaap.py")
 addFilteredFile(scriptDir / "projects/effectivesan.py")
@@ -148,13 +149,11 @@ addFilteredFile(scriptDir / "projects/ninja.py")
 addFilteredFile(scriptDir / "projects/cheri_afl.py")
 
 # cross compilation targets
-addFilteredFile(scriptDir / "projects/cross/multiarchmixin.py")
 addFilteredFile(scriptDir / "projects/cross/cheribsd.py")
 addFilteredFile(scriptDir / "projects/cross/crosscompileproject.py")
 
 # First three need to be in order, then add all others
 cross_files = [
-    (scriptDir / "projects/cross/multiarchmixin.py").resolve(),
     (scriptDir / "projects/cross/cheribsd.py").resolve(),
     (scriptDir / "projects/cross/crosscompileproject.py").resolve(),
 ]
@@ -168,7 +167,9 @@ for file in cross_files:
 
 # disk-image, sdk and run_qemu must come after cheribsd as they use CheriBSD.rootfsDir
 addFilteredFile(scriptDir / "projects/disk_image.py")
+addFilteredFile(scriptDir / "projects/syzkaller.py")
 addFilteredFile(scriptDir / "projects/sdk.py")
+addFilteredFile(scriptDir / "projects/spike.py")
 addFilteredFile(scriptDir / "projects/run_qemu.py")
 addFilteredFile(scriptDir / "projects/run_fpga.py")
 

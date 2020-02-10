@@ -42,8 +42,8 @@ from .loader import ConfigLoaderBase
 from .target_info import CrossCompileTarget, MipsFloatAbi, Linkage, CheriBSDTargetInfo, CompilationTargets
 from ..utils import latestClangTool, warningMessage, statusUpdate, have_working_internet_connection
 
-if typing.TYPE_CHECKING:
-    from ..filesystemutils import FileSystemUtils
+if typing.TYPE_CHECKING:   # no-combine
+    from ..filesystemutils import FileSystemUtils   # no-combine
 
 
 # custom encoder to handle pathlib.Path objects

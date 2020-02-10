@@ -43,9 +43,9 @@ from ..colour import *
 from ..utils import typing, Type_T, fatalError
 from pathlib import Path
 
-if typing.TYPE_CHECKING:
-    from .chericonfig import CheriConfig
-    from ..projects.project import SimpleProject, Project
+if typing.TYPE_CHECKING:   # no-combine
+    from .chericonfig import CheriConfig   # no-combine
+    from ..projects.project import SimpleProject, Project   # no-combine
 
 
 class ComputedDefaultValue(typing.Generic[Type_T]):
