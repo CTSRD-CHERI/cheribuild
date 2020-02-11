@@ -769,6 +769,26 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # for the --benchmark option
         statusUpdate("No benchmarks defined for target", self.target)
 
+    def _get_mfs_root_kernel(self, use_benchmark_kernel: bool) -> Path:
+        assert self.target_info.is_cheribsd, "Other cases not handled yet"
+        kernel_xtarget = self._get_mfs_kernel_xtarget()
+        from .cross.cheribsd import BuildCheriBsdMfsKernel
+        if use_benchmark_kernel:
+            return BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self, cross_target=kernel_xtarget)
+        else:
+            return BuildCheriBsdMfsKernel.get_installed_kernel_path(self)
+
+    def _get_mfs_kernel_xtarget(self):
+        kernel_xtarget = self.crosscompile_target
+        if self.target_info.is_cheribsd:
+            # TODO: allow using non-CHERI kernels? Or the purecap kernel?
+            if self.compiling_for_mips(include_purecap=True):
+                # Always use CHERI hybrid kernel
+                kernel_xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
+            elif self.compiling_for_riscv(include_purecap=True):
+                kernel_xtarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
+        return kernel_xtarget
+
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
                                  mount_builddir=True, mount_sourcedir=False, mount_sysroot=False, mount_installdir=False,
                                  use_benchmark_kernel_by_default=False):
@@ -790,11 +810,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             use_benchmark_kernel_value = self.config.use_minimal_benchmark_kernel  # Load the value first to ensure that it has been loaded
             use_benchmark_config_option = inspect.getattr_static(self.config, "use_minimal_benchmark_kernel")
             assert isinstance(use_benchmark_config_option, ConfigOptionBase)
-            if use_benchmark_kernel_value or (use_benchmark_kernel_by_default and use_benchmark_config_option.is_default_value):
-                kernel_path = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self)
-            else:
-                kernel_path = BuildCheriBsdMfsKernel.get_installed_kernel_path(self)
-
+            want_benchmark_kernel = use_benchmark_kernel_value or (
+                        use_benchmark_kernel_by_default and use_benchmark_config_option.is_default_value)
+            kernel_path = self._get_mfs_root_kernel(use_benchmark_kernel=want_benchmark_kernel)
             if not kernel_path.exists():
                 cheribsd_image = "cheribsd{suffix}-cheri{suffix}-malta64-mfs-root-minimal-cheribuild-kernel.bz2".format(
                         suffix="" if self.config.cheriBits == 256 else self.config.cheri_bits_str)
@@ -2229,10 +2247,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         from .cross.cheribsd import BuildCheriBsdMfsKernel
         if self.config.benchmark_with_qemu:
             # When benchmarking with QEMU we always spawn a new instance
-            if self.config.benchmark_with_debug_kernel:
-                kernel_image = BuildCheriBsdMfsKernel.get_installed_kernel_path(self)
-            else:
-                kernel_image = BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self)
+            kernel_image = self._get_mfs_root_kernel(use_benchmark_kernel=not self.config.benchmark_with_debug_kernel)
             basic_args.append("--kernel-img=" + str(kernel_image))
         elif self.config.benchmark_clean_boot:
             # use a bitfile from jenkins. TODO: add option for overriding
@@ -2241,9 +2256,8 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             else:
                 assert self.compiling_for_cheri()
                 basic_args.append("--jenkins-bitfile=cheri" + self.config.cheri_bits_str)
-            # TODO: allow using a plain MIPS kernel?
-            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(
-                CompilationTargets.CHERIBSD_MIPS_HYBRID, self.config)
+            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(self._get_mfs_kernel_xtarget(),
+                self.config, caller=self)
             if self.config.benchmark_with_debug_kernel:
                 kernel_config = mfs_kernel.fpga_kernconf
             else:
