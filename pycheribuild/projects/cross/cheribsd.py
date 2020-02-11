@@ -1272,8 +1272,6 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 
     @classproperty
     def supported_architectures(cls) -> list:
-        from ..disk_image import BuildMinimalCheriBSDDiskImage
-        return list(BuildMinimalCheriBSDDiskImage.supported_architectures)  # no-combine
         return list(CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS)
 
     def process(self):
