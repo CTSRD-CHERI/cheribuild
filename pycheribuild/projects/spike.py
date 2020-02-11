@@ -42,6 +42,7 @@ class BuildCheriSpike(AutotoolsProject):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     default_build_type = BuildType.RELEASE
     lto_by_default = True
+    prefer_full_lto_over_thin_lto = True
 
     def __init__(self, config):
         super().__init__(config)

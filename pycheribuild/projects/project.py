@@ -1520,6 +1520,7 @@ class Project(SimpleProject):
         super().check_system_dependencies()
 
     lto_by_default = False  # Don't default to LTO
+    prefer_full_lto_over_thin_lto = False  # If LTO is enabled, use LLVM's ThinLTO by default
     default_build_type = BuildType.DEFAULT
 
     @classmethod
@@ -1845,7 +1846,7 @@ class Project(SimpleProject):
     def set_lto_binutils(self, ar, ranlib, nm, ld):
         raise NotImplementedError()
 
-    def add_lto_build_options(self, ccinfo: CompilerInfo, prefer_thinlto: bool = True) -> bool:
+    def add_lto_build_options(self, ccinfo: CompilerInfo) -> bool:
         compiler = ccinfo.path
         if not self.can_use_lto(ccinfo):
             return False
@@ -1866,7 +1867,10 @@ class Project(SimpleProject):
                     "-> disabling LTO (resulting binary will be a bit slower)")
                 return False
             self.set_lto_binutils(ar=llvm_ar, ranlib=llvm_ranlib, nm=llvm_nm, ld=lld)
-        if prefer_thinlto:
+        if self.prefer_full_lto_over_thin_lto:
+            self._lto_compiler_flags.append("-flto")
+            self._lto_linker_flags.append("-flto")
+        else:
             self._lto_compiler_flags.append("-flto=thin")
             self._lto_linker_flags.append("-flto=thin")
             if self.canUseLLd(ccinfo.path):
@@ -1876,9 +1880,6 @@ class Project(SimpleProject):
                 assert ccinfo.compiler == "apple-clang"
                 thinlto_cache_flag = "-cache_path_lto,"
             self._lto_linker_flags.append("-Wl," + thinlto_cache_flag + str(self.buildDir / "thinlto-cache"))
-        else:
-            self._lto_compiler_flags.append("-flto")
-            self._lto_linker_flags.append("-flto")
         self.info("Building with LTO")
         return True
 
