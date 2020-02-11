@@ -129,14 +129,14 @@ class BuildQEMUBase(AutotoolsProject):
         if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
             # Turn implicit function declaration into an error -Wimplicit-function-declaration
             self.CFLAGS.extend(["-Werror=implicit-function-declaration",
-                                      "-Werror=incompatible-pointer-types",
-                                      # Also make discarding const an error:
-                                      "-Werror=incompatible-pointer-types-discards-qualifiers",
-                                      # silence this warning that comes lots of times (it's fine on x86)
-                                      "-Wno-address-of-packed-member",
-                                      "-Wextra", "-Wno-sign-compare", "-Wno-unused-parameter",
-                                      "-Wno-c11-extension", "-Wno-missing-field-initializers",
-                                      ])
+                                "-Werror=incompatible-pointer-types",
+                                # Also make discarding const an error:
+                                "-Werror=incompatible-pointer-types-discards-qualifiers",
+                                # silence this warning that comes lots of times (it's fine on x86)
+                                "-Wno-address-of-packed-member",
+                                "-Wextra", "-Wno-sign-compare", "-Wno-unused-parameter",
+                                "-Wno-missing-field-initializers"
+                                ])
         self.COMMON_FLAGS.append("-Wall")
         # This would have cought some problems in the past
         self.CFLAGS.append("-Werror=return-type")
