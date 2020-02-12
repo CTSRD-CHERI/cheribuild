@@ -45,7 +45,7 @@ from .projects import *  # make sure all projects are loaded so that targetManag
 from .projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
 from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import SimpleProject, Project
-from .targets import targetManager, Target
+from .targets import targetManager, Target, MultiArchTargetAlias
 from .utils import *
 
 
@@ -275,12 +275,12 @@ def _jenkins_main():
         Target.instantiating_targets_should_warn = False
         target.checkSystemDeps(cheriConfig)
         # need to set destdir after checkSystemDeps:
-        project = target.get_or_create_project(CompilationTargets.NONE, cheriConfig)
+        project = target.get_or_create_project(cheriConfig.crossCompileTarget, cheriConfig)
         assert project
         cross_target = project.get_crosscompile_target(cheriConfig)
-        if cross_target is not None and cross_target != cheriConfig.crossCompileTarget:
+        if isinstance(target, MultiArchTargetAlias) and cross_target is not None and cross_target != cheriConfig.crossCompileTarget:
             fatalError("Cannot build project", project.target, "with cross compile target", cross_target.name,
-                       "when --cpu is set to", cheriConfig.crossCompileTarget.name)
+                       "when --cpu is set to", cheriConfig.crossCompileTarget.name, fatalWhenPretending=True)
         if isinstance(project, CrossCompileMixin):
             project.destdir = cheriConfig.outputRoot
             project._installPrefix = cheriConfig.installationPrefix
