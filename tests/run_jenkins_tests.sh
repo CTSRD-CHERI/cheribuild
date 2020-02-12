@@ -28,16 +28,19 @@ else
     cd "$_srcdir"
 fi
 
-# env | sort
-./cheribuild.py -p __run_everything__ --freebsd/crossbuild > /dev/null
-./cheribuild.py --help > /dev/null
-./cheribuild.py --help-all > /dev/null
+# Run unit tests
 rm -f "../$test_prefix-results.xml"
 $pytest_binary -v --junit-xml "../$test_prefix-results.xml" tests || echo "Some tests failed"
 if [ ! -e "../$test_prefix-results.xml" ]; then
   echo "FATAL: could not find test results xml"
   exit 1
 fi
+# env | sort
+# Run all targets
+./cheribuild.py -p __run_everything__ --freebsd/crossbuild > /dev/null
+./cheribuild.py --help > /dev/null
+./cheribuild.py --help-all > /dev/null
+
 # Remove all debug messages (contains ansi escape sequences and the Available targets message:)
 targets=$(./cheribuild.py --list-targets | grep -v Available | grep -v "$(printf "\x1b")")
 # echo "targets=$targets"
