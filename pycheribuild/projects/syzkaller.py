@@ -51,7 +51,7 @@ class BuildSyzkaller(CrossCompileProject):
     make_kind = MakeCommandKind.GnuMake
 
     # is_sdk_target = True
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_NO_CHERI]
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID]
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
 
     @classmethod
@@ -171,7 +171,8 @@ class RunSyzkaller(SimpleProject):
         super().__init__(config)
 
         self.qemu_binary = BuildQEMU.qemu_binary(self, xtarget=CompilationTargets.CHERIBSD_MIPS_HYBRID)
-        self.syzkaller_binary = BuildSyzkaller.get_instance(self, cross_target=CompilationTargets.CHERIBSD_MIPS_NO_CHERI).syzkaller_binary()
+        self.syzkaller_binary = BuildSyzkaller.get_instance(
+            self, cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID).syzkaller_binary()
         self.kernel_path = BuildCHERIBSD.get_installed_kernel_path(
             self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP)
         self.disk_image = BuildCheriBSDDiskImage.get_instance(
@@ -194,7 +195,9 @@ class RunSyzkaller(SimpleProject):
                 "target": "freebsd/mips64",
                 "http": ":10000",
                 "workdir": str(self.syz_workdir),
-                "syzkaller": str(BuildSyzkaller.get_instance(self, cross_target=CompilationTargets.CHERIBSD_MIPS_NO_CHERI).syzkaller_install_path().parent),
+                "syzkaller": str(BuildSyzkaller.get_instance(
+                    self, cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID)
+                                 .syzkaller_install_path().parent),
                 "sshkey": str(self.syz_ssh_key),
                 "sandbox": "none",
                 "procs": 1,
