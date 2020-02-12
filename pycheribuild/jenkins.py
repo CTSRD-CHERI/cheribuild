@@ -278,7 +278,7 @@ def _jenkins_main():
         project = target.get_or_create_project(cheriConfig.crossCompileTarget, cheriConfig)
         assert project
         cross_target = project.get_crosscompile_target(cheriConfig)
-        if isinstance(target, MultiArchTargetAlias) and cross_target is not None and cross_target != cheriConfig.crossCompileTarget:
+        if isinstance(target, MultiArchTargetAlias) and cross_target is not None and cross_target != cheriConfig.crossCompileTarget and cheriConfig.crossCompileTarget is not CompilationTargets.NONE:
             fatalError("Cannot build project", project.target, "with cross compile target", cross_target.name,
                        "when --cpu is set to", cheriConfig.crossCompileTarget.name, fatalWhenPretending=True)
         if isinstance(project, CrossCompileMixin):

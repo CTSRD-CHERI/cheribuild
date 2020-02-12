@@ -77,7 +77,7 @@ class JenkinsConfig(CheriConfig):
 
         self.cpu = loader.addCommandLineOnlyOption("cpu", default=os.getenv("CPU"),
                                                    help="The target to build the software for (defaults to $CPU).",
-                                                   choices=["cheri128", "cheri256",
+                                                   choices=["default", "cheri128", "cheri256",
                                                             "mips", "hybrid-cheri128", "hybrid-cheri256",
                                                             "native", "x86", "amd64"])  # type: str
         self.workspace = loader.addCommandLineOnlyOption("workspace", default=os.getenv("WORKSPACE"), type=Path,
@@ -210,7 +210,10 @@ class JenkinsConfig(CheriConfig):
         else:
             self.cheri_sdk_dir = self.workspace / self.cheri_sdk_directory_name
         self.crossCompileTarget = self.cpu
-        if self.cpu == "cheri128":
+        if self.cpu == "default":
+            self.cheriBits = 128
+            self.crossCompileTarget = CompilationTargets.NONE
+        elif self.cpu == "cheri128":
             self.cheriBits = 128
             self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
         elif self.cpu == "cheri256":
