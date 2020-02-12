@@ -5,6 +5,8 @@ pipeline {
     }
   }
   stages {
+  stage('Test') {
+  parallel {
     stage('Test Python 3.5.0') {
       agent {
         dockerfile {
@@ -113,6 +115,8 @@ pipeline {
         junit 'ubuntu-results.xml'
       }
     }
+  }
+  }
   }
   environment {
     PYTHONDONTWRITEBYTECODE = '1'
