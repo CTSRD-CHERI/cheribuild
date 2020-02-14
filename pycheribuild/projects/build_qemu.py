@@ -84,6 +84,7 @@ class BuildQEMUBase(AutotoolsProject):
 
         if self.build_type == BuildType.DEBUG:
             self.COMMON_FLAGS.append("-DCONFIG_DEBUG_TCG=1")
+            self.COMMON_FLAGS.append("-O0")
         else:
             self.COMMON_FLAGS.append("-O3")
         if shutil.which("pkg-config"):
@@ -219,7 +220,7 @@ class BuildQEMU(BuildQEMUBase):
         cls.magic128 = cls.add_bool_option("magic-128")
         # Turn on unaligned loads/stores by default
         cls.unaligned = cls.add_bool_option("unaligned", show_help=True, help="Permit un-aligned loads/stores",
-                                          default=True)
+                                            default=False)
         cls.statistics = cls.add_bool_option("statistics", show_help=True,
                                            help="Collect statistics on out-of-bounds capability creation.")
 
