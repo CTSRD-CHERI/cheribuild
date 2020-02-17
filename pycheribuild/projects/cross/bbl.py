@@ -65,8 +65,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
             self.configureArgs.append("--with-abi=l64pc128")
             # Enable CHERI extensions
             self.configureArgs.append("--with-arch=rv64imafdcxcheri")
-            # Tag bits only in the 0xc region:
-            self.configureArgs.append("--with-mem-start=0xc0000000")
+            self.configureArgs.append("--with-mem-start=0x80000000")
         else:
             self.configureArgs.append("--with-abi=lp64")
             self.configureArgs.append("--with-arch=rv64imafdc")
