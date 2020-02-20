@@ -867,6 +867,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def libcompat_name(self) -> str:
         if self.crosscompile_target.is_cheri_purecap():
+            if self.crosscompile_target.is_riscv(include_purecap=True):
+                self.info("RISCV currently doesn't have COMPAT_64")
+                return ""
             return "lib64"
         elif self.crosscompile_target.is_cheri_hybrid():
             return "libcheri"
@@ -901,7 +904,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             else:
                 args.set(BUILDENV_SHELL="/bin/sh")
             buildenv_target = "buildenv"
-            if self.config.libcompat_buildenv:
+            if self.config.libcompat_buildenv and self.libcompat_name():
                 buildenv_target = self.libcompat_name() + "buildenv"
             runCmd([self.make_args.command] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
                    cwd=self.sourceDir)
@@ -965,7 +968,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                    cwd=self.sourceDir)
         # If we are building a library, we want to build both the CHERI and the mips version (unless the
         # user explicitly specified --libcompat-buildenv)
-        if has_libcompat and not noncheri_only:
+        if has_libcompat and not noncheri_only and self.libcompat_name():
             compat_buildenv_target = self.libcompat_name() + "buildenv"
             statusUpdate("Building", subdir, "using", compat_buildenv_target, "target")
             runCmd([self.make_args.command] + make_args.all_commandline_args + [compat_buildenv_target],
