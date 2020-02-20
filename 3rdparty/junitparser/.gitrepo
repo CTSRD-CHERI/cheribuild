@@ -6,7 +6,7 @@
 [subrepo]
 	remote = https://github.com/gastlygem/junitparser
 	branch = master
-	commit = cd46788a60be7ba62d129b2103a90e836c59b769
-	parent = 76397bb541b87ba04e86689c5992a2217a3faab7
+	commit = db488bc96d96fc77f6f0003ff3fc9caf2f128f67
+	parent = b33f99e25573677de24ca2e7ff0aec589cfec366
 	method = rebase
-	cmdver = 0.4.0
+	cmdver = 0.4.1
