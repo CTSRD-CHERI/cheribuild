@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/pexpect/ptyprocess.git
+	branch = master
+	commit = 3931cd45db50ee8533b8b0fef424b8d75f7ba1c2
+	parent = 4e12c3be6da571c9a812bf589a86815d5e8893a7
+	method = merge
+	cmdver = 0.4.1
