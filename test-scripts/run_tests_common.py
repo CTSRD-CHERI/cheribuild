@@ -42,6 +42,11 @@ _pexpect_dir = _cheribuild_root / "3rdparty/pexpect"
 assert (_pexpect_dir / "pexpect/__init__.py").exists()
 sys.path.insert(1, str(_junitparser_dir))
 sys.path.insert(1, str(_pexpect_dir))
+# Pexpect also needs ptyprocess
+_ptyprocess_dir = _cheribuild_root / "3rdparty/ptyprocess"
+assert (_ptyprocess_dir / "ptyprocess/ptyprocess.py").exists(), (_ptyprocess_dir / "ptyprocess/ptyprocess.py")
+sys.path.insert(1, str(_ptyprocess_dir))
+
 sys.path.insert(1, str(_cheribuild_root))
 import junitparser
 import pexpect
