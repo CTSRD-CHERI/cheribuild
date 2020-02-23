@@ -48,7 +48,7 @@ PKG_REPO_URL = "https://people.freebsd.org/~brooks/packages/cheribsd-mips-201704
 # old version of libarchive needed by kyua
 OLD_LIBRARIES_BASE_URL = "https://people.freebsd.org/~arichardson/cheri-files/{file}"
 # Bump this to redownload all the pkg files
-PKG_REPO_NEEDS_UPDATE = datetime.datetime(day=28, month=7, year=2019)
+PKG_REPO_NEEDS_UPDATE = datetime.datetime(day=23, month=2, year=2020)
 
 
 # noinspection PyMethodMayBeStatic
@@ -208,7 +208,7 @@ class _BuildDiskImageBase(SimpleProject):
             self.fatal("Could not find required input mtree file", self.input_METALOG)
 
         # Add the files needed to install kyua (make sure to download before calculating the list of extra files!)
-        if self.needs_special_pkg_repo:
+        if self.needs_special_pkg_repo and self.compiling_for_mips(include_purecap=True):
             self.createFileForImage("/etc/local-kyua-pkg/repos/kyua-pkg-cache.conf", mode=0o644,
                                     showContentsByDefault=False,
                                     contents=includeLocalFile("files/cheribsd/kyua-pkg-cache.repo.conf"))
@@ -220,7 +220,12 @@ class _BuildDiskImageBase(SimpleProject):
             # Download all the kyua pkg files from and put them in /var/db/kyua-pkg-cache
             # But only do that if we really need to update (since the recursive wget is slow)
 
-            custom_pkg_repo_root_dir = self.config.outputRoot / "kyua-cheribsd-pkgcache"
+            cache_dir_name = "kyua-cheribsd-pkgcache"
+            if self.crosscompile_target.is_cheri_purecap():
+                cache_dir_name += "-mips-purecap"
+            else:
+                cache_dir_name += "-" + self.crosscompile_target.generic_suffix
+            custom_pkg_repo_root_dir = self.config.outputRoot / cache_dir_name
             download_time_path = (custom_pkg_repo_root_dir / "var/db/kyua-pkg-cache/.downloaded_time")
             needs_fresh_download = True
             if download_time_path.exists():
@@ -237,13 +242,14 @@ class _BuildDiskImageBase(SimpleProject):
                 self.makedirs(pkgcache_dir)
                 self.makedirs(pkgcache_dir)
                 runCmd("find", pkgcache_dir)
-                self._wget_fetch_dir(["--accept", "*.txz", # only download .txz files
+                self._wget_fetch_dir(["--accept", "*.txz",  # only download .txz files
                                       PKG_REPO_URL], pkgcache_dir)
                 # fetch old libarchive which is currently needed
+                mips_libdir = "usr/lib64" if self.crosscompile_target.is_cheri_purecap() else "usr/lib"
                 # We also need old versions of libssl and libcrypto
-                self.makedirs(custom_pkg_repo_root_dir / "usr/lib")
+                self.makedirs(custom_pkg_repo_root_dir / mips_libdir)
                 for lib in ("libarchive.so.6", "libcrypto.so.8", "libssl.so.8"):
-                    self._wget_fetch([OLD_LIBRARIES_BASE_URL.format(file=lib)], custom_pkg_repo_root_dir / "usr/lib")
+                    self._wget_fetch([OLD_LIBRARIES_BASE_URL.format(file=lib)], custom_pkg_repo_root_dir / mips_libdir)
                 self.writeFile(download_time_path, str(datetime.datetime.utcnow().timestamp()), overwrite=True)
             self.add_all_files_in_dir(custom_pkg_repo_root_dir)
         # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
