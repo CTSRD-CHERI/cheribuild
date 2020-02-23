@@ -12,13 +12,19 @@ echo 'nameserver 8.8.8.8' > /etc/resolv.conf
 # See https://github.com/freebsd/pkg/blob/master/libpkg/pkg_config.c for options
 export NAMESERVER=8.8.8.8
 
+if [ -e /usr/lib64/libc.so.7 ]; then
+    _mips_libdir=/usr/lib64
+else
+    _mips_libdir=/usr/lib
+fi
+
 # The current binary pkg depends on on older version of libarchive, libssl and libcrypto:
 for _lib in libarchive.so.6 libssl.so.8 libcrypto.so.8; do
-    if [ ! -e /usr/lib/${_lib} ]; then
+    if [ ! -e ${_mips_libdir}/${_lib} ]; then
         # Without the SSL_NO_VERIFY_PEER I get the following error:
         # Certificate verification failed for /C=US/O=Let's Encrypt/CN=Let's Encrypt Authority X3
         # 1076765744:error:14090086:SSL routines:ssl3_get_server_certificate:certificate verify failed:/exports/users/alr48/sources/cheribsd/crypto/openssl/ssl/s3_clnt.c:1269:
-        env SSL_NO_VERIFY_PEER=1 fetch "https://people.freebsd.org/~arichardson/cheri-files/${_lib}" -o /usr/lib/${_lib}
+        env SSL_NO_VERIFY_PEER=1 fetch "https://people.freebsd.org/~arichardson/cheri-files/${_lib}" -o ${_mips_libdir}/${_lib}
     fi
 done
 
