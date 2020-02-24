@@ -256,6 +256,8 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
             kwargs["env"] = dict((k, str(v)) for k, v in kwargs["env"].items())
     if give_tty_control:
         kwargs["preexec_fn"] = _become_tty_foreground_process
+    stdout = b""
+    stderr = b""
     with popen_handle_noexec(cmdline, **kwargs) as process:
         try:
             stdout, stderr = process.communicate(input, timeout=timeout)
