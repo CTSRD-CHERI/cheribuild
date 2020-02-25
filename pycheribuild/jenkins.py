@@ -112,6 +112,7 @@ class SdkArchive(object):
     def __repr__(self):
         return str(self.archive)
 
+
 def get_sdk_archives(cheriConfig, needs_cheribsd_sysroot: bool) -> "typing.List[SdkArchive]":
     # Try the full SDK archive first:
     if cheriConfig.sdkArchivePath.exists():
@@ -252,25 +253,6 @@ def _jenkins_main():
                     cls._installDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
                     cls._check_install_dir_conflict = False
                 # print(project.projectClass.project_name, project.projectClass.installDir)
-        if JenkinsAction.BUILD in cheriConfig.action:
-            if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
-                assert cheriConfig.cheri_sdk_dir == Path("/cheri-sdk"), cheriConfig.cheri_sdk_dir
-            elif cheriConfig.without_sdk:
-                statusUpdate("Not using CHERI SDK, only files from /usr")
-                assert cheriConfig.clangPath.exists(), cheriConfig.clangPath
-                assert cheriConfig.clangPlusPlusPath.exists(), cheriConfig.clangPlusPlusPath
-            elif cheriConfig.cheri_sdk_path:
-                expected_clang = cheriConfig.cheri_sdk_bindir / "clang"
-                if not expected_clang.exists():
-                    fatalError("--cheri-sdk-path specified but", expected_clang, "does not exist")
-            else:
-                need_cheribsd_sysroot = False
-                deps = target.get_real_target(CompilationTargets.NONE, cheriConfig, caller="jenkins").projectClass.recursive_dependencies(cheriConfig)
-                for d in deps:
-                    assert isinstance(d, Target)
-                    if d.name.startswith("cheribsd-sysroot"):
-                        need_cheribsd_sysroot = True
-                create_sdk_from_archives(cheriConfig, needs_cheribsd_sysroot=need_cheribsd_sysroot)
 
         Target.instantiating_targets_should_warn = False
         target.checkSystemDeps(cheriConfig)
@@ -285,6 +267,24 @@ def _jenkins_main():
             project.destdir = cheriConfig.outputRoot
             project._installPrefix = cheriConfig.installationPrefix
             project._installDir = cheriConfig.outputRoot
+
+        if JenkinsAction.BUILD in cheriConfig.action:
+            if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
+                assert cheriConfig.cheri_sdk_dir == Path("/cheri-sdk"), cheriConfig.cheri_sdk_dir
+            elif cheriConfig.without_sdk:
+                statusUpdate("Not using CHERI SDK, only files from /usr")
+                assert cheriConfig.clangPath.exists(), cheriConfig.clangPath
+                assert cheriConfig.clangPlusPlusPath.exists(), cheriConfig.clangPlusPlusPath
+            elif cheriConfig.cheri_sdk_path:
+                expected_clang = cheriConfig.cheri_sdk_bindir / "clang"
+                if not expected_clang.exists():
+                    fatalError("--cheri-sdk-path specified but", expected_clang, "does not exist")
+            else:
+                need_cheribsd_sysroot = project.needs_sysroot and project.target_info.is_cheribsd
+                create_sdk_from_archives(cheriConfig, needs_cheribsd_sysroot=need_cheribsd_sysroot)
+
+        if project.needs_sysroot and not project.target_info.sysroot_dir.exists():
+            fatalError("Sysroot directory", project.target_info.sysroot_dir, "does not exist")
 
         if cheriConfig.debug_output:
             statusUpdate("Configuration options for building", project.project_name, file=sys.stderr)
