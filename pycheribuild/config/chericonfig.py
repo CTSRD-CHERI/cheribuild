@@ -380,18 +380,18 @@ class CheriConfig(object):
         assert isinstance(cross_compile_target, CrossCompileTarget)
         assert issubclass(cross_compile_target.target_info_cls, CheriBSDTargetInfo), "Only valid for CheriBSD targets"
         if cross_compile_target.is_mips(include_purecap=True):
-            if cross_compile_target.is_cheri_hybrid():
+            if cross_compile_target.is_cheri_hybrid() or cross_compile_target.is_cheri_purecap():
                 return self.cheri_sdk_dir / ("sysroot" + self.cheri_bits_and_abi_str)
-            if cross_compile_target.is_cheri_purecap():
-                return self.cheri_sdk_dir / ("sysroot-purecap" + self.cheri_bits_and_abi_str)
+            # if cross_compile_target.is_cheri_purecap():
+            #     return self.cheri_sdk_dir / ("sysroot-purecap" + self.cheri_bits_and_abi_str)
             if self.mips_float_abi == MipsFloatAbi.HARD:
                 return self.cheri_sdk_dir / "sysroot-mipshf"
             return self.cheri_sdk_dir / "sysroot-mips"
         elif cross_compile_target.is_riscv(include_purecap=True):
-            if cross_compile_target.is_cheri_purecap():
-                return self.cheri_sdk_dir / ("sysroot-riscv64c" + self.cheri_bits_and_abi_str)
-            if cross_compile_target.is_cheri_hybrid():
+            if cross_compile_target.is_hybrid_or_purecap_cheri():
                 return self.cheri_sdk_dir / ("sysroot-riscv64c" + self.cheri_bits_and_abi_str + "-hybrid")
+            # if cross_compile_target.is_cheri_purecap():
+            #     return self.cheri_sdk_dir / ("sysroot-riscv64c" + self.cheri_bits_and_abi_str)
             return self.cheri_sdk_dir / "sysroot-riscv64"
         elif cross_compile_target.is_x86_64():
             return self.cheri_sdk_dir / "sysroot-x86_64"

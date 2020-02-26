@@ -70,6 +70,9 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
             self.configureArgs.append("--with-abi=lp64")
             self.configureArgs.append("--with-arch=rv64imafdc")
 
+        if self.build_type == BuildType.DEBUG:
+            self.configureArgs.append("--enable-logo")  # For debugging
+
         # BBL build uses weird objcopy flags and therefore requires GNU objcopy which we can get from GDB
         self.add_configure_and_make_env_arg("OBJCOPY",
             BuildGDB.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/gobjcopy")
