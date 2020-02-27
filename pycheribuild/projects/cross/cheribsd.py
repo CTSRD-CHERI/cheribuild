@@ -556,6 +556,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # force static linking for /sbin and /bin
             result.set(NO_RTLD=True)
             result.set_with_options(DYNAMICROOT=False)
+        if self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.RISCV64]):
+            # CheriBSD installworld currently get's very confused that libcheri CCDL is forced to false
+            # and attempts to install the files during installworld
+            result.set_with_options(CDDL=False)
         if self.useExternalToolchainForWorld:
             if not self.CC.exists():
                 self.fatal("Requested build of world with external toolchain, but", self.CC,
