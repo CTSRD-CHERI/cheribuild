@@ -340,14 +340,20 @@ class BuildFreeBSD(BuildFreeBSDBase):
             target_arch = self.config.mips_float_abi.freebsd_target_arch()
             if self.crosscompile_target.is_cheri_purecap():
                 target_arch += "c" + self.config.cheri_bits_str  # build purecap
-            return {"TARGET": "mips", "TARGET_ARCH": target_arch}
+            result = {"TARGET": "mips", "TARGET_ARCH": target_arch}
+            if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+                result["CHERI"] = self.config.cheri_bits_str
+            return result
         elif self.crosscompile_target.is_x86_64():
             return {"TARGET": "amd64", "TARGET_ARCH": "amd64"}
         elif self.crosscompile_target.is_riscv(include_purecap=True):
             target_arch = "riscv64"  # TODO: allow building softfloat?
             if self.crosscompile_target.is_cheri_purecap():
                 target_arch += "c"  # build purecap
-            return {"TARGET": "riscv", "TARGET_ARCH": target_arch}
+            result = {"TARGET": "riscv", "TARGET_ARCH": target_arch}
+            if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+                result["WITH_CHERI"] = True
+            return result
         elif self.crosscompile_target.is_i386():
             return {"TARGET": "i386", "TARGET_ARCH": "i386"}
         elif self.crosscompile_target.is_aarch64():
@@ -1155,13 +1161,6 @@ class BuildCHERIBSD(BuildFreeBSD):
         if not self.is_exact_instance(BuildCHERIBSD):
             return None
         return self.config.get_cheribsd_sysroot_path(self.crosscompile_target)
-
-    @property
-    def arch_build_flags(self):
-        result = super().arch_build_flags
-        if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.MIPS64]):
-            result["CHERI"] = self.config.cheri_bits_str
-        return result
 
     def __init__(self, config: CheriConfig):
         self.installAsRoot = os.getuid() == 0
