@@ -230,7 +230,8 @@ class BuildQEMU(BuildQEMUBase):
         if xtarget is None:
             xtarget = caller.get_crosscompile_target(caller.config)
         if xtarget.is_riscv(include_purecap=True):
-            binary_name = "qemu-system-riscv64"
+            # Always use the CHERI qemu even for plain riscv:
+            binary_name = "qemu-system-riscv64cheri"
         else:
             assert xtarget.is_mips(include_purecap=True)
             binary_name = "qemu-system-cheri"
