@@ -601,10 +601,10 @@ def download_file(url, outfile):
     if args.jenkins_user == "readonly" and not args.jenkins_password:
         args.jenkins_password = get_jenkins_password()
     print("Downloading", url)
-    cmd = ["curl", "--create-dirs", "--output", str(outfile), "--anyauth", "--user"]
+    cmd = ["curl", "--create-dirs", "--output", str(outfile), "--user"]
     # don't print the password:
-    boot_cheribsd.print_cmd(cmd + ["*****:*****"])
-    subprocess.check_call(cmd + ["{user}:{pw}".format(user=args.jenkins_user, pw=args.jenkins_password)])
+    boot_cheribsd.print_cmd(cmd + ["*****:*****", url])
+    subprocess.check_call(cmd + ["{user}:{pw}".format(user=args.jenkins_user, pw=args.jenkins_password), url])
 
 
 def common_boot (kernel_img=args.kernel_img,addr=args.kernel_addr,bitfile=args.bitfile,cable_id=args.cable_id,
