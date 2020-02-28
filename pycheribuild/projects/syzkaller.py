@@ -77,9 +77,6 @@ class BuildSyzkaller(CrossCompileProject):
         self.gopath = self.buildDir
         self.gosrc = self.sourceDir
 
-        self.rootfs = config.outputRoot / ("rootfs" + config.cheri_bits_and_abi_str)
-        self.cheribsd_include = self.rootfs / "usr" / "include"
-
         self._newPath = (str(self.config.cheri_sdk_dir / "bin") + ":" +
                          str(self.config.dollarPathWithOtherTools))
 
