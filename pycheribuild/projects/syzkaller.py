@@ -131,6 +131,7 @@ class BuildSyzkaller(CrossCompileProject):
                     self.installFile(fpath, syz_remote_install / fname, mode=0o755)
 
     def clean(self) -> ThreadJoiner:
+        self.run_cmd(["chmod", "-R", "u+w", self.buildDir])
         self.make_args.set_env(
             HOSTARCH="amd64",
             TARGETARCH="mips64",
