@@ -123,7 +123,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             # TODO: can we use relative paths?
             self.configureArgs.append("--libdir=" + str(self.installPrefix) + "/libcheri")
 
-        if not self.target_info.is_baremetal:
+        if not self.target_info.is_baremetal and not self.target_info.is_rtems:
             CPPFLAGS = self.default_compiler_flags
             for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
                 assert key not in self.configureEnvironment

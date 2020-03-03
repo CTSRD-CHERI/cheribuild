@@ -170,6 +170,10 @@ class TargetInfo(ABC):
         return False
 
     @property
+    def is_rtems(self):
+        return False
+
+    @property
     def is_newlib(self):
         return False
 
@@ -260,7 +264,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             result.append("-integrated-as")
             result.append("-G0")  # no small objects in GOT optimization
             # Floating point ABI:
-            if self.is_baremetal:
+            if self.is_baremetal or self.is_rtems:
                 # The baremetal driver doesn't add -fPIC for CHERI
                 if self.target.is_cheri_purecap([CPUArchitecture.MIPS64]):
                     result.append("-fPIC")
@@ -567,6 +571,61 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
         from ..projects.cross.newlib_baremetal import BuildNewlibBaremetal
         return BuildNewlibBaremetal.get_instance(self.project)
 
+class NewlibRtemsTargetInfo(_ClangBasedTargetInfo):
+    shortname = "Newlib RTEMS"
+
+    @property
+    def sdk_root_dir(self) -> Path:
+        return self.config.cheri_sdk_dir
+
+    @property
+    def sysroot_dir(self) -> Path:
+        # Install to target triple as RTEMS' LLVM/Clang Driver expects
+        return self.config.cheri_sdk_dir
+
+    @property
+    def must_link_statically(self):
+        return True  # only static linking works
+
+    @property
+    def _compiler_dir(self) -> Path:
+        return self.config.cheri_sdk_bindir
+
+    @classmethod
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        return ["llvm-native"]
+
+    @property
+    def target_triple(self):
+        return "riscv64-unknown-rtems5"
+
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        return ["newlib", "compiler-rt-builtins"]
+
+    def required_compile_flags(self) -> typing.List[str]:
+        return [""]
+
+    @property
+    def local_install_root(self) -> Path:
+        return self.config.cheri_sdk_dir
+
+    @property
+    def additional_executable_link_flags(self):
+        """Additional linker flags that need to be passed when building an executable (e.g. custom linker script)"""
+        return [""]
+
+    @property
+    def is_baremetal(self):
+        return False
+
+    @property
+    def is_rtems(self):
+        return True
+
+    @property
+    def is_newlib(self):
+        return True
 
 class Linkage(Enum):
     DEFAULT = "default"
@@ -728,6 +787,10 @@ class CompilationTargets(object):
     FREEBSD_I386 = CrossCompileTarget("i386", CPUArchitecture.I386, FreeBSDTargetInfo)
     FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, FreeBSDTargetInfo)
     FREEBSD_X86_64 = CrossCompileTarget("x86_64", CPUArchitecture.X86_64, FreeBSDTargetInfo)
+
+    # RTEMS targets
+    RTEMS_NEWLIB_RISCV64 = CrossCompileTarget("rtems-riscv64-purecap", CPUArchitecture.RISCV64,
+        NewlibRtemsTargetInfo, is_cheri_purecap=True)
 
     # TODO: test RISCV
     ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = [CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI,
