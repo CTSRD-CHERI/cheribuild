@@ -1,4 +1,5 @@
 #
+# Copyright (c) 2020 Hesham Almatary
 # Copyright (c) 2017 Alex Richardson
 # All rights reserved.
 #
@@ -34,13 +35,13 @@ from ..project import *
 from ...utils import IS_MAC, runCmd
 
 
-class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
+class BuildNewlib(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/newlib",
         per_target_branches={
             CompilationTargets.BAREMETAL_NEWLIB_RISCV64: TargetBranchInfo("p1_release", "newlib-riscv")
             })
     target = "newlib"
-    project_name = "newlib-baremetal"
+    project_name = "newlib"
     make_kind = MakeCommandKind.GnuMake
     needs_sysroot = False  # We are building newlib so we don't need a sysroot
     add_host_target_build_config_options = False
@@ -49,7 +50,8 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
     cross_install_dir = DefaultInstallDir.SYSROOT
     supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_MIPS64,
                                CompilationTargets.BAREMETAL_NEWLIB_MIPS64_PURECAP,
-                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
+                               CompilationTargets.RTEMS_NEWLIB_RISCV64]
     # build_in_source_dir = True  # we have to build in the source directory
 
     @classmethod
@@ -118,31 +120,39 @@ class BuildNewlibBaremetal(CrossCompileAutotoolsProject):
             newlib_cv_ldbl_eq_dbl="yes",
             LD_FOR_TARGET=str(self.target_info.linker), LDFLAGS_FOR_TARGET="-fuse-ld=" + str(self.target_info.linker),
             )
-        self.configureArgs.extend([
-            "--enable-malloc-debugging",
-            "--enable-newlib-long-time_t",  # we want time_t to be long and not int!
-            "--enable-newlib-io-c99-formats",
-            "--enable-newlib-io-long-long",
-            # --enable-newlib-io-pos-args (probably not needed)
-            "--disable-newlib-io-long-double",  # we don't need this, MIPS long double == double
-            "--enable-newlib-io-float",
-            # "--disable-newlib-supplied-syscalls"
-            "--disable-libstdcxx",  # not sure if this is needed
 
-            # we don't have any multithreading support on baremetal
-            "--disable-newlib-multithread",
+        if self.target_info.is_baremetal:
+          self.configureArgs.extend([
+              "--enable-malloc-debugging",
+              "--enable-newlib-long-time_t",  # we want time_t to be long and not int!
+              "--enable-newlib-io-c99-formats",
+              "--enable-newlib-io-long-long",
+              # --enable-newlib-io-pos-args (probably not needed)
+              "--disable-newlib-io-long-double",  # we don't need this, MIPS long double == double
+              "--enable-newlib-io-float",
+              # "--disable-newlib-supplied-syscalls"
+              "--disable-libstdcxx",  # not sure if this is needed
 
-            "--enable-newlib-global-atexit",  # TODO: is this needed?
-            # --enable-newlib-nano-malloc (should we do this?)
-            "--disable-multilib",
+              # we don't have any multithreading support on baremetal
+              "--disable-newlib-multithread",
 
-            # TODO: smaller lib? "--enable-target-optspace"
+              "--enable-newlib-global-atexit",  # TODO: is this needed?
+              # --enable-newlib-nano-malloc (should we do this?)
+              "--disable-multilib",
 
-            # FIXME: these don't seem to work
-            "--enable-serial-build-configure",
-            "--enable-serial-target-configure",
-            "--enable-serial-host-configure",
-        ])
+              # TODO: smaller lib? "--enable-target-optspace"
+
+              # FIXME: these don't seem to work
+              "--enable-serial-build-configure",
+              "--enable-serial-target-configure",
+              "--enable-serial-host-configure",
+          ])
+        elif self.target_info.is_rtems:
+          self.configureArgs.extend([
+              "--enable-newlib-io-c99-formats",
+              "--disable-libgloss",
+              "--disable-libstdcxx"  # not sure if this is needed
+          ])
 
         if self.locale_support:
             # needed for locale support
