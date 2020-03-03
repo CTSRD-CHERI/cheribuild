@@ -327,8 +327,8 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         result.append(cls._source_class.get_class_for_target(xtarget).target)
         return result
 
-    def __init__(self, config):
-        super().__init__(config,
+    def __init__(self, config, *, source_class=None, needs_disk_image=True):
+        super().__init__(config, needs_disk_image=needs_disk_image, source_class=source_class,
             disk_image_class=self._source_class.get_class_for_target(self.get_crosscompile_target(config)))
         self.useBblForBoot = False  # uncomment if you really think this is a good idea.
 
@@ -368,10 +368,14 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        add_to_port = cls.get_cross_target_index()
-        if add_to_port != 0:  # 1 is used by run-purecap
-            add_to_port += 1
-        super().setup_config_options(defaultSshPort=defaultSshForwardingPort(add_to_port), **kwargs)
+        if "defaultSshPort" in kwargs:
+            # CheribsdMfsRoot case
+            super().setup_config_options(**kwargs)
+        else:
+            add_to_port = cls.get_cross_target_index()
+            if add_to_port != 0:  # 1 is used by run-purecap
+                add_to_port += 1
+            super().setup_config_options(defaultSshPort=defaultSshForwardingPort(add_to_port), **kwargs)
 
     @classmethod
     def dependencies(cls, config: CheriConfig):
@@ -388,8 +392,8 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
             result.append("bbl")
         return result
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config, source_class=None, needs_disk_image=True):
+        super().__init__(config, source_class=source_class, needs_disk_image=needs_disk_image)
         if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             if False:
                 if self.crosscompile_target.is_cheri_purecap():
@@ -475,17 +479,16 @@ class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
                                    defaultSshPort=defaultSshForwardingPort(20 + add_to_port), **kwargs)
 
 
-class LaunchCheriBsdMfsRoot(AbstractLaunchFreeBSD):
+class LaunchCheriBsdMfsRoot(LaunchCheriBSD):
     project_name = "run-minimal"
     dependencies = ["qemu", "cheribsd-mfs-root-kernel"]
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID]
+    _source_class = BuildCheriBsdMfsKernel
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        # TODO:         add_to_port = cls.get_cross_target_index()
-        add_to_port = 0
+        add_to_port = cls.get_cross_target_index()
         super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
-                                   defaultSshPort=defaultSshForwardingPort(8 + add_to_port), **kwargs)
+                                     defaultSshPort=defaultSshForwardingPort(20 + add_to_port), **kwargs)
 
     def __init__(self, config):
         super().__init__(config, source_class=BuildCheriBsdMfsKernel, needs_disk_image=False)
