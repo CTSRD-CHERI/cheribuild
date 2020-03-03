@@ -114,9 +114,9 @@ def test_remove_duplicates():
 def test_minimal_run():
     # Check that we build the mfs root first
     assert _sort_targets(["disk-image-minimal", "cheribsd-mfs-root-kernel", "run-minimal"]) == \
-                         ["disk-image-minimal-mips-hybrid", "cheribsd-mfs-root-kernel-mips-hybrid", "run-minimal"]
+                         ["disk-image-minimal-mips-hybrid", "cheribsd-mfs-root-kernel-mips-hybrid", "run-minimal-mips-hybrid"]
     assert _sort_targets(["cheribsd-mfs-root-kernel", "disk-image-minimal", "run-minimal"]) == \
-                         ["disk-image-minimal-mips-hybrid", "cheribsd-mfs-root-kernel-mips-hybrid", "run-minimal"]
+                         ["disk-image-minimal-mips-hybrid", "cheribsd-mfs-root-kernel-mips-hybrid", "run-minimal-mips-hybrid"]
 
 
 def _check_deps_not_cached(classes):
