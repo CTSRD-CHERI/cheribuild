@@ -212,9 +212,16 @@ class BuildFreeBSDBase(Project):
 
     # Return the path the a potetial sysroot created from installing this project
     # Currently we only create sysroots for CheriBSD but we might change that in the future
-    # noinspection PyMethodMayBeStatic
     def get_corresponding_sysroot(self) -> "typing.Optional[Path]":
-        return None
+        if self.target_info.is_cheribsd:
+            # Note: we can't use self.target_info.sysroot_dir here since we currently build
+            # both purecap and hybrid targets against the same sysroot.
+            # For MIPS self.target_info.sysroot_dir is $CHERI_SDK/sysroot128 in both cases, but we
+            # want to install the purecap one (with default ABI == purecap) to sysroot-purecap128
+            return self.config.get_cheribsd_sysroot_path(self.crosscompile_target, separate_cheri_sysroots=True)
+        else:
+            assert not self.has_installsysroot_target, "Not implemented yet"
+            return self.target_info.sysroot_dir
 
     def has_cheri_support(self):
         return self.crosscompile_target.is_hybrid_or_purecap_cheri()
@@ -794,16 +801,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             installsysroot_args = install_world_args.copy()
             # No need for the files in /usr/share and the METALOG file
             installsysroot_args.set(NO_SHARE=True, METALOG="/dev/null")
-            # Note: we can't use self.target_info.sysroot_dir here since we currently build
-            # both purecap and hybrid targets against the same sysroot.
-            # For MIPS self.target_info.sysroot_dir is $CHERI_SDK/sysroot128 in both cases, but we
-            # want to install the purecap one (with default ABI == purecap) to sysroot-purecap128
-            if self.target_info.is_cheribsd:
-                sysroot_dir = self.config.get_cheribsd_sysroot_path(self.crosscompile_target,
-                    separate_cheri_sysroots=True)
-            else:
-                sysroot_dir = self.target_info.sysroot_dir
-            installsysroot_args.set_env(DESTDIR=sysroot_dir)
+            installsysroot_args.set_env(DESTDIR=self.get_corresponding_sysroot())
             if sysroot_only:
                 if not self.has_installsysroot_target:
                     self.fatal("Can't use installsysroot here")
@@ -1169,11 +1167,6 @@ class BuildCHERIBSD(BuildFreeBSD):
         cls.purecapKernel = cls.add_bool_option("pure-cap-kernel", show_help=True, _allow_unknown_targets=True,
                                               only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP],
                                               help="Build kernel with pure capability ABI (probably won't work!)")
-
-    def get_corresponding_sysroot(self):
-        if not self.is_exact_instance(BuildCHERIBSD):
-            return None
-        return self.config.get_cheribsd_sysroot_path(self.crosscompile_target)
 
     def __init__(self, config: CheriConfig):
         self.installAsRoot = os.getuid() == 0

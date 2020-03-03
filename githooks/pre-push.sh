@@ -67,6 +67,7 @@ do
 		try_run ./cheribuild.py mibench-mips-hybrid --benchmark --benchmark-clean-boot -p
 		try_run ./cheribuild.py --help
 		try_run ./jenkins-cheri-build.py --help
+		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=default -p cheribsd
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=cheri128 -p libcxx
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --test --cpu=cheri128 -p postgres
 		try_run env WORKSPACE=/tmp ./jenkins-cheri-build.py --build --cpu=cheri128 -p llvm-native
