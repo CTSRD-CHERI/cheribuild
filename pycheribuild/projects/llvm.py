@@ -278,6 +278,11 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
                 self.createSymlink(self.installDir / "bin/clang", self.installDir / "bin" / (prefix + "-clang"))
                 self.createSymlink(self.installDir / "bin/clang++", self.installDir / "bin" / (prefix + "-clang++"))
                 self.createSymlink(self.installDir / "bin/clang-cpp", self.installDir / "bin" / (prefix + "-clang-cpp"))
+        # llvm-objdump currently doesn't infer the available features
+        # This depends on https://reviews.llvm.org/D74023
+        self.writeFile(self.installDir / "bin/riscv64cheri-objdump",
+            "#!/bin/sh\nexec '{}' -mattr=+a,+m,+c,+d,+f,+xcheri \"$@\"".format(self.installDir / "bin/llvm-objdump"),
+            overwrite=True, mode=0o755)
 
     @property
     def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
