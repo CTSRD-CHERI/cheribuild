@@ -535,6 +535,67 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             xtarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
         return BuildCHERIBSD.get_instance(self.project, cross_target=xtarget)
 
+class RTEMSTargetInfo(_ClangBasedTargetInfo):
+    shortname = "RTEMS"
+    RTEMS_VERSION = 5
+
+    def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
+        super().__init__(target, project)
+        self._sdk_root_dir = None
+
+    @property
+    def is_rtems(self):
+        return True
+
+    @property
+    def is_newlib(self):
+        return True
+
+    @property
+    def target_triple(self):
+        return "riscv64-unknown-rtems5"
+
+    @property
+    def sdk_root_dir(self):
+        return self.config.cheri_sdk_dir
+
+    @property
+    def sysroot_dir(self):
+        return Path(self.sdk_root_dir, self.target_triple)
+
+    def _get_sdk_root_dir_lazy(self) -> Path:
+        return self.config.cheri_sdk_dir
+
+    @property
+    def _compiler_dir(self) -> Path:
+        return self.sdk_root_dir / "bin"
+
+    @classmethod
+    def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", include_version):
+        if target.is_cheri_purecap():
+            if target.is_riscv(include_purecap=True):
+                return "riscv64-unknown-rtems{}".format(cls.RTEMS_VERSION if include_version else "")
+            else:
+                assert False, "Unsuported purecap target" + str(cls)
+        return super().triple_for_target(target, config, include_version)
+
+    @classmethod
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        return ["llvm-native", "newlib-rtems-riscv64-purecap"]
+
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        if target.is_cheri_purecap():
+            if target.is_riscv(include_purecap=True):
+                return ["newlib-rtems-riscv64-purecap"]
+            else:
+                assert False, "No support for building purecap RTEMS for non RISC-V targets yet"
+
+        assert False, "No support for building vanilla RTEMS. Only purecap CHER-RISC-V RTEMS is supported"
+
+    @property
+    def local_install_root(self) -> Path:
+        return self.sysroot_dir
 
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     shortname = "Newlib"
@@ -840,6 +901,9 @@ class CompilationTargets(object):
     # RTEMS targets
     RTEMS_NEWLIB_RISCV64 = CrossCompileTarget("rtems-riscv64-purecap", CPUArchitecture.RISCV64,
         NewlibRtemsTargetInfo, is_cheri_purecap=True)
+    RTEMS_RISCV64_PURECAP = CrossCompileTarget("rtems-riscv64-purecap", CPUArchitecture.RISCV64, RTEMSTargetInfo,
+        is_cheri_purecap=True)
+    ALL_SUPPORTED_RTEMS_TARGETS = [RTEMS_NEWLIB_RISCV64, RTEMS_RISCV64_PURECAP]
 
     # TODO: test RISCV
     ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = [CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI,
