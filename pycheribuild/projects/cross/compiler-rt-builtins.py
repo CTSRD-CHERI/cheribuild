@@ -41,17 +41,20 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     project_name = "compiler-rt-builtins"
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.SYSROOT
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS
+    supported_architectures =CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
     _default_architecture = CompilationTargets.BAREMETAL_NEWLIB_MIPS64
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        assert self.target_info.is_baremetal, "No other targets supported yet"
+        assert self.target_info.is_baremetal or self.target_info.is_rtems, "No other targets supported yet"
         assert self.target_info.is_newlib, "No other targets supported yet"
         # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")
         if self.compiling_for_mips(include_purecap=False):
             self.add_cmake_options(COMPILER_RT_HAS_FPIC_FLAG=False)  # HACK: currently we build everything as -fno-pic
+
+        if self.target_info.is_rtems:
+            self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY") # RTEMS only needs static libs
         self.add_cmake_options(
             LLVM_CONFIG_PATH=BuildCheriLLVM.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
             LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
@@ -79,7 +82,13 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         super().install(**kwargs)
 
         libname = "libclang_rt.builtins-" + self.triple_arch + ".a"
-        self.moveFile(self.installDir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
+
+        if self.target_info.is_rtems:
+           # Move the builtins lib to where RTEMS Driver expects
+           self.moveFile(self.installDir / "lib/generic" / libname, self.target_info.sysroot_dir / "lib" / libname)
+        else:
+           self.moveFile(self.installDir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
+
         if self.compiling_for_cheri():
             # compatibility with older compilers
             self.createSymlink(self.real_install_root_dir / "lib" / libname,
