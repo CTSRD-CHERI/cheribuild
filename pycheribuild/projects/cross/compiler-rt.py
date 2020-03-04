@@ -42,9 +42,16 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     default_install_dir = DefaultInstallDir.COMPILER_RESOURCE_DIR
     _check_install_dir_conflict = False
     _default_architecture = CompilationTargets.CHERIBSD_MIPS_PURECAP
+    supported_architectures =CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+
+        if self.target_info.is_rtems:
+            self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY") # RTEMS only needs static libs
+            # Get default target (arch) from the triple
+            self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH=self.target_info.target_triple.split('-')[0])
+
         self.add_cmake_options(
             LLVM_CONFIG_PATH=BuildCheriLLVM.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
             LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
@@ -74,3 +81,10 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             ubsan_runtime_path = self.installDir / ("lib/freebsd/libclang_rt.ubsan_standalone-mips64c" + self.config.mips_cheri_bits_str + ".a")
             if not ubsan_runtime_path.exists():
                 self.warning("Did not install ubsan runtime", ubsan_runtime_path)
+        if self.target_info.is_rtems:
+            rt_runtime_path = self.installDir / ("lib/generic/libclang_rt.builtins-riscv64.a")
+            if not rt_runtime_path.exists():
+                self.warning("Did not install compiler runtime", rt_runtime_path.exists)
+            else:
+                print(self.target_info.sysroot_dir)
+                self.createSymlink(rt_runtime_path, self.target_info.sysroot_dir / "lib/libclang_rt.builtins-riscv64.a")
