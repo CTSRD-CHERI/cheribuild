@@ -332,11 +332,11 @@ class CompilerInfo(object):
         for basename in ("clang++", "clang-cpp", "clang"):
             if name.startswith(basename):
                 version_suffix = name[len(basename):]
-        result = None
+        # Try to find a binutil with the same version suffix first
         real_compiler_path = self.path.resolve()
-        suffixed_binutil = real_compiler_path.parent / (binutil + version_suffix)
-        if suffixed_binutil.exists():
-            return suffixed_binutil
+        result = real_compiler_path.parent / (binutil + version_suffix)
+        if result.exists():
+            return result
         else:
             statusUpdate("Could not find version-suffixed", binutil, "in expected path", result)
         if real_compiler_path != self.path.parent:
