@@ -190,6 +190,8 @@ class CheriConfig(object):
                  "debugging, but deviates from the spec, and therefore off by default.")
         self.debugger_on_cheri_trap = loader.add_bool_option("qemu-gdb-break-on-cheri-trap", default=False,
             help="Drop into GDB attached to QEMU when a CHERI exception is triggered (QEMU only).")
+        self.qemu_debug_program = loader.addOption("qemu-gdb-debug-userspace-program",
+            help="Print the command to debug the following userspace program in GDB attaced to QEMU")
         self.includeDependencies = None  # type: Optional[bool]
         self.crossCompileTarget = None  # type: Optional[CrossCompileTarget]
         self.makeWithoutNice = None  # type: Optional[bool]

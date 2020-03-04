@@ -225,23 +225,31 @@ class LaunchQEMUBase(SimpleProject):
         if self.config.wait_for_debugger:
             self.info("QEMU is waiting for GDB to attach (using `target remote :1234`)."
                       " Once connected enter 'continue\\n' to continue booting")
-            gdb_cmd = BuildGDB.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/gdb"
-            launch_cmd = [
-                gdb_cmd,
-                self.currentKernel,
+
+            def gdb_command(main_binary, breakpoint=None, extra_binary=None) -> str:
+                gdb_cmd = BuildGDB.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/gdb"
                 # Set the sysroot to ensure that the .debug file is loaded from $SYSROOT/usr/lib/debug/boot/kernel
-                "--init-eval-command=set sysroot " + str(self.rootfs_path),
+                result = [gdb_cmd, main_binary, "--init-eval-command=set sysroot " + str(self.rootfs_path)]
                 # Once the file has been loaded set a breakpoint on panic() and connect to the remote host
-                "--eval-command=break panic",
-                "--eval-command=target remote localhost:1234",
-                "--eval-command=continue",
-                ]
-            self.info("To start and connect GDB run the following command in another terminal:\n"
-                "\t", coloured(AnsiColour.red, commandline_to_str(launch_cmd)))
-            self.info("If you would like to debug /sbin/init (or any other statically linked program) run this inside GDB:")
-            self.info(coloured(AnsiColour.red, "\tadd-symbol-file -o 0", str(self.rootfs_path / "sbin/init")))
-            self.info("For dynamically linked programs you will have to add libraries at the correct offset. For example:")
-            self.info(coloured(AnsiColour.red, "\tadd-symbol-file -o 0x40212000", str(self.rootfs_path / "lib/libc.so.7")))
+                if breakpoint:
+                    result.append("--eval-command=break " + breakpoint)
+                result.append("--eval-command=target remote localhost:1234")
+                result.append("--eval-command=continue")
+                if extra_binary:
+                    result.append("--init-eval-command=add-symbol-file -o 0 " + str(extra_binary))
+                return commandline_to_str(result)
+
+            self.info("To start and connect GDB run the following command in another terminal:")
+            if self.config.qemu_debug_program:
+                self.info("\t", coloured(AnsiColour.red, gdb_command(self.rootfs_path / self.config.qemu_debug_program, "main", self.currentKernel)), sep="")
+            else:
+                self.info("\t", coloured(AnsiColour.red, gdb_command(self.currentKernel, "panic")), sep="")
+                self.info("If you would like to debug /sbin/init (or any other statically linked program) run this inside GDB:")
+                self.info(coloured(AnsiColour.red, "\tadd-symbol-file -o 0", str(self.rootfs_path / "sbin/init")))
+                self.info("For dynamically linked programs you will have to add libraries at the correct offset. For example:")
+                self.info(coloured(AnsiColour.red, "\tadd-symbol-file -o 0x40212000", str(self.rootfs_path / "lib/libc.so.7")))
+                self.info("If you would like to debug a userspace program (e.g. sbin/init):")
+                self.info("\t", coloured(AnsiColour.red, gdb_command(self.rootfs_path / "sbin/init", "main", self.currentKernel)), sep="")
             self.info("Launching QEMU in suspended state...")
             # TODO: control tmux to do this automatically?
             # See e.g. https://github.com/tmux-python/libtmux/
