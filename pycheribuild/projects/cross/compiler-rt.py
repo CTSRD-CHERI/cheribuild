@@ -42,7 +42,9 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     default_install_dir = DefaultInstallDir.COMPILER_RESOURCE_DIR
     _check_install_dir_conflict = False
     _default_architecture = CompilationTargets.CHERIBSD_MIPS_PURECAP
-    supported_architectures =CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
+    supported_architectures = [_default_architecture] + \
+                              CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + \
+                              CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
