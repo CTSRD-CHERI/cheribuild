@@ -240,8 +240,13 @@ class LaunchQEMUBase(SimpleProject):
                 return commandline_to_str(result)
 
             self.info("To start and connect GDB run the following command in another terminal:")
+            path_to_kernel = self.currentKernel
+            # Prefer the file with debug info
+            kernel_full_guess = path_to_kernel.with_name(path_to_kernel.name + ".full")
+            if kernel_full_guess.exists():
+                path_to_kernel = kernel_full_guess
             if self.config.qemu_debug_program:
-                self.info("\t", coloured(AnsiColour.red, gdb_command(self.rootfs_path / self.config.qemu_debug_program, "main", self.currentKernel)), sep="")
+                self.info("\t", coloured(AnsiColour.red, gdb_command(self.rootfs_path / self.config.qemu_debug_program, "main", path_to_kernel)), sep="")
             else:
                 self.info("\t", coloured(AnsiColour.red, gdb_command(self.currentKernel, "panic")), sep="")
                 self.info("If you would like to debug /sbin/init (or any other statically linked program) run this inside GDB:")
@@ -249,7 +254,7 @@ class LaunchQEMUBase(SimpleProject):
                 self.info("For dynamically linked programs you will have to add libraries at the correct offset. For example:")
                 self.info(coloured(AnsiColour.red, "\tadd-symbol-file -o 0x40212000", str(self.rootfs_path / "lib/libc.so.7")))
                 self.info("If you would like to debug a userspace program (e.g. sbin/init):")
-                self.info("\t", coloured(AnsiColour.red, gdb_command(self.rootfs_path / "sbin/init", "main", self.currentKernel)), sep="")
+                self.info("\t", coloured(AnsiColour.red, gdb_command(self.rootfs_path / "sbin/init", "main", path_to_kernel)), sep="")
             self.info("Launching QEMU in suspended state...")
             # TODO: control tmux to do this automatically?
             # See e.g. https://github.com/tmux-python/libtmux/
