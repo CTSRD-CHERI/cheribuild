@@ -64,6 +64,8 @@ class BuildQEMUBase(AutotoolsProject):
                                     help="Build a the graphical UI bits for QEMU (SDL,VNC)")
         cls.qemu_targets = cls.add_config_option("targets",
             show_help=True, help="Build QEMU for the following targets", default=cls.default_targets)
+        cls.prefer_full_lto_over_thin_lto = cls.add_bool_option("full-lto", show_help=False, default=True,
+            help="Prefer full LTO over LLVM ThinLTO when using LTO")
 
     @classmethod
     def qemu_binary(cls, caller: SimpleProject):
