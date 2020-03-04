@@ -639,7 +639,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             kernelMakeArgs.set(MFS_IMAGE=mfs_root_image)
             if "MFS_ROOT" not in kernconf:
                 warningMessage("Attempting to build an MFS_ROOT kernel but kernel config name sounds wrong")
-        if not self.kernel_toolchain_exists:
+        if not self.kernel_toolchain_exists and not self.fast_rebuild:
             kernel_toolchain_opts = kernelMakeArgs.copy()
             # The kernel seems to use LDFLAGS and ignore XLDFLAGS. Ensure we don't pass those flags when building host
             # binaries
@@ -685,7 +685,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
         if not self.config.skipBuildworld:
             if self.fast_rebuild:
-                build_args.set(WORLDFAST=True)
+                if self.config.clean:
+                    self.info("Ignoring --", self.target, "/fast option since --clean was passed", sep="")
+                else:
+                    build_args.set(WORLDFAST=True)
             self.runMake("buildworld", options=build_args)
             self.kernel_toolchain_exists = True  # includes the necessary tools for kernel-toolchain
         if not self.subdirOverride:
