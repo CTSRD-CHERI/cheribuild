@@ -28,6 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
+from pathlib import Path
 from .project import *
 from ..utils import *
 
@@ -54,6 +55,7 @@ class BuildGo(Project):
         self.binDir = self.sourceDir / "bin"
         self.pkgDir = self.sourceDir / "pkg"
         self.gorootDir = self.installDir / "go"
+        self.goCache = Path("~").expanduser() / ".cache" / "go-build"
 
     def build_dir_for_target(self, target: CrossCompileTarget):
         return self.sourceDir / "pkg"
@@ -71,7 +73,12 @@ class BuildGo(Project):
         self.run_cmd(cmd, cwd=self.makeDir, env=env)
 
     def clean(self) -> ThreadJoiner:
-        self.run_cmd("bash clean.bash".split(), cwd=self.makeDir)
+        if (self.binDir / "go").exists():
+            self.run_cmd("bash clean.bash".split(), cwd=self.makeDir)
+        self.clean_directory(self.gorootDir)
+        # Make sure we remove everything in the go cache, just in case
+        if self.goCache.exists():
+            self.clean_directory(self.goCache.resolve())
         joiner = super().clean()
         return joiner
 
