@@ -1830,7 +1830,7 @@ class Project(SimpleProject):
             self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
 
         assert self.installDir, "must be set"
-        statusUpdate(self.target, "INSTALLDIR = ", self._installDir, "INSTALL_PREFIX=", self._installPrefix,
+        self.verbose_print(self.target, "INSTALLDIR = ", self._installDir, "INSTALL_PREFIX=", self._installPrefix,
             "DESTDIR=", self.destdir)
 
         if self.should_include_debug_info:

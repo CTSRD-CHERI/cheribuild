@@ -188,6 +188,8 @@ class CheriConfig(object):
         self.trap_on_unrepresentable = loader.add_bool_option("trap-on-unrepresentable", default=False,
             help="Raise a CHERI exception when capabilities become unreprestable instead of detagging. Useful for "
                  "debugging, but deviates from the spec, and therefore off by default.")
+        self.debugger_on_cheri_trap = loader.add_bool_option("qemu-gdb-break-on-cheri-trap", default=False,
+            help="Drop into GDB attached to QEMU when a CHERI exception is triggered (QEMU only).")
         self.includeDependencies = None  # type: Optional[bool]
         self.crossCompileTarget = None  # type: Optional[CrossCompileTarget]
         self.makeWithoutNice = None  # type: Optional[bool]

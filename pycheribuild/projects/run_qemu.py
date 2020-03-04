@@ -50,6 +50,7 @@ class LaunchQEMUBase(SimpleProject):
     sshForwardingPort = None  # type: int
     custom_qemu_smb_mount = None
     _hasPCI = True
+    _qemu_riscv_bios = "default"    # Use the default built-in OpenSBI firmware
 
     @classmethod
     def setup_config_options(cls, defaultSshPort: int=None, **kwargs):
@@ -85,13 +86,36 @@ class LaunchQEMUBase(SimpleProject):
         self.diskImage = None  # type: typing.Optional[Path]
         self.virtioDisk = False
         self._projectSpecificOptions = []
-        self.machineFlags = ["-M", "malta"]  # malta cpu
+        self.machineFlags = []
         # For debugging generate a trap on unrepresentable instead of detagging:
-        if self.config.trap_on_unrepresentable:
-            self.machineFlags.append("-cheri-c2e-on-unrepresentable")
+        if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+            if self.config.trap_on_unrepresentable:
+                self.machineFlags.append("-cheri-c2e-on-unrepresentable")
+            if self.config.debugger_on_cheri_trap:
+                self.machineFlags.append("-cheri-debugger-on-trap")
         self._qemuUserNetworking = True
         self.rootfs_path = typing.Optional[None]  # type: Path
         self._after_disk_options = []
+
+    def setup(self):
+        super().setup()
+        xtarget = self.crosscompile_target
+        if xtarget.is_mips(include_purecap=True):
+            self.machineFlags += ["-M", "malta"]
+        if xtarget.is_riscv(include_purecap=True):
+            _hasPCI = False
+            self.machineFlags += ["-M", "virt"]
+            self.virtioDisk = True
+            self.machineFlags += ["-bios", self._qemu_riscv_bios]
+            assert self.currentKernel is not None
+        elif xtarget.is_any_x86():
+            qemu_suffix = "x86_64" if xtarget.is_x86_64() else "i386"
+            self.currentKernel = None  # boot from disk
+            self.addRequiredSystemTool("qemu-system-" + qemu_suffix)
+            self.qemuBinary = Path(shutil.which("qemu-system-" + qemu_suffix) or "/could/not/find/qemu")
+            self.machineFlags = []  # default CPU (and NOT -M malta!)
+        # only QEMU-MIPS supports more than one SMB share
+        self._provide_src_via_smb = self.compiling_for_mips(include_purecap=True)
 
     def process(self):
         if not self.qemuBinary.exists():
@@ -300,7 +324,6 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     doNotAddToTargets = True
     _source_class = None
     _bbl_class = BuildBBLNoPayload
-    _qemu_riscv_bios = "default"
 
     @classproperty
     def supported_architectures(cls):
@@ -330,29 +353,6 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     def __init__(self, config, *, source_class=None, needs_disk_image=True):
         super().__init__(config, needs_disk_image=needs_disk_image, source_class=source_class,
             disk_image_class=self._source_class.get_class_for_target(self.get_crosscompile_target(config)))
-        self.useBblForBoot = False  # uncomment if you really think this is a good idea.
-
-    def setup(self):
-        super().setup()
-        xtarget = self.crosscompile_target
-        if xtarget.is_riscv(include_purecap=True):
-            _hasPCI = False
-            self.machineFlags = ["-M", "virt"]  # want VirtIO
-            self.virtioDisk = True
-            if self.useBblForBoot:
-                self.machineFlags += ["-bios", "none"]
-                self.currentKernel = self._bbl_class.get_installed_kernel_path(self)
-            else:
-                self.machineFlags += ["-bios", self._qemu_riscv_bios]
-                assert self.currentKernel is not None
-        elif xtarget.is_any_x86():
-            qemu_suffix = "x86_64" if xtarget.is_x86_64() else "i386"
-            self.currentKernel = None  # boot from disk
-            self.addRequiredSystemTool("qemu-system-" + qemu_suffix)
-            self.qemuBinary = Path(shutil.which("qemu-system-" + qemu_suffix) or "/could/not/find/qemu")
-            self.machineFlags = []  # default CPU (and NOT -M malta!)
-        # only QEMU-MIPS supports more than one SMB share
-        self._provide_src_via_smb = self.compiling_for_mips(include_purecap=True)
 
 
 class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
