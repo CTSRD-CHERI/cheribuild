@@ -53,7 +53,7 @@ Type_T = typing.TypeVar("Type_T")
 __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includeLocalFile", "CompilerInfo",   # no-combine
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
            "warningMessage", "Type_T", "typing", "popen_handle_noexec", "extract_version", "get_program_version",  # no-combine
-           "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latestClangTool", "SafeDict",  # no-combine
+           "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latest_system_clang_tool", "SafeDict",  # no-combine
            "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
            "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection", # no-combine
            "is_case_sensitive_dir"]  # no-combine
@@ -353,6 +353,10 @@ class CompilerInfo(object):
     def is_clang(self):
         return self.compiler in ("clang", "apple-clang")
 
+    @property
+    def is_apple_clang(self):
+        return self.compiler == "apple-clang"
+
 _cached_compiler_infos = dict()  # type: typing.Dict[Path, CompilerInfo]
 
 
@@ -435,37 +439,36 @@ def extract_version(output: bytes, component_kind: "typing.Type[Type_T]" = int, 
     return tuple(map(component_kind, match.groups()))
 
 
-def latestClangTool(basename: str):
+def latest_system_clang_tool(basename: str, fallback_basename: str):
     # try to find at least clang 3.7, otherwise fall back to system clang
-    found_versioned_clang = (None, None)
-    versions = [(i, 0) for i in range(10, 3, -1)] + [(3, 9), (3, 8), (3, 7)]
-    for version in versions:
-        # FreeBSD installs clang39 and clang70, Linux uses clang-3.9 and clang-7
-        suffix1 = ("%d%d" % version)
-        if version[0] >= 7:
-            # version after 7.0 don't include the minor component anymore on Linux:
-            suffix2 = "-" + str(version[0])
-        else:
-            suffix2 = ("-%d.%d" % version)
-        guess = shutil.which(basename + suffix1)
-        if guess:
-            found_versioned_clang = (guess, version)
-            break
-        guess = shutil.which(basename + suffix2)
-        if guess:
-            found_versioned_clang = (guess, version)
-            break
-    guess = shutil.which(basename)
-    if guess is None and basename == "clang-cpp":
-        guess = shutil.which("cpp")
-    if guess:
-        if found_versioned_clang[0] is None:
-            return guess
-        # Otherwise check if the versioned clang install is newer than the unsuffixed one:
-        info = getCompilerInfo(guess)
-        # print("default clang is ", info, "found clang is", found_versioned_clang[1])
-        return guess if info.version > found_versioned_clang[1] else found_versioned_clang[0]
-    return found_versioned_clang[0]
+    # Only search in /usr/bin/ and /usr/local/bin by default.
+    # If users want to use other versions they should explicitly pass --cc-path, etc
+    search_path = [Path("/usr/local/bin"), Path("/usr/bin")]
+
+    valid_regex = re.compile(re.escape(basename) + r"[-\d.]*$")
+    results = []
+    for search_dir in search_path:
+        candidates = search_dir.glob(basename + "*")
+        for candidate in candidates:
+            if not valid_regex.match(candidate.name):
+                continue
+            # print("Checking compiler candidate", candidate)
+            info = getCompilerInfo(candidate)
+            if IS_MAC and not info.is_apple_clang:
+                # print("Ignoring", candidate, "since it is not apple clang and won't be able to build host binaries")
+                continue
+            # Minimum version is 4.0
+            if info.version < (4, 0, 0):
+                # print("Ignoring", basename, "candidate", candidate, "since it is too old:", info.version)
+                continue
+            results.append((candidate, info.is_apple_clang, info.version))
+    if not results:
+        return shutil.which(fallback_basename)
+    # Find the newest version (and prefer apple-clang to non-apple clang
+    # since it is required on macOS to build any binary
+    # print("Candidates for", basename, results)
+    newest = max(results, key=lambda p: (p[1], p[2]))
+    return newest[0]
 
 
 def defaultNumberOfMakeJobs():

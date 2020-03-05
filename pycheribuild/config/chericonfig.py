@@ -40,7 +40,7 @@ from typing import Optional
 # Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
 from .loader import ConfigLoaderBase
 from .target_info import CrossCompileTarget, MipsFloatAbi, Linkage, CheriBSDTargetInfo, CompilationTargets
-from ..utils import latestClangTool, warningMessage, statusUpdate, have_working_internet_connection
+from ..utils import latest_system_clang_tool, warningMessage, statusUpdate, have_working_internet_connection
 
 if typing.TYPE_CHECKING:   # no-combine
     from ..filesystemutils import FileSystemUtils   # no-combine
@@ -97,13 +97,13 @@ class CheriConfig(object):
             help="Don't run the build but instead only print the targets that would be executed")
 
         self.clangPath = loader.add_path_option("clang-path", shortname="-cc-path",
-              default=latestClangTool("clang"), group=loader.pathGroup,
+              default=latest_system_clang_tool("clang", "cc"), group=loader.pathGroup,
               help="The C compiler to use for host binaries (must be compatible with Clang >= 3.7)")
         self.clangPlusPlusPath = loader.add_path_option("clang++-path", shortname="-c++-path",
-              default=latestClangTool("clang++"), group=loader.pathGroup,
+              default=latest_system_clang_tool("clang++", "c++"), group=loader.pathGroup,
               help="The C++ compiler to use for host binaries (must be compatible with Clang >= 3.7)")
         self.clangCppPath = loader.add_path_option("clang-cpp-path", shortname="-cpp-path",
-              default=latestClangTool("clang-cpp"), group=loader.pathGroup,
+              default=latest_system_clang_tool("clang-cpp", "cpp"), group=loader.pathGroup,
               help="The C preprocessor to use for host binaries (must be compatible with Clang >= 3.7)")
 
         self.passDashKToMake = loader.addCommandLineOnlyBoolOption("pass-k-to-make", "k",
