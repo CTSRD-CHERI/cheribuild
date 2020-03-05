@@ -655,8 +655,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 kernel_toolchain_opts.set_with_options(AUTO_OBJ=True)
             self.runMake("kernel-toolchain", options=kernel_toolchain_opts)
             self.kernel_toolchain_exists = True
+        statusUpdate("Building kernels for configs:", kernconf)
         self.runMake("buildkernel", options=kernelMakeArgs,
-                     compilationDbName="compile_commands_" + self.kernelConfig + ".json")
+                     compilationDbName="compile_commands_" + kernconf.replace(" ", "_") + ".json")
 
     def _installkernel(self, kernconf, destdir: str = None, extra_make_args=None):
         # don't use multiple jobs here
@@ -670,9 +671,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             install_kernel_args.set(INSTALL_KERNEL_DOT_FULL=True)
         if destdir:
             install_kernel_args.set_env(DESTDIR=destdir)
+        statusUpdate("Installing kernels for configs:", kernconf)
         self.runMake("installkernel", options=install_kernel_args, parallel=False)
 
-    def compile(self, mfs_root_image: Path = None, sysroot_only=False, **kwargs):
+    def compile(self, mfs_root_image: Path = None, sysroot_only=False, all_kernel_configs: str =None, **kwargs):
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
         # so just omit the flag here if the user passes -j1 on the command line
         build_args = self.buildworld_args
@@ -699,7 +701,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     self.info("Not embedding MFS_ROOT image in non-MFS root kernel config:", self.kernelConfig)
                     mfs_root_image = None
                     break
-            self._buildkernel(kernconf=self.kernelConfig, mfs_root_image=mfs_root_image)
+            if not all_kernel_configs:
+                all_kernel_configs = self.kernelConfig
+            self._buildkernel(kernconf=all_kernel_configs, mfs_root_image=mfs_root_image)
 
     def _removeOldRootfs(self):
         assert self.config.clean or not self.keepOldRootfs
@@ -1189,7 +1193,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         self.extra_kernels_with_mfs = []
         if self.buildFpgaKernels:
             if self.compiling_for_mips(include_purecap=True):
-                if self._crossCompileTarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
+                if self.crosscompile_target.is_hybrid_or_purecap_cheri():
                     if self.config.cheriBits == 128:
                         prefix = "CHERI128_DE4_"
                     elif self.config.cheriBits == 256:
@@ -1198,15 +1202,19 @@ class BuildCHERIBSD(BuildFreeBSD):
                         assert False, "unreachable"
                 else:
                     prefix = "BERI_DE4_"
+                    # TODO: build the benchmark kernels? TODO: NFSROOT?
+                for conf in ("USBROOT", "USBROOT_BENCHMARK", "NFSROOT"):
+                    self.extra_kernels.append(prefix + conf)
+                if self.mfs_root_image:
+                    self.extra_kernels_with_mfs.append(prefix + "MFS_ROOT")
+                    self.extra_kernels_with_mfs.append(prefix + "MFS_ROOT_BENCHMARK")
+            elif self.compiling_for_riscv(include_purecap=True):
+                if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+                    self.extra_kernels_with_mfs.append("CHERI_GFE")
+                else:
+                    self.extra_kernels_with_mfs.append("GFE")
             else:
-                prefix = "INVALID_KERNCONF_"
-                self.fatal("Invalid CHERI BITS")
-            # TODO: build the benchmark kernels?
-            for conf in ("USBROOT", "USBROOT_BENCHMARK"):
-                self.extra_kernels.append(prefix + conf)
-            if self.mfs_root_image:
-                self.extra_kernels_with_mfs.append(prefix + "MFS_ROOT")
-                self.extra_kernels_with_mfs.append(prefix + "MFS_ROOT_BENCHMARK")
+                self.fatal("Unsupported architecture for FPGA kernels")
 
     def _removeSchgFlag(self, *paths: "typing.Iterable[str]"):
         for i in paths:
@@ -1236,22 +1244,20 @@ class BuildCHERIBSD(BuildFreeBSD):
             mipsCC = self.cross_toolchain_root / "bin/clang"
             if not mipsCC.is_file():
                 self.fatal("MIPS toolchain specified but", mipsCC, "is missing.")
-        super().compile(mfs_root_image=self.mfs_root_image, sysroot_only=self.sysroot_only, **kwargs)
-        if self.sysroot_only:
-            return  # Don't attempt to build extra kernels if we are only building a sysroot
-
-        # We could also just pass multiple values in KERNCONF to build all those kernels. However, if MFS_ROOT is set
+        # We could also just pass all values in KERNCONF to build all those kernels. However, if MFS_ROOT is set
         # that will apply to all those kernels and embed the rootfs even if not needed
-        for i in self.extra_kernels:
-            self._buildkernel(kernconf=i)
-        for i in self.extra_kernels_with_mfs:
-            self._buildkernel(kernconf=i, mfs_root_image=self.mfs_root_image)
+        super().compile(all_kernel_configs=self.kernelConfig, mfs_root_image=self.mfs_root_image, sysroot_only=self.sysroot_only, **kwargs)
+        if self.sysroot_only:
+            # Don't attempt to build extra kernels if we are only building a sysroot
+            return
+        if self.extra_kernels:
+            self._buildkernel(kernconf=" ".join(self.extra_kernels))
+        if self.extra_kernels_with_mfs and self.mfs_root_image:
+            self._buildkernel(kernconf=" ".join(self.extra_kernels_with_mfs), mfs_root_image=self.mfs_root_image)
 
     def install(self, **kwargs):
-        all_kernel_configs = self.kernelConfig
         # If we build the FPGA kernels also install them into boot:
-        for i in self.extra_kernels + self.extra_kernels_with_mfs:
-            all_kernel_configs += " " + i
+        all_kernel_configs = " ".join([self.kernelConfig] + self.extra_kernels + self.extra_kernels_with_mfs)
         super().install(all_kernel_configs=all_kernel_configs, sysroot_only=self.sysroot_only, **kwargs)
 
     def update(self):
