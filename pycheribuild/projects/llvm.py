@@ -76,9 +76,11 @@ class BuildLLVMBase(CMakeProject):
 
     def setup(self):
         super().setup()
-        if self.compiling_for_host() and self.CC.resolve() == (self.config.cheri_sdk_bindir / "clang").resolve():
-            self.warning("It appears you are trying to compile CHERI-LLVM with CHERI-LLVM (", self.CC,
-                "). This is not recommended!", sep="")
+        if self.compiling_for_host():
+            cheri_cc = self.config.cheri_sdk_bindir / "clang"
+            if self.CC.exists() and cheri_cc.exists() and self.CC.resolve() == cheri_cc.resolve():
+                self.warning("It appears you are trying to compile CHERI-LLVM with CHERI-LLVM (", self.CC,
+                    "). This is not recommended!", sep="")
             if not self.query_yes_no("Are you sure you want to continue?"):
                 self.fatal("Cannot continue")
         # this must be added after check_system_dependencies
@@ -151,10 +153,10 @@ class BuildLLVMBase(CMakeProject):
         self.add_cmake_options(LLVM_USE_LINKER=ld)
         self.add_cmake_options(LLVM_ENABLE_LLD=False)
 
-    def add_lto_build_options(self, ccinfo: CompilerInfo, prefer_thinlto: bool = True) -> bool:
-        if not super().add_lto_build_options(ccinfo, prefer_thinlto):
-            return False # can't use LTO
-        if self.canUseLLd(self.CC) and prefer_thinlto:
+    def add_lto_build_options(self, ccinfo: CompilerInfo) -> bool:
+        if not super().add_lto_build_options(ccinfo):
+            return False  # can't use LTO
+        if self.canUseLLd(self.CC) and not self.prefer_full_lto_over_thin_lto:
             self.add_cmake_options(LLVM_ENABLE_LTO="Thin")
 
     def clean(self) -> ThreadJoiner:
