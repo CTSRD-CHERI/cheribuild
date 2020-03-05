@@ -43,7 +43,7 @@ import traceback
 import typing
 from pathlib import Path
 
-from .colour import coloured, AnsiColour, statusUpdate, warningMessage
+from .colour import coloured, AnsiColour
 if typing.TYPE_CHECKING:   # no-combine
     from .config.chericonfig import CheriConfig    # no-combine
 
@@ -476,23 +476,31 @@ def defaultNumberOfMakeJobs():
         makeJobs /= 2
     return makeJobs
 
+def maybe_add_space(msg, sep) -> tuple:
+    if sep == "":
+        return msg, " "
+    return (msg, )
+
+def statusUpdate(*args, sep=" ", **kwargs):
+    print(coloured(AnsiColour.cyan, *args, sep=sep), **kwargs)
+
+
+def warningMessage(*args, sep=" "):
+    # we ignore fatal errors when simulating a run
+    print(coloured(AnsiColour.magenta, maybe_add_space("Warning:", sep) + args, sep=sep), file=sys.stderr)
+
 
 def fatalError(*args, sep=" ", fixitHint=None, fatalWhenPretending=False):
     # we ignore fatal errors when simulating a run
-    def maybe_add_space(msg) -> tuple:
-        if sep == "":
-            return msg, " "
-        return (msg, )
-
     if _cheriConfig and _cheriConfig.pretend:
-        print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:") + args, sep=sep), file=sys.stderr)
+        print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:", sep) + args, sep=sep), file=sys.stderr)
         if fixitHint:
             print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr)
         if fatalWhenPretending:
             traceback.print_stack()
             sys.exit(3)
     else:
-        print(coloured(AnsiColour.red, maybe_add_space("Fatal error:") + args, sep=sep), file=sys.stderr)
+        print(coloured(AnsiColour.red, maybe_add_space("Fatal error:", sep) + args, sep=sep), file=sys.stderr)
         if fixitHint:
             print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr)
         sys.exit(3)

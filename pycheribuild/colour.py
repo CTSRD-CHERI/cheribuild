@@ -51,12 +51,3 @@ def coloured(colour: AnsiColour, *args, sep=" ") -> str:
         return startColour + sep.join(map(str, args[0])) + endColour
     else:
         return startColour + sep.join(map(str, args)) + endColour
-
-
-def statusUpdate(*args, sep=" ", **kwargs):
-    print(coloured(AnsiColour.cyan, *args, sep=sep), **kwargs)
-
-
-def warningMessage(*args, sep=" "):
-    # we ignore fatal errors when simulating a run
-    print(coloured(AnsiColour.magenta, ("Warning:",) + args, sep=sep), file=sys.stderr)
