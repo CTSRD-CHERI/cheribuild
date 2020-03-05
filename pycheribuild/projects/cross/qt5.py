@@ -365,8 +365,10 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             self._linkage = Linkage.STATIC  # currently dynamic doesn't work
 
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-bitwise-operations", "-Wno-error=cheri-capability-misuse", "-Wno-error=format"]  # FIXME: build with capability -Werror
+        # We are building an old version of webkit
+        self.cross_warning_flags.append("-Wno-deprecated-copy")
         if self.should_include_debug_info:
-            self.COMMON_FLAGS.append("-gline-tables-only") # otherwise too much debug info
+            self.COMMON_FLAGS.append("-gline-tables-only")  # otherwise too much debug info
         self.add_cmake_options(PORT="Qt", ENABLE_X11_TARGET=False,
                                ENABLE_OPENGL=False,
                                USE_LIBHYPHEN=False,  # we don't have libhyphen
