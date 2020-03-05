@@ -272,10 +272,13 @@ class BuildICU4C(CrossCompileAutotoolsProject):
             deps.append("icu4c-native")
         return deps
 
+    def linkage(self):
+        if not self.compiling_for_host() and BuildQtWebkit.get_instance(self, self.config).force_static_linkage:
+            return Linkage.STATIC  # make sure it works with webkit
+        return super().linkage()
+
     def __init__(self, config):
         super().__init__(config)
-        if not self.compiling_for_host() and BuildQtWebkit.get_instance(self, config).force_static_linkage:
-            self._linkage = Linkage.STATIC  # make sure it works with webkit
         self.configureCommand = self.sourceDir / "source/configure"
         if (self.sourceDir / "icu4c").exists():
             self.configureCommand = self.sourceDir / "icu4c/source/configure"
@@ -312,11 +315,13 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
     cross_install_dir = DefaultInstallDir.SYSROOT
     make_kind = MakeCommandKind.GnuMake
 
+    def linkage(self):
+        if not self.compiling_for_host() and BuildQtWebkit.get_instance(self, self.config).force_static_linkage:
+            return Linkage.STATIC  # make sure it works with webkit
+        return super().linkage()
+
     def __init__(self, config):
         super().__init__(config)
-        if not self.compiling_for_host() and BuildQtWebkit.get_instance(self, config).force_static_linkage:
-            self._linkage = Linkage.STATIC  # make sure it works with webkit
-
         if (self.sourceDir / "configure").exists():
             self.configureCommand = self.sourceDir / "configure"
         else:
@@ -352,6 +357,11 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             return self.config.cheri_sdk_bindir  # Use the CHERI SDK for native
         return self.target_info.sdk_root_dir / "bin"
 
+    def linkage(self):
+        if not self.compiling_for_host():
+            return Linkage.STATIC  # currently dynamic doesn't work
+        return super().linkage()
+
     def __init__(self, config: CheriConfig):
         # There is a bug in the cmake ninja generator that makes it use a response file for linking
         # WebCore but not actually generating it
@@ -361,8 +371,6 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                          )
         self.addRequiredSystemTool("update-mime-database", homebrew="shared-mime-info", apt="shared-mime-info")
         self.addRequiredSystemTool("ruby", apt="ruby")
-        if not self.compiling_for_host():
-            self._linkage = Linkage.STATIC  # currently dynamic doesn't work
 
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-bitwise-operations", "-Wno-error=cheri-capability-misuse", "-Wno-error=format"]  # FIXME: build with capability -Werror
         # We are building an old version of webkit

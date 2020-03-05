@@ -38,12 +38,14 @@ class BuildSQLite(CrossCompileAutotoolsProject):
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.SYSROOT
 
+    def linkage(self):
+        if not self.compiling_for_host() and BuildQtWebkit.get_instance(self, self.config).force_static_linkage:
+            return Linkage.STATIC  # make sure it works with webkit
+        return super().linkage()
+
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         if not self.compiling_for_host():
-            if BuildQtWebkit.get_instance(self, config).force_static_linkage:
-                self._linkage = Linkage.STATIC  # make sure it works with webkit
-
             self.configureEnvironment["BUILD_CC"] = self.host_CC
             # self.configureEnvironment["BUILD_CFLAGS"] = "-integrated-as"
             self.configureArgs.extend([
