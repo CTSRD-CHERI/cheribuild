@@ -47,7 +47,6 @@ class BuildLLVMBase(CMakeProject):
     # Linking all the debug info takes forever
     default_build_type = BuildType.RELEASE
 
-
     @classmethod
     def setup_config_options(cls, useDefaultSysroot=True):
         super().setup_config_options()
@@ -77,6 +76,11 @@ class BuildLLVMBase(CMakeProject):
 
     def setup(self):
         super().setup()
+        if self.compiling_for_host() and self.CC.resolve() == (self.config.cheri_sdk_bindir / "clang").resolve():
+            self.warning("It appears you are trying to compile CHERI-LLVM with CHERI-LLVM (", self.CC,
+                "). This is not recommended!", sep="")
+            if not self.query_yes_no("Are you sure you want to continue?"):
+                self.fatal("Cannot continue")
         # this must be added after check_system_dependencies
         link_jobs = 2 if self.enable_lto else 4
         if os.cpu_count() >= 24:
