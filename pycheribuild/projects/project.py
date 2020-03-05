@@ -1381,6 +1381,7 @@ class Project(SimpleProject):
     skipGitSubmodules = False
     compileDBRequiresBear = True
     doNotAddToTargets = True
+    full_rebuild_if_older_than = None  # type: datetime.datetime
 
     build_dir_suffix = ""   # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
     add_build_dir_suffix_for_native = False  # Whether to add -native to the native build dir
@@ -2371,6 +2372,22 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
                         return
                     self._force_clean = True
 
+        last_build_path = Path(self.buildDir, ".last_build_date")
+        if self.full_rebuild_if_older_than is not None and not self.config.clean:
+            last_build_date = None
+            try:
+                if last_build_path.exists():
+                    last_build_date = datetime.datetime.fromisoformat(last_build_path.read_text().strip())
+                    last_build_date = last_build_date.replace(tzinfo=datetime.timezone.utc)
+            except Exception as e:
+                self.warning("Could not parse contents of", last_build_path, e)
+            if last_build_date is None:
+                self._force_clean = True
+                self.info("Forcing full rebuild since", last_build_path, "Could not be parsed")
+            elif last_build_date < self.full_rebuild_if_older_than:
+                self._force_clean = True
+                self.info("Forcing full rebuild since a full rebuild is required for builds older than",
+                    self.full_rebuild_if_older_than, "and last build time was", last_build_date)
         # run the rm -rf <build dir> in the background
         cleaningTask = self.clean() if (self._force_clean or self.config.clean) else ThreadJoiner(None)
         if cleaningTask is None:
@@ -2394,6 +2411,8 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
                     # move any csetbounds stats from configuration (since they are not useful)
                 statusUpdate("Building", self.display_name, "... ")
                 self.compile()
+                if self.full_rebuild_if_older_than is not None:
+                    self.writeFile(last_build_path, datetime.datetime.utcnow().isoformat(), overwrite=True)
             if not self.config.skipInstall:
                 statusUpdate("Installing", self.display_name, "... ")
                 if install_dir_kind == DefaultInstallDir.DO_NOT_INSTALL:
