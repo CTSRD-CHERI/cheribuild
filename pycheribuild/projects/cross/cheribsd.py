@@ -574,7 +574,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             result.update(self.cross_toolchain_config)
         return result
 
-    def kernel_make_args_for_config(self, kernconf: str) -> MakeOptions:
+    def kernel_make_args_for_config(self, kernconf: str, extra_make_args) -> MakeOptions:
         self._setup_make_args()  # ensure make args are complete
         kernel_options = self.make_args.copy()
         if self.compiling_for_mips(include_purecap=True):
@@ -599,6 +599,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
                                TRAMP_LDFLAGS=fuse_ld_flag)
             kernel_options.set_env(LDFLAGS=fuse_ld_flag, XLDFLAGS=fuse_ld_flag)
         kernel_options.set(KERNCONF=kernconf)
+        if extra_make_args:
+            self.make_args.set(**extra_make_args)
         return kernel_options
 
     def clean(self) -> ThreadJoiner:
@@ -628,8 +630,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         else:
             return self.async_clean_directory(builddir)
 
-    def _buildkernel(self, kernconf: str, mfs_root_image: Path = None):
-        kernelMakeArgs = self.kernel_make_args_for_config(kernconf)
+    def _buildkernel(self, kernconf: str, mfs_root_image: Path = None, extra_make_args=None):
+        kernelMakeArgs = self.kernel_make_args_for_config(kernconf, extra_make_args)
         if self.debug_kernel:
             if "_BENCHMARK" in kernconf:
                 if not self.query_yes_no("Trying to build BENCHMARK kernel without optimization. Continue?"):
@@ -656,9 +658,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.runMake("buildkernel", options=kernelMakeArgs,
                      compilationDbName="compile_commands_" + self.kernelConfig + ".json")
 
-    def _installkernel(self, kernconf, destdir: str = None):
+    def _installkernel(self, kernconf, destdir: str = None, extra_make_args=None):
         # don't use multiple jobs here
-        install_kernel_args = self.kernel_make_args_for_config(kernconf)
+        install_kernel_args = self.kernel_make_args_for_config(kernconf, extra_make_args)
         install_kernel_args.env_vars.update(self.makeInstallEnv)
         # Also install all other kernels that were potentially built
         install_kernel_args.set(NO_INSTALLEXTRAKERNELS="no")
@@ -1285,6 +1287,12 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     def supported_architectures(cls) -> list:
         return list(CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS)
 
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.buildFpgaKernels = cls.add_bool_option("build-fpga-kernels", show_help=True, _allow_unknown_targets=True,
+            default=True, help="Also build kernels for the FPGA.")
+
     def process(self):
         from ..disk_image import BuildMinimalCheriBSDDiskImage
         minimal_image_instance = BuildMinimalCheriBSDDiskImage.get_instance(self)
@@ -1292,52 +1300,61 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         # Re-use the same build directory as the CheriBSD target that was used for the disk image
         # This ensure that the kernel build tools can be found in the build directory
         build_cheribsd_instance = minimal_image_instance.cheribsd_class.get_instance(self)
-        kernconf = self._get_kernconf_to_build(build_cheribsd_instance)
+        default_kernconf = self._get_kernconf_to_build(build_cheribsd_instance)
+        kernel_configs = [default_kernconf]
         # TODO: add the benchmark ones for RISCV
         has_benchmark_kernel = build_cheribsd_instance.crosscompile_target.is_mips(include_purecap=True)
-
-        if self.config.clean:
-            kernel_dir = build_cheribsd_instance.kernel_objdir(kernconf)
-            if kernel_dir:
-                with self.async_clean_directory(kernel_dir):
-                    self.verbose_print("Cleaning ", kernel_dir)
-        self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=kernconf, image=image)
         # also build the benchmark kernel:
         if has_benchmark_kernel:
-            self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=kernconf + "_BENCHMARK", image=image)
-
-        if build_cheribsd_instance.buildFpgaKernels:
-            prefix = self.fpga_kernconf
-            self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=prefix, image=image)
+            kernel_configs.append(default_kernconf + "_BENCHMARK")
+        if self.buildFpgaKernels:
+            fpga_conf = self.fpga_kernconf
+            kernel_configs.append(fpga_conf)
             if has_benchmark_kernel:
-                self._build_and_install_kernel_binary(build_cheribsd_instance, kernconf=prefix + "_BENCHMARK", image=image)
+                kernel_configs.append(fpga_conf + "_BENCHMARK")
+        if self.config.clean:
+            for kernconf in kernel_configs:
+                kernel_dir = build_cheribsd_instance.kernel_objdir(kernconf)
+                if kernel_dir:
+                    with self.async_clean_directory(kernel_dir):
+                        self.verbose_print("Cleaning ", kernel_dir)
+        self._build_and_install_kernel_binaries(build_cheribsd_instance, kernconfs=kernel_configs, image=image)
 
     @property
     def fpga_kernconf(self):
-        assert not self.compiling_for_riscv(include_purecap=True), "This case is not handled yet"
-        if self.compiling_for_mips(include_purecap=False):
+        if self.compiling_for_mips(include_purecap=True):
+            if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+                return "CHERI128_DE4_MFS_ROOT" if self.config.cheriBits == 128 else "CHERI_DE4_MFS_ROOT"
             return "BERI_DE4_MFS_ROOT"
-        elif self.crosscompile_target.is_hybrid_or_purecap_cheri():
-            return "CHERI128_DE4_MFS_ROOT" if self.config.cheriBits == 128 else "CHERI_DE4_MFS_ROOT"
+        elif self.compiling_for_riscv(include_purecap=True):
+            return "CHERI_GFE" if self.crosscompile_target.is_hybrid_or_purecap_cheri() else "GFE"
         else:
             self.fatal("Invalid ARCH")
             return "INVALID_KERNCONF"
 
-    def _build_and_install_kernel_binary(self, build_cheribsd: BuildCHERIBSD, kernconf: str, image: Path):
+    def _build_and_install_kernel_binaries(self, build_cheribsd: BuildCHERIBSD, kernconfs: "typing.List[str]", image: Path):
         # Install to a temporary directory and then copy the kernel to OUTPUT_ROOT
         # noinspection PyProtectedMember
-        build_cheribsd._buildkernel(kernconf=kernconf, mfs_root_image=image)
+        # Don't bother with modules for the MFS kernels:
+        extra_make_args = dict(NO_MODULES="yes")
+        build_cheribsd._buildkernel(kernconf=" ".join(kernconfs), mfs_root_image=image, extra_make_args=extra_make_args)
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
             # noinspection PyProtectedMember
-            build_cheribsd._installkernel(kernconf=kernconf, destdir=td)
-            # runCmd("find", td)
-            kernel_install_path = self.installed_kernel_for_config(self, kernconf)
-            self.deleteFile(kernel_install_path)
-            self.installFile(Path(td, "boot/kernel/kernel"), kernel_install_path, force=True, print_verbose_only=False)
-            if Path(td, "boot/kernel/kernel.full").exists():
-                fullkernel_install_path = kernel_install_path.with_name(kernel_install_path.name + ".full")
-                self.installFile(Path(td, "boot/kernel/kernel.full"), fullkernel_install_path, force=True,
-                                 print_verbose_only=False)
+            build_cheribsd._installkernel(kernconf=" ".join(kernconfs), destdir=td, extra_make_args=extra_make_args)
+            runCmd("find", td)
+            for conf in kernconfs:
+                kernel_install_path = self.installed_kernel_for_config(self, conf)
+                self.deleteFile(kernel_install_path)
+                if conf == kernconfs[0]:
+                    source_path = Path(td, "boot/kernel/kernel")
+                else:
+                    # All other kernels are installed with a suffixex name:
+                    source_path = Path(td, "boot/kernel." + conf, "kernel")
+                self.installFile(source_path, kernel_install_path, force=True, print_verbose_only=False)
+                dbg_info_kernel = source_path.with_suffix(".full")
+                if dbg_info_kernel.exists():
+                    fullkernel_install_path = kernel_install_path.with_name(kernel_install_path.name + ".full")
+                    self.installFile(dbg_info_kernel, fullkernel_install_path, force=True, print_verbose_only=False)
 
     @property
     def crossbuild(self):
