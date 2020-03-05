@@ -153,6 +153,12 @@ class BuildLLVMBase(CMakeProject):
         if self.canUseLLd(self.CC) and prefer_thinlto:
             self.add_cmake_options(LLVM_ENABLE_LTO="Thin")
 
+    def clean(self) -> ThreadJoiner:
+        # TODO: probably fine if LLVM is the only target to be built
+        # Warn before cleaning LLVM to avoid wasted CPU cycles
+        if not self.query_yes_no("You are about to do a clean LLVM build. This may take a long time. Are you sure?", default_result=True):
+            return ThreadJoiner(None)
+        return super().clean()
 
     @staticmethod
     def clang_install_hint():
