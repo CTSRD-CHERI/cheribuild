@@ -33,7 +33,7 @@ import sys
 from .crosscompileproject import *
 from ..llvm import BuildCheriLLVM
 from ..project import ReuseOtherProjectDefaultTargetRepository
-#from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str, IS_MAC
+from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str, IS_MAC
 
 class BuildCompilerRt(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
@@ -90,3 +90,66 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             else:
                 print(self.target_info.sysroot_dir)
                 self.createSymlink(rt_runtime_path, self.target_info.sysroot_dir / "lib/libclang_rt.builtins-riscv64.a")
+
+class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
+    # TODO: add an option to allow upstream llvm?
+    repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="compiler-rt")
+    project_name = "compiler-rt-builtins"
+    default_install_dir = DefaultInstallDir.COMPILER_RESOURCE_DIR
+    _check_install_dir_conflict = False
+    supported_architectures =CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
+    _default_architecture = CompilationTargets.BAREMETAL_NEWLIB_MIPS64
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        assert self.target_info.is_baremetal or self.target_info.is_rtems, "No other targets supported yet"
+        assert self.target_info.is_newlib, "No other targets supported yet"
+        # self.COMMON_FLAGS.append("-v")
+        self.COMMON_FLAGS.append("-ffreestanding")
+        if self.compiling_for_mips(include_purecap=False):
+            self.add_cmake_options(COMPILER_RT_HAS_FPIC_FLAG=False)  # HACK: currently we build everything as -fno-pic
+
+        if self.target_info.is_rtems:
+            self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY") # RTEMS only needs static libs
+        self.add_cmake_options(
+            LLVM_CONFIG_PATH=BuildCheriLLVM.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
+            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
+            COMPILER_RT_BUILD_BUILTINS=True,
+            COMPILER_RT_BUILD_SANITIZERS=False,
+            COMPILER_RT_BUILD_XRAY=False,
+            COMPILER_RT_BUILD_LIBFUZZER=False,
+            COMPILER_RT_BUILD_PROFILE=False,
+            COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal,
+            COMPILER_RT_DEFAULT_TARGET_ONLY=True,
+            # BUILTIN_SUPPORTED_ARCH="mips64",
+            TARGET_TRIPLE=self.target_info.target_triple,
+        )
+        if self.should_include_debug_info:
+            self.add_cmake_options(COMPILER_RT_DEBUG=True)
+        if self.compiling_for_mips(include_purecap=True):
+            # self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH="mips")
+            self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ONLY=True)
+
+    def configure(self, **kwargs):
+        self.configureArgs[0] = str(self.sourceDir / "lib/builtins")
+        super().configure()
+
+    def install(self, **kwargs):
+        super().install(**kwargs)
+
+        libname = "libclang_rt.builtins-" + self.triple_arch + ".a"
+
+        if not self.target_info.is_rtems:
+            self.moveFile(self.installDir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
+
+            if self.compiling_for_cheri():
+                # compatibility with older compilers
+                self.createSymlink(self.real_install_root_dir / "lib" / libname,
+                                   self.real_install_root_dir / "lib" / "libclang_rt.builtins-cheri.a", print_verbose_only=False)
+                self.createSymlink(self.real_install_root_dir / "lib" / libname,
+                                   self.real_install_root_dir / "lib" / "libclang_rt.builtins-mips64.a", print_verbose_only=False)
+            # HACK: we don't really need libunwind but the toolchain pulls it in automatically
+            # TODO: is there an easier way to create empty .a files?
+            runCmd("ar", "rcv", self.installDir / "lib/libunwind.a", "/dev/null")
+            runCmd("ar", "dv", self.installDir / "lib/libunwind.a", "null")
+            runCmd("ar", "t", self.installDir / "lib/libunwind.a")  # should be empty now
