@@ -2372,22 +2372,22 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
                         return
                     self._force_clean = True
 
-        last_build_path = Path(self.buildDir, ".last_build_date")
+        last_clean_build_date_path = Path(self.buildDir, ".last_clean_build_date")
         if self.full_rebuild_if_older_than is not None and not self.config.clean:
-            last_build_date = None
+            last_clean_date = None
             try:
-                if last_build_path.exists():
-                    last_build_date = datetime.datetime.fromisoformat(last_build_path.read_text().strip())
-                    last_build_date = last_build_date.replace(tzinfo=datetime.timezone.utc)
+                if last_clean_build_date_path.exists():
+                    last_clean_date = datetime.datetime.fromisoformat(last_clean_build_date_path.read_text().strip())
+                    last_clean_date = last_clean_date.replace(tzinfo=datetime.timezone.utc)
             except Exception as e:
-                self.warning("Could not parse contents of", last_build_path, e)
-            if last_build_date is None:
+                self.warning("Could not parse contents of", last_clean_build_date_path, e)
+            if last_clean_date is None:
                 self._force_clean = True
-                self.info("Forcing full rebuild since", last_build_path, "Could not be parsed")
-            elif last_build_date < self.full_rebuild_if_older_than:
+                self.info("Forcing full rebuild since", last_clean_build_date_path, "could not be parsed")
+            elif last_clean_date < self.full_rebuild_if_older_than:
                 self._force_clean = True
                 self.info("Forcing full rebuild since a full rebuild is required for builds older than",
-                    self.full_rebuild_if_older_than, "and last build time was", last_build_date)
+                    self.full_rebuild_if_older_than, "and last build time was", last_clean_date)
         # run the rm -rf <build dir> in the background
         cleaningTask = self.clean() if (self._force_clean or self.config.clean) else ThreadJoiner(None)
         if cleaningTask is None:
@@ -2396,6 +2396,9 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
         with cleaningTask:
             if not self.buildDir.is_dir():
                 self.makedirs(self.buildDir)
+            # Clean has been performed -> write the last clean build date now (if needed).
+            if self.full_rebuild_if_older_than is not None:
+                self.writeFile(last_clean_build_date_path, datetime.datetime.utcnow().isoformat(), overwrite=True)
             if self.build_in_source_dir:
                 self.writeFile(last_build_file, self.build_configuration_suffix(), overwrite=True)
             if not self.config.skipConfigure or self.config.configureOnly:
@@ -2411,8 +2414,6 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
                     # move any csetbounds stats from configuration (since they are not useful)
                 statusUpdate("Building", self.display_name, "... ")
                 self.compile()
-                if self.full_rebuild_if_older_than is not None:
-                    self.writeFile(last_build_path, datetime.datetime.utcnow().isoformat(), overwrite=True)
             if not self.config.skipInstall:
                 statusUpdate("Installing", self.display_name, "... ")
                 if install_dir_kind == DefaultInstallDir.DO_NOT_INSTALL:
