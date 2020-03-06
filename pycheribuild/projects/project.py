@@ -2623,7 +2623,10 @@ class CMakeProject(Project):
             # CMAKE_CROSSCOMPILING will be set when we change CMAKE_SYSTEM_NAME:
             # This means we may not need the toolchain file at all
             # https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html
-            system_name = "Generic" if self.target_info.is_baremetal or self.target_info.is_rtems else "FreeBSD"
+            if self.target_info.is_rtems:
+              system_name = "rtems" + str(self.target_info.RTEMS_VERSION)
+            else:
+              system_name = "Generic" if self.target_info.is_baremetal else "FreeBSD"
             self._prepare_toolchain_file(
                 TOOLCHAIN_SDK_BINDIR=self.sdk_bindir if not self.compiling_for_host() else
                 self.config.cheri_sdk_bindir,
