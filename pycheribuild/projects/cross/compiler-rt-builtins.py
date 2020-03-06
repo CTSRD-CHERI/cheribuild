@@ -39,8 +39,8 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="compiler-rt")
     project_name = "compiler-rt-builtins"
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
-    cross_install_dir = DefaultInstallDir.SYSROOT
+    default_install_dir = DefaultInstallDir.COMPILER_RESOURCE_DIR
+    _check_install_dir_conflict = False
     supported_architectures =CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
     _default_architecture = CompilationTargets.BAREMETAL_NEWLIB_MIPS64
 
@@ -83,10 +83,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
 
         libname = "libclang_rt.builtins-" + self.triple_arch + ".a"
 
-        if self.target_info.is_rtems:
-           # Move the builtins lib to where RTEMS Driver expects
-           self.moveFile(self.installDir / "lib/generic" / libname, self.target_info.sysroot_dir / "lib" / libname)
-        else:
+        if not self.target_info.is_rtems:
            self.moveFile(self.installDir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
 
         if self.compiling_for_cheri():
