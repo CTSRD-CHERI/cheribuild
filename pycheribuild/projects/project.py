@@ -1498,7 +1498,8 @@ class Project(SimpleProject):
         if install_dir is None and cls._default_install_dir_fn is Project._default_install_dir_fn:
             raise RuntimeError("native_install_dir/cross_install_dir/_default_install_dir_fn not specified for " + cls.target)
         if install_dir == DefaultInstallDir.SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE:
-            if cls._xtarget is not CompilationTargets.NONE and cls._xtarget.target_info_cls.is_baremetal:
+            if cls._xtarget is not CompilationTargets.NONE and (cls._xtarget.target_info_cls.is_baremetal or \
+               cls._xtarget.target_info_cls.is_rtems):
                 install_dir = DefaultInstallDir.SYSROOT
             else:
                 install_dir = DefaultInstallDir.ROOTFS
