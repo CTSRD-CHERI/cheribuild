@@ -1006,7 +1006,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 class BuildFreeBSDGFE(BuildFreeBSD):
     project_name = "freebsd-gfe"
     target = "freebsd-gfe"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git", default_branch="freebsd-head")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/cheribsd.git", default_branch="freebsd-crossbuild")
     supported_architectures = [CompilationTargets.FREEBSD_RISCV]
 
 
