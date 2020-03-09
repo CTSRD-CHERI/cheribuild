@@ -491,6 +491,16 @@ class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
         super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
                                    defaultSshPort=defaultSshForwardingPort(20 + add_to_port), **kwargs)
 
+class LaunchFreeBSDGFE(_RunMultiArchFreeBSDImage):
+    project_name = "run-freebsd-gfe"
+    hide_options_from_help = True
+    _source_class = BuildFreeBSDGFEDiskImage
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        add_to_port = cls.get_cross_target_index()
+        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
+                                   defaultSshPort=defaultSshForwardingPort(20 + add_to_port), **kwargs)
 
 class LaunchCheriBsdMfsRoot(LaunchCheriBSD):
     project_name = "run-minimal"

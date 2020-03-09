@@ -1008,3 +1008,7 @@ class BuildFreeBSDWithDefaultOptionsDiskImage(BuildFreeBSDImage):
     _source_class = BuildFreeBSDWithDefaultOptions
     hide_options_from_help = True
 
+class BuildFreeBSDGFEDiskImage(BuildFreeBSDImage):
+    project_name = "disk-image-freebsd-gfe"
+    _source_class = BuildFreeBSDGFE
+    hide_options_from_help = True
