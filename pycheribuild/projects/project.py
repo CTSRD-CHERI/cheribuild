@@ -1540,6 +1540,7 @@ class Project(SimpleProject):
 
     lto_by_default = False  # Don't default to LTO
     prefer_full_lto_over_thin_lto = False  # If LTO is enabled, use LLVM's ThinLTO by default
+    lto_set_ld = True
     default_build_type = BuildType.DEFAULT
 
     @classmethod
@@ -1888,7 +1889,8 @@ class Project(SimpleProject):
                 self.warning("Could not find llvm-{ar,ranlib,nm}" + version_suffix,
                     "-> disabling LTO (resulting binary will be a bit slower)")
                 return False
-            self.set_lto_binutils(ar=llvm_ar, ranlib=llvm_ranlib, nm=llvm_nm, ld=lld)
+            ld = lld if self.lto_set_ld else None
+            self.set_lto_binutils(ar=llvm_ar, ranlib=llvm_ranlib, nm=llvm_nm, ld=ld)
         if self.prefer_full_lto_over_thin_lto:
             self._lto_compiler_flags.append("-flto")
             self._lto_linker_flags.append("-flto")
@@ -2722,10 +2724,13 @@ class AutotoolsProject(Project):
         return not (self.buildDir / "Makefile").exists()
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):
-        self.configureEnvironment.update(NM=nm, AR=ar, RANLIB=ranlib, LD=ld)
+        kwargs = { "NM": nm, "AR": ar, "RANLIB": ranlib }
+        if ld:
+            kwargs["LD"] = ld
+        self.configureEnvironment.update(**kwargs)
         # self.make_args.env_vars.update(NM=llvm_nm, AR=llvm_ar, RANLIB=llvm_ranlib)
-        self.make_args.set(NM=nm, AR=ar, RANLIB=ranlib, LD=ld)
-        self.make_args.env_vars.update(NM=nm, AR=ar, RANLIB=ranlib, LD=ld)
+        self.make_args.set(**kwargs)
+        self.make_args.env_vars.update(**kwargs)
 
 
 # A target that is just an alias for at least one other targets but does not force building of dependencies
