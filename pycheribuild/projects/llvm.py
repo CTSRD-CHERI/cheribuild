@@ -75,6 +75,8 @@ class BuildLLVMBase(CMakeProject):
             help="Also build documentation,examples and bindings")
         cls.use_llvm_cxx = cls.add_bool_option("use-tree-cxx", default=False,
             help="Use in-tree, not host, C++ runtime")
+        cls.dylib = cls.add_bool_option("dylib", default=False,
+            help="Build dynamic-link LLVM")
 
     def setup(self):
         super().setup()
@@ -122,6 +124,8 @@ class BuildLLVMBase(CMakeProject):
                 CLANG_DEFAULT_CXX_STDLIB="libc++",
                 CLANG_DEFAULT_RTLIB="compiler-rt",
                 )
+        if self.dylib:
+            self.add_cmake_options(LLVM_LINK_LLVM_DYLIB=True)
         if self.skip_static_analyzer:
             # save some build time by skipping the static analyzer
             self.add_cmake_options(CLANG_ENABLE_STATIC_ANALYZER=False,
