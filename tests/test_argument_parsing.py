@@ -33,12 +33,6 @@ except ImportError:
     typing = {}
 
 
-# python 3.4 compatibility
-def write_bytes(path: Path, contents: bytes):
-    with path.open(mode='wb') as f:
-        return f.write(contents)
-
-
 # noinspection PyProtectedMember
 def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")) -> DefaultCheriConfig:
     global _targets_registered
@@ -62,7 +56,7 @@ def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")) -> Defau
 def _parse_config_file_and_args(config_file_contents: bytes, *args) -> DefaultCheriConfig:
     with tempfile.NamedTemporaryFile() as t:
         config = Path(t.name)
-        write_bytes(config, config_file_contents)
+        config.write_bytes(config_file_contents)
         return _parse_arguments(list(args), config_file=config)
 
 def test_skip_update():
@@ -74,12 +68,12 @@ def test_skip_update():
     # check config file
     with tempfile.NamedTemporaryFile() as t:
         config = Path(t.name)
-        write_bytes(config, b'{ "skip-update": true}')
+        config.write_bytes(b'{ "skip-update": true}')
         assert _parse_arguments([], config_file=config).skipUpdate
         # command line overrides config file:
         assert _parse_arguments(["--skip-update"], config_file=config).skipUpdate
         assert not _parse_arguments(["--no-skip-update"], config_file=config).skipUpdate
-        write_bytes(config, b'{ "skip-update": false}')
+        config.write_bytes(b'{ "skip-update": false}')
         assert not _parse_arguments([], config_file=config).skipUpdate
         # command line overrides config file:
         assert _parse_arguments(["--skip-update"], config_file=config).skipUpdate
@@ -100,13 +94,14 @@ def test_per_project_override():
 
     with tempfile.NamedTemporaryFile() as t:
         config_path = Path(t.name)
-        write_bytes(config_path, b'{ "source-root": "/x"}')
+        config_path.write_bytes(b'{ "source-root": "/x"}')
         _parse_arguments([], config_file=config_path)
         assert BuildCheriBSDDiskImage.get_instance(None, config).extraFilesDir == Path("/x/extra-files")
 
         # check that source root can be overridden
         _parse_arguments(["--source-root=/y"])
         assert BuildCheriBSDDiskImage.get_instance(None, config).extraFilesDir == Path("/y/extra-files")
+
 
 def test_cross_compile_project_inherits():
     # Parse args once to ensure targetManager is initialized
@@ -348,15 +343,15 @@ def _get_config_with_include(tmpdir: Path, config_json: bytes, workdir: Path = N
     if not workdir:
         workdir = tmpdir
     config = workdir / "config.json"
-    write_bytes(config, config_json)
+    config.write_bytes(config_json)
     return _parse_arguments([], config_file=config)
 
 def test_config_file_include():
     with tempfile.TemporaryDirectory() as d:
         config_dir = Path(d)
-        write_bytes(config_dir / "128-common.json", b'{ "cheri-bits": 128 }')
-        write_bytes(config_dir / "256-common.json", b'{ "cheri-bits": 256 }')
-        write_bytes(config_dir / "common.json", b'{ "source-root": "/this/is/a/unit/test" }')
+        (config_dir / "128-common.json").write_bytes(b'{ "cheri-bits": 128 }')
+        (config_dir / "256-common.json").write_bytes(b'{ "cheri-bits": 256 }')
+        (config_dir / "common.json").write_bytes(b'{ "source-root": "/this/is/a/unit/test" }')
 
         # Check that the config file is parsed:
         result = _get_config_with_include(config_dir, b'{ "#include": "common.json"}')
@@ -374,7 +369,7 @@ def test_config_file_include():
         assert 256 == result.cheriBits
 
         # TODO: handled nested cases: the level closest to the initial file wins
-        write_bytes(config_dir / "change-source-root.json",
+        (config_dir / "change-source-root.json").write_bytes(
             b'{ "source-root": "/source/root/override", "#include": "common.json" }')
         result = _get_config_with_include(config_dir, b'{ "#include": "change-source-root.json"}')
         assert "/source/root/override" == str(result.sourceRoot)
@@ -389,8 +384,7 @@ def test_config_file_include():
 
 
         # Test merging of objects:
-        write_bytes(config_dir / "change-smb-dir.json",
-            b'{ "run": { "smb-host-directory": "/some/path" }, "#include": "common.json" }')
+        (config_dir / "change-smb-dir.json").write_bytes(b'{ "run": { "smb-host-directory": "/some/path" }, "#include": "common.json" }')
         result = _get_config_with_include(config_dir, b'{ "run": { "ssh-forwarding-port": 12345 }, "#include": "change-smb-dir.json" }')
         run_project = targetManager.get_target_raw("run").get_or_create_project(CompilationTargets.NONE, result)
         assert run_project.custom_qemu_smb_mount == Path("/some/path")
