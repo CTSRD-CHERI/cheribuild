@@ -81,8 +81,7 @@ class BuildLLVMBase(CMakeProject):
             if self.CC.exists() and cheri_cc.exists() and self.CC.resolve() == cheri_cc.resolve():
                 self.warning("It appears you are trying to compile CHERI-LLVM with CHERI-LLVM (", self.CC,
                     "). This is not recommended!", sep="")
-            if not self.query_yes_no("Are you sure you want to continue?"):
-                self.fatal("Cannot continue")
+                self.ask_for_confirmation("Are you sure you want to continue?")
         # this must be added after check_system_dependencies
         link_jobs = 2 if self.enable_lto else 4
         if os.cpu_count() >= 24:
