@@ -759,9 +759,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             self.add_file_to_image(ld_elf_path, base_directory=self.rootfsDir)
         else:
             self.warning("default ABI runtime linker not present in rootfs at", ld_elf_path)
-            if not self.query_yes_no("Are you sure you want to continue?"):
-                self.fatal("Cannot continue")
-                return
+            self.ask_for_confirmation("Are you sure you want to continue?")
         # Add all compat ABI runtime linkers that we find in the rootfs:
         for rtld_basename in ("ld-elf32.so.1", "ld-elf64.so.1", "ld-cheri-elf.so.1"):
             rtld_path = self.rootfsDir / "libexec" / rtld_basename
