@@ -34,8 +34,9 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from enum import Enum
 
-from ..llvm import BuildUpstreamLLVM
+from ..llvm import BuildUpstreamLLVM, BuildCheriLLVM
 from ..project import *
 from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi
 from ...config.loader import ComputedDefaultValue
@@ -109,20 +110,12 @@ def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
         return config.outputRoot / "rootfs-x86"
 
 
-def default_cross_toolchain_path(config: CheriConfig, proj: SimpleProject):
-    assert isinstance(proj, BuildFreeBSD)
-    if proj.build_with_upstream_llvm:
-        return BuildUpstreamLLVM.getInstallDir(proj, cross_target=CompilationTargets.NATIVE)
-    return proj.target_info.sdk_root_dir
-
-
 class BuildFreeBSDBase(Project):
     doNotAddToTargets = True  # base class only
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
     make_kind = MakeCommandKind.BsdMake
     crossbuild = None
     skipBuildworld = False
-    use_external_toolchain = False
     is_large_source_repository = True
     has_installsysroot_target = False
 
@@ -236,8 +229,16 @@ class BuildFreeBSDBase(Project):
             assert not self.has_installsysroot_target, "Not implemented yet"
             return self.target_info.sysroot_dir
 
-    def has_cheri_support(self):
-        return self.crosscompile_target.is_hybrid_or_purecap_cheri()
+    def set_lto_binutils(self, ar, ranlib, nm, ld):
+        self.fatal("Building FreeBSD/CheriBSD with LTO is not supported (yet).")
+
+
+class FreeBSDToolchainKind(Enum):
+    DEFAULT_EXTERNAL = "default-external"
+    BOOTSTRAP = "bootstrap"
+    UPSTREAM_LLVM = "upstream-llvm"
+    CHERI_LLVM = "cheri-llvm"
+    CUSTOM = "custom"
 
 
 class BuildFreeBSD(BuildFreeBSDBase):
@@ -255,6 +256,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
     add_custom_make_options = True
     use_llvm_binutils = False
 
+    # The compiler to use for building freebsd (bundled/upstream-llvm/cheri-llvm/custom)
+    build_toolchain = FreeBSDToolchainKind.DEFAULT_EXTERNAL
+
+    @property
+    def use_bootstrapped_toolchain(self):
+        return self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAP
+
     @classmethod
     def rootfsDir(cls, caller, config=None, cross_target: CrossCompileTarget = CompilationTargets.NONE):
         return cls.getInstallDir(caller, config, cross_target)
@@ -265,8 +273,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         return cls.rootfsDir(caller, config, cross_target) / "boot/kernel/kernel"
 
     @classmethod
-    def setup_config_options(cls, buildKernelWithClang: bool = True, bootstrap_toolchain=False,
-                             use_upstream_llvm: bool = None, debug_info_by_default=True, **kwargs):
+    def setup_config_options(cls, bootstrap_toolchain=False, use_upstream_llvm: bool = None, debug_info_by_default=True, **kwargs):
         super().setup_config_options(add_common_cross_options=False, **kwargs)
         if "subdirOverride" not in cls.__dict__:
             cls.subdirOverride = cls.add_config_option("subdir-with-deps", metavar="DIR",
@@ -292,32 +299,27 @@ class BuildFreeBSD(BuildFreeBSDBase):
             help="The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64 or CHERI128_MALTA64"
                  " depending on --cheri-bits)")  # type: str
 
-        if bootstrap_toolchain:
+        if cls._crossCompileTarget.is_hybrid_or_purecap_cheri():
+            # When targeting CHERI we have to use CHERI LLVM
             assert not use_upstream_llvm
-            cls.use_external_toolchain = False
-            cls.build_with_upstream_llvm = False
-            cls.cross_toolchain_root = None
-            cls.useExternalToolchainForKernel = False
-            cls.useExternalToolchainForWorld = False
+            assert not bootstrap_toolchain
+            cls.build_toolchain = FreeBSDToolchainKind.DEFAULT_EXTERNAL
+            cls.linker_for_world = "lld"
+            cls.linker_for_kernel = "lld"
+        elif bootstrap_toolchain:
+            assert not use_upstream_llvm
+            cls.build_toolchain = FreeBSDToolchainKind.BOOTSTRAP
+            cls._cross_toolchain_root = None
             cls.linker_for_kernel = "should-not-be-used"
             cls.linker_for_world = "should-not-be-used"
         else:
-            cls.use_external_toolchain = True
-            if use_upstream_llvm is not None:
-                cls.build_with_upstream_llvm = use_upstream_llvm
-            else:
-                cls.build_with_upstream_llvm = cls.add_bool_option("compile-with-cheribuild-upstream-llvm",
-                    show_help=True, default=True,
-                    help="Compile with the Clang version built by the `cheribuild.py upstream-llvm` target")
-            default_external_toolchain = ComputedDefaultValue(function=default_cross_toolchain_path,
-                as_string="$CHERI_SDK_DIR")
-            cls.cross_toolchain_root = cls.add_path_option("cross-toolchain",
-                help="Path to the mips64-unknown-freebsd-* tools", default=default_external_toolchain)
+            cls.build_toolchain = cls.add_config_option("toolchain", kind=FreeBSDToolchainKind,
+                default=FreeBSDToolchainKind.DEFAULT_EXTERNAL, enum_choice_strings=[t.value for t in FreeBSDToolchainKind],
+                help="The toolchain to use for building FreeBSD. When set to 'custom', the 'cross-toolchain-path' "
+                     "option must also be set")
+            cls._cross_toolchain_root = cls.add_path_option("toolchain-path",
+                help="Path to the cross toolchain tools", default=None)
             # override in CheriBSD
-            cls.useExternalToolchainForKernel = cls.add_bool_option("use-external-toolchain-for-kernel", show_help=True,
-                help="build the kernel with the external toolchain", default=buildKernelWithClang)
-            cls.useExternalToolchainForWorld = cls.add_bool_option("use-external-toolchain-for-world", show_help=True,
-                help="build world with the external toolchain", default=True)
             cls.linker_for_world = cls.add_config_option("linker-for-world", default="lld", choices=["bfd", "lld"],
                                                        help="The linker to use for world")
             cls.linker_for_kernel = cls.add_config_option("linker-for-kernel", default="lld", choices=["bfd", "lld"],
@@ -392,15 +394,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # before querying the compiler.
         if self.crossbuild:
             assert not IS_FREEBSD
-            assert self.use_external_toolchain
             self.addCrossBuildOptions()
-            self.useExternalToolchainForWorld = True
-            self.useExternalToolchainForKernel = True
-
-        if self.build_with_upstream_llvm:
-            # make sure we don't fail if clang introduces a new warning
-            self.make_args.set(NO_WERROR=True)
-            self.make_args.set(WERROR="")  # fix kernel build
 
         # external toolchain options:
         self._setup_cross_toolchain_config()
@@ -427,14 +421,21 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+        if self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAP:
+            self.target_info._sdk_root_dir = Path("/this/path/should/not/be/used/when/bootstrapping")
+        elif self.build_toolchain == FreeBSDToolchainKind.UPSTREAM_LLVM:
+            self.target_info._sdk_root_dir = BuildUpstreamLLVM.getInstallDir(self, cross_target=CompilationTargets.NATIVE)
+        elif self.build_toolchain == FreeBSDToolchainKind.CHERI_LLVM:
+            self.target_info._sdk_root_dir = BuildCheriLLVM.getInstallDir(self, cross_target=CompilationTargets.NATIVE)
+        elif self.build_toolchain == FreeBSDToolchainKind.CUSTOM:
+            if self._cross_toolchain_root is None:
+                self.fatal("Requested custom toolchain but path is not set.")
+            self.target_info._sdk_root_dir = self._cross_toolchain_root
         self._setup_make_args_called = False
         self.destdir = self.installDir
         self._installPrefix = Path("/")
         self.kernel_toolchain_exists = False
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
-        if self.cross_toolchain_root:
-            # override the cross toolchain
-            self.target_info._sdk_root_dir = self.cross_toolchain_root
         assert self.kernelConfig is not None
         self.make_args.set(**self.arch_build_flags)
 
@@ -443,12 +444,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.make_args.set(SUBDIR_OVERRIDE=self.subdirOverride)
 
     def _setup_cross_toolchain_config(self):
-        if not self.use_external_toolchain:
+        if self.use_bootstrapped_toolchain:
             return
 
         # For RISCV the makefile check fails unless we set CROSS_TOOLCHAIN_PREFIX (even though we provide all the tools)
         if self.compiling_for_riscv(include_purecap=True):
-            self.make_args.set(CROSS_TOOLCHAIN_PREFIX=str(self.cross_toolchain_root / "bin/llvm-"))
+            self.cross_toolchain_config.set(CROSS_TOOLCHAIN_PREFIX=str(self.target_info.sdk_root_dir / "bin/llvm-"))
 
         self.cross_toolchain_config.set_with_options(
             # TODO: should we have an option to include a compiler in the target system?
@@ -463,8 +464,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.cross_toolchain_config.set(CHERI_SUBOBJECT_BOUNDS=self.config.subobject_bounds)
             self.cross_toolchain_config.set(CHERI_SUBOBJECT_BOUNDS_DEBUG="yes" if self.config.subobject_debug else "no")
 
-        cross_bindir = self.cross_toolchain_root / "bin"
-        cross_prefix = str(self.cross_toolchain_root / "bin") + "/"  # needs to end with / for concatenation
+        cross_bindir = self.target_info.sdk_root_dir / "bin"
+        cross_prefix = str(cross_bindir / "bin") + "/"  # needs to end with / for concatenation
         target_flags = self._setup_arch_specific_options()
 
         # TODO: should I be setting this in the environment instead?
@@ -527,25 +528,18 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def _setup_arch_specific_options(self):
         if self.crosscompile_target.is_any_x86():
             target_flags = ""
-            self.useExternalToolchainForWorld = True
-            self.useExternalToolchainForKernel = True
             self.linker_for_kernel = "lld"  # bfd won't work here
             self.linker_for_world = "lld"
             # DONT SET XAS!!! It prevents bfd from being built
             # self.cross_toolchain_config.set(XAS="/usr/bin/as")
         elif self.compiling_for_mips(include_purecap=True):
-            target_flags = " -integrated-as -fcolor-diagnostics"
-            if self.has_cheri_support():
-                target_flags += " -mcpu=beri"
+            target_flags = " -integrated-as -fcolor-diagnostics -mcpu=beri"
             self.cross_toolchain_config.set_with_options(RESCUE=False,  # Won't compile with CHERI clang yet
                                                          BOOT=False)  # bootloaders won't link with LLD yet
             # DONT SET XAS!!! It prevents bfd from being built
             # self.cross_toolchain_config.set(XAS=cross_prefix + "clang " + target_flags)
         elif self.compiling_for_riscv(include_purecap=True):
             target_flags = ""
-            self.useExternalToolchainForWorld = True
-            self.useExternalToolchainForKernel = True
-            # TODO: determine flags
         else:
             self.fatal("Invalid state, should have a cross env")
             sys.exit(1)
@@ -568,11 +562,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # CheriBSD installworld currently get's very confused that libcheri CCDL is forced to false
             # and attempts to install the files during installworld
             result.set_with_options(CDDL=False)
-        if self.useExternalToolchainForWorld:
-            if not self.CC.exists():
-                self.fatal("Requested build of world with external toolchain, but", self.CC,
-                           "doesn't exist!")
-            result.update(self.cross_toolchain_config)
+        result.update(self.cross_toolchain_config)
         return result
 
     def kernel_make_args_for_config(self, kernconf: str, extra_make_args) -> MakeOptions:
@@ -586,15 +576,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
             kernel_options.set(NO_MODULES="yes")  # FIXME: remove
             kernel_options.set_with_options(CTF=False)  # FIXME: restore once debugged
             kernel_options.set(WITHOUT_MODULES="malo")
-        if self.useExternalToolchainForKernel:
-            if not self.CC.exists():
-                self.fatal("Requested build of kernel with external toolchain, but", self.CC,
-                           "doesn't exist!")
+        if not self.use_bootstrapped_toolchain:
             # We can't use LLD for the kernel yet but there is a flag to experiment with it
-            cross_prefix = str(self.cross_toolchain_root / "bin") + "/"  # must end with a '/' !
             kernel_options.update(self.cross_toolchain_config)
-            linker = cross_prefix + "ld." + self.linker_for_kernel
-            fuse_ld_flag = "-fuse-ld=" + linker
+            linker = Path(self.target_info.sdk_root_dir, "bin", "ld." + self.linker_for_kernel)
+            fuse_ld_flag = "-fuse-ld=" + str(linker)
             kernel_options.remove_var("LDFLAGS")
             kernel_options.set(LD=linker, XLD=linker, HACK_EXTRA_FLAGS="-shared " + fuse_ld_flag,
                                TRAMP_LDFLAGS=fuse_ld_flag)
@@ -633,6 +619,9 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def _buildkernel(self, kernconf: str, mfs_root_image: Path = None, extra_make_args=None):
         kernelMakeArgs = self.kernel_make_args_for_config(kernconf, extra_make_args)
+        if not self.use_bootstrapped_toolchain and not self.CC.exists():
+            self.fatal("Requested build of kernel with external toolchain, but", self.CC,
+                       "doesn't exist!")
         if self.debug_kernel:
             if "_BENCHMARK" in kernconf:
                 if not self.query_yes_no("Trying to build BENCHMARK kernel without optimization. Continue?"):
@@ -650,7 +639,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             kernel_toolchain_opts.remove_var("LD")
             kernel_toolchain_opts.set_env(LDFLAGS="")
             # Don't build a compiler if we are using and external toolchain (only build config, etc)
-            if self.use_external_toolchain:
+            if not self.use_bootstrapped_toolchain:
                 kernel_toolchain_opts.set_with_options(LLD_BOOTSTRAP=False, CLANG=False, CLANG_BOOTSTRAP=False)
             if self.auto_obj:
                 kernel_toolchain_opts.set_with_options(AUTO_OBJ=True)
@@ -678,6 +667,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def compile(self, mfs_root_image: Path = None, sysroot_only=False, all_kernel_configs: str =None, **kwargs):
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
         # so just omit the flag here if the user passes -j1 on the command line
+        if not self.use_bootstrapped_toolchain:
+            if not self.CC.is_file():
+                self.fatal("CC does not exist: ", self.CC)
+            if not self.CXX.is_file():
+                self.fatal("CXX does not exist: ", self.CXX)
         build_args = self.buildworld_args
         if self.config.verbose:
             self.runMake("showconfig", options=build_args)
@@ -986,7 +980,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             install=install_cmd, colour_diags=colour_diags)
         make_args.set(BUILDENV_SHELL="sh -ex -c '" + build_cmd + "' || exit 1")
         # If --libcompat-buildenv was passed skip the MIPS lib
-        has_libcompat = self.has_cheri_support() and is_lib  # TODO: handle lib32
+        has_libcompat = self.crosscompile_target.is_hybrid_or_purecap_cheri() and is_lib  # TODO: handle lib32
         if has_libcompat and (self.config.libcompat_buildenv or libcompat_only):
             statusUpdate("Skipping default ABI build of", subdir, "since --libcompat-buildenv was passed.")
         else:
@@ -1160,8 +1154,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         if installDirectoryHelp is None:
             installDirectoryHelp = "Install directory for CheriBSD root file system (default: " \
                                    "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)"
-        super().setup_config_options(buildKernelWithClang=True, installDirectoryHelp=installDirectoryHelp,
-                                     use_upstream_llvm=False)
+        super().setup_config_options(installDirectoryHelp=installDirectoryHelp, use_upstream_llvm=False)
         cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=True,
                                              help="Only build a sysroot instead of the full system. This will only "
                                                   "build the libraries and skip all binaries")
@@ -1183,7 +1176,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         self.installAsRoot = os.getuid() == 0
         super().__init__(config)
 
-        if self.has_cheri_support():
+        if self.crosscompile_target.is_hybrid_or_purecap_cheri():
             if self.config.cheri_cap_table_abi:
                 self.cross_toolchain_config.set(CHERI_USE_CAP_TABLE=self.config.cheri_cap_table_abi)
 
@@ -1238,14 +1231,6 @@ class BuildCHERIBSD(BuildFreeBSD):
         super()._removeOldRootfs()
 
     def compile(self, **kwargs):
-        if not self.CC.is_file():
-            self.fatal("CHERI CC does not exist: ", self.CC)
-        if not self.CXX.is_file():
-            self.fatal("CHERI CXX does not exist: ", self.CXX)
-        if self.cross_toolchain_root:
-            mipsCC = self.cross_toolchain_root / "bin/clang"
-            if not mipsCC.is_file():
-                self.fatal("MIPS toolchain specified but", mipsCC, "is missing.")
         # We could also just pass all values in KERNCONF to build all those kernels. However, if MFS_ROOT is set
         # that will apply to all those kernels and embed the rootfs even if not needed
         super().compile(all_kernel_configs=self.kernelConfig, mfs_root_image=self.mfs_root_image, sysroot_only=self.sysroot_only, **kwargs)

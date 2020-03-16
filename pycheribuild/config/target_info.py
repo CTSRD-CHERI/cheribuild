@@ -230,10 +230,23 @@ class TargetInfo(ABC):
 
 
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
+    def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
+        super().__init__(target, project)
+        self._sdk_root_dir = None  # type: Path
+
     @property
-    @abstractmethod
     def _compiler_dir(self) -> Path:
-        ...
+        return self.sdk_root_dir / "bin"
+
+    @property
+    def sdk_root_dir(self) -> Path:
+        if self._sdk_root_dir is not None:
+            return self._sdk_root_dir
+        self._sdk_root_dir = self._get_sdk_root_dir_lazy()
+        return self._sdk_root_dir
+
+    @abstractmethod
+    def _get_sdk_root_dir_lazy(self) -> Path: ...
 
     @property
     def c_compiler(self) -> Path:
@@ -379,17 +392,9 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     shortname = "FreeBSD"
     FREEBSD_VERSION = 13
 
-    def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
-        super().__init__(target, project)
-        self._sdk_root_dir = None
-
-    @property
-    def sdk_root_dir(self):
-        if self._sdk_root_dir is not None:
-            return self._sdk_root_dir
+    def _get_sdk_root_dir_lazy(self):
         from ..projects.llvm import BuildUpstreamLLVM
-        self._sdk_root_dir = BuildUpstreamLLVM.getInstallDir(self.project, cross_target=CompilationTargets.NATIVE)
-        return self._sdk_root_dir
+        return BuildUpstreamLLVM.getInstallDir(self.project, cross_target=CompilationTargets.NATIVE)
 
     @property
     def sysroot_dir(self):
@@ -398,11 +403,6 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     @property
     def is_freebsd(self):
         return True
-
-    @property
-    def _compiler_dir(self) -> Path:
-        # TODO: BuildLLVM.installDir?
-        return self.sdk_root_dir / "bin"
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
@@ -437,8 +437,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     shortname = "CheriBSD"
     FREEBSD_VERSION = 13
 
-    @property
-    def sdk_root_dir(self):
+    def _get_sdk_root_dir_lazy(self):
         return self.config.cheri_sdk_dir
 
     @property
@@ -505,8 +504,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     shortname = "Newlib"
 
-    @property
-    def sdk_root_dir(self) -> Path:
+    def _get_sdk_root_dir_lazy(self) -> Path:
         return self.config.cheri_sdk_dir
 
     @property
@@ -568,8 +566,9 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
         return True
 
     def get_rootfs_target(self) -> "Project":
-        from ..projects.cross.newlib_baremetal import BuildNewlibBaremetal
-        return BuildNewlibBaremetal.get_instance(self.project)
+        from ..projects.cross.newlib import BuildNewlib
+        return BuildNewlib.get_instance(self.project)
+
 
 class NewlibRtemsTargetInfo(_ClangBasedTargetInfo):
     shortname = "Newlib RTEMS"
@@ -626,6 +625,7 @@ class NewlibRtemsTargetInfo(_ClangBasedTargetInfo):
     @property
     def is_newlib(self):
         return True
+
 
 class Linkage(Enum):
     DEFAULT = "default"

@@ -1,9 +1,7 @@
 import inspect
 import sys
 import tempfile
-import unittest
 from pathlib import Path
-from unittest import TestCase
 
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
@@ -20,7 +18,9 @@ from pycheribuild.projects import *  # make sure all projects are loaded so that
 from pycheribuild.projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
 from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage
 from pycheribuild.projects.cross.qt5 import BuildQtBase
-from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD, BuildFreeBSD
+from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, FreeBSDToolchainKind
+from pycheribuild.utils import commandline_to_str
+
 import pytest
 import re
 
@@ -450,6 +450,53 @@ def test_libcxxrt_dependency_path():
     config = _parse_arguments(["--skip-configure", "--128"])
     check_libunwind_path(config.outputRoot / "rootfs128/opt/cheri/c++/lib", "libcxxrt")
     check_libunwind_path(config.outputRoot / "rootfs128/opt/cheri/c++/lib", "libcxxrt-cheri")
+
+
+@pytest.mark.parametrize("target,expected_path,kind,extra_args", [
+    # FreeBSD targets default to upstream LLVM:
+    pytest.param("freebsd-mips", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.DEFAULT_EXTERNAL, []),
+    pytest.param("freebsd-mips", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
+    pytest.param("freebsd-mips", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
+    pytest.param("freebsd-mips", "/this/path/should/not/be/used/when/bootstrapping/bin/clang",
+        FreeBSDToolchainKind.BOOTSTRAP, []),
+    pytest.param("freebsd-mips", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
+        ["--freebsd-mips/toolchain-path", "/path/to/custom/toolchain"]),
+
+    # CheriBSD-mips can be built with all these toolchains (but defaults to CHERI LLVM):
+    pytest.param("cheribsd-mips-nocheri", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.DEFAULT_EXTERNAL, []),
+    pytest.param("cheribsd-mips-nocheri", "$OUTPUT$/upstream-llvm/bin/clang", FreeBSDToolchainKind.UPSTREAM_LLVM, []),
+    pytest.param("cheribsd-mips-nocheri", "$OUTPUT$/sdk/bin/clang", FreeBSDToolchainKind.CHERI_LLVM, []),
+    pytest.param("cheribsd-mips-nocheri", "/this/path/should/not/be/used/when/bootstrapping/bin/clang",
+        FreeBSDToolchainKind.BOOTSTRAP, []),
+    pytest.param("cheribsd-mips-nocheri", "/path/to/custom/toolchain/bin/clang", FreeBSDToolchainKind.CUSTOM,
+        ["--cheribsd-mips-nocheri/toolchain-path", "/path/to/custom/toolchain"]),
+    ])
+def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, extra_args):
+    args = ["--" + target + "/toolchain", kind.value]
+    args.extend(extra_args)
+    config = _parse_arguments(args)
+    expected_path = expected_path.replace("$OUTPUT$", str(config.outputRoot))
+    project = targetManager.get_target_raw(target).get_or_create_project(CompilationTargets.NONE, config)
+    assert isinstance(project, BuildFreeBSD)
+    assert str(project.CC) == str(expected_path)
+    if kind == FreeBSDToolchainKind.BOOTSTRAP:
+        assert "XCC" not in project.buildworld_args.env_vars
+        assert "XCC=" not in project.kernel_make_args_for_config("GENERIC", None).env_vars
+    else:
+        assert project.buildworld_args.env_vars.get("XCC", None) == expected_path
+        assert project.kernel_make_args_for_config("GENERIC", None).env_vars.get("XCC", None) == expected_path
+
+
+def test_freebsd_toolchains_cheribsd_purecap():
+    # Targets that need CHERI don't have the --toolchain option:
+    # Argparse should exit with exit code 2
+    with pytest.raises(SystemExit, match=r'2$'):
+        for i in FreeBSDToolchainKind:
+            test_freebsd_toolchains("cheribsd-purecap", "/wrong/path", i, [])
+            test_freebsd_toolchains("cheribsd-mips-hybrid", "/wrong/path", i, [])
+            test_freebsd_toolchains("cheribsd-riscv64-hybrid", "/wrong/path", i, [])
+            test_freebsd_toolchains("cheribsd-riscv64-purecap", "/wrong/path", i, [])
+
 
 
 @pytest.mark.parametrize("base_name,expected", [
