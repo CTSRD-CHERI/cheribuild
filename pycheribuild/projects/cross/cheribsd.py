@@ -201,6 +201,18 @@ class BuildFreeBSDBase(Project):
         # print detailed information about the failed target (including the command that was executed)
         self.make_args.add_flags("-de")
 
+        for option in self.makeOptions:
+            if not self._crossCompileTarget.is_cheri_purecap() and "CHERI_" in option:
+                warningMessage("Not adding CHERI specific make option", option, "for", self.target,
+                               " -- consider setting separate", self.target + "/make-options in the config file.")
+                continue
+            if "=" in option:
+                key, value = option.split("=")
+                args = {key: value}
+                self.make_args.set(**args)
+            else:
+                self.make_args.add_flags(option)
+
     def runMake(self, make_target="", *, options: MakeOptions = None, parallel=True, **kwargs):
         # make behaves differently with -j1 and not j flags -> remove the j flag if j1 is requested
         if parallel and self.config.makeJobs == 1:
@@ -429,18 +441,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.subdirOverride:
             # build only part of the tree
             self.make_args.set(SUBDIR_OVERRIDE=self.subdirOverride)
-
-        for option in self.makeOptions:
-            if not self._crossCompileTarget.is_cheri_purecap() and "CHERI_" in option:
-                warningMessage("Not adding CHERI specific make option", option, "for", self.target,
-                               " -- consider setting separate", self.target + "/make-options in the config file.")
-                continue
-            if "=" in option:
-                key, value = option.split("=")
-                args = {key: value}
-                self.make_args.set(**args)
-            else:
-                self.make_args.add_flags(option)
 
     def _setup_cross_toolchain_config(self):
         if not self.use_external_toolchain:
