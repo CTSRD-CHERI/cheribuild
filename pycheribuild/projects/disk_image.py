@@ -796,7 +796,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             "libdl.so.1",
             # needed by /bin/sh & /bin/csh (if we included the purecap sh/csh)
             "libedit.so.7",
-            "libncursesw.so.8",
+            "libncursesw.so.9",
             "libxo.so.0",
             "libz.so.6",
             ]
