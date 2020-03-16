@@ -573,8 +573,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
 class NewlibRtemsTargetInfo(_ClangBasedTargetInfo):
     shortname = "Newlib RTEMS"
 
-    @property
-    def sdk_root_dir(self) -> Path:
+    def _get_sdk_root_dir_lazy(self) -> Path:
         return self.config.cheri_sdk_dir
 
     @property
