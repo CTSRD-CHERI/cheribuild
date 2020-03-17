@@ -189,7 +189,12 @@ class BuildQEMUBase(AutotoolsProject):
             "--extra-cflags=" + commandline_to_str(self.default_compiler_flags + self.CFLAGS),
             "--cxx=" + str(self.CXX),
             "--cc=" + str(self.CC),
+            # Using /usr/bin/make on macOS breaks compilation DB creation with bear since SIP prevents it from
+            # injecting shared libraries into any process that is installed as part of the system.
+            "--make=" + self.make_args.command,
             ])
+        if self.config.create_compilation_db:
+            self.make_args.set(V=1)  # Otherwise bear can't parse the compiler output
         ldflags = self.default_ldflags + self.LDFLAGS
         if ldflags:
             self.configureArgs.append("--extra-ldflags=" + commandline_to_str(ldflags))
