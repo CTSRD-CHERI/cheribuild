@@ -46,7 +46,7 @@ class BuildSamba(Project):
     else:
         build_in_source_dir = True
     repository = GitRepository("https://github.com/samba-team/samba.git",
-                               default_branch="v4-10-stable", force_branch=True)
+                               default_branch="v4-12-stable", force_branch=True)
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -89,6 +89,8 @@ class BuildSamba(Project):
             self.configureArgs.extend(["--with-system-mitkrb5", "/usr/local/opt/krb5"])
 
     def configure(self, **kwargs):
+        # Add the yapp binary
+        self.configureEnvironment["PATH"] = os.getenv("PATH") + ":" + str(Path(shutil.which("perl")).resolve().parent)
         super().configure(cwd=self.sourceDir, **kwargs)
 
     def compile(self, **kwargs):
