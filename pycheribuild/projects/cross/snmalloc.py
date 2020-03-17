@@ -126,7 +126,7 @@ class SNMalloc(CrossCompileCMakeProject):
 
     def compile(self, **kwargs):
       if self.just_so:
-        self.runMake("libsnmallocshim.so", cwd=kwargs.get("cwd"))
+        self.run_make("libsnmallocshim.so", cwd=kwargs.get("cwd"))
       else:
         return super().compile(**kwargs)
 

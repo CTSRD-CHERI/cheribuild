@@ -124,7 +124,7 @@ class BuildCheriVis(Project):
 
     def clean(self):
         # doesn't seem to be possible to use a out of source build
-        self.runMake("clean", cwd=self.sourceDir)
+        self.run_make("clean", cwd=self.sourceDir)
         self.clean_directory(self.cheritrace_subproject.buildDir)
         return ThreadJoiner(None)   # can't be done async
 
@@ -137,17 +137,17 @@ class BuildCheriVis(Project):
         self.cheritrace_subproject.configure()
         self.cheritrace_subproject.compile()
         if IS_MAC:
-            self.runMake(cwd=self.sourceDir)
+            self.run_make(cwd=self.sourceDir)
         else:
-            self.runMake("print-gnustep-make-help", cwd=self.sourceDir)
-            self.runMake("all", cwd=self.sourceDir)
+            self.run_make("print-gnustep-make-help", cwd=self.sourceDir)
+            self.run_make("all", cwd=self.sourceDir)
 
     def install(self, **kwargs):
         if IS_MAC:
             # TODO: xcodebuild install?
             runCmd("cp", "-aRv", self.sourceDir / "build/Release/CheriVis.app", self.config.cheri_sdk_dir)
         else:
-            self.runMake("install", cwd=self.sourceDir)
+            self.run_make("install", cwd=self.sourceDir)
 
 #
 # Some of these settings seem required:

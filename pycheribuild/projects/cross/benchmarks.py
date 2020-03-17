@@ -97,7 +97,7 @@ class BuildMibench(CrossCompileProject):
                     self.make_args.set(VERSION="cheri256", CHERI256_SYSROOT=self.sdk_sysroot)
             self.makedirs(self.buildDir / "bundle")
             self.make_args.set(BUNDLE_DIR=self.buildDir / self.bundle_dir)
-            self.runMake("bundle_dump", cwd=self.sourceDir)
+            self.run_make("bundle_dump", cwd=self.sourceDir)
             if self.compiling_for_mips(include_purecap=False) and self.use_asan:
                 self.copy_asan_dependencies(self.buildDir / "bundle/lib")
 
@@ -181,15 +181,15 @@ class BuildOlden(CrossCompileProject):
             self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(self.default_compiler_flags))
             self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
             if self.compiling_for_host():
-                self.runMake("x86")
+                self.run_make("x86")
             if self.compiling_for_mips(include_purecap=False):
-                self.runMake("mips-asan" if self.use_asan else "mips")
+                self.run_make("mips-asan" if self.use_asan else "mips")
             if self.compiling_for_cheri():
                 if self.config.cheriBits == 128:
-                    self.runMake("cheriabi128")
+                    self.run_make("cheriabi128")
                 else:
                     assert self.config.cheriBits == 256
-                    self.runMake("cheriabi256")
+                    self.run_make("cheriabi256")
         # copy asan libraries and the run script to the bin dir to ensure that we can run with --test from the
         # build directory.
         self.installFile(self.sourceDir / "run_jenkins-bluehive.sh",

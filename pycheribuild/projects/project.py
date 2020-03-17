@@ -1296,7 +1296,7 @@ class GitRepository(SourceRepository):
             pull_cmd.append("--recurse-submodules")
         runCmd(pull_cmd + ["--rebase"], cwd=src_dir, print_verbose_only=True)
         if not skip_submodules:
-            runCmd("git", "submodule", "update", "--recursive", cwd=src_dir, print_verbose_only=True)
+            runCmd("git", "submodule", "update", "--init", "--recursive", cwd=src_dir, print_verbose_only=True)
         if has_changes and not has_autostash:
             runCmd("git", "stash", "pop", cwd=src_dir, print_verbose_only=True)
         if revision:
@@ -1939,50 +1939,51 @@ class Project(SimpleProject):
                                    self.__class__.__name__)
         self.__dict__[name] = value
 
-    def _get_make_commandline(self, make_target, make_command, options, parallel: bool=True, compilationDbName: str=None):
+    def _get_make_commandline(self, make_target, make_command, options, parallel: bool=True, compilation_db_name: str=None):
         assert options is not None
         assert make_command is not None
         if make_target:
-            allArgs = options.all_commandline_args + [make_target]
+            all_args = options.all_commandline_args + [make_target]
         else:
-            allArgs = options.all_commandline_args
+            all_args = options.all_commandline_args
         if parallel and options.can_pass_jflag:
-            allArgs.append(self.config.makeJFlag)
-        allArgs = [make_command] + allArgs
+            all_args.append(self.config.makeJFlag)
+        all_args = [make_command] + all_args
         # TODO: use compdb instead for GNU make projects?
         if self.config.create_compilation_db and self.compileDBRequiresBear:
             if self._compiledb_tool == "bear":
-                allArgs = [shutil.which("bear"), "--cdb", self.buildDir / compilationDbName, "--append"] + allArgs
+                all_args = [shutil.which("bear"), "--cdb", self.buildDir / compilation_db_name, "--append"] + all_args
             else:
-                allArgs = [shutil.which("compiledb"), "--output", self.buildDir / compilationDbName] + allArgs
+                all_args = [shutil.which("compiledb"), "--output", self.buildDir / compilation_db_name] + all_args
         if not self.config.makeWithoutNice:
-            allArgs = ["nice"] + allArgs
+            all_args = ["nice"] + all_args
         if self.config.debug_output and make_command == "ninja":
-            allArgs.append("-v")
+            all_args.append("-v")
         if self.config.passDashKToMake:
-            allArgs.append("-k")
+            all_args.append("-k")
             if make_command == "ninja":
                 # ninja needs the maximum number of failed jobs as an argument
-                allArgs.append("50")
-        return allArgs
+                all_args.append("50")
+        return all_args
 
-    def get_make_commandline(self, make_target, make_command:str=None, options: MakeOptions=None,
-                             parallel: bool=True, compilationDbName: str=None) -> list:
+    def get_make_commandline(self, make_target, make_command: str = None, options: MakeOptions = None,
+                             parallel: bool = True, compilation_db_name: str = None) -> list:
         if not options:
             options = self.make_args
         if not make_command:
             make_command = self.make_args.command
-        return self._get_make_commandline(make_target, make_command, options, parallel, compilationDbName)
+        return self._get_make_commandline(make_target, make_command, options, parallel, compilation_db_name)
 
-    def runMake(self, make_target="", *, make_command: str = None, options: MakeOptions=None, logfile_name: str = None,
-                cwd: Path = None, append_to_logfile=False, compilationDbName="compile_commands.json",
-                parallel: bool=True, stdout_filter: "typing.Optional[typing.Callable[[bytes], None]]" = _default_stdout_filter) -> None:
+    def run_make(self, make_target="", *, make_command: str = None, options: MakeOptions = None,
+                 logfile_name: str = None, cwd: Path = None, append_to_logfile=False,
+                 compilation_db_name="compile_commands.json", parallel: bool = True,
+                 stdout_filter: "typing.Optional[typing.Callable[[bytes], None]]" = _default_stdout_filter) -> None:
         if not options:
             options = self.make_args
         if not make_command:
             make_command = self.make_args.command
-        allArgs = self._get_make_commandline(make_target, make_command, options, parallel=parallel,
-                                             compilationDbName=compilationDbName)
+        all_args = self._get_make_commandline(make_target, make_command, options, parallel=parallel,
+                                              compilation_db_name=compilation_db_name)
         if not cwd:
             cwd = self.buildDir
         if not logfile_name:
@@ -1999,11 +2000,11 @@ class Project(SimpleProject):
         if stdout_filter is _default_stdout_filter:
             stdout_filter = self._stdout_filter
         env = options.env_vars
-        self.run_with_logfile(allArgs, logfile_name=logfile_name, stdout_filter=stdout_filter, cwd=cwd, env=env,
+        self.run_with_logfile(all_args, logfile_name=logfile_name, stdout_filter=stdout_filter, cwd=cwd, env=env,
                               append_to_logfile=append_to_logfile)
         # if we create a compilation db, copy it to the source dir:
-        if self.config.copy_compilation_db_to_source_dir and (self.buildDir / compilationDbName).exists():
-            self.installFile(self.buildDir / compilationDbName, self.sourceDir / compilationDbName, force=True)
+        if self.config.copy_compilation_db_to_source_dir and (self.buildDir / compilation_db_name).exists():
+            self.installFile(self.buildDir / compilation_db_name, self.sourceDir / compilation_db_name, force=True)
         # add a newline at the end in case it ended with a filtered line (no final newline)
         print("Running", make_command, make_target, "took", time.time() - starttime, "seconds")
 
@@ -2076,7 +2077,7 @@ class Project(SimpleProject):
     def compile(self, cwd: Path = None):
         if cwd is None:
             cwd = self.buildDir
-        self.runMake("all", cwd=cwd)
+        self.run_make("all", cwd=cwd)
 
     @property
     def makeInstallEnv(self):
@@ -2115,7 +2116,7 @@ class Project(SimpleProject):
         else:
             options = options.copy()
         options.env_vars.update(self.makeInstallEnv)
-        self.runMake(make_target=target, options=options, stdout_filter=_stdout_filter, cwd=cwd,
+        self.run_make(make_target=target, options=options, stdout_filter=_stdout_filter, cwd=cwd,
                      parallel=parallel, **kwargs)
 
     def install(self, _stdout_filter=_default_stdout_filter):

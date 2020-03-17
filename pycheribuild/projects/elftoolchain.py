@@ -97,12 +97,12 @@ class BuildElftoolchain(Project):
             # To speed it up run make for the individual library directories instead and then for all the binaries
             first_call = True  # recreate logfile on first call, after that append
             for tgt in self.libTargets + self.programsToBuild:
-                self.runMake("obj", cwd=self.sourceDir / tgt, logfile_name="build", append_to_logfile=not first_call)
-                self.runMake("all", cwd=self.sourceDir / tgt, logfile_name="build", append_to_logfile=True)
+                self.run_make("obj", cwd=self.sourceDir / tgt, logfile_name="build", append_to_logfile=not first_call)
+                self.run_make("all", cwd=self.sourceDir / tgt, logfile_name="build", append_to_logfile=True)
                 first_call = False
         else:
-            self.runMake("obj", cwd=self.sourceDir)
-            self.runMake("all", cwd=self.sourceDir, append_to_logfile=True)
+            self.run_make("obj", cwd=self.sourceDir)
+            self.run_make("all", cwd=self.sourceDir, append_to_logfile=True)
 
     def install(self, **kwargs):
         self.makedirs(self.installDir / "bin")

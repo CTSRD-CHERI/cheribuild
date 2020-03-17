@@ -203,7 +203,7 @@ class BuildQEMUBase(AutotoolsProject):
             self.configureArgs.append("--extra-cxxflags=" + commandline_to_str(cxxflags))
 
     def run_tests(self):
-        self.runMake("check", cwd=self.buildDir)
+        self.run_make("check", cwd=self.buildDir)
 
     def update(self):
         # the build sometimes modifies the po/ subdirectory

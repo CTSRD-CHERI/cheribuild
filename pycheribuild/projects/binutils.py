@@ -94,17 +94,17 @@ class BuildGnuBinutils(AutotoolsProject):
         self.configureEnvironment["CFLAGS"] = cflags
 
     def compile(self, **kwargs):
-        self.runMake("all-ld", logfile_name="build")
-        self.runMake("all-gas", logfile_name="build")
-        self.runMake("all-binutils", logfile_name="build")
+        self.run_make("all-ld", logfile_name="build")
+        self.run_make("all-gas", logfile_name="build")
+        self.run_make("all-binutils", logfile_name="build")
 
     def install(self, **kwargs):
         bindir = self.installDir / "bin"
         if not self.fullInstall:
             # we don't want to install all programs, as the rest comes from elftoolchain
-            self.runMake("install-gas", logfile_name="install", append_to_logfile=True, parallel=False)
+            self.run_make("install-gas", logfile_name="install", append_to_logfile=True, parallel=False)
             self.deleteFile(bindir / "mips64-unknown-freebsd-ld")
-            self.runMake("install-ld", logfile_name="install", append_to_logfile=True, parallel=False)
+            self.run_make("install-ld", logfile_name="install", append_to_logfile=True, parallel=False)
             # we also need the linker scripts so this is not enough:
             # self.installFile(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
             self.moveFile(bindir / "mips64-unknown-freebsd-ld", bindir / "mips64-unknown-freebsd-ld.bfd")

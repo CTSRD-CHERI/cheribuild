@@ -106,12 +106,12 @@ class BuildSyzkaller(CrossCompileProject):
             self.generate()
 
         self.make_args.set_env(CFLAGS=" ".join(cflags))
-        self.runMake(parallel=False, cwd=self.gosrc)
+        self.run_make(parallel=False, cwd=self.gosrc)
 
     def generate(self, **kwargs):
         with setEnv(PATH=self._newPath, SOURCEDIR=self.cheribsd_dir):
-            self.runMake("extract", parallel=False, cwd=self.gosrc)
-            self.runMake("generate", parallel=False, cwd=self.gosrc)
+            self.run_make("extract", parallel=False, cwd=self.gosrc)
+            self.run_make("generate", parallel=False, cwd=self.gosrc)
 
     def install(self, **kwargs):
         # XXX-AM: should have a propert install dir configuration
@@ -141,7 +141,7 @@ class BuildSyzkaller(CrossCompileProject):
             CC=self.CC, CXX=self.CXX,
             PATH=self._newPath)
 
-        self.runMake("clean", parallel=False, cwd=self.gosrc)
+        self.run_make("clean", parallel=False, cwd=self.gosrc)
         joiner = super().clean()
         return joiner
 

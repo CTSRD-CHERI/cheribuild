@@ -206,11 +206,11 @@ class BuildFreeBSDBase(Project):
             else:
                 self.make_args.add_flags(option)
 
-    def runMake(self, make_target="", *, options: MakeOptions = None, parallel=True, **kwargs):
+    def run_make(self, make_target="", *, options: MakeOptions = None, parallel=True, **kwargs):
         # make behaves differently with -j1 and not j flags -> remove the j flag if j1 is requested
         if parallel and self.config.makeJobs == 1:
             parallel = False
-        super().runMake(make_target, options=options, cwd=self.sourceDir, parallel=parallel, **kwargs)
+        super().run_make(make_target, options=options, cwd=self.sourceDir, parallel=parallel, **kwargs)
 
     @property
     def jflag(self) -> list:
@@ -643,11 +643,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 kernel_toolchain_opts.set_with_options(LLD_BOOTSTRAP=False, CLANG=False, CLANG_BOOTSTRAP=False)
             if self.auto_obj:
                 kernel_toolchain_opts.set_with_options(AUTO_OBJ=True)
-            self.runMake("kernel-toolchain", options=kernel_toolchain_opts)
+            self.run_make("kernel-toolchain", options=kernel_toolchain_opts)
             self.kernel_toolchain_exists = True
         statusUpdate("Building kernels for configs:", kernconf)
-        self.runMake("buildkernel", options=kernelMakeArgs,
-                     compilationDbName="compile_commands_" + kernconf.replace(" ", "_") + ".json")
+        self.run_make("buildkernel", options=kernelMakeArgs,
+                     compilation_db_name="compile_commands_" + kernconf.replace(" ", "_") + ".json")
 
     def _installkernel(self, kernconf, destdir: str = None, extra_make_args=None):
         # don't use multiple jobs here
@@ -662,7 +662,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if destdir:
             install_kernel_args.set_env(DESTDIR=destdir)
         statusUpdate("Installing kernels for configs:", kernconf)
-        self.runMake("installkernel", options=install_kernel_args, parallel=False)
+        self.run_make("installkernel", options=install_kernel_args, parallel=False)
 
     def compile(self, mfs_root_image: Path = None, sysroot_only=False, all_kernel_configs: str =None, **kwargs):
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
@@ -674,12 +674,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 self.fatal("CXX does not exist: ", self.CXX)
         build_args = self.buildworld_args
         if self.config.verbose:
-            self.runMake("showconfig", options=build_args)
+            self.run_make("showconfig", options=build_args)
         if self.config.freebsd_host_tools_only:
-            self.runMake("kernel-toolchain", options=build_args)
+            self.run_make("kernel-toolchain", options=build_args)
             return
         if sysroot_only:
-            self.runMake("buildsysroot", options=build_args)
+            self.run_make("buildsysroot", options=build_args)
             return  # We are done after building the sysroot
 
         if not self.config.skipBuildworld:
@@ -688,7 +688,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     self.info("Ignoring --", self.target, "/fast option since --clean was passed", sep="")
                 else:
                     build_args.set(WORLDFAST=True)
-            self.runMake("buildworld", options=build_args)
+            self.run_make("buildworld", options=build_args)
             self.kernel_toolchain_exists = True  # includes the necessary tools for kernel-toolchain
         if not self.subdirOverride:
             for i in ("USBROOT", "NFSROOT", "MDROOT"):
@@ -793,11 +793,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # it will attempt to install libc++ because compiler for kernel is now clang and not GCC
             # as a workaround force writing the compiler metadata by invoking the _compiler-metadata target
             try:
-                self.runMake("_build-metadata", options=install_world_args)
+                self.run_make("_build-metadata", options=install_world_args)
             except subprocess.CalledProcessError:
                 try:
                     # support building old versions of cheribsd before _compiler-metadata was renamed to _build-metadata
-                    self.runMake("_compiler-metadata", options=install_world_args)
+                    self.run_make("_compiler-metadata", options=install_world_args)
                 except subprocess.CalledProcessError:
                     warningMessage("Failed to run either target _compiler-metadata or "
                                    "_build_metadata, build system has changed!")
@@ -812,15 +812,15 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 if is_jenkins_build():
                     # Install to the install dir in jenkins, but the sysroot otherwise
                     installsysroot_args.set_env(DESTDIR=self.installDir)
-                self.runMake("installsysroot", options=installsysroot_args)
+                self.run_make("installsysroot", options=installsysroot_args)
                 # Don't try to install the kernel if we are only building a sysroot
                 return
             else:
-                self.runMake("installworld", options=install_world_args)
-                self.runMake("distribution", options=install_world_args)
+                self.run_make("installworld", options=install_world_args)
+                self.run_make("distribution", options=install_world_args)
                 if self.has_installsysroot_target:
                     installsysroot_args.set_env(DESTDIR=self.target_info.sysroot_dir)
-                    self.runMake("installsysroot", options=installsysroot_args)
+                    self.run_make("installsysroot", options=installsysroot_args)
 
         if skip_kernel:
             return
@@ -1072,7 +1072,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
         # so just omit the flag here if the user passes -j1 on the command line
         build_args = self.make_args.copy()
         if self.config.verbose:
-            self.runMake("showconfig", options=build_args)
+            self.run_make("showconfig", options=build_args)
 
         if self.worlds_only and self.kernels_only:
             self.fatal("Can't set both worlds-only and kernels-only!")
@@ -1087,13 +1087,13 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
 
         if self.kernels_only:
             # We need to build kernel-toolchains first (see https://reviews.freebsd.org/D17779)
-            self.runMake("kernel-toolchains", options=build_args, parallel=False)
+            self.run_make("kernel-toolchains", options=build_args, parallel=False)
 
         if self.worlds_only:
             build_args.set(MAKE_JUST_WORLDS=True)
         if self.kernels_only:
             build_args.set(MAKE_JUST_KERNELS=True)
-        self.runMake("tinderbox" if self.tinderbox else "universe", options=build_args, parallel=False)
+        self.run_make("tinderbox" if self.tinderbox else "universe", options=build_args, parallel=False)
 
     def install(self, **kwargs):
         self.info("freebsd-universe is a compile-only target")
@@ -1454,7 +1454,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 #         args_without_subdir_override = self.buildworld_args
 #         # subdir-override seems to break if we don't build toolchain first
 #         args_without_subdir_override.remove_var("SUBDIR_OVERRIDE")
-#         self.runMake("kernel-toolchain", options=args_without_subdir_override)
+#         self.run_make("kernel-toolchain", options=args_without_subdir_override)
 #         super().compile(**kwargs)
 #         self.build_and_install_subdir(args_without_subdir_override, "tools/cheribsdbox",
 #                                       skip_build=False, skip_install=True, install_to_internal_sysroot=True)

@@ -52,15 +52,15 @@ class BuildAflCheriNinja(Project):
         base_flags = self.make_args.copy()
         base_flags.env_vars["XCFLAGS"] = base_xcflags + " -mabi=n64"
         #  $  XCC=${SDK_PATH}/bin/clang XCFLAGS='-cheri-linker -target mips64-unknown-freebsd -mcpu=mips3 -integrated-as -msoft-float' gmake
-        self.runMake(options=base_flags, cwd=self.sourceDir)
+        self.run_make(options=base_flags, cwd=self.sourceDir)
         #  $  XCC=${SDK_PATH}/bin/clang XCFLAGS='-cheri-linker -target mips64-unknown-freebsd -mcpu=mips3 -integrated-as -msoft-float' gmake
         llvm_mode_flags = self.make_args.copy()
         llvm_mode_flags.env_vars["XCFLAGS"] = base_xcflags + " -mabi=purecap"
-        self.runMake(options=llvm_mode_flags, cwd=self.sourceDir / "llvm_mode")
+        self.run_make(options=llvm_mode_flags, cwd=self.sourceDir / "llvm_mode")
 
     def install(self, **kwargs):
         self.make_args.set(DESTDIR=self.config.cheri_sdk_dir / "afl")
-        self.runMake("install", options=self.make_args)
+        self.run_make("install", options=self.make_args)
         self.installFile(self.buildDir / "afl-fuzz",
                          BuildCHERIBSD.rootfsDir(self, cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID) / "usr/local/bin/afl-fuzz")
         self.installFile(self.buildDir / "afl-fuzz",

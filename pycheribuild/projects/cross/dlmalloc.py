@@ -127,9 +127,9 @@ class DLMalloc(CrossCompileProject):
             new_env["CHERI_SDK"] = self.target_info.sdk_root_dir,
         with setEnv(**new_env):
             if self.just_so :
-                self.runMake("libdlmalloc_nonreuse.so", cwd=self.buildDir)
+                self.run_make("libdlmalloc_nonreuse.so", cwd=self.buildDir)
             else :
-                self.runMake("all", cwd=self.buildDir)
+                self.run_make("all", cwd=self.buildDir)
 
     def install(*args, **kwargs):
         pass

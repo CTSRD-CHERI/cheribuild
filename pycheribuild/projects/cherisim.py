@@ -61,7 +61,7 @@ class BuildCheriSim(Project):
         cls.build_cheri = cls.add_bool_option("cheri", default=True, help="include the CHERI code in the simulator. If false build BERI")
 
     def clean(self):
-        self.runMake("clean", parallel=False, cwd=self.sourceDir / "cheri")
+        self.run_make("clean", parallel=False, cwd=self.sourceDir / "cheri")
         return None
 
     def compile(self, **kwargs):
@@ -95,7 +95,7 @@ class BuildBeriCtl(Project):
         self.make_args.set(JTAG_ATLANTIC=1) # MUCH faster
 
     def clean(self):
-        self.runMake("clean", parallel=False, cwd=self.sourceDir)
+        self.run_make("clean", parallel=False, cwd=self.sourceDir)
         return None
 
     def compile(self, **kwargs):

@@ -93,13 +93,13 @@ class BuildSamba(Project):
 
     def compile(self, **kwargs):
         if SMB_OUT_OF_SOURCE_BUILD_WORKS:
-            self.runMake("build", cwd=self.sourceDir)
+            self.run_make("build", cwd=self.sourceDir)
         else:
             super().compile(**kwargs)
 
     def install(self, **kwargs):
         if SMB_OUT_OF_SOURCE_BUILD_WORKS:
-            self.runMake("install", cwd=self.sourceDir)
+            self.run_make("install", cwd=self.sourceDir)
         else:
             super().install(**kwargs)
 

@@ -93,7 +93,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         super().configure(**kwargs)
 
     def compile(self, cwd: Path = None):
-        self.runMake("bbl")
+        self.run_make("bbl")
 
     def install(self, **kwargs):
         self.installFile(self.buildDir / "bbl", self.real_install_root_dir / "bbl")

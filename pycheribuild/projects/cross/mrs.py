@@ -100,8 +100,8 @@ class MRS(CrossCompileCMakeProject):
 
     def compile(self, **kwargs):
         if self.build_target:
-            # self.runMake("libsnmallocshim.so", cwd=kwargs.get("cwd"))
-            self.runMake(self.build_target)
+            # self.run_make("libsnmallocshim.so", cwd=kwargs.get("cwd"))
+            self.run_make(self.build_target)
         else:
             return super().compile(**kwargs)
 

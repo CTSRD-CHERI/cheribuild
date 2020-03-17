@@ -172,8 +172,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
         with TemporarilyRemoveProgramsFromSdk(["as", "ld", "objcopy", "objdump"], self.config,
                                               self.installDir):
             # also install objdump
-            self.runMake(make_target="all-binutils", cwd=self.buildDir)
-            self.runMake(make_target="all-gdb", cwd=self.buildDir)
+            self.run_make(make_target="all-binutils", cwd=self.buildDir)
+            self.run_make(make_target="all-gdb", cwd=self.buildDir)
 
     def install(self, **kwargs):
         self.runMakeInstall(target="install-gdb")

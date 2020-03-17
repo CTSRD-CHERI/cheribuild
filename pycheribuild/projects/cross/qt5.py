@@ -233,15 +233,15 @@ class BuildQtBase(BuildQtWithConfigureScript):
 
     def compile(self, **kwargs):
         if self.minimal:
-            self.runMake("sub-src")
+            self.run_make("sub-src")
             if self.build_tests:
                 # only build the tests for corelib:
                 if not (self.buildDir / "tests/auto/corelib").exists():
                     # generate the makefiles
-                    self.runMake("sub-tests-make_first")
-                self.runMake("sub-corelib", cwd=self.buildDir / "tests/auto")
+                    self.run_make("sub-tests-make_first")
+                self.run_make("sub-corelib", cwd=self.buildDir / "tests/auto")
         else:
-            self.runMake() # QtBase ignores -nomake if you run "gmake all"
+            self.run_make() # QtBase ignores -nomake if you run "gmake all"
 
     def run_tests(self):
         if self.compiling_for_host():
@@ -447,9 +447,9 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             self.installFile(Path(td, "mime/mime.cache"), self.buildDir / "mime.cache", force=True, print_verbose_only=False)
             # TODO: get https://github.com/annulen/webkit-test-fonts to run the full testsuite
         if self.build_jsc_only:
-            self.runMake("jsc")
+            self.run_make("jsc")
         else:
-            self.runMake("all")
+            self.run_make("all")
 
     def install(self, **kwargs):
         # create a stripped version of DumpRenderTree and jsc since the one with debug info is too big
