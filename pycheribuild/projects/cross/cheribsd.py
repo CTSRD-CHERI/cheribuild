@@ -465,7 +465,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.cross_toolchain_config.set(CHERI_SUBOBJECT_BOUNDS_DEBUG="yes" if self.config.subobject_debug else "no")
 
         cross_bindir = self.target_info.sdk_root_dir / "bin"
-        cross_prefix = str(cross_bindir / "bin") + "/"  # needs to end with / for concatenation
+        cross_prefix = str(cross_bindir) + "/"  # needs to end with / for concatenation
         target_flags = self._setup_arch_specific_options()
 
         # TODO: should I be setting this in the environment instead?
