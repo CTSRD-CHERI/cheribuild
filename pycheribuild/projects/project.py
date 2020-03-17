@@ -1002,8 +1002,15 @@ class MakeOptions(object):
     # noinspection PyProtectedMember
     def __infer_command(self) -> str:
         if self.kind == MakeCommandKind.DefaultMake:
-            self.__project.addRequiredSystemTool("make")
-            return "make"
+            if IS_MAC and shutil.which("gmake"):
+                # Using /usr/bin/make on macOS breaks compilation DB creation with bear since SIP prevents it from
+                # injecting shared libraries into any process that is installed as part of the system.
+                # Prefer homebrew-installed gmake if it is available
+                self.__project.addRequiredSystemTool("gmake", homebrew="make")
+                return "gmake"
+            else:
+                self.__project.addRequiredSystemTool("make")
+                return "make"
         elif self.kind == MakeCommandKind.GnuMake:
             if IS_LINUX and not shutil.which("gmake"):
                 statusUpdate("Could not find `gmake` command, assuming `make` is GNU make")
