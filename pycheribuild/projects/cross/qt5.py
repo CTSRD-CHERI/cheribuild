@@ -412,13 +412,10 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                 self.LDFLAGS.append("-pthread")  # Needed for DumpRenderTree when linking statically
 
             # Pass CHERI capability size so we can pass this to the offlineasm ruby scripts
-            if self.compiling_for_cheri():
-                if self.config.cheriBits == 128:
-                    self.add_cmake_options(CHERI_CAPABILITY_SIZE=128)
-                elif self.config.cheriBits == 256:
-                    self.add_cmake_options(CHERI_CAPABILITY_SIZE=256)
+            if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+                self.add_cmake_options(CHERI_CAPABILITY_SIZE=self.target_info.capability_size)
+            if self.crosscompile_target.is_cheri_purecap():
                 self.add_cmake_options(CHERI_PURE_CAPABILITY=True)
-
             if not self.compiling_for_host():
                 self.add_cmake_options(QTWEBKIT_LINK_STATIC_ONLY=self.force_static_linkage)
 

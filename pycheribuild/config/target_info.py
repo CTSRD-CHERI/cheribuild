@@ -195,17 +195,21 @@ class TargetInfo(ABC):
 
     @property
     def pointer_size(self):
-        if self.target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            assert self.config.cheriBits in (128, 256), "No other cap size supported yet"
-            return self.config.cheriBits / 8
-        if self.target.is_cheri_purecap([CPUArchitecture.RISCV64]):
-            assert self.config.cheriBits == 128, "For now setting cheribits != 128 may break stuff"
-            return 16
-        assert not self.target.is_cheri_purecap(), "Other purecap not handled yet"
+        if self.target.is_cheri_purecap():
+            return self.capability_size
         if self.target.is_i386():
             return 4
         # all other architectures we support currently use 64-bit pointers
         return 8
+
+    @property
+    def capability_size(self):
+        if self.target.is_hybrid_or_purecap_cheri([CPUArchitecture.MIPS64]):
+            assert self.config.mips_cheri_bits in (128, 256), "No other cap size supported yet"
+            return self.config.mips_cheri_bits / 8
+        elif self.target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+            return 16  # RISCV64 uses 128-bit capabilities
+        raise ValueError("Capabilities not supported for " + repr(self))
 
     @staticmethod
     def host_c_compiler(config: "CheriConfig") -> Path:
