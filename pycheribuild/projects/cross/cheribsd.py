@@ -1248,26 +1248,6 @@ class BuildCHERIBSD(BuildFreeBSD):
         all_kernel_configs = " ".join([self.kernelConfig] + self.extra_kernels + self.extra_kernels_with_mfs)
         super().install(all_kernel_configs=all_kernel_configs, sysroot_only=self.sysroot_only, **kwargs)
 
-    def update(self):
-        super().update()
-        if not (self.sourceDir / "contrib/cheri-libc++/src").exists():
-            runCmd("git", "submodule", "init", cwd=self.sourceDir)
-            runCmd("git", "submodule", "update", cwd=self.sourceDir)
-
-    def process(self):
-        # Compatibility with older versions of cheribuild (and scripts that hardcode the path):
-        # Create a symlink from the new build directory name to the old build directory name.
-        if self.compiling_for_mips(include_purecap=False) and self.crosscompile_target.is_cheri_hybrid() and self.config.cheri_cap_table_abi == self.crosscompile_target.DEFAULT_CAP_TABLE_ABI:
-            old_build_dir = Path(self.config.buildRoot, "cheribsd-" + self.config.mips_cheri_bits_str + "-build")
-            if not old_build_dir.is_symlink():
-                self.info("Updating old build directory name:")
-                if not self.buildDir.exists() and old_build_dir.exists() and not self.config.clean:
-                    self.run_cmd("mv", old_build_dir, self.buildDir)
-                else:
-                    self.clean_directory(old_build_dir, ensure_dir_exists=False)
-                self.createSymlink(self.buildDir, old_build_dir, cwd=old_build_dir.parent, print_verbose_only=False)
-        super().process()
-
 
 # FIXME: this should inherit from BuildCheriBSD to avoid subtle problems
 class BuildCheriBsdMfsKernel(SimpleProject):
