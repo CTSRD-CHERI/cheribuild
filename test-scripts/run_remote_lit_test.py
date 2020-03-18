@@ -254,20 +254,20 @@ Host cheribsd-test-instance
         # lit_proc = pexpect.spawnu(lit_cmd[0], lit_cmd[1:], echo=True, timeout=60, cwd=str(test_build_dir))
         # TODO: get stderr!!
         # while lit_proc.isalive():
-        lit_proc = None
-        while False:
-            line = lit_proc.readline()
-            if shard_prefix:
-                line = shard_prefix + line
-            print(line)
-            global KERNEL_PANIC
-            # Abort once we detect a kernel panic
-            if KERNEL_PANIC:
-                lit_proc.sendintr()
-            print(shard_prefix + lit_proc.read())
-        print("Lit finished.")
-        if lit_proc and lit_proc.exitstatus == 1:
-            boot_cheribsd.failure(shard_prefix + "SOME TESTS FAILED", exit=False)
+        # lit_proc = None
+        # while False:
+        #     line = lit_proc.readline()
+        #     if shard_prefix:
+        #         line = shard_prefix + line
+        #     print(line)
+        #     global KERNEL_PANIC
+        #     # Abort once we detect a kernel panic
+        #     if KERNEL_PANIC:
+        #         lit_proc.sendintr()
+        #     print(shard_prefix + lit_proc.read())
+        # print("Lit finished.")
+        # if lit_proc and lit_proc.exitstatus == 1:
+        #     boot_cheribsd.failure(shard_prefix + "SOME TESTS FAILED", exit=False)
     except subprocess.CalledProcessError as e:
         boot_cheribsd.failure(shard_prefix + "SOME TESTS FAILED: ", e, exit=False)
         # Should only ever return 1 (otherwise something else went wrong!)

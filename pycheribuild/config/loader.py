@@ -40,7 +40,7 @@ except ImportError:
     argcomplete = None
 
 from ..colour import *
-from ..utils import typing, Type_T, fatalError
+from ..utils import typing, Type_T, fatalError, warningMessage
 from pathlib import Path
 
 if typing.TYPE_CHECKING:   # no-combine

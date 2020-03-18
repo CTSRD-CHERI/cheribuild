@@ -32,7 +32,6 @@ import grp
 import json
 import os
 import typing
-import warnings
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
@@ -40,7 +39,7 @@ from typing import Optional
 
 # Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
 from .loader import ConfigLoaderBase
-from .target_info import CrossCompileTarget, MipsFloatAbi, Linkage, CheriBSDTargetInfo, CompilationTargets
+from .target_info import CrossCompileTarget, MipsFloatAbi, Linkage
 from ..utils import latest_system_clang_tool, warningMessage, statusUpdate, have_working_internet_connection
 
 if typing.TYPE_CHECKING:   # no-combine

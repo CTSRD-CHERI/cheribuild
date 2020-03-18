@@ -453,7 +453,6 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
     def get_cheribsd_sysroot_path(self, separate_cheri_sysroots=False) -> Path:
         """
-        :param cross_compile_target: The target we want the sysroot dir for
         :param separate_cheri_sysroots: If true will use a separate sysroot dir for purecap and hybrid sysroots. The
         default behaviour is to use the hybrid sysroot for both purecap and hybrid applications.
         :return: The sysroot path

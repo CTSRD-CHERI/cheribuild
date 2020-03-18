@@ -444,7 +444,7 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
         #             cwd=self.buildDir / "test")
         #self.run_cmd("find", ".", cwd=self.buildDir / "test")
         self.clean_directory(self.buildDir / "spec-test-dir")
-        benchmarks_dir = self.create_tests_dir(self.buildDir / "spec-test-dir")
+        self.create_tests_dir(self.buildDir / "spec-test-dir")
         test_command = """
 export LD_LIBRARY_PATH=/sysroot/usr/lib:/sysroot/lib;
 export LD_CHERI_LIBRARY_PATH=/sysroot/usr/libcheri;

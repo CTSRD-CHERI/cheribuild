@@ -131,6 +131,7 @@ class OpamMixin(object):
         # for opam commands we don't need to prepend opam exec --
         if command[0] != self.opam_binary:
             command = [self.opam_binary, "exec", "--root=" + str(self.opamroot), "--"] + command
+        assert isinstance(self, SimpleProject)
         return self.run_cmd(command, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)
 
 

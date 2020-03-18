@@ -949,7 +949,8 @@ class MakeOptions(object):
         assert False, "Should not be called!"
         pass
 
-    def __do_set(self, target_dict: "typing.Dict[str, str]", **kwargs):
+    @staticmethod
+    def __do_set(target_dict: "typing.Dict[str, str]", **kwargs):
         for k, v in kwargs.items():
             if isinstance(v, bool):
                 v = "1" if v else "0"
@@ -1555,7 +1556,7 @@ class Project(SimpleProject):
     default_build_type = BuildType.DEFAULT
 
     @classmethod
-    def setup_config_options(cls, installDirectoryHelp="", **kwargs):
+    def setup_config_options(cls, install_directory_help="", **kwargs):
         super().setup_config_options(**kwargs)
         # statusUpdate("Setting up config options for", cls, cls.target)
         cls.default_source_dir = cls.add_path_option("source-directory", metavar="DIR", default=cls.defaultSourceDir,
@@ -1574,9 +1575,9 @@ class Project(SimpleProject):
                                                                         "the value of the global --skip-update option"),
                                            help="Override --skip-update/--no-skip-update for this target only ")
 
-        if not installDirectoryHelp:
-            installDirectoryHelp = "Override default install directory for " + cls.project_name
-        cls._installDir = cls.add_path_option("install-directory", metavar="DIR", help=installDirectoryHelp,
+        if not install_directory_help:
+            install_directory_help = "Override default install directory for " + cls.project_name
+        cls._installDir = cls.add_path_option("install-directory", metavar="DIR", help=install_directory_help,
                                            default=cls._default_install_dir_fn)
         if "repository" in cls.__dict__ and isinstance(cls.repository, GitRepository):
             cls.gitRevision = cls.add_config_option("git-revision", metavar="REVISION",
@@ -1852,7 +1853,7 @@ class Project(SimpleProject):
         self.CFLAGS = []
         self.CXXFLAGS = []
         self.ASMFLAGS = []
-        self.LDFLAGS = []
+        self.LDFLAGS = self.target_info.required_link_flags()
         self.COMMON_LDFLAGS = []
         # Don't build CHERI with ASAN since that doesn't work or make much sense
         if self.use_asan and not self.compiling_for_cheri():
@@ -2237,6 +2238,8 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             self.fatal("cheri-cpu repository missing. Run `cheribuild.py berictl` or `git clone {} {}`".format(
                 sim_project.repository.url, sim_project.sourceDir))
 
+        qemu_ssh_socket = None # type: typing.Optional[SocketAndPort]
+
         if self.config.benchmark_with_qemu:
             from .build_qemu import BuildQEMU
             qemu_path = BuildQEMU.qemu_binary(self)
@@ -2302,7 +2305,6 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
         """.format(cheri_dir=cheri_dir, cherilibs_dir=cherilibs_dir,
             runbench_args=commandline_to_str(runbench_args),
             basic_args=commandline_to_str(basic_args), cheribuild_path=cheribuild_path)
-        qemu_ssh_socket = None
         if self.config.benchmark_with_qemu:
             # Free the port that we reserved for QEMU before starting beri-fpga-bsd-boot.py
             qemu_ssh_socket.socket.close()

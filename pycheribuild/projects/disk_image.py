@@ -27,7 +27,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import datetime
 import io
 
 from .cross.cheribsd import *
@@ -542,7 +541,7 @@ class _BuildDiskImageBase(SimpleProject):
     def __process(self):
         if self.disk_image_path.is_dir():
             # Given a directory, derive the default file name inside it
-            self.disk_image_path = _defaultDiskImagePath(self.config, self.disk_image_path)
+            self.disk_image_path = _default_disk_image_name(self.config, self.disk_image_path, self)
 
         if self.disk_image_path.is_file():
             # only show prompt if we can actually input something to stdin
@@ -961,10 +960,8 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
 
         tmpfs_shortname = None
         extra_files_shortname = None
-        disk_img_shortname = None
         if cls._xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
             tmpfs_shortname = "-disable-tmpfs"
-            disk_img_shortname = "-disk-image-path"
             extra_files_shortname = "-extra-files"
 
         super().setup_config_options(extraFilesShortname=extra_files_shortname, defaultHostname=defaultHostname, **kwargs)

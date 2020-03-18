@@ -28,7 +28,6 @@
 # SUCH DAMAGE.
 #
 from enum import Enum
-import sys
 
 
 class AnsiColour(Enum):

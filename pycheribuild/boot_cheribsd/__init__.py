@@ -191,7 +191,7 @@ def run_host_command(*args, **kwargs):
     subprocess.check_call(*args, **kwargs)
 
 
-def decompress(archive: Path, force_decompression: bool, *, keep_archive=True, cmd=None, args=None) -> Path:
+def decompress(archive: Path, force_decompression: bool, *, keep_archive=True, cmd=None) -> Path:
     result = archive.with_suffix("")
     if result.exists():
         if not force_decompression:
@@ -395,6 +395,7 @@ def _set_posix_sh_prompt(child):
     success("===> successfully set PS1")
 
 
+# noinspection PyMethodMayBeStatic,PyUnusedLocal
 class FakeSpawn(object):
     pid = -1
     should_quit = False

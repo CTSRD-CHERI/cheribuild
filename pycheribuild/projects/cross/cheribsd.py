@@ -1019,7 +1019,7 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
         crossbuild = True
 
     @classmethod
-    def setup_config_options(cls, installDirectoryHelp=None, **kwargs):
+    def setup_config_options(cls, install_directory_help=None, **kwargs):
         if IS_FREEBSD:
             kwargs["bootstrap_toolchain"] = True
         if not IS_FREEBSD:
@@ -1032,10 +1032,11 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
         pass
 
 
+# noinspection PyUnusedLocal
 def jflag_in_subjobs(config: CheriConfig, proj):
     return max(1, config.makeJobs // 2)
 
-
+# noinspection PyUnusedLocal
 def jflag_for_universe(config: CheriConfig, proj):
     return max(1, config.makeJobs // 4)
 
@@ -1150,11 +1151,11 @@ class BuildCHERIBSD(BuildFreeBSD):
         return super().build_dir_suffix
 
     @classmethod
-    def setup_config_options(cls, installDirectoryHelp=None, **kwargs):
-        if installDirectoryHelp is None:
-            installDirectoryHelp = "Install directory for CheriBSD root file system (default: " \
+    def setup_config_options(cls, install_directory_help=None, **kwargs):
+        if install_directory_help is None:
+            install_directory_help = "Install directory for CheriBSD root file system (default: " \
                                    "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)"
-        super().setup_config_options(installDirectoryHelp=installDirectoryHelp, use_upstream_llvm=False)
+        super().setup_config_options(install_directory_help=install_directory_help, use_upstream_llvm=False)
         cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=True,
                                              help="Only build a sysroot instead of the full system. This will only "
                                                   "build the libraries and skip all binaries")

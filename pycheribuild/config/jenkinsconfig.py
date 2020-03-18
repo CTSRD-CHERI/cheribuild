@@ -34,7 +34,7 @@ from pathlib import Path
 
 from .loader import ConfigLoaderBase
 from .chericonfig import CheriConfig
-from .target_info import CompilationTargets, CrossCompileTarget
+from .target_info import CompilationTargets
 from ..utils import defaultNumberOfMakeJobs, fatalError, IS_MAC, IS_LINUX, IS_FREEBSD
 
 

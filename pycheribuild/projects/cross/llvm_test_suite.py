@@ -31,7 +31,6 @@
 from .crosscompileproject import *
 from ..llvm import BuildCheriLLVM
 from ...config.loader import ComputedDefaultValue
-from ...utils import statusUpdate
 
 
 class BuildLLVMTestSuite(CrossCompileCMakeProject):

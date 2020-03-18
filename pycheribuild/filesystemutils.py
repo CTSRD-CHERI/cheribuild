@@ -149,7 +149,8 @@ class FileSystemUtils(object):
             return
         file.unlink()
 
-    def copyRemoteFile(self, remotePath: str, targetFile: Path):
+    @staticmethod
+    def copyRemoteFile(remotePath: str, targetFile: Path):
         # if we have rsync we can skip the copy if file is already up-to-date
         if shutil.which("rsync"):
             try:

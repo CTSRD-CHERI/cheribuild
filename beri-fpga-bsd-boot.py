@@ -510,6 +510,7 @@ def get_network_iface(args):
     else:
         return "atse0"
 
+
 def do_network_on(console: boot_cheribsd.CheriBSDInstance, args, timeout=300):
     ifc = get_network_iface(args)
     # Note: If we devctl disable le0, we can't enable it anymore
@@ -525,8 +526,9 @@ def do_network_on(console: boot_cheribsd.CheriBSDInstance, args, timeout=300):
     console.expect_prompt()
     # No longer needed? console.run('/sbin/ifconfig {} polling'.format(ifc))
     console.sendline('/sbin/dhclient {}'.format(ifc))
-    console.expect(["bound to .* -- renewal in .*\."], timeout=240)
+    console.expect(["bound to .* -- renewal in .*\\."], timeout=timeout)
     console.expect_prompt()
+
 
 def do_network_off(console: boot_cheribsd.CheriBSDInstance, args):
     ifc = get_network_iface(args)
