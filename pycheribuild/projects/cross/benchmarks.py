@@ -195,12 +195,12 @@ class BuildOlden(CrossCompileProject):
     def test_arch_suffix(self):
         if self.compiling_for_host():
             return "x86"
-        if self.compiling_for_mips(include_purecap=True):
+        elif self.compiling_for_mips(include_purecap=True):
             if self.crosscompile_target.is_cheri_purecap():
                 return "cheri" + self.config.mips_cheri_bits_str
             return "mips-asan" if self.use_asan else "mips"
         else:
-            assert False, "other arches not supported"
+            raise ValueError("other arches not supported")
 
     def install(self, **kwargs):
         self.makedirs(self.installDir)
@@ -267,7 +267,7 @@ class BuildSpec2006(CrossCompileProject):
     @property
     def config_name(self):
         if self.compiling_for_cheri():
-            build_arch = "cheri" + self.config.cheri_bits_and_abi_str + "-" + self.linkage().value
+            build_arch = "cheri" + self.cheri_config_suffix + "-" + self.linkage().value
             float_abi = self.config.mips_float_abi.name.lower() + "fp"
             return "freebsd-" + build_arch + "-" + float_abi
         elif self.compiling_for_mips(include_purecap=False):
@@ -280,10 +280,10 @@ class BuildSpec2006(CrossCompileProject):
 
     @property
     def hw_cpu(self):
-        if self.compiling_for_mips(include_purecap=False):
+        if self.compiling_for_mips(include_purecap=True):
+            if self.crosscompile_target.is_cheri_purecap():
+                return "CHERI" + self.cheri_config_suffix
             return "BERI"
-        elif self.compiling_for_cheri():
-            return "CHERI" + self.config.cheri_bits_and_abi_str
         return "unknown"
 
     @property
@@ -458,11 +458,12 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_f
     def bluehive_benchmark_script_archname(self):
         if self.compiling_for_host():
             return "x86"
-        if self.compiling_for_cheri():
-            return "cheri" + self.config.cheri_bits_str
-        else:
-            assert self.compiling_for_mips(include_purecap=False), "other arches not supported"
+        elif self.compiling_for_mips(include_purecap=True):
+            if self.crosscompile_target.is_cheri_purecap():
+                return "cheri" + self.config.mips_cheri_bits_str
             return "mips-asan" if self.use_asan else "mips"
+        else:
+            raise ValueError("other arches not supported")
 
     def run_benchmarks(self):
         if not self.compiling_for_mips(include_purecap=True):

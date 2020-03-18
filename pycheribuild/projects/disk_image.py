@@ -653,9 +653,9 @@ def _default_disk_image_name(config: CheriConfig, directory: Path, project: Simp
     if xtarget.is_mips(include_purecap=True):
         # Backwards compat (different prefix for hybrid+purecap images):
         if xtarget.is_cheri_hybrid():
-            return directory / ("cheri" + config.cheri_bits_and_abi_str + "-disk.img")
+            return directory / ("cheri" + project.cheri_config_suffix + "-disk.img")
         if xtarget.is_cheri_purecap():
-            return directory / ("purecap-" + config.cheri_bits_and_abi_str + "-disk.img")
+            return directory / ("purecap-" + project.cheri_config_suffix + "-disk.img")
     suffix = xtarget.generic_suffix if xtarget else "<TARGET>"
     if project.compiling_for_mips(include_purecap=False):
         if config.mips_float_abi == MipsFloatAbi.HARD:
@@ -692,7 +692,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
     def setup_config_options(cls, **kwargs):
         hostUsername = CheriConfig.get_user_name()
         defaultHostname = ComputedDefaultValue(
-            function=lambda conf, unused: "qemu-cheri" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
+            function=lambda conf, proj: "qemu-cheri" + proj.cheri_config_suffix + "-" + hostUsername,
             as_string="qemu-cheri${ABI}-" + hostUsername)
 
         super().setup_config_options(defaultHostname=defaultHostname, extraFilesSuffix="-minimal", **kwargs)
@@ -956,7 +956,7 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
     def setup_config_options(cls, **kwargs):
         hostUsername = CheriConfig.get_user_name()
         defaultHostname = ComputedDefaultValue(
-            function=lambda conf, unused: "qemu-cheri" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
+            function=lambda conf, proj: "qemu-cheri" + proj.cheri_config_suffix + "-" + hostUsername,
             as_string="qemu-cheri${ABI}-" + hostUsername)
 
         tmpfs_shortname = None

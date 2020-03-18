@@ -39,7 +39,7 @@ class BuildCheriOS(CMakeProject):
         dependencies.append("makefs-linux")
     default_build_type = BuildType.DEBUG
     repository = GitRepository("https://github.com/CTSRD-CHERI/cherios.git", default_branch="master")
-    _default_install_dir_fn = lambda config, cls: config.outputRoot / ("cherios" + config.cheri_bits_str)
+    _default_install_dir_fn = lambda config, cls: config.outputRoot / ("cherios" + config.mips_cheri_bits_str)
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
 
     @classmethod

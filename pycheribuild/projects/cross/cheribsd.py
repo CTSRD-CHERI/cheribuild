@@ -54,9 +54,9 @@ def default_kernel_config(config: CheriConfig, project: SimpleProject) -> str:
             # or a purecap kernel is selected
             assert isinstance(project, BuildCHERIBSD)
             kernconf_name = "CHERI{bits}{pure}_MALTA64"
-            cheri_bits = "128" if config.mips_cheri_bits == 128 else ""
+            cheri_bits_suffix = "128" if config.mips_cheri_bits == 128 else ""
             cheri_pure = "_PURECAP" if project.purecapKernel else ""
-            return kernconf_name.format(bits=cheri_bits, pure=cheri_pure)
+            return kernconf_name.format(bits=cheri_bits_suffix, pure=cheri_pure)
         return "MALTA64"
     elif xtarget.is_riscv(include_purecap=True):
         # TODO: purecap/hybrid kernel
@@ -93,17 +93,17 @@ def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
     xtarget = project.crosscompile_target
     if xtarget.is_mips(include_purecap=True):
         if xtarget.is_cheri_purecap():
-            return config.outputRoot / ("rootfs-purecap" + config.cheri_bits_and_abi_str)
+            return config.outputRoot / ("rootfs-purecap" + project.cheri_config_suffix)
         elif xtarget.is_cheri_hybrid():
-            return config.outputRoot / ("rootfs" + config.cheri_bits_and_abi_str)
+            return config.outputRoot / ("rootfs" + project.cheri_config_suffix)
         if config.mips_float_abi == MipsFloatAbi.HARD:
             return config.outputRoot / "rootfs-mipshf"
         return config.outputRoot / "rootfs-mips"
     elif xtarget.is_riscv(include_purecap=True):
         if xtarget.is_cheri_purecap():
-            return config.outputRoot / ("rootfs-riscv64-purecap" + config.cheri_bits_and_abi_str)
+            return config.outputRoot / ("rootfs-riscv64-purecap" + project.cheri_config_suffix)
         elif xtarget.is_cheri_hybrid():
-            return config.outputRoot / ("rootfs-riscv64c" + config.cheri_bits_and_abi_str)
+            return config.outputRoot / ("rootfs-riscv64c" + project.cheri_config_suffix)
         return config.outputRoot / "rootfs-riscv64"
     else:
         assert project.crosscompile_target.is_x86_64()
@@ -361,10 +361,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.compiling_for_mips(include_purecap=True):
             target_arch = self.config.mips_float_abi.freebsd_target_arch()
             if self.crosscompile_target.is_cheri_purecap():
-                target_arch += "c" + self.config.cheri_bits_str  # build purecap
+                target_arch += "c" + self.config.mips_cheri_bits_str  # build purecap
             result = {"TARGET": "mips", "TARGET_ARCH": target_arch}
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                result["CHERI"] = self.config.cheri_bits_str
+                result["CHERI"] = self.config.mips_cheri_bits_str
             return result
         elif self.crosscompile_target.is_x86_64():
             return {"TARGET": "amd64", "TARGET_ARCH": "amd64"}
@@ -1256,9 +1256,8 @@ class BuildCHERIBSD(BuildFreeBSD):
     def process(self):
         # Compatibility with older versions of cheribuild (and scripts that hardcode the path):
         # Create a symlink from the new build directory name to the old build directory name.
-
-        if self.compiling_for_mips(include_purecap=False) and self.crosscompile_target.is_cheri_hybrid() and self.config.cheri_cap_table_abi == self.config.DEFAULT_CAP_TABLE_ABI:
-            old_build_dir = Path(self.config.buildRoot, "cheribsd-" + self.config.cheri_bits_str + "-build")
+        if self.compiling_for_mips(include_purecap=False) and self.crosscompile_target.is_cheri_hybrid() and self.config.cheri_cap_table_abi == self.crosscompile_target.DEFAULT_CAP_TABLE_ABI:
+            old_build_dir = Path(self.config.buildRoot, "cheribsd-" + self.config.mips_cheri_bits_str + "-build")
             if not old_build_dir.is_symlink():
                 self.info("Updating old build directory name:")
                 if not self.buildDir.exists() and old_build_dir.exists() and not self.config.clean:
@@ -1402,13 +1401,13 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 #     assert isinstance(project, BuildCHERIBSD)
 #     if project.compiling_for_mips(include_purecap=False):
 #         if project.crosscompile_target.is_cheri_hybrid():
-#             return config.outputRoot / ("rootfs-minimal" + config.cheri_bits_and_abi_str)
+#             return config.outputRoot / ("rootfs-minimal" + project.cheri_config_suffix)
 #         if config.mips_float_abi == MipsFloatAbi.HARD:
 #             return config.outputRoot / "rootfs-minimal-mipshf"
 #         return config.outputRoot / "rootfs-minimal-mips"
 #     elif project.compiling_for_riscv(include_purecap=False):
 #         if project.crosscompile_target.is_cheri_hybrid():
-#             return config.outputRoot / ("rootfs-minimal-riscv64" + config.cheri_bits_and_abi_str)
+#             return config.outputRoot / ("rootfs-minimal-riscv64" + project.cheri_config_suffix)
 #         return config.outputRoot / "rootfs-minimal-riscv64"
 #     else:
 #         assert project.crosscompile_target.is_x86_64()

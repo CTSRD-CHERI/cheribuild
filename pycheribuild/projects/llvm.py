@@ -133,7 +133,7 @@ class BuildLLVMBase(CMakeProject):
                 self.add_cmake_options(LLVM_USE_SPLIT_DWARF=True)
         if self.add_default_sysroot:
             self.add_cmake_options(DEFAULT_SYSROOT=self.crossSysrootPath,
-                LLVM_DEFAULT_TARGET_TRIPLE="mips64c" + self.config.cheri_bits_str +
+                LLVM_DEFAULT_TARGET_TRIPLE="mips64c" + self.config.mips_cheri_bits_str +
                                            "hybrid-unknown-freebsd")
         # when making a debug or asserts build speed it up by building a release tablegen
         # Actually it seems like the time spent in CMake is longer than that spent running tablegen, disable for now
@@ -303,9 +303,9 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
             CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_NO_CHERI, self.config, include_version=False),
             # Only create CHERI128 symlinks for now:
             CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_PURECAP, self.config,
-                include_version=False).replace(self.config.cheri_bits_str, "128"),
+                include_version=False).replace(self.config.mips_cheri_bits_str, "128"),
             CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_PURECAP, self.config,
-                include_version=True).replace(self.config.cheri_bits_str, "128"),
+                include_version=True).replace(self.config.mips_cheri_bits_str, "128"),
             ]
         return [x + "-" for x in triples]
 

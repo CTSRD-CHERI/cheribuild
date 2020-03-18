@@ -59,7 +59,7 @@ class TargetInfo(ABC):
         # FIXME: move this to target_info!
         if self.target.is_mips(include_purecap=True):
             if self.target.is_cheri_purecap():
-                return "CHERI (MIPS IV compatible) with {}-bit capabilities".format(self.config.cheri_bits_str)
+                return "CHERI (MIPS IV compatible) with {}-bit capabilities".format(self.config.mips_cheri_bits_str)
             else:
                 return "BERI (MIPS IV compatible)"
         if self.target.is_aarch64(include_purecap=True):
@@ -301,7 +301,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             if self.is_cheribsd:
                 result.append("-mcpu=beri")
             if self.target.is_cheri_purecap():
-                result.extend(["-mabi=purecap", "-mcpu=beri", "-cheri=" + self.config.cheri_bits_str])
+                result.extend(["-mabi=purecap", "-mcpu=beri", "-cheri=" + self.config.mips_cheri_bits_str])
                 if self.config.subobject_bounds:
                     result.extend(["-Xclang", "-cheri-bounds=" + str(self.config.subobject_bounds)])
                     if self.config.subobject_debug:
@@ -313,7 +313,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 # TODO: should we use -mcpu=cheri128/256?
                 result.extend(["-mabi=n64", "-mcpu=beri"])
                 if self.target.is_cheri_hybrid():
-                    result.append("-cheri=" + self.config.cheri_bits_str)
+                    result.append("-cheri=" + self.config.mips_cheri_bits_str)
                 # always use libc++
                 result.append("-stdlib=libc++")
         elif self.target.is_riscv(include_purecap=True):
@@ -515,7 +515,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     def sysroot_dir(self) -> Path:
         # Install to mips/cheri128/cheri256 directory
         if self.target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            suffix = "cheri" + self.config.cheri_bits_str
+            suffix = "cheri" + self.config.mips_cheri_bits_str
         else:
             suffix = self.target.generic_suffix
         return self.config.cheri_sdk_dir / "baremetal" / suffix / self.target_triple
@@ -648,6 +648,10 @@ class MipsFloatAbi(Enum):
 
 
 class CrossCompileTarget(object):
+    # Currently the same for all targets
+    DEFAULT_CAP_TABLE_ABI = "pcrel"
+    DEFAULT_SUBOBJECT_BOUNDS = "conservative"
+
     def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "typing.Type[TargetInfo]", *,
                  is_cheri_purecap=False, is_cheri_hybrid=False, check_conflict_with: "CrossCompileTarget" = None):
         if target_info_cls is None:
@@ -673,16 +677,27 @@ class CrossCompileTarget(object):
             result = ""  # only -128/-256 for legacy build dir compat
         else:
             result = "-" + self.generic_suffix
+        result += self.cheri_config_suffix(config)
+        return result
 
-        if self.cpu_architecture is CPUArchitecture.MIPS64:
-            if self._is_cheri_hybrid:
-                assert result.endswith("hybrid")
-                result += config.cheri_bits_and_abi_str
-            if config.mips_float_abi == MipsFloatAbi.HARD:
-                result += "-hardfloat"
-
-        if self._is_cheri_purecap:
-            result += "-" + config.cheri_bits_and_abi_str
+    def cheri_config_suffix(self, config: "CheriConfig"):
+        """
+        :return: a string such as "-subobject-safe"/"128"/"256-plt" to ensure different build/install dirs for config options
+        """
+        result = ""
+        if self.is_hybrid_or_purecap_cheri([CPUArchitecture.MIPS64]):
+            # MIPS supports 128/256 -> include that in the configuration
+            result += config.mips_cheri_bits_str
+        if self.is_cheri_purecap():
+            if config.cheri_cap_table_abi != self.DEFAULT_CAP_TABLE_ABI:
+                result += "-" + str(config.cheri_cap_table_abi)
+            if config.subobject_bounds is not None and config.subobject_bounds != self.DEFAULT_SUBOBJECT_BOUNDS:
+                result += "-" + str(config.subobject_bounds)
+                # TODO: this suffix should not be added. However, it's useful for me right now...
+                if not config.subobject_debug:
+                    result += "-subobject-nodebug"
+        if self.is_mips(include_purecap=True) and config.mips_float_abi == MipsFloatAbi.HARD:
+            result += "-hardfloat"
         if config.cross_target_suffix:
             result += "-" + config.cross_target_suffix
         return result

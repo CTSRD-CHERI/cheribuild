@@ -394,6 +394,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return self.target_info.sysroot_dir
 
     @property
+    def cheri_config_suffix(self):
+        return self.crosscompile_target.cheri_config_suffix(self.config)
+
+    @property
     def sdk_bindir(self) -> Path:
         return self.target_info.sdk_root_dir / "bin"
 
@@ -1458,7 +1462,7 @@ class Project(SimpleProject):
         else:
             result = target.build_suffix(config)
         if target.is_native() and self.append_cheri_bits_to_native_build_dir:
-            result = "-" + config.cheri_bits_str
+            result = "-" + config.mips_cheri_bits_str
         if self.use_asan:
             result = "-asan" + result
         if self.build_dir_suffix:
@@ -2270,7 +2274,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 basic_args.append("--jenkins-bitfile=cheri128")
             else:
                 assert self.compiling_for_cheri()
-                basic_args.append("--jenkins-bitfile=cheri" + self.config.cheri_bits_str)
+                basic_args.append("--jenkins-bitfile=cheri" + self.config.mips_cheri_bits_str)
             mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(self._get_mfs_kernel_xtarget(),
                 self.config, caller=self)
             if self.config.benchmark_with_debug_kernel:

@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import os
+import shlex
 
 from .project import *
 from ..utils import OSInfo, commandline_to_str, IS_MAC, setEnv

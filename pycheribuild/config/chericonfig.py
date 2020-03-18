@@ -32,6 +32,7 @@ import grp
 import json
 import os
 import typing
+import warnings
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
@@ -72,9 +73,6 @@ class BuildType(Enum):
 
 
 class CheriConfig(object):
-    DEFAULT_CAP_TABLE_ABI = "pcrel"
-    DEFAULT_SUBOBJECT_BOUNDS = "conservative"
-
     def __init__(self, loader: ConfigLoaderBase, action_class):
         loader._cheriConfig = self
         self.loader = loader
@@ -336,7 +334,7 @@ class CheriConfig(object):
 
     def _initializeDerivedPaths(self):
         # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
-        os.environ["CHERI_BITS"] = self.cheri_bits_str
+        os.environ["CHERI_BITS"] = self.mips_cheri_bits_str
         os.environ["CHERI_CAPTABLE_ABI"] = self.cheri_cap_table_abi
 
     @property
@@ -350,28 +348,6 @@ class CheriConfig(object):
     @property
     def mips_cheri_bits_str(self):
         return str(self.mips_cheri_bits)
-
-    @property
-    def cheri_bits_str(self):
-        warnings.warn('This function is deprecated', DeprecationWarning)
-        return str(self.mips_cheri_bits)
-
-    @property
-    def cheri_bits_and_abi_str(self):
-        return str(self.cheriBits) + self.cheri_configuration_str(CompilationTargets.CHERIBSD_MIPS_PURECAP)
-
-    def cheri_configuration_str(self, xtarget: CrossCompileTarget):
-        result = ""
-        if self.cheri_cap_table_abi != self.DEFAULT_CAP_TABLE_ABI:
-            result += "-" + str(self.cheri_cap_table_abi)
-        if self.subobject_bounds is not None and self.subobject_bounds != self.DEFAULT_SUBOBJECT_BOUNDS:
-            result += "-" + str(self.subobject_bounds)
-            # TODO: this suffix should not be added. However, it's useful for me right now...
-            if not self.subobject_debug:
-                result += "-subobject-nodebug"
-        if xtarget.is_mips(include_purecap=True) and self.mips_float_abi == MipsFloatAbi.HARD:
-            result += "-hardfloat"
-        return result
 
     @property
     def cheri_sdk_directory_name(self) -> str:
@@ -398,10 +374,10 @@ class CheriConfig(object):
         if cross_compile_target.is_mips(include_purecap=True):
             if cross_compile_target.is_cheri_hybrid() or (
                     cross_compile_target.is_cheri_purecap() and not separate_cheri_sysroots):
-                return self.cheri_sdk_dir / ("sysroot" + self.cheri_bits_and_abi_str)
+                return self.cheri_sdk_dir / ("sysroot" + cross_compile_target.cheri_config_suffix(self))
             elif cross_compile_target.is_cheri_purecap():
                 assert separate_cheri_sysroots, "Logic error?"
-                return self.cheri_sdk_dir / ("sysroot-purecap" + self.cheri_bits_and_abi_str)
+                return self.cheri_sdk_dir / ("sysroot-purecap" + cross_compile_target.cheri_config_suffix(self))
             if self.mips_float_abi == MipsFloatAbi.HARD:
                 return self.cheri_sdk_dir / "sysroot-mipshf"
             assert not cross_compile_target.is_hybrid_or_purecap_cheri()
@@ -409,10 +385,10 @@ class CheriConfig(object):
         elif cross_compile_target.is_riscv(include_purecap=True):
             if cross_compile_target.is_cheri_hybrid() or (
                     cross_compile_target.is_cheri_purecap() and not separate_cheri_sysroots):
-                return self.cheri_sdk_dir / ("sysroot-riscv64c" + self.cheri_bits_and_abi_str + "-hybrid")
+                return self.cheri_sdk_dir / ("sysroot-riscv64c" + cross_compile_target.cheri_config_suffix(self) + "-hybrid")
             elif cross_compile_target.is_cheri_purecap():
                 assert separate_cheri_sysroots, "Logic error?"
-                return self.cheri_sdk_dir / ("sysroot-riscv64c" + self.cheri_bits_and_abi_str)
+                return self.cheri_sdk_dir / ("sysroot-riscv64c" + cross_compile_target.cheri_config_suffix(self))
             assert not cross_compile_target.is_hybrid_or_purecap_cheri()
             return self.cheri_sdk_dir / "sysroot-riscv64"
         elif cross_compile_target.is_x86_64():
