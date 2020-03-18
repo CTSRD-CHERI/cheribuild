@@ -73,9 +73,6 @@ class DLMalloc(CrossCompileProject):
         cls.quar_unsafe      = cls.add_bool_option("unsafe-quarantine",
                                                  help="Don't isolate quarantine structures")
 
-    def __init__(self, config: CheriConfig, *args, **kwargs):
-        super().__init__(config, *args, **kwargs)
-
     def compile(self, **kwargs):
         if self.cheri_set_bounds :
             self.CFLAGS.append("-DCHERI_SET_BOUNDS")

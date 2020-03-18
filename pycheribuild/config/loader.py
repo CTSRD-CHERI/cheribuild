@@ -33,6 +33,7 @@ import json
 import os
 import shlex
 import shutil
+import sys
 
 try:
     import argcomplete
@@ -146,7 +147,7 @@ class ConfigLoaderBase(object):
 
     def addOption(self, name: str, shortname=None, default=None,
                   type: "typing.Union[typing.Type[Type_T], typing.Callable[[str], Type_T]]" = str,
-                  group=None, helpHidden=False, _owningClass: "typing.Type"=None,
+                  group=None, helpHidden=False, _owning_class: "typing.Type"=None,
                   _fallback_names: "typing.List[str]" = None, option_cls: "typing.Type[ConfigOptionBase]"=None,
                   **kwargs) -> "Type_T":
         if option_cls is None:
@@ -168,7 +169,7 @@ class ConfigLoaderBase(object):
                 kwargs["choices"] = tuple(t.name.lower() for t in type)
             type = _EnumArgparseType(type)
 
-        result = option_cls(name, shortname, default, type, _owningClass, _loader=self, group=group,
+        result = option_cls(name, shortname, default, type, _owning_class, _loader=self, group=group,
                             helpHidden=helpHidden, _fallback_names=_fallback_names, **kwargs)
         assert name not in self.options  # make sure we don't add duplicate options
         self.options[name] = result
@@ -206,31 +207,31 @@ class ConfigLoaderBase(object):
 
 
 class ConfigOptionBase(object):
-    def __init__(self, name: str, shortname: str, default, valueType: "typing.Type", _owningClass=None,
-                 _loader: ConfigLoaderBase=None, _fallback_names: "typing.List[str]"=None):
+    def __init__(self, name: str, shortname: str, default, value_type: "typing.Type", _owning_class=None,
+                 _loader: ConfigLoaderBase = None, _fallback_names: "typing.List[str]" = None):
         self.name = name
         self.shortname = shortname
         self.default = default
-        self.valueType = valueType
+        self.value_type = value_type
         if isinstance(default, ComputedDefaultValue):
             if callable(default.as_string):
-                self.default_str = default.as_string(_owningClass)
+                self.default_str = default.as_string(_owning_class)
             else:
                 self.default_str = str(default.as_string)
         elif default is not None:
-            if isinstance(default, Enum) or isinstance(valueType, _EnumArgparseType):
+            if isinstance(default, Enum) or isinstance(value_type, _EnumArgparseType):
                 # allow append
                 if isinstance(default, list) and not default:
                     self.default_str = "[]"
                 else:
-                    assert isinstance(valueType, _EnumArgparseType), "default is enum but value type isn't: " + str(valueType)
+                    assert isinstance(value_type, _EnumArgparseType), "default is enum but value type isn't: " + str(value_type)
                     assert isinstance(default, Enum), "Should use enum constant for default and not " + str(default)
                     self.default_str = default.name.lower()
             else:
                 self.default_str = str(default)
         self._cached = None
         self._loader = _loader
-        self._owningClass = _owningClass  # if none it means the global CheriConfig is the class containing this option
+        self._owning_class = _owning_class  # if none it means the global CheriConfig is the class containing this option
         self._fallback_names = _fallback_names  # for targets such as gdb-mips, etc
         self._is_default_value = False
 
@@ -281,7 +282,7 @@ class ConfigOptionBase(object):
         # TODO: would be nice if this was possible (but too much depends on accessing values without instances)
         # if instance is None:
         #     return self
-        assert not self._owningClass or issubclass(owner, self._owningClass)
+        assert not self._owning_class or issubclass(owner, self._owning_class)
         if self._cached is None:
             # allow getting the value when used on a class as well:
             if instance is None:
@@ -300,25 +301,25 @@ class ConfigOptionBase(object):
         # check for None to make sure we don't call str(None) which would result in "None"
         if result is None:
             return None
-        # print("Converting", result, "to", self.valueType)
+        # print("Converting", result, "to", self.value_type)
         # if the requested type is list, tuple, etc. use shlex.split() to convert strings to lists
-        if self.valueType != str and isinstance(result, str):
-            if isinstance(self.valueType, type) and issubclass(self.valueType, collections.abc.Sequence):
+        if self.value_type != str and isinstance(result, str):
+            if isinstance(self.value_type, type) and issubclass(self.value_type, collections.abc.Sequence):
                 stringValue = result
                 result = shlex.split(stringValue)
                 print(coloured(AnsiColour.magenta, "Config option ", self.fullOptionName, " (", stringValue,
                                ") should be a list, got a string instead -> assuming the correct value is ",
                                result, sep=""))
-        if isinstance(self.valueType, type) and issubclass(self.valueType, Path):
+        if isinstance(self.value_type, type) and issubclass(self.value_type, Path):
             expanded = os.path.expanduser(os.path.expandvars(str(result)))
             # print("Expanding env vars in", result, "->", expanded, os.environ)
             result = Path(expanded).absolute()
         else:
-            result = self.valueType(result)  # make sure it has the right type (e.g. Path, int, bool, str)
+            result = self.value_type(result)  # make sure it has the right type (e.g. Path, int, bool, str)
         return result
 
     def __repr__(self):
-        return "<{}({}) type={} cached={}>".format(self.__class__.__name__, self.name, self.valueType, self._cached)
+        return "<{}({}) type={} cached={}>".format(self.__class__.__name__, self.name, self.value_type, self._cached)
 
 
 class DefaultValueOnlyConfigOption(ConfigOptionBase):
@@ -331,10 +332,10 @@ class DefaultValueOnlyConfigOption(ConfigOptionBase):
 
 class CommandLineConfigOption(ConfigOptionBase):
     # noinspection PyProtectedMember
-    def __init__(self, name: str, shortname: str, default, valueType: "typing.Type", _owningClass,
+    def __init__(self, name: str, shortname: str, default, value_type: "typing.Type", _owning_class,
                  _loader: ConfigLoaderBase, helpHidden: bool, group: argparse._ArgumentGroup,
                  _fallback_names: "typing.List[str]" = None, **kwargs):
-        super().__init__(name, shortname, default, valueType, _owningClass, _loader, _fallback_names)
+        super().__init__(name, shortname, default, value_type, _owning_class, _loader, _fallback_names)
         # hide obscure options unless --help-hidden/--help/all is passed
         if helpHidden and not self._loader.showAllHelp:
             kwargs["help"] = argparse.SUPPRESS
@@ -344,7 +345,7 @@ class CommandLineConfigOption(ConfigOptionBase):
         assert "default" not in kwargs  # Should be handled manually
         # noinspection PyProtectedMember
         parserObj = group if group else self._loader._parser
-        if self.valueType == bool and group is None:
+        if self.value_type == bool and group is None:
             parserObj = parserObj.add_mutually_exclusive_group()
             kwargs["default"] = None
             assert kwargs["action"] == "store_true"
@@ -352,7 +353,7 @@ class CommandLineConfigOption(ConfigOptionBase):
             action = parserObj.add_argument("--" + self.name, "-" + self.shortname, **kwargs)
         else:
             action = parserObj.add_argument("--" + self.name, **kwargs)
-        if self.valueType == bool:
+        if self.value_type == bool:
             slashIndex = self.name.rfind("/")
             negatedName = self.name[:slashIndex + 1] + "no-" + self.name[slashIndex + 1:]
             negatedHelp = argparse.SUPPRESS

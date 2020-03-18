@@ -506,7 +506,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if extra_fallback_config_names:
             fallback_config_names.extend(extra_fallback_config_names)
         return cls._configLoader.addOption(config_option_key + "/" + name, shortname, default=default, type=kind,
-                                           _owningClass=cls, group=cls._commandLineOptionGroup, helpHidden=help_hidden,
+                                           _owning_class=cls, group=cls._commandLineOptionGroup, helpHidden=help_hidden,
                                            _fallback_names=fallback_config_names, **kwargs)
 
     @classmethod
@@ -1379,7 +1379,7 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
 
 def _default_install_dir_str(project: "Project") -> str:
     install_dir = project.get_default_install_dir_kind()
-    return install_dir.value
+    return str(install_dir.value)
     # fatalError("Unknown install dir for", project.project_name)
 
 

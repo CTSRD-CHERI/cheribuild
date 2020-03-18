@@ -28,7 +28,6 @@
 # SUCH DAMAGE.
 #
 
-from .cheribsd import *
 from .crosscompileproject import CrossCompileAutotoolsProject
 from .gdb import BuildGDB
 from ..project import *

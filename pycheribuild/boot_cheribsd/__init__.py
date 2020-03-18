@@ -222,10 +222,10 @@ def set_ld_library_path_with_sysroot(qemu: CheriBSDInstance):
 def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, args: argparse.Namespace = None, what: str = None) -> Path:
     # drop the suffix and then try decompressing
     def bunzip(archive):
-        return decompress(archive, force_decompression, cmd=["bunzip2", "-v", "-f"], keep_archive=keep_archive, args=args)
+        return decompress(archive, force_decompression, cmd=["bunzip2", "-v", "-f"], keep_archive=keep_archive)
 
     def unxz(archive):
-        return decompress(archive, force_decompression, cmd=["xz", "-d", "-v", "-f"], keep_archive=keep_archive, args=args)
+        return decompress(archive, force_decompression, cmd=["xz", "-d", "-v", "-f"], keep_archive=keep_archive)
 
     if args and getattr(args, "internal_shard", None) and not PRETEND:
         assert path.exists()
