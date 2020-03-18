@@ -1376,7 +1376,7 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
     project.fatal("Unknown install dir for", project.project_name)
 
 
-def _default_install_dir_str(project: "Project"):
+def _default_install_dir_str(project: "Project") -> str:
     install_dir = project.get_default_install_dir_kind()
     return install_dir.value
     # fatalError("Unknown install dir for", project.project_name)
@@ -1479,7 +1479,7 @@ class Project(SimpleProject):
         return not self._crossCompileTarget.is_cheri_purecap()
 
     @classmethod
-    def get_default_install_dir_kind(cls):
+    def get_default_install_dir_kind(cls) -> DefaultInstallDir:
         if cls.default_install_dir is not None:
             assert cls.native_install_dir is None, "default_install_dir and native_install_dir are mutually " \
                                                        "exclusive"

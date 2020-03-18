@@ -58,7 +58,7 @@ class BuildGo(Project):
     def build_dir_for_target(self, target: CrossCompileTarget):
         return self.sourceDir / "pkg"
 
-    def compile(self):
+    def compile(self, **kwargs):
         env = {
             "GOROOT_FINAL": self.gorootDir,
         }

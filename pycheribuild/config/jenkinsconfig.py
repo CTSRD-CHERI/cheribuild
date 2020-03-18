@@ -182,10 +182,6 @@ class JenkinsConfig(CheriConfig):
             os_suffix = "unknown-os"
         return self.workspace / ("qemu-" + os_suffix) / "bin"
 
-    def get_cheribsd_sysroot_path(self, cross_compile_target: CrossCompileTarget, separate_cheri_sysroots=False):
-        # TODO: currently we need this to be unprefixed since that is what the archives created by jenkins look like
-        return self.cheri_sdk_dir / "sysroot"
-
     def load(self):
         super().load()
 

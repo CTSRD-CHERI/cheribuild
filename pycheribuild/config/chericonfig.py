@@ -361,41 +361,6 @@ class CheriConfig(object):
     def qemu_bindir(self):
         return self.cheri_sdk_bindir
 
-    def get_cheribsd_sysroot_path(self, cross_compile_target: CrossCompileTarget, separate_cheri_sysroots=False) -> Path:
-        """
-
-        :param cross_compile_target: The target we want the sysroot dir for
-        :param separate_cheri_sysroots: If true will use a separate sysroot dir for purecap and hybrid sysroots. The
-        default behaviour is to use the hybrid sysroot for both purecap and hybrid applications.
-        :return: The sysroot path
-        """
-        assert isinstance(cross_compile_target, CrossCompileTarget)
-        assert issubclass(cross_compile_target.target_info_cls, CheriBSDTargetInfo), "Only valid for CheriBSD targets"
-        if cross_compile_target.is_mips(include_purecap=True):
-            if cross_compile_target.is_cheri_hybrid() or (
-                    cross_compile_target.is_cheri_purecap() and not separate_cheri_sysroots):
-                return self.cheri_sdk_dir / ("sysroot" + cross_compile_target.cheri_config_suffix(self))
-            elif cross_compile_target.is_cheri_purecap():
-                assert separate_cheri_sysroots, "Logic error?"
-                return self.cheri_sdk_dir / ("sysroot-purecap" + cross_compile_target.cheri_config_suffix(self))
-            if self.mips_float_abi == MipsFloatAbi.HARD:
-                return self.cheri_sdk_dir / "sysroot-mipshf"
-            assert not cross_compile_target.is_hybrid_or_purecap_cheri()
-            return self.cheri_sdk_dir / "sysroot-mips"
-        elif cross_compile_target.is_riscv(include_purecap=True):
-            if cross_compile_target.is_cheri_hybrid() or (
-                    cross_compile_target.is_cheri_purecap() and not separate_cheri_sysroots):
-                return self.cheri_sdk_dir / ("sysroot-riscv64c" + cross_compile_target.cheri_config_suffix(self) + "-hybrid")
-            elif cross_compile_target.is_cheri_purecap():
-                assert separate_cheri_sysroots, "Logic error?"
-                return self.cheri_sdk_dir / ("sysroot-riscv64c" + cross_compile_target.cheri_config_suffix(self))
-            assert not cross_compile_target.is_hybrid_or_purecap_cheri()
-            return self.cheri_sdk_dir / "sysroot-riscv64"
-        elif cross_compile_target.is_x86_64():
-            return self.cheri_sdk_dir / "sysroot-x86_64"
-        else:
-            assert False, "Invalid cross_compile_target: " + str(cross_compile_target)
-
     def _ensure_required_properties_set(self) -> bool:
         for key in self.__dict__.keys():
             if key in self.__optionalProperties:

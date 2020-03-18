@@ -224,7 +224,7 @@ class BuildFreeBSDBase(Project):
             # both purecap and hybrid targets against the same sysroot.
             # For MIPS self.target_info.sysroot_dir is $CHERI_SDK/sysroot128 in both cases, but we
             # want to install the purecap one (with default ABI == purecap) to sysroot-purecap128
-            return self.config.get_cheribsd_sysroot_path(self.crosscompile_target, separate_cheri_sysroots=True)
+            return self.target_info.get_cheribsd_sysroot_path(separate_cheri_sysroots=True)
         else:
             assert not self.has_installsysroot_target, "Not implemented yet"
             return self.target_info.sysroot_dir
