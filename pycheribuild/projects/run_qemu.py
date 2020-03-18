@@ -345,9 +345,9 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     @classmethod
     def get_cross_target_index(cls):
         for idx, value in enumerate(cls.supported_architectures):
-            if cls._crossCompileTarget is value:
+            if cls._xtarget is value:
                 return idx
-        assert cls._crossCompileTarget is CompilationTargets.NONE
+        assert cls._xtarget is CompilationTargets.NONE
         return -1  # return -1 for NONE
 
     @classproperty

@@ -39,7 +39,7 @@ from ..utils import defaultNumberOfMakeJobs, fatalError, IS_MAC, IS_LINUX, IS_FR
 
 
 def default_install_prefix(conf: "JenkinsConfig", unused):
-    if conf.crossCompileTarget.is_native():
+    if conf.preferred_xtarget.is_native():
         return "/opt/" + conf.targets[0]
     return "/opt/" + conf.cpu
 
@@ -206,38 +206,38 @@ class JenkinsConfig(CheriConfig):
             self.cheri_sdk_dir = Path("/cheri-sdk")
         else:
             self.cheri_sdk_dir = self.workspace / self.cheri_sdk_directory_name
-        self.crossCompileTarget = self.cpu
+        self.preferred_xtarget = self.cpu
         self.mips_cheri_bits = 128
         if self.cpu == "default":
-            self.crossCompileTarget = CompilationTargets.NONE
+            self.preferred_xtarget = CompilationTargets.NONE
         elif self.cpu == "cheri128":
             self.mips_cheri_bits = 128
-            self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
+            self.preferred_xtarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
         elif self.cpu == "cheri256":
             self.mips_cheri_bits = 256
-            self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
+            self.preferred_xtarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
         elif self.cpu in ("mips", "hybrid-cheri128", "hybrid-cheri256"):  # MIPS with CHERI memcpy
             if self.cpu == "mips" and self.sdk_cpu in ("cheri128", "cheri256"):
                 self.cpu = "hybrid-" + self.sdk_cpu
             if self.cpu.startswith("hybrid-cheri"):
                 self.mips_cheri_bits = int(self.cpu[len("hybrid-cheri"):])
                 self.run_mips_tests_with_cheri_image = True
-                self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
+                self.preferred_xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
             else:
                 assert self.cpu == "mips"
-                self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_NO_CHERI
+                self.preferred_xtarget = CompilationTargets.CHERIBSD_MIPS_NO_CHERI
         elif self.cpu == "riscv64":
-            self.crossCompileTarget = CompilationTargets.CHERIBSD_RISCV_NO_CHERI
+            self.preferred_xtarget = CompilationTargets.CHERIBSD_RISCV_NO_CHERI
         elif self.cpu == "riscv64-hybrid":
-            self.crossCompileTarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
+            self.preferred_xtarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
         elif self.cpu == "riscv64-purecap":
-            self.crossCompileTarget = CompilationTargets.CHERIBSD_RISCV_PURECAP
+            self.preferred_xtarget = CompilationTargets.CHERIBSD_RISCV_PURECAP
         elif self.cpu in ("x86", "x86_64", "amd64", "host", "native"):
-            self.crossCompileTarget = CompilationTargets.NATIVE
+            self.preferred_xtarget = CompilationTargets.NATIVE
         else:
             fatalError("CPU is not set to a valid value:", self.cpu)
 
-        if IS_MAC and self.crossCompileTarget.is_native():
+        if IS_MAC and self.preferred_xtarget.is_native():
             self.without_sdk = True  # cannot build macos binaries with lld
 
         if self.force_update:
@@ -245,7 +245,7 @@ class JenkinsConfig(CheriConfig):
             self.skipClone = False
 
         if self.without_sdk:
-            if not self.crossCompileTarget.is_native():
+            if not self.preferred_xtarget.is_native():
                 fatalError("The --without-sdk flag only works when building host binaries")
             self.cheri_sdk_dir = self.outputRoot / str(self.installationPrefix).strip('/')
             # allow overriding the clang/clang++ paths with HOST_CC/HOST_CXX

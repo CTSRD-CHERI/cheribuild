@@ -191,7 +191,7 @@ class CheriConfig(object):
         self.qemu_debug_program = loader.addOption("qemu-gdb-debug-userspace-program",
             help="Print the command to debug the following userspace program in GDB attaced to QEMU")
         self.includeDependencies = None  # type: Optional[bool]
-        self.crossCompileTarget = None  # type: Optional[CrossCompileTarget]
+        self.preferred_xtarget = None  # type: Optional[CrossCompileTarget]
         self.makeWithoutNice = None  # type: Optional[bool]
 
         self.mips_cheri_bits = None  # type: Optional[int]
@@ -277,7 +277,7 @@ class CheriConfig(object):
 
         self.targets = None  # type: typing.Optional[typing.List[str]]
         self.FS = None  # type: Optional[FileSystemUtils]
-        self.__optionalProperties = ["crossCompileTarget"]
+        self.__optionalProperties = ["preferred_xtarget"]
 
     def load(self):
         self.loader.load()

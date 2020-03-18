@@ -54,7 +54,7 @@ class Target(object):
     @property
     def projectClass(self) -> "typing.Type[SimpleProject]":
         result = self._project_class
-        assert result._crossCompileTarget is not CompilationTargets.NONE
+        assert result._xtarget is not CompilationTargets.NONE
         return result
 
     def get_real_target(self, cross_target: CrossCompileTarget, config, caller=None) -> "Target":
@@ -242,7 +242,7 @@ class MultiArchTargetAlias(Target):
         assert self.derived_targets, "derived targets must not be empty"
         tgt = self.get_real_target(cross_target, config)
         # Update the cross target
-        cross_target = tgt._project_class._crossCompileTarget
+        cross_target = tgt._project_class._xtarget
         assert cross_target is not CompilationTargets.NONE
         return tgt.get_or_create_project(cross_target, config)
 

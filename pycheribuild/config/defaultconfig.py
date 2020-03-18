@@ -130,12 +130,12 @@ class DefaultCheriConfig(CheriConfig):
         super().load()
         if self.crossCompileForHost:
             assert not self.crossCompileForMips
-            self.crossCompileTarget = CompilationTargets.NATIVE
+            self.preferred_xtarget = CompilationTargets.NATIVE
         elif self.crossCompileForMips:
             assert not self.crossCompileForHost
-            self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
+            self.preferred_xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
         else:
-            self.crossCompileTarget = CompilationTargets.NONE
+            self.preferred_xtarget = CompilationTargets.NONE
         # now set some generic derived config options
         self.cheri_sdk_dir = self.outputRoot / self.cheri_sdk_directory_name  # qemu and binutils (and llvm/clang)
         self.otherToolsDir = self.outputRoot / "bootstrap"

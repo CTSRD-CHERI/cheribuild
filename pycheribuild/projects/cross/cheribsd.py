@@ -195,7 +195,7 @@ class BuildFreeBSDBase(Project):
         self.make_args.add_flags("-de")
 
         for option in self.makeOptions:
-            if not self._crossCompileTarget.is_cheri_purecap() and "CHERI_" in option:
+            if not self._xtarget.is_cheri_purecap() and "CHERI_" in option:
                 warningMessage("Not adding CHERI specific make option", option, "for", self.target,
                                " -- consider setting separate", self.target + "/make-options in the config file.")
                 continue
@@ -299,7 +299,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             help="The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64 or CHERI128_MALTA64"
                  " depending on --cheri-bits)")  # type: str
 
-        if cls._crossCompileTarget.is_hybrid_or_purecap_cheri():
+        if cls._xtarget.is_hybrid_or_purecap_cheri():
             # When targeting CHERI we have to use CHERI LLVM
             assert not use_upstream_llvm
             assert not bootstrap_toolchain

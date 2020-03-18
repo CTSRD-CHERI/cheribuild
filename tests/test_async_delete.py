@@ -20,7 +20,7 @@ class MockProject(Project):
     repository = ExternallyManagedSourceRepository()
 
     def __init__(self, config: MockConfig, name: str):
-        self._crossCompileTarget = CompilationTargets.NATIVE
+        self._xtarget = CompilationTargets.NATIVE
         self.project_name = name
         expected_src = config.sourceRoot / "sources" / name  # type: Path
         self.default_source_dir = expected_src

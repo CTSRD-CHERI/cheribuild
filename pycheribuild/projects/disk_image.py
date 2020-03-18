@@ -962,7 +962,7 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
         tmpfs_shortname = None
         extra_files_shortname = None
         disk_img_shortname = None
-        if cls._crossCompileTarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
+        if cls._xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
             tmpfs_shortname = "-disable-tmpfs"
             disk_img_shortname = "-disk-image-path"
             extra_files_shortname = "-extra-files"
@@ -991,9 +991,9 @@ class BuildFreeBSDImage(BuildMultiArchDiskImage):
     @classmethod
     def setup_config_options(cls, **kwargs):
         hostUsername = CheriConfig.get_user_name()
-        suffix = cls._crossCompileTarget.generic_suffix if cls._crossCompileTarget else "<TARGET>"
+        suffix = cls._xtarget.generic_suffix if cls._xtarget else "<TARGET>"
         super().setup_config_options(defaultHostname="qemu-" + suffix + "-" + hostUsername, **kwargs)
-        cls.disableTMPFS = cls._crossCompileTarget.is_mips()  # MALTA64 doesn't include tmpfs
+        cls.disableTMPFS = cls._xtarget.is_mips()  # MALTA64 doesn't include tmpfs
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

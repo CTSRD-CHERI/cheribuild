@@ -106,7 +106,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-device-option", "COMPILER_FLAGS=" + commandline_to_str(compiler_flags),
                 "-device-option", "LINKER_FLAGS=" + commandline_to_str(linker_flags),
                 "-sysroot", self.crossSysrootPath,
-                "-prefix", "/usr/local/" + self._crossCompileTarget.generic_suffix
+                "-prefix", "/usr/local/" + self._xtarget.generic_suffix
             ])
 
         self.configureArgs.extend([
@@ -405,7 +405,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                                )
         if not self.compiling_for_host():
             # we need to find the installed Qt
-            self.add_cmake_options(Qt5_DIR=self.crossSysrootPath / ("usr/local/" + self._crossCompileTarget.generic_suffix) / "lib/cmake/Qt5")
+            self.add_cmake_options(Qt5_DIR=self.crossSysrootPath / ("usr/local/" + self._xtarget.generic_suffix) / "lib/cmake/Qt5")
             self.add_cmake_options(PNG_LIBRARIES="libqtlibpng.a")
             self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.getSourceDir(self) / "src/3rdparty/libpng")
             if self.force_static_linkage:

@@ -130,7 +130,7 @@ def get_sdk_archives(cheriConfig, needs_cheribsd_sysroot: bool) -> "typing.List[
         warningMessage("Neither full SDK archive", cheriConfig.sdkArchiveName, " nor clang archive", clang_archive_name,
                        "exists, will use only existing $WORKSPACE/cherisdk")
         return []
-    if cheriConfig.crossCompileTarget.is_native():
+    if cheriConfig.preferred_xtarget.is_native():
         # we need the LLVM builtin includes (should be part of the clang archive)
         clang_archive.required_globs.append("lib/clang/*/include/stddef.h")
         return [clang_archive]
@@ -257,12 +257,12 @@ def _jenkins_main():
         Target.instantiating_targets_should_warn = False
         target.checkSystemDeps(cheriConfig)
         # need to set destdir after checkSystemDeps:
-        project = target.get_or_create_project(cheriConfig.crossCompileTarget, cheriConfig)
+        project = target.get_or_create_project(cheriConfig.preferred_xtarget, cheriConfig)
         assert project
         cross_target = project.get_crosscompile_target(cheriConfig)
-        if isinstance(target, MultiArchTargetAlias) and cross_target is not None and cross_target != cheriConfig.crossCompileTarget and cheriConfig.crossCompileTarget is not CompilationTargets.NONE:
+        if isinstance(target, MultiArchTargetAlias) and cross_target is not None and cross_target != cheriConfig.preferred_xtarget and cheriConfig.preferred_xtarget is not CompilationTargets.NONE:
             fatalError("Cannot build project", project.target, "with cross compile target", cross_target.name,
-                       "when --cpu is set to", cheriConfig.crossCompileTarget.name, fatalWhenPretending=True)
+                       "when --cpu is set to", cheriConfig.preferred_xtarget.name, fatalWhenPretending=True)
         if isinstance(project, CrossCompileMixin):
             project.destdir = cheriConfig.outputRoot
             project._installPrefix = cheriConfig.installationPrefix
