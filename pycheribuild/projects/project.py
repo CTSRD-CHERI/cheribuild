@@ -1874,7 +1874,8 @@ class Project(SimpleProject):
             self.add_lto_build_options(getCompilerInfo(self.CC))
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):
-        raise NotImplementedError()
+        self.fatal("Building", self.project_name, "with LTO is not supported (yet).")
+        # raise NotImplementedError()
 
     def add_lto_build_options(self, ccinfo: CompilerInfo) -> bool:
         compiler = ccinfo.path
