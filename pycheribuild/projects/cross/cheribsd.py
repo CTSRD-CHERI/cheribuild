@@ -1146,7 +1146,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     @property
     def build_dir_suffix(self):
         if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            return "-purecap"
+            return "-purecap-"
         return super().build_dir_suffix
 
     @classmethod

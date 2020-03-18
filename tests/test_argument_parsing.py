@@ -339,12 +339,14 @@ def test_duplicate_key():
         _parse_config_file_and_args(b'{ "cheri-bits": 128, "some-other-key": "abc", "cheri-bits": 256 }')
         assert re.search("duplicate key: 'cheri-bits'", excinfo.value)
 
+
 def _get_config_with_include(tmpdir: Path, config_json: bytes, workdir: Path = None):
     if not workdir:
         workdir = tmpdir
     config = workdir / "config.json"
     config.write_bytes(config_json)
     return _parse_arguments([], config_file=config)
+
 
 def test_config_file_include():
     with tempfile.TemporaryDirectory() as d:
@@ -531,7 +533,7 @@ def test_default_arch(base_name, expected):
                  "cheribsd-mips-hybrid128-plt-build"),
     # everything
     pytest.param("cheribsd-purecap", ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
-                 "cheribsd-purecap-hardfloat-128-plt-aggressive-hardfloat-build"),
+                 "cheribsd-purecap-128-plt-aggressive-hardfloat-build"),
 ])
 def test_default_arch(target: str, args: list, expected: str):
     # Check that the cheribsd build dir is correct

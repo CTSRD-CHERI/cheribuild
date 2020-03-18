@@ -720,7 +720,7 @@ class CrossCompileTarget(object):
         if self.is_hybrid_or_purecap_cheri([CPUArchitecture.MIPS64]):
             # MIPS supports 128/256 -> include that in the configuration
             result += config.mips_cheri_bits_str
-        if self.is_cheri_purecap():
+        if self.is_hybrid_or_purecap_cheri():
             if config.cheri_cap_table_abi != self.DEFAULT_CAP_TABLE_ABI:
                 result += "-" + str(config.cheri_cap_table_abi)
             if config.subobject_bounds is not None and config.subobject_bounds != self.DEFAULT_SUBOBJECT_BOUNDS:
