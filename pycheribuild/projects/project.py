@@ -815,7 +815,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             kernel_path = self._get_mfs_root_kernel(use_benchmark_kernel=want_benchmark_kernel)
             if not kernel_path.exists():
                 cheribsd_image = "cheribsd{suffix}-cheri{suffix}-malta64-mfs-root-minimal-cheribuild-kernel.bz2".format(
-                        suffix="" if self.config.cheriBits == 256 else self.config.cheri_bits_str)
+                        suffix="" if self.config.mips_cheri_bits == 256 else str(self.config.mips_cheri_bits))
                 freebsd_image = "freebsd-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
                 if xtarget.is_mips(include_purecap=False):
                     guessed_archive = cheribsd_image if self.config.run_mips_tests_with_cheri_image else freebsd_image

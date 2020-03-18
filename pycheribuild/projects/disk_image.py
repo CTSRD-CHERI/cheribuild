@@ -693,7 +693,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         hostUsername = CheriConfig.get_user_name()
         defaultHostname = ComputedDefaultValue(
             function=lambda conf, unused: "qemu-cheri" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
-            as_string="qemu-cheri${CHERI_BITS}-" + hostUsername)
+            as_string="qemu-cheri${ABI}-" + hostUsername)
 
         super().setup_config_options(defaultHostname=defaultHostname, extraFilesSuffix="-minimal", **kwargs)
         cls.strip_binaries = cls.add_bool_option("strip", default=True,
@@ -957,7 +957,7 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
         hostUsername = CheriConfig.get_user_name()
         defaultHostname = ComputedDefaultValue(
             function=lambda conf, unused: "qemu-cheri" + conf.cheri_bits_and_abi_str + "-" + hostUsername,
-            as_string="qemu-cheri${CHERI_BITS}-" + hostUsername)
+            as_string="qemu-cheri${ABI}-" + hostUsername)
 
         tmpfs_shortname = None
         extra_files_shortname = None

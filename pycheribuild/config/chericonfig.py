@@ -196,7 +196,7 @@ class CheriConfig(object):
         self.crossCompileTarget = None  # type: Optional[CrossCompileTarget]
         self.makeWithoutNice = None  # type: Optional[bool]
 
-        self.cheriBits = None  # type: Optional[int]
+        self.mips_cheri_bits = None  # type: Optional[int]
         self.makeJobs = None  # type: Optional[int]
 
         self.sourceRoot = None  # type: Optional[Path]
@@ -348,8 +348,13 @@ class CheriConfig(object):
         return "-j" + str(self.makeJobs)
 
     @property
+    def mips_cheri_bits_str(self):
+        return str(self.mips_cheri_bits)
+
+    @property
     def cheri_bits_str(self):
-        return str(self.cheriBits)
+        warnings.warn('This function is deprecated', DeprecationWarning)
+        return str(self.mips_cheri_bits)
 
     @property
     def cheri_bits_and_abi_str(self):

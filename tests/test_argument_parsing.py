@@ -359,14 +359,14 @@ def test_config_file_include():
 
         # Check that the current file always has precendence
         result = _get_config_with_include(config_dir, b'{ "#include": "256-common.json", "cheri-bits": 128}')
-        assert 128 == result.cheriBits
+        assert 128 == result.mips_cheri_bits
         result = _get_config_with_include(config_dir, b'{ "#include": "128-common.json", "cheri-bits": 256}')
-        assert 256 == result.cheriBits
+        assert 256 == result.mips_cheri_bits
         # order doesn't matter since the #include is only evaluated after the whole file has been parsed:
         result = _get_config_with_include(config_dir, b'{ "cheri-bits": 128, "#include": "256-common.json"}')
-        assert 128 == result.cheriBits
+        assert 128 == result.mips_cheri_bits
         result = _get_config_with_include(config_dir, b'{ "cheri-bits": 256, "#include": "128-common.json"}')
-        assert 256 == result.cheriBits
+        assert 256 == result.mips_cheri_bits
 
         # TODO: handled nested cases: the level closest to the initial file wins
         (config_dir / "change-source-root.json").write_bytes(

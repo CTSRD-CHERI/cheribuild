@@ -75,11 +75,11 @@ class BuildCheriSim(Project):
         self._addRequiredSystemHeader("mpfr.h", apt="libmpfr-dev")
         self.make_args.set(COP1="1" if self.build_fpu else "0")
         if self.build_cheri:
-            if self.config.cheriBits == 128:
+            if self.config.mips_cheri_bits == 128:
                 self.make_args.set(CAP128="1")
             else:
                 self.make_args.set(CAP="1")
-        self.make_args.set(NOPRINTS="1") # This massively speeds up the simulator
+        self.make_args.set(NOPRINTS="1")  # This massively speeds up the simulator
 
     @classmethod
     def setup_config_options(cls, **kwargs):

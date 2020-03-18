@@ -54,7 +54,7 @@ def default_kernel_config(config: CheriConfig, project: SimpleProject) -> str:
             # or a purecap kernel is selected
             assert isinstance(project, BuildCHERIBSD)
             kernconf_name = "CHERI{bits}{pure}_MALTA64"
-            cheri_bits = "128" if config.cheriBits == 128 else ""
+            cheri_bits = "128" if config.mips_cheri_bits == 128 else ""
             cheri_pure = "_PURECAP" if project.purecapKernel else ""
             return kernconf_name.format(bits=cheri_bits, pure=cheri_pure)
         return "MALTA64"
@@ -1189,9 +1189,9 @@ class BuildCHERIBSD(BuildFreeBSD):
         if self.buildFpgaKernels:
             if self.compiling_for_mips(include_purecap=True):
                 if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                    if self.config.cheriBits == 128:
+                    if self.config.mips_cheri_bits == 128:
                         prefix = "CHERI128_DE4_"
-                    elif self.config.cheriBits == 256:
+                    elif self.config.mips_cheri_bits == 256:
                         prefix = "CHERI_DE4_"
                     else:
                         assert False, "unreachable"
@@ -1317,7 +1317,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     def fpga_kernconf(self):
         if self.compiling_for_mips(include_purecap=True):
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                return "CHERI128_DE4_MFS_ROOT" if self.config.cheriBits == 128 else "CHERI_DE4_MFS_ROOT"
+                return "CHERI128_DE4_MFS_ROOT" if self.config.mips_cheri_bits == 128 else "CHERI_DE4_MFS_ROOT"
             return "BERI_DE4_MFS_ROOT"
         elif self.compiling_for_riscv(include_purecap=True):
             return "CHERI_GFE" if self.crosscompile_target.is_hybrid_or_purecap_cheri() else "GFE"

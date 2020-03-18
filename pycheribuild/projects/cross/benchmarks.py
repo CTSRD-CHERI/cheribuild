@@ -32,6 +32,7 @@ import tempfile
 
 from .crosscompileproject import *
 from ..project import ExternallyManagedSourceRepository
+from ...config.target_info import CPUArchitecture
 from ...utils import setEnv, commandline_to_str, is_jenkins_build
 
 
@@ -65,8 +66,8 @@ class BuildMibench(CrossCompileProject):
     def benchmark_version(self):
         if self.compiling_for_host():
             return "x86"
-        if self.compiling_for_cheri():
-            return "cheri" + self.config.cheri_bits_str
+        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+            return "cheri" + self.config.mips_cheri_bits_str
         if self.compiling_for_mips(include_purecap=False):
             return "mips-asan" if self.use_asan else "mips"
         raise ValueError("Unsupported target architecture!")
@@ -84,17 +85,12 @@ class BuildMibench(CrossCompileProject):
                 self.make_args.set(AR=str(self.sdk_bindir / "llvm-ar") + " rc")
                 self.make_args.set(AR2=str(self.sdk_bindir / "llvm-ranlib"))
                 self.make_args.set(RANLIB=str(self.sdk_bindir / "llvm-ranlib"))
+                self.make_args.set(MIPS_SYSROOT=self.sdk_sysroot, CHERI128_SYSROOT=self.sdk_sysroot,
+                    CHERI256_SYSROOT=self.sdk_sysroot)
+
             self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(self.default_compiler_flags))
             self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
             self.make_args.set(VERSION=self.benchmark_version)
-            if self.compiling_for_mips(include_purecap=False):
-                self.make_args.set(MIPS_SYSROOT=self.sdk_sysroot)
-            if self.compiling_for_cheri():
-                if self.config.cheriBits == 128:
-                    self.make_args.set(VERSION="cheri128", CHERI128_SYSROOT=self.sdk_sysroot)
-                else:
-                    assert self.config.cheriBits == 256
-                    self.make_args.set(VERSION="cheri256", CHERI256_SYSROOT=self.sdk_sysroot)
             self.makedirs(self.buildDir / "bundle")
             self.make_args.set(BUNDLE_DIR=self.buildDir / self.bundle_dir)
             self.run_make("bundle_dump", cwd=self.sourceDir)
@@ -182,14 +178,12 @@ class BuildOlden(CrossCompileProject):
             self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
             if self.compiling_for_host():
                 self.run_make("x86")
-            if self.compiling_for_mips(include_purecap=False):
+            elif self.compiling_for_mips(include_purecap=False):
                 self.run_make("mips-asan" if self.use_asan else "mips")
-            if self.compiling_for_cheri():
-                if self.config.cheriBits == 128:
-                    self.run_make("cheriabi128")
-                else:
-                    assert self.config.cheriBits == 256
-                    self.run_make("cheriabi256")
+            elif self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+                self.run_make("cheriabi" + self.config.mips_cheri_bits_str)
+            else:
+                self.fatal("Unknown target: ", self.crosscompile_target)
         # copy asan libraries and the run script to the bin dir to ensure that we can run with --test from the
         # build directory.
         self.installFile(self.sourceDir / "run_jenkins-bluehive.sh",
@@ -201,11 +195,12 @@ class BuildOlden(CrossCompileProject):
     def test_arch_suffix(self):
         if self.compiling_for_host():
             return "x86"
-        if self.compiling_for_cheri():
-            return "cheri" + self.config.cheri_bits_str
-        else:
-            assert self.compiling_for_mips(include_purecap=False), "other arches not supported"
+        if self.compiling_for_mips(include_purecap=True):
+            if self.crosscompile_target.is_cheri_purecap():
+                return "cheri" + self.config.mips_cheri_bits_str
             return "mips-asan" if self.use_asan else "mips"
+        else:
+            assert False, "other arches not supported"
 
     def install(self, **kwargs):
         self.makedirs(self.installDir)

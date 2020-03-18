@@ -457,7 +457,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         if target.is_cheri_purecap():
             # anything over 10 should use libc++ by default
             if target.is_mips(include_purecap=True):
-                return "mips64c{}-unknown-freebsd{}-purecap".format(config.cheriBits,
+                return "mips64c{}-unknown-freebsd{}-purecap".format(config.mips_cheri_bits,
                     cls.FREEBSD_VERSION if include_version else "")
             elif target.is_riscv(include_purecap=True):
                 return "riscv64-unknown-freebsd{}".format(cls.FREEBSD_VERSION if include_version else "")
@@ -537,7 +537,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     def target_triple(self):
         if self.target.is_mips(include_purecap=True):
             if self.target.is_cheri_purecap():
-                return "mips64c{}-qemu-elf-purecap".format(self.config.cheriBits)
+                return "mips64c{}-qemu-elf-purecap".format(self.config.mips_cheri_bits)
             return "mips64-qemu-elf"
         if self.target.is_riscv(include_purecap=True):
             if self.target.is_cheri_purecap():

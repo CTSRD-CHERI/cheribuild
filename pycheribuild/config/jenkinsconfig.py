@@ -211,37 +211,32 @@ class JenkinsConfig(CheriConfig):
         else:
             self.cheri_sdk_dir = self.workspace / self.cheri_sdk_directory_name
         self.crossCompileTarget = self.cpu
+        self.mips_cheri_bits = 128
         if self.cpu == "default":
-            self.cheriBits = 128
             self.crossCompileTarget = CompilationTargets.NONE
         elif self.cpu == "cheri128":
-            self.cheriBits = 128
+            self.mips_cheri_bits = 128
             self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
         elif self.cpu == "cheri256":
-            self.cheriBits = 256
+            self.mips_cheri_bits = 256
             self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
         elif self.cpu in ("mips", "hybrid-cheri128", "hybrid-cheri256"):  # MIPS with CHERI memcpy
-            self.cheriBits = 9998
             if self.cpu == "mips" and self.sdk_cpu in ("cheri128", "cheri256"):
                 self.cpu = "hybrid-" + self.sdk_cpu
             if self.cpu.startswith("hybrid-cheri"):
-                self.cheriBits = int(self.cpu[len("hybrid-cheri"):])
+                self.mips_cheri_bits = int(self.cpu[len("hybrid-cheri"):])
                 self.run_mips_tests_with_cheri_image = True
                 self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
             else:
                 assert self.cpu == "mips"
                 self.crossCompileTarget = CompilationTargets.CHERIBSD_MIPS_NO_CHERI
         elif self.cpu == "riscv64":
-            self.cheriBits = 9999
             self.crossCompileTarget = CompilationTargets.CHERIBSD_RISCV_NO_CHERI
         elif self.cpu == "riscv64-hybrid":
-            self.cheriBits = 128
             self.crossCompileTarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
         elif self.cpu == "riscv64-purecap":
-            self.cheriBits = 128
             self.crossCompileTarget = CompilationTargets.CHERIBSD_RISCV_PURECAP
         elif self.cpu in ("x86", "x86_64", "amd64", "host", "native"):
-            self.cheriBits = 9999
             self.crossCompileTarget = CompilationTargets.NATIVE
         else:
             fatalError("CPU is not set to a valid value:", self.cpu)

@@ -52,7 +52,7 @@ class BuildCheriOS(CMakeProject):
         super().__init__(config)
         self.add_cmake_options(
             CHERI_SDK_DIR=BuildCheriOSLLVM.get_instance(self, cross_target=CompilationTargets.NATIVE).installDir)
-        self.add_cmake_options(BUILD_FOR_CHERI128=self.config.cheriBits == 128)
+        self.add_cmake_options(BUILD_FOR_CHERI128=self.config.mips_cheri_bits == 128)
         self.add_cmake_options(BUILD_WITH_NET=self.build_net)
         self.add_cmake_options(SMP_CORES=self.smp_cores)
         self.add_cmake_options(CMAKE_AR=BuildCheriOSLLVM.get_instance(self, cross_target=CompilationTargets.NATIVE).installDir / "bin/llvm-ar")
