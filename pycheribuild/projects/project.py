@@ -1134,7 +1134,7 @@ class ReuseOtherProjectRepository(SourceRepository):
         self.repo_for_target = repo_for_target
 
     def ensure_cloned(self, current_project: "Project", **kwargs) -> None:
-        src = self.get_real_source_dir(current_project, current_project.config)
+        src = self.get_real_source_dir(current_project, current_project.default_source_dir)
         if not src.exists():
             current_project.fatal("Source repository for target", current_project.target, "does not exist.",
                                   fixitHint="This project uses the sources from the " + self.source_project.target +
