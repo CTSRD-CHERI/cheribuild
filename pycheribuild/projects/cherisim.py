@@ -27,10 +27,36 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import shlex
+import os
 
 from .project import *
-from ..utils import OSInfo, commandline_to_str
+from ..utils import OSInfo, commandline_to_str, IS_MAC, setEnv
+
+
+class BuildBluespecCompiler(Project):
+    target = "bluespec-compiler"
+    project_name = "bsc"
+    repository = GitRepository("https://github.com/B-Lang-org/bsc.git")
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
+    build_in_source_dir = True
+    make_kind = MakeCommandKind.GnuMake
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        self.addRequiredSystemTool("ghc", apt="ghc", homebrew="ghc")
+        self.addRequiredSystemTool("cabal", apt="cabal-install", homebrew="cabal-install")
+        for i in ("autoconf", "gperf", "bison", "flex"):
+            self.addRequiredSystemTool(i)
+        self.make_args.set(PREFIX=self.installDir)
+
+    def compile(self, cwd: Path = None):
+        try:
+            self.run_make("all")
+        except:
+            self.info("Compilation failed. If it complains about missing packages try running:\n"
+                      "\tcabal install regex-compat syb old-time split\n"
+                      "If this doesn't fix the issue `v1-install` instead of `install` (e.g. macOS)")
+            raise
 
 
 class BuildCheriSim(Project):
@@ -45,6 +71,7 @@ class BuildCheriSim(Project):
         super().__init__(config)
         # TODO: move this to project
         self.addRequiredSystemTool("dtc", apt="device-tree-compiler", homebrew="dtc")
+        self.addRequiredSystemTool("bsc", cheribuild_target="bluespec-compiler")
         self._addRequiredSystemHeader("mpfr.h", apt="libmpfr-dev")
         self.make_args.set(COP1="1" if self.build_fpu else "0")
         if self.build_cheri:
