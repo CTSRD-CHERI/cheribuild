@@ -943,7 +943,7 @@ class MakeOptions(object):
         self.kind = kind
         self.__can_pass_j_flag = None  # type: typing.Optional[bool]
         self.__command = None  # type: typing.Optional[str]
-        self.install_instructions = None  # type: typing.Optional[str]
+        self.__command_args = []  # type: typing.List[str]
 
     def __deepcopy__(self, memo):
         assert False, "Should not be called!"
@@ -1039,17 +1039,21 @@ class MakeOptions(object):
             self.__project.fatal("Cannot infer path from CustomMakeTool. Set self.make_args.set_command(\"tool\")")
             raise RuntimeError()
 
-    def set_command(self, value, can_pass_j_flag=True, **kwargs):
+    def set_command(self, value, can_pass_j_flag=True, early_args: "typing.List[str]" = None, *, installInstructions=None):
         self.__command = str(value)
+        if early_args is None:
+            early_args = []
+        self.__command_args = early_args
+        assert isinstance(self.__command_args, list)
         # noinspection PyProtectedMember
         if not Path(value).is_absolute():
-            self.__project.addRequiredSystemTool(value, **kwargs)
+            self.__project.addRequiredSystemTool(value, installInstructions=installInstructions)
         self.__can_pass_j_flag = can_pass_j_flag
 
     @property
     def all_commandline_args(self) -> list:
         assert self.kind
-        result = []
+        result = self.__command_args
         # First all the variables
         for k, v in self._vars.items():
             assert isinstance(v, str)
@@ -1945,29 +1949,37 @@ class Project(SimpleProject):
                                    self.__class__.__name__)
         self.__dict__[name] = value
 
-    def _get_make_commandline(self, make_target, make_command, options, parallel: bool=True, compilation_db_name: str=None):
+    def _get_make_commandline(self, make_target, make_command, options: MakeOptions, parallel: bool=True, compilation_db_name: str=None):
         assert options is not None
         assert make_command is not None
+        options = options.copy()
+        if self.config.create_compilation_db and self.compileDBRequiresBear:
+            compdb_extra_args = []
+            if self._compiledb_tool == "bear":
+                compdb_extra_args = ["--cdb", self.buildDir / compilation_db_name, "--append", make_command]
+            elif self._compiledb_tool == "compiledb":
+                compdb_extra_args = ["--output", self.buildDir / compilation_db_name, make_command]
+            else:
+                self.fatal("Invalid tool")
+            options.set_command(shutil.which(self._compiledb_tool), can_pass_j_flag=options.can_pass_jflag,
+                early_args=compdb_extra_args)
+            # Ensure that recursive make invocations reuse the compilation DB tool
+            options.set(MAKE=commandline_to_str([options.command] + compdb_extra_args))
+            make_command = options.command
+
         if make_target:
-            all_args = options.all_commandline_args + [make_target]
+            all_args = [make_command] + options.all_commandline_args + [make_target]
         else:
-            all_args = options.all_commandline_args
+            all_args = [make_command] + options.all_commandline_args
         if parallel and options.can_pass_jflag:
             all_args.append(self.config.makeJFlag)
-        all_args = [make_command] + all_args
-        # TODO: use compdb instead for GNU make projects?
-        if self.config.create_compilation_db and self.compileDBRequiresBear:
-            if self._compiledb_tool == "bear":
-                all_args = [shutil.which("bear"), "--cdb", self.buildDir / compilation_db_name, "--append"] + all_args
-            else:
-                all_args = [shutil.which("compiledb"), "--output", self.buildDir / compilation_db_name] + all_args
         if not self.config.makeWithoutNice:
             all_args = ["nice"] + all_args
-        if self.config.debug_output and make_command == "ninja":
+        if self.config.debug_output and options.kind == MakeCommandKind.Ninja:
             all_args.append("-v")
         if self.config.passDashKToMake:
             all_args.append("-k")
-            if make_command == "ninja":
+            if options.kind == MakeCommandKind.Ninja:
                 # ninja needs the maximum number of failed jobs as an argument
                 all_args.append("50")
         return all_args
