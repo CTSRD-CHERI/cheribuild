@@ -71,7 +71,8 @@ class BuildCheriVis(Project):
             self.addRequiredSystemTool("gnustep-config", installInstructions=gnuStepInstallInstructions)
         self.gnustepMakefilesDir = None  # type: typing.Optional[Path]
         if IS_MAC:
-            self.make_args.set_command("xcodebuild", can_pass_j_flag=False, installInstructions="Install XCode")
+            self.make_args.set_command("xcodebuild", can_pass_j_flag=False,
+                installInstructions="Install Command Line Tools")
             assert self.make_args.kind == MakeCommandKind.CustomMakeTool
         print("command = ", self.make_args.command)
 
