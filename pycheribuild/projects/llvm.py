@@ -73,7 +73,7 @@ class BuildLLVMBase(CMakeProject):
                      "needed by default (e.g. llvm-mca, llvm-pdbutil)")
         cls.build_everything = cls.add_bool_option("build-everything", default=False,
             help="Also build documentation,examples and bindings")
-        cls.use_llvm_cxx = cls.add_bool_option("use-tree-cxx", default=False,
+        cls.use_llvm_cxx = cls.add_bool_option("use-in-tree-cxx-libs", default=False,
             help="Use in-tree, not host, C++ runtime")
         cls.dylib = cls.add_bool_option("dylib", default=False,
             help="Build dynamic-link LLVM")
