@@ -46,7 +46,7 @@ class BuildBluespecCompiler(Project):
         self.addRequiredSystemTool("ghc", apt="ghc", homebrew="ghc")
         self.addRequiredSystemTool("cabal", apt="cabal-install", homebrew="cabal-install")
         for i in ("autoconf", "gperf", "bison", "flex"):
-            self.addRequiredSystemTool(i)
+            self.addRequiredSystemTool(i, homebrew=i)
         self.make_args.set(PREFIX=self.installDir)
 
     def compile(self, cwd: Path = None):
@@ -62,6 +62,7 @@ class BuildBluespecCompiler(Project):
 class BuildCheriSim(Project):
     target = "cheri-sim"
     project_name = "cheri-cpu"
+    dependencies = ["bluespec-compiler"]
     repository = GitRepository("git@github.com:CTSRD-CHERI/cheri-cpu")
     native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True      # Needs to build in the source dir

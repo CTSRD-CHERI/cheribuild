@@ -983,7 +983,7 @@ class MakeOptions(object):
         if self.kind == MakeCommandKind.BsdMake:
             return "-D" + name
         else:
-            assert self.kind == MakeCommandKind.GnuMake
+            assert self.kind in (MakeCommandKind.GnuMake, MakeCommandKind.DefaultMake)
             return name + "=1"
 
     @property
@@ -1053,7 +1053,7 @@ class MakeOptions(object):
     @property
     def all_commandline_args(self) -> list:
         assert self.kind
-        result = self.__command_args
+        result = list(self.__command_args)
         # First all the variables
         for k, v in self._vars.items():
             assert isinstance(v, str)
