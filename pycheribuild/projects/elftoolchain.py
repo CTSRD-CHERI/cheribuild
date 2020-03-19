@@ -79,7 +79,7 @@ class BuildElftoolchain(Project):
     def check_system_dependencies(self):
         super().check_system_dependencies()
         if IS_MAC and not Path("/usr/local/opt/libarchive/lib").exists():
-            self.dependencyError("libarchive is missing", installInstructions="Run `brew install libarchive`")
+            self.dependencyError("libarchive is missing", install_instructions="Run `brew install libarchive`")
 
     def compile(self, **kwargs):
         is_old_broken_bmake = True

@@ -55,7 +55,7 @@ class LaunchFPGABase(SimpleProject):
         assert self.currentKernel is not None
         if self.currentKernel is not None and not self.currentKernel.exists():
             self.dependencyError("Kernel is missing:", self.currentKernel,
-                                 installInstructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
+                                 install_instructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
         sim_project = BuildCheriSim.get_instance(self, cross_target=CompilationTargets.NATIVE)
         cherilibs_dir = Path(sim_project.sourceDir, "cherilibs")
         cheri_dir = Path(sim_project.sourceDir, "cheri")

@@ -120,10 +120,10 @@ class LaunchQEMUBase(SimpleProject):
     def process(self):
         if not self.qemuBinary.exists():
             self.dependencyError("QEMU is missing:", self.qemuBinary,
-                                 installInstructions="Run `cheribuild.py qemu` or `cheribuild.py run -d`.")
+                                 install_instructions="Run `cheribuild.py qemu` or `cheribuild.py run -d`.")
         if self.currentKernel is not None and not self.currentKernel.exists():
             self.dependencyError("Kernel is missing:", self.currentKernel,
-                                 installInstructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
+                                 install_instructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
 
         diskOptions = []
         if self.diskImage:
@@ -134,7 +134,7 @@ class LaunchQEMUBase(SimpleProject):
                 diskOptions = ["-drive", "file=" + str(self.diskImage) + ",format=raw,index=0,media=disk"]
             if not self.diskImage.exists():
                 self.dependencyError("Disk image is missing:", self.diskImage,
-                                     installInstructions="Run `cheribuild.py disk-image` or `cheribuild.py run -d`.")
+                                     install_instructions="Run `cheribuild.py disk-image` or `cheribuild.py run -d`.")
         if self._forwardSSHPort and not self.isPortAvailable(self.sshForwardingPort):
             self.printPortUsage(self.sshForwardingPort)
             self.fatal("SSH forwarding port", self.sshForwardingPort, "is already in use! Make sure you don't ",

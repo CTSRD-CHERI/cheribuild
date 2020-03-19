@@ -68,11 +68,11 @@ class BuildCheriVis(Project):
         self.addRequiredSystemTool("clang")
         self.addRequiredSystemTool("clang++")
         if IS_LINUX or IS_FREEBSD:
-            self.addRequiredSystemTool("gnustep-config", installInstructions=gnuStepInstallInstructions)
+            self.addRequiredSystemTool("gnustep-config", install_instructions=gnuStepInstallInstructions)
         self.gnustepMakefilesDir = None  # type: typing.Optional[Path]
         if IS_MAC:
             self.make_args.set_command("xcodebuild", can_pass_j_flag=False,
-                installInstructions="Install Command Line Tools")
+                install_instructions="Install Command Line Tools")
             assert self.make_args.kind == MakeCommandKind.CustomMakeTool
         print("command = ", self.make_args.command)
 
@@ -102,7 +102,7 @@ class BuildCheriVis(Project):
         commonDotMake = self.gnustepMakefilesDir / "common.make"
         if not commonDotMake.is_file():
             self.dependencyError("gnustep-config binary exists, but", commonDotMake, "does not exist!",
-                                 installInstructions=gnuStepInstallInstructions())
+                                 install_instructions=gnuStepInstallInstructions())
         # TODO: set ADDITIONAL_LIB_DIRS?
         # http://www.gnustep.org/resources/documentation/Developer/Make/Manual/gnustep-make_1.html#SEC17
         # http://www.gnustep.org/resources/documentation/Developer/Make/Manual/gnustep-make_1.html#SEC29

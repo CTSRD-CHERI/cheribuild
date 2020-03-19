@@ -179,9 +179,9 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
     def check_system_dependencies(self):
         super().check_system_dependencies()
         # make sure we have at least version 3.8
-        self.check_compiler_version(3, 8, installInstructions=self.clang_install_hint())
+        self.check_compiler_version(3, 8, install_instructions=self.clang_install_hint())
 
-    def check_compiler_version(self, major: int, minor: int, patch=0, installInstructions=None):
+    def check_compiler_version(self, major: int, minor: int, patch=0, install_instructions=None):
         info = getCompilerInfo(self.CC)
         # noinspection PyTypeChecker
         version_str = ".".join(map(str, info.version))
@@ -194,7 +194,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         elif info.compiler != "clang" or info.version < (major, minor, patch):
             self.dependencyError(self.CC, "version", version_str,
                 "is not supported. Clang version %d.%d or newer is required." % (major, minor),
-                installInstructions=self.clang_install_hint())
+                install_instructions=self.clang_install_hint())
 
     def install(self, **kwargs):
         super().install()

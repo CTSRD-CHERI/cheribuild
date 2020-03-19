@@ -550,12 +550,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         assert not self._setup_called, "Should only be called once"
         self._setup_called = True
 
-    def addRequiredSystemTool(self, executable: str, installInstructions=None, freebsd: str=None, apt: str=None,
+    def addRequiredSystemTool(self, executable: str, install_instructions=None, freebsd: str=None, apt: str=None,
                               zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
-        if not installInstructions:
-            installInstructions = OSInfo.install_instructions(executable, False, freebsd=freebsd, zypper=zypper, apt=apt,
+        if not install_instructions:
+            install_instructions = OSInfo.install_instructions(executable, False, freebsd=freebsd, zypper=zypper, apt=apt,
                                                               homebrew=homebrew, cheribuild_target=cheribuild_target)
-        self.__requiredSystemTools[executable] = installInstructions
+        self.__requiredSystemTools[executable] = install_instructions
 
     def _addRequiredPkgConfig(self, package: str, install_instructions=None, freebsd: str=None, apt: str = None,
                               zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
@@ -732,22 +732,22 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 message += "See " + logfile.name + " for details."
             raise SystemExit(message)
 
-    def dependencyError(self, *args, installInstructions: str = None):
+    def dependencyError(self, *args, install_instructions: str = None):
         self._systemDepsChecked = True  # make sure this is always set
-        if callable(installInstructions):
-            installInstructions = installInstructions()
-        self.fatal("Dependency for", self.target, "missing:", *args, fixitHint=installInstructions)
+        if callable(install_instructions):
+            install_instructions = install_instructions()
+        self.fatal("Dependency for", self.target, "missing:", *args, fixitHint=install_instructions)
 
     def check_system_dependencies(self) -> None:
         """
         Checks that all the system dependencies (required tool, etc) are available
         :return: Throws an error if dependencies are missing
         """
-        for (tool, installInstructions) in self.__requiredSystemTools.items():
+        for (tool, install_instructions) in self.__requiredSystemTools.items():
             if not shutil.which(str(tool)):
-                if installInstructions is None or installInstructions == "":
-                    installInstructions = "Try installing `" + tool + "` using your system package manager."
-                self.dependencyError("Required program", tool, "is missing!", installInstructions=installInstructions)
+                if install_instructions is None or install_instructions == "":
+                    install_instructions = "Try installing `" + tool + "` using your system package manager."
+                self.dependencyError("Required program", tool, "is missing!", install_instructions=install_instructions)
         for (package, instructions) in self.__requiredPkgConfig.items():
             if not shutil.which("pkg-config"):
                 # error should already have printed above
@@ -756,10 +756,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             printCommand(check_cmd, print_verbose_only=True)
             exit_code = subprocess.call(check_cmd)
             if exit_code != 0:
-                self.dependencyError("Required library", package, "is missing!", installInstructions=instructions)
+                self.dependencyError("Required library", package, "is missing!", install_instructions=instructions)
         for (header, instructions) in self.__requiredSystemHeaders.items():
             if not Path("/usr/include", header).exists() and not Path("/usr/local/include", header).exists():
-                self.dependencyError("Required C header", header, "is missing!", installInstructions=instructions)
+                self.dependencyError("Required C header", header, "is missing!", install_instructions=instructions)
         self._systemDepsChecked = True
 
     def process(self):
@@ -1039,7 +1039,7 @@ class MakeOptions(object):
             self.__project.fatal("Cannot infer path from CustomMakeTool. Set self.make_args.set_command(\"tool\")")
             raise RuntimeError()
 
-    def set_command(self, value, can_pass_j_flag=True, early_args: "typing.List[str]" = None, *, installInstructions=None):
+    def set_command(self, value, can_pass_j_flag=True, early_args: "typing.List[str]" = None, *, install_instructions=None):
         self.__command = str(value)
         if early_args is None:
             early_args = []
@@ -1047,7 +1047,7 @@ class MakeOptions(object):
         assert isinstance(self.__command_args, list)
         # noinspection PyProtectedMember
         if not Path(value).is_absolute():
-            self.__project.addRequiredSystemTool(value, installInstructions=installInstructions)
+            self.__project.addRequiredSystemTool(value, install_instructions=install_instructions)
         self.__can_pass_j_flag = can_pass_j_flag
 
     @property
@@ -1784,10 +1784,10 @@ class Project(SimpleProject):
             if self.make_args.is_gnu_make and False:
                 # use compiledb instead of bear for gnu make
                 # https://blog.jetbrains.com/clion/2018/08/working-with-makefiles-in-clion-using-compilation-db/
-                self.addRequiredSystemTool("compiledb", installInstructions="Run `pip2 install --user compiledb``")
+                self.addRequiredSystemTool("compiledb", install_instructions="Run `pip2 install --user compiledb``")
                 self._compiledb_tool = "compiledb"
             else:
-                self.addRequiredSystemTool("bear", installInstructions="Run `cheribuild.py bear`")
+                self.addRequiredSystemTool("bear", install_instructions="Run `cheribuild.py bear`")
                 self._compiledb_tool = "bear"
         self._force_clean = False
         self._preventAssign = True
@@ -2705,7 +2705,7 @@ class CMakeProject(Project):
                 instrs = "Use your package manager to install CMake > " + expectedStr + \
                          " or run `cheribuild.py cmake` to install the latest version locally"
                 self.dependencyError("CMake version", versionStr, "is too old (need at least", expectedStr + ")",
-                                     installInstructions=instrs)
+                                     install_instructions=instrs)
 
     @staticmethod
     def findPackage(name: str) -> bool:

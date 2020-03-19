@@ -61,7 +61,7 @@ class OpamMixin(object):
             opam_version = get_program_version(Path(opam_path), regex=b"(\\d+)\\.(\\d+)\\.?(\\d+)?")
             if opam_version < (2, 0, 0):
                 self.dependencyError("Opam version", opam_version, "is too old. Need at least 2.0.0",
-                                     installInstructions="Install opam 2.0 with your system package manager or run "
+                                     install_instructions="Install opam 2.0 with your system package manager or run "
                                                          "`cheribuild.py opam-2.0` (Linux-only)")
 
     @property
@@ -382,7 +382,7 @@ class OcamlProject(OpamMixin, Project):
                 self.run_in_ocaml_env("ocamlfind query " + shlex.quote(pkg), cwd="/", print_verbose_only=True)
             except CalledProcessError:
                 instrs = "Try running `" + self._opam_cmd_str("install", _add_switch=False) + pkg + "`"
-                self.dependencyError("missing opam package " + pkg, installInstructions=instrs)
+                self.dependencyError("missing opam package " + pkg, install_instructions=instrs)
 
     def install(self, **kwargs):
         pass
@@ -396,7 +396,7 @@ class OcamlProject(OpamMixin, Project):
             self.warning("stderr was:", e.stderr)
             self.dependencyError("OCaml env seems to be messed up. Note: On MacOS homebrew OCaml "
                                  "is not installed correctly. Try installing it with opam instead:",
-                                 installInstructions="Try running `" + self._opam_cmd_str("update",
+                                 install_instructions="Try running `" + self._opam_cmd_str("update",
                                                                                           _add_switch=False) + " && "
                                                      + self._opam_cmd_str(
                                      "switch", _add_switch=False) + " 4.06.0`")
@@ -422,7 +422,7 @@ class BuildSailFromSource(OcamlProject):
             self.run_in_ocaml_env("ocamlfind query menhirLib", cwd="/", print_verbose_only=True)
         except CalledProcessError:
             self.dependencyError("missing opam package menhirLib",
-                                 installInstructions="Try running `opam install menhir`")
+                                 install_instructions="Try running `opam install menhir`")
 
     def compile(self, cwd: Path = None):
         self.run_in_ocaml_env("""
