@@ -45,6 +45,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     kernel_class = None
     cross_install_dir = DefaultInstallDir.ROOTFS
     without_payload = False
+    mem_start = "0x80000000"
 
     @classmethod
     def dependencies(cls, config: CheriConfig):
@@ -64,7 +65,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
             self.configureArgs.append("--with-abi=l64pc128")
             # Enable CHERI extensions
             self.configureArgs.append("--with-arch=rv64imafdcxcheri")
-            self.configureArgs.append("--with-mem-start=0x80000000")
+            self.configureArgs.append("--with-mem-start=" + self.mem_start)
         else:
             self.configureArgs.append("--with-abi=lp64")
             self.configureArgs.append("--with-arch=rv64imafdc")
@@ -104,7 +105,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
 
 
 def bbl_no_payload_install_dir(config: CheriConfig, project: SimpleProject):
-    return config.cheri_sdk_dir / "bbl" / project.crosscompile_target.generic_suffix
+    return
 
 
 # Build BBL without an embedded payload
@@ -118,9 +119,20 @@ class BuildBBLNoPayload(BuildBBLBase):
     supported_architectures = [CompilationTargets.CHERIBSD_RISCV_PURECAP, CompilationTargets.CHERIBSD_RISCV_HYBRID,
                                CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
 
-    _default_install_dir_fn = ComputedDefaultValue(function=bbl_no_payload_install_dir,
-                                                   as_string="$SDK_ROOT/bbl/riscv{32,64}{c,-hybrid}")
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=lambda config, project: config.cheri_sdk_dir / "bbl" / project.crosscompile_target.generic_suffix,
+        as_string="$SDK_ROOT/bbl/riscv{32,64}{c,-hybrid}")
 
+
+class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
+    mem_start = "0xc0000000"
+    target = "bbl-gfe"
+    project_name = "bbl"  # reuse same source dir
+    build_dir_suffix = "-gfe"  # but not the build dir
+
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=lambda config, project: config.cheri_sdk_dir / "bbl-gfe" / project.crosscompile_target.generic_suffix,
+        as_string="$SDK_ROOT/bbl-gfe/riscv{32,64}{c,-hybrid}")
 
 # class BuildBBLFreeBSDRISCV(BuildBBLBase):
 #     project_name = "bbl"  # reuse same source dir
