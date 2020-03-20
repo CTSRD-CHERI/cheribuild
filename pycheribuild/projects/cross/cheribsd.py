@@ -375,6 +375,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             result = {"TARGET": "riscv", "TARGET_ARCH": target_arch}
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
                 result["WITH_CHERI"] = True
+                result["TARGET_CPUTYPE"] = "cheri"
             return result
         elif self.crosscompile_target.is_i386():
             return {"TARGET": "i386", "TARGET_ARCH": "i386"}
