@@ -55,7 +55,12 @@ class BuildBluespecCompiler(Project):
         except:
             self.info("Compilation failed. If it complains about missing packages try running:\n"
                       "\tcabal install regex-compat syb old-time split\n"
-                      "If this doesn't fix the issue `v1-install` instead of `install` (e.g. macOS)")
+                      "If this doesn't fix the issue `v1-install` instead of `install` (e.g. macOS).")
+            if OSInfo.IS_MAC:
+                self.info("Alternatively, try running:", self.sourceDir / ".github/workflows/install_dependencies_macos.sh")
+            elif OSInfo.isUbuntu():
+                self.info("Alternatively, try running:",
+                    self.sourceDir / ".github/workflows/install_dependencies_ubuntu.sh")
             raise
 
 
