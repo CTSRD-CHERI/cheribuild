@@ -365,23 +365,23 @@ class BuildFreeBSD(BuildFreeBSDBase):
             result = {"TARGET": "mips", "TARGET_ARCH": target_arch}
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
                 result["CHERI"] = self.config.mips_cheri_bits_str
-            return result
         elif self.crosscompile_target.is_x86_64():
-            return {"TARGET": "amd64", "TARGET_ARCH": "amd64"}
+            result = {"TARGET": "amd64", "TARGET_ARCH": "amd64"}
         elif self.crosscompile_target.is_riscv(include_purecap=True):
             target_arch = "riscv64"  # TODO: allow building softfloat?
             if self.crosscompile_target.is_cheri_purecap():
                 target_arch += "c"  # build purecap
             result = {"TARGET": "riscv", "TARGET_ARCH": target_arch}
-            if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                result["TARGET_CPUTYPE"] = "cheri"
-            return result
         elif self.crosscompile_target.is_i386():
-            return {"TARGET": "i386", "TARGET_ARCH": "i386"}
+            result = {"TARGET": "i386", "TARGET_ARCH": "i386"}
         elif self.crosscompile_target.is_aarch64():
-            return {"TARGET": "arm64", "TARGET_ARCH": "aarch64"}
+            result = {"TARGET": "arm64", "TARGET_ARCH": "aarch64"}
         else:
             assert False, "This should not be reached!"
+        if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+            result["TARGET_CPUTYPE"] = "cheri"
+            result["WITH_CHERI"] = True
+        return result
 
     def setup(self):
         super().setup()
