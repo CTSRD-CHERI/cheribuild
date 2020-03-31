@@ -56,9 +56,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
     host_has_kyua = shutil.which("kyua") is not None
 
     try:
-        # potentially bootstrap kyua for later testing
-        if args.bootstrap_kyua or args.kyua_tests_files:
-            qemu.checked_run("/sbin/prepare-testsuite.sh", timeout=30 * 60)
+        if args.kyua_tests_files:
             qemu.checked_run("kyua help", timeout=60)
 
         for i, tests_file in enumerate(args.kyua_tests_files):
@@ -173,8 +171,6 @@ def cheribsd_setup_args(args: argparse.Namespace):
 
 
 def add_args(parser: argparse.ArgumentParser):
-    parser.add_argument("--bootstrap-kyua", action="store_true",
-                        help="Install kyua using the /sbin/prepare-testsuite.sh script")
     parser.add_argument("--skip-poweroff", action="store_true",
                         help="Don't run poweroff after tests (implicit with --interact). Without --interact this will"
                              "almost certainly corrupt the disk image, so only pass this if you no longer need the "

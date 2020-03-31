@@ -41,15 +41,6 @@ from ..utils import *
 # ufstype=ufs2 is required as the Linux kernel can't automatically determine which UFS filesystem is being used
 # Same thing is possible with qemu-nbd, but needs root (might be faster)
 
-
-
-PKG_REPO_URL = "https://people.freebsd.org/~brooks/packages/cheribsd-mips-20170403-brooks-20170609/"
-# old version of libarchive needed by kyua
-OLD_LIBRARIES_BASE_URL = "https://people.freebsd.org/~arichardson/cheri-files/{file}"
-# Bump this to redownload all the pkg files
-PKG_REPO_NEEDS_UPDATE = datetime.datetime(day=23, month=2, year=2020)
-
-
 # noinspection PyMethodMayBeStatic
 class _AdditionalFileTemplates(object):
     def get_fstab_template(self):
@@ -69,10 +60,6 @@ class _BuildDiskImageBase(SimpleProject):
     strip_binaries = False  # True by default for minimal disk-image
     is_minimal = False  # To allow building a much smaller image
     default_disk_image_path = None
-
-    @property
-    def needs_special_pkg_repo(self):
-        return False  # True for CheriBSD
 
     @classmethod
     def setup_config_options(cls, *, defaultHostname, extraFilesShortname=None, extraFilesSuffix="", **kwargs):
@@ -124,8 +111,6 @@ class _BuildDiskImageBase(SimpleProject):
         # used during process to generated files
         self.tmpdir = None  # type: typing.Optional[Path]
         self.file_templates = _AdditionalFileTemplates()
-        if self.needs_special_pkg_repo:
-            self.addRequiredSystemTool("wget")  # Needed to recursively fetch the pkg repo
         self.hostname = os.path.expandvars(self.hostname)   # Expand env vars in hostname to allow $CHERI_BITS
         # MIPS needs big-endian disk images
         self.big_endian = self.compiling_for_mips(include_purecap=True)
@@ -206,54 +191,10 @@ class _BuildDiskImageBase(SimpleProject):
         elif self.input_METALOG_required:
             self.fatal("Could not find required input mtree file", self.input_METALOG)
 
-        # Add the files needed to install kyua (make sure to download before calculating the list of extra files!)
-        if self.needs_special_pkg_repo and self.compiling_for_mips(include_purecap=True):
-            self.createFileForImage("/etc/local-kyua-pkg/repos/kyua-pkg-cache.conf", mode=0o644,
-                                    showContentsByDefault=False,
-                                    contents=includeLocalFile("files/cheribsd/kyua-pkg-cache.repo.conf"))
-            self.createFileForImage("/etc/local-kyua-pkg/config/pkg.conf", mode=0o644,
-                                    showContentsByDefault=False,
-                                    contents=includeLocalFile("files/cheribsd/kyua-pkg-cache.options.conf"))
-            self.createFileForImage("/sbin/prepare-testsuite.sh", mode=0o755, showContentsByDefault=False,
-                                    contents=includeLocalFile("files/cheribsd/prepare-testsuite.sh"))
-            # Download all the kyua pkg files from and put them in /var/db/kyua-pkg-cache
-            # But only do that if we really need to update (since the recursive wget is slow)
-
-            cache_dir_name = "kyua-cheribsd-pkgcache"
-            if self.crosscompile_target.is_cheri_purecap():
-                cache_dir_name += "-mips-purecap"
-            else:
-                cache_dir_name += "-" + self.crosscompile_target.generic_suffix
-            custom_pkg_repo_root_dir = self.config.outputRoot / cache_dir_name
-            download_time_path = (custom_pkg_repo_root_dir / "var/db/kyua-pkg-cache/.downloaded_time")
-            needs_fresh_download = True
-            if download_time_path.exists():
-                last_downloaded = datetime.datetime.utcfromtimestamp(float(download_time_path.read_text()))
-                self.verbose_print("pkg repo was downloaded", last_downloaded)
-                if last_downloaded > PKG_REPO_NEEDS_UPDATE:
-                    needs_fresh_download = False
-                    statusUpdate("Not fetching pkg repo since download time", last_downloaded,
-                                 "is newer than oldest acceptable download time", PKG_REPO_NEEDS_UPDATE,
-                                 "\nTo force an update delete the file", str(download_time_path))
-
-            if needs_fresh_download:
-                pkgcache_dir = custom_pkg_repo_root_dir / "var/db/kyua-pkg-cache"
-                self.makedirs(pkgcache_dir)
-                self.makedirs(pkgcache_dir)
-                runCmd("find", pkgcache_dir)
-                self._wget_fetch_dir(["--accept", "*.txz",  # only download .txz files
-                                      PKG_REPO_URL], pkgcache_dir)
-                # fetch old libarchive which is currently needed
-                mips_libdir = "usr/lib64" if self.crosscompile_target.is_cheri_purecap() else "usr/lib"
-                # We also need old versions of libssl and libcrypto
-                self.makedirs(custom_pkg_repo_root_dir / mips_libdir)
-                for lib in ("libarchive.so.6", "libcrypto.so.8", "libssl.so.8"):
-                    self._wget_fetch([OLD_LIBRARIES_BASE_URL.format(file=lib)], custom_pkg_repo_root_dir / mips_libdir)
-                self.writeFile(download_time_path, str(datetime.datetime.utcnow().timestamp()), overwrite=True)
-            self.add_all_files_in_dir(custom_pkg_repo_root_dir)
-        # we need to add /etc/fstab and /etc/rc.conf as well as the SSH host keys to the disk-image
+        # We need to add /etc/fstab and /etc/rc.conf and the SSH host keys to the disk-image.
         # If they do not exist in the extra-files directory yet we generate a default one and use that
         # Additionally all other files in the extra-files directory will be added to the disk image
+
         if self.extraFilesDir.exists():
             self.add_all_files_in_dir(self.extraFilesDir)
 
@@ -721,10 +662,6 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         if self.rootfs_xtarget.is_cheri_purecap([CPUArchitecture.RISCV64]):
             self.have_cplusplus_support = False
 
-    @property
-    def needs_special_pkg_repo(self):
-        return False
-
     def process_files_list(self, files_list):
         for line in io.StringIO(files_list).readlines():
             line = line.strip()
@@ -973,10 +910,6 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
         super().__init__(config)
         self.minimumImageSize = "256m"  # let's try to shrink the image size
 
-    @property
-    def needs_special_pkg_repo(self):
-        return self.crosscompile_target.is_mips(include_purecap=True)
-
 
 class BuildFreeBSDImage(BuildMultiArchDiskImage):
     target = "disk-image-freebsd"
@@ -1002,6 +935,7 @@ class BuildFreeBSDWithDefaultOptionsDiskImage(BuildFreeBSDImage):
     project_name = "disk-image-freebsd-with-default-options"
     _source_class = BuildFreeBSDWithDefaultOptions
     hide_options_from_help = True
+
 
 class BuildFreeBSDGFEDiskImage(BuildFreeBSDImage):
     project_name = "disk-image-freebsd-gfe"
