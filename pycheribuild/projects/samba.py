@@ -62,18 +62,25 @@ class BuildSamba(Project):
         # Based on https://willhaley.com/blog/compile-samba-macos/
         # Also try to disable everything that is not needed for QEMU user shares
         self.configureArgs.extend([
-            "--without-ad-dc", "--without-acl-support",
+            "--disable-cephfs",
+            "--disable-cups",
+            "--disable-iprint",
+            "--disable-glusterfs",
+            "--disable-python",
+            "--without-acl-support",
+            "--without-ad-dc",
+            "--without-ads",
+            "--without-dnsupdate",
+            "--without-ldap",
+            "--without-ntvfs-fileserver",
+            "--without-pam",
+            "--without-quotas",
+            "--without-regedit",
+            "--without-syslog",
+            "--without-utmp",
+            "--without-winbind",
             # "--without-json-audit", "--without-ldb-lmdb", (only needed in master not 4.8 stable)
             "--without-libarchive",
-            "--disable-cups",
-            "--disable-python",
-            # "--disable-gnutls",
-            "--without-ldap", "--disable-iprint",
-            "--without-gettext",
-            "--without-ads", "--without-winbind", "--without-pam", "--without-utmp",
-            "--without-syslog", "--without-regedit",
-            "--disable-glusterfs", "--disable-cephfs",
-            "--without-ntvfs-fileserver",
             # Avoid depending on libraries from the build tree:
             "--bundled-libraries=talloc,tdb,pytdb,ldb,pyldb,tevent,pytevent",
             "--with-static-modules=ALL",
@@ -106,9 +113,13 @@ class BuildSamba(Project):
             super().install(**kwargs)
 
     def process(self):
-        if SMB_OUT_OF_SOURCE_BUILD_WORKS and IS_MAC:
+        if IS_MAC:
+            # We need readline and krb5 from homebrew:
             with setEnv(PATH="/usr/local/opt/krb5/bin:/usr/local/opt/krb5/sbin:" + os.getenv("PATH", ""),
-                        PKG_CONFIG_PATH="/usr/local/opt/krb5/lib/pkgconfig:" + os.getenv("PKG_CONFIG_PATH", "")):
+                        PKG_CONFIG_PATH="/usr/local/opt/krb5/lib/pkgconfig:/usr/local/opt/readline/lib/pkgconfig:" + os.getenv("PKG_CONFIG_PATH", ""),
+                        LDFLAGS="-L/usr/local/opt/krb5/lib -L/usr/local/opt/readline/lib",
+                        CPPFLAGS="-I/usr/local/opt/krb5/include -I/usr/local/opt/readline/include",
+                        CFLAGS="-I/usr/local/opt/krb5/include -I/usr/local/opt/readline/include"):
                 super().process()
         else:
             super().process()
