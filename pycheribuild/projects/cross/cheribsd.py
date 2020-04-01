@@ -1160,10 +1160,11 @@ class BuildCHERIBSD(BuildFreeBSD):
                                              help="Only build a sysroot instead of the full system. This will only "
                                                   "build the libraries and skip all binaries")
 
-        mips_and_purecap_mips = [CompilationTargets.CHERIBSD_MIPS_NO_CHERI, CompilationTargets.CHERIBSD_MIPS_HYBRID,
-                                 CompilationTargets.CHERIBSD_MIPS_PURECAP]
+        fpga_targets = [CompilationTargets.CHERIBSD_MIPS_NO_CHERI, CompilationTargets.CHERIBSD_MIPS_HYBRID,
+                        CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+                        CompilationTargets.CHERIBSD_RISCV_HYBRID, CompilationTargets.CHERIBSD_RISCV_PURECAP]
         cls.buildFpgaKernels = cls.add_bool_option("build-fpga-kernels", show_help=True, _allow_unknown_targets=True,
-                                                 only_add_for_targets=mips_and_purecap_mips,
+                                                 only_add_for_targets=fpga_targets,
                                                  help="Also build kernels for the FPGA.")
         cls.mfs_root_image = cls.add_path_option("mfs-root-image",
             help="Path to an MFS root image to be embedded in the kernel for booting")
