@@ -77,7 +77,6 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             autotools_triple = autotools_triple.replace("-purecap", "")
             # TODO: do we have to remove these too?
             #autotools_triple = autotools_triple.replace("mips64c128-", "cheri-")
-            #autotools_triple = autotools_triple.replace("mips64c256-", "cheri-")
             self.configureArgs.extend(["--host=" + autotools_triple, "--target=" + autotools_triple,
                                        "--build=" + buildhost])
 

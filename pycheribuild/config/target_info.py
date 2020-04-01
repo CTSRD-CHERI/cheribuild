@@ -310,7 +310,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                     result.append("-cheri-cap-table-abi=" + self.config.cheri_cap_table_abi)
             else:
                 assert self.target.is_mips(include_purecap=False)
-                # TODO: should we use -mcpu=cheri128/256?
+                # TODO: should we use -mcpu=cheri128?
                 result.extend(["-mabi=n64", "-mcpu=beri"])
                 if self.target.is_cheri_hybrid():
                     result.append("-cheri=" + self.config.mips_cheri_bits_str)
@@ -544,7 +544,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def sysroot_dir(self) -> Path:
-        # Install to mips/cheri128/cheri256 directory
+        # Install to mips/cheri128 directory
         if self.target.is_cheri_purecap([CPUArchitecture.MIPS64]):
             suffix = "cheri" + self.config.mips_cheri_bits_str
         else:
@@ -705,7 +705,7 @@ class CrossCompileTarget(object):
     def build_suffix(self, config: "CheriConfig"):
         assert self is not CompilationTargets.NONE
         if self is CompilationTargets.CHERIBSD_MIPS_PURECAP:
-            result = ""  # only -128/-256 for legacy build dir compat
+            result = ""  # only -128 for legacy build dir compat
         else:
             result = "-" + self.generic_suffix
         result += self.cheri_config_suffix(config)
@@ -713,7 +713,7 @@ class CrossCompileTarget(object):
 
     def cheri_config_suffix(self, config: "CheriConfig"):
         """
-        :return: a string such as "-subobject-safe"/"128"/"256-plt" to ensure different build/install dirs for config options
+        :return: a string such as "-subobject-safe"/"128"/"128-plt" to ensure different build/install dirs for config options
         """
         result = ""
         if self.is_hybrid_or_purecap_cheri([CPUArchitecture.MIPS64]):

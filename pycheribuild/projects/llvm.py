@@ -292,7 +292,7 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
 -B{sdk_dir}/bin
 -mabi={abi}
 """
-        for cheri_bits in (128, 256):
+        for cheri_bits in [128]:
             for abi in ("purecap", "n64"):
                 prefix = "cheribsd" + str(cheri_bits) + abi
                 config_file_contents = config_file_template.format(cheri_bits=cheri_bits, abi=abi,

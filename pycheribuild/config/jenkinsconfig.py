@@ -77,8 +77,7 @@ class JenkinsConfig(CheriConfig):
 
         self.cpu = loader.addCommandLineOnlyOption("cpu", default=os.getenv("CPU"),
                                                    help="The target to build the software for (defaults to $CPU).",
-                                                   choices=["default", "cheri128", "cheri256",
-                                                            "mips", "hybrid-cheri128", "hybrid-cheri256",
+                                                   choices=["default", "cheri128", "mips", "hybrid-cheri128",
                                                             "riscv64", "riscv64-hybrid", "riscv64-purecap",
                                                             "native", "x86", "amd64"])  # type: str
         self.workspace = loader.addCommandLineOnlyOption("workspace", default=os.getenv("WORKSPACE"), type=Path,
@@ -141,12 +140,10 @@ class JenkinsConfig(CheriConfig):
     def sdk_cpu(self) -> str:
         sdk_cpu = os.getenv("SDK_CPU")
         if not sdk_cpu:
-            if self.cpu in ("cheri128", "cheri256", "mips"):
+            if self.cpu in ("cheri128", "mips"):
                 return self.cpu
             if self.cpu == "hybrid-cheri128":
                 return "cheri128"
-            if self.cpu == "hybrid-cheri256":
-                return "cheri256"
             else:
                 fatalError("SDK_CPU variable not set, cannot infer the name of the SDK archive")
         return sdk_cpu
@@ -199,7 +196,7 @@ class JenkinsConfig(CheriConfig):
         self.cheribsd_image_root = self.workspace
 
         self.otherToolsDir = self.workspace / "bootstrap"
-        # check for ctsrd/cheri-sdk-{cheri256,cheri128,mips} docker image
+        # check for ctsrd/cheri-sdk-{cheri128,mips} docker image
         if self.cheri_sdk_path is not None:
             self.cheri_sdk_dir = self.cheri_sdk_path
         elif Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
@@ -207,20 +204,14 @@ class JenkinsConfig(CheriConfig):
         else:
             self.cheri_sdk_dir = self.workspace / self.cheri_sdk_directory_name
         self.preferred_xtarget = self.cpu
-        self.mips_cheri_bits = 128
         if self.cpu == "default":
             self.preferred_xtarget = CompilationTargets.NONE
         elif self.cpu == "cheri128":
-            self.mips_cheri_bits = 128
             self.preferred_xtarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
-        elif self.cpu == "cheri256":
-            self.mips_cheri_bits = 256
-            self.preferred_xtarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
-        elif self.cpu in ("mips", "hybrid-cheri128", "hybrid-cheri256"):  # MIPS with CHERI memcpy
-            if self.cpu == "mips" and self.sdk_cpu in ("cheri128", "cheri256"):
+        elif self.cpu in ("mips", "hybrid-cheri128"):  # MIPS with CHERI memcpy
+            if self.cpu == "mips" and self.sdk_cpu == "cheri128":
                 self.cpu = "hybrid-" + self.sdk_cpu
-            if self.cpu.startswith("hybrid-cheri"):
-                self.mips_cheri_bits = int(self.cpu[len("hybrid-cheri"):])
+            if self.cpu == "hybrid-cheri128":
                 self.run_mips_tests_with_cheri_image = True
                 self.preferred_xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
             else:

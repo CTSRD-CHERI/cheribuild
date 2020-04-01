@@ -625,8 +625,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
 
     default_disk_image_path = ComputedDefaultValue(
         function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "minimal-"),
-        as_string="$OUTPUT_ROOT/minimal-cheri256-disk.img or $OUTPUT_ROOT/minimal-cheri128-disk.img depending "
-                  "on --cheri-bits.")
+        as_string="$OUTPUT_ROOT/minimal-<TARGET>-disk.img depending on architecture")
 
     @classmethod
     def setup_config_options(cls, **kwargs):

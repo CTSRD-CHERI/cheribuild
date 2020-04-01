@@ -74,13 +74,8 @@ However, some targets (e.g. `all`, `sdk`) will always build their dependencies b
 
 In order to run CheriBSD you will first need to compile QEMU (`cheribuild.py qemu`).
 You will also need to build LLVM (this includes a compiler and linker suitable for CHERI) using `cheribuild.py llvm`.
-It is now possible to target both 128 and 256-bit CHERI using the same clang binary by specifying
-`-mcpu=cheri128` or `-mcpu=256`. However, if you use cheribuild.py for building you won't have to care
-about this since the `--128` (the default) or `--256` flag for cheribuild.py will ensure the right
-flags are passed.
-
+The compiler can generate CHERI code for MIPS (64-bit only) and RISCV (32 and 64-bit).
 All binaries will by default be installed to `~/cheri/sdk/bin`.
-
 
 ## Building and running CheriBSD
 
@@ -181,7 +176,6 @@ For example if you want cheribuild.py to behave as if you had passed
 {
   "source-root": "/sources/cheri",
   "output-root": "/build/cheri",
-  "cheri-bits": 128,
   "make-jobs": 4,
   "cheribsd": {
     "build-options": ["-DWITH_CHERI_PURE", "FOO=bar"]

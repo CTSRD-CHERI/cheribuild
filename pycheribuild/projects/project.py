@@ -818,8 +818,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                         use_benchmark_kernel_by_default and use_benchmark_config_option.is_default_value)
             kernel_path = self._get_mfs_root_kernel(use_benchmark_kernel=want_benchmark_kernel)
             if not kernel_path.exists():
-                cheribsd_image = "cheribsd{suffix}-cheri{suffix}-malta64-mfs-root-minimal-cheribuild-kernel.bz2".format(
-                        suffix="" if self.config.mips_cheri_bits == 256 else str(self.config.mips_cheri_bits))
+                cheribsd_image = "cheribsd128-cheri128-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
                 freebsd_image = "freebsd-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
                 if xtarget.is_mips(include_purecap=False):
                     guessed_archive = cheribsd_image if self.config.run_mips_tests_with_cheri_image else freebsd_image
@@ -917,7 +916,6 @@ def installDirNotSpecified(config: CheriConfig, project: "Project"):
 
 
 def _defaultBuildDir(config: CheriConfig, project: "SimpleProject"):
-    # make sure we have different build dirs for LLVM/CHERIBSD/QEMU 128 and 256
     assert isinstance(project, Project)
     target = project.get_crosscompile_target(config)
     return project.build_dir_for_target(target)
@@ -1401,7 +1399,6 @@ class Project(SimpleProject):
 
     build_dir_suffix = ""   # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
     add_build_dir_suffix_for_native = False  # Whether to add -native to the native build dir
-    append_cheri_bits_to_native_build_dir = False  #  Whether to append -128/-256 to the computed native build directory name
 
     defaultSourceDir = ComputedDefaultValue(
         function=lambda config, project: Path(config.sourceRoot / project.project_name.lower()),
@@ -1466,8 +1463,6 @@ class Project(SimpleProject):
             result = ""
         else:
             result = target.build_suffix(config)
-        if target.is_native() and self.append_cheri_bits_to_native_build_dir:
-            result = "-" + config.mips_cheri_bits_str
         if self.use_asan:
             result = "-asan" + result
         if self.build_dir_suffix:

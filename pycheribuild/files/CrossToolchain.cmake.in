@@ -74,15 +74,6 @@ endif()
 #endif()
 #include(CMakeFindBinUtils)
 
-# Doesn't seem to be needed?
-if(FALSE)
-    # https://cmake.org/cmake/help/git-master/variable/CMAKE_LANG_COMPILER_EXTERNAL_TOOLCHAIN.html
-    # This seems to set the --gcc-toolchain=/home/alr48/cheri/output/sdk256/bin
-    set(CMAKE_C_COMPILER_EXTERNAL_TOOLCHAIN ${CHERI_SDK_BINDIR})
-    set(CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN ${CHERI_SDK_BINDIR})
-    set(CMAKE_ASM_COMPILER_EXTERNAL_TOOLCHAIN ${CHERI_SDK_BINDIR})
-endif()
-
 set(CHERIBSD_COMMON_FLAGS "@TOOLCHAIN_COMMON_FLAGS@")
 set(CHERIBSD_LINK_FLAGS "@TOOLCHAIN_LINKER_FLAGS@")
 # https://cmake.org/cmake/help/git-master/variable/CMAKE_TRY_COMPILE_PLATFORM_VARIABLES.html

@@ -193,7 +193,7 @@ class CheriConfig(object):
         self.preferred_xtarget = None  # type: Optional[CrossCompileTarget]
         self.makeWithoutNice = None  # type: Optional[bool]
 
-        self.mips_cheri_bits = None  # type: Optional[int]
+        self.mips_cheri_bits = 128  # Backwards compat
         self.makeJobs = None  # type: Optional[int]
 
         self.sourceRoot = None  # type: Optional[Path]

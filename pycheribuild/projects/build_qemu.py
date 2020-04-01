@@ -219,7 +219,7 @@ class BuildQEMUBase(AutotoolsProject):
 class BuildQEMU(BuildQEMUBase):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-cheri",
                                force_branch=True)
-    default_targets = "cheri256-softmmu,cheri128-softmmu,cheri128magic-softmmu,mips64-softmmu," \
+    default_targets = "cheri128-softmmu,cheri128magic-softmmu,mips64-softmmu," \
                       "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu"
 
     @classmethod
@@ -243,7 +243,7 @@ class BuildQEMU(BuildQEMUBase):
             assert xtarget.is_mips(include_purecap=True)
             binary_name = "qemu-system-cheri"
             binary_name += caller.config.mips_cheri_bits_str
-            if caller.config.mips_cheri_bits == 128 and cls.get_instance(caller, cross_target=CompilationTargets.NATIVE).magic128:
+            if cls.get_instance(caller, cross_target=CompilationTargets.NATIVE).magic128:
                binary_name += "magic"
         return caller.config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
 
@@ -289,7 +289,7 @@ class BuildCheriOSQEMU(BuildQEMU):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self._qemuTargets = "cheri256-softmmu,cheri128-softmmu"
+        self._qemuTargets = "cheri128-softmmu"
 
     @classmethod
     def qemu_binary(cls, caller: SimpleProject, xtarget=None):

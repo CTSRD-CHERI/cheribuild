@@ -90,15 +90,6 @@ class DefaultCheriConfig(CheriConfig):
                                                              "ensures dependencies are built before the real target. (run "
                                                              " with --list-targets for more information)")
 
-        self._buildCheri128 = loader.mips_cheri_bits_group.add_argument("--cheri-128", "--128", dest="cheri_bits",
-            action="store_const", const="128", help="Shortcut for --cheri-bits=128")
-        self._buildCheri256 = loader.mips_cheri_bits_group.add_argument("--cheri-256", "--256", dest="cheri_bits",
-            action="store_const", const="256", help="Shortcut for --cheri-bits=256")
-        self.mips_cheri_bits = loader.addOption("cheri-bits", type=int, group=loader.mips_cheri_bits_group,
-            help="Whether to build the whole MIPS software stack for 128 or 256 bit CHERI. The output directories "
-                 "will be suffixed with the number of bits to make sure the right binaries are being used.",
-            choices=["128", "256"], default=128)
-
         self.copy_compilation_db_to_source_dir = loader.addCommandLineOnlyBoolOption("compilation-db-in-source-dir",
             help="Generate a compile_commands.json and also copy it to the source directory")
 

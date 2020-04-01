@@ -1154,7 +1154,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     def setup_config_options(cls, install_directory_help=None, **kwargs):
         if install_directory_help is None:
             install_directory_help = "Install directory for CheriBSD root file system (default: " \
-                                   "<OUTPUT>/rootfs256 or <OUTPUT>/rootfs128 depending on --cheri-bits)"
+                                   "<OUTPUT>/rootfs128 or <OUTPUT>/rootfs-riscv64-purecap, etc. depending on target)"
         super().setup_config_options(install_directory_help=install_directory_help, use_upstream_llvm=False)
         cls.sysroot_only = cls.add_bool_option("sysroot-only", show_help=True,
                                              help="Only build a sysroot instead of the full system. This will only "
@@ -1191,12 +1191,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         if self.buildFpgaKernels:
             if self.compiling_for_mips(include_purecap=True):
                 if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                    if self.config.mips_cheri_bits == 128:
-                        prefix = "CHERI128_DE4_"
-                    elif self.config.mips_cheri_bits == 256:
-                        prefix = "CHERI_DE4_"
-                    else:
-                        assert False, "unreachable"
+                    prefix = "CHERI128_DE4_"
                 else:
                     prefix = "BERI_DE4_"
                     # TODO: build the benchmark kernels? TODO: NFSROOT?
@@ -1405,7 +1400,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 #     _should_not_be_instantiated = False
 #     build_dir_suffix = "-minimal"
 #     _default_install_dir_fn = ComputedDefaultValue(function=cheribsd_minimal_install_dir,
-#                                              as_string="$INSTALL_ROOT/rootfs-minmal{128,256,-mips,-x86}")
+#                                              as_string="$INSTALL_ROOT/rootfs-minmal{128,-mips,-x86}")
 #
 #     @classmethod
 #     def setup_config_options(cls, **kwargs):
@@ -1516,7 +1511,7 @@ class BuildCheriBsdSysroot(SimpleProject):
             help="The path to the CHERI SDK on the remote FreeBSD machine (e.g. vica:~foo/cheri/output/sdk)")
         cls.use_cheri_sysroot_for_mips = cls.add_bool_option("use-cheri-sysroot-for-mips",
             help="Create the MIPS sysroot using the files from hybrid CHERI libraries (note: binaries build from this "
-                 "sysroot will only work on the matching CHERI 128/256 architecture)")
+                 "sysroot will only work on the matching CHERI architecture)")
         cls.use_cheribsd_purecap_rootfs = cls.add_bool_option("use-cheribsd-purecap-rootfs",
             help="Use the rootfs built by cheribsd-purecap instead")
         cls.install_dir_override = cls.add_path_option("install-directory",
