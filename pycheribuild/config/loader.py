@@ -499,7 +499,6 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                                                                                      " the target-specific ones.")
         # argument groups:
         # self.deprecatedOptionsGroup = _parser.add_argument_group("Old deprecated options", "These should not be used any more")
-        self.mips_cheri_bits_group = self._parser.add_mutually_exclusive_group()
         self.crossCompileGroup = self._parser.add_mutually_exclusive_group()
         self.configureGroup = self._parser.add_mutually_exclusive_group()
         self.completion_excludes = []
