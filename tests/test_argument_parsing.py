@@ -336,8 +336,8 @@ def test_kernconf():
 
 def test_duplicate_key():
     with pytest.raises(SyntaxError) as excinfo:
-        _parse_config_file_and_args(b'{ "cheri-bits": 128, "some-other-key": "abc", "cheri-bits": 256 }')
-        assert re.search("duplicate key: 'cheri-bits'", excinfo.value)
+        _parse_config_file_and_args(b'{ "output-root": "/foo", "some-other-key": "abc", "output-root": "/bar" }')
+        assert re.search("duplicate key: 'output-root'", excinfo.value)
 
 
 def _get_config_with_include(tmpdir: Path, config_json: bytes, workdir: Path = None):
@@ -351,8 +351,8 @@ def _get_config_with_include(tmpdir: Path, config_json: bytes, workdir: Path = N
 def test_config_file_include():
     with tempfile.TemporaryDirectory() as d:
         config_dir = Path(d)
-        (config_dir / "128-common.json").write_bytes(b'{ "cheri-bits": 128 }')
-        (config_dir / "256-common.json").write_bytes(b'{ "cheri-bits": 256 }')
+        (config_dir / "128-common.json").write_bytes(b'{ "output-root": "/output128" }')
+        (config_dir / "256-common.json").write_bytes(b'{ "output-root": "/output256" }')
         (config_dir / "common.json").write_bytes(b'{ "source-root": "/this/is/a/unit/test" }')
 
         # Check that the config file is parsed:
@@ -360,15 +360,15 @@ def test_config_file_include():
         assert "/this/is/a/unit/test" == str(result.sourceRoot)
 
         # Check that the current file always has precendence
-        result = _get_config_with_include(config_dir, b'{ "#include": "256-common.json", "cheri-bits": 128}')
-        assert 128 == result.mips_cheri_bits
-        result = _get_config_with_include(config_dir, b'{ "#include": "128-common.json", "cheri-bits": 256}')
-        assert 256 == result.mips_cheri_bits
+        result = _get_config_with_include(config_dir, b'{ "#include": "256-common.json", "output-root": "/output128"}')
+        assert "/output128" == str(result.outputRoot)
+        result = _get_config_with_include(config_dir, b'{ "#include": "128-common.json", "output-root": "/output256"}')
+        assert "/output256" == str(result.outputRoot)
         # order doesn't matter since the #include is only evaluated after the whole file has been parsed:
-        result = _get_config_with_include(config_dir, b'{ "cheri-bits": 128, "#include": "256-common.json"}')
-        assert 128 == result.mips_cheri_bits
-        result = _get_config_with_include(config_dir, b'{ "cheri-bits": 256, "#include": "128-common.json"}')
-        assert 256 == result.mips_cheri_bits
+        result = _get_config_with_include(config_dir, b'{ "output-root": "/output128", "#include": "256-common.json"}')
+        assert "/output128" == str(result.outputRoot)
+        result = _get_config_with_include(config_dir, b'{ "output-root": "/output256", "#include": "128-common.json"}')
+        assert "/output256" == str(result.outputRoot)
 
         # TODO: handled nested cases: the level closest to the initial file wins
         (config_dir / "change-source-root.json").write_bytes(
@@ -440,12 +440,6 @@ def test_libcxxrt_dependency_path():
     check_libunwind_path(config.outputRoot / "rootfs128/opt/mips-hybrid/c++/lib", "libcxxrt")
     check_libunwind_path(config.outputRoot / "rootfs128/opt/mips-hybrid/c++/lib", "libcxxrt-mips-hybrid")
     check_libunwind_path(config.outputRoot / "rootfs-mips/opt/mips-nocheri/c++/lib", "libcxxrt-mips-nocheri")
-    config = _parse_arguments(["--skip-configure", "--256"])
-    check_libunwind_path(config.outputRoot / "rootfs256/opt/cheri/c++/lib", "libcxxrt")
-    check_libunwind_path(config.outputRoot / "rootfs256/opt/cheri/c++/lib", "libcxxrt-cheri")
-    config = _parse_arguments(["--skip-configure", "--128"])
-    check_libunwind_path(config.outputRoot / "rootfs128/opt/cheri/c++/lib", "libcxxrt")
-    check_libunwind_path(config.outputRoot / "rootfs128/opt/cheri/c++/lib", "libcxxrt-cheri")
 
 
 @pytest.mark.parametrize("target,expected_path,kind,extra_args", [
