@@ -656,10 +656,12 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         self.input_METALOG = self.rootfsDir / "cheribsdbox.mtree"
         self.file_templates = BuildMinimalCheriBSDDiskImage._MinimalFileTemplates()
         self.is_minimal = True
-        self.have_cplusplus_support = True
+
+    def _have_cplusplus_support(self, libdirs: "typing.List[str]"):
         # C++ runtime not available for RISC-V purecap due to https://github.com/CTSRD-CHERI/llvm-project/issues/379
-        if self.rootfs_xtarget.is_cheri_purecap([CPUArchitecture.RISCV64]):
-            self.have_cplusplus_support = False
+        if self.rootfs_xtarget.is_riscv(include_purecap=True):
+            return not self.rootfs_xtarget.is_cheri_purecap() and libdirs != ["usr/libcheri"]
+        return True
 
     def process_files_list(self, files_list):
         for line in io.StringIO(files_list).readlines():
@@ -681,7 +683,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         self.verbose_print("Adding files from rootfs to minimal image:")
         files_to_add = [includeLocalFile("files/minimal-image/base.files"),
                         includeLocalFile("files/minimal-image/etc.files")]
-        if self.have_cplusplus_support:
+        if self._have_cplusplus_support(["lib", "usr/lib"]):
             files_to_add.append(includeLocalFile("files/minimal-image/need-cplusplus.files"))
 
         for files_list in files_to_add:
@@ -752,7 +754,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             # Needed for most benchmarks (MIPS-only):
             required_libs.append("libstatcounters.so.3")
 
-        if self.have_cplusplus_support:
+        if self._have_cplusplus_support(libdirs):
             required_libs += ["libc++.so.1", "libcxxrt.so.1", "libgcc_s.so.1"]
 
         for library_basename in required_libs:
