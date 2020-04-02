@@ -70,6 +70,7 @@ class Attr(object):
 
     def __get__(self, instance, cls):
         """Gets value from attribute, return None if attribute doesn't exist."""
+        assert self.name is not None
         value = instance._elem.attrib.get(self.name)
         if value is not None:
             return escape(value)
@@ -77,6 +78,7 @@ class Attr(object):
 
     def __set__(self, instance, value):
         """Sets XML element attribute."""
+        assert self.name is not None
         if value is not None:
             instance._elem.attrib[self.name] = unicode(value)
 
@@ -125,25 +127,16 @@ class FloatAttr(Attr):
         super(FloatAttr, self).__set__(instance, value)
 
 
-def attributed(cls):
-    """Decorator to read XML element attribute name from class attribute."""
-    for key, value in vars(cls).items():
-        if isinstance(value, Attr):
-            value.name = key
-    return cls
+class JunitXmlMeta(type):
+    """Metaclass to read XML element attribute name from class attribute."""
+    def __init__(cls, name: str, bases, clsdict):
+        super().__init__(name, bases, clsdict)
+        for key, value in clsdict.items():
+            if isinstance(value, Attr):
+                value.name = key
 
 
-class junitxml(type):
-    """Metaclass to decorate the xml class"""
-
-    def __new__(meta, name, bases, methods):
-        cls = super(junitxml, meta).__new__(meta, name, bases, methods)
-        cls = attributed(cls)
-        return cls
-
-
-class Element(object):
-    __metaclass__ = junitxml
+class Element(object, metaclass=JunitXmlMeta):
     """Base class for all Junit XML elements."""
 
     def __init__(self, name=None):
