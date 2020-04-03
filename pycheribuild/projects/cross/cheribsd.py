@@ -486,7 +486,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.cross_toolchain_config.set_with_options(ELFTOOLCHAIN_BOOTSTRAP=True)
 
             self.cross_toolchain_config.set(
-                XAS="/xas/should/not/be/used",
                 XAR=cross_bindir / "llvm-ar",
                 # XLD
                 XNM=cross_bindir / "llvm-nm",
@@ -529,14 +528,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             target_flags = ""
             self.linker_for_kernel = "lld"  # bfd won't work here
             self.linker_for_world = "lld"
-            # DONT SET XAS!!! It prevents bfd from being built
-            # self.cross_toolchain_config.set(XAS="/usr/bin/as")
         elif self.compiling_for_mips(include_purecap=True):
             target_flags = " -integrated-as -fcolor-diagnostics -mcpu=beri"
             self.cross_toolchain_config.set_with_options(RESCUE=False,  # Won't compile with CHERI clang yet
                                                          BOOT=False)  # bootloaders won't link with LLD yet
-            # DONT SET XAS!!! It prevents bfd from being built
-            # self.cross_toolchain_config.set(XAS=cross_prefix + "clang " + target_flags)
         elif self.compiling_for_riscv(include_purecap=True):
             target_flags = ""
         else:
