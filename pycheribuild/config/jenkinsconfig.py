@@ -75,7 +75,7 @@ class JenkinsConfig(CheriConfig):
         super().__init__(loader, action_class=JenkinsAction)
         self.default_action = ""  # error if no action set
 
-        self.cpu = loader.addCommandLineOnlyOption("cpu", default=os.getenv("CPU"),
+        self.cpu = loader.addCommandLineOnlyOption("cpu", default=os.getenv("CPU", "default"),
                                                    help="The target to build the software for (defaults to $CPU).",
                                                    choices=["default", "cheri128", "mips", "hybrid-cheri128",
                                                             "riscv64", "riscv64-hybrid", "riscv64-purecap",
