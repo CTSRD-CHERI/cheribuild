@@ -2322,6 +2322,8 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
 
     _check_install_dir_conflict = True
 
+    _LAST_CLEAN_TIME_FMT = "%Y-%m-%dT%H:%M:%S.%f"
+
     def process(self):
         if self.generate_cmakelists:
             self._do_generate_cmakelists()
@@ -2401,9 +2403,12 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
             last_clean_date = None
             try:
                 if last_clean_build_date_path.exists():
-                    last_clean_date = datetime.datetime.fromisoformat(last_clean_build_date_path.read_text().strip())
+                    # Note: fromisoformat() only available in python 3.7
+                    # last_clean_date = datetime.datetime.fromisoformat(last_clean_build_date_path.read_text().strip())
+                    last_clean_date = datetime.datetime.strptime(last_clean_build_date_path.read_text().strip(), self._LAST_CLEAN_TIME_FMT)
+                    # Update timezone to allow equality comparison with utcnow()
                     last_clean_date = last_clean_date.replace(tzinfo=datetime.timezone.utc)
-            except Exception as e:
+            except ValueError as e:
                 self.warning("Could not parse contents of", last_clean_build_date_path, e)
             if last_clean_date is None:
                 self._force_clean = True
@@ -2422,7 +2427,10 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
                 self.makedirs(self.buildDir)
             # Clean has been performed -> write the last clean build date now (if needed).
             if self.full_rebuild_if_older_than is not None:
-                self.writeFile(last_clean_build_date_path, datetime.datetime.utcnow().isoformat(), overwrite=True)
+                # Note: fromisoformat is only available with python3.7+
+                # date_str = datetime.datetime.utcnow().isoformat()
+                date_str = datetime.datetime.utcnow().strftime(self._LAST_CLEAN_TIME_FMT)
+                self.writeFile(last_clean_build_date_path, date_str, overwrite=True)
             if self.build_in_source_dir:
                 self.writeFile(last_build_file, self.build_configuration_suffix(), overwrite=True)
             if not self.config.skipConfigure or self.config.configureOnly:
