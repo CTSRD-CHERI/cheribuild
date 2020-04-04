@@ -275,6 +275,9 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         # And usually also --sysroot
         if self.project.needs_sysroot:
             result.append("--sysroot=" + str(self.sysroot_dir))
+            if self.project.is_nonexistent_or_empty_dir(self.sysroot_dir):
+                self.project.fatal("Project", self.project.target, "needs a sysroot, but", self.sysroot_dir,
+                    " is empty or does not exist.")
         result += ["-B" + str(self._compiler_dir)]
 
         if self.target.is_mips(include_purecap=True):

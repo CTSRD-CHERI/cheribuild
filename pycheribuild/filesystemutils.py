@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 
+import functools
 import os
 import threading
 import shutil
@@ -269,3 +270,15 @@ class FileSystemUtils(object):
                 #    print(coloured(AnsiColour.yellow, "Not overwriting", link, "because it is the target"))
                 continue
             runCmd("ln", "-fsn", tool_path.name, target + tool_name, cwd=cwd, print_verbose_only=True)
+
+    @staticmethod
+    # Not cached since another target could write to this dir: @functools.lru_cache(maxsize=20)
+    def is_nonexistent_or_empty_dir(d: Path):
+        #print("Checking if dir is empty:", d)
+        if not d.exists():
+            return True
+        for i, item in enumerate(d.iterdir()):
+            #print(d, "is not empty, found ", item)
+            return False
+        #print(d, "is empty")
+        return True
