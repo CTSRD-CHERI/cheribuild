@@ -49,4 +49,4 @@ class BuildEigen(CrossCompileCMakeProject):
         return super().compile(**kwargs)
 
     def install(self, *args, **kwargs):
-        pass
+        return super().install(*args, **kwargs)
