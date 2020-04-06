@@ -547,8 +547,10 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
                 start_dhclient(child)
             _set_posix_sh_prompt(child)
         else:
+            # If this was a CHEIR trap wait up to 20 seconds to ensure the dump output has been printed
+            child.expect(["THIS STRING SHOULD NOT MATCH, JUST WAITING FOR 20 secs", pexpect.TIMEOUT], timeout=20)
             # If this was a failure of init we should get a debugger backtrace
-            failure("error during boot login prompt: ", str(child), "match index=", i)
+            failure("Error during boot login prompt: ", str(child), "match index=", i)
         success("===> booted CheriBSD (userspace startup time: ", datetime.datetime.now() - userspace_starttime, ")")
     except KeyboardInterrupt:
         failure("Keyboard interrupt during boot", exit=True)
