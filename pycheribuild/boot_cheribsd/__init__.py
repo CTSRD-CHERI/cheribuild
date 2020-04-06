@@ -119,36 +119,42 @@ class CheriBSDInstance(pexpect.spawn):
     smb_dirs = None  # type: typing.List[SmbMount]
     flush_interval = None
 
-    def expect(self, pattern: list, timeout=-1, pretend_result=None, **kwargs):
+    def expect(self, pattern: list, timeout=-1, pretend_result=None, timeout_msg="timeout", **kwargs):
         assert isinstance(pattern, list), "expected list and not " + str(pattern)
-        return self._expect_and_handle_panic(pattern, timeout=timeout, **kwargs)
+        return self._expect_and_handle_panic(pattern, timeout=timeout, timeout_msg=timeout_msg, **kwargs)
 
-    def expect_prompt(self, timeout=-1, **kwargs):
-        return self._expect_and_handle_panic([PROMPT], timeout=timeout, **kwargs)
+    def expect_prompt(self, timeout=-1, timeout_msg="timeout", **kwargs):
+        return self._expect_and_handle_panic([PROMPT], timeout=timeout, timeout_msg=timeout_msg, **kwargs)
 
-    def expect_exact(self, pattern_list, timeout=-1, pretend_result=None, **kwargs):
+    def expect_exact(self, pattern_list, timeout=-1, pretend_result=None, timeout_msg="timeout", **kwargs):
         assert PANIC not in pattern_list
         assert STOPPED not in pattern_list
         assert PANIC_KDB not in pattern_list
         if not isinstance(pattern_list, list):
             pattern_list = [pattern_list]
         panic_regexes = [PANIC, STOPPED, PANIC_KDB]
-        i = super().expect_exact(panic_regexes + pattern_list, **kwargs)
-        if i < len(panic_regexes):
-            debug_kernel_panic(self)
-            failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
-        return i - len(panic_regexes)
+        try:
+            i = super().expect_exact(panic_regexes + pattern_list, **kwargs)
+            if i < len(panic_regexes):
+                debug_kernel_panic(self)
+                failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
+            return i - len(panic_regexes)
+        except pexpect.TIMEOUT:
+            failure(timeout_msg, ": ", str(self))
 
-    def _expect_and_handle_panic(self, options: list, **kwargs):
+    def _expect_and_handle_panic(self, options: list, timeout_msg, **kwargs):
         assert PANIC not in options
         assert STOPPED not in options
         assert PANIC_KDB not in options
         panic_regexes = [PANIC, STOPPED, PANIC_KDB]
-        i = super().expect(panic_regexes + options, **kwargs)
-        if i < len(panic_regexes):
-            debug_kernel_panic(self)
-            failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
-        return i - len(panic_regexes)
+        try:
+            i = super().expect(panic_regexes + options, **kwargs)
+            if i < len(panic_regexes):
+                debug_kernel_panic(self)
+                failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
+            return i - len(panic_regexes)
+        except pexpect.TIMEOUT:
+            failure(timeout_msg, ": ", str(self))
 
     def run(self, cmd: str, *, expected_output=None, error_output=None, cheri_trap_fatal=True, ignore_cheri_trap=False, timeout=60):
         run_cheribsd_command(self, cmd, expected_output=expected_output, error_output=error_output,
@@ -494,10 +500,9 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
-        i = child.expect([pexpect.TIMEOUT, STARTING_INIT, BOOT_FAILURE, BOOT_FAILURE2] + FATAL_ERROR_MESSAGES, timeout=15 * 60)
-        if i == 0:  # Timeout
-            failure("timeout before booted: ", str(child))
-        elif i != 1:  # start up scripts failed
+        i = child.expect([STARTING_INIT, BOOT_FAILURE, BOOT_FAILURE2] + FATAL_ERROR_MESSAGES, timeout=15 * 60,
+            timeout_msg="timeout before /sbin/init")
+        if i != 0:  # start up scripts failed
             failure("start up scripts failed to run")
         userspace_starttime = datetime.datetime.now()
         success("===> init running (kernel startup time: ", userspace_starttime - starttime, ")")
@@ -505,38 +510,36 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
             # To test kernel startup time
             return child
 
-        boot_expect_strings = [pexpect.TIMEOUT, LOGIN, SHELL_OPEN, BOOT_FAILURE]
-        i = child.expect(boot_expect_strings + ["DHCPACK from "] + FATAL_ERROR_MESSAGES, timeout=15 * 60)
+        boot_expect_strings = [LOGIN, SHELL_OPEN, BOOT_FAILURE]
+        i = child.expect(boot_expect_strings + ["DHCPACK from "] + FATAL_ERROR_MESSAGES, timeout=15 * 60,
+            timeout_msg="timeout awaiting login prompt")
         if i == len(boot_expect_strings):
             have_dhclient = True
+            success("===> got DHCPACK")
             # we have a network, keep waiting for the login prompt
-            i = child.expect(boot_expect_strings + FATAL_ERROR_MESSAGES, timeout=15 * 60)
-        if i == 0:  # Timeout
-            failure("timeout awaiting login prompt: ", str(child))
-        elif i == 1:
+            i = child.expect(boot_expect_strings + FATAL_ERROR_MESSAGES, timeout=5 * 60,
+                timeout_msg="timeout awaiting login prompt")
+        if i == 0:
             success("===> got login prompt")
             child.sendline("root")
 
-            i = child.expect([pexpect.TIMEOUT, PROMPT, PROMPT_SH],
-                             timeout=3 * 60)  # give CheriABI csh 3 minutes to start
-            if i == 0:  # Timeout
-                failure("timeout awaiting command prompt ")
-            if i == 1:  # /bin/csh prompt
+            i = child.expect([PROMPT, PROMPT_SH], timeout=3 * 60,
+                timeout_msg="timeout awaiting command prompt ")  # give CheriABI csh 3 minutes to start
+            if i == 0:  # /bin/csh prompt
                 success("===> got csh command prompt, starting POSIX sh")
                 # csh is weird, use the normal POSIX sh instead
                 child.sendline("sh")
-                i = child.expect([pexpect.TIMEOUT, PROMPT, PROMPT_SH], timeout=3 * 60) # give CheriABI sh 3 minutes to start
-                if i == 0:  # Timeout
-                    failure("timeout starting /bin/sh")
-                elif i == 1:  # POSIX sh with PS1 set
+                i = child.expect([PROMPT, PROMPT_SH], timeout=3 * 60,
+                    timeout_msg="timeout starting /bin/sh")  # give CheriABI sh 3 minutes to start
+                if i == 0:  # POSIX sh with PS1 set
                     success("===> started POSIX sh (PS1 already set)")
-                elif i == 2:  # POSIX sh without PS1
+                elif i == 1:  # POSIX sh without PS1
                     success("===> started POSIX sh (PS1 not set)")
                     _set_posix_sh_prompt(child)
-            if i == 2:  # /bin/sh prompt
+            if i == 1:  # /bin/sh prompt
                 success("===> got /sbin/sh prompt")
                 _set_posix_sh_prompt(child)
-        elif i == 2:  # shell started from /etc/rc:
+        elif i == 1:  # shell started from /etc/rc:
             child.expect_exact(PROMPT_SH, timeout=30)
             success("===> /etc/rc completed, got command prompt")
             # set up network (bluehive image tries to use atse0)
@@ -545,8 +548,7 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
             _set_posix_sh_prompt(child)
         else:
             # If this was a failure of init we should get a debugger backtrace
-            debug_kernel_panic(child)
-            failure("error during boot login prompt: ", str(child))
+            failure("error during boot login prompt: ", str(child), "match index=", i)
         success("===> booted CheriBSD (userspace startup time: ", datetime.datetime.now() - userspace_starttime, ")")
     except KeyboardInterrupt:
         failure("Keyboard interrupt during boot", exit=True)
