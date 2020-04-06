@@ -145,7 +145,8 @@ class BuildFreeBSDBase(Project):
                                             help="Don't build all of FreeBSD, just what is needed for running most "
                                                  "CHERI tests/benchmarks")
         if "build_tests" not in cls.__dict__:
-            cls.build_tests = cls.add_bool_option("build-tests", help="Build the tests too (-DWITH_TESTS)", show_help=True)
+            cls.build_tests = cls.add_bool_option("build-tests", help="Build the tests too (-DWITH_TESTS)",
+                show_help=True, default=True)
 
         cls.debug_kernel = cls.add_bool_option("debug-kernel", help="Build the kernel with -O0 and verbose boot output",
                                              show_help=False)
