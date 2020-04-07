@@ -188,6 +188,7 @@ class BuildFreeBSDBase(Project):
         # tests off by default because they take a long time and often seems to break
         # the creation of disk-image (METALOG is invalid)
         self.make_args.set_with_options(TESTS=self.build_tests)
+        self.make_args.set_with_options(DTRACE_TESTS=self.build_tests)
 
         if not self.config.verbose and not self.config.quiet:
             # By default we only want to print the status updates -> use make -s so we have to do less filtering
