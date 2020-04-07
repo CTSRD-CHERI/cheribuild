@@ -2621,15 +2621,12 @@ class CMakeProject(Project):
             CMAKE_SHARED_LINKER_FLAGS_INIT=commandline_to_str(custom_ldflags + self.target_info.additional_shared_library_link_flags),
             CMAKE_MODULE_LINKER_FLAGS_INIT=commandline_to_str(custom_ldflags + self.target_info.additional_shared_library_link_flags),
             )
-        # TODO: always avoid the toolchain file?
         if not self.compiling_for_host():
             # CMAKE_CROSSCOMPILING will be set when we change CMAKE_SYSTEM_NAME:
             # This means we may not need the toolchain file at all
             # https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html
-            if self.target_info.is_rtems():
-              system_name = "rtems" + str(self.target_info.RTEMS_VERSION)
-            else:
-              system_name = "Generic" if self.target_info.is_baremetal() else "FreeBSD"
+            # TODO: avoid the toolchain file and set all flags on the command line
+            system_name = self.target_info.cmake_system_name
             self._prepare_toolchain_file(
                 TOOLCHAIN_SDK_BINDIR=self.sdk_bindir if not self.compiling_for_host() else
                 self.config.cheri_sdk_bindir,

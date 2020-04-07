@@ -56,7 +56,6 @@ class TargetInfo(ABC):
 
     @property
     def cmake_processor_id(self):
-        # FIXME: move this to target_info!
         if self.target.is_mips(include_purecap=True):
             if self.target.is_cheri_purecap():
                 return "CHERI (MIPS IV compatible) with {}-bit capabilities".format(self.config.mips_cheri_bits_str)
@@ -65,6 +64,11 @@ class TargetInfo(ABC):
         if self.target.is_aarch64(include_purecap=True):
             return "ARM64"
         return self.target.cpu_architecture.value
+
+    @property
+    @abstractmethod
+    def cmake_system_name(self) -> str:
+        ...
 
     @property
     @abstractmethod
@@ -352,6 +356,10 @@ class NativeTargetInfo(TargetInfo):
     def sysroot_dir(self):
         raise ValueError("Should not be called for native")
 
+    @property
+    def cmake_system_name(self) -> str:
+        raise ValueError("Should not be called for native")
+
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         raise ValueError("Should not be called for native")
@@ -403,6 +411,10 @@ class NativeTargetInfo(TargetInfo):
 class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     shortname = "FreeBSD"
     FREEBSD_VERSION = 13
+
+    @property
+    def cmake_system_name(self) -> str:
+        return "FreeBSD"
 
     def _get_sdk_root_dir_lazy(self):
         from ..projects.llvm import BuildUpstreamLLVM
@@ -548,6 +560,10 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
     shortname = "RTEMS"
     RTEMS_VERSION = 5
 
+    @property
+    def cmake_system_name(self) -> str:
+        return "rtems" + str(self.RTEMS_VERSION)
+
     def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
         super().__init__(target, project)
         self._sdk_root_dir = None
@@ -562,7 +578,8 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def target_triple(self):
-        return "riscv64-unknown-rtems5"
+        assert self.target.is_riscv(include_purecap=True)
+        return "riscv64-unknown-rtems" + str(self.RTEMS_VERSION)
 
     @property
     def sdk_root_dir(self):
@@ -609,6 +626,10 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
 
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     shortname = "Newlib"
+
+    @property
+    def cmake_system_name(self) -> str:
+        return "Generic"  # Unknown platform, CMake expects the value to be set to Generic
 
     def _get_sdk_root_dir_lazy(self) -> Path:
         return self.config.cheri_sdk_dir
@@ -678,6 +699,11 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
 
 class NewlibRtemsTargetInfo(_ClangBasedTargetInfo):
     shortname = "Newlib RTEMS"
+    RTEMS_VERSION = 5
+
+    @property
+    def cmake_system_name(self) -> str:
+        return "rtems" + str(self.RTEMS_VERSION)
 
     def _get_sdk_root_dir_lazy(self) -> Path:
         return self.config.cheri_sdk_dir
@@ -701,7 +727,8 @@ class NewlibRtemsTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def target_triple(self):
-        return "riscv64-unknown-rtems5"
+        assert self.target.is_riscv(include_purecap=True)
+        return "riscv64-unknown-rtems" + str(self.RTEMS_VERSION)
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
