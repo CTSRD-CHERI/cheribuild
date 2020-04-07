@@ -146,8 +146,9 @@ class Opam2(SimpleProject):
 
     def process(self):
         if IS_LINUX:
+            self.makedirs(self.config.otherToolsDir / "bin")
             # NOTE: 2.0.2 won't work for me
-            runCmd("wget", "https://github.com/ocaml/opam/releases/download/2.0.1/opam-2.0.1-x86_64-linux", "-O",
+            runCmd("wget", "https://github.com/ocaml/opam/releases/download/2.0.6/opam-2.0.6-x86_64-linux", "-O",
                    self.config.otherToolsDir / "bin/opam")
             # Make it executable
             if not self.config.pretend:
