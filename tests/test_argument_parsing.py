@@ -213,55 +213,55 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     assert cheribsd_cheri.synthetic_base == cheribsd_class
     assert hasattr(cheribsd_purecap, "synthetic_base")
 
-    _parse_arguments(["--cheribsd-mips-nocheri/build-tests"])
-    assert not cheribsd_purecap.build_tests, "cheribsd-purecap build-tests should default to false"
-    assert not cheribsd_cheri.build_tests, "cheribsd-cheri build-tests should default to false"
-    assert cheribsd_mips.build_tests, "cheribsd-mips-nocheri build-tests should be set on cmdline"
-    _parse_arguments(["--cheribsd-purecap/build-tests"])
-    assert cheribsd_purecap.build_tests, "cheribsd-purecap build-tests should be set on cmdline"
-    assert not cheribsd_cheri.build_tests, "cheribsd-cheri build-tests should default to false"
-    assert not cheribsd_mips.build_tests, "cheribsd-mips-nocheri build-tests should default to false"
-    _parse_arguments(["--cheribsd-cheri/build-tests"])
-    assert not cheribsd_purecap.build_tests, "cheribsd-purecap build-tests should default to false"
-    assert cheribsd_cheri.build_tests, "cheribsd-cheri build-tests should be set on cmdline"
-    assert not cheribsd_mips.build_tests, "cheribsd-mips-nocheri build-tests should default to false"
+    _parse_arguments(["--cheribsd-mips-nocheri/debug-kernel"])
+    assert not cheribsd_purecap.debug_kernel, "cheribsd-purecap debug-kernel should default to false"
+    assert not cheribsd_cheri.debug_kernel, "cheribsd-cheri debug-kernel should default to false"
+    assert cheribsd_mips.debug_kernel, "cheribsd-mips-nocheri debug-kernel should be set on cmdline"
+    _parse_arguments(["--cheribsd-purecap/debug-kernel"])
+    assert cheribsd_purecap.debug_kernel, "cheribsd-purecap debug-kernel should be set on cmdline"
+    assert not cheribsd_cheri.debug_kernel, "cheribsd-cheri debug-kernel should default to false"
+    assert not cheribsd_mips.debug_kernel, "cheribsd-mips-nocheri debug-kernel should default to false"
+    _parse_arguments(["--cheribsd-cheri/debug-kernel"])
+    assert not cheribsd_purecap.debug_kernel, "cheribsd-purecap debug-kernel should default to false"
+    assert cheribsd_cheri.debug_kernel, "cheribsd-cheri debug-kernel should be set on cmdline"
+    assert not cheribsd_mips.debug_kernel, "cheribsd-mips-nocheri debug-kernel should default to false"
 
     # If the base cheribsd option is set but no per-target one use both cheribsd-cheri and cheribsd-purecap should inherit basic one:
-    _parse_arguments(["--cheribsd/build-tests"])
-    assert cheribsd_cheri.build_tests, "cheribsd-cheri should inherit build-tests from cheribsd(default)"
-    assert cheribsd_purecap.build_tests, "cheribsd-purecap should inherit build-tests from cheribsd(default)"
+    _parse_arguments(["--cheribsd/debug-kernel"])
+    assert cheribsd_cheri.debug_kernel, "cheribsd-cheri should inherit debug-kernel from cheribsd(default)"
+    assert cheribsd_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
 
     # But target-specific ones should override
-    _parse_arguments(["--cheribsd/build-tests", "--cheribsd-purecap/no-build-tests"])
-    assert cheribsd_cheri.build_tests, "cheribsd-cheri should inherit build-tests from cheribsd(default)"
-    assert not cheribsd_purecap.build_tests, "cheribsd-purecap should have a false override for build-tests"
+    _parse_arguments(["--cheribsd/debug-kernel", "--cheribsd-purecap/no-debug-kernel"])
+    assert cheribsd_cheri.debug_kernel, "cheribsd-cheri should inherit debug-kernel from cheribsd(default)"
+    assert not cheribsd_purecap.debug_kernel, "cheribsd-purecap should have a false override for debug-kernel"
 
-    _parse_arguments(["--cheribsd/build-tests", "--cheribsd-cheri/no-build-tests"])
-    assert cheribsd_purecap.build_tests, "cheribsd-purecap should inherit build-tests from cheribsd(default)"
-    assert not cheribsd_cheri.build_tests, "cheribsd-cheri should have a false override for build-tests"
+    _parse_arguments(["--cheribsd/debug-kernel", "--cheribsd-cheri/no-debug-kernel"])
+    assert cheribsd_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
+    assert not cheribsd_cheri.debug_kernel, "cheribsd-cheri should have a false override for debug-kernel"
 
     # Check that we hav ethe same behaviour when loading from json:
-    _parse_config_file_and_args(b'{"cheribsd/build-tests": true }')
-    assert cheribsd_purecap.build_tests, "cheribsd-purecap should inherit build-tests from cheribsd(default)"
-    assert cheribsd_cheri.build_tests, "cheribsd-cheri should inherit build-tests from cheribsd(default)"
-    assert cheribsd_mips.build_tests, "cheribsd-mips should inherit build-tests from cheribsd(default)"
+    _parse_config_file_and_args(b'{"cheribsd/debug-kernel": true }')
+    assert cheribsd_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
+    assert cheribsd_cheri.debug_kernel, "cheribsd-cheri should inherit debug-kernel from cheribsd(default)"
+    assert cheribsd_mips.debug_kernel, "cheribsd-mips should inherit debug-kernel from cheribsd(default)"
 
     # But target-specific ones should override
-    _parse_config_file_and_args(b'{"cheribsd/build-tests": true, "cheribsd-cheri/build-tests": false }')
-    assert cheribsd_mips.build_tests, "cheribsd-mips build-tests should be inherited on cmdline"
-    assert cheribsd_purecap.build_tests, "cheribsd-purecap should inherit build-tests from cheribsd(default)"
-    assert not cheribsd_cheri.build_tests, "cheribsd-cheri should have a false override for build-tests"
+    _parse_config_file_and_args(b'{"cheribsd/debug-kernel": true, "cheribsd-cheri/debug-kernel": false }')
+    assert cheribsd_mips.debug_kernel, "cheribsd-mips debug-kernel should be inherited on cmdline"
+    assert cheribsd_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
+    assert not cheribsd_cheri.debug_kernel, "cheribsd-cheri should have a false override for debug-kernel"
 
     # And that cmdline still overrides JSON:
-    _parse_config_file_and_args(b'{"cheribsd/build-tests": true }', "--cheribsd-cheri/no-build-tests")
-    assert cheribsd_purecap.build_tests, "cheribsd-purecap should inherit build-tests from cheribsd(default)"
-    assert cheribsd_mips.build_tests, "cheribsd-mips build-tests should be inherited from cheribsd(default)"
-    assert not cheribsd_cheri.build_tests, "cheribsd-cheri should have a false override for build-tests"
+    _parse_config_file_and_args(b'{"cheribsd/debug-kernel": true }', "--cheribsd-cheri/no-debug-kernel")
+    assert cheribsd_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
+    assert cheribsd_mips.debug_kernel, "cheribsd-mips debug-kernel should be inherited from cheribsd(default)"
+    assert not cheribsd_cheri.debug_kernel, "cheribsd-cheri should have a false override for debug-kernel"
     # But if a per-target option is set in the json that still overrides the default set on the cmdline
-    _parse_config_file_and_args(b'{"cheribsd-cheri/build-tests": false }', "--cheribsd/build-tests")
-    assert cheribsd_purecap.build_tests, "cheribsd-purecap should inherit build-tests from cheribsd(default)"
-    assert cheribsd_mips.build_tests, "cheribsd-mips build-tests should be inherited from cheribsd(default)"
-    assert not cheribsd_cheri.build_tests, "cheribsd-cheri should have a JSON false override for build-tests"
+    _parse_config_file_and_args(b'{"cheribsd-cheri/debug-kernel": false }', "--cheribsd/debug-kernel")
+    assert cheribsd_purecap.debug_kernel, "cheribsd-purecap should inherit debug-kernel from cheribsd(default)"
+    assert cheribsd_mips.debug_kernel, "cheribsd-mips debug-kernel should be inherited from cheribsd(default)"
+    assert not cheribsd_cheri.debug_kernel, "cheribsd-cheri should have a JSON false override for debug-kernel"
 
     # However, don't inherit for buildDir since that doesn't make sense:
     def assertBuildDirsDifferent():
