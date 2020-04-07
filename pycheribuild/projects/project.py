@@ -774,7 +774,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         statusUpdate("No benchmarks defined for target", self.target)
 
     def _get_mfs_root_kernel(self, use_benchmark_kernel: bool) -> Path:
-        assert self.target_info.is_cheribsd, "Other cases not handled yet"
+        assert self.target_info.is_cheribsd(), "Other cases not handled yet"
         kernel_xtarget = self._get_mfs_kernel_xtarget()
         from .cross.cheribsd import BuildCheriBsdMfsKernel
         if use_benchmark_kernel:
@@ -784,7 +784,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def _get_mfs_kernel_xtarget(self):
         kernel_xtarget = self.crosscompile_target
-        if self.target_info.is_cheribsd:
+        if self.target_info.is_cheribsd():
             # TODO: allow using non-CHERI kernels? Or the purecap kernel?
             if self.compiling_for_mips(include_purecap=True):
                 # Always use CHERI hybrid kernel
@@ -1493,8 +1493,8 @@ class Project(SimpleProject):
         if install_dir is None and cls._default_install_dir_fn is Project._default_install_dir_fn:
             raise RuntimeError("native_install_dir/cross_install_dir/_default_install_dir_fn not specified for " + cls.target)
         if install_dir == DefaultInstallDir.SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE:
-            if cls._xtarget is not CompilationTargets.NONE and (cls._xtarget.target_info_cls.is_baremetal or \
-               cls._xtarget.target_info_cls.is_rtems):
+            if cls._xtarget is not CompilationTargets.NONE and (cls._xtarget.target_info_cls.is_baremetal() or \
+               cls._xtarget.target_info_cls.is_rtems()):
                 install_dir = DefaultInstallDir.SYSROOT
             else:
                 install_dir = DefaultInstallDir.ROOTFS
@@ -1650,7 +1650,7 @@ class Project(SimpleProject):
 
     def should_use_extra_c_compat_flags(self):
         # TODO: add a command-line option and default to true for
-        return self.compiling_for_cheri() and self.target_info.is_baremetal
+        return self.compiling_for_cheri() and self.target_info.is_baremetal()
 
     @property
     def extra_c_compat_flags(self):
@@ -1730,9 +1730,9 @@ class Project(SimpleProject):
 
         # Should work fine without linker emulation (the linker should infer it from input files)
         # if self.compiling_for_cheri():
-        #     emulation = "elf64btsmip_cheri_fbsd" if not self.target_info.is_baremetal else "elf64btsmip_cheri"
+        #     emulation = "elf64btsmip_cheri_fbsd" if not self.target_info.is_baremetal() else "elf64btsmip_cheri"
         # elif self.compiling_for_mips(include_purecap=False):
-        #     emulation = "elf64btsmip_fbsd" if not self.target_info.is_baremetal else "elf64btsmip"
+        #     emulation = "elf64btsmip_fbsd" if not self.target_info.is_baremetal() else "elf64btsmip"
         # result.append("-Wl,-m" + emulation)
         result += self.target_info.essential_compiler_and_linker_flags + [
             "-fuse-ld=" + str(self.target_info.linker),
@@ -1793,10 +1793,10 @@ class Project(SimpleProject):
             install_dir_kind = self.get_default_install_dir_kind()
             # Install to SDK if CHERIBSD_ROOTFS is the install dir but we are not building for CheriBSD
             if install_dir_kind == DefaultInstallDir.SYSROOT:
-                if self.target_info.is_baremetal:
+                if self.target_info.is_baremetal():
                     self.destdir = self.sdk_sysroot.parent
                     self._installPrefix = Path("/", self.target_info.target_triple)
-                elif  self.target_info.is_rtems:
+                elif  self.target_info.is_rtems():
                     self.destdir = self.sdk_sysroot
                     self._installPrefix = Path("/", self.target_info.target_triple)
                 else:
@@ -1848,7 +1848,7 @@ class Project(SimpleProject):
             "DESTDIR=", self.destdir)
 
         if self.should_include_debug_info:
-            if not self.target_info.is_macos:
+            if not self.target_info.is_macos():
                 self.COMMON_FLAGS.append("-ggdb")
         self.CFLAGS = []
         self.CXXFLAGS = []
@@ -2517,7 +2517,7 @@ class CMakeProject(Project):
         # This must come first:
         if not self.compiling_for_host():
             # Despite the name it should also work for baremetal newlib
-            assert self.target_info.is_cheribsd or (self.target_info.is_baremetal and self.target_info.is_newlib) or (self.target_info.is_rtems and self.target_info.is_newlib)
+            assert self.target_info.is_cheribsd or (self.target_info.is_baremetal() and self.target_info.is_newlib) or (self.target_info.is_rtems() and self.target_info.is_newlib)
             self._cmakeTemplate = includeLocalFile("files/CrossToolchain.cmake.in")
             self.toolchainFile = self.buildDir / "CrossToolchain.cmake"
             self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self.toolchainFile)
@@ -2582,7 +2582,7 @@ class CMakeProject(Project):
             self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installPrefix)
         else:
             self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installDir)
-        if self.crosscompile_target.is_cheri_purecap() and self.target_info.is_cheribsd:
+        if self.crosscompile_target.is_cheri_purecap() and self.target_info.is_cheribsd():
             if self._get_cmake_version() < (3, 9, 0) and not (self.sdk_sysroot / "usr/local/lib/cheri").exists():
                 warningMessage("Workaround for missing custom lib suffix in CMake < 3.9")
                 self.makedirs(self.sdk_sysroot / "usr/lib")
@@ -2626,10 +2626,10 @@ class CMakeProject(Project):
             # CMAKE_CROSSCOMPILING will be set when we change CMAKE_SYSTEM_NAME:
             # This means we may not need the toolchain file at all
             # https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html
-            if self.target_info.is_rtems:
+            if self.target_info.is_rtems():
               system_name = "rtems" + str(self.target_info.RTEMS_VERSION)
             else:
-              system_name = "Generic" if self.target_info.is_baremetal else "FreeBSD"
+              system_name = "Generic" if self.target_info.is_baremetal() else "FreeBSD"
             self._prepare_toolchain_file(
                 TOOLCHAIN_SDK_BINDIR=self.sdk_bindir if not self.compiling_for_host() else
                 self.config.cheri_sdk_bindir,

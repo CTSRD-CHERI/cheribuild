@@ -220,7 +220,7 @@ class BuildFreeBSDBase(Project):
     # Return the path the a potetial sysroot created from installing this project
     # Currently we only create sysroots for CheriBSD but we might change that in the future
     def get_corresponding_sysroot(self) -> "typing.Optional[Path]":
-        if self.target_info.is_cheribsd:
+        if self.target_info.is_cheribsd():
             # Note: we can't use self.target_info.sysroot_dir here since we currently build
             # both purecap and hybrid targets against the same sysroot.
             # For MIPS self.target_info.sysroot_dir is $CHERI_SDK/sysroot128 in both cases, but we
@@ -532,7 +532,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         elif self.compiling_for_mips(include_purecap=True):
             target_flags = "-fcolor-diagnostics"
             # TODO: should probably set that inside CheriBSD makefiles instead
-            if self.target_info.is_cheribsd:
+            if self.target_info.is_cheribsd():
                 target_flags += " -mcpu=beri"
             self.cross_toolchain_config.set_with_options(RESCUE=False,  # Won't compile with CHERI clang yet
                                                          BOOT=False)  # bootloaders won't link with LLD yet

@@ -97,7 +97,7 @@ class BuildQEMUBase(AutotoolsProject):
         # Disable some more unneeded things (we don't usually need the GUI frontends)
         if not self.gui:
             self.configureArgs.extend(["--disable-vnc", "--disable-sdl", "--disable-gtk", "--disable-opengl"])
-            if self.target_info.is_macos:
+            if self.target_info.is_macos():
                 self.configureArgs.append("--disable-cocoa")
 
         # QEMU now builds with python3
@@ -119,7 +119,7 @@ class BuildQEMUBase(AutotoolsProject):
         # Having symbol information is useful for debugging and profiling
         self.configureArgs.append("--disable-strip")
 
-        if not self.target_info.is_linux:
+        if not self.target_info.is_linux():
             self.configureArgs.extend(["--disable-linux-aio", "--disable-kvm"])
 
         if self.config.verbose:
@@ -145,9 +145,9 @@ class BuildQEMUBase(AutotoolsProject):
         self.CFLAGS.append("-Werror=return-type")
         if self.use_smbd:
             smbd_path = "/usr/sbin/smbd"
-            if self.target_info.is_freebsd:
+            if self.target_info.is_freebsd():
                 smbd_path = "/usr/local/sbin/smbd"
-            elif self.target_info.is_macos:
+            elif self.target_info.is_macos():
                 try:
                     prefix = self.run_cmd("brew", "--prefix", "samba", captureOutput=True, runInPretendMode=True,
                                           print_verbose_only=True).stdout.decode("utf-8").strip()
@@ -164,7 +164,7 @@ class BuildQEMUBase(AutotoolsProject):
 
             self.configureArgs.append("--smbd=" + str(smbd_path))
             if not Path(smbd_path).exists():
-                if self.target_info.is_macos:
+                if self.target_info.is_macos():
                     # QEMU user networking expects a smbd that accepts the same flags and config files as the samba.org
                     # sources but the macos /usr/sbin/smbd is incompatible with that:
                     self.warning("QEMU user-mode samba shares require the samba.org smbd. You will need to build it "

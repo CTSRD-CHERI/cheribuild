@@ -49,7 +49,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
 
-        if self.target_info.is_rtems:
+        if self.target_info.is_rtems():
             self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY") # RTEMS only needs static libs
             # Get default target (arch) from the triple
             self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH=self.target_info.target_triple.split('-')[0])
@@ -62,7 +62,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             COMPILER_RT_BUILD_XRAY=False,
             COMPILER_RT_BUILD_LIBFUZZER=True,
             COMPILER_RT_BUILD_PROFILE=False,
-            COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal,
+            COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal(),
             # COMPILER_RT_DEFAULT_TARGET_ONLY=True,
             # BUILTIN_SUPPORTED_ARCH="mips64",
             TARGET_TRIPLE=self.target_info.target_triple,
@@ -83,13 +83,14 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             ubsan_runtime_path = self.installDir / ("lib/freebsd/libclang_rt.ubsan_standalone-mips64c" + self.config.mips_cheri_bits_str + ".a")
             if not ubsan_runtime_path.exists():
                 self.warning("Did not install ubsan runtime", ubsan_runtime_path)
-        if self.target_info.is_rtems:
+        if self.target_info.is_rtems():
             rt_runtime_path = self.installDir / ("lib/generic/libclang_rt.builtins-riscv64.a")
             if not rt_runtime_path.exists():
                 self.warning("Did not install compiler runtime", rt_runtime_path.exists)
             else:
                 print(self.target_info.sysroot_dir)
                 self.createSymlink(rt_runtime_path, self.target_info.sysroot_dir / "lib/libclang_rt.builtins-riscv64.a")
+
 
 class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
@@ -102,14 +103,14 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        assert self.target_info.is_baremetal or self.target_info.is_rtems, "No other targets supported yet"
+        assert self.target_info.is_baremetal() or self.target_info.is_rtems(), "No other targets supported yet"
         assert self.target_info.is_newlib, "No other targets supported yet"
         # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")
         if self.compiling_for_mips(include_purecap=False):
             self.add_cmake_options(COMPILER_RT_HAS_FPIC_FLAG=False)  # HACK: currently we build everything as -fno-pic
 
-        if self.target_info.is_rtems:
+        if self.target_info.is_rtems():
             self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY") # RTEMS only needs static libs
         self.add_cmake_options(
             LLVM_CONFIG_PATH=BuildCheriLLVM.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
@@ -119,7 +120,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             COMPILER_RT_BUILD_XRAY=False,
             COMPILER_RT_BUILD_LIBFUZZER=False,
             COMPILER_RT_BUILD_PROFILE=False,
-            COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal,
+            COMPILER_RT_BAREMETAL_BUILD=self.target_info.is_baremetal(),
             COMPILER_RT_DEFAULT_TARGET_ONLY=True,
             # BUILTIN_SUPPORTED_ARCH="mips64",
             TARGET_TRIPLE=self.target_info.target_triple,
@@ -139,7 +140,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
 
         libname = "libclang_rt.builtins-" + self.triple_arch + ".a"
 
-        if not self.target_info.is_rtems:
+        if not self.target_info.is_rtems():
             self.moveFile(self.installDir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
 
             if self.compiling_for_cheri():

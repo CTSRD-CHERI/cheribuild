@@ -121,7 +121,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             LD_FOR_TARGET=str(self.target_info.linker), LDFLAGS_FOR_TARGET="-fuse-ld=" + str(self.target_info.linker),
             )
 
-        if self.target_info.is_baremetal:
+        if self.target_info.is_baremetal():
           self.configureArgs.extend([
               "--enable-malloc-debugging",
               "--enable-newlib-long-time_t",  # we want time_t to be long and not int!
@@ -147,7 +147,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
               "--enable-serial-target-configure",
               "--enable-serial-host-configure",
           ])
-        elif self.target_info.is_rtems:
+        elif self.target_info.is_rtems():
           self.configureArgs.extend([
               "--enable-newlib-io-c99-formats",
               "--disable-libgloss",

@@ -165,32 +165,32 @@ class TargetInfo(ABC):
     def get_rootfs_target(self) -> "Project":
         raise RuntimeError("Should not be called for " + self.project.target)
 
-    @classproperty
-    def is_baremetal(self):
+    @classmethod
+    def is_baremetal(cls):
         return False
 
-    @property
-    def is_rtems(self):
+    @classmethod
+    def is_rtems(cls):
         return False
 
-    @property
-    def is_newlib(self):
+    @classmethod
+    def is_newlib(cls):
         return False
 
-    @property
-    def is_freebsd(self):
+    @classmethod
+    def is_freebsd(cls):
         return False
 
-    @property
-    def is_cheribsd(self):
+    @classmethod
+    def is_cheribsd(cls):
         return False
 
-    @property
-    def is_macos(self):
+    @classmethod
+    def is_macos(cls):
         return False
 
-    @property
-    def is_linux(self):
+    @classmethod
+    def is_linux(cls):
         return False
 
     @property
@@ -288,7 +288,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             result.append("-integrated-as")
             result.append("-G0")  # no small objects in GOT optimization
             # Floating point ABI:
-            if self.is_baremetal or self.is_rtems:
+            if self.is_baremetal() or self.is_rtems():
                 # The baremetal driver doesn't add -fPIC for CHERI
                 if self.target.is_cheri_purecap([CPUArchitecture.MIPS64]):
                     result.append("-fPIC")
@@ -305,7 +305,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 result.append("-stdlib=libc++")
 
             # CPU flags (currently always BERI):
-            if self.is_cheribsd:
+            if self.is_cheribsd():
                 result.append("-mcpu=beri")
             if self.target.is_cheri_purecap():
                 result.extend(["-mabi=purecap", "-mcpu=beri", "-cheri=" + self.config.mips_cheri_bits_str])
@@ -383,16 +383,16 @@ class NativeTargetInfo(TargetInfo):
     def c_preprocessor(self) -> Path:
         return self.host_c_preprocessor(self.config)
 
-    @property
-    def is_freebsd(self):
+    @classmethod
+    def is_freebsd(cls):
         return IS_FREEBSD
 
-    @property
-    def is_macos(self):
+    @classmethod
+    def is_macos(cls):
         return IS_MAC
 
-    @property
-    def is_linux(self):
+    @classmethod
+    def is_linux(cls):
         return IS_LINUX
 
     @property
@@ -412,8 +412,8 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def sysroot_dir(self):
         return Path(self.sdk_root_dir, "sysroot-freebsd-" + str(self.target.cpu_architecture.value))
 
-    @property
-    def is_freebsd(self):
+    @classmethod
+    def is_freebsd(cls):
         return True
 
     @classmethod
@@ -487,8 +487,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         assert not self.target.is_hybrid_or_purecap_cheri()
         return root_dir / ("sysroot" + nocheri_name)
 
-    @property
-    def is_cheribsd(self):
+    @classmethod
+    def is_cheribsd(cls):
         return True
 
     @classmethod
@@ -543,6 +543,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             xtarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
         return BuildCHERIBSD.get_instance(self.project, cross_target=xtarget)
 
+
 class RTEMSTargetInfo(_ClangBasedTargetInfo):
     shortname = "RTEMS"
     RTEMS_VERSION = 5
@@ -551,12 +552,12 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
         super().__init__(target, project)
         self._sdk_root_dir = None
 
-    @property
-    def is_rtems(self):
+    @classmethod
+    def is_rtems(cls):
         return True
 
-    @property
-    def is_newlib(self):
+    @classmethod
+    def is_newlib(cls):
         return True
 
     @property
@@ -604,6 +605,7 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
     @property
     def local_install_root(self) -> Path:
         return self.sysroot_dir
+
 
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     shortname = "Newlib"
@@ -661,12 +663,12 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
         """Additional linker flags that need to be passed when building an executable (e.g. custom linker script)"""
         return ["-Wl,-T,qemu-malta.ld"]
 
-    @property
-    def is_baremetal(self):
+    @classmethod
+    def is_baremetal(cls):
         return True
 
-    @property
-    def is_newlib(self):
+    @classmethod
+    def is_newlib(cls):
         return True
 
     def get_rootfs_target(self) -> "Project":
@@ -717,16 +719,12 @@ class NewlibRtemsTargetInfo(_ClangBasedTargetInfo):
         """Additional linker flags that need to be passed when building an executable (e.g. custom linker script)"""
         return [""]
 
-    @property
-    def is_baremetal(self):
-        return False
-
-    @property
-    def is_rtems(self):
+    @classmethod
+    def is_rtems(cls):
         return True
 
-    @property
-    def is_newlib(self):
+    @classmethod
+    def is_newlib(cls):
         return True
 
 
