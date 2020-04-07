@@ -318,9 +318,10 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             else:
                 assert self.target.is_mips(include_purecap=False)
                 # TODO: should we use -mcpu=cheri128?
-                result.extend(["-mabi=n64", "-mcpu=beri"])
+                result.extend(["-mabi=n64"])
                 if self.target.is_cheri_hybrid():
                     result.append("-cheri=" + self.config.mips_cheri_bits_str)
+                    result.append("-mcpu=beri")
                 # always use libc++
                 result.append("-stdlib=libc++")
         elif self.target.is_riscv(include_purecap=True):

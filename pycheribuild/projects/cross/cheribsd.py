@@ -530,7 +530,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.linker_for_kernel = "lld"  # bfd won't work here
             self.linker_for_world = "lld"
         elif self.compiling_for_mips(include_purecap=True):
-            target_flags = " -integrated-as -fcolor-diagnostics -mcpu=beri"
+            target_flags = "-fcolor-diagnostics"
+            # TODO: should probably set that inside CheriBSD makefiles instead
+            if self.target_info.is_cheribsd:
+                target_flags += " -mcpu=beri"
             self.cross_toolchain_config.set_with_options(RESCUE=False,  # Won't compile with CHERI clang yet
                                                          BOOT=False)  # bootloaders won't link with LLD yet
         elif self.compiling_for_riscv(include_purecap=True):
