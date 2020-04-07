@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2017 Alex Richardson
+# Copyright (c) 2020 Alex Richardson
 # All rights reserved.
 #
 # This software was developed by SRI International and the University of
