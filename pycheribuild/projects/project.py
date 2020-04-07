@@ -1493,7 +1493,8 @@ class Project(SimpleProject):
         if install_dir is None and cls._default_install_dir_fn is Project._default_install_dir_fn:
             raise RuntimeError("native_install_dir/cross_install_dir/_default_install_dir_fn not specified for " + cls.target)
         if install_dir == DefaultInstallDir.SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE:
-            if cls._xtarget is not CompilationTargets.NONE and cls._xtarget.target_info_cls.is_baremetal:
+            if cls._xtarget is not CompilationTargets.NONE and (cls._xtarget.target_info_cls.is_baremetal or \
+               cls._xtarget.target_info_cls.is_rtems):
                 install_dir = DefaultInstallDir.SYSROOT
             else:
                 install_dir = DefaultInstallDir.ROOTFS
@@ -2516,7 +2517,7 @@ class CMakeProject(Project):
         # This must come first:
         if not self.compiling_for_host():
             # Despite the name it should also work for baremetal newlib
-            assert self.target_info.is_cheribsd or (self.target_info.is_baremetal and self.target_info.is_newlib)
+            assert self.target_info.is_cheribsd or (self.target_info.is_baremetal and self.target_info.is_newlib) or (self.target_info.is_rtems and self.target_info.is_newlib)
             self._cmakeTemplate = includeLocalFile("files/CrossToolchain.cmake.in")
             self.toolchainFile = self.buildDir / "CrossToolchain.cmake"
             self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self.toolchainFile)
@@ -2625,7 +2626,10 @@ class CMakeProject(Project):
             # CMAKE_CROSSCOMPILING will be set when we change CMAKE_SYSTEM_NAME:
             # This means we may not need the toolchain file at all
             # https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html
-            system_name = "Generic" if self.target_info.is_baremetal else "FreeBSD"
+            if self.target_info.is_rtems:
+              system_name = "rtems" + str(self.target_info.RTEMS_VERSION)
+            else:
+              system_name = "Generic" if self.target_info.is_baremetal else "FreeBSD"
             self._prepare_toolchain_file(
                 TOOLCHAIN_SDK_BINDIR=self.sdk_bindir if not self.compiling_for_host() else
                 self.config.cheri_sdk_bindir,
