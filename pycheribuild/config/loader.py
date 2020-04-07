@@ -169,6 +169,7 @@ class ConfigLoaderBase(object):
                 kwargs["choices"] = tuple(t.name.lower() for t in type)
             type = _EnumArgparseType(type)
 
+        # noinspection PyArgumentList
         result = option_cls(name, shortname, default, type, _owning_class, _loader=self, group=group,
                             helpHidden=helpHidden, _fallback_names=_fallback_names, **kwargs)
         assert name not in self.options  # make sure we don't add duplicate options

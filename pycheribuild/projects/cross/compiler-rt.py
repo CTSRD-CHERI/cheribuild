@@ -28,12 +28,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import os
-import sys
 from .crosscompileproject import *
 from ..llvm import BuildCheriLLVM
 from ..project import ReuseOtherProjectDefaultTargetRepository
-from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str, IS_MAC
+
 
 class BuildCompilerRt(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
@@ -151,6 +149,6 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
                                    self.real_install_root_dir / "lib" / "libclang_rt.builtins-mips64.a", print_verbose_only=False)
             # HACK: we don't really need libunwind but the toolchain pulls it in automatically
             # TODO: is there an easier way to create empty .a files?
-            runCmd("ar", "rcv", self.installDir / "lib/libunwind.a", "/dev/null")
-            runCmd("ar", "dv", self.installDir / "lib/libunwind.a", "null")
-            runCmd("ar", "t", self.installDir / "lib/libunwind.a")  # should be empty now
+            self.run_cmd("ar", "rcv", self.installDir / "lib/libunwind.a", "/dev/null")
+            self.run_cmd("ar", "dv", self.installDir / "lib/libunwind.a", "null")
+            self.run_cmd("ar", "t", self.installDir / "lib/libunwind.a")  # should be empty now

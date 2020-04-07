@@ -1493,7 +1493,7 @@ class Project(SimpleProject):
         if install_dir is None and cls._default_install_dir_fn is Project._default_install_dir_fn:
             raise RuntimeError("native_install_dir/cross_install_dir/_default_install_dir_fn not specified for " + cls.target)
         if install_dir == DefaultInstallDir.SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE:
-            if cls._xtarget is not CompilationTargets.NONE and (cls._xtarget.target_info_cls.is_baremetal() or \
+            if cls._xtarget is not CompilationTargets.NONE and (cls._xtarget.target_info_cls.is_baremetal() or
                cls._xtarget.target_info_cls.is_rtems()):
                 install_dir = DefaultInstallDir.SYSROOT
             else:
@@ -2246,7 +2246,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             self.fatal("cheri-cpu repository missing. Run `cheribuild.py berictl` or `git clone {} {}`".format(
                 sim_project.repository.url, sim_project.sourceDir))
 
-        qemu_ssh_socket = None # type: typing.Optional[SocketAndPort]
+        qemu_ssh_socket = None  # type: typing.Optional[SocketAndPort]
 
         if self.config.benchmark_with_qemu:
             from .build_qemu import BuildQEMU
@@ -2363,10 +2363,10 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
             # If the conflicting target is also in supported_architectures, check for conficts:
             if xtarget.check_conflict_with is not None and xtarget.check_conflict_with in self.supported_architectures:
                 # Check that we are not installing to the same directory as MIPS to avoid conflicts
-                assert hasattr(self, "synthetic_base")
-                assert issubclass(self.synthetic_base, SimpleProject)
-                other_instance = self.synthetic_base.get_instance_for_cross_target(xtarget.check_conflict_with,
-                                                                                  self.config, caller=self)
+                base = getattr(self, "synthetic_base", None)
+                assert base is not None
+                assert issubclass(base, SimpleProject)
+                other_instance = base.get_instance_for_cross_target(xtarget.check_conflict_with, self.config, caller=self)
                 if self.config.verbose:
                     self.info(self.target, "install dir for", xtarget.name, "is", self.installDir)
                     other_xtarget = other_instance.get_crosscompile_target(self.config)
@@ -2656,7 +2656,8 @@ class CMakeProject(Project):
                 CMAKE_REQUIRED_LINK_OPTIONS=commandline_to_str(self.target_info.additional_executable_link_flags))
             # TODO: if this doesn't work we can set CMAKE_TRY_COMPILE_TARGET_TYPE to build a static lib instead
             # https://cmake.org/cmake/help/git-master/variable/CMAKE_TRY_COMPILE_TARGET_TYPE.html
-            if False:  # XXX: we should have everything set up correctly so this should no longer be needed
+            # XXX: we should have everything set up correctly so this should no longer be needed for FreeBSD
+            if self.target_info.is_baremetal():
                 self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")
         if self.force_static_linkage:
             self.add_cmake_options(

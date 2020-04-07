@@ -56,7 +56,7 @@ __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includ
            "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latest_system_clang_tool", "SafeDict",  # no-combine
            "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
            "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection", # no-combine
-           "is_case_sensitive_dir"]  # no-combine
+           "is_case_sensitive_dir", "SocketAndPort"]  # no-combine
 
 
 _TEST_MODE = False

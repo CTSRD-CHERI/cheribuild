@@ -28,8 +28,6 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import *
-from .qt5 import BuildQtWebkit
-from ...utils import runCmd, IS_FREEBSD
 
 
 class BuildAsio(CrossCompileAutotoolsProject):

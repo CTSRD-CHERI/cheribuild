@@ -305,6 +305,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
         self.source_class = source_class
         self.currentKernel = source_class.get_installed_kernel_path(self, )
         if hasattr(source_class, "rootfsDir"):
+            # noinspection PyCallingNonCallable
             self.rootfs_path = source_class.rootfsDir(self, config)
         if needs_disk_image:
             self.diskImage = disk_image_class.get_instance(self, config).disk_image_path
@@ -408,6 +409,7 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
     def __init__(self, config, source_class=None, needs_disk_image=True):
         super().__init__(config, source_class=source_class, needs_disk_image=needs_disk_image)
         if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+            # noinspection PyUnreachableCode
             if False:
                 if self.crosscompile_target.is_cheri_purecap():
                     fw_jump = BuildOpenSBI.get_purecap_bios(self)

@@ -379,6 +379,7 @@ class CheriConfig(object):
     def __getattribute__(self, item):
         v = object.__getattribute__(self, item)
         if hasattr(v, '__get__'):
+            # noinspection PyCallingNonCallable
             return v.__get__(self, self.__class__)
         return v
 

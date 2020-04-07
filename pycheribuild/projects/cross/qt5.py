@@ -250,8 +250,9 @@ class BuildQtBase(BuildQtWithConfigureScript):
             self.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=True)
 
 
-# Webkit needs ICU (and recommended for QtBase too:
+# Webkit needs ICU (and recommended for QtBase too):
 class BuildICU4C(CrossCompileAutotoolsProject):
+    # noinspection PyUnreachableCode
     if True:
         repository = GitRepository("https://github.com/CTSRD-CHERI/icu4c.git")
     else:

@@ -32,7 +32,7 @@ from abc import ABCMeta, abstractmethod, ABC
 from enum import Enum
 from pathlib import Path
 
-from ..utils import IS_MAC, IS_FREEBSD, IS_LINUX, getCompilerInfo, classproperty, is_jenkins_build
+from ..utils import IS_MAC, IS_FREEBSD, IS_LINUX, getCompilerInfo, is_jenkins_build
 
 if typing.TYPE_CHECKING:    # no-combine
     from .chericonfig import CheriConfig    # no-combine
@@ -244,7 +244,7 @@ class TargetInfo(ABC):
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
         super().__init__(target, project)
-        self._sdk_root_dir = None  # type: Path
+        self._sdk_root_dir = None  # type: typing.Optional[Path]
 
     @property
     def _compiler_dir(self) -> Path:
@@ -597,15 +597,6 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
         return self.sdk_root_dir / "bin"
 
     @classmethod
-    def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", include_version):
-        if target.is_cheri_purecap():
-            if target.is_riscv(include_purecap=True):
-                return "riscv64-unknown-rtems{}".format(cls.RTEMS_VERSION if include_version else "")
-            else:
-                assert False, "Unsuported purecap target" + str(cls)
-        return super().triple_for_target(target, config, include_version)
-
-    @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         return ["llvm-native", "newlib-rtems-riscv64-purecap"]
 
@@ -898,6 +889,7 @@ class CrossCompileTarget(object):
 
 
 class CompilationTargets(object):
+    # noinspection PyTypeChecker
     NONE = CrossCompileTarget("invalid", None, None)  # Placeholder
 
     # XXX: should probably not harcode x86_64 for native

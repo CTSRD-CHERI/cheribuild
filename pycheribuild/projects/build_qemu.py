@@ -261,6 +261,7 @@ class BuildQEMU(BuildQEMUBase):
         # the capstone disassembler doesn't support CHERI instructions:
         self.configureArgs.append("--disable-capstone")
         # TODO: tests:
+        # noinspection PyUnreachableCode
         if False:
             # Get all the required compilation flags for the TCG tests
             fake_project = SimpleNamespace()
@@ -268,7 +269,9 @@ class BuildQEMU(BuildQEMUBase):
             fake_project.needs_sysroot = False
             fake_project.warning = self.warning
             fake_project.target = "qemu-tcg-tests"
+            # noinspection PyTypeChecker
             tgt_info_mips = NewlibBaremetalTargetInfo(CompilationTargets.BAREMETAL_NEWLIB_MIPS64, fake_project)
+            # noinspection PyTypeChecker
             tgt_info_riscv64 = NewlibBaremetalTargetInfo(CompilationTargets.BAREMETAL_NEWLIB_RISCV64, fake_project)
             self.configureArgs.extend([
                 "--cross-cc-mips=" + str(tgt_info_mips.c_compiler),

@@ -28,7 +28,6 @@
 # SUCH DAMAGE.
 #
 
-import functools
 import os
 import threading
 import shutil
