@@ -841,9 +841,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
         self.make_args.set_env(CC=self.host_CC, CXX=self.host_CXX, CPP=self.host_CPP)
 
-        # we don't build elftoolchain during buildworld so for the kernel we need to set these variables
-        self.make_args.set_env(XOBJDUMP=self.sdk_bindir / "llvm-objdump")
-        self.make_args.set_env(OBJCOPY=self.sdk_bindir / "llvm-objcopy")
+        # We might not build elftoolchain during buildworld so for the kernel we need to set these variables
+        if not self.crosscompile_target.is_aarch64():
+            # The AArch64 kernel needs elftoolchain objcopy due to unsupported flags
+            self.make_args.set_env(OBJCOPY=self.sdk_bindir / "llvm-objcopy")
+
         # This is not actually the path to the strip binary but rather a flag to install
         # self.make_args.env_vars["STRIP"] = self.sdk_bindir / "strip"
 
