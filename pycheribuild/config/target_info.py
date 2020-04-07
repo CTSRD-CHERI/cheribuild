@@ -790,7 +790,7 @@ class CrossCompileTarget(object):
     def build_suffix(self, config: "CheriConfig"):
         assert self is not CompilationTargets.NONE
         if self is CompilationTargets.CHERIBSD_MIPS_PURECAP:
-            result = ""  # only -128 for legacy build dir compat
+            result = "-"  # only -128 for legacy build dir compat
         else:
             result = "-" + self.generic_suffix
         result += self.cheri_config_suffix(config)

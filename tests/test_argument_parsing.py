@@ -488,23 +488,6 @@ def test_freebsd_toolchains_cheribsd_purecap():
             test_freebsd_toolchains("cheribsd-riscv64-purecap", "/wrong/path", i, [])
 
 
-
-@pytest.mark.parametrize("base_name,expected", [
-    pytest.param("cheribsd", "cheribsd-cheri"),
-    pytest.param("freebsd", "freebsd-x86_64"),
-    pytest.param("newlib-baremetal", "newlib-baremetal-mips"),
-    pytest.param("libcxxrt-baremetal", "libcxxrt-baremetal-mips"),
-    pytest.param("compiler-rt-baremetal", "compiler-rt-builtins-baremetal-mips"),
-])
-def test_default_arch(base_name, expected):
-    # The default target should be selected regardless of --xmips/--xhost/--128/--256 flags
-    # Parse args once to ensure targetManager is initialized
-    for default_flag in ("--xhost", "--xmips", "--256", "--128"):
-        config = _parse_arguments(["--skip-configure", default_flag])
-        target = targetManager.get_target(base_name, None, config)
-        assert expected == target.name, "Failed for " + default_flag
-
-
 @pytest.mark.parametrize("target,args,expected", [
     pytest.param("cheribsd", ["--foo"],
                  "cheribsd-mips-hybrid128-build"),
@@ -528,8 +511,12 @@ def test_default_arch(base_name, expected):
     # everything
     pytest.param("cheribsd-purecap", ["--cap-table-abi=plt", "--subobject-bounds=aggressive", "--mips-float-abi=hard"],
                  "cheribsd-purecap-128-plt-aggressive-hardfloat-build"),
+    # plt should be encoded
+    pytest.param("sqlite", [], "sqlite-128-build"),
+    pytest.param("sqlite-mips-hybrid", [], "sqlite-mips-hybrid128-build"),
+    pytest.param("sqlite-native", [], "sqlite-native-build"),
 ])
-def test_default_arch(target: str, args: list, expected: str):
+def test_default_build_dir(target: str, args: list, expected: str):
     # Check that the cheribsd build dir is correct
     config = _parse_arguments(args)
     target = targetManager.get_target(target, CompilationTargets.NONE, config, caller="test_default_arch")
