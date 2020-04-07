@@ -211,6 +211,10 @@ class TargetInfo(ABC):
             return 16  # RISCV64 uses 128-bit capabilities
         raise ValueError("Capabilities not supported for " + repr(self))
 
+    @property
+    def capability_size_in_bits(self):
+        return self.capability_size * 8
+
     @staticmethod
     def host_c_compiler(config: "CheriConfig") -> Path:
         if config.use_sdk_clang_for_native_xbuild and not IS_MAC:
