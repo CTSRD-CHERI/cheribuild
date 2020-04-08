@@ -598,7 +598,7 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["llvm-native", "newlib-rtems-riscv64-purecap"]
+        return ["llvm-native", "newlib-rtems-riscv64-purecap", "compiler-rt-builtins-rtems-riscv64-purecap"]
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
