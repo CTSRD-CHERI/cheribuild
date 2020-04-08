@@ -928,7 +928,6 @@ class CompilationTargets(object):
         NewlibRtemsTargetInfo, is_cheri_purecap=True)
     RTEMS_RISCV64_PURECAP = CrossCompileTarget("rtems-riscv64-purecap", CPUArchitecture.RISCV64, RTEMSTargetInfo,
         is_cheri_purecap=True)
-    ALL_SUPPORTED_RTEMS_TARGETS = [RTEMS_NEWLIB_RISCV64, RTEMS_RISCV64_PURECAP]
 
     # TODO: test RISCV
     ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = [CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI,
