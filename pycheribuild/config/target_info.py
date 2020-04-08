@@ -702,7 +702,7 @@ class NewlibRtemsTargetInfo(_ClangBasedTargetInfo):
     @property
     def sysroot_dir(self) -> Path:
         # Install to target triple as RTEMS' LLVM/Clang Driver expects
-        return self.config.cheri_sdk_dir
+        return Path(self.sdk_root_dir, self.target_triple)
 
     @property
     def must_link_statically(self):
