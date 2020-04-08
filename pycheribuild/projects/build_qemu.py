@@ -73,7 +73,7 @@ class BuildQEMUBase(AutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.addRequiredSystemTool("glibtoolize" if self.target_info.is_macos else "libtoolize", homebrew="libtool")
+        self.addRequiredSystemTool("glibtoolize" if self.target_info.is_macos() else "libtoolize", homebrew="libtool")
         self.addRequiredSystemTool("autoreconf", homebrew="autoconf")
         self.addRequiredSystemTool("aclocal", homebrew="automake")
 
