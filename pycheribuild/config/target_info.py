@@ -723,7 +723,7 @@ class NewlibRtemsTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["newlib", "compiler-rt-builtins"]
+        return ["newlib-rtems-riscv64-purecap"]
 
     def required_compile_flags(self) -> typing.List[str]:
         return [""]
