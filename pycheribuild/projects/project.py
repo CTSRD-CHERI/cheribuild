@@ -804,7 +804,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         xtarget = self.crosscompile_target
         test_native = xtarget.is_native()
         # Only supported for CheriBSD-MIPS right now:
-        if not test_native and (not self.target_info.is_cheribsd or not xtarget.is_mips(include_purecap=True)):
+        if not test_native and (not self.target_info.is_cheribsd() or not xtarget.is_mips(include_purecap=True)):
             self.warning("Test scripts currently only work for CheriBSD-MIPS! Needs updating for RISCV")
             return
         if kernel_path is None and not test_native and "--kernel" not in self.config.test_extra_args:
@@ -1742,7 +1742,7 @@ class Project(SimpleProject):
         if self.should_include_debug_info and not ".bfd" in self.target_info.linker.name:
             # Add a gdb_index to massively speed up running GDB on CHERIBSD:
             result.append("-Wl,--gdb-index")
-        if self.target_info.is_cheribsd and self.config.withLibstatcounters:
+        if self.target_info.is_cheribsd() and self.config.withLibstatcounters:
             # We need to include the constructor even if there is no reference to libstatcounters:
             # TODO: always include the .a file?
             result += ["-Wl,--whole-archive", "-lstatcounters", "-Wl,--no-whole-archive"]
@@ -2517,7 +2517,9 @@ class CMakeProject(Project):
         # This must come first:
         if not self.compiling_for_host():
             # Despite the name it should also work for baremetal newlib
-            assert self.target_info.is_cheribsd or (self.target_info.is_baremetal() and self.target_info.is_newlib) or (self.target_info.is_rtems() and self.target_info.is_newlib)
+            assert self.target_info.is_cheribsd() or (
+                        self.target_info.is_baremetal() and self.target_info.is_newlib()) or (
+                               self.target_info.is_rtems() and self.target_info.is_newlib())
             self._cmakeTemplate = includeLocalFile("files/CrossToolchain.cmake.in")
             self.toolchainFile = self.buildDir / "CrossToolchain.cmake"
             self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self.toolchainFile)

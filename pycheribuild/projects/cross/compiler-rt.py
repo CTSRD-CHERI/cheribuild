@@ -102,7 +102,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         assert self.target_info.is_baremetal() or self.target_info.is_rtems(), "No other targets supported yet"
-        assert self.target_info.is_newlib, "No other targets supported yet"
+        assert self.target_info.is_newlib(), "No other targets supported yet"
         # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")
         if self.compiling_for_mips(include_purecap=False):

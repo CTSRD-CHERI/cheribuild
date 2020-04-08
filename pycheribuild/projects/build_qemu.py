@@ -82,7 +82,7 @@ class BuildQEMUBase(AutotoolsProject):
         self._addRequiredPkgConfig("glib-2.0", homebrew="glib", zypper="glib2-devel", apt="libglib2.0-dev",
                                    freebsd="glib")
         # Tests require GNU sed
-        self.addRequiredSystemTool("sed" if self.target_info.is_linux else "gsed", homebrew="gnu-sed", freebsd="gsed")
+        self.addRequiredSystemTool("sed" if self.target_info.is_linux() else "gsed", homebrew="gnu-sed", freebsd="gsed")
 
         if self.build_type == BuildType.DEBUG:
             self.COMMON_FLAGS.append("-DCONFIG_DEBUG_TCG=1")

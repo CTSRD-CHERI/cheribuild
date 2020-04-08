@@ -280,7 +280,7 @@ def _jenkins_main():
                 if not expected_clang.exists():
                     fatalError("--cheri-sdk-path specified but", expected_clang, "does not exist")
             else:
-                need_cheribsd_sysroot = project.needs_sysroot and project.target_info.is_cheribsd
+                need_cheribsd_sysroot = project.needs_sysroot and project.target_info.is_cheribsd()
                 create_sdk_from_archives(cheriConfig, needs_cheribsd_sysroot=need_cheribsd_sysroot)
 
         if project.needs_sysroot and not project.target_info.sysroot_dir.exists():
