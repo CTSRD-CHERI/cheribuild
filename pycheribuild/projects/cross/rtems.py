@@ -51,7 +51,7 @@ class BuildRtems(CrossCompileProject):
         waf_run = self.run_cmd(self.sourceDir / "waf",
                   "bsp_defaults",
                   "-t", self.sourceDir,
-                  "--rtems-bsps=rv64imacxcheri_medany",
+                  "--rtems-bsps=rv64imafdcxcheri_medany",
                   "--rtems-compiler=clang",
                   captureOutput=True)
 
