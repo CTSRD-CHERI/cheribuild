@@ -604,7 +604,7 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         if target.is_cheri_purecap():
             if target.is_riscv(include_purecap=True):
-                return ["newlib-rtems-riscv64-purecap"]
+                return ["rtems"]
             else:
                 assert False, "No support for building purecap RTEMS for non RISC-V targets yet"
 
