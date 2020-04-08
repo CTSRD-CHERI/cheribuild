@@ -1132,7 +1132,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     crossbuild = True  # changes have been merged into master
     use_llvm_binutils = True
     has_installsysroot_target = True
-    full_rebuild_if_older_than = datetime.datetime(2020, 3, 5, 17, 45, tzinfo=datetime.timezone.utc)
+    full_rebuild_if_older_than = datetime.datetime(2020, 4, 8, 17, 0, tzinfo=datetime.timezone.utc)
 
     @staticmethod
     def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
