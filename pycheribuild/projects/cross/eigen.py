@@ -37,16 +37,3 @@ class BuildEigen(CrossCompileCMakeProject):
     repository = GitRepository("https://gitlab.com/libeigen/eigen.git")
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.SYSROOT
-
-    # @classmethod
-    # def setup_config_options(cls, **kwargs):
-    #     super().setup_config_options(**kwargs)
-    
-    # def __init__(self, config: CheriConfig, *args, **kwargs):
-    #     super().__init__(config, *args, **kwargs)
-
-    # def compile(self, **kwargs):
-    #     return super().compile(**kwargs)
-
-    # def install(self, *args, **kwargs):
-    #     return super().install(*args, **kwargs)
