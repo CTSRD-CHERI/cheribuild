@@ -279,6 +279,19 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     cross_install_dir = DefaultInstallDir.ROOTFS
     supported_architectures = [CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS_NO_CHERI, CompilationTargets.CHERIBSD_MIPS_PURECAP]
 
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.build_all_targets = cls.add_bool_option("build-all-targets",
+            help="Support code generation for all architectures instead of only for CHERI+Host. This is off by "
+                 "default to reduce compile time.")
+
+    def setup(self):
+        super().setup()
+        if not self.build_all_targets:
+            # Save some time by only building the targets that we need.
+            self.add_cmake_options(LLVM_TARGETS_TO_BUILD="Mips;RISCV;host")
+
     def install(self, **kwargs):
         super().install(**kwargs)
         # Create symlinks that hardcode the sdk and the ABI to easily compile binaries
