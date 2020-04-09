@@ -76,5 +76,7 @@ class BuildRtems(CrossCompileProject):
         self.run_cmd(self.sourceDir / "waf", "-t", self.sourceDir, "-o", self.buildDir, "install")
 
     def process(self):
-        with setEnv(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", "")):
+        with setEnv(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
+                    CFLAGS="--sysroot=" + str(self.sdk_sysroot),
+                    LDFLAGS="--sysroot=" + str(self.sdk_sysroot)):
             super().process()
