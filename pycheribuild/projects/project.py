@@ -226,10 +226,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                     statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
                                  "since it is an SDK target and --skip-sdk was passed.")
                 continue
-            if not config.include_toolchain_dependencies and dep_target.projectClass.is_toolchain_target():
+            if config.includeDependencies and (
+                    not config.include_toolchain_dependencies and dep_target.projectClass.is_toolchain_target()):
                 if config.verbose:
                     statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
-                                 "since it is a Toolchain target and --include-toolchain-dependencies was not passed.")
+                                 "since it is a toolchain target and --include-toolchain-dependencies was not passed.")
                 continue
             # Now find the actual crosscompile targets for target aliases:
             if isinstance(dep_target, MultiArchTargetAlias):
