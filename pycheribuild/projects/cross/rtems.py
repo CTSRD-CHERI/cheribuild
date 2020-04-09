@@ -43,6 +43,9 @@ class BuildRtems(CrossCompileProject):
             })
     target = "rtems"
     project_name = "rtems"
+    dependencies = ["newlib", "compiler-rt-builtins"]
+    is_sdk_target = True
+    needs_sysroot = False  # We don't need a complete sysroot
     supported_architectures = [CompilationTargets.RTEMS_RISCV64_PURECAP]
     default_install_dir = DefaultInstallDir.SYSROOT
 
