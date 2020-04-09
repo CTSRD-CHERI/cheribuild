@@ -63,6 +63,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         super().__init__(config)
         self._installPrefix = self._installPrefix.parent  # newlib install already appends the triple
         self._installDir = self._installDir.parent  # newlib install already appends the triple
+        self.destdir = self._installDir
         print("after:", self.installDir, "_=", self._installDir, "dest=", self.destdir, "real=", self.real_install_root_dir)
         #self.configureCommand = Path("/this/path/does/not/exist")
         self.configureCommand = self.sourceDir / "configure"
