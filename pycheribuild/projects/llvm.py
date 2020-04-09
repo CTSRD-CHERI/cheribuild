@@ -48,6 +48,10 @@ class BuildLLVMBase(CMakeProject):
     default_build_type = BuildType.RELEASE
 
     @classmethod
+    def is_toolchain_target(cls):
+        return True
+
+    @classmethod
     def setup_config_options(cls, useDefaultSysroot=True):
         super().setup_config_options()
         if "included_projects" not in cls.__dict__:

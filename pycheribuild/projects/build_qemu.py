@@ -53,6 +53,10 @@ class BuildQEMUBase(AutotoolsProject):
     lto_by_default = True
 
     @classmethod
+    def is_toolchain_target(cls):
+        return True
+
+    @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options()
         cls.with_sanitizers = cls.add_bool_option("sanitizers", help="Build QEMU with ASAN/UBSAN (very slow)", default=False)

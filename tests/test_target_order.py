@@ -26,12 +26,13 @@ setup_mock_chericonfig(Path("/this/path/does/not/exist"))
 BuildCHERIBSD.crossbuild = True
 
 
-def _sort_targets(targets: "typing.List[str]", add_dependencies=False, skip_sdk=False) -> "typing.List[str]":
+def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolchain=True, skip_sdk=False) -> "typing.List[str]":
     targetManager.reset()
     # print(real_targets)
     config = get_global_config()
     real_targets = list(targetManager.get_target(t, CompilationTargets.NONE, config, caller="_sort_targets") for t in targets)
     config.includeDependencies = add_dependencies
+    config.include_toolchain_dependencies = add_toolchain
     config.skipSdk = skip_sdk
     for t in real_targets:
         if t._project_class._xtarget is CompilationTargets.NONE:

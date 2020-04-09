@@ -181,6 +181,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # To prevent non-suffixed targets in case the only target is not NATIVE
     _always_add_suffixed_targets = False  # add a suffixed target only if more than one variant is supported
 
+    @classmethod
+    def is_toolchain_target(cls):
+        return False
+
     @property
     def _no_overwrite_allowed(self) -> "typing.Tuple[str]":
         return "_xtarget",
@@ -221,6 +225,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 if config.verbose:
                     statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
                                  "since it is an SDK target and --skip-sdk was passed.")
+                continue
+            if not config.include_toolchain_dependencies and dep_target.projectClass.is_toolchain_target():
+                if config.verbose:
+                    statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
+                                 "since it is a Toolchain target and --include-toolchain-dependencies was not passed.")
                 continue
             # Now find the actual crosscompile targets for target aliases:
             if isinstance(dep_target, MultiArchTargetAlias):
