@@ -44,7 +44,7 @@ class BuildRtems(CrossCompileProject):
     target = "rtems"
     project_name = "rtems"
     supported_architectures = [CompilationTargets.RTEMS_RISCV64_PURECAP]
-    default_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    default_install_dir = DefaultInstallDir.SYSROOT
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -65,7 +65,7 @@ class BuildRtems(CrossCompileProject):
         self.run_cmd(self.sourceDir / "waf", "configure",
             "-t", self.sourceDir,
             "-o", self.buildDir,
-            "--prefix", self.installPrefix)
+            "--prefix", self.destdir)
 
     def compile(self, **kwargs):
         self.run_cmd(self.sourceDir / "waf", "-t", self.sourceDir, "-o", self.buildDir)
