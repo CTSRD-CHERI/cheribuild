@@ -1805,8 +1805,8 @@ class Project(SimpleProject):
                 if self.target_info.is_baremetal():
                     self.destdir = self.sdk_sysroot.parent
                     self._installPrefix = Path("/", self.target_info.target_triple)
-                elif  self.target_info.is_rtems():
-                    self.destdir = self.sdk_sysroot
+                elif self.target_info.is_rtems():
+                    self.destdir = self.sdk_sysroot.parent
                     self._installPrefix = Path("/", self.target_info.target_triple)
                 else:
                     self._installPrefix = Path("/usr/local", self.crosscompile_target.generic_suffix)
