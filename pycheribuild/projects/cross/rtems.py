@@ -29,9 +29,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import os
 from .crosscompileproject import *
 from ..project import *
-from ...utils import IS_MAC, runCmd
+from ...utils import setEnv
+
 
 class BuildRtems(CrossCompileProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/rtems",
@@ -42,11 +44,12 @@ class BuildRtems(CrossCompileProject):
     project_name = "rtems"
     supported_architectures = [CompilationTargets.RTEMS_RISCV64_PURECAP]
     default_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    build_in_source_dir = True  # Currently always building in source dir
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
 
-    def configure(self):
+    def configure(self, **kwargs):
         self.run_cmd(self.sourceDir / "waf", "-t", self.sourceDir, "distclean")
         waf_run = self.run_cmd(self.sourceDir / "waf",
                   "bsp_defaults",
@@ -62,8 +65,12 @@ class BuildRtems(CrossCompileProject):
                "-t", self.sourceDir,
                "--prefix", self.buildDir)
 
-    def compile(self):
+    def compile(self, **kwargs):
         self.run_cmd(self.sourceDir / "waf", "-t", self.sourceDir)
 
     def install(self, **kwargs):
         self.run_cmd(self.sourceDir / "waf", "-t", self.sourceDir, "install")
+
+    def process(self):
+        with setEnv(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", "")):
+            super().process()
