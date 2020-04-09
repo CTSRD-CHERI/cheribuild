@@ -50,7 +50,6 @@ class BuildRtems(CrossCompileProject):
         super().__init__(config)
 
     def configure(self, **kwargs):
-        self.run_cmd(self.sourceDir / "waf", "-t", self.sourceDir, "distclean")
         waf_run = self.run_cmd(self.sourceDir / "waf",
             "bsp_defaults",
             "-t", self.sourceDir,
