@@ -43,6 +43,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
     target = "newlib"
     project_name = "newlib"
     make_kind = MakeCommandKind.GnuMake
+    is_sdk_target = True
     needs_sysroot = False  # We are building newlib so we don't need a sysroot
     add_host_target_build_config_options = False
     _configure_supports_libdir = False
@@ -51,7 +52,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
     supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_MIPS64,
                                CompilationTargets.BAREMETAL_NEWLIB_MIPS64_PURECAP,
                                CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
-                               CompilationTargets.RTEMS_NEWLIB_RISCV64]
+                               CompilationTargets.RTEMS_RISCV64_PURECAP]
     # build_in_source_dir = True  # we have to build in the source directory
 
     @classmethod

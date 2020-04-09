@@ -564,10 +564,6 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
     def cmake_system_name(self) -> str:
         return "rtems" + str(self.RTEMS_VERSION)
 
-    def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
-        super().__init__(target, project)
-        self._sdk_root_dir = None
-
     @classmethod
     def is_rtems(cls):
         return True
@@ -582,32 +578,32 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
         return "riscv64-unknown-rtems" + str(self.RTEMS_VERSION)
 
     @property
-    def sdk_root_dir(self):
-        return self.config.cheri_sdk_dir
-
-    @property
     def sysroot_dir(self):
-        return Path(self.sdk_root_dir, self.target_triple)
+        # Install to target triple as RTEMS' LLVM/Clang Driver expects
+        return self.sdk_root_dir / ("sysroot-" + self.target.generic_suffix) / self.target_triple
 
     def _get_sdk_root_dir_lazy(self) -> Path:
         return self.config.cheri_sdk_dir
 
     @property
     def _compiler_dir(self) -> Path:
-        return self.sdk_root_dir / "bin"
+        return self.config.cheri_sdk_bindir
+
+    @property
+    def must_link_statically(self):
+        return True  # only static linking works
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["llvm-native", "newlib-rtems-riscv64-purecap", "compiler-rt-builtins-rtems-riscv64-purecap"]
+        return ["llvm-native"]
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
         if target.is_cheri_purecap():
             if target.is_riscv(include_purecap=True):
-                return ["rtems"]
+                return ["newlib", "compiler-rt-builtins", "rtems"]
             else:
                 assert False, "No support for building purecap RTEMS for non RISC-V targets yet"
-
         assert False, "No support for building vanilla RTEMS. Only purecap CHER-RISC-V RTEMS is supported"
 
     @property
@@ -686,64 +682,6 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     def get_rootfs_target(self) -> "Project":
         from ..projects.cross.newlib import BuildNewlib
         return BuildNewlib.get_instance(self.project)
-
-
-class NewlibRtemsTargetInfo(_ClangBasedTargetInfo):
-    shortname = "Newlib RTEMS"
-    RTEMS_VERSION = 5
-
-    @property
-    def cmake_system_name(self) -> str:
-        return "rtems" + str(self.RTEMS_VERSION)
-
-    def _get_sdk_root_dir_lazy(self) -> Path:
-        return self.config.cheri_sdk_dir
-
-    @property
-    def sysroot_dir(self) -> Path:
-        # Install to target triple as RTEMS' LLVM/Clang Driver expects
-        return Path(self.sdk_root_dir, self.target_triple)
-
-    @property
-    def must_link_statically(self):
-        return True  # only static linking works
-
-    @property
-    def _compiler_dir(self) -> Path:
-        return self.config.cheri_sdk_bindir
-
-    @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["llvm-native"]
-
-    @property
-    def target_triple(self):
-        assert self.target.is_riscv(include_purecap=True)
-        return "riscv64-unknown-rtems" + str(self.RTEMS_VERSION)
-
-    @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["newlib-rtems-riscv64-purecap"]
-
-    def required_compile_flags(self) -> typing.List[str]:
-        return [""]
-
-    @property
-    def local_install_root(self) -> Path:
-        return self.config.cheri_sdk_dir
-
-    @property
-    def additional_executable_link_flags(self):
-        """Additional linker flags that need to be passed when building an executable (e.g. custom linker script)"""
-        return [""]
-
-    @classmethod
-    def is_rtems(cls):
-        return True
-
-    @classmethod
-    def is_newlib(cls):
-        return True
 
 
 class Linkage(Enum):
@@ -924,8 +862,6 @@ class CompilationTargets(object):
     FREEBSD_X86_64 = CrossCompileTarget("x86_64", CPUArchitecture.X86_64, FreeBSDTargetInfo)
 
     # RTEMS targets
-    RTEMS_NEWLIB_RISCV64 = CrossCompileTarget("rtems-riscv64-purecap", CPUArchitecture.RISCV64,
-        NewlibRtemsTargetInfo, is_cheri_purecap=True)
     RTEMS_RISCV64_PURECAP = CrossCompileTarget("rtems-riscv64-purecap", CPUArchitecture.RISCV64, RTEMSTargetInfo,
         is_cheri_purecap=True)
 
