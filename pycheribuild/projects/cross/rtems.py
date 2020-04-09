@@ -52,28 +52,25 @@ class BuildRtems(CrossCompileProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
 
+    def _run_waf(self, *args, **kwargs):
+        cmdline = [self.sourceDir / "waf", "-t", self.sourceDir, "-o", self.buildDir] + list(args)
+        if self.config.verbose:
+            cmdline.append("-v")
+        return self.run_cmd(cmdline, cwd=self.sourceDir, **kwargs)
+
     def configure(self, **kwargs):
-        waf_run = self.run_cmd(self.sourceDir / "waf",
-            "bsp_defaults",
-            "-t", self.sourceDir,
-            "-o", self.buildDir,
-            "--rtems-bsps=rv64*xcheri*",
-            "--rtems-compiler=clang",
+        waf_run = self._run_waf("bsp_defaults", "--rtems-bsps=rv64*xcheri*", "--rtems-compiler=clang",
             captureOutput=True)
 
         # waf configure reads config.ini by default to read RTEMS flags from
         self.writeFile(self.sourceDir / "config.ini", str(waf_run.stdout, 'utf-8'), overwrite=True)
-
-        self.run_cmd(self.sourceDir / "waf", "configure",
-            "-t", self.sourceDir,
-            "-o", self.buildDir,
-            "--prefix", self.destdir)
+        self._run_waf("configure", "--prefix", self.destdir)
 
     def compile(self, **kwargs):
-        self.run_cmd(self.sourceDir / "waf", "-t", self.sourceDir, "-o", self.buildDir)
+        self._run_waf("build", self.config.makeJFlag)
 
     def install(self, **kwargs):
-        self.run_cmd(self.sourceDir / "waf", "-t", self.sourceDir, "-o", self.buildDir, "install")
+        self._run_waf("install")
 
     def process(self):
         with setEnv(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
