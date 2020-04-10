@@ -54,7 +54,7 @@ class BuildRtems(CrossCompileProject):
             "bsp_defaults",
             "-t", self.sourceDir,
             "-o", self.buildDir,
-            "--rtems-bsps=rv64imafdcxcheri_medany",
+            "--rtems-bsps=rv64*xcheri*",
             "--rtems-compiler=clang",
             captureOutput=True)
 
