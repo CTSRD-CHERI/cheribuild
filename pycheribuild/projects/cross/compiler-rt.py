@@ -54,7 +54,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH=self.target_info.target_triple.split('-')[0])
 
         self.add_cmake_options(
-            LLVM_CONFIG_PATH=BuildCheriLLVM.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
+            LLVM_CONFIG_PATH=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
             LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=True,
@@ -123,7 +123,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         if self.target_info.is_rtems():
             self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")  # RTEMS only needs static libs
         self.add_cmake_options(
-            LLVM_CONFIG_PATH=BuildCheriLLVM.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
+            LLVM_CONFIG_PATH=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
             LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=False,
