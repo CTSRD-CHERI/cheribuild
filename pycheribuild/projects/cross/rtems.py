@@ -59,7 +59,7 @@ class BuildRtems(CrossCompileProject):
         return self.run_cmd(cmdline, cwd=self.sourceDir, **kwargs)
 
     def configure(self, **kwargs):
-        waf_run = self._run_waf("bsp_defaults", "--rtems-bsps=rv64*xcheri*", "--rtems-compiler=clang",
+        waf_run = self._run_waf("bsp_defaults", "--rtems-bsps=rv64imafdcxcheri_medany,rv64xcheri_gfe", "--rtems-compiler=clang",
             captureOutput=True)
 
         # waf configure reads config.ini by default to read RTEMS flags from
