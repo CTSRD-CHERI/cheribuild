@@ -585,6 +585,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
             kernel_options.remove_var("LDFLAGS")
             kernel_options.set(LD=linker, XLD=linker, HACK_EXTRA_FLAGS="-shared " + fuse_ld_flag,
                                TRAMP_LDFLAGS=fuse_ld_flag)
+            # The kernel build using ${BINUTIL} directly and not X${BINUTIL}:
+            for binutil_name in ("AS", "AR", "NM", "OBJCOPY", "RANLIB", "SIZE", "STRINGS", "STRIPBIN"):
+                xbinutil = kernel_options.get_var("X" + binutil_name)
+                if xbinutil:
+                    kernel_options.set(**{binutil_name: xbinutil})
+                    kernel_options.remove_var("X" + binutil_name)
             kernel_options.set_env(LDFLAGS=fuse_ld_flag, XLDFLAGS=fuse_ld_flag)
         kernel_options.set(KERNCONF=kernconf)
         if extra_make_args:

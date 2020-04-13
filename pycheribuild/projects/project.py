@@ -1085,6 +1085,9 @@ class MakeOptions(object):
             if flag.strip() == "-D" + variable or flag.startswith(variable + "="):
                 self._flags.remove(flag)
 
+    def get_var(self, variable, default=None):
+        return self._vars.get(variable, default)
+
     def remove_flag(self, flag: str):
         if flag in self._flags:
             self._flags.remove(flag)
