@@ -210,7 +210,7 @@ class TargetInfo(ABC):
     def capability_size(self):
         if self.target.is_hybrid_or_purecap_cheri([CPUArchitecture.MIPS64]):
             assert self.config.mips_cheri_bits in (128, 256), "No other cap size supported yet"
-            return self.config.mips_cheri_bits / 8
+            return self.config.mips_cheri_bits // 8
         elif self.target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             return 16  # RISCV64 uses 128-bit capabilities
         raise ValueError("Capabilities not supported for " + repr(self))
