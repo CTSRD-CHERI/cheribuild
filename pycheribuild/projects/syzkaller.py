@@ -192,6 +192,7 @@ class RunSyzkaller(SimpleProject):
                 "name": "cheribsd-n64",
                 "target": "freebsd/mips64",
                 "http": ":10000",
+                "rpc": ":10001",
                 "workdir": str(self.syz_workdir),
                 "syzkaller": str(BuildSyzkaller.get_instance(
                     self, cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID)
