@@ -212,16 +212,46 @@ class MultiArchTarget(Target):
         return "<Cross target (" + self.target_arch.name + ") " + self.name + ">"
 
 
+class _TargetAliasBase(Target):
+    @property
+    def projectClass(self) -> "typing.Type[SimpleProject]":
+        raise ValueError("Should not be called!")
+
+    def _create_project(self, config: CheriConfig):
+        raise ValueError("Should not be called!")
+
+    def get_real_target(self, cross_target: CrossCompileTarget, config,
+                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> MultiArchTarget:
+        raise NotImplementedError()
+
+    def get_or_create_project(self, cross_target: "CrossCompileTarget", config) -> "SimpleProject":
+        assert cross_target is not None
+        assert cross_target is not CompilationTargets.NONE
+        tgt = self.get_real_target(cross_target, config)
+        return tgt.get_or_create_project(cross_target, config)
+
+    def execute(self, config):
+        return self.get_real_target(CompilationTargets.NONE, config).execute(config)
+
+    def run_tests(self, config: "CheriConfig"):
+        return self.get_real_target(CompilationTargets.NONE, config).run_tests(config)
+
+    def run_benchmarks(self, config: "CheriConfig"):
+        return self.get_real_target(CompilationTargets.NONE, config).run_benchmarks(config)
+
+    def checkSystemDeps(self, config: CheriConfig):
+        return self.get_real_target(CompilationTargets.NONE, config).checkSystemDeps(config)
+
+
 # This is used for targets like "libcxx", etc and resolves to "libcxx-cheri/libcxx-native/libcxx-mips"
 # at runtime
-class MultiArchTargetAlias(Target):
+class MultiArchTargetAlias(_TargetAliasBase):
     def __init__(self, name, projectClass):
         super().__init__(name, projectClass)
         self.derived_targets = []  # type: typing.List[MultiArchTarget]
 
-    @property
-    def projectClass(self) -> "typing.Type[SimpleProject]":
-        raise ValueError("Should not be called!")
+    def __repr__(self):
+        return "<Cross target alias " + self.name + ">"
 
     def get_real_target(self, cross_target: CrossCompileTarget, config,
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> MultiArchTarget:
@@ -245,27 +275,6 @@ class MultiArchTargetAlias(Target):
         cross_target = tgt._project_class._xtarget
         assert cross_target is not CompilationTargets.NONE
         return tgt.get_or_create_project(cross_target, config)
-
-    def _create_project(self, config: CheriConfig):
-        from .projects.cross.crosscompileproject import CrossCompileMixin
-        from .projects.cross.cheribsd import BuildFreeBSD
-        assert issubclass(self.projectClass, CrossCompileMixin) or issubclass(self.projectClass, BuildFreeBSD)
-        return self.projectClass(config)
-
-    def execute(self, config):
-        return self.get_real_target(CompilationTargets.NONE, config).execute(config)
-
-    def run_tests(self, config: "CheriConfig"):
-        return self.get_real_target(CompilationTargets.NONE, config).run_tests(config)
-
-    def run_benchmarks(self, config: "CheriConfig"):
-        return self.get_real_target(CompilationTargets.NONE, config).run_benchmarks(config)
-
-    def checkSystemDeps(self, config: CheriConfig):
-        return self.get_real_target(CompilationTargets.NONE, config).checkSystemDeps(config)
-
-    def __repr__(self):
-        return "<Cross target alias " + self.name + ">"
 
 
 class TargetManager(object):
