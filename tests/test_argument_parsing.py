@@ -200,10 +200,10 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     config = _parse_arguments(["--skip-configure"])
     cheribsd_class = target_manager.get_target_raw("cheribsd").projectClass
     cheribsd_default_tgt = target_manager.get_target_raw("cheribsd").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
-    assert cheribsd_default_tgt.target == "cheribsd-cheri"
+    assert cheribsd_default_tgt.target == "cheribsd-mips-hybrid"
     cheribsd_mips = target_manager.get_target_raw("cheribsd-mips-nocheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
-    cheribsd_cheri = target_manager.get_target_raw("cheribsd-cheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
-    cheribsd_purecap = target_manager.get_target_raw("cheribsd-purecap").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    cheribsd_cheri = target_manager.get_target_raw("cheribsd-mips-hybrid").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    cheribsd_purecap = target_manager.get_target_raw("cheribsd-mips-purecap").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
 
     # Check that project name is the same:
     assert cheribsd_mips.project_name == cheribsd_cheri.project_name
@@ -215,11 +215,11 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
 
     _parse_arguments(["--cheribsd-mips-nocheri/debug-kernel"])
     assert not cheribsd_purecap.debug_kernel, "cheribsd-purecap debug-kernel should default to false"
-    assert not cheribsd_cheri.debug_kernel, "cheribsd-cheri debug-kernel should default to false"
+    assert not cheribsd_cheri.debug_kernel, "cheribsd-mips-hybrid debug-kernel should default to false"
     assert cheribsd_mips.debug_kernel, "cheribsd-mips-nocheri debug-kernel should be set on cmdline"
     _parse_arguments(["--cheribsd-purecap/debug-kernel"])
     assert cheribsd_purecap.debug_kernel, "cheribsd-purecap debug-kernel should be set on cmdline"
-    assert not cheribsd_cheri.debug_kernel, "cheribsd-cheri debug-kernel should default to false"
+    assert not cheribsd_cheri.debug_kernel, "cheribsd-mips-hybrid debug-kernel should default to false"
     assert not cheribsd_mips.debug_kernel, "cheribsd-mips-nocheri debug-kernel should default to false"
     _parse_arguments(["--cheribsd-cheri/debug-kernel"])
     assert not cheribsd_purecap.debug_kernel, "cheribsd-purecap debug-kernel should default to false"

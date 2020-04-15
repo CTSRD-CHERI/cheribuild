@@ -48,7 +48,7 @@ freestanding_deps = ["llvm-native", "qemu", "gdb-native", "freestanding-sdk"]
 baremetal_deps = freestanding_deps + ["newlib-baremetal-mips", "compiler-rt-builtins-baremetal-mips",
                                       "libunwind-baremetal-mips", "libcxxrt-baremetal-mips",
                                       "libcxx-baremetal-mips", "baremetal-sdk"]
-cheribsd_sdk_deps = freestanding_deps + ["cheribsd-cheri", "cheribsd-sdk"]
+cheribsd_sdk_deps = freestanding_deps + ["cheribsd-mips-hybrid", "cheribsd-sdk"]
 
 
 @pytest.mark.parametrize("target_name,expected_list", [
@@ -63,10 +63,10 @@ def test_sdk(target_name, expected_list):
 
 
 @pytest.mark.parametrize("target_name,expected_name", [
-    pytest.param("cheribsd", "cheribsd-cheri"),
+    pytest.param("cheribsd", "cheribsd-mips-hybrid"),
     pytest.param("freebsd", "freebsd-x86_64"),
     pytest.param("gdb", "gdb-native"),
-    pytest.param("libcxx", "libcxx-cheri"),
+    pytest.param("libcxx", "libcxx-mips-purecap"),
     ])
 def test_alias_resolving(target_name, expected_name):
     # test that we select the default target for multi projects:
@@ -75,9 +75,9 @@ def test_alias_resolving(target_name, expected_name):
 
 def test_reordering():
     # GDB is a cross compiled project so cheribsd should be built first
-    assert _sort_targets(["cheribsd", "gdb-mips-hybrid"]) == ["cheribsd-cheri", "gdb-mips-hybrid"]
-    assert _sort_targets(["gdb-mips-hybrid", "cheribsd"]) == ["cheribsd-cheri", "gdb-mips-hybrid"]
-    assert _sort_targets(["gdb-mips-hybrid", "cheribsd-cheri"]) == ["cheribsd-cheri", "gdb-mips-hybrid"]
+    assert _sort_targets(["cheribsd", "gdb-mips-hybrid"]) == ["cheribsd-mips-hybrid", "gdb-mips-hybrid"]
+    assert _sort_targets(["gdb-mips-hybrid", "cheribsd"]) == ["cheribsd-mips-hybrid", "gdb-mips-hybrid"]
+    assert _sort_targets(["gdb-mips-hybrid", "cheribsd-cheri"]) == ["cheribsd-mips-hybrid", "gdb-mips-hybrid"]
 
 
 def test_run_comes_last():
@@ -86,19 +86,19 @@ def test_run_comes_last():
 
 def test_disk_image_comes_second_last():
     assert _sort_targets(["run", "disk-image"]) == ["disk-image-mips-hybrid", "run-mips-hybrid"]
-    assert _sort_targets(["run", "disk-image", "cheribsd"]) == ["cheribsd-cheri", "disk-image-mips-hybrid", "run-mips-hybrid"]
-    assert _sort_targets(["run", "gdb-mips-hybrid", "disk-image", "cheribsd"]) == ["cheribsd-cheri", "gdb-mips-hybrid", "disk-image-mips-hybrid", "run-mips-hybrid"]
-    assert _sort_targets(["run", "disk-image", "postgres", "cheribsd"]) == ["cheribsd-cheri", "postgres-cheri", "disk-image-mips-hybrid", "run-mips-hybrid"]
+    assert _sort_targets(["run", "disk-image", "cheribsd"]) == ["cheribsd-mips-hybrid", "disk-image-mips-hybrid", "run-mips-hybrid"]
+    assert _sort_targets(["run", "gdb-mips-hybrid", "disk-image", "cheribsd"]) == ["cheribsd-mips-hybrid", "gdb-mips-hybrid", "disk-image-mips-hybrid", "run-mips-hybrid"]
+    assert _sort_targets(["run", "disk-image", "postgres", "cheribsd"]) == ["cheribsd-mips-hybrid", "postgres-mips-purecap", "disk-image-mips-hybrid", "run-mips-hybrid"]
 
 
 def test_cheribsd_default_aliases():
     assert _sort_targets(["run"]) == ["run-mips-hybrid"]
     assert _sort_targets(["disk-image"]) == ["disk-image-mips-hybrid"]
-    assert _sort_targets(["cheribsd"]) == ["cheribsd-cheri"]
+    assert _sort_targets(["cheribsd"]) == ["cheribsd-mips-hybrid"]
 
 
 def test_all_run_deps():
-    assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm-native", "gdb-native", "cheribsd-cheri",
+    assert _sort_targets(["run"], add_dependencies=True) == ["qemu", "llvm-native", "gdb-native", "cheribsd-mips-hybrid",
                                                              "gdb-mips-hybrid", "disk-image-mips-hybrid",
                                                              "run-mips-hybrid"]
 
@@ -135,13 +135,13 @@ def test_webkit_cached_deps():
     config = copy.copy(get_global_config())
     config.skipSdk = True
     webkit_native = target_manager.get_target_raw("qtwebkit-native").projectClass
-    webkit_cheri = target_manager.get_target_raw("qtwebkit-cheri").projectClass
+    webkit_cheri = target_manager.get_target_raw("qtwebkit-mips-purecap").projectClass
     webkit_mips = target_manager.get_target_raw("qtwebkit-mips-hybrid").projectClass
     # Check that the deps are not cached yet
     _check_deps_not_cached((webkit_native, webkit_cheri, webkit_mips))
 
     cheri_target_names = list(sorted(webkit_cheri.allDependencyNames(config)))
-    assert cheri_target_names == ["icu4c-cheri", "icu4c-native", "libxml2-cheri", "qtbase-cheri", "sqlite-cheri"]
+    assert cheri_target_names == ["icu4c-mips-purecap", "icu4c-native", "libxml2-mips-purecap", "qtbase-mips-purecap", "sqlite-mips-purecap"]
     _check_deps_not_cached([webkit_native, webkit_mips])
     _check_deps_cached([webkit_cheri])
 
@@ -165,7 +165,7 @@ def test_webkit_deps_2():
     assert _sort_targets(["qtwebkit-mips-hybrid"], add_dependencies=True, skip_sdk=True) == \
                          ["qtbase-mips-hybrid", "icu4c-native", "icu4c-mips-hybrid", "libxml2-mips-hybrid", "sqlite-mips-hybrid", "qtwebkit-mips-hybrid"]
     assert _sort_targets(["qtwebkit-cheri"], add_dependencies=True, skip_sdk=True) == \
-                         ["qtbase-cheri", "icu4c-native", "icu4c-cheri", "libxml2-cheri", "sqlite-cheri", "qtwebkit-cheri"]
+                         ["qtbase-mips-purecap", "icu4c-native", "icu4c-mips-purecap", "libxml2-mips-purecap", "sqlite-mips-purecap", "qtwebkit-mips-purecap"]
 
 
 def test_riscv():
@@ -188,9 +188,10 @@ def test_riscv():
     pytest.param("-native", "-native", id="native"),
     pytest.param("-mips-nocheri", "-mips-nocheri", id="mips-nocheri"),
     pytest.param("-mips-hybrid", "-mips-hybrid", id="mips-hybrid"),
-    pytest.param("-cheri", "-cheri", id="cheri"),
+    pytest.param("-cheri", "-mips-purecap", id="cheri"),
+    pytest.param("-mips-purecap", "-mips-purecap", id="mips-purecap"),
     # no suffix should resolve to the -cheri targets:
-    pytest.param("", "-cheri", id="no suffix"),
+    pytest.param("", "-mips-purecap", id="no suffix"),
 ])
 def test_libcxx_deps(suffix, expected_suffix):
     expected = ["libunwind" + expected_suffix, "libcxxrt" + expected_suffix, "libcxx" + expected_suffix]
