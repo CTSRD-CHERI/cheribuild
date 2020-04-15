@@ -38,6 +38,7 @@ from enum import Enum
 
 from ..llvm import BuildUpstreamLLVM, BuildCheriLLVM
 from ..project import *
+from ...targets import target_manager
 from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi
 from ...config.loader import ComputedDefaultValue
 from ...utils import *
@@ -1618,6 +1619,10 @@ class BuildCheriBsdSysroot(SimpleProject):
                 if not libgcc_eh.is_file():
                     warningMessage("CHERI libgcc_eh missing! You should probably update CheriBSD")
                     runCmd("ar", "rc", libgcc_eh)
+
+
+# Add a target aliases for old script invocations
+target_manager.add_target_alias("cheribsd-mips-hybrid", "cheribsd-cheri")
 
 
 class BuildCheriBsdAndSysroot(TargetAliasWithDependencies):

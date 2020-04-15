@@ -215,19 +215,22 @@ class MultiArchTarget(Target):
 class _TargetAliasBase(Target):
     @property
     def projectClass(self) -> "typing.Type[SimpleProject]":
-        raise ValueError("Should not be called!")
+        assert self._project_class is not None
+        return self._project_class
 
     def _create_project(self, config: CheriConfig):
         raise ValueError("Should not be called!")
 
     def get_real_target(self, cross_target: CrossCompileTarget, config,
-                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> MultiArchTarget:
+                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
         raise NotImplementedError()
 
     def get_or_create_project(self, cross_target: "CrossCompileTarget", config) -> "SimpleProject":
         assert cross_target is not None
-        assert cross_target is not CompilationTargets.NONE
         tgt = self.get_real_target(cross_target, config)
+        # Update the cross target
+        cross_target = tgt._project_class._xtarget
+        assert cross_target is not CompilationTargets.NONE
         return tgt.get_or_create_project(cross_target, config)
 
     def execute(self, config):
@@ -254,8 +257,9 @@ class MultiArchTargetAlias(_TargetAliasBase):
         return "<Cross target alias " + self.name + ">"
 
     def get_real_target(self, cross_target: CrossCompileTarget, config,
-                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> MultiArchTarget:
+                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
         assert cross_target is not None
+        assert self.derived_targets, "derived targets must not be empty"
         if cross_target is CompilationTargets.NONE:
             # Use the default target:
             cross_target = self._project_class.get_crosscompile_target(config)
@@ -266,15 +270,24 @@ class MultiArchTargetAlias(_TargetAliasBase):
                 return tgt
         raise LookupError("Could not find '" + self.name + "' target for " + str(cross_target) + ", caller was " + str(caller))
 
-    def get_or_create_project(self, cross_target: "CrossCompileTarget", config) -> "SimpleProject":
-        # If there are any derived targets pick the right one based on the target_arch:
-        assert cross_target is not None
-        assert self.derived_targets, "derived targets must not be empty"
-        tgt = self.get_real_target(cross_target, config)
-        # Update the cross target
-        cross_target = tgt._project_class._xtarget
-        assert cross_target is not CompilationTargets.NONE
-        return tgt.get_or_create_project(cross_target, config)
+
+class SimpleTargetAlias(_TargetAliasBase):
+    def __init__(self, name, real_target_name: str, t: "TargetManager"):
+        super().__init__(name, None)
+        self.real_target_name = real_target_name
+        # Add the alias name for config lookups so that old configs remain valid
+        # Note: we can't modify _alias_target_names since otherwise we change it for all classes
+        # noinspection PyProtectedMember
+        self.real_target = t.get_target_raw(real_target_name)
+        real_cls = self.real_target.projectClass
+        real_cls._alias_target_names = getattr(real_cls, "_alias_target_names", tuple()) + (self.name, )
+
+    def get_real_target(self, cross_target: CrossCompileTarget, config,
+                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
+        return self.real_target
+
+    def __repr__(self):
+        return "<Target alias " + self.name + " (for " + self.real_target_name + ")>"
 
 
 class TargetManager(object):
@@ -282,14 +295,20 @@ class TargetManager(object):
         self._allTargets = {}  # type: typing.Dict[str, Target]
 
     def add_target(self, target: Target) -> None:
+        assert target.name not in self._allTargets
         self._allTargets[target.name] = target
+
+    def add_target_alias(self, name: str, real_target: str) -> None:
+        assert name not in self._allTargets
+        self._allTargets[name] = SimpleTargetAlias(name, real_target, self)
 
     def registerCommandLineOptions(self):
         # this cannot be done in the Project metaclass as otherwise we get
         # RuntimeError: super(): empty __class__ cell
         # https://stackoverflow.com/questions/13126727/how-is-super-in-python-3-implemented/28605694#28605694
         for tgt in self._allTargets.values():
-            tgt._project_class.setup_config_options()
+            if tgt._project_class is not None:
+                tgt._project_class.setup_config_options()
 
     @property
     def targetNames(self):

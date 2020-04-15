@@ -304,16 +304,42 @@ def test_target_alias():
     cheribsd_cheri = target_manager.get_target_raw("cheribsd-cheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
     assert str(cheribsd_cheri.mfs_root_image) == "/some/image"
     cheribsd_mips_hybrid = target_manager.get_target_raw("cheribsd-mips-hybrid").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
-    assert str(cheribsd_cheri.mfs_root_image) == "/some/image"
-
-    # For other targets we currently keep -cheri suffixed aliases for the -mips-purecap versions
-    config = _parse_config_file_and_args(b'{"qtbase-cheri/build-directory": "/some/build/dir"}')
+    assert str(cheribsd_mips_hybrid.mfs_root_image) == "/some/image"
+    # Try again with the other key:
+    config = _parse_config_file_and_args(b'{"cheribsd-mips-hybrid/mfs-root-image": "/some/image"}')
     # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
     # We should load config options for that target from
-    qtbase_cheri = target_manager.get_target_raw("qtbase-cheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
-    assert str(qtbase_cheri.buildDir) == "/some/build/dir"
-    qtbase_mips_purecap = target_manager.get_target_raw("qtbase-mips-purecap").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
-    assert str(qtbase_mips_purecap.buildDir) == "/some/build/dir"
+    cheribsd_cheri = target_manager.get_target_raw("cheribsd-cheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    assert str(cheribsd_cheri.mfs_root_image) == "/some/image"
+    cheribsd_mips_hybrid = target_manager.get_target_raw("cheribsd-mips-hybrid").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    assert str(cheribsd_mips_hybrid.mfs_root_image) == "/some/image"
+
+    # Check command line aliases:
+    config = _parse_config_file_and_args(b'{"cheribsd-cheri/mfs-root-image": "/json/value"}', "--cheribsd-cheri/mfs-root-image=/command/line/value")
+    # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
+    # We should load config options for that target from
+    cheribsd_cheri = target_manager.get_target_raw("cheribsd-cheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    assert str(cheribsd_cheri.mfs_root_image) == "/command/line/value"
+    cheribsd_mips_hybrid = target_manager.get_target_raw("cheribsd-mips-hybrid").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    assert str(cheribsd_mips_hybrid.mfs_root_image) == "/command/line/value"
+
+    config = _parse_config_file_and_args(b'{"cheribsd-cheri/mfs-root-image": "/json/value"}', "--cheribsd-mips-hybrid/mfs-root-image=/command/line/value")
+    # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
+    # We should load config options for that target from
+    cheribsd_cheri = target_manager.get_target_raw("cheribsd-cheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    mfs_option = inspect.getattr_static(cheribsd_cheri, "mfs_root_image")
+    assert str(cheribsd_cheri.mfs_root_image) == "/command/line/value"
+    cheribsd_mips_hybrid = target_manager.get_target_raw("cheribsd-mips-hybrid").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    assert str(cheribsd_mips_hybrid.mfs_root_image) == "/command/line/value"
+
+    # # For other targets we currently keep -cheri suffixed aliases for the -mips-purecap versions
+    # config = _parse_config_file_and_args(b'{"qtbase-cheri/build-directory": "/some/build/dir"}')
+    # # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
+    # # We should load config options for that target from
+    # qtbase_cheri = target_manager.get_target_raw("qtbase-cheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    # assert str(qtbase_cheri.buildDir) == "/some/build/dir"
+    # qtbase_mips_purecap = target_manager.get_target_raw("qtbase-mips-purecap").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    # assert str(qtbase_mips_purecap.buildDir) == "/some/build/dir"
 
 def test_kernconf():
     # Parse args once to ensure target_manager is initialized

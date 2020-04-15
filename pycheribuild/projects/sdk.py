@@ -33,6 +33,7 @@ import datetime
 
 from .cross.cheribsd import BuildCHERIBSD
 from .project import *
+from ..targets import target_manager
 from ..utils import *
 
 from pathlib import Path
@@ -127,14 +128,8 @@ class BuildFreestandingSdk(SimpleProject):
         #    self.installFile(CHERILIBEXEC_OBJ / tool, self.config.cheri_sdk_bindir / tool, force=True)
 
 
-# Replace the old binutils target by on that builds the required tools from GNU binutils and elftoolchain
-class BuildBinutils(TargetAlias):
-    target = "binutils"
-    # LLD should be usable for all cases now, now longer install the ancient gnu ld
-    # After the next merge we can probably also remove elftoolchain (however, for consistency
-    # with buildworld we should probably keep it?)
-    dependencies = ["elftoolchain"]
-    is_sdk_target = True
+# Binutils now just builds LLVM since we don't need GNU binutils or Elftoolchain any more
+target_manager.add_target_alias("binutils", "llvm")
 
 
 class BuildBaremetalSdk(TargetAliasWithDependencies):

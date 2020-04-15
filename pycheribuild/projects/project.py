@@ -181,9 +181,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # To prevent non-suffixed targets in case the only target is not NATIVE
     _always_add_suffixed_targets = False  # add a suffixed target only if more than one variant is supported
 
-    # Used for target aliases
-    _fallback_config_names = set()
-
     @classmethod
     def is_toolchain_target(cls):
         return False
@@ -494,7 +491,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             # If we are adding to the base class or the target is not in
             if not _allow_unknown_targets:
                 for t in only_add_for_targets:
-                    assert any(t is x for x in cls.supported_architectures), \
+                    assert t in cls.supported_architectures, \
                         cls.__name__ + ": some of " + str(only_add_for_targets) + " not in " + str(
                             cls.supported_architectures)
             if target is not CompilationTargets.NONE and target not in only_add_for_targets:
@@ -503,7 +500,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # We don't want to inherit certain options from the non-target specific class since they should always be
         # set directly for that target. Currently the only such option is build-directory since sharing that would
         # break the build in most cases.
-        fallback_config_names = list(cls._fallback_config_names)
+        # Important: Only look in the current class, not in parent classes to avoid duplicate names!
+        fallback_config_names = []
         if not _no_fallback_config_name and fallback_name_base:
             if name not in ["build-directory"]:
                 fallback_config_names.append(fallback_name_base + "/" + name)
@@ -518,9 +516,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                         fallback_config_names.append(fallback_name_base + "/" + name)
         if extra_fallback_config_names:
             fallback_config_names.extend(extra_fallback_config_names)
+        alias_target_names = [prefix + "/" + name for prefix in cls.__dict__.get("_alias_target_names", tuple())]
         return cls._configLoader.addOption(config_option_key + "/" + name, shortname, default=default, type=kind,
                                            _owning_class=cls, group=cls._commandLineOptionGroup, helpHidden=help_hidden,
-                                           _fallback_names=fallback_config_names, **kwargs)
+                                           _fallback_names=fallback_config_names, _alias_names=alias_target_names, **kwargs)
 
     @classmethod
     def add_bool_option(cls, name: str, *, shortname=None, only_add_for_targets: list = None,
