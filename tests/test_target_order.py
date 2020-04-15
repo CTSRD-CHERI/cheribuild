@@ -35,7 +35,7 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolc
     config.include_toolchain_dependencies = add_toolchain
     config.skipSdk = skip_sdk
     for t in real_targets:
-        if t._project_class._xtarget is CompilationTargets.NONE:
+        if t.projectClass._xtarget is CompilationTargets.NONE:
             continue
         t.projectClass._cached_deps = None
         t.get_dependencies(config)  # ensure they have been cached

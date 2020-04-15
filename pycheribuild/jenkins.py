@@ -45,7 +45,7 @@ from .projects import *  # make sure all projects are loaded so that target_mana
 from .projects.cross import *  # make sure all projects are loaded so that target_manager gets populated
 from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import SimpleProject, Project
-from .targets import target_manager, Target, MultiArchTargetAlias
+from .targets import target_manager, Target, MultiArchTargetAlias, SimpleTargetAlias
 from .utils import *
 
 
@@ -238,7 +238,9 @@ def _jenkins_main():
         target = target_manager.get_target_raw(cheriConfig.targets[0])
 
         for tgt in target_manager.targets:
-            cls = tgt._project_class
+            if isinstance(tgt, SimpleTargetAlias):
+                continue
+            cls = tgt.projectClass
             if issubclass(cls, Project):
                 cls._default_install_dir_fn = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
                 i = inspect.getattr_static(cls, "_installDir")

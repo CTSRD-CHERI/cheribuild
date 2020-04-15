@@ -229,7 +229,7 @@ class _TargetAliasBase(Target):
         assert cross_target is not None
         tgt = self.get_real_target(cross_target, config)
         # Update the cross target
-        cross_target = tgt._project_class._xtarget
+        cross_target = tgt.projectClass._xtarget
         assert cross_target is not CompilationTargets.NONE
         return tgt.get_or_create_project(cross_target, config)
 
@@ -262,7 +262,7 @@ class MultiArchTargetAlias(_TargetAliasBase):
         assert self.derived_targets, "derived targets must not be empty"
         if cross_target is CompilationTargets.NONE:
             # Use the default target:
-            cross_target = self._project_class.get_crosscompile_target(config)
+            cross_target = self.projectClass.get_crosscompile_target(config)
         assert cross_target is not None and cross_target is not CompilationTargets.NONE
         # find the correct derived project:
         for tgt in self.derived_targets:
@@ -327,7 +327,7 @@ class TargetManager(object):
         # https://stackoverflow.com/questions/13126727/how-is-super-in-python-3-implemented/28605694#28605694
         for tgt in self._allTargets.values():
             if not isinstance(tgt, SimpleTargetAlias):
-                tgt._project_class.setup_config_options()
+                tgt.projectClass.setup_config_options()
 
     @property
     def targetNames(self):
