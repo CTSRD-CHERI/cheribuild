@@ -368,7 +368,7 @@ class CommandLineConfigOption(ConfigOptionBase):
             parserObj = parserObj.add_mutually_exclusive_group()
             kwargs["default"] = None
             assert kwargs["action"] == "store_true"
-        if self.shortname:
+        if shortname:
             action = parserObj.add_argument("--" + name, "-" + shortname, **kwargs)
         else:
             action = parserObj.add_argument("--" + name, **kwargs)
