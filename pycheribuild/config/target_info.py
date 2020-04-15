@@ -525,7 +525,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         # Purecap (currently) builds against the hybrid sysroot:
         if target.is_cheri_purecap():
             if target.is_mips(include_purecap=True):
-                return ["cheribsd-cheri"]
+                return ["cheribsd-mips-hybrid"]
             elif target.is_riscv(include_purecap=True):
                 return ["cheribsd-riscv64-hybrid"]
             else:
@@ -836,7 +836,7 @@ class CompilationTargets(object):
     CHERIBSD_MIPS_NO_CHERI = CrossCompileTarget("mips-nocheri", CPUArchitecture.MIPS64, CheriBSDTargetInfo)
     CHERIBSD_MIPS_HYBRID = CrossCompileTarget("mips-hybrid", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
         is_cheri_hybrid=True, check_conflict_with=CHERIBSD_MIPS_NO_CHERI)
-    CHERIBSD_MIPS_PURECAP = CrossCompileTarget("cheri", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
+    CHERIBSD_MIPS_PURECAP = CrossCompileTarget("mips-purecap", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
         is_cheri_purecap=True, check_conflict_with=CHERIBSD_MIPS_NO_CHERI)
 
     CHERIBSD_RISCV_NO_CHERI = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriBSDTargetInfo)

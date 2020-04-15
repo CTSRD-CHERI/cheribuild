@@ -1144,16 +1144,6 @@ class BuildCHERIBSD(BuildFreeBSD):
     has_installsysroot_target = True
     full_rebuild_if_older_than = datetime.datetime(2020, 4, 8, 17, 0, tzinfo=datetime.timezone.utc)
 
-    @staticmethod
-    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
-        # backwards compatibility:
-        if xtarget.is_mips(include_purecap=True):
-            if xtarget.is_cheri_purecap():
-                return base_target + "-purecap"
-            if xtarget.is_cheri_hybrid():
-                return base_target + "-cheri"
-        return base_target + "-" + xtarget.generic_suffix
-
     @property
     def build_dir_suffix(self):
         if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
@@ -1622,10 +1612,11 @@ class BuildCheriBsdSysroot(SimpleProject):
 
 
 # Add a target aliases for old script invocations
-target_manager.add_target_alias("cheribsd-mips-hybrid", "cheribsd-cheri")
+target_manager.add_target_alias("cheribsd-cheri", "cheribsd-mips-hybrid", deprecated=True)
+target_manager.add_target_alias("cheribsd-purecap", "cheribsd-mips-purecap", deprecated=True)
 
 
 class BuildCheriBsdAndSysroot(TargetAliasWithDependencies):
     target = "cheribsd-with-sysroot"
-    dependencies = ["cheribsd-cheri"]
+    dependencies = ["cheribsd-mips-hybrid"]
 

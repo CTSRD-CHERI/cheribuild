@@ -138,6 +138,10 @@ class ProjectSubclassDefinitionHook(type):
                 # noinspection PyTypeChecker
                 new_type = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
                 target_manager.add_target(MultiArchTarget(new_name, new_type, arch, base_target))
+                if arch is CompilationTargets.CHERIBSD_MIPS_PURECAP and new_name.endswith("-mips-purecap"):
+                    # Add deprecated alias for to keep the old -cheri names working
+                    if not new_name.startswith("cheribsd-") and not new_name.startswith("disk-image-") and not new_name.startswith("run-"):
+                        target_manager.add_target_alias(new_name.replace("-mips-purecap", "-cheri"), new_name, deprecated=True)
         else:
             assert len(supported_archs) == 1
             # Only one target is supported:
@@ -584,13 +588,14 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                                                homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__requiredSystemHeaders[header] = install_instructions
 
-    def query_yes_no(self, message: str = "", *, default_result=False, force_result=True, yes_no_str: str=None) -> bool:
+    @staticmethod
+    def _query_yes_no(config: CheriConfig, message: str = "", *, default_result=False, force_result=True, yes_no_str: str=None) -> bool:
         if yes_no_str is None:
             yes_no_str = " [Y]/n " if default_result else " y/[N] "
-        if self.config.pretend:
+        if config.pretend:
             print(message + yes_no_str, coloured(AnsiColour.green, "y" if force_result else "n"), sep="")
             return force_result  # in pretend mode we always return true
-        if self.config.force:
+        if config.force:
             # in force mode we always return the forced result without prompting the user
             print(message + yes_no_str, coloured(AnsiColour.green, "y" if force_result else "n"), sep="")
             return force_result
@@ -600,6 +605,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if default_result:
             return not result.startswith("n")  # if default is yes accept anything other than strings starting with "n"
         return str(result).lower().startswith("y")  # anything but y will be treated as false
+
+    def query_yes_no(self, message: str = "", *, default_result=False, force_result=True, yes_no_str: str=None) -> bool:
+        return self._query_yes_no(self.config, message, default_result=default_result, force_result=force_result,
+            yes_no_str=yes_no_str)
 
     def ask_for_confirmation(self, message: str, error_message="Cannot continue.", default_result=True, **kwargs):
         if not self.query_yes_no(message, default_result=default_result, **kwargs):

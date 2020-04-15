@@ -273,9 +273,9 @@ class MultiArchTargetAlias(_TargetAliasBase):
 
 class SimpleTargetAlias(_TargetAliasBase):
     def __init__(self, name, real_target_name: str, t: "TargetManager"):
-        self.real_target = t.get_target_raw(real_target_name)
-        real_cls = self.real_target.projectClass
-        assert not isinstance(self.real_target, _TargetAliasBase), "Target aliases must reference a real target not another alias"
+        self._real_target = t.get_target_raw(real_target_name)
+        real_cls = self._real_target.projectClass
+        assert not isinstance(self._real_target, _TargetAliasBase), "Target aliases must reference a real target not another alias"
         super().__init__(name, real_cls)
         self.real_target_name = real_target_name
         # Add the alias name for config lookups so that old configs remain valid
@@ -285,17 +285,24 @@ class SimpleTargetAlias(_TargetAliasBase):
 
     def get_real_target(self, cross_target: CrossCompileTarget, config,
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
-        return self.real_target
+        return self._real_target
 
     def __repr__(self):
         return "<Target alias " + self.name + " (for " + self.real_target_name + ")>"
 
 
 class DeprecatedTargetAlias(SimpleTargetAlias):
-    def get_real_target(self, cross_target: CrossCompileTarget, config,
+    def get_real_target(self, cross_target: CrossCompileTarget, config: "CheriConfig",
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
-        warningMessage("Using deprecated target", self.name, ". Please use ", self.real_target_name, "instead." , sep="")
-        return self.real_target
+        warningMessage("Using deprecated target ", coloured(AnsiColour.red, self.name),
+                       coloured(AnsiColour.magenta, ". Please use "),
+                       coloured(AnsiColour.yellow, self.real_target_name),
+                       coloured(AnsiColour.magenta, " instead."), sep="")
+        from .projects.project import SimpleProject
+        # noinspection PyProtectedMember
+        if not SimpleProject._query_yes_no(config, "Continue?", default_result=True):
+            fatalError("Cannot continue.")
+        return self._real_target
 
 
 class TargetManager(object):
@@ -304,11 +311,15 @@ class TargetManager(object):
 
     def add_target(self, target: Target) -> None:
         assert target.name not in self._allTargets
+        assert target.name != "cheribsd-cheri"
         self._allTargets[target.name] = target
 
-    def add_target_alias(self, name: str, real_target: str) -> None:
+    def add_target_alias(self, name: str, real_target: str, deprecated=False) -> None:
         assert name not in self._allTargets
-        self._allTargets[name] = SimpleTargetAlias(name, real_target, self)
+        if deprecated:
+            self._allTargets[name] = DeprecatedTargetAlias(name, real_target, self)
+        else:
+            self._allTargets[name] = SimpleTargetAlias(name, real_target, self)
 
     def registerCommandLineOptions(self):
         # this cannot be done in the Project metaclass as otherwise we get
@@ -353,7 +364,7 @@ class TargetManager(object):
         chosen_targets = []  # type: typing.List[Target]
         for t in explicit_targets:
             if isinstance(t, SimpleTargetAlias):
-                t = t.real_target
+                t = t.get_real_target(CompilationTargets.NONE, config)
             chosen_targets.append(t)
             deps_to_add = []
             if add_dependencies:

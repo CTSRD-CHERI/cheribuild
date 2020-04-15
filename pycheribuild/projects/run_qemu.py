@@ -373,13 +373,6 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
     project_name = "run"
     _source_class = BuildCheriBSDDiskImage
 
-    @staticmethod
-    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
-        # backwards compatibility:
-        if xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            return base_target + "-purecap"
-        return base_target + "-" + xtarget.generic_suffix
-
     @classmethod
     def setup_config_options(cls, **kwargs):
         if "defaultSshPort" in kwargs:
@@ -543,3 +536,10 @@ class LaunchCheriBsdMinimal(AbstractLaunchFreeBSD):
 
     def __init__(self, config):
         super().__init__(config, source_class=BuildCHERIBSD, disk_image_class=BuildMinimalCheriBSDDiskImage)
+
+
+# Backwards compatibility:
+target_manager.add_target_alias("run-cheri", "run-mips-hybrid", deprecated=True)
+target_manager.add_target_alias("run-purecap", "run-mips-purecap", deprecated=True)
+target_manager.add_target_alias("run-minimal-cheri", "run-minimal-mips-hybrid", deprecated=True)
+target_manager.add_target_alias("run-minimal-purecap", "run-minimal-mips-purecap", deprecated=True)

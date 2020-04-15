@@ -613,13 +613,6 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                                CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
                                ]
 
-    @staticmethod
-    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
-        # backwards compatibility:
-        if xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            return base_target + "-purecap"
-        return base_target + "-" + xtarget.generic_suffix
-
     class _MinimalFileTemplates(_AdditionalFileTemplates):
         def get_fstab_template(self):
             return includeLocalFile("files/minimal-image/etc/fstab.in")
@@ -869,13 +862,6 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
         function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "cheribsd-"),
         as_string="$OUTPUT_ROOT/$arch_prefix-disk.img.")
 
-    @staticmethod
-    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
-        # backwards compatibility:
-        if xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            return base_target + "-purecap"
-        return base_target + "-" + xtarget.generic_suffix
-
     @classmethod
     def dependencies(cls, config):
         xtarget = cls.get_crosscompile_target(config)
@@ -946,3 +932,8 @@ class BuildFreeBSDGFEDiskImage(BuildFreeBSDImage):
     project_name = "disk-image-freebsd-gfe"
     _source_class = BuildFreeBSDGFE
     hide_options_from_help = True
+
+
+# Backwards compatibility:
+target_manager.add_target_alias("disk-image-purecap", "disk-image-mips-purecap", deprecated=True)
+target_manager.add_target_alias("disk-image-minimal-purecap", "disk-image-minimal-mips-purecap", deprecated=True)

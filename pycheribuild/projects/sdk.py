@@ -41,7 +41,7 @@ from pathlib import Path
 
 class BuildCheriBSDSdk(TargetAliasWithDependencies):
     target = "cheribsd-sdk"
-    dependencies = ["freestanding-sdk", "cheribsd-cheri"]
+    dependencies = ["freestanding-sdk", "cheribsd-mips-hybrid"]
     is_sdk_target = True
 
 
