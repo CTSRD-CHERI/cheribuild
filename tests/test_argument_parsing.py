@@ -11,11 +11,11 @@ _loader = JsonAndCommandLineConfigLoader()
 from pycheribuild.projects.project import SimpleProject, CompilationTargets
 
 SimpleProject._configLoader = _loader
-from pycheribuild.targets import targetManager, Target
+from pycheribuild.targets import target_manager, Target
 from pycheribuild.config.defaultconfig import DefaultCheriConfig
 # noinspection PyUnresolvedReferences
-from pycheribuild.projects import *  # make sure all projects are loaded so that targetManager gets populated
-from pycheribuild.projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
+from pycheribuild.projects import *  # make sure all projects are loaded so that target_manager gets populated
+from pycheribuild.projects.cross import *  # make sure all projects are loaded so that target_manager gets populated
 from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage, _BuildDiskImageBase
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, FreeBSDToolchainKind
@@ -39,12 +39,12 @@ def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")) -> Defau
     # noinspection PyGlobalUndefined
     global _cheriConfig
     if not _targets_registered:
-        allTargetNames = list(sorted(targetManager.targetNames)) + ["__run_everything__"]
+        allTargetNames = list(sorted(target_manager.targetNames)) + ["__run_everything__"]
         ConfigLoaderBase._cheriConfig = DefaultCheriConfig(_loader, allTargetNames)
         SimpleProject._configLoader = _loader
-        targetManager.registerCommandLineOptions()
+        target_manager.registerCommandLineOptions()
         _targets_registered = True
-    targetManager.reset()
+    target_manager.reset()
     ConfigLoaderBase._cheriConfig.loader._configPath = config_file
     sys.argv = ["cheribuild.py"] + args
     ConfigLoaderBase._cheriConfig.loader.reload()
@@ -104,12 +104,12 @@ def test_per_project_override():
 
 
 def test_cross_compile_project_inherits():
-    # Parse args once to ensure targetManager is initialized
+    # Parse args once to ensure target_manager is initialized
     config = _parse_arguments(["--skip-configure"])
-    qtbase_class = targetManager.get_target_raw("qtbase")._project_class
-    qtbase_default = targetManager.get_target_raw("qtbase").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildQtBase
-    qtbase_native = targetManager.get_target_raw("qtbase-native").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildQtBase
-    qtbase_mips = targetManager.get_target_raw("qtbase-mips-hybrid").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildQtBase
+    qtbase_class = target_manager.get_target_raw("qtbase")._project_class
+    qtbase_default = target_manager.get_target_raw("qtbase").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildQtBase
+    qtbase_native = target_manager.get_target_raw("qtbase-native").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildQtBase
+    qtbase_mips = target_manager.get_target_raw("qtbase-mips-hybrid").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildQtBase
 
     # Check that project name is the same:
     assert qtbase_default.project_name == qtbase_native.project_name
@@ -196,14 +196,14 @@ def test_cross_compile_project_inherits():
 
 # FIXME: cheribsd-cheri/kernel-config should use the cheribsd/kernel-config value
 def test_cheribsd_purecap_inherits_config_from_cheribsd():
-    # Parse args once to ensure targetManager is initialized
+    # Parse args once to ensure target_manager is initialized
     config = _parse_arguments(["--skip-configure"])
-    cheribsd_class = targetManager.get_target_raw("cheribsd")._project_class
-    cheribsd_default_tgt = targetManager.get_target_raw("cheribsd").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    cheribsd_class = target_manager.get_target_raw("cheribsd")._project_class
+    cheribsd_default_tgt = target_manager.get_target_raw("cheribsd").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
     assert cheribsd_default_tgt.target == "cheribsd-cheri"
-    cheribsd_mips = targetManager.get_target_raw("cheribsd-mips-nocheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
-    cheribsd_cheri = targetManager.get_target_raw("cheribsd-cheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
-    cheribsd_purecap = targetManager.get_target_raw("cheribsd-purecap").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    cheribsd_mips = target_manager.get_target_raw("cheribsd-mips-nocheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    cheribsd_cheri = target_manager.get_target_raw("cheribsd-cheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    cheribsd_purecap = target_manager.get_target_raw("cheribsd-purecap").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
 
     # Check that project name is the same:
     assert cheribsd_mips.project_name == cheribsd_cheri.project_name
@@ -297,14 +297,32 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     assertBuildDirsDifferent()
 
 
+def test_target_alias():
+    config = _parse_config_file_and_args(b'{"cheribsd-cheri/mfs-root-image": "/some/image"}')
+    # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
+    # We should load config options for that target from
+    cheribsd_cheri = target_manager.get_target_raw("cheribsd-cheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    assert str(cheribsd_cheri.mfs_root_image) == "/some/image"
+    cheribsd_mips_hybrid = target_manager.get_target_raw("cheribsd-mips-hybrid").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    assert str(cheribsd_cheri.mfs_root_image) == "/some/image"
+
+    # For other targets we currently keep -cheri suffixed aliases for the -mips-purecap versions
+    config = _parse_config_file_and_args(b'{"qtbase-cheri/build-directory": "/some/build/dir"}')
+    # Check that cheribsd-cheri is a (deprecated) target alias for cheribsd-mips-cheri
+    # We should load config options for that target from
+    qtbase_cheri = target_manager.get_target_raw("qtbase-cheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    assert str(qtbase_cheri.buildDir) == "/some/build/dir"
+    qtbase_mips_purecap = target_manager.get_target_raw("qtbase-mips-purecap").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    assert str(qtbase_mips_purecap.buildDir) == "/some/build/dir"
+
 def test_kernconf():
-    # Parse args once to ensure targetManager is initialized
+    # Parse args once to ensure target_manager is initialized
     # check default values
     config = _parse_arguments([])
-    cheribsd_cheri = targetManager.get_target_raw("cheribsd-cheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
-    cheribsd_mips = targetManager.get_target_raw("cheribsd-mips-nocheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
-    freebsd_mips = targetManager.get_target_raw("freebsd-mips").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildFreeBSD
-    freebsd_native = targetManager.get_target_raw("freebsd-x86_64").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildFreeBSD
+    cheribsd_cheri = target_manager.get_target_raw("cheribsd-cheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    cheribsd_mips = target_manager.get_target_raw("cheribsd-mips-nocheri").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildCHERIBSD
+    freebsd_mips = target_manager.get_target_raw("freebsd-mips").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildFreeBSD
+    freebsd_native = target_manager.get_target_raw("freebsd-x86_64").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildFreeBSD
     assert config.freebsd_kernconf is None
     assert freebsd_mips.kernelConfig == "MALTA64"
     assert cheribsd_cheri.kernelConfig == "CHERI128_MALTA64"
@@ -388,7 +406,7 @@ def test_config_file_include():
         # Test merging of objects:
         (config_dir / "change-smb-dir.json").write_bytes(b'{ "run": { "smb-host-directory": "/some/path" }, "#include": "common.json" }')
         result = _get_config_with_include(config_dir, b'{ "run": { "ssh-forwarding-port": 12345 }, "#include": "change-smb-dir.json" }')
-        run_project = targetManager.get_target_raw("run").get_or_create_project(CompilationTargets.NONE, result)
+        run_project = target_manager.get_target_raw("run").get_or_create_project(CompilationTargets.NONE, result)
         assert run_project.custom_qemu_smb_mount == Path("/some/path")
         assert run_project.sshForwardingPort == 12345
 
@@ -421,7 +439,7 @@ def test_config_file_include():
 def test_libcxxrt_dependency_path():
     # Test that we pick the correct libunwind path when building libcxxrt
     def check_libunwind_path(path, target_name):
-        tgt = targetManager.get_target_raw(target_name).get_or_create_project(CompilationTargets.NONE, config)
+        tgt = target_manager.get_target_raw(target_name).get_or_create_project(CompilationTargets.NONE, config)
         for i in tgt.configureArgs:
             if i.startswith("-DLIBUNWIND_PATH="):
                 assert i == ("-DLIBUNWIND_PATH=" + str(path)), tgt.configureArgs
@@ -466,7 +484,7 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
     args.extend(extra_args)
     config = _parse_arguments(args)
     expected_path = expected_path.replace("$OUTPUT$", str(config.outputRoot))
-    project = targetManager.get_target_raw(target).get_or_create_project(CompilationTargets.NONE, config)
+    project = target_manager.get_target_raw(target).get_or_create_project(CompilationTargets.NONE, config)
     assert isinstance(project, BuildFreeBSD)
     assert str(project.CC) == str(expected_path)
     if kind == FreeBSDToolchainKind.BOOTSTRAP:
@@ -508,7 +526,7 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
     ])
 def test_disk_image_path(target, expected_name):
     config = _parse_arguments([])
-    project = targetManager.get_target_raw(target).get_or_create_project(CompilationTargets.NONE, config)
+    project = target_manager.get_target_raw(target).get_or_create_project(CompilationTargets.NONE, config)
     assert isinstance(project, _BuildDiskImageBase)
     assert str(project.disk_image_path) == str(config.outputRoot / expected_name)
 
@@ -555,7 +573,7 @@ def test_freebsd_toolchains_cheribsd_purecap():
 def test_default_build_dir(target: str, args: list, expected: str):
     # Check that the cheribsd build dir is correct
     config = _parse_arguments(args)
-    target = targetManager.get_target(target, CompilationTargets.NONE, config, caller="test_default_arch")
+    target = target_manager.get_target(target, CompilationTargets.NONE, config, caller="test_default_arch")
     builddir = target.get_or_create_project(CompilationTargets.NONE, config).buildDir
     assert isinstance(builddir, Path)
     assert builddir.name == expected

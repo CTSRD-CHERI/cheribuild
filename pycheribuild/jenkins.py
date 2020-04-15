@@ -40,12 +40,12 @@ from pathlib import Path
 from .config.jenkinsconfig import JenkinsConfig, CompilationTargets, JenkinsAction
 from .config.loader import ConfigLoaderBase, CommandLineConfigOption
 # noinspection PyUnresolvedReferences
-from .projects import *  # make sure all projects are loaded so that targetManager gets populated
+from .projects import *  # make sure all projects are loaded so that target_manager gets populated
 # noinspection PyUnresolvedReferences
-from .projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
+from .projects.cross import *  # make sure all projects are loaded so that target_manager gets populated
 from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import SimpleProject, Project
-from .targets import targetManager, Target, MultiArchTargetAlias
+from .targets import target_manager, Target, MultiArchTargetAlias
 from .utils import *
 
 
@@ -207,12 +207,12 @@ def create_sdk_from_archives(cheriConfig: JenkinsConfig, needs_cheribsd_sysroot=
 
 def _jenkins_main():
     os.environ["_CHERIBUILD_JENKINS_BUILD"] = "1"
-    allTargetNames = list(sorted(targetManager.targetNames))
+    allTargetNames = list(sorted(target_manager.targetNames))
     configLoader = JenkinsConfigLoader()
     # Register all command line options
     cheriConfig = JenkinsConfig(configLoader, allTargetNames)
     SimpleProject._configLoader = configLoader
-    targetManager.registerCommandLineOptions()
+    target_manager.registerCommandLineOptions()
     cheriConfig.load()
     if cheriConfig.verbose:
         # json = cheri_config.getOptionsJSON()  # make sure all config options are loaded
@@ -235,9 +235,9 @@ def _jenkins_main():
 
     if JenkinsAction.BUILD in cheriConfig.action or JenkinsAction.TEST in cheriConfig.action:
         assert len(cheriConfig.targets) == 1
-        target = targetManager.get_target_raw(cheriConfig.targets[0])
+        target = target_manager.get_target_raw(cheriConfig.targets[0])
 
-        for tgt in targetManager.targets:
+        for tgt in target_manager.targets:
             cls = tgt._project_class
             if issubclass(cls, Project):
                 cls._default_install_dir_fn = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))

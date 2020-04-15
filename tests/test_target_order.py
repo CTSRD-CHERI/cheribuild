@@ -14,10 +14,10 @@ sys.path.append(str(Path(__file__).parent.parent))
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can"t do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
 from pycheribuild.projects.project import CompilationTargets
-from pycheribuild.targets import targetManager
+from pycheribuild.targets import target_manager
 # noinspection PyUnresolvedReferences
-from pycheribuild.projects import *  # make sure all projects are loaded so that targetManager gets populated
-from pycheribuild.projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
+from pycheribuild.projects import *  # make sure all projects are loaded so that target_manager gets populated
+from pycheribuild.projects.cross import *  # make sure all projects are loaded so that target_manager gets populated
 from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD
 from .setup_mock_chericonfig import setup_mock_chericonfig
 
@@ -27,10 +27,10 @@ BuildCHERIBSD.crossbuild = True
 
 
 def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolchain=True, skip_sdk=False) -> "typing.List[str]":
-    targetManager.reset()
+    target_manager.reset()
     # print(real_targets)
     config = get_global_config()
-    real_targets = list(targetManager.get_target(t, CompilationTargets.NONE, config, caller="_sort_targets") for t in targets)
+    real_targets = list(target_manager.get_target(t, CompilationTargets.NONE, config, caller="_sort_targets") for t in targets)
     config.includeDependencies = add_dependencies
     config.include_toolchain_dependencies = add_toolchain
     config.skipSdk = skip_sdk
@@ -39,7 +39,7 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolc
             continue
         t.projectClass._cached_deps = None
         t.get_dependencies(config)  # ensure they have been cached
-    result = list(t.name for t in targetManager.get_all_targets(real_targets, config))
+    result = list(t.name for t in target_manager.get_all_targets(real_targets, config))
     # print("result = ", result)
     return result
 
@@ -134,9 +134,9 @@ def test_webkit_cached_deps():
     # regression test for a bug in caching deps
     config = copy.copy(get_global_config())
     config.skipSdk = True
-    webkit_native = targetManager.get_target_raw("qtwebkit-native").projectClass
-    webkit_cheri = targetManager.get_target_raw("qtwebkit-cheri").projectClass
-    webkit_mips = targetManager.get_target_raw("qtwebkit-mips-hybrid").projectClass
+    webkit_native = target_manager.get_target_raw("qtwebkit-native").projectClass
+    webkit_cheri = target_manager.get_target_raw("qtwebkit-cheri").projectClass
+    webkit_mips = target_manager.get_target_raw("qtwebkit-mips-hybrid").projectClass
     # Check that the deps are not cached yet
     _check_deps_not_cached((webkit_native, webkit_cheri, webkit_mips))
 

@@ -41,12 +41,12 @@ from .config.loader import JsonAndCommandLineConfigLoader, JsonAndCommandLineCon
 from .config.defaultconfig import DefaultCheriConfig, CheribuildAction
 from .utils import *
 from .utils import have_working_internet_connection
-from .targets import targetManager
+from .targets import target_manager
 from .projects.project import SimpleProject
 # noinspection PyUnresolvedReferences
-from .projects import *  # make sure all projects are loaded so that targetManager gets populated
+from .projects import *  # make sure all projects are loaded so that target_manager gets populated
 # noinspection PyUnresolvedReferences
-from .projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
+from .projects.cross import *  # make sure all projects are loaded so that target_manager gets populated
 from pathlib import Path
 
 DIRS_TO_CHECK_FOR_UPDATES = [Path(__file__).parent.parent]
@@ -98,13 +98,13 @@ def real_main():
     ensure_fd_is_blocking(sys.stdout.fileno())
     ensure_fd_is_blocking(sys.stderr.fileno())
 
-    allTargetNames = list(sorted(targetManager.targetNames))
+    allTargetNames = list(sorted(target_manager.targetNames))
     runEverythingTarget = "__run_everything__"
     configLoader = JsonAndCommandLineConfigLoader()
     # Register all command line options
     cheriConfig = DefaultCheriConfig(configLoader, allTargetNames + [runEverythingTarget])
     SimpleProject._configLoader = configLoader
-    targetManager.registerCommandLineOptions()
+    target_manager.registerCommandLineOptions()
     # load them from JSON/cmd line
     cheriConfig.load()
     setCheriConfig(cheriConfig)
@@ -220,15 +220,15 @@ def real_main():
         except Exception as e:                        # no-combine
             print("Failed to check for updates:", e)  # no-combine
     if CheribuildAction.PRINT_CHOSEN_TARGETS in cheriConfig.action:
-        for target in targetManager.get_all_chosen_targets(cheriConfig):
+        for target in target_manager.get_all_chosen_targets(cheriConfig):
             print("Would run", target)
     if CheribuildAction.BUILD in cheriConfig.action:
-        targetManager.run(cheriConfig)
+        target_manager.run(cheriConfig)
     if CheribuildAction.TEST in cheriConfig.action:
-        for target in targetManager.get_all_chosen_targets(cheriConfig):
+        for target in target_manager.get_all_chosen_targets(cheriConfig):
             target.run_tests(cheriConfig)
     if CheribuildAction.BENCHMARK in cheriConfig.action:
-        for target in targetManager.get_all_chosen_targets(cheriConfig):
+        for target in target_manager.get_all_chosen_targets(cheriConfig):
             target.run_benchmarks(cheriConfig)
 
 

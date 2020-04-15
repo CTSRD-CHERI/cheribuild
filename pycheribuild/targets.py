@@ -272,7 +272,7 @@ class TargetManager(object):
     def __init__(self):
         self._allTargets = {}  # type: typing.Dict[str, Target]
 
-    def addTarget(self, target: Target) -> None:
+    def add_target(self, target: Target) -> None:
         self._allTargets[target.name] = target
 
     def registerCommandLineOptions(self):
@@ -383,4 +383,5 @@ class TargetManager(object):
         for i in self._allTargets.values():
             i.reset()
 
-targetManager = TargetManager()
+
+target_manager = TargetManager()

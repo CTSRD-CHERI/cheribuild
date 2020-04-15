@@ -48,7 +48,7 @@ from ..config.chericonfig import CheriConfig, Linkage, BuildType
 from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase, DefaultValueOnlyConfigOption
 from ..config.target_info import CrossCompileTarget, CPUArchitecture, TargetInfo, CompilationTargets
 from ..filesystemutils import FileSystemUtils
-from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, targetManager
+from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
 from ..utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
@@ -117,7 +117,7 @@ class ProjectSubclassDefinitionHook(type):
         if cls._always_add_suffixed_targets or len(supported_archs) > 1:
             # Add a the target for the default architecture
             base_target = MultiArchTargetAlias(targetName, cls)
-            targetManager.addTarget(base_target)
+            target_manager.add_target(base_target)
             # TODO: make this hold with CheriBSD
             assert cls._xtarget is CompilationTargets.NONE, "Should not be set!"
             # assert cls._should_not_be_instantiated, "multiarch base classes should not be instantiated"
@@ -137,13 +137,13 @@ class ProjectSubclassDefinitionHook(type):
                 new_dict["synthetic_base"] = cls  # We are already adding it here
                 # noinspection PyTypeChecker
                 new_type = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
-                targetManager.addTarget(MultiArchTarget(new_name, new_type, arch, base_target))
+                target_manager.add_target(MultiArchTarget(new_name, new_type, arch, base_target))
         else:
             assert len(supported_archs) == 1
             # Only one target is supported:
             cls._xtarget = supported_archs[0]
             cls._should_not_be_instantiated = False  # can be instantiated
-            targetManager.addTarget(Target(targetName, cls))
+            target_manager.add_target(Target(targetName, cls))
         # print("Adding target", targetName, "with deps:", cls.dependencies)
 
 
@@ -181,6 +181,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # To prevent non-suffixed targets in case the only target is not NATIVE
     _always_add_suffixed_targets = False  # add a suffixed target only if more than one variant is supported
 
+    # Used for target aliases
+    _fallback_config_names = set()
+
     @classmethod
     def is_toolchain_target(cls):
         return False
@@ -216,7 +219,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if callable(dep_name):
                 dep_name = dep_name(cls, config)
             try:
-                dep_target = targetManager.get_target(dep_name, arch=expected_build_arch, config=config, caller=cls)
+                dep_target = target_manager.get_target(dep_name, arch=expected_build_arch, config=config, caller=cls)
             except KeyError:
                 fatalError("Could not find target '", dep_name, "' for ", cls.__name__, sep="")
                 raise
@@ -304,9 +307,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def get_instance_for_cross_target(cls: "typing.Type[Type_T]", cross_target: CrossCompileTarget,
                                       config: CheriConfig, caller: "SimpleProject" = None) -> "Type_T":
         # Also need to handle calling self.get_instance_for_cross_target() on a target-specific instance
-        # In that case cls.target returns e.g. foo-mips, etc and targetManager will always return the MIPS version
+        # In that case cls.target returns e.g. foo-mips, etc and target_manager will always return the MIPS version
         root_class = getattr(cls, "synthetic_base", cls)
-        target = targetManager.get_target(root_class.target, cross_target, config, caller=caller)
+        target = target_manager.get_target(root_class.target, cross_target, config, caller=caller)
         result = target.get_or_create_project(cross_target, config)
         assert isinstance(result, SimpleProject)
         found_target = result.get_crosscompile_target(config)
@@ -419,7 +422,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def get_class_for_target(cls: "typing.Type[Type_T]", arch: CrossCompileTarget) -> "typing.Type[Type_T]":
-        target = targetManager.get_target_raw(cls.target)
+        target = target_manager.get_target_raw(cls.target)
         if isinstance(target, MultiArchTarget):
             # check for exact match
             if target.target_arch is arch:
@@ -500,7 +503,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # We don't want to inherit certain options from the non-target specific class since they should always be
         # set directly for that target. Currently the only such option is build-directory since sharing that would
         # break the build in most cases.
-        fallback_config_names = []
+        fallback_config_names = list(cls._fallback_config_names)
         if not _no_fallback_config_name and fallback_name_base:
             if name not in ["build-directory"]:
                 fallback_config_names.append(fallback_name_base + "/" + name)
