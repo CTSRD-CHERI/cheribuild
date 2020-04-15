@@ -129,7 +129,7 @@ class BuildFreestandingSdk(SimpleProject):
 
 
 # Binutils now just builds LLVM since we don't need GNU binutils or Elftoolchain any more
-target_manager.add_target_alias("binutils", "llvm")
+target_manager.add_target_alias("binutils", "llvm-native")
 
 
 class BuildBaremetalSdk(TargetAliasWithDependencies):

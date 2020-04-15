@@ -109,7 +109,7 @@ def test_run_disk_image():
 
 
 def test_remove_duplicates():
-    assert _sort_targets(["binutils", "elftoolchain"], add_dependencies=True) == ["elftoolchain", "binutils"]
+    assert _sort_targets(["binutils", "llvm"], add_dependencies=True) == ["llvm-native"]
 
 
 def test_minimal_run():

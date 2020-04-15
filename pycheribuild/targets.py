@@ -273,13 +273,14 @@ class MultiArchTargetAlias(_TargetAliasBase):
 
 class SimpleTargetAlias(_TargetAliasBase):
     def __init__(self, name, real_target_name: str, t: "TargetManager"):
-        super().__init__(name, None)
+        self.real_target = t.get_target_raw(real_target_name)
+        real_cls = self.real_target.projectClass
+        assert not isinstance(self.real_target, _TargetAliasBase), "Target aliases must reference a real target not another alias"
+        super().__init__(name, real_cls)
         self.real_target_name = real_target_name
         # Add the alias name for config lookups so that old configs remain valid
         # Note: we can't modify _alias_target_names since otherwise we change it for all classes
         # noinspection PyProtectedMember
-        self.real_target = t.get_target_raw(real_target_name)
-        real_cls = self.real_target.projectClass
         real_cls._alias_target_names = getattr(real_cls, "_alias_target_names", tuple()) + (self.name, )
 
     def get_real_target(self, cross_target: CrossCompileTarget, config,
@@ -288,6 +289,13 @@ class SimpleTargetAlias(_TargetAliasBase):
 
     def __repr__(self):
         return "<Target alias " + self.name + " (for " + self.real_target_name + ")>"
+
+
+class DeprecatedTargetAlias(SimpleTargetAlias):
+    def get_real_target(self, cross_target: CrossCompileTarget, config,
+                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
+        warningMessage("Using deprecated target", self.name, ". Please use ", self.real_target_name, "instead." , sep="")
+        return self.real_target
 
 
 class TargetManager(object):
@@ -307,7 +315,7 @@ class TargetManager(object):
         # RuntimeError: super(): empty __class__ cell
         # https://stackoverflow.com/questions/13126727/how-is-super-in-python-3-implemented/28605694#28605694
         for tgt in self._allTargets.values():
-            if tgt._project_class is not None:
+            if not isinstance(tgt, SimpleTargetAlias):
                 tgt._project_class.setup_config_options()
 
     @property
@@ -344,6 +352,8 @@ class TargetManager(object):
         add_dependencies = config.includeDependencies
         chosen_targets = []  # type: typing.List[Target]
         for t in explicit_targets:
+            if isinstance(t, SimpleTargetAlias):
+                t = t.real_target
             chosen_targets.append(t)
             deps_to_add = []
             if add_dependencies:
