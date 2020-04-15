@@ -593,13 +593,10 @@ def _default_disk_image_name(config: CheriConfig, directory: Path, project: Simp
     if xtarget.is_mips(include_purecap=True):
         # Backwards compat (different prefix for hybrid+purecap images):
         if xtarget.is_cheri_hybrid():
-            return directory / ("cheri" + project.cheri_config_suffix + "-disk.img")
+            return directory / (img_prefix + "mips-hybrid" + project.cheri_config_suffix + ".img")
         if xtarget.is_cheri_purecap():
-            return directory / ("purecap-" + project.cheri_config_suffix + "-disk.img")
-    suffix = xtarget.generic_suffix if xtarget else "<TARGET>"
-    if project.compiling_for_mips(include_purecap=False):
-        if config.mips_float_abi == MipsFloatAbi.HARD:
-            suffix += "-hardfloat"
+            return directory / (img_prefix + "mips-purecap" + project.cheri_config_suffix + ".img")
+    suffix = (xtarget.generic_suffix if xtarget else "<TARGET>") + project.cheri_config_suffix
     return config.outputRoot / (img_prefix + suffix + ".img")
 
 
@@ -616,6 +613,13 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                                CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
                                ]
 
+    @staticmethod
+    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
+        # backwards compatibility:
+        if xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
+            return base_target + "-purecap"
+        return base_target + "-" + xtarget.generic_suffix
+
     class _MinimalFileTemplates(_AdditionalFileTemplates):
         def get_fstab_template(self):
             return includeLocalFile("files/minimal-image/etc/fstab.in")
@@ -624,7 +628,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             return includeLocalFile("files/minimal-image/etc/rc.conf.in")
 
     default_disk_image_path = ComputedDefaultValue(
-        function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "minimal-"),
+        function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "cheribsd-minimal-"),
         as_string="$OUTPUT_ROOT/minimal-<TARGET>-disk.img depending on architecture")
 
     @classmethod

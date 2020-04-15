@@ -16,7 +16,7 @@ from pycheribuild.config.defaultconfig import DefaultCheriConfig
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # make sure all projects are loaded so that targetManager gets populated
 from pycheribuild.projects.cross import *  # make sure all projects are loaded so that targetManager gets populated
-from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage
+from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage, _BuildDiskImageBase
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, FreeBSDToolchainKind
 from pycheribuild.utils import commandline_to_str
@@ -475,6 +475,42 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
     else:
         assert project.buildworld_args.env_vars.get("XCC", None) == expected_path
         assert project.kernel_make_args_for_config("GENERIC", None).env_vars.get("XCC", None) == expected_path
+
+
+@pytest.mark.parametrize("target,expected_name", [
+    # CheriBSD
+    pytest.param("disk-image-mips-nocheri", "cheribsd-mips-nocheri.img"),
+    pytest.param("disk-image-mips-hybrid", "cheribsd-mips-hybrid128.img"),
+    pytest.param("disk-image-purecap", "cheribsd-mips-purecap128.img"),
+    pytest.param("disk-image-riscv64", "cheribsd-riscv64.img"),
+    pytest.param("disk-image-riscv64-hybrid", "cheribsd-riscv64-hybrid.img"),
+    pytest.param("disk-image-riscv64-purecap", "cheribsd-riscv64-purecap.img"),
+    pytest.param("disk-image-native", "cheribsd-native.img"),
+    # Minimal image
+    pytest.param("disk-image-minimal-mips-nocheri", "cheribsd-minimal-mips-nocheri.img"),
+    pytest.param("disk-image-minimal-mips-hybrid", "cheribsd-minimal-mips-hybrid128.img"),
+    pytest.param("disk-image-minimal-purecap", "cheribsd-minimal-mips-purecap128.img"),
+    pytest.param("disk-image-minimal-riscv64", "cheribsd-minimal-riscv64.img"),
+    pytest.param("disk-image-minimal-riscv64-hybrid", "cheribsd-minimal-riscv64-hybrid.img"),
+    pytest.param("disk-image-minimal-riscv64-purecap", "cheribsd-minimal-riscv64-purecap.img"),
+    # FreeBSD
+    pytest.param("disk-image-freebsd-mips", "freebsd-mips.img"),
+    pytest.param("disk-image-freebsd-riscv", "freebsd-riscv.img"),
+    # pytest.param("disk-image-freebsd-aarch64", "freebsd-aarch64.img"),
+    # pytest.param("disk-image-freebsd-i386", "freebsd-i386.img"),
+    pytest.param("disk-image-freebsd-x86_64", "freebsd-x86_64.img"),
+    # FreeBSD with default options
+    pytest.param("disk-image-freebsd-with-default-options-mips", "freebsd-mips.img"),
+    pytest.param("disk-image-freebsd-with-default-options-riscv", "freebsd-riscv.img"),
+    # pytest.param("disk-image-freebsd-with-default-options-aarch64", "freebsd-aarch64.img"),
+    pytest.param("disk-image-freebsd-with-default-options-i386", "freebsd-i386.img"),
+    pytest.param("disk-image-freebsd-with-default-options-x86_64", "freebsd-x86_64.img"),
+    ])
+def test_disk_image_path(target, expected_name):
+    config = _parse_arguments([])
+    project = targetManager.get_target_raw(target).get_or_create_project(CompilationTargets.NONE, config)
+    assert isinstance(project, _BuildDiskImageBase)
+    assert str(project.disk_image_path) == str(config.outputRoot / expected_name)
 
 
 def test_freebsd_toolchains_cheribsd_purecap():
