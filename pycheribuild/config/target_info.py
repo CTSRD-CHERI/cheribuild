@@ -668,8 +668,10 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def additional_executable_link_flags(self):
-        """Additional linker flags that need to be passed when building an executable (e.g. custom linker script)"""
-        return ["-Wl,-T,qemu-malta.ld"]
+        if self.target.is_mips(include_purecap=True):
+            """Additional linker flags that need to be passed when building an executable (e.g. custom linker script)"""
+            return ["-Wl,-T,qemu-malta.ld"]
+        return super().additional_executable_link_flags
 
     @classmethod
     def is_baremetal(cls):
