@@ -382,9 +382,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
             result["TARGET_CPUTYPE"] = "cheri"
             result["WITH_CHERI"] = True
-        # Work around https://github.com/CTSRD-CHERI/cheribsd/issues/423
-        if not self.crosscompile_target.is_cheri_hybrid():
-            result["WITHOUT_COMPAT_CHERIABI"] = True
         return result
 
     def setup(self):
