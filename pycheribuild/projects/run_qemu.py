@@ -215,8 +215,11 @@ class LaunchQEMUBase(SimpleProject):
             # qemuCommand += ["-redir", "tcp:" + str(self.sshForwardingPort) + "::22"]
             print(coloured(AnsiColour.green, "\nListening for SSH connections on localhost:", self.sshForwardingPort, sep=""))
         if self._qemuUserNetworking:
-            # qemuCommand += ["-net", "rtl8139,netdev=net0", "-net", "user,id=net0,ipv6=off" + user_network_options]
-            qemuCommand += ["-net", "nic", "-net", "user,id=net0,ipv6=off" + user_network_options]
+            # We'd like to use virtio everwhere, but it doesn't work on BE mips.
+            if self.compiling_for_mips(include_purecap=True):
+                qemuCommand += ["-net", "nic", "-net", "user,id=net0,ipv6=off" + user_network_options]
+            else:
+                qemuCommand += ["-device", "virtio-net-device,netdev=net0", "-netdev", "user,id=net0,ipv6=off" + user_network_options]
 
         # Add a virtio RNG to speed up random number generation
         if self._hasPCI:
