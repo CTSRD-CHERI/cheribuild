@@ -78,7 +78,7 @@ def _update_check(d: Path):
             # Use the autostash flag for Git >= 2.14
             # https://stackoverflow.com/a/30209750/894271
             autostash_flag = ["--autostash"] if git_version >= (2, 14) else []
-            subprocess.check_call(["git", "pull", "--rebase"] + autostash_flag, cwd=project_dir)
+            subprocess.check_call(["git", "pull", "--rebase=merges"] + autostash_flag, cwd=project_dir)
             os.execv(sys.argv[0], sys.argv)
 
 

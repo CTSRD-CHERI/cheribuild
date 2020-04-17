@@ -1325,7 +1325,7 @@ class GitRepository(SourceRepository):
 
         if not skip_submodules:
             pull_cmd.append("--recurse-submodules")
-        runCmd(pull_cmd + ["--rebase"], cwd=src_dir, print_verbose_only=True)
+        runCmd(pull_cmd + ["--rebase=merges"], cwd=src_dir, print_verbose_only=True)
         if not skip_submodules:
             runCmd("git", "submodule", "update", "--init", "--recursive", cwd=src_dir, print_verbose_only=True)
         if has_changes and not has_autostash:
