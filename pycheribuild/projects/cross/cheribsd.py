@@ -38,9 +38,9 @@ from enum import Enum
 
 from ..llvm import BuildUpstreamLLVM, BuildCheriLLVM
 from ..project import *
-from ...targets import target_manager
 from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi
 from ...config.loader import ComputedDefaultValue
+from ...targets import target_manager
 from ...utils import *
 
 
@@ -1027,6 +1027,14 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     supported_architectures = BuildFreeBSD.supported_architectures + [CompilationTargets.FREEBSD_I386]
     if not IS_FREEBSD:
         crossbuild = True
+
+    def clean(self) -> ThreadJoiner:
+        # Bootstrapping LLVM takes forever with FreeBSD makefiles
+        if not self.query_yes_no("You are about to do a clean FreeBSD build (without external toolchain). "
+                                 "This will rebuild all of LLVM and take a long time. Are you sure?",
+                default_result=True):
+            return ThreadJoiner(None)
+        return super().clean()
 
     @classmethod
     def setup_config_options(cls, install_directory_help=None, **kwargs):
