@@ -1295,6 +1295,15 @@ class GitRepository(SourceRepository):
                     if current_project.query_yes_no("Update to correct URL?"):
                         runCmd("git", "remote", "set-url", "origin", self.url, runInPretendMode=True, cwd=src_dir)
 
+        # see if we have an upstream
+        head = runCmd("git", "symbolic-ref", "-q", "HEAD",
+                      captureOutput=True, cwd=src_dir, print_verbose_only=True, runInPretendMode=True).stdout.strip().decode("utf-8")
+        upstream_branch = runCmd("git", "for-each-ref", '--format=%(upstream:short)', head, "origin/mainline",
+                                 captureOutput=True, cwd=src_dir, print_verbose_only=True, runInPretendMode=True).stdout.strip().decode("utf-8")
+        if len(upstream_branch) == 0:
+            print(coloured(AnsiColour.blue, "No upstream to update from"))
+            return
+
         # make sure we run git stash if we discover any local changes
         has_changes = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
                                  captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
