@@ -1280,6 +1280,8 @@ class GitRepository(SourceRepository):
                            skip_submodules=skip_submodules)
         if current_project.skipUpdate:
             return
+        if not src_dir.exists():
+            return
 
         # handle repositories that have moved
         if src_dir.exists() and self.old_urls:
