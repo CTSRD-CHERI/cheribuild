@@ -417,7 +417,7 @@ class _BuildDiskImageBase(SimpleProject):
     def make_disk_image(self):
         if self.is_x86:
             if not self.mkimg_cmd:
-                self.fatal("Missing freebsd mkimg command! Should be found in FreeBSD build dir")
+                self.fatal("Missing mkimg command! Should be found in FreeBSD build dir (or set $MKIMG_CMD)")
             root_partition = self.disk_image_path.with_suffix(".partition.img")
             self.make_rootfs_image(root_partition)
             self.build_gpt_image(root_partition)
