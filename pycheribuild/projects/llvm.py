@@ -281,7 +281,8 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     is_sdk_target = True
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS
-    supported_architectures = [CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS_NO_CHERI, CompilationTargets.CHERIBSD_MIPS_PURECAP]
+    supported_architectures = [CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
+                               CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_MIPS_PURECAP]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
