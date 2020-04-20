@@ -448,10 +448,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.use_bootstrapped_toolchain:
             return
 
-        # For RISCV the makefile check fails unless we set CROSS_TOOLCHAIN_PREFIX (even though we provide all the tools)
-        if self.compiling_for_riscv(include_purecap=True):
-            self.cross_toolchain_config.set(CROSS_TOOLCHAIN_PREFIX=str(self.target_info.sdk_root_dir / "bin/llvm-"))
-
         self.cross_toolchain_config.set_with_options(
             # TODO: should we have an option to include a compiler in the target system?
             GCC=False, CLANG=False, LLD=False,  # Take a long time and not needed in the target system
