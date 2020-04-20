@@ -455,6 +455,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.cross_toolchain_config.set_with_options(
             # TODO: should we have an option to include a compiler in the target system?
             GCC=False, CLANG=False, LLD=False,  # Take a long time and not needed in the target system
+            LLDB=False,  # may be useful but means we need to build LLVM
             # Bootstrap compiler/ linker are not needed:
             GCC_BOOTSTRAP=False, CLANG_BOOTSTRAP=False, LLD_BOOTSTRAP=False,
             LIB32=False,  # takes a long time and not needed
@@ -1041,10 +1042,14 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
             kwargs["bootstrap_toolchain"] = False
             kwargs["use_upstream_llvm"] = True
         super().setup_config_options(**kwargs)
+        cls.include_llvm = cls.add_bool_option("build-target-llvm",
+            help="Build LLVM for the target architecture. Note: this adds significant time to the build")
 
     def addCrossBuildOptions(self):
         # Just try to build as much as possible (but using make.py)
-        pass
+        if not self.include_llvm:
+            # Avoid extremely long builds by default
+            self.make_args.set_with_options(CLANG=False, LLD=False, LLDB=False)
 
 
 # noinspection PyUnusedLocal
