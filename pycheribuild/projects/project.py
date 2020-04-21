@@ -1306,12 +1306,14 @@ class GitRepository(SourceRepository):
 
         # make sure there's work to do before touching the repo
         upstream_remote = upstream_branch.split("/", 1)[0]
-        print(coloured(AnsiColour.red, "upstream_remote " + upstream_remote))
+        current_project.verbose_print(coloured(AnsiColour.red, "upstream remote is " + upstream_remote))
         runCmd("git", "fetch", upstream_remote, cwd=src_dir)
-        head_rev = runCmd("git", "rev-parse", "HEAD",
-                          captureOutput=True, cwd=src_dir, print_verbose_only=True, runInPretendMode=True).stdout.strip().decode("utf-8")
-        upstream_rev = runCmd("git", "rev-parse", upstream_branch,
-                              captureOutput=True, cwd=src_dir, print_verbose_only=True, runInPretendMode=True).stdout.strip().decode("utf-8")
+        head_rev = runCmd("git", "rev-parse", "HEAD", captureOutput=True, cwd=src_dir, print_verbose_only=True,
+            runInPretendMode=True).stdout.strip().decode("utf-8")
+        upstream_rev = runCmd("git", "rev-parse", upstream_branch, captureOutput=True, cwd=src_dir,
+            print_verbose_only=True, runInPretendMode=True).stdout.strip().decode("utf-8")
+        current_project.verbose_print("HEAD revision:    ", head_rev)
+        current_project.verbose_print("upstream revision ", upstream_rev)
         if head_rev == upstream_rev:
             print(coloured(AnsiColour.blue, "HEAD is up to date with", upstream_branch, "at", upstream_rev[:11]))
             return
