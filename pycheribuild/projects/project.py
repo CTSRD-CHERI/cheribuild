@@ -1304,7 +1304,7 @@ class GitRepository(SourceRepository):
             print(coloured(AnsiColour.blue, "No upstream to update from"))
             return
 
-	# make sure there's work to do before touching the repo
+        # make sure there's work to do before touching the repo
         upstream_remote = upstream_branch.split("/", 1)[0]
         print(coloured(AnsiColour.red, "upstream_remote " + upstream_remote))
         runCmd("git", "fetch", upstream_remote)
