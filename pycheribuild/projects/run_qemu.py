@@ -425,7 +425,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
     target = "run-cherios"
     project_name = "run-cherios"
     dependencies = ["cherios-qemu", "cherios"]
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
+    supported_architectures = [CompilationTargets.CHERIOS_MIPS_PURECAP]
     _forwardSSHPort = False
     _qemuUserNetworking = False
     hide_options_from_help = True
