@@ -1312,7 +1312,7 @@ class GitRepository(SourceRepository):
                           captureOutput=True, cwd=src_dir, print_verbose_only=True, runInPretendMode=True).stdout.strip().decode("utf-8")
         upstream_rev = runCmd("git", "rev-parse", upstream_branch,
                               captureOutput=True, cwd=src_dir, print_verbose_only=True, runInPretendMode=True).stdout.strip().decode("utf-8")
-        if (head_rev == upstream_rev):
+        if head_rev == upstream_rev:
             print(coloured(AnsiColour.blue, "HEAD is up to date with", upstream_branch, "at", upstream_rev[:11]))
             return
 
