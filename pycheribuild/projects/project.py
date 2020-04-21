@@ -2567,9 +2567,7 @@ class CMakeProject(Project):
         # This must come first:
         if not self.compiling_for_host():
             # Despite the name it should also work for baremetal newlib
-            assert self.target_info.is_cheribsd() or (
-                        self.target_info.is_baremetal() and self.target_info.is_newlib()) or (
-                               self.target_info.is_rtems() and self.target_info.is_newlib())
+            assert self.target_info.is_cheribsd() or self.target_info.is_baremetal() or self.target_info.is_rtems()
             self._cmakeTemplate = includeLocalFile("files/CrossToolchain.cmake.in")
             self.toolchainFile = self.buildDir / "CrossToolchain.cmake"
             self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self.toolchainFile)

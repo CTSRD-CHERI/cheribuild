@@ -556,6 +556,48 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         return BuildCHERIBSD.get_instance(self.project, cross_target=xtarget)
 
 
+# FIXME: This is completely wrong since cherios is not cheribsd, but should work for now:
+class CheriOSTargetInfo(CheriBSDTargetInfo):
+    shortname = "CheriOS"
+    FREEBSD_VERSION = 0
+
+    def get_rootfs_target(self) -> "Project":
+        raise ValueError("Should not be called")
+
+    def _get_sdk_root_dir_lazy(self):
+        from ..projects.llvm import BuildCheriOSLLVM
+        return BuildCheriOSLLVM.getInstallDir(self.project, cross_target=CompilationTargets.NATIVE)
+
+    @property
+    def sysroot_dir(self):
+        return self.sdk_root_dir / "sysroot"
+
+    @classmethod
+    def is_cheribsd(cls):
+        return False
+
+    @classmethod
+    def is_freebsd(cls):
+        return False
+
+    @classmethod
+    def is_baremetal(cls):
+        return True
+
+    @classmethod
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        return ["cherios-llvm", "cherios-qemu", "gdb-native"]
+
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        # Otherwise pick the matching sysroot
+        return ["cherios"]
+
+    @property
+    def pkgconfig_dirs(self) -> str:
+        return ""
+
+
 class RTEMSTargetInfo(_ClangBasedTargetInfo):
     shortname = "RTEMS"
     RTEMS_VERSION = 5
@@ -847,6 +889,8 @@ class CompilationTargets(object):
     CHERIBSD_RISCV_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
         is_cheri_purecap=True, check_conflict_with=CHERIBSD_RISCV_HYBRID)
     CHERIBSD_X86_64 = CrossCompileTarget("native", CPUArchitecture.X86_64, CheriBSDTargetInfo)
+
+    CHERIOS_MIPS_PURECAP = CrossCompileTarget("mips", CPUArchitecture.MIPS64, CheriOSTargetInfo, is_cheri_purecap=True)
 
     # Baremetal targets
     BAREMETAL_NEWLIB_MIPS64 = CrossCompileTarget("baremetal-mips", CPUArchitecture.MIPS64, NewlibBaremetalTargetInfo)
