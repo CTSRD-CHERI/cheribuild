@@ -1277,7 +1277,7 @@ class GitRepository(SourceRepository):
     def update(self, current_project: "Project", *, src_dir: Path, default_src_dir: Path = None, revision=None,
                skip_submodules=False):
         self.ensure_cloned(current_project, src_dir=src_dir, default_src_dir=default_src_dir,
-                           skip_submodules=skip_submodules)
+            skip_submodules=skip_submodules)
         if current_project.skipUpdate:
             return
         if not src_dir.exists():
@@ -1289,7 +1289,7 @@ class GitRepository(SourceRepository):
             for old_url in self.old_urls:
                 assert isinstance(old_url, bytes)
                 remote_url = runCmd("git", "remote", "get-url", "origin", captureOutput=True,
-                                    cwd=src_dir).stdout.strip()
+                    cwd=src_dir).stdout.strip()
                 if remote_url == old_url:
                     warningMessage(current_project.project_name, "still points to old repository", remote_url)
                     if current_project.query_yes_no("Update to correct URL?"):
@@ -1348,13 +1348,13 @@ class GitRepository(SourceRepository):
             if current_project.config.force_update:
                 statusUpdate("Updating", src_dir, "with autostash due to --force-update")
             elif not current_project.query_yes_no("Stash the changes, update and reapply?", default_result=True,
-                                                force_result=True):
+                    force_result=True):
                 statusUpdate("Skipping update of", src_dir)
                 return
             if not has_autostash:
                 # TODO: ask if we should continue?
                 stash_result = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
-                                      captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout
+                    captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout
                 # print("stash_result =", stash_result)
                 if "No local changes to save" in stash_result.decode("utf-8"):
                     # print("NO REAL CHANGES")
@@ -1375,17 +1375,17 @@ class GitRepository(SourceRepository):
             assert self.default_branch, "default_branch must be set if force_branch is true!"
             # TODO: move this to Project so it can also be used for other targets
             status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
-                            captureOutput=True, print_verbose_only=True, cwd=src_dir, runInPretendMode=True)
+                captureOutput=True, print_verbose_only=True, cwd=src_dir, runInPretendMode=True)
             if status.stdout.startswith(b"## ") and not status.stdout.startswith(
                     b"## " + self.default_branch.encode("utf-8") + b"..."):
                 current_branch = status.stdout[3:status.stdout.find(b"...")].strip()
                 warningMessage("You are trying to build the", current_branch.decode("utf-8"),
-                               "branch. You should be using", self.default_branch)
+                    "branch. You should be using", self.default_branch)
                 if current_project.query_yes_no("Would you like to change to the " + self.default_branch + " branch?"):
                     runCmd("git", "checkout", self.default_branch, cwd=src_dir)
                 else:
                     current_project.ask_for_confirmation("Are you sure you want to continue?", force_result=False,
-                                                         error_message="Wrong branch: " + current_branch.decode("utf-8"))
+                        error_message="Wrong branch: " + current_branch.decode("utf-8"))
 
 
 class DefaultInstallDir(Enum):
