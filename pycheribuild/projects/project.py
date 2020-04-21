@@ -1295,32 +1295,44 @@ class GitRepository(SourceRepository):
                     if current_project.query_yes_no("Update to correct URL?"):
                         runCmd("git", "remote", "set-url", "origin", self.url, runInPretendMode=True, cwd=src_dir)
 
-        # see if we have an upstream
-        head = runCmd("git", "symbolic-ref", "-q", "HEAD",
-                      captureOutput=True, cwd=src_dir, print_verbose_only=True, runInPretendMode=True).stdout.strip().decode("utf-8")
-        upstream_branch = runCmd("git", "for-each-ref", '--format=%(upstream:short)', head, "origin/mainline",
-                                 captureOutput=True, cwd=src_dir, print_verbose_only=True, runInPretendMode=True).stdout.strip().decode("utf-8")
-        if len(upstream_branch) == 0:
-            print(coloured(AnsiColour.blue, "No upstream to update from"))
+        # see if we have an upstream and fetch it
+        try:
+            upstream_branch = runCmd("git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}",
+                captureError=True, captureOutput=True, cwd=src_dir, print_verbose_only=True,
+                runInPretendMode=True).stdout.strip().decode("utf-8")
+            # make sure there's work to do before touching the repo
+            upstream_remote = upstream_branch.split("/", 1)[0]
+            current_project.verbose_print("Upstream remote is " + upstream_remote)
+            # FIXME: does "git fetch" without arguments do the right thing?
+            # Fetch first and then check if we need to do a rebase
+            runCmd("git", "fetch", upstream_remote, cwd=src_dir)
+        except subprocess.CalledProcessError as e:
+            if e.returncode == 128 or "no upstream configured" in e.stderr:
+                print(coloured(AnsiColour.blue, "No upstream configured to update from"))
+                return
+            raise  # Unknown error
+        # No need to update if the upstream commit is an ancestor of the current HEAD.
+        # This check ensures that we avoid a rebase if the current branch is a few commits ahead of upstream.
+        # Note: merge-base --is-ancestor exits with code 0/1 instead of printing output so we need a try/catch
+        try:
+            is_ancestor = runCmd("git", "merge-base", "--is-ancestor", "@{upstream}", "HEAD", cwd=src_dir,
+                print_verbose_only=True, captureError=True, runInPretendMode=True)
+            assert is_ancestor.returncode == 0
+            current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is up-to-date or ahead of upstream."))
             return
-
-        # make sure there's work to do before touching the repo
-        upstream_remote = upstream_branch.split("/", 1)[0]
-        current_project.verbose_print(coloured(AnsiColour.red, "upstream remote is " + upstream_remote))
-        runCmd("git", "fetch", upstream_remote, cwd=src_dir)
-        head_rev = runCmd("git", "rev-parse", "HEAD", captureOutput=True, cwd=src_dir, print_verbose_only=True,
-            runInPretendMode=True).stdout.strip().decode("utf-8")
-        upstream_rev = runCmd("git", "rev-parse", upstream_branch, captureOutput=True, cwd=src_dir,
-            print_verbose_only=True, runInPretendMode=True).stdout.strip().decode("utf-8")
-        current_project.verbose_print("HEAD revision:    ", head_rev)
-        current_project.verbose_print("upstream revision ", upstream_rev)
-        if head_rev == upstream_rev:
-            print(coloured(AnsiColour.blue, "HEAD is up to date with", upstream_branch, "at", upstream_rev[:11]))
-            return
+        except subprocess.CalledProcessError as e:
+            if e.returncode == 128 or "no upstream configured" in e.stderr:
+                print(coloured(AnsiColour.blue, "No upstream configured to update from"))
+                return
+            elif e.returncode == 1:
+                current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is behind upstream."))
+            else:
+                current_project.warning("Unknown return code", e)
+                raise  # some other error -> raise so that I can see what went wrong
 
         # make sure we run git stash if we discover any local changes
         has_changes = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
-                                 captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
+            captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
 
         pull_cmd = ["git", "pull"]
         has_autostash = False
