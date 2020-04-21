@@ -1299,7 +1299,7 @@ class GitRepository(SourceRepository):
         try:
             upstream_branch = runCmd("git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}",
                 captureError=True, captureOutput=True, cwd=src_dir, print_verbose_only=True,
-                runInPretendMode=True).stdout.strip().decode("utf-8")
+                runInPretendMode=True, raiseInPretendMode=True).stdout.strip().decode("utf-8")
             # make sure there's work to do before touching the repo
             upstream_remote = upstream_branch.split("/", 1)[0]
             current_project.verbose_print("Upstream remote is " + upstream_remote)
@@ -1316,16 +1316,16 @@ class GitRepository(SourceRepository):
         # Note: merge-base --is-ancestor exits with code 0/1 instead of printing output so we need a try/catch
         try:
             is_ancestor = runCmd("git", "merge-base", "--is-ancestor", "@{upstream}", "HEAD", cwd=src_dir,
-                print_verbose_only=True, captureError=True, runInPretendMode=True)
+                print_verbose_only=True, captureError=True, runInPretendMode=True, raiseInPretendMode=True)
             assert is_ancestor.returncode == 0
             current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is up-to-date or ahead of upstream."))
             return
         except subprocess.CalledProcessError as e:
-            if e.returncode == 128 or "no upstream configured" in e.stderr:
+            if e.returncode == 1:
+                current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is behind upstream."))
+            elif e.returncode == 128 or (e.stderr and "no upstream configured" in e.stderr):
                 print(coloured(AnsiColour.blue, "No upstream configured to update from"))
                 return
-            elif e.returncode == 1:
-                current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is behind upstream."))
             else:
                 current_project.warning("Unknown return code", e)
                 raise  # some other error -> raise so that I can see what went wrong
