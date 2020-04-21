@@ -1307,7 +1307,7 @@ class GitRepository(SourceRepository):
         # make sure there's work to do before touching the repo
         upstream_remote = upstream_branch.split("/", 1)[0]
         print(coloured(AnsiColour.red, "upstream_remote " + upstream_remote))
-        runCmd("git", "fetch", upstream_remote)
+        runCmd("git", "fetch", upstream_remote, cwd=src_dir)
         head_rev = runCmd("git", "rev-parse", "HEAD",
                           captureOutput=True, cwd=src_dir, print_verbose_only=True, runInPretendMode=True).stdout.strip().decode("utf-8")
         upstream_rev = runCmd("git", "rev-parse", upstream_branch,
