@@ -116,6 +116,9 @@ class DefaultCheriConfig(CheriConfig):
         self.buildRoot = loader.add_path_option("build-root",
             default=lambda p, cls: (p.sourceRoot / "build"), group=loader.pathGroup,
             help="The directory for all the builds (default: '<SOURCE_ROOT>/build')")
+        self.toolsRoot = loader.add_path_option("tools-root",
+            default=lambda p, cls: p.outputRoot, group=loader.pathGroup,
+            help="The directory to find sdk and bootstrap tools (default: '<OUTPUT_ROOT>')")
         loader.finalizeOptions(availableTargets)
 
     def load(self):
@@ -129,8 +132,8 @@ class DefaultCheriConfig(CheriConfig):
         else:
             self.preferred_xtarget = CompilationTargets.NONE
         # now set some generic derived config options
-        self.cheri_sdk_dir = self.outputRoot / self.cheri_sdk_directory_name  # qemu and binutils (and llvm/clang)
-        self.otherToolsDir = self.outputRoot / "bootstrap"
+        self.cheri_sdk_dir = self.toolsRoot / self.cheri_sdk_directory_name  # qemu and binutils (and llvm/clang)
+        self.otherToolsDir = self.toolsRoot / "bootstrap"
         self.cheribsd_image_root = self.outputRoot  # TODO: allow this to be different?
         self._initializeDerivedPaths()
 
