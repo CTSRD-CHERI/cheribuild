@@ -1295,23 +1295,11 @@ class GitRepository(SourceRepository):
                     if current_project.query_yes_no("Update to correct URL?"):
                         runCmd("git", "remote", "set-url", "origin", self.url, runInPretendMode=True, cwd=src_dir)
 
-        # see if we have an upstream and fetch it
-        try:
-            upstream_branch = runCmd("git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}",
-                captureError=True, captureOutput=True, cwd=src_dir, print_verbose_only=True,
-                runInPretendMode=True, raiseInPretendMode=True).stdout.strip().decode("utf-8")
-            # make sure there's work to do before touching the repo
-            upstream_remote = upstream_branch.split("/", 1)[0]
-            current_project.verbose_print("Upstream remote is " + upstream_remote)
-            # FIXME: does "git fetch" without arguments do the right thing?
-            # Fetch first and then check if we need to do a rebase
-            runCmd("git", "fetch", upstream_remote, cwd=src_dir)
-        except subprocess.CalledProcessError as e:
-            if e.returncode == 128 or "no upstream configured" in e.stderr:
-                print(coloured(AnsiColour.blue, "No upstream configured to update from"))
-                return
-            raise  # Unknown error
-        # No need to update if the upstream commit is an ancestor of the current HEAD.
+        # First fetch all the current upstream branch to see if we need to autostash/pull.
+        # Note: "git fetch" without other arguments will fetch from the currently configured upstream.
+        # If there is no upstream, it will just return immediately.
+        runCmd("git", "fetch", cwd=src_dir)
+        # We don't need to update if the upstream commit is an ancestor of the current HEAD.
         # This check ensures that we avoid a rebase if the current branch is a few commits ahead of upstream.
         # Note: merge-base --is-ancestor exits with code 0/1 instead of printing output so we need a try/catch
         try:
