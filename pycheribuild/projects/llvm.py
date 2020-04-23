@@ -323,7 +323,7 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
         # llvm-objdump currently doesn't infer the available features
         # This depends on https://reviews.llvm.org/D74023
         self.writeFile(self.installDir / "bin/riscv64cheri-objdump",
-            "#!/bin/sh\nexec '{}' -mattr=+a,+m,+c,+d,+f,+xcheri \"$@\"".format(self.installDir / "bin/llvm-objdump"),
+            "#!/bin/sh\nexec '{}' -mattr=+m,+a,+f,+d,+c,+xcheri \"$@\"".format(self.installDir / "bin/llvm-objdump"),
             overwrite=True, mode=0o755)
 
     @property
