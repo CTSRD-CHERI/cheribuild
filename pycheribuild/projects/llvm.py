@@ -337,6 +337,9 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
                 include_version=False).replace(self.config.mips_cheri_bits_str, "128"),
             CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_PURECAP, self.config,
                 include_version=True).replace(self.config.mips_cheri_bits_str, "128"),
+            # RISC-V triple is the same for NO_CHERI and PURECAP so only give once
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, self.config, include_version=True),
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, self.config, include_version=False),
             ]
         return [x + "-" for x in triples]
 
