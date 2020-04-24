@@ -363,7 +363,7 @@ class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
     skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
 
     def configure(self, **kwargs):
-        self.add_cmake_options(LLVM_TARGETS_TO_BUILD="Mips")
+        self.add_cmake_options(LLVM_TARGETS_TO_BUILD="Mips;host")
         super().configure(**kwargs)
 
 
