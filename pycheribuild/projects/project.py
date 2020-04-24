@@ -2661,7 +2661,7 @@ class CMakeProject(Project):
     # cheri libraries are found in /usr/libcheri:
     if("${CMAKE_VERSION}" VERSION_LESS 3.9)
       # message(STATUS "CMAKE < 3.9 HACK to find libcheri libraries")
-      # need to create a <sysroot>/usr/lib/cheri -> <sysroot>/usr/libcheri symlink 
+      # need to create a <sysroot>/usr/lib/cheri -> <sysroot>/usr/libcheri symlink
       set(CMAKE_LIBRARY_ARCHITECTURE "cheri")
       set(CMAKE_SYSTEM_LIBRARY_PATH "${CMAKE_FIND_ROOT_PATH}/usr/libcheri;${CMAKE_FIND_ROOT_PATH}/usr/local/cheri/lib;${CMAKE_FIND_ROOT_PATH}/usr/local/cheri/libcheri")
     else()
