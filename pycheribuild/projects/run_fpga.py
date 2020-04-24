@@ -78,13 +78,18 @@ class LaunchFPGABase(SimpleProject):
             subcmd_and_args = ["console"]
         else:
             subcmd_and_args = ["bootonly", *bootonly_args]
+        if self.config.fpga_custom_env_setup_script:
+            env_setup_script = self.config.fpga_custom_env_setup_script
+        else:
+            env_setup_script = "{cheri_dir}/setup.sh".format(cheri_dir=cheri_dir)
+
         beri_fpga_bsd_boot_script = """
 set +x
-source "{cheri_dir}/setup.sh"
+source "{env_setup_script}"
 set -x
 export PATH="$PATH:{cherilibs_dir}/tools:{cherilibs_dir}/tools/debug"
 exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv {subcmd_and_args}
-            """.format(cheri_dir=cheri_dir, cherilibs_dir=cherilibs_dir, basic_args=commandline_to_str(basic_args),
+            """.format(env_setup_script=env_setup_script, cherilibs_dir=cherilibs_dir, basic_args=commandline_to_str(basic_args),
                        subcmd_and_args=commandline_to_str(subcmd_and_args), cheribuild_path=cheribuild_path)
         self.runShellScript(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
 

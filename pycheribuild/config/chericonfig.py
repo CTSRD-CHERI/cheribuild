@@ -289,6 +289,9 @@ class CheriConfig(object):
             help="Perform a shallow `git clone` when cloning new projects. This can save a lot of time for large"
             "repositories such as FreeBSD or LLVM. Use `git fetch --unshallow` to convert to a non-shallow clone")
 
+        self.fpga_custom_env_setup_script = loader.add_path_option("beri-fpga-env-setup-script",
+            help="Custom script to source to setup PATH and quartus, default to using cheri-cpu/cheri/setup.sh")
+
         self.targets = None  # type: typing.Optional[typing.List[str]]
         self.FS = None  # type: Optional[FileSystemUtils]
         self.__optionalProperties = ["preferred_xtarget"]

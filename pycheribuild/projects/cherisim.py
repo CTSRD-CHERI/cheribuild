@@ -98,11 +98,14 @@ class BuildCheriSim(Project):
         return None
 
     def compile(self, **kwargs):
-        if not (self.sourceDir / "cheri/setup.sh").exists():
-            self.fatal("Could not find setup.sh, please set --cheri-sim/source-directory")
-        self.runShellScript("source setup.sh && " + commandline_to_str(self.get_make_commandline("sim", parallel=False)),
+        setup_sh = self.sourceDir / "cheri" / "setup.sh"
+        if self.config.fpga_custom_env_setup_script:
+            setup_sh = self.config.fpga_custom_env_setup_script
+        if not setup_sh.exists():
+            self.fatal("Could not find setup.sh, please set --cheri-sim/source-directory or --fpga-env-setup-script")
+        source_cmd = "source {setup_script}".format(setup_script=setup_sh)
+        self.runShellScript(source_cmd + " && " + commandline_to_str(self.get_make_commandline("sim", parallel=False)),
                             cwd=self.sourceDir / "cheri", shell="bash")
-        pass
 
     def install(self, **kwargs):
         pass
@@ -132,7 +135,10 @@ class BuildBeriCtl(Project):
         return None
 
     def compile(self, **kwargs):
-        setup_sh = self.sourceDir / "../../../cheri/setup.sh"
+        sim_project = BuildCheriSim.get_instance(self, cross_target=CompilationTargets.NATIVE)
+        setup_sh = sim_project.sourceDir / "cheri" / "setup.sh"
+        if self.config.fpga_custom_env_setup_script:
+            setup_sh = self.config.fpga_custom_env_setup_script
         if not setup_sh.exists():
             self.fatal("Could not find setup.sh")
         self.runShellScript("source {} && ".format(shlex.quote(str(setup_sh))) + commandline_to_str(self.get_make_commandline(None, parallel=False)),
@@ -148,4 +154,3 @@ class BuildBeriCtl(Project):
                        fixitHint="Creating a symlink to /usr/lib/x86_64-linux-gnu/libgmp.so.10 seems to work.\n"
                                  "\t\tTry running `sudo ln -s libgmp.so.10 /usr/lib/x86_64-linux-gnu/libgmp.so.3`")
         super().process()
-
