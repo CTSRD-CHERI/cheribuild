@@ -287,6 +287,7 @@ class BuildQEMU(BuildQEMUBase):
 
 class BuildCheriOSQEMU(BuildQEMU):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="cherios", force_branch=True)
+    default_targets = "cheri128-softmmu"
     project_name = "cherios-qemu"
     target = "cherios-qemu"
     _default_install_dir_fn = ComputedDefaultValue(
@@ -296,7 +297,6 @@ class BuildCheriOSQEMU(BuildQEMU):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self._qemuTargets = "cheri128-softmmu"
 
     @classmethod
     def qemu_binary(cls, caller: SimpleProject, xtarget=None):
