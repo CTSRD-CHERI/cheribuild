@@ -88,8 +88,8 @@ class DefaultCheriConfig(CheriConfig):
                  "line will be reordered and processed in an order that ensures dependencies are built before the "
                  "real target. (run --list-targets for more information). By default this does not build toolchain "
                  "targets such as LLVM. Pass --include-toolchain-dependencies to also build those.")
-        self.include_toolchain_dependencies = loader.add_bool_option("include-toolchain-dependencies",
-            help="Also include toolchain targets such as LLVM and QEMU when --include-dependencies is set.")
+        self.include_toolchain_dependencies = loader.add_bool_option("include-toolchain-dependencies", default=True,
+            help="Include toolchain targets such as LLVM and QEMU when --include-dependencies is set.")
 
         self.copy_compilation_db_to_source_dir = loader.addCommandLineOnlyBoolOption("compilation-db-in-source-dir",
             help="Generate a compile_commands.json and also copy it to the source directory")
