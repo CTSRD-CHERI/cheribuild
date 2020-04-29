@@ -365,7 +365,7 @@ def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
     if compiler not in _cached_compiler_infos:
         clangVersionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         gccVersionPattern = re.compile(b"gcc version (\\d+)\\.(\\d+)\\.?(\\d+)?")
-        appleLlvmVersionPattern = re.compile(b"Apple LLVM version (\\d+)\\.(\\d+)\\.?(\\d+)?")
+        appleLlvmVersionPattern = re.compile(b"Apple (?:clang|LLVM) version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         # TODO: could also use -dumpmachine to get the triple
         targetPattern = re.compile(b"Target: (.+)")
         # clang prints this output to stderr
@@ -389,13 +389,12 @@ def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
         if gccVersion:
             kind = "gcc"
             version = tuple(map(int, gccVersion.groups()))
+        elif appleLlvmVersion:
+            kind = "apple-clang"
+            version = tuple(map(int, appleLlvmVersion.groups()))
         elif clangVersion:
             kind = "clang"
             version = tuple(map(int, clangVersion.groups()))
-        elif appleLlvmVersion:
-            kind = "apple-clang"
-            # TODO: parse #define __VERSION__ "4.2.1 Compatible Apple LLVM 8.1.0 (clang-802.0.42)"
-            version = tuple(map(int, appleLlvmVersion.groups()))
         else:
             warningMessage("Could not detect compiler info for", compiler, "- output was", versionCmd.stderr)
         if _cheriConfig and _cheriConfig.verbose:
