@@ -627,12 +627,29 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
 
     def load(self):
         if argcomplete and "_ARGCOMPLETE" in os.environ:
-            argcomplete.autocomplete(
-                self._parser,
-                always_complete_options=None,  # don't print -/-- by default
-                exclude=self.completion_excludes,  # hide these options from the output
-                print_suppressed=True,  # also include target-specific options
-            )
+            if "_ARGCOMPLETE_BENCHMARK" in os.environ:
+                os.environ["_ARC_DEBUG"] = "1"
+                os.environ["_ARGCOMPLETE_IFS"] = "\n"
+                # os.environ["COMP_LINE"] = "cheribuild.py " # return all targets
+                os.environ["COMP_LINE"] = "cheribuild.py -" # return all options
+                os.environ["COMP_POINT"] = str(len(os.environ["COMP_LINE"]))
+                with open(os.devnull, "wb") as output:
+                # with open("/dev/stdout", "wb") as output:
+                    # sys.stdout.buffer
+                    argcomplete.autocomplete(
+                        self._parser,
+                        always_complete_options=None,  # don't print -/-- by default
+                        exclude=self.completion_excludes,  # hide these options from the output
+                        print_suppressed=True,  # also include target-specific options
+                        output_stream=output,
+                        exit_method=sys.exit)  # ensure that cprofile data is written
+            else:
+                argcomplete.autocomplete(
+                    self._parser,
+                    always_complete_options=None,  # don't print -/-- by default
+                    exclude=self.completion_excludes,  # hide these options from the output
+                    print_suppressed=True,  # also include target-specific options
+                )
         self._parsedArgs, trailingTargets = self._parser.parse_known_args()
         # print(self._parsedArgs, trailingTargets)
         self._parsedArgs.targets += trailingTargets
