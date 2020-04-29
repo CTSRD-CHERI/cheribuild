@@ -448,17 +448,18 @@ def latest_system_clang_tool(basename: str, fallback_basename: str):
     valid_regex = re.compile(re.escape(basename) + r"[-\d.]*$")
     results = []
     for search_dir in search_path:
-        candidates = search_dir.glob(basename + "*")
-        for candidate in candidates:
-            if not valid_regex.match(candidate.name):
+        # Note: os.listdir is faster than path.glob("*") since we don't have to stat all files
+        for candidate_name in os.listdir(str(search_dir)):
+            if not candidate_name.startswith(basename) or not valid_regex.match(candidate_name):
                 continue
             # print("Checking compiler candidate", candidate)
+            candidate = search_dir / candidate_name
             info = getCompilerInfo(candidate)
             if IS_MAC and not info.is_apple_clang:
                 # print("Ignoring", candidate, "since it is not apple clang and won't be able to build host binaries")
                 continue
             # Minimum version is 4.0
-            if info.version < (4, 0, 0):
+            if info.version < (4, 0, 0) and not info.is_apple_clang:
                 # print("Ignoring", basename, "candidate", candidate, "since it is too old:", info.version)
                 continue
             results.append((candidate, info.is_apple_clang, info.version))
