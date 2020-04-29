@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import os
 import sys
 import time
 from collections import OrderedDict
@@ -362,20 +363,22 @@ class TargetManager(object):
     def get_all_targets(self, explicit_targets: "typing.List[Target]", config: CheriConfig) -> "typing.List[Target]":
         add_dependencies = config.includeDependencies
         chosen_targets = []  # type: typing.List[Target]
-        for t in explicit_targets:
+        remaining_targets_to_check = explicit_targets
+        while remaining_targets_to_check:
+            t = remaining_targets_to_check.pop()
             if isinstance(t, SimpleTargetAlias):
                 t = t.get_real_target(CompilationTargets.NONE, config)
             chosen_targets.append(t)
+            all_target_dependencies = t.get_dependencies(config)  # Ensure we cache the dependencies
             deps_to_add = []
-            if add_dependencies:
-                deps_to_add = t.projectClass.recursive_dependencies(config)
-            elif t.projectClass.dependenciesMustBeBuilt:
+            if add_dependencies or t.projectClass.dependenciesMustBeBuilt:
                 # some targets such as sdk always need their dependencies build:
-                deps_to_add = t.projectClass.recursive_dependencies(config)
+                deps_to_add = all_target_dependencies
             elif t.projectClass.isAlias:
                 assert not t.projectClass.dependenciesMustBeBuilt
                 # for aliases without full dependencies just add the direct dependencies
-                deps_to_add = t.projectClass.direct_dependencies(config)
+                remaining_targets_to_check.extend(t.projectClass.direct_dependencies(config))
+                continue
             # Now add all the dependencies:
             for dep_target in deps_to_add:
                 # when --skip-sdk is passed don't include sdk dependencies
@@ -384,7 +387,12 @@ class TargetManager(object):
                         statusUpdate("Not adding ", t, "dependency", dep_target,
                                      "since it is an SDK target and --skip-sdk was passed.")
                     continue
-                chosen_targets.append(dep_target)
+                if dep_target.projectClass.is_toolchain_target() and not config.include_toolchain_dependencies:
+                    if config.verbose:
+                        statusUpdate("Not adding ", t, "dependency", dep_target,
+                            "since it is an SDK target and --no-include-toolchain-dependencies was passed.")
+                    continue
+                remaining_targets_to_check.append(dep_target)
 
         sort = self.sort_in_dependency_order(chosen_targets)
         return sort
@@ -404,12 +412,13 @@ class TargetManager(object):
 
     def get_all_chosen_targets(self, config) -> "typing.Iterable[Target]":
         # check that all target dependencies are correct:
-        for t in self._allTargets.values():
-            if isinstance(t, MultiArchTargetAlias):
-                continue
-            for dep in t.get_dependencies(config):
-                if dep.name not in self._allTargets:
-                    sys.exit("Invalid dependency " + dep.name + " for " + t.projectClass.__name__)
+        if os.getenv("CHERIBUILD_DEBUG"):
+            for t in self._allTargets.values():
+                if isinstance(t, MultiArchTargetAlias):
+                    continue
+                for dep in t.get_dependencies(config):
+                    if dep.name not in self._allTargets:
+                        sys.exit("Invalid dependency " + dep.name + " for " + t.projectClass.__name__)
         # targetsSorted = sorted(self._allTargets.values())
         # print(" ".join(t.name for t in targetsSorted))
         # assert self._allTargets["llvm"] < self._allTargets["cheribsd"]

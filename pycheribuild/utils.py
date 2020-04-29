@@ -490,22 +490,22 @@ def statusUpdate(*args, sep=" ", **kwargs):
 
 def warningMessage(*args, sep=" "):
     # we ignore fatal errors when simulating a run
-    print(coloured(AnsiColour.magenta, maybe_add_space("Warning:", sep) + args, sep=sep), file=sys.stderr)
+    print(coloured(AnsiColour.magenta, maybe_add_space("Warning:", sep) + args, sep=sep), file=sys.stderr, flush=True)
 
 
 def fatalError(*args, sep=" ", fixitHint=None, fatalWhenPretending=False):
     # we ignore fatal errors when simulating a run
     if _cheriConfig and _cheriConfig.pretend:
-        print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:", sep) + args, sep=sep), file=sys.stderr)
+        print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:", sep) + args, sep=sep), file=sys.stderr, flush=True)
         if fixitHint:
-            print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr)
+            print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr, flush=True)
         if fatalWhenPretending:
             traceback.print_stack()
             sys.exit(3)
     else:
-        print(coloured(AnsiColour.red, maybe_add_space("Fatal error:", sep) + args, sep=sep), file=sys.stderr)
+        print(coloured(AnsiColour.red, maybe_add_space("Fatal error:", sep) + args, sep=sep), file=sys.stderr, flush=True)
         if fixitHint:
-            print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr)
+            print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr, flush=True)
         sys.exit(3)
 
 

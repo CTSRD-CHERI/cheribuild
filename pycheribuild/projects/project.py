@@ -593,11 +593,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if yes_no_str is None:
             yes_no_str = " [Y]/n " if default_result else " y/[N] "
         if config.pretend:
-            print(message + yes_no_str, coloured(AnsiColour.green, "y" if force_result else "n"), sep="")
+            print(message + yes_no_str, coloured(AnsiColour.green, "y" if force_result else "n"), sep="", flush=True)
             return force_result  # in pretend mode we always return true
         if config.force:
             # in force mode we always return the forced result without prompting the user
-            print(message + yes_no_str, coloured(AnsiColour.green, "y" if force_result else "n"), sep="")
+            print(message + yes_no_str, coloured(AnsiColour.green, "y" if force_result else "n"), sep="", flush=True)
             return force_result
         if not sys.__stdin__.isatty():
             return default_result  # can't get any input -> return the default

@@ -41,6 +41,7 @@ try_run() {
 
 # skip expensive metalog checks in pre-push hook
 export _TEST_SKIP_METALOG=1
+export CHERIBUILD_DEBUG=1
 
 
 while read -r local_ref local_sha remote_ref remote_sha
