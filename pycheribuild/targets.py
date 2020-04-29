@@ -365,7 +365,7 @@ class TargetManager(object):
         chosen_targets = []  # type: typing.List[Target]
         remaining_targets_to_check = explicit_targets
         while remaining_targets_to_check:
-            t = remaining_targets_to_check.pop()
+            t = remaining_targets_to_check.pop(0)
             if isinstance(t, SimpleTargetAlias):
                 t = t.get_real_target(CompilationTargets.NONE, config)
             chosen_targets.append(t)
