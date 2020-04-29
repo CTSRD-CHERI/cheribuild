@@ -518,7 +518,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["llvm-native", "qemu", "gdb-native"]
+        return ["llvm-native"]
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
@@ -586,7 +586,7 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["cherios-llvm", "cherios-qemu", "gdb-native"]
+        return ["cherios-llvm"]
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
@@ -683,7 +683,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["llvm-native", "qemu", "gdb-native"]  # upstream-llvm??
+        return ["llvm-native"]  # upstream-llvm??
 
     @property
     def target_triple(self):
