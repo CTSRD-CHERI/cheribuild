@@ -531,6 +531,16 @@ class LaunchCheriBsdMinimal(AbstractLaunchFreeBSD):
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID]
 
     @classmethod
+    def dependencies(cls, config: CheriConfig):
+        result = super().dependencies(config)
+        # RISCV needs OpenSBI/BBL to run:
+        # Note: QEMU 4.2+ embeds opensbi, for CHERI, we have to use BBL (for now):
+        xtarget = cls.get_crosscompile_target(config)
+        if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+            result.append("bbl")
+        return result
+
+    @classmethod
     def setup_config_options(cls, **kwargs):
         # TODO:         add_to_port = cls.get_cross_target_index()
         add_to_port = 0
