@@ -30,8 +30,6 @@
 import socket
 from random import randint
 
-import libtmux
-
 from .build_qemu import BuildQEMU, BuildCheriOSQEMU
 from .cherios import BuildCheriOS
 from .cross.bbl import *
@@ -227,8 +225,8 @@ class LaunchQEMUBase(SimpleProject):
 
         if self.config.wait_for_debugger or self.config.debug_kernel:
             gdb_port = randint(1200,1300) if self.config.gdb_random_port else 1234
-            self.info(f"QEMU is waiting for GDB to attach (using `target remote :{gdb_port}`)."
-                      " Once connected enter 'continue\\n' to continue booting")
+            self.info("QEMU is waiting for GDB to attach (using `target remote :{}`)."
+                      " Once connected enter 'continue\\n' to continue booting".format(gdb_port))
             def gdb_command(main_binary, breakpoint=None, extra_binary=None) -> str:
                 gdb_cmd = BuildGDB.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/gdb"
                 # Set the sysroot to ensure that the .debug file is loaded from $SYSROOT/usr/lib/debug/boot/kernel
@@ -236,7 +234,7 @@ class LaunchQEMUBase(SimpleProject):
                 # Once the file has been loaded set a breakpoint on panic() and connect to the remote host
                 if breakpoint:
                     result.append("--eval-command=break " + breakpoint)
-                result.append(f"--eval-command=target remote localhost:{gdb_port}")
+                result.append("--eval-command=target remote localhost:{}".format(gdb_port))
                 result.append("--eval-command=continue")
                 if extra_binary:
                     result.append("--init-eval-command=add-symbol-file -o 0 " + str(extra_binary))
@@ -260,16 +258,28 @@ class LaunchQEMUBase(SimpleProject):
                 self.info("\t", coloured(AnsiColour.red, gdb_command(self.rootfs_path / "sbin/init", "main", path_to_kernel)), sep="")
             self.info("Launching QEMU in suspended state...")
 
-            if self.config.debug_kernel:
+            def start_gdb_in_tmux_pane(command):
                 server = libtmux.Server()
-                session = server.list_sessions()[0] # hopefully
+                if server is None:
+                    raise Exception("Tmux server not found")
+                sessions = server.list_sessions()
+                if len(sessions) != 1:
+                    raise Exception("There should be only one tmux session running")
+                session = server.list_sessions()[0]
                 window = session.attached_window
                 pane = window.split_window(vertical=True, attach=False)
-                pane.send_keys(gdb_command(self.currentKernel, "panic"))
+                pane.send_keys(command)
 
-            # TODO: control tmux to do this automatically?
-            # See e.g. https://github.com/tmux-python/libtmux/
-            qemuCommand += ["-gdb", f"tcp::{gdb_port}",  # wait for gdb on localhost:1234
+            if self.config.debug_kernel:
+                try:
+                    import libtmux
+                    start_gdb_in_tmux_pane(gdb_command(self.currentKernel, "panic"))
+                except ImportError:
+                    self.info(coloured(AnsiColour.red, "libtmux not installed, impossible to automatically start gdb"))
+                except Exception as e:
+                    self.info(coloured(AnsiColour.red, "Unable to start gdb in tmux: " + e))
+
+            qemuCommand += ["-gdb", "tcp::{}".format(gdb_port),  # wait for gdb on localhost:1234
                             "-S"  # freeze CPU at startup (use 'c' to start execution)
                             ]
 
