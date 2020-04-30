@@ -489,6 +489,7 @@ class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
         super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
                                    defaultSshPort=defaultSshForwardingPort(20 + add_to_port), **kwargs)
 
+
 class LaunchFreeBSDGFE(_RunMultiArchFreeBSDImage):
     project_name = "run-freebsd-gfe"
     hide_options_from_help = True
@@ -500,9 +501,9 @@ class LaunchFreeBSDGFE(_RunMultiArchFreeBSDImage):
         super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
                                    defaultSshPort=defaultSshForwardingPort(20 + add_to_port), **kwargs)
 
+
 class LaunchCheriBsdMfsRoot(LaunchCheriBSD):
     project_name = "run-minimal"
-    dependencies = ["qemu", "cheribsd-mfs-root-kernel"]
     _source_class = BuildCheriBsdMfsKernel
 
     @classmethod
