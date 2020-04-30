@@ -524,24 +524,6 @@ class LaunchCheriBsdMfsRoot(LaunchCheriBSD):
         self.run_cheribsd_test_script("run_cheribsd_tests.py")
 
 
-# Allow running cheribsd without the MFS_ROOT kernel, but with a disk image instead:
-class LaunchCheriBsdMinimal(AbstractLaunchFreeBSD):
-    project_name = "run-minimal-with-disk-image"
-    dependencies = ["qemu", "disk-image-minimal"]
-    hide_options_from_help = True
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID]
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        # TODO:         add_to_port = cls.get_cross_target_index()
-        add_to_port = 0
-        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
-                                   defaultSshPort=defaultSshForwardingPort(8 + add_to_port), **kwargs)
-
-    def __init__(self, config):
-        super().__init__(config, source_class=BuildCHERIBSD, disk_image_class=BuildMinimalCheriBSDDiskImage)
-
-
 # Backwards compatibility:
 target_manager.add_target_alias("run-cheri", "run-mips-hybrid", deprecated=True)
 target_manager.add_target_alias("run-purecap", "run-mips-purecap", deprecated=True)
