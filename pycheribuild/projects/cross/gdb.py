@@ -139,7 +139,14 @@ class BuildGDB(CrossCompileAutotoolsProject):
                                              MAKEINFO="/bin/false"
                                              )
             self.COMMON_FLAGS.append("-static")  # seems like LDFLAGS is not enough
-            self.COMMON_FLAGS.extend(["-DRL_NO_COMPAT", "-DLIBICONV_PLUG", "-fno-strict-aliasing"])
+            # XXX: libtool wants to strip -static from some linker invocations,
+            #      and because sbrk's availability is determined based on
+            #      -static (libc.a has sbrk on RISC-V, but not libc.so.7), the
+            #      dynamic links error with the missing symbol. --static isn't
+            #      recognised by libtool but still accepted by the drivers, so
+            #      this bypasses that.
+            self.LDFLAGS.append("--static")
+            self.COMMON_FLAGS.extend(["-DRL_NO_COMPAT", "-DLIBICONV_PLUG", "-fno-strict-aliasing", "-fcommon"])
             # Currently there are a lot of `undefined symbol 'elf_version'`, etc errors
             # Add -lelf to the linker command line until the source is fixed
             self.LDFLAGS.append("-lelf")
