@@ -1920,6 +1920,7 @@ class Project(SimpleProject):
             # (e.g. GDB) run the configure scripts lazily during the make all stage. If we don't set PKG_CONFIG_*
             # these configure steps will find the libraries on the host instead and cause the build to fail
             pkg_config_args = dict(
+                PKG_CONFIG_PATH=self.target_info.pkgconfig_dirs,
                 PKG_CONFIG_LIBDIR=self.target_info.pkgconfig_dirs,
                 PKG_CONFIG_SYSROOT_DIR=self.target_info.sysroot_dir
                 )
