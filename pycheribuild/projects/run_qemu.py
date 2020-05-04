@@ -521,7 +521,7 @@ class LaunchCheriBsdMfsRoot(LaunchCheriBSD):
         self.rootfs_path = BuildCHERIBSD.rootfsDir(self, config)
 
     def run_tests(self):
-        self.run_cheribsd_test_script("run_cheribsd_tests.py")
+        self.run_cheribsd_test_script("run_cheribsd_tests.py", "--minimal-image")
 
 
 # Backwards compatibility:

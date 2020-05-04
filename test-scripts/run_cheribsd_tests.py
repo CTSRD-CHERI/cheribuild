@@ -44,6 +44,41 @@ from kyua_db_to_junit_xml import convert_kyua_db_to_junit_xml, fixup_kyua_genera
 from run_tests_common import boot_cheribsd, run_tests_main, pexpect
 
 
+def run_cheritest(qemu: boot_cheribsd.CheriBSDInstance, binary_name, args: argparse.Namespace) -> bool:
+    try:
+        qemu.checked_run("rm -f /test-results/{}.xml".format(binary_name))
+        # Run it once with textual output (for debugging)
+        qemu.run("/bin/{} -a".format(binary_name, binary_name),
+            ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
+        # Generate JUnit XML:
+        qemu.run("/bin/{} -a -x > /test-results/{}.xml".format(binary_name, binary_name),
+            ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
+        qemu.sendline("echo EXITCODE=$?")
+        qemu.expect(["EXITCODE=(\\d+)\r"], timeout=5, pretend_result=0)
+        if boot_cheribsd.PRETEND:
+            exit_code = 0
+        else:
+            print(qemu.match.groups())
+            exit_code = int(qemu.match.group(1))
+            qemu.expect_prompt()
+        qemu.run("fsync /test-results/{}.xml".format(binary_name))
+        return exit_code == 0
+    except boot_cheribsd.CheriBSDCommandTimeout as e:
+        boot_cheribsd.failure("Timeout running cheritest: " + str(e), exit=False)
+        qemu.sendintr()
+        qemu.sendintr()
+        # Try to cancel the running command and get back to having a sensible prompt
+        qemu.checked_run("pwd")
+        time.sleep(10)
+        return False
+    except boot_cheribsd.CheriBSDCommandFailed as e:
+        if "command not found" in e.args:
+            boot_cheribsd.failure("Cannot find cheritest binary ", binary_name, ": " + str(e), exit=False)
+        else:
+            boot_cheribsd.failure("Failed to run: " + str(e), exit=False)
+        return False
+
+
 def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     boot_cheribsd.success("Booted successfully")
     qemu.checked_run("kenv")
@@ -55,6 +90,21 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
     tests_successful = True
     host_has_kyua = shutil.which("kyua") is not None
 
+    # Run the various cheritest binaries
+    if args.run_cheritest:
+        # Disable trap dumps while running cheritest:
+        qemu.checked_run("sysctl machdep.log_cheri_exceptions=0")
+        # The minimal disk image only has the statically linked variants:
+        test_binaries = ["cheritest", "cheriabitest"]
+        if not args.minimal_image:
+            test_binaries.extend(["cheriabitest-dynamic", "cheriabitest-dynamic-mt", "cheriabitest-mt",
+                                  "cheritest-dynamic", "cheritest-dynamic-mt", "cheritest-mt"])
+        for test in test_binaries:
+            if not run_cheritest(qemu, test, args):
+                tests_successful = False
+        qemu.checked_run("sysctl machdep.log_cheri_exceptions=1")
+
+    # Run kyua tests
     try:
         if args.kyua_tests_files:
             qemu.checked_run("kyua help", timeout=60)
@@ -68,9 +118,9 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
             qemu.run("kyua test --results-file=/tmp/results.db -k {}".format(shlex.quote(tests_file)),
                      ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=24 * 60 * 60)
             if i == 0:
-                results_db = Path("/kyua-results/test-results.db")
+                results_db = Path("/test-results/test-results.db")
             else:
-                results_db = Path("/kyua-results/test-results-{}.db".format(i))
+                results_db = Path("/test-results/test-results-{}.db".format(i))
             results_xml = results_db.with_suffix(".xml")
             assert shlex.quote(str(results_db)) == str(results_db), "Should not contain any special chars"
             qemu.checked_run("cp -v /tmp/results.db {}".format(results_db))
@@ -105,20 +155,20 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
         boot_cheribsd.info("Trying to shut down cleanly")
         tests_successful = False
 
-    # Update the JUnit stats in the XML file
-    if args.kyua_tests_files:
+    # Update the JUnit stats in the XML files (both kyua and cheritest):
+    if args.kyua_tests_files or args.run_cheritest:
         if not boot_cheribsd.PRETEND:
             time.sleep(2)  # sleep two seconds to ensure the files exist
-        junit_dir = Path(args.kyua_tests_output)
+        junit_dir = Path(args.test_output_dir)
         try:
             if host_has_kyua:
                 boot_cheribsd.info("Converting kyua databases to JUNitXML in output directory ", junit_dir)
                 for host_kyua_db_path in junit_dir.glob("*.db"):
                     convert_kyua_db_to_junit_xml(host_kyua_db_path, host_kyua_db_path.with_suffix(".xml"))
-            else:
-                boot_cheribsd.info("Updating statistics in JUnit output directory ", junit_dir)
-                for host_xml_path in junit_dir.glob("*.xml"):
-                    fixup_kyua_generated_junit_xml(host_xml_path)
+
+            boot_cheribsd.info("Updating statistics in JUnit output directory ", junit_dir)
+            for host_xml_path in junit_dir.glob("*.xml"):
+                fixup_kyua_generated_junit_xml(host_xml_path)  # Despite the name also works for cheritest
         except Exception as e:
             boot_cheribsd.failure("Could not update stats in ", junit_dir, ": ", e, exit=False)
             tests_successful = False
@@ -153,21 +203,23 @@ def cheribsd_setup_args(args: argparse.Namespace):
         for file in args.kyua_tests_files:
             if not Path(file).name == "Kyuafile":
                 boot_cheribsd.failure("Expected a path to a Kyuafile but got: ", file)
-        test_output_dir = Path(os.path.expandvars(os.path.expanduser(args.kyua_tests_output)))
+    # Make sure we mount the output directory if we are running kyua and/or cheritest
+    if args.kyua_tests_files or args.run_cheritest:
+        test_output_dir = Path(os.path.expandvars(os.path.expanduser(args.test_output_dir)))
         if not test_output_dir.is_dir():
             boot_cheribsd.failure("Output directory does not exist: ", test_output_dir)
         # Create a timestamped directory:
-        if args.kyua_tests_output_no_timestamped_subdir:
+        if args.no_timestamped_test_subdir:
             real_output_dir = test_output_dir.absolute()
         else:
             args.timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
             real_output_dir = (test_output_dir / args.timestamp).absolute()
-            args.kyua_tests_output = str(real_output_dir)
+            args.test_output_dir = str(real_output_dir)
         boot_cheribsd.run_host_command(["mkdir", "-p", str(real_output_dir)])
         if not boot_cheribsd.PRETEND:
             (real_output_dir / "cmdline").write_text(str(sys.argv))
         args.smb_mount_directories.append(
-            boot_cheribsd.SmbMount(real_output_dir, readonly=False, in_target="/kyua-results"))
+            boot_cheribsd.SmbMount(real_output_dir, readonly=False, in_target="/test-results"))
 
 
 def add_args(parser: argparse.ArgumentParser):
@@ -177,10 +229,17 @@ def add_args(parser: argparse.ArgumentParser):
                              "image!")
     parser.add_argument("--kyua-tests-files", action="append", nargs=argparse.ZERO_OR_MORE, default=[],
                         help="Run tests for the given following Kyuafile(s)")
-    parser.add_argument("--kyua-tests-output", default=str(Path(".").resolve() / "kyua-results"),
-                        help="Copy the kyua results.db to the following directory (it will be mounted with SMB)")
-    parser.add_argument("--kyua-tests-output-no-timestamped-subdir", action="store_true",
+    default_test_output = str(Path(".").resolve() / "cheribsd-test-results")
+    parser.add_argument("--test-output-dir", "--kyua-tests-output", dest="test_output_dir", default=default_test_output,
+                        help="Directory for the test outputs (it will be mounted with SMB)")
+    parser.add_argument("--no-timestamped-test-subdir", action="store_true",
                         help="Don't create a timestamped subdirectory in the test output dir ")
+    parser.add_argument("--run-cheritest", dest="run_cheritest", action="store_true", default=True,
+                        help="Run cheritest and cheriabitest")
+    parser.add_argument("--minimal-image", action="store_true",
+        help="Set this if tests are being run on the minimal disk image rather than the full one")
+    parser.add_argument("--no-run-cheritest", dest="run_cheritest", action="store_false",
+                        help="Do not run cheritest and cheriabitest")
 
 
 if __name__ == '__main__':
