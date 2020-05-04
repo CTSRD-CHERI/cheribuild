@@ -54,19 +54,20 @@ assert (_pexpect_dir / "pexpect/__init__.py").exists()
 assert str(_pexpect_dir.resolve()) in sys.path, str(_pexpect_dir) + " not found in " + str(sys.path)
 import pexpect
 from ..utils import find_free_port
+from pexpect.replwrap import PEXPECT_PROMPT, PEXPECT_CONTINUATION_PROMPT
 
 STARTING_INIT = "start_init: trying /sbin/init"
 BOOT_FAILURE = "Enter full pathname of shell or RETURN for /bin/sh"
 BOOT_FAILURE2 = "wait for /bin/sh on /etc/rc failed'"
 SHELL_OPEN = "exec /bin/sh"
 LOGIN = "login:"
-PROMPT = "root@.+:.+# "  # /bin/csh
-PROMPT_SH = "# "  # /bin/sh
+INITIAL_PROMPT_CSH = "root@.+:.+# "  # /bin/csh
+INITIAL_PROMPT_SH = "# "  # /bin/sh
 STOPPED = "Stopped at"
 PANIC = "panic: trap"
 PANIC_KDB = "KDB: enter: panic"
-CHERI_TRAP = "USER_CHERI_EXCEPTION: pid \\d+ tid \\d+ \(.+\)"
-SHELL_LINE_CONTINUATION = "\r\r\n> "
+CHERI_TRAP = "USER_CHERI_EXCEPTION: pid \\d+ tid \\d+ \\(.+\\)"
+# SHELL_LINE_CONTINUATION = "\r\r\n> "
 
 FATAL_ERROR_MESSAGES = [CHERI_TRAP]
 
@@ -123,8 +124,9 @@ class CheriBSDInstance(pexpect.spawn):
         assert isinstance(pattern, list), "expected list and not " + str(pattern)
         return self._expect_and_handle_panic(pattern, timeout=timeout, timeout_msg=timeout_msg, **kwargs)
 
-    def expect_prompt(self, timeout=-1, timeout_msg="timeout", **kwargs):
-        return self._expect_and_handle_panic([PROMPT], timeout=timeout, timeout_msg=timeout_msg, **kwargs)
+    def expect_prompt(self, timeout=-1, timeout_msg="timeout", timeout_fatal=True, **kwargs):
+        return self._expect_and_handle_panic([PEXPECT_PROMPT], timeout=timeout, timeout_msg=timeout_msg,
+            timeout_fatal=timeout_fatal, **kwargs)
 
     def expect_exact(self, pattern_list, timeout=-1, pretend_result=None, timeout_msg="timeout", **kwargs):
         assert PANIC not in pattern_list
@@ -142,7 +144,7 @@ class CheriBSDInstance(pexpect.spawn):
         except pexpect.TIMEOUT:
             failure(timeout_msg, ": ", str(self))
 
-    def _expect_and_handle_panic(self, options: list, timeout_msg, **kwargs):
+    def _expect_and_handle_panic(self, options: list, timeout_msg, timeout_fatal=True, **kwargs):
         assert PANIC not in options
         assert STOPPED not in options
         assert PANIC_KDB not in options
@@ -284,7 +286,7 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
 
     results = ["/bin/sh: [/\\w\\d_-]+: not found",
                "ld(-cheri)?-elf.so.1: Shared object \".+\" not found, required by \".+\"",
-               pexpect.TIMEOUT, PROMPT, SHELL_LINE_CONTINUATION]
+               pexpect.TIMEOUT, PEXPECT_PROMPT, PEXPECT_CONTINUATION_PROMPT]
     error_output_index = -1
     cheri_trap_index = -1
     if error_output:
@@ -307,13 +309,13 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
     elif i == 4:
         raise CheriBSDCommandFailed("Detected line continuation, cannot handle this yet! ", cmd)
     elif i == error_output_index:
-        # wait up to 5 seconds for a prompt to ensure the full output has been printed
-        qemu.expect([PROMPT], timeout=5)
+        # wait up to 20 seconds for a prompt to ensure the full output has been printed
+        qemu.expect_prompt(timeout=20, timeout_fatal=False)
         qemu.flush()
         raise CheriBSDMatchedErrorOutput("Matched error output ", error_output, " in ", cmd)
     elif i == cheri_trap_index:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
-        qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
+        qemu.expect_prompt(timeout=20, timeout_fatal=False)
         qemu.flush()
         if cheri_trap_fatal:
             raise CheriBSDCommandFailed("Got CHERI TRAP!")
@@ -322,12 +324,12 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
 
 
 def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, ignore_cheri_trap=False,
-                                 error_output: str=None, **kwargs):
+                                 error_output: str = None, **kwargs):
     starttime = datetime.datetime.now()
     qemu.sendline(cmd + " ;if test $? -eq 0; then echo '__COMMAND' 'SUCCESSFUL__'; else echo '__COMMAND' 'FAILED__'; fi")
     cheri_trap_index = None
     error_output_index = None
-    results = ["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__", SHELL_LINE_CONTINUATION]
+    results = ["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__", PEXPECT_CONTINUATION_PROMPT]
     try:
         if not ignore_cheri_trap:
             cheri_trap_index = len(results)
@@ -343,19 +345,19 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, 
         raise CheriBSDCommandTimeout("timeout after ", runtime, " running '", cmd, "': ", str(qemu))
     elif i == 0:
         success("ran '", cmd, "' successfully (in ", runtime.total_seconds(), "s)")
-        qemu.expect([PROMPT])
+        qemu.expect_prompt(timeout=10)
         qemu.flush()
         return True
     elif i == 2:
         raise CheriBSDCommandFailed("Detected line continuation, cannot handle this yet! ", cmd)
     elif i == cheri_trap_index:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
-        qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
+        qemu.expect_prompt(timeout=20, timeout_fatal=False)
         qemu.flush()
         raise CheriBSDCommandFailed("Got CHERI trap running '", cmd, "' (after '", runtime.total_seconds(), "s)")
     elif i == error_output_index:
         # wait up to 20 seconds for the shell prompt
-        qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
+        qemu.expect_prompt(timeout=20, timeout_fatal=False)
         qemu.flush()
         raise CheriBSDMatchedErrorOutput("Matched error output '" + error_output + "' running '", cmd, "' (after '", runtime.total_seconds(), ")")
     else:
@@ -384,21 +386,26 @@ def setup_ssh_for_root_login(qemu: CheriBSDInstance, pubkey: Path):
         qemu.expect(["service: not found", "Starting sshd.", "Cannot 'restart' sshd."], timeout=120)
     except pexpect.TIMEOUT:
         failure("Timed out setting up SSH keys")
-    qemu.expect([PROMPT])
+    qemu.expect_prompt(timeout=60)
     time.sleep(2)  # sleep for two seconds to avoid a rejection
     success("===> SSH authorized_keys set up")
 
 
-def _set_posix_sh_prompt(child):
+def _set_pexpect_sh_prompt(child):
     success("===> setting PS1")
     # Make the prompt match PROMPT
-    child.sendline("export PS1=\"{}\"".format("root@qemu-test:~ \\\\$ "))
-    # No need to eat the echoed command since we end the prompt with \$ (expands to # or $) instead of #
+    # From replrwap.py:
+    # If the user runs 'env', the value of PS1 will be in the output. To avoid
+    # replwrap seeing that as the next prompt, we'll embed the marker characters
+    # for invisible characters in the prompt; these show up when inspecting the
+    # environment variable, but not when bash displays the prompt.
+    ps1 = PEXPECT_PROMPT[:5] + u'\\[\\]' + PEXPECT_PROMPT[5:]
+    ps2 = PEXPECT_CONTINUATION_PROMPT[:5] + u'\\[\\]' + PEXPECT_CONTINUATION_PROMPT[5:]
+    prompt_change = u"PS1='{0}' PS2='{1}' PROMPT_COMMAND=''".format(ps1, ps2)
+    child.sendline(prompt_change)
     # Find the prompt
-    j = child.expect([pexpect.TIMEOUT, PROMPT], timeout=60)
-    if j == 0:  # timeout
-        failure("timeout after setting command prompt ", str(child))
-    success("===> successfully set PS1")
+    child.expect_prompt(timeout=60)
+    success("===> successfully set PS1/PS2")
 
 
 # noinspection PyMethodMayBeStatic,PyUnusedLocal
@@ -449,7 +456,7 @@ def start_dhclient(qemu: CheriBSDInstance):
         if i == 0:  # Timeout
             failure("timeout awaiting dhclient ", str(qemu))
     success("===> le0 bound to QEMU networking")
-    qemu.expect_exact(PROMPT_SH, timeout=30)
+    qemu.expect_prompt(timeout=30)
 
 
 def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *,
@@ -523,29 +530,29 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
             success("===> got login prompt")
             child.sendline("root")
 
-            i = child.expect([PROMPT, PROMPT_SH], timeout=3 * 60,
+            i = child.expect([INITIAL_PROMPT_CSH, INITIAL_PROMPT_SH], timeout=3 * 60,
                 timeout_msg="timeout awaiting command prompt ")  # give CheriABI csh 3 minutes to start
             if i == 0:  # /bin/csh prompt
                 success("===> got csh command prompt, starting POSIX sh")
                 # csh is weird, use the normal POSIX sh instead
                 child.sendline("sh")
-                i = child.expect([PROMPT, PROMPT_SH], timeout=3 * 60,
+                i = child.expect([INITIAL_PROMPT_CSH, INITIAL_PROMPT_SH], timeout=3 * 60,
                     timeout_msg="timeout starting /bin/sh")  # give CheriABI sh 3 minutes to start
                 if i == 0:  # POSIX sh with PS1 set
                     success("===> started POSIX sh (PS1 already set)")
                 elif i == 1:  # POSIX sh without PS1
                     success("===> started POSIX sh (PS1 not set)")
-                    _set_posix_sh_prompt(child)
+                    _set_pexpect_sh_prompt(child)
             if i == 1:  # /bin/sh prompt
                 success("===> got /sbin/sh prompt")
-                _set_posix_sh_prompt(child)
+                _set_pexpect_sh_prompt(child)
         elif i == 1:  # shell started from /etc/rc:
-            child.expect_exact(PROMPT_SH, timeout=30)
+            child.expect_exact(INITIAL_PROMPT_SH, timeout=30)
             success("===> /etc/rc completed, got command prompt")
             # set up network (bluehive image tries to use atse0)
             if not have_dhclient:
                 start_dhclient(child)
-            _set_posix_sh_prompt(child)
+            _set_pexpect_sh_prompt(child)
         else:
             # If this was a CHEIR trap wait up to 20 seconds to ensure the dump output has been printed
             child.expect(["THIS STRING SHOULD NOT MATCH, JUST WAITING FOR 20 secs", pexpect.TIMEOUT], timeout=20)
