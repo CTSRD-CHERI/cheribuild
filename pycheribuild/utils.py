@@ -447,6 +447,8 @@ def latest_system_clang_tool(basename: str, fallback_basename: str):
     valid_regex = re.compile(re.escape(basename) + r"[-\d.]*$")
     results = []
     for search_dir in search_path:
+        if not search_dir.exists():
+            continue
         # Note: os.listdir is faster than path.glob("*") since we don't have to stat all files
         for candidate_name in os.listdir(str(search_dir)):
             if not candidate_name.startswith(basename) or not valid_regex.match(candidate_name):
