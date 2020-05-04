@@ -623,7 +623,7 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
             failure("QEMU SMBD timed out while mounting ", d.in_target, ". Trying one more time.", exit=False)
             info("Waiting for 5 seconds before retrying mount_smbfs...")
             if not PRETEND:
-                time.sleep(5) # wait 5 seconds, hopefully the server is less busy then.
+                time.sleep(5)  # wait 5 seconds, hopefully the server is less busy then.
             # If the smbfs connection timed out try once more. This can happen when multiple libc++ test jobs are running
             # on the same jenkins slaves so one of them might time out
             checked_run_cheribsd_command(qemu, mount_command)
