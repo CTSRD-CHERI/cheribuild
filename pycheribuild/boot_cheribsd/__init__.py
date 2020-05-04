@@ -37,6 +37,7 @@ import argparse
 import atexit
 import datetime
 import os
+import re
 import shlex
 import shutil
 import socket
@@ -54,7 +55,6 @@ assert (_pexpect_dir / "pexpect/__init__.py").exists()
 assert str(_pexpect_dir.resolve()) in sys.path, str(_pexpect_dir) + " not found in " + str(sys.path)
 import pexpect
 from ..utils import find_free_port
-from pexpect.replwrap import PEXPECT_PROMPT, PEXPECT_CONTINUATION_PROMPT
 
 STARTING_INIT = "start_init: trying /sbin/init"
 BOOT_FAILURE = "Enter full pathname of shell or RETURN for /bin/sh"
@@ -68,6 +68,20 @@ PANIC = "panic: trap"
 PANIC_KDB = "KDB: enter: panic"
 CHERI_TRAP = "USER_CHERI_EXCEPTION: pid \\d+ tid \\d+ \\(.+\\)"
 # SHELL_LINE_CONTINUATION = "\r\r\n> "
+
+#from pexpect.replwrap import PEXPECT_PROMPT, PEXPECT_CONTINUATION_PROMPT
+# Similar approach to pexpect.replwrap:
+# If the user runs 'env', the value of PS1 will be in the output. To avoid seeing that as the next prompt,
+# we'll embed the marker characters# for invisible characters in the prompt; these show up when inspecting the
+# environment variable, but not when bash displays the prompt.
+# Unfortunately FreeBSD sh doesn't handle '\\[\\]', so we rely on FreeBSD sh PS1/PS2 mapping double backslash to
+# single backslash. If we embed that in the middle of the prompt string, the regexes won't match for 'env' output.
+PEXPECT_PROMPT = "[PEXPECT\\PROMPT]>"
+PEXPECT_CONTINUATION_PROMPT = "[++PEXPECT\\PROMPT++]"
+PEXPECT_PROMPT_SET_STR = PEXPECT_PROMPT.replace("\\", "\\\\")
+PEXPECT_CONTINUATION_PROMPT_SET_STR = PEXPECT_CONTINUATION_PROMPT.replace("\\", "\\\\")
+PEXPECT_PROMPT_RE = re.escape(PEXPECT_PROMPT)
+PEXPECT_CONTINUATION_PROMPT_RE = re.escape(PEXPECT_CONTINUATION_PROMPT)
 
 FATAL_ERROR_MESSAGES = [CHERI_TRAP]
 
@@ -128,10 +142,11 @@ class CheriBSDInstance(pexpect.spawn):
         return self._expect_and_handle_panic(pattern, timeout=timeout, timeout_msg=timeout_msg, **kwargs)
 
     def expect_prompt(self, timeout=-1, timeout_msg="timeout", timeout_fatal=True, **kwargs):
-        return self._expect_and_handle_panic([PEXPECT_PROMPT], timeout=timeout, timeout_msg=timeout_msg,
+        return self.expect_exact([PEXPECT_PROMPT], timeout=timeout, timeout_msg=timeout_msg,
             timeout_fatal=timeout_fatal, **kwargs)
 
-    def expect_exact(self, pattern_list, timeout=-1, pretend_result=None, timeout_msg="timeout", **kwargs):
+    def expect_exact(self, pattern_list, timeout=-1, pretend_result=None, timeout_fatal=True, timeout_msg="timeout",
+                     **kwargs):
         assert PANIC not in pattern_list
         assert STOPPED not in pattern_list
         assert PANIC_KDB not in pattern_list
@@ -145,7 +160,7 @@ class CheriBSDInstance(pexpect.spawn):
                 failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
             return i - len(panic_regexes)
         except pexpect.TIMEOUT:
-            failure(timeout_msg, ": ", str(self))
+            failure(timeout_msg, ": ", str(self), exit=timeout_fatal)
 
     def _expect_and_handle_panic(self, options: list, timeout_msg, timeout_fatal=True, **kwargs):
         assert PANIC not in options
@@ -296,7 +311,7 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
 
     results = ["/bin/sh: [/\\w\\d_-]+: not found",
                "ld(-cheri)?-elf.so.1: Shared object \".+\" not found, required by \".+\"",
-               pexpect.TIMEOUT, PEXPECT_PROMPT, PEXPECT_CONTINUATION_PROMPT]
+               pexpect.TIMEOUT, PEXPECT_PROMPT_RE, PEXPECT_CONTINUATION_PROMPT_RE]
     error_output_index = -1
     cheri_trap_index = -1
     if error_output:
@@ -340,7 +355,7 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, 
         cmd + " ;if test $? -eq 0; then echo '__COMMAND' 'SUCCESSFUL__'; else echo '__COMMAND' 'FAILED__'; fi")
     cheri_trap_index = None
     error_output_index = None
-    results = ["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__", PEXPECT_CONTINUATION_PROMPT]
+    results = ["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__", PEXPECT_CONTINUATION_PROMPT_RE]
     try:
         if not ignore_cheri_trap:
             cheri_trap_index = len(results)
@@ -406,14 +421,8 @@ def setup_ssh_for_root_login(qemu: CheriBSDInstance, pubkey: Path):
 def _set_pexpect_sh_prompt(child):
     success("===> setting PS1")
     # Make the prompt match PROMPT
-    # From replrwap.py:
-    # If the user runs 'env', the value of PS1 will be in the output. To avoid
-    # replwrap seeing that as the next prompt, we'll embed the marker characters
-    # for invisible characters in the prompt; these show up when inspecting the
-    # environment variable, but not when bash displays the prompt.
-    ps1 = PEXPECT_PROMPT[:5] + u'\\[\\]' + PEXPECT_PROMPT[5:]
-    ps2 = PEXPECT_CONTINUATION_PROMPT[:5] + u'\\[\\]' + PEXPECT_CONTINUATION_PROMPT[5:]
-    prompt_change = u"PS1='{0}' PS2='{1}' PROMPT_COMMAND=''".format(ps1, ps2)
+    prompt_change = u"PS1='{0}' PS2='{1}' PROMPT_COMMAND=''".format(PEXPECT_PROMPT_SET_STR,
+        PEXPECT_CONTINUATION_PROMPT_SET_STR)
     child.sendline(prompt_change)
     # Find the prompt
     child.expect_prompt(timeout=60)
