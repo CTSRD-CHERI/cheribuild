@@ -71,3 +71,13 @@ class BuildSQLite(CrossCompileAutotoolsProject):
     def needsConfigure(self):
         return not (self.buildDir / "Makefile").exists()
 
+
+class BuildFettSQLite(BuildSQLite):
+    target = "fett-sqlite"
+    project_name = "fett-sqlite"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git",
+                               default_branch="fett")
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        self.configureArgs.extend(["--enable-fts3"])
