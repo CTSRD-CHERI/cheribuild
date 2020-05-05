@@ -107,3 +107,9 @@ class BuildNginx(CrossCompileAutotoolsProject):
     def compile(self, **kwargs):
         # The cwd for make needs to be the source dir and it expects an empty target name
         self.run_make(cwd=self.sourceDir)
+
+class BuildFettNginx(BuildNginx):
+    target = "fett-nginx"
+    project_name = "fett-nginx"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/nginx.git",
+        default_branch="fett")
