@@ -2156,7 +2156,7 @@ class Project(SimpleProject):
     @property
     def real_install_root_dir(self):
         """
-        :return: the real install root directory (e.g. if prefix == /usr/local and desdir == /tmp/benchdir it will
+        :return: the real install root directory (e.g. if prefix == /usr/local and destdir == /tmp/benchdir it will
          return /tmp/benchdir/usr/local
         """
         if self.destdir is not None:
