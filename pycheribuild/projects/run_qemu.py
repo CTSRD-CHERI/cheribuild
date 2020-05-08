@@ -108,7 +108,6 @@ class LaunchQEMUBase(SimpleProject):
             self.machineFlags += ["-M", "virt"]
             self.virtioDisk = True
             self.machineFlags += ["-bios", self._qemu_riscv_bios]
-            assert self.currentKernel is not None
         elif xtarget.is_any_x86():
             qemu_suffix = "x86_64" if xtarget.is_x86_64() else "i386"
             self.currentKernel = None  # boot from disk
