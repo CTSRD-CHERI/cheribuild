@@ -80,6 +80,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
     _configure_supports_libdir = True  # override in nginx
     _configure_supports_variables_on_cmdline = True  # override in nginx
     _configure_understands_enable_static = True
+    _define_ld = True  # override to not define LD
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -143,7 +144,8 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
 
             if not self.compiling_for_host():
                 self.set_prog_with_args("CPP", self.CPP, CPPFLAGS)
-                self.add_configure_env_arg("LD", self.target_info.linker)
+                if self._define_ld:
+                    self.add_configure_env_arg("LD", self.target_info.linker)
 
         # remove all empty items from environment:
         env = {k: v for k, v in self.configureEnvironment.items() if v}
