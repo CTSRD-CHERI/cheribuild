@@ -31,6 +31,7 @@ import socket
 
 from .build_qemu import BuildQEMU, BuildCheriOSQEMU
 from .cherios import BuildCheriOS
+from .cross.rtems import BuildRtems
 from .cross.bbl import *
 from .cross.opensbi import BuildOpenSBI
 from .disk_image import *
@@ -465,6 +466,28 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
                 runCmd("dd", "if=/dev/zero", "of=" + str(self.diskImage), size_flag, "count=1")
         super().process()
 
+class LaunchRtemsQEMU(LaunchQEMUBase):
+    target = "run-rtems"
+    project_name = "run-rtems"
+    dependencies = ["rtems"]
+    supported_architectures = [CompilationTargets.RTEMS_RISCV64_PURECAP]
+    _forwardSSHPort = False
+    _qemuUserNetworking = False
+    _hasPCI = False
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
+                                   defaultSshPort=None,
+                                   **kwargs)
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        # Run a simple RTEMS shell application
+        self._qemu_riscv_bios = BuildRtems.getBuildDir(self) / "riscv/rv64xcheri_qemu/testsuites/samples/capture.exe"
+
+    def process(self):
+        super().process()
 
 class LaunchFreeBSD(_RunMultiArchFreeBSDImage):
     project_name = "run-freebsd"
