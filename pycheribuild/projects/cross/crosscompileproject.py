@@ -51,6 +51,19 @@ class CrossCompileMixin(object):
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
     _should_not_be_instantiated = True
 
+    def add_configure_env_arg(self, arg: str, value: "typing.Union[str,Path]"):
+        if not value:
+            return
+        assert not isinstance(value, list), ("Wrong type:", type(value))
+        assert not isinstance(value, tuple), ("Wrong type:", type(value))
+        self.configureEnvironment[arg] = str(value)
+
+    def set_prog_with_args(self, prog: str, path: Path, args: list):
+        fullpath = str(path)
+        if args:
+            fullpath += " " + commandline_to_str(args)
+        self.configureEnvironment[prog] = fullpath
+
 
 class CrossCompileProject(CrossCompileMixin, Project):
     doNotAddToTargets = True
@@ -85,11 +98,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
         self.make_args.set_env(**{arg: str(value)})
 
     def add_configure_env_arg(self, arg: str, value: "typing.Union[str,Path]"):
-        if not value:
-            return
-        assert not isinstance(value, list), ("Wrong type:", type(value))
-        assert not isinstance(value, tuple), ("Wrong type:", type(value))
-        self.configureEnvironment[arg] = str(value)
+        super(CrossCompileAutotoolsProject, self).add_configure_env_arg(arg, value)
         if self._configure_supports_variables_on_cmdline:
             self.configureArgs.append(arg + "=" + str(value))
 
@@ -98,12 +107,9 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             self.add_configure_env_arg(k, v)
 
     def set_prog_with_args(self, prog: str, path: Path, args: list):
-        fullpath = str(path)
-        if args:
-            fullpath += " " + commandline_to_str(args)
-        self.configureEnvironment[prog] = fullpath
+        super(CrossCompileAutotoolsProject, self).set_prog_with_args(prog, path, args)
         if self._configure_supports_variables_on_cmdline:
-            self.configureArgs.append(prog + "=" + fullpath)
+            self.configureArgs.append(prog + "=" + self.configureEnvironment[prog])
 
     def configure(self, **kwargs):
         if self._configure_understands_enable_static:     # workaround for nginx which isn't really autotools
