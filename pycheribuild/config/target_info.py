@@ -102,6 +102,11 @@ class TargetInfo(ABC):
 
     @property
     @abstractmethod
+    def ar(self) -> Path:
+        ...
+
+    @property
+    @abstractmethod
     def essential_compiler_and_linker_flags(self) -> typing.List[str]:
         """
         :return: flags such as -target + -mabi which are needed for both compiler and linker
@@ -277,6 +282,10 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         return self._compiler_dir / "ld.lld"
 
     @property
+    def ar(self) -> Path:
+        return self._compiler_dir / "llvm-ar"
+
+    @property
     def essential_compiler_and_linker_flags(self) -> typing.List[str]:
         # However, when cross compiling we need at least -target=
         result = ["-target", self.target_triple, "-pipe"]
@@ -386,6 +395,11 @@ class NativeTargetInfo(TargetInfo):
     def linker(self) -> Path:
         # Should rarely be needed
         return self.c_compiler.parent / "ld"
+
+    @property
+    def ar(self) -> Path:
+        # Should rarely be needed
+        return self.c_compiler.parent / "ar"
 
     @property
     def c_preprocessor(self) -> Path:
