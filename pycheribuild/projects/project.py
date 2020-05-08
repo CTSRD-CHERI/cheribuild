@@ -2139,10 +2139,10 @@ class Project(SimpleProject):
             self.run_with_logfile([_configure_path] + self.configureArgs, logfile_name="configure", cwd=cwd,
                 env=self.configureEnvironment)
 
-    def compile(self, cwd: Path = None):
+    def compile(self, cwd: Path = None, parallel: bool = True):
         if cwd is None:
             cwd = self.buildDir
-        self.run_make("all", cwd=cwd)
+        self.run_make("all", cwd=cwd, parallel = parallel)
 
     @property
     def makeInstallEnv(self):
