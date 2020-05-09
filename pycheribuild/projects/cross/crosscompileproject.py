@@ -98,7 +98,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
         self.make_args.set_env(**{arg: str(value)})
 
     def add_configure_env_arg(self, arg: str, value: "typing.Union[str,Path]"):
-        super(CrossCompileAutotoolsProject, self).add_configure_env_arg(arg, value)
+        super().add_configure_env_arg(arg, value)
         if self._configure_supports_variables_on_cmdline:
             self.configureArgs.append(arg + "=" + str(value))
 
