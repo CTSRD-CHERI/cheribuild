@@ -2142,7 +2142,7 @@ class Project(SimpleProject):
     def compile(self, cwd: Path = None, parallel: bool = True):
         if cwd is None:
             cwd = self.buildDir
-        self.run_make("all", cwd=cwd, parallel = parallel)
+        self.run_make("all", cwd=cwd, parallel=parallel)
 
     @property
     def makeInstallEnv(self):
