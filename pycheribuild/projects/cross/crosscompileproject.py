@@ -107,7 +107,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             self.add_configure_env_arg(k, v)
 
     def set_prog_with_args(self, prog: str, path: Path, args: list):
-        super(CrossCompileAutotoolsProject, self).set_prog_with_args(prog, path, args)
+        super().set_prog_with_args(prog, path, args)
         if self._configure_supports_variables_on_cmdline:
             self.configureArgs.append(prog + "=" + self.configureEnvironment[prog])
 
