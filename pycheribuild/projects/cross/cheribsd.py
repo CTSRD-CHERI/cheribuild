@@ -40,6 +40,7 @@ from ..llvm import BuildUpstreamLLVM, BuildCheriLLVM
 from ..project import *
 from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi
 from ...config.loader import ComputedDefaultValue
+from ...targets import target_manager
 from ...utils import *
 
 
@@ -447,13 +448,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.use_bootstrapped_toolchain:
             return
 
-        # For RISCV the makefile check fails unless we set CROSS_TOOLCHAIN_PREFIX (even though we provide all the tools)
-        if self.compiling_for_riscv(include_purecap=True):
-            self.cross_toolchain_config.set(CROSS_TOOLCHAIN_PREFIX=str(self.target_info.sdk_root_dir / "bin/llvm-"))
-
         self.cross_toolchain_config.set_with_options(
             # TODO: should we have an option to include a compiler in the target system?
             GCC=False, CLANG=False, LLD=False,  # Take a long time and not needed in the target system
+            LLDB=False,  # may be useful but means we need to build LLVM
             # Bootstrap compiler/ linker are not needed:
             GCC_BOOTSTRAP=False, CLANG_BOOTSTRAP=False, LLD_BOOTSTRAP=False,
             LIB32=False,  # takes a long time and not needed
@@ -582,6 +580,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
             kernel_options.remove_var("LDFLAGS")
             kernel_options.set(LD=linker, XLD=linker, HACK_EXTRA_FLAGS="-shared " + fuse_ld_flag,
                                TRAMP_LDFLAGS=fuse_ld_flag)
+            # The kernel build using ${BINUTIL} directly and not X${BINUTIL}:
+            for binutil_name in ("AS", "AR", "NM", "OBJCOPY", "RANLIB", "SIZE", "STRINGS", "STRIPBIN"):
+                xbinutil = kernel_options.get_var("X" + binutil_name)
+                if xbinutil:
+                    kernel_options.set(**{binutil_name: xbinutil})
+                    kernel_options.remove_var("X" + binutil_name)
             kernel_options.set_env(LDFLAGS=fuse_ld_flag, XLDFLAGS=fuse_ld_flag)
         kernel_options.set(KERNCONF=kernconf)
         if extra_make_args:
@@ -1018,6 +1022,14 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
     if not IS_FREEBSD:
         crossbuild = True
 
+    def clean(self) -> ThreadJoiner:
+        # Bootstrapping LLVM takes forever with FreeBSD makefiles
+        if not self.query_yes_no("You are about to do a clean FreeBSD build (without external toolchain). "
+                                 "This will rebuild all of LLVM and take a long time. Are you sure?",
+                default_result=True):
+            return ThreadJoiner(None)
+        return super().clean()
+
     @classmethod
     def setup_config_options(cls, install_directory_help=None, **kwargs):
         if IS_FREEBSD:
@@ -1026,10 +1038,14 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
             kwargs["bootstrap_toolchain"] = False
             kwargs["use_upstream_llvm"] = True
         super().setup_config_options(**kwargs)
+        cls.include_llvm = cls.add_bool_option("build-target-llvm",
+            help="Build LLVM for the target architecture. Note: this adds significant time to the build")
 
     def addCrossBuildOptions(self):
         # Just try to build as much as possible (but using make.py)
-        pass
+        if not self.include_llvm:
+            # Avoid extremely long builds by default
+            self.make_args.set_with_options(CLANG=False, LLD=False, LLDB=False)
 
 
 # noinspection PyUnusedLocal
@@ -1132,17 +1148,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     crossbuild = True  # changes have been merged into master
     use_llvm_binutils = True
     has_installsysroot_target = True
-    full_rebuild_if_older_than = datetime.datetime(2020, 3, 5, 17, 45, tzinfo=datetime.timezone.utc)
-
-    @staticmethod
-    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
-        # backwards compatibility:
-        if xtarget.is_mips(include_purecap=True):
-            if xtarget.is_cheri_purecap():
-                return base_target + "-purecap"
-            if xtarget.is_cheri_hybrid():
-                return base_target + "-cheri"
-        return base_target + "-" + xtarget.generic_suffix
+    full_rebuild_if_older_than = datetime.datetime(2020, 4, 8, 17, 0, tzinfo=datetime.timezone.utc)
 
     @property
     def build_dir_suffix(self):
@@ -1611,7 +1617,12 @@ class BuildCheriBsdSysroot(SimpleProject):
                     runCmd("ar", "rc", libgcc_eh)
 
 
+# Add a target aliases for old script invocations
+target_manager.add_target_alias("cheribsd-cheri", "cheribsd-mips-hybrid", deprecated=True)
+target_manager.add_target_alias("cheribsd-purecap", "cheribsd-mips-purecap", deprecated=True)
+
+
 class BuildCheriBsdAndSysroot(TargetAliasWithDependencies):
     target = "cheribsd-with-sysroot"
-    dependencies = ["cheribsd-cheri"]
+    dependencies = ["cheribsd-mips-hybrid"]
 

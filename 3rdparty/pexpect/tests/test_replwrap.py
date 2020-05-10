@@ -2,6 +2,7 @@ import platform
 import unittest
 import re
 import os
+import sys
 
 import pexpect
 from pexpect import replwrap
@@ -44,6 +45,7 @@ class REPLWrapTestCase(unittest.TestCase):
         """env, which displays PS1=..., should not mess up finding the prompt.
         """
         bash = replwrap.bash()
+        res = bash.run_command("export PS1")
         res = bash.run_command("env")
         self.assertIn('PS1', res)
         res = bash.run_command("echo $HOME")
@@ -108,7 +110,7 @@ class REPLWrapTestCase(unittest.TestCase):
         if platform.python_implementation() == 'PyPy':
             raise unittest.SkipTest(skip_pypy)
 
-        child = pexpect.spawn('python', echo=False, timeout=5, encoding='utf-8')
+        child = pexpect.spawn(sys.executable, echo=False, timeout=5, encoding='utf-8')
         # prompt_change=None should mean no prompt change
         py = replwrap.REPLWrapper(child, u">>> ", prompt_change=None,
                                   continuation_prompt=u"... ")

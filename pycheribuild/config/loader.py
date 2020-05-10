@@ -209,7 +209,8 @@ class ConfigLoaderBase(object):
 
 class ConfigOptionBase(object):
     def __init__(self, name: str, shortname: str, default, value_type: "typing.Type", _owning_class=None,
-                 _loader: ConfigLoaderBase = None, _fallback_names: "typing.List[str]" = None):
+                 _loader: ConfigLoaderBase = None, _fallback_names: "typing.List[str]" = None,
+                 _alias_names: "typing.List[str]" = None):
         self.name = name
         self.shortname = shortname
         self.default = default
@@ -234,17 +235,26 @@ class ConfigOptionBase(object):
         self._loader = _loader
         self._owning_class = _owning_class  # if none it means the global CheriConfig is the class containing this option
         self._fallback_names = _fallback_names  # for targets such as gdb-mips, etc
+        self._alias_names = _alias_names  # for targets such as gdb-mips, etc
         self._is_default_value = False
 
     def loadOption(self, config: "CheriConfig", instance: "typing.Optional[SimpleProject]", owner: "typing.Type",
                    return_none_if_default=False):
         result = self._loadOptionImpl(config, self.fullOptionName)
         # fall back from --qtbase-mips/foo to --qtbase/foo
+        # Try aliases first:
+        if result is None and self._alias_names is not None:
+            for alias_name in self._alias_names:
+                result = self._loadOptionImpl(config, alias_name)
+                if result is not None:
+                    if config.verbose:
+                        print("Using alias config option value", alias_name, "for", self.name, "->", result)
+                    break
         if result is None and self._fallback_names is not None:
             for fallback_name in self._fallback_names:
                 fallback_option = self._loader.options.get(fallback_name)
-                assert fallback_option is not None, "Could not find option " + fallback_name
-                result = fallback_option._loadOptionImpl(config, self.fullOptionName)
+                assert fallback_option is not None
+                result = fallback_option._loadOptionImpl(config, fallback_name)
                 if result is not None:
                     if config.verbose:
                         print("Using fallback config option value", fallback_name, "for", self.name, "->", result)
@@ -335,12 +345,20 @@ class CommandLineConfigOption(ConfigOptionBase):
     # noinspection PyProtectedMember
     def __init__(self, name: str, shortname: str, default, value_type: "typing.Type", _owning_class,
                  _loader: ConfigLoaderBase, helpHidden: bool, group: argparse._ArgumentGroup,
-                 _fallback_names: "typing.List[str]" = None, **kwargs):
-        super().__init__(name, shortname, default, value_type, _owning_class, _loader, _fallback_names)
+                 _fallback_names: "typing.List[str]" = None, _alias_names: "typing.List[str]" = None, **kwargs):
+        super().__init__(name, shortname, default, value_type, _owning_class, _loader, _fallback_names, _alias_names)
         # hide obscure options unless --help-hidden/--help/all is passed
         if helpHidden and not self._loader.showAllHelp:
             kwargs["help"] = argparse.SUPPRESS
+        self.action = self._add_argparse_action(name, shortname, default, group, kwargs)
+        # Add the aliases (with argparse.SUPPRESS)
+        kwargs["help"] = argparse.SUPPRESS
+        self.alias_actions = []
+        if _alias_names:
+            for alias in _alias_names:
+                self.alias_actions.append(self._add_argparse_action(alias, None, default, group, kwargs))
 
+    def _add_argparse_action(self, name, shortname, default, group, kwargs):
         # add the default string to help if it is not lambda and help != argparse.SUPPRESS
         hasDefaultHelpText = isinstance(self.default, ComputedDefaultValue) or not callable(self.default)
         assert "default" not in kwargs  # Should be handled manually
@@ -350,13 +368,13 @@ class CommandLineConfigOption(ConfigOptionBase):
             parserObj = parserObj.add_mutually_exclusive_group()
             kwargs["default"] = None
             assert kwargs["action"] == "store_true"
-        if self.shortname:
-            action = parserObj.add_argument("--" + self.name, "-" + self.shortname, **kwargs)
+        if shortname:
+            action = parserObj.add_argument("--" + name, "-" + shortname, **kwargs)
         else:
-            action = parserObj.add_argument("--" + self.name, **kwargs)
+            action = parserObj.add_argument("--" + name, **kwargs)
         if self.value_type == bool:
-            slashIndex = self.name.rfind("/")
-            negatedName = self.name[:slashIndex + 1] + "no-" + self.name[slashIndex + 1:]
+            slashIndex = name.rfind("/")
+            negatedName = name[:slashIndex + 1] + "no-" + name[slashIndex + 1:]
             negatedHelp = argparse.SUPPRESS
             # if the default is true we want to show the negated option instead.
             if default is True:
@@ -367,7 +385,7 @@ class CommandLineConfigOption(ConfigOptionBase):
                     negatedHelp = "Do not " + negatedHelp
                 action.help = argparse.SUPPRESS
             neg = parserObj.add_argument("--" + negatedName, dest=action.dest, default=None, action="store_false",
-                                         help=negatedHelp)
+                help=negatedHelp)
             # change the default action value
             neg.default = None
             action.default = None
@@ -378,7 +396,7 @@ class CommandLineConfigOption(ConfigOptionBase):
         assert isinstance(action, argparse.Action)
         assert not action.default  # we handle the default value manually
         assert not action.type  # we handle the type of the value manually
-        self.action = action
+        return action
 
     def _loadOptionImpl(self, config: "CheriConfig", target_option_name: str):
         from_cmdline = self.loadFromCommandLine()
@@ -389,7 +407,13 @@ class CommandLineConfigOption(ConfigOptionBase):
         assert self._loader._parsedArgs  # load() must have been called before using this object
         # FIXME: check the fallback name here
         assert hasattr(self._loader._parsedArgs, self.action.dest)
-        return getattr(self._loader._parsedArgs, self.action.dest)  # from command line
+        result = getattr(self._loader._parsedArgs, self.action.dest)  # from command line
+        if result is None:
+            for alias_action in self.alias_actions:
+                result = getattr(self._loader._parsedArgs, alias_action.dest)  # alias from command line
+                if result is not None:
+                    break
+        return result
 
 
 # noinspection PyProtectedMember
@@ -406,7 +430,7 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
                 return fromCmdLine
             # print("From command line == default:", fromCmdLine, self.action.default, "-> trying JSON")
         # try loading it from the JSON file:
-        fromJson = self._loadFromJson(self.fullOptionName)
+        fromJson = self._loadFromJson(target_option_name)
         # print(fullOptionName, "from JSON:", fromJson)
         if fromJson[0] is not None:
             if config.verbose or True:
@@ -603,12 +627,29 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
 
     def load(self):
         if argcomplete and "_ARGCOMPLETE" in os.environ:
-            argcomplete.autocomplete(
-                self._parser,
-                always_complete_options=None,  # don't print -/-- by default
-                exclude=self.completion_excludes,  # hide these options from the output
-                print_suppressed=True,  # also include target-specific options
-            )
+            if "_ARGCOMPLETE_BENCHMARK" in os.environ:
+                os.environ["_ARC_DEBUG"] = "1"
+                os.environ["_ARGCOMPLETE_IFS"] = "\n"
+                # os.environ["COMP_LINE"] = "cheribuild.py " # return all targets
+                os.environ["COMP_LINE"] = "cheribuild.py -" # return all options
+                os.environ["COMP_POINT"] = str(len(os.environ["COMP_LINE"]))
+                with open(os.devnull, "wb") as output:
+                # with open("/dev/stdout", "wb") as output:
+                    # sys.stdout.buffer
+                    argcomplete.autocomplete(
+                        self._parser,
+                        always_complete_options=None,  # don't print -/-- by default
+                        exclude=self.completion_excludes,  # hide these options from the output
+                        print_suppressed=True,  # also include target-specific options
+                        output_stream=output,
+                        exit_method=sys.exit)  # ensure that cprofile data is written
+            else:
+                argcomplete.autocomplete(
+                    self._parser,
+                    always_complete_options=None,  # don't print -/-- by default
+                    exclude=self.completion_excludes,  # hide these options from the output
+                    print_suppressed=True,  # also include target-specific options
+                )
         self._parsedArgs, trailingTargets = self._parser.parse_known_args()
         # print(self._parsedArgs, trailingTargets)
         self._parsedArgs.targets += trailingTargets
@@ -635,6 +676,9 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 alternateName = option.shortname.lstrip("-")
                 if fullname == alternateName:
                     return True  # fine
+            if option._alias_names:
+                if fullname in option._alias_names:
+                    return True
 
         print(coloured(AnsiColour.red, "Unknown config option '", fullname, "' in ", self._configPath, sep=""))
         return False

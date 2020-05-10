@@ -1,10 +1,11 @@
 #
-# Copyright (c) 2016 Alex Richardson
+# Copyright (c) 2020 SRI International
 # All rights reserved.
 #
 # This software was developed by SRI International and the University of
-# Cambridge Computer Laboratory under DARPA/AFRL contract FA8750-10-C-0237
-# ("CTSRD"), as part of the DARPA CRASH research programme.
+# Cambridge Computer Laboratory (Department of Computer Science and
+# Technology) under DARPA contract HR0011-18-C-0016 ("ECATS"), as part of the
+# DARPA SSITH research programme.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -27,8 +28,31 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+from .crosscompileproject import *
+from .qt5 import BuildQtWebkit
+from ...utils import runCmd, IS_FREEBSD
 
-# based on https://stackoverflow.com/questions/1057431/loading-all-modules-in-a-folder-in-python
-from pathlib import Path
-files = Path(__file__).parent.glob("*.py")
-__all__ = [f.name[:-3] for f in files if f.is_file() and f.name != "__init__.py"]
+
+class BuildZlib(CrossCompileAutotoolsProject):
+    # Just add add the FETT target below for now.
+    doNotAddToTargets = True
+
+    repository = GitRepository("https://github.com/CTSRD-CHERI/zlib.git")
+
+    # Enable the same hacks as nginx since this isn't really autoconf...
+    add_host_target_build_config_options = False
+    _configure_understands_enable_static = False
+    _configure_supports_variables_on_cmdline = False
+
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS
+
+    def needsConfigure(self):
+        return not (self.buildDir / "Makefile").exists()
+
+
+class BuildFettZlib(BuildZlib):
+    target = "fett-zlib"
+    project_name = "fett-zlib"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/zlib.git",
+                               default_branch="fett")

@@ -365,7 +365,7 @@ def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
     if compiler not in _cached_compiler_infos:
         clangVersionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         gccVersionPattern = re.compile(b"gcc version (\\d+)\\.(\\d+)\\.?(\\d+)?")
-        appleLlvmVersionPattern = re.compile(b"Apple LLVM version (\\d+)\\.(\\d+)\\.?(\\d+)?")
+        appleLlvmVersionPattern = re.compile(b"Apple (?:clang|LLVM) version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         # TODO: could also use -dumpmachine to get the triple
         targetPattern = re.compile(b"Target: (.+)")
         # clang prints this output to stderr
@@ -389,13 +389,12 @@ def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
         if gccVersion:
             kind = "gcc"
             version = tuple(map(int, gccVersion.groups()))
+        elif appleLlvmVersion:
+            kind = "apple-clang"
+            version = tuple(map(int, appleLlvmVersion.groups()))
         elif clangVersion:
             kind = "clang"
             version = tuple(map(int, clangVersion.groups()))
-        elif appleLlvmVersion:
-            kind = "apple-clang"
-            # TODO: parse #define __VERSION__ "4.2.1 Compatible Apple LLVM 8.1.0 (clang-802.0.42)"
-            version = tuple(map(int, appleLlvmVersion.groups()))
         else:
             warningMessage("Could not detect compiler info for", compiler, "- output was", versionCmd.stderr)
         if _cheriConfig and _cheriConfig.verbose:
@@ -448,17 +447,20 @@ def latest_system_clang_tool(basename: str, fallback_basename: str):
     valid_regex = re.compile(re.escape(basename) + r"[-\d.]*$")
     results = []
     for search_dir in search_path:
-        candidates = search_dir.glob(basename + "*")
-        for candidate in candidates:
-            if not valid_regex.match(candidate.name):
+        if not search_dir.exists():
+            continue
+        # Note: os.listdir is faster than path.glob("*") since we don't have to stat all files
+        for candidate_name in os.listdir(str(search_dir)):
+            if not candidate_name.startswith(basename) or not valid_regex.match(candidate_name):
                 continue
             # print("Checking compiler candidate", candidate)
+            candidate = search_dir / candidate_name
             info = getCompilerInfo(candidate)
             if IS_MAC and not info.is_apple_clang:
                 # print("Ignoring", candidate, "since it is not apple clang and won't be able to build host binaries")
                 continue
             # Minimum version is 4.0
-            if info.version < (4, 0, 0):
+            if info.version < (4, 0, 0) and not info.is_apple_clang:
                 # print("Ignoring", basename, "candidate", candidate, "since it is too old:", info.version)
                 continue
             results.append((candidate, info.is_apple_clang, info.version))
@@ -490,22 +492,22 @@ def statusUpdate(*args, sep=" ", **kwargs):
 
 def warningMessage(*args, sep=" "):
     # we ignore fatal errors when simulating a run
-    print(coloured(AnsiColour.magenta, maybe_add_space("Warning:", sep) + args, sep=sep), file=sys.stderr)
+    print(coloured(AnsiColour.magenta, maybe_add_space("Warning:", sep) + args, sep=sep), file=sys.stderr, flush=True)
 
 
 def fatalError(*args, sep=" ", fixitHint=None, fatalWhenPretending=False):
     # we ignore fatal errors when simulating a run
     if _cheriConfig and _cheriConfig.pretend:
-        print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:", sep) + args, sep=sep), file=sys.stderr)
+        print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:", sep) + args, sep=sep), file=sys.stderr, flush=True)
         if fixitHint:
-            print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr)
+            print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr, flush=True)
         if fatalWhenPretending:
             traceback.print_stack()
             sys.exit(3)
     else:
-        print(coloured(AnsiColour.red, maybe_add_space("Fatal error:", sep) + args, sep=sep), file=sys.stderr)
+        print(coloured(AnsiColour.red, maybe_add_space("Fatal error:", sep) + args, sep=sep), file=sys.stderr, flush=True)
         if fixitHint:
-            print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr)
+            print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr, flush=True)
         sys.exit(3)
 
 

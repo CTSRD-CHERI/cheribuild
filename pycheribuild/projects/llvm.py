@@ -48,6 +48,10 @@ class BuildLLVMBase(CMakeProject):
     default_build_type = BuildType.RELEASE
 
     @classmethod
+    def is_toolchain_target(cls):
+        return True
+
+    @classmethod
     def setup_config_options(cls, useDefaultSysroot=True):
         super().setup_config_options()
         if "included_projects" not in cls.__dict__:
@@ -277,7 +281,21 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     is_sdk_target = True
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.ROOTFS
-    supported_architectures = [CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS_NO_CHERI, CompilationTargets.CHERIBSD_MIPS_PURECAP]
+    supported_architectures = [CompilationTargets.NATIVE, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
+                               CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_MIPS_PURECAP]
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.build_all_targets = cls.add_bool_option("build-all-targets",
+            help="Support code generation for all architectures instead of only for CHERI+Host. This is off by "
+                 "default to reduce compile time.")
+
+    def setup(self):
+        super().setup()
+        if not self.build_all_targets:
+            # Save some time by only building the targets that we need.
+            self.add_cmake_options(LLVM_TARGETS_TO_BUILD="Mips;RISCV;host")
 
     def install(self, **kwargs):
         super().install(**kwargs)
@@ -305,7 +323,7 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
         # llvm-objdump currently doesn't infer the available features
         # This depends on https://reviews.llvm.org/D74023
         self.writeFile(self.installDir / "bin/riscv64cheri-objdump",
-            "#!/bin/sh\nexec '{}' -mattr=+a,+m,+c,+d,+f,+xcheri \"$@\"".format(self.installDir / "bin/llvm-objdump"),
+            "#!/bin/sh\nexec '{}' --mattr=+m,+a,+f,+d,+c,+xcheri \"$@\"".format(self.installDir / "bin/llvm-objdump"),
             overwrite=True, mode=0o755)
 
     @property
@@ -319,6 +337,9 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
                 include_version=False).replace(self.config.mips_cheri_bits_str, "128"),
             CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_MIPS_PURECAP, self.config,
                 include_version=True).replace(self.config.mips_cheri_bits_str, "128"),
+            # RISC-V triple is the same for NO_CHERI and PURECAP so only give once
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, self.config, include_version=True),
+            CheriBSDTargetInfo.triple_for_target(CompilationTargets.CHERIBSD_RISCV_NO_CHERI, self.config, include_version=False),
             ]
         return [x + "-" for x in triples]
 
@@ -342,7 +363,7 @@ class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
     skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
 
     def configure(self, **kwargs):
-        self.add_cmake_options(LLVM_TARGETS_TO_BUILD="Mips")
+        self.add_cmake_options(LLVM_TARGETS_TO_BUILD="Mips;host")
         super().configure(**kwargs)
 
 

@@ -32,6 +32,7 @@ from random import randint
 
 from .build_qemu import BuildQEMU, BuildCheriOSQEMU
 from .cherios import BuildCheriOS
+from .cross.rtems import BuildRtems
 from .cross.bbl import *
 from .cross.opensbi import BuildOpenSBI
 from .disk_image import *
@@ -108,7 +109,6 @@ class LaunchQEMUBase(SimpleProject):
             self.machineFlags += ["-M", "virt"]
             self.virtioDisk = True
             self.machineFlags += ["-bios", self._qemu_riscv_bios]
-            assert self.currentKernel is not None
         elif xtarget.is_any_x86():
             qemu_suffix = "x86_64" if xtarget.is_x86_64() else "i386"
             self.currentKernel = None  # boot from disk
@@ -216,8 +216,11 @@ class LaunchQEMUBase(SimpleProject):
             # qemuCommand += ["-redir", "tcp:" + str(self.sshForwardingPort) + "::22"]
             print(coloured(AnsiColour.green, "\nListening for SSH connections on localhost:", self.sshForwardingPort, sep=""))
         if self._qemuUserNetworking:
-            # qemuCommand += ["-net", "rtl8139,netdev=net0", "-net", "user,id=net0,ipv6=off" + user_network_options]
-            qemuCommand += ["-net", "nic", "-net", "user,id=net0,ipv6=off" + user_network_options]
+            # We'd like to use virtio everwhere, but it doesn't work on BE mips.
+            if self.compiling_for_mips(include_purecap=True):
+                qemuCommand += ["-net", "nic", "-net", "user,id=net0,ipv6=off" + user_network_options]
+            else:
+                qemuCommand += ["-device", "virtio-net-device,netdev=net0", "-netdev", "user,id=net0,ipv6=off" + user_network_options]
 
         # Add a virtio RNG to speed up random number generation
         if self._hasPCI:
@@ -394,13 +397,6 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
     project_name = "run"
     _source_class = BuildCheriBSDDiskImage
 
-    @staticmethod
-    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
-        # backwards compatibility:
-        if xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            return base_target + "-purecap"
-        return base_target + "-" + xtarget.generic_suffix
-
     @classmethod
     def setup_config_options(cls, **kwargs):
         if "defaultSshPort" in kwargs:
@@ -450,7 +446,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
     target = "run-cherios"
     project_name = "run-cherios"
     dependencies = ["cherios-qemu", "cherios"]
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP]
+    supported_architectures = [CompilationTargets.CHERIOS_MIPS_PURECAP]
     _forwardSSHPort = False
     _qemuUserNetworking = False
     hide_options_from_help = True
@@ -490,6 +486,28 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
                 runCmd("dd", "if=/dev/zero", "of=" + str(self.diskImage), size_flag, "count=1")
         super().process()
 
+class LaunchRtemsQEMU(LaunchQEMUBase):
+    target = "run-rtems"
+    project_name = "run-rtems"
+    dependencies = ["rtems"]
+    supported_architectures = [CompilationTargets.RTEMS_RISCV64_PURECAP]
+    _forwardSSHPort = False
+    _qemuUserNetworking = False
+    _hasPCI = False
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
+                                   defaultSshPort=None,
+                                   **kwargs)
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        # Run a simple RTEMS shell application
+        self._qemu_riscv_bios = BuildRtems.getBuildDir(self) / "riscv/rv64xcheri_qemu/testsuites/samples/capture.exe"
+
+    def process(self):
+        super().process()
 
 class LaunchFreeBSD(_RunMultiArchFreeBSDImage):
     project_name = "run-freebsd"
@@ -514,6 +532,7 @@ class LaunchFreeBSDWithDefaultOptions(_RunMultiArchFreeBSDImage):
         super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
                                    defaultSshPort=defaultSshForwardingPort(20 + add_to_port), **kwargs)
 
+
 class LaunchFreeBSDGFE(_RunMultiArchFreeBSDImage):
     project_name = "run-freebsd-gfe"
     hide_options_from_help = True
@@ -525,9 +544,9 @@ class LaunchFreeBSDGFE(_RunMultiArchFreeBSDImage):
         super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
                                    defaultSshPort=defaultSshForwardingPort(20 + add_to_port), **kwargs)
 
+
 class LaunchCheriBsdMfsRoot(LaunchCheriBSD):
     project_name = "run-minimal"
-    dependencies = ["qemu", "cheribsd-mfs-root-kernel"]
     _source_class = BuildCheriBsdMfsKernel
 
     @classmethod
@@ -545,22 +564,11 @@ class LaunchCheriBsdMfsRoot(LaunchCheriBSD):
         self.rootfs_path = BuildCHERIBSD.rootfsDir(self, config)
 
     def run_tests(self):
-        self.run_cheribsd_test_script("run_cheribsd_tests.py")
+        self.run_cheribsd_test_script("run_cheribsd_tests.py", "--minimal-image")
 
 
-# Allow running cheribsd without the MFS_ROOT kernel, but with a disk image instead:
-class LaunchCheriBsdMinimal(AbstractLaunchFreeBSD):
-    project_name = "run-minimal-with-disk-image"
-    dependencies = ["qemu", "disk-image-minimal"]
-    hide_options_from_help = True
-    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID]
-
-    @classmethod
-    def setup_config_options(cls, **kwargs):
-        # TODO:         add_to_port = cls.get_cross_target_index()
-        add_to_port = 0
-        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
-                                   defaultSshPort=defaultSshForwardingPort(8 + add_to_port), **kwargs)
-
-    def __init__(self, config):
-        super().__init__(config, source_class=BuildCHERIBSD, disk_image_class=BuildMinimalCheriBSDDiskImage)
+# Backwards compatibility:
+target_manager.add_target_alias("run-cheri", "run-mips-hybrid", deprecated=True)
+target_manager.add_target_alias("run-purecap", "run-mips-purecap", deprecated=True)
+target_manager.add_target_alias("run-minimal-cheri", "run-minimal-mips-hybrid", deprecated=True)
+target_manager.add_target_alias("run-minimal-purecap", "run-minimal-mips-purecap", deprecated=True)

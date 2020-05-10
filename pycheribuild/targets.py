@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import os
 import sys
 import time
 from collections import OrderedDict
@@ -212,45 +213,26 @@ class MultiArchTarget(Target):
         return "<Cross target (" + self.target_arch.name + ") " + self.name + ">"
 
 
-# This is used for targets like "libcxx", etc and resolves to "libcxx-cheri/libcxx-native/libcxx-mips"
-# at runtime
-class MultiArchTargetAlias(Target):
-    def __init__(self, name, projectClass):
-        super().__init__(name, projectClass)
-        self.derived_targets = []  # type: typing.List[MultiArchTarget]
-
+class _TargetAliasBase(Target):
     @property
     def projectClass(self) -> "typing.Type[SimpleProject]":
+        assert self._project_class is not None
+        return self._project_class
+
+    def _create_project(self, config: CheriConfig):
         raise ValueError("Should not be called!")
 
     def get_real_target(self, cross_target: CrossCompileTarget, config,
-                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> MultiArchTarget:
-        assert cross_target is not None
-        if cross_target is CompilationTargets.NONE:
-            # Use the default target:
-            cross_target = self._project_class.get_crosscompile_target(config)
-        assert cross_target is not None and cross_target is not CompilationTargets.NONE
-        # find the correct derived project:
-        for tgt in self.derived_targets:
-            if tgt.target_arch is cross_target:
-                return tgt
-        raise LookupError("Could not find '" + self.name + "' target for " + str(cross_target) + ", caller was " + str(caller))
+                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
+        raise NotImplementedError()
 
     def get_or_create_project(self, cross_target: "CrossCompileTarget", config) -> "SimpleProject":
-        # If there are any derived targets pick the right one based on the target_arch:
         assert cross_target is not None
-        assert self.derived_targets, "derived targets must not be empty"
         tgt = self.get_real_target(cross_target, config)
         # Update the cross target
-        cross_target = tgt._project_class._xtarget
+        cross_target = tgt.projectClass._xtarget
         assert cross_target is not CompilationTargets.NONE
         return tgt.get_or_create_project(cross_target, config)
-
-    def _create_project(self, config: CheriConfig):
-        from .projects.cross.crosscompileproject import CrossCompileMixin
-        from .projects.cross.cheribsd import BuildFreeBSD
-        assert issubclass(self.projectClass, CrossCompileMixin) or issubclass(self.projectClass, BuildFreeBSD)
-        return self.projectClass(config)
 
     def execute(self, config):
         return self.get_real_target(CompilationTargets.NONE, config).execute(config)
@@ -264,23 +246,89 @@ class MultiArchTargetAlias(Target):
     def checkSystemDeps(self, config: CheriConfig):
         return self.get_real_target(CompilationTargets.NONE, config).checkSystemDeps(config)
 
+
+# This is used for targets like "libcxx", etc and resolves to "libcxx-cheri/libcxx-native/libcxx-mips"
+# at runtime
+class MultiArchTargetAlias(_TargetAliasBase):
+    def __init__(self, name, projectClass):
+        super().__init__(name, projectClass)
+        self.derived_targets = []  # type: typing.List[MultiArchTarget]
+
     def __repr__(self):
         return "<Cross target alias " + self.name + ">"
+
+    def get_real_target(self, cross_target: CrossCompileTarget, config,
+                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
+        assert cross_target is not None
+        assert self.derived_targets, "derived targets must not be empty"
+        if cross_target is CompilationTargets.NONE:
+            # Use the default target:
+            cross_target = self.projectClass.get_crosscompile_target(config)
+        assert cross_target is not None and cross_target is not CompilationTargets.NONE
+        # find the correct derived project:
+        for tgt in self.derived_targets:
+            if tgt.target_arch is cross_target:
+                return tgt
+        raise LookupError("Could not find '" + self.name + "' target for " + str(cross_target) + ", caller was " + str(caller))
+
+
+class SimpleTargetAlias(_TargetAliasBase):
+    def __init__(self, name, real_target_name: str, t: "TargetManager"):
+        self._real_target = t.get_target_raw(real_target_name)
+        real_cls = self._real_target.projectClass
+        assert not isinstance(self._real_target, _TargetAliasBase), "Target aliases must reference a real target not another alias"
+        super().__init__(name, real_cls)
+        self.real_target_name = real_target_name
+        # Add the alias name for config lookups so that old configs remain valid
+        # Note: we can't modify _alias_target_names since otherwise we change it for all classes
+        # noinspection PyProtectedMember
+        real_cls._alias_target_names = getattr(real_cls, "_alias_target_names", tuple()) + (self.name, )
+
+    def get_real_target(self, cross_target: CrossCompileTarget, config,
+                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
+        return self._real_target
+
+    def __repr__(self):
+        return "<Target alias " + self.name + " (for " + self.real_target_name + ")>"
+
+
+class DeprecatedTargetAlias(SimpleTargetAlias):
+    def get_real_target(self, cross_target: CrossCompileTarget, config: "CheriConfig",
+                        caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
+        warningMessage("Using deprecated target ", coloured(AnsiColour.red, self.name),
+                       coloured(AnsiColour.magenta, ". Please use "),
+                       coloured(AnsiColour.yellow, self.real_target_name),
+                       coloured(AnsiColour.magenta, " instead."), sep="")
+        from .projects.project import SimpleProject
+        # noinspection PyProtectedMember
+        if not SimpleProject._query_yes_no(config, "Continue?", default_result=True):
+            fatalError("Cannot continue.")
+        return self._real_target
 
 
 class TargetManager(object):
     def __init__(self):
         self._allTargets = {}  # type: typing.Dict[str, Target]
 
-    def addTarget(self, target: Target) -> None:
+    def add_target(self, target: Target) -> None:
+        assert target.name not in self._allTargets
+        assert target.name != "cheribsd-cheri"
         self._allTargets[target.name] = target
+
+    def add_target_alias(self, name: str, real_target: str, deprecated=False) -> None:
+        assert name not in self._allTargets
+        if deprecated:
+            self._allTargets[name] = DeprecatedTargetAlias(name, real_target, self)
+        else:
+            self._allTargets[name] = SimpleTargetAlias(name, real_target, self)
 
     def registerCommandLineOptions(self):
         # this cannot be done in the Project metaclass as otherwise we get
         # RuntimeError: super(): empty __class__ cell
         # https://stackoverflow.com/questions/13126727/how-is-super-in-python-3-implemented/28605694#28605694
         for tgt in self._allTargets.values():
-            tgt._project_class.setup_config_options()
+            if not isinstance(tgt, SimpleTargetAlias):
+                tgt.projectClass.setup_config_options()
 
     @property
     def targetNames(self):
@@ -315,18 +363,22 @@ class TargetManager(object):
     def get_all_targets(self, explicit_targets: "typing.List[Target]", config: CheriConfig) -> "typing.List[Target]":
         add_dependencies = config.includeDependencies
         chosen_targets = []  # type: typing.List[Target]
-        for t in explicit_targets:
+        remaining_targets_to_check = explicit_targets
+        while remaining_targets_to_check:
+            t = remaining_targets_to_check.pop(0)
+            if isinstance(t, SimpleTargetAlias):
+                t = t.get_real_target(CompilationTargets.NONE, config)
             chosen_targets.append(t)
+            all_target_dependencies = t.get_dependencies(config)  # Ensure we cache the dependencies
             deps_to_add = []
-            if add_dependencies:
-                deps_to_add = t.projectClass.recursive_dependencies(config)
-            elif t.projectClass.dependenciesMustBeBuilt:
+            if add_dependencies or t.projectClass.dependenciesMustBeBuilt:
                 # some targets such as sdk always need their dependencies build:
-                deps_to_add = t.projectClass.recursive_dependencies(config)
+                deps_to_add = all_target_dependencies
             elif t.projectClass.isAlias:
                 assert not t.projectClass.dependenciesMustBeBuilt
                 # for aliases without full dependencies just add the direct dependencies
-                deps_to_add = t.projectClass.direct_dependencies(config)
+                remaining_targets_to_check.extend(t.projectClass.direct_dependencies(config))
+                continue
             # Now add all the dependencies:
             for dep_target in deps_to_add:
                 # when --skip-sdk is passed don't include sdk dependencies
@@ -335,7 +387,12 @@ class TargetManager(object):
                         statusUpdate("Not adding ", t, "dependency", dep_target,
                                      "since it is an SDK target and --skip-sdk was passed.")
                     continue
-                chosen_targets.append(dep_target)
+                if dep_target.projectClass.is_toolchain_target() and not config.include_toolchain_dependencies:
+                    if config.verbose:
+                        statusUpdate("Not adding ", t, "dependency", dep_target,
+                            "since it is an SDK target and --no-include-toolchain-dependencies was passed.")
+                    continue
+                remaining_targets_to_check.append(dep_target)
 
         sort = self.sort_in_dependency_order(chosen_targets)
         return sort
@@ -355,12 +412,13 @@ class TargetManager(object):
 
     def get_all_chosen_targets(self, config) -> "typing.Iterable[Target]":
         # check that all target dependencies are correct:
-        for t in self._allTargets.values():
-            if isinstance(t, MultiArchTargetAlias):
-                continue
-            for dep in t.get_dependencies(config):
-                if dep.name not in self._allTargets:
-                    sys.exit("Invalid dependency " + dep.name + " for " + t.projectClass.__name__)
+        if os.getenv("CHERIBUILD_DEBUG"):
+            for t in self._allTargets.values():
+                if isinstance(t, MultiArchTargetAlias):
+                    continue
+                for dep in t.get_dependencies(config):
+                    if dep.name not in self._allTargets:
+                        sys.exit("Invalid dependency " + dep.name + " for " + t.projectClass.__name__)
         # targetsSorted = sorted(self._allTargets.values())
         # print(" ".join(t.name for t in targetsSorted))
         # assert self._allTargets["llvm"] < self._allTargets["cheribsd"]
@@ -383,4 +441,5 @@ class TargetManager(object):
         for i in self._allTargets.values():
             i.reset()
 
-targetManager = TargetManager()
+
+target_manager = TargetManager()

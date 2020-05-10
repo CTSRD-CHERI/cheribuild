@@ -53,6 +53,10 @@ class BuildQEMUBase(AutotoolsProject):
     lto_by_default = True
 
     @classmethod
+    def is_toolchain_target(cls):
+        return True
+
+    @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options()
         cls.with_sanitizers = cls.add_bool_option("sanitizers", help="Build QEMU with ASAN/UBSAN (very slow)", default=False)
@@ -73,7 +77,7 @@ class BuildQEMUBase(AutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.addRequiredSystemTool("glibtoolize" if self.target_info.is_macos else "libtoolize", homebrew="libtool")
+        self.addRequiredSystemTool("glibtoolize" if self.target_info.is_macos() else "libtoolize", homebrew="libtool")
         self.addRequiredSystemTool("autoreconf", homebrew="autoconf")
         self.addRequiredSystemTool("aclocal", homebrew="automake")
 
@@ -82,7 +86,7 @@ class BuildQEMUBase(AutotoolsProject):
         self._addRequiredPkgConfig("glib-2.0", homebrew="glib", zypper="glib2-devel", apt="libglib2.0-dev",
                                    freebsd="glib")
         # Tests require GNU sed
-        self.addRequiredSystemTool("sed" if self.target_info.is_linux else "gsed", homebrew="gnu-sed", freebsd="gsed")
+        self.addRequiredSystemTool("sed" if self.target_info.is_linux() else "gsed", homebrew="gnu-sed", freebsd="gsed")
 
         if self.build_type == BuildType.DEBUG:
             self.COMMON_FLAGS.append("-DCONFIG_DEBUG_TCG=1")
@@ -283,6 +287,7 @@ class BuildQEMU(BuildQEMUBase):
 
 class BuildCheriOSQEMU(BuildQEMU):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="cherios", force_branch=True)
+    default_targets = "cheri128-softmmu"
     project_name = "cherios-qemu"
     target = "cherios-qemu"
     _default_install_dir_fn = ComputedDefaultValue(
@@ -292,7 +297,6 @@ class BuildCheriOSQEMU(BuildQEMU):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self._qemuTargets = "cheri128-softmmu"
 
     @classmethod
     def qemu_binary(cls, caller: SimpleProject, xtarget=None):

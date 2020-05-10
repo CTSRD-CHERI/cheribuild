@@ -17,6 +17,8 @@ _srcdir=../src
 set -e
 set -x
 
+export CHERIBUILD_DEBUG=1
+
 # Copy cheribuild to a temporary director
 if command -v git >/dev/null && [[ -z "$FORCE_RUN" ]]; then
     echo "GIT IS INSTALLED, copying to tempdir to avoid chowning files to root"

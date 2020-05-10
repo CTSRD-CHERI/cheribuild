@@ -190,6 +190,7 @@ class CheriConfig(object):
         self.qemu_debug_program = loader.addOption("qemu-gdb-debug-userspace-program",
             help="Print the command to debug the following userspace program in GDB attaced to QEMU")
         self.includeDependencies = None  # type: Optional[bool]
+        self.include_toolchain_dependencies = True
         self.preferred_xtarget = None  # type: Optional[CrossCompileTarget]
         self.makeWithoutNice = None  # type: Optional[bool]
 

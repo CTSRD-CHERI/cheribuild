@@ -48,8 +48,6 @@ class BuildNginx(CrossCompileAutotoolsProject):
         super().__init__(config)
         self.configureCommand = self.sourceDir / "auto/configure"
         if not self.compiling_for_host():
-            self.LDFLAGS.append("-static")
-            self.COMMON_FLAGS.append("-static")  # adding it to LDFLAGS only doesn't seem to be enough
             self.COMMON_FLAGS.extend(["-pedantic",
                                       "-Wno-gnu-statement-expression",
                                       "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
@@ -109,3 +107,9 @@ class BuildNginx(CrossCompileAutotoolsProject):
     def compile(self, **kwargs):
         # The cwd for make needs to be the source dir and it expects an empty target name
         self.run_make(cwd=self.sourceDir)
+
+class BuildFettNginx(BuildNginx):
+    target = "fett-nginx"
+    project_name = "fett-nginx"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/nginx.git",
+        default_branch="fett")

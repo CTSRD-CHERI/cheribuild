@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2016 Alex Richardson
+# Copyright (c) 2020 Alex Richardson
 # All rights reserved.
 #
 # This software was developed by SRI International and the University of
@@ -28,7 +28,16 @@
 # SUCH DAMAGE.
 #
 
-# based on https://stackoverflow.com/questions/1057431/loading-all-modules-in-a-folder-in-python
-from pathlib import Path
-files = Path(__file__).parent.glob("*.py")
-__all__ = [f.name[:-3] for f in files if f.is_file() and f.name != "__init__.py"]
+from .crosscompileproject import *
+# from ..project import ReuseOtherProjectRepository
+
+
+class BuildPoco(CrossCompileCMakeProject):
+    project_name = "poco"
+    repository = GitRepository("https://github.com/dodsonmg/poco.git", default_branch="cheri", force_branch=True)
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.SYSROOT
+    
+    def __init__(self, config: CheriConfig, *args, **kwargs):
+        super().__init__(config, *args, **kwargs)
+        self.COMMON_FLAGS.append("-DHAVE_STDINT_H=1")

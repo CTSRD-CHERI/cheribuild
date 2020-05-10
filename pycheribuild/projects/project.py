@@ -48,7 +48,7 @@ from ..config.chericonfig import CheriConfig, Linkage, BuildType
 from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase, DefaultValueOnlyConfigOption
 from ..config.target_info import CrossCompileTarget, CPUArchitecture, TargetInfo, CompilationTargets
 from ..filesystemutils import FileSystemUtils
-from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, targetManager
+from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
 from ..utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
@@ -117,7 +117,7 @@ class ProjectSubclassDefinitionHook(type):
         if cls._always_add_suffixed_targets or len(supported_archs) > 1:
             # Add a the target for the default architecture
             base_target = MultiArchTargetAlias(targetName, cls)
-            targetManager.addTarget(base_target)
+            target_manager.add_target(base_target)
             # TODO: make this hold with CheriBSD
             assert cls._xtarget is CompilationTargets.NONE, "Should not be set!"
             # assert cls._should_not_be_instantiated, "multiarch base classes should not be instantiated"
@@ -129,7 +129,7 @@ class ProjectSubclassDefinitionHook(type):
                     new_name = cls.custom_target_name(targetName, arch)
                 else:
                     new_name = targetName + "-" + arch.generic_suffix
-                new_dict = cls.__dict__.copy()
+                new_dict = dict()
                 new_dict["_xtarget"] = arch
                 new_dict["_should_not_be_instantiated"] = False  # unlike the subclass we can instantiate these
                 new_dict["doNotAddToTargets"] = True  # We are already adding it here
@@ -137,13 +137,17 @@ class ProjectSubclassDefinitionHook(type):
                 new_dict["synthetic_base"] = cls  # We are already adding it here
                 # noinspection PyTypeChecker
                 new_type = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
-                targetManager.addTarget(MultiArchTarget(new_name, new_type, arch, base_target))
+                target_manager.add_target(MultiArchTarget(new_name, new_type, arch, base_target))
+                if arch is CompilationTargets.CHERIBSD_MIPS_PURECAP and new_name.endswith("-mips-purecap"):
+                    # Add deprecated alias for to keep the old -cheri names working
+                    if not new_name.startswith("cheribsd-") and not new_name.startswith("disk-image-") and not new_name.startswith("run-"):
+                        target_manager.add_target_alias(new_name.replace("-mips-purecap", "-cheri"), new_name, deprecated=True)
         else:
             assert len(supported_archs) == 1
             # Only one target is supported:
             cls._xtarget = supported_archs[0]
             cls._should_not_be_instantiated = False  # can be instantiated
-            targetManager.addTarget(Target(targetName, cls))
+            target_manager.add_target(Target(targetName, cls))
         # print("Adding target", targetName, "with deps:", cls.dependencies)
 
 
@@ -181,6 +185,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # To prevent non-suffixed targets in case the only target is not NATIVE
     _always_add_suffixed_targets = False  # add a suffixed target only if more than one variant is supported
 
+    @classmethod
+    def is_toolchain_target(cls):
+        return False
+
     @property
     def _no_overwrite_allowed(self) -> "typing.Tuple[str]":
         return "_xtarget",
@@ -212,7 +220,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if callable(dep_name):
                 dep_name = dep_name(cls, config)
             try:
-                dep_target = targetManager.get_target(dep_name, arch=expected_build_arch, config=config, caller=cls)
+                dep_target = target_manager.get_target(dep_name, arch=expected_build_arch, config=config, caller=cls)
             except KeyError:
                 fatalError("Could not find target '", dep_name, "' for ", cls.__name__, sep="")
                 raise
@@ -221,6 +229,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 if config.verbose:
                     statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
                                  "since it is an SDK target and --skip-sdk was passed.")
+                continue
+            if config.includeDependencies and (
+                    not config.include_toolchain_dependencies and dep_target.projectClass.is_toolchain_target()):
+                if config.verbose:
+                    statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
+                                 "since it is a toolchain target and --include-toolchain-dependencies was not passed.")
                 continue
             # Now find the actual crosscompile targets for target aliases:
             if isinstance(dep_target, MultiArchTargetAlias):
@@ -294,9 +308,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def get_instance_for_cross_target(cls: "typing.Type[Type_T]", cross_target: CrossCompileTarget,
                                       config: CheriConfig, caller: "SimpleProject" = None) -> "Type_T":
         # Also need to handle calling self.get_instance_for_cross_target() on a target-specific instance
-        # In that case cls.target returns e.g. foo-mips, etc and targetManager will always return the MIPS version
+        # In that case cls.target returns e.g. foo-mips, etc and target_manager will always return the MIPS version
         root_class = getattr(cls, "synthetic_base", cls)
-        target = targetManager.get_target(root_class.target, cross_target, config, caller=caller)
+        target = target_manager.get_target(root_class.target, cross_target, config, caller=caller)
         result = target.get_or_create_project(cross_target, config)
         assert isinstance(result, SimpleProject)
         found_target = result.get_crosscompile_target(config)
@@ -409,7 +423,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def get_class_for_target(cls: "typing.Type[Type_T]", arch: CrossCompileTarget) -> "typing.Type[Type_T]":
-        target = targetManager.get_target_raw(cls.target)
+        target = target_manager.get_target_raw(cls.target)
         if isinstance(target, MultiArchTarget):
             # check for exact match
             if target.target_arch is arch:
@@ -481,7 +495,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             # If we are adding to the base class or the target is not in
             if not _allow_unknown_targets:
                 for t in only_add_for_targets:
-                    assert any(t is x for x in cls.supported_architectures), \
+                    assert t in cls.supported_architectures, \
                         cls.__name__ + ": some of " + str(only_add_for_targets) + " not in " + str(
                             cls.supported_architectures)
             if target is not CompilationTargets.NONE and target not in only_add_for_targets:
@@ -490,6 +504,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # We don't want to inherit certain options from the non-target specific class since they should always be
         # set directly for that target. Currently the only such option is build-directory since sharing that would
         # break the build in most cases.
+        # Important: Only look in the current class, not in parent classes to avoid duplicate names!
         fallback_config_names = []
         if not _no_fallback_config_name and fallback_name_base:
             if name not in ["build-directory"]:
@@ -505,9 +520,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                         fallback_config_names.append(fallback_name_base + "/" + name)
         if extra_fallback_config_names:
             fallback_config_names.extend(extra_fallback_config_names)
+        alias_target_names = [prefix + "/" + name for prefix in cls.__dict__.get("_alias_target_names", tuple())]
         return cls._configLoader.addOption(config_option_key + "/" + name, shortname, default=default, type=kind,
                                            _owning_class=cls, group=cls._commandLineOptionGroup, helpHidden=help_hidden,
-                                           _fallback_names=fallback_config_names, **kwargs)
+                                           _fallback_names=fallback_config_names, _alias_names=alias_target_names, **kwargs)
 
     @classmethod
     def add_bool_option(cls, name: str, *, shortname=None, only_add_for_targets: list = None,
@@ -572,15 +588,16 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                                                homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__requiredSystemHeaders[header] = install_instructions
 
-    def query_yes_no(self, message: str = "", *, default_result=False, force_result=True, yes_no_str: str=None) -> bool:
+    @staticmethod
+    def _query_yes_no(config: CheriConfig, message: str = "", *, default_result=False, force_result=True, yes_no_str: str=None) -> bool:
         if yes_no_str is None:
             yes_no_str = " [Y]/n " if default_result else " y/[N] "
-        if self.config.pretend:
-            print(message + yes_no_str, coloured(AnsiColour.green, "y" if force_result else "n"), sep="")
+        if config.pretend:
+            print(message + yes_no_str, coloured(AnsiColour.green, "y" if force_result else "n"), sep="", flush=True)
             return force_result  # in pretend mode we always return true
-        if self.config.force:
+        if config.force:
             # in force mode we always return the forced result without prompting the user
-            print(message + yes_no_str, coloured(AnsiColour.green, "y" if force_result else "n"), sep="")
+            print(message + yes_no_str, coloured(AnsiColour.green, "y" if force_result else "n"), sep="", flush=True)
             return force_result
         if not sys.__stdin__.isatty():
             return default_result  # can't get any input -> return the default
@@ -588,6 +605,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if default_result:
             return not result.startswith("n")  # if default is yes accept anything other than strings starting with "n"
         return str(result).lower().startswith("y")  # anything but y will be treated as false
+
+    def query_yes_no(self, message: str = "", *, default_result=False, force_result=True, yes_no_str: str=None) -> bool:
+        return self._query_yes_no(self.config, message, default_result=default_result, force_result=force_result,
+            yes_no_str=yes_no_str)
 
     def ask_for_confirmation(self, message: str, error_message="Cannot continue.", default_result=True, **kwargs):
         if not self.query_yes_no(message, default_result=default_result, **kwargs):
@@ -804,7 +825,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         xtarget = self.crosscompile_target
         test_native = xtarget.is_native()
         # Only supported for CheriBSD-MIPS right now:
-        if not test_native and (not self.target_info.is_cheribsd or not xtarget.is_mips(include_purecap=True)):
+        if not test_native and (not self.target_info.is_cheribsd() or not xtarget.is_mips(include_purecap=True)):
             self.warning("Test scripts currently only work for CheriBSD-MIPS! Needs updating for RISCV")
             return
         if kernel_path is None and not test_native and "--kernel" not in self.config.test_extra_args:
@@ -1075,6 +1096,9 @@ class MakeOptions(object):
             if flag.strip() == "-D" + variable or flag.startswith(variable + "="):
                 self._flags.remove(flag)
 
+    def get_var(self, variable, default=None):
+        return self._vars.get(variable, default)
+
     def remove_flag(self, flag: str):
         if flag in self._flags:
             self._flags.remove(flag)
@@ -1253,8 +1277,10 @@ class GitRepository(SourceRepository):
     def update(self, current_project: "Project", *, src_dir: Path, default_src_dir: Path = None, revision=None,
                skip_submodules=False):
         self.ensure_cloned(current_project, src_dir=src_dir, default_src_dir=default_src_dir,
-                           skip_submodules=skip_submodules)
+            skip_submodules=skip_submodules)
         if current_project.skipUpdate:
+            return
+        if not src_dir.exists():
             return
 
         # handle repositories that have moved
@@ -1263,15 +1289,38 @@ class GitRepository(SourceRepository):
             for old_url in self.old_urls:
                 assert isinstance(old_url, bytes)
                 remote_url = runCmd("git", "remote", "get-url", "origin", captureOutput=True,
-                                    cwd=src_dir).stdout.strip()
+                    cwd=src_dir).stdout.strip()
                 if remote_url == old_url:
                     warningMessage(current_project.project_name, "still points to old repository", remote_url)
                     if current_project.query_yes_no("Update to correct URL?"):
                         runCmd("git", "remote", "set-url", "origin", self.url, runInPretendMode=True, cwd=src_dir)
 
+        # First fetch all the current upstream branch to see if we need to autostash/pull.
+        # Note: "git fetch" without other arguments will fetch from the currently configured upstream.
+        # If there is no upstream, it will just return immediately.
+        runCmd("git", "fetch", cwd=src_dir)
+        # We don't need to update if the upstream commit is an ancestor of the current HEAD.
+        # This check ensures that we avoid a rebase if the current branch is a few commits ahead of upstream.
+        # Note: merge-base --is-ancestor exits with code 0/1 instead of printing output so we need a try/catch
+        try:
+            is_ancestor = runCmd("git", "merge-base", "--is-ancestor", "@{upstream}", "HEAD", cwd=src_dir,
+                print_verbose_only=True, captureError=True, runInPretendMode=True, raiseInPretendMode=True)
+            assert is_ancestor.returncode == 0
+            current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is up-to-date or ahead of upstream."))
+            return
+        except subprocess.CalledProcessError as e:
+            if e.returncode == 1:
+                current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is behind upstream."))
+            elif e.returncode == 128 or (e.stderr and "no upstream configured" in e.stderr):
+                print(coloured(AnsiColour.blue, "No upstream configured to update from"))
+                return
+            else:
+                current_project.warning("Unknown return code", e)
+                raise  # some other error -> raise so that I can see what went wrong
+
         # make sure we run git stash if we discover any local changes
         has_changes = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
-                                 captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
+            captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
 
         pull_cmd = ["git", "pull"]
         has_autostash = False
@@ -1287,13 +1336,13 @@ class GitRepository(SourceRepository):
             if current_project.config.force_update:
                 statusUpdate("Updating", src_dir, "with autostash due to --force-update")
             elif not current_project.query_yes_no("Stash the changes, update and reapply?", default_result=True,
-                                                force_result=True):
+                    force_result=True):
                 statusUpdate("Skipping update of", src_dir)
                 return
             if not has_autostash:
                 # TODO: ask if we should continue?
                 stash_result = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
-                                      captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout
+                    captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout
                 # print("stash_result =", stash_result)
                 if "No local changes to save" in stash_result.decode("utf-8"):
                     # print("NO REAL CHANGES")
@@ -1301,7 +1350,8 @@ class GitRepository(SourceRepository):
 
         if not skip_submodules:
             pull_cmd.append("--recurse-submodules")
-        runCmd(pull_cmd + ["--rebase"], cwd=src_dir, print_verbose_only=True)
+        rebase_flag = "--rebase=merges" if git_version >= (2, 18) else "--rebase=preserve"
+        runCmd(pull_cmd + [rebase_flag], cwd=src_dir, print_verbose_only=True)
         if not skip_submodules:
             runCmd("git", "submodule", "update", "--init", "--recursive", cwd=src_dir, print_verbose_only=True)
         if has_changes and not has_autostash:
@@ -1313,17 +1363,17 @@ class GitRepository(SourceRepository):
             assert self.default_branch, "default_branch must be set if force_branch is true!"
             # TODO: move this to Project so it can also be used for other targets
             status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
-                            captureOutput=True, print_verbose_only=True, cwd=src_dir, runInPretendMode=True)
+                captureOutput=True, print_verbose_only=True, cwd=src_dir, runInPretendMode=True)
             if status.stdout.startswith(b"## ") and not status.stdout.startswith(
                     b"## " + self.default_branch.encode("utf-8") + b"..."):
                 current_branch = status.stdout[3:status.stdout.find(b"...")].strip()
                 warningMessage("You are trying to build the", current_branch.decode("utf-8"),
-                               "branch. You should be using", self.default_branch)
+                    "branch. You should be using", self.default_branch)
                 if current_project.query_yes_no("Would you like to change to the " + self.default_branch + " branch?"):
                     runCmd("git", "checkout", self.default_branch, cwd=src_dir)
                 else:
                     current_project.ask_for_confirmation("Are you sure you want to continue?", force_result=False,
-                                                         error_message="Wrong branch: " + current_branch.decode("utf-8"))
+                        error_message="Wrong branch: " + current_branch.decode("utf-8"))
 
 
 class DefaultInstallDir(Enum):
@@ -1742,7 +1792,7 @@ class Project(SimpleProject):
         if self.should_include_debug_info and not ".bfd" in self.target_info.linker.name:
             # Add a gdb_index to massively speed up running GDB on CHERIBSD:
             result.append("-Wl,--gdb-index")
-        if self.target_info.is_cheribsd and self.config.withLibstatcounters:
+        if self.target_info.is_cheribsd() and self.config.withLibstatcounters:
             # We need to include the constructor even if there is no reference to libstatcounters:
             # TODO: always include the .a file?
             result += ["-Wl,--whole-archive", "-lstatcounters", "-Wl,--no-whole-archive"]
@@ -1796,8 +1846,8 @@ class Project(SimpleProject):
                 if self.target_info.is_baremetal():
                     self.destdir = self.sdk_sysroot.parent
                     self._installPrefix = Path("/", self.target_info.target_triple)
-                elif  self.target_info.is_rtems():
-                    self.destdir = self.sdk_sysroot
+                elif self.target_info.is_rtems():
+                    self.destdir = self.sdk_sysroot.parent
                     self._installPrefix = Path("/", self.target_info.target_triple)
                 else:
                     self._installPrefix = Path("/usr/local", self.crosscompile_target.generic_suffix)
@@ -1823,7 +1873,7 @@ class Project(SimpleProject):
         # See https://github.com/CTSRD-CHERI/cheribuild/issues/33
         self.cross_warning_flags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
                                     "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types",
-                                    "-Werror=mips-cheri-prototypes", "-Werror=cheri-bitwise-operations"]
+                                    "-Werror=cheri-prototypes", "-Werror=cheri-bitwise-operations"]
         # Make underaligned capability loads/stores an error and require an explicit cast:
         self.cross_warning_flags.append("-Werror=pass-failed")
         self.host_warning_flags = []
@@ -1870,6 +1920,7 @@ class Project(SimpleProject):
             # (e.g. GDB) run the configure scripts lazily during the make all stage. If we don't set PKG_CONFIG_*
             # these configure steps will find the libraries on the host instead and cause the build to fail
             pkg_config_args = dict(
+                PKG_CONFIG_PATH=self.target_info.pkgconfig_dirs,
                 PKG_CONFIG_LIBDIR=self.target_info.pkgconfig_dirs,
                 PKG_CONFIG_SYSROOT_DIR=self.target_info.sysroot_dir
                 )
@@ -2088,10 +2139,10 @@ class Project(SimpleProject):
             self.run_with_logfile([_configure_path] + self.configureArgs, logfile_name="configure", cwd=cwd,
                 env=self.configureEnvironment)
 
-    def compile(self, cwd: Path = None):
+    def compile(self, cwd: Path = None, parallel: bool = True):
         if cwd is None:
             cwd = self.buildDir
-        self.run_make("all", cwd=cwd)
+        self.run_make("all", cwd=cwd, parallel=parallel)
 
     @property
     def makeInstallEnv(self):
@@ -2105,7 +2156,7 @@ class Project(SimpleProject):
     @property
     def real_install_root_dir(self):
         """
-        :return: the real install root directory (e.g. if prefix == /usr/local and desdir == /tmp/benchdir it will
+        :return: the real install root directory (e.g. if prefix == /usr/local and destdir == /tmp/benchdir it will
          return /tmp/benchdir/usr/local
         """
         if self.destdir is not None:
@@ -2517,7 +2568,7 @@ class CMakeProject(Project):
         # This must come first:
         if not self.compiling_for_host():
             # Despite the name it should also work for baremetal newlib
-            assert self.target_info.is_cheribsd or (self.target_info.is_baremetal() and self.target_info.is_newlib) or (self.target_info.is_rtems() and self.target_info.is_newlib)
+            assert self.target_info.is_cheribsd() or self.target_info.is_baremetal() or self.target_info.is_rtems()
             self._cmakeTemplate = includeLocalFile("files/CrossToolchain.cmake.in")
             self.toolchainFile = self.buildDir / "CrossToolchain.cmake"
             self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self.toolchainFile)

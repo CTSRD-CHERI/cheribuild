@@ -417,7 +417,7 @@ class _BuildDiskImageBase(SimpleProject):
     def make_disk_image(self):
         if self.is_x86:
             if not self.mkimg_cmd:
-                self.fatal("Missing freebsd mkimg command! Should be found in FreeBSD build dir")
+                self.fatal("Missing mkimg command! Should be found in FreeBSD build dir (or set $MKIMG_CMD)")
             root_partition = self.disk_image_path.with_suffix(".partition.img")
             self.make_rootfs_image(root_partition)
             self.build_gpt_image(root_partition)
@@ -593,13 +593,10 @@ def _default_disk_image_name(config: CheriConfig, directory: Path, project: Simp
     if xtarget.is_mips(include_purecap=True):
         # Backwards compat (different prefix for hybrid+purecap images):
         if xtarget.is_cheri_hybrid():
-            return directory / ("cheri" + project.cheri_config_suffix + "-disk.img")
+            return directory / (img_prefix + "mips-hybrid" + project.cheri_config_suffix + ".img")
         if xtarget.is_cheri_purecap():
-            return directory / ("purecap-" + project.cheri_config_suffix + "-disk.img")
-    suffix = xtarget.generic_suffix if xtarget else "<TARGET>"
-    if project.compiling_for_mips(include_purecap=False):
-        if config.mips_float_abi == MipsFloatAbi.HARD:
-            suffix += "-hardfloat"
+            return directory / (img_prefix + "mips-purecap" + project.cheri_config_suffix + ".img")
+    suffix = (xtarget.generic_suffix if xtarget else "<TARGET>") + project.cheri_config_suffix
     return config.outputRoot / (img_prefix + suffix + ".img")
 
 
@@ -624,7 +621,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             return includeLocalFile("files/minimal-image/etc/rc.conf.in")
 
     default_disk_image_path = ComputedDefaultValue(
-        function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "minimal-"),
+        function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "cheribsd-minimal-"),
         as_string="$OUTPUT_ROOT/minimal-<TARGET>-disk.img depending on architecture")
 
     @classmethod
@@ -656,10 +653,12 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         self.input_METALOG = self.rootfsDir / "cheribsdbox.mtree"
         self.file_templates = BuildMinimalCheriBSDDiskImage._MinimalFileTemplates()
         self.is_minimal = True
-        self.have_cplusplus_support = True
+
+    def _have_cplusplus_support(self, libdirs: "typing.List[str]"):
         # C++ runtime not available for RISC-V purecap due to https://github.com/CTSRD-CHERI/llvm-project/issues/379
-        if self.rootfs_xtarget.is_cheri_purecap([CPUArchitecture.RISCV64]):
-            self.have_cplusplus_support = False
+        if self.rootfs_xtarget.is_riscv(include_purecap=True):
+            return not self.rootfs_xtarget.is_cheri_purecap() and libdirs != ["usr/libcheri"]
+        return True
 
     def process_files_list(self, files_list):
         for line in io.StringIO(files_list).readlines():
@@ -681,7 +680,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         self.verbose_print("Adding files from rootfs to minimal image:")
         files_to_add = [includeLocalFile("files/minimal-image/base.files"),
                         includeLocalFile("files/minimal-image/etc.files")]
-        if self.have_cplusplus_support:
+        if self._have_cplusplus_support(["lib", "usr/lib"]):
             files_to_add.append(includeLocalFile("files/minimal-image/need-cplusplus.files"))
 
         for files_list in files_to_add:
@@ -752,7 +751,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             # Needed for most benchmarks (MIPS-only):
             required_libs.append("libstatcounters.so.3")
 
-        if self.have_cplusplus_support:
+        if self._have_cplusplus_support(libdirs):
             required_libs += ["libc++.so.1", "libcxxrt.so.1", "libgcc_s.so.1"]
 
         for library_basename in required_libs:
@@ -863,13 +862,6 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
         function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "cheribsd-"),
         as_string="$OUTPUT_ROOT/$arch_prefix-disk.img.")
 
-    @staticmethod
-    def custom_target_name(base_target: str, xtarget: CrossCompileTarget) -> str:
-        # backwards compatibility:
-        if xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            return base_target + "-purecap"
-        return base_target + "-" + xtarget.generic_suffix
-
     @classmethod
     def dependencies(cls, config):
         xtarget = cls.get_crosscompile_target(config)
@@ -940,3 +932,8 @@ class BuildFreeBSDGFEDiskImage(BuildFreeBSDImage):
     project_name = "disk-image-freebsd-gfe"
     _source_class = BuildFreeBSDGFE
     hide_options_from_help = True
+
+
+# Backwards compatibility:
+target_manager.add_target_alias("disk-image-purecap", "disk-image-mips-purecap", deprecated=True)
+target_manager.add_target_alias("disk-image-minimal-purecap", "disk-image-minimal-mips-purecap", deprecated=True)

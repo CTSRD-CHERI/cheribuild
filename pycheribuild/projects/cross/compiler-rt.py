@@ -31,6 +31,7 @@
 from .crosscompileproject import *
 from ..llvm import BuildCheriLLVM
 from ..project import ReuseOtherProjectDefaultTargetRepository
+from ...utils import classproperty
 
 
 class BuildCompilerRt(CrossCompileCMakeProject):
@@ -42,7 +43,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     _default_architecture = CompilationTargets.CHERIBSD_MIPS_PURECAP
     supported_architectures = [_default_architecture] + \
                               CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + \
-                              CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
+                              [CompilationTargets.RTEMS_RISCV64_PURECAP]
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -53,7 +54,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH=self.target_info.target_triple.split('-')[0])
 
         self.add_cmake_options(
-            LLVM_CONFIG_PATH=BuildCheriLLVM.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
+            LLVM_CONFIG_PATH=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
             LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=True,
@@ -94,24 +95,35 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     # TODO: add an option to allow upstream llvm?
     repository = ReuseOtherProjectDefaultTargetRepository(BuildCheriLLVM, subdirectory="compiler-rt")
     project_name = "compiler-rt-builtins"
-    default_install_dir = DefaultInstallDir.COMPILER_RESOURCE_DIR
     _check_install_dir_conflict = False
-    supported_architectures =CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
+    is_sdk_target = True
+    dependencies = ["newlib"]
+    needs_sysroot = False  # We don't need a complete sysroot
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + [
+        CompilationTargets.RTEMS_RISCV64_PURECAP]
     _default_architecture = CompilationTargets.BAREMETAL_NEWLIB_MIPS64
+
+    # Note: needs to be @classproperty since it is called before __init__
+    @classproperty
+    def default_install_dir(cls):
+        # Install compiler-rt to the sysroot to handle purecap and non-CHERI RTEMS
+        if cls._xtarget is CompilationTargets.RTEMS_RISCV64_PURECAP:
+            return DefaultInstallDir.SYSROOT
+        return DefaultInstallDir.COMPILER_RESOURCE_DIR
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         assert self.target_info.is_baremetal() or self.target_info.is_rtems(), "No other targets supported yet"
-        assert self.target_info.is_newlib, "No other targets supported yet"
+        assert self.target_info.is_newlib(), "No other targets supported yet"
         # self.COMMON_FLAGS.append("-v")
         self.COMMON_FLAGS.append("-ffreestanding")
         if self.compiling_for_mips(include_purecap=False):
             self.add_cmake_options(COMPILER_RT_HAS_FPIC_FLAG=False)  # HACK: currently we build everything as -fno-pic
 
         if self.target_info.is_rtems():
-            self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY") # RTEMS only needs static libs
+            self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")  # RTEMS only needs static libs
         self.add_cmake_options(
-            LLVM_CONFIG_PATH=BuildCheriLLVM.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
+            LLVM_CONFIG_PATH=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
             LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=False,
@@ -138,7 +150,9 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
 
         libname = "libclang_rt.builtins-" + self.triple_arch + ".a"
 
-        if not self.target_info.is_rtems():
+        if self.target_info.is_rtems():
+            self.moveFile(self.installDir / "lib/rtems5" / libname, self.installDir / "lib" / libname)
+        else:
             self.moveFile(self.installDir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
 
             if self.compiling_for_cheri():

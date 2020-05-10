@@ -173,6 +173,8 @@ class RunSyzkaller(SimpleProject):
             self, cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID).syzkaller_binary()
         self.kernel_path = BuildCHERIBSD.get_installed_kernel_path(
             self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP)
+        self.kernel_src_path = BuildCHERIBSD.get_instance(self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).sourceDir
+        self.kernel_build_path = BuildCHERIBSD.get_instance(self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).buildDir
         self.disk_image = BuildCheriBSDDiskImage.get_instance(
             self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).disk_image_path
 
@@ -192,11 +194,18 @@ class RunSyzkaller(SimpleProject):
                 "name": "cheribsd-n64",
                 "target": "freebsd/mips64",
                 "http": ":10000",
+                "rpc": ":10001",
                 "workdir": str(self.syz_workdir),
                 "syzkaller": str(BuildSyzkaller.get_instance(
                     self, cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID)
                                  .syzkaller_install_path().parent),
                 "sshkey": str(self.syz_ssh_key),
+                # (used for report symbolization and coverage reports, optional).
+                "kernel_obj": str(self.kernel_path),
+                # Kernel source directory (if not set defaults to KernelObj)
+                "kernel_src": str(self.kernel_src_path),
+                # Location of the driectory where the kernel was built (if not set defaults to KernelSrc)
+                "kernel_build_src": str(self.kernel_build_path),
                 "sandbox": "none",
                 "procs": 1,
                 "image": str(self.disk_image),
@@ -212,6 +221,7 @@ class RunSyzkaller(SimpleProject):
                     "timeout": 60
                     }
                 }
+            self.verbose_print("Using syzkaller configuration", template)
             if not self.config.pretend:
                 with syz_config.open("w+") as fp:
                     print("Emit syzkaller configuration to {}".format(syz_config))

@@ -37,6 +37,7 @@ import argparse
 import atexit
 import datetime
 import os
+import re
 import shlex
 import shutil
 import socket
@@ -60,13 +61,27 @@ BOOT_FAILURE = "Enter full pathname of shell or RETURN for /bin/sh"
 BOOT_FAILURE2 = "wait for /bin/sh on /etc/rc failed'"
 SHELL_OPEN = "exec /bin/sh"
 LOGIN = "login:"
-PROMPT = "root@.+:.+# "  # /bin/csh
-PROMPT_SH = "# "  # /bin/sh
+INITIAL_PROMPT_CSH = "root@.+:.+# "  # /bin/csh
+INITIAL_PROMPT_SH = "# "  # /bin/sh
 STOPPED = "Stopped at"
 PANIC = "panic: trap"
 PANIC_KDB = "KDB: enter: panic"
-CHERI_TRAP = "USER_CHERI_EXCEPTION: pid \\d+ tid \\d+ \(.+\)"
-SHELL_LINE_CONTINUATION = "\r\r\n> "
+CHERI_TRAP = "USER_CHERI_EXCEPTION: pid \\d+ tid \\d+ \\(.+\\)"
+# SHELL_LINE_CONTINUATION = "\r\r\n> "
+
+#from pexpect.replwrap import PEXPECT_PROMPT, PEXPECT_CONTINUATION_PROMPT
+# Similar approach to pexpect.replwrap:
+# If the user runs 'env', the value of PS1 will be in the output. To avoid seeing that as the next prompt,
+# we'll embed the marker characters# for invisible characters in the prompt; these show up when inspecting the
+# environment variable, but not when bash displays the prompt.
+# Unfortunately FreeBSD sh doesn't handle '\\[\\]', so we rely on FreeBSD sh PS1/PS2 mapping double backslash to
+# single backslash. If we embed that in the middle of the prompt string, the regexes won't match for 'env' output.
+PEXPECT_PROMPT = "[PEXPECT\\PROMPT]>"
+PEXPECT_CONTINUATION_PROMPT = "[++PEXPECT\\PROMPT++]"
+PEXPECT_PROMPT_SET_STR = PEXPECT_PROMPT.replace("\\", "\\\\")
+PEXPECT_CONTINUATION_PROMPT_SET_STR = PEXPECT_CONTINUATION_PROMPT.replace("\\", "\\\\")
+PEXPECT_PROMPT_RE = re.escape(PEXPECT_PROMPT)
+PEXPECT_CONTINUATION_PROMPT_RE = re.escape(PEXPECT_CONTINUATION_PROMPT)
 
 FATAL_ERROR_MESSAGES = [CHERI_TRAP]
 
@@ -81,11 +96,14 @@ class CheriBSDCommandFailed(Exception):
     def __str__(self):
         return "".join(map(str, self.args))
 
+
 class CheriBSDCommandTimeout(CheriBSDCommandFailed):
     pass
 
+
 class CheriBSDMatchedErrorOutput(CheriBSDCommandFailed):
     pass
+
 
 class SmbMount(object):
     def __init__(self, hostdir: str, readonly: bool, in_target: str):
@@ -123,10 +141,12 @@ class CheriBSDInstance(pexpect.spawn):
         assert isinstance(pattern, list), "expected list and not " + str(pattern)
         return self._expect_and_handle_panic(pattern, timeout=timeout, timeout_msg=timeout_msg, **kwargs)
 
-    def expect_prompt(self, timeout=-1, timeout_msg="timeout", **kwargs):
-        return self._expect_and_handle_panic([PROMPT], timeout=timeout, timeout_msg=timeout_msg, **kwargs)
+    def expect_prompt(self, timeout=-1, timeout_msg="timeout", timeout_fatal=True, **kwargs):
+        return self.expect_exact([PEXPECT_PROMPT], timeout=timeout, timeout_msg=timeout_msg,
+            timeout_fatal=timeout_fatal, **kwargs)
 
-    def expect_exact(self, pattern_list, timeout=-1, pretend_result=None, timeout_msg="timeout", **kwargs):
+    def expect_exact(self, pattern_list, timeout=-1, pretend_result=None, timeout_fatal=True, timeout_msg="timeout",
+                     **kwargs):
         assert PANIC not in pattern_list
         assert STOPPED not in pattern_list
         assert PANIC_KDB not in pattern_list
@@ -140,9 +160,9 @@ class CheriBSDInstance(pexpect.spawn):
                 failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
             return i - len(panic_regexes)
         except pexpect.TIMEOUT:
-            failure(timeout_msg, ": ", str(self))
+            failure(timeout_msg, ": ", str(self), exit=timeout_fatal)
 
-    def _expect_and_handle_panic(self, options: list, timeout_msg, **kwargs):
+    def _expect_and_handle_panic(self, options: list, timeout_msg, timeout_fatal=True, **kwargs):
         assert PANIC not in options
         assert STOPPED not in options
         assert PANIC_KDB not in options
@@ -154,15 +174,16 @@ class CheriBSDInstance(pexpect.spawn):
                 failure("EXITING DUE TO KERNEL PANIC!", exit=self.EXIT_ON_KERNEL_PANIC)
             return i - len(panic_regexes)
         except pexpect.TIMEOUT:
-            failure(timeout_msg, ": ", str(self))
+            failure(timeout_msg, ": ", str(self), exit=timeout_fatal)
 
-    def run(self, cmd: str, *, expected_output=None, error_output=None, cheri_trap_fatal=True, ignore_cheri_trap=False, timeout=60):
+    def run(self, cmd: str, *, expected_output=None, error_output=None, cheri_trap_fatal=True, ignore_cheri_trap=False,
+            timeout=60):
         run_cheribsd_command(self, cmd, expected_output=expected_output, error_output=error_output,
-                             cheri_trap_fatal=cheri_trap_fatal, ignore_cheri_trap=ignore_cheri_trap, timeout=timeout)
+            cheri_trap_fatal=cheri_trap_fatal, ignore_cheri_trap=ignore_cheri_trap, timeout=timeout)
 
-    def checked_run(self, cmd: str, *, timeout=600, ignore_cheri_trap=False, error_output: str=None, **kwargs):
+    def checked_run(self, cmd: str, *, timeout=600, ignore_cheri_trap=False, error_output: str = None, **kwargs):
         checked_run_cheribsd_command(self, cmd, timeout=timeout, ignore_cheri_trap=ignore_cheri_trap,
-                                     error_output=error_output, **kwargs)
+            error_output=error_output, **kwargs)
 
 
 def info(*args, **kwargs):
@@ -221,11 +242,17 @@ def prepend_ld_library_path(qemu: CheriBSDInstance, path: str):
 
 
 def set_ld_library_path_with_sysroot(qemu: CheriBSDInstance):
-    qemu.run("export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/sysroot/lib:/sysroot/usr/lib:/sysroot/usr/local/mips/lib", timeout=3)
-    qemu.run("export LD_CHERI_LIBRARY_PATH=/usr/libcheri:/usr/local/libcheri:/sysroot/libcheri:/sysroot/usr/libcheri:/sysroot/usr/local/cheri/lib:/sysroot/usr/local/cheri/libcheri", timeout=3)
+    qemu.run(
+        "export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/sysroot/lib:/sysroot/usr/lib:/sysroot/usr/local/mips/lib",
+        timeout=3)
+    qemu.run(
+        "export LD_CHERI_LIBRARY_PATH=/usr/libcheri:/usr/local/libcheri:/sysroot/libcheri:/sysroot/usr/libcheri"
+        ":/sysroot/usr/local/cheri/lib:/sysroot/usr/local/cheri/libcheri",
+        timeout=3)
 
 
-def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, args: argparse.Namespace = None, what: str = None) -> Path:
+def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, args: argparse.Namespace = None,
+                     what: str = None) -> Path:
     # drop the suffix and then try decompressing
     def bunzip(archive):
         return decompress(archive, force_decompression, cmd=["bunzip2", "-v", "-f"], keep_archive=keep_archive)
@@ -284,7 +311,7 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
 
     results = ["/bin/sh: [/\\w\\d_-]+: not found",
                "ld(-cheri)?-elf.so.1: Shared object \".+\" not found, required by \".+\"",
-               pexpect.TIMEOUT, PROMPT, SHELL_LINE_CONTINUATION]
+               pexpect.TIMEOUT, PEXPECT_PROMPT_RE, PEXPECT_CONTINUATION_PROMPT_RE]
     error_output_index = -1
     cheri_trap_index = -1
     if error_output:
@@ -307,13 +334,13 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
     elif i == 4:
         raise CheriBSDCommandFailed("Detected line continuation, cannot handle this yet! ", cmd)
     elif i == error_output_index:
-        # wait up to 5 seconds for a prompt to ensure the full output has been printed
-        qemu.expect([PROMPT], timeout=5)
+        # wait up to 20 seconds for a prompt to ensure the full output has been printed
+        qemu.expect_prompt(timeout=20, timeout_fatal=False)
         qemu.flush()
         raise CheriBSDMatchedErrorOutput("Matched error output ", error_output, " in ", cmd)
     elif i == cheri_trap_index:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
-        qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
+        qemu.expect_prompt(timeout=20, timeout_fatal=False)
         qemu.flush()
         if cheri_trap_fatal:
             raise CheriBSDCommandFailed("Got CHERI TRAP!")
@@ -322,12 +349,13 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
 
 
 def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, ignore_cheri_trap=False,
-                                 error_output: str=None, **kwargs):
+                                 error_output: str = None, **kwargs):
     starttime = datetime.datetime.now()
-    qemu.sendline(cmd + " ;if test $? -eq 0; then echo '__COMMAND' 'SUCCESSFUL__'; else echo '__COMMAND' 'FAILED__'; fi")
+    qemu.sendline(
+        cmd + " ;if test $? -eq 0; then echo '__COMMAND' 'SUCCESSFUL__'; else echo '__COMMAND' 'FAILED__'; fi")
     cheri_trap_index = None
     error_output_index = None
-    results = ["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__", SHELL_LINE_CONTINUATION]
+    results = ["__COMMAND SUCCESSFUL__", "__COMMAND FAILED__", PEXPECT_CONTINUATION_PROMPT_RE]
     try:
         if not ignore_cheri_trap:
             cheri_trap_index = len(results)
@@ -343,21 +371,22 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, 
         raise CheriBSDCommandTimeout("timeout after ", runtime, " running '", cmd, "': ", str(qemu))
     elif i == 0:
         success("ran '", cmd, "' successfully (in ", runtime.total_seconds(), "s)")
-        qemu.expect([PROMPT])
+        qemu.expect_prompt(timeout=10)
         qemu.flush()
         return True
     elif i == 2:
         raise CheriBSDCommandFailed("Detected line continuation, cannot handle this yet! ", cmd)
     elif i == cheri_trap_index:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
-        qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
+        qemu.expect_prompt(timeout=20, timeout_fatal=False)
         qemu.flush()
         raise CheriBSDCommandFailed("Got CHERI trap running '", cmd, "' (after '", runtime.total_seconds(), "s)")
     elif i == error_output_index:
         # wait up to 20 seconds for the shell prompt
-        qemu.expect([pexpect.TIMEOUT, PROMPT], timeout=20)
+        qemu.expect_prompt(timeout=20, timeout_fatal=False)
         qemu.flush()
-        raise CheriBSDMatchedErrorOutput("Matched error output '" + error_output + "' running '", cmd, "' (after '", runtime.total_seconds(), ")")
+        raise CheriBSDMatchedErrorOutput("Matched error output '" + error_output + "' running '", cmd, "' (after '",
+            runtime.total_seconds(), ")")
     else:
         assert i < len(results), str(i) + " >= len(" + str(results) + ")"
         raise CheriBSDCommandFailed("error running '", cmd, "' (after '", runtime.total_seconds(), "s)")
@@ -384,21 +413,20 @@ def setup_ssh_for_root_login(qemu: CheriBSDInstance, pubkey: Path):
         qemu.expect(["service: not found", "Starting sshd.", "Cannot 'restart' sshd."], timeout=120)
     except pexpect.TIMEOUT:
         failure("Timed out setting up SSH keys")
-    qemu.expect([PROMPT])
+    qemu.expect_prompt(timeout=60)
     time.sleep(2)  # sleep for two seconds to avoid a rejection
     success("===> SSH authorized_keys set up")
 
 
-def _set_posix_sh_prompt(child):
+def _set_pexpect_sh_prompt(child):
     success("===> setting PS1")
     # Make the prompt match PROMPT
-    child.sendline("export PS1=\"{}\"".format("root@qemu-test:~ \\\\$ "))
-    # No need to eat the echoed command since we end the prompt with \$ (expands to # or $) instead of #
+    prompt_change = u"PS1='{0}' PS2='{1}' PROMPT_COMMAND=''".format(PEXPECT_PROMPT_SET_STR,
+        PEXPECT_CONTINUATION_PROMPT_SET_STR)
+    child.sendline(prompt_change)
     # Find the prompt
-    j = child.expect([pexpect.TIMEOUT, PROMPT], timeout=60)
-    if j == 0:  # timeout
-        failure("timeout after setting command prompt ", str(child))
-    success("===> successfully set PS1")
+    child.expect_prompt(timeout=60)
+    success("===> successfully set PS1/PS2")
 
 
 # noinspection PyMethodMayBeStatic,PyUnusedLocal
@@ -449,7 +477,7 @@ def start_dhclient(qemu: CheriBSDInstance):
         if i == 0:  # Timeout
             failure("timeout awaiting dhclient ", str(qemu))
     success("===> le0 bound to QEMU networking")
-    qemu.expect_exact(PROMPT_SH, timeout=30)
+    qemu.expect_prompt(timeout=30)
 
 
 def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *,
@@ -523,29 +551,29 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
             success("===> got login prompt")
             child.sendline("root")
 
-            i = child.expect([PROMPT, PROMPT_SH], timeout=3 * 60,
+            i = child.expect([INITIAL_PROMPT_CSH, INITIAL_PROMPT_SH], timeout=3 * 60,
                 timeout_msg="timeout awaiting command prompt ")  # give CheriABI csh 3 minutes to start
             if i == 0:  # /bin/csh prompt
                 success("===> got csh command prompt, starting POSIX sh")
                 # csh is weird, use the normal POSIX sh instead
                 child.sendline("sh")
-                i = child.expect([PROMPT, PROMPT_SH], timeout=3 * 60,
+                i = child.expect([INITIAL_PROMPT_CSH, INITIAL_PROMPT_SH], timeout=3 * 60,
                     timeout_msg="timeout starting /bin/sh")  # give CheriABI sh 3 minutes to start
                 if i == 0:  # POSIX sh with PS1 set
                     success("===> started POSIX sh (PS1 already set)")
                 elif i == 1:  # POSIX sh without PS1
                     success("===> started POSIX sh (PS1 not set)")
-                    _set_posix_sh_prompt(child)
+                    _set_pexpect_sh_prompt(child)
             if i == 1:  # /bin/sh prompt
                 success("===> got /sbin/sh prompt")
-                _set_posix_sh_prompt(child)
+                _set_pexpect_sh_prompt(child)
         elif i == 1:  # shell started from /etc/rc:
-            child.expect_exact(PROMPT_SH, timeout=30)
+            child.expect_exact(INITIAL_PROMPT_SH, timeout=30)
             success("===> /etc/rc completed, got command prompt")
             # set up network (bluehive image tries to use atse0)
             if not have_dhclient:
                 start_dhclient(child)
-            _set_posix_sh_prompt(child)
+            _set_pexpect_sh_prompt(child)
         else:
             # If this was a CHEIR trap wait up to 20 seconds to ensure the dump output has been printed
             child.expect(["THIS STRING SHOULD NOT MATCH, JUST WAITING FOR 20 secs", pexpect.TIMEOUT], timeout=20)
@@ -567,15 +595,17 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     smb_dirs = qemu.smb_dirs  # type: typing.List[SmbMount]
     setup_tests_starttime = datetime.datetime.now()
     # disable coredumps, otherwise we get no space left on device errors
-    for dir in smb_dirs:
+    for smb_dir in smb_dirs:
         # If we are mounting /build set kern.corefile to point there:
-        if not dir.readonly and dir.in_target == "/build":
+        if not smb_dir.readonly and smb_dir.in_target == "/build":
             qemu.run("sysctl kern.corefile=/build/%N.%P.core")
     qemu.run("sysctl kern.coredump=0")
     # ensure that /usr/local exists and if not create it as a tmpfs (happens in the minimal image)
     # However, don't do it on the full image since otherwise we would install kyua to the tmpfs on /usr/local
-    # We can differentiate the two by checking if /boot/kernel/kernel exists since it will be missing in the minimal image
-    qemu.run("if [ ! -e /boot/kernel/kernel ]; then mkdir -p /usr/local && mount -t tmpfs -o size=300m tmpfs /usr/local; fi")
+    # We can differentiate the two by checking if /boot/kernel/kernel exists since it will be missing in the minimal
+    # image
+    qemu.run(
+        "if [ ! -e /boot/kernel/kernel ]; then mkdir -p /usr/local && mount -t tmpfs -o size=300m tmpfs /usr/local; fi")
     # Or this: if [ "$(ls -A $DIR)" ]; then echo "Not Empty"; else echo "Empty"; fi
     qemu.run("if [ ! -e /opt ]; then mkdir -p /opt && mount -t tmpfs -o size=500m tmpfs /opt; fi")
     qemu.run("df -ih")
@@ -584,7 +614,8 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     def do_scp(src, dst="/"):
         # strip the .pub from the key file
         private_key = str(Path(ssh_keyfile).with_suffix(""))
-        # CVE-2018-20685 -> Can no longer use '.' See https://superuser.com/questions/1403473/scp-error-unexpected-filename
+        # CVE-2018-20685 -> Can no longer use '.' See
+        # https://superuser.com/questions/1403473/scp-error-unexpected-filename
         scp_cmd = ["scp", "-B", "-r", "-P", str(ssh_port), "-o", "StrictHostKeyChecking=no",
                    "-o", "UserKnownHostsFile=/dev/null",
                    "-i", shlex.quote(private_key), str(src), "root@localhost:" + dst]
@@ -618,14 +649,15 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
         qemu.run("mkdir -p '{}'".format(d.in_target))
         mount_command = "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu{} '{}'".format(index + 1, d.in_target)
         try:
-            checked_run_cheribsd_command(qemu, mount_command, error_output="unable to open connection: syserr = Operation timed out", pretend_result=0)
+            checked_run_cheribsd_command(qemu, mount_command,
+                error_output="unable to open connection: syserr = Operation timed out", pretend_result=0)
         except CheriBSDMatchedErrorOutput:
             failure("QEMU SMBD timed out while mounting ", d.in_target, ". Trying one more time.", exit=False)
             info("Waiting for 5 seconds before retrying mount_smbfs...")
             if not PRETEND:
-                time.sleep(5) # wait 5 seconds, hopefully the server is less busy then.
-            # If the smbfs connection timed out try once more. This can happen when multiple libc++ test jobs are running
-            # on the same jenkins slaves so one of them might time out
+                time.sleep(5)  # wait 5 seconds, hopefully the server is less busy then.
+            # If the smbfs connection timed out try once more. This can happen when multiple libc++ test jobs are
+            # running on the same jenkins slaves so one of them might time out
             checked_run_cheribsd_command(qemu, mount_command)
 
     if test_archives:
@@ -635,20 +667,17 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     # ensure that /tmp is world-writable
     qemu.run("chmod 777 /tmp")
 
-
     for lib in ld_preload_target_paths:
         # Ensure that the libraries exist
         checked_run_cheribsd_command(qemu, "test -x '{}'".format(lib))
     if ld_preload_target_paths:
         checked_run_cheribsd_command(qemu, "export '{}={}'".format(args.test_ld_preload_variable,
-                                                                   ":".join(ld_preload_target_paths)))
+            ":".join(ld_preload_target_paths)))
     success("Preparing test enviroment took ", datetime.datetime.now() - setup_tests_starttime)
     if test_setup_function:
         setup_tests_starttime = datetime.datetime.now()
         test_setup_function(qemu, args)
         success("Additional test enviroment setup took ", datetime.datetime.now() - setup_tests_starttime)
-
-
 
     if args.test_environment_only:
         success("Test environment set up. Skipping tests due to --test-environment-only")
@@ -678,7 +707,8 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
     i = qemu.expect([pexpect.TIMEOUT, "TESTS COMPLETED", "TESTS UNSTABLE", "TESTS FAILED"], timeout=timeout)
     testtime = datetime.datetime.now() - run_tests_starttime
     if i == 0:  # Timeout
-        return failure("timeout after ", testtime, "waiting for tests (command='", test_command, "'): ", str(qemu), exit=False)
+        return failure("timeout after ", testtime, "waiting for tests (command='", test_command, "'): ", str(qemu),
+            exit=False)
     elif i == 1 or i == 2:
         if i == 2:
             success("===> Tests completed (but with FAILURES)!")
@@ -703,40 +733,43 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(allow_abbrev=False)
     parser.add_argument("--qemu-cmd", "--qemu", default="qemu-system-cheri")
     parser.add_argument("--kernel", default="/usr/local/share/cheribsd/cheribsd-malta64-kernel")
-    parser.add_argument("--disk-image", default=None,  # default="/usr/local/share/cheribsd/cheribsd-full.img"
-                        )
+    parser.add_argument("--disk-image", default=None)  # default="/usr/local/share/cheribsd/cheribsd-full.img"
     parser.add_argument("--extract-images-to", help="Path where the compressed images should be extracted to")
     parser.add_argument("--reuse-image", action="store_true")
     parser.add_argument("--keep-compressed-images", action="store_true", default=True, dest="keep_compressed_images")
     parser.add_argument("--no-keep-compressed-images", action="store_false", dest="keep_compressed_images")
-    parser.add_argument("--make-disk-image-copy", default=True, action="store_true", help="Make a copy of the disk image before running tests")
+    parser.add_argument("--make-disk-image-copy", default=True, action="store_true",
+        help="Make a copy of the disk image before running tests")
     parser.add_argument("--no-make-disk-image-copy", action="store_false", dest="disk_image_copy")
-    parser.add_argument("--keep-disk-image-copy", default=False, action="store_true", help="Keep the copy of the disk image (if a copy was made)")
-    parser.add_argument("--trap-on-unrepresentable", action="store_true", help="CHERI trap on unrepresentable caps instead of detagging")
+    parser.add_argument("--keep-disk-image-copy", default=False, action="store_true",
+        help="Keep the copy of the disk image (if a copy was made)")
+    parser.add_argument("--trap-on-unrepresentable", action="store_true",
+        help="CHERI trap on unrepresentable caps instead of detagging")
     parser.add_argument("--ssh-key", default=default_ssh_key())
     parser.add_argument("--ssh-port", type=int, default=None)
     parser.add_argument("--use-smb-instead-of-ssh", action="store_true")
     parser.add_argument("--smb-mount-directory", metavar="HOST_PATH:IN_TARGET",
-                        help="Share a host directory with the QEMU guest via smb. This option can be passed multiple times "
-                             "to share more than one directory. The argument should be colon-separated as follows: "
-                             "'<HOST_PATH>:<EXPECTED_PATH_IN_TARGET>'. Appending '@ro' to HOST_PATH will cause the directory "
-                             "to be mapped as a read-only smb share", action="append",
-                        dest="smb_mount_directories", type=parse_smb_mount, default=[])
+        help="Share a host directory with the QEMU guest via smb. This option can be passed multiple times "
+             "to share more than one directory. The argument should be colon-separated as follows: "
+             "'<HOST_PATH>:<EXPECTED_PATH_IN_TARGET>'. Appending '@ro' to HOST_PATH will cause the directory "
+             "to be mapped as a read-only smb share", action="append",
+        dest="smb_mount_directories", type=parse_smb_mount, default=[])
     parser.add_argument("--test-archive", "-t", action="append", nargs=1)
     parser.add_argument("--test-command", "-c")
     parser.add_argument('--test-ld-preload', action="append", nargs=1, metavar='LIB',
-                        help="Copy LIB to the guest andLD_PRELOAD it before running tests")
+        help="Copy LIB to the guest andLD_PRELOAD it before running tests")
     parser.add_argument('--test-ld-preload-variable', type=str, default=None,
-                        help="The environment variable to set to LD_PRELOAD a library. should be set to either LD_PRELOAD or LD_CHERI_PRELOAD")
+        help="The environment variable to set to LD_PRELOAD a library. should be set to either LD_PRELOAD or "
+             "LD_CHERI_PRELOAD")
     parser.add_argument("--test-timeout", "-tt", type=int, default=60 * 60)
     # noinspection PyTypeChecker
     parser.add_argument("--qemu-logfile", help="File to write all interactions with QEMU to", type=Path)
     parser.add_argument("--test-environment-only", action="store_true",
-                        help="Setup mount paths + SSH for tests but don't actually run the tests (implies --interact)")
+        help="Setup mount paths + SSH for tests but don't actually run the tests (implies --interact)")
     parser.add_argument("--skip-ssh-setup", action="store_true",
-                        help="Don't start sshd on boot. Saves a few seconds of boot time if not needed.")
+        help="Don't start sshd on boot. Saves a few seconds of boot time if not needed.")
     parser.add_argument("--pretend", "-p", action="store_true",
-                        help="Don't actually boot CheriBSD just print what would happen")
+        help="Don't actually boot CheriBSD just print what would happen")
     parser.add_argument("--interact", "-i", action="store_true")
     parser.add_argument("--test-kernel-init-only", action="store_true")
 
@@ -747,10 +780,11 @@ def get_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument("--internal-disk-image-override", help=argparse.SUPPRESS)
     return parser
 
-def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]"=None,
-         test_setup_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace], None]"=None,
-         argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]"=None,
-         argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]"=None):
+
+def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]" = None,
+         test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None,
+         argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]" = None,
+         argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]" = None):
     parser = get_argument_parser()
     if argparse_setup_callback:
         argparse_setup_callback(parser)
@@ -843,15 +877,20 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace], 
 
         force_decompression = True
         keep_compressed_images = False
-    kernel = str(maybe_decompress(Path(args.kernel), force_decompression, keep_archive=keep_compressed_images, args=args, what="kernel"))
+    kernel = str(
+        maybe_decompress(Path(args.kernel), force_decompression, keep_archive=keep_compressed_images, args=args,
+            what="kernel"))
     diskimg = None
     if args.disk_image:
-        diskimg = str(maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images, args=args, what="kernel"))
+        diskimg = str(
+            maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images, args=args,
+                what="kernel"))
 
     # Allow running multiple jobs in parallel by making a copy of the disk image
     if diskimg is not None and args.make_disk_image_copy:
         str(os.getpid())
-        new_img = Path(diskimg).with_suffix(".img.runtests." + datetime.datetime.now().strftime("%Y%m%d%H%M%S") + ".pid" + str(os.getpid()))
+        new_img = Path(diskimg).with_suffix(
+            ".img.runtests." + datetime.datetime.now().strftime("%Y%m%d%H%M%S") + ".pid" + str(os.getpid()))
         assert not new_img.exists()
         run_host_command(["cp", "-fv", diskimg, str(new_img)])
         if not args.keep_disk_image_copy:
@@ -860,8 +899,8 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace], 
 
     boot_starttime = datetime.datetime.now()
     qemu = boot_cheribsd(args.qemu_cmd, kernel, diskimg, args.ssh_port, smb_dirs=args.smb_mount_directories,
-                         kernel_init_only=args.test_kernel_init_only, trap_on_unrepresentable=args.trap_on_unrepresentable,
-                         skip_ssh_setup=args.skip_ssh_setup)
+        kernel_init_only=args.test_kernel_init_only, trap_on_unrepresentable=args.trap_on_unrepresentable,
+        skip_ssh_setup=args.skip_ssh_setup)
     success("Booting CheriBSD took: ", datetime.datetime.now() - boot_starttime)
 
     tests_okay = True
@@ -873,7 +912,7 @@ def main(test_function:"typing.Callable[[CheriBSDInstance, argparse.Namespace], 
                 setup_ssh_for_root_login(qemu, Path(args.ssh_key))
                 info("Setting up SSH took: ", datetime.datetime.now() - setup_ssh_starttime)
             tests_okay = runtests(qemu, args, test_archives=test_archives, test_function=test_function,
-                                  test_setup_function=test_setup_function, test_ld_preload_files=test_ld_preload_files)
+                test_setup_function=test_setup_function, test_ld_preload_files=test_ld_preload_files)
         except CheriBSDCommandFailed as e:
             failure("Command failed while runnings tests: ", str(e), "\n", str(qemu), exit=False)
             traceback.print_exc(file=sys.stderr)
