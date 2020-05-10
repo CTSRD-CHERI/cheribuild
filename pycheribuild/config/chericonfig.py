@@ -230,6 +230,7 @@ class CheriConfig(object):
                                                              "tmux split")
 
         self.gdb_random_port = loader.add_bool_option("gdb-random-port",
+                                                        default=True,
                                                         group=loader.run_group,
                                                         help="Wait for gdb "
                                                              "using a random "
