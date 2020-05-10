@@ -155,3 +155,13 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
         else:
             # when building the native target we just rely on the host tools in /usr/bin
             super().process()
+
+    def append_config_sub(self, path: Path):
+        fullpath = str(path)
+        with open(fullpath, 'r') as file :
+            filedata = file.read()
+            filedata = filedata.replace('| mips16', '| mips16 | mips64c128 | mips64c256')
+        with open(fullpath, 'w') as file:
+            file.write(filedata)
+
+
