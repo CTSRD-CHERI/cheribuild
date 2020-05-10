@@ -28,7 +28,6 @@
 # SUCH DAMAGE.
 #
 import socket
-from random import randint
 
 from .build_qemu import BuildQEMU, BuildCheriOSQEMU
 from .cherios import BuildCheriOS
@@ -227,7 +226,8 @@ class LaunchQEMUBase(SimpleProject):
             qemuCommand += ["-device", "virtio-rng-pci"]
 
         if self.config.wait_for_debugger or self.config.debug_kernel:
-            gdb_port = randint(1200,1300) if self.config.gdb_random_port else 1234
+            gdb_socket_placeholder = find_free_port()
+            gdb_port = gdb_socket_placeholder.port if self.config.gdb_random_port else 1234
             self.info("QEMU is waiting for GDB to attach (using `target remote :{}`)."
                       " Once connected enter 'continue\\n' to continue booting".format(gdb_port))
             def gdb_command(main_binary, breakpoint=None, extra_binary=None) -> str:
@@ -282,6 +282,7 @@ class LaunchQEMUBase(SimpleProject):
                 except Exception as e:
                     self.info(coloured(AnsiColour.red, "Unable to start gdb in tmux: " + e))
 
+            gdb_socket_placeholder.socket.close() # the port is now available for qemu
             qemuCommand += ["-gdb", "tcp::{}".format(gdb_port),  # wait for gdb on localhost:1234
                             "-S"  # freeze CPU at startup (use 'c' to start execution)
                             ]
