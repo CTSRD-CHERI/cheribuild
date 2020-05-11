@@ -248,7 +248,16 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
             if IS_MAC:
                 self.deleteFile(self.installDir / "bin/ld", print_verbose_only=True)
                 # lld will call the mach-o linker when invoked as ld -> need to create a shell script instead
-                script = "#!/bin/sh\nexec " + str(self.installDir / "bin/ld.lld") + " \"$@\"\n"
+                # that forwards to /usr/bin/ld for macOS binaries and ld.lld for cross-compilation
+                script = """"#!/bin/sh
+case "$@" in
+  *-macosx_version_min*)
+    # Must be linking a native macOS executable
+    exec /usr/bin/ld "$@"
+    ;;
+esac
+exec {lld} "$@"
+""".format(lld=self.installDir / "bin/ld.lld")
                 self.writeFile(self.installDir / "bin/ld", script, overwrite=True, mode=0o755)
             self.create_triple_prefixed_symlinks(self.installDir / "bin/ld.lld", tool_name="ld",
                 create_unprefixed_link=not IS_MAC)
