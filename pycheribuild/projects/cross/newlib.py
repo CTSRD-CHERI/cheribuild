@@ -36,10 +36,7 @@ from ...utils import IS_MAC, runCmd
 
 
 class BuildNewlib(CrossCompileAutotoolsProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/newlib",
-        per_target_branches={
-            CompilationTargets.BAREMETAL_NEWLIB_RISCV64: TargetBranchInfo("p1_release", "newlib-riscv")
-            })
+    repository = GitRepository("https://github.com/CTSRD-CHERI/newlib")
     target = "newlib"
     project_name = "newlib"
     make_kind = MakeCommandKind.GnuMake
