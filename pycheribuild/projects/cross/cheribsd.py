@@ -614,8 +614,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             assert not os.path.relpath(str(builddir.resolve()), str(self.buildDir.resolve())).startswith(".."), builddir
         if self.crossbuild:
             # avoid rebuilding bmake and libbsd when crossbuilding:
-            return self.async_clean_directory(builddir, keep_root=not cleaning_kerneldir,
-                                            keep_dirs=["libbsd-install", "bmake-install"])
+            return self.async_clean_directory(builddir, keep_root=not cleaning_kerneldir, keep_dirs=["bmake-install"])
         else:
             return self.async_clean_directory(builddir)
 
