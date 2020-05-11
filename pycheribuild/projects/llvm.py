@@ -249,7 +249,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
                 self.deleteFile(self.installDir / "bin/ld", print_verbose_only=True)
                 # lld will call the mach-o linker when invoked as ld -> need to create a shell script instead
                 # that forwards to /usr/bin/ld for macOS binaries and ld.lld for cross-compilation
-                script = """"#!/bin/sh
+                script = """#!/bin/sh
 case "$@" in
   *-macosx_version_min*)
     # Must be linking a native macOS executable
