@@ -120,7 +120,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             LD_FOR_TARGET=str(self.target_info.linker), LDFLAGS_FOR_TARGET="-fuse-ld=" + str(self.target_info.linker),
             )
 
-        if self.target_info.target.is_riscv():
+        if self.target_info.target.is_riscv(include_purecap=True):
             self.configureArgs.extend([
                 "--disable-libgloss"
                 ])
