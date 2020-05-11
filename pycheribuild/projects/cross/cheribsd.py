@@ -620,7 +620,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             return self.async_clean_directory(builddir)
 
     def _buildkernel(self, kernconf: str, mfs_root_image: Path = None, extra_make_args=None):
-        kernelMakeArgs = self.kernel_make_args_for_config(kernconf, extra_make_args)
+        kernel_make_args = self.kernel_make_args_for_config(kernconf, extra_make_args)
         if not self.use_bootstrapped_toolchain and not self.CC.exists():
             self.fatal("Requested build of kernel with external toolchain, but", self.CC,
                        "doesn't exist!")
@@ -628,13 +628,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if "_BENCHMARK" in kernconf:
                 if not self.query_yes_no("Trying to build BENCHMARK kernel without optimization. Continue?"):
                     return
-            kernelMakeArgs.set(COPTFLAGS="-O0 -DBOOTVERBOSE=2")
+            kernel_make_args.set(COPTFLAGS="-O0 -DBOOTVERBOSE=2")
         if mfs_root_image:
-            kernelMakeArgs.set(MFS_IMAGE=mfs_root_image)
+            kernel_make_args.set(MFS_IMAGE=mfs_root_image)
             if "MFS_ROOT" not in kernconf:
                 warningMessage("Attempting to build an MFS_ROOT kernel but kernel config name sounds wrong")
         if not self.kernel_toolchain_exists and not self.fast_rebuild:
-            kernel_toolchain_opts = kernelMakeArgs.copy()
+            kernel_toolchain_opts = kernel_make_args.copy()
             # The kernel seems to use LDFLAGS and ignore XLDFLAGS. Ensure we don't pass those flags when building host
             # binaries
             kernel_toolchain_opts.remove_var("LDFLAGS")
@@ -648,7 +648,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.run_make("kernel-toolchain", options=kernel_toolchain_opts)
             self.kernel_toolchain_exists = True
         statusUpdate("Building kernels for configs:", kernconf)
-        self.run_make("buildkernel", options=kernelMakeArgs,
+        self.run_make("buildkernel", options=kernel_make_args,
                      compilation_db_name="compile_commands_" + kernconf.replace(" ", "_") + ".json")
 
     def _installkernel(self, kernconf, destdir: str = None, extra_make_args=None):
