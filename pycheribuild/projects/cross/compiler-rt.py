@@ -48,7 +48,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
 
-        if self.target_info.is_rtems():
+        if self.target_info.is_rtems() or self.target_info.is_baremetal():
             self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY") # RTEMS only needs static libs
             # Get default target (arch) from the triple
             self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH=self.target_info.target_triple.split('-')[0])
@@ -122,8 +122,9 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         if self.compiling_for_mips(include_purecap=False):
             self.add_cmake_options(COMPILER_RT_HAS_FPIC_FLAG=False)  # HACK: currently we build everything as -fno-pic
 
-        if self.target_info.is_rtems():
+        if self.target_info.is_rtems() or self.target_info.is_baremetal():
             self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")  # RTEMS only needs static libs
+
         self.add_cmake_options(
             LLVM_CONFIG_PATH=self.sdk_bindir / "llvm-config" if is_jenkins_build() and not self.compiling_for_host() else
               BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
