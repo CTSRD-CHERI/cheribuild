@@ -32,6 +32,7 @@ from .crosscompileproject import *
 from ..llvm import BuildCheriLLVM
 from ..project import ReuseOtherProjectDefaultTargetRepository
 from ...utils import classproperty
+from ...utils import setEnv, commandline_to_str, is_jenkins_build
 
 
 class BuildCompilerRt(CrossCompileCMakeProject):
@@ -53,8 +54,10 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ARCH=self.target_info.target_triple.split('-')[0])
 
         self.add_cmake_options(
-            LLVM_CONFIG_PATH=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
-            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
+            LLVM_CONFIG_PATH=self.sdk_bindir / "llvm-config" if is_jenkins_build() and not self.compiling_for_host() else
+              BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
+            LLVM_EXTERNAL_LIT=self.sdk_bindir/ "llvm-lit" if is_jenkins_build() and not self.compiling_for_host() else
+              BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=True,
             COMPILER_RT_BUILD_XRAY=False,
@@ -122,8 +125,10 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         if self.target_info.is_rtems():
             self.add_cmake_options(CMAKE_TRY_COMPILE_TARGET_TYPE="STATIC_LIBRARY")  # RTEMS only needs static libs
         self.add_cmake_options(
-            LLVM_CONFIG_PATH=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
-            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
+            LLVM_CONFIG_PATH=self.sdk_bindir / "llvm-config" if is_jenkins_build() and not self.compiling_for_host() else
+              BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
+            LLVM_EXTERNAL_LIT=self.sdk_bindir/ "llvm-lit" if is_jenkins_build() and not self.compiling_for_host() else
+              BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=False,
             COMPILER_RT_BUILD_XRAY=False,
