@@ -882,10 +882,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # We don't want separate .debug for now
         self.make_args.set_with_options(DEBUG_FILES=False)
 
-        if self.compiling_for_host():
-            self.make_args.set_with_options(BHYVE=False,
-                                            # seems to be missing some include paths which appears to work on freebsd
-                                            CTF=False)  # can't crossbuild ctfconvert yet
+        if self.crosscompile_target.is_any_x86():
+            # seems to be missing some include paths which appears to work on freebsd
+            self.make_args.set_with_options(BHYVE=False)
+            # BOOT is required
             self.make_args.set_with_options(BOOT=True)
         else:
             self.make_args.set_with_options(BOOT=False)
