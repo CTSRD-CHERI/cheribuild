@@ -691,7 +691,6 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
     def local_install_root(self) -> Path:
         return self.sysroot_dir
 
-
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     shortname = "Newlib"
 
@@ -962,6 +961,6 @@ class CompilationTargets(object):
     ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS = [CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI, CHERIBSD_MIPS_PURECAP,
                                            CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID,CHERIBSD_RISCV_NO_CHERI]
     ALL_SUPPORTED_BAREMETAL_TARGETS = [BAREMETAL_NEWLIB_MIPS64, BAREMETAL_NEWLIB_MIPS64_PURECAP,
-                                       BAREMETAL_NEWLIB_RISCV64]
+                                       BAREMETAL_NEWLIB_RISCV64, CHERIFREERTOS_RISCV64_PURECAP]
     ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS = ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
                                                             ALL_SUPPORTED_BAREMETAL_TARGETS
