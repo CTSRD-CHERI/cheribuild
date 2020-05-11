@@ -120,6 +120,11 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             LD_FOR_TARGET=str(self.target_info.linker), LDFLAGS_FOR_TARGET="-fuse-ld=" + str(self.target_info.linker),
             )
 
+        if self.target_info.target.is_riscv():
+          self.configureArgs.extend([
+              "--disable-libgloss"
+          ])
+
         if self.target_info.is_baremetal():
           self.configureArgs.extend([
               "--enable-malloc-debugging",
@@ -149,7 +154,6 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         elif self.target_info.is_rtems():
           self.configureArgs.extend([
               "--enable-newlib-io-c99-formats",
-              "--disable-libgloss",
               "--disable-libstdcxx"  # not sure if this is needed
           ])
 
