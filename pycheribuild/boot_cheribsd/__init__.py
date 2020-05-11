@@ -445,6 +445,10 @@ class FakeSpawn(object):
             return 1
         return 0
 
+    def expect_prompt(self, *args, **kwargs):
+        print("Expecting prompt")
+        return
+
     def sendline(self, msg):
         print("RUNNING '", msg, "'", sep="", file=sys.stderr, flush=True)
 
