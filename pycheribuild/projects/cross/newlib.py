@@ -49,6 +49,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
     supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_MIPS64,
                                CompilationTargets.BAREMETAL_NEWLIB_MIPS64_PURECAP,
                                CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
                                CompilationTargets.RTEMS_RISCV64_PURECAP]
     # build_in_source_dir = True  # we have to build in the source directory
 
