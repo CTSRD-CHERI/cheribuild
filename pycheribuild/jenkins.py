@@ -285,7 +285,7 @@ def _jenkins_main():
                 need_cheribsd_sysroot = project.needs_sysroot and project.target_info.is_cheribsd()
                 create_sdk_from_archives(cheriConfig, needs_cheribsd_sysroot=need_cheribsd_sysroot)
 
-        if project.needs_sysroot and not project.target_info.sysroot_dir.exists():
+        if project.needs_sysroot and not project.target_info.sysroot_dir.exists() and JenkinsAction.BUILD in cheriConfig.action:
             fatalError("Sysroot directory", project.target_info.sysroot_dir, "does not exist")
 
         if cheriConfig.debug_output:
