@@ -545,13 +545,13 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
         boot_expect_strings = [LOGIN, SHELL_OPEN, BOOT_FAILURE]
         i = child.expect(boot_expect_strings + ["DHCPACK from "] + FATAL_ERROR_MESSAGES, timeout=15 * 60,
             timeout_msg="timeout awaiting login prompt")
-        if i == len(boot_expect_strings):
+        if i == len(boot_expect_strings):  # DHCPACK from
             have_dhclient = True
             success("===> got DHCPACK")
             # we have a network, keep waiting for the login prompt
             i = child.expect(boot_expect_strings + FATAL_ERROR_MESSAGES, timeout=5 * 60,
                 timeout_msg="timeout awaiting login prompt")
-        if i == 0:
+        if i == boot_expect_strings.index(LOGIN):
             success("===> got login prompt")
             child.sendline("root")
 
@@ -571,14 +571,14 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
             if i == 1:  # /bin/sh prompt
                 success("===> got /sbin/sh prompt")
                 _set_pexpect_sh_prompt(child)
-        elif i == 1:  # shell started from /etc/rc:
+        elif i == boot_expect_strings.index(SHELL_OPEN):  # shell started from /etc/rc:
             child.expect_exact(INITIAL_PROMPT_SH, timeout=30)
             success("===> /etc/rc completed, got command prompt")
             # set up network (bluehive image tries to use atse0)
             if not have_dhclient:
                 start_dhclient(child)
             _set_pexpect_sh_prompt(child)
-        else:
+        else:  # BOOT_FAILURE or FATAL_ERROR_MESSAGES
             # If this was a CHEIR trap wait up to 20 seconds to ensure the dump output has been printed
             child.expect(["THIS STRING SHOULD NOT MATCH, JUST WAITING FOR 20 secs", pexpect.TIMEOUT], timeout=20)
             # If this was a failure of init we should get a debugger backtrace
