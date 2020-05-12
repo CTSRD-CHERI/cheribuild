@@ -80,6 +80,11 @@ class BuildNginx(CrossCompileAutotoolsProject):
             self.configureArgs.append("--with-debug")
         self.configureArgs.extend(["--without-pcre",
                                    "--without-http_rewrite_module",
+                                   "--with-http_v2_module",
+                                   "--with-http_ssl_module",
+                                   "--without-http_gzip_module",
+                                   "--without-http_rewrite_module",
+                                   "--without-pcre",
                                    "--builddir=" + str(self.buildDir)])
         if not self.compiling_for_host():
             self.LDFLAGS.append("-v")
@@ -113,3 +118,10 @@ class BuildFettNginx(BuildNginx):
     project_name = "fett-nginx"
     repository = GitRepository("https://github.com/CTSRD-CHERI/nginx.git",
         default_branch="fett")
+    dependencies = ["fett-openssl"]
+
+    def configure(self):
+        openssl_dir = str(self._installPrefix).replace("fett-nginx", "fett-openssl")
+        self.configureEnvironment["NGX_OPENSSL_fett_path"] = str(self.destdir) + openssl_dir
+        self.configureEnvironment["NGX_OPENSSL_fett_rpath"] = openssl_dir + "/lib"
+        super().configure()
