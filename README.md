@@ -7,15 +7,17 @@ will start an instance of [CheriBSD](https://github.com/CTSRD-CHERI/cheribsd) in
 
 It has been tested and should work on FreeBSD 10, 11 and 12.
 On Linux, Ubuntu 16.04, Ubuntu 18.04 and OpenSUSE Tumbleweed are supported. Ubuntu 14.04 may also work but is no longer tested.
-macOS 10.13 is also supported.
+macOS 10.14 is also supported.
 
 # Pre-Build Setup
 
 If you are building CHERI on a Debian/Ubuntu-based machine, please install the following packages:
 
 ```shell
-apt-get install libtool pkg-config clang bison cmake ninja-build samba flex texinfo libglib2.0-dev libpixman-1-dev libarchive-dev bsdtar libbz2-dev
+apt-get install libtool pkg-config clang bison cmake ninja-build samba flex texinfo libglib2.0-dev libpixman-1-dev libarchive-dev libarchive-tools libbz2-dev
 ```
+
+Older versions of Ubuntu may report errors when trying to install `libarchive-tools`. In this case try using `apt-get install bsdtar` instead.
 
 # Basic usage
 
