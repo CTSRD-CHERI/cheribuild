@@ -718,7 +718,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     def required_compile_flags(self) -> typing.List[str]:
         # Currently we need these flags to build anything against newlib baremetal
         return [
-            "-D_GNU_SOURCE=1",  # needed for the locale functions
+            "-D_GNU_SOURCE=1" if self.target.is_mips(include_purecap=True) else "",  # needed for the locale functions
             "-D_POSIX_TIMERS=1", "-D_POSIX_MONOTONIC_CLOCK=1",  # pretend that we have a monotonic clock
             ]
 

@@ -36,10 +36,7 @@ from ...utils import IS_MAC, runCmd
 
 
 class BuildNewlib(CrossCompileAutotoolsProject):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/newlib",
-        per_target_branches={
-            CompilationTargets.BAREMETAL_NEWLIB_RISCV64: TargetBranchInfo("p1_release", "newlib-riscv")
-            })
+    repository = GitRepository("https://github.com/CTSRD-CHERI/newlib")
     target = "newlib"
     project_name = "newlib"
     make_kind = MakeCommandKind.GnuMake
@@ -123,38 +120,42 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             LD_FOR_TARGET=str(self.target_info.linker), LDFLAGS_FOR_TARGET="-fuse-ld=" + str(self.target_info.linker),
             )
 
+        if self.target_info.target.is_riscv(include_purecap=True):
+            self.configureArgs.extend([
+                "--disable-libgloss"
+                ])
+
         if self.target_info.is_baremetal():
-          self.configureArgs.extend([
-              "--enable-malloc-debugging",
-              "--enable-newlib-long-time_t",  # we want time_t to be long and not int!
-              "--enable-newlib-io-c99-formats",
-              "--enable-newlib-io-long-long",
-              # --enable-newlib-io-pos-args (probably not needed)
-              "--disable-newlib-io-long-double",  # we don't need this, MIPS long double == double
-              "--enable-newlib-io-float",
-              # "--disable-newlib-supplied-syscalls"
-              "--disable-libstdcxx",  # not sure if this is needed
+            self.configureArgs.extend([
+                "--enable-malloc-debugging",
+                "--enable-newlib-long-time_t",  # we want time_t to be long and not int!
+                "--enable-newlib-io-c99-formats",
+                "--enable-newlib-io-long-long",
+                # --enable-newlib-io-pos-args (probably not needed)
+                "--disable-newlib-io-long-double",  # we don't need this, MIPS long double == double
+                "--enable-newlib-io-float",
+                # "--disable-newlib-supplied-syscalls"
+                "--disable-libstdcxx",  # not sure if this is needed
 
-              # we don't have any multithreading support on baremetal
-              "--disable-newlib-multithread",
+                # we don't have any multithreading support on baremetal
+                "--disable-newlib-multithread",
 
-              "--enable-newlib-global-atexit",  # TODO: is this needed?
-              # --enable-newlib-nano-malloc (should we do this?)
-              "--disable-multilib",
+                "--enable-newlib-global-atexit",  # TODO: is this needed?
+                # --enable-newlib-nano-malloc (should we do this?)
+                "--disable-multilib",
 
-              # TODO: smaller lib? "--enable-target-optspace"
+                # TODO: smaller lib? "--enable-target-optspace"
 
-              # FIXME: these don't seem to work
-              "--enable-serial-build-configure",
-              "--enable-serial-target-configure",
-              "--enable-serial-host-configure",
-          ])
+                # FIXME: these don't seem to work
+                "--enable-serial-build-configure",
+                "--enable-serial-target-configure",
+                "--enable-serial-host-configure",
+                ])
         elif self.target_info.is_rtems():
-          self.configureArgs.extend([
-              "--enable-newlib-io-c99-formats",
-              "--disable-libgloss",
-              "--disable-libstdcxx"  # not sure if this is needed
-          ])
+            self.configureArgs.extend([
+                "--enable-newlib-io-c99-formats",
+                "--disable-libstdcxx"  # not sure if this is needed
+                ])
 
         if self.locale_support:
             # needed for locale support

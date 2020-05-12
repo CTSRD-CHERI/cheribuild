@@ -235,7 +235,8 @@ def real_main():
 def main():
     error = False
     try:
-        os.setpgrp()  # create new process group, become its leader
+        if os.getpgrp() != os.getpid():
+            os.setpgrp()  # create new process group, become its leader
         real_main()
     except KeyboardInterrupt:
         error = True

@@ -614,13 +614,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
             assert not os.path.relpath(str(builddir.resolve()), str(self.buildDir.resolve())).startswith(".."), builddir
         if self.crossbuild:
             # avoid rebuilding bmake and libbsd when crossbuilding:
-            return self.async_clean_directory(builddir, keep_root=not cleaning_kerneldir,
-                                            keep_dirs=["libbsd-install", "bmake-install"])
+            return self.async_clean_directory(builddir, keep_root=not cleaning_kerneldir, keep_dirs=["bmake-install"])
         else:
             return self.async_clean_directory(builddir)
 
     def _buildkernel(self, kernconf: str, mfs_root_image: Path = None, extra_make_args=None):
-        kernelMakeArgs = self.kernel_make_args_for_config(kernconf, extra_make_args)
+        kernel_make_args = self.kernel_make_args_for_config(kernconf, extra_make_args)
         if not self.use_bootstrapped_toolchain and not self.CC.exists():
             self.fatal("Requested build of kernel with external toolchain, but", self.CC,
                        "doesn't exist!")
@@ -628,13 +627,13 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if "_BENCHMARK" in kernconf:
                 if not self.query_yes_no("Trying to build BENCHMARK kernel without optimization. Continue?"):
                     return
-            kernelMakeArgs.set(COPTFLAGS="-O0 -DBOOTVERBOSE=2")
+            kernel_make_args.set(COPTFLAGS="-O0 -DBOOTVERBOSE=2")
         if mfs_root_image:
-            kernelMakeArgs.set(MFS_IMAGE=mfs_root_image)
+            kernel_make_args.set(MFS_IMAGE=mfs_root_image)
             if "MFS_ROOT" not in kernconf:
                 warningMessage("Attempting to build an MFS_ROOT kernel but kernel config name sounds wrong")
         if not self.kernel_toolchain_exists and not self.fast_rebuild:
-            kernel_toolchain_opts = kernelMakeArgs.copy()
+            kernel_toolchain_opts = kernel_make_args.copy()
             # The kernel seems to use LDFLAGS and ignore XLDFLAGS. Ensure we don't pass those flags when building host
             # binaries
             kernel_toolchain_opts.remove_var("LDFLAGS")
@@ -648,7 +647,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.run_make("kernel-toolchain", options=kernel_toolchain_opts)
             self.kernel_toolchain_exists = True
         statusUpdate("Building kernels for configs:", kernconf)
-        self.run_make("buildkernel", options=kernelMakeArgs,
+        self.run_make("buildkernel", options=kernel_make_args,
                      compilation_db_name="compile_commands_" + kernconf.replace(" ", "_") + ".json")
 
     def _installkernel(self, kernconf, destdir: str = None, extra_make_args=None):
@@ -882,10 +881,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # We don't want separate .debug for now
         self.make_args.set_with_options(DEBUG_FILES=False)
 
-        if self.compiling_for_host():
-            self.make_args.set_with_options(BHYVE=False,
-                                            # seems to be missing some include paths which appears to work on freebsd
-                                            CTF=False)  # can't crossbuild ctfconvert yet
+        if self.crosscompile_target.is_any_x86():
+            # seems to be missing some include paths which appears to work on freebsd
+            self.make_args.set_with_options(BHYVE=False)
+            # BOOT is required
             self.make_args.set_with_options(BOOT=True)
         else:
             self.make_args.set_with_options(BOOT=False)
@@ -1148,7 +1147,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     crossbuild = True  # changes have been merged into master
     use_llvm_binutils = True
     has_installsysroot_target = True
-    full_rebuild_if_older_than = datetime.datetime(2020, 4, 8, 17, 0, tzinfo=datetime.timezone.utc)
+    full_rebuild_if_older_than = datetime.datetime(2020, 5, 11, 20, 0, tzinfo=datetime.timezone.utc)
 
     @property
     def build_dir_suffix(self):
@@ -1488,7 +1487,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         # GNU tar doesn't accept --include (and doesn't handle METALOG). bsdtar appears to be available
         # on FreeBSD and macOS by default. On Linux it is not always installed by default.
         self.bsdtar_cmd = "bsdtar"
-        self.addRequiredSystemTool("bsdtar", cheribuild_target="bsdtar", apt="bsdtar")
+        self.addRequiredSystemTool("bsdtar", cheribuild_target="bsdtar", apt="libarchive-tools")
         self.install_dir = self.target_info.sdk_root_dir
 
     def fixSymlinks(self):

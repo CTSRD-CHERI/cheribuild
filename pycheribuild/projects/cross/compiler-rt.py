@@ -40,8 +40,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     project_name = "compiler-rt"
     default_install_dir = DefaultInstallDir.COMPILER_RESOURCE_DIR
     _check_install_dir_conflict = False
-    _default_architecture = CompilationTargets.CHERIBSD_MIPS_PURECAP
-    supported_architectures = [_default_architecture] + \
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
                               CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + \
                               [CompilationTargets.RTEMS_RISCV64_PURECAP]
 
