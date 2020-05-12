@@ -44,11 +44,8 @@ class BuildZlib(CrossCompileAutotoolsProject):
     _configure_understands_enable_static = False
     _configure_supports_variables_on_cmdline = False
 
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     cross_install_dir = DefaultInstallDir.ROOTFS
-
-    def needsConfigure(self):
-        return not (self.buildDir / "Makefile").exists()
 
 
 class BuildFettZlib(BuildZlib):
