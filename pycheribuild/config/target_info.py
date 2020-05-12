@@ -348,6 +348,11 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             result.append("-march=" + self.riscv_arch_string)
             result.append("-mabi=" + self.riscv_abi)
             result.append("-mno-relax")  # Linker relaxations are not supported with clang+lld
+
+            if self.is_baremetal() or self.is_rtems():
+                # Both RTEMS and baremetal FreeRTOS are linked above 0x80000000
+                result.append("-mcmodel=medium")
+
         else:
             self.project.warning("Compiler flags might be wong, only native + MIPS checked so far")
         return result
