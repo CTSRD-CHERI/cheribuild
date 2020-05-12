@@ -225,7 +225,7 @@ class LaunchQEMUBase(SimpleProject):
         if self._hasPCI:
             qemuCommand += ["-device", "virtio-rng-pci"]
 
-        if self.config.wait_for_debugger or self.config.debug_kernel:
+        if self.config.wait_for_debugger or self.config.debugger_in_tmux_pane:
             gdb_socket_placeholder = find_free_port()
             gdb_port = gdb_socket_placeholder.port if self.config.gdb_random_port else 1234
             self.info("QEMU is waiting for GDB to attach (using `target remote :{}`)."
@@ -270,10 +270,10 @@ class LaunchQEMUBase(SimpleProject):
                     raise Exception("There should be only one tmux session running")
                 session = server.list_sessions()[0]
                 window = session.attached_window
-                pane = window.split_window(vertical=True, attach=False)
+                pane = window.attached_pane.split_window(vertical=True, attach=False)
                 pane.send_keys(command)
 
-            if self.config.debug_kernel:
+            if self.config.debugger_in_tmux_pane:
                 try:
                     import libtmux
                     start_gdb_in_tmux_pane(gdb_command(self.currentKernel, "panic"))

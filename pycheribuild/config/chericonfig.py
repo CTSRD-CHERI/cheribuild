@@ -223,9 +223,9 @@ class CheriConfig(object):
                                                         help="Start QEMU in the 'wait for a debugger' state when"
                                                              "launching CheriBSD,FreeBSD, etc.")
 
-        self.debug_kernel = loader.add_bool_option("debug-kernel",
-                                                        group=loader.run_group,
-                                                        help="Start Qemu and "
+        self.debugger_in_tmux_pane = loader.add_bool_option("debugger-in-tmux-pane",
+                                                            group=loader.run_group,
+                                                            help="Start Qemu and "
                                                              "gdb in another "
                                                              "tmux split")
 
