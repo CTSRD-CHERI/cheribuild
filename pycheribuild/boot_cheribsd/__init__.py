@@ -654,7 +654,8 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
         mount_command = "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu{} '{}'".format(index + 1, d.in_target)
         try:
             checked_run_cheribsd_command(qemu, mount_command,
-                error_output="unable to open connection: syserr = Operation timed out", pretend_result=0)
+                error_output="unable to open connection: syserr = (Operation timed out)|(Connection reset by peer)",
+                pretend_result=0)
         except CheriBSDMatchedErrorOutput:
             failure("QEMU SMBD timed out while mounting ", d.in_target, ". Trying one more time.", exit=False)
             info("Waiting for 5 seconds before retrying mount_smbfs...")
