@@ -29,6 +29,7 @@
 #
 from .crosscompileproject import *
 import re
+from .openssl import BuildFettOpenSSL
 
 
 class BuildNginx(CrossCompileAutotoolsProject):
@@ -121,7 +122,7 @@ class BuildFettNginx(BuildNginx):
     dependencies = ["fett-openssl"]
 
     def configure(self):
-        openssl_dir = str(self._installPrefix).replace("fett-nginx", "fett-openssl")
-        self.configureEnvironment["NGX_OPENSSL_fett_path"] = str(self.destdir) + openssl_dir
+        openssl_dir = str(BuildFettOpenSSL.get_instance(self)._installPrefix)
+        self.configureEnvironment["NGX_OPENSSL_fett_path"] = str(BuildFettOpenSSL.get_instance(self).destdir) + openssl_dir
         self.configureEnvironment["NGX_OPENSSL_fett_rpath"] = openssl_dir + "/lib"
         super().configure()
