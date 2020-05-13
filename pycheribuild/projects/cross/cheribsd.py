@@ -549,11 +549,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.auto_obj:
             result.set_with_options(AUTO_OBJ=True)
 
-        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.RISCV64]):
-            # RTLD not ported yet -> skip building it and set WITHOUT_DYNAMICROOT to
-            # force static linking for /sbin and /bin
-            result.set(NO_RTLD=True)
-            result.set_with_options(DYNAMICROOT=False)
         if self.crosscompile_target.is_cheri_hybrid([CPUArchitecture.RISCV64]):
             # CheriBSD installworld currently get's very confused that libcheri CCDL is forced to false
             # and attempts to install the files during installworld
