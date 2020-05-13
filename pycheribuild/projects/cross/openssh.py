@@ -31,6 +31,8 @@
 from .crosscompileproject import *
 from ...utils import classproperty
 from pathlib import Path
+from .openssl import BuildFettOpenSSL
+from .zlib import BuildFettZlib
 
 
 class BuildOpenSSH(CrossCompileAutotoolsProject):
@@ -63,15 +65,12 @@ class BuildFettOpenSSH(BuildOpenSSH):
     dependencies = ["fett-zlib", "fett-openssl"]
 
     def configure(self, **kwargs):
-        # XXX: this is wrong, we should get the paths from our dependencies
-        # rather than assuming we have the same basic configs.
-
-        openssl_dir = str(self._installPrefix).replace("fett-openssh", "fett-openssl")
-        self.configureArgs.append("--with-ssl-dir=" + str(self.destdir) + "/" + openssl_dir)
+        openssl_dir = str(BuildFettOpenSSL.get_instance(self)._installPrefix)
+        self.configureArgs.append("--with-ssl-dir=" + str(BuildFettOpenSSL.get_instance(self).destdir) + "/" + openssl_dir)
         self.COMMON_LDFLAGS.append("-Wl,-rpath," + openssl_dir + "/lib")
 
-        zlib_dir = str(self._installPrefix).replace("fett-openssh", "fett-zlib")
-        self.configureArgs.append("--with-zlib=" + str(self.destdir) + "/" + zlib_dir)
+        zlib_dir = str(BuildFettZlib.get_instance(self)._installPrefix)
+        self.configureArgs.append("--with-zlib=" + str(BuildFettZlib.get_instance(self).destdir) + "/" + zlib_dir)
         self.COMMON_LDFLAGS.append("-Wl,-rpath," + zlib_dir + "/lib")
 
         super().configure(**kwargs)
