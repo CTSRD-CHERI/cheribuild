@@ -106,7 +106,7 @@ def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
         if xtarget.is_cheri_purecap():
             return config.outputRoot / ("rootfs-riscv64-purecap" + project.cheri_config_suffix)
         elif xtarget.is_cheri_hybrid():
-            return config.outputRoot / ("rootfs-riscv64c" + project.cheri_config_suffix)
+            return config.outputRoot / ("rootfs-riscv64-hybrid" + project.cheri_config_suffix)
         return config.outputRoot / "rootfs-riscv64"
     else:
         assert project.crosscompile_target.is_x86_64()

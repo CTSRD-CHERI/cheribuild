@@ -497,7 +497,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                 purecap_prefix="-purecap", hybrid_prefix="", nocheri_name="-mips")
         elif self.target.is_riscv(include_purecap=True):
             return self._sysroot_path(config.cheri_sdk_dir, separate_cheri_sysroots,
-                purecap_prefix="-riscv64c", hybrid_prefix="-riscv64c-hybrid", nocheri_name="-riscv64")
+                purecap_prefix="-riscv64-purecap", hybrid_prefix="-riscv64-hybrid", nocheri_name="-riscv64")
         elif self.target.is_x86_64():
             return config.cheri_sdk_dir / "sysroot-x86_64"
         else:
