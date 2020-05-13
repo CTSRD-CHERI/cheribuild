@@ -946,7 +946,8 @@ def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace],
     success("===> DONE")
     info("Total execution time: ", datetime.datetime.now() - starttime)
     if not tests_okay:
-        failure("ERROR: Some tests failed!", exit=True)
+        failure("ERROR: Some tests failed!", exit=False)
+        sys.exit(2)  # different exit code for test failures
 
 
 if __name__ == "__main__":
