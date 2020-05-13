@@ -495,7 +495,7 @@ def warningMessage(*args, sep=" "):
     print(coloured(AnsiColour.magenta, maybe_add_space("Warning:", sep) + args, sep=sep), file=sys.stderr, flush=True)
 
 
-def fatalError(*args, sep=" ", fixitHint=None, fatalWhenPretending=False):
+def fatalError(*args, sep=" ", fixitHint=None, fatalWhenPretending=False, exit_code=3):
     # we ignore fatal errors when simulating a run
     if _cheriConfig and _cheriConfig.pretend:
         print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:", sep) + args, sep=sep), file=sys.stderr, flush=True)
@@ -503,12 +503,12 @@ def fatalError(*args, sep=" ", fixitHint=None, fatalWhenPretending=False):
             print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr, flush=True)
         if fatalWhenPretending:
             traceback.print_stack()
-            sys.exit(3)
+            sys.exit(exit_code)
     else:
         print(coloured(AnsiColour.red, maybe_add_space("Fatal error:", sep) + args, sep=sep), file=sys.stderr, flush=True)
         if fixitHint:
             print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr, flush=True)
-        sys.exit(3)
+        sys.exit(exit_code)
 
 
 def includeLocalFile(path: str) -> str:

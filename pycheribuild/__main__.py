@@ -245,7 +245,7 @@ def main():
         error = True
         cwd = (". Working directory was ", err.cwd) if hasattr(err, "cwd") else ()
         fatalError("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code ",
-                   err.returncode, *cwd, fatalWhenPretending=True, sep="")
+                   err.returncode, *cwd, fatalWhenPretending=True, sep="", exit_code=err.returncode)
     finally:
         if error:
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
