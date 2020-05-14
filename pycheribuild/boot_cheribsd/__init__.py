@@ -889,7 +889,7 @@ def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace],
     if args.disk_image:
         diskimg = str(
             maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images, args=args,
-                what="kernel"))
+                what="disk image"))
 
     # Allow running multiple jobs in parallel by making a copy of the disk image
     if diskimg is not None and args.make_disk_image_copy:
