@@ -31,12 +31,12 @@ import socket
 
 from .build_qemu import BuildQEMU, BuildCheriOSQEMU
 from .cherios import BuildCheriOS
-from .cross.rtems import BuildRtems
 from .cross.bbl import *
 from .cross.opensbi import BuildOpenSBI
+from .cross.rtems import BuildRtems
 from .disk_image import *
 from .project import *
-from ..utils import IS_FREEBSD
+from ..utils import OSInfo, qemu_supports_9pfs
 
 
 def defaultSshForwardingPort(addend: int):
@@ -118,6 +118,7 @@ class LaunchQEMUBase(SimpleProject):
         self._provide_src_via_smb = self.compiling_for_mips(include_purecap=True)
 
     def process(self):
+        assert self.qemuBinary is not None
         if not self.qemuBinary.exists():
             self.dependencyError("QEMU is missing:", self.qemuBinary,
                                  install_instructions="Run `cheribuild.py qemu` or `cheribuild.py run -d`.")
@@ -178,36 +179,55 @@ class LaunchQEMUBase(SimpleProject):
         statusUpdate("About to run QEMU with image", self.diskImage, "and kernel", self.currentKernel)
         user_network_options = ""
         smb_dir_count = 0
+        have_9pfs_support = qemu_supports_9pfs(self.qemuBinary)
+        # Only default to providing the smb mount if smbd exists
+        have_smbfs_support = self._provide_src_via_smb and shutil.which("smbd")
 
-        def add_smb_dir(directory, target, share_name=None, readonly=False):
+        def add_smb_or_9p_dir(directory, target, share_name=None, readonly=False):
             if not directory:
                 return
             nonlocal user_network_options
             nonlocal smb_dir_count
-            if smb_dir_count:
-                user_network_options += ":"
-            else:
-                user_network_options += ",smb="
+            nonlocal have_9pfs_support
+            nonlocal have_smbfs_support
+            nonlocal qemuCommand
             smb_dir_count += 1
-            share_name_option = ""
-            if share_name is not None:
-                share_name_option = "<<<" + share_name
-            else:
-                share_name = "qemu{}".format(smb_dir_count)
-            user_network_options += str(directory) + share_name_option + ("@ro" if readonly else "")
-            guest_cmd = coloured(AnsiColour.yellow, "mkdir -p {target} && mount_smbfs -I 10.0.2.4 -N "
-                                 "//10.0.2.4/{share_name} {target}".format(target=target, share_name=share_name))
-            statusUpdate("Providing ", coloured(AnsiColour.green, str(directory)),
-                         coloured(AnsiColour.cyan, " over SMB to the guest. Use `"), guest_cmd,
-                         coloured(AnsiColour.cyan, "` to mount it"), sep="")
+            if have_smbfs_support:
+                if smb_dir_count > 1:
+                    user_network_options += ":"
+                else:
+                    user_network_options += ",smb="
+                share_name_option = ""
+                if share_name is not None:
+                    share_name_option = "<<<" + share_name
+                else:
+                    share_name = "qemu{}".format(smb_dir_count)
+                user_network_options += str(directory) + share_name_option + ("@ro" if readonly else "")
+                guest_cmd = coloured(AnsiColour.yellow, "mkdir -p {target} && mount_smbfs -I 10.0.2.4 -N "
+                                     "//10.0.2.4/{share_name} {target}".format(target=target, share_name=share_name))
+                statusUpdate("Providing ", coloured(AnsiColour.green, str(directory)),
+                             coloured(AnsiColour.cyan, " over SMB to the guest. Use `"), guest_cmd,
+                             coloured(AnsiColour.cyan, "` to mount it"), sep="")
+            if have_9pfs_support:
+                if smb_dir_count > 1:
+                    return  # FIXME: 9pfs panics if there is more than one device
+                # Also provide it via virtfs:
+                qemuCommand.append("-virtfs")
+                qemuCommand.append("local,id=virtfs{n},mount_tag={tag},path={path},security_model=none{ro}".format(
+                    n=smb_dir_count, path=directory, tag=share_name, ro=",readonly" if readonly else ""))
+                guest_cmd = coloured(AnsiColour.yellow,
+                    "mkdir -p {tgt} && mount -t virtfs -o trans=virtio,version=9p2000.L {share_name} {tgt}".format(
+                        tgt=target, share_name=share_name))
+                statusUpdate("Providing ", coloured(AnsiColour.green, str(directory)),
+                    coloured(AnsiColour.cyan, " over 9pfs to the guest. Use `"), guest_cmd,
+                    coloured(AnsiColour.cyan, "` to mount it"), sep="")
 
-        # Only default to providing the smb mount if smbd exists
-        if self._provide_src_via_smb and shutil.which("smbd"):  # for running CheriBSD + FreeBSD
-            add_smb_dir(self.custom_qemu_smb_mount, "/mnt")
-            add_smb_dir(self.config.sourceRoot, "/srcroot", share_name="source_root", readonly=True)
-            add_smb_dir(self.config.buildRoot, "/buildroot", share_name="build_root", readonly=False)
-            add_smb_dir(self.config.outputRoot, "/outputroot", share_name="output_root", readonly=True)
-            add_smb_dir(self.rootfs_path, "/rootfs", share_name="rootfs", readonly=False)
+        if have_smbfs_support or have_9pfs_support:  # for running CheriBSD + FreeBSD
+            add_smb_or_9p_dir(self.custom_qemu_smb_mount, "/mnt")
+            add_smb_or_9p_dir(self.config.sourceRoot, "/srcroot", share_name="source_root", readonly=True)
+            add_smb_or_9p_dir(self.config.buildRoot, "/buildroot", share_name="build_root", readonly=False)
+            add_smb_or_9p_dir(self.config.outputRoot, "/outputroot", share_name="output_root", readonly=True)
+            add_smb_or_9p_dir(self.rootfs_path, "/rootfs", share_name="rootfs", readonly=False)
 
         if self._forwardSSHPort:
             user_network_options += ",hostfwd=tcp::" + str(self.sshForwardingPort) + "-:22"
@@ -264,15 +284,14 @@ class LaunchQEMUBase(SimpleProject):
             qemuCommand += ["-gdb", "tcp::1234",  # wait for gdb on localhost:1234
                             "-S"  # freeze CPU at startup (use 'c' to start execution)
                             ]
-
         runCmd(qemuCommand, stdout=sys.stdout, stderr=sys.stderr, give_tty_control=True)  # even with --quiet we want stdout here
 
     @staticmethod
     def printPortUsage(port: int):
         print("Port", port, "usage information:")
-        if IS_FREEBSD:
+        if OSInfo.IS_FREEBSD:
             runCmd("sockstat", "-P", "tcp", "-p", str(port))
-        elif IS_LINUX:
+        elif OSInfo.IS_LINUX:
             runCmd("sh", "-c", "netstat -tulpne | grep \":" + str(port) + "\"")
 
     @staticmethod

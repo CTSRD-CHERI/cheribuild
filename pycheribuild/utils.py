@@ -475,6 +475,15 @@ def latest_system_clang_tool(basename: str, fallback_basename: str):
     return newest[0]
 
 
+@functools.lru_cache(maxsize=20)
+def qemu_supports_9pfs(qemu: Path) -> bool:
+    if not qemu.is_file():
+        return False
+    prog = runCmd([str(qemu), "-virtfs", "?"], stdin=subprocess.DEVNULL, captureOutput=True, captureError=True,
+        runInPretendMode=True, expected_exit_code=1, print_verbose_only=True)
+    return b"-virtfs ?: Usage: -virtfs" in prog.stderr
+
+
 def defaultNumberOfMakeJobs():
     makeJobs = os.cpu_count()
     if makeJobs > 24:
