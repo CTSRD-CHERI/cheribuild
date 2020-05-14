@@ -239,7 +239,12 @@ class LaunchQEMUBase(SimpleProject):
             if self.compiling_for_mips(include_purecap=True):
                 qemuCommand += ["-net", "nic", "-net", "user,id=net0,ipv6=off" + user_network_options]
             else:
-                qemuCommand += ["-device", "virtio-net-device,netdev=net0", "-netdev", "user,id=net0,ipv6=off" + user_network_options]
+                if self.crosscompile_target.is_any_x86():
+                    virtio_device_kind = "virtio-net-pci"
+                else:
+                    virtio_device_kind = "virtio-net-device"
+                qemuCommand += ["-device", virtio_device_kind + ",netdev=net0", "-netdev",
+                                "user,id=net0,ipv6=off" + user_network_options]
 
         # Add a virtio RNG to speed up random number generation
         if self._hasPCI:
