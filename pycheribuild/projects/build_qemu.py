@@ -224,7 +224,8 @@ class BuildQEMU(BuildQEMUBase):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-cheri",
                                force_branch=True)
     default_targets = "cheri128-softmmu,cheri128magic-softmmu,mips64-softmmu," \
-                      "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu"
+                      "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu," \
+                      "x86_64-softmmu"
 
     @classmethod
     def setup_config_options(cls, **kwargs):
