@@ -1302,21 +1302,22 @@ class GitRepository(SourceRepository):
         # We don't need to update if the upstream commit is an ancestor of the current HEAD.
         # This check ensures that we avoid a rebase if the current branch is a few commits ahead of upstream.
         # Note: merge-base --is-ancestor exits with code 0/1 instead of printing output so we need a try/catch
-        try:
-            is_ancestor = runCmd("git", "merge-base", "--is-ancestor", "@{upstream}", "HEAD", cwd=src_dir,
-                print_verbose_only=True, captureError=True, runInPretendMode=True, raiseInPretendMode=True)
-            assert is_ancestor.returncode == 0
+        is_ancestor = runCmd("git", "merge-base", "--is-ancestor", "@{upstream}", "HEAD", cwd=src_dir,
+            print_verbose_only=True, captureError=True, runInPretendMode=True, raiseInPretendMode=True,
+            allow_unexpected_returncode=True)
+        if is_ancestor.returncode == 0:
             current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is up-to-date or ahead of upstream."))
             return
-        except subprocess.CalledProcessError as e:
-            if e.returncode == 1:
-                current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is behind upstream."))
-            elif e.returncode == 128 or (e.stderr and "no upstream configured" in e.stderr):
-                print(coloured(AnsiColour.blue, "No upstream configured to update from"))
-                return
-            else:
-                current_project.warning("Unknown return code", e)
-                raise  # some other error -> raise so that I can see what went wrong
+        elif is_ancestor.returncode == 128 or (is_ancestor.stderr and "no upstream configured" in is_ancestor.stderr):
+            current_project.info("No upstream configured to update from")
+            return
+        elif is_ancestor.returncode == 1:
+            current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is behind upstream."))
+        else:
+            current_project.warning("Unknown return code", is_ancestor)
+            # some other error -> raise so that I can see what went wrong
+            raise subprocess.CalledProcessError(is_ancestor.retcode, is_ancestor.args, output=is_ancestor.stdout,
+                stderr=is_ancestor.stderr)
 
         # make sure we run git stash if we discover any local changes
         has_changes = len(runCmd("git", "diff", "--stat", "--ignore-submodules",

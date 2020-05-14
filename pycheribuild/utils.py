@@ -44,6 +44,7 @@ import typing
 from pathlib import Path
 
 from .colour import coloured, AnsiColour
+
 if typing.TYPE_CHECKING:   # no-combine
     from .config.chericonfig import CheriConfig    # no-combine
 
@@ -146,7 +147,6 @@ def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remain
         print(coloured(colour, prefix, sep=sep), coloured(colour, new_args, sep=sep), flush=True, **kwargs)
 
 
-
 def getInterpreter(cmdline: "typing.Sequence[str]") -> "typing.Optional[typing.List[str]]":
     """
     :param cmdline: The command to check
@@ -210,9 +210,11 @@ def _become_tty_foreground_process():
     os.tcsetpgrp(tty, os.getpgrp())
     signal.signal(signal.SIGTTOU, hdlr)
 
-def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]"=None, timeout=None,
+
+def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]" = None, timeout=None,
            print_verbose_only=False, runInPretendMode=False, raiseInPretendMode=False, no_print=False,
-           replace_env=False, give_tty_control=False, **kwargs):
+           replace_env=False, give_tty_control=False, expected_exit_code=0, allow_unexpected_returncode=False,
+           **kwargs):
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         cmdline = args[0]  # list with parameters was passed
     else:
@@ -278,11 +280,11 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
             process.wait()
             raise
         retcode = process.poll()
-        if retcode:
+        if retcode != expected_exit_code and not allow_unexpected_returncode:
             if _cheriConfig and _cheriConfig.pretend and not raiseInPretendMode:
                 cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
                 fatalError("Command ", "`" + commandline_to_str(process.args) +
-                           "` failed with non-zero exit code ", retcode, *cwd, sep="")
+                           "` failed with unexpected exit code ", retcode, *cwd, sep="")
             else:
                 raise _make_called_process_error(retcode, process.args, stdout=stdout, cwd=kwargs["cwd"])
         return CompletedProcess(process.args, retcode, stdout, stderr)
