@@ -278,6 +278,8 @@ class LaunchQEMUBase(SimpleProject):
 
             self.info("To start and connect GDB run the following command in another terminal:")
             path_to_kernel = self.currentKernel
+            if path_to_kernel is None:
+                path_to_kernel = self.rootfs_path / "boot/kernel/kernel"
             # Prefer the file with debug info
             kernel_full_guess = path_to_kernel.with_name(path_to_kernel.name + ".full")
             if kernel_full_guess.exists():
@@ -285,7 +287,7 @@ class LaunchQEMUBase(SimpleProject):
             if self.config.qemu_debug_program:
                 self.info("\t", coloured(AnsiColour.red, gdb_command(self.rootfs_path / self.config.qemu_debug_program, "main", path_to_kernel)), sep="")
             else:
-                self.info("\t", coloured(AnsiColour.red, gdb_command(self.currentKernel, "panic")), sep="")
+                self.info("\t", coloured(AnsiColour.red, gdb_command(path_to_kernel, "panic")), sep="")
                 self.info("If you would like to debug /sbin/init (or any other statically linked program) run this inside GDB:")
                 self.info(coloured(AnsiColour.red, "\tadd-symbol-file -o 0", str(self.rootfs_path / "sbin/init")))
                 self.info("For dynamically linked programs you will have to add libraries at the correct offset. For example:")
