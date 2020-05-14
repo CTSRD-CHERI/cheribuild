@@ -31,9 +31,10 @@ import socket
 
 from .build_qemu import BuildQEMU, BuildCheriOSQEMU
 from .cherios import BuildCheriOS
+from .cross.rtems import BuildRtems
+from .cross.freertos import BuildFreeRTOS
 from .cross.bbl import *
 from .cross.opensbi import BuildOpenSBI
-from .cross.rtems import BuildRtems
 from .disk_image import *
 from .project import *
 from ..utils import OSInfo, qemu_supports_9pfs
@@ -552,6 +553,30 @@ class LaunchRtemsQEMU(LaunchQEMUBase):
         super().__init__(config)
         # Run a simple RTEMS shell application
         self._qemu_riscv_bios = BuildRtems.getBuildDir(self) / "riscv/rv64xcheri_qemu/testsuites/samples/capture.exe"
+
+    def process(self):
+        super().process()
+
+class LaunchFreeRTOSQEMU(LaunchQEMUBase):
+    target = "run-freertos"
+    project_name = "run-freertos"
+    dependencies = ["freertos"]
+    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
+    _forwardSSHPort = False
+    _qemuUserNetworking = False
+    _hasPCI = False
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
+                                   defaultSshPort=None,
+                                   **kwargs)
+
+    def __init__(self, config: CheriConfig):
+        super().__init__(config)
+        # Run a simple FreeRTOS blinky demo application
+        self._qemu_riscv_bios = BuildFreeRTOS.getInstallDir(self) / "RISC-V-Generic_main_blinky.elf"
 
     def process(self):
         super().process()
