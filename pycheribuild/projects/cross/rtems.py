@@ -38,22 +38,25 @@ from ...utils import setEnv
 
 class BuildRtems(CrossCompileProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/rtems",
-        per_target_branches={
-            CompilationTargets.RTEMS_RISCV64_PURECAP: TargetBranchInfo("cheri_waf1", "rtems-riscv")
-            })
+        force_branch=True, default_branch="cheri_waf1")
     target = "rtems"
     project_name = "rtems"
     dependencies = ["newlib", "compiler-rt-builtins"]
     is_sdk_target = True
     needs_sysroot = False  # We don't need a complete sysroot
-    supported_architectures = [CompilationTargets.RTEMS_RISCV64_PURECAP]
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
     default_install_dir = DefaultInstallDir.SYSROOT
 
     # RTEMS BSPs to build
-    rtems_bsps = ["rv64imafdcxcheri_medany", "rv64xcheri_gfe", "rv64xcheri_qemu"]
+    rtems_bsps = []
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
+
+        if self.target_info.target.is_cheri_purecap():
+            self.rtems_bsps = ["rv64imafdcxcheri_medany", "rv64xcheri_gfe", "rv64xcheri_qemu"]
+        else:
+            self.rtems_bsps = ["rv64imafdc_medany"]
 
     def _run_waf(self, *args, **kwargs):
         cmdline = [self.sourceDir / "waf", "-t", self.sourceDir, "-o", self.buildDir] + list(args)

@@ -696,12 +696,10 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
 
     @classmethod
     def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        if target.is_cheri_purecap():
-            if target.is_riscv(include_purecap=True):
-                return ["newlib", "compiler-rt-builtins", "rtems"]
-            else:
-                assert False, "No support for building purecap RTEMS for non RISC-V targets yet"
-        assert False, "No support for building vanilla RTEMS. Only purecap CHER-RISC-V RTEMS is supported"
+        if target.is_riscv(include_purecap=True):
+            return ["newlib", "compiler-rt-builtins", "rtems"]
+        else:
+            assert False, "No support for building RTEMS for non RISC-V targets yet"
 
     @property
     def local_install_root(self) -> Path:
@@ -965,6 +963,7 @@ class CompilationTargets(object):
     FREEBSD_X86_64 = CrossCompileTarget("x86_64", CPUArchitecture.X86_64, FreeBSDTargetInfo)
 
     # RTEMS targets
+    RTEMS_RISCV64 = CrossCompileTarget("rtems-riscv64", CPUArchitecture.RISCV64, RTEMSTargetInfo)
     RTEMS_RISCV64_PURECAP = CrossCompileTarget("rtems-riscv64-purecap", CPUArchitecture.RISCV64, RTEMSTargetInfo,
         is_cheri_purecap=True)
 
@@ -976,5 +975,6 @@ class CompilationTargets(object):
                                            CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID,CHERIBSD_RISCV_NO_CHERI]
     ALL_SUPPORTED_BAREMETAL_TARGETS = [BAREMETAL_NEWLIB_MIPS64, BAREMETAL_NEWLIB_MIPS64_PURECAP,
                                        BAREMETAL_NEWLIB_RISCV64, BAREMETAL_NEWLIB_RISCV64_PURECAP]
+    ALL_SUPPORTED_RTEMS_TARGETS = [RTEMS_RISCV64, RTEMS_RISCV64_PURECAP]
     ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS = ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
                                                             ALL_SUPPORTED_BAREMETAL_TARGETS
