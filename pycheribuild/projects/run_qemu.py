@@ -103,7 +103,7 @@ class LaunchQEMUBase(SimpleProject):
         xtarget = self.crosscompile_target
         if xtarget.is_mips(include_purecap=True):
             self.machineFlags += ["-M", "malta"]
-        if xtarget.is_riscv(include_purecap=True):
+        elif xtarget.is_riscv(include_purecap=True):
             _hasPCI = False
             self.machineFlags += ["-M", "virt"]
             self.virtioDisk = True
@@ -114,8 +114,17 @@ class LaunchQEMUBase(SimpleProject):
             self.addRequiredSystemTool("qemu-system-" + qemu_suffix)
             self.qemuBinary = Path(shutil.which("qemu-system-" + qemu_suffix) or "/could/not/find/qemu")
             self.machineFlags = []  # default CPU (and NOT -M malta!)
-        # only QEMU-MIPS supports more than one SMB share
-        self._provide_src_via_smb = self.compiling_for_mips(include_purecap=True)
+        elif xtarget.is_aarch64():
+            qemu_suffix = "aarch64"
+            self.currentKernel = None  # boot from disk
+            self.addRequiredSystemTool("qemu-system-" + qemu_suffix)
+            self.qemuBinary = Path(shutil.which("qemu-system-" + qemu_suffix) or "/could/not/find/qemu")
+            self.machineFlags += ["-M", "virt"]
+        else:
+            assert False, "Unknown target"
+        # only CHERI QEMU supports more than one SMB share
+        self._provide_src_via_smb = self.compiling_for_mips(include_purecap=True) or self.compiling_for_riscv(
+            include_purecap=True)
 
     def process(self):
         assert self.qemuBinary is not None

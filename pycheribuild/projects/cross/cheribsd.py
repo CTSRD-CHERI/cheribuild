@@ -80,6 +80,8 @@ def freebsd_install_dir(config: CheriConfig, project: SimpleProject):
         return config.outputRoot / "freebsd-mips"
     elif target.is_x86_64():
         return config.outputRoot / "freebsd-x86"
+    elif target.is_aarch64():
+        return config.outputRoot / "freebsd-aarch64"
     elif target.is_riscv(include_purecap=False):
         return config.outputRoot / "freebsd-riscv"
     elif target.is_i386():
@@ -250,7 +252,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
     needs_sysroot = False  # We are building the full OS so we don't need a sysroot
     # TODO: test more architectures (e.g. RISCV)
     supported_architectures = [CompilationTargets.FREEBSD_X86_64, CompilationTargets.FREEBSD_MIPS,
-                               CompilationTargets.FREEBSD_RISCV]
+                               CompilationTargets.FREEBSD_RISCV, CompilationTargets.FREEBSD_AARCH64]
 
     _default_install_dir_fn = ComputedDefaultValue(function=freebsd_install_dir,
                                              as_string="$INSTALL_ROOT/freebsd-{mips/x86}")
