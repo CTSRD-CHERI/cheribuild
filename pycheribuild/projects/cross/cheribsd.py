@@ -525,7 +525,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.cross_toolchain_config.set_with_options(BINUTILS_BOOTSTRAP=False)
 
     def _setup_arch_specific_options(self):
-        if self.crosscompile_target.is_any_x86():
+        if self.crosscompile_target.is_any_x86() or self.crosscompile_target.is_aarch64():
             target_flags = ""
             self.linker_for_kernel = "lld"  # bfd won't work here
             self.linker_for_world = "lld"
@@ -1352,9 +1352,9 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         xtarget = build_cheribsd.crosscompile_target
         if xtarget.is_mips(include_purecap=True):
             return build_cheribsd.kernelConfig + "_MFS_ROOT"
-        elif xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            # Use the SPIKE MFSROOT kernel config by default
-            return "CHERI_SPIKE"
+        elif xtarget.is_riscv(include_purecap=True):
+            # TODO: maybe this should be renamed to GENERIC_MFS_ROOT?
+            return "SPIKE"  # Use the SPIKE MFSROOT kernel config by default
         return build_cheribsd.kernelConfig
 
     @classmethod
