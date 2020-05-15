@@ -1383,6 +1383,7 @@ class DefaultInstallDir(Enum):
     ROOTFS = "The rootfs for this target"
     COMPILER_RESOURCE_DIR = "The compiler resource directory"
     SYSROOT = "The sysroot for this target"
+    SYSROOT_AND_ROOTFS = "The sysroot for this target and the sysroot"
     CHERI_SDK = "The CHERI SDK directory"
     BOOTSTRAP_TOOLS = "The bootstap tools directory"
     CUSTOM_INSTALL_DIR = "Custom install directory"
@@ -1415,7 +1416,7 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
         if project.compiling_for_host():
             compiler_for_resource_dir = config.cheri_sdk_bindir / "clang"
         return getCompilerInfo(compiler_for_resource_dir).get_resource_dir()
-    elif install_dir == DefaultInstallDir.SYSROOT:
+    elif install_dir == DefaultInstallDir.SYSROOT or install_dir == DefaultInstallDir.SYSROOT_AND_ROOTFS:
         return project.sdk_sysroot
     elif install_dir == DefaultInstallDir.CHERI_SDK:
         assert project.compiling_for_host(), "CHERI_SDK is only a valid install dir for native, " \
@@ -1844,7 +1845,7 @@ class Project(SimpleProject):
         if not self.compiling_for_host():
             install_dir_kind = self.get_default_install_dir_kind()
             # Install to SDK if CHERIBSD_ROOTFS is the install dir but we are not building for CheriBSD
-            if install_dir_kind == DefaultInstallDir.SYSROOT:
+            if install_dir_kind == DefaultInstallDir.SYSROOT or install_dir_kind == DefaultInstallDir.SYSROOT_AND_ROOTFS:
                 if self.target_info.is_baremetal():
                     self.destdir = self.sdk_sysroot.parent
                     self._installPrefix = Path("/", self.target_info.target_triple)
@@ -1854,6 +1855,8 @@ class Project(SimpleProject):
                 else:
                     self._installPrefix = Path("/usr/local", self.crosscompile_target.generic_suffix)
                     self.destdir = self._installDir
+                if install_dir_kind == DefaultInstallDir.SYSROOT_AND_ROOTFS:
+                    self.rootfs_path = self.target_info.get_rootfs_target().installDir
             elif install_dir_kind == DefaultInstallDir.ROOTFS:
                 self.rootfs_path = self.target_info.get_rootfs_target().installDir
                 relative_to_rootfs = os.path.relpath(str(self._installDir), str(self.rootfs_path))
@@ -2176,18 +2179,26 @@ class Project(SimpleProject):
             return self._installPrefix
         return self._installDir
 
-    def runMakeInstall(self, *, options: MakeOptions=None, target="install", _stdout_filter=_default_stdout_filter, cwd=None,
-                       parallel=False, **kwargs):
+    def runMakeInstall(self, *, options: MakeOptions = None, target="install", _stdout_filter=_default_stdout_filter,
+                       cwd=None, parallel=False, make_install_env=None, **kwargs):
         if options is None:
             options = self.make_args.copy()
         else:
             options = options.copy()
-        options.env_vars.update(self.makeInstallEnv)
+        if make_install_env is None:
+            make_install_env = self.makeInstallEnv
+        options.env_vars.update(make_install_env)
         self.run_make(make_target=target, options=options, stdout_filter=_stdout_filter, cwd=cwd,
-                     parallel=parallel, **kwargs)
+            parallel=parallel, **kwargs)
 
     def install(self, _stdout_filter=_default_stdout_filter):
         self.runMakeInstall(_stdout_filter=_stdout_filter)
+        if self.get_default_install_dir_kind() == DefaultInstallDir.SYSROOT_AND_ROOTFS:
+            # Also install to the rootfs:
+            make_install_env = self.makeInstallEnv.copy()
+            assert "DESTDIR" in make_install_env, "DESTDIR must be set in install env for SYSROOT_AND_ROOTFS to work!"
+            make_install_env["DESTDIR"] = self.rootfs_path
+            self.runMakeInstall(_stdout_filter=_stdout_filter, make_install_env=make_install_env)
 
     def _do_generate_cmakelists(self):
         assert not isinstance(self, CMakeProject), self
