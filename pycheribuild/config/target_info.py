@@ -525,8 +525,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         if target.is_cheri_purecap():
             # anything over 10 should use libc++ by default
             if target.is_mips(include_purecap=True):
-                return "mips64c{}-unknown-freebsd{}-purecap".format(config.mips_cheri_bits,
-                    cls.FREEBSD_VERSION if include_version else "")
+                return "mips64-unknown-freebsd{}".format(cls.FREEBSD_VERSION if include_version else "")
             elif target.is_riscv(include_purecap=True):
                 return "riscv64-unknown-freebsd{}".format(cls.FREEBSD_VERSION if include_version else "")
             else:

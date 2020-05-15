@@ -150,8 +150,7 @@ class BuildLLVMBase(CMakeProject):
                 self.add_cmake_options(LLVM_USE_SPLIT_DWARF=True)
         if self.add_default_sysroot:
             self.add_cmake_options(DEFAULT_SYSROOT=self.crossSysrootPath,
-                LLVM_DEFAULT_TARGET_TRIPLE="mips64c" + self.config.mips_cheri_bits_str +
-                                           "hybrid-unknown-freebsd")
+                LLVM_DEFAULT_TARGET_TRIPLE="mips64-unknown-freebsd")
         # when making a debug or asserts build speed it up by building a release tablegen
         # Actually it seems like the time spent in CMake is longer than that spent running tablegen, disable for now
         self.add_cmake_options(LLVM_OPTIMIZED_TABLEGEN=False)
