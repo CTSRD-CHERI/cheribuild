@@ -34,6 +34,7 @@ from subprocess import CalledProcessError
 from typing import Tuple, Dict, Any, Union
 
 from .project import *
+from ..targets import target_manager
 from ..utils import runCmd, setEnv, coloured, AnsiColour, commandline_to_str, get_program_version, IS_LINUX
 
 
@@ -177,8 +178,13 @@ class ProjectUsingOpam(OpamMixin, Project):
 REMS_OPAM_REPO = "https://github.com/rems-project/opam-repository.git"
 
 
-class BuildSailFromOpam(OpamMixin, SimpleProject):
-    target = "sail-from-opam"
+class BuildSailFromOpam(ProjectUsingOpam):
+    target = "sail"
+    project_name = "sail"
+    repository = GitRepository("https://github.com/rems-project/sail", default_branch="sail2")
+    native_install_dir = DefaultInstallDir.CHERI_SDK
+    build_in_source_dir = True  # Cannot build out-of-source
+    make_kind = MakeCommandKind.GnuMake
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -188,10 +194,17 @@ class BuildSailFromOpam(OpamMixin, SimpleProject):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.use_git_version = cls.add_bool_option("use-git-version", show_help=False,
-                                                help="Install sail from github instead of using the latest released "
-                                                     "version")
+            help="Install sail from github instead of using the latest released version")
 
-    def process(self):
+    def update(self):
+        if not self.use_git_version:
+            return
+        super().update()
+
+    def compile(self, **kwargs):
+        pass
+
+    def install(self, **kwargs):
         # self.run_command_in_ocaml_env(["env"])
         repos = self.run_opam_cmd("repository", "list", captureOutput=True)
         if REMS_OPAM_REPO not in repos.stdout.decode("utf-8"):
@@ -211,10 +224,9 @@ class BuildSailFromOpam(OpamMixin, SimpleProject):
         # ensure sail isn't pinned
         self.run_opam_cmd("pin", "remove", "sail", "--no-action")
         if self.use_git_version:
-            # Force installation from latest git (pin repo now, but pass --no-acton since we need to install with
+            # Force installation from latest git (pin repo now, but pass --no-action since we need to install with
             # --destdir)
-            self.run_opam_cmd("pin", "add", "sail", "https://github.com/rems-project/sail.git", "--verbose",
-                              "--no-action")
+            self.run_opam_cmd("pin", "add", "sail", self.sourceDir, "--verbose", "--no-action")
         try:
             self.run_opam_cmd("install", "-y", "--verbose", "sail", "--destdir=" + str(self.config.cheri_sdk_dir))
             # I bet this will not work as intended... Probably better to just uninstall and reinstall
@@ -231,17 +243,14 @@ class BuildSailFromOpam(OpamMixin, SimpleProject):
             self.createSymlink(opamroot_sail_binary, self.config.cheri_sdk_bindir / opamroot_sail_binary.name)
 
 
-class BuildSail(TargetAliasWithDependencies):
-    # alias target to build both sail and the CHERI-MIPS model
-    target = "sail"
-    dependencies = ["sail-from-opam", "sail-cheri-mips"]
+target_manager.add_target_alias("sail-from-opam", "sail", deprecated=True)
 
 
 class BuildSailCheriMips(ProjectUsingOpam):
     target = "sail-cheri-mips"
     project_name = "sail-cheri-mips"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-mips")
-    dependencies = ["sail-from-opam"]
+    dependencies = ["sail"]
     native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
@@ -259,7 +268,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
                                                         "will be slow but the traces are useful to debug failing "
                                                         "tests)")
 
-    def compile(self, cwd: Path = None):
+    def compile(self, **kwargs):
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
         cmd = [self.make_args.command, self.config.makeJFlag, "all"] + self.make_args.all_commandline_args
@@ -273,7 +282,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
 class RunSailShell(OpamMixin, SimpleProject):
     target = "sail-env"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-mips")
-    dependencies = ["sail-from-opam"]
+    dependencies = ["sail"]
     native_install_dir = DefaultInstallDir.CHERI_SDK
 
     def process(self):
@@ -291,12 +300,11 @@ class RunSailShell(OpamMixin, SimpleProject):
             raise
 
 
-
 class BuildSailRISCV(ProjectUsingOpam):
     target = "sail-riscv"
     project_name = "sail-riscv"
     repository = GitRepository("https://github.com/rems-project/sail-riscv")
-    dependencies = ["sail-from-opam"]
+    dependencies = ["sail"]
     native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
@@ -313,7 +321,7 @@ class BuildSailRISCV(ProjectUsingOpam):
                                                         "will be slow but"
                                                         "the traces are useful to debug failing tests)")
 
-    def compile(self, cwd: Path = None):
+    def compile(self, **kwargs):
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
         cmd = [self.make_args.command, self.config.makeJFlag, "opam-build"] + self.make_args.all_commandline_args
@@ -329,7 +337,7 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
     target = "sail-cheri-riscv"
     project_name = "sail-cheri-riscv"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-riscv")
-    dependencies = ["sail-from-opam"]
+    dependencies = ["sail"]
     native_install_dir = DefaultInstallDir.CHERI_SDK
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
@@ -346,7 +354,7 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
                                                         "will be slow but the traces are useful to debug failing "
                                                         "tests)")
 
-    def compile(self, cwd: Path = None):
+    def compile(self, **kwargs):
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
         cmd = [self.make_args.command, self.config.makeJFlag, "opam-build"] + self.make_args.all_commandline_args
@@ -425,7 +433,7 @@ class BuildSailFromSource(OcamlProject):
             self.dependencyError("missing opam package menhirLib",
                                  install_instructions="Try running `opam install menhir`")
 
-    def compile(self, cwd: Path = None):
+    def compile(self, **kwargs):
         self.run_in_ocaml_env("""
 make
 make -C mips mips mips_c
@@ -446,7 +454,7 @@ class BuildLem(OcamlProject):
     repository = GitRepository("https://github.com/rems-project/lem")
     needed_ocaml_packages = OcamlProject.needed_ocaml_packages + ["zarith"]
 
-    def compile(self, cwd: Path = None):
+    def compile(self, **kwargs):
         # Note: this all breaks on MacOS if ocamlfind is installed via opam
         self.run_in_ocaml_env("make && make -C ocaml-lib local-install")
 
@@ -457,7 +465,7 @@ class BuildLem(OcamlProject):
 class BuildOtt(OcamlProject):
     repository = GitRepository("https://github.com/ott-lang/ott")
 
-    def compile(self, cwd: Path = None):
+    def compile(self, **kwargs):
         self.run_in_ocaml_env("make")
 
 
@@ -465,7 +473,7 @@ class BuildLinksem(OcamlProject):
     repository = GitRepository("https://github.com/rems-project/linksem")
     dependencies = ["lem", "ott"]
 
-    def compile(self, cwd: Path = None):
+    def compile(self, **kwargs):
         self.run_in_ocaml_env("""
 make USE_OCAMLBUILD=false
 make -C src USE_OCAMLBUILD=false local-install
