@@ -1734,6 +1734,7 @@ class Project(SimpleProject):
 
     @property
     def default_compiler_flags(self):
+        assert self._setup_called
         result = []
         if self.use_lto:
             result.extend(self._lto_compiler_flags)

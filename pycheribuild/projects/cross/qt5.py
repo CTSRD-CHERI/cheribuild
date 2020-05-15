@@ -52,6 +52,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         self.configureCommand = self.sourceDir / "configure"
         if not self.compiling_for_host():
             self._linkage = Linkage.STATIC
+
+    def setup(self):
+        super().setup()
         if self.compiling_for_mips(include_purecap=False) and self.force_static_linkage:
             assert "-mxgot" in self.default_compiler_flags
 
@@ -452,7 +455,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     def install(self, **kwargs):
         # create a stripped version of DumpRenderTree and jsc since the one with debug info is too big
         if not self.build_jsc_only:
-            dump_render_tree = self.buildDir / "bin/DumpRenderTree" # type: Path
+            dump_render_tree = self.buildDir / "bin/DumpRenderTree"  # type: Path
             if dump_render_tree.is_file():
                 runCmd(self.llvm_binutils_dir / "llvm-strip", "-o", dump_render_tree.with_suffix(".stripped"), dump_render_tree)
         jsc = self.buildDir / "bin/jsc"  # type: Path

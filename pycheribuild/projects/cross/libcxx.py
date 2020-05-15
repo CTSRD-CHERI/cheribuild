@@ -217,6 +217,8 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             self.qemu_host = os.path.expandvars(self.qemu_host)
         self.libcxx_lit_jobs = ""
 
+    def setup(self):
+        super().setup()
         if self.compiling_for_host():
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=True, LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False)
             if OSInfo.isUbuntu():

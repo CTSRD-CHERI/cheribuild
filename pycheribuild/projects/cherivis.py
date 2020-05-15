@@ -134,6 +134,7 @@ class BuildCheriVis(Project):
         assert self.cheritrace_subproject.buildDir == self.sourceDir / "cheritrace/Build"
         assert self.cheritrace_subproject.installDir == "/this/path/does/not/exist", self.cheritrace_subproject.installDir
         self.makedirs(self.cheritrace_subproject.buildDir)
+        self.cheritrace_subproject.setup()
         self.cheritrace_subproject.configure()
         self.cheritrace_subproject.compile()
         if IS_MAC:
