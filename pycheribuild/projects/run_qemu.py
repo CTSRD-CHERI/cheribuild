@@ -188,7 +188,7 @@ class LaunchQEMUBase(SimpleProject):
         statusUpdate("About to run QEMU with image", self.diskImage, "and kernel", self.currentKernel)
         user_network_options = ""
         smb_dir_count = 0
-        have_9pfs_support = qemu_supports_9pfs(self.qemuBinary)
+        have_9pfs_support = (self.crosscompile_target.is_native() or self.crosscompile_target.is_any_x86()) and qemu_supports_9pfs(self.qemuBinary)
         # Only default to providing the smb mount if smbd exists
         have_smbfs_support = self._provide_src_via_smb and shutil.which("smbd")
 
