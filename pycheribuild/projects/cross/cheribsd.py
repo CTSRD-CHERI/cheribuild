@@ -802,7 +802,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # By default also create a sysroot when installing world
             installsysroot_args = install_world_args.copy()
             # No need for the files in /usr/share and the METALOG file
-            installsysroot_args.set(NO_SHARE=True, METALOG="/dev/null")
+            installsysroot_args.set(NO_SHARE=True)
             installsysroot_args.set_env(DESTDIR=self.get_corresponding_sysroot())
             if sysroot_only:
                 if not self.has_installsysroot_target:
