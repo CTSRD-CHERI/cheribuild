@@ -311,12 +311,14 @@ class LaunchQEMUBase(SimpleProject):
 
             if self.config.debugger_in_tmux_pane:
                 try:
+                    if "TMUX" not in os.environ:
+                        raise Exception("You are not in a tmux session")
                     import libtmux
                     start_gdb_in_tmux_pane(gdb_command(self.currentKernel, "panic"))
                 except ImportError:
                     self.info(coloured(AnsiColour.red, "libtmux not installed, impossible to automatically start gdb"))
                 except Exception as e:
-                    self.info(coloured(AnsiColour.red, "Unable to start gdb in tmux: " + e))
+                    self.info(coloured(AnsiColour.red, "Unable to start gdb in tmux: {}".format(e)))
 
             gdb_socket_placeholder.socket.close() # the port is now available for qemu
             qemuCommand += ["-gdb", "tcp::{}".format(gdb_port),  # wait for gdb on localhost:1234
