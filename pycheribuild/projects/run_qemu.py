@@ -306,7 +306,8 @@ class LaunchQEMUBase(SimpleProject):
                     raise Exception("There should be only one tmux session running")
                 session = server.list_sessions()[0]
                 window = session.attached_window
-                pane = window.attached_pane.split_window(vertical=True, attach=False)
+                vertical = int(window.height) > int(window.width)
+                pane = window.attached_pane.split_window(vertical=vertical, attach=False)
                 pane.send_keys(command)
 
             if self.config.debugger_in_tmux_pane:
