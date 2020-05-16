@@ -305,9 +305,13 @@ class LaunchQEMUBase(SimpleProject):
                 if len(sessions) != 1:
                     raise Exception("There should be only one tmux session running")
                 session = server.list_sessions()[0]
-                window = session.attached_window
-                vertical = int(window.height) > int(window.width)
-                pane = window.attached_pane.split_window(vertical=vertical, attach=False)
+                window = session.attached_window  # type: libtmux.Window
+                pane = window.attached_pane
+                # Note: multiply by two since most monospace fonts are taller than wide
+                vertical = int(pane.height) * 2 > int(pane.width)
+                self.verbose_print("Current window h =", window.height, "w=", window.width)
+                self.verbose_print("Current pane h =", window.attached_pane.height, "w=", window.attached_pane.width)
+                pane = pane.split_window(vertical=vertical, attach=False)
                 pane.send_keys(command)
 
             if self.config.debugger_in_tmux_pane:
