@@ -309,15 +309,19 @@ class LaunchQEMUBase(SimpleProject):
                 pane = window.attached_pane
                 # Note: multiply by two since most monospace fonts are taller than wide
                 vertical = int(pane.height) * 2 > int(pane.width)
-                self.verbose_print("Current window h =", window.height, "w=", window.width)
-                self.verbose_print("Current pane h =", window.attached_pane.height, "w=", window.attached_pane.width)
-                pane = pane.split_window(vertical=vertical, attach=False)
-                pane.send_keys(command)
+                self.verbose_print("Current window h =", window.height, "w =", window.width)
+                self.verbose_print("Current pane h =", window.attached_pane.height, "w =", window.attached_pane.width)
+                if self.config.pretend:
+                    self.info("Would have split current tmux pane", "vertically." if vertical else "horizontally.")
+                    self.info("Would have run", coloured(AnsiColour.yellow, command), "in new pane.")
+                else:
+                    pane = pane.split_window(vertical=vertical, attach=False)
+                    pane.send_keys(command)
 
             if self.config.debugger_in_tmux_pane:
                 try:
                     if "TMUX" not in os.environ:
-                        raise Exception("You are not in a tmux session")
+                        raise Exception("--debugger-in-tmux-pane set, but not in a tmux session")
                     import libtmux
                     start_gdb_in_tmux_pane(gdb_command(self.currentKernel, "panic"))
                 except ImportError:
