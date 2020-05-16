@@ -1174,8 +1174,9 @@ class BuildCHERIBSD(BuildFreeBSD):
 
         # We also want to add this config option to the fake "cheribsd" target (to keep the config file manageable)
         cls.purecapKernel = cls.add_bool_option("pure-cap-kernel", show_help=True, _allow_unknown_targets=True,
-                                              only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP],
-                                              help="Build kernel with pure capability ABI (probably won't work!)")
+                                              only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP,
+                                                                    CompilationTargets.CHERIBSD_MIPS_HYBRID],
+                                              help="Build kernel with pure capability ABI (experimental)")
 
     def __init__(self, config: CheriConfig):
         self.installAsRoot = os.getuid() == 0
@@ -1194,15 +1195,19 @@ class BuildCHERIBSD(BuildFreeBSD):
         self.extra_kernels_with_mfs = []
         if self.buildFpgaKernels:
             if self.compiling_for_mips(include_purecap=True):
+                purecap_prefix = "PURECAP_" if self.purecapKernel else ""
                 if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                    prefix = "CHERI_DE4_"
+                    prefix = "CHERI_{}DE4_".format(purecap_prefix)
                 else:
                     prefix = "BERI_DE4_"
-                    # TODO: build the benchmark kernels? TODO: NFSROOT?
-                for conf in ("USBROOT", "USBROOT_BENCHMARK", "NFSROOT"):
-                    self.extra_kernels.append(prefix + conf)
+                # TODO: build the benchmark kernels? TODO: NFSROOT?
+                # XXX-AM: Skip these for now as the purecap kernel version is untested
+                if not self.purecapKernel:
+                    for conf in ("USBROOT", "USBROOT_BENCHMARK", "NFSROOT"):
+                        self.extra_kernels.append(prefix + conf)
                 if self.mfs_root_image:
                     self.extra_kernels_with_mfs.append(prefix + "MFS_ROOT")
+                    self.extra_kernels_with_mfs.append(prefix + "MFS_ROOT_FUZZ")
                     self.extra_kernels_with_mfs.append(prefix + "MFS_ROOT_BENCHMARK")
             elif self.compiling_for_riscv(include_purecap=True):
                 if self.crosscompile_target.is_hybrid_or_purecap_cheri():
@@ -1265,6 +1270,9 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         super().setup_config_options(**kwargs)
         cls.buildFpgaKernels = cls.add_bool_option("build-fpga-kernels", show_help=True, _allow_unknown_targets=True,
             default=True, help="Also build kernels for the FPGA.")
+        cls.purecapKernel = cls.add_bool_option("pure-cap-kernel", show_help=True, _allow_unknown_targets=True,
+                                              only_add_for_targets=[CompilationTargets.CHERIBSD_MIPS_PURECAP],
+                                              help="Build kernel with pure capability ABI (experimental)")
 
     def process(self):
         from ..disk_image import BuildMinimalCheriBSDDiskImage
@@ -1297,7 +1305,9 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     def fpga_kernconf(self):
         if self.compiling_for_mips(include_purecap=True):
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                return "CHERI_DE4_MFS_ROOT"
+                prefix = "CHERI_" if self.config.mips_cheri_bits == 128 else "CHERI"
+                purecap = "PURECAP_" if self.purecapKernel else ""
+                return "{}{}DE4_MFS_ROOT".format(prefix, purecap)
             return "BERI_DE4_MFS_ROOT"
         elif self.compiling_for_riscv(include_purecap=True):
             return "CHERI_GFE" if self.crosscompile_target.is_hybrid_or_purecap_cheri() else "GFE"
@@ -1620,4 +1630,3 @@ target_manager.add_target_alias("cheribsd-purecap", "cheribsd-mips-purecap", dep
 class BuildCheriBsdAndSysroot(TargetAliasWithDependencies):
     target = "cheribsd-with-sysroot"
     dependencies = ["cheribsd-mips-hybrid"]
-
