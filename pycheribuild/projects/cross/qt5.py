@@ -256,13 +256,11 @@ class BuildQtBase(BuildQtWithConfigureScript):
 # Webkit needs ICU (and recommended for QtBase too):
 class BuildICU4C(CrossCompileAutotoolsProject):
     # noinspection PyUnreachableCode
-    if True:
-        repository = GitRepository("https://github.com/CTSRD-CHERI/icu4c.git")
-    else:
-        repository = GitRepository("https://github.com/CTSRD-CHERI/icu.git", default_branch="maint/maint-66", force_branch=True)
-        project_name = "icu"
-        target = "icu4c"
-        build_dir_suffix = "4c"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/icu.git", default_branch="maint/maint-67",
+        force_branch=True, old_urls=[b"https://github.com/unicode-org/icu.git"])
+    project_name = "icu"
+    target = "icu4c"
+    build_dir_suffix = "4c"
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.SYSROOT
     make_kind = MakeCommandKind.GnuMake
@@ -306,9 +304,9 @@ class BuildICU4C(CrossCompileAutotoolsProject):
             self.configureArgs.append("--with-data-packaging=archive")
 
     def process(self):
-        if not self.compiling_for_host() and not self.nativeBuildDir.exists():
+        if not self.compiling_for_host() and not (self.nativeBuildDir / "bin/icupkg").exists():
             self.fatal("Missing host build directory", self.nativeBuildDir, " (needed for cross-compiling)",
-                       fixitHint="Run `cheribuild.py " + self.target + " --xhost`")
+                       fixitHint="Run `cheribuild.py " + self.target + "-native`")
         super().process()
 
 
