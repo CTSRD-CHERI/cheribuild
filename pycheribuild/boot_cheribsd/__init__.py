@@ -246,12 +246,14 @@ def prepend_ld_library_path(qemu: CheriBSDInstance, path: str):
 
 
 def set_ld_library_path_with_sysroot(qemu: CheriBSDInstance):
-    qemu.run(
-        "export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/sysroot/lib:/sysroot/usr/lib:/sysroot/usr/local/mips/lib",
-        timeout=3)
-    qemu.run(
-        "export LD_CHERI_LIBRARY_PATH=/usr/libcheri:/usr/local/libcheri:/sysroot/libcheri:/sysroot/usr/libcheri"
-        ":/sysroot/usr/local/cheri/lib:/sysroot/usr/local/cheri/libcheri",
+    # TODO: handle RISCV
+    purecap_install_prefix = "usr/local/mips-purecap"
+    hybrid_install_prefix = "usr/local/mips-hybrid"
+    nocheri_install_prefix = "usr/local/mips-nocheri"
+    qemu.run("export LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib:/sysroot/lib:/sysroot/usr/lib:/sysroot/{}/lib".format(
+        hybrid_install_prefix), timeout=3)
+    qemu.run("export LD_CHERI_LIBRARY_PATH=/usr/libcheri:/usr/local/libcheri:/sysroot/libcheri:/sysroot/usr/libcheri"
+        ":/sysroot/{}/lib:/sysroot/{}/libcheri".format(purecap_install_prefix, purecap_install_prefix),
         timeout=3)
 
 

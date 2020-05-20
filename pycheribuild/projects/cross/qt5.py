@@ -91,7 +91,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             linker_flags = self.default_ldflags + ["-target", self.target_info.target_triple]
             assert self.force_static_linkage, "Currently only static linking is supported!"
 
-            if self.compiling_for_cheri():
+            if self.crosscompile_target.is_cheri_purecap():
+                # Note: we are using the hybrid sysroot, so base system libraries are in usr/libcheri:
                 self.configureArgs.append("QMAKE_LIBDIR=" + str(self.crossSysrootPath / "usr/libcheri"))
             elif self.compiling_for_mips(include_purecap=False):
                 # self.configureArgs.append("QMAKE_CXXFLAGS+=-stdlib=libc++")

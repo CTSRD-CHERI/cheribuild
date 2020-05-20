@@ -56,8 +56,7 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        # Adding -ldl won't work: no libdl in /usr/libcheri
-        self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)
+        self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)  # Adding -ldl won't work: no libdl in /usr/libcheri
         self.lit_path = BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit"
         self.add_cmake_options(
             LLVM_PATH=BuildCheriLLVM.getSourceDir(self, cross_target=CompilationTargets.NATIVE) / "llvm",
@@ -161,8 +160,8 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
                 self.add_cmake_options(BUILD_TESTS=True, TEST_LIBUNWIND=True)
 
     def install(self, **kwargs):
-        libdir = self.installDir / "libcheri" if self.compiling_for_cheri() else self.installDir / "lib"
-        self.installFile(self.buildDir / "lib/libcxxrt.a", libdir / "libcxxrt.a", force=True)
+        self.installFile(self.buildDir / "lib/libcxxrt.a", self.installDir / "lib" / "libcxxrt.a", force=True)
+        self.installFile(self.buildDir / "lib/libcxxrt.so", self.installDir / "lib" / "libcxxrt.soa", force=True)
         # self.installFile(self.buildDir / "lib/libcxxrt.a", libdir / "libcxxrt.so", force=True)
         # self.installFile(self.buildDir / "lib/libcxxrt.so", self.installDir / "usr/libcheri/libcxxrt.so", force=True)
 

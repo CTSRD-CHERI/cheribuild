@@ -973,7 +973,10 @@ class MakeOptions(object):
         for k, v in kwargs.items():
             if isinstance(v, bool):
                 v = "1" if v else "0"
-            target_dict[k] = str(v)
+            if isinstance(v, (Path, int)):
+                v = str(v)
+            assert isinstance(v, str), "Should only pass int/bool/str/Path here!"
+            target_dict[k] = v
 
     def set(self, **kwargs):
         self.__do_set(self._vars, **kwargs)
@@ -2649,27 +2652,12 @@ class CMakeProject(Project):
         else:
             self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installDir)
         if self.crosscompile_target.is_cheri_purecap() and self.target_info.is_cheribsd():
-            if self._get_cmake_version() < (3, 9, 0) and not (self.sdk_sysroot / "usr/local/lib/cheri").exists():
-                warningMessage("Workaround for missing custom lib suffix in CMake < 3.9")
-                self.makedirs(self.sdk_sysroot / "usr/lib")
-                # create a /usr/lib/cheri -> /usr/libcheri symlink so that cmake can find the right libraries
-                self.createSymlink(Path("../libcheri"), self.sdk_sysroot / "usr/lib/cheri", relative=True,
-                    cwd=self.sdk_sysroot / "usr/lib")
-                self.makedirs(self.sdk_sysroot / "usr/local/cheri/lib")
-                self.makedirs(self.sdk_sysroot / "usr/local/cheri/libcheri")
-                self.createSymlink(Path("../libcheri"), self.sdk_sysroot / "usr/local/cheri/lib/cheri",
-                    relative=True, cwd=self.sdk_sysroot / "usr/local/cheri/lib")
+            if self._get_cmake_version() < (3, 9, 0):
+                self.fatal("CMake 3.9 or newer is required to cross-compile for CheriBSD")
             add_lib_suffix = """
-    # cheri libraries are found in /usr/libcheri:
-    if("${CMAKE_VERSION}" VERSION_LESS 3.9)
-      # message(STATUS "CMAKE < 3.9 HACK to find libcheri libraries")
-      # need to create a <sysroot>/usr/lib/cheri -> <sysroot>/usr/libcheri symlink
-      set(CMAKE_LIBRARY_ARCHITECTURE "cheri")
-      set(CMAKE_SYSTEM_LIBRARY_PATH "${CMAKE_FIND_ROOT_PATH}/usr/libcheri;${CMAKE_FIND_ROOT_PATH}/usr/local/cheri/lib;${CMAKE_FIND_ROOT_PATH}/usr/local/cheri/libcheri")
-    else()
-        set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
-    endif()
-    set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
+# cheri libraries are found in /usr/libcheri:
+set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
+# set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
     """
         else:
             add_lib_suffix = "# no lib suffix needed for non-purecap"
@@ -2710,6 +2698,7 @@ class CMakeProject(Project):
                 TOOLCHAIN_SYSTEM_PROCESSOR=self.target_info.cmake_processor_id,
                 TOOLCHAIN_SYSTEM_NAME=system_name,
                 TOOLCHAIN_PKGCONFIG_DIRS=self.target_info.pkgconfig_dirs,
+                TOOLCHAIN_PREFIX_PATHS=";".join(map(str, self.target_info.cmake_prefix_paths)),
                 TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
                 )
             # TODO: set CMAKE_STRIP, CMAKE_NM, CMAKE_OBJDUMP, CMAKE_READELF, CMAKE_DLLTOOL, CMAKE_DLLTOOL, CMAKE_ADDR2LINE

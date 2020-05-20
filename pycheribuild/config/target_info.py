@@ -71,6 +71,11 @@ class TargetInfo(ABC):
         ...
 
     @property
+    def cmake_prefix_paths(self) -> list:
+        """List of additional directories to be searched for packages (e.g. sysroot/usr/local/riscv64-purecap)"""
+        return []
+
+    @property
     @abstractmethod
     def sdk_root_dir(self) -> Path:
         ...
@@ -153,11 +158,8 @@ class TargetInfo(ABC):
 
     @property
     def install_prefix_dirname(self):
-        """The name of the root directory to install to: i.e. for CheriBSD /usr/local/cheri or /usr/local/mips"""
-        if self.target.is_cheri_purecap():
-            result = "cheri"
-        else:
-            result = self.target.generic_suffix
+        """The name of the root directory to install to: i.e. for CheriBSD /usr/local/mips-purecap or /usr/local/riscv64-hybrid"""
+        result = self.target.generic_suffix
         if self.config.cross_target_suffix:
             result += "-" + self.config.cross_target_suffix
         return result
@@ -469,6 +471,14 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def pkgconfig_dirs(self) -> str:
         return str(self.sysroot_dir / "usr/local/lib/pkgconfig")
 
+    @property
+    def local_install_root(self) -> Path:
+        return self.sysroot_dir / "usr/local"
+
+    @property
+    def cmake_prefix_paths(self) -> list:
+        return [self.local_install_root]
+
     def get_rootfs_target(self) -> "Project":
         from ..projects.cross.cheribsd import BuildFreeBSD
         return BuildFreeBSD.get_instance(self.project)
@@ -556,8 +566,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     @property
     def pkgconfig_dirs(self) -> str:
         if self.target.is_cheri_purecap():
-            return str(self.sysroot_dir / "usr/libcheri/pkgconfig") + ":" + \
-                   str(self.local_install_root / "lib/pkgconfig") + ":" + \
+            return str(self.local_install_root / "lib/pkgconfig") + ":" + \
                    str(self.local_install_root / "libcheri/pkgconfig")
         return str(self.sysroot_dir / "usr/lib/pkgconfig") + ":" + str(self.local_install_root / "lib/pkgconfig")
 

@@ -122,12 +122,10 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             # else:
             #    self.configureArgs.extend(["--enable-static", "--enable-shared"])
 
-        # target triple contains a number suffix -> remove it when computing the compiler name
-        if self.compiling_for_cheri() and self._configure_supports_libdir:
-            # nginx configure script doesn't understand --libdir
-            # make sure that we install to the right directory
-            # TODO: can we use relative paths?
-            self.configureArgs.append("--libdir=" + str(self.installPrefix) + "/libcheri")
+        if self.crosscompile_target.is_cheri_purecap() and self._configure_supports_libdir:
+            # Install to lib and not libcheri since we have a separate prefix and that makes it
+            # easier to handle build systems that assume that library are always in /lib
+            self.configureArgs.append("--libdir=" + str(self.installPrefix) + "/lib")
 
         if not self.target_info.is_baremetal() and not self.target_info.is_rtems():
             CPPFLAGS = self.default_compiler_flags

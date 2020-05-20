@@ -1,10 +1,14 @@
 #
-# Copyright (c) 2016 Alex Richardson
-# All rights reserved.
+# Copyright (c) 2016-2020 Alex Richardson
 #
 # This software was developed by SRI International and the University of
 # Cambridge Computer Laboratory under DARPA/AFRL contract FA8750-10-C-0237
 # ("CTSRD"), as part of the DARPA CRASH research programme.
+#
+# This software was developed by SRI International and the University of
+# Cambridge Computer Laboratory (Department of Computer Science and
+# Technology) under DARPA contract HR0011-18-C-0016 ("ECATS"), as part of the
+# DARPA SSITH research programme.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -44,11 +48,8 @@ set(CHERIBSD_SYSROOT "@TOOLCHAIN_SYSROOT@")
 # https://cmake.org/cmake/help/git-master/variable/CMAKE_SYSROOT.html
 set(CMAKE_SYSROOT ${CHERIBSD_SYSROOT})
 
-
-# if("${CMAKE_SYSTEM_NAME}" STREQUAL "Generic")
-  set(CMAKE_AR "@TOOLCHAIN_SDK_BINDIR@/ar" CACHE FILEPATH "ar")
-  set(CMAKE_RANLIB "@TOOLCHAIN_SDK_BINDIR@/ranlib" CACHE FILEPATH "ranlib")
-# endif()
+set(CMAKE_AR "@TOOLCHAIN_SDK_BINDIR@/ar" CACHE FILEPATH "ar")
+set(CMAKE_RANLIB "@TOOLCHAIN_SDK_BINDIR@/ranlib" CACHE FILEPATH "ranlib")
 
 # specify the cross compiler
 set(CMAKE_C_COMPILER "@TOOLCHAIN_C_COMPILER@")
@@ -63,16 +64,6 @@ set(CMAKE_ASM_COMPILER_TARGET "@TOOLCHAIN_TARGET_TRIPLE@")
 if (CMAKE_VERSION VERSION_LESS "3.13")
     set(CMAKE_ASM_COMPILER_ID "Clang")  # for some reason CMake doesn't detect this automatically
 endif()
-
-# FIXME: this doesn't work :(
-# strip the version number from the triple to find the binutils
-# if ("@TOOLCHAIN_TARGET_TRIPLE@" MATCHES "^(.+-freebsd)[0-9]*$")
-#    # These variables are used to find the binutils: (See CMakeFindBinUtils.cmake)
-#    set(_CMAKE_TOOLCHAIN_PREFIX "${CMAKE_MATCH_1}" CACHE INTERNAL "")
-#    message(WARNING _CMAKE_TOOLCHAIN_PREFIX=${_CMAKE_TOOLCHAIN_PREFIX})
-#    #set(_CMAKE_TOOLCHAIN_SUFFIX "${CMAKE_MATCH_2}")
-#endif()
-#include(CMakeFindBinUtils)
 
 set(CHERIBSD_COMMON_FLAGS "@TOOLCHAIN_COMMON_FLAGS@")
 set(CHERIBSD_LINK_FLAGS "@TOOLCHAIN_LINKER_FLAGS@")
@@ -114,15 +105,10 @@ set(ENV{PKG_CONFIG_PATH} "")
 # Use -pthread flag https://gitlab.kitware.com/cmake/cmake/issues/16920
 set(THREADS_HAVE_PTHREAD_ARG TRUE)
 
+
+# Ensure we search in the custom install prefix that we install everything to:
+set(CMAKE_PREFIX_PATH "@TOOLCHAIN_PREFIX_PATHS@;${CMAKE_PREFIX_PATH}")
 SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 # for libraries and headers in the target directories
 SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
-
-# For some reason ranlib doesn't like our static libraries:
-#  /build/ctsrd/sdk256/bin/mips64-unknown-freebsd-ranlib: libcmTC_1737a.a:
-#  File format is ambiguous
-#  /build/ctsrd/sdk256/bin/mips64-unknown-freebsd-ranlib: Matching formats:
-#  elf64-tradbigmips ecoff-bigmips ecoff-littlemips
-# As it is not required we can simply use : instead
-# set(CMAKE_RANLIB ":")
