@@ -1299,6 +1299,24 @@ class GitRepository(SourceRepository):
         # Note: "git fetch" without other arguments will fetch from the currently configured upstream.
         # If there is no upstream, it will just return immediately.
         runCmd("git", "fetch", cwd=src_dir)
+
+        # Handle forced branches now that we have fetched the latest changes
+        if src_dir.exists() and self.force_branch:
+            assert self.default_branch, "default_branch must be set if force_branch is true!"
+            # TODO: move this to Project so it can also be used for other targets
+            status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
+                captureOutput=True, print_verbose_only=True, cwd=src_dir, runInPretendMode=True)
+            if status.stdout.startswith(b"## ") and not status.stdout.startswith(
+                    b"## " + self.default_branch.encode("utf-8") + b"..."):
+                current_branch = status.stdout[3:status.stdout.find(b"...")].strip()
+                warningMessage("You are trying to build the", current_branch.decode("utf-8"),
+                    "branch. You should be using", self.default_branch)
+                if current_project.query_yes_no("Would you like to change to the " + self.default_branch + " branch?"):
+                    runCmd("git", "checkout", self.default_branch, cwd=src_dir)
+                else:
+                    current_project.ask_for_confirmation("Are you sure you want to continue?", force_result=False,
+                        error_message="Wrong branch: " + current_branch.decode("utf-8"))
+
         # We don't need to update if the upstream commit is an ancestor of the current HEAD.
         # This check ensures that we avoid a rebase if the current branch is a few commits ahead of upstream.
         # Note: merge-base --is-ancestor exits with code 0/1 instead of printing output so we need a try/catch
@@ -1359,22 +1377,6 @@ class GitRepository(SourceRepository):
             runCmd("git", "stash", "pop", cwd=src_dir, print_verbose_only=True)
         if revision:
             runCmd("git", "checkout", revision, cwd=src_dir, print_verbose_only=True)
-
-        if src_dir.exists() and self.force_branch:
-            assert self.default_branch, "default_branch must be set if force_branch is true!"
-            # TODO: move this to Project so it can also be used for other targets
-            status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
-                captureOutput=True, print_verbose_only=True, cwd=src_dir, runInPretendMode=True)
-            if status.stdout.startswith(b"## ") and not status.stdout.startswith(
-                    b"## " + self.default_branch.encode("utf-8") + b"..."):
-                current_branch = status.stdout[3:status.stdout.find(b"...")].strip()
-                warningMessage("You are trying to build the", current_branch.decode("utf-8"),
-                    "branch. You should be using", self.default_branch)
-                if current_project.query_yes_no("Would you like to change to the " + self.default_branch + " branch?"):
-                    runCmd("git", "checkout", self.default_branch, cwd=src_dir)
-                else:
-                    current_project.ask_for_confirmation("Are you sure you want to continue?", force_result=False,
-                        error_message="Wrong branch: " + current_branch.decode("utf-8"))
 
 
 class DefaultInstallDir(Enum):
