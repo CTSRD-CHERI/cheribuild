@@ -506,6 +506,12 @@ def dict_raise_on_duplicates(ordered_pairs):
             d[k] = v
     return d
 
+# https://stackoverflow.com/a/50936474
+class ArgparseSetGivenAction(argparse.Action):
+  def __call__(self, parser, namespace, values, option_string=None):
+    setattr(namespace, self.dest, values)
+    setattr(namespace, self.dest+'_given', True)
+
 class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
     def __init__(self):
         super().__init__(JsonAndCommandLineConfigOption)
@@ -518,6 +524,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         # print("Name is:", program, "prefix:", config_prefix)
         self.defaultConfigPath = Path(self.configdir, config_prefix + "cheribuild.json")
         self.pathGroup.add_argument("--config-file", metavar="FILE", type=str, default=str(self.defaultConfigPath),
+                                  action=ArgparseSetGivenAction,
                                   help="The config file that is used to load the default settings (default: '" +
                                   str(self.defaultConfigPath) + "')")
         self._parser.add_argument("--help-all", "--help-hidden", action="help", help="Show all help options, including"
@@ -621,6 +628,10 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
             self._configPath = Path(os.path.expanduser(self._parsedArgs.config_file)).absolute()
         if self._configPath.exists():
             self._JSON = self.__load_json_with_includes(self._configPath)
+        elif hasattr(self._parsedArgs, "config_file_given"):
+            print(coloured(AnsiColour.red, "Configuration file", self._configPath,
+                           "does not exist, using only command line arguments."), file=sys.stderr)
+            raise FileNotFoundError(self._parsedArgs.config_file)
         else:
             print(coloured(AnsiColour.green, "Configuration file", self._configPath,
                            "does not exist, using only command line arguments."), file=sys.stderr)
