@@ -37,6 +37,7 @@ import argparse
 import atexit
 import datetime
 import os
+import random
 import re
 import shlex
 import shutil
@@ -206,7 +207,10 @@ def print_cmd(*args, **kwargs):
 def failure(*args, exit=True, **kwargs):
     print("\n", MESSAGE_PREFIX, "\033[0;31m", *args, "\033[0m", sep="", file=sys.stderr, flush=True, **kwargs)
     if exit:
-        time.sleep(1)  # to get the remaining output
+        try:
+            time.sleep(1)  # to get the remaining output
+        except:
+            pass
         sys.exit(1)
     return False
 
@@ -589,13 +593,10 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
     return child
 
 
-def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: list, test_ld_preload_files: list,
-             test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None,
-             test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]" = None) -> bool:
-    test_command = args.test_command
+def _do_test_setup(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: list, test_ld_preload_files: list,
+                   test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None) -> None:
     ssh_keyfile = args.ssh_key
     ssh_port = args.ssh_port
-    timeout = args.test_timeout
     smb_dirs = qemu.smb_dirs  # type: typing.List[SmbMount]
     setup_tests_starttime = datetime.datetime.now()
     # disable coredumps, otherwise we get no space left on device errors
@@ -658,9 +659,9 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
                 pretend_result=0)
         except CheriBSDMatchedErrorOutput:
             failure("QEMU SMBD failed to mount ", d.in_target, ". Trying one more time.", exit=False)
-            info("Waiting for 5 seconds before retrying mount_smbfs...")
+            info("Waiting for 2-5 seconds before retrying mount_smbfs...")
             if not PRETEND:
-                time.sleep(5)  # wait 5 seconds, hopefully the server is less busy then.
+                time.sleep(2 + 3 * random.random())  # wait 2-5 seconds, hopefully the server is less busy then.
             # If the smbfs connection timed out try once more. This can happen when multiple libc++ test jobs are
             # running on the same jenkins slaves so one of them might time out
             checked_run_cheribsd_command(qemu, mount_command)
@@ -683,6 +684,19 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
         setup_tests_starttime = datetime.datetime.now()
         test_setup_function(qemu, args)
         success("Additional test enviroment setup took ", datetime.datetime.now() - setup_tests_starttime)
+
+
+def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: list, test_ld_preload_files: list,
+             test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None,
+             test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]" = None) -> bool:
+    try:
+        _do_test_setup(qemu, args, test_archives, test_ld_preload_files, test_setup_function)
+    except KeyboardInterrupt:
+        raise
+    except Exception as e:
+        traceback.print_exc(file=sys.stderr)
+        failure("Got exception while preparing test environment:", e, exit=True)
+        return False
 
     if args.test_environment_only:
         success("Test environment set up. Skipping tests due to --test-environment-only")
@@ -707,6 +721,8 @@ def runtests(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: li
             failure("Tests failed after ", testtime, exit=False)
         return result
 
+    test_command = args.test_command
+    timeout = args.test_timeout
     qemu.sendline(test_command +
                   " ;if test $? -eq 0; then echo 'TESTS' 'COMPLETED'; else echo 'TESTS' 'FAILED'; fi")
     i = qemu.expect([pexpect.TIMEOUT, "TESTS COMPLETED", "TESTS UNSTABLE", "TESTS FAILED"], timeout=timeout)
@@ -921,6 +937,7 @@ def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace],
         except CheriBSDCommandFailed as e:
             failure("Command failed while runnings tests: ", str(e), "\n", str(qemu), exit=False)
             traceback.print_exc(file=sys.stderr)
+            tests_okay = False
         except Exception:
             failure("FAILED to run tests!!\n", str(qemu), exit=False)
             traceback.print_exc(file=sys.stderr)
