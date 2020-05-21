@@ -54,12 +54,11 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         result = [cls.kernel_class.get_class_for_target(xtarget).target, "gdb-native"]
         return result
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         self.COMMON_LDFLAGS.extend(["-nostartfiles", "-nostdlib", "-static"])
         self.COMMON_FLAGS.append("-nostdlib")
 
-    def configure(self, **kwargs):
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
             # We have to build a purecap if we want to support CHERI
             self.configureArgs.append("--with-abi=l64pc128")
@@ -90,9 +89,8 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
             assert self.kernel_class is not None
             kernel_path = self.kernel_class.get_installed_kernel_path(self, cross_target=self.crosscompile_target)
             self.configureArgs.append("--with-payload=" + str(kernel_path))
-        super().configure(**kwargs)
 
-    def compile(self, cwd: Path = None):
+    def compile(self, **kwargs):
         self.run_make("bbl")
 
     def install(self, **kwargs):
