@@ -477,7 +477,7 @@ def test_libcxxrt_dependency_path():
 
     config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.buildRoot / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
-    check_libunwind_path(config.outputRoot / "rootfs-purecap128/opt/cheri/c++/lib", "libcxxrt-cheri")
+    check_libunwind_path(config.outputRoot / "rootfs-purecap128/opt/mips-purecap/c++/lib", "libcxxrt-cheri")
     check_libunwind_path(config.outputRoot / "rootfs128/opt/mips-hybrid/c++/lib", "libcxxrt-mips-hybrid")
     # Check the defaults:
     config = _parse_arguments(["--skip-configure", "--xhost"])
