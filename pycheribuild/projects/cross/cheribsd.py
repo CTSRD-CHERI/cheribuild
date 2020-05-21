@@ -1353,8 +1353,9 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         if xtarget.is_mips(include_purecap=True):
             return build_cheribsd.kernelConfig + "_MFS_ROOT"
         elif xtarget.is_riscv(include_purecap=True):
+            # Use the SPIKE MFSROOT kernel config by default
             # TODO: maybe this should be renamed to GENERIC_MFS_ROOT?
-            return "SPIKE"  # Use the SPIKE MFSROOT kernel config by default
+            return "CHERI_SPIKE" if xtarget.is_hybrid_or_purecap_cheri() else "SPIKE"
         return build_cheribsd.kernelConfig
 
     @classmethod
