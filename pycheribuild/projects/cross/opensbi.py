@@ -33,9 +33,7 @@ from ...utils import IS_MAC, classproperty
 
 
 def opensbi_install_dir(config: CheriConfig, project: SimpleProject):
-    dir_name = project.crosscompile_target.cpu_architecture.value
-    if project.crosscompile_target.is_cheri_purecap():
-        dir_name += "c"
+    dir_name = project.crosscompile_target.generic_suffix.replace("baremetal-", "")
     return config.cheri_sdk_dir / "opensbi" / dir_name
 
 
@@ -45,6 +43,7 @@ class BuildOpenSBI(Project):
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     default_build_type = BuildType.RELWITHDEBINFO
     supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64_HYBRID,
                                CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP]
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
@@ -80,7 +79,9 @@ class BuildOpenSBI(Project):
             FW_OPTIONS="0x2",  # Debug output enabled for now
             # FW_JUMP_ADDR= ## cheribsd start addr
             # FW_JUMP_FDT_ADDR= ## cheribsd fdt addr
-            #
+            PLATFORM_RISCV_ABI=self.target_info.riscv_softfloat_abi,
+            PLATFORM_RISCV_ISA=self.target_info.riscv_arch_string,
+            PLATFORM_RISCV_XLEN=64,
         )
         if self.config.verbose:
             self.make_args.set(V=True)
@@ -92,12 +93,13 @@ class BuildOpenSBI(Project):
         all_platforms = []
         for c in platforms_dir.glob("**/config.mk"):
             relpath = str(c.parent.relative_to(platforms_dir))
-            print(relpath)
             if relpath != "template":
                 all_platforms.append(relpath)
-        if "qemu/virt" not in all_platforms:
-            self.fatal("qemu/virt platform missing?")
-        return all_platforms
+        if "generic" not in all_platforms:
+            self.fatal("generic platform missing?")
+        # return all_platforms
+
+        return ["generic"]
 
     def compile(self, **kwargs):
         for platform in self.all_platforms:
@@ -114,7 +116,7 @@ class BuildOpenSBI(Project):
 
     @staticmethod
     def _fw_jump_path() -> str:
-        return "platform/qemu/virt/firmware/fw_jump.elf"
+        return "platform/generic/firmware/fw_jump.elf"
 
     @classmethod
     def get_nocap_instance(cls, caller, cpu_arch=CPUArchitecture.RISCV64) -> "BuildOpenSBI":

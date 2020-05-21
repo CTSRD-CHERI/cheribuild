@@ -345,18 +345,37 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         elif self.target.is_riscv(include_purecap=True):
             assert self.target.cpu_architecture == CPUArchitecture.RISCV64
             # Use the insane RISC-V arch string to enable CHERI
-            arch_string = "rv64imafdc"
-            if self.target.is_hybrid_or_purecap_cheri():
-                arch_string += "xcheri"
-            result.append("-march=" + arch_string)  # XXX: any more xfoo extensions?
-            if self.target.is_cheri_purecap():
-                result.append("-mabi=l64pc128d")  # 64-bit double-precision hard-float + purecap
-            else:
-                result.append("-mabi=lp64d")  # 64-bit double-precision hard-float
+            result.append("-march=" + self.riscv_arch_string)
+            result.append("-mabi=" + self.riscv_abi)
             result.append("-mno-relax")  # Linker relaxations are not supported with clang+lld
         else:
             self.project.warning("Compiler flags might be wong, only native + MIPS checked so far")
         return result
+
+    @property
+    def riscv_arch_string(self):
+        assert self.target.is_riscv(include_purecap=True)
+        # Use the insane RISC-V arch string to enable CHERI
+        arch_string = "rv64imafdc"
+        if self.target.is_hybrid_or_purecap_cheri():
+            arch_string += "xcheri"
+        return arch_string  # XXX: any more extensions needed?
+
+    @property
+    def riscv_abi(self):
+        assert self.target.is_riscv(include_purecap=True)
+        if self.target.is_cheri_purecap():
+            return "l64pc128d"  # 64-bit double-precision hard-float + purecap
+        else:
+            return "lp64d"  # 64-bit double-precision hard-float
+
+    @property
+    def riscv_softfloat_abi(self):
+        assert self.target.is_riscv(include_purecap=True)
+        if self.target.is_cheri_purecap():
+            return "l64pc128"  # 64-bit soft-float purecap
+        else:
+            return "lp64"  # 64-bit soft-float
 
 
 class NativeTargetInfo(TargetInfo):
@@ -921,6 +940,8 @@ class CompilationTargets(object):
         NewlibBaremetalTargetInfo, is_cheri_purecap=True, check_conflict_with=BAREMETAL_NEWLIB_MIPS64)
     BAREMETAL_NEWLIB_RISCV64 = CrossCompileTarget("baremetal-riscv64", CPUArchitecture.RISCV64,
         NewlibBaremetalTargetInfo, check_conflict_with=BAREMETAL_NEWLIB_MIPS64)
+    BAREMETAL_NEWLIB_RISCV64_HYBRID = CrossCompileTarget("baremetal-riscv64-hybrid", CPUArchitecture.RISCV64,
+        NewlibBaremetalTargetInfo, is_cheri_hybrid=True, check_conflict_with=BAREMETAL_NEWLIB_RISCV64)
     BAREMETAL_NEWLIB_RISCV64_PURECAP = CrossCompileTarget("baremetal-riscv64-purecap", CPUArchitecture.RISCV64,
         NewlibBaremetalTargetInfo, is_cheri_purecap=True, check_conflict_with=BAREMETAL_NEWLIB_RISCV64)
     # FreeBSD targets
