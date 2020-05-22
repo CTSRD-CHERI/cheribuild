@@ -2593,7 +2593,7 @@ class CMakeProject(Project):
         # The toolchain files need at least CMake 3.7
         self.set_minimum_cmake_version(3, 7)
 
-    def _prepare_toolchain_file(self, **kwargs):
+    def _prepare_toolchain_file(self, file: Path, **kwargs):
         configured_template = self._cmakeTemplate
         for key, value in kwargs.items():
             if value is None:
@@ -2609,7 +2609,7 @@ class CMakeProject(Project):
         # work around jenkins paths that might contain @[0-9]+ in the path:
         configured_jenkins_workaround = re.sub(r"@\d+", "", configured_template)
         assert "@" not in configured_jenkins_workaround, configured_jenkins_workaround
-        self.writeFile(contents=configured_template, file=self.toolchainFile, overwrite=True)
+        self.writeFile(contents=configured_template, file=file, overwrite=True)
 
     def add_cmake_options(self, *, _include_empty_vars=False, **kwargs):
         for option, value in kwargs.items():
@@ -2645,12 +2645,11 @@ class CMakeProject(Project):
         buildFile = "build.ninja" if self.generator == CMakeProject.Generator.Ninja else "Makefile"
         return not cmakeCache.exists() or not (self.buildDir / buildFile).exists()
 
-    def configure(self, **kwargs):
-        if self.installPrefix != self.installDir:
-            assert self.destdir, "custom install prefix requires DESTDIR being set!"
-            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installPrefix)
-        else:
-            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installDir)
+    def generate_cmake_toolchain_file(self, file: Path):
+        # CMAKE_CROSSCOMPILING will be set when we change CMAKE_SYSTEM_NAME:
+        # This means we may not need the toolchain file at all
+        # https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html
+        # TODO: avoid the toolchain file and set all flags on the command line
         if self.crosscompile_target.is_cheri_purecap() and self.target_info.is_cheribsd():
             if self._get_cmake_version() < (3, 9, 0):
                 self.fatal("CMake 3.9 or newer is required to cross-compile for CheriBSD")
@@ -2658,10 +2657,36 @@ class CMakeProject(Project):
 # cheri libraries are found in /usr/libcheri:
 set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
 # set(LIB_SUFFIX "cheri" CACHE INTERNAL "")
-    """
+"""
         else:
             add_lib_suffix = "# no lib suffix needed for non-purecap"
+        self._prepare_toolchain_file(file=file,
+            TOOLCHAIN_SDK_BINDIR=self.sdk_bindir if not self.compiling_for_host() else
+            self.config.cheri_sdk_bindir,
+            TOOLCHAIN_COMPILER_BINDIR=self.CC.parent,
+            TOOLCHAIN_TARGET_TRIPLE=self.target_info.target_triple,
+            TOOLCHAIN_COMMON_FLAGS=self.default_compiler_flags,
+            TOOLCHAIN_C_FLAGS=self.CFLAGS,
+            TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
+            TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
+            TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
+            TOOLCHAIN_C_COMPILER=self.CC,
+            TOOLCHAIN_CXX_COMPILER=self.CXX,
+            TOOLCHAIN_SYSROOT=self.sdk_sysroot,
+            ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
+            TOOLCHAIN_SYSTEM_PROCESSOR=self.target_info.cmake_processor_id,
+            TOOLCHAIN_SYSTEM_NAME=self.target_info.cmake_system_name,
+            TOOLCHAIN_PKGCONFIG_DIRS=self.target_info.pkgconfig_dirs,
+            TOOLCHAIN_PREFIX_PATHS=";".join(map(str, self.target_info.cmake_prefix_paths)),
+            TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
+            )
 
+    def configure(self, **kwargs):
+        if self.installPrefix != self.installDir:
+            assert self.destdir, "custom install prefix requires DESTDIR being set!"
+            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installPrefix)
+        else:
+            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installDir)
         custom_ldflags = self.default_ldflags + self.LDFLAGS
         self.add_cmake_options(
             CMAKE_C_COMPILER=self.CC,
@@ -2676,32 +2701,8 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
             CMAKE_MODULE_LINKER_FLAGS_INIT=commandline_to_str(custom_ldflags + self.target_info.additional_shared_library_link_flags),
             )
         if not self.compiling_for_host():
-            # CMAKE_CROSSCOMPILING will be set when we change CMAKE_SYSTEM_NAME:
-            # This means we may not need the toolchain file at all
-            # https://cmake.org/cmake/help/latest/variable/CMAKE_CROSSCOMPILING.html
-            # TODO: avoid the toolchain file and set all flags on the command line
-            system_name = self.target_info.cmake_system_name
-            self._prepare_toolchain_file(
-                TOOLCHAIN_SDK_BINDIR=self.sdk_bindir if not self.compiling_for_host() else
-                self.config.cheri_sdk_bindir,
-                TOOLCHAIN_COMPILER_BINDIR=self.CC.parent,
-                TOOLCHAIN_TARGET_TRIPLE=self.target_info.target_triple,
-                TOOLCHAIN_COMMON_FLAGS=self.default_compiler_flags,
-                TOOLCHAIN_C_FLAGS=self.CFLAGS,
-                TOOLCHAIN_LINKER_FLAGS=self.LDFLAGS + self.default_ldflags,
-                TOOLCHAIN_CXX_FLAGS=self.CXXFLAGS,
-                TOOLCHAIN_ASM_FLAGS=self.ASMFLAGS,
-                TOOLCHAIN_C_COMPILER=self.CC,
-                TOOLCHAIN_CXX_COMPILER=self.CXX,
-                TOOLCHAIN_SYSROOT=self.sdk_sysroot,
-                ADD_TOOLCHAIN_LIB_SUFFIX=add_lib_suffix,
-                TOOLCHAIN_SYSTEM_PROCESSOR=self.target_info.cmake_processor_id,
-                TOOLCHAIN_SYSTEM_NAME=system_name,
-                TOOLCHAIN_PKGCONFIG_DIRS=self.target_info.pkgconfig_dirs,
-                TOOLCHAIN_PREFIX_PATHS=";".join(map(str, self.target_info.cmake_prefix_paths)),
-                TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
-                )
             # TODO: set CMAKE_STRIP, CMAKE_NM, CMAKE_OBJDUMP, CMAKE_READELF, CMAKE_DLLTOOL, CMAKE_DLLTOOL, CMAKE_ADDR2LINE
+            self.generate_cmake_toolchain_file(self.toolchainFile)
             self.add_cmake_options(
                 _CMAKE_TOOLCHAIN_LOCATION=self.target_info.sdk_root_dir / "bin",
                 CMAKE_LINKER=self.target_info.linker)
