@@ -496,7 +496,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def cmake_prefix_paths(self) -> list:
-        return [self.local_install_root]
+        return [self.local_install_root, self.local_install_root / "libcheri/cmake"]
 
     def get_rootfs_target(self) -> "Project":
         from ..projects.cross.cheribsd import BuildFreeBSD
