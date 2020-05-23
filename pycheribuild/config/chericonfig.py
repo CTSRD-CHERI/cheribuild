@@ -70,6 +70,10 @@ class BuildType(Enum):
     def should_include_debug_info(self):
         return self in (BuildType.DEBUG, BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO)
 
+    @property
+    def is_release(self):
+        return self in (BuildType.RELEASE, BuildType.RELWITHDEBINFO)
+
 
 class CheriConfig(object):
     def __init__(self, loader: ConfigLoaderBase, action_class):
@@ -135,7 +139,7 @@ class CheriConfig(object):
                                                     help="The ABI to use for cap-table mode")
         self.cross_target_suffix = loader.addOption("cross-target-suffix", helpHidden=True, default="",
                                                     help="Add a suffix to the cross build and install directories. "
-                                                         "With VALUE=-pcrel it will use /opt/cheriXXX-pcrel/$PROJECT")
+                                                         "With VALUE=-pcrel it will use /opt/mips-purecap-pcrel/$PROJECT")
 
         # Attributes for code completion:
         self.verbose = None  # type: Optional[bool]

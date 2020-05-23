@@ -466,8 +466,8 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             # noinspection PyUnreachableCode
             if False:
-                if self.crosscompile_target.is_cheri_purecap():
-                    fw_jump = BuildOpenSBI.get_purecap_bios(self)
+                if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+                    fw_jump = BuildOpenSBI.get_cheri_bios(self)
                 else:
                     # TODO: always use purecap bios for CheriBSD
                     fw_jump = BuildOpenSBI.get_nocap_bios(self)

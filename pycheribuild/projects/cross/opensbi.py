@@ -114,9 +114,10 @@ class BuildOpenSBI(Project):
             args.set(PLATFORM=platform)
             self.runMakeInstall(cwd=self.sourceDir, options=args)
 
-    @staticmethod
-    def _fw_jump_path() -> str:
-        return "platform/generic/firmware/fw_jump.elf"
+    def _fw_jump_path(self) -> Path:
+        # share/opensbi/lp64/generic/firmware//fw_payload.bin
+        return self.installDir / "share/opensbi/{abi}/generic/firmware/fw_jump.elf".format(
+            abi=self.target_info.riscv_softfloat_abi)
 
     @classmethod
     def get_nocap_instance(cls, caller, cpu_arch=CPUArchitecture.RISCV64) -> "BuildOpenSBI":
@@ -124,14 +125,15 @@ class BuildOpenSBI(Project):
         return cls.get_instance(caller, cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64)
 
     @classmethod
-    def get_purecap_instance(cls, caller, cpu_arch=CPUArchitecture.RISCV64) -> "BuildOpenSBI":
+    def get_hybrid_instance(cls, caller, cpu_arch=CPUArchitecture.RISCV64) -> "BuildOpenSBI":
         assert cpu_arch == CPUArchitecture.RISCV64, "RISCV32 not supported yet"
-        return cls.get_instance(caller, cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP)
+        return cls.get_instance(caller, cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64_HYBRID)
 
     @classmethod
     def get_nocap_bios(cls, caller) -> Path:
-        return cls.get_nocap_instance(caller).installDir / cls._fw_jump_path()
+        return cls.get_nocap_instance(caller)._fw_jump_path()
 
     @classmethod
-    def get_purecap_bios(cls, caller):
-        return cls.get_purecap_instance(caller).installDir / cls._fw_jump_path()
+    def get_cheri_bios(cls, caller):
+        # We currently use a hybrid build for
+        return cls.get_hybrid_instance(caller)._fw_jump_path()
