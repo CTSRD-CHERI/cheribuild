@@ -24,7 +24,6 @@
 # SUCH DAMAGE.
 #
 
-from os.path import isdir
 from .crosscompileproject import *
 # from ..project import ReuseOtherProjectRepository
 
