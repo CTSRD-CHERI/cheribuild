@@ -58,7 +58,8 @@ class BuildRos2(CrossCompileCMakeProject):
         colcon_args = ["--no-warn-unused-cli"]
         cmake_args = ["--cmake-args"]
         cmake_args.append("-DBUILD_TESTING=NO")
-        cmake_args.append("-DCMAKE_TOOLCHAIN_FILE=" + str(self.sourceDir / "CrossToolchain.cmake"))
+        if not self.compiling_for_host():
+            cmake_args.append("-DCMAKE_TOOLCHAIN_FILE=" + str(self.sourceDir / "CrossToolchain.cmake"))
         cmdline = colcon_cmd + cmake_args + colcon_args
         if self.config.verbose:
             cmdline.append("--event-handlers")
