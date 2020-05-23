@@ -76,7 +76,8 @@ class BuildRos2(CrossCompileCMakeProject):
     def configure(self, **kwargs):
         # overriding this method allows creation of CrossToolchain.cmake
         # without actually calling cmake, as super().configure() would do
-        self.generate_cmake_toolchain_file(self.sourceDir / "CrossToolchain.cmake")
+        if not self.compiling_for_host():
+            self.generate_cmake_toolchain_file(self.sourceDir / "CrossToolchain.cmake")
         return
 
     def compile(self, **kwargs):
