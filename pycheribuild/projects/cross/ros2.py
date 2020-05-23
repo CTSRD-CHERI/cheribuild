@@ -67,7 +67,7 @@ class BuildRos2(CrossCompileCMakeProject):
     
     def update(self):
         super().update()
-        if not isdir(str(self.sourceDir / "src")):
+        if not (self.sourceDir / "src").is_dir():
             self.makedirs(self.sourceDir / "src")
         self._run_vcs()
         self._ignore_packages()
