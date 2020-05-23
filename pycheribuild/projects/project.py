@@ -1677,7 +1677,7 @@ class Project(SimpleProject):
         cls.build_type = cls.add_config_option("build-type",
             help="Optimization+debuginfo defaults (supports the same values as CMake (as well as 'DEFAULT' which"
                  " does not pass any additional flags to the configure command).",
-            default=cls.default_build_type, kind=BuildType, enum_choice_strings=[t.value for t in BuildType])
+            default=cls.default_build_type, kind=BuildType, enum_choice_strings=[t.value for t in BuildType]) # type: BuildType
 
     def linkage(self):
         if self.target_info.must_link_statically:

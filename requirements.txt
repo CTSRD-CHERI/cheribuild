@@ -1,0 +1,2 @@
+libtmux~=0.8.2
+pytest~=5.4.2
