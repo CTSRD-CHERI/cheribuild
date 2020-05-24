@@ -52,6 +52,7 @@ class LaunchQEMUBase(SimpleProject):
     sshForwardingPort = None  # type: int
     custom_qemu_smb_mount = None
     _hasPCI = True
+    _enable_smbfs_support = True
     _qemu_riscv_bios = "default"    # Use the default built-in OpenSBI firmware
 
     @classmethod
@@ -202,7 +203,7 @@ class LaunchQEMUBase(SimpleProject):
             nonlocal have_smbfs_support
             nonlocal qemuCommand
             smb_dir_count += 1
-            if have_smbfs_support:
+            if have_smbfs_support and self._enable_smbfs_support:
                 if smb_dir_count > 1:
                     user_network_options += ":"
                 else:
@@ -541,6 +542,7 @@ class LaunchRtemsQEMU(LaunchQEMUBase):
     supported_architectures = [CompilationTargets.RTEMS_RISCV64_PURECAP]
     _forwardSSHPort = False
     _qemuUserNetworking = False
+    _enable_smbfs_support = False
     _hasPCI = False
 
     @classmethod
@@ -565,6 +567,7 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
                                CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
     _forwardSSHPort = False
     _qemuUserNetworking = False
+    _enable_smbfs_support = False
     _hasPCI = False
 
     @classmethod
