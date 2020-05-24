@@ -36,3 +36,10 @@ class BuildKsh(CrossCompileAutotoolsProject):
     repository = GitRepository("git@github.com:tomgrean/pdksh.git")
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.SYSROOT
+    _configure_supports_variables_on_cmdline = False
+
+    def setup(self):
+        super().setup()
+        self.cross_warning_flags.append("-Wno-error=format-security")
+        self.cross_warning_flags.append("-Wno-error=string-plus-int")
+        self.cross_warning_flags.append("-Wno-error=format-conversion")
