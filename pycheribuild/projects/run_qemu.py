@@ -579,7 +579,7 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # Run a simple FreeRTOS blinky demo application
-        self._qemu_riscv_bios = BuildFreeRTOS.getInstallDir(self) / "RISC-V-Generic_main_blinky.elf"
+        self._qemu_riscv_bios = BuildFreeRTOS.getInstallDir(self) / "FreeRTOS/Demo/RISC-V-Generic_main_blinky.elf"
 
     def process(self):
         super().process()
