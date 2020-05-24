@@ -346,7 +346,13 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
             assert self.target.cpu_architecture == CPUArchitecture.RISCV64
             # Use the insane RISC-V arch string to enable CHERI
             result.append("-march=" + self.riscv_arch_string)
-            result.append("-mabi=" + self.riscv_abi)
+
+            if self.is_baremetal():
+                # Baremetal/FreeRTOS only supports softfloat
+                result.append("-mabi=" + self.riscv_softfloat_abi)
+            else:
+                result.append("-mabi=" + self.riscv_abi)
+
             result.append("-mno-relax")  # Linker relaxations are not supported with clang+lld
 
             if self.is_baremetal() or self.is_rtems():
@@ -361,7 +367,12 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     def riscv_arch_string(self):
         assert self.target.is_riscv(include_purecap=True)
         # Use the insane RISC-V arch string to enable CHERI
-        arch_string = "rv64imafdc"
+        if self.is_baremetal():
+            # Baremetal/FreeRTOS only supports softfloat
+            arch_string = "rv64imac"
+        else:
+            arch_string = "rv64imafdc"
+
         if self.target.is_hybrid_or_purecap_cheri():
             arch_string += "xcheri"
         return arch_string  # XXX: any more extensions needed?
