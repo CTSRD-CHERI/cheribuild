@@ -90,7 +90,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
         for demo in self.freertos_demos:
             if demo == "RISC-V-Generic":
                 # Build parametrized FreeRTOS to run on QEMU's virt machine
-                self.make_args.set(BSP="qemu_virt-"+self.target_info.arch_string+"-"+self.target_info.abi_string)
+                self.make_args.set(BSP="qemu_virt-"+self.target_info.riscv_arch_string+"-"+self.target_info.riscv_softfloat_abi)
 
             for app in self.demo_apps[demo]:
                 # Need to clean before/between building apps, otherwise
