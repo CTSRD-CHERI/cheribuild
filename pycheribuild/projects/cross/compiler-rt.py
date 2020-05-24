@@ -43,7 +43,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
     _check_install_dir_conflict = False
     supported_architectures = CompilationTargets.ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
                               CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + \
-                              [CompilationTargets.RTEMS_RISCV64_PURECAP]
+                              CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -101,8 +101,8 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
     is_sdk_target = True
     dependencies = ["newlib"]
     needs_sysroot = False  # We don't need a complete sysroot
-    supported_architectures = CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + [
-        CompilationTargets.RTEMS_RISCV64_PURECAP]
+    supported_architectures = CompilationTargets.ALL_SUPPORTED_BAREMETAL_TARGETS + \
+                              CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
     _default_architecture = CompilationTargets.BAREMETAL_NEWLIB_MIPS64
 
     # Note: needs to be @classproperty since it is called before __init__
