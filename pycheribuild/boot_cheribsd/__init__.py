@@ -91,7 +91,7 @@ MESSAGE_PREFIX = ""
 QEMU_LOGFILE = None  # type: typing.Optional[Path]
 # To keep the port available until we start QEMU
 _SSH_SOCKET_PLACEHOLDER = None  # type: typing.Optional[socket.socket]
-
+MAX_SMBFS_RETRY = 3
 
 class CheriBSDCommandFailed(Exception):
     def __str__(self):
@@ -655,18 +655,20 @@ def _do_test_setup(qemu: CheriBSDInstance, args: argparse.Namespace, test_archiv
     for index, d in enumerate(smb_dirs):
         qemu.run("mkdir -p '{}'".format(d.in_target))
         mount_command = "mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu{} '{}'".format(index + 1, d.in_target)
-        try:
-            checked_run_cheribsd_command(qemu, mount_command,
-                error_output="unable to open connection: syserr = ",
-                pretend_result=0)
-        except CheriBSDMatchedErrorOutput:
-            failure("QEMU SMBD failed to mount ", d.in_target, ". Trying one more time.", exit=False)
-            info("Waiting for 2-5 seconds before retrying mount_smbfs...")
-            if not PRETEND:
-                time.sleep(2 + 3 * random.random())  # wait 2-5 seconds, hopefully the server is less busy then.
-            # If the smbfs connection timed out try once more. This can happen when multiple libc++ test jobs are
-            # running on the same jenkins slaves so one of them might time out
-            checked_run_cheribsd_command(qemu, mount_command)
+        for trial in range(MAX_SMBFS_RETRY if not PRETEND else 1):  # maximum of 3 trials
+            try:
+                checked_run_cheribsd_command(qemu, mount_command,
+                                             error_output="unable to open connection: syserr = ",
+                                             pretend_result=0)
+                break
+            except CheriBSDMatchedErrorOutput:
+                failure("QEMU SMBD failed to mount ", d.in_target, ". Trying other ", (MAX_SMBFS_RETRY - trial - 1), " times", exit=False)
+                info("Waiting for 2-10 seconds before retrying mount_smbfs...")
+                if not PRETEND:
+                    time.sleep(2 + 8 * random.random())  # wait 2-10 seconds, hopefully the server is less busy then.
+                # If the smbfs connection timed out try once more. This can happen when multiple libc++ test jobs are
+                # running on the same jenkins slaves so one of them might time out
+                checked_run_cheribsd_command(qemu, mount_command)
 
     if test_archives:
         time.sleep(5)  # wait 5 seconds to make sure the disks have synced
