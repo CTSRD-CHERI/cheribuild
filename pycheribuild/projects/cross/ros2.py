@@ -25,8 +25,7 @@
 #
 
 from .crosscompileproject import *
-# from ..project import ReuseOtherProjectRepository
-
+import shlex
 
 class BuildRos2(CrossCompileCMakeProject):
     project_name = "ros2"
@@ -55,9 +54,8 @@ class BuildRos2(CrossCompileCMakeProject):
 
     def _run_colcon(self, **kwargs):
         colcon_cmd = ["colcon", "build"]
-        colcon_args = ["--no-warn-unused-cli"]
-        cmake_args = ["--cmake-args"]
-        cmake_args.append("-DBUILD_TESTING=NO")
+        colcon_args = ["--no-warn-unused-cli", "--packages-skip-build-finished"]
+        cmake_args = ["--cmake-args", "-DBUILD_TESTING=NO"]
         if not self.compiling_for_host():
             cmake_args.append("-DCMAKE_TOOLCHAIN_FILE=" + str(self.sourceDir / "CrossToolchain.cmake"))
         cmdline = colcon_cmd + cmake_args + colcon_args
@@ -65,6 +63,40 @@ class BuildRos2(CrossCompileCMakeProject):
             cmdline.append("--event-handlers")
             cmdline.append("console_cohesion+")
         return self.run_cmd(cmdline, cwd=self.sourceDir, **kwargs)
+
+    def _set_env(self, **kwargs):
+        # create a cheri_setup.csh file in self.sourceDir which can be source'ed
+        # to set environment variables (primarily LD_CHERI_LIBRARY_PATH)
+        #
+        # based off the install/setup.bash file sourced for ubuntu installs
+
+        # source the setup script created by ROS to set LD_LIBRARY_PATH
+        setup_script = self.sourceDir / "install" / "setup.bash"
+        if not setup_script.is_file():
+            print("No setup.bash file to source.")
+            return
+        cmdline = shlex.split("bash -c 'source " + str(setup_script) + " | echo $LD_LIBRARY_PATH'")
+        output = self.run_cmd(cmdline, cwd=self.sourceDir, captureOutput=True, **kwargs)
+
+        # extract LD_LIBRARY_PATH into a variable
+        LD_LIBRARY_PATH = output.stdout.decode("utf-8")
+        if len(LD_LIBRARY_PATH) == 0:
+            print("LD_LIBRARY_PATH not set.")
+            return
+
+        # convert LD_LIBRARY_PATH into LD_CHERI_LIBRARY_PATH for CheriBSD
+        LD_LIBRARY_PATHs = LD_LIBRARY_PATH.split(':')
+        LD_CHERI_LIBRARY_PATH = "."
+        for path in LD_LIBRARY_PATHs:
+            LD_CHERI_LIBRARY_PATH += ":" + path
+
+        # write LD_CHERI_LIBRARY_PATH to a text file to source from csh in CheriBSD
+        with open(str(self.sourceDir / 'cheri_setup.csh'), 'w') as fout:
+            fout.write("#!/bin/csh\n\n")
+            fout.write("setenv LD_CHERI_LIBRARY_PATH " + LD_CHERI_LIBRARY_PATH + "\n\n")
+            fout.write("setenv LD_LIBRARY_PATH " + LD_CHERI_LIBRARY_PATH)
+        
+        return
     
     def update(self):
         super().update()
@@ -87,6 +119,8 @@ class BuildRos2(CrossCompileCMakeProject):
     def install(self, **kwargs):
         # colcon build performs an install, so we override this to make sure
         # super doesn't attemt to install with ninja
+        #
+        # call the function to create an env setup file
+        if not self.compiling_for_host():
+            return self._set_env(**kwargs)
         return
-
-    ## consider a 'run' function that sources install/setup.bash and executes a test program?
