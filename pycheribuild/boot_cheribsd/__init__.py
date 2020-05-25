@@ -668,7 +668,6 @@ def _do_test_setup(qemu: CheriBSDInstance, args: argparse.Namespace, test_archiv
                     time.sleep(2 + 8 * random.random())  # wait 2-10 seconds, hopefully the server is less busy then.
                 # If the smbfs connection timed out try once more. This can happen when multiple libc++ test jobs are
                 # running on the same jenkins slaves so one of them might time out
-                checked_run_cheribsd_command(qemu, mount_command)
 
     if test_archives:
         time.sleep(5)  # wait 5 seconds to make sure the disks have synced
