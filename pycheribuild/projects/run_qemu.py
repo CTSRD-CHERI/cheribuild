@@ -84,8 +84,6 @@ class LaunchQEMUBase(SimpleProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.qemuBinary = None  # type: typing.Optional[Path]
-        if self.compiling_for_mips(include_purecap=True) or self.compiling_for_riscv(include_purecap=True):
-            self.qemuBinary = BuildQEMU.qemu_binary(self)
         self.currentKernel = None  # type: typing.Optional[Path]
         self.disk_image = None  # type: typing.Optional[Path]
         self.virtioDisk = False
@@ -108,13 +106,17 @@ class LaunchQEMUBase(SimpleProject):
         if xtarget.is_riscv(include_purecap=True):
             _hasPCI = False
             self.extra_flags += ["-bios", self._qemu_riscv_bios]
-        elif xtarget.is_i386() or xtarget.is_aarch64():
+            self.qemuBinary = BuildQEMU.qemu_binary(self)
+        elif xtarget.is_mips(include_purecap=True):
+            self.qemuBinary = BuildQEMU.qemu_binary(self)
+        elif xtarget.is_any_x86() or xtarget.is_aarch64():
             # Use the system QEMU instead of CHERI QEMU (for now)
+            # Note: x86_64 can be either CHERI QEMU or system QEMU:
             self.addRequiredSystemTool("qemu-system-" + self.qemu_options.qemu_arch_sufffix)
             self.qemuBinary = Path(
                 shutil.which("qemu-system-" + self.qemu_options.qemu_arch_sufffix) or "/could/not/find/qemu")
         else:
-            assert xtarget.is_mips(include_purecap=True) or xtarget.is_any_x86(), "Unknown target " + str(xtarget)
+            assert False, "Unknown target " + str(xtarget)
         # only CHERI QEMU supports more than one SMB share
         self._provide_src_via_smb = self.compiling_for_mips(include_purecap=True) or self.compiling_for_riscv(
             include_purecap=True)
