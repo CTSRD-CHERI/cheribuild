@@ -627,7 +627,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             kernel_make_args.set(COPTFLAGS="-O0 -DBOOTVERBOSE=2")
         if mfs_root_image:
             kernel_make_args.set(MFS_IMAGE=mfs_root_image)
-            if "MFS_ROOT" not in kernconf:
+            if self.compiling_for_mips(include_purecap=True) and "MFS_ROOT" not in kernconf:
                 warningMessage("Attempting to build an MFS_ROOT kernel but kernel config name sounds wrong")
         if not self.kernel_toolchain_exists and not self.fast_rebuild:
             kernel_toolchain_opts = kernel_make_args.copy()
