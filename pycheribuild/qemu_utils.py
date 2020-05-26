@@ -28,7 +28,9 @@
 # SUCH DAMAGE.
 #
 import functools
+import shutil
 import subprocess
+import typing
 from pathlib import Path
 
 from .config.target_info import CrossCompileTarget
@@ -39,8 +41,8 @@ class QemuOptions:
     def __init__(self, xtarget: CrossCompileTarget):
         self.xtarget = xtarget
         self.virtio_disk = True
-        self._has_pci = True
         self.can_boot_kernel_directly = False
+        self.memory_size = "2048"
         if xtarget.is_mips(include_purecap=True):
             # Note: we always use the CHERI QEMU
             self.qemu_arch_sufffix = "cheri128"
@@ -50,7 +52,6 @@ class QemuOptions:
         elif xtarget.is_riscv(include_purecap=True):
             # Note: we always use the CHERI QEMU
             self.qemu_arch_sufffix = "riscv64cheri"
-            self._has_pci = False
             self.machine_flags = ["-M", "virt"]
             self.can_boot_kernel_directly = True
         elif xtarget.is_any_x86():
@@ -81,6 +82,41 @@ class QemuOptions:
             else:
                 virtio_device_kind = "virtio-net-device"
             return ["-device", virtio_device_kind + ",netdev=net0", "-netdev", "user,id=net0,ipv6=off" + extra_options]
+
+    def get_qemu_binary(self) -> "typing.Optional[Path]":
+        found_in_path = shutil.which("qemu-system-" + self.qemu_arch_sufffix)
+        return Path(found_in_path) if found_in_path is not None else None
+
+    def get_commandline(self, *, qemu_command=None, kernel_file: Path = None, disk_image: Path = None,
+                        user_network_args: str = "", add_network_device=True, bios_args: "typing.List[str]" = None,
+                        trap_on_unrepresentable=False, debugger_on_cheri_trap=False, add_virtio_rng=False,
+                        gui_options: "typing.List[str]" = None) -> "typing.List[str]":
+        if qemu_command is None:
+            qemu_command = self.get_qemu_binary()
+        result = [str(qemu_command)]
+        result.extend(self.machine_flags)
+        result.extend(["-m", self.memory_size])
+        if gui_options is None:
+            gui_options = ["-nographic"]
+        # For debugging generate a trap on unrepresentable instead of detagging:
+        if self.xtarget.is_hybrid_or_purecap_cheri():
+            if trap_on_unrepresentable:
+                result.append("-cheri-c2e-on-unrepresentable")
+            if debugger_on_cheri_trap:
+                result.append("-cheri-debugger-on-trap")
+        result.extend(gui_options)
+        if bios_args:
+            result.extend(bios_args)
+        if kernel_file:
+            result.append("-kernel")
+            result.append(str(kernel_file))
+        if disk_image:
+            result.extend(self.disk_image_args(disk_image))
+        if add_network_device:
+            result.extend(self.user_network_args(user_network_args))
+        if add_virtio_rng:
+            result.extend(["-device", "virtio-rng-pci"])
+        return result
 
 
 @functools.lru_cache(maxsize=20)

@@ -31,10 +31,10 @@ import socket
 
 from .build_qemu import BuildQEMU, BuildCheriOSQEMU
 from .cherios import BuildCheriOS
-from .cross.rtems import BuildRtems
-from .cross.freertos import BuildFreeRTOS
 from .cross.bbl import *
+from .cross.freertos import BuildFreeRTOS
 from .cross.opensbi import BuildOpenSBI
+from .cross.rtems import BuildRtems
 from .disk_image import *
 from .project import *
 from ..qemu_utils import QemuOptions, qemu_supports_9pfs
@@ -52,9 +52,9 @@ class LaunchQEMUBase(SimpleProject):
     _provide_src_via_smb = False
     sshForwardingPort = None  # type: int
     custom_qemu_smb_mount = None
-    _hasPCI = True
+    # Add a virtio RNG to speed up random number generation
+    _add_virtio_rng = True
     _enable_smbfs_support = True
-    _qemu_riscv_bios = "default"    # Use the default built-in OpenSBI firmware
 
     @classmethod
     def setup_config_options(cls, default_ssh_port: int = None, **kwargs):
@@ -88,24 +88,21 @@ class LaunchQEMUBase(SimpleProject):
         self.disk_image = None  # type: typing.Optional[Path]
         self.virtioDisk = False
         self._projectSpecificOptions = []
-        self.extra_flags = []
+        self.bios_flags = []
         self.qemu_options = QemuOptions(self.crosscompile_target)
-        # For debugging generate a trap on unrepresentable instead of detagging:
-        if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-            if self.config.trap_on_unrepresentable:
-                self.extra_flags.append("-cheri-c2e-on-unrepresentable")
-            if self.config.debugger_on_cheri_trap:
-                self.extra_flags.append("-cheri-debugger-on-trap")
         self._qemuUserNetworking = True
         self.rootfs_path = typing.Optional[None]  # type: Path
         self._after_disk_options = []
+
+    def get_riscv_bios(self) -> str:
+        return "default"  # Use the default built-in OpenSBI firmware
 
     def setup(self):
         super().setup()
         xtarget = self.crosscompile_target
         if xtarget.is_riscv(include_purecap=True):
-            _hasPCI = False
-            self.extra_flags += ["-bios", self._qemu_riscv_bios]
+            self._add_virtio_rng = False
+            self.bios_flags += ["-bios", self.get_riscv_bios()]
             self.qemuBinary = BuildQEMU.qemu_binary(self)
         elif xtarget.is_mips(include_purecap=True):
             self.qemuBinary = BuildQEMU.qemu_binary(self)
@@ -130,12 +127,6 @@ class LaunchQEMUBase(SimpleProject):
             self.dependencyError("Kernel is missing:", self.currentKernel,
                                  install_instructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
 
-        disk_options = []
-        if self.disk_image:
-            if not self.disk_image.exists():
-                self.dependencyError("Disk image is missing:", self.disk_image,
-                                     install_instructions="Run `cheribuild.py disk-image` or `cheribuild.py run -d`.")
-            disk_options = self.qemu_options.disk_image_args(self.disk_image)
         if self._forwardSSHPort and not self.is_port_available(self.sshForwardingPort):
             self.print_port_usage(self.sshForwardingPort)
             self.fatal("SSH forwarding port", self.sshForwardingPort, "is already in use! Make sure you don't ",
@@ -170,14 +161,10 @@ class LaunchQEMUBase(SimpleProject):
 
         if self.cvtrace:
             logfile_options += ["-cheri-trace-format", "cvtrace"]
-        # input("Press enter to continue")
-        kernel_flags = ["-kernel", self.currentKernel] if self.currentKernel else []
-        qemu_command = [self.qemuBinary] + self.qemu_options.machine_flags + self.extra_flags + kernel_flags + [
-            "-m", "2048",  # 2GB memory
-            "-nographic",  # no GPU
-            ] + self._projectSpecificOptions + disk_options + self._after_disk_options + monitor_options \
-              + logfile_options + self.extra_qemu_options
-        statusUpdate("About to run QEMU with image", self.disk_image, "and kernel", self.currentKernel)
+        if self.disk_image is not None and not self.disk_image.exists():
+            self.dependencyError("Disk image is missing:", self.disk_image,
+                install_instructions="Run `cheribuild.py disk-image` or `cheribuild.py run -d`.")
+
         user_network_options = ""
         smb_dir_count = 0
         have_9pfs_support = (self.crosscompile_target.is_native() or self.crosscompile_target.is_any_x86()) and qemu_supports_9pfs(self.qemuBinary)
@@ -236,12 +223,15 @@ class LaunchQEMUBase(SimpleProject):
             # qemu_command += ["-redir", "tcp:" + str(self.sshForwardingPort) + "::22"]
             print(coloured(AnsiColour.green, "\nListening for SSH connections on localhost:", self.sshForwardingPort,
                 sep=""))
-        if self._qemuUserNetworking:
-            qemu_command += self.qemu_options.user_network_args(user_network_options)
 
-        # Add a virtio RNG to speed up random number generation
-        if self._hasPCI:
-            qemu_command += ["-device", "virtio-rng-pci"]
+        # input("Press enter to continue")
+        qemu_command = self.qemu_options.get_commandline(qemu_command=self.qemuBinary, kernel_file=self.currentKernel,
+            disk_image=self.disk_image, add_network_device=self._qemuUserNetworking, bios_args=self.bios_flags,
+            user_network_args=user_network_options, trap_on_unrepresentable=self.config.trap_on_unrepresentable,
+            debugger_on_cheri_trap=self.config.debugger_on_cheri_trap, add_virtio_rng=self._add_virtio_rng)
+        qemu_command += self._projectSpecificOptions + self._after_disk_options + monitor_options \
+                        + logfile_options + self.extra_qemu_options
+        statusUpdate("About to run QEMU with image", self.disk_image, "and kernel", self.currentKernel)
 
         if self.config.wait_for_debugger or self.config.debugger_in_tmux_pane:
             gdb_socket_placeholder = find_free_port()
@@ -463,19 +453,21 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
             result.append("bbl")
         return result
 
-    def __init__(self, config, source_class=None, needs_disk_image=True):
-        super().__init__(config, source_class=source_class, needs_disk_image=needs_disk_image)
-        if self.crosscompile_target.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+    @classmethod
+    def riscv_bios_arg(cls, xtarget: CrossCompileTarget, caller: SimpleProject, prefer_bbl=False) -> str:
+        assert xtarget.is_riscv(include_purecap=True)
+        if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             # noinspection PyUnreachableCode
-            if False:
-                if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                    fw_jump = BuildOpenSBI.get_cheri_bios(self)
-                else:
-                    # TODO: always use purecap bios for CheriBSD
-                    fw_jump = BuildOpenSBI.get_nocap_bios(self)
+            if prefer_bbl:
+                return str(BuildBBLNoPayload.get_installed_kernel_path(caller))
             else:
-                fw_jump = BuildBBLNoPayload.get_installed_kernel_path(self)
-            self._qemu_riscv_bios = fw_jump
+                return str(BuildOpenSBI.get_cheri_bios(caller))
+        # For non-CHERI we prefer the OpenSBI bios that is bundled with QEMU
+        # return BuildOpenSBI.get_nocap_bios(caller)
+        return "default"
+
+    def get_riscv_bios(self) -> str:
+        return self.riscv_bios_arg(self.crosscompile_target, self)
 
     def run_tests(self):
         self.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.disk_image,
@@ -535,7 +527,7 @@ class LaunchRtemsQEMU(LaunchQEMUBase):
     _forwardSSHPort = False
     _qemuUserNetworking = False
     _enable_smbfs_support = False
-    _hasPCI = False
+    _add_virtio_rng = False
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -543,10 +535,9 @@ class LaunchRtemsQEMU(LaunchQEMUBase):
                                    default_ssh_port=None,
                                    **kwargs)
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        # Run a simple RTEMS shell application
-        self._qemu_riscv_bios = BuildRtems.getBuildDir(self) / "riscv/rv64xcheri_qemu/testsuites/samples/capture.exe"
+    def get_riscv_bios(self) -> str:
+        # Run a simple RTEMS shell application (run in machine mode using the -bios QEMU argument)
+        return str(BuildRtems.getBuildDir(self) / "riscv/rv64xcheri_qemu/testsuites/samples/capture.exe")
 
     def process(self):
         super().process()
@@ -560,7 +551,7 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     _forwardSSHPort = False
     _qemuUserNetworking = False
     _enable_smbfs_support = False
-    _hasPCI = False
+    _add_virtio_rng = False
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -568,10 +559,9 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
                                    defaultSshPort=None,
                                    **kwargs)
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-        # Run a simple FreeRTOS blinky demo application
-        self._qemu_riscv_bios = BuildFreeRTOS.getInstallDir(self) / "FreeRTOS/Demo/RISC-V-Generic_main_blinky.elf"
+    def get_riscv_bios(self) -> str:
+        # Run a simple FreeRTOS blinky demo application (run in machine mode using the -bios QEMU argument)
+        return str(BuildFreeRTOS.getInstallDir(self) / "FreeRTOS/Demo/RISC-V-Generic_main_blinky.elf")
 
     def process(self):
         super().process()

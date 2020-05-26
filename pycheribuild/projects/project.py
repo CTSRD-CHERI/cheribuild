@@ -825,9 +825,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         xtarget = self.crosscompile_target
         test_native = xtarget.is_native()
         # Only supported for CheriBSD-MIPS right now:
-        if not test_native and (not self.target_info.is_cheribsd() or not xtarget.is_mips(include_purecap=True)):
-            self.warning("Test scripts currently only work for CheriBSD-MIPS! Needs updating for RISCV")
-            return
+        if not test_native and not self.target_info.is_cheribsd():
+            if not xtarget.is_mips(include_purecap=True) or not xtarget.is_riscv(include_purecap=True):
+                self.warning("Test scripts currently only work for CheriBSD-MIPS and CHERI-RISC-V")
+                return
         if kernel_path is None and not test_native and "--kernel" not in self.config.test_extra_args:
             from .cross.cheribsd import BuildCheriBsdMfsKernel
             # Use the benchmark kernel by default if the parameter is set and the user didn't pass
@@ -862,7 +863,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if test_native:
             cmd = [script, "--test-native"]
         else:
-            cmd = [script, "--ssh-key", self.config.test_ssh_key]
+            assert self.target_info.is_cheribsd(), "Only CheriBSD targets supported right now"
+            cmd = [script, "--ssh-key", self.config.test_ssh_key, "--architecture", xtarget.generic_suffix]
+            if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+                # We need a custom BIOS (for now)
+                from .run_qemu import LaunchCheriBSD
+                cmd.extend(["--bios", LaunchCheriBSD.riscv_bios_arg(xtarget, self)])
             if "--kernel" not in self.config.test_extra_args:
                 cmd.extend(["--kernel", kernel_path])
             if "--qemu-cmd" not in self.config.test_extra_args:

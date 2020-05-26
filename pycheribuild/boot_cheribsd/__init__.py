@@ -56,6 +56,16 @@ assert (_pexpect_dir / "pexpect/__init__.py").exists()
 assert str(_pexpect_dir.resolve()) in sys.path, str(_pexpect_dir) + " not found in " + str(sys.path)
 import pexpect
 from ..utils import find_free_port
+from ..config.target_info import CompilationTargets, CrossCompileTarget
+from ..qemu_utils import QemuOptions
+
+SUPPORTED_ARCHITECTURES = {x.generic_suffix: x for x in (CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
+                                                         CompilationTargets.CHERIBSD_MIPS_HYBRID,
+                                                         CompilationTargets.CHERIBSD_MIPS_PURECAP,
+                                                         CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
+                                                         CompilationTargets.CHERIBSD_RISCV_HYBRID,
+                                                         CompilationTargets.CHERIBSD_RISCV_PURECAP,
+                                                         )}
 
 STARTING_INIT = "start_init: trying /sbin/init"
 BOOT_FAILURE = "Enter full pathname of shell or RETURN for /bin/sh"
@@ -490,9 +500,9 @@ def start_dhclient(qemu: CheriBSDInstance):
     qemu.expect_prompt(timeout=30)
 
 
-def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: typing.Optional[int], *,
-                  smb_dirs: typing.List[SmbMount] = None, kernel_init_only=False, trap_on_unrepresentable=False,
-                  skip_ssh_setup=False) -> CheriBSDInstance:
+def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path], kernel_image: Path, disk_image: Path,
+                  ssh_port: typing.Optional[int], *, smb_dirs: typing.List[SmbMount] = None, kernel_init_only=False,
+                  trap_on_unrepresentable=False, skip_ssh_setup=False, bios_path: Path = None) -> CheriBSDInstance:
     user_network_args = "user,id=net0,ipv6=off"
     if smb_dirs is None:
         smb_dirs = []
@@ -503,18 +513,21 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
         user_network_args += ",smb=" + ":".join(d.qemu_arg for d in smb_dirs)
     if ssh_port is not None:
         user_network_args += ",hostfwd=tcp::" + str(ssh_port) + "-:22"
-    qemu_args = ["-M", "malta", "-kernel", kernel_image, "-m", "2048", "-nographic",
-                 "-device", "virtio-rng-pci",  # faster entropy gathering
-                 #  ssh forwarding:
-                 "-net", "nic", "-net", user_network_args]
-    if trap_on_unrepresentable:
-        qemu_args.append("-cheri-c2e-on-unrepresentable")  # trap on unrepresetable instead of detagging
+
+    assert qemu_options.can_boot_kernel_directly, "X86/AArch64 case not handled yet"
+    # TODO: RISCV bios args
+    bios_args = ["-bios", str(bios_path)] if bios_path is not None else []
+    qemu_args = qemu_options.get_commandline(qemu_command=qemu_command, kernel_file=kernel_image, disk_image=disk_image,
+        bios_args=bios_args, user_network_args=user_network_args, add_network_device=True,
+        trap_on_unrepresentable=trap_on_unrepresentable,  # For debugging
+        add_virtio_rng=True  # faster entropy gathering
+        )
     if skip_ssh_setup:
         qemu_args.append("-append")
         qemu_args.append("cheribuild.skip_sshd=1 cheribuild.skip_entropy=1")
     if disk_image:
-        qemu_args += ["-hda", disk_image]
-    success("Starting QEMU: ", qemu_cmd, " ", " ".join(qemu_args))
+        qemu_args.extend(qemu_options.disk_image_args(user_network_args))
+    success("Starting QEMU: ", " ".join(qemu_args))
     qemu_starttime = datetime.datetime.now()
     global _SSH_SOCKET_PLACEHOLDER  # type: socket.socket
     if _SSH_SOCKET_PLACEHOLDER is not None:
@@ -523,7 +536,7 @@ def boot_cheribsd(qemu_cmd: str, kernel_image: str, disk_image: str, ssh_port: t
         child = FakeSpawn()
     else:
         # child = pexpect.spawnu(qemu_cmd, qemu_args, echo=False, timeout=60)
-        child = CheriBSDInstance(qemu_cmd, qemu_args, encoding="utf-8", echo=False, timeout=60)
+        child = CheriBSDInstance(qemu_args[0], qemu_args[1:], encoding="utf-8", echo=False, timeout=60)
     # child.logfile=sys.stdout.buffer
     child.smb_dirs = smb_dirs
     if QEMU_LOGFILE:
@@ -755,9 +768,12 @@ def default_ssh_key():
 
 def get_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(allow_abbrev=False)
-    parser.add_argument("--qemu-cmd", "--qemu", default="qemu-system-cheri")
-    parser.add_argument("--kernel", default="/usr/local/share/cheribsd/cheribsd-malta64-kernel")
-    parser.add_argument("--disk-image", default=None)  # default="/usr/local/share/cheribsd/cheribsd-full.img"
+    parser.add_argument("--architecture", help="CPU architecture to be used for this test", required=True,
+        choices=[x for x in SUPPORTED_ARCHITECTURES.keys()])
+    parser.add_argument("--qemu-cmd", "--qemu", help="Path to QEMU (default: find matching on in $PATH)", default=None)
+    parser.add_argument("--kernel", default=None)
+    parser.add_argument("--bios", default=None)
+    parser.add_argument("--disk-image", default=None)
     parser.add_argument("--extract-images-to", help="Path where the compressed images should be extracted to")
     parser.add_argument("--reuse-image", action="store_true")
     parser.add_argument("--keep-compressed-images", action="store_true", default=True, dest="keep_compressed_images")
@@ -837,8 +853,26 @@ def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace],
         args.interact = True
     if argparse_adjust_args_callback:
         argparse_adjust_args_callback(args)
-    if shutil.which(args.qemu_cmd) is None:
-        failure("ERROR: QEMU binary ", args.qemu_cmd, " doesn't exist", exit=True)
+
+    xtarget = SUPPORTED_ARCHITECTURES.get(args.architecture, None)  # type: CrossCompileTarget
+    if xtarget is None:
+        failure("Invalid architecture", args.architecture)
+    qemu_options = QemuOptions(xtarget)
+    if args.qemu_cmd is not None:
+        if not Path(args.qemu_cmd).exists():
+            failure("ERROR: Cannot find QEMU binary ", args.qemu_cmd, " doesn't exist", exit=True)
+        args.qemu_cmd = Path(args.qemu_cmd).absolute()
+    else:
+        args.qemu_cmd = qemu_options.get_qemu_binary()
+        if args.qemu_cmd is None:
+            failure("ERROR: Cannot find QEMU binary for target", qemu_options.qemu_arch_sufffix, exit=True)
+
+    if xtarget.is_riscv(include_purecap=True):
+        if args.bios is None:
+            if xtarget.is_hybrid_or_purecap_cheri():
+                failure("ERROR: Cannot use the default QEMU bios for hybrid/purecap CHERI", exit=True)
+            else:
+                args.bios = "default"
 
     global PRETEND
     if args.pretend:
@@ -901,30 +935,29 @@ def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace],
 
         force_decompression = True
         keep_compressed_images = False
-    kernel = str(
-        maybe_decompress(Path(args.kernel), force_decompression, keep_archive=keep_compressed_images, args=args,
-            what="kernel"))
+    kernel = maybe_decompress(Path(args.kernel), force_decompression, keep_archive=keep_compressed_images, args=args,
+        what="kernel")
     diskimg = None
     if args.disk_image:
-        diskimg = str(
-            maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images, args=args,
-                what="disk image"))
+        diskimg = maybe_decompress(Path(args.disk_image), force_decompression, keep_archive=keep_compressed_images,
+            args=args, what="disk image")
 
     # Allow running multiple jobs in parallel by making a copy of the disk image
     if diskimg is not None and args.make_disk_image_copy:
+        assert isinstance(diskimg, Path)
         str(os.getpid())
-        new_img = Path(diskimg).with_suffix(
+        new_img = diskimg.with_suffix(
             ".img.runtests." + datetime.datetime.now().strftime("%Y%m%d%H%M%S") + ".pid" + str(os.getpid()))
         assert not new_img.exists()
         run_host_command(["cp", "-fv", diskimg, str(new_img)])
         if not args.keep_disk_image_copy:
             atexit.register(run_host_command, ["rm", "-fv", str(new_img)])
-        diskimg = str(new_img)
+        diskimg = new_img
 
     boot_starttime = datetime.datetime.now()
-    qemu = boot_cheribsd(args.qemu_cmd, kernel, diskimg, args.ssh_port, smb_dirs=args.smb_mount_directories,
-        kernel_init_only=args.test_kernel_init_only, trap_on_unrepresentable=args.trap_on_unrepresentable,
-        skip_ssh_setup=args.skip_ssh_setup)
+    qemu = boot_cheribsd(qemu_options, qemu_command=args.qemu_cmd, kernel_image=kernel, disk_image=diskimg,
+        ssh_port=args.ssh_port, smb_dirs=args.smb_mount_directories, kernel_init_only=args.test_kernel_init_only,
+        trap_on_unrepresentable=args.trap_on_unrepresentable, skip_ssh_setup=args.skip_ssh_setup, bios_path=args.bios)
     success("Booting CheriBSD took: ", datetime.datetime.now() - boot_starttime)
 
     tests_okay = True
