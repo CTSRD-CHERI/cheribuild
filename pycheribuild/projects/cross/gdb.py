@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-
+import sys
 import typing
 
 from .crosscompileproject import *
@@ -129,6 +129,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
         if self.compiling_for_host():
             self.LDFLAGS.append("-L/usr/local/lib")
             self.configureArgs.append("--with-expat")
+            self.configureArgs.append("--with-python=" + str(sys.executable))
         else:
             self.configureArgs.extend(["--without-python", "--without-expat", "--without-libunwind-ia64"])
             self.configureEnvironment.update(gl_cv_func_gettimeofday_clobber="no",
