@@ -219,6 +219,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
         cmdline = args[0]  # list with parameters was passed
     else:
         cmdline = args
+    assert "_ARGCOMPLETE" not in os.environ, "Should execute any programs as part of bash completion!"
     cmdline = list(map(str, cmdline))  # ensure it's all strings so that subprocess can handle it
     # When running scripts from a noexec filesystem try to read the interpreter and run that
     if not no_print:
@@ -440,12 +441,13 @@ def extract_version(output: bytes, component_kind: "typing.Type[Type_T]" = int, 
     return tuple(map(component_kind, match.groups()))
 
 
-def latest_system_clang_tool(basename: str, fallback_basename: str):
-    # try to find at least clang 3.7, otherwise fall back to system clang
+def latest_system_clang_tool(basename: str, fallback_basename: str) -> str:
+    if "_ARGCOMPLETE" in os.environ:  # Avoid expensive lookup when tab-completing
+        return fallback_basename
+
     # Only search in /usr/bin/ and /usr/local/bin by default.
     # If users want to use other versions they should explicitly pass --cc-path, etc
     search_path = [Path("/usr/local/bin"), Path("/usr/bin")]
-
     valid_regex = re.compile(re.escape(basename) + r"[-\d.]*$")
     results = []
     for search_dir in search_path:

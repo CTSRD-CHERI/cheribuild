@@ -642,7 +642,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 os.environ["_ARC_DEBUG"] = "1"
                 os.environ["_ARGCOMPLETE_IFS"] = "\n"
                 # os.environ["COMP_LINE"] = "cheribuild.py " # return all targets
-                os.environ["COMP_LINE"] = "cheribuild.py -" # return all options
+                os.environ["COMP_LINE"] = "cheribuild.py --" # return all options
                 os.environ["COMP_POINT"] = str(len(os.environ["COMP_LINE"]))
                 with open(os.devnull, "wb") as output:
                 # with open("/dev/stdout", "wb") as output:
