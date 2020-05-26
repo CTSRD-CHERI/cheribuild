@@ -872,10 +872,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if "--kernel" not in self.config.test_extra_args:
                 cmd.extend(["--kernel", kernel_path])
             if "--qemu-cmd" not in self.config.test_extra_args:
-                qemu_path = BuildQEMU.qemu_binary(self)
-                if not qemu_path.exists():
-                    self.fatal("QEMU binary", qemu_path, "doesn't exist")
-                cmd.extend(["--qemu-cmd", qemu_path])
+                if xtarget.is_riscv(include_purecap=True) or xtarget.is_mips(include_purecap=True):
+                    qemu_path = BuildQEMU.qemu_binary(self)
+                    if not qemu_path.exists():
+                        self.fatal("QEMU binary", qemu_path, "doesn't exist")
+                    cmd.extend(["--qemu-cmd", qemu_path])
         if mount_builddir and self.buildDir and "--build-dir" not in self.config.test_extra_args:
             cmd.extend(["--build-dir", self.buildDir])
         if mount_sourcedir and self.sourceDir and "--source-dir" not in self.config.test_extra_args:

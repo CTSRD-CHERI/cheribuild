@@ -842,7 +842,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         self.make_args.set_env(CC=self.host_CC, CXX=self.host_CXX, CPP=self.host_CPP)
 
         # We might not build elftoolchain during buildworld so for the kernel we need to set these variables
-        if not self.crosscompile_target.is_aarch64():
+        if not self.crosscompile_target.is_aarch64(include_purecap=True):
             # The AArch64 kernel needs elftoolchain objcopy due to unsupported flags
             self.make_args.set_env(OBJCOPY=self.sdk_bindir / "llvm-objcopy")
 
