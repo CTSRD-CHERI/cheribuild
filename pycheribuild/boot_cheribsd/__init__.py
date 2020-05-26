@@ -148,6 +148,10 @@ class CheriBSDInstance(pexpect.spawn):
     smb_dirs = None  # type: typing.List[SmbMount]
     flush_interval = None
 
+    def __init__(self, qemu_config: QemuOptions, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.qemu_config = qemu_config
+
     def expect(self, pattern: list, timeout=-1, pretend_result=None, timeout_msg="timeout", **kwargs):
         assert isinstance(pattern, list), "expected list and not " + str(pattern)
         return self._expect_and_handle_panic(pattern, timeout=timeout, timeout_msg=timeout_msg, **kwargs)
@@ -450,6 +454,9 @@ class FakeSpawn(object):
     pid = -1
     should_quit = False
 
+    def __init__(self, qemu_config: QemuOptions, *args, **kwargs):
+        self.qemu_config = qemu_config
+
     def expect(self, *args, pretend_result=None, **kwargs):
         print("Expecting", args, file=sys.stderr, flush=True)
         args_list = args[0]
@@ -488,15 +495,22 @@ class FakeSpawn(object):
 
 def start_dhclient(qemu: CheriBSDInstance):
     success("===> Setting up QEMU networking")
-    qemu.sendline("ifconfig le0 up && dhclient le0")
-    i = qemu.expect([pexpect.TIMEOUT, "DHCPACK from 10.0.2.2", "dhclient already running"], timeout=120)
+    network_iface = "vtnet0" if qemu.qemu_config.can_use_virtio_network() else "le0"
+    qemu.sendline("ifconfig {network_iface} up && dhclient {network_iface}".format(network_iface=network_iface))
+    i = qemu.expect([pexpect.TIMEOUT, "DHCPACK from 10.0.2.2", "dhclient already running",
+                     "interface ([\\w\\d]+) does not exist"], timeout=120)
     if i == 0:  # Timeout
         failure("timeout awaiting dhclient ", str(qemu))
     if i == 1:
         i = qemu.expect([pexpect.TIMEOUT, "bound to"], timeout=120)
         if i == 0:  # Timeout
             failure("timeout awaiting dhclient ", str(qemu))
-    success("===> le0 bound to QEMU networking")
+    if i == 3:
+        qemu.expect_prompt(timeout=30)
+        qemu.run("ifconfig -a")
+        failure("Expected network interface ", qemu.match.group(1), " does not exist ", str(qemu))
+
+    success("===> {} bound to QEMU networking".format(network_iface))
     qemu.expect_prompt(timeout=30)
 
 
@@ -533,10 +547,10 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
     if _SSH_SOCKET_PLACEHOLDER is not None:
         _SSH_SOCKET_PLACEHOLDER.close()
     if PRETEND:
-        child = FakeSpawn()
+        child = FakeSpawn(qemu_options)
     else:
         # child = pexpect.spawnu(qemu_cmd, qemu_args, echo=False, timeout=60)
-        child = CheriBSDInstance(qemu_args[0], qemu_args[1:], encoding="utf-8", echo=False, timeout=60)
+        child = CheriBSDInstance(qemu_options, qemu_args[0], qemu_args[1:], encoding="utf-8", echo=False, timeout=60)
     # child.logfile=sys.stdout.buffer
     child.smb_dirs = smb_dirs
     if QEMU_LOGFILE:
@@ -593,10 +607,10 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
         elif i == boot_expect_strings.index(SHELL_OPEN):  # shell started from /etc/rc:
             child.expect_exact(INITIAL_PROMPT_SH, timeout=30)
             success("===> /etc/rc completed, got command prompt")
+            _set_pexpect_sh_prompt(child)
             # set up network (bluehive image tries to use atse0)
             if not have_dhclient:
                 start_dhclient(child)
-            _set_pexpect_sh_prompt(child)
         else:  # BOOT_FAILURE or FATAL_ERROR_MESSAGES
             # If this was a CHEIR trap wait up to 20 seconds to ensure the dump output has been printed
             child.expect(["THIS STRING SHOULD NOT MATCH, JUST WAITING FOR 20 secs", pexpect.TIMEOUT], timeout=20)

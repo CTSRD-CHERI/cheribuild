@@ -72,16 +72,21 @@ class QemuOptions:
         else:
             return ["-drive", "file=" + str(image) + ",format=raw,index=0,media=disk"]
 
-    def user_network_args(self, extra_options):
+    def can_use_virtio_network(self):
         # We'd like to use virtio everwhere, but FreeBSD doesn't like it on BE mips.
         if self.xtarget.is_mips(include_purecap=True):
+            return False
+        return True
+
+    def user_network_args(self, extra_options):
+        # We'd like to use virtio everwhere, but FreeBSD doesn't like it on BE mips.
+        if not self.can_use_virtio_network():
             return ["-net", "nic", "-net", "user,id=net0,ipv6=off" + extra_options]
+        if self.xtarget.is_any_x86():  # TODO: aarch64?
+            virtio_device_kind = "virtio-net-pci"
         else:
-            if self.xtarget.is_any_x86():  # TODO: aarch64?
-                virtio_device_kind = "virtio-net-pci"
-            else:
-                virtio_device_kind = "virtio-net-device"
-            return ["-device", virtio_device_kind + ",netdev=net0", "-netdev", "user,id=net0,ipv6=off" + extra_options]
+            virtio_device_kind = "virtio-net-device"
+        return ["-device", virtio_device_kind + ",netdev=net0", "-netdev", "user,id=net0,ipv6=off" + extra_options]
 
     def get_qemu_binary(self) -> "typing.Optional[Path]":
         found_in_path = shutil.which("qemu-system-" + self.qemu_arch_sufffix)
