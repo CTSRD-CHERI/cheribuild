@@ -282,9 +282,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 
     def __init__(self, config):
         super().__init__(config)
-        self.configureCommand = self.sourceDir / "source/configure"
-        if (self.sourceDir / "icu4c").exists():
-            self.configureCommand = self.sourceDir / "icu4c/source/configure"
+        self.configureCommand = self.sourceDir / "icu4c/source/configure"
         self.configureArgs.extend(["--disable-plugins", "--disable-dyload",
                                    "--disable-tests",
                                    "--disable-samples"])
