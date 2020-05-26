@@ -1758,7 +1758,7 @@ class Project(SimpleProject):
             result.extend(["-mllvm", "-collect-csetbounds-output=" + str(self.csetbounds_stats_file),
                            "-mllvm", "-collect-csetbounds-stats=csv",
                            # "-Xclang", "-cheri-bounds=everywhere-unsafe"])
-                           "-Xclang", "-cheri-bounds=aggressive"])
+                           ])
         # Add mxcaptable for projects that need it
         if self.compiling_for_cheri() and self.config.cheri_cap_table_abi != "legacy":
             if self.force_static_linkage and self.needs_mxcaptable_static:
