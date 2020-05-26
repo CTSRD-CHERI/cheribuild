@@ -134,9 +134,9 @@ def run_parallel(args: argparse.Namespace):
     ssh_port_queue = Queue()
     processes = []  # type: typing.List[LitShardProcess]
     # Extract the kernel + disk image in the main process to avoid race condition:
-    kernel_path = boot_cheribsd.maybe_decompress(Path(args.kernel), True, True, args) if args.kernel else None
+    kernel_path = boot_cheribsd.maybe_decompress(Path(args.kernel), True, True, args, what="kernel") if args.kernel else None
     disk_image_path = boot_cheribsd.maybe_decompress(Path(args.disk_image), True, True,
-                                                     args) if args.disk_image else None
+                                                     args, what="disk image") if args.disk_image else None
     for i in range(args.parallel_jobs):
         shard_num = i + 1
         boot_cheribsd.info(args)

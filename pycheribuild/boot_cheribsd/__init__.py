@@ -151,6 +151,7 @@ class CheriBSDInstance(pexpect.spawn):
     def __init__(self, qemu_config: QemuOptions, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.qemu_config = qemu_config
+        self.should_quit = False
 
     def expect(self, pattern: list, timeout=-1, pretend_result=None, timeout_msg="timeout", **kwargs):
         assert isinstance(pattern, list), "expected list and not " + str(pattern)
@@ -209,8 +210,8 @@ def success(*args, **kwargs):
     print("\n", MESSAGE_PREFIX, "\033[0;32m", *args, "\033[0m", sep="", file=sys.stderr, flush=True, **kwargs)
 
 
-def print_cmd(*args, **kwargs):
-    args_str = " ".join((shlex.quote(i) for i in list(*args)))
+def print_cmd(cmd: typing.List[str], **kwargs):
+    args_str = " ".join((shlex.quote(i) for i in list(cmd)))
     if kwargs:
         print("\033[0;33mRunning ", args_str, " with ", kwargs.copy(), "\033[0m", sep="", file=sys.stderr, flush=True)
     else:
@@ -229,11 +230,11 @@ def failure(*args, exit=True, **kwargs):
     return False
 
 
-def run_host_command(*args, **kwargs):
-    print_cmd(*args, **kwargs)
+def run_host_command(cmd: typing.List[str], **kwargs):
+    print_cmd(cmd, **kwargs)
     if PRETEND:
         return
-    subprocess.check_call(*args, **kwargs)
+    subprocess.check_call(cmd, **kwargs)
 
 
 def decompress(archive: Path, force_decompression: bool, *, keep_archive=True, cmd=None) -> Path:
@@ -271,8 +272,8 @@ def set_ld_library_path_with_sysroot(qemu: CheriBSDInstance):
         timeout=3)
 
 
-def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, args: argparse.Namespace = None,
-                     what: str = None) -> Path:
+def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, args: argparse.Namespace = None, *,
+                     what: str) -> Path:
     # drop the suffix and then try decompressing
     def bunzip(archive):
         return decompress(archive, force_decompression, cmd=["bunzip2", "-v", "-f"], keep_archive=keep_archive)
@@ -405,6 +406,7 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, 
         # wait up to 20 seconds for the shell prompt
         qemu.expect_prompt(timeout=20, timeout_fatal=False)
         qemu.flush()
+        assert isinstance(error_output, str)
         raise CheriBSDMatchedErrorOutput("Matched error output '" + error_output + "' running '", cmd, "' (after '",
             runtime.total_seconds(), ")")
     else:
@@ -456,6 +458,10 @@ class FakeSpawn(object):
 
     def __init__(self, qemu_config: QemuOptions, *args, **kwargs):
         self.qemu_config = qemu_config
+        self.smb_dirs = []  # type: typing.List[SmbMount]
+        self.logfile = None  # type: typing.Optional[typing.TextIO]
+        self.logfile_read = None  # type: typing.Optional[typing.TextIO]
+
 
     def expect(self, *args, pretend_result=None, **kwargs):
         print("Expecting", args, file=sys.stderr, flush=True)
@@ -514,8 +520,9 @@ def start_dhclient(qemu: CheriBSDInstance):
     qemu.expect_prompt(timeout=30)
 
 
-def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path], kernel_image: Path, disk_image: Path,
-                  ssh_port: typing.Optional[int], *, smb_dirs: typing.List[SmbMount] = None, kernel_init_only=False,
+def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path], kernel_image: Path,
+                  disk_image: typing.Optional[Path], ssh_port: typing.Optional[int], *,
+                  smb_dirs: typing.List[SmbMount] = None, kernel_init_only=False,
                   trap_on_unrepresentable=False, skip_ssh_setup=False, bios_path: Path = None) -> CheriBSDInstance:
     user_network_args = "user,id=net0,ipv6=off"
     if smb_dirs is None:
@@ -543,14 +550,13 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
         qemu_args.extend(qemu_options.disk_image_args(user_network_args))
     success("Starting QEMU: ", " ".join(qemu_args))
     qemu_starttime = datetime.datetime.now()
-    global _SSH_SOCKET_PLACEHOLDER  # type: socket.socket
+    global _SSH_SOCKET_PLACEHOLDER
     if _SSH_SOCKET_PLACEHOLDER is not None:
         _SSH_SOCKET_PLACEHOLDER.close()
-    if PRETEND:
-        child = FakeSpawn(qemu_options)
-    else:
-        # child = pexpect.spawnu(qemu_cmd, qemu_args, echo=False, timeout=60)
+    if not PRETEND:
         child = CheriBSDInstance(qemu_options, qemu_args[0], qemu_args[1:], encoding="utf-8", echo=False, timeout=60)
+    else:
+        child = FakeSpawn(qemu_options)  # type: ignore
     # child.logfile=sys.stdout.buffer
     child.smb_dirs = smb_dirs
     if QEMU_LOGFILE:
@@ -868,9 +874,10 @@ def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace],
     if argparse_adjust_args_callback:
         argparse_adjust_args_callback(args)
 
-    xtarget = SUPPORTED_ARCHITECTURES.get(args.architecture, None)  # type: CrossCompileTarget
+    xtarget = SUPPORTED_ARCHITECTURES.get(args.architecture, None)
     if xtarget is None:
         failure("Invalid architecture", args.architecture)
+    assert isinstance(xtarget, CrossCompileTarget)
     qemu_options = QemuOptions(xtarget)
     if args.qemu_cmd is not None:
         if not Path(args.qemu_cmd).exists():
@@ -963,7 +970,7 @@ def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace],
         new_img = diskimg.with_suffix(
             ".img.runtests." + datetime.datetime.now().strftime("%Y%m%d%H%M%S") + ".pid" + str(os.getpid()))
         assert not new_img.exists()
-        run_host_command(["cp", "-fv", diskimg, str(new_img)])
+        run_host_command(["cp", "-fv", str(diskimg), str(new_img)])
         if not args.keep_disk_image_copy:
             atexit.register(run_host_command, ["rm", "-fv", str(new_img)])
         diskimg = new_img
