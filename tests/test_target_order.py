@@ -164,7 +164,7 @@ def test_webkit_deps_2():
 
     assert _sort_targets(["qtwebkit-mips-hybrid"], add_dependencies=True, skip_sdk=True) == \
                          ["qtbase-mips-hybrid", "icu4c-native", "icu4c-mips-hybrid", "libxml2-mips-hybrid", "sqlite-mips-hybrid", "qtwebkit-mips-hybrid"]
-    assert _sort_targets(["qtwebkit-cheri"], add_dependencies=True, skip_sdk=True) == \
+    assert _sort_targets(["qtwebkit-mips-purecap"], add_dependencies=True, skip_sdk=True) == \
                          ["qtbase-mips-purecap", "icu4c-native", "icu4c-mips-purecap", "libxml2-mips-purecap", "sqlite-mips-purecap", "qtwebkit-mips-purecap"]
 
 
@@ -181,12 +181,11 @@ def test_riscv():
            ["qemu", "llvm-native", "cheribsd-riscv64", "gdb-riscv64", "disk-image-riscv64", "run-riscv64"]
 
 # Check that libcxx deps with skip sdk pick the matching -native/-mips versions
-# Also the libcxx target should resolve to libcxx-cheri:
+# Also the libcxx target should resolve to libcxx-mips-purecap:
 @pytest.mark.parametrize("suffix,expected_suffix", [
     pytest.param("-native", "-native", id="native"),
     pytest.param("-mips-nocheri", "-mips-nocheri", id="mips-nocheri"),
     pytest.param("-mips-hybrid", "-mips-hybrid", id="mips-hybrid"),
-    pytest.param("-cheri", "-mips-purecap", id="cheri"),
     pytest.param("-mips-purecap", "-mips-purecap", id="mips-purecap"),
     # no suffix should resolve to the -cheri targets:
     pytest.param("", "-mips-purecap", id="no suffix"),

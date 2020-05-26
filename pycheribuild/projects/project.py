@@ -138,10 +138,6 @@ class ProjectSubclassDefinitionHook(type):
                 # noinspection PyTypeChecker
                 new_type = type(cls.__name__ + "_" + arch.name, (cls,) + cls.__bases__, new_dict)
                 target_manager.add_target(MultiArchTarget(new_name, new_type, arch, base_target))
-                if arch is CompilationTargets.CHERIBSD_MIPS_PURECAP and new_name.endswith("-mips-purecap"):
-                    # Add deprecated alias for to keep the old -cheri names working
-                    if not new_name.startswith("cheribsd-") and not new_name.startswith("disk-image-") and not new_name.startswith("run-"):
-                        target_manager.add_target_alias(new_name.replace("-mips-purecap", "-cheri"), new_name, deprecated=True)
         else:
             assert len(supported_archs) == 1
             # Only one target is supported:
