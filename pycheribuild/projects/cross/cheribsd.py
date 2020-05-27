@@ -1347,8 +1347,11 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         if xtarget.is_mips(include_purecap=True):
             return build_cheribsd.kernelConfig + "_MFS_ROOT"
         elif xtarget.is_riscv(include_purecap=True):
+            print(build_cheribsd.sourceDir)
             # Use the SPIKE MFSROOT kernel config by default
-            # TODO: maybe this should be renamed to GENERIC_MFS_ROOT?
+            # Use the SPIKE kernel config for older cheribsd versions that don't have QEMU_MFS_ROOT yet
+            if (build_cheribsd.sourceDir / "sys/riscv/conf/QEMU_MFS_ROOT").exists():
+                return "CHERI_QEMU_MFS_ROOT" if xtarget.is_hybrid_or_purecap_cheri() else "QEMU_MFS_ROOT"
             return "CHERI_SPIKE" if xtarget.is_hybrid_or_purecap_cheri() else "SPIKE"
         return build_cheribsd.kernelConfig
 
