@@ -547,8 +547,6 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
     if skip_ssh_setup:
         qemu_args.append("-append")
         qemu_args.append("cheribuild.skip_sshd=1 cheribuild.skip_entropy=1")
-    if disk_image:
-        qemu_args.extend(qemu_options.disk_image_args(user_network_args))
     success("Starting QEMU: ", " ".join(qemu_args))
     qemu_starttime = datetime.datetime.now()
     global _SSH_SOCKET_PLACEHOLDER
