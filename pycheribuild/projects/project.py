@@ -851,7 +851,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 else:
                     self.fatal("Could not find kernel image", kernel_path, "and jenkins path", jenkins_kernel_path,
                                "is also missing")
-        if not kernel_path.exists():
+        if kernel_path is None or not kernel_path.exists():
             self.fatal("Could not find kernel image", kernel_path)
         # generate a sensible error when using remote-cheribuild.py by omitting this line:
         script_dir = Path(__file__).parent.parent.parent / "test-scripts"   # no-combine
