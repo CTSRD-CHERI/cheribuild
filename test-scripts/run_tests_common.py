@@ -51,8 +51,9 @@ sys.path.insert(1, str(_cheribuild_root))
 import junitparser
 import pexpect
 from pycheribuild import boot_cheribsd
+from pycheribuild.config.target_info import CrossCompileTarget
 
-__all__ = ["run_tests_main", "boot_cheribsd", "junitparser", "pexpect"]
+__all__ = ["run_tests_main", "boot_cheribsd", "junitparser", "pexpect", "CrossCompileTarget"]
 
 
 def run_tests_main(test_function: Callable[[boot_cheribsd.CheriBSDInstance, argparse.Namespace], bool] = None,

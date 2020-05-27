@@ -103,6 +103,7 @@ QEMU_LOGFILE = None  # type: typing.Optional[Path]
 _SSH_SOCKET_PLACEHOLDER = None  # type: typing.Optional[socket.socket]
 MAX_SMBFS_RETRY = 3
 
+
 class CheriBSDCommandFailed(Exception):
     def __str__(self):
         return "".join(map(str, self.args))
@@ -871,13 +872,14 @@ def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace],
         args.disk_image = args.internal_disk_image_override
     if args.test_environment_only:
         args.interact = True
-    if argparse_adjust_args_callback:
-        argparse_adjust_args_callback(args)
-
     xtarget = SUPPORTED_ARCHITECTURES.get(args.architecture, None)
     if xtarget is None:
         failure("Invalid architecture", args.architecture)
     assert isinstance(xtarget, CrossCompileTarget)
+    args.xtarget = xtarget
+    if argparse_adjust_args_callback:
+        argparse_adjust_args_callback(args)
+
     qemu_options = QemuOptions(xtarget)
     if args.qemu_cmd is not None:
         if not Path(args.qemu_cmd).exists():

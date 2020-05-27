@@ -41,7 +41,7 @@ import time
 from pathlib import Path
 
 from kyua_db_to_junit_xml import convert_kyua_db_to_junit_xml, fixup_kyua_generated_junit_xml
-from run_tests_common import boot_cheribsd, run_tests_main, pexpect
+from run_tests_common import boot_cheribsd, run_tests_main, pexpect, CrossCompileTarget
 
 
 def run_cheritest(qemu: boot_cheribsd.CheriBSDInstance, binary_name, args: argparse.Namespace) -> bool:
@@ -179,13 +179,13 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
 
     poweroff_start = datetime.datetime.now()
     qemu.sendline("poweroff")
-    i = qemu.expect(["Uptime:", pexpect.TIMEOUT, pexpect.EOF] + boot_cheribsd.FATAL_ERROR_MESSAGES, timeout=360)
+    i = qemu.expect(["Uptime: ", pexpect.TIMEOUT, pexpect.EOF], timeout=360)
     if i != 0:
         boot_cheribsd.failure("Poweroff " + ("timed out" if i == 1 else "failed"))
         return False
     # 240 secs since it takes a lot longer on a full image (it took 44 seconds after installing kyua, so on a really
     # busy jenkins slave it might be a lot slower)
-    i = qemu.expect([pexpect.TIMEOUT, pexpect.EOF], timeout=240)
+    i = qemu.expect([pexpect.TIMEOUT, "Please press any key to reboot.", pexpect.EOF], timeout=240)
     if i == 0:
         boot_cheribsd.failure("QEMU didn't exit after shutdown!")
         return False
@@ -196,6 +196,10 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
 def cheribsd_setup_args(args: argparse.Namespace):
     args.use_smb_instead_of_ssh = True  # skip the ssh setup
     args.skip_ssh_setup = True
+    if args.run_cheritest is None:
+        # Only hybrid and purecap images have cheritest
+        assert isinstance(args.xtarget, CrossCompileTarget)
+        args.run_cheritest = args.xtarget.is_hybrid_or_purecap_cheri()
     if args.kyua_tests_files:
         # flatten the list (https://stackoverflow.com/a/45323085/894271):
         args.kyua_tests_files = functools.reduce(operator.iconcat, args.kyua_tests_files, [])
@@ -234,7 +238,7 @@ def add_args(parser: argparse.ArgumentParser):
                         help="Directory for the test outputs (it will be mounted with SMB)")
     parser.add_argument("--no-timestamped-test-subdir", action="store_true",
                         help="Don't create a timestamped subdirectory in the test output dir ")
-    parser.add_argument("--run-cheritest", dest="run_cheritest", action="store_true", default=True,
+    parser.add_argument("--run-cheritest", dest="run_cheritest", action="store_true", default=None,
                         help="Run cheritest and cheriabitest")
     parser.add_argument("--minimal-image", action="store_true",
         help="Set this if tests are being run on the minimal disk image rather than the full one")
