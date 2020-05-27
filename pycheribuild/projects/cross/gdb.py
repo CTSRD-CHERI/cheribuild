@@ -121,6 +121,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
             "-Wno-unknown-warning-option",  # caused by the build passing -Wshadow=local
             ])
         self.CXXFLAGS.append("-Wno-mismatched-tags")
+        self.COMMON_FLAGS.append("-fcommon")
         # TODO: we should fix this:
         self.cross_warning_flags.append("-Wno-error=implicit-function-declaration")
         self.cross_warning_flags.append("-Wno-error=format")
@@ -147,7 +148,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
             #      recognised by libtool but still accepted by the drivers, so
             #      this bypasses that.
             self.LDFLAGS.append("--static")
-            self.COMMON_FLAGS.extend(["-DRL_NO_COMPAT", "-DLIBICONV_PLUG", "-fno-strict-aliasing", "-fcommon"])
+            self.COMMON_FLAGS.extend(["-DRL_NO_COMPAT", "-DLIBICONV_PLUG", "-fno-strict-aliasing"])
             # Currently there are a lot of `undefined symbol 'elf_version'`, etc errors
             # Add -lelf to the linker command line until the source is fixed
             self.LDFLAGS.append("-lelf")
