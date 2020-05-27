@@ -454,7 +454,7 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         return result
 
     @classmethod
-    def riscv_bios_arg(cls, xtarget: CrossCompileTarget, caller: SimpleProject, prefer_bbl=False) -> str:
+    def riscv_bios_arg(cls, xtarget: CrossCompileTarget, caller: SimpleProject, prefer_bbl=True) -> str:
         assert xtarget.is_riscv(include_purecap=True)
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             # noinspection PyUnreachableCode
