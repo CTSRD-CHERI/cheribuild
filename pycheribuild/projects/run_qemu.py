@@ -350,22 +350,22 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             cls.skipKernelUpdate = cls.add_bool_option("skip-kernel-update", show_help=True,
                                                      help="Don't update the kernel from the remote host")
 
-    def __init__(self, config: CheriConfig, source_class: type(BuildFreeBSD) = None,
-                 disk_image_class: type(BuildFreeBSDImage) = None, needs_disk_image=True):
+    def __init__(self, config: CheriConfig, source_class: "typing.Type[BuildFreeBSD]" = None,
+                 disk_image_class: "typing.Type[BuildFreeBSDImage]" = None, needs_disk_image=True):
         super().__init__(config)
         if source_class is None and disk_image_class is not None:
             # noinspection PyProtectedMember
             source_class = disk_image_class.get_instance(self).source_project
         self.source_class = source_class
-        self.currentKernel = source_class.get_installed_kernel_path(self, )
+        self.currentKernel = source_class.get_installed_kernel_path(self)
         if hasattr(source_class, "rootfsDir"):
             # noinspection PyCallingNonCallable
-            self.rootfs_path = source_class.rootfsDir(self, config)
+            self.rootfs_path = source_class.rootfsDir(self, config=config)
         if needs_disk_image:
-            self.disk_image = disk_image_class.get_instance(self, config).disk_image_path
+            self.disk_image = disk_image_class.get_instance(self).disk_image_path
         self.needsRemoteKernelCopy = True
         # no need to copy from remote host if we were crossbuilding
-        if IS_FREEBSD or source_class.get_instance(self, config).crossbuild:
+        if IS_FREEBSD or source_class.get_instance(self).crossbuild:
             self.needsRemoteKernelCopy = False
         # same if skip-update was passed
         elif self.skipKernelUpdate or self.config.skipUpdate:

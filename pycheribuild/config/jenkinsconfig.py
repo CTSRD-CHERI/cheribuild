@@ -213,7 +213,6 @@ class JenkinsConfig(CheriConfig):
             if self.cpu == "mips" and self.sdk_cpu == "cheri128":
                 self.cpu = "hybrid-" + self.sdk_cpu
             if self.cpu == "hybrid-cheri128":
-                self.run_mips_tests_with_cheri_image = True
                 self.preferred_xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
             else:
                 assert self.cpu == "mips"

@@ -1338,13 +1338,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 
     @classmethod
     def get_kernel_config(cls, caller: SimpleProject) -> str:
-        config = caller.config
-        xtarget = caller.get_crosscompile_target(config)
-        if xtarget.is_mips(include_purecap=True) and (xtarget.is_hybrid_or_purecap_cheri() or config.run_mips_tests_with_cheri_image):
-            build_cheribsd = BuildCHERIBSD.get_instance_for_cross_target(CompilationTargets.CHERIBSD_MIPS_HYBRID,
-                config, caller=caller)
-        else:
-            build_cheribsd = BuildCHERIBSD.get_instance(caller, config)
+        build_cheribsd = BuildCHERIBSD.get_instance(caller)
         return cls._get_kernconf_to_build(build_cheribsd)
 
     @classmethod
