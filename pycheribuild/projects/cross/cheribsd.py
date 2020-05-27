@@ -383,7 +383,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
             assert False, "This should not be reached!"
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
             result["TARGET_CPUTYPE"] = "cheri"
-            result["WITH_CHERI"] = True
         return result
 
     def setup(self):
@@ -1181,6 +1180,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         super().__init__(config)
 
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+            self.make_args.set_with_options(CHERI=True)
             if self.config.cheri_cap_table_abi:
                 self.cross_toolchain_config.set(CHERI_USE_CAP_TABLE=self.config.cheri_cap_table_abi)
 
