@@ -350,7 +350,7 @@ class BuildSpec2006(CrossCompileProject):
         self.cross_warning_flags.append("-Wno-writable-strings")
         self.cross_warning_flags.append("-Wno-unused-variable")
         self.cross_warning_flags.append("-Wno-error=format")
-        self.cross_warning_flags.append("-Wno-error=mips-cheri-prototypes")  # FIXME: h264 has this, but seeems to run fine
+        self.cross_warning_flags.append("-Wno-error=cheri-prototypes")  # FIXME: h264 has this, but seeems to run fine
         self.cross_warning_flags.append("-Wno-unused-function")
         self.cross_warning_flags.append("-Wno-logical-op-parentheses") # so noisy in  xalanbmk
         # The C++ benchmarks have narrowing errors if we compile with the default std (c++14)

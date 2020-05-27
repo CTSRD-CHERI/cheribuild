@@ -56,7 +56,7 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
             TEST_SUITE_LIT=self._find_in_sdk_or_llvm_build_dir("llvm-lit")
         )
         # TODO: fix these issues
-        self.cross_warning_flags += ["-Wno-error=format", "-Werror=mips-cheri-prototypes"]
+        self.cross_warning_flags += ["-Wno-error=format", "-Werror=cheri-prototypes"]
         if not self.compiling_for_host():
             self.add_cmake_options(TEST_SUITE_HOST_CC="/usr/bin/cc")
             # we want to link against libc++ not libstdc++ (and for some reason we need to specify libgcc_eh too
