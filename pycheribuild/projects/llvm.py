@@ -250,7 +250,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
                 # that forwards to /usr/bin/ld for macOS binaries and ld.lld for cross-compilation
                 script = """#!/bin/sh
 case "$@" in
-  *-macosx_version_min*)
+  *-macosx_version_min*|*-platform_version*macos*)
     # Must be linking a native macOS executable
     exec /usr/bin/ld "$@"
     ;;
