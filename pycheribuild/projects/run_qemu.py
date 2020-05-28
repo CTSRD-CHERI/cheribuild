@@ -494,7 +494,6 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
         # FIXME: these should be config options
         cherios = BuildCheriOS.get_instance(self, config)
         self.currentKernel = BuildCheriOS.getBuildDir(self) / "boot/cherios.elf"
-        self.qemuBinary = BuildCheriOSQEMU.qemu_binary(self)
         self.disk_image = self.config.outputRoot / "cherios-disk.img"
         self._projectSpecificOptions = ["-no-reboot"]
 
@@ -510,6 +509,10 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
 
         self.qemu_options.virtio_disk = True  # CheriOS needs virtio
         self._qemuUserNetworking = False
+
+    def setup(self):
+        super().setup()
+        self.qemuBinary = BuildCheriOSQEMU.qemu_binary(self)
 
     def process(self):
         if not self.disk_image.exists():
