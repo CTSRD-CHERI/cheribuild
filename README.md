@@ -501,8 +501,7 @@ Options for target 'cheribsd':
                         will break if not all dependencies have been built. (default: 'the value of the global
                         --freebsd-subdir options')
   --cheribsd/kernel-config CONFIG
-                        The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64 or
-                        CHERI128_MALTA64 depending on --cheri-bits) (default: 'target-dependent default')
+                        The kernel configuration to use for `make buildkernel` (default: 'target-dependent default')
   --cheribsd/no-debug-info
                         Do not pass make flags for building with debug info
   --cheribsd/no-auto-obj
