@@ -91,6 +91,7 @@ class _BuildDiskImageBase(SimpleProject):
         # this means we can create a disk image without root privilege
         self.manifestFile = None  # type: typing.Optional[Path]
         self.extraFiles = []  # type: typing.List[Path]
+        self.autoPrefixes = ["usr/local/", "opt/", "extra/"]
         self.addRequiredSystemTool("ssh-keygen")
 
         self.makefs_cmd = None  # type: typing.Optional[Path]
@@ -553,9 +554,14 @@ class _BuildDiskImageBase(SimpleProject):
             for filename in filenames:
                 full_path = Path(root, filename)
                 target_path = os.path.relpath(str(full_path), rootfs_str)
-                if target_path.startswith("usr/local/") or target_path.startswith("opt/") or target_path.startswith(
-                        "extra/"):
-                    self.mtree.add_file(full_path, target_path, print_status=self.config.verbose)
+                added = False
+                for prefix in self.autoPrefixes:
+                    if target_path.startswith(prefix):
+                        self.mtree.add_file(full_path, target_path, print_status=self.config.verbose)
+                        added = True
+                        break
+                if added:
+                    continue
                 elif target_path not in self.mtree:
                     if target_path != "METALOG":  # METALOG is not added to METALOG
                         unlisted_files.append((full_path, target_path))
