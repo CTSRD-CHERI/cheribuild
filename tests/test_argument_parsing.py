@@ -354,7 +354,7 @@ def test_kernconf():
     freebsd_native = target_manager.get_target_raw("freebsd-x86_64").get_or_create_project(CompilationTargets.NONE, config)  # type: BuildFreeBSD
     assert config.freebsd_kernconf is None
     assert freebsd_mips.kernelConfig == "MALTA64"
-    assert cheribsd_cheri.kernelConfig == "CHERI128_MALTA64"
+    assert cheribsd_cheri.kernelConfig == "CHERI_MALTA64"
     assert freebsd_native.kernelConfig == "GENERIC"
 
     # Check that --kernconf is used as the fallback

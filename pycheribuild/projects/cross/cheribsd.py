@@ -51,13 +51,11 @@ def default_kernel_config(config: CheriConfig, project: SimpleProject) -> str:
         return "GENERIC"
     elif xtarget.is_mips(include_purecap=True):
         if xtarget.is_hybrid_or_purecap_cheri():
-            # make sure we use a kernel with 128 bit CPU features selected
-            # or a purecap kernel is selected
+            # use purecap kernel if selected
             assert isinstance(project, BuildCHERIBSD)
-            kernconf_name = "CHERI{bits}{pure}_MALTA64"
-            cheri_bits_suffix = "128" if config.mips_cheri_bits == 128 else ""
+            kernconf_name = "CHERI{pure}_MALTA64"
             cheri_pure = "_PURECAP" if project.purecapKernel else ""
-            return kernconf_name.format(bits=cheri_bits_suffix, pure=cheri_pure)
+            return kernconf_name.format(pure=cheri_pure)
         return "MALTA64"
     elif xtarget.is_riscv(include_purecap=True):
         # TODO: purecap/hybrid kernel
@@ -300,7 +298,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         cls.kernelConfig = cls.add_config_option(
             "kernel-config", metavar="CONFIG", show_help=True, extra_fallback_config_names=["kernel-config"],
             default=ComputedDefaultValue(function=default_kernel_config, as_string="target-dependent default"),
-            help="The kernel configuration to use for `make buildkernel` (default: CHERI128_MALTA64)")  # type: str
+            help="The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64)")  # type: str
 
         if cls._xtarget.is_hybrid_or_purecap_cheri():
             # When targeting CHERI we have to use CHERI LLVM
@@ -1193,7 +1191,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         if self.buildFpgaKernels:
             if self.compiling_for_mips(include_purecap=True):
                 if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                    prefix = "CHERI128_DE4_"
+                    prefix = "CHERI_DE4_"
                 else:
                     prefix = "BERI_DE4_"
                     # TODO: build the benchmark kernels? TODO: NFSROOT?
@@ -1295,7 +1293,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     def fpga_kernconf(self):
         if self.compiling_for_mips(include_purecap=True):
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                return "CHERI128_DE4_MFS_ROOT" if self.config.mips_cheri_bits == 128 else "CHERI_DE4_MFS_ROOT"
+                return "CHERI_DE4_MFS_ROOT"
             return "BERI_DE4_MFS_ROOT"
         elif self.compiling_for_riscv(include_purecap=True):
             return "CHERI_GFE" if self.crosscompile_target.is_hybrid_or_purecap_cheri() else "GFE"
