@@ -182,7 +182,9 @@ class MtreeFile(object):
         self._mtree[mtree_path] = MtreeEntry(mtree_path, attribs)
 
     def add_dir(self, path, mode=None, uname="root", gname="wheel", print_status=True, reference_dir=None):
-        assert not path.startswith("/"), path
+        if isinstance(path, Path):
+            path= str(path)
+        assert not path.startswith("/")
         path = path.rstrip("/")  # remove trailing slashes
         mtree_path = self._ensure_mtree_path_fmt(path)
         if mtree_path in self._mtree:
