@@ -529,7 +529,7 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
                   disk_image: typing.Optional[Path], ssh_port: typing.Optional[int], *,
                   smb_dirs: typing.List[SmbMount] = None, kernel_init_only=False,
                   trap_on_unrepresentable=False, skip_ssh_setup=False, bios_path: Path = None) -> CheriBSDInstance:
-    user_network_args = "user,id=net0,ipv6=off"
+    user_network_args = ""
     if smb_dirs is None:
         smb_dirs = []
     if smb_dirs:
