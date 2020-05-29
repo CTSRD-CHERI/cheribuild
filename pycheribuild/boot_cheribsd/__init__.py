@@ -154,6 +154,10 @@ class CheriBSDInstance(pexpect.spawn):
         self.qemu_config = qemu_config
         self.should_quit = False
 
+    @property
+    def xtarget(self) -> CrossCompileTarget:
+        return self.qemu_config.xtarget
+
     def expect(self, pattern: list, timeout=-1, pretend_result=None, timeout_msg="timeout", **kwargs):
         assert isinstance(pattern, list), "expected list and not " + str(pattern)
         return self._expect_and_handle_panic(pattern, timeout=timeout, timeout_msg=timeout_msg, **kwargs)

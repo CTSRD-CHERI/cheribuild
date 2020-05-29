@@ -48,8 +48,8 @@ def run_cheritest(qemu: boot_cheribsd.CheriBSDInstance, binary_name, args: argpa
     try:
         qemu.checked_run("rm -f /test-results/{}.xml".format(binary_name))
         # Run it once with textual output (for debugging)
-        qemu.run("/bin/{} -a".format(binary_name, binary_name),
-            ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
+        # qemu.run("/bin/{} -a".format(binary_name, binary_name),
+        #     ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
         # Generate JUnit XML:
         qemu.run("/bin/{} -a -x > /test-results/{}.xml".format(binary_name, binary_name),
             ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
@@ -92,8 +92,9 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
 
     # Run the various cheritest binaries
     if args.run_cheritest:
-        # Disable trap dumps while running cheritest:
-        qemu.checked_run("sysctl machdep.log_cheri_exceptions=0")
+        # Disable trap dumps while running cheritest (only available on MIPS):
+        if qemu.xtarget.is_mips(include_purecap=True):
+            qemu.checked_run("sysctl machdep.log_cheri_exceptions=0")
         # The minimal disk image only has the statically linked variants:
         test_binaries = ["cheritest", "cheriabitest"]
         if not args.minimal_image:
@@ -102,7 +103,8 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
         for test in test_binaries:
             if not run_cheritest(qemu, test, args):
                 tests_successful = False
-        qemu.checked_run("sysctl machdep.log_cheri_exceptions=1")
+        if qemu.xtarget.is_mips(include_purecap=True):
+            qemu.checked_run("sysctl machdep.log_cheri_exceptions=1")
 
     # Run kyua tests
     try:
