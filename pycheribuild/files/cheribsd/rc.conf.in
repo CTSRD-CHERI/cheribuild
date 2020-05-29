@@ -15,3 +15,6 @@ cron_enable="NO"
 nfs_client_enable="YES"
 fsck_y_enable="YES"
 fsck_y_flags="-T ffs:-R -T ufs:-R"
+if [ -e /fett ]; then
+	fett_nginx_enable="YES"
+fi
