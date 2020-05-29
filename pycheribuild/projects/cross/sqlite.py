@@ -73,10 +73,11 @@ class BuildSQLite(CrossCompileAutotoolsProject):
 
 
 class BuildFettSQLite(BuildSQLite):
-    target = "fett-sqlite"
     project_name = "fett-sqlite"
+    path_in_rootfs = "/fett"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git",
                                default_branch="fett")
+    cross_install_dir = DefaultInstallDir.ROOTFS
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

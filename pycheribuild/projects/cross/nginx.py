@@ -117,8 +117,8 @@ class BuildNginx(CrossCompileAutotoolsProject):
         self.run_make(cwd=self.sourceDir)
 
 class BuildFettNginx(BuildNginx):
-    target = "fett-nginx"
     project_name = "fett-nginx"
+    path_in_rootfs = "/fett/nginx"
     repository = GitRepository("https://github.com/CTSRD-CHERI/nginx.git",
         default_branch="fett")
     dependencies = ["fett-openssl"]
