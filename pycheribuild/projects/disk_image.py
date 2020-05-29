@@ -62,10 +62,9 @@ class _BuildDiskImageBase(SimpleProject):
     default_disk_image_path = None
 
     @classmethod
-    def setup_config_options(cls, *, defaultHostname, extraFilesShortname=None, extraFilesSuffix="", **kwargs):
+    def setup_config_options(cls, *, defaultHostname, extraFilesSuffix="", **kwargs):
         super().setup_config_options()
-        cls.extraFilesDir = cls.add_path_option("extra-files",
-            shortname=extraFilesShortname, show_help=True,
+        cls.extraFilesDir = cls.add_path_option("extra-files", show_help=True,
             default=lambda config, project: (config.sourceRoot / ("extra-files" + extraFilesSuffix)),
             help="A directory with additional files that will be added to the image (default: "
                  "'$SOURCE_ROOT/extra-files" + extraFilesSuffix + "')", metavar="DIR")
@@ -892,16 +891,7 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
             function=lambda conf, proj: "qemu-cheri" + proj.cheri_config_suffix + "-" + hostUsername,
             as_string="qemu-cheri${ABI}-" + hostUsername)
 
-        tmpfs_shortname = None
-        extra_files_shortname = None
-        if cls._xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            tmpfs_shortname = "-disable-tmpfs"
-            extra_files_shortname = "-extra-files"
-
-        super().setup_config_options(extraFilesShortname=extra_files_shortname, defaultHostname=defaultHostname, **kwargs)
-        cls.disableTMPFS = cls.add_bool_option("disable-tmpfs", shortname=tmpfs_shortname,
-                                             help="Don't make /tmp a TMPFS mount in the CHERIBSD system image."
-                                                  " This is a workaround in case TMPFS is not working correctly")
+        super().setup_config_options(defaultHostname=defaultHostname, **kwargs)
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
