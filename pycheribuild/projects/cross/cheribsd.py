@@ -816,7 +816,6 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 self.run_make("installworld", options=install_world_args)
                 self.run_make("distribution", options=install_world_args)
                 if self.has_installsysroot_target:
-                    installsysroot_args.set_env(DESTDIR=self.target_info.sysroot_dir)
                     self.run_make("installsysroot", options=installsysroot_args)
 
         if skip_kernel:
