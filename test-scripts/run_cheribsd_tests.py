@@ -85,9 +85,16 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
     # unchecked since mount_smbfs returns non-zero for --help:
     qemu.run("mount_smbfs --help", cheri_trap_fatal=True)
     # same for ld-cheri-elf.so (but do check for CHERI traps):
-    qemu.run("/libexec/ld-cheri-elf.so.1 -h", cheri_trap_fatal=True)
+    if qemu.xtarget.is_cheri_hybrid():
+        qemu.run("/libexec/ld-cheri-elf.so.1 -h", cheri_trap_fatal=True)
+    qemu.run("/libexec/ld-elf.so.1 -h", cheri_trap_fatal=True)
 
     tests_successful = True
+
+    # Check that we can connect to QEMU using SSH. This catches regressions that break SSHD.
+    if not qemu.check_ssh_connection():
+        tests_successful = False
+
     host_has_kyua = shutil.which("kyua") is not None
 
     # Run the various cheritest binaries
@@ -196,8 +203,6 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
 
 
 def cheribsd_setup_args(args: argparse.Namespace):
-    args.use_smb_instead_of_ssh = True  # skip the ssh setup
-    args.skip_ssh_setup = True
     if args.run_cheritest is None:
         # Only hybrid and purecap images have cheritest
         assert isinstance(args.xtarget, CrossCompileTarget)
@@ -249,6 +254,6 @@ def add_args(parser: argparse.ArgumentParser):
 
 
 if __name__ == '__main__':
-    # we don't need to setup ssh config/authorized_keys to test the boot
+    # we set need_ssh to True here to test that SSH connections work.
     run_tests_main(test_function=run_cheribsd_test, argparse_setup_callback=add_args, should_mount_builddir=False,
-                   argparse_adjust_args_callback=cheribsd_setup_args)
+                   argparse_adjust_args_callback=cheribsd_setup_args, need_ssh=True)

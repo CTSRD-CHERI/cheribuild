@@ -149,10 +149,18 @@ class CheriBSDInstance(pexpect.spawn):
     smb_dirs = None  # type: typing.List[SmbMount]
     flush_interval = None
 
-    def __init__(self, qemu_config: QemuOptions, *args, **kwargs):
+    def __init__(self, qemu_config: QemuOptions, *args, ssh_port: typing.Optional[int],
+                 ssh_pubkey: typing.Optional[Path], **kwargs):
         super().__init__(*args, **kwargs)
         self.qemu_config = qemu_config
         self.should_quit = False
+        self.ssh_port = ssh_port
+        assert ssh_pubkey is None or isinstance(ssh_pubkey, Path)
+        self.ssh_public_key = ssh_pubkey
+        # strip the .pub from the key file
+        self.ssh_private_key = Path(ssh_pubkey).with_suffix("") if ssh_pubkey else None
+        assert self.ssh_private_key != self.ssh_public_key
+        self.ssh_user = "root"
 
     @property
     def xtarget(self) -> CrossCompileTarget:
@@ -205,6 +213,46 @@ class CheriBSDInstance(pexpect.spawn):
     def checked_run(self, cmd: str, *, timeout=600, ignore_cheri_trap=False, error_output: str = None, **kwargs):
         checked_run_cheribsd_command(self, cmd, timeout=timeout, ignore_cheri_trap=ignore_cheri_trap,
             error_output=error_output, **kwargs)
+
+    def run_command_via_ssh(self, command: typing.List[str], *, stdout=None, stderr=None, check=True, verbose=False,
+                            use_controlmaster=False, **kwargs) -> subprocess.CompletedProcess:
+        assert self.ssh_port is not None
+        ssh_command = ["ssh", "{user}@{host}".format(user=self.ssh_user, host="localhost"),
+                       "-p", str(self.ssh_port),
+                       "-i", str(self.ssh_private_key),
+                       "-o", "UserKnownHostsFile=/dev/null",
+                       "-o", "StrictHostKeyChecking=no",
+                       "-o", "NoHostAuthenticationForLocalhost=yes",
+                       # "-o", "ConnectTimeout=20",
+                       # "-o", "ConnectionAttempts=2",
+                       ]
+        if verbose:
+            ssh_command.append("-v")
+        if use_controlmaster:
+            # XXX: always use controlmaster for faster connections?
+            controlmaster_dir = Path.home() / ".ssh/controlmasters"
+            controlmaster_dir.mkdir(exist_ok=True)
+            ssh_command += ["-o", "ControlPath={control_dir}/%r@%h:%p".format(control_dir=controlmaster_dir),
+                            "-o", "ControlMaster=auto",
+                            # Keep socket open for 10 min (600) or indefinitely (yes)
+                            "-o", "ControlPersist=600"]
+        ssh_command.append("--")
+        ssh_command.extend(command)
+        print_cmd(ssh_command, **kwargs)
+        return subprocess.run(ssh_command, stdout=stdout, stderr=stderr, check=check, **kwargs)
+
+    def check_ssh_connection(self, prefix="SSH connection:"):
+        connection_test_start = datetime.datetime.utcnow()
+        result = self.run_command_via_ssh(["echo", "connection successful"], check=True, stdout=subprocess.PIPE,
+            verbose=True)
+        connection_time = (datetime.datetime.utcnow() - connection_test_start).total_seconds()
+        info(prefix, result.stdout)
+        if result.stdout != b"connection successful\n":
+            failure(prefix, " unexepected output ", result.stdout, " after ", connection_time, " seconds", exit=False)
+            return False
+        else:
+            success(prefix, " successful after ", connection_time, " seconds")
+            return True
 
 
 def info(*args, **kwargs):
@@ -419,7 +467,10 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, 
         raise CheriBSDCommandFailed("error running '", cmd, "' (after '", runtime.total_seconds(), "s)")
 
 
-def setup_ssh_for_root_login(qemu: CheriBSDInstance, pubkey: Path):
+def setup_ssh_for_root_login(qemu: CheriBSDInstance):
+    pubkey = qemu.ssh_public_key
+    assert pubkey is not None
+    assert isinstance(pubkey, Path)
     # Ensure that we have permissions set up in a way so that ssh doesn't complain
     qemu.run("mkdir -p /root/.ssh && chmod 700 /root /root/.ssh")
     ssh_pubkey_contents = pubkey.read_text(encoding="utf-8").strip()
@@ -463,10 +514,10 @@ class FakeSpawn(object):
 
     def __init__(self, qemu_config: QemuOptions, *args, **kwargs):
         self.qemu_config = qemu_config
+        self.xtarget = qemu_config.xtarget
         self.smb_dirs = []  # type: typing.List[SmbMount]
         self.logfile = None  # type: typing.Optional[typing.TextIO]
         self.logfile_read = None  # type: typing.Optional[typing.TextIO]
-
 
     def expect(self, *args, pretend_result=None, **kwargs):
         print("Expecting", args, file=sys.stderr, flush=True)
@@ -503,6 +554,10 @@ class FakeSpawn(object):
         # noinspection PyTypeChecker
         checked_run_cheribsd_command(self, cmd, **kwargs)
 
+    def check_ssh_connection(self, prefix="SSH connection:"):
+        success(prefix, "checked SSH connection")
+        return True
+
 
 def start_dhclient(qemu: CheriBSDInstance):
     success("===> Setting up QEMU networking")
@@ -526,8 +581,8 @@ def start_dhclient(qemu: CheriBSDInstance):
 
 
 def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path], kernel_image: Path,
-                  disk_image: typing.Optional[Path], ssh_port: typing.Optional[int], *,
-                  smb_dirs: typing.List[SmbMount] = None, kernel_init_only=False,
+                  disk_image: typing.Optional[Path], ssh_port: typing.Optional[int],
+                  ssh_pubkey: typing.Optional[Path], *, smb_dirs: typing.List[SmbMount] = None, kernel_init_only=False,
                   trap_on_unrepresentable=False, skip_ssh_setup=False, bios_path: Path = None) -> CheriBSDInstance:
     user_network_args = ""
     if smb_dirs is None:
@@ -541,7 +596,6 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
         user_network_args += ",hostfwd=tcp::" + str(ssh_port) + "-:22"
 
     assert qemu_options.can_boot_kernel_directly, "X86/AArch64 case not handled yet"
-    # TODO: RISCV bios args
     bios_args = ["-bios", str(bios_path)] if bios_path is not None else []
     qemu_args = qemu_options.get_commandline(qemu_command=qemu_command, kernel_file=kernel_image, disk_image=disk_image,
         bios_args=bios_args, user_network_args=user_network_args, add_network_device=True,
@@ -557,7 +611,8 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
     if _SSH_SOCKET_PLACEHOLDER is not None:
         _SSH_SOCKET_PLACEHOLDER.close()
     if not PRETEND:
-        child = CheriBSDInstance(qemu_options, qemu_args[0], qemu_args[1:], encoding="utf-8", echo=False, timeout=60)
+        child = CheriBSDInstance(qemu_options, qemu_args[0], qemu_args[1:], ssh_port=ssh_port, ssh_pubkey=ssh_pubkey,
+            encoding="utf-8", echo=False, timeout=60)
     else:
         child = FakeSpawn(qemu_options)  # type: ignore
     # child.logfile=sys.stdout.buffer
@@ -633,8 +688,6 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
 
 def _do_test_setup(qemu: CheriBSDInstance, args: argparse.Namespace, test_archives: list, test_ld_preload_files: list,
                    test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None) -> None:
-    ssh_keyfile = args.ssh_key
-    ssh_port = args.ssh_port
     smb_dirs = qemu.smb_dirs  # type: typing.List[SmbMount]
     setup_tests_starttime = datetime.datetime.now()
     # disable coredumps, otherwise we get no space left on device errors
@@ -655,13 +708,11 @@ def _do_test_setup(qemu: CheriBSDInstance, args: argparse.Namespace, test_archiv
     info("\nWill transfer the following archives: ", test_archives)
 
     def do_scp(src, dst="/"):
-        # strip the .pub from the key file
-        private_key = str(Path(ssh_keyfile).with_suffix(""))
         # CVE-2018-20685 -> Can no longer use '.' See
         # https://superuser.com/questions/1403473/scp-error-unexpected-filename
-        scp_cmd = ["scp", "-B", "-r", "-P", str(ssh_port), "-o", "StrictHostKeyChecking=no",
+        scp_cmd = ["scp", "-B", "-r", "-P", str(qemu.ssh_port), "-o", "StrictHostKeyChecking=no",
                    "-o", "UserKnownHostsFile=/dev/null",
-                   "-i", shlex.quote(private_key), str(src), "root@localhost:" + dst]
+                   "-i", str(qemu.ssh_private_key), str(src), "root@localhost:" + dst]
         # use script for a fake tty to get progress output from scp
         if sys.platform.startswith("linux"):
             scp_cmd = ["script", "--quiet", "--return", "--command", " ".join(scp_cmd), "/dev/null"]
@@ -911,14 +962,14 @@ def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace],
     # validate args:
     test_archives = []  # type: list
     test_ld_preload_files = []  # type: list
+    if not args.use_smb_instead_of_ssh and not args.skip_ssh_setup:
+        if Path(args.ssh_key).suffix != ".pub":
+            failure("--ssh-key should point to the public key and not ", args.ssh_key)
+        if not Path(args.ssh_key).exists():
+            failure("SSH key missing: ", args.ssh_key)
     if args.test_archive or args.test_ld_preload:
         if args.use_smb_instead_of_ssh and not args.smb_mount_directories:
             failure("--smb-mount-directory is required if ssh is disabled")
-        if not args.use_smb_instead_of_ssh:
-            if Path(args.ssh_key).suffix != ".pub":
-                failure("--ssh-key should point to the public key and not ", args.ssh_key)
-            if not Path(args.ssh_key).exists():
-                failure("SSH key missing: ", args.ssh_key)
 
         if args.test_archive:
             info("Using the following test archives: ", args.test_archive)
@@ -981,7 +1032,8 @@ def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace],
 
     boot_starttime = datetime.datetime.now()
     qemu = boot_cheribsd(qemu_options, qemu_command=args.qemu_cmd, kernel_image=kernel, disk_image=diskimg,
-        ssh_port=args.ssh_port, smb_dirs=args.smb_mount_directories, kernel_init_only=args.test_kernel_init_only,
+        ssh_port=args.ssh_port, ssh_pubkey=Path(args.ssh_key), smb_dirs=args.smb_mount_directories,
+        kernel_init_only=args.test_kernel_init_only,
         trap_on_unrepresentable=args.trap_on_unrepresentable, skip_ssh_setup=args.skip_ssh_setup, bios_path=args.bios)
     success("Booting CheriBSD took: ", datetime.datetime.now() - boot_starttime)
 
@@ -991,7 +1043,7 @@ def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace],
         try:
             if not args.skip_ssh_setup:
                 setup_ssh_starttime = datetime.datetime.now()
-                setup_ssh_for_root_login(qemu, Path(args.ssh_key))
+                setup_ssh_for_root_login(qemu)
                 info("Setting up SSH took: ", datetime.datetime.now() - setup_ssh_starttime)
             tests_okay = runtests(qemu, args, test_archives=test_archives, test_function=test_function,
                 test_setup_function=test_setup_function, test_ld_preload_files=test_ld_preload_files)
