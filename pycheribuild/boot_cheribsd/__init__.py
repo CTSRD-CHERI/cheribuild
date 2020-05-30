@@ -105,6 +105,10 @@ MAX_SMBFS_RETRY = 3
 
 
 class CheriBSDCommandFailed(Exception):
+    def __init__(self, *args, execution_time: datetime.timedelta):
+        super().__init__(*args)
+        self.execution_time = execution_time
+
     def __str__(self):
         return "".join(map(str, self.args))
 
@@ -398,26 +402,26 @@ def run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, expected_output=None,
     i = qemu.expect(results, timeout=timeout, pretend_result=3)
     runtime = datetime.datetime.now() - starttime
     if i == 0:
-        raise CheriBSDCommandFailed("/bin/sh: command not found: ", cmd)
+        raise CheriBSDCommandFailed("/bin/sh: command not found: ", cmd, execution_time=runtime)
     elif i == 1:
-        raise CheriBSDCommandFailed("Missing shared library dependencies: ", cmd)
+        raise CheriBSDCommandFailed("Missing shared library dependencies: ", cmd, execution_time=runtime)
     elif i == 2:
-        raise CheriBSDCommandTimeout("timeout running ", cmd)
+        raise CheriBSDCommandTimeout("timeout running ", cmd, execution_time=runtime)
     elif i == 3:
         success("ran '", cmd, "' successfully (in ", runtime.total_seconds(), "s)")
     elif i == 4:
-        raise CheriBSDCommandFailed("Detected line continuation, cannot handle this yet! ", cmd)
+        raise CheriBSDCommandFailed("Detected line continuation, cannot handle this yet! ", cmd, execution_time=runtime)
     elif i == error_output_index:
         # wait up to 20 seconds for a prompt to ensure the full output has been printed
         qemu.expect_prompt(timeout=20, timeout_fatal=False)
         qemu.flush()
-        raise CheriBSDMatchedErrorOutput("Matched error output ", error_output, " in ", cmd)
+        raise CheriBSDMatchedErrorOutput("Matched error output ", error_output, " in ", cmd, execution_time=runtime)
     elif i == cheri_trap_index:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
         qemu.expect_prompt(timeout=20, timeout_fatal=False)
         qemu.flush()
         if cheri_trap_fatal:
-            raise CheriBSDCommandFailed("Got CHERI TRAP!")
+            raise CheriBSDCommandFailed("Got CHERI TRAP!", execution_time=runtime)
         else:
             failure("Got CHERI TRAP!", exit=False)
 
@@ -442,29 +446,29 @@ def checked_run_cheribsd_command(qemu: CheriBSDInstance, cmd: str, timeout=600, 
         i = -1
     runtime = datetime.datetime.now() - starttime
     if i == -1:  # Timeout
-        raise CheriBSDCommandTimeout("timeout after ", runtime, " running '", cmd, "': ", str(qemu))
+        raise CheriBSDCommandTimeout("timeout after ", runtime, " running '", cmd, "': ", str(qemu), execution_time=runtime)
     elif i == 0:
         success("ran '", cmd, "' successfully (in ", runtime.total_seconds(), "s)")
         qemu.expect_prompt(timeout=10)
         qemu.flush()
         return True
     elif i == 2:
-        raise CheriBSDCommandFailed("Detected line continuation, cannot handle this yet! ", cmd)
+        raise CheriBSDCommandFailed("Detected line continuation, cannot handle this yet! ", cmd, execution_time=runtime)
     elif i == cheri_trap_index:
         # wait up to 20 seconds for a prompt to ensure the dump output has been printed
         qemu.expect_prompt(timeout=20, timeout_fatal=False)
         qemu.flush()
-        raise CheriBSDCommandFailed("Got CHERI trap running '", cmd, "' (after '", runtime.total_seconds(), "s)")
+        raise CheriBSDCommandFailed("Got CHERI trap running '", cmd, "' (after '", runtime.total_seconds(), "s)", execution_time=runtime)
     elif i == error_output_index:
         # wait up to 20 seconds for the shell prompt
         qemu.expect_prompt(timeout=20, timeout_fatal=False)
         qemu.flush()
         assert isinstance(error_output, str)
         raise CheriBSDMatchedErrorOutput("Matched error output '" + error_output + "' running '", cmd, "' (after '",
-            runtime.total_seconds(), ")")
+            runtime.total_seconds(), ")", execution_time=runtime)
     else:
         assert i < len(results), str(i) + " >= len(" + str(results) + ")"
-        raise CheriBSDCommandFailed("error running '", cmd, "' (after '", runtime.total_seconds(), "s)")
+        raise CheriBSDCommandFailed("error running '", cmd, "' (after '", runtime.total_seconds(), "s)", execution_time=runtime)
 
 
 def setup_ssh_for_root_login(qemu: CheriBSDInstance):
@@ -748,13 +752,14 @@ def _do_test_setup(qemu: CheriBSDInstance, args: argparse.Namespace, test_archiv
                                              error_output="unable to open connection: syserr = ",
                                              pretend_result=0)
                 break
-            except CheriBSDMatchedErrorOutput:
-                failure("QEMU SMBD failed to mount ", d.in_target, ". Trying other ", (MAX_SMBFS_RETRY - trial - 1), " times", exit=False)
+            except CheriBSDMatchedErrorOutput as e:
+                # If the smbfs connection timed out try once more. This can happen when multiple libc++ test jobs are
+                # running on the same jenkins slaves so one of them might time out
+                failure("QEMU SMBD failed to mount ", d.in_target, " after ", e.execution_time.total_seconds(),
+                    " seconds. Trying ", (MAX_SMBFS_RETRY - trial - 1), " more time(s)", exit=False)
                 info("Waiting for 2-10 seconds before retrying mount_smbfs...")
                 if not PRETEND:
                     time.sleep(2 + 8 * random.random())  # wait 2-10 seconds, hopefully the server is less busy then.
-                # If the smbfs connection timed out try once more. This can happen when multiple libc++ test jobs are
-                # running on the same jenkins slaves so one of them might time out
 
     if test_archives:
         time.sleep(5)  # wait 5 seconds to make sure the disks have synced
