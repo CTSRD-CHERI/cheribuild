@@ -1413,7 +1413,7 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
         return project.buildDir / "test-install-prefix"
     elif install_dir == DefaultInstallDir.ROOTFS:
         assert not project.compiling_for_host(), "Should not use DefaultInstallDir.ROOTFS for native builds!"
-        rootfs_target = project.target_info.get_rootfs_target()
+        rootfs_target = project.target_info.get_rootfs_project()
         if hasattr(project, "path_in_rootfs"):
             assert project.path_in_rootfs.startswith("/"), project.path_in_rootfs
             return rootfs_target.installDir / project.path_in_rootfs[1:]
@@ -1866,9 +1866,9 @@ class Project(SimpleProject):
                     self._installPrefix = Path("/usr/local", self.crosscompile_target.generic_suffix)
                     self.destdir = self._installDir
                 if install_dir_kind == DefaultInstallDir.SYSROOT_AND_ROOTFS:
-                    self.rootfs_path = self.target_info.get_rootfs_target().installDir
+                    self.rootfs_path = self.target_info.get_rootfs_project().installDir
             elif install_dir_kind == DefaultInstallDir.ROOTFS:
-                self.rootfs_path = self.target_info.get_rootfs_target().installDir
+                self.rootfs_path = self.target_info.get_rootfs_project().installDir
                 relative_to_rootfs = os.path.relpath(str(self._installDir), str(self.rootfs_path))
                 if relative_to_rootfs.startswith(os.path.pardir):
                     self.verbose_print("Custom install dir", self._installDir, "-> using / as install prefix")

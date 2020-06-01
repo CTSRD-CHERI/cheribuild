@@ -173,7 +173,10 @@ class TargetInfo(ABC):
         """E.g. for baremetal target infos we have to link statically (and add the -static linker flag)"""
         return False
 
-    def get_rootfs_target(self) -> "Project":
+    def get_rootfs_project(self, xtarget: "CrossCompileTarget" = None) -> "Project":
+        return self._get_rootfs_project(xtarget if xtarget is not None else CompilationTargets.NONE)
+
+    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         raise RuntimeError("Should not be called for " + self.project.target)
 
     @classmethod
@@ -514,9 +517,9 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
     def cmake_prefix_paths(self) -> list:
         return [self.local_install_root, self.local_install_root / "libcheri/cmake"]
 
-    def get_rootfs_target(self) -> "Project":
+    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         from ..projects.cross.cheribsd import BuildFreeBSD
-        return BuildFreeBSD.get_instance(self.project)
+        return BuildFreeBSD.get_instance(self.project, cross_target=xtarget)
 
 
 class CheriBSDTargetInfo(FreeBSDTargetInfo):
@@ -605,9 +608,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                    str(self.local_install_root / "libcheri/pkgconfig")
         return str(self.sysroot_dir / "usr/lib/pkgconfig") + ":" + str(self.local_install_root / "lib/pkgconfig")
 
-    def get_rootfs_target(self) -> "Project":
+    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         from ..projects.cross.cheribsd import BuildCHERIBSD
-        xtarget = CompilationTargets.NONE
         return BuildCHERIBSD.get_instance(self.project, cross_target=xtarget)
 
 
@@ -616,7 +618,7 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
     shortname = "CheriOS"
     FREEBSD_VERSION = 0
 
-    def get_rootfs_target(self) -> "Project":
+    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         raise ValueError("Should not be called")
 
     def _get_sdk_root_dir_lazy(self):
@@ -776,9 +778,9 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     def is_newlib(cls):
         return True
 
-    def get_rootfs_target(self) -> "Project":
+    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         from ..projects.cross.newlib import BuildNewlib
-        return BuildNewlib.get_instance(self.project)
+        return BuildNewlib.get_instance(self.project, cross_target=xtarget)
 
 
 class Linkage(Enum):
@@ -804,7 +806,9 @@ class CrossCompileTarget(object):
     DEFAULT_SUBOBJECT_BOUNDS = "conservative"
 
     def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "typing.Type[TargetInfo]", *,
-                 is_cheri_purecap=False, is_cheri_hybrid=False, check_conflict_with: "CrossCompileTarget" = None):
+                 is_cheri_purecap=False, is_cheri_hybrid=False, check_conflict_with: "CrossCompileTarget" = None,
+                 non_cheri_target: "CrossCompileTarget" = None, hybrid_target: "CrossCompileTarget" = None,
+                 purecap_target: "CrossCompileTarget" = None):
         if target_info_cls is None:
             self.name = suffix
         else:
@@ -818,6 +822,26 @@ class CrossCompileTarget(object):
         assert not (is_cheri_purecap and is_cheri_hybrid), "Can't be both hybrid and purecap"
         self.check_conflict_with = check_conflict_with  # Check that we don't reuse install-dir, etc for this target
         self.target_info_cls = target_info_cls
+
+        # Set the related targets:
+        def _set_for_other(other_target):
+            if other_target is not None:
+                if is_cheri_hybrid:
+                    assert other_target._hybrid_target is None, "Already set?"
+                    other_target._hybrid_target = self
+                elif is_cheri_purecap:
+                    assert other_target._hybrid_target is None, "Already set?"
+                    other_target._purecap_target = self
+                else:
+                    assert other_target._non_cheri_target is None, "Already set?"
+                    other_target._non_cheri_target = self
+
+        self._non_cheri_target = non_cheri_target
+        _set_for_other(self._non_cheri_target)
+        self._hybrid_target = hybrid_target
+        _set_for_other(self._hybrid_target)
+        self._purecap_target = purecap_target
+        _set_for_other(self._purecap_target)
 
     def create_target_info(self, project: "SimpleProject") -> TargetInfo:
         return self.target_info_cls(self, project)
@@ -911,6 +935,27 @@ class CrossCompileTarget(object):
     def is_hybrid_or_purecap_cheri(self, valid_cpu_archs: "typing.List[CPUArchitecture]" = None):
         return self.is_cheri_purecap(valid_cpu_archs) or self.is_cheri_hybrid(valid_cpu_archs)
 
+    def get_cheri_hybrid_target(self) -> "CrossCompileTarget":
+        if self._is_cheri_hybrid:
+            return self
+        elif self._hybrid_target is not None:
+            return self._hybrid_target
+        raise ValueError("Don't know CHERI hybrid version of " + repr(self))
+
+    def get_cheri_purecap_target(self) -> "CrossCompileTarget":
+        if self._is_cheri_purecap:
+            return self
+        elif self._purecap_target is not None:
+            return self._purecap_target
+        raise ValueError("Don't know CHERI purecap version of " + repr(self))
+
+    def get_non_cheri_target(self) -> "CrossCompileTarget":
+        if not self._is_cheri_purecap and not self._is_cheri_hybrid:
+            return self
+        elif self._non_cheri_target is not None:
+            return self._non_cheri_target
+        raise ValueError("Don't know non-CHERI version of " + repr(self))
+
     def __repr__(self):
         result = self.target_info_cls.__name__ + "(" + self.cpu_architecture.name
         if self._is_cheri_purecap:
@@ -932,15 +977,15 @@ class CompilationTargets(object):
 
     CHERIBSD_MIPS_NO_CHERI = CrossCompileTarget("mips-nocheri", CPUArchitecture.MIPS64, CheriBSDTargetInfo)
     CHERIBSD_MIPS_HYBRID = CrossCompileTarget("mips-hybrid", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
-        is_cheri_hybrid=True, check_conflict_with=CHERIBSD_MIPS_NO_CHERI)
+        is_cheri_hybrid=True, check_conflict_with=CHERIBSD_MIPS_NO_CHERI, non_cheri_target=CHERIBSD_MIPS_NO_CHERI)
     CHERIBSD_MIPS_PURECAP = CrossCompileTarget("mips-purecap", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
-        is_cheri_purecap=True, check_conflict_with=CHERIBSD_MIPS_NO_CHERI)
+        is_cheri_purecap=True, check_conflict_with=CHERIBSD_MIPS_NO_CHERI, hybrid_target=CHERIBSD_MIPS_HYBRID)
 
     CHERIBSD_RISCV_NO_CHERI = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriBSDTargetInfo)
     CHERIBSD_RISCV_HYBRID = CrossCompileTarget("riscv64-hybrid", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
-        is_cheri_hybrid=True, check_conflict_with=CHERIBSD_RISCV_NO_CHERI)
+        is_cheri_hybrid=True, non_cheri_target=CHERIBSD_RISCV_NO_CHERI)
     CHERIBSD_RISCV_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
-        is_cheri_purecap=True, check_conflict_with=CHERIBSD_RISCV_HYBRID)
+        is_cheri_purecap=True, hybrid_target=CHERIBSD_RISCV_HYBRID)
     CHERIBSD_X86_64 = CrossCompileTarget("native", CPUArchitecture.X86_64, CheriBSDTargetInfo)
 
     CHERIOS_MIPS_PURECAP = CrossCompileTarget("mips", CPUArchitecture.MIPS64, CheriOSTargetInfo, is_cheri_purecap=True)
@@ -948,13 +993,13 @@ class CompilationTargets(object):
     # Baremetal targets
     BAREMETAL_NEWLIB_MIPS64 = CrossCompileTarget("baremetal-mips", CPUArchitecture.MIPS64, NewlibBaremetalTargetInfo)
     BAREMETAL_NEWLIB_MIPS64_PURECAP = CrossCompileTarget("baremetal-mips-purecap", CPUArchitecture.MIPS64,
-        NewlibBaremetalTargetInfo, is_cheri_purecap=True, check_conflict_with=BAREMETAL_NEWLIB_MIPS64)
+        NewlibBaremetalTargetInfo, is_cheri_purecap=True, non_cheri_target=BAREMETAL_NEWLIB_MIPS64)
     BAREMETAL_NEWLIB_RISCV64 = CrossCompileTarget("baremetal-riscv64", CPUArchitecture.RISCV64,
         NewlibBaremetalTargetInfo, check_conflict_with=BAREMETAL_NEWLIB_MIPS64)
     BAREMETAL_NEWLIB_RISCV64_HYBRID = CrossCompileTarget("baremetal-riscv64-hybrid", CPUArchitecture.RISCV64,
-        NewlibBaremetalTargetInfo, is_cheri_hybrid=True, check_conflict_with=BAREMETAL_NEWLIB_RISCV64)
+        NewlibBaremetalTargetInfo, is_cheri_hybrid=True, non_cheri_target=BAREMETAL_NEWLIB_RISCV64)
     BAREMETAL_NEWLIB_RISCV64_PURECAP = CrossCompileTarget("baremetal-riscv64-purecap", CPUArchitecture.RISCV64,
-        NewlibBaremetalTargetInfo, is_cheri_purecap=True, check_conflict_with=BAREMETAL_NEWLIB_RISCV64)
+        NewlibBaremetalTargetInfo, is_cheri_purecap=True, hybrid_target=BAREMETAL_NEWLIB_RISCV64_HYBRID)
     # FreeBSD targets
     FREEBSD_MIPS = CrossCompileTarget("mips", CPUArchitecture.MIPS64, FreeBSDTargetInfo)
     FREEBSD_RISCV = CrossCompileTarget("riscv", CPUArchitecture.RISCV64, FreeBSDTargetInfo)
@@ -965,7 +1010,7 @@ class CompilationTargets(object):
     # RTEMS targets
     RTEMS_RISCV64 = CrossCompileTarget("rtems-riscv64", CPUArchitecture.RISCV64, RTEMSTargetInfo)
     RTEMS_RISCV64_PURECAP = CrossCompileTarget("rtems-riscv64-purecap", CPUArchitecture.RISCV64, RTEMSTargetInfo,
-        is_cheri_purecap=True)
+        is_cheri_purecap=True, non_cheri_target=RTEMS_RISCV64)
 
     # TODO: test RISCV
     ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = [CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI,
