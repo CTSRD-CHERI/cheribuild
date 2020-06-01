@@ -169,18 +169,21 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
         if not boot_cheribsd.PRETEND:
             time.sleep(2)  # sleep two seconds to ensure the files exist
         junit_dir = Path(args.test_output_dir)
-        try:
-            if host_has_kyua:
+        if host_has_kyua:
+            try:
                 boot_cheribsd.info("Converting kyua databases to JUNitXML in output directory ", junit_dir)
                 for host_kyua_db_path in junit_dir.glob("*.db"):
                     convert_kyua_db_to_junit_xml(host_kyua_db_path, host_kyua_db_path.with_suffix(".xml"))
-
-            boot_cheribsd.info("Updating statistics in JUnit output directory ", junit_dir)
-            for host_xml_path in junit_dir.glob("*.xml"):
+            except Exception as e:
+                boot_cheribsd.failure("Could not convert kyua database in ", junit_dir, ": ", e, exit=False)
+                tests_successful = False
+        boot_cheribsd.info("Updating statistics in JUnit output directory ", junit_dir)
+        for host_xml_path in junit_dir.glob("*.xml"):
+            try:
                 fixup_kyua_generated_junit_xml(host_xml_path)  # Despite the name also works for cheritest
-        except Exception as e:
-            boot_cheribsd.failure("Could not update stats in ", junit_dir, ": ", e, exit=False)
-            tests_successful = False
+            except Exception as e:
+                boot_cheribsd.failure("Could not update stats in ", junit_dir, ": ", e, exit=False)
+                tests_successful = False
 
     if args.interact or args.skip_poweroff:
         boot_cheribsd.info("Skipping poweroff step since --interact/--skip-poweroff was passed.")
