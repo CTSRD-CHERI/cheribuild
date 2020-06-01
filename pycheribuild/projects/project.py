@@ -821,7 +821,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         xtarget = self.crosscompile_target
         test_native = xtarget.is_native()
         # Only supported for CheriBSD-MIPS right now:
-        if not test_native and not self.target_info.is_cheribsd():
+        if not test_native and self.target_info.is_cheribsd():
             if not xtarget.is_mips(include_purecap=True) or not xtarget.is_riscv(include_purecap=True):
                 self.warning("Test scripts currently only work for CheriBSD-MIPS and CHERI-RISC-V")
                 return
