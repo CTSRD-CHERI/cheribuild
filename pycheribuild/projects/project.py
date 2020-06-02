@@ -52,7 +52,7 @@ from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_mana
 from ..utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
-           "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
+           "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
            "CrossCompileTarget", "CPUArchitecture", "GitRepository", "ComputedDefaultValue", "TargetInfo",  # no-combine
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
            "TargetBranchInfo", "CompilationTargets", "DefaultInstallDir", "BuildType"]  # no-combine
@@ -60,7 +60,7 @@ __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "Target
 Type_T = typing.TypeVar("Type_T")
 
 
-def flushStdio(stream):
+def flush_stdio(stream):
     while True:
         try:
             # can lead to EWOULDBLOCK if stream cannot be flushed immediately
@@ -71,6 +71,7 @@ def flushStdio(stream):
                 raise
             else:
                 time.sleep(0.1)
+
 
 def _default_stdout_filter(arg: bytes):
     raise NotImplementedError("Should never be called, this is a dummy")
@@ -621,10 +622,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                     # noinspection PyProtectedMember
                     if project._lastStdoutLineCanBeOverwritten:
                         sys.stdout.buffer.write(b"\n")
-                        flushStdio(sys.stdout)
+                        flush_stdio(sys.stdout)
                         project._lastStdoutLineCanBeOverwritten = False
                     sys.stderr.buffer.write(errLine)
-                    flushStdio(sys.stderr)
+                    flush_stdio(sys.stderr)
                     if project.config.write_logfile:
                         outfile.write(errLine)
                 except ValueError:
@@ -638,14 +639,14 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             sys.stdout.buffer.write(Project._clearLineSequence)
         sys.stdout.buffer.write(line[:-1])  # remove the newline at the end
         sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
-        flushStdio(sys.stdout)
+        flush_stdio(sys.stdout)
         self._lastStdoutLineCanBeOverwritten = True
 
     def _show_line_stdout_filter(self, line: bytes):
         if self._lastStdoutLineCanBeOverwritten:
             sys.stdout.buffer.write(b"\n")
         sys.stdout.buffer.write(line)
-        flushStdio(sys.stdout)
+        flush_stdio(sys.stdout)
         self._lastStdoutLineCanBeOverwritten = False
 
     def _stdout_filter(self, line: bytes):
@@ -727,7 +728,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                     stdout_filter(line)
                 else:
                     sys.stdout.buffer.write(line)
-                    flushStdio(sys.stdout)
+                    flush_stdio(sys.stdout)
         retcode = proc.wait()
         if stderrThread:
             stderrThread.join()

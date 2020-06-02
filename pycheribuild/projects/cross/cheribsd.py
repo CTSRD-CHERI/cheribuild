@@ -342,7 +342,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if self._lastStdoutLineCanBeOverwritten:
                 sys.stdout.buffer.write(Project._clearLineSequence)
             sys.stdout.buffer.write(line)
-            flushStdio(sys.stdout)
+            flush_stdio(sys.stdout)
             self._lastStdoutLineCanBeOverwritten = False
         elif line.startswith(b"===> "):  # new subdirectory
             self._line_not_important_stdout_filter(line)
