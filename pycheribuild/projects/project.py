@@ -57,6 +57,9 @@ __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "Target
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
            "TargetBranchInfo", "CompilationTargets", "DefaultInstallDir", "BuildType"]  # no-combine
 
+Type_T = typing.TypeVar("Type_T")
+
+
 def flushStdio(stream):
     while True:
         try:
@@ -76,8 +79,8 @@ def _default_stdout_filter(arg: bytes):
 class ProjectSubclassDefinitionHook(type):
     def __init__(cls, name: str, bases, clsdict):
         super().__init__(name, bases, clsdict)
-        if typing.TYPE_CHECKING:   # no-combine
-            assert issubclass(cls, SimpleProject)   # no-combine
+        if typing.TYPE_CHECKING:  # no-combine
+            assert issubclass(cls, SimpleProject)  # no-combine
         if clsdict.get("doNotAddToTargets") is not None:
             if clsdict.get("doNotAddToTargets") is True:
                 return  # if doNotAddToTargets is defined within the class we skip it
@@ -284,8 +287,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return _cached
 
     @classmethod
-    def get_instance(cls: "typing.Type[Type_T]", caller: "typing.Optional[SimpleProject]",
-                     config: CheriConfig = None, cross_target: CrossCompileTarget = CompilationTargets.NONE) -> "Type_T":
+    def get_instance(cls: typing.Type[Type_T], caller: "typing.Optional[SimpleProject]",
+                     config: CheriConfig = None, cross_target: CrossCompileTarget = CompilationTargets.NONE) -> Type_T:
         # TODO: assert that target manager has been initialized
         assert cross_target is not None
         if caller is not None:
@@ -301,8 +304,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return cls.get_instance_for_cross_target(cross_target, config, caller=caller)
 
     @classmethod
-    def get_instance_for_cross_target(cls: "typing.Type[Type_T]", cross_target: CrossCompileTarget,
-                                      config: CheriConfig, caller: "SimpleProject" = None) -> "Type_T":
+    def get_instance_for_cross_target(cls: typing.Type[Type_T], cross_target: CrossCompileTarget,
+                                      config: CheriConfig, caller: "SimpleProject" = None) -> Type_T:
         # Also need to handle calling self.get_instance_for_cross_target() on a target-specific instance
         # In that case cls.target returns e.g. foo-mips, etc and target_manager will always return the MIPS version
         root_class = getattr(cls, "synthetic_base", cls)

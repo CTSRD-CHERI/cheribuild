@@ -29,7 +29,7 @@
 #
 
 from ..project import *
-from ...utils import IS_MAC, classproperty
+from ...utils import IS_MAC, classproperty, commandline_to_str
 
 
 def opensbi_install_dir(config: CheriConfig, project: SimpleProject):
