@@ -45,15 +45,15 @@ from pathlib import Path
 
 from .colour import coloured, AnsiColour
 
-if typing.TYPE_CHECKING:   # no-combine
-    from .config.chericonfig import CheriConfig    # no-combine
+if typing.TYPE_CHECKING:  # no-combine
+    from .config.chericonfig import CheriConfig  # no-combine
 
 Type_T = typing.TypeVar("Type_T")
 
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includeLocalFile", "CompilerInfo",   # no-combine
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
-           "warningMessage", "Type_T", "popen_handle_noexec", "extract_version", "get_program_version",  # no-combine
+           "warningMessage", "popen_handle_noexec", "extract_version", "get_program_version",  # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latest_system_clang_tool", "SafeDict",  # no-combine
            "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
            "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
@@ -250,13 +250,14 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
         kwargs["stdout"] = subprocess.DEVNULL
 
     if "env" in kwargs:
+        env_arg = kwargs["env"]  # type: typing.Dict[str, str]
         if not replace_env:
             new_env = os.environ.copy()
-            env = {k: str(v) for k, v in kwargs["env"].items()}  # make sure everything is a string
+            env = {k: str(v) for k, v in env_arg.items()}  # make sure everything is a string
             new_env.update(env)
             kwargs["env"] = new_env
         else:
-            kwargs["env"] = dict((k, str(v)) for k, v in kwargs["env"].items())
+            kwargs["env"] = dict((k, str(v)) for k, v in env_arg.items())
     if give_tty_control:
         kwargs["preexec_fn"] = _become_tty_foreground_process
     stdout = b""
@@ -269,8 +270,8 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
         except subprocess.TimeoutExpired:
             process.kill()
             stdout, stderr = process.communicate()
-            # TODO py35: pass stderr=stderr as well
-            raise subprocess.TimeoutExpired(process.args, timeout, output=stdout)
+            assert timeout is not None
+            raise subprocess.TimeoutExpired(process.args, timeout, output=stdout, stderr=stderr)
         except BrokenPipeError:
             # just return the exit code
             process.kill()
@@ -441,9 +442,9 @@ def extract_version(output: bytes, component_kind: "typing.Type[Type_T]" = int, 
     return tuple(map(component_kind, match.groups()))
 
 
-def latest_system_clang_tool(basename: str, fallback_basename: str) -> str:
+def latest_system_clang_tool(basename: str, fallback_basename: str) -> Path:
     if "_ARGCOMPLETE" in os.environ:  # Avoid expensive lookup when tab-completing
-        return fallback_basename
+        return Path(fallback_basename)
 
     # Only search in /usr/bin/ and /usr/local/bin by default.
     # If users want to use other versions they should explicitly pass --cc-path, etc
@@ -469,7 +470,8 @@ def latest_system_clang_tool(basename: str, fallback_basename: str) -> str:
                 continue
             results.append((candidate, info.is_apple_clang, info.version))
     if not results:
-        return shutil.which(fallback_basename)
+        fullpath = shutil.which(fallback_basename)
+        return Path(fullpath) if fullpath else Path(basename)
     # Find the newest version (and prefer apple-clang to non-apple clang
     # since it is required on macOS to build any binary
     # print("Candidates for", basename, results)
