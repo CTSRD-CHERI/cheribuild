@@ -31,7 +31,7 @@ import sys
 import typing
 
 from .crosscompileproject import *
-from ...utils import runCmd, statusUpdate, IS_MAC
+from ...utils import runCmd, statusUpdate, OSInfo
 
 
 class TemporarilyRemoveProgramsFromSdk(object):
@@ -107,7 +107,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
         # BUILD the gui:
         if False and self.compiling_for_host():
             self.configureArgs.append("--enable-gdbtk")
-            # if IS_MAC:
+            # if OSInfo.IS_MAC:
             # self.configureArgs.append("--with-tcl=/usr/local/opt/tcl-tk/lib")
             # self.configureEnvironment["PKG_CONFIG_PATH"] = "/usr/local/opt/tcl-tk/lib/pkgconfig:/usr/local/lib/pkgconfig"
 
@@ -171,7 +171,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
         self.make_args.set_env(**self.configureEnvironment)
 
     def configure(self, **kwargs):
-        if self.compiling_for_host() and IS_MAC:
+        if self.compiling_for_host() and OSInfo.IS_MAC:
             self.configureEnvironment.clear()
             print(self.configureArgs)
             # self.configureArgs.clear()

@@ -31,7 +31,7 @@ import tempfile
 
 from .crosscompileproject import *
 from ...config.loader import ComputedDefaultValue
-from ...utils import commandline_to_str, runCmd, IS_FREEBSD, IS_MAC, fatalError, IS_LINUX, getCompilerInfo
+from ...utils import commandline_to_str, runCmd, OSInfo, fatalError, getCompilerInfo
 
 
 # This class is used to build qtbase and all of qt5
@@ -76,12 +76,12 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             self.configureArgs.extend(["-prefix", str(self.installDir)])
             self.configureArgs.append("QMAKE_CC=" + str(self.CC))
             self.configureArgs.append("QMAKE_CXX=" + str(self.CXX))
-            if IS_LINUX and getCompilerInfo(self.CC).is_clang:
+            if OSInfo.IS_LINUX and getCompilerInfo(self.CC).is_clang:
                 # otherwise the build assumes GCC
                 self.configureArgs.append("-platform")
                 self.configureArgs.append("linux-clang")
             # FreeBSD header files may use the register storage class but c++17 disallows this
-            if IS_FREEBSD:
+            if OSInfo.IS_FREEBSD:
                 self.configureArgs.append("-platform")
                 self.configureArgs.append("offscreen")
                 self.configureArgs.extend(["-c++std", "c++14"])
@@ -126,7 +126,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         ])
         if self.build_tests:
             self.configureArgs.append("-developer-build")
-            if IS_MAC:
+            if OSInfo.IS_MAC:
                 # Otherwise we get "ERROR: debug-only framework builds are not supported. Configure with -no-framework
                 # if you want a pure debug build."
                 self.configureArgs.append("-no-framework")
@@ -329,7 +329,7 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
         self.configureArgs.extend([
             "--without-python", "--without-modules", "--without-lzma",
         ])
-        if IS_MAC:
+        if OSInfo.IS_MAC:
             self.addRequiredSystemTool("glibtoolize", homebrew="libtool")
             self.configureEnvironment["LIBTOOLIZE"] = "glibtoolize"
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-capability-misuse"]  # FIXME: build with capability -Werror

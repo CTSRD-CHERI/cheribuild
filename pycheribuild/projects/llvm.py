@@ -183,7 +183,7 @@ class BuildLLVMBase(CMakeProject):
 
     @staticmethod
     def clang_install_hint():
-        if IS_FREEBSD:
+        if OSInfo.IS_FREEBSD:
             return "Try running `pkg install llvm`"
         if OSInfo.isUbuntu() or OSInfo.isDebian():
             return """Try running:
@@ -244,7 +244,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
 
         if "lld" in self.included_projects:
             self.create_triple_prefixed_symlinks(self.installDir / "bin/ld.lld")
-            if IS_MAC:
+            if OSInfo.IS_MAC:
                 self.deleteFile(self.installDir / "bin/ld", print_verbose_only=True)
                 # lld will call the mach-o linker when invoked as ld -> need to create a shell script instead
                 # that forwards to /usr/bin/ld for macOS binaries and ld.lld for cross-compilation
@@ -259,7 +259,7 @@ exec {lld} "$@"
 """.format(lld=self.installDir / "bin/ld.lld")
                 self.writeFile(self.installDir / "bin/ld", script, overwrite=True, mode=0o755)
             self.create_triple_prefixed_symlinks(self.installDir / "bin/ld.lld", tool_name="ld",
-                create_unprefixed_link=not IS_MAC)
+                create_unprefixed_link=not OSInfo.IS_MAC)
 
 
 class BuildLLVMMonoRepoBase(BuildLLVMBase):

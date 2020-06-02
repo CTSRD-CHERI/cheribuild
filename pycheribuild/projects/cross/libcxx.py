@@ -35,7 +35,7 @@ from ..build_qemu import BuildQEMU
 from ..llvm import BuildCheriLLVM
 from ..project import ReuseOtherProjectDefaultTargetRepository
 from ..run_qemu import LaunchCheriBSD
-from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str, IS_MAC
+from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str
 
 
 # A base class to set the default installation directory
@@ -84,7 +84,7 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
         self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
         if self.compiling_for_host():
-            if IS_MAC or OSInfo.isUbuntu():
+            if OSInfo.IS_MAC or OSInfo.isUbuntu():
                 # Can't link libc++abi on MacOS and libsupc++ statically on Ubuntu
                 self.add_cmake_options(LIBUNWIND_TEST_ENABLE_EXCEPTIONS=False)
                 # Static linking is broken on Ubuntu 16.04
@@ -238,7 +238,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
         self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
         # select libcxxrt as the runtime library (except on macos where this doesn't seem to work very well)
-        if not (self.compiling_for_host() and IS_MAC):
+        if not (self.compiling_for_host() and OSInfo.IS_MAC):
             self.add_cmake_options(
                 LIBCXX_CXX_ABI="libcxxrt",
                 LIBCXX_CXX_ABI_LIBNAME="libcxxrt",

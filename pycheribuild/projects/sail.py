@@ -35,7 +35,7 @@ from typing import Tuple, Dict, Any, Union
 
 from .project import *
 from ..targets import target_manager
-from ..utils import runCmd, setEnv, coloured, AnsiColour, commandline_to_str, get_program_version, IS_LINUX
+from ..utils import runCmd, setEnv, coloured, AnsiColour, commandline_to_str, get_program_version, OSInfo
 
 
 class OpamMixin(object):
@@ -141,12 +141,12 @@ class Opam2(SimpleProject):
 
     def __init__(self, config):
         super().__init__(config)
-        if IS_LINUX:
+        if OSInfo.IS_LINUX:
             self.addRequiredSystemTool("wget")
             self.addRequiredSystemTool("bwrap", cheribuild_target="bubblewrap")
 
     def process(self):
-        if IS_LINUX:
+        if OSInfo.IS_LINUX:
             self.makedirs(self.config.otherToolsDir / "bin")
             # NOTE: 2.0.2 won't work for me
             runCmd("wget", "https://github.com/ocaml/opam/releases/download/2.0.6/opam-2.0.6-x86_64-linux", "-O",

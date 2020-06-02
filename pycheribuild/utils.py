@@ -47,7 +47,7 @@ from subprocess import CompletedProcess
 from .colour import coloured, AnsiColour
 
 # reduce the number of import statements per project  # no-combine
-__all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includeLocalFile", "CompilerInfo",   # no-combine
+__all__ = ["typing", "printCommand", "includeLocalFile", "CompilerInfo",   # no-combine
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setEnv", "init_global_config",  # no-combine
            "warningMessage", "popen_handle_noexec", "extract_version", "get_program_version",  # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latest_system_clang_tool", "SafeDict",  # no-combine
@@ -83,13 +83,10 @@ class classproperty(object):
 if sys.version_info < (3, 5, 2):
     sys.exit("This script requires at least Python 3.5.2")
 
-IS_LINUX = sys.platform.startswith("linux")
-IS_FREEBSD = sys.platform.startswith("freebsd")
-IS_MAC = sys.platform.startswith("darwin")
-
 
 def is_jenkins_build() -> bool:
     return os.getenv("_CHERIBUILD_JENKINS_BUILD") is not None
+
 
 def __filter_env(env: dict) -> dict:
     result = dict()
@@ -439,7 +436,7 @@ def latest_system_clang_tool(basename: str, fallback_basename: str) -> Path:
             # print("Checking compiler candidate", candidate)
             candidate = search_dir / candidate_name
             info = getCompilerInfo(candidate)
-            if IS_MAC and not info.is_apple_clang:
+            if OSInfo.IS_MAC and not info.is_apple_clang:
                 # print("Ignoring", candidate, "since it is not apple clang and won't be able to build host binaries")
                 continue
             # Minimum version is 4.0
@@ -531,7 +528,7 @@ def have_working_internet_connection():
 def is_case_sensitive_dir(d: Path):
     if not d.exists():
         # assume true for macos:
-        if IS_MAC:
+        if OSInfo.IS_MAC:
             return False
         return True  # XXX: exception?
     path_upper = d / "TestDirCaseSensitive"
@@ -569,7 +566,7 @@ class OSInfo(object):
 
     @classmethod
     def __is_linux_distribution(cls, kind):
-        if not IS_LINUX:
+        if not cls.IS_LINUX:
             return False
         return kind in cls.etc_os_release().get("ID", "") or kind in cls.etc_os_release().get("ID_LIKE", "")
 

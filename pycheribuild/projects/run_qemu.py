@@ -343,7 +343,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        if not IS_FREEBSD:
+        if not OSInfo.IS_FREEBSD:
             cls.remoteKernelPath = cls.add_config_option("remote-kernel-path", show_help=True,
                                                        help="Path to the FreeBSD kernel image on a remote host. "
                                                             "Needed because FreeBSD cannot be cross-compiled.")
@@ -365,7 +365,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             self.disk_image = disk_image_class.get_instance(self).disk_image_path
         self.needsRemoteKernelCopy = True
         # no need to copy from remote host if we were crossbuilding
-        if IS_FREEBSD or source_class.get_instance(self).crossbuild:
+        if OSInfo.IS_FREEBSD or source_class.get_instance(self).crossbuild:
             self.needsRemoteKernelCopy = False
         # same if skip-update was passed
         elif self.skipKernelUpdate or self.config.skipUpdate:
@@ -517,7 +517,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
     def process(self):
         if not self.disk_image.exists():
             if self.query_yes_no("CheriOS disk image is missing. Would you like to create a zero-filled 1MB image?"):
-                size_flag = "bs=128m" if IS_MAC else "bs=128M"
+                size_flag = "bs=128m" if OSInfo.IS_MAC else "bs=128M"
                 runCmd("dd", "if=/dev/zero", "of=" + str(self.disk_image), size_flag, "count=1")
         super().process()
 

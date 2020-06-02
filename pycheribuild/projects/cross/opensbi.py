@@ -29,7 +29,7 @@
 #
 
 from ..project import *
-from ...utils import IS_MAC, classproperty, commandline_to_str
+from ...utils import OSInfo, classproperty, commandline_to_str
 
 
 def opensbi_install_dir(config: CheriConfig, project: SimpleProject):
@@ -57,7 +57,7 @@ class BuildOpenSBI(Project):
     def __init__(self, config):
         super().__init__(config)
         self.addRequiredSystemTool("dtc", apt="device-tree-compiler", homebrew="dtc")
-        if IS_MAC:
+        if OSInfo.IS_MAC:
             self.addRequiredSystemTool("greadlink", homebrew="coreutils")
             self.make_args.set(READLINK="greadlink")
 

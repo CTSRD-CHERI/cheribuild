@@ -34,9 +34,9 @@ from ..utils import *
 
 
 def gnuStepInstallInstructions():
-    if IS_FREEBSD:
+    if OSInfo.IS_FREEBSD:
         return "Try running `pkg install gnustep-make gnustep-gui` or `cheribuild.py gnustep` to build from source"
-    if IS_LINUX:
+    if OSInfo.IS_LINUX:
         return ("Try running `cheribuild.py gnustep`. It might also be possible to use distribution packages but they"
                 " will probably be too old.")
         # packaged versions don't seem to work
@@ -54,7 +54,7 @@ class BuildCheriVis(Project):
     repository = GitRepository("https://github.com/CTSRD-CHERI/CheriVis.git")
     native_install_dir = DefaultInstallDir.CHERI_SDK
     # dependencies = ["cheritrace"]
-    if IS_MAC:
+    if OSInfo.IS_MAC:
         build_in_source_dir = True
         make_kind = MakeCommandKind.CustomMakeTool
     else:
@@ -66,10 +66,10 @@ class BuildCheriVis(Project):
         super().__init__(config)
         self.addRequiredSystemTool("clang")
         self.addRequiredSystemTool("clang++")
-        if IS_LINUX or IS_FREEBSD:
+        if OSInfo.IS_LINUX or OSInfo.IS_FREEBSD:
             self.addRequiredSystemTool("gnustep-config", install_instructions=gnuStepInstallInstructions)
         self.gnustepMakefilesDir = None  # type: typing.Optional[Path]
-        if IS_MAC:
+        if OSInfo.IS_MAC:
             self.make_args.set_command("xcodebuild", can_pass_j_flag=False,
                 install_instructions="Install Command Line Tools")
             assert self.make_args.kind == MakeCommandKind.CustomMakeTool
@@ -93,7 +93,7 @@ class BuildCheriVis(Project):
         #                " doesn't work set the environment variable CHERITRACE_LIB to point to libcheritrace.so")
         #     return
         # self.cheritrace_path = cheritraceLib
-        if IS_MAC:
+        if OSInfo.IS_MAC:
             return  # don't need GnuStep here
 
         configOutput = runCmd("gnustep-config", "--variable=GNUSTEP_MAKEFILES", captureOutput=True).stdout
@@ -137,14 +137,14 @@ class BuildCheriVis(Project):
         self.cheritrace_subproject.setup()
         self.cheritrace_subproject.configure()
         self.cheritrace_subproject.compile()
-        if IS_MAC:
+        if OSInfo.IS_MAC:
             self.run_make(cwd=self.sourceDir)
         else:
             self.run_make("print-gnustep-make-help", cwd=self.sourceDir)
             self.run_make("all", cwd=self.sourceDir)
 
     def install(self, **kwargs):
-        if IS_MAC:
+        if OSInfo.IS_MAC:
             # TODO: xcodebuild install?
             runCmd("cp", "-aRv", self.sourceDir / "build/Release/CheriVis.app", self.config.cheri_sdk_dir)
         else:

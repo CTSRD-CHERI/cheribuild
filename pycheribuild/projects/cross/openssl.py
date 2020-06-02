@@ -29,7 +29,6 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import *
-from ...utils import runCmd, IS_FREEBSD
 import shutil
 
 
@@ -55,7 +54,7 @@ class BuildOpenSSL(CrossCompileProject):
         if not self._xtarget.is_native():
             self.configureArgs.append("--openssldir=" + str(self._installPrefix))
 
-    def compile(self, cwd: Path = None):
+    def compile(self, **kwargs):
         # link errors at -j40
         super().compile(parallel=False)
 

@@ -78,7 +78,7 @@ class BuildElftoolchain(Project):
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
-        if IS_MAC and not Path("/usr/local/opt/libarchive/lib").exists():
+        if OSInfo.IS_MAC and not Path("/usr/local/opt/libarchive/lib").exists():
             self.dependencyError("libarchive is missing", install_instructions="Run `brew install libarchive`")
 
     def compile(self, **kwargs):
@@ -126,7 +126,7 @@ class BuildElftoolchain(Project):
             SHAREDIR="/share",
             )
 
-        if IS_LINUX:
+        if OSInfo.IS_LINUX:
             # $INSTALL is not set to create leading directories on Ubuntu
             self.make_args.set(MANDIR="/share/man", INSTALL="install -D")
 

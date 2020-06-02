@@ -140,7 +140,7 @@ def get_sdk_archives(cheriConfig, needs_cheribsd_sysroot: bool) -> "typing.List[
         cheri_sysroot_archive_name = "{}-{}-cheribsd-world.tar.xz".format(cheriConfig.sdk_cpu, cheriConfig.cheri_sdk_isa_name)
         extra_args = ["--strip-components", "1"]
         # Don't extract FreeBSD binaries on a linux host:
-        if not IS_FREEBSD:
+        if not OSInfo.IS_FREEBSD:
             extra_args += ["--exclude", "bin/*"]
         sysroot_archive = SdkArchive(cheriConfig, cheri_sysroot_archive_name, required_globs=["sysroot/usr/include"],
                                      extra_args=extra_args)
@@ -320,9 +320,9 @@ def _jenkins_main():
                 tar_cmd = bsdtar_path
                 owner_flags = ["--uid=0", "--gid=0", "--numeric-owner"]
 
-        if not tar_cmd and (shutil.which("gtar") or IS_LINUX):
+        if not tar_cmd and (shutil.which("gtar") or OSInfo.IS_LINUX):
             # GNU tar
-            tar_cmd = "tar" if IS_LINUX else "gtar"
+            tar_cmd = "tar" if OSInfo.IS_LINUX else "gtar"
             owner_flags = ["--owner=0", "--group=0", "--numeric-owner"]
 
         # bsdtar too old and GNU tar not found

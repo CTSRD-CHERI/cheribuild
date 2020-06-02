@@ -32,7 +32,7 @@ import shutil
 from .crosscompileproject import *
 from ..softboundcets import BuildSoftBoundCETS
 from ..effectivesan import BuildEffectiveSan
-from ...utils import getCompilerInfo, IS_FREEBSD
+from ...utils import getCompilerInfo, OSInfo
 
 
 class BuildBODiagSuite(CrossCompileCMakeProject):
@@ -137,7 +137,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
 
     def run_tests(self):
         bmake = shutil.which("bmake")
-        if bmake is None and IS_FREEBSD:
+        if bmake is None and OSInfo.IS_FREEBSD:
             # on FreeBSD bmake is
             bmake = shutil.which("make")
         if bmake is None:

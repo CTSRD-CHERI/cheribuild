@@ -1038,7 +1038,7 @@ class MakeOptions(object):
     # noinspection PyProtectedMember
     def __infer_command(self) -> str:
         if self.kind == MakeCommandKind.DefaultMake:
-            if IS_MAC and shutil.which("gmake"):
+            if OSInfo.IS_MAC and shutil.which("gmake"):
                 # Using /usr/bin/make on macOS breaks compilation DB creation with bear since SIP prevents it from
                 # injecting shared libraries into any process that is installed as part of the system.
                 # Prefer homebrew-installed gmake if it is available
@@ -1048,7 +1048,7 @@ class MakeOptions(object):
                 self.__project.addRequiredSystemTool("make")
                 return "make"
         elif self.kind == MakeCommandKind.GnuMake:
-            if IS_LINUX and not shutil.which("gmake"):
+            if OSInfo.IS_LINUX and not shutil.which("gmake"):
                 statusUpdate("Could not find `gmake` command, assuming `make` is GNU make")
                 self.__project.addRequiredSystemTool("make")
                 return "make"
@@ -1056,7 +1056,7 @@ class MakeOptions(object):
                 self.__project.addRequiredSystemTool("gmake", homebrew="make")
                 return "gmake"
         elif self.kind == MakeCommandKind.BsdMake:
-            if IS_FREEBSD:
+            if OSInfo.IS_FREEBSD:
                 return "make"
             else:
                 self.__project.addRequiredSystemTool("bmake", homebrew="bmake", cheribuild_target="bmake")
@@ -1587,7 +1587,7 @@ class Project(SimpleProject):
 
     @classmethod
     def canUseLLd(cls, compiler: Path):
-        if IS_MAC:
+        if OSInfo.IS_MAC:
             return False  # lld does not work on MacOS
         if compiler not in cls.__can_use_lld_map:
             try:

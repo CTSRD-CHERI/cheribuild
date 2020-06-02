@@ -29,7 +29,7 @@
 #
 from .crosscompileproject import *
 from .qt5 import BuildQtWebkit
-from ...utils import runCmd, IS_FREEBSD
+from ...utils import runCmd, OSInfo
 
 
 class BuildSQLite(CrossCompileAutotoolsProject):
@@ -55,7 +55,7 @@ class BuildSQLite(CrossCompileAutotoolsProject):
             ])
         self.cross_warning_flags += ["-Wno-error=cheri-capability-misuse"]
 
-        if not self.compiling_for_host() or IS_FREEBSD:
+        if not self.compiling_for_host() or OSInfo.IS_FREEBSD:
             self.configureArgs.append("--disable-editline")
             # not sure if needed:
             self.configureArgs.append("--disable-readline")

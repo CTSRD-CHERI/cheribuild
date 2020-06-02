@@ -31,7 +31,7 @@ import tempfile
 
 from .project import *
 from .llvm import BuildLLVMMonoRepoBase
-from ..utils import IS_LINUX
+from ..utils import OSInfo
 
 
 # TODO: build from source
@@ -51,7 +51,7 @@ class BuildEffectiveSan(BuildLLVMMonoRepoBase):
         pass
 
     def process(self):
-        if not IS_LINUX:
+        if not OSInfo.IS_LINUX:
             self.fatal("This target is currently only supported on Linux")
 
         with tempfile.TemporaryDirectory() as td:

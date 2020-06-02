@@ -153,7 +153,7 @@ class BuildFreeBSDBase(Project):
 
         cls.debug_kernel = cls.add_bool_option("debug-kernel", help="Build the kernel with -O0 and verbose boot output",
                                              show_help=False)
-        if IS_FREEBSD:
+        if OSInfo.IS_FREEBSD:
             cls.crossbuild = False
         elif is_jenkins_build():
             cls.crossbuild = True
@@ -173,7 +173,7 @@ class BuildFreeBSDBase(Project):
             # Use the script that I added for building on Linux/MacOS:
             self.make_args.set_command(self.sourceDir / "tools/build/make.py")
 
-        # if not IS_FREEBSD:
+        # if not OSInfo.IS_FREEBSD:
         #     self._addRequiredSystemHeader("archive.h", apt="libarchive-dev", homebrew="libarchive")
         self.make_args.set(
             DB_FROM_SRC=True,  # don't use the system passwd file
@@ -395,7 +395,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         # Must be called after __init__() to ensure that CHERI LLVM/upstream LLVM have been built
         # before querying the compiler.
         if self.crossbuild:
-            assert not IS_FREEBSD
+            assert not OSInfo.IS_FREEBSD
             self.addCrossBuildOptions()
 
         # external toolchain options:
@@ -899,7 +899,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         return ""
 
     def process(self):
-        if not IS_FREEBSD:
+        if not OSInfo.IS_FREEBSD:
             if not self.crossbuild:
                 statusUpdate("Can't build CHERIBSD on a non-FreeBSD host! Any targets that depend on this will need"
                              " to scp the required files from another server (see --frebsd-build-server options)")
@@ -1015,7 +1015,7 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
 
     # also try to support building for RISCV
     supported_architectures = BuildFreeBSD.supported_architectures + [CompilationTargets.FREEBSD_I386]
-    if not IS_FREEBSD:
+    if not OSInfo.IS_FREEBSD:
         crossbuild = True
 
     def clean(self) -> ThreadJoiner:
@@ -1028,9 +1028,9 @@ class BuildFreeBSDWithDefaultOptions(BuildFreeBSD):
 
     @classmethod
     def setup_config_options(cls, install_directory_help=None, **kwargs):
-        if IS_FREEBSD:
+        if OSInfo.IS_FREEBSD:
             kwargs["bootstrap_toolchain"] = True
-        if not IS_FREEBSD:
+        if not OSInfo.IS_FREEBSD:
             kwargs["bootstrap_toolchain"] = False
             kwargs["use_upstream_llvm"] = True
         super().setup_config_options(**kwargs)
@@ -1115,7 +1115,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
     _stdout_filter = Project._show_line_stdout_filter
 
     def process(self):
-        if not IS_FREEBSD:
+        if not OSInfo.IS_FREEBSD:
             if not self.crossbuild:
                 statusUpdate("Can't build CHERIBSD on a non-FreeBSD host! Any targets that depend on this will need"
                              " to scp the required files from another server (see --frebsd-build-server options)")
@@ -1495,7 +1495,7 @@ class BuildCheriBsdSysroot(SimpleProject):
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
-        if not IS_FREEBSD and not self.remotePath and not self.rootfs_source_class.get_instance(self).crossbuild:
+        if not OSInfo.IS_FREEBSD and not self.remotePath and not self.rootfs_source_class.get_instance(self).crossbuild:
             config_option = "'--" + self.target + "/" + "remote-sdk-path'"
             self.fatal("Path to the remote SDK is not set, option", config_option,
                        "must be set to a path that scp understands (e.g. vica:~foo/cheri/output/sdk)")
@@ -1598,7 +1598,7 @@ class BuildCheriBsdSysroot(SimpleProject):
             return
 
         with self.async_clean_directory(self.crossSysrootPath):
-            building_on_host = IS_FREEBSD or self.rootfs_source_class.get_instance(self).crossbuild
+            building_on_host = OSInfo.IS_FREEBSD or self.rootfs_source_class.get_instance(self).crossbuild
             if self.copy_remote_sysroot or not building_on_host:
                 self.copySysrootFromRemoteMachine()
             else:

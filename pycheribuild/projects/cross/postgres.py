@@ -30,7 +30,7 @@
 import re
 
 from .crosscompileproject import *
-from ...utils import IS_FREEBSD
+from ...utils import OSInfo
 
 
 class BuildPostgres(CrossCompileAutotoolsProject):
@@ -57,7 +57,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
                                           "-Wno-flexible-array-extensions",  # TODO: could this cause errors?
                                           "-Wno-format-pedantic"])
         self.LDFLAGS.append("-pthread")
-        if IS_FREEBSD and self.compiling_for_host():
+        if OSInfo.IS_FREEBSD and self.compiling_for_host():
             # Something werid is happending with the locale code (somehow not being built -FPIC?):
             # /usr/local/llvm60/bin/ld: error: can't create dynamic relocation R_X86_64_PC32 against symbol: _CurrentRuneLocale in readonly segment; recompile object files with -fPIC
             # >>> defined in /lib/libc.so.7
@@ -67,7 +67,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             # As a workaround I'll just add -fPIC
             self.COMMON_FLAGS.append("-fPIC")
 
-        if IS_FREEBSD or not self.compiling_for_host():
+        if OSInfo.IS_FREEBSD or not self.compiling_for_host():
             # postgres can't find readline on FreeBSD:
             self.COMMON_FLAGS.append("-I/usr/include/edit")
         if not self.compiling_for_host():

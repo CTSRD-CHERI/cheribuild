@@ -32,7 +32,7 @@ import os
 import shutil
 
 from .project import *
-from ..utils import setEnv, IS_MAC
+from ..utils import setEnv, OSInfo
 
 SMB_OUT_OF_SOURCE_BUILD_WORKS = False
 
@@ -90,7 +90,7 @@ class BuildSamba(Project):
         self.configureEnvironment["PYTHON"] = shutil.which("python")
         #  version 4.9 "--without-json-audit",
         self.configureArgs.append("--without-json")
-        if IS_MAC:
+        if OSInfo.IS_MAC:
             self.addRequiredSystemTool("/usr/local/opt/krb5/bin/kinit", homebrew="krb5")
             # TODO: brew --prefix krb5
             self.configureArgs.extend(["--with-system-mitkrb5", "/usr/local/opt/krb5"])
@@ -113,7 +113,7 @@ class BuildSamba(Project):
             super().install(**kwargs)
 
     def process(self):
-        if IS_MAC:
+        if OSInfo.IS_MAC:
             # We need readline and krb5 from homebrew:
             with setEnv(PATH="/usr/local/opt/krb5/bin:/usr/local/opt/krb5/sbin:" + os.getenv("PATH", ""),
                         PKG_CONFIG_PATH="/usr/local/opt/krb5/lib/pkgconfig:/usr/local/opt/readline/lib/pkgconfig:" + os.getenv("PKG_CONFIG_PATH", ""),

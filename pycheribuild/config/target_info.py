@@ -32,7 +32,7 @@ from abc import ABCMeta, abstractmethod, ABC
 from enum import Enum
 from pathlib import Path
 
-from ..utils import IS_MAC, IS_FREEBSD, IS_LINUX, getCompilerInfo, is_jenkins_build
+from ..utils import OSInfo, getCompilerInfo, is_jenkins_build
 
 if typing.TYPE_CHECKING:    # no-combine
     from .chericonfig import CheriConfig    # no-combine    # pytype: disable=pyi-error
@@ -231,21 +231,21 @@ class TargetInfo(ABC):
 
     @staticmethod
     def host_c_compiler(config: "CheriConfig") -> Path:
-        if config.use_sdk_clang_for_native_xbuild and not IS_MAC:
+        if config.use_sdk_clang_for_native_xbuild and not OSInfo.IS_MAC:
             # SDK clang doesn't work for native builds on macos
             return config.cheri_sdk_bindir / "clang"
         return config.clangPath
 
     @staticmethod
     def host_cxx_compiler(config: "CheriConfig") -> Path:
-        if config.use_sdk_clang_for_native_xbuild and not IS_MAC:
+        if config.use_sdk_clang_for_native_xbuild and not OSInfo.IS_MAC:
             # SDK clang doesn't work for native builds on macos
             return config.cheri_sdk_bindir / "clang++"
         return config.clangPlusPlusPath
 
     @staticmethod
     def host_c_preprocessor(config: "CheriConfig") -> Path:
-        if config.use_sdk_clang_for_native_xbuild and not IS_MAC:
+        if config.use_sdk_clang_for_native_xbuild and not OSInfo.IS_MAC:
             # SDK clang doesn't work for native builds on macos
             return config.cheri_sdk_bindir / "clang-cpp"
         return config.clangCppPath
@@ -450,15 +450,15 @@ class NativeTargetInfo(TargetInfo):
 
     @classmethod
     def is_freebsd(cls):
-        return IS_FREEBSD
+        return OSInfo.IS_FREEBSD
 
     @classmethod
     def is_macos(cls):
-        return IS_MAC
+        return OSInfo.IS_MAC
 
     @classmethod
     def is_linux(cls):
-        return IS_LINUX
+        return OSInfo.IS_LINUX
 
     @property
     def essential_compiler_and_linker_flags(self) -> typing.List[str]:

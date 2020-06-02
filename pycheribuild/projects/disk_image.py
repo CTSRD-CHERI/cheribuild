@@ -71,7 +71,7 @@ class _BuildDiskImageBase(SimpleProject):
                                            help="The hostname to use for the QEMU image")
         if "useQCOW2" not in cls.__dict__:
             cls.useQCOW2 = cls.add_bool_option("use-qcow2", help="Convert the disk image to QCOW2 format instead of raw")
-        if not IS_FREEBSD:
+        if not OSInfo.IS_FREEBSD:
             cls.remotePath = cls.add_config_option("remote-path", show_help=True, metavar="PATH", help="The path on the "
                                                  "remote FreeBSD machine from where to copy the disk image")
         cls.wget_via_tmp = cls.add_bool_option("wget-via-tmp",
@@ -465,7 +465,7 @@ class _BuildDiskImageBase(SimpleProject):
         self.copyRemoteFile(self.remotePath, self.disk_image_path)
 
     def process(self):
-        if not IS_FREEBSD and self.crossBuildImage:
+        if not OSInfo.IS_FREEBSD and self.crossBuildImage:
             with setEnv(PATH=str(self.config.outputRoot / "freebsd-cross/bin") + ":" + os.getenv("PATH")):
                 self.__process()
         else:
@@ -493,7 +493,7 @@ class _BuildDiskImageBase(SimpleProject):
             self.deleteFile(self.disk_image_path)
 
         # we can only build disk images on FreeBSD, so copy the file if we aren't
-        if not IS_FREEBSD and not self.crossBuildImage:
+        if not OSInfo.IS_FREEBSD and not self.crossBuildImage:
             self.copyFromRemoteHost()
             return
 

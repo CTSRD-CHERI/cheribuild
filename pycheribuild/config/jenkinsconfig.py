@@ -35,7 +35,7 @@ from pathlib import Path
 from .loader import ConfigLoaderBase
 from .chericonfig import CheriConfig
 from .target_info import CompilationTargets
-from ..utils import defaultNumberOfMakeJobs, fatalError, IS_MAC, IS_LINUX, IS_FREEBSD, warningMessage
+from ..utils import defaultNumberOfMakeJobs, fatalError, OSInfo, warningMessage
 from ..filesystemutils import FileSystemUtils
 
 
@@ -172,11 +172,11 @@ class JenkinsConfig(CheriConfig):
                 print("Found QEMU binary", i, "in SDK dir -> using that for QEMU binaries")
             # If one qemu-system-foo exists in the cheri_sdk_bindir use that instead of $WORKSPACE/qemu-<OS>
             return self.cheri_sdk_bindir
-        if IS_LINUX:
+        if OSInfo.IS_LINUX:
             os_suffix = "linux"
-        elif IS_FREEBSD:
+        elif OSInfo.IS_FREEBSD:
             os_suffix = "freebsd"
-        elif IS_MAC:
+        elif OSInfo.IS_MAC:
             os_suffix = "mac"
         else:
             os_suffix = "unknown-os"
@@ -230,7 +230,7 @@ class JenkinsConfig(CheriConfig):
         else:
             fatalError("CPU is not set to a valid value:", self.cpu)
 
-        if IS_MAC and self.preferred_xtarget.is_native():
+        if OSInfo.IS_MAC and self.preferred_xtarget.is_native():
             self.without_sdk = True  # cannot build macos binaries with lld
 
         if self.force_update:

@@ -32,7 +32,7 @@ import tempfile
 
 from .crosscompileproject import *
 from ..project import *
-from ...utils import IS_MAC, runCmd
+from ...utils import OSInfo, runCmd
 
 
 class BuildNewlib(CrossCompileAutotoolsProject):
@@ -71,7 +71,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         self.make_args.env_vars["newlib_cv_ldbl_eq_dbl"] = "yes"
         # ensure that we don't fall back to system headers (but do use stddef.h from clang...)
         self.COMMON_FLAGS.extend(["--sysroot", "/this/path/does/not/exist"])
-        if IS_MAC:
+        if OSInfo.IS_MAC:
             self.add_configure_vars(LDFLAGS="-fuse-ld=/usr/bin/ld")
 
     # def install(self, **kwargs):

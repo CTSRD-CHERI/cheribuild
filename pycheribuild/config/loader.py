@@ -552,7 +552,7 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         targetOption = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.ZERO_OR_MORE,
                                                  help="The targets to build", choices=availableTargets + [[]])
         if argcomplete and "_ARGCOMPLETE" in os.environ:
-            # if IS_FREEBSD: # FIXME: for some reason this won't work
+            # if OSInfo.IS_FREEBSD: # FIXME: for some reason this won't work
             self.completion_excludes = ["-t", "--skip-dependencies"]
             if sys.platform.startswith("freebsd"):
                 self.completion_excludes += ["--freebsd-builder-copy-only", "--freebsd-builder-hostname",
