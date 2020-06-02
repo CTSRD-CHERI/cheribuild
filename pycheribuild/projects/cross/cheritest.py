@@ -57,7 +57,7 @@ class _BuildCheriMipsTestBase(Project):
             self.make_args.set_env(PYTEST_ADDOPTS="--color=yes")
 
     # Should run tests both for --test and --build
-    def compile(self, cwd: Path = None):
+    def compile(self, **kwargs):
         if not self.single_test:
             self.run_make("elfs")
         self.do_cheritest()
@@ -78,7 +78,7 @@ class BuildCheriMipsTestQEMU(_BuildCheriMipsTestBase):
         if self.single_test:
             self.run_make("pytest/qemu/tests/" + str(self.single_test), parallel=False)
         else:
-            self.run_make("pytest_qemu")
+            self.run_make("pytest_qemu_all")
 
 
 class BuildCheriMipsTestBluesim(_BuildCheriMipsTestBase):
