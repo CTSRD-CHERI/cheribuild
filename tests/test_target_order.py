@@ -21,7 +21,7 @@ from pycheribuild.projects.cross import *  # make sure all projects are loaded s
 from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD
 from .setup_mock_chericonfig import setup_mock_chericonfig
 
-setup_mock_chericonfig(Path("/this/path/does/not/exist"))
+global_config = setup_mock_chericonfig(Path("/this/path/does/not/exist"))
 # Init code:
 BuildCHERIBSD.crossbuild = True
 
@@ -29,17 +29,16 @@ BuildCHERIBSD.crossbuild = True
 def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolchain=True, skip_sdk=False) -> "typing.List[str]":
     target_manager.reset()
     # print(real_targets)
-    config = get_global_config()
-    real_targets = list(target_manager.get_target(t, CompilationTargets.NONE, config, caller="_sort_targets") for t in targets)
-    config.includeDependencies = add_dependencies
-    config.include_toolchain_dependencies = add_toolchain
-    config.skipSdk = skip_sdk
+    real_targets = list(target_manager.get_target(t, CompilationTargets.NONE, global_config, caller="_sort_targets") for t in targets)
+    global_config.includeDependencies = add_dependencies
+    global_config.include_toolchain_dependencies = add_toolchain
+    global_config.skipSdk = skip_sdk
     for t in real_targets:
         if t.projectClass._xtarget is CompilationTargets.NONE:
             continue
         t.projectClass._cached_deps = None
-        t.get_dependencies(config)  # ensure they have been cached
-    result = list(t.name for t in target_manager.get_all_targets(real_targets, config))
+        t.get_dependencies(global_config)  # ensure they have been cached
+    result = list(t.name for t in target_manager.get_all_targets(real_targets, global_config))
     # print("result = ", result)
     return result
 
@@ -132,7 +131,7 @@ def _check_deps_cached(classes):
 
 def test_webkit_cached_deps():
     # regression test for a bug in caching deps
-    config = copy.copy(get_global_config())
+    config = copy.copy(global_config)
     config.skipSdk = True
     webkit_native = target_manager.get_target_raw("qtwebkit-native").projectClass
     webkit_cheri = target_manager.get_target_raw("qtwebkit-mips-purecap").projectClass

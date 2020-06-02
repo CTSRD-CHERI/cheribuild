@@ -48,7 +48,6 @@ from .projects.project import SimpleProject, Project
 from .targets import target_manager, Target, MultiArchTargetAlias, SimpleTargetAlias
 from .utils import *
 
-
 EXTRACT_SDK_TARGET = "extract-sdk"
 
 
@@ -218,7 +217,8 @@ def _jenkins_main():
         # json = cheri_config.getOptionsJSON()  # make sure all config options are loaded
         # pprint.pprint(configLoader.options)
         pass
-    setCheriConfig(cheriConfig)
+    init_global_config(test_mode=False, pretend_mode=cheriConfig.pretend,
+        verbose_mode=cheriConfig.verbose, quiet_mode=cheriConfig.quiet)
 
     # special target to extract the sdk
     if JenkinsAction.EXTRACT_SDK in cheriConfig.action or (len(cheriConfig.targets) > 0 and cheriConfig.targets[0] == EXTRACT_SDK_TARGET):

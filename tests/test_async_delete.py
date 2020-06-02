@@ -1,7 +1,6 @@
 from pathlib import Path
 from unittest import TestCase
 from pycheribuild.projects.project import Project, CompilationTargets, ExternallyManagedSourceRepository, DefaultInstallDir
-from pycheribuild.utils import setCheriConfig, IS_LINUX
 from .setup_mock_chericonfig import setup_mock_chericonfig, MockConfig
 import os
 import tempfile
@@ -51,8 +50,7 @@ class TestAsyncDelete(TestCase):
     def setUp(self):
         self._tempRoot = tempfile.TemporaryDirectory()
         self.tempRoot = Path(self._tempRoot.name)
-        self.config = setup_mock_chericonfig(self.tempRoot)
-        self.config.pretend = False
+        self.config = setup_mock_chericonfig(self.tempRoot, pretend=False)
         self.config.sleep_before_delete = False
 
         self.assertEqual(self.tempRoot, self.config.sourceRoot)

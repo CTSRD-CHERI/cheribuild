@@ -107,7 +107,8 @@ def real_main():
     target_manager.registerCommandLineOptions()
     # load them from JSON/cmd line
     cheriConfig.load()
-    setCheriConfig(cheriConfig)
+    init_global_config(test_mode=False, pretend_mode=cheriConfig.pretend,
+        verbose_mode=cheriConfig.verbose, quiet_mode=cheriConfig.quiet)
 
     if cheriConfig.docker or JsonAndCommandLineConfigLoader.get_config_prefix() == "docker-":
         # check that the docker build won't override native binaries

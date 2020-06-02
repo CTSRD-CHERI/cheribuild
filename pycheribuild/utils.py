@@ -46,26 +46,36 @@ from subprocess import CompletedProcess
 
 from .colour import coloured, AnsiColour
 
-if typing.TYPE_CHECKING:  # no-combine
-    from .config.chericonfig import CheriConfig  # no-combine
-
-Type_T = typing.TypeVar("Type_T")
-
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includeLocalFile", "CompilerInfo",   # no-combine
-           "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
+           "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setEnv", "init_global_config",  # no-combine
            "warningMessage", "popen_handle_noexec", "extract_version", "get_program_version",  # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latest_system_clang_tool", "SafeDict",  # no-combine
-           "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
+           "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build",  # no-combine
            "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
            "is_case_sensitive_dir", "SocketAndPort"]  # no-combine
+Type_T = typing.TypeVar("Type_T")
 
 
-_TEST_MODE = False
+class GlobalConfig:
+    TEST_MODE = False
+    PRENTEND_MODE = False
+    VERBOSE_MODE = False
+    QUIET_MODE = False
+
+
+def init_global_config(*, test_mode: bool, pretend_mode: bool, verbose_mode: bool, quiet_mode: bool):
+    assert not (verbose_mode and quiet_mode), "mutually exclusive"
+    GlobalConfig.TEST_MODE = test_mode
+    GlobalConfig.PRENTEND_MODE = pretend_mode
+    GlobalConfig.VERBOSE_MODE = verbose_mode
+    GlobalConfig.QUIET_MODE = quiet_mode
+
 
 class classproperty(object):
     def __init__(self, f):
         self.f = f
+
     def __get__(self, obj, owner):
         return self.f(owner)
 
@@ -76,25 +86,12 @@ if sys.version_info < (3, 5, 2):
 IS_LINUX = sys.platform.startswith("linux")
 IS_FREEBSD = sys.platform.startswith("freebsd")
 IS_MAC = sys.platform.startswith("darwin")
-_cheriConfig = None  # type: typing.Optional[CheriConfig]
 
 
 def is_jenkins_build() -> bool:
     return os.getenv("_CHERIBUILD_JENKINS_BUILD") is not None
 
-# To make it easier to use this as a module (probably most of these commands should be in Project)
-def setCheriConfig(c: "CheriConfig"):
-    global _cheriConfig
-    _cheriConfig = c
-
-
-def get_global_config() -> "CheriConfig":
-    global _cheriConfig
-    assert _cheriConfig is not None
-    return _cheriConfig
-
-
-def __filterEnv(env: dict) -> dict:
+def __filter_env(env: dict) -> dict:
     result = dict()
     for k, v in env.items():
         if k not in os.environ or os.environ[k] != v:
@@ -104,7 +101,7 @@ def __filterEnv(env: dict) -> dict:
 
 def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remaining_args, outputFile=None,
                  colour=AnsiColour.yellow, cwd=None, env=None, sep=" ", print_verbose_only=False, **kwargs):
-    if not _cheriConfig or (_cheriConfig.quiet or (print_verbose_only and not _cheriConfig.verbose)):
+    if GlobalConfig.QUIET_MODE or (print_verbose_only and not GlobalConfig.VERBOSE_MODE):
         return
     # also allow passing a single string
     if not type(arg1) is str:
@@ -114,7 +111,7 @@ def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remain
     prefix = ("cd", shlex.quote(str(cwd)), "&&") if cwd else tuple()
     if env:
         # only print the changed environment entries
-        new_env_vars = __filterEnv(env)
+        new_env_vars = __filter_env(env)
         if new_env_vars:
             envvars = coloured(AnsiColour.cyan, commandline_to_str(k + "=" + str(v) for k, v in new_env_vars.items()))
             prefix += ("env", envvars)
@@ -214,7 +211,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
             kwargs["cwd"] = os.getcwd()
         except FileNotFoundError:
             kwargs["cwd"] = tempfile.gettempdir()
-    if not runInPretendMode and _cheriConfig and _cheriConfig.pretend:
+    if not runInPretendMode and GlobalConfig.PRENTEND_MODE:
         return CompletedProcess(args=cmdline, returncode=0, stdout=b"", stderr=b"")
     # actually run the process now:
     if input is not None:
@@ -228,7 +225,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
     if captureError:
         assert "stderr" not in kwargs  # we need to use stdout here
         kwargs["stderr"] = subprocess.PIPE
-    elif _cheriConfig and _cheriConfig.quiet and "stdout" not in kwargs:
+    elif GlobalConfig.QUIET_MODE and "stdout" not in kwargs:
         kwargs["stdout"] = subprocess.DEVNULL
 
     if "env" in kwargs:
@@ -265,7 +262,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
             raise
         retcode = process.poll()
         if retcode != expected_exit_code and not allow_unexpected_returncode:
-            if _cheriConfig and _cheriConfig.pretend and not raiseInPretendMode:
+            if GlobalConfig.PRENTEND_MODE and not raiseInPretendMode:
                 cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
                 fatalError("Command ", "`" + commandline_to_str(process.args) +
                            "` failed with unexpected exit code ", retcode, *cwd, sep="")
@@ -302,7 +299,7 @@ class CompilerInfo(object):
     def get_resource_dir(self):
         # assert self.is_clang, self.compiler
         if not self._resource_dir:
-            if not self.path.exists() and _cheriConfig.pretend:
+            if not self.path.exists() and GlobalConfig.PRENTEND_MODE:
                 return Path("/unknown/resource/dir")  # avoid failing in jenkins
             # pretend to compile an existing source file and capture the -resource-dir output
             cc1_cmd = runCmd(self.path, "-###", "-xc", "-c", "/dev/null",
@@ -368,7 +365,6 @@ def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
         appleLlvmVersion = appleLlvmVersionPattern.search(versionCmd.stderr)
         gccVersion = gccVersionPattern.search(versionCmd.stderr)
         target = targetPattern.search(versionCmd.stderr)
-        # if _cheriConfig and _cheriConfig.pretend:
         kind = "unknown compiler"
         version = (0, 0, 0)
         targetString = target.group(1).decode("utf-8") if target else ""
@@ -383,7 +379,7 @@ def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
             version = tuple(map(int, clangVersion.groups()))
         else:
             warningMessage("Could not detect compiler info for", compiler, "- output was", versionCmd.stderr)
-        if _cheriConfig and _cheriConfig.verbose:
+        if GlobalConfig.VERBOSE_MODE:
             print(compiler, "is", kind, "version", version, "with default target", targetString)
         _cached_compiler_infos[compiler] = CompilerInfo(compiler, kind, version, targetString)
     return _cached_compiler_infos[compiler]
@@ -485,7 +481,7 @@ def warningMessage(*args, sep=" "):
 
 def fatalError(*args, sep=" ", fixitHint=None, fatalWhenPretending=False, exit_code=3):
     # we ignore fatal errors when simulating a run
-    if _cheriConfig and _cheriConfig.pretend:
+    if GlobalConfig.PRENTEND_MODE:
         print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:", sep) + args, sep=sep), file=sys.stderr, flush=True)
         if fixitHint:
             print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr, flush=True)
@@ -508,7 +504,7 @@ def includeLocalFile(path: str) -> str:
 
 
 def have_working_internet_connection():
-    if _TEST_MODE:
+    if GlobalConfig.TEST_MODE:
         return True
     # Try to connect to google DNS server at 8.8.8.8 to check if we have a working internet connection
     # Don't make a DNS request since that could be broken for other reasons!
