@@ -53,7 +53,7 @@ from ..utils import *
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flushStdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
-           "CrossCompileTarget", "CPUArchitecture", "GitRepository", "ComputedDefaultValue", "TargetInfo", # no-combine
+           "CrossCompileTarget", "CPUArchitecture", "GitRepository", "ComputedDefaultValue", "TargetInfo",  # no-combine
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
            "TargetBranchInfo", "CompilationTargets", "DefaultInstallDir", "BuildType"]  # no-combine
 
@@ -2138,6 +2138,19 @@ class Project(SimpleProject):
         if self.config.clean:
             return True
         return self.needsConfigure()
+
+    def add_configure_env_arg(self, arg: str, value: "typing.Union[str,Path]"):
+        if value is None:
+            return
+        assert not isinstance(value, list), ("Wrong type:", type(value))
+        assert not isinstance(value, tuple), ("Wrong type:", type(value))
+        self.configureEnvironment[arg] = str(value)
+
+    def set_configure_prog_with_args(self, prog: str, path: Path, args: list):
+        fullpath = str(path)
+        if args:
+            fullpath += " " + commandline_to_str(args)
+        self.configureEnvironment[prog] = fullpath
 
     def configure(self, cwd: Path = None, configure_path: Path=None):
         if cwd is None:

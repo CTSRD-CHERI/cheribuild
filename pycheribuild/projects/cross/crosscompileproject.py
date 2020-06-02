@@ -51,19 +51,6 @@ class CrossCompileMixin(object):
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
     _should_not_be_instantiated = True
 
-    def add_configure_env_arg(self, arg: str, value: "typing.Union[str,Path]"):
-        if not value:
-            return
-        assert not isinstance(value, list), ("Wrong type:", type(value))
-        assert not isinstance(value, tuple), ("Wrong type:", type(value))
-        self.configureEnvironment[arg] = str(value)
-
-    def set_prog_with_args(self, prog: str, path: Path, args: list):
-        fullpath = str(path)
-        if args:
-            fullpath += " " + commandline_to_str(args)
-        self.configureEnvironment[prog] = fullpath
-
 
 class CrossCompileProject(CrossCompileMixin, Project):
     doNotAddToTargets = True
@@ -107,8 +94,8 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
         for k, v in kwargs.items():
             self.add_configure_env_arg(k, v)
 
-    def set_prog_with_args(self, prog: str, path: Path, args: list):
-        super().set_prog_with_args(prog, path, args)
+    def set_configure_prog_with_args(self, prog: str, path: Path, args: list):
+        super().set_configure_prog_with_args(prog, path, args)
         if self._configure_supports_variables_on_cmdline:
             self.configureArgs.append(prog + "=" + self.configureEnvironment[prog])
 
@@ -132,8 +119,8 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
                 assert key not in self.configureEnvironment
             # autotools overrides CFLAGS -> use CC and CXX vars here
-            self.set_prog_with_args("CC", self.CC, CPPFLAGS + self.CFLAGS)
-            self.set_prog_with_args("CXX", self.CXX, CPPFLAGS + self.CXXFLAGS)
+            self.set_configure_prog_with_args("CC", self.CC, CPPFLAGS + self.CFLAGS)
+            self.set_configure_prog_with_args("CXX", self.CXX, CPPFLAGS + self.CXXFLAGS)
             # self.add_configure_env_arg("CPPFLAGS", commandline_to_str(CPPFLAGS))
             self.add_configure_env_arg("CFLAGS", commandline_to_str(self.default_compiler_flags))
             self.add_configure_env_arg("CXXFLAGS", commandline_to_str(self.default_compiler_flags))
@@ -141,7 +128,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             self.add_configure_env_arg("LDFLAGS", commandline_to_str(self.LDFLAGS + self.default_ldflags))
 
             if not self.compiling_for_host():
-                self.set_prog_with_args("CPP", self.CPP, CPPFLAGS)
+                self.set_configure_prog_with_args("CPP", self.CPP, CPPFLAGS)
                 if self._define_ld:
                     self.add_configure_env_arg("LD", self.target_info.linker)
 
