@@ -33,11 +33,10 @@ from .build_qemu import BuildQEMU, BuildCheriOSQEMU
 from .cherios import BuildCheriOS
 from .cross.bbl import *
 from .cross.freertos import BuildFreeRTOS
-from .cross.opensbi import BuildOpenSBI
 from .cross.rtems import BuildRtems
 from .disk_image import *
 from .project import *
-from ..qemu_utils import QemuOptions, qemu_supports_9pfs
+from ..qemu_utils import QemuOptions, qemu_supports_9pfs, riscv_bios_arguments
 from ..utils import OSInfo
 
 
@@ -94,15 +93,15 @@ class LaunchQEMUBase(SimpleProject):
         self.rootfs_path = typing.Optional[None]  # type: Path
         self._after_disk_options = []
 
-    def get_riscv_bios(self) -> str:
-        return "default"  # Use the default built-in OpenSBI firmware
+    def get_riscv_bios_args(self) -> typing.List[str]:
+        return riscv_bios_arguments(self.crosscompile_target, self)
 
     def setup(self):
         super().setup()
         xtarget = self.crosscompile_target
         if xtarget.is_riscv(include_purecap=True):
             self._add_virtio_rng = False
-            self.bios_flags += ["-bios", self.get_riscv_bios()]
+            self.bios_flags += self.get_riscv_bios_args()
             self.qemuBinary = BuildQEMU.qemu_binary(self)
         elif xtarget.is_mips(include_purecap=True):
             self.qemuBinary = BuildQEMU.qemu_binary(self)
@@ -453,22 +452,6 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
             result.append("bbl")
         return result
 
-    @classmethod
-    def riscv_bios_arg(cls, xtarget: CrossCompileTarget, caller: SimpleProject, prefer_bbl=True) -> str:
-        assert xtarget.is_riscv(include_purecap=True)
-        if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            # noinspection PyUnreachableCode
-            if prefer_bbl:
-                return str(BuildBBLNoPayload.get_installed_kernel_path(caller))
-            else:
-                return str(BuildOpenSBI.get_cheri_bios(caller))
-        # For non-CHERI we prefer the OpenSBI bios that is bundled with QEMU
-        # return BuildOpenSBI.get_nocap_bios(caller)
-        return "default"
-
-    def get_riscv_bios(self) -> str:
-        return self.riscv_bios_arg(self.crosscompile_target, self)
-
     def run_tests(self):
         self.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.disk_image,
                                       kernel_path=self.currentKernel)
@@ -538,9 +521,9 @@ class LaunchRtemsQEMU(LaunchQEMUBase):
                                    default_ssh_port=None,
                                    **kwargs)
 
-    def get_riscv_bios(self) -> str:
+    def get_riscv_bios_args(self) -> typing.List[str]:
         # Run a simple RTEMS shell application (run in machine mode using the -bios QEMU argument)
-        return str(BuildRtems.getBuildDir(self) / "riscv/rv64xcheri_qemu/testsuites/samples/capture.exe")
+        return ["-bios", str(BuildRtems.getBuildDir(self) / "riscv/rv64xcheri_qemu/testsuites/samples/capture.exe")]
 
     def process(self):
         super().process()
@@ -562,9 +545,9 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
                                    defaultSshPort=None,
                                    **kwargs)
 
-    def get_riscv_bios(self) -> str:
+    def get_riscv_bios_args(self) -> typing.List[str]:
         # Run a simple FreeRTOS blinky demo application (run in machine mode using the -bios QEMU argument)
-        return str(BuildFreeRTOS.getInstallDir(self) / "FreeRTOS/Demo/RISC-V-Generic_main_blinky.elf")
+        return ["-bios", str(BuildFreeRTOS.getInstallDir(self) / "FreeRTOS/Demo/RISC-V-Generic_main_blinky.elf")]
 
     def process(self):
         super().process()

@@ -28,9 +28,7 @@
 # SUCH DAMAGE.
 #
 
-from .llvm import BuildCheriOSLLVM
-from .project import *
-from ..utils import *
+from .project import CMakeProject, BuildType, GitRepository, CompilationTargets, CheriConfig
 
 
 class BuildCheriOS(CMakeProject):

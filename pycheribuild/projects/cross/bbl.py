@@ -30,10 +30,10 @@
 
 from .crosscompileproject import CrossCompileAutotoolsProject
 from .gdb import BuildGDB
-from ..project import *
+from ..project import (GitRepository, DefaultInstallDir, MakeCommandKind, CheriConfig, CompilationTargets,
+                       CrossCompileTarget, ComputedDefaultValue, SimpleProject, BuildType)
 
 
-# Using GCC not Clang, so can't use CrossCompileAutotoolsProject
 class BuildBBLBase(CrossCompileAutotoolsProject):
     doNotAddToTargets = True
     repository = GitRepository("https://github.com/CTSRD-CHERI/riscv-pk",

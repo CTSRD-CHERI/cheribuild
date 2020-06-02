@@ -28,8 +28,10 @@
 # SUCH DAMAGE.
 #
 import shlex
+from pathlib import Path
 
-from .project import *
+from .project import (Project, GitRepository, DefaultInstallDir, MakeCommandKind, CheriConfig,
+                      ReuseOtherProjectRepository, CompilationTargets)
 from ..utils import OSInfo, commandline_to_str
 
 
@@ -49,7 +51,7 @@ class BuildBluespecCompiler(Project):
             self.addRequiredSystemTool(i, homebrew=i)
         self.make_args.set(PREFIX=self.installDir)
 
-    def compile(self, cwd: Path = None):
+    def compile(self, **kwargs):
         try:
             self.run_make("all")
         except:

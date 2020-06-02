@@ -33,7 +33,7 @@ import subprocess
 import typing
 from pathlib import Path
 
-from .config.target_info import CrossCompileTarget
+from .config.target_info import CrossCompileTarget, CPUArchitecture
 from .utils import runCmd
 
 
@@ -131,3 +131,20 @@ def qemu_supports_9pfs(qemu: Path) -> bool:
     prog = runCmd([str(qemu), "-virtfs", "?"], stdin=subprocess.DEVNULL, captureOutput=True, captureError=True,
         runInPretendMode=True, expected_exit_code=1, print_verbose_only=True)
     return b"-virtfs ?: Usage: -virtfs" in prog.stderr
+
+
+def riscv_bios_arguments(xtarget: CrossCompileTarget, caller, prefer_bbl=True) -> typing.List[str]:
+    assert xtarget.is_riscv(include_purecap=True)
+    if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
+        # noinspection PyUnreachableCode
+        if prefer_bbl:
+            from .projects.cross.bbl import BuildBBLNoPayload
+            # We want a purecap BBL:
+            return ["-bios", str(
+                BuildBBLNoPayload.get_installed_kernel_path(caller, cross_target=xtarget.get_cheri_purecap_target()))]
+        else:
+            from .projects.cross.opensbi import BuildOpenSBI
+            return ["-bios", str(BuildOpenSBI.get_cheri_bios(caller))]
+    # For non-CHERI we prefer the OpenSBI bios that is bundled with QEMU
+    # return BuildOpenSBI.get_nocap_bios(caller)
+    return ["-bios", "default"]

@@ -869,8 +869,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             cmd = [script, "--ssh-key", self.config.test_ssh_key, "--architecture", xtarget.generic_suffix]
             if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
                 # We need a custom BIOS (for now)
-                from .run_qemu import LaunchCheriBSD
-                cmd.extend(["--bios", LaunchCheriBSD.riscv_bios_arg(xtarget, self)])
+                from ..qemu_utils import riscv_bios_arguments
+                bios_args = riscv_bios_arguments(xtarget, self)
+                assert bios_args[0] == "-bios", bios_args
+                assert len(bios_args) == 2, bios_args
+                cmd.extend(["--bios", bios_args[1]])
             if "--kernel" not in self.config.test_extra_args:
                 cmd.extend(["--kernel", kernel_path])
             if "--qemu-cmd" not in self.config.test_extra_args:

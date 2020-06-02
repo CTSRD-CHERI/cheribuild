@@ -36,10 +36,11 @@ import sys
 import tempfile
 from enum import Enum
 
-from ..llvm import BuildUpstreamLLVM, BuildCheriLLVM
-from ..project import *
-from ...config.target_info import CrossCompileTarget, MipsFloatAbi
+from ..llvm import BuildCheriLLVM, BuildUpstreamLLVM
+from ..project import (CheriConfig, CompilationTargets, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,
+                       MakeCommandKind, MakeOptions, Project, SimpleProject, TargetAliasWithDependencies)
 from ...config.loader import ComputedDefaultValue
+from ...config.target_info import CrossCompileTarget, MipsFloatAbi
 from ...targets import target_manager
 from ...utils import *
 

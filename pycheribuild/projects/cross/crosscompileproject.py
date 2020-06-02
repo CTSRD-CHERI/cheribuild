@@ -30,15 +30,17 @@
 
 import os
 import pprint
+import typing
 from pathlib import Path
 
-from ..project import *
+from ..project import (AutotoolsProject, CheriConfig, CMakeProject, DefaultInstallDir, GitRepository, MakeCommandKind,
+                       Project)
 from ...config.chericonfig import BuildType
-from ...config.target_info import CrossCompileTarget, Linkage, CompilationTargets
-from ...utils import *
+from ...config.target_info import CompilationTargets, CrossCompileTarget, Linkage
+from ...utils import setEnv, AnsiColour, coloured, commandline_to_str
 
-__all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget", "BuildType", # no-combine
-           "CrossCompileProject", "MakeCommandKind", "Linkage", "Path", "DefaultInstallDir", # no-combine
+__all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget",  # no-combine
+           "CrossCompileProject", "MakeCommandKind", "Linkage", "Path", "DefaultInstallDir", "BuildType",  # no-combine
            "CompilationTargets", "GitRepository", "commandline_to_str", "CrossCompileMixin"]  # no-combine
 
 

@@ -32,11 +32,13 @@ import shlex
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
-from .project import *
+from .project import (AutotoolsProject, GitRepository, MakeCommandKind, DefaultInstallDir, SimpleProject, CheriConfig,
+                      BuildType)
 from ..config.loader import ComputedDefaultValue
-from ..config.target_info import NewlibBaremetalTargetInfo
+from ..config.target_info import NewlibBaremetalTargetInfo, CompilationTargets, CrossCompileTarget
 from ..utils import getCompilerInfo, commandline_to_str
 
 

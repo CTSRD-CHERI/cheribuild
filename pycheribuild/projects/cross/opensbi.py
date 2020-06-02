@@ -28,8 +28,11 @@
 # SUCH DAMAGE.
 #
 
-from ..project import *
-from ...utils import OSInfo, classproperty, commandline_to_str
+from pathlib import Path
+
+from ..project import (BuildType, CheriConfig, CompilationTargets, ComputedDefaultValue, CPUArchitecture,
+                       DefaultInstallDir, GitRepository, MakeCommandKind, Project, SimpleProject)
+from ...utils import classproperty, commandline_to_str, OSInfo
 
 
 def opensbi_install_dir(config: CheriConfig, project: SimpleProject):
