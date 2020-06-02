@@ -170,7 +170,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     doNotAddToTargets = True
     # ANSI escape sequence \e[2k clears the whole line, \r resets to beginning of line
     # However, if the output is just a plain text file don't attempt to do any line clearing
-    _clearLineSequence = b"\x1b[2K\r" if sys.__stdout__.isatty() else b"\n"
+    _clearLineSequence = b"\x1b[2K\r" if sys.stdout.isatty() else b"\n"
     # Default to NATIVE only
     supported_architectures = [CompilationTargets.NATIVE]
     # The architecture to build for if no --xmips/--xhost flag is passed (defaults to supported_architectures[0]
