@@ -34,6 +34,7 @@ import os
 import shlex
 import shutil
 import sys
+import typing
 
 try:
     import argcomplete
@@ -41,7 +42,7 @@ except ImportError:
     argcomplete = None
 
 from ..colour import *
-from ..utils import typing, Type_T, fatalError, warningMessage
+from ..utils import fatalError, warningMessage
 from pathlib import Path
 
 if typing.TYPE_CHECKING:   # no-combine
@@ -49,13 +50,16 @@ if typing.TYPE_CHECKING:   # no-combine
     from ..projects.project import SimpleProject, Project   # no-combine
 
 
-class ComputedDefaultValue(typing.Generic[Type_T]):
-    def __init__(self, function: "typing.Callable[[CheriConfig, typing.Union[SimpleProject, Project]], Type_T]",
+T = typing.TypeVar('T')
+
+
+class ComputedDefaultValue(typing.Generic[T]):
+    def __init__(self, function: "typing.Callable[[CheriConfig, typing.Union[SimpleProject, Project]], T]",
                  as_string: "typing.Union[str, typing.Callable[[typing.Any], str]]"):
         self.function = function
         self.as_string = as_string
 
-    def __call__(self, config: "CheriConfig", obj: "SimpleProject") -> Type_T:
+    def __call__(self, config: "CheriConfig", obj: "SimpleProject") -> T:
         return self.function(config, obj)
 
     def __repr__(self):
@@ -108,7 +112,7 @@ class ConfigLoaderBase(object):
     # will be set later...
     _cheriConfig = None  # type: CheriConfig
 
-    options = dict()  # type: typing.Dict[str, ConfigOptionBase]
+    options = dict()  # type: typing.Dict[str, "ConfigOptionBase"]
     _parsedArgs = None
     _JSON = {}  # type: dict
 
@@ -146,10 +150,9 @@ class ConfigLoaderBase(object):
         return isinstance(value_type, type) and issubclass(value_type, Enum)
 
     def addOption(self, name: str, shortname=None, default=None,
-                  type: "typing.Union[typing.Type[Type_T], typing.Callable[[str], Type_T]]" = str,
-                  group=None, helpHidden=False, _owning_class: "typing.Type"=None,
-                  _fallback_names: "typing.List[str]" = None, option_cls: "typing.Type[ConfigOptionBase]"=None,
-                  **kwargs) -> "Type_T":
+                  type: "typing.Union[typing.Type[T], typing.Callable[[str], T]]" = str, group=None, helpHidden=False,
+                  _owning_class: "typing.Type" = None, _fallback_names: "typing.List[str]" = None,
+                  option_cls: "typing.Type[ConfigOptionBase]" = None, **kwargs) -> T:
         if option_cls is None:
             option_cls = self.__option_cls
 
@@ -208,7 +211,7 @@ class ConfigLoaderBase(object):
 
 
 class ConfigOptionBase(object):
-    def __init__(self, name: str, shortname: str, default, value_type: "typing.Type", _owning_class=None,
+    def __init__(self, name: str, shortname: typing.Optional[str], default, value_type: "typing.Type", _owning_class=None,
                  _loader: ConfigLoaderBase = None, _fallback_names: "typing.List[str]" = None,
                  _alias_names: "typing.List[str]" = None):
         self.name = name
@@ -506,11 +509,13 @@ def dict_raise_on_duplicates(ordered_pairs):
             d[k] = v
     return d
 
+
 # https://stackoverflow.com/a/50936474
 class ArgparseSetGivenAction(argparse.Action):
   def __call__(self, parser, namespace, values, option_string=None):
     setattr(namespace, self.dest, values)
     setattr(namespace, self.dest+'_given', True)
+
 
 class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
     def __init__(self):

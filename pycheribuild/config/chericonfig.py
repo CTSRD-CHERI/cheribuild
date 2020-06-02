@@ -37,13 +37,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-# Need to import loader here and not `from loader import ConfigLoader` because that copies the reference
-from .loader import ConfigLoaderBase
-from .target_info import CrossCompileTarget, MipsFloatAbi, Linkage
 from ..utils import latest_system_clang_tool, warningMessage, statusUpdate, have_working_internet_connection
-
-if typing.TYPE_CHECKING:   # no-combine
-    from ..filesystemutils import FileSystemUtils   # no-combine
 
 
 # custom encoder to handle pathlib.Path objects
@@ -76,7 +70,12 @@ class BuildType(Enum):
 
 
 class CheriConfig(object):
-    def __init__(self, loader: ConfigLoaderBase, action_class):
+    def __init__(self, loader, action_class):
+        # Work around circular dependencies
+        from .loader import ConfigLoaderBase
+        from .target_info import CrossCompileTarget, MipsFloatAbi, Linkage
+
+        assert isinstance(loader, ConfigLoaderBase)
         loader._cheriConfig = self
         self.loader = loader
         self.pretend = loader.addCommandLineOnlyBoolOption("pretend", "p",
@@ -293,7 +292,6 @@ class CheriConfig(object):
             help="Custom script to source to setup PATH and quartus, default to using cheri-cpu/cheri/setup.sh")
 
         self.targets = None  # type: typing.Optional[typing.List[str]]
-        self.FS = None  # type: Optional[FileSystemUtils]
         self.__optionalProperties = ["preferred_xtarget"]
 
     def load(self):
@@ -303,7 +301,6 @@ class CheriConfig(object):
         if self.debug_output:
             self.verbose = True
         self.targets = self.loader.targets
-        from ..filesystemutils import FileSystemUtils
         # If there is no clang, default to /usr/bin/cc
         if self.clangCppPath is None and self.clangPlusPlusPath is None and self.clangPath is None:
             self.clangPath = Path("/usr/bin/cc")
@@ -315,7 +312,6 @@ class CheriConfig(object):
             self.clangPlusPlusPath = Path("/c++/compiler/is/missing")
         if self.clangCppPath is None or not self.clangCppPath.exists():
             self.clangCppPath = Path("/cpp/is/missing")
-        self.FS = FileSystemUtils(self)
 
         if self.test_extra_args is None:
             self.test_extra_args = []
@@ -398,14 +394,14 @@ class CheriConfig(object):
         v = object.__getattribute__(self, item)
         if hasattr(v, '__get__'):
             # noinspection PyCallingNonCallable
-            return v.__get__(self, self.__class__)
+            return v.__get__(self, self.__class__)  # pytype: disable=attribute-error
         return v
 
     def getOptionsJSON(self):
         jsonDict = OrderedDict()
         for v in self.loader.options.values():
             # noinspection PyProtectedMember
-            jsonDict[v.fullOptionName] = v.__get__(self, v._owning_class if v._owning_class else self)
+            jsonDict[v.fullOptionName] = v.__get__(self, v._owning_class if v._owning_class else self)  # pytype: disable=attribute-error
         return json.dumps(jsonDict, sort_keys=True, cls=MyJsonEncoder, indent=4)
 
     @classmethod

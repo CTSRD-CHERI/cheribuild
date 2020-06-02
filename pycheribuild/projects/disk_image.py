@@ -32,7 +32,6 @@ import io
 from .cross.cheribsd import *
 from .cross.gdb import BuildGDB
 from .project import *
-from ..config.chericonfig import MipsFloatAbi
 from ..mtree import MtreeFile
 from ..utils import *
 

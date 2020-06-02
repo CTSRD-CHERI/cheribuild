@@ -36,6 +36,7 @@ from .loader import ConfigLoaderBase
 from .chericonfig import CheriConfig
 from .target_info import CompilationTargets
 from ..utils import defaultNumberOfMakeJobs, fatalError, IS_MAC, IS_LINUX, IS_FREEBSD, warningMessage
+from ..filesystemutils import FileSystemUtils
 
 
 def default_install_prefix(conf: "JenkinsConfig", unused):
@@ -131,6 +132,7 @@ class JenkinsConfig(CheriConfig):
         # self.getConfigOption = None
         self.includeDependencies = False
         loader.finalizeOptions(availableTargets)
+        self.FS = FileSystemUtils(self)
 
     @property
     def cheri_sdk_directory_name(self):

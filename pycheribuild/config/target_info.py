@@ -35,7 +35,7 @@ from pathlib import Path
 from ..utils import IS_MAC, IS_FREEBSD, IS_LINUX, getCompilerInfo, is_jenkins_build
 
 if typing.TYPE_CHECKING:    # no-combine
-    from .chericonfig import CheriConfig    # no-combine
+    from .chericonfig import CheriConfig    # no-combine    # pytype: disable=pyi-error
     from ..projects.project import SimpleProject, Project    # no-combine
 
 
@@ -48,7 +48,7 @@ class CPUArchitecture(Enum):
 
 
 class TargetInfo(ABC):
-    shortname = None
+    shortname = "INVALID"  # type: str
 
     def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
         self.target = target
@@ -707,6 +707,7 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
     def local_install_root(self) -> Path:
         return self.sysroot_dir
 
+
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
     shortname = "Newlib"
 
@@ -800,12 +801,15 @@ class MipsFloatAbi(Enum):
         return self.value[1]
 
 
+_TgtInfo = typing.TypeVar('_TgtInfo', bound=TargetInfo)
+
+
 class CrossCompileTarget(object):
     # Currently the same for all targets
     DEFAULT_CAP_TABLE_ABI = "pcrel"
     DEFAULT_SUBOBJECT_BOUNDS = "conservative"
 
-    def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "typing.Type[TargetInfo]", *,
+    def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "typing.Type[_TgtInfo]", *,
                  is_cheri_purecap=False, is_cheri_hybrid=False, check_conflict_with: "CrossCompileTarget" = None,
                  non_cheri_target: "CrossCompileTarget" = None, hybrid_target: "CrossCompileTarget" = None,
                  purecap_target: "CrossCompileTarget" = None):
@@ -822,6 +826,9 @@ class CrossCompileTarget(object):
         assert not (is_cheri_purecap and is_cheri_hybrid), "Can't be both hybrid and purecap"
         self.check_conflict_with = check_conflict_with  # Check that we don't reuse install-dir, etc for this target
         self.target_info_cls = target_info_cls
+        self._non_cheri_target = non_cheri_target
+        self._hybrid_target = hybrid_target
+        self._purecap_target = purecap_target
 
         # Set the related targets:
         def _set_for_other(other_target):
@@ -835,12 +842,8 @@ class CrossCompileTarget(object):
                 else:
                     assert other_target._non_cheri_target is None, "Already set?"
                     other_target._non_cheri_target = self
-
-        self._non_cheri_target = non_cheri_target
         _set_for_other(self._non_cheri_target)
-        self._hybrid_target = hybrid_target
         _set_for_other(self._hybrid_target)
-        self._purecap_target = purecap_target
         _set_for_other(self._purecap_target)
 
     def create_target_info(self, project: "SimpleProject") -> TargetInfo:
@@ -970,7 +973,7 @@ class CrossCompileTarget(object):
 
 class CompilationTargets(object):
     # noinspection PyTypeChecker
-    NONE = CrossCompileTarget("invalid", None, None)  # Placeholder
+    NONE = CrossCompileTarget("invalid", None, None)  # Placeholder  # pytype: disable=wrong-arg-types
 
     # XXX: should probably not harcode x86_64 for native
     NATIVE = CrossCompileTarget("native", CPUArchitecture.X86_64, NativeTargetInfo)

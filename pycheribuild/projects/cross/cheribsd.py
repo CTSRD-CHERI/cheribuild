@@ -38,7 +38,7 @@ from enum import Enum
 
 from ..llvm import BuildUpstreamLLVM, BuildCheriLLVM
 from ..project import *
-from ...config.chericonfig import CrossCompileTarget, MipsFloatAbi
+from ...config.target_info import CrossCompileTarget, MipsFloatAbi
 from ...config.loader import ComputedDefaultValue
 from ...targets import target_manager
 from ...utils import *

@@ -37,7 +37,7 @@ from types import SimpleNamespace
 from .project import *
 from ..config.loader import ComputedDefaultValue
 from ..config.target_info import NewlibBaremetalTargetInfo
-from ..utils import getCompilerInfo
+from ..utils import getCompilerInfo, commandline_to_str
 
 
 class BuildQEMUBase(AutotoolsProject):

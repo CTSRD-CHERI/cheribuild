@@ -44,9 +44,9 @@ from enum import Enum
 from pathlib import Path
 from typing import Union, Callable
 
-from ..config.chericonfig import CheriConfig, Linkage, BuildType
+from ..config.chericonfig import CheriConfig, BuildType
 from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase, DefaultValueOnlyConfigOption
-from ..config.target_info import CrossCompileTarget, CPUArchitecture, TargetInfo, CompilationTargets
+from ..config.target_info import CrossCompileTarget, CPUArchitecture, TargetInfo, CompilationTargets, Linkage
 from ..filesystemutils import FileSystemUtils
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
 from ..utils import *

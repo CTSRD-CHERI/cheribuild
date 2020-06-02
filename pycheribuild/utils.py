@@ -53,10 +53,10 @@ Type_T = typing.TypeVar("Type_T")
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "IS_LINUX", "IS_FREEBSD", "IS_MAC", "printCommand", "includeLocalFile", "CompilerInfo",   # no-combine
            "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setCheriConfig", "setEnv",  # no-combine
-           "warningMessage", "Type_T", "typing", "popen_handle_noexec", "extract_version", "get_program_version",  # no-combine
+           "warningMessage", "Type_T", "popen_handle_noexec", "extract_version", "get_program_version",  # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latest_system_clang_tool", "SafeDict",  # no-combine
            "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build", "get_global_config",  # no-combine
-           "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection", # no-combine
+           "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
            "is_case_sensitive_dir", "SocketAndPort"]  # no-combine
 
 
