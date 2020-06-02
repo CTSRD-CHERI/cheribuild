@@ -28,8 +28,8 @@
 # SUCH DAMAGE.
 #
 
-from ..project import *
 from ..cherisim import BuildCheriSim
+from ..project import *
 from ..sail import BuildSailCheriMips
 
 
@@ -37,7 +37,7 @@ class _BuildCheriMipsTestBase(Project):
     doNotAddToTargets = True
     target = "cheritest"
     project_name = "cheritest"
-    repository = GitRepository("git@github.com:CTSRD-CHERI/cheritest.git")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/cheritest.git")
     default_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     build_in_source_dir = True  # Cannot build out-of-source
     make_kind = MakeCommandKind.GnuMake
@@ -52,14 +52,12 @@ class _BuildCheriMipsTestBase(Project):
         # CHERI_SDK is also used to find QEMU
         self.make_args.set(CHERI_SDK=self.config.cheri_sdk_dir)
         self.make_args.set(TEST_FPU=1)
-        self.make_args.set(CAP_SIZE=self.config.mips_cheri_bits)
         if self.single_test:
+            self.make_args.set(CAP_SIZE=self.config.mips_cheri_bits)
             self.make_args.set_env(PYTEST_ADDOPTS="--color=yes")
 
     # Should run tests both for --test and --build
     def compile(self, **kwargs):
-        if not self.single_test:
-            self.run_make("elfs")
         self.do_cheritest()
 
     def run_tests(self):
