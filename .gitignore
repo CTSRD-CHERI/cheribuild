@@ -2,3 +2,4 @@ Pipfile.lock
 /.pytest_cache/
 /tests/.cache/
 /.mypy_cache/
+/.pytype/
