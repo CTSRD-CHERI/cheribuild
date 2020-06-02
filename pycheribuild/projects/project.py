@@ -822,7 +822,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         test_native = xtarget.is_native()
         # Only supported for CheriBSD-MIPS right now:
         if not test_native and self.target_info.is_cheribsd():
-            if not xtarget.is_mips(include_purecap=True) or not xtarget.is_riscv(include_purecap=True):
+            if not xtarget.is_mips(include_purecap=True) and not xtarget.is_riscv(include_purecap=True):
                 self.warning("Test scripts currently only work for CheriBSD-MIPS and CHERI-RISC-V")
                 return
         if kernel_path is None and not test_native and "--kernel" not in self.config.test_extra_args:
