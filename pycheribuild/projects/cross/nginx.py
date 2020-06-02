@@ -27,6 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import os
 import re
 
 from .crosscompileproject import (CheriConfig, commandline_to_str, CrossCompileAutotoolsProject, DefaultInstallDir,
@@ -128,3 +129,9 @@ class BuildFettNginx(BuildNginx):
         self.configureEnvironment["NGX_OPENSSL_fett_path"] = str(BuildFettOpenSSL.get_instance(self).destdir) + openssl_dir
         self.configureEnvironment["NGX_OPENSSL_fett_rpath"] = openssl_dir + "/lib"
         super().configure()
+
+    def install(self):
+        super().install()
+        nginx_conf = str(self.destdir) + str(self._installPrefix) + "/conf/nginx.conf"
+        if os.path.exists(nginx_conf):
+            os.remove(nginx_conf)
