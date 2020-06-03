@@ -72,6 +72,8 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         if self.build_type == BuildType.DEBUG:
             self.configureArgs.append("--enable-logo")  # For debugging
 
+        self.configureArgs.append("--disable-fp-emulation")  # Should not be needed
+
         # BBL build uses weird objcopy flags and therefore requires GNU objcopy which we can get from GDB
         self.add_configure_and_make_env_arg("OBJCOPY",
             BuildGDB.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/gobjcopy")
