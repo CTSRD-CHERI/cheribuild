@@ -1,11 +1,11 @@
-from pathlib import Path
 from enum import Enum
-from pycheribuild.utils import init_global_config
+from pathlib import Path
+
 from pycheribuild.config.chericonfig import CheriConfig
-from pycheribuild.config.target_info import CompilationTargets, CrossCompileTarget
 from pycheribuild.config.loader import ConfigLoaderBase, DefaultValueOnlyConfigLoader
 from pycheribuild.projects.project import SimpleProject
 from pycheribuild.targets import Target
+from pycheribuild.utils import init_global_config
 
 
 class MockArgs(object):

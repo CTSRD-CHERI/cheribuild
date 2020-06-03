@@ -56,7 +56,7 @@ assert (_pexpect_dir / "pexpect/__init__.py").exists()
 assert str(_pexpect_dir.resolve()) in sys.path, str(_pexpect_dir) + " not found in " + str(sys.path)
 import pexpect
 from ..utils import find_free_port
-from ..config.target_info import CompilationTargets, CrossCompileTarget
+from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
 from ..qemu_utils import QemuOptions
 
 SUPPORTED_ARCHITECTURES = {x.generic_suffix: x for x in (CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
