@@ -91,22 +91,22 @@ class GnuStepModule(AutotoolsProject):
     def configure(self):
         if not shutil.which("gnustep-config"):
             self.dependencyError("gnustep-config should have been installed in the last build step!")
-            gnustepLibdir = Path("/invalid/path")
+            gnustep_libdir = Path("/invalid/path")
         else:
-            gnustepLibdir = runCmd("gnustep-config", "--variable=GNUSTEP_SYSTEM_LIBRARIES",
-                                   captureOutput=True, print_verbose_only=True, runInPretendMode=True).stdout.strip().decode("utf-8")
+            gnustep_libdir = self.run_cmd("gnustep-config", "--variable=GNUSTEP_SYSTEM_LIBRARIES",
+                captureOutput=True, print_verbose_only=True, runInPretendMode=True).stdout.strip().decode("utf-8")
         # Just to confirm that we have set up the -rpath flag correctly
-        expectedLibdir = self.installDir / "lib"
-        if not expectedLibdir.is_dir():
-            self.fatal("Expected gnustep libdir", expectedLibdir, "doesn't exist")
-        if not Path(gnustepLibdir).is_dir():
-            self.fatal("GNUSTEP_SYSTEM_LIBRARIES directory", gnustepLibdir, "doesn't exist")
-        if Path(gnustepLibdir).exists() and Path(gnustepLibdir).resolve() != expectedLibdir.resolve():
-            self.fatal("GNUSTEP_SYSTEM_LIBRARIES was", gnustepLibdir, "but expected ", expectedLibdir)
+        expected_libdir = self.installDir / "lib"
+        if not expected_libdir.is_dir():
+            self.fatal("Expected gnustep libdir", expected_libdir, "doesn't exist")
+        if not Path(gnustep_libdir).is_dir():
+            self.fatal("GNUSTEP_SYSTEM_LIBRARIES directory", gnustep_libdir, "doesn't exist")
+        if Path(gnustep_libdir).exists() and Path(gnustep_libdir).resolve() != expected_libdir.resolve():
+            self.fatal("GNUSTEP_SYSTEM_LIBRARIES was", gnustep_libdir, "but expected ", expected_libdir)
 
-        # print(coloured(AnsiColour.green, "LDFLAGS=-L" + gnustepLibdir))
+        # print(coloured(AnsiColour.green, "LDFLAGS=-L" + gnustep_libdir))
         # TODO: what about spaces??
-        # self.configureArgs.append("LDFLAGS=-L" + gnustepLibdir + " -Wl,-rpath," + gnustepLibdir)
+        # self.configureArgs.append("LDFLAGS=-L" + gnustep_libdir + " -Wl,-rpath," + gnustep_libdir)
         super().configure()
 
 
