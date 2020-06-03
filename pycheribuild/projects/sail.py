@@ -30,6 +30,7 @@
 import os
 import shlex
 import shutil
+from abc import abstractmethod, ABCMeta
 from subprocess import CalledProcessError
 from typing import Any, Dict, Tuple, Union
 
@@ -39,7 +40,7 @@ from ..targets import target_manager
 from ..utils import AnsiColour, coloured, commandline_to_str, get_program_version, OSInfo, runCmd, setEnv
 
 
-class OpamMixin(object):
+class OpamMixin(object, metaclass=ABCMeta):
     config = None
 
     def __init__(self, *args, **kwargs):
@@ -54,17 +55,16 @@ class OpamMixin(object):
     def opamroot(self):
         return self.config.cheri_sdk_dir / "opamroot"
 
+    # noinspection PyUnresolvedReferences
     def check_system_dependencies(self):
-        assert isinstance(self, SimpleProject)
-        # noinspection PyUnresolvedReferences
-        super().check_system_dependencies()
+        super().check_system_dependencies()  # pytype: disable=attribute-error
         opam_path = shutil.which("opam")
         if opam_path:
             opam_version = get_program_version(Path(opam_path), regex=b"(\\d+)\\.(\\d+)\\.?(\\d+)?")
             if opam_version < (2, 0, 0):
-                self.dependencyError("Opam version", opam_version, "is too old. Need at least 2.0.0",
+                self.dependencyError("Opam version", opam_version, "is too old. Need at least 2.0.0",  # pytype: disable=attribute-error
                                      install_instructions="Install opam 2.0 with your system package manager or run "
-                                                         "`cheribuild.py opam-2.0` (Linux-only)")
+                                                          "`cheribuild.py opam-2.0` (Linux-only)")
 
     @property
     def opam_binary(self):
@@ -106,11 +106,21 @@ class OpamMixin(object):
             else:
                 raise
 
+    def get_default_cwd(self) -> Path:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def run_cmd(self, *args, **kwargs): ...
+
+    @abstractmethod
+    def runShellScript(self, *args, **kwargs): ...
+
+    @abstractmethod
+    def addRequiredSystemTool(self, *args, **kwargs): ...
+
     def _run_in_ocaml_env_prepare(self, cwd=None) -> "Tuple[Dict[Any, Union[Union[str, int], Any]], Union[str, Any]]":
         if cwd is None:
-            # noinspection PyUnresolvedReferences
-            cwd = self.sourceDir if getattr(self, "sourceDir") else "/"
-
+            cwd = self.get_default_cwd()
         self._ensure_correct_switch()
         opam_env = dict(GIT_TEMPLATE_DIR="",  # see https://github.com/ocaml/opam/issues/3493
                         OPAMROOT=self.opamroot, CCACHE_DISABLE=1,  # https://github.com/ocaml/opam/issues/3395
@@ -118,7 +128,7 @@ class OpamMixin(object):
         if Path(self.opam_binary).is_absolute():
             opam_env["OPAM_USER_PATH_RO"] = Path(self.opam_binary).parent
         if not (self.opamroot / "opam-init").exists():
-            runCmd(self.opam_binary, "init", "--root=" + str(self.opamroot), "--no-setup", cwd="/", env=opam_env)
+            self.run_cmd(self.opam_binary, "init", "--root=" + str(self.opamroot), "--no-setup", cwd="/", env=opam_env)
         return opam_env, cwd
 
     def run_in_ocaml_env(self, command: str, cwd=None, print_verbose_only=False, **kwargs):
@@ -172,7 +182,10 @@ class BuildBubbleWrap(AutotoolsProject):
         self.configureArgs.append("--with-bash-completion-dir=no")
 
 
-class ProjectUsingOpam(OpamMixin, Project):
+class ProjectUsingOpam(Project, OpamMixin):
+    def get_default_cwd(self) -> Path:
+        return self.sourceDir
+
     doNotAddToTargets = True
 
 
@@ -280,7 +293,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
         self.run_make("install")
 
 
-class RunSailShell(OpamMixin, SimpleProject):
+class RunSailShell(SimpleProject, OpamMixin):
     target = "sail-env"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-mips")
     dependencies = ["sail"]
