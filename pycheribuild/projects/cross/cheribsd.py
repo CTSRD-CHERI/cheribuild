@@ -1148,7 +1148,6 @@ class BuildCHERIBSD(BuildFreeBSD):
     crossbuild = True  # changes have been merged into master
     use_llvm_binutils = True
     has_installsysroot_target = True
-    full_rebuild_if_older_than = datetime.datetime(2020, 5, 11, 20, 0, tzinfo=datetime.timezone.utc)
 
     @property
     def build_dir_suffix(self):

@@ -1470,7 +1470,6 @@ class Project(SimpleProject):
     skipGitSubmodules = False
     compileDBRequiresBear = True
     doNotAddToTargets = True
-    full_rebuild_if_older_than = None  # type: datetime.datetime
 
     build_dir_suffix = ""   # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
     add_build_dir_suffix_for_native = False  # Whether to add -native to the native build dir
@@ -2423,7 +2422,38 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
 
     _check_install_dir_conflict = True
 
-    _LAST_CLEAN_TIME_FMT = "%Y-%m-%dT%H:%M:%S.%f"
+    def _last_build_kind_path(self):
+        return Path(self.buildDir, ".cheribuild_last_build_kind")
+
+    def _last_clean_counter_path(self):
+        return Path(self.buildDir, ".cheribuild_last_clean_counter")
+
+    def _parse_require_clean_build_counter(self) -> typing.Optional[int]:
+        require_clean_path = Path(self.sourceDir, ".require_clean_build")
+        if not require_clean_path.exists():
+            return None
+        with require_clean_path.open("r") as f:
+            latest_counter = None  # type: typing.Optional[int]
+            for i, line in enumerate(f.readlines()):
+                # Remove comments
+                while "#" in line:
+                    line = line[:line.index('#')]
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    parsed = int(line)
+                    if latest_counter is not None and parsed < latest_counter:
+                        self.warning(require_clean_path, ":", i + 1, ": parsed counter ", parsed,
+                            " is smaller than previous one: ", latest_counter, sep="")
+                    else:
+                        latest_counter = parsed
+                except ValueError as e:
+                    self.warning(require_clean_path, ":", i + 1, ": could not parse line (", line, "): ", e, sep="")
+                    continue
+            if latest_counter is None:
+                self.warning("Could not find latest counter in", require_clean_path)
+            return latest_counter
 
     def process(self):
         if self.generate_cmakelists:
@@ -2485,7 +2515,7 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
             self.check_system_dependencies()
         assert self._systemDepsChecked, "self._systemDepsChecked must be set by now!"
 
-        last_build_file = Path(self.buildDir, ".last_build_kind")
+        last_build_file = self._last_build_kind_path()
         if self.build_in_source_dir and not self.config.clean:
             if not last_build_file.exists():
                 self._force_clean = True  # could be an old build prior to adding this check
@@ -2499,25 +2529,25 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
                         return
                     self._force_clean = True
 
-        last_clean_build_date_path = Path(self.buildDir, ".last_clean_build_date")
-        if self.full_rebuild_if_older_than is not None and not self.config.clean:
-            last_clean_date = None
+        required_clean_counter = self._parse_require_clean_build_counter()
+        clean_counter_in_build_dir = None  # typing.Optional[int]
+        last_clean_counter_path = self._last_clean_counter_path()
+        if required_clean_counter is not None:
+            # Check if the last clean build had a smaller counter than the current required on and if so perform a clean
+            # build and increment the value in the build directory.
             try:
-                if last_clean_build_date_path.exists():
-                    # Note: fromisoformat() only available in python 3.7
-                    # last_clean_date = datetime.datetime.fromisoformat(last_clean_build_date_path.read_text().strip())
-                    last_clean_date = datetime.datetime.strptime(last_clean_build_date_path.read_text().strip(), self._LAST_CLEAN_TIME_FMT)
-                    # Update timezone to allow equality comparison with utcnow()
-                    last_clean_date = last_clean_date.replace(tzinfo=datetime.timezone.utc)
-            except ValueError as e:
-                self.warning("Could not parse contents of", last_clean_build_date_path, e)
-            if last_clean_date is None:
+                clean_counter_in_build_dir = int(last_clean_counter_path.read_text().strip())
+                if clean_counter_in_build_dir < required_clean_counter:
+                    self.info("Forcing full rebuild since clean counter in build dir (", clean_counter_in_build_dir,
+                        ") is less than required minimum ", required_clean_counter, sep="")
+                    self._force_clean = True
+                else:
+                    self.verbose_print("Not forcing clean build since clean counter in build dir",
+                        clean_counter_in_build_dir, "is >= required minimum", required_clean_counter)
+            except Exception as e:
+                self.warning("Could not parse", last_clean_counter_path, "-> assuming clean build is required.", e)
                 self._force_clean = True
-                self.info("Forcing full rebuild since", last_clean_build_date_path, "could not be parsed")
-            elif last_clean_date < self.full_rebuild_if_older_than:
-                self._force_clean = True
-                self.info("Forcing full rebuild since a full rebuild is required for builds older than",
-                    self.full_rebuild_if_older_than, "and last build time was", last_clean_date)
+
         # run the rm -rf <build dir> in the background
         cleaningTask = self.clean() if (self._force_clean or self.config.clean) else ThreadJoiner(None)
         if cleaningTask is None:
@@ -2526,20 +2556,23 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
         with cleaningTask:
             if not self.buildDir.is_dir():
                 self.makedirs(self.buildDir)
-            # Clean has been performed -> write the last clean build date now (if needed).
-            if self.full_rebuild_if_older_than is not None:
-                # Note: fromisoformat is only available with python3.7+
-                # date_str = datetime.datetime.utcnow().isoformat()
-                date_str = datetime.datetime.utcnow().strftime(self._LAST_CLEAN_TIME_FMT)
-                self.writeFile(last_clean_build_date_path, date_str, overwrite=True)
+            # Clean has been performed -> write the last clean counter now (if needed).
+            if required_clean_counter is not None and clean_counter_in_build_dir != required_clean_counter:
+                self.writeFile(last_clean_counter_path, str(required_clean_counter), overwrite=True)
+            # Update the last build kind file if we are building in the source dir;
             if self.build_in_source_dir:
                 self.writeFile(last_build_file, self.build_configuration_suffix(), overwrite=True)
+            # Clean completed
+
+            # Configure step
             if not self.config.skipConfigure or self.config.configureOnly:
                 if self.should_run_configure():
                     statusUpdate("Configuring", self.display_name, "... ")
                     self.configure()
             if self.config.configureOnly:
                 return
+
+            # Build step
             if not self.config.skipBuild:
                 if self.config.csetbounds_stats and (self.csetbounds_stats_file.exists() or self.config.pretend):
                     self.moveFile(self.csetbounds_stats_file, self.csetbounds_stats_file.with_suffix(".from-configure.csv"),
@@ -2547,6 +2580,8 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
                     # move any csetbounds stats from configuration (since they are not useful)
                 statusUpdate("Building", self.display_name, "... ")
                 self.compile()
+
+            # Install step
             if not self.config.skipInstall:
                 statusUpdate("Installing", self.display_name, "... ")
                 if install_dir_kind == DefaultInstallDir.DO_NOT_INSTALL:
