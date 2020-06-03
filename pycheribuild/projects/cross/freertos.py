@@ -87,7 +87,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
             self.make_args.set(EXTENSION="cheri")
 
-    def compile(self):
+    def compile(self, **kwargs):
         for demo in self.freertos_demos:
             if demo == "RISC-V-Generic":
                 # Build parametrized FreeRTOS to run on QEMU's virt machine

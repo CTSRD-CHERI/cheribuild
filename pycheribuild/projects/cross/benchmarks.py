@@ -327,7 +327,7 @@ class BuildSpec2006(CrossCompileProject):
         else:
             self.benchmark_list = self.working_benchmark_list
 
-    def compile(self, cwd: Path = None):
+    def compile(self, **kwargs):
         self.makedirs(self.buildDir / "spec")
         if not (self.buildDir / "spec/install.sh").exists():
             self.clean_directory(self.buildDir / "spec")  # clean up partial builds

@@ -117,6 +117,7 @@ class OpamMixin(object):
         if Path(self.opam_binary).is_absolute():
             opam_env["OPAM_USER_PATH_RO"] = Path(self.opam_binary).parent
         if not (self.opamroot / "opam-init").exists():
+            # noinspection PyUnresolvedReferences
             self.run_cmd(self.opam_binary, "init", "--root=" + str(self.opamroot), "--no-setup", cwd="/", env=opam_env)  # pytype: disable=attribute-error
         return opam_env, cwd
 

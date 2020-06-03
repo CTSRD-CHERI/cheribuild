@@ -1124,7 +1124,7 @@ class MakeOptions(object):
         if flag in self._flags:
             self._flags.remove(flag)
 
-    def remove_all(self, predicate: "typing.Callable[bool, [str]]"):
+    def remove_all(self, predicate: "typing.Callable[[str], bool]"):
         keys = list(self._vars.keys())
         for k in keys:
             if predicate(k):

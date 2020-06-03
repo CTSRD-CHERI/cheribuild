@@ -45,8 +45,7 @@ class BuildRos2(CrossCompileCMakeProject):
     def _ignore_packages(self):
         packages = ["src/ros2/rcl_logging/rcl_logging_log4cxx"] # relative to self.sourceDir
         for package in packages:
-            cmdline = ["touch"]
-            cmdline.append(str(self.sourceDir / package / "COLCON_IGNORE"))
+            cmdline = ["touch", str(self.sourceDir / package / "COLCON_IGNORE")]
             self.run_cmd(cmdline, cwd=self.sourceDir)
         return
 

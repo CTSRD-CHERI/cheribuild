@@ -32,6 +32,7 @@ import os
 import shutil
 import tempfile
 import typing
+import sys
 
 from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDGFE, BuildFreeBSDWithDefaultOptions
 from .cross.gdb import BuildGDB
@@ -167,8 +168,7 @@ class _BuildDiskImageBase(SimpleProject):
             self.writeFile(targetFile, contents, noCommandPrint=True, overwrite=False, mode=mode)
         self.add_file_to_image(targetFile, base_directory=baseDir)
 
-    @staticmethod
-    def _wget_fetch(what, where):
+    def _wget_fetch(self, what, where):
         # https://apple.stackexchange.com/a/100573/251654
         # https://www.gnu.org/software/wget/manual/html_node/Directory-Options.html
         wget_cmd = ["wget", "--no-host-directories", "--cut-dirs=3",  # strip prefix

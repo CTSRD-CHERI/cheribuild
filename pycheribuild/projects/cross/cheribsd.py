@@ -1084,7 +1084,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
                                                      kind=int, default=ComputedDefaultValue(jflag_for_universe,
                                                                                             "default -j flag / 4"))
 
-    def compile(self, cwd: Path = None):
+    def compile(self, **kwargs):
         # The build seems to behave differently when -j1 is passed (it still complains about parallel make failures)
         # so just omit the flag here if the user passes -j1 on the command line
         build_args = self.make_args.copy()

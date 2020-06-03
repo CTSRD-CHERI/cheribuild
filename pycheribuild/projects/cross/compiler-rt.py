@@ -84,7 +84,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
             if not ubsan_runtime_path.exists():
                 self.warning("Did not install ubsan runtime", ubsan_runtime_path)
         if self.target_info.is_rtems():
-            rt_runtime_path = self.installDir / ("lib/generic/libclang_rt.builtins-riscv64.a")
+            rt_runtime_path = self.installDir / "lib/generic/libclang_rt.builtins-riscv64.a"
             if not rt_runtime_path.exists():
                 self.warning("Did not install compiler runtime", rt_runtime_path.exists)
             else:
