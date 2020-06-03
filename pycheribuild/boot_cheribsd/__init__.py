@@ -165,6 +165,7 @@ class CheriBSDInstance(pexpect.spawn):
         self.ssh_private_key = Path(ssh_pubkey).with_suffix("") if ssh_pubkey else None
         assert self.ssh_private_key != self.ssh_public_key
         self.ssh_user = "root"
+        self.smb_dirs = []  # type: typing.List[SmbMount]
 
     @property
     def xtarget(self) -> CrossCompileTarget:
@@ -512,16 +513,10 @@ def _set_pexpect_sh_prompt(child):
 
 
 # noinspection PyMethodMayBeStatic,PyUnusedLocal
-class FakeSpawn(object):
-    pid = -1
-    should_quit = False
-
+class FakeSpawn(CheriBSDInstance):
     def __init__(self, qemu_config: QemuOptions, *args, **kwargs):
-        self.qemu_config = qemu_config
-        self.xtarget = qemu_config.xtarget
-        self.smb_dirs = []  # type: typing.List[SmbMount]
-        self.logfile = None  # type: typing.Optional[typing.TextIO]
-        self.logfile_read = None  # type: typing.Optional[typing.TextIO]
+        # Just start cat for --pretend mode
+        super().__init__(qemu_config, "cat", **kwargs)
 
     def expect(self, *args, pretend_result=None, **kwargs):
         print("Expecting", args, file=sys.stderr, flush=True)
@@ -538,16 +533,7 @@ class FakeSpawn(object):
         print("Expecting prompt")
         return
 
-    def sendline(self, msg):
-        print("RUNNING '", msg, "'", sep="", file=sys.stderr, flush=True)
-
     def flush(self):
-        pass
-
-    def isalive(self):
-        return not self.should_quit
-
-    def interact(self):
         pass
 
     def run(self, cmd, **kwargs):
@@ -614,11 +600,11 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
     global _SSH_SOCKET_PLACEHOLDER
     if _SSH_SOCKET_PLACEHOLDER is not None:
         _SSH_SOCKET_PLACEHOLDER.close()
-    if not PRETEND:
-        child = CheriBSDInstance(qemu_options, qemu_args[0], qemu_args[1:], ssh_port=ssh_port, ssh_pubkey=ssh_pubkey,
-            encoding="utf-8", echo=False, timeout=60)
-    else:
-        child = FakeSpawn(qemu_options)  # type: ignore
+    qemu_cls = CheriBSDInstance
+    if PRETEND:
+        qemu_cls = FakeSpawn
+    child = qemu_cls(qemu_options, qemu_args[0], qemu_args[1:], ssh_port=ssh_port, ssh_pubkey=ssh_pubkey,
+        encoding="utf-8", echo=False, timeout=60)
     # child.logfile=sys.stdout.buffer
     child.smb_dirs = smb_dirs
     if QEMU_LOGFILE:
