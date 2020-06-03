@@ -42,11 +42,12 @@ import time
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
-from typing import Union, Callable
+from typing import Callable, Union
 
-from ..config.chericonfig import CheriConfig, BuildType
-from ..config.loader import ConfigLoaderBase, ComputedDefaultValue, ConfigOptionBase, DefaultValueOnlyConfigOption
-from ..config.target_info import CrossCompileTarget, CPUArchitecture, TargetInfo, CompilationTargets, Linkage
+from ..config.chericonfig import BuildType, CheriConfig
+from ..config.compilation_targets import CompilationTargets
+from ..config.loader import ComputedDefaultValue, ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption
+from ..config.target_info import CPUArchitecture, CrossCompileTarget, Linkage, TargetInfo
 from ..filesystemutils import FileSystemUtils
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
 from ..utils import *
@@ -55,7 +56,7 @@ __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "Target
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
            "CrossCompileTarget", "CPUArchitecture", "GitRepository", "ComputedDefaultValue", "TargetInfo",  # no-combine
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
-           "TargetBranchInfo", "CompilationTargets", "DefaultInstallDir", "BuildType"]  # no-combine
+           "TargetBranchInfo", "Linkage", "CompilationTargets", "DefaultInstallDir", "BuildType"]  # no-combine
 
 Type_T = typing.TypeVar("Type_T")
 

@@ -35,6 +35,7 @@ import subprocess
 import sys
 import tempfile
 from enum import Enum
+from pathlib import Path
 
 from ..llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..project import (CheriConfig, CompilationTargets, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,

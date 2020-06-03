@@ -35,11 +35,11 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
-from .project import (AutotoolsProject, GitRepository, MakeCommandKind, DefaultInstallDir, SimpleProject, CheriConfig,
-                      BuildType)
+from .project import (AutotoolsProject, BuildType, CheriConfig, CrossCompileTarget, DefaultInstallDir, GitRepository,
+                      MakeCommandKind, SimpleProject)
+from ..config.compilation_targets import CompilationTargets, NewlibBaremetalTargetInfo
 from ..config.loader import ComputedDefaultValue
-from ..config.target_info import NewlibBaremetalTargetInfo, CompilationTargets, CrossCompileTarget
-from ..utils import getCompilerInfo, commandline_to_str
+from ..utils import commandline_to_str, getCompilerInfo
 
 
 class BuildQEMUBase(AutotoolsProject):

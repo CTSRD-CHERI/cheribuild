@@ -32,11 +32,11 @@ import os
 from enum import Enum
 from pathlib import Path
 
-from .loader import ConfigLoaderBase
 from .chericonfig import CheriConfig
-from .target_info import CompilationTargets
-from ..utils import defaultNumberOfMakeJobs, fatalError, OSInfo, warningMessage
+from .compilation_targets import CompilationTargets
+from .loader import ConfigLoaderBase
 from ..filesystemutils import FileSystemUtils
+from ..utils import defaultNumberOfMakeJobs, fatalError, OSInfo, warningMessage
 
 
 def default_install_prefix(conf: "JenkinsConfig", unused):

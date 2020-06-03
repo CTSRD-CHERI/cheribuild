@@ -28,15 +28,15 @@
 # SUCH DAMAGE.
 #
 import typing
-from abc import ABCMeta, abstractmethod, ABC
+from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
 
-from ..utils import OSInfo, getCompilerInfo, is_jenkins_build
+from ..utils import OSInfo
 
-if typing.TYPE_CHECKING:    # no-combine
-    from .chericonfig import CheriConfig    # no-combine    # pytype: disable=pyi-error
-    from ..projects.project import SimpleProject, Project    # no-combine
+if typing.TYPE_CHECKING:  # no-combine
+    from .chericonfig import CheriConfig  # no-combine    # pytype: disable=pyi-error
+    from ..projects.project import SimpleProject, Project  # no-combine
 
 
 class CPUArchitecture(Enum):
@@ -174,10 +174,14 @@ class TargetInfo(ABC):
         return False
 
     def get_rootfs_project(self, xtarget: "CrossCompileTarget" = None) -> "Project":
-        return self._get_rootfs_project(xtarget if xtarget is not None else CompilationTargets.NONE)
+        return self._get_rootfs_project(xtarget if xtarget is not None else self.target)
 
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         raise RuntimeError("Should not be called for " + self.project.target)
+
+    @classmethod
+    def is_native(cls):
+        return False
 
     @classmethod
     def is_baremetal(cls):
@@ -251,539 +255,6 @@ class TargetInfo(ABC):
         return config.clangCppPath
 
 
-class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
-    def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
-        super().__init__(target, project)
-        self._sdk_root_dir = None  # type: typing.Optional[Path]
-
-    @property
-    def _compiler_dir(self) -> Path:
-        return self.sdk_root_dir / "bin"
-
-    @property
-    def sdk_root_dir(self) -> Path:
-        if self._sdk_root_dir is not None:
-            return self._sdk_root_dir
-        self._sdk_root_dir = self._get_sdk_root_dir_lazy()
-        return self._sdk_root_dir
-
-    @abstractmethod
-    def _get_sdk_root_dir_lazy(self) -> Path: ...
-
-    @property
-    def c_compiler(self) -> Path:
-        return self._compiler_dir / "clang"
-
-    @property
-    def cxx_compiler(self) -> Path:
-        return self._compiler_dir / "clang++"
-
-    @property
-    def c_preprocessor(self) -> Path:
-        return self._compiler_dir / "clang-cpp"
-
-    @property
-    def linker(self) -> Path:
-        return self._compiler_dir / "ld.lld"
-
-    @property
-    def ar(self) -> Path:
-        return self._compiler_dir / "llvm-ar"
-
-    @property
-    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
-        if not self.project._setup_called:
-            self.project.fatal("essential_compiler_and_linker_flags should not be called in __init__, use setup()!",
-                fatalWhenPretending=True)
-        # However, when cross compiling we need at least -target=
-        result = ["-target", self.target_triple, "-pipe"]
-        # And usually also --sysroot
-        if self.project.needs_sysroot:
-            result.append("--sysroot=" + str(self.sysroot_dir))
-            if self.project.is_nonexistent_or_empty_dir(self.sysroot_dir):
-                self.project.fatal("Project", self.project.target, "needs a sysroot, but", self.sysroot_dir,
-                    " is empty or does not exist.")
-        result += ["-B" + str(self._compiler_dir)]
-
-        if self.target.is_mips(include_purecap=True):
-            result.append("-integrated-as")
-            result.append("-G0")  # no small objects in GOT optimization
-            # Floating point ABI:
-            if self.is_baremetal() or self.is_rtems():
-                # The baremetal driver doesn't add -fPIC for CHERI
-                if self.target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-                    result.append("-fPIC")
-                    # For now use soft-float to avoid compiler crashes
-                    result.append(MipsFloatAbi.SOFT.clang_float_flag())
-                else:
-                    # We don't have a softfloat library baremetal so always compile hard-float
-                    result.append(MipsFloatAbi.HARD.clang_float_flag())
-                    result.append("-fno-pic")
-                    result.append("-mno-abicalls")
-            else:
-                result.append(self.config.mips_float_abi.clang_float_flag())
-                # always use libc++
-                result.append("-stdlib=libc++")
-
-            # CPU flags (currently always BERI):
-            if self.is_cheribsd():
-                result.append("-mcpu=beri")
-            if self.target.is_cheri_purecap():
-                result.extend(["-mabi=purecap", "-mcpu=beri", "-cheri=" + self.config.mips_cheri_bits_str])
-                if self.config.subobject_bounds:
-                    result.extend(["-Xclang", "-cheri-bounds=" + str(self.config.subobject_bounds)])
-                    if self.config.subobject_debug:
-                        result.extend(["-mllvm", "-cheri-subobject-bounds-clear-swperm=2"])
-                if self.config.cheri_cap_table_abi:
-                    result.append("-cheri-cap-table-abi=" + self.config.cheri_cap_table_abi)
-            else:
-                assert self.target.is_mips(include_purecap=False)
-                # TODO: should we use -mcpu=cheri128?
-                result.extend(["-mabi=n64"])
-                if self.target.is_cheri_hybrid():
-                    result.append("-cheri=" + self.config.mips_cheri_bits_str)
-                    result.append("-mcpu=beri")
-                # always use libc++
-                result.append("-stdlib=libc++")
-        elif self.target.is_riscv(include_purecap=True):
-            assert self.target.cpu_architecture == CPUArchitecture.RISCV64
-            # Use the insane RISC-V arch string to enable CHERI
-            result.append("-march=" + self.riscv_arch_string)
-
-            if self.is_baremetal():
-                # Baremetal/FreeRTOS only supports softfloat
-                result.append("-mabi=" + self.riscv_softfloat_abi)
-            else:
-                result.append("-mabi=" + self.riscv_abi)
-
-            result.append("-mno-relax")  # Linker relaxations are not supported with clang+lld
-
-            if self.is_baremetal() or self.is_rtems():
-                # Both RTEMS and baremetal FreeRTOS are linked above 0x80000000
-                result.append("-mcmodel=medium")
-
-        else:
-            self.project.warning("Compiler flags might be wong, only native + MIPS checked so far")
-        return result
-
-    @property
-    def riscv_arch_string(self):
-        assert self.target.is_riscv(include_purecap=True)
-        # Use the insane RISC-V arch string to enable CHERI
-        if self.is_baremetal():
-            # Baremetal/FreeRTOS only supports softfloat
-            arch_string = "rv64imac"
-        else:
-            arch_string = "rv64imafdc"
-
-        if self.target.is_hybrid_or_purecap_cheri():
-            arch_string += "xcheri"
-        return arch_string  # XXX: any more extensions needed?
-
-    @property
-    def riscv_abi(self):
-        assert self.target.is_riscv(include_purecap=True)
-        if self.target.is_cheri_purecap():
-            return "l64pc128d"  # 64-bit double-precision hard-float + purecap
-        else:
-            return "lp64d"  # 64-bit double-precision hard-float
-
-    @property
-    def riscv_softfloat_abi(self):
-        assert self.target.is_riscv(include_purecap=True)
-        if self.target.is_cheri_purecap():
-            return "l64pc128"  # 64-bit soft-float purecap
-        else:
-            return "lp64"  # 64-bit soft-float
-
-
-class NativeTargetInfo(TargetInfo):
-    shortname = "native"
-
-    @property
-    def sdk_root_dir(self):
-        raise ValueError("Should not be called for native")
-
-    @property
-    def sysroot_dir(self):
-        raise ValueError("Should not be called for native")
-
-    @property
-    def cmake_system_name(self) -> str:
-        raise ValueError("Should not be called for native")
-
-    @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        raise ValueError("Should not be called for native")
-
-    @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        if config.use_sdk_clang_for_native_xbuild:
-            return ["llvm-native"]
-        return []  # use host tools -> no target needed
-
-    @property
-    def target_triple(self):
-        return getCompilerInfo(self.c_compiler).default_target
-
-    @property
-    def c_compiler(self) -> Path:
-        return self.host_c_compiler(self.config)
-
-    @property
-    def cxx_compiler(self) -> Path:
-        return self.host_cxx_compiler(self.config)
-
-    @property
-    def linker(self) -> Path:
-        # Should rarely be needed
-        return self.c_compiler.parent / "ld"
-
-    @property
-    def ar(self) -> Path:
-        # Should rarely be needed
-        return self.c_compiler.parent / "ar"
-
-    @property
-    def c_preprocessor(self) -> Path:
-        return self.host_c_preprocessor(self.config)
-
-    @classmethod
-    def is_freebsd(cls):
-        return OSInfo.IS_FREEBSD
-
-    @classmethod
-    def is_macos(cls):
-        return OSInfo.IS_MAC
-
-    @classmethod
-    def is_linux(cls):
-        return OSInfo.IS_LINUX
-
-    @property
-    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
-        return []  # default host compiler should not need any extra flags
-
-
-class FreeBSDTargetInfo(_ClangBasedTargetInfo):
-    shortname = "FreeBSD"
-    FREEBSD_VERSION = 13
-
-    @property
-    def cmake_system_name(self) -> str:
-        return "FreeBSD"
-
-    def _get_sdk_root_dir_lazy(self):
-        from ..projects.llvm import BuildUpstreamLLVM
-        return BuildUpstreamLLVM.getInstallDir(self.project, cross_target=CompilationTargets.NATIVE)
-
-    @property
-    def sysroot_dir(self):
-        return Path(self.sdk_root_dir, "sysroot-freebsd-" + str(self.target.cpu_architecture.value))
-
-    @classmethod
-    def is_freebsd(cls):
-        return True
-
-    @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["upstream-llvm"]
-
-    @classmethod
-    def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", include_version: bool):
-        common_suffix = "-unknown-freebsd"
-        if include_version:
-            common_suffix += str(cls.FREEBSD_VERSION)
-        # TODO: do we need any special cases here?
-        return target.cpu_architecture.value + common_suffix
-
-    @property
-    def target_triple(self):
-        return self.triple_for_target(self.target, self.config, include_version=True)
-
-    @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["freebsd"]
-
-    @property
-    def pkgconfig_dirs(self) -> str:
-        return str(self.sysroot_dir / "usr/local/lib/pkgconfig")
-
-    @property
-    def local_install_root(self) -> Path:
-        return self.sysroot_dir / "usr/local"
-
-    @property
-    def cmake_prefix_paths(self) -> list:
-        return [self.local_install_root, self.local_install_root / "libcheri/cmake"]
-
-    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
-        from ..projects.cross.cheribsd import BuildFreeBSD
-        return BuildFreeBSD.get_instance(self.project, cross_target=xtarget)
-
-
-class CheriBSDTargetInfo(FreeBSDTargetInfo):
-    shortname = "CheriBSD"
-    FREEBSD_VERSION = 13
-
-    def _get_sdk_root_dir_lazy(self):
-        return self.config.cheri_sdk_dir
-
-    @property
-    def sysroot_dir(self):
-        if is_jenkins_build():
-            # TODO: currently we need this to be unprefixed since that is what the archives created by jenkins look like
-            return self.config.cheri_sdk_dir / "sysroot"
-        return self.get_cheribsd_sysroot_path()
-
-    def get_cheribsd_sysroot_path(self, separate_cheri_sysroots=False) -> Path:
-        """
-        :param separate_cheri_sysroots: If true will use a separate sysroot dir for purecap and hybrid sysroots. The
-        default behaviour is to use the hybrid sysroot for both purecap and hybrid applications.
-        :return: The sysroot path
-        """
-        config = self.config
-        if self.target.is_mips(include_purecap=True):
-            return self._sysroot_path(config.cheri_sdk_dir, separate_cheri_sysroots,
-                purecap_prefix="-purecap", hybrid_prefix="", nocheri_name="-mips")
-        elif self.target.is_riscv(include_purecap=True):
-            return self._sysroot_path(config.cheri_sdk_dir, separate_cheri_sysroots,
-                purecap_prefix="-riscv64-purecap", hybrid_prefix="-riscv64-hybrid", nocheri_name="-riscv64")
-        elif self.target.is_x86_64():
-            return config.cheri_sdk_dir / "sysroot-x86_64"
-        else:
-            assert False, "Invalid cross_compile_target: " + str(self.target)
-
-    def _sysroot_path(self, root_dir: Path, separate_cheri_sysroots: bool, *, purecap_prefix: str,
-                      hybrid_prefix: str, nocheri_name: str):
-        if self.target.is_cheri_hybrid() or (self.target.is_cheri_purecap() and not separate_cheri_sysroots):
-            return root_dir / ("sysroot" + hybrid_prefix + self.target.cheri_config_suffix(self.config))
-        elif self.target.is_cheri_purecap():
-            assert separate_cheri_sysroots, "Logic error?"
-            return root_dir / ("sysroot" + purecap_prefix + self.target.cheri_config_suffix(self.config))
-        assert not self.target.is_hybrid_or_purecap_cheri()
-        return root_dir / ("sysroot" + nocheri_name)
-
-    @classmethod
-    def is_cheribsd(cls):
-        return True
-
-    @classmethod
-    def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", include_version):
-        if target.is_cheri_purecap():
-            # anything over 10 should use libc++ by default
-            if target.is_mips(include_purecap=True):
-                return "mips64-unknown-freebsd{}".format(cls.FREEBSD_VERSION if include_version else "")
-            elif target.is_riscv(include_purecap=True):
-                return "riscv64-unknown-freebsd{}".format(cls.FREEBSD_VERSION if include_version else "")
-            else:
-                assert False, "Unsuported purecap target" + str(cls)
-        return super().triple_for_target(target, config, include_version)
-
-    @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["llvm-native"]
-
-    @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        # Purecap (currently) builds against the hybrid sysroot:
-        if target.is_cheri_purecap():
-            if target.is_mips(include_purecap=True):
-                return ["cheribsd-mips-hybrid"]
-            elif target.is_riscv(include_purecap=True):
-                return ["cheribsd-riscv64-hybrid"]
-            else:
-                assert False, "Logic error"
-        # Otherwise pick the matching sysroot
-        return ["cheribsd"]
-
-    @property
-    def local_install_root(self) -> Path:
-        return self.sysroot_dir / "usr/local" / self.install_prefix_dirname
-
-    @property
-    def pkgconfig_dirs(self) -> str:
-        if self.target.is_cheri_purecap():
-            return str(self.local_install_root / "lib/pkgconfig") + ":" + \
-                   str(self.local_install_root / "libcheri/pkgconfig")
-        return str(self.sysroot_dir / "usr/lib/pkgconfig") + ":" + str(self.local_install_root / "lib/pkgconfig")
-
-    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
-        from ..projects.cross.cheribsd import BuildCHERIBSD
-        return BuildCHERIBSD.get_instance(self.project, cross_target=xtarget)
-
-
-# FIXME: This is completely wrong since cherios is not cheribsd, but should work for now:
-class CheriOSTargetInfo(CheriBSDTargetInfo):
-    shortname = "CheriOS"
-    FREEBSD_VERSION = 0
-
-    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
-        raise ValueError("Should not be called")
-
-    def _get_sdk_root_dir_lazy(self):
-        from ..projects.llvm import BuildCheriOSLLVM
-        return BuildCheriOSLLVM.getInstallDir(self.project, cross_target=CompilationTargets.NATIVE)
-
-    @property
-    def sysroot_dir(self):
-        return self.sdk_root_dir / "sysroot"
-
-    @classmethod
-    def is_cheribsd(cls):
-        return False
-
-    @classmethod
-    def is_freebsd(cls):
-        return False
-
-    @classmethod
-    def is_baremetal(cls):
-        return True
-
-    @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["cherios-llvm"]
-
-    @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        # Otherwise pick the matching sysroot
-        return ["cherios"]
-
-    @property
-    def pkgconfig_dirs(self) -> str:
-        return ""
-
-
-class RTEMSTargetInfo(_ClangBasedTargetInfo):
-    shortname = "RTEMS"
-    RTEMS_VERSION = 5
-
-    @property
-    def cmake_system_name(self) -> str:
-        return "rtems" + str(self.RTEMS_VERSION)
-
-    @classmethod
-    def is_rtems(cls):
-        return True
-
-    @classmethod
-    def is_newlib(cls):
-        return True
-
-    @property
-    def target_triple(self):
-        assert self.target.is_riscv(include_purecap=True)
-        return "riscv64-unknown-rtems" + str(self.RTEMS_VERSION)
-
-    @property
-    def sysroot_dir(self):
-        # Install to target triple as RTEMS' LLVM/Clang Driver expects
-        return self.sdk_root_dir / ("sysroot-" + self.target.generic_suffix) / self.target_triple
-
-    def _get_sdk_root_dir_lazy(self) -> Path:
-        return self.config.cheri_sdk_dir
-
-    @property
-    def _compiler_dir(self) -> Path:
-        return self.config.cheri_sdk_bindir
-
-    @property
-    def must_link_statically(self):
-        return True  # only static linking works
-
-    @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["llvm-native"]
-
-    @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        if target.is_riscv(include_purecap=True):
-            return ["newlib", "compiler-rt-builtins", "rtems"]
-        else:
-            assert False, "No support for building RTEMS for non RISC-V targets yet"
-
-    @property
-    def local_install_root(self) -> Path:
-        return self.sysroot_dir
-
-
-class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
-    shortname = "Newlib"
-
-    @property
-    def cmake_system_name(self) -> str:
-        return "Generic"  # Unknown platform, CMake expects the value to be set to Generic
-
-    def _get_sdk_root_dir_lazy(self) -> Path:
-        return self.config.cheri_sdk_dir
-
-    @property
-    def sysroot_dir(self) -> Path:
-        # Install to mips/cheri128 directory
-        if self.target.is_cheri_purecap([CPUArchitecture.MIPS64]):
-            suffix = "cheri" + self.config.mips_cheri_bits_str
-        else:
-            suffix = self.target.generic_suffix
-        return self.config.cheri_sdk_dir / "baremetal" / suffix / self.target_triple
-
-    @property
-    def must_link_statically(self):
-        return True  # only static linking works
-
-    @property
-    def _compiler_dir(self) -> Path:
-        # TODO: BuildUpstreamLLVM.installDir?
-        return self.config.cheri_sdk_bindir
-
-    @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["llvm-native"]  # upstream-llvm??
-
-    @property
-    def target_triple(self):
-        if self.target.is_mips(include_purecap=True):
-            if self.target.is_cheri_purecap():
-                return "mips64c{}-qemu-elf-purecap".format(self.config.mips_cheri_bits)
-            return "mips64-qemu-elf"
-        if self.target.is_riscv(include_purecap=True):
-            return "riscv64-unknown-elf"
-        assert False, "Other baremetal cases have not been tested yet!"
-
-    @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        return ["newlib", "compiler-rt-builtins"]
-
-    def required_compile_flags(self) -> typing.List[str]:
-        # Currently we need these flags to build anything against newlib baremetal
-        if self.target.is_mips(include_purecap=True):
-            return [
-                "-D_GNU_SOURCE=1",  # needed for the locale functions
-                "-D_POSIX_TIMERS=1", "-D_POSIX_MONOTONIC_CLOCK=1",  # pretend that we have a monotonic clock
-                ]
-        else:
-            return []
-
-    @property
-    def additional_executable_link_flags(self):
-        if self.target.is_mips(include_purecap=True):
-            """Additional linker flags that need to be passed when building an executable (e.g. custom linker script)"""
-            return ["-Wl,-T,qemu-malta.ld"]
-        return super().additional_executable_link_flags
-
-    @classmethod
-    def is_baremetal(cls):
-        return True
-
-    @classmethod
-    def is_newlib(cls):
-        return True
-
-    def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
-        from ..projects.cross.newlib import BuildNewlib
-        return BuildNewlib.get_instance(self.project, cross_target=xtarget)
-
-
 class Linkage(Enum):
     DEFAULT = "default"
     STATIC = "static"
@@ -801,7 +272,7 @@ class MipsFloatAbi(Enum):
         return self.value[1]
 
 
-_TgtInfo = typing.TypeVar('_TgtInfo', bound=TargetInfo)
+_TgtInfoSubclass = typing.TypeVar("_TgtInfoSubclass", bound=TargetInfo)
 
 
 class CrossCompileTarget(object):
@@ -809,8 +280,8 @@ class CrossCompileTarget(object):
     DEFAULT_CAP_TABLE_ABI = "pcrel"
     DEFAULT_SUBOBJECT_BOUNDS = "conservative"
 
-    def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "typing.Type[_TgtInfo]", *,
-                 is_cheri_purecap=False, is_cheri_hybrid=False, check_conflict_with: "CrossCompileTarget" = None,
+    def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "typing.Type[_TgtInfoSubclass]",
+                 *, is_cheri_purecap=False, is_cheri_hybrid=False, check_conflict_with: "CrossCompileTarget" = None,
                  non_cheri_target: "CrossCompileTarget" = None, hybrid_target: "CrossCompileTarget" = None,
                  purecap_target: "CrossCompileTarget" = None):
         if target_info_cls is None:
@@ -850,8 +321,8 @@ class CrossCompileTarget(object):
         return self.target_info_cls(self, project)
 
     def build_suffix(self, config: "CheriConfig"):
-        assert self is not CompilationTargets.NONE
-        if self is CompilationTargets.CHERIBSD_MIPS_PURECAP:
+        assert self.target_info_cls is not None
+        if self._is_cheri_purecap and self.target_info_cls.is_cheribsd() and self.is_mips(include_purecap=True):
             result = "-"  # only -128 for legacy build dir compat
         else:
             result = "-" + self.generic_suffix
@@ -882,7 +353,7 @@ class CrossCompileTarget(object):
 
     def is_native(self):
         """returns true if we building for the curent host"""
-        return self is CompilationTargets.NATIVE
+        return self.target_info_cls is not None and self.target_info_cls.is_native()
 
     def _check_arch(self, arch: CPUArchitecture, include_purecap: bool):
         if self.cpu_architecture is not arch:
@@ -969,60 +440,3 @@ class CrossCompileTarget(object):
 
     # def __eq__(self, other):
     #     raise NotImplementedError("Should not compare to CrossCompileTarget, use the is_foo() methods.")
-
-
-class CompilationTargets(object):
-    # noinspection PyTypeChecker
-    NONE = CrossCompileTarget("invalid", None, None)  # Placeholder  # pytype: disable=wrong-arg-types
-
-    # XXX: should probably not harcode x86_64 for native
-    NATIVE = CrossCompileTarget("native", CPUArchitecture.X86_64, NativeTargetInfo)
-
-    CHERIBSD_MIPS_NO_CHERI = CrossCompileTarget("mips-nocheri", CPUArchitecture.MIPS64, CheriBSDTargetInfo)
-    CHERIBSD_MIPS_HYBRID = CrossCompileTarget("mips-hybrid", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
-        is_cheri_hybrid=True, check_conflict_with=CHERIBSD_MIPS_NO_CHERI, non_cheri_target=CHERIBSD_MIPS_NO_CHERI)
-    CHERIBSD_MIPS_PURECAP = CrossCompileTarget("mips-purecap", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
-        is_cheri_purecap=True, check_conflict_with=CHERIBSD_MIPS_NO_CHERI, hybrid_target=CHERIBSD_MIPS_HYBRID)
-
-    CHERIBSD_RISCV_NO_CHERI = CrossCompileTarget("riscv64", CPUArchitecture.RISCV64, CheriBSDTargetInfo)
-    CHERIBSD_RISCV_HYBRID = CrossCompileTarget("riscv64-hybrid", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
-        is_cheri_hybrid=True, non_cheri_target=CHERIBSD_RISCV_NO_CHERI)
-    CHERIBSD_RISCV_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
-        is_cheri_purecap=True, hybrid_target=CHERIBSD_RISCV_HYBRID)
-    CHERIBSD_X86_64 = CrossCompileTarget("native", CPUArchitecture.X86_64, CheriBSDTargetInfo)
-
-    CHERIOS_MIPS_PURECAP = CrossCompileTarget("mips", CPUArchitecture.MIPS64, CheriOSTargetInfo, is_cheri_purecap=True)
-
-    # Baremetal targets
-    BAREMETAL_NEWLIB_MIPS64 = CrossCompileTarget("baremetal-mips", CPUArchitecture.MIPS64, NewlibBaremetalTargetInfo)
-    BAREMETAL_NEWLIB_MIPS64_PURECAP = CrossCompileTarget("baremetal-mips-purecap", CPUArchitecture.MIPS64,
-        NewlibBaremetalTargetInfo, is_cheri_purecap=True, non_cheri_target=BAREMETAL_NEWLIB_MIPS64)
-    BAREMETAL_NEWLIB_RISCV64 = CrossCompileTarget("baremetal-riscv64", CPUArchitecture.RISCV64,
-        NewlibBaremetalTargetInfo, check_conflict_with=BAREMETAL_NEWLIB_MIPS64)
-    BAREMETAL_NEWLIB_RISCV64_HYBRID = CrossCompileTarget("baremetal-riscv64-hybrid", CPUArchitecture.RISCV64,
-        NewlibBaremetalTargetInfo, is_cheri_hybrid=True, non_cheri_target=BAREMETAL_NEWLIB_RISCV64)
-    BAREMETAL_NEWLIB_RISCV64_PURECAP = CrossCompileTarget("baremetal-riscv64-purecap", CPUArchitecture.RISCV64,
-        NewlibBaremetalTargetInfo, is_cheri_purecap=True, hybrid_target=BAREMETAL_NEWLIB_RISCV64_HYBRID)
-    # FreeBSD targets
-    FREEBSD_MIPS = CrossCompileTarget("mips", CPUArchitecture.MIPS64, FreeBSDTargetInfo)
-    FREEBSD_RISCV = CrossCompileTarget("riscv", CPUArchitecture.RISCV64, FreeBSDTargetInfo)
-    FREEBSD_I386 = CrossCompileTarget("i386", CPUArchitecture.I386, FreeBSDTargetInfo)
-    FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, FreeBSDTargetInfo)
-    FREEBSD_X86_64 = CrossCompileTarget("x86_64", CPUArchitecture.X86_64, FreeBSDTargetInfo)
-
-    # RTEMS targets
-    RTEMS_RISCV64 = CrossCompileTarget("rtems-riscv64", CPUArchitecture.RISCV64, RTEMSTargetInfo)
-    RTEMS_RISCV64_PURECAP = CrossCompileTarget("rtems-riscv64-purecap", CPUArchitecture.RISCV64, RTEMSTargetInfo,
-        is_cheri_purecap=True, non_cheri_target=RTEMS_RISCV64)
-
-    # TODO: test RISCV
-    ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = [CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI,
-                                               CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI,
-                                               NATIVE]
-    ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS = [CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI, CHERIBSD_MIPS_PURECAP,
-                                           CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID,CHERIBSD_RISCV_NO_CHERI]
-    ALL_SUPPORTED_BAREMETAL_TARGETS = [BAREMETAL_NEWLIB_MIPS64, BAREMETAL_NEWLIB_MIPS64_PURECAP,
-                                       BAREMETAL_NEWLIB_RISCV64, BAREMETAL_NEWLIB_RISCV64_PURECAP]
-    ALL_SUPPORTED_RTEMS_TARGETS = [RTEMS_RISCV64, RTEMS_RISCV64_PURECAP]
-    ALL_SUPPORTED_CHERIBSD_AND_BAREMETAL_AND_HOST_TARGETS = ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS + \
-                                                            ALL_SUPPORTED_BAREMETAL_TARGETS

@@ -33,7 +33,8 @@ import time
 from collections import OrderedDict
 
 from .config.chericonfig import CheriConfig
-from .config.target_info import CompilationTargets, CrossCompileTarget
+from .config.target_info import CrossCompileTarget
+from .config.compilation_targets import CompilationTargets
 from .utils import *
 
 if typing.TYPE_CHECKING:   # no-combine

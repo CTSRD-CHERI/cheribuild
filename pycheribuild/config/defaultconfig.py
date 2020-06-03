@@ -33,7 +33,7 @@ from pathlib import Path
 
 from .chericonfig import CheriConfig
 from .loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader
-from .target_info import CompilationTargets
+from .compilation_targets import CompilationTargets
 from ..utils import defaultNumberOfMakeJobs
 
 
