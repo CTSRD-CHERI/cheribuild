@@ -226,14 +226,13 @@ class BuildQEMUBase(AutotoolsProject):
 class BuildQEMU(BuildQEMUBase):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="qemu-cheri",
                                force_branch=True)
-    default_targets = "cheri128-softmmu,cheri128magic-softmmu,mips64-softmmu," \
+    default_targets = "cheri128-softmmu,mips64-softmmu," \
                       "riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu," \
                       "x86_64-softmmu"
 
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options()
-        cls.magic128 = cls.add_bool_option("magic-128")
         # Turn on unaligned loads/stores by default
         cls.unaligned = cls.add_bool_option("unaligned", show_help=True, help="Permit un-aligned loads/stores",
                                             default=False)
@@ -250,8 +249,6 @@ class BuildQEMU(BuildQEMUBase):
         elif xtarget.is_mips(include_purecap=True):
             binary_name = "qemu-system-cheri"
             binary_name += caller.config.mips_cheri_bits_str
-            if cls.get_instance(caller, cross_target=CompilationTargets.NATIVE).magic128:
-                binary_name += "magic"
         else:
             raise ValueError("Invalid xtarget" + str(xtarget))
         return caller.config.qemu_bindir / os.getenv("QEMU_CHERI_PATH", binary_name)
