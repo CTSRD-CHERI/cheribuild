@@ -30,12 +30,13 @@
 import os
 import sys
 import time
+import typing
 from collections import OrderedDict
 
 from .config.chericonfig import CheriConfig
-from .config.target_info import CrossCompileTarget
 from .config.compilation_targets import CompilationTargets
-from .utils import *
+from .config.target_info import CrossCompileTarget
+from .utils import AnsiColour, coloured, fatalError, setEnv, statusUpdate, warningMessage
 
 if typing.TYPE_CHECKING:   # no-combine
     from .projects.project import SimpleProject   # no-combine

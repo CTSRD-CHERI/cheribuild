@@ -1,13 +1,9 @@
 import copy
 import sys
-
-try:
-    import typing
-except ImportError:
-    typing = {}
-import pytest
+import typing
 from pathlib import Path
-from pycheribuild.utils import *
+
+import pytest
 
 sys.path.append(str(Path(__file__).parent.parent))
 

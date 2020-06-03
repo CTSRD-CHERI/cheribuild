@@ -30,13 +30,14 @@
 import datetime
 import os
 import subprocess
+import typing
 from pathlib import Path
 
 from .cross.cheribsd import BuildCHERIBSD
 from .project import (CheriConfig, CMakeProject, DefaultInstallDir, GitRepository, SimpleProject,
                       TargetAliasWithDependencies)
 from ..targets import target_manager
-from ..utils import *
+from ..utils import includeLocalFile, OSInfo, setEnv, statusUpdate
 
 
 class BuildCheriBSDSdk(TargetAliasWithDependencies):
@@ -85,7 +86,7 @@ class BuildFreestandingSdk(SimpleProject):
         # Compile the cheridis helper (TODO: add it to the LLVM repo instead?)
         cheridis_src = includeLocalFile("files/cheridis.c")
         self.makedirs(self.config.cheri_sdk_bindir)
-        runCmd("cc", "-DLLVM_PATH=\"%s/\"" % str(self.config.cheri_sdk_bindir), "-x", "c", "-",
+        self.run_cmd("cc", "-DLLVM_PATH=\"%s/\"" % str(self.config.cheri_sdk_bindir), "-x", "c", "-",
                "-o", self.config.cheri_sdk_bindir / "cheridis", input=cheridis_src)
 
     def process(self):
@@ -148,7 +149,7 @@ class StartCheriSDKShell(SimpleProject):
         with setEnv(MANPATH=new_man_path, PATH=new_path):
             statusUpdate("Starting CHERI SDK shell... ", end="")
             try:
-                runCmd(shell)
+                self.run_cmd(shell)
             except subprocess.CalledProcessError as e:
                 if e.returncode == 130:
                     return  # User pressed Ctrl+D to exit shell, don't print an error

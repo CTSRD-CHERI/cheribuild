@@ -29,13 +29,14 @@
 #
 
 import os
-import threading
 import shutil
 import subprocess
-
+import threading
+import typing
 from pathlib import Path
+
 from .config.chericonfig import CheriConfig
-from .utils import *
+from .utils import AnsiColour, fatalError, printCommand, runCmd, statusUpdate, ThreadJoiner, warningMessage
 
 
 class FileSystemUtils(object):

@@ -28,14 +28,16 @@
 # SUCH DAMAGE.
 #
 
-from .utils import *
-from pathlib import Path
-from collections import OrderedDict
 import io
 import os
 import shlex
 import stat
 import sys
+import typing
+from collections import OrderedDict
+from pathlib import Path
+
+from .utils import commandline_to_str, statusUpdate, warningMessage
 
 
 class MtreeEntry(object):

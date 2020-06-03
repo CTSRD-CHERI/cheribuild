@@ -29,9 +29,10 @@
 #
 import os
 import shutil
+import typing
 
 from .project import AutotoolsProject, DefaultInstallDir, GitRepository, Path
-from ..utils import *
+from ..utils import getCompilerInfo
 
 
 class BuildGnuBinutils(AutotoolsProject):

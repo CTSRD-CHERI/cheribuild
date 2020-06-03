@@ -39,14 +39,16 @@ import sys
 # https://stackoverflow.com/questions/3536620/how-to-change-a-module-variable-from-another-module
 from .config.loader import JsonAndCommandLineConfigLoader, JsonAndCommandLineConfigOption
 from .config.defaultconfig import DefaultCheriConfig, CheribuildAction
-from .utils import *
-from .utils import have_working_internet_connection
+from .utils import (printCommand, statusUpdate, fatalError, coloured, AnsiColour, init_global_config,
+                    get_program_version, commandline_to_str, have_working_internet_connection)
 from .targets import target_manager
 from .projects.project import SimpleProject
+
 # noinspection PyUnresolvedReferences
 from .projects import *  # make sure all projects are loaded so that target_manager gets populated
 # noinspection PyUnresolvedReferences
 from .projects.cross import *  # make sure all projects are loaded so that target_manager gets populated
+
 from pathlib import Path
 
 DIRS_TO_CHECK_FOR_UPDATES = [Path(__file__).parent.parent]

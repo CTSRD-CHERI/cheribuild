@@ -27,8 +27,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import typing
+
 from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Path, Project
-from ..utils import *
+from ..utils import get_program_version, OSInfo, setEnv, statusUpdate, warningMessage
 
 
 class BuildElftoolchain(Project):

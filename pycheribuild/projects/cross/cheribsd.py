@@ -34,6 +34,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import typing
 from enum import Enum
 from pathlib import Path
 
@@ -43,7 +44,8 @@ from ..project import (CheriConfig, CompilationTargets, CPUArchitecture, Default
 from ...config.loader import ComputedDefaultValue
 from ...config.target_info import CrossCompileTarget, MipsFloatAbi
 from ...targets import target_manager
-from ...utils import *
+from ...utils import (classproperty, commandline_to_str, getCompilerInfo, includeLocalFile, is_jenkins_build, OSInfo,
+                      printCommand, runCmd, statusUpdate, ThreadJoiner, warningMessage)
 
 
 def default_kernel_config(config: CheriConfig, project: SimpleProject) -> str:

@@ -39,6 +39,7 @@ import subprocess
 import sys
 import threading
 import time
+import typing
 from collections import OrderedDict
 from enum import Enum
 from pathlib import Path
@@ -50,7 +51,10 @@ from ..config.loader import ComputedDefaultValue, ConfigLoaderBase, ConfigOption
 from ..config.target_info import CPUArchitecture, CrossCompileTarget, Linkage, TargetInfo
 from ..filesystemutils import FileSystemUtils
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
-from ..utils import *
+from ..utils import (AnsiColour, check_call_handle_noexec, classproperty, coloured, commandline_to_str, CompilerInfo,
+                     fatalError, find_free_port, get_program_version, get_version_output, getCompilerInfo,
+                     includeLocalFile, is_jenkins_build, OSInfo, popen_handle_noexec, printCommand, runCmd,
+                     SocketAndPort, statusUpdate, ThreadJoiner, warningMessage)
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine

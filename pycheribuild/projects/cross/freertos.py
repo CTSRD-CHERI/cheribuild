@@ -33,7 +33,7 @@ import os
 
 from .crosscompileproject import CrossCompileAutotoolsProject
 from ..project import CheriConfig, CompilationTargets, DefaultInstallDir, GitRepository
-from ...utils import *
+from ...utils import getCompilerInfo, setEnv
 
 
 class BuildFreeRTOS(CrossCompileAutotoolsProject):

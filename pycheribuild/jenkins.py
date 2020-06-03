@@ -34,6 +34,7 @@ import pprint
 import shutil
 import subprocess
 import sys
+import typing
 # noinspection PyUnresolvedReferences
 from pathlib import Path
 
@@ -46,7 +47,8 @@ from .projects.cross import *  # make sure all projects are loaded so that targe
 from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import SimpleProject, Project
 from .targets import target_manager, Target, MultiArchTargetAlias, SimpleTargetAlias
-from .utils import *
+from .utils import (runCmd, statusUpdate, fatalError, setEnv, init_global_config, warningMessage, get_program_version,
+                    ThreadJoiner, commandline_to_str, OSInfo)
 
 EXTRACT_SDK_TARGET = "extract-sdk"
 

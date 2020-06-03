@@ -27,10 +27,11 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import typing
 
 from .cheritrace import BuildCheriTrace
 from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Path, Project
-from ..utils import *
+from ..utils import OSInfo, runCmd, ThreadJoiner
 
 
 def gnuStepInstallInstructions():

@@ -29,15 +29,17 @@
 #
 import io
 import os
+import shutil
 import tempfile
+import typing
 
 from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDGFE, BuildFreeBSDWithDefaultOptions
 from .cross.gdb import BuildGDB
 from .project import (CheriConfig, CompilationTargets, ComputedDefaultValue, CPUArchitecture, CrossCompileTarget, Path,
                       SimpleProject)
-from ..targets import target_manager
 from ..mtree import MtreeFile
-from ..utils import *
+from ..targets import target_manager
+from ..utils import AnsiColour, classproperty, coloured, includeLocalFile, OSInfo, setEnv, statusUpdate, warningMessage
 
 
 # Notes:
@@ -134,7 +136,7 @@ class _BuildDiskImageBase(SimpleProject):
                     stripped_path = self.tmpdir / path_in_target
                     self.makedirs(stripped_path.parent)
                     self.run_cmd(self.sdk_bindir / "llvm-strip", file, "-o", stripped_path, print_verbose_only=True)
-                    # runCmd("file", stripped_path)
+                    # self.run_cmd("file", stripped_path)
                     file = stripped_path
 
         if not self.config.quiet:
@@ -174,15 +176,15 @@ class _BuildDiskImageBase(SimpleProject):
                     "--convert-links", "--execute=robots = off",  # ignore robots.txt files, don't download robots.txt files"
                     "--no-verbose",
                     ]
-        runCmd(wget_cmd + what, cwd=where)
+        self.run_cmd(wget_cmd + what, cwd=where)
 
     def _wget_fetch_dir(self, what, where):
         if self.wget_via_tmp:
             with tempfile.TemporaryDirectory(prefix="cheribuild-wget-") as td:
                 # Speed things up by using whatever we've got locally, too
-                runCmd("rsync", "-avvP", str(where) + "/.", td + "/.")
+                self.run_cmd("rsync", "-avvP", str(where) + "/.", td + "/.")
                 self._wget_fetch(what, td)
-                runCmd("rsync", "-avvP", "--no-times", "--delete", td + "/.", str(where) + "/.")
+                self.run_cmd("rsync", "-avvP", "--no-times", "--delete", td + "/.", str(where) + "/.")
         else:
             self._wget_fetch(what, where)
 
@@ -282,8 +284,8 @@ class _BuildDiskImageBase(SimpleProject):
                                        str(authorizedKeys) + "')?"):
                         self.installFile(self.tmpdir / "root/.ssh/authorized_keys", authorizedKeys)
                         # SSHD complains and rejects all connections if /root or /root/.ssh is not 0700
-                        runCmd("chmod", "0700", authorizedKeys.parent.parent, authorizedKeys.parent)
-                        runCmd("chmod", "0600", authorizedKeys)
+                        self.run_cmd("chmod", "0700", authorizedKeys.parent.parent, authorizedKeys.parent)
+                        self.run_cmd("chmod", "0600", authorizedKeys)
 
         if self.include_gdb:
             cross_target = self.source_project.get_crosscompile_target(self.config)
@@ -394,7 +396,7 @@ class _BuildDiskImageBase(SimpleProject):
             if self.is_x86:
                 # x86: -t ffs -f 200000 -s 8g -o version=2,bsize=32768,fsize=4096
                 extra_flags = ["-t", "ffs", "-o", "version=2,bsize=32768,fsize=4096"]
-            runCmd([self.makefs_cmd] + debug_options + extra_flags + [
+            self.run_cmd([self.makefs_cmd] + debug_options + extra_flags + [
                 "-Z",  # sparse file output
                 # For the minimal image 2mb of free space and 1k inodes should be enough
                 # For the larger images we need a lot more space (kyua needs around 400MB and the test might create
@@ -439,21 +441,21 @@ class _BuildDiskImageBase(SimpleProject):
                     self.warning("qemu-img command was not found! Make sure to build target qemu first.")
             # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
             if not self.config.quiet and qemu_img_command.exists():
-                runCmd(qemu_img_command, "info", self.disk_image_path)
+                self.run_cmd(qemu_img_command, "info", self.disk_image_path)
             if self.useQCOW2:
                 if not qemu_img_command.exists():
                     self.fatal("Cannot create QCOW2 image without qemu-img command!")
                 # create a qcow2 version from the raw image:
                 raw_img = self.disk_image_path.with_suffix(".raw")
-                runCmd("mv", "-f", self.disk_image_path, raw_img)
-                runCmd(qemu_img_command, "convert",
+                self.run_cmd("mv", "-f", self.disk_image_path, raw_img)
+                self.run_cmd(qemu_img_command, "convert",
                        "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
                        "-O", "qcow2",  # convert to qcow2 format
                        raw_img,  # input file
                        self.disk_image_path)  # output file
                 self.deleteFile(raw_img, print_verbose_only=True)
                 if self.config.verbose:
-                    runCmd(qemu_img_command, "info", self.disk_image_path)
+                    self.run_cmd(qemu_img_command, "info", self.disk_image_path)
 
     def copyFromRemoteHost(self):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
@@ -585,15 +587,15 @@ class _BuildDiskImageBase(SimpleProject):
 
         for keyType in ("rsa", "dsa", "ecdsa", "ed25519"):
             # SSH1 protocol uses just /etc/ssh/ssh_host_key without the type
-            privateKeyName = "ssh_host_key" if keyType == "rsa1" else "ssh_host_" + keyType + "_key"
-            privateKey = sshDir / privateKeyName
-            publicKey = sshDir / (privateKeyName + ".pub")
-            if not privateKey.is_file():
-                runCmd("ssh-keygen", "-t", keyType,
-                       "-N", "",  # no passphrase
-                       "-f", str(privateKey))
-            self.add_file_to_image(privateKey, base_directory=self.extraFilesDir, mode="0600")
-            self.add_file_to_image(publicKey, base_directory=self.extraFilesDir, mode="0644")
+            private_key_name = "ssh_host_key" if keyType == "rsa1" else "ssh_host_" + keyType + "_key"
+            private_key = sshDir / private_key_name
+            public_key = sshDir / (private_key_name + ".pub")
+            if not private_key.is_file():
+                self.run_cmd("ssh-keygen", "-t", keyType,
+                    "-N", "",  # no passphrase
+                    "-f", str(private_key))
+            self.add_file_to_image(private_key, base_directory=self.extraFilesDir, mode="0600")
+            self.add_file_to_image(public_key, base_directory=self.extraFilesDir, mode="0644")
 
 
 def _default_disk_image_name(config: CheriConfig, directory: Path, project: SimpleProject, img_prefix=""):
@@ -813,11 +815,11 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                 if i.attributes.get("contents", None) == "./bin/cheribsdbox":
                     i.attributes["contents"] = cheribsdbox_path
 
-        # runCmd(["sh", "-c", "du -ah " + shlex.quote(str(self.tmpdir)) + " | sort -h"])
+        # self.run_cmd(["sh", "-c", "du -ah " + shlex.quote(str(self.tmpdir)) + " | sort -h"])
         if self.config.debug_output:
             self.mtree.write(sys.stderr)
         if self.config.verbose:
-            runCmd("du", "-ah", self.tmpdir)
+            self.run_cmd("du", "-ah", self.tmpdir)
         super().make_rootfs_image(rootfs_img)
 
 
