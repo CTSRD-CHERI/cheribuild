@@ -2530,23 +2530,28 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
                     self._force_clean = True
 
         required_clean_counter = self._parse_require_clean_build_counter()
-        clean_counter_in_build_dir = None  # typing.Optional[int]
+        clean_counter_in_build_dir = None  # type: typing.Optional[int]
         last_clean_counter_path = self._last_clean_counter_path()
         if required_clean_counter is not None:
             # Check if the last clean build had a smaller counter than the current required on and if so perform a clean
             # build and increment the value in the build directory.
-            try:
-                clean_counter_in_build_dir = int(last_clean_counter_path.read_text().strip())
-                if clean_counter_in_build_dir < required_clean_counter:
-                    self.info("Forcing full rebuild since clean counter in build dir (", clean_counter_in_build_dir,
-                        ") is less than required minimum ", required_clean_counter, sep="")
-                    self._force_clean = True
-                else:
-                    self.verbose_print("Not forcing clean build since clean counter in build dir",
-                        clean_counter_in_build_dir, "is >= required minimum", required_clean_counter)
-            except Exception as e:
-                self.warning("Could not parse", last_clean_counter_path, "-> assuming clean build is required.", e)
+            if not last_clean_counter_path.is_file():
+                self.verbose_print("Forcing full rebuild since clean counter", last_clean_counter_path,
+                    "does not exist yet")
                 self._force_clean = True
+            else:
+                try:
+                    clean_counter_in_build_dir = int(last_clean_counter_path.read_text().strip())
+                    if clean_counter_in_build_dir < required_clean_counter:
+                        self.info("Forcing full rebuild since clean counter in build dir (", clean_counter_in_build_dir,
+                            ") is less than required minimum ", required_clean_counter, sep="")
+                        self._force_clean = True
+                    else:
+                        self.verbose_print("Not forcing clean build since clean counter in build dir",
+                            clean_counter_in_build_dir, "is >= required minimum", required_clean_counter)
+                except Exception as e:
+                    self.warning("Could not parse", last_clean_counter_path, "-> assuming clean build is required.", e)
+                    self._force_clean = True
 
         # run the rm -rf <build dir> in the background
         cleaningTask = self.clean() if (self._force_clean or self.config.clean) else ThreadJoiner(None)
