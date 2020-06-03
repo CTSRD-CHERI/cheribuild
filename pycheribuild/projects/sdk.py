@@ -27,16 +27,16 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import datetime
 import os
 import subprocess
-import datetime
+from pathlib import Path
 
 from .cross.cheribsd import BuildCHERIBSD
-from .project import *
+from .project import (CheriConfig, CMakeProject, DefaultInstallDir, GitRepository, SimpleProject,
+                      TargetAliasWithDependencies)
 from ..targets import target_manager
 from ..utils import *
-
-from pathlib import Path
 
 
 class BuildCheriBSDSdk(TargetAliasWithDependencies):

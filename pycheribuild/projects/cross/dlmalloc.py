@@ -28,7 +28,8 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import *
+from .crosscompileproject import (commandline_to_str, CrossCompileProject, DefaultInstallDir, GitRepository,
+                                  MakeCommandKind)
 from ...utils import setEnv
 
 

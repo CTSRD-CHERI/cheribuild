@@ -28,9 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import *
-from ...utils import classproperty
-from pathlib import Path
+from .crosscompileproject import CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
 from .openssl import BuildFettOpenSSL
 from .zlib import BuildFettZlib
 

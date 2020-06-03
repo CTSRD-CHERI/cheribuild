@@ -28,7 +28,8 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import *
+from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
+                                  GitRepository)
 
 
 class MRS(CrossCompileCMakeProject):

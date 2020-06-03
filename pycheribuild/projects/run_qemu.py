@@ -27,17 +27,25 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import datetime
+import os
+import shutil
 import socket
+import sys
+import typing
 
-from .build_qemu import BuildQEMU, BuildCheriOSQEMU
+from .build_qemu import BuildCheriOSQEMU, BuildQEMU
 from .cherios import BuildCheriOS
-from .cross.bbl import *
+from .cross.cheribsd import BuildCHERIBSD, BuildCheriBsdMfsKernel, BuildFreeBSD
 from .cross.freertos import BuildFreeRTOS
+from .cross.gdb import BuildGDB
 from .cross.rtems import BuildRtems
-from .disk_image import *
-from .project import *
-from ..qemu_utils import QemuOptions, qemu_supports_9pfs, riscv_bios_arguments
-from ..utils import OSInfo
+from .disk_image import (BuildCheriBSDDiskImage, BuildFreeBSDGFEDiskImage, BuildFreeBSDImage,
+                         BuildFreeBSDWithDefaultOptionsDiskImage)
+from .project import CheriConfig, commandline_to_str, CompilationTargets, CPUArchitecture, Path, SimpleProject
+from ..qemu_utils import qemu_supports_9pfs, QemuOptions, riscv_bios_arguments
+from ..targets import target_manager
+from ..utils import AnsiColour, classproperty, coloured, find_free_port, OSInfo
 
 
 def get_default_ssh_forwarding_port(addend: int):
@@ -137,7 +145,7 @@ class LaunchQEMUBase(SimpleProject):
             monitor_port = self.useTelnet
             monitor_options = ["-monitor", "telnet:127.0.0.1:" + str(monitor_port) + ",server,nowait"]
             if not self.is_port_available(monitor_port):
-                warningMessage("Cannot connect QEMU montitor to port", monitor_port)
+                self.warning("Cannot connect QEMU montitor to port", monitor_port)
                 self.print_port_usage(monitor_port)
                 if self.query_yes_no("Will connect the QEMU monitor to stdio instead. Continue?"):
                     monitor_options = []
@@ -166,7 +174,8 @@ class LaunchQEMUBase(SimpleProject):
 
         user_network_options = ""
         smb_dir_count = 0
-        have_9pfs_support = (self.crosscompile_target.is_native() or self.crosscompile_target.is_any_x86()) and qemu_supports_9pfs(self.qemuBinary)
+        have_9pfs_support = (self.crosscompile_target.is_native() or
+                             self.crosscompile_target.is_any_x86()) and qemu_supports_9pfs(self.qemuBinary)
         # Only default to providing the smb mount if smbd exists
         have_smbfs_support = self._provide_src_via_smb and shutil.which("smbd")
 
@@ -192,9 +201,9 @@ class LaunchQEMUBase(SimpleProject):
                 user_network_options += str(directory) + share_name_option + ("@ro" if readonly else "")
                 guest_cmd = coloured(AnsiColour.yellow, "mkdir -p {target} && mount_smbfs -I 10.0.2.4 -N "
                                      "//10.0.2.4/{share_name} {target}".format(target=target, share_name=share_name))
-                statusUpdate("Providing ", coloured(AnsiColour.green, str(directory)),
-                             coloured(AnsiColour.cyan, " over SMB to the guest. Use `"), guest_cmd,
-                             coloured(AnsiColour.cyan, "` to mount it"), sep="")
+                self.info("Providing ", coloured(AnsiColour.green, str(directory)),
+                    coloured(AnsiColour.cyan, " over SMB to the guest. Use `"), guest_cmd,
+                    coloured(AnsiColour.cyan, "` to mount it"), sep="")
             if have_9pfs_support:
                 if smb_dir_count > 1:
                     return  # FIXME: 9pfs panics if there is more than one device
@@ -205,7 +214,7 @@ class LaunchQEMUBase(SimpleProject):
                 guest_cmd = coloured(AnsiColour.yellow,
                     "mkdir -p {tgt} && mount -t virtfs -o trans=virtio,version=9p2000.L {share_name} {tgt}".format(
                         tgt=target, share_name=share_name))
-                statusUpdate("Providing ", coloured(AnsiColour.green, str(directory)),
+                self.info("Providing ", coloured(AnsiColour.green, str(directory)),
                     coloured(AnsiColour.cyan, " over 9pfs to the guest. Use `"), guest_cmd,
                     coloured(AnsiColour.cyan, "` to mount it"), sep="")
 
@@ -229,8 +238,8 @@ class LaunchQEMUBase(SimpleProject):
             user_network_args=user_network_options, trap_on_unrepresentable=self.config.trap_on_unrepresentable,
             debugger_on_cheri_trap=self.config.debugger_on_cheri_trap, add_virtio_rng=self._add_virtio_rng)
         qemu_command += self._projectSpecificOptions + self._after_disk_options + monitor_options \
-                        + logfile_options + self.extra_qemu_options
-        statusUpdate("About to run QEMU with image", self.disk_image, "and kernel", self.currentKernel)
+            + logfile_options + self.extra_qemu_options
+        self.info("About to run QEMU with image", self.disk_image, "and kernel", self.currentKernel)
 
         if self.config.wait_for_debugger or self.config.debugger_in_tmux_pane:
             gdb_socket_placeholder = find_free_port()
@@ -238,13 +247,13 @@ class LaunchQEMUBase(SimpleProject):
             self.info("QEMU is waiting for GDB to attach (using `target remote :{}`)."
                       " Once connected enter 'continue\\n' to continue booting".format(gdb_port))
 
-            def gdb_command(main_binary, breakpoint=None, extra_binary=None) -> str:
+            def gdb_command(main_binary, bp=None, extra_binary=None) -> str:
                 gdb_cmd = BuildGDB.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/gdb"
                 # Set the sysroot to ensure that the .debug file is loaded from $SYSROOT/usr/lib/debug/boot/kernel
                 result = [gdb_cmd, main_binary, "--init-eval-command=set sysroot " + str(self.rootfs_path)]
                 # Once the file has been loaded set a breakpoint on panic() and connect to the remote host
-                if breakpoint:
-                    result.append("--eval-command=break " + breakpoint)
+                if bp:
+                    result.append("--eval-command=break " + bp)
                 result.append("--eval-command=target remote localhost:{}".format(gdb_port))
                 result.append("--eval-command=continue")
                 if extra_binary:
@@ -315,15 +324,14 @@ class LaunchQEMUBase(SimpleProject):
         # We want stdout/stderr here even when running with --quiet
         self.run_cmd(qemu_command, stdout=sys.stdout, stderr=sys.stderr, give_tty_control=True)
 
-    @staticmethod
-    def print_port_usage(port: int):
+    def print_port_usage(self, port: int):
         print("Port", port, "usage information:")
         if OSInfo.IS_FREEBSD:
-            runCmd("sockstat", "-P", "tcp", "-p", str(port))
+            self.run_cmd("sockstat", "-P", "tcp", "-p", str(port))
         elif OSInfo.IS_LINUX:
-            runCmd("sh", "-c", "netstat -tulpne | grep \":" + str(port) + "\"")
+            self.run_cmd("sh", "-c", "netstat -tulpne | grep \":" + str(port) + "\"")
         elif OSInfo.IS_MAC:
-            runCmd("lsof", "-nP", "-iTCP:" + str(port))
+            self.run_cmd("lsof", "-nP", "-iTCP:" + str(port))
 
     @staticmethod
     def is_port_available(port: int):
@@ -371,7 +379,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             self.needsRemoteKernelCopy = False
 
     def _copy_kernel_image_from_remote_host(self):
-        statusUpdate("Copying kernel image from FreeBSD build machine")
+        self.info("Copying kernel image from FreeBSD build machine")
         if not self.remoteKernelPath:
             self.fatal("Path to the remote disk image is not set, option '--", self.target, "/",
                        "remote-kernel-path' must be set to a path that scp understands",
@@ -390,7 +398,6 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
 class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
     doNotAddToTargets = True
     _source_class = None
-    _bbl_class = BuildBBLNoPayload
 
     @classproperty
     def supported_architectures(cls):
@@ -501,7 +508,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
         if not self.disk_image.exists():
             if self.query_yes_no("CheriOS disk image is missing. Would you like to create a zero-filled 1MB image?"):
                 size_flag = "bs=128m" if OSInfo.IS_MAC else "bs=128M"
-                runCmd("dd", "if=/dev/zero", "of=" + str(self.disk_image), size_flag, "count=1")
+                self.run_cmd("dd", "if=/dev/zero", "of=" + str(self.disk_image), size_flag, "count=1")
         super().process()
 
 
@@ -527,6 +534,7 @@ class LaunchRtemsQEMU(LaunchQEMUBase):
 
     def process(self):
         super().process()
+
 
 class LaunchFreeRTOSQEMU(LaunchQEMUBase):
     target = "run-freertos"

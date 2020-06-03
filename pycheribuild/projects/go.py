@@ -28,9 +28,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
-from pathlib import Path
-from .project import *
-from ..utils import *
+from .project import CheriConfig, CrossCompileTarget, DefaultInstallDir, GitRepository, Path, Project
+from ..utils import ThreadJoiner
 
 
 class BuildGo(Project):

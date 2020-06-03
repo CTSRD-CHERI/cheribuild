@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .project import *
+from .project import AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository
 
 
 # Not really autotools but same sequence of commands (other than the script being call bootstrap instead of configure)

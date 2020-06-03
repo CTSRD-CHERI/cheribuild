@@ -28,9 +28,10 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import *
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
+from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
 
 
 class BuildSimpleCheriBenchmarks(CrossCompileCMakeProject):

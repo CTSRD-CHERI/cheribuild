@@ -30,12 +30,13 @@
 import os
 import sys
 
-from .crosscompileproject import *
+from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
+                                  GitRepository)
 from ..build_qemu import BuildQEMU
 from ..llvm import BuildCheriLLVM
 from ..project import ReuseOtherProjectDefaultTargetRepository
 from ..run_qemu import LaunchCheriBSD
-from ...utils import OSInfo, setEnv, runCmd, warningMessage, commandline_to_str
+from ...utils import commandline_to_str, OSInfo, runCmd, setEnv, warningMessage
 
 
 # A base class to set the default installation directory

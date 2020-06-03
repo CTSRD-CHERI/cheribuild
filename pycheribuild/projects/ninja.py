@@ -27,8 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .project import *
-from ..utils import runCmd
+from .project import DefaultInstallDir, GitRepository, Project
 
 
 class BuildNinja(Project):
@@ -39,7 +38,7 @@ class BuildNinja(Project):
         pass
 
     def compile(self, **kwargs):
-        runCmd(self.sourceDir / "configure.py", "--bootstrap", cwd=self.buildDir)
+        self.run_cmd(self.sourceDir / "configure.py", "--bootstrap", cwd=self.buildDir)
 
     def install(self, **kwargs):
         self.installFile(self.buildDir / "ninja", self.installDir / "bin/ninja")

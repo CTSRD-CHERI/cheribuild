@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import *
+from .crosscompileproject import BuildType, CheriConfig, CrossCompileCMakeProject, DefaultInstallDir, GitRepository
 
 
 class SNMalloc(CrossCompileCMakeProject):

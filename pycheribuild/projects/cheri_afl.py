@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 from .cross.cheribsd import BuildCHERIBSD
-from .project import *
+from .project import CompilationTargets, DefaultInstallDir, GitRepository, MakeCommandKind, Project
 
 
 class BuildAflCheriNinja(Project):

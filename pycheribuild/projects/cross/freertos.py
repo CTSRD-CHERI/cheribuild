@@ -31,9 +31,10 @@
 #
 import os
 
-from .crosscompileproject import *
-from ..project import *
+from .crosscompileproject import CrossCompileAutotoolsProject
+from ..project import CheriConfig, CompilationTargets, DefaultInstallDir, GitRepository
 from ...utils import *
+
 
 class BuildFreeRTOS(CrossCompileAutotoolsProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/FreeRTOS-mirror",

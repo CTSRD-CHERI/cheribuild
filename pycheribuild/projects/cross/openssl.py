@@ -28,8 +28,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import *
 import shutil
+
+from .crosscompileproject import CrossCompileProject, DefaultInstallDir, GitRepository
 
 
 class BuildOpenSSL(CrossCompileProject):

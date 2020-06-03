@@ -28,8 +28,8 @@
 # SUCH DAMAGE.
 #
 
-from .project import *
-from ..utils import runCmd, OSInfo
+from .project import AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository
+from ..utils import OSInfo
 
 
 # Install latest version of valgrind from source
@@ -48,5 +48,5 @@ class BuildValgrind(AutotoolsProject):
             # self.configureArgs.append("--enable-only64bit")
 
     def configure(self, **kwargs):
-        runCmd(self.sourceDir / "autogen.sh", cwd=self.sourceDir)
+        self.run_cmd(self.sourceDir / "autogen.sh", cwd=self.sourceDir)
         super().configure()

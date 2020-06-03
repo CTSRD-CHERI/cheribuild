@@ -28,8 +28,8 @@
 # SUCH DAMAGE.
 #
 
+from ..project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..cherisim import BuildCheriSim
-from ..project import *
 from ..sail import BuildSailCheriMips
 
 

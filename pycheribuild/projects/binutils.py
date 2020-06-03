@@ -30,7 +30,7 @@
 import os
 import shutil
 
-from .project import *
+from .project import AutotoolsProject, DefaultInstallDir, GitRepository, Path
 from ..utils import *
 
 

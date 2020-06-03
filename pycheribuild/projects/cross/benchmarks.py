@@ -30,10 +30,11 @@
 import stat
 import tempfile
 
-from .crosscompileproject import *
+from .crosscompileproject import (CompilationTargets, CrossCompileProject, DefaultInstallDir, GitRepository,
+                                  MakeCommandKind, Path)
 from ..project import ExternallyManagedSourceRepository
 from ...config.target_info import CPUArchitecture
-from ...utils import setEnv, commandline_to_str, is_jenkins_build
+from ...utils import commandline_to_str, is_jenkins_build, setEnv
 
 
 class BuildMibench(CrossCompileProject):

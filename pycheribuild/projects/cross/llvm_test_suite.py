@@ -28,7 +28,8 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import *
+from .crosscompileproject import (BuildType, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
+                                  GitRepository, Path)
 from ..llvm import BuildCheriLLVM
 from ...config.loader import ComputedDefaultValue
 

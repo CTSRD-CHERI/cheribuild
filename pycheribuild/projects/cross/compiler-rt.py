@@ -28,11 +28,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import *
+from .crosscompileproject import CheriConfig, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir
 from ..llvm import BuildCheriLLVM
 from ..project import ReuseOtherProjectDefaultTargetRepository
-from ...utils import classproperty
-from ...utils import setEnv, commandline_to_str, is_jenkins_build
+from ...utils import classproperty, is_jenkins_build
 
 
 class BuildCompilerRt(CrossCompileCMakeProject):

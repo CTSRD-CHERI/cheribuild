@@ -30,7 +30,8 @@
 
 import os
 
-from .crosscompileproject import *
+from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
+                                  DefaultInstallDir, GitRepository)
 from ...utils import is_case_sensitive_dir
 
 

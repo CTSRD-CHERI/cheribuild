@@ -29,8 +29,8 @@
 #
 import tempfile
 
-from .project import *
 from .llvm import BuildLLVMMonoRepoBase
+from .project import ComputedDefaultValue, GitRepository
 from ..utils import OSInfo
 
 

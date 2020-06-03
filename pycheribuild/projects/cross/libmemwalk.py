@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 
-from .crosscompileproject import *
+from .crosscompileproject import BuildType, CheriConfig, CrossCompileCMakeProject, DefaultInstallDir, GitRepository
 
 
 class BuildLibMemwalk(CrossCompileCMakeProject):

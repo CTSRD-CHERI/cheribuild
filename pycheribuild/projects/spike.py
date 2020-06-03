@@ -31,7 +31,8 @@ import sys
 
 from .cross.bbl import BuildBBLNoPayload
 from .cross.cheribsd import BuildCheriBsdMfsKernel
-from .project import *
+from .project import (AutotoolsProject, BuildType, commandline_to_str, CompilationTargets, DefaultInstallDir,
+                      GitRepository, MakeCommandKind, SimpleProject)
 
 
 class BuildCheriSpike(AutotoolsProject):

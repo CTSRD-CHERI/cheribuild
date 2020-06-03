@@ -30,9 +30,10 @@
 
 import os
 import shutil
+from pathlib import Path
 
-from .project import *
-from ..utils import setEnv, OSInfo
+from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
+from ..utils import OSInfo, setEnv
 
 SMB_OUT_OF_SOURCE_BUILD_WORKS = False
 

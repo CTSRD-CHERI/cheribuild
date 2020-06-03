@@ -27,10 +27,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .project import *
-from ..utils import *
-
 from pathlib import Path
+
+from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
+from ..utils import OSInfo
 
 
 class BuildMakefsOnLinux(Project):
@@ -68,6 +68,6 @@ class BuildMakefsOnLinux(Project):
 
     def process(self):
         if OSInfo.IS_FREEBSD:
-            statusUpdate("Skipping makefs as this is only needed on Linux hosts")
+            self.info("Skipping makefs as this is only needed on Linux hosts")
         else:
             super().process()

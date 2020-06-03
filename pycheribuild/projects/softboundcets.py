@@ -29,8 +29,9 @@
 #
 import shutil
 
-from .project import *
 from .llvm import BuildLLVMMonoRepoBase
+from .project import DefaultInstallDir, GitRepository
+
 
 # install_to_soaap_dir = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "soaap",
 #                                            as_string="$INSTALL_ROOT/soaap")

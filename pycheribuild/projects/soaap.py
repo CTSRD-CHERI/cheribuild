@@ -27,10 +27,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .project import *
 from .llvm import BuildLLVMSplitRepoBase
+from .project import CMakeProject, GitRepository
 from ..config.loader import ComputedDefaultValue
-
 
 install_to_soaap_dir = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "soaap",
                                             as_string="$INSTALL_ROOT/soaap")

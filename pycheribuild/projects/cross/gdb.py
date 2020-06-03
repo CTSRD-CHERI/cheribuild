@@ -30,8 +30,9 @@
 import sys
 import typing
 
-from .crosscompileproject import *
-from ...utils import runCmd, statusUpdate, OSInfo
+from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
+                                  GitRepository, Linkage, MakeCommandKind, Path)
+from ...utils import OSInfo, runCmd, statusUpdate
 
 
 class TemporarilyRemoveProgramsFromSdk(object):

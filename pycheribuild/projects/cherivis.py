@@ -29,7 +29,7 @@
 #
 
 from .cheritrace import BuildCheriTrace
-from .project import *
+from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Path, Project
 from ..utils import *
 
 

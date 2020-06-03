@@ -28,7 +28,8 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import *
+from .crosscompileproject import (BuildType, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
+                                  GitRepository)
 from ..project import ReuseOtherProjectRepository
 
 

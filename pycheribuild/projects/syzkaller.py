@@ -35,9 +35,9 @@ from urllib.parse import urlparse
 
 from .build_qemu import BuildQEMU
 from .cross.cheribsd import BuildCHERIBSD
-from .cross.crosscompileproject import *
+from .cross.crosscompileproject import CrossCompileProject
 from .disk_image import BuildCheriBSDDiskImage
-from .project import *
+from .project import CheriConfig, CompilationTargets, DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject
 from ..utils import *
 
 

@@ -31,11 +31,12 @@ import os
 import shlex
 import shutil
 from subprocess import CalledProcessError
-from typing import Tuple, Dict, Any, Union
+from typing import Any, Dict, Tuple, Union
 
-from .project import *
+from .project import (AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Path, Project,
+                      SimpleProject)
 from ..targets import target_manager
-from ..utils import runCmd, setEnv, coloured, AnsiColour, commandline_to_str, get_program_version, OSInfo
+from ..utils import AnsiColour, coloured, commandline_to_str, get_program_version, OSInfo, runCmd, setEnv
 
 
 class OpamMixin(object):

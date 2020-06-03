@@ -27,8 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .project import *
-from ..utils import *
+from .project import BuildType, CheriConfig, CMakeProject, DefaultInstallDir, GitRepository, SimpleProject
 
 
 # doesn't seem to be part of distro packages
@@ -74,9 +73,8 @@ class StartKDevelop(SimpleProject):
         self.addRequiredSystemTool("qtpaths")
 
     def process(self):
-        kdevelopBinary = BuildKDevelop.getInstallDir(self) / "bin/start-kdevelop.py"
-        if not kdevelopBinary.exists():
-            self.dependencyError("KDevelop is missing:", kdevelopBinary,
-                                 install_instructions="Run `cheribuild.py kdevelop` or `cheribuild.py " +
-                                                     self.target + " -d`.")
-        runCmd(kdevelopBinary, "--ps")
+        kdevelop_binary = BuildKDevelop.getInstallDir(self) / "bin/start-kdevelop.py"
+        if not kdevelop_binary.exists():
+            self.dependencyError("KDevelop is missing:", kdevelop_binary,
+                install_instructions="Run `cheribuild.py kdevelop` or `cheribuild.py " + self.target + " -d`.")
+        self.run_cmd(kdevelop_binary, "--ps")

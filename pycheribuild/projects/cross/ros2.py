@@ -24,8 +24,10 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import *
 import shlex
+
+from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
+
 
 class BuildRos2(CrossCompileCMakeProject):
     project_name = "ros2"

@@ -30,9 +30,9 @@
 #
 import tempfile
 
-from .crosscompileproject import *
-from ..project import *
-from ...utils import OSInfo, runCmd
+from .crosscompileproject import CrossCompileAutotoolsProject, Path
+from ..project import (CheriConfig, CompilationTargets, DefaultInstallDir, GitRepository, MakeCommandKind)
+from ...utils import commandline_to_str, OSInfo, runCmd
 
 
 class BuildNewlib(CrossCompileAutotoolsProject):

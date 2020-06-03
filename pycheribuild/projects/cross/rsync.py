@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import *
+from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
 
 
 class BuildRsync(CrossCompileAutotoolsProject):

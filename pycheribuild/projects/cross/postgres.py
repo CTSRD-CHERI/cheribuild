@@ -29,7 +29,8 @@
 #
 import re
 
-from .crosscompileproject import *
+from .crosscompileproject import (CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository,
+                                  MakeCommandKind)
 from ...utils import OSInfo
 
 

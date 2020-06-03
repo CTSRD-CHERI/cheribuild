@@ -29,9 +29,11 @@
 #
 import tempfile
 
-from .crosscompileproject import *
+from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
+                                  CrossCompileCMakeProject, CrossCompileProject, DefaultInstallDir, GitRepository,
+                                  Linkage, MakeCommandKind, Path)
 from ...config.loader import ComputedDefaultValue
-from ...utils import commandline_to_str, runCmd, OSInfo, fatalError, getCompilerInfo
+from ...utils import commandline_to_str, fatalError, getCompilerInfo, OSInfo, runCmd
 
 
 # This class is used to build qtbase and all of qt5

@@ -27,8 +27,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import *
 import re
+
+from .crosscompileproject import (CheriConfig, commandline_to_str, CrossCompileAutotoolsProject, DefaultInstallDir,
+                                  GitRepository, MakeCommandKind)
 from .openssl import BuildFettOpenSSL
 
 

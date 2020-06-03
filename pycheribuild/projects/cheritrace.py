@@ -27,7 +27,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .project import *
+from .project import CMakeProject, GitRepository, DefaultInstallDir, CheriConfig
 
 
 class BuildCheriTrace(CMakeProject):

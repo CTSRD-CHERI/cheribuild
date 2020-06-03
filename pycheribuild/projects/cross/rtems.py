@@ -31,8 +31,8 @@
 #
 import os
 
-from .crosscompileproject import *
-from ..project import *
+from .crosscompileproject import CrossCompileProject
+from ..project import CheriConfig, CompilationTargets, DefaultInstallDir, GitRepository
 from ...utils import setEnv
 
 

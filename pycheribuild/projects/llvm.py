@@ -29,11 +29,12 @@
 #
 import os
 import sys
+import typing
 
-from .project import *
+from .project import BuildType, CMakeProject, CompilationTargets, DefaultInstallDir, GitRepository
+from ..config.compilation_targets import CheriBSDTargetInfo
 from ..config.loader import ComputedDefaultValue
-from ..config.target_info import CheriBSDTargetInfo
-from ..utils import *
+from ..utils import CompilerInfo, getCompilerInfo, OSInfo, ThreadJoiner
 
 
 class BuildLLVMBase(CMakeProject):

@@ -29,9 +29,10 @@
 #
 import shutil
 
-from .crosscompileproject import *
-from ..softboundcets import BuildSoftBoundCETS
+from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileCMakeProject,
+                                  DefaultInstallDir, GitRepository)
 from ..effectivesan import BuildEffectiveSan
+from ..softboundcets import BuildSoftBoundCETS
 from ...utils import getCompilerInfo, OSInfo
 
 

@@ -27,9 +27,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import *
+from .crosscompileproject import CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository, Linkage
 from .qt5 import BuildQtWebkit
-from ...utils import runCmd, OSInfo
+from ...utils import OSInfo, runCmd
 
 
 class BuildSQLite(CrossCompileAutotoolsProject):

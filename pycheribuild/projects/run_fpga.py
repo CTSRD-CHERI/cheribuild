@@ -28,11 +28,11 @@
 # SUCH DAMAGE.
 #
 import tempfile
-
-from .project import *
 from pathlib import Path
-from .cherisim import BuildCheriSim, BuildBeriCtl
 from typing import Optional
+
+from .cherisim import BuildBeriCtl, BuildCheriSim
+from .project import CheriConfig, commandline_to_str, CompilationTargets, SimpleProject
 
 
 class LaunchFPGABase(SimpleProject):
