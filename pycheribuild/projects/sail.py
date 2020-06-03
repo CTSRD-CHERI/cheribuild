@@ -30,7 +30,6 @@
 import os
 import shlex
 import shutil
-from abc import ABCMeta, abstractmethod
 from subprocess import CalledProcessError
 from typing import Any, Dict, Tuple, Union
 
@@ -40,13 +39,13 @@ from ..targets import target_manager
 from ..utils import AnsiColour, coloured, commandline_to_str, get_program_version, OSInfo, runCmd, setEnv
 
 
-class OpamMixin(object, metaclass=ABCMeta):
+class OpamMixin(object):
     config = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         assert isinstance(self, SimpleProject)
-        self.add_required_system_tool("opam", homebrew="opam", cheribuild_target="opam-2.0")
+        self.add_required_system_tool("opam", homebrew="opam", cheribuild_target="opam-2.0")  # pytype: disable=attribute-error
         self.required_ocaml_version = "4.06.1"
         self.__using_correct_switch = False
         self.__ignore_switch_version = False
@@ -106,21 +105,11 @@ class OpamMixin(object, metaclass=ABCMeta):
             else:
                 raise
 
-    def get_default_cwd(self) -> Path:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def run_cmd(self, *args, **kwargs): ...
-
-    @abstractmethod
-    def run_shell_script(self, *args, **kwargs): ...
-
-    @abstractmethod
-    def add_required_system_tool(self, *args, **kwargs): ...
-
     def _run_in_ocaml_env_prepare(self, cwd=None) -> "Tuple[Dict[Any, Union[Union[str, int], Any]], Union[str, Any]]":
         if cwd is None:
-            cwd = self.get_default_cwd()
+            # noinspection PyUnresolvedReferences
+            cwd = self.sourceDir if getattr(self, "sourceDir") else "/"  # pytype: disable=attribute-error
+
         self._ensure_correct_switch()
         opam_env = dict(GIT_TEMPLATE_DIR="",  # see https://github.com/ocaml/opam/issues/3493
                         OPAMROOT=self.opamroot, CCACHE_DISABLE=1,  # https://github.com/ocaml/opam/issues/3395
@@ -128,14 +117,14 @@ class OpamMixin(object, metaclass=ABCMeta):
         if Path(self.opam_binary).is_absolute():
             opam_env["OPAM_USER_PATH_RO"] = Path(self.opam_binary).parent
         if not (self.opamroot / "opam-init").exists():
-            self.run_cmd(self.opam_binary, "init", "--root=" + str(self.opamroot), "--no-setup", cwd="/", env=opam_env)
+            self.run_cmd(self.opam_binary, "init", "--root=" + str(self.opamroot), "--no-setup", cwd="/", env=opam_env)  # pytype: disable=attribute-error
         return opam_env, cwd
 
     def run_in_ocaml_env(self, command: str, cwd=None, print_verbose_only=False, **kwargs):
         opam_env, cwd = self._run_in_ocaml_env_prepare(cwd=cwd)
         script = "eval `opam config env`\n" + command + "\n"
         assert isinstance(self, Project)
-        return self.run_shell_script(script, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)
+        return self.run_shell_script(script, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)  # pytype: disable=attribute-error
 
     def run_command_in_ocaml_env(self, command: list, cwd=None, print_verbose_only=False, **kwargs):
         self._ensure_correct_switch()
@@ -144,7 +133,7 @@ class OpamMixin(object, metaclass=ABCMeta):
         if command[0] != self.opam_binary:
             command = [self.opam_binary, "exec", "--root=" + str(self.opamroot), "--"] + command
         assert isinstance(self, SimpleProject)
-        return self.run_cmd(command, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)
+        return self.run_cmd(command, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)  # pytype: disable=attribute-error
 
 
 class Opam2(SimpleProject):
@@ -182,10 +171,7 @@ class BuildBubbleWrap(AutotoolsProject):
         self.configureArgs.append("--with-bash-completion-dir=no")
 
 
-class ProjectUsingOpam(Project, OpamMixin):
-    def get_default_cwd(self) -> Path:
-        return self.sourceDir
-
+class ProjectUsingOpam(OpamMixin, Project):
     doNotAddToTargets = True
 
 
@@ -293,7 +279,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
         self.run_make("install")
 
 
-class RunSailShell(SimpleProject, OpamMixin):
+class RunSailShell(OpamMixin, SimpleProject):
     target = "sail-env"
     repository = GitRepository("https://github.com/CTSRD-CHERI/sail-cheri-mips")
     dependencies = ["sail"]
