@@ -46,7 +46,7 @@ class BuildOpenSSH(CrossCompileAutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.addRequiredSystemTool("autoreconf", homebrew="autoconf")
+        self.add_required_system_tool("autoreconf", homebrew="autoconf")
 
     def configure(self, **kwargs):
         self.add_configure_env_arg("AR", self.target_info.ar)

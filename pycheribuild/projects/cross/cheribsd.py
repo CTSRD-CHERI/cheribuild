@@ -1484,7 +1484,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         # GNU tar doesn't accept --include (and doesn't handle METALOG). bsdtar appears to be available
         # on FreeBSD and macOS by default. On Linux it is not always installed by default.
         self.bsdtar_cmd = "bsdtar"
-        self.addRequiredSystemTool("bsdtar", cheribuild_target="bsdtar", apt="libarchive-tools")
+        self.add_required_system_tool("bsdtar", cheribuild_target="bsdtar", apt="libarchive-tools")
         self.install_dir = self.target_info.sdk_root_dir
 
     def fixSymlinks(self):

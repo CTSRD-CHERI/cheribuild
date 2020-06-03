@@ -49,7 +49,7 @@ class BuildCheriSpike(AutotoolsProject):
 
     def __init__(self, config):
         super().__init__(config)
-        self.addRequiredSystemTool("dtc", apt="device-tree-compiler", homebrew="dtc")
+        self.add_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
 
     def setup(self):
         super().setup()

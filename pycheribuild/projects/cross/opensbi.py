@@ -59,9 +59,9 @@ class BuildOpenSBI(Project):
 
     def __init__(self, config):
         super().__init__(config)
-        self.addRequiredSystemTool("dtc", apt="device-tree-compiler", homebrew="dtc")
+        self.add_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
         if OSInfo.IS_MAC:
-            self.addRequiredSystemTool("greadlink", homebrew="coreutils")
+            self.add_required_system_tool("greadlink", homebrew="coreutils")
             self.make_args.set(READLINK="greadlink")
 
     def setup(self):

@@ -568,7 +568,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         assert not self._setup_called, "Should only be called once"
         self._setup_called = True
 
-    def addRequiredSystemTool(self, executable: str, install_instructions=None, freebsd: str=None, apt: str=None,
+    def add_required_system_tool(self, executable: str, install_instructions=None, freebsd: str=None, apt: str=None,
                               zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
         if not install_instructions:
             install_instructions = OSInfo.install_instructions(executable, False, freebsd=freebsd, zypper=zypper, apt=apt,
@@ -577,7 +577,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def _addRequiredPkgConfig(self, package: str, install_instructions=None, freebsd: str=None, apt: str = None,
                               zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
-        self.addRequiredSystemTool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config")
+        self.add_required_system_tool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config")
         if not install_instructions:
             install_instructions = OSInfo.install_instructions(package, True, freebsd=freebsd, zypper=zypper, apt=apt,
                                                                homebrew=homebrew, cheribuild_target=cheribuild_target)
@@ -755,7 +755,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 message += "See " + logfile.name + " for details."
             raise SystemExit(message)
 
-    def dependencyError(self, *args, install_instructions: str = None):
+    def dependency_error(self, *args, install_instructions: str = None):
         self._systemDepsChecked = True  # make sure this is always set
         if callable(install_instructions):
             install_instructions = install_instructions()
@@ -770,7 +770,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if not shutil.which(str(tool)):
                 if install_instructions is None or install_instructions == "":
                     install_instructions = "Try installing `" + tool + "` using your system package manager."
-                self.dependencyError("Required program", tool, "is missing!", install_instructions=install_instructions)
+                self.dependency_error("Required program", tool, "is missing!", install_instructions=install_instructions)
         for (package, instructions) in self.__requiredPkgConfig.items():
             if not shutil.which("pkg-config"):
                 # error should already have printed above
@@ -779,10 +779,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             printCommand(check_cmd, print_verbose_only=True)
             exit_code = subprocess.call(check_cmd)
             if exit_code != 0:
-                self.dependencyError("Required library", package, "is missing!", install_instructions=instructions)
+                self.dependency_error("Required library", package, "is missing!", install_instructions=instructions)
         for (header, instructions) in self.__requiredSystemHeaders.items():
             if not Path("/usr/include", header).exists() and not Path("/usr/local/include", header).exists():
-                self.dependencyError("Required C header", header, "is missing!", install_instructions=instructions)
+                self.dependency_error("Required C header", header, "is missing!", install_instructions=instructions)
         self._systemDepsChecked = True
 
     def process(self):
@@ -916,7 +916,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             cmd.extend(map(str, self.config.test_extra_args))
         runCmd(cmd)
 
-    def runShellScript(self, script, shell="sh", **kwargs):
+    def run_shell_script(self, script, shell="sh", **kwargs):
         print_args = dict(**kwargs)
         if "captureOutput" in print_args:
             del print_args["captureOutput"]
@@ -1047,27 +1047,27 @@ class MakeOptions(object):
                 # Using /usr/bin/make on macOS breaks compilation DB creation with bear since SIP prevents it from
                 # injecting shared libraries into any process that is installed as part of the system.
                 # Prefer homebrew-installed gmake if it is available
-                self.__project.addRequiredSystemTool("gmake", homebrew="make")
+                self.__project.add_required_system_tool("gmake", homebrew="make")
                 return "gmake"
             else:
-                self.__project.addRequiredSystemTool("make")
+                self.__project.add_required_system_tool("make")
                 return "make"
         elif self.kind == MakeCommandKind.GnuMake:
             if OSInfo.IS_LINUX and not shutil.which("gmake"):
                 statusUpdate("Could not find `gmake` command, assuming `make` is GNU make")
-                self.__project.addRequiredSystemTool("make")
+                self.__project.add_required_system_tool("make")
                 return "make"
             else:
-                self.__project.addRequiredSystemTool("gmake", homebrew="make")
+                self.__project.add_required_system_tool("gmake", homebrew="make")
                 return "gmake"
         elif self.kind == MakeCommandKind.BsdMake:
             if OSInfo.IS_FREEBSD:
                 return "make"
             else:
-                self.__project.addRequiredSystemTool("bmake", homebrew="bmake", cheribuild_target="bmake")
+                self.__project.add_required_system_tool("bmake", homebrew="bmake", cheribuild_target="bmake")
                 return "bmake"
         elif self.kind == MakeCommandKind.Ninja:
-            self.__project.addRequiredSystemTool("ninja", homebrew="ninja", apt="ninja-build")
+            self.__project.add_required_system_tool("ninja", homebrew="ninja", apt="ninja-build")
             return "ninja"
         else:
             if self.__command is not None:
@@ -1083,7 +1083,7 @@ class MakeOptions(object):
         assert isinstance(self.__command_args, list)
         # noinspection PyProtectedMember
         if not Path(value).is_absolute():
-            self.__project.addRequiredSystemTool(value, install_instructions=install_instructions)
+            self.__project.add_required_system_tool(value, install_instructions=install_instructions)
         self.__can_pass_j_flag = can_pass_j_flag
 
     @property
@@ -1852,10 +1852,10 @@ class Project(SimpleProject):
             if self.make_args.is_gnu_make and False:
                 # use compiledb instead of bear for gnu make
                 # https://blog.jetbrains.com/clion/2018/08/working-with-makefiles-in-clion-using-compilation-db/
-                self.addRequiredSystemTool("compiledb", install_instructions="Run `pip2 install --user compiledb``")
+                self.add_required_system_tool("compiledb", install_instructions="Run `pip2 install --user compiledb``")
                 self._compiledb_tool = "compiledb"
             else:
-                self.addRequiredSystemTool("bear", install_instructions="Run `cheribuild.py bear`")
+                self.add_required_system_tool("bear", install_instructions="Run `cheribuild.py bear`")
                 self._compiledb_tool = "bear"
         self._force_clean = False
         self._preventAssign = True
@@ -2415,7 +2415,7 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
             self.run_cmd(
                 [cheribuild_path / "beri-fpga-bsd-boot.py"] + basic_args + ["-vvvvv", "runbench"] + runbench_args)
         else:
-            self.runShellScript(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
+            self.run_shell_script(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
 
     _check_install_dir_conflict = True
 
@@ -2577,7 +2577,7 @@ class CMakeProject(Project):
     def __init__(self, config, generator=Generator.Ninja):
         super().__init__(config)
         self.configureCommand = os.getenv("CMAKE_COMMAND", "cmake")
-        self.addRequiredSystemTool("cmake", homebrew="cmake", zypper="cmake", apt="cmake", freebsd="cmake")
+        self.add_required_system_tool("cmake", homebrew="cmake", zypper="cmake", apt="cmake", freebsd="cmake")
         # allow a -G flag in cmake-options to override the default generator (e.g. use makefiles for CLion)
         custom_generator = next((x for x in self.cmakeOptions if x.startswith("-G")), None)
         if custom_generator:
@@ -2792,7 +2792,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
                 expectedStr = ".".join(map(str, self.__minimum_cmake_version))
                 instrs = "Use your package manager to install CMake > " + expectedStr + \
                          " or run `cheribuild.py cmake` to install the latest version locally"
-                self.dependencyError("CMake version", versionStr, "is too old (need at least", expectedStr + ")",
+                self.dependency_error("CMake version", versionStr, "is too old (need at least", expectedStr + ")",
                                      install_instructions=instrs)
 
     @staticmethod

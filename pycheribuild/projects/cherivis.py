@@ -64,10 +64,10 @@ class BuildCheriVis(Project):
     # TODO: allow external cheritrace
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.addRequiredSystemTool("clang")
-        self.addRequiredSystemTool("clang++")
+        self.add_required_system_tool("clang")
+        self.add_required_system_tool("clang++")
         if OSInfo.IS_LINUX or OSInfo.IS_FREEBSD:
-            self.addRequiredSystemTool("gnustep-config", install_instructions=gnuStepInstallInstructions)
+            self.add_required_system_tool("gnustep-config", install_instructions=gnuStepInstallInstructions)
         self.gnustepMakefilesDir = None  # type: typing.Optional[Path]
         if OSInfo.IS_MAC:
             self.make_args.set_command("xcodebuild", can_pass_j_flag=False,
@@ -100,7 +100,7 @@ class BuildCheriVis(Project):
         self.gnustepMakefilesDir = Path(configOutput.decode("utf-8").strip())
         commonDotMake = self.gnustepMakefilesDir / "common.make"
         if not commonDotMake.is_file():
-            self.dependencyError("gnustep-config binary exists, but", commonDotMake, "does not exist!",
+            self.dependency_error("gnustep-config binary exists, but", commonDotMake, "does not exist!",
                                  install_instructions=gnuStepInstallInstructions())
         # TODO: set ADDITIONAL_LIB_DIRS?
         # http://www.gnustep.org/resources/documentation/Developer/Make/Manual/gnustep-make_1.html#SEC17

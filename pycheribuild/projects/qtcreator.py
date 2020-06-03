@@ -37,7 +37,7 @@ class BuildQtCreator(Project):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.addRequiredSystemTool("qmake")
+        self.add_required_system_tool("qmake")
         self.configureCommand = "qmake"
         self.configureArgs.extend(["-r", self.sourceDir / "qtcreator.pro"])
         self.configureEnvironment["LLVM_INSTALL_DIR"] = str(self.config.cheri_sdk_dir)

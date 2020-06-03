@@ -54,8 +54,8 @@ class BuildLibObjC2(CMakeProject):
             "-DGNUSTEP_INSTALL_TYPE=NONE",
         ])
         # TODO: require libdispatch?
-        self.addRequiredSystemTool("clang")
-        self.addRequiredSystemTool("clang++")
+        self.add_required_system_tool("clang")
+        self.add_required_system_tool("clang++")
 
 
 class BuildGnuStep_Make(AutotoolsProject):
@@ -90,7 +90,7 @@ class GnuStepModule(AutotoolsProject):
 
     def configure(self):
         if not shutil.which("gnustep-config"):
-            self.dependencyError("gnustep-config should have been installed in the last build step!")
+            self.dependency_error("gnustep-config should have been installed in the last build step!")
             gnustep_libdir = Path("/invalid/path")
         else:
             gnustep_libdir = self.run_cmd("gnustep-config", "--variable=GNUSTEP_SYSTEM_LIBRARIES",

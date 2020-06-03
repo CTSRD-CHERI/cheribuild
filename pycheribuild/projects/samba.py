@@ -92,7 +92,7 @@ class BuildSamba(Project):
         #  version 4.9 "--without-json-audit",
         self.configureArgs.append("--without-json")
         if OSInfo.IS_MAC:
-            self.addRequiredSystemTool("/usr/local/opt/krb5/bin/kinit", homebrew="krb5")
+            self.add_required_system_tool("/usr/local/opt/krb5/bin/kinit", homebrew="krb5")
             # TODO: brew --prefix krb5
             self.configureArgs.extend(["--with-system-mitkrb5", "/usr/local/opt/krb5"])
 

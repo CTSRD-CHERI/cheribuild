@@ -116,7 +116,7 @@ class LaunchQEMUBase(SimpleProject):
         elif xtarget.is_any_x86() or xtarget.is_aarch64():
             # Use the system QEMU instead of CHERI QEMU (for now)
             # Note: x86_64 can be either CHERI QEMU or system QEMU:
-            self.addRequiredSystemTool("qemu-system-" + self.qemu_options.qemu_arch_sufffix)
+            self.add_required_system_tool("qemu-system-" + self.qemu_options.qemu_arch_sufffix)
             self.qemuBinary = Path(
                 shutil.which("qemu-system-" + self.qemu_options.qemu_arch_sufffix) or "/could/not/find/qemu")
         else:
@@ -128,10 +128,10 @@ class LaunchQEMUBase(SimpleProject):
     def process(self):
         assert self.qemuBinary is not None
         if not self.qemuBinary.exists():
-            self.dependencyError("QEMU is missing:", self.qemuBinary,
+            self.dependency_error("QEMU is missing:", self.qemuBinary,
                                  install_instructions="Run `cheribuild.py qemu` or `cheribuild.py run -d`.")
         if self.currentKernel is not None and not self.currentKernel.exists():
-            self.dependencyError("Kernel is missing:", self.currentKernel,
+            self.dependency_error("Kernel is missing:", self.currentKernel,
                                  install_instructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
 
         if self._forwardSSHPort and not self.is_port_available(self.sshForwardingPort):
@@ -169,7 +169,7 @@ class LaunchQEMUBase(SimpleProject):
         if self.cvtrace:
             logfile_options += ["-cheri-trace-format", "cvtrace"]
         if self.disk_image is not None and not self.disk_image.exists():
-            self.dependencyError("Disk image is missing:", self.disk_image,
+            self.dependency_error("Disk image is missing:", self.disk_image,
                 install_instructions="Run `cheribuild.py disk-image` or `cheribuild.py run -d`.")
 
         user_network_options = ""

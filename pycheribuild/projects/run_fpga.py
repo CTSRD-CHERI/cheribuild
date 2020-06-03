@@ -54,7 +54,7 @@ class LaunchFPGABase(SimpleProject):
     def process(self):
         assert self.currentKernel is not None
         if self.currentKernel is not None and not self.currentKernel.exists():
-            self.dependencyError("Kernel is missing:", self.currentKernel,
+            self.dependency_error("Kernel is missing:", self.currentKernel,
                                  install_instructions="Run `cheribuild.py cheribsd` or `cheribuild.py run -d`.")
         sim_project = BuildCheriSim.get_instance(self, cross_target=CompilationTargets.NATIVE)
         cherilibs_dir = Path(sim_project.sourceDir, "cherilibs")
@@ -91,7 +91,7 @@ export PATH="$PATH:{cherilibs_dir}/tools:{cherilibs_dir}/tools/debug"
 exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv {subcmd_and_args}
             """.format(env_setup_script=env_setup_script, cherilibs_dir=cherilibs_dir, basic_args=commandline_to_str(basic_args),
                        subcmd_and_args=commandline_to_str(subcmd_and_args), cheribuild_path=cheribuild_path)
-        self.runShellScript(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
+        self.run_shell_script(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
 
 
 class LaunchCheriBSDOnFGPA(LaunchFPGABase):

@@ -95,7 +95,7 @@ class _BuildDiskImageBase(SimpleProject):
         self.manifestFile = None  # type: typing.Optional[Path]
         self.extraFiles = []  # type: typing.List[Path]
         self.autoPrefixes = ["usr/local/", "opt/", "extra/"]
-        self.addRequiredSystemTool("ssh-keygen")
+        self.add_required_system_tool("ssh-keygen")
 
         self.makefs_cmd = None  # type: typing.Optional[Path]
         self.mkimg_cmd = None  # type: typing.Optional[Path]

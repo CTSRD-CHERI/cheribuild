@@ -46,7 +46,7 @@ class BuildCheriTrace(CMakeProject):
 
     def configure(self):
         if not self.llvmConfigPath.is_file():
-            self.dependencyError("Could not find llvm-config from CHERI LLVM.",
+            self.dependency_error("Could not find llvm-config from CHERI LLVM.",
                                  install_instructions="Build target 'llvm' first.")
         self.add_cmake_options(
             LLVM_CONFIG=self.llvmConfigPath,

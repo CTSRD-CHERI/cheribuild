@@ -378,7 +378,7 @@ runspec -c {spec_config_name} --noreportable --action build {benchmark_list}
 echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --iterations 1 --make_bundle {spec_config_name} {benchmark_list}
 """.format(benchmark_list=commandline_to_str(self.benchmark_list), spec_config_name=self.config_name)
         # TODO: add extra files to the bundle instead of copying later? https://www.spec.org/cpu2006/Docs/runspec.html#makebundle
-        self.runShellScript(script, shell="bash", cwd=self.buildDir / "spec")
+        self.run_shell_script(script, shell="bash", cwd=self.buildDir / "spec")
 
     def install(self, **kwargs):
         pass

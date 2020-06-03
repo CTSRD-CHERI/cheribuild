@@ -79,16 +79,16 @@ class BuildQEMUBase(AutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.addRequiredSystemTool("glibtoolize" if self.target_info.is_macos() else "libtoolize", homebrew="libtool")
-        self.addRequiredSystemTool("autoreconf", homebrew="autoconf")
-        self.addRequiredSystemTool("aclocal", homebrew="automake")
+        self.add_required_system_tool("glibtoolize" if self.target_info.is_macos() else "libtoolize", homebrew="libtool")
+        self.add_required_system_tool("autoreconf", homebrew="autoconf")
+        self.add_required_system_tool("aclocal", homebrew="automake")
 
         self._addRequiredPkgConfig("pixman-1", homebrew="pixman", zypper="libpixman-1-0-devel", apt="libpixman-1-dev",
                                    freebsd="pixman")
         self._addRequiredPkgConfig("glib-2.0", homebrew="glib", zypper="glib2-devel", apt="libglib2.0-dev",
                                    freebsd="glib")
         # Tests require GNU sed
-        self.addRequiredSystemTool("sed" if self.target_info.is_linux() else "gsed", homebrew="gnu-sed", freebsd="gsed")
+        self.add_required_system_tool("sed" if self.target_info.is_linux() else "gsed", homebrew="gnu-sed", freebsd="gsed")
 
         if self.build_type == BuildType.DEBUG:
             self.COMMON_FLAGS.append("-DCONFIG_DEBUG_TCG=1")
@@ -165,7 +165,7 @@ class BuildQEMUBase(AutotoolsProject):
             if (self.config.otherToolsDir / "sbin/smbd").exists():
                 smbd_path = self.config.otherToolsDir / "sbin/smbd"
 
-            self.addRequiredSystemTool(smbd_path, cheribuild_target="samba", freebsd="samba48", apt="samba",
+            self.add_required_system_tool(smbd_path, cheribuild_target="samba", freebsd="samba48", apt="samba",
                                        homebrew="samba")
 
             self.configureArgs.append("--smbd=" + str(smbd_path))

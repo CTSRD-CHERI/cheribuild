@@ -332,7 +332,7 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
             "--without-python", "--without-modules", "--without-lzma",
         ])
         if OSInfo.IS_MAC:
-            self.addRequiredSystemTool("glibtoolize", homebrew="libtool")
+            self.add_required_system_tool("glibtoolize", homebrew="libtool")
             self.configureEnvironment["LIBTOOLIZE"] = "glibtoolize"
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-capability-misuse"]  # FIXME: build with capability -Werror
 
@@ -371,8 +371,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                          # generator=BuildQtWebkit.Generator.Makefiles
                          generator=BuildQtWebkit.Generator.Ninja
                          )
-        self.addRequiredSystemTool("update-mime-database", homebrew="shared-mime-info", apt="shared-mime-info")
-        self.addRequiredSystemTool("ruby", apt="ruby")
+        self.add_required_system_tool("update-mime-database", homebrew="shared-mime-info", apt="shared-mime-info")
+        self.add_required_system_tool("ruby", apt="ruby")
 
         self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-bitwise-operations", "-Wno-error=cheri-capability-misuse", "-Wno-error=format"]  # FIXME: build with capability -Werror
         # We are building an old version of webkit
@@ -421,7 +421,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             if not self.compiling_for_host():
                 self.add_cmake_options(QTWEBKIT_LINK_STATIC_ONLY=self.force_static_linkage)
 
-        self.addRequiredSystemTool("gperf")
+        self.add_required_system_tool("gperf")
 
     @classmethod
     def setup_config_options(cls, **kwargs):

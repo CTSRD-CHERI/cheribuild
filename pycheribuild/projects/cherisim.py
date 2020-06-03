@@ -45,10 +45,10 @@ class BuildBluespecCompiler(Project):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.addRequiredSystemTool("ghc", apt="ghc", homebrew="ghc")
-        self.addRequiredSystemTool("cabal", apt="cabal-install", homebrew="cabal-install")
+        self.add_required_system_tool("ghc", apt="ghc", homebrew="ghc")
+        self.add_required_system_tool("cabal", apt="cabal-install", homebrew="cabal-install")
         for i in ("autoconf", "gperf", "bison", "flex"):
-            self.addRequiredSystemTool(i, homebrew=i)
+            self.add_required_system_tool(i, homebrew=i)
         self.make_args.set(PREFIX=self.installDir)
 
     def compile(self, **kwargs):
@@ -78,8 +78,8 @@ class BuildCheriSim(Project):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # TODO: move this to project
-        self.addRequiredSystemTool("dtc", apt="device-tree-compiler", homebrew="dtc")
-        self.addRequiredSystemTool("bsc", cheribuild_target="bluespec-compiler")
+        self.add_required_system_tool("dtc", apt="device-tree-compiler", homebrew="dtc")
+        self.add_required_system_tool("bsc", cheribuild_target="bluespec-compiler")
         self._addRequiredSystemHeader("mpfr.h", apt="libmpfr-dev")
         self.make_args.set(COP1="1" if self.build_fpu else "0")
         if self.build_cheri:
@@ -106,7 +106,7 @@ class BuildCheriSim(Project):
         if not setup_sh.exists():
             self.fatal("Could not find setup.sh, please set --cheri-sim/source-directory or --fpga-env-setup-script")
         source_cmd = "source {setup_script}".format(setup_script=setup_sh)
-        self.runShellScript(source_cmd + " && " + commandline_to_str(self.get_make_commandline("sim", parallel=False)),
+        self.run_shell_script(source_cmd + " && " + commandline_to_str(self.get_make_commandline("sim", parallel=False)),
                             cwd=self.sourceDir / "cheri", shell="bash")
 
     def install(self, **kwargs):
@@ -143,7 +143,7 @@ class BuildBeriCtl(Project):
             setup_sh = self.config.fpga_custom_env_setup_script
         if not setup_sh.exists():
             self.fatal("Could not find setup.sh")
-        self.runShellScript("source {} && ".format(shlex.quote(str(setup_sh))) + commandline_to_str(self.get_make_commandline(None, parallel=False)),
+        self.run_shell_script("source {} && ".format(shlex.quote(str(setup_sh))) + commandline_to_str(self.get_make_commandline(None, parallel=False)),
                             cwd=self.sourceDir, shell="bash")
 
     def install(self, **kwargs):

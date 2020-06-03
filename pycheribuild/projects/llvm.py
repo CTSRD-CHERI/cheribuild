@@ -209,7 +209,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
             if info.version < (5, 0, 0):
                 self.warning("GCC older than 5.0.0 will probably not work for compiling clang!")
         elif info.compiler != "clang" or info.version < (major, minor, patch):
-            self.dependencyError(self.CC, "version", version_str,
+            self.dependency_error(self.CC, "version", version_str,
                 "is not supported. Clang version %d.%d or newer is required." % (major, minor),
                 install_instructions=self.clang_install_hint())
 

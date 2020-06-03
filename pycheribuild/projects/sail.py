@@ -30,7 +30,7 @@
 import os
 import shlex
 import shutil
-from abc import abstractmethod, ABCMeta
+from abc import ABCMeta, abstractmethod
 from subprocess import CalledProcessError
 from typing import Any, Dict, Tuple, Union
 
@@ -46,7 +46,7 @@ class OpamMixin(object, metaclass=ABCMeta):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         assert isinstance(self, SimpleProject)
-        self.addRequiredSystemTool("opam", homebrew="opam", cheribuild_target="opam-2.0")
+        self.add_required_system_tool("opam", homebrew="opam", cheribuild_target="opam-2.0")
         self.required_ocaml_version = "4.06.1"
         self.__using_correct_switch = False
         self.__ignore_switch_version = False
@@ -62,7 +62,7 @@ class OpamMixin(object, metaclass=ABCMeta):
         if opam_path:
             opam_version = get_program_version(Path(opam_path), regex=b"(\\d+)\\.(\\d+)\\.?(\\d+)?")
             if opam_version < (2, 0, 0):
-                self.dependencyError("Opam version", opam_version, "is too old. Need at least 2.0.0",  # pytype: disable=attribute-error
+                self.dependency_error("Opam version", opam_version, "is too old. Need at least 2.0.0",  # pytype: disable=attribute-error
                                      install_instructions="Install opam 2.0 with your system package manager or run "
                                                           "`cheribuild.py opam-2.0` (Linux-only)")
 
@@ -113,10 +113,10 @@ class OpamMixin(object, metaclass=ABCMeta):
     def run_cmd(self, *args, **kwargs): ...
 
     @abstractmethod
-    def runShellScript(self, *args, **kwargs): ...
+    def run_shell_script(self, *args, **kwargs): ...
 
     @abstractmethod
-    def addRequiredSystemTool(self, *args, **kwargs): ...
+    def add_required_system_tool(self, *args, **kwargs): ...
 
     def _run_in_ocaml_env_prepare(self, cwd=None) -> "Tuple[Dict[Any, Union[Union[str, int], Any]], Union[str, Any]]":
         if cwd is None:
@@ -135,7 +135,7 @@ class OpamMixin(object, metaclass=ABCMeta):
         opam_env, cwd = self._run_in_ocaml_env_prepare(cwd=cwd)
         script = "eval `opam config env`\n" + command + "\n"
         assert isinstance(self, Project)
-        return self.runShellScript(script, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)
+        return self.run_shell_script(script, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)
 
     def run_command_in_ocaml_env(self, command: list, cwd=None, print_verbose_only=False, **kwargs):
         self._ensure_correct_switch()
@@ -153,8 +153,8 @@ class Opam2(SimpleProject):
     def __init__(self, config):
         super().__init__(config)
         if OSInfo.IS_LINUX:
-            self.addRequiredSystemTool("wget")
-            self.addRequiredSystemTool("bwrap", cheribuild_target="bubblewrap")
+            self.add_required_system_tool("wget")
+            self.add_required_system_tool("bwrap", cheribuild_target="bubblewrap")
 
     def process(self):
         if OSInfo.IS_LINUX:
@@ -202,7 +202,7 @@ class BuildSailFromOpam(ProjectUsingOpam):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.addRequiredSystemTool("z3", homebrew="z3 --without-python@2 --with-python")
+        self.add_required_system_tool("z3", homebrew="z3 --without-python@2 --with-python")
 
     @classmethod
     def setup_config_options(cls, **kwargs):
@@ -392,8 +392,8 @@ class OcamlProject(OpamMixin, Project):
         super().__init__(config)
         # The homebrew version of ocaml doesn't seem compatible -> suggest --without-ocaml --without-aspcud
         # This avoids pulling in incompatible ocaml and the python@2 formula
-        # self.addRequiredSystemTool("opam", homebrew="opam --without-ocaml --without-camlp4 --without-aspcud")
-        self.addRequiredSystemTool("opam",
+        # self.add_required_system_tool("opam", homebrew="opam --without-ocaml --without-camlp4 --without-aspcud")
+        self.add_required_system_tool("opam",
                                    homebrew="Installing with hombrew generates a broken ocaml env, use this instead: "
                                             "`wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh "
                                             "-O - | sh -s /usr/local/bin`")
@@ -405,7 +405,7 @@ class OcamlProject(OpamMixin, Project):
                 self.run_in_ocaml_env("ocamlfind query " + shlex.quote(pkg), cwd="/", print_verbose_only=True)
             except CalledProcessError:
                 instrs = "Try running `" + self._opam_cmd_str("install", _add_switch=False) + pkg + "`"
-                self.dependencyError("missing opam package " + pkg, install_instructions=instrs)
+                self.dependency_error("missing opam package " + pkg, install_instructions=instrs)
 
     def install(self, **kwargs):
         pass
@@ -417,12 +417,10 @@ class OcamlProject(OpamMixin, Project):
         except CalledProcessError as e:
             self.warning(e)
             self.warning("stderr was:", e.stderr)
-            self.dependencyError("OCaml env seems to be messed up. Note: On MacOS homebrew OCaml "
-                                 "is not installed correctly. Try installing it with opam instead:",
-                                 install_instructions="Try running `" + self._opam_cmd_str("update",
-                                                                                          _add_switch=False) + " && "
-                                                     + self._opam_cmd_str(
-                                     "switch", _add_switch=False) + " 4.06.0`")
+            self.dependency_error(
+                "OCaml env seems to be messed up. Note: On MacOS homebrew OCaml is not installed correctly. Try "
+                "installing it with opam instead:", install_instructions="Try running `" + self._opam_cmd_str("update",
+                    _add_switch=False) + " && " + self._opam_cmd_str("switch", _add_switch=False) + " 4.06.0`")
         super().process()
 
 
@@ -436,7 +434,7 @@ class BuildSailFromSource(OcamlProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.addRequiredSystemTool("z3", homebrew="z3 --without-python@2 --with-python")
+        self.add_required_system_tool("z3", homebrew="z3 --without-python@2 --with-python")
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
@@ -444,7 +442,7 @@ class BuildSailFromSource(OcamlProject):
             # opam and ocamlfind don't agree for menhir
             self.run_in_ocaml_env("ocamlfind query menhirLib", cwd="/", print_verbose_only=True)
         except CalledProcessError:
-            self.dependencyError("missing opam package menhirLib",
+            self.dependency_error("missing opam package menhirLib",
                                  install_instructions="Try running `opam install menhir`")
 
     def compile(self, **kwargs):
