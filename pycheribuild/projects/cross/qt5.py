@@ -415,7 +415,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
 
             # Pass CHERI capability size so we can pass this to the offlineasm ruby scripts
             if self.crosscompile_target.is_hybrid_or_purecap_cheri():
-                self.add_cmake_options(CHERI_CAPABILITY_SIZE=self.target_info.capability_size)
+                self.add_cmake_options(CHERI_CAPABILITY_SIZE=self.target_info.capability_size_in_bits)
             if self.crosscompile_target.is_cheri_purecap():
                 self.add_cmake_options(CHERI_PURE_CAPABILITY=True)
             if not self.compiling_for_host():
