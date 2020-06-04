@@ -117,7 +117,7 @@ class BuildBBLNoPayload(BuildBBLBase):
     project_name = "bbl"
     without_payload = True
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
-    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP, CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
+    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP, CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
 
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.cheri_sdk_dir / "bbl" / project.crosscompile_target.generic_suffix,
