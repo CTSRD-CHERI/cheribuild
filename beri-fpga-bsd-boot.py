@@ -31,19 +31,19 @@
 # SUCH DAMAGE.
 #
 import argparse
-import re
-import sys
-import string
-import os
-import signal
-import os.path as op
-import tempfile
-import subprocess
 import datetime
-from subprocess import Popen, PIPE, check_output, check_call, CalledProcessError
-from time import sleep
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+import os
+import os.path as op
+import re
+import signal
+import string
+import subprocess
+import sys
+import tempfile
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from pathlib import Path
+from subprocess import CalledProcessError, check_call, check_output, PIPE, Popen
+from time import sleep
 
 _cheribuild_root = Path(__file__).resolve().parent
 _pexpect_dir = _cheribuild_root / "3rdparty/pexpect"
@@ -51,6 +51,8 @@ assert (_pexpect_dir / "pexpect/__init__.py").exists()
 sys.path.insert(1, str(_pexpect_dir))
 sys.path.insert(1, str(_cheribuild_root))
 from pycheribuild import boot_cheribsd
+from pycheribuild.qemu_utils import QemuOptions
+from pycheribuild.config.compilation_targets import CompilationTargets
 import pexpect
 
 ##########################
@@ -129,7 +131,7 @@ parser.add_argument('--jenkins-kernel-cpu-kind', type=str, choices=jenkins_cpus,
                     help="Which CPU the BITFILE is. Only needed if --jenkins-kernel is passed without --jenkins-bitfile")
 parser.add_argument('--jenkins-user', default='readonly', help='The username for jenkins authentication')
 parser.add_argument('--jenkins-password', default=None, help='The password for jenkins authentication')
-parser.add_argument('-k', '--ssh-key', type=str, metavar='SSHKEY', default=op.join(op.expanduser("~"),".ssh","id_rsa"),
+parser.add_argument('-k', '--ssh-key', type=str, metavar='SSHKEY', default=str(Path.home() / ".ssh/id_rsa"),
                     help="The ssh private key SSHKEY to use for ssh connection with the board.")
 parser.add_argument('-v', '--verbose', action='count', default=0,
         help="Increase verbosity level kosby adding more \"v\".")
@@ -168,8 +170,6 @@ runbench.add_argument('--extra-output-files', nargs=argparse.ZERO_OR_MORE, metav
                       help="Additional files to copy out of the board.")
 runbench.add_argument('--extra-input-files', nargs=argparse.ZERO_OR_MORE, metavar='FILES', default=[],
                       help="Additional files to copy to the board before running the benchmark.")
-runbench.add_argument('-k', '--ssh-key', type=str, metavar='SSHKEY', default=op.join(op.expanduser("~"),".ssh","id_rsa"),
-                    help="The ssh private key SSHKEY to use for ssh connection with the board.")
 runbench.add_argument('-u', '--user', type=str, metavar='USER', default="ctsrd",
                     help="The user name USER to use for ssh connection with the board.")
 runbench.add_argument('-t', '--target', type=str, metavar='TGT', default="de4",
@@ -304,6 +304,9 @@ def cleanup (cable_id=args.cable_id):
             errorprint("failed to kill nios2-terminal instance in cleanup()")
 
 class MySpawn(boot_cheribsd.CheriBSDInstance):
+    def __init__(self, *args, ssh_port: int=None, ssh_pubkey: Path=None, **kwargs):
+        super().__init__(*args, ssh_port=ssh_port, ssh_pubkey=ssh_pubkey, **kwargs)
+
     def checked_expect(self, step, pat, timeout=10, failstr=None):
         try:
             if not failstr:
@@ -438,7 +441,7 @@ def streamtrace_berictl(args):
     boot.wait()
     boot.close()
 
-def boot_bsd_qemu(disk_image, kernel, args) -> boot_cheribsd.CheriBSDInstance:
+def boot_bsd_qemu(disk_image, kernel, args, pubkey: Path, port: int) -> boot_cheribsd.CheriBSDInstance:
     qemu = default_qemu_path(args)
 
     # if needed extract the kernel/image:
@@ -452,7 +455,7 @@ def boot_bsd_qemu(disk_image, kernel, args) -> boot_cheribsd.CheriBSDInstance:
         check_call(["ls", "-la", op.dirname(disk_image)])
         disk_image = os.path.splitext(disk_image)[0]  # strip .xz
     # For booting QEMU we (ab)use the bitfile as the QEMU kernel and the FPGA kernel image as the disk image
-
+    qemu_config = QemuOptions(CompilationTargets.CHERIBSD_MIPS_HYBRID)
     cmd = [qemu, "-M", "malta", "-kernel", kernel, "-m", "2048", "-nographic",
            # Add the necessary flags to allow connecting to QEMU via ssh
            # TODO: smb=/foo/bar?
@@ -461,14 +464,15 @@ def boot_bsd_qemu(disk_image, kernel, args) -> boot_cheribsd.CheriBSDInstance:
         cmd.extend(["-hda", disk_image])
     # TODO: ssh host forwarding
     print("Running", " ".join(cmd))
-    c = boot_cheribsd.CheriBSDInstance(" ".join(cmd), encoding="utf-8", echo=False, timeout=60)
+    c = boot_cheribsd.CheriBSDInstance(qemu_config, " ".join(cmd), ssh_port=port, ssh_pubkey=pubkey, encoding="utf-8", echo=False, timeout=60)
     return c
 
 
 def boot_bsd(kernel_img, args):
     starttime = datetime.datetime.now()
+    ssh_pubkey = Path(args.ssh_key).with_suffix(".pub")
     if args.use_qemu_instead_of_fpga:
-        console = boot_bsd_qemu(args.qemu_disk_image, kernel_img, args)
+        console = boot_bsd_qemu(args.qemu_disk_image, kernel_img, args, pubkey=ssh_pubkey, port=args.qemu_ssh_port)
     else:
         # bitfile and image are not needed here since they have already been loaded
         console = boot_bsd_berictl(args)
@@ -476,15 +480,15 @@ def boot_bsd(kernel_img, args):
     console.logfile_read = sys.stdout
     console = boot_cheribsd.boot_and_login(console, starttime=starttime)
     # ensure that we have the ssh public key set up
-    ssh_pubkey = Path(args.ssh_key).with_suffix(".pub")
     if ssh_pubkey.exists():
-        boot_cheribsd.setup_ssh_for_root_login(console, ssh_pubkey)
+        boot_cheribsd.setup_ssh_for_root_login(console)
         console.run("test -e /home/ctsrd/.ssh/authorized_keys && cat /root/.ssh/authorized_keys >> /home/ctsrd/.ssh/authorized_keys")
     # create the ctsrd user if it doesn't exist yet
     console.run("if ! pw user show ctsrd -q > /dev/null; then pw useradd -n ctsrd ctsrd-test-user -s /bin/sh -m -w none && mkdir -p /home/ctsrd && cp -a /root/.ssh /home/ctsrd/.ssh && chown -R ctsrd /home/ctsrd/.ssh && echo \"Created user ctsrd\"; fi")
     return console
 
-def do_scp (src, dst, *, port:int, key,timeout=600):
+
+def do_scp(src, dst, *, port: int, ssh_privkey, timeout=600):
     cmd = ['scp']
     if port != 22:
         cmd += ['-P', str(port)]
@@ -492,14 +496,12 @@ def do_scp (src, dst, *, port:int, key,timeout=600):
     # completely disable host key checking by setting the known hosts file to /dev/null
     # See https://dustymabe.com/2012/01/09/hi-planet---ssh-disable-checking-host-key-against-known_hosts-file./
     cmd += ['-o','StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null', '-o', 'BatchMode=yes']
-    cmd += ['-i',key]
+    cmd += ['-i', ssh_privkey]
     cmd += ['-r']
     cmd += [src, dst]
     hostcmdprint(" ".join(cmd))
-    boot = MySpawn(" ".join(cmd), encoding="utf-8", logfile=logf, echo=False)
-    boot.checked_expect("transfering files - scp", pexpect.EOF, timeout)
-    boot.wait()
-    boot.close()
+    boot_cheribsd.run_host_command(cmd, stdout=logf)
+
 
 def get_network_iface(args):
     result = args.network_interface
@@ -774,10 +776,11 @@ def main():
         locout = Path(args.local_out_path) if args.local_out_path is not None else os.getcwd()
         phaseprint("transfer benchmark")
         if not args.skip_copy:
-            do_scp(src=args.benchdir, dst="{}@{}:{}".format(args.user,args.target,tgtfs), port=ssh_port, key=args.ssh_key, timeout=2400)
+            do_scp(src=args.benchdir, dst="{}@{}:{}".format(args.user, args.target, tgtfs), port=ssh_port,
+                ssh_privkey=args.ssh_key, timeout=2400)
             # Allow copying additional files to the fpga
             for extra_file in args.extra_input_files:
-                do_scp(src=extra_file, dst="{}@{}:{}".format(args.user, args.target, tgtfs), port=ssh_port, key=args.ssh_key)
+                do_scp(src=extra_file, dst="{}@{}:{}".format(args.user, args.target, tgtfs), port=ssh_port, ssh_privkey=args.ssh_key)
         phaseprint("turn network off")
         do_network_off(console, args)
         phaseprint("running benchmark")
@@ -785,11 +788,12 @@ def main():
         phaseprint("turn network on")
         do_network_on(console, args)
         phaseprint("transfer benchmark result")
-        do_scp("{}@{}:{}".format(args.user,args.target,tgtout),str(locout),port=ssh_port,key=args.ssh_key)
+        do_scp("{}@{}:{}".format(args.user, args.target, tgtout), str(locout), port=ssh_port, ssh_privkey=args.ssh_key)
         # Allow copying more than one file from the FPGA:
         if args.extra_output_files:
             for extra_file in args.extra_output_files:
-                do_scp("{}@{}:{}".format(args.user,args.target,extra_file),str(locout),port=ssh_port,key=args.ssh_key)
+                do_scp("{}@{}:{}".format(args.user, args.target, extra_file), str(locout), port=ssh_port,
+                    ssh_privkey=args.ssh_key)
         if args.interact:
             console.interact()
         console.close()

@@ -66,6 +66,8 @@ class LaunchFPGABase(SimpleProject):
 
         if self.extra_base_options:
             basic_args.extend(self.extra_base_options)
+        if self.config.test_ssh_key.with_suffix("").exists():
+            basic_args.extend(["--ssh-key", str(self.config.test_ssh_key.with_suffix(""))])
         # use a bitfile from jenkins. TODO: add option for overriding
         basic_args.append("--jenkins-bitfile=cheri" + self.config.mips_cheri_bits_str)
         basic_args.append("--kernel-img=" + str(self.currentKernel))

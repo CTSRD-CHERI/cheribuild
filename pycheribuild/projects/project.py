@@ -2360,6 +2360,9 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             basic_args = ["--berictl=" + str(
                 BuildBeriCtl.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "berictl")]
 
+        if self.config.test_ssh_key.with_suffix("").exists():
+            basic_args.extend(["--ssh-key", str(self.config.test_ssh_key.with_suffix(""))])
+
         if self.config.benchmark_ld_preload:
             runbench_args.append("--extra-input-files=" + str(self.config.benchmark_ld_preload))
             env_var = "LD_CHERI_PRELOAD" if self.compiling_for_cheri() else "LD_PRELOAD"
