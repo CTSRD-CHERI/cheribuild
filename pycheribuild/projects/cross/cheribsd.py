@@ -418,11 +418,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # bootstrapped on FreeBSD)
             # TODO: upstream a patch to bootstrap them by default
             self.make_args.set(LOCAL_XTOOL_DIRS="lib/libnetbsd usr.sbin/makefs usr.bin/mkimg")
+            # Don't build ZFS for CHERI hybrid/purecap kernels. It's marked as broken in the kernel build so no
+            # point building it for userspace
+            if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+                self.make_args.set_with_options(ZFS=False)
 
-        # doesn't appear to work for buildkernel
-        # if self.auto_obj:
-        #     # seems like it should speed up the build significantly
-        #     self.common_options.add(AUTO_OBJ=True)
         self._setup_make_args_called = True
 
     def __init__(self, config: CheriConfig):
