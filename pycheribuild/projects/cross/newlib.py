@@ -45,6 +45,9 @@ class BuildNewlib(CrossCompileAutotoolsProject):
     add_host_target_build_config_options = False
     _configure_supports_libdir = False
     _configure_supports_variables_on_cmdline = True
+    # CC,CFLAGS, etc. are the compilers for the build host not the target -> don't set automatically
+    _autotools_add_default_compiler_args = False
+
     cross_install_dir = DefaultInstallDir.SYSROOT
     supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_MIPS64,
                                CompilationTargets.BAREMETAL_NEWLIB_MIPS64_PURECAP,
@@ -71,8 +74,6 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         self.make_args.env_vars["newlib_cv_ldbl_eq_dbl"] = "yes"
         # ensure that we don't fall back to system headers (but do use stddef.h from clang...)
         self.COMMON_FLAGS.extend(["--sysroot", "/this/path/does/not/exist"])
-        if OSInfo.IS_MAC:
-            self.add_configure_vars(LDFLAGS="-fuse-ld=/usr/bin/ld")
 
     # def install(self, **kwargs):
     #     # self.runMakeInstall(cwd=self.buildDir / "newlib")
@@ -116,9 +117,11 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             # Some build tools are needed:
             CC_FOR_BUILD=self.host_CC,
             CXX_FOR_BUILD=self.host_CXX,
+            CPP_FOR_BUILD=self.host_CPP,
             # long double is the same as double
             newlib_cv_ldbl_eq_dbl="yes",
-            LD_FOR_TARGET=str(self.target_info.linker), LDFLAGS_FOR_TARGET="-fuse-ld=" + str(self.target_info.linker),
+            LD_FOR_TARGET=str(self.target_info.linker),
+            LDFLAGS_FOR_TARGET="-fuse-ld=" + str(self.target_info.linker),
             )
 
         if self.target_info.target.is_riscv(include_purecap=True):

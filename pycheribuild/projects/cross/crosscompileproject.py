@@ -64,6 +64,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
     doNotAddToTargets = True  # only used as base class
 
     add_host_target_build_config_options = True
+    _autotools_add_default_compiler_args = True
     _configure_supports_libdir = True  # override in nginx
     _configure_supports_variables_on_cmdline = True  # override in nginx
     _configure_understands_enable_static = True
@@ -99,7 +100,8 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
         if self._configure_supports_variables_on_cmdline:
             self.configureArgs.append(prog + "=" + self.configureEnvironment[prog])
 
-    def configure(self, **kwargs):
+    def setup(self):
+        super().setup()
         if self._configure_understands_enable_static:     # workaround for nginx which isn't really autotools
             if self.force_static_linkage:
                 self.configureArgs.extend(["--enable-static", "--disable-shared"])
@@ -114,10 +116,10 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             # easier to handle build systems that assume that library are always in /lib
             self.configureArgs.append("--libdir=" + str(self.installPrefix) + "/lib")
 
-        if not self.target_info.is_baremetal() and not self.target_info.is_rtems():
+        if self._autotools_add_default_compiler_args:
             CPPFLAGS = self.default_compiler_flags
             for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
-                assert key not in self.configureEnvironment
+                assert key not in self.configureEnvironment, key
             # autotools overrides CFLAGS -> use CC and CXX vars here
             self.set_configure_prog_with_args("CC", self.CC, CPPFLAGS + self.CFLAGS)
             self.set_configure_prog_with_args("CXX", self.CXX, CPPFLAGS + self.CXXFLAGS)
@@ -132,6 +134,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
                 if self._define_ld:
                     self.add_configure_env_arg("LD", self.target_info.linker)
 
+    def configure(self, **kwargs):
         # remove all empty items from environment:
         env = {k: v for k, v in self.configureEnvironment.items() if v}
         self.configureEnvironment.clear()
