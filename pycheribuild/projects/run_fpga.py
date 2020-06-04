@@ -73,7 +73,7 @@ class LaunchFPGABase(SimpleProject):
         bootonly_args = ["--interact"]
         if self.extra_bootonly_options:
             bootonly_args.extend(self.extra_bootonly_options)
-        cheribuild_path = Path(__file__).parent.parent.parent
+        cheribuild_path = Path(__file__).absolute().parent.parent.parent
         if self.attach_only:
             subcmd_and_args = ["console"]
         else:

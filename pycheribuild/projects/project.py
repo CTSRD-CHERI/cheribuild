@@ -2402,7 +2402,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if extra_runbench_args:
             runbench_args.extend(extra_runbench_args)
 
-        cheribuild_path = Path(__file__).parent.parent.parent.parent
+        cheribuild_path = Path(__file__).absolute().parent.parent.parent
         beri_fpga_bsd_boot_script = """
 set +x
 source "{cheri_dir}/setup.sh"
