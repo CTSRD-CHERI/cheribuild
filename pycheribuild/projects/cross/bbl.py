@@ -30,8 +30,9 @@
 
 from .crosscompileproject import CrossCompileAutotoolsProject
 from .gdb import BuildGDB
-from ..project import (GitRepository, DefaultInstallDir, MakeCommandKind, CheriConfig, CompilationTargets,
-                       CrossCompileTarget, ComputedDefaultValue, SimpleProject, BuildType)
+from ..build_qemu import BuildQEMU
+from ..project import (BuildType, CheriConfig, CompilationTargets, ComputedDefaultValue, CrossCompileTarget,
+                       DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
 
 
 class BuildBBLBase(CrossCompileAutotoolsProject):
@@ -42,6 +43,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
     is_sdk_target = False
+    needs_sysroot = False  # Should be buildable without a sysroot
     kernel_class = None
     cross_install_dir = DefaultInstallDir.ROOTFS
     without_payload = False
@@ -49,15 +51,20 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
 
     @classmethod
     def dependencies(cls, config: CheriConfig):
-        xtarget = cls.get_crosscompile_target(config)
         # We need GNU objcopy which is installed by gdb-native
-        result = [cls.kernel_class.get_class_for_target(xtarget).target, "gdb-native"]
+        result = ["gdb-native"]
+        if cls.kernel_class:
+            xtarget = cls.get_crosscompile_target(config)
+            result.append(cls.kernel_class.get_class_for_target(xtarget).target)
         return result
 
     def setup(self):
         super().setup()
         self.COMMON_LDFLAGS.extend(["-nostartfiles", "-nostdlib", "-static"])
         self.COMMON_FLAGS.append("-nostdlib")
+        self.common_warning_flags.append("-Werror=undef")
+        self.common_warning_flags.append("-Werror=return-type")
+        self.common_warning_flags.append("-Wall")
 
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
             # We have to build a purecap if we want to support CHERI
@@ -104,20 +111,13 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         return cls.get_instance(caller, config=config, cross_target=cross_target).real_install_root_dir / "bbl"
 
 
-def bbl_no_payload_install_dir(config: CheriConfig, project: SimpleProject):
-    return
-
-
 # Build BBL without an embedded payload
 class BuildBBLNoPayload(BuildBBLBase):
     target = "bbl"
     project_name = "bbl"
     without_payload = True
-    # For some reason BBL needs a sysroot, so we use the CheriBSD one
-    dependencies = ["cheribsd"]
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
-    supported_architectures = [CompilationTargets.CHERIBSD_RISCV_PURECAP, CompilationTargets.CHERIBSD_RISCV_HYBRID,
-                               CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
+    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP, CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
 
     _default_install_dir_fn = ComputedDefaultValue(
         function=lambda config, project: config.cheri_sdk_dir / "bbl" / project.crosscompile_target.generic_suffix,

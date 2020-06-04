@@ -33,7 +33,8 @@ import subprocess
 import typing
 from pathlib import Path
 
-from .config.target_info import CrossCompileTarget, CPUArchitecture
+from .config.compilation_targets import CompilationTargets
+from .config.target_info import CPUArchitecture, CrossCompileTarget
 from .utils import runCmd
 
 
@@ -138,10 +139,10 @@ def riscv_bios_arguments(xtarget: CrossCompileTarget, caller, prefer_bbl=True) -
     if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
         # noinspection PyUnreachableCode
         if prefer_bbl:
-            from .projects.cross.bbl import BuildBBLNoPayload
             # We want a purecap BBL:
-            return ["-bios", str(
-                BuildBBLNoPayload.get_installed_kernel_path(caller, cross_target=xtarget.get_cheri_purecap_target()))]
+            from .projects.cross.bbl import BuildBBLNoPayload
+            return ["-bios", str(BuildBBLNoPayload.get_installed_kernel_path(caller,
+                    cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP))]
         else:
             from .projects.cross.opensbi import BuildOpenSBI
             return ["-bios", str(BuildOpenSBI.get_cheri_bios(caller))]

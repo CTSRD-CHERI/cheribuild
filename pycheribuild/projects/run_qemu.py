@@ -456,7 +456,7 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         #     else:
         #         result.append("opensbi-baremetal-riscv64")
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
-            result.append("bbl")
+            result.append("bbl-baremetal-riscv64-purecap")
         return result
 
     def run_tests(self):
