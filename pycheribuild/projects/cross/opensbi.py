@@ -35,9 +35,9 @@ from ..project import (BuildType, CheriConfig, CompilationTargets, ComputedDefau
 from ...utils import classproperty, commandline_to_str, OSInfo
 
 
-def opensbi_install_dir(config: CheriConfig, project: SimpleProject):
+def opensbi_install_dir(config: CheriConfig, project: "BuildOpenSBI", suffix: str):
     dir_name = project.crosscompile_target.generic_suffix.replace("baremetal-", "")
-    return config.cheri_sdk_dir / "opensbi" / dir_name
+    return config.cheri_sdk_dir / ("opensbi" + project.build_dir_suffix) / dir_name
 
 
 class BuildOpenSBI(Project):
@@ -45,13 +45,15 @@ class BuildOpenSBI(Project):
     repository = GitRepository("https://github.com/CTSRD-CHERI/opensbi")
     default_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
     default_build_type = BuildType.RELWITHDEBINFO
-    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
-                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64_HYBRID,
-                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP]
+    supported_architectures = [
+        CompilationTargets.BAREMETAL_NEWLIB_RISCV64_HYBRID,
+        CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
+        # Won't compile yet: CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP
+    ]
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
-    _default_install_dir_fn = ComputedDefaultValue(function=opensbi_install_dir,
-                                                   as_string="$SDK_ROOT/opensbi/riscv{32,64}{c,}")
+    _default_install_dir_fn = ComputedDefaultValue(function=lambda c, p: opensbi_install_dir(c, p, ""),
+                                                   as_string="$SDK_ROOT/opensbi/riscv{32,64}{-hybrid,-purecap,}")
 
     @classproperty
     def needs_sysroot(cls):
@@ -140,3 +142,13 @@ class BuildOpenSBI(Project):
     def get_cheri_bios(cls, caller):
         # We currently use a hybrid build for
         return cls.get_hybrid_instance(caller)._fw_jump_path()
+
+
+class BuildOpenSBIGFE(BuildOpenSBI):
+    target = "opensbi-gfe"
+    project_name = "opensbi"
+    build_dir_suffix = "-gfe"
+
+    def setup(self):
+        super().setup()
+        self.make_args.set(FW_TEXT_START=0xc0000000)
