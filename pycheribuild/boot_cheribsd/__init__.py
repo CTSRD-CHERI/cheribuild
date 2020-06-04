@@ -562,9 +562,10 @@ def start_dhclient(qemu: CheriBSDInstance):
         if i == 0:  # Timeout
             failure("timeout awaiting dhclient ", str(qemu))
     if i == 3:
+        bad_iface = qemu.match.group(1)
         qemu.expect_prompt(timeout=30)
         qemu.run("ifconfig -a")
-        failure("Expected network interface ", qemu.match.group(1), " does not exist ", str(qemu))
+        failure("Expected network interface ", bad_iface, " does not exist ", str(qemu))
 
     success("===> {} bound to QEMU networking".format(network_iface))
     qemu.expect_prompt(timeout=30)
