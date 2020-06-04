@@ -110,12 +110,12 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             # Otherwise just let the project decide
             # else:
             #    self.configureArgs.extend(["--enable-static", "--enable-shared"])
-
         if self.crosscompile_target.is_cheri_purecap() and self._configure_supports_libdir:
             # Install to lib and not libcheri since we have a separate prefix and that makes it
             # easier to handle build systems that assume that library are always in /lib
             self.configureArgs.append("--libdir=" + str(self.installPrefix) + "/lib")
 
+    def configure(self, **kwargs):
         if self._autotools_add_default_compiler_args:
             CPPFLAGS = self.default_compiler_flags
             for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
@@ -134,7 +134,6 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
                 if self._define_ld:
                     self.add_configure_env_arg("LD", self.target_info.linker)
 
-    def configure(self, **kwargs):
         # remove all empty items from environment:
         env = {k: v for k, v in self.configureEnvironment.items() if v}
         self.configureEnvironment.clear()

@@ -52,16 +52,17 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
     @classmethod
     def dependencies(cls, config: CheriConfig):
         # We need GNU objcopy which is installed by gdb-native
-        result = ["gdb-native"]
+        result = super().dependencies(config) + ["gdb-native"]
         if cls.kernel_class:
             xtarget = cls.get_crosscompile_target(config)
             result.append(cls.kernel_class.get_class_for_target(xtarget).target)
         return result
 
     def setup(self):
-        super().setup()
         self.COMMON_LDFLAGS.extend(["-nostartfiles", "-nostdlib", "-static"])
+        self.CFLAGS.extend(["-nostartfiles", "-nostdlib", "-static", "-ffreestanding"])
         self.COMMON_FLAGS.append("-nostdlib")
+        super().setup()
         self.common_warning_flags.append("-Werror=undef")
         self.common_warning_flags.append("-Werror=return-type")
         self.common_warning_flags.append("-Wall")
