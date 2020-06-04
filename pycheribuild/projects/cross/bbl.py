@@ -123,6 +123,16 @@ class BuildBBLNoPayload(BuildBBLBase):
         function=lambda config, project: config.cheri_sdk_dir / "bbl" / project.crosscompile_target.generic_suffix,
         as_string="$SDK_ROOT/bbl/riscv{32,64}{c,-hybrid}")
 
+    def install(self):
+        super().install()
+        if self.crosscompile_target.is_cheri_purecap():
+            # Install into the QEMU firware directory so that `-bios default` works
+            qemu_fw_dir = BuildQEMU.getInstallDir(self,
+                cross_target=CompilationTargets.NATIVE) / "share/qemu/"
+            self.makedirs(qemu_fw_dir)
+            self.run_cmd(self.sdk_bindir / "llvm-objcopy", "-S", "-O", "binary",
+                self.get_installed_kernel_path(self), qemu_fw_dir / "bbl-riscv64cheri-virt-fw_jump.bin")
+
 
 class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
     mem_start = "0xc0000000"
