@@ -336,10 +336,11 @@ def _jenkins_main():
         if cheriConfig.strip_elf_files:
             strip_binaries(cheriConfig, cheriConfig.workspace / "tarball")
         runCmd([tar_cmd, "--create", "--xz"] + owner_flags + ["-f", cheriConfig.tarball_name, "-C", "tarball", "."], cwd=cheriConfig.workspace)
+        runCmd("du", "-sh", cheriConfig.workspace / cheriConfig.tarball_name)
 
 
 def strip_binaries(cheriConfig: JenkinsConfig, directory: Path):
-    statusUpdate("Tarball size before stripping ELF files:")
+    statusUpdate("Tarball directory size before stripping ELF files:")
     runCmd("du", "-sh", directory)
     for root, dirs, filelist in os.walk(str(directory)):
         for file in filelist:
@@ -354,7 +355,7 @@ def strip_binaries(cheriConfig: JenkinsConfig, directory: Path):
                         runCmd(cheriConfig.cheri_sdk_bindir / "llvm-strip", filepath)
             except Exception as e:
                 warningMessage("Failed to detect type of file:", filepath, e)
-    statusUpdate("Tarball size after stripping ELF files:")
+    statusUpdate("Tarball directory size after stripping ELF files:")
     runCmd("du", "-sh", directory)
 
 
