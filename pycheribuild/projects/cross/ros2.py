@@ -96,9 +96,9 @@ class BuildRos2(CrossCompileCMakeProject):
             fout.write("#!/bin/csh\n\n")
             fout.write("setenv LD_CHERI_LIBRARY_PATH " + LD_CHERI_LIBRARY_PATH + "\n\n")
             fout.write("setenv LD_LIBRARY_PATH " + LD_CHERI_LIBRARY_PATH)
-        
+
         return
-    
+
     def update(self):
         super().update()
         if not (self.sourceDir / "src").is_dir():
@@ -116,7 +116,7 @@ class BuildRos2(CrossCompileCMakeProject):
 
     def compile(self, **kwargs):
         return self._run_colcon(**kwargs)
-    
+
     def install(self, **kwargs):
         # colcon build performs an install, so we override this to make sure
         # super doesn't attemt to install with ninja
@@ -125,3 +125,8 @@ class BuildRos2(CrossCompileCMakeProject):
         if not self.compiling_for_host():
             return self._set_env(**kwargs)
         return
+
+    def run_tests(self):
+        # only test when not compiling for host
+        if not self.compiling_for_host():
+            self.run_cheribsd_test_script("run_ros2_tests.py")
