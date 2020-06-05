@@ -272,15 +272,12 @@ class MipsFloatAbi(Enum):
         return self.value[1]
 
 
-_TgtInfoSubclass = typing.TypeVar("_TgtInfoSubclass", bound=TargetInfo)
-
-
 class CrossCompileTarget(object):
     # Currently the same for all targets
     DEFAULT_CAP_TABLE_ABI = "pcrel"
     DEFAULT_SUBOBJECT_BOUNDS = "conservative"
 
-    def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "typing.Type[_TgtInfoSubclass]",
+    def __init__(self, suffix: str, cpu_architecture: CPUArchitecture, target_info_cls: "typing.Type[TargetInfo]",
                  *, is_cheri_purecap=False, is_cheri_hybrid=False, check_conflict_with: "CrossCompileTarget" = None,
                  non_cheri_target: "CrossCompileTarget" = None, hybrid_target: "CrossCompileTarget" = None,
                  purecap_target: "CrossCompileTarget" = None):

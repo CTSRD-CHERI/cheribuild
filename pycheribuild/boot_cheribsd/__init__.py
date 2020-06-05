@@ -551,7 +551,7 @@ class FakeSpawn(CheriBSDInstance):
 
 def start_dhclient(qemu: CheriBSDInstance):
     success("===> Setting up QEMU networking")
-    network_iface = "vtnet0" if qemu.qemu_config.can_use_virtio_network() else "le0"
+    network_iface = qemu.qemu_config.network_interface_name()
     qemu.sendline("ifconfig {network_iface} up && dhclient {network_iface}".format(network_iface=network_iface))
     i = qemu.expect([pexpect.TIMEOUT, "DHCPACK from 10.0.2.2", "dhclient already running",
                      "interface ([\\w\\d]+) does not exist"], timeout=120)

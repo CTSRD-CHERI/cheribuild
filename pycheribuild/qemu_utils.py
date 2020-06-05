@@ -44,12 +44,14 @@ class QemuOptions:
         self.virtio_disk = True
         self.can_boot_kernel_directly = False
         self.memory_size = "2048"
+        self.has_default_nic = False
         if xtarget.is_mips(include_purecap=True):
             # Note: we always use the CHERI QEMU
             self.qemu_arch_sufffix = "cheri128"
             self.machine_flags = ["-M", "malta"]
             self.virtio_disk = False  # broken for MIPS?
             self.can_boot_kernel_directly = True
+            self.has_default_nic = True  # MALTA board has a default pcnet at 0x0b
         elif xtarget.is_riscv(include_purecap=True):
             # Note: we always use the CHERI QEMU
             self.qemu_arch_sufffix = "riscv64cheri"
@@ -79,15 +81,29 @@ class QemuOptions:
             return False
         return True
 
+    def _qemu_network_config(self):
+        if self.has_default_nic:
+            assert self.xtarget.is_mips(include_purecap=True)
+            return "pcnet", "le0"
+        if not self.can_use_virtio_network():
+            # Note: providing a "pcnet" net crashes CheriBSD for non-MIPS
+            if self.xtarget.is_mips(include_purecap=True):
+                return "pcnet", "le0"
+            return "e1000", "em0"
+        elif self.xtarget.is_riscv(include_purecap=True):  # TODO: aarch64?
+            return "virtio-net-device", "vtnet0"
+        else:
+            return "virtio-net-pci", "em0"  # XXX: is vtnet0 correct?
+
+    def network_interface_name(self):
+        return self._qemu_network_config()[1]
+
     def user_network_args(self, extra_options):
         # We'd like to use virtio everwhere, but FreeBSD doesn't like it on BE mips.
-        if not self.can_use_virtio_network():
-            return ["-net", "nic", "-net", "user,id=net0,ipv6=off" + extra_options]
-        if self.xtarget.is_any_x86():  # TODO: aarch64?
-            virtio_device_kind = "virtio-net-pci"
-        else:
-            virtio_device_kind = "virtio-net-device"
-        return ["-device", virtio_device_kind + ",netdev=net0", "-netdev", "user,id=net0,ipv6=off" + extra_options]
+        if self.has_default_nic:
+            return ["-nic", "user,id=net0,ipv6=off" + extra_options]
+        network_device_kind = self._qemu_network_config()[0]
+        return ["-device", network_device_kind + ",netdev=net0", "-netdev", "user,id=net0,ipv6=off" + extra_options]
 
     def get_qemu_binary(self) -> "typing.Optional[Path]":
         found_in_path = shutil.which("qemu-system-" + self.qemu_arch_sufffix)
@@ -120,6 +136,8 @@ class QemuOptions:
             result.extend(self.disk_image_args(disk_image))
         if add_network_device:
             result.extend(self.user_network_args(user_network_args))
+        if self.xtarget.target_info_cls.is_cheribsd() and self.xtarget.is_mips():
+            add_virtio_rng = False  # currently hangs the kernel
         if add_virtio_rng:
             result.extend(["-device", "virtio-rng-pci"])
         return result
