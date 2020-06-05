@@ -19,4 +19,7 @@ if [ -e /fett ]; then
 	fett_nginx_enable="YES"
 	sshd_enable="NO"
 	fett_sshd_enable="YES"
+	# What dhcp gets in qemu...
+	ifconfig_vtnet0="inet 10.0.2.15 netmask 255.255.255.0"
+	defaultrouter="10.0.2.2"
 fi
