@@ -308,7 +308,7 @@ def cleanup (cable_id=args.cable_id):
 
 class MySpawn(boot_cheribsd.CheriBSDInstance):
     def __init__(self, *args, ssh_port: int=None, ssh_pubkey: Path=None, **kwargs):
-        assert isinstance(args[0], str)
+        assert isinstance(args[0], str), args
         super().__init__(args[0], args[1:], ssh_port=ssh_port, ssh_pubkey=ssh_pubkey, **kwargs)
 
     def checked_expect(self, step, pat, timeout=10, failstr=None):
@@ -376,7 +376,7 @@ def loadsof (bitfile=args.bitfile,cable_id=args.cable_id,berictl=args.berictl,ti
         cmd += ['-z']
     cmd += [bitfile]
     hostcmdprint(" ".join(cmd))
-    ldsof = MySpawn(cmd, encoding="utf-8", logfile=logf, echo=False)
+    ldsof = MySpawn(*cmd, encoding="utf-8", logfile=logf, echo=False)
     ldsof.checked_expect("loading bitfile","Programmer was successful. 0 errors", timeout)
     ldsof.wait()
     ldsof.close()
@@ -393,7 +393,7 @@ def loadbin (img=args.kernel_img,addr=args.kernel_addr,cable_id=args.cable_id,be
         cmd += ['-z']
     cmd += [img,hex(addr)]
     hostcmdprint(" ".join(cmd))
-    ldbin = MySpawn(" ".join(cmd), encoding="utf-8", logfile=logf, echo=False)
+    ldbin = MySpawn(*cmd, encoding="utf-8", logfile=logf, echo=False)
     ldbin.checked_expect("loading kernel image","100% of *", 3000)
     ldbin.wait()
     ldbin.close()
@@ -406,14 +406,14 @@ def boot_bsd_berictl(args) -> boot_cheribsd.CheriBSDInstance:
     # trigger boot
     unpause_cmd = [args.berictl, '-c', str(args.cable_id), '-j', 'resume']
     hostcmdprint(" ".join(unpause_cmd))
-    unpause = MySpawn(unpause_cmd, encoding="utf-8", logfile=logf, echo=False)
+    unpause = MySpawn(*unpause_cmd, encoding="utf-8", logfile=logf, echo=False)
     # boot.checked_expect("booting", pexpect.EOF)
     unpause.wait()
     unpause.close()
 
     cmd = [args.berictl, '-c', str(args.cable_id), '-j', 'boot']
     hostcmdprint(" ".join(cmd))
-    boot = MySpawn(cmd, encoding="utf-8", logfile=logf, echo=False)
+    boot = MySpawn(*cmd, encoding="utf-8", logfile=logf, echo=False)
     boot.checked_expect("booting", pexpect.EOF)
     boot.wait()
     boot.close()
@@ -427,7 +427,7 @@ def traceall (cable_id=args.cable_id,berictl=args.berictl):
     cmd += ['-c',str(cable_id)]
     cmd += ['-j','settracefilter']
     hostcmdprint(" ".join(cmd))
-    ldbin = MySpawn(cmd, encoding="utf-8", logfile=logf, echo=False)
+    ldbin = MySpawn(*cmd, encoding="utf-8", logfile=logf, echo=False)
     ldbin.checked_expect("Trace Mask", pexpect.EOF)
     ldbin.wait()
     ldbin.close()
@@ -440,7 +440,7 @@ def streamtrace_berictl(args):
     cmd += ['-c',str(args.cable_id)]
     cmd += ['-j','streamtrace']
     hostcmdprint(" ".join(cmd))
-    boot = MySpawn(cmd, encoding="utf-8", logfile=logf, echo=False)
+    boot = MySpawn(*cmd, encoding="utf-8", logfile=logf, echo=False)
     boot.checked_expect("Leaving processor paused", pexpect.EOF)
     boot.wait()
     boot.close()
