@@ -8,8 +8,16 @@ fi
 
 if [ "$kind" = "smb" ]; then
     # rootfs is provided as the fourth SMB mount, but we now have named smb mounts:
-    # mkdir -p /nfsroot && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/qemu4 /nfsroot
     mkdir -p /nfsroot && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/rootfs /nfsroot
+    # Also try mounting the non-cheri/hybrid/purecap rootfs
+    if [ -n "$(ls -A "/outputroot")" ]; then
+        echo "/outputroot is not empty. Already mounted?"
+    else
+        mkdir -p /outputroot && mount_smbfs -I 10.0.2.4 -N //10.0.2.4/output_root /outputroot
+    fi
+    test -L /nfsroot-nocheri || ln -sfnv /outputroot/{NOCHERI_ROOTFS_DIRNAME} /nfsroot-nocheri
+    test -L /nfsroot-hybrid  || ln -sfnv /outputroot/{HYBRID_ROOTFS_DIRNAME}  /nfsroot-hybrid
+    test -L /nfsroot-purecap || ln -sfnv /outputroot/{PURECAP_ROOTFS_DIRNAME} /nfsroot-purecap
 elif [ "$kind" = "nfs" ]; then
     mkdir -p /nfsroot && mount 10.0.2.2:{ROOTFS_DIR} /nfsroot/
 else

@@ -30,9 +30,9 @@
 import io
 import os
 import shutil
+import sys
 import tempfile
 import typing
-import sys
 
 from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDGFE, BuildFreeBSDWithDefaultOptions
 from .cross.gdb import BuildGDB
@@ -227,8 +227,26 @@ class _BuildDiskImageBase(SimpleProject):
 
         # Add the mount-source/mount-rootfs/do-reroot scripts (even in the minimal image)
         # TODO: should we omit this from the minimal image?
+        non_cheri_dirname = "non-cheri-rootfs-not-found"
+        hybrid_cheri_dirname = "hybrid-cheri-rootfs-not-found"
+        purecap_cheri_dirname = "purecap-cheri-rootfs-not-found"
+
+        def path_relative_to_outputroot(xtarget) -> Path:
+            install_dir = self.source_project.getInstallDir(self, cross_target=xtarget)
+            try:
+                return install_dir.relative_to(self.config.outputRoot)
+            except ValueError:
+                self.info(install_dir, "is not relative to", self.config.outputRoot,
+                    "-- qemu-mount-rootfs.sh may not mount it")
+
+        if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+            non_cheri_dirname = path_relative_to_outputroot(self.crosscompile_target.get_non_cheri_target())
+            hybrid_cheri_dirname = path_relative_to_outputroot(self.crosscompile_target.get_cheri_hybrid_target())
+            purecap_cheri_dirname = path_relative_to_outputroot(self.crosscompile_target.get_cheri_purecap_target())
         mount_rootfs_script = includeLocalFile("files/cheribsd/qemu-mount-rootfs.sh.in").format(
-            SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
+            SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir,
+            NOCHERI_ROOTFS_DIRNAME=non_cheri_dirname, HYBRID_ROOTFS_DIRNAME=hybrid_cheri_dirname,
+            PURECAP_ROOTFS_DIRNAME=purecap_cheri_dirname)
         self.createFileForImage("/sbin/qemu-mount-rootfs.sh", contents=mount_rootfs_script,
                                 mode=0o755, showContentsByDefault=False)
         mount_sources_script = includeLocalFile("files/cheribsd/qemu-mount-sources.sh.in").format(

@@ -297,25 +297,45 @@ class CrossCompileTarget(object):
         assert not (is_cheri_purecap and is_cheri_hybrid), "Can't be both hybrid and purecap"
         self.check_conflict_with = check_conflict_with  # Check that we don't reuse install-dir, etc for this target
         self.target_info_cls = target_info_cls
-        self._non_cheri_target = non_cheri_target
-        self._hybrid_target = hybrid_target
-        self._purecap_target = purecap_target
+        # FIXME: there must be a better way of doing this, but this works for now
+        self._hybrid_target = non_cheri_target
+        self._purecap_target = hybrid_target
+        self._non_cheri_target = purecap_target
+        self._set_for(non_cheri_target)
+        self._set_for(hybrid_target)
+        self._set_for(purecap_target)
 
-        # Set the related targets:
-        def _set_for_other(other_target):
-            if other_target is not None:
-                if is_cheri_hybrid:
-                    assert other_target._hybrid_target is None, "Already set?"
-                    other_target._hybrid_target = self
-                elif is_cheri_purecap:
-                    assert other_target._hybrid_target is None, "Already set?"
-                    other_target._purecap_target = self
-                else:
-                    assert other_target._non_cheri_target is None, "Already set?"
-                    other_target._non_cheri_target = self
-        _set_for_other(self._non_cheri_target)
-        _set_for_other(self._hybrid_target)
-        _set_for_other(self._purecap_target)
+    def _set_from(self, other_target: "CrossCompileTarget"):
+        if self is other_target:
+            return
+        if self._hybrid_target is None and other_target._hybrid_target is not None:
+            self._hybrid_target = other_target._hybrid_target
+            other_target._hybrid_target._set_from(self)
+        if self._non_cheri_target is None and other_target._non_cheri_target is not None:
+            self._non_cheri_target = other_target._non_cheri_target
+            other_target._non_cheri_target._set_from(self)
+        if self._purecap_target is None and other_target._purecap_target is not None:
+            self._purecap_target = other_target._purecap_target
+            other_target._purecap_target._set_from(self)
+
+    # Set the related targets:
+    def _set_for(self, other_target: "CrossCompileTarget", also_set_other=True):
+        if other_target is not None and self is not other_target:
+            if self._is_cheri_hybrid:
+                assert other_target._hybrid_target is None or other_target._hybrid_target is self, "Already set?"
+                other_target._hybrid_target = self
+                self._hybrid_target = self
+            elif self._is_cheri_purecap:
+                assert other_target._purecap_target is None or other_target._purecap_target is self, "Already set?"
+                other_target._purecap_target = self
+                self._purecap_target = self
+            else:
+                assert other_target._non_cheri_target is None or other_target._non_cheri_target is self, "Already set?"
+                other_target._non_cheri_target = self
+                self._non_cheri_target = self
+            if also_set_other:
+                other_target._set_for(self, also_set_other=False)
+            other_target._set_from(self)
 
     def create_target_info(self, project: "SimpleProject") -> TargetInfo:
         return self.target_info_cls(self, project)
