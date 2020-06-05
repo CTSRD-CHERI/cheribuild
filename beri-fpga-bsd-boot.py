@@ -309,7 +309,7 @@ def cleanup (cable_id=args.cable_id):
 class MySpawn(pexpect.spawn):
     def __init__(self, *args, **kwargs):
         assert isinstance(args[0], str), args
-        super().__init__(args[0], args[1:], **kwargs)
+        super().__init__(args[0], list(args[1:]), **kwargs)
 
     def checked_expect(self, step, pat, timeout=10, failstr=None):
         try:
