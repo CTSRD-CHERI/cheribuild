@@ -146,6 +146,16 @@ class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
     _default_install_dir_fn = ComputedDefaultValue(function=_bbl_install_dir,
         as_string="$SDK_ROOT/bbl-gfe/riscv{32,64}{,-purecap}")
 
+
+class BuildBBLNoPayloadFETT(BuildBBLNoPayloadGFE):
+    target = "bbl-fett"
+    build_dir_suffix = "-fett"  # but not the build dir
+
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=lambda config, project: config.cheri_sdk_dir / "bbl-fett" / project.crosscompile_target.generic_suffix,
+        as_string="$SDK_ROOT/bbl-fett/riscv{32,64}{c,-hybrid}")
+
+
 # class BuildBBLFreeBSDRISCV(BuildBBLBase):
 #     project_name = "bbl"  # reuse same source dir
 #     target = "bbl-freebsd"
