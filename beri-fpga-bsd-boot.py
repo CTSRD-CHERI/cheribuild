@@ -306,10 +306,10 @@ def cleanup (cable_id=args.cable_id):
             errorprint("failed to kill nios2-terminal instance in cleanup()")
 
 
-class MySpawn(boot_cheribsd.CheriBSDInstance):
-    def __init__(self, *args, ssh_port: int=None, ssh_pubkey: Path=None, **kwargs):
+class MySpawn(pexpect.spawn):
+    def __init__(self, *args, **kwargs):
         assert isinstance(args[0], str), args
-        super().__init__(args[0], args[1:], ssh_port=ssh_port, ssh_pubkey=ssh_pubkey, **kwargs)
+        super().__init__(args[0], args[1:], **kwargs)
 
     def checked_expect(self, step, pat, timeout=10, failstr=None):
         try:
@@ -338,6 +338,10 @@ class MySpawn(boot_cheribsd.CheriBSDInstance):
 
 
 class BeriCtlCheriBSDSpawn(boot_cheribsd.CheriBSDInstance):
+    def __init__(self, *args, ssh_port: int=None, ssh_pubkey: Path=None, **kwargs):
+        qemu_config = QemuOptions(CompilationTargets.CHERIBSD_MIPS_HYBRID) # unused but needs to be passed
+        super().__init__(qemu_config, *args, ssh_port=ssh_port, ssh_pubkey=ssh_pubkey, **kwargs)
+
     def interact(self, escape_character=chr(29),
             input_filter=None, output_filter=None):
         print("Interacting with console")
@@ -352,17 +356,18 @@ class BeriCtlCheriBSDSpawn(boot_cheribsd.CheriBSDInstance):
         self.logfile_read = old_logfile_read
 
 
-def get_console (cable_id=args.cable_id,berictl=args.berictl,logfile=None) -> boot_cheribsd.CheriBSDInstance:
+def get_console (cable_id=args.cable_id,berictl=args.berictl,logfile=None, *, pubkey: Path) -> boot_cheribsd.CheriBSDInstance:
     cmd = [berictl]
     cmd += ['-c',str(cable_id)]
     cmd += ['-j','console']
     hostcmdprint(" ".join(cmd))
     # if we specify encoding=utf-8 then spawn only accepts bytes...
-    c = BeriCtlCheriBSDSpawn(" ".join(cmd), encoding="utf-8", echo=False, timeout=60, logfile=logfile)
+    c = BeriCtlCheriBSDSpawn(" ".join(cmd), ssh_port=22, ssh_pubkey=pubkey, encoding="utf-8", echo=False, timeout=60, logfile=logfile)
     res = c.expect([pexpect.TIMEOUT, "Connecting to BERI UART"], timeout=30)
     if res == 0 :
-        raise boot_cheribsd.CheriBSDCommandTimeout("timeout waiting for UART to attach")
+        raise boot_cheribsd.CheriBSDCommandTimeout("timeout waiting for UART to attach", execution_time=None)
     return c
+
 
 def loadsof (bitfile=args.bitfile,cable_id=args.cable_id,berictl=args.berictl,timeout=30):
     if args.use_qemu_instead_of_fpga:
@@ -398,10 +403,10 @@ def loadbin (img=args.kernel_img,addr=args.kernel_addr,cable_id=args.cable_id,be
     ldbin.wait()
     ldbin.close()
 
-def boot_bsd_berictl(args) -> boot_cheribsd.CheriBSDInstance:
+def boot_bsd_berictl(args, pubkey: Path) -> boot_cheribsd.CheriBSDInstance:
     # grab the console before booting; this should reduce the chance that we
     # miss boot messages
-    console = get_console(args.cable_id,args.berictl)
+    console = get_console(args.cable_id,args.berictl, pubkey=pubkey)
 
     # trigger boot
     unpause_cmd = [args.berictl, '-c', str(args.cable_id), '-j', 'resume']
@@ -472,14 +477,13 @@ def boot_bsd_qemu(disk_image, kernel, args, pubkey: Path, port: int) -> boot_che
     return c
 
 
-def boot_bsd(kernel_img, args):
+def boot_bsd(kernel_img, args, ssh_pubkey: Path):
     starttime = datetime.datetime.now()
-    ssh_pubkey = Path(args.ssh_key).with_suffix(".pub")
     if args.use_qemu_instead_of_fpga:
         console = boot_bsd_qemu(args.qemu_disk_image, kernel_img, args, pubkey=ssh_pubkey, port=args.qemu_ssh_port)
     else:
         # bitfile and image are not needed here since they have already been loaded
-        console = boot_bsd_berictl(args)
+        console = boot_bsd_berictl(args, pubkey=ssh_pubkey)
     assert isinstance(console, boot_cheribsd.CheriBSDInstance)
     console.logfile_read = sys.stdout
     console = boot_cheribsd.boot_and_login(console, starttime=starttime)
@@ -617,7 +621,7 @@ def download_file(url, outfile):
 
 def common_boot (kernel_img=args.kernel_img,addr=args.kernel_addr,bitfile=args.bitfile,cable_id=args.cable_id,
                  berictl=args.berictl, jenkins_bitfile=args.jenkins_bitfile, jenkins_kernel=args.jenkins_kernel,
-                 stop_after_bitfile=False,skip_bitfile=False):
+                 stop_after_bitfile=False,skip_bitfile=False, *, ssh_pubkey: Path):
 
     bitfile_job_nr = args.jenkins_bitfile_job_number
     kernel_job_nr = args.jenkins_kernel_job_number
@@ -690,7 +694,7 @@ def common_boot (kernel_img=args.kernel_img,addr=args.kernel_addr,bitfile=args.b
                 bitfile = outfile
             # Do the real boot now (hack to keep the rest of the function inside this with statement)
             return common_boot(kernel_img=kernel_img, addr=addr, bitfile=bitfile, cable_id=cable_id, berictl=berictl,
-                               jenkins_kernel=None, jenkins_bitfile=None, skip_bitfile=skip_bitfile)
+                               jenkins_kernel=None, jenkins_bitfile=None, skip_bitfile=skip_bitfile, ssh_pubkey=ssh_pubkey)
 
     # Loading bitfile onto the board
     if not skip_bitfile:
@@ -704,7 +708,7 @@ def common_boot (kernel_img=args.kernel_img,addr=args.kernel_addr,bitfile=args.b
     traceall(cable_id,berictl)
     # Booting BSD
     phaseprint("booting")
-    return boot_bsd(kernel_img, args)
+    return boot_bsd(kernel_img, args, ssh_pubkey=ssh_pubkey)
 
 #################
 # main function #
@@ -724,19 +728,20 @@ def main():
         if stdout_tty:
             print("stdout tty attrs =", tty.tcgetattr(sys.stdout.fileno()))
 
+    ssh_pubkey = Path(args.ssh_key).with_suffix(".pub")
     ############
     # bitfile #
     ############
     if args.subcmd == "load-bitfile":
         # always print what's going on when running load-bitfile
         args.verbose = 3
-        common_boot(stop_after_bitfile=True)
+        common_boot(stop_after_bitfile=True, ssh_pubkey=ssh_pubkey)
 
     ############
     # bootonly #
     ############
     if args.subcmd == "bootonly":
-        console = common_boot(skip_bitfile=args.skip_bitfile)
+        console = common_boot(skip_bitfile=args.skip_bitfile, ssh_pubkey=ssh_pubkey)
         assert isinstance(console, boot_cheribsd.CheriBSDInstance)
         if args.interact:
             console.interact()
@@ -751,13 +756,13 @@ def main():
         if args.skip_boot:
             if args.use_qemu_instead_of_fpga:
                 die("--skip-boot is not compatible with --use-qemu-instead-of-fpga")
-            console = get_console(logfile=logf)
+            console = get_console(logfile=logf, pubkey=ssh_pubkey)
             assert isinstance(console, boot_cheribsd.CheriBSDInstance)
             phaseprint("turn network on")
             do_network_off(console, args)
             do_network_on(console, args)
         else:
-            console = common_boot(skip_bitfile=args.skip_bitfile)
+            console = common_boot(skip_bitfile=args.skip_bitfile, ssh_pubkey=ssh_pubkey)
             assert isinstance(console, boot_cheribsd.CheriBSDInstance)
             if not args.use_qemu_instead_of_fpga:
                 print("Sleeping for 20 seconds to ensure FPGA is ready")
@@ -806,7 +811,7 @@ def main():
     # console #
     ###########
     elif args.subcmd == "console":
-        console = get_console()
+        console = get_console(pubkey=ssh_pubkey)
         console.interact()
         console.close()
 
