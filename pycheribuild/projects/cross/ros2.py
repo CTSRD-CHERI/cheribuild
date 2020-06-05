@@ -43,17 +43,19 @@ class BuildRos2(CrossCompileCMakeProject):
     dependencies = ["poco"]
 
     def _ignore_packages(self):
+        # some repositories have packages we don't want to build, so we add empty COLCON_IGNORE files
         packages = ["src/ros2/rcl_logging/rcl_logging_log4cxx"] # relative to self.sourceDir
         for package in packages:
             cmdline = ["touch", str(self.sourceDir / package / "COLCON_IGNORE")]
             self.run_cmd(cmdline, cwd=self.sourceDir)
-        return
 
     def _run_vcs(self):
+        # this is the meta version control system used by ros for downloading and unpacking repos
         cmdline = ["vcs", "import", "--input", "ros2_minimal.repos", "src"]
-        return self.run_cmd(cmdline, cwd=self.sourceDir)
+        self.run_cmd(cmdline, cwd=self.sourceDir)
 
     def _run_colcon(self, **kwargs):
+        # colcon is the meta build system (on top of cmake) used by ros
         colcon_cmd = ["colcon", "build"]
         colcon_args = ["--no-warn-unused-cli", "--packages-skip-build-finished"]
         cmake_args = ["--cmake-args", "-DBUILD_TESTING=NO"]
@@ -63,7 +65,7 @@ class BuildRos2(CrossCompileCMakeProject):
         if self.config.verbose:
             cmdline.append("--event-handlers")
             cmdline.append("console_cohesion+")
-        return self.run_cmd(cmdline, cwd=self.sourceDir, **kwargs)
+        self.run_cmd(cmdline, cwd=self.sourceDir, **kwargs)
 
     def _set_env(self, **kwargs):
         # create a cheri_setup.csh file in self.sourceDir which can be source'ed
@@ -97,25 +99,21 @@ class BuildRos2(CrossCompileCMakeProject):
             fout.write("setenv LD_CHERI_LIBRARY_PATH " + LD_CHERI_LIBRARY_PATH + "\n\n")
             fout.write("setenv LD_LIBRARY_PATH " + LD_CHERI_LIBRARY_PATH)
 
-        return
-
     def update(self):
         super().update()
         if not (self.sourceDir / "src").is_dir():
             self.makedirs(self.sourceDir / "src")
         self._run_vcs()
         self._ignore_packages()
-        return
 
     def configure(self, **kwargs):
         # overriding this method allows creation of CrossToolchain.cmake
         # without actually calling cmake, as super().configure() would do
         if not self.compiling_for_host():
             self.generate_cmake_toolchain_file(self.sourceDir / "CrossToolchain.cmake")
-        return
 
     def compile(self, **kwargs):
-        return self._run_colcon(**kwargs)
+        self._run_colcon(**kwargs)
 
     def install(self, **kwargs):
         # colcon build performs an install, so we override this to make sure
@@ -123,8 +121,7 @@ class BuildRos2(CrossCompileCMakeProject):
         #
         # call the function to create an env setup file
         if not self.compiling_for_host():
-            return self._set_env(**kwargs)
-        return
+            self._set_env(**kwargs)
 
     def run_tests(self):
         # only test when not compiling for host
