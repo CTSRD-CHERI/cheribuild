@@ -68,7 +68,6 @@ class BuildLLVMBase(CMakeProject):
             cls.add_default_sysroot = False
 
         cls.enable_assertions = cls.add_bool_option("assertions", help="build with assertions enabled", default=True)
-        cls.enable_lto = cls.add_bool_option("enable-lto", help="build with LTO enabled (experimental)")
         if "skip_static_analyzer" not in cls.__dict__:
             cls.skip_static_analyzer = cls.add_bool_option("skip-static-analyzer", default=True,
                 help="Don't build the clang static analyzer")
@@ -92,7 +91,7 @@ class BuildLLVMBase(CMakeProject):
                     "). This is not recommended!", sep="")
                 self.ask_for_confirmation("Are you sure you want to continue?")
         # this must be added after check_system_dependencies
-        link_jobs = 2 if self.enable_lto else 4
+        link_jobs = 2 if self.use_lto else 4
         if os.cpu_count() >= 24:
             link_jobs *= 2  # Increase number of link jobs for powerful servers
         # non-shared debug builds take lots of ram -> use fewer parallel jobs
@@ -142,7 +141,7 @@ class BuildLLVMBase(CMakeProject):
                 LLVM_TOOL_LLVM_RC_BUILD=False,
                 )
         if self.canUseLLd(self.CC):
-            self.add_cmake_options(LLVM_ENABLE_LLD=True)
+            self.add_cmake_options(LLVM_ENABLE_LLD=True, _replace=False)  # Don't set to true if LTO set it to false
             # Add GDB index to speed up debugging
             if self.should_include_debug_info:
                 self.add_cmake_options(CMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld -Wl,--gdb-index",
@@ -174,6 +173,8 @@ class BuildLLVMBase(CMakeProject):
             return False  # can't use LTO
         if self.canUseLLd(self.CC) and not self.prefer_full_lto_over_thin_lto:
             self.add_cmake_options(LLVM_ENABLE_LTO="Thin")
+        else:
+            self.add_cmake_options(LLVM_ENABLE_LTO=True)
 
     def clean(self) -> ThreadJoiner:
         # TODO: probably fine if LLVM is the only target to be built
