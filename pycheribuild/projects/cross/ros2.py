@@ -87,6 +87,7 @@ class BuildRos2(CrossCompileCMakeProject):
             shutil.copyfile(libPocoFoundation, self.sourceDir / "libPocoFoundation.so.71")
         else:
             print("libPocoFoundation.so.71 cannot be found.")
+            print(self.rootfs_path)
 
     def _set_env(self, **kwargs):
         # create cheri_setup.csh and cheri_setup.sh files in self.sourceDir which can be source'ed
@@ -110,10 +111,7 @@ class BuildRos2(CrossCompileCMakeProject):
 
         # convert LD_LIBRARY_PATH into LD_CHERI_LIBRARY_PATH for CheriBSD
         LD_LIBRARY_PATH = str(self.sourceDir) + ":" + LD_LIBRARY_PATH
-        LD_LIBRARY_PATHs = LD_LIBRARY_PATH.split(':')
-        LD_CHERI_LIBRARY_PATH = ""
-        for path in LD_LIBRARY_PATHs:
-            LD_CHERI_LIBRARY_PATH += ":" + path
+        LD_CHERI_LIBRARY_PATH = LD_LIBRARY_PATH
         LD_CHERI_LIBRARY_PATH += ":${LD_CHERI_LIBRARY_PATH}"
         LD_LIBRARY_PATH += ":${LD_LIBRARY_PATH}"
 
