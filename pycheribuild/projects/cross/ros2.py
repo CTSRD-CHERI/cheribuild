@@ -69,7 +69,7 @@ class BuildRos2(CrossCompileCMakeProject):
         self.run_cmd(cmdline, cwd=self.sourceDir, **kwargs)
 
     def _find_file(self, name, path):
-        for root, dirs, files in os.walk(path):
+        for root, dirs, files in os.walk(str(path)):
             if name in files:
                 return os.path.join(root, name)
         return ""
