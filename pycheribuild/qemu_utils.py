@@ -136,7 +136,7 @@ class QemuOptions:
             result.extend(self.disk_image_args(disk_image))
         if add_network_device:
             result.extend(self.user_network_args(user_network_args))
-        if self.xtarget.target_info_cls.is_cheribsd() and self.xtarget.is_mips():
+        if self.xtarget.target_info_cls.is_cheribsd() and self.xtarget.is_mips(include_purecap=True):
             add_virtio_rng = False  # currently hangs the kernel
         if add_virtio_rng:
             result.extend(["-device", "virtio-rng-pci"])
