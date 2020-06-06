@@ -92,12 +92,17 @@ class BuildRos2(CrossCompileCMakeProject):
         LD_CHERI_LIBRARY_PATH = "."
         for path in LD_LIBRARY_PATHs:
             LD_CHERI_LIBRARY_PATH += ":" + path
+        LD_CHERI_LIBRARY_PATH += ":${LD_CHERI_LIBRARY_PATH}"
 
         # write LD_CHERI_LIBRARY_PATH to a text file to source from csh in CheriBSD
         with open(str(self.sourceDir / 'cheri_setup.csh'), 'w') as fout:
             fout.write("#!/bin/csh\n\n")
             fout.write("setenv LD_CHERI_LIBRARY_PATH " + LD_CHERI_LIBRARY_PATH + "\n\n")
-            fout.write("setenv LD_LIBRARY_PATH " + LD_CHERI_LIBRARY_PATH)
+
+        # write LD_CHERI_LIBRARY_PATH to a text file to source from sh in CheriBSD
+        with open(str(self.sourceDir / 'cheri_setup.sh'), 'w') as fout:
+            fout.write("#!/bin/sh\n\n")
+            fout.write("setenv LD_CHERI_LIBRARY_PATH " + LD_CHERI_LIBRARY_PATH + "\n\n")
 
     def update(self):
         super().update()
@@ -126,4 +131,4 @@ class BuildRos2(CrossCompileCMakeProject):
     def run_tests(self):
         # only test when not compiling for host
         if not self.compiling_for_host():
-            self.run_cheribsd_test_script("run_ros2_tests.py")
+            self.run_cheribsd_test_script("run_ros2_tests.py", mount_sourcedir=True, mount_sysroot=False)
