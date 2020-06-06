@@ -33,7 +33,7 @@ from run_tests_common import *
 def run_ros2_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace) -> bool:
     boot_cheribsd.info("Running ROS2 tests")
     boot_cheribsd.set_ld_library_path_with_sysroot(qemu)
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "sh -xe ./source/run-ros2-tests.sh", timeout=240 * 60)
+    boot_cheribsd.checked_run_cheribsd_command(qemu, "cd /source && sh -xe ./run-ros2-tests.sh", timeout=240 * 60)
     return True
 
 if __name__ == '__main__':
