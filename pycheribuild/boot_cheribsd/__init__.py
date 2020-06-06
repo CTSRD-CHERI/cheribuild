@@ -937,10 +937,7 @@ def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace],
 
     if xtarget.is_riscv(include_purecap=True):
         if args.bios is None:
-            if xtarget.is_hybrid_or_purecap_cheri():
-                failure("ERROR: Cannot use the default QEMU bios for hybrid/purecap CHERI", exit=True)
-            else:
-                args.bios = "default"
+            args.bios = "default"
 
     global PRETEND
     if args.pretend:

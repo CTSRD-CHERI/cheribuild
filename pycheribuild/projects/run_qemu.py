@@ -102,7 +102,9 @@ class LaunchQEMUBase(SimpleProject):
         self._after_disk_options = []
 
     def get_riscv_bios_args(self) -> typing.List[str]:
-        return riscv_bios_arguments(self.crosscompile_target, self)
+        # Explicit bios args no longer needed now that qemu defaults to a different file name for CHERI
+        # return riscv_bios_arguments(self.crosscompile_target, self)
+        return ["-bios", "default"]
 
     def setup(self):
         super().setup()
@@ -450,11 +452,6 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         # RISCV needs OpenSBI/BBL to run:
         # Note: QEMU 4.2+ embeds opensbi, for CHERI, we have to use BBL (for now):
         xtarget = cls.get_crosscompile_target(config)
-        # if xtarget.is_riscv(include_purecap=True):
-        #     if xtarget.is_cheri_purecap():
-        #         result.append("opensbi-baremetal-riscv64-purecap")
-        #     else:
-        #         result.append("opensbi-baremetal-riscv64")
         if xtarget.is_hybrid_or_purecap_cheri([CPUArchitecture.RISCV64]):
             result.append("bbl-baremetal-riscv64-purecap")
         return result
