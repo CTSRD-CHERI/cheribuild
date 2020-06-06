@@ -838,6 +838,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             self.mtree.write(sys.stderr)
         if self.config.verbose:
             self.run_cmd("du", "-ah", self.tmpdir)
+            self.run_cmd("sh", "-c", "du -ah '{}' | sort -h".format(self.tmpdir))
         super().make_rootfs_image(rootfs_img)
 
 
