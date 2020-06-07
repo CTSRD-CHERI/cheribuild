@@ -103,8 +103,7 @@ class LaunchQEMUBase(SimpleProject):
 
     def get_riscv_bios_args(self) -> typing.List[str]:
         # Explicit bios args no longer needed now that qemu defaults to a different file name for CHERI
-        # return riscv_bios_arguments(self.crosscompile_target, self)
-        return ["-bios", "default"]
+        return riscv_bios_arguments(self.crosscompile_target, self)
 
     def setup(self):
         super().setup()

@@ -57,7 +57,7 @@ assert str(_pexpect_dir.resolve()) in sys.path, str(_pexpect_dir) + " not found 
 import pexpect
 from ..utils import find_free_port
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
-from ..qemu_utils import QemuOptions
+from ..qemu_utils import QemuOptions, riscv_bios_arguments
 
 SUPPORTED_ARCHITECTURES = {x.generic_suffix: x for x in (CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
                                                          CompilationTargets.CHERIBSD_MIPS_HYBRID,
@@ -587,7 +587,12 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
         user_network_args += ",hostfwd=tcp::" + str(ssh_port) + "-:22"
 
     assert qemu_options.can_boot_kernel_directly, "X86/AArch64 case not handled yet"
-    bios_args = ["-bios", str(bios_path)] if bios_path is not None else []
+    if bios_path is not None:
+        bios_args = ["-bios", str(bios_path)]
+    elif qemu_options.xtarget.is_riscv(include_purecap=True):
+        bios_args = riscv_bios_arguments(qemu_options.xtarget, None)
+    else:
+        bios_args = []
     qemu_args = qemu_options.get_commandline(qemu_command=qemu_command, kernel_file=kernel_image, disk_image=disk_image,
         bios_args=bios_args, user_network_args=user_network_args, add_network_device=True,
         trap_on_unrepresentable=trap_on_unrepresentable,  # For debugging
@@ -934,10 +939,6 @@ def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace],
         args.qemu_cmd = qemu_options.get_qemu_binary()
         if args.qemu_cmd is None:
             failure("ERROR: Cannot find QEMU binary for target", qemu_options.qemu_arch_sufffix, exit=True)
-
-    if xtarget.is_riscv(include_purecap=True):
-        if args.bios is None:
-            args.bios = "default"
 
     global PRETEND
     if args.pretend:

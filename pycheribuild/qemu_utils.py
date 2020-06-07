@@ -158,12 +158,15 @@ def riscv_bios_arguments(xtarget: CrossCompileTarget, caller, prefer_bbl=True) -
         # noinspection PyUnreachableCode
         if prefer_bbl:
             # We want a purecap BBL:
-            from .projects.cross.bbl import BuildBBLNoPayload
-            return ["-bios", str(BuildBBLNoPayload.get_installed_kernel_path(caller,
-                    cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP))]
+            # from .projects.cross.bbl import BuildBBLNoPayload
+            # return ["-bios", str(BuildBBLNoPayload.get_installed_kernel_path(caller,
+            #         cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP))]
+            # Explicitly specify the file name while QEMU may still be too old:
+            return ["-bios", "bbl-riscv64cheri-virt-fw_jump.bin"]
         else:
-            from .projects.cross.opensbi import BuildOpenSBI
-            return ["-bios", str(BuildOpenSBI.get_cheri_bios(caller))]
+            # from .projects.cross.opensbi import BuildOpenSBI
+            # return ["-bios", str(BuildOpenSBI.get_cheri_bios(caller))]
+            return ["-bios", "opensbi-riscv64cheri-virt-fw_jump.bin"]
     # For non-CHERI we prefer the OpenSBI bios that is bundled with QEMU
     # return BuildOpenSBI.get_nocap_bios(caller)
     return ["-bios", "default"]
