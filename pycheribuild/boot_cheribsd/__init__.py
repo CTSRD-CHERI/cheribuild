@@ -668,14 +668,15 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
             child.expect_exact(INITIAL_PROMPT_SH, timeout=30)
             success("===> /etc/rc completed, got command prompt")
             _set_pexpect_sh_prompt(child)
-            # set up network (bluehive image tries to use atse0)
-            if not have_dhclient:
-                start_dhclient(child)
         else:  # BOOT_FAILURE or FATAL_ERROR_MESSAGES
             # If this was a CHEIR trap wait up to 20 seconds to ensure the dump output has been printed
             child.expect(["THIS STRING SHOULD NOT MATCH, JUST WAITING FOR 20 secs", pexpect.TIMEOUT], timeout=20)
             # If this was a failure of init we should get a debugger backtrace
             failure("Error during boot login prompt: ", str(child), "match index=", i)
+        # set up network in case dhclient wasn't started yet
+        if not have_dhclient:
+            info("Did not see DHCPACK message, starting dhclient manually.")
+            start_dhclient(child)
         success("===> booted CheriBSD (userspace startup time: ", datetime.datetime.now() - userspace_starttime, ")")
     except KeyboardInterrupt:
         failure("Keyboard interrupt during boot", exit=True)
