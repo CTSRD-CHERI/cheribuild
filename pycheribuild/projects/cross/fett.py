@@ -68,7 +68,7 @@ class BuildFettConfig(CrossCompileProject):
     def install(self, **kwargs):
         if os.getenv("_TEST_SKIP_METALOG"):
              return
-        if not os.path.exists(str(self.METALOG)):
+        if not self.METALOG.exists():
              fatalError("METALOG " + str(self.METALOG) + "does not exist")
              return
 

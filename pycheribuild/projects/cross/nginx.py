@@ -132,6 +132,6 @@ class BuildFettNginx(BuildNginx):
 
     def install(self):
         super().install()
-        nginx_conf = str(self.destdir) + str(self._installPrefix) + "/conf/nginx.conf"
-        if os.path.exists(nginx_conf):
-            os.remove(nginx_conf)
+        nginx_conf = self.installDir / "conf/nginx.conf"
+        if nginx_conf.is_file():
+            self.deleteFile(nginx_conf)
