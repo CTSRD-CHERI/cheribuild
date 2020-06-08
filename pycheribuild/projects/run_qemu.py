@@ -111,17 +111,21 @@ class LaunchQEMUBase(SimpleProject):
         if xtarget.is_riscv(include_purecap=True):
             self._add_virtio_rng = False
             self.bios_flags += self.get_riscv_bios_args()
-            self.qemuBinary = BuildQEMU.qemu_binary(self)
+            self.qemuBinary = BuildQEMU.qemu_cheri_binary(self)
         elif xtarget.is_mips(include_purecap=True):
-            self.qemuBinary = BuildQEMU.qemu_binary(self)
+            self.qemuBinary = BuildQEMU.qemu_cheri_binary(self)
         elif xtarget.is_any_x86() or xtarget.is_aarch64():
             # Use the system QEMU instead of CHERI QEMU (for now)
             # Note: x86_64 can be either CHERI QEMU or system QEMU:
             self.add_required_system_tool("qemu-system-" + self.qemu_options.qemu_arch_sufffix)
-            self.qemuBinary = Path(
-                shutil.which("qemu-system-" + self.qemu_options.qemu_arch_sufffix) or "/could/not/find/qemu")
         else:
             assert False, "Unknown target " + str(xtarget)
+        if self.qemuBinary is None:
+            binary_name = "qemu-system-" + self.qemu_options.qemu_arch_sufffix
+            if (self.config.qemu_bindir / binary_name).is_file():
+                self.qemuBinary = self.config.qemu_bindir / binary_name
+            else:
+                self.qemuBinary = Path(shutil.which(binary_name) or "/could/not/find/qemu")
         # only CHERI QEMU supports more than one SMB share
         self._provide_src_via_smb = self.compiling_for_mips(include_purecap=True) or self.compiling_for_riscv(
             include_purecap=True)
@@ -209,8 +213,8 @@ class LaunchQEMUBase(SimpleProject):
                 if smb_dir_count > 1:
                     return  # FIXME: 9pfs panics if there is more than one device
                 # Also provide it via virtfs:
-                qemu_command.append("-virtfs")
-                qemu_command.append("local,id=virtfs{n},mount_tag={tag},path={path},security_model=none{ro}".format(
+                virtfs_args.append("-virtfs")
+                virtfs_args.append("local,id=virtfs{n},mount_tag={tag},path={path},security_model=none{ro}".format(
                     n=smb_dir_count, path=directory, tag=share_name, ro=",readonly" if readonly else ""))
                 guest_cmd = coloured(AnsiColour.yellow,
                     "mkdir -p {tgt} && mount -t virtfs -o trans=virtio,version=9p2000.L {share_name} {tgt}".format(
@@ -218,7 +222,7 @@ class LaunchQEMUBase(SimpleProject):
                 self.info("Providing ", coloured(AnsiColour.green, str(directory)),
                     coloured(AnsiColour.cyan, " over 9pfs to the guest. Use `"), guest_cmd,
                     coloured(AnsiColour.cyan, "` to mount it"), sep="")
-
+        virtfs_args = []
         if have_smbfs_support or have_9pfs_support:  # for running CheriBSD + FreeBSD
             add_smb_or_9p_dir(self.custom_qemu_smb_mount, "/mnt")
             add_smb_or_9p_dir(self.config.sourceRoot, "/srcroot", share_name="source_root", readonly=True)
@@ -239,7 +243,7 @@ class LaunchQEMUBase(SimpleProject):
             user_network_args=user_network_options, trap_on_unrepresentable=self.config.trap_on_unrepresentable,
             debugger_on_cheri_trap=self.config.debugger_on_cheri_trap, add_virtio_rng=self._add_virtio_rng)
         qemu_command += self._projectSpecificOptions + self._after_disk_options + monitor_options \
-            + logfile_options + self.extra_qemu_options
+            + logfile_options + self.extra_qemu_options + virtfs_args
         self.info("About to run QEMU with image", self.disk_image, "and kernel", self.currentKernel)
 
         if self.config.wait_for_debugger or self.config.debugger_in_tmux_pane:

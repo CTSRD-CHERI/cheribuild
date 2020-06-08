@@ -65,6 +65,7 @@ SUPPORTED_ARCHITECTURES = {x.generic_suffix: x for x in (CompilationTargets.CHER
                                                          CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
                                                          CompilationTargets.CHERIBSD_RISCV_HYBRID,
                                                          CompilationTargets.CHERIBSD_RISCV_PURECAP,
+                                                         CompilationTargets.CHERIBSD_X86_64,
                                                          )}
 
 STARTING_INIT = "start_init: trying /sbin/init"
@@ -586,7 +587,9 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
     if ssh_port is not None:
         user_network_args += ",hostfwd=tcp::" + str(ssh_port) + "-:22"
 
-    assert qemu_options.can_boot_kernel_directly, "X86/AArch64 case not handled yet"
+    if not qemu_options.can_boot_kernel_directly:
+        if not disk_image:
+            failure("Cannot boot kernel directly and no disk image passed!")
     if bios_path is not None:
         bios_args = ["-bios", str(bios_path)]
     elif qemu_options.xtarget.is_riscv(include_purecap=True):
@@ -625,16 +628,29 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
-        i = child.expect([STARTING_INIT, BOOT_FAILURE, BOOT_FAILURE2] + FATAL_ERROR_MESSAGES, timeout=15 * 60,
-            timeout_msg="timeout before /sbin/init")
-        if i != 0:  # start up scripts failed
-            failure("start up scripts failed to run")
+        # BOOTVERBOSE is off for the amd64 kernel so we don't see the STARTING_INIT message
+        bootverbose = child.xtarget.is_mips(include_purecap=True) or child.xtarget.is_riscv(include_purecap=True)
+        boot_messages = [STARTING_INIT, "Hit \\[Enter\\] to boot immediately", "Trying to mount root from",
+                         BOOT_FAILURE, BOOT_FAILURE2] + FATAL_ERROR_MESSAGES
+        i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
+        # Skip 10s wait from x86 loader if we see the "Hit [Enter] to boot" message
+        if i == 1:  # Hit Enter
+            success("Got '", child.match.string, "' from loader")
+            child.sendline("")
+            i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
+        if i == 2:
+            success(child.match.string)
+            if bootverbose:
+                i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
+                if i != 0:  # start up scripts failed
+                    failure("failed to start init")
+
         userspace_starttime = datetime.datetime.now()
         success("===> init running (kernel startup time: ", userspace_starttime - starttime, ")")
         if kernel_init_only:
             # To test kernel startup time
             return child
-
+        # TODO: add bad mountroot messages rather than waiting for timeout
         boot_expect_strings = [LOGIN, SHELL_OPEN, BOOT_FAILURE]
         i = child.expect(boot_expect_strings + ["DHCPACK from "] + FATAL_ERROR_MESSAGES, timeout=15 * 60,
             timeout_msg="timeout awaiting login prompt")

@@ -832,8 +832,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         test_native = xtarget.is_native()
         # Only supported for CheriBSD-MIPS right now:
         if not test_native and self.target_info.is_cheribsd():
-            if not xtarget.is_mips(include_purecap=True) and not xtarget.is_riscv(include_purecap=True):
-                self.warning("Test scripts currently only work for CheriBSD-MIPS and CHERI-RISC-V")
+            if not xtarget.is_mips(include_purecap=True) and not xtarget.is_riscv(include_purecap=True) and not xtarget.is_x86_64(include_purecap=True):
+                self.warning("CheriBSD test scripts currently only work for MIPS, RISC-V and x86-64")
                 return
         if kernel_path is None and not test_native and "--kernel" not in self.config.test_extra_args:
             from .cross.cheribsd import BuildCheriBsdMfsKernel
@@ -877,7 +877,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 cmd.extend(["--kernel", kernel_path])
             if "--qemu-cmd" not in self.config.test_extra_args:
                 if xtarget.is_riscv(include_purecap=True) or xtarget.is_mips(include_purecap=True):
-                    qemu_path = BuildQEMU.qemu_binary(self)
+                    qemu_path = BuildQEMU.qemu_cheri_binary(self)
                     if not qemu_path.exists():
                         self.fatal("QEMU binary", qemu_path, "doesn't exist")
                     cmd.extend(["--qemu-cmd", qemu_path])
@@ -2342,7 +2342,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
 
         if self.config.benchmark_with_qemu:
             from .build_qemu import BuildQEMU
-            qemu_path = BuildQEMU.qemu_binary(self)
+            qemu_path = BuildQEMU.qemu_cheri_binary(self)
             qemu_ssh_socket = find_free_port()
             if not qemu_path.exists():
                 self.fatal("QEMU binary", qemu_path, "doesn't exist")

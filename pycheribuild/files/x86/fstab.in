@@ -1,9 +1,7 @@
 # Device        Mountpoint      FStype  Options                     Dump    Pass#
-# GPT: /dev/gpt/swapfs none            swap    sw                           0       0
-# GPT: /dev/gpt/rootfs /               ufs     rw,noatime,async,failok      1       1
-/dev/ada0p2     /               ufs     rw                              	1   	1
-# MBR: /dev/ada0s1a	/               ufs     rw,noatime,async,failok    	1       1
-# /dev/vtbd0    /               ufs     rw,noatime,async,failok     1       1
+/dev/vtbd0p2     /               ufs     rw,noatime                 1   	1
+# MBR: /dev/ada0s1a	/            ufs     rw,noatime,async,failok    1       1
 {tmpfsrem}tmpfs /tmp            tmpfs   rw,failok                   0       0
+
 # Uncomment to automount the default QEMU smbfs
 # //10.0.2.4/qemu /mnt smbfs rw,-I=10.0.2.4,-N 0 0

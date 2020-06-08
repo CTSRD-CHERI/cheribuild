@@ -33,7 +33,6 @@ import subprocess
 import typing
 from pathlib import Path
 
-from .config.compilation_targets import CompilationTargets
 from .config.target_info import CPUArchitecture, CrossCompileTarget
 from .utils import runCmd
 
@@ -70,8 +69,10 @@ class QemuOptions:
 
     def disk_image_args(self, image) -> list:
         if self.virtio_disk:
+            # RISC-V doesn't support virtio-blk-pci, we have to use virtio-blk-device
+            device_kind = "virtio-blk-device" if self.xtarget.is_riscv(include_purecap=True) else "virtio-blk-pci"
             return ["-drive", "if=none,file=" + str(image) + ",id=drv,format=raw",
-                    "-device", "virtio-blk-device,drive=drv"]
+                    "-device", device_kind + ",drive=drv"]
         else:
             return ["-drive", "file=" + str(image) + ",format=raw,index=0,media=disk"]
 
@@ -129,15 +130,15 @@ class QemuOptions:
         result.extend(gui_options)
         if bios_args:
             result.extend(bios_args)
-        if kernel_file:
+        if kernel_file and self.can_boot_kernel_directly:
             result.append("-kernel")
             result.append(str(kernel_file))
         if disk_image:
             result.extend(self.disk_image_args(disk_image))
         if add_network_device:
             result.extend(self.user_network_args(user_network_args))
-        if self.xtarget.target_info_cls.is_cheribsd() and self.xtarget.is_mips(include_purecap=True):
-            add_virtio_rng = False  # currently hangs the kernel
+        if self.xtarget.target_info_cls.is_cheribsd():  # and self.xtarget.is_mips(include_purecap=True):
+            add_virtio_rng = False  # currently hangs the kernel (even for x86)
         if add_virtio_rng:
             result.extend(["-device", "virtio-rng-pci"])
         return result
