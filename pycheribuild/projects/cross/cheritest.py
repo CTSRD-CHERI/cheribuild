@@ -125,10 +125,8 @@ class BuildCheriMipsTestSail(_BuildCheriMipsTestBase):
     def do_cheritest(self):
         if self.single_test:
             self.run_make("pytest/sail_cheri128_c/tests/" + str(self.single_test), parallel=False)
-            self.run_make("pytest/sail_cheri_c/tests/" + str(self.single_test), parallel=False)
             self.run_make("pytest/sail_mips_c/tests/" + str(self.single_test), parallel=False)
         else:
             # Ignore ocaml version: nosetests_sail nosetests_sail_cheri nosetests_sail_cheri128
             self.run_make("nosetests_sail_cheri128_c")  # CHERI128
-            self.run_make("nosetests_sail_cheri")  # CHERI256
             self.run_make("nosetests_sail_mips_c")  # MIPS
