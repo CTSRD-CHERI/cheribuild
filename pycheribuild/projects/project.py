@@ -2111,7 +2111,7 @@ class Project(SimpleProject):
         # just use git clean for cleanup
         warningMessage(self.project_name, "does not support out-of-source builds, using git clean to remove "
                                           "build artifacts.")
-        git_clean_cmd = ["git", "clean", "-dfx", "--exclude=.*", "--exclude=*.kdev4"] + self._extra_git_clean_excludes
+        git_clean_cmd = ["git", "clean", "-dfx", "--exclude=.*"] + self._extra_git_clean_excludes
         # Try to keep project files for IDEs and other dotfiles:
         runCmd(git_clean_cmd, cwd=self.sourceDir)
 
