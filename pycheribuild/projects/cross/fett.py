@@ -178,6 +178,7 @@ class BuildFettDiskImage(BuildCheriBSDDiskImage):
         super().setup_config_options(**kwargs)
         cls.hostname = "cheri-fett"
 
+
 class LaunchFett(LaunchCheriBSD):
     project_name = "run-fett"
     _source_class = BuildFettDiskImage
