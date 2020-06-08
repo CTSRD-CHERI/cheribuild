@@ -28,8 +28,8 @@
 # SUCH DAMAGE.
 #
 
-from ..project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..cherisim import BuildCheriSim
+from ..project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..sail import BuildSailCheriMips
 
 
@@ -72,6 +72,11 @@ class BuildCheriMipsTestQEMU(_BuildCheriMipsTestBase):
     project_name = "cheritest"
     dependencies = ["qemu"]
 
+    def setup(self):
+        super().setup()
+        self.make_args.set(QEMU_CHERI128=self.config.qemu_bindir / "qemu-system-cheri128")
+        self.make_args.set(QEMU_MIPS64=self.config.qemu_bindir / "qemu-system-mips64")
+
     def do_cheritest(self):
         if self.single_test:
             self.run_make("pytest/qemu/tests/" + str(self.single_test), parallel=False)
@@ -98,7 +103,10 @@ class BuildCheriMipsTestBluesim(_BuildCheriMipsTestBase):
                 self.run_make("pytest/sim_uncached/tests/" + str(self.single_test), parallel=False)
                 self.run_make("pytest/sim_cached/tests/" + str(self.single_test), parallel=False)
         else:
-            test_targets = ("nosetests_multi", "nosetests_cachedmulti") if multicore else ("nosetest", "nosetest_cached")
+            if multicore:
+                test_targets = ("nosetests_multi", "nosetests_cachedmulti")
+            else:
+                test_targets = ("nosetest", "nosetest_cached")
             for tgt in test_targets:
                 self.run_make(tgt)
 
