@@ -52,7 +52,7 @@ class BuildFettConfig(CrossCompileProject):
     skipGitSubmodules = True
     supported_architectures = fett_supported_architectures
 
-    dependencies = ["fett-nginx", "fett-openssh", "fett-sqlite"]
+    dependencies = ["fett-nginx", "fett-openssh", "fett-sqlite", "fett-voting"]
 
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     cross_install_dir = DefaultInstallDir.ROOTFS
@@ -80,6 +80,7 @@ class BuildFettConfig(CrossCompileProject):
         nginx_prefix = BuildFettNginx.get_instance(self)._installPrefix.relative_to('/')
         self.mtree.add_file(nginx_src / "common/conf/nginx.conf",
                             nginx_prefix / "conf/nginx.conf")
+        self.mtree.add_dir(nginx_prefix / "conf/sites")
         self.mtree.add_dir(nginx_prefix / "logs")
         # XXX: make private key dir 700?
         self.mtree.add_file(nginx_src / "common/keys/private-selfsigned.key",
@@ -112,9 +113,52 @@ class BuildFettConfig(CrossCompileProject):
         # XXX-TODO: install a smoketest?
 
         # voting app
-        # ???
+        voting_src = src / "build/voting"
+        self.mtree.add_dir("var/www")
+        self.mtree.add_dir("var/www/cgi-bin")
+        self.mtree.add_dir("var/www/html")
+        self.mtree.add_dir("var/www/data", uname="www", gname="www", mode="0770")
+        self.mtree.add_file(voting_src / "common/conf/fastcgi.conf",
+                            nginx_prefix / "conf/fastcgi.conf")
+        self.mtree.add_file(voting_src / "common/conf/sites/voting.conf",
+                            nginx_prefix / "conf/sites/voting.conf")
+
+        # Install rc script
 
         self.mtree.write(self.METALOG)
+
+
+class BuildFettVoting(CrossCompileProject):
+    project_name = "fett-voting"
+    path_in_rootfs = "/fett"
+    repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Voting.git", default_branch="develop")
+    supported_architectures = fett_supported_architectures
+
+    dependencies = ["fett-kcgi", "fett-sqlbox", "fett-sqlite", "fett-zlib"]
+
+    native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+    cross_install_dir = DefaultInstallDir.ROOTFS
+
+    make_kind = MakeCommandKind.GnuMake
+    build_in_source_dir = True
+
+    def setup(self):
+        super().setup()
+
+        self.make_args.set_env(**{"PREFIX": str(self.destdir) + str(self._installPrefix)})
+        self.make_args.set_env(**{"ORT_PREFIX": str(self.target_info.sdk_root_dir / "bin/ort")})
+        self.make_args.set_env(**{"CC": str(self.CC) + " " + commandline_to_str(self.default_compiler_flags) + " -Wno-error-unused-function -Wno-error-unused-variable"})
+        # kcgi requires libmd
+        self.make_args.set_env(**{"LFLAGS": "-lmd"})
+
+    def compile(self, parallel: bool = True):
+        self.run_make("bvrs", cwd=self.sourceDir / "source/src", parallel=True)
+        self.run_make("bvrs.sql", cwd=self.sourceDir / "source/src", parallel=True)
+
+    def install(self, **kwargs):
+        self.installFile(self.buildDir / "source/src/bvrs", self.destdir / "var/www/cgi-bin/bvrs")
+        self.installFile(self.buildDir / "source/src/bvrs.sql", self.real_install_root_dir / "share/bvrs.sql")
+
 
 class BuildFettDiskImage(BuildCheriBSDDiskImage):
     project_name = "disk-image-fett"
