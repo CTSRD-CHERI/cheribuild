@@ -29,7 +29,6 @@
 #
 
 from .crosscompileproject import CrossCompileAutotoolsProject
-from .gdb import BuildGDB
 from ..build_qemu import BuildQEMU
 from ..project import (BuildType, CheriConfig, CompilationTargets, ComputedDefaultValue, CrossCompileTarget,
                        DefaultInstallDir, GitRepository, MakeCommandKind, Project)
@@ -51,8 +50,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
 
     @classmethod
     def dependencies(cls, config: CheriConfig):
-        # We need GNU objcopy which is installed by gdb-native
-        result = super().dependencies(config) + ["gdb-native"]
+        result = super().dependencies(config)
         if cls.kernel_class:
             xtarget = cls.get_crosscompile_target(config)
             result.append(cls.kernel_class.get_class_for_target(xtarget).target)
@@ -82,10 +80,9 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
 
         self.configureArgs.append("--disable-fp-emulation")  # Should not be needed
 
-        # BBL build uses weird objcopy flags and therefore requires GNU objcopy which we can get from GDB
-        self.add_configure_and_make_env_arg("OBJCOPY",
-            BuildGDB.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/gobjcopy")
-        # Otherwise use LLVM tools
+        # BBL build uses weird objcopy flags and therefore requires GNU objcopy if you want to build everything
+        # Fortunetaly we don't need this when building only BBL.
+        self.add_configure_and_make_env_arg("OBJCOPY", self.sdk_bindir / "llvm-objcopy")
         self.add_configure_and_make_env_arg("READELF", self.sdk_bindir / "llvm-readelf")
         self.add_configure_and_make_env_arg("RANLIB", self.sdk_bindir / "llvm-ranlib")
         self.add_configure_and_make_env_arg("AR", self.sdk_bindir / "llvm-ar")
