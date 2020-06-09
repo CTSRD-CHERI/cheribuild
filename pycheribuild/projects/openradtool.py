@@ -28,15 +28,14 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-#from .crosscompileproject import (CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository,
-#                                  MakeCommandKind)
 from .project import AutotoolsProject, DefaultInstallDir, GitRepository, MakeCommandKind
+
 
 class BuildOpenRADTool(AutotoolsProject):
     project_name = "openradtool"
     build_in_source_dir = True
 
-    repository = GitRepository("https://github.com/kristapsdz/sqlbox.git")
+    repository = GitRepository("https://github.com/kristapsdz/openradtool.git")
 
     native_install_dir = DefaultInstallDir.CHERI_SDK
 
