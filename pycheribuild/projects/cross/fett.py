@@ -134,7 +134,7 @@ class BuildFettVoting(CrossCompileProject):
     repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Voting.git", default_branch="develop")
     supported_architectures = fett_supported_architectures
 
-    dependencies = ["fett-kcgi", "fett-sqlbox", "fett-sqlite", "fett-zlib"]
+    dependencies = ["fett-kcgi", "fett-sqlbox", "fett-sqlite", "fett-zlib", "openradtool"]
 
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     cross_install_dir = DefaultInstallDir.ROOTFS
@@ -144,14 +144,18 @@ class BuildFettVoting(CrossCompileProject):
 
     def setup(self):
         super().setup()
+        # XXX: The buid system appends -Werror at the end so we can't use -Wno-error=xxx instead of -Wno-xxx
+        self.common_warning_flags.append("-Wno-unused-function")
+        self.common_warning_flags.append("-Wno-unused-variable")
+        self.make_args.set_env(
+            CC=str(self.CC),
+            LFLAGS=commandline_to_str(self.default_ldflags + ["-lmd"]),  # kcgi requires libmd
+            CFLAGS=commandline_to_str(self.default_compiler_flags)
+            )
+        # Note: We must set these variables on the command line since the Makefile assigns to them with =
+        self.make_args.set(PREFIX=self.real_install_root_dir, ORT_PREFIX=self.sdk_bindir / "ort")
 
-        self.make_args.set_env(**{"PREFIX": str(self.destdir) + str(self._installPrefix)})
-        self.make_args.set_env(**{"ORT_PREFIX": str(self.target_info.sdk_root_dir / "bin/ort")})
-        self.make_args.set_env(**{"CC": str(self.CC) + " " + commandline_to_str(self.default_compiler_flags) + " -Wno-error-unused-function -Wno-error-unused-variable"})
-        # kcgi requires libmd
-        self.make_args.set_env(**{"LFLAGS": "-lmd"})
-
-    def compile(self, parallel: bool = True):
+    def compile(self, **kwargs):
         self.run_make("bvrs", cwd=self.sourceDir / "source/src", parallel=True)
         self.run_make("bvrs.sql", cwd=self.sourceDir / "source/src", parallel=True)
 
