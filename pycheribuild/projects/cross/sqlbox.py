@@ -48,54 +48,9 @@ class BuildSQLbox(CrossCompileAutotoolsProject):
     _configure_supports_variables_on_cmdline = False
     _configure_understands_enable_static = False
 
-    def configure(self, **kwargs):
+    def setup(self):
+        super().setup()
         self.configureArgs.append("PREFIX=" + str(self.installPrefix))
-
-        # Swiped from an x86 config.h
-        # Not obviously needed here (unlike kcgi), but probably makes
-        # cross build more consistent.)
-        self.add_configure_env_arg("HAVE_ARC4RANDOM", "1")
-        self.add_configure_env_arg("HAVE_B64_NTOP", "1")
-        self.add_configure_env_arg("HAVE_CAPSICUM", "1")
-        self.add_configure_env_arg("HAVE_ENDIAN_H", "0")
-        self.add_configure_env_arg("HAVE_ERR", "1")
-        self.add_configure_env_arg("HAVE_EXPLICIT_BZERO", "1")
-        self.add_configure_env_arg("HAVE_GETEXECNAME", "0")
-        self.add_configure_env_arg("HAVE_GETPROGNAME", "1")
-        self.add_configure_env_arg("HAVE_INFTIM", "1")
-        self.add_configure_env_arg("HAVE_MD5", "1")
-        self.add_configure_env_arg("HAVE_MEMMEM", "1")
-        self.add_configure_env_arg("HAVE_MEMRCHR", "1")
-        self.add_configure_env_arg("HAVE_MEMSET_S", "1")
-        self.add_configure_env_arg("HAVE_MKFIFOAT", "1")
-        self.add_configure_env_arg("HAVE_MKNODAT", "1")
-        self.add_configure_env_arg("HAVE_OSBYTEORDER_H", "0")
-        self.add_configure_env_arg("HAVE_PATH_MAX", "1")
-        self.add_configure_env_arg("HAVE_PLEDGE", "0")
-        self.add_configure_env_arg("HAVE_PROGRAM_INVOCATION_SHORT_NAME", "0")
-        self.add_configure_env_arg("HAVE_READPASSPHRASE", "1")
-        self.add_configure_env_arg("HAVE_REALLOCARRAY", "1")
-        self.add_configure_env_arg("HAVE_RECALLOCARRAY", "0")
-        self.add_configure_env_arg("HAVE_SANDBOX_INIT", "0")
-        self.add_configure_env_arg("HAVE_SECCOMP_FILTER", "0")
-        self.add_configure_env_arg("HAVE_SOCK_NONBLOCK", "1")
-        self.add_configure_env_arg("HAVE_STRLCAT", "1")
-        self.add_configure_env_arg("HAVE_STRLCPY", "1")
-        self.add_configure_env_arg("HAVE_STRNDUP", "1")
-        self.add_configure_env_arg("HAVE_STRNLEN", "1")
-        self.add_configure_env_arg("HAVE_STRTONUM", "1")
-        self.add_configure_env_arg("HAVE_SYS_BYTEORDER_H", "0")
-        self.add_configure_env_arg("HAVE_SYS_ENDIAN_H", "1")
-        self.add_configure_env_arg("HAVE_SYS_MKDEV_H", "0")
-        self.add_configure_env_arg("HAVE_SYS_QUEUE", "1")
-        self.add_configure_env_arg("HAVE_SYS_SYSMACROS_H", "0")
-        self.add_configure_env_arg("HAVE_SYS_TREE", "1")
-        self.add_configure_env_arg("HAVE_SYSTRACE", "0")
-        self.add_configure_env_arg("HAVE_UNVEIL", "0")
-        self.add_configure_env_arg("HAVE_WAIT_ANY", "1")
-        self.add_configure_env_arg("HAVE___PROGNAME", "1")
-
-        super().configure(**kwargs)
 
     def needsConfigure(self):
         return not (self.buildDir / "config.h").exists()
