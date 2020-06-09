@@ -29,26 +29,24 @@
 # SUCH DAMAGE.
 #
 import os
-
 from pathlib import Path
-from .crosscompileproject import *
-from ..disk_image import BuildCheriBSDDiskImage
-from ..disk_image import _default_disk_image_name
-from ..run_qemu import LaunchCheriBSD
-from ...config.loader import ComputedDefaultValue
-from ...utils import classproperty, fatalError
-from ...mtree import MtreeFile
+
+from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileProject, DefaultInstallDir,
+                                  GitRepository, MakeCommandKind)
 from .nginx import BuildFettNginx
 from .openssh import BuildFettOpenSSH
-from .sqlite import BuildFettSQLite
-
+from ..disk_image import _default_disk_image_name, BuildCheriBSDDiskImage
+from ..run_qemu import LaunchCheriBSD
+from ...config.loader import ComputedDefaultValue
+from ...mtree import MtreeFile
+from ...utils import commandline_to_str
 
 fett_supported_architectures = CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS
 
+
 class BuildFettConfig(CrossCompileProject):
     project_name = "fett-config"
-    repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Target.git",
-                               default_branch="cheri")
+    repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Target.git", default_branch="cheri")
     skipGitSubmodules = True
     supported_architectures = fett_supported_architectures
 
@@ -62,15 +60,15 @@ class BuildFettConfig(CrossCompileProject):
         self.mtree = MtreeFile()
         self.METALOG = self.destdir / "METALOG"
 
-    def compile(self):
+    def compile(self, **kwargs):
         print("Nothing to build for " + self.project_name)
 
     def install(self, **kwargs):
         if os.getenv("_TEST_SKIP_METALOG"):
-             return
+            return
         if not self.METALOG.exists():
-             fatalError("METALOG " + str(self.METALOG) + "does not exist")
-             return
+            self.fatal("METALOG " + str(self.METALOG) + "does not exist")
+            return
 
         self.mtree.load(self.METALOG)
         src = self.sourceDir
@@ -88,15 +86,15 @@ class BuildFettConfig(CrossCompileProject):
         self.mtree.add_file(nginx_src / "common/certs/selfsigned.crt",
                             nginx_prefix / "etc/ssl/certs/selfsigned.crt")
         self.mtree.add_file(src / "build/webserver/FreeBSD/rcfile",
-                            "etc/rc.d/fett_nginx", mode="0555")
+            "etc/rc.d/fett_nginx", mode="0555")
         self.mtree.add_dir(nginx_prefix / "post", uname="www", gname="www")
         html_files = [
-          "index.html",
-          "private/secret.html",
-          "stanford.png",
-          "static.html",
-          "test.txt",
-        ]
+            "index.html",
+            "private/secret.html",
+            "stanford.png",
+            "static.html",
+            "test.txt",
+            ]
         for file in html_files:
             self.mtree.add_file(src / "build/webserver/common/html" / file,
                                 nginx_prefix / "html" / file)
@@ -105,9 +103,8 @@ class BuildFettConfig(CrossCompileProject):
         ssh_prefix = BuildFettOpenSSH.get_instance(self)._installPrefix.relative_to('/')
         keyfiles = ["ssh_host_dsa_key", "ssh_host_ecdsa_key", "ssh_host_ed25519_key", "ssh_host_rsa_key"]
         for keyfile in keyfiles:
-            self.mtree.add_file("/etc/ssh/" + keyfile, ssh_prefix / "etc/" / keyfile, symlink=True)
-        self.mtree.add_file(src / "build/ssh/FreeBSD/fett_sshd",
-                            "etc/rc.d/fett_sshd", mode="0555")
+            self.mtree.add_file(Path("/etc/ssh", keyfile), ssh_prefix / "etc/" / keyfile, symlink=True)
+        self.mtree.add_file(src / "build/ssh/FreeBSD/fett_sshd", "etc/rc.d/fett_sshd", mode="0555")
 
         # sqlite bits
         # XXX-TODO: install a smoketest?
