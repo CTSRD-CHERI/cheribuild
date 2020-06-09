@@ -110,6 +110,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
         for test in test_binaries:
             if not run_cheritest(qemu, test, args):
                 tests_successful = False
+                boot_cheribsd.failure("At least one test failure in", test, exit=False)
         if qemu.xtarget.is_mips(include_purecap=True):
             qemu.checked_run("sysctl machdep.log_cheri_exceptions=1")
 

@@ -168,7 +168,7 @@ class RunSyzkaller(SimpleProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
 
-        self.qemu_binary = BuildQEMU.qemu_binary(self, xtarget=CompilationTargets.CHERIBSD_MIPS_HYBRID)
+        self.qemu_binary = BuildQEMU.qemu_cheri_binary(self, xtarget=CompilationTargets.CHERIBSD_MIPS_HYBRID)
         self.syzkaller_binary = BuildSyzkaller.get_instance(
             self, cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID).syzkaller_binary()
         self.kernel_path = BuildCHERIBSD.get_installed_kernel_path(

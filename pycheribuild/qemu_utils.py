@@ -33,7 +33,6 @@ import subprocess
 import typing
 from pathlib import Path
 
-from .config.compilation_targets import CompilationTargets
 from .config.target_info import CPUArchitecture, CrossCompileTarget
 from .utils import runCmd
 
@@ -44,12 +43,14 @@ class QemuOptions:
         self.virtio_disk = True
         self.can_boot_kernel_directly = False
         self.memory_size = "2048"
+        self.has_default_nic = False
         if xtarget.is_mips(include_purecap=True):
             # Note: we always use the CHERI QEMU
             self.qemu_arch_sufffix = "cheri128"
             self.machine_flags = ["-M", "malta"]
             self.virtio_disk = False  # broken for MIPS?
             self.can_boot_kernel_directly = True
+            self.has_default_nic = True  # MALTA board has a default pcnet at 0x0b
         elif xtarget.is_riscv(include_purecap=True):
             # Note: we always use the CHERI QEMU
             self.qemu_arch_sufffix = "riscv64cheri"
@@ -68,8 +69,10 @@ class QemuOptions:
 
     def disk_image_args(self, image) -> list:
         if self.virtio_disk:
+            # RISC-V doesn't support virtio-blk-pci, we have to use virtio-blk-device
+            device_kind = "virtio-blk-device" if self.xtarget.is_riscv(include_purecap=True) else "virtio-blk-pci"
             return ["-drive", "if=none,file=" + str(image) + ",id=drv,format=raw",
-                    "-device", "virtio-blk-device,drive=drv"]
+                    "-device", device_kind + ",drive=drv"]
         else:
             return ["-drive", "file=" + str(image) + ",format=raw,index=0,media=disk"]
 
@@ -79,15 +82,29 @@ class QemuOptions:
             return False
         return True
 
+    def _qemu_network_config(self):
+        if self.has_default_nic:
+            assert self.xtarget.is_mips(include_purecap=True)
+            return "pcnet", "le0"
+        if not self.can_use_virtio_network():
+            # Note: providing a "pcnet" net crashes CheriBSD for non-MIPS
+            if self.xtarget.is_mips(include_purecap=True):
+                return "pcnet", "le0"
+            return "e1000", "em0"
+        elif self.xtarget.is_riscv(include_purecap=True):  # TODO: aarch64?
+            return "virtio-net-device", "vtnet0"
+        else:
+            return "virtio-net-pci", "em0"  # XXX: is vtnet0 correct?
+
+    def network_interface_name(self):
+        return self._qemu_network_config()[1]
+
     def user_network_args(self, extra_options):
         # We'd like to use virtio everwhere, but FreeBSD doesn't like it on BE mips.
-        if not self.can_use_virtio_network():
-            return ["-net", "nic", "-net", "user,id=net0,ipv6=off" + extra_options]
-        if self.xtarget.is_any_x86():  # TODO: aarch64?
-            virtio_device_kind = "virtio-net-pci"
-        else:
-            virtio_device_kind = "virtio-net-device"
-        return ["-device", virtio_device_kind + ",netdev=net0", "-netdev", "user,id=net0,ipv6=off" + extra_options]
+        if self.has_default_nic:
+            return ["-nic", "user,id=net0,ipv6=off" + extra_options]
+        network_device_kind = self._qemu_network_config()[0]
+        return ["-device", network_device_kind + ",netdev=net0", "-netdev", "user,id=net0,ipv6=off" + extra_options]
 
     def get_qemu_binary(self) -> "typing.Optional[Path]":
         found_in_path = shutil.which("qemu-system-" + self.qemu_arch_sufffix)
@@ -113,13 +130,15 @@ class QemuOptions:
         result.extend(gui_options)
         if bios_args:
             result.extend(bios_args)
-        if kernel_file:
+        if kernel_file and self.can_boot_kernel_directly:
             result.append("-kernel")
             result.append(str(kernel_file))
         if disk_image:
             result.extend(self.disk_image_args(disk_image))
         if add_network_device:
             result.extend(self.user_network_args(user_network_args))
+        if self.xtarget.target_info_cls.is_cheribsd():  # and self.xtarget.is_mips(include_purecap=True):
+            add_virtio_rng = False  # currently hangs the kernel (even for x86)
         if add_virtio_rng:
             result.extend(["-device", "virtio-rng-pci"])
         return result
@@ -140,12 +159,15 @@ def riscv_bios_arguments(xtarget: CrossCompileTarget, caller, prefer_bbl=True) -
         # noinspection PyUnreachableCode
         if prefer_bbl:
             # We want a purecap BBL:
-            from .projects.cross.bbl import BuildBBLNoPayload
-            return ["-bios", str(BuildBBLNoPayload.get_installed_kernel_path(caller,
-                    cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP))]
+            # from .projects.cross.bbl import BuildBBLNoPayload
+            # return ["-bios", str(BuildBBLNoPayload.get_installed_kernel_path(caller,
+            #         cross_target=CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP))]
+            # Explicitly specify the file name while QEMU may still be too old:
+            return ["-bios", "bbl-riscv64cheri-virt-fw_jump.bin"]
         else:
-            from .projects.cross.opensbi import BuildOpenSBI
-            return ["-bios", str(BuildOpenSBI.get_cheri_bios(caller))]
+            # from .projects.cross.opensbi import BuildOpenSBI
+            # return ["-bios", str(BuildOpenSBI.get_cheri_bios(caller))]
+            return ["-bios", "opensbi-riscv64cheri-virt-fw_jump.bin"]
     # For non-CHERI we prefer the OpenSBI bios that is bundled with QEMU
     # return BuildOpenSBI.get_nocap_bios(caller)
     return ["-bios", "default"]

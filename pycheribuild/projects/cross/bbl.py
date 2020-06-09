@@ -29,10 +29,9 @@
 #
 
 from .crosscompileproject import CrossCompileAutotoolsProject
-from .gdb import BuildGDB
 from ..build_qemu import BuildQEMU
 from ..project import (BuildType, CheriConfig, CompilationTargets, ComputedDefaultValue, CrossCompileTarget,
-                       DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
+                       DefaultInstallDir, GitRepository, MakeCommandKind, Project)
 
 
 class BuildBBLBase(CrossCompileAutotoolsProject):
@@ -51,8 +50,7 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
 
     @classmethod
     def dependencies(cls, config: CheriConfig):
-        # We need GNU objcopy which is installed by gdb-native
-        result = super().dependencies(config) + ["gdb-native"]
+        result = super().dependencies(config)
         if cls.kernel_class:
             xtarget = cls.get_crosscompile_target(config)
             result.append(cls.kernel_class.get_class_for_target(xtarget).target)
@@ -82,10 +80,9 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
 
         self.configureArgs.append("--disable-fp-emulation")  # Should not be needed
 
-        # BBL build uses weird objcopy flags and therefore requires GNU objcopy which we can get from GDB
-        self.add_configure_and_make_env_arg("OBJCOPY",
-            BuildGDB.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/gobjcopy")
-        # Otherwise use LLVM tools
+        # BBL build uses weird objcopy flags and therefore requires GNU objcopy if you want to build everything
+        # Fortunetaly we don't need this when building only BBL.
+        self.add_configure_and_make_env_arg("OBJCOPY", self.sdk_bindir / "llvm-objcopy")
         self.add_configure_and_make_env_arg("READELF", self.sdk_bindir / "llvm-readelf")
         self.add_configure_and_make_env_arg("RANLIB", self.sdk_bindir / "llvm-ranlib")
         self.add_configure_and_make_env_arg("AR", self.sdk_bindir / "llvm-ar")
@@ -112,24 +109,29 @@ class BuildBBLBase(CrossCompileAutotoolsProject):
         return cls.get_instance(caller, config=config, cross_target=cross_target).real_install_root_dir / "bbl"
 
 
+def _bbl_install_dir(config: CheriConfig, project: Project):
+    dir_name = project.crosscompile_target.generic_suffix.replace("baremetal-", "")
+    return config.cheri_sdk_dir / ("bbl" + project.build_dir_suffix) / dir_name
+
+
 # Build BBL without an embedded payload
 class BuildBBLNoPayload(BuildBBLBase):
     target = "bbl"
     project_name = "bbl"
     without_payload = True
     cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
-    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP, CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
+    supported_architectures = [CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP,
+                               CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
 
-    _default_install_dir_fn = ComputedDefaultValue(
-        function=lambda config, project: config.cheri_sdk_dir / "bbl" / project.crosscompile_target.generic_suffix,
-        as_string="$SDK_ROOT/bbl/riscv{32,64}{c,-hybrid}")
+    _default_install_dir_fn = ComputedDefaultValue(function=_bbl_install_dir,
+        as_string="$SDK_ROOT/bbl/riscv{32,64}{,-purecap}")
 
     def install(self):
         super().install()
-        if self.crosscompile_target.is_cheri_purecap():
+        # Only install BuildBBLNoPayload as the QEMU bios and not the GFE version by checking build_dir_suffix
+        if self.crosscompile_target.is_cheri_purecap() and not self.build_dir_suffix:
             # Install into the QEMU firware directory so that `-bios default` works
-            qemu_fw_dir = BuildQEMU.getInstallDir(self,
-                cross_target=CompilationTargets.NATIVE) / "share/qemu/"
+            qemu_fw_dir = BuildQEMU.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "share/qemu/"
             self.makedirs(qemu_fw_dir)
             self.run_cmd(self.sdk_bindir / "llvm-objcopy", "-S", "-O", "binary",
                 self.get_installed_kernel_path(self), qemu_fw_dir / "bbl-riscv64cheri-virt-fw_jump.bin")
@@ -141,9 +143,18 @@ class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
     project_name = "bbl"  # reuse same source dir
     build_dir_suffix = "-gfe"  # but not the build dir
 
+    _default_install_dir_fn = ComputedDefaultValue(function=_bbl_install_dir,
+        as_string="$SDK_ROOT/bbl-gfe/riscv{32,64}{,-purecap}")
+
+
+class BuildBBLNoPayloadFETT(BuildBBLNoPayloadGFE):
+    target = "bbl-fett"
+    build_dir_suffix = "-fett"  # but not the build dir
+
     _default_install_dir_fn = ComputedDefaultValue(
-        function=lambda config, project: config.cheri_sdk_dir / "bbl-gfe" / project.crosscompile_target.generic_suffix,
-        as_string="$SDK_ROOT/bbl-gfe/riscv{32,64}{c,-hybrid}")
+        function=lambda config, project: config.cheri_sdk_dir / "bbl-fett" / project.crosscompile_target.generic_suffix,
+        as_string="$SDK_ROOT/bbl-fett/riscv{32,64}{c,-hybrid}")
+
 
 # class BuildBBLFreeBSDRISCV(BuildBBLBase):
 #     project_name = "bbl"  # reuse same source dir
@@ -167,4 +178,3 @@ class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
 #     build_dir_suffix = "cheribsd"
 #     supported_architectures = [CompilationTargets.CHERIBSD_RISCV_HYBRID, CompilationTargets.CHERIBSD_RISCV_NO_CHERI]
 #     kernel_class = BuildCHERIBSD
-

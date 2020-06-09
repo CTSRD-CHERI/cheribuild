@@ -28,8 +28,8 @@
 # SUCH DAMAGE.
 #
 
-from ..project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..cherisim import BuildCheriSim
+from ..project import DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..sail import BuildSailCheriMips
 
 
@@ -46,6 +46,8 @@ class _BuildCheriMipsTestBase(Project):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.single_test = cls.add_config_option("single-test", help="Run a single test instead of all of them")
+        cls.run_tests_with_build = cls.add_bool_option("run-tests-with-build",
+            help="Run tests as part of the --build step (option is useful for jenkins)", show_help=False, default=True)
 
     def setup(self):
         super().setup()
@@ -56,9 +58,15 @@ class _BuildCheriMipsTestBase(Project):
             self.make_args.set(CAP_SIZE=self.config.mips_cheri_bits)
             self.make_args.set_env(PYTEST_ADDOPTS="--color=yes")
 
+    _stdout_filter = None  # don't filter output during make
+
     # Should run tests both for --test and --build
     def compile(self, **kwargs):
-        self.do_cheritest()
+        if self.run_tests_with_build:
+            self.do_cheritest()
+        else:
+            self.run_make("elfs128")
+            self.run_make("elfs_mips")
 
     def run_tests(self):
         self.do_cheritest()
@@ -71,6 +79,11 @@ class BuildCheriMipsTestQEMU(_BuildCheriMipsTestBase):
     target = "cheritest-qemu"
     project_name = "cheritest"
     dependencies = ["qemu"]
+
+    def setup(self):
+        super().setup()
+        self.make_args.set(QEMU_CHERI128=self.config.qemu_bindir / "qemu-system-cheri128")
+        self.make_args.set(QEMU_MIPS64=self.config.qemu_bindir / "qemu-system-mips64")
 
     def do_cheritest(self):
         if self.single_test:
@@ -98,7 +111,10 @@ class BuildCheriMipsTestBluesim(_BuildCheriMipsTestBase):
                 self.run_make("pytest/sim_uncached/tests/" + str(self.single_test), parallel=False)
                 self.run_make("pytest/sim_cached/tests/" + str(self.single_test), parallel=False)
         else:
-            test_targets = ("nosetests_multi", "nosetests_cachedmulti") if multicore else ("nosetest", "nosetest_cached")
+            if multicore:
+                test_targets = ("nosetests_multi", "nosetests_cachedmulti")
+            else:
+                test_targets = ("nosetest", "nosetest_cached")
             for tgt in test_targets:
                 self.run_make(tgt)
 
@@ -115,10 +131,8 @@ class BuildCheriMipsTestSail(_BuildCheriMipsTestBase):
     def do_cheritest(self):
         if self.single_test:
             self.run_make("pytest/sail_cheri128_c/tests/" + str(self.single_test), parallel=False)
-            self.run_make("pytest/sail_cheri_c/tests/" + str(self.single_test), parallel=False)
             self.run_make("pytest/sail_mips_c/tests/" + str(self.single_test), parallel=False)
         else:
             # Ignore ocaml version: nosetests_sail nosetests_sail_cheri nosetests_sail_cheri128
             self.run_make("nosetests_sail_cheri128_c")  # CHERI128
-            self.run_make("nosetests_sail_cheri")  # CHERI256
             self.run_make("nosetests_sail_mips_c")  # MIPS

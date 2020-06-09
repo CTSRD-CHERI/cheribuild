@@ -39,7 +39,7 @@ class BuildOpenSSH(CrossCompileAutotoolsProject):
 
     repository = GitRepository("https://github.com/CTSRD-CHERI/openssh-portable.git")
 
-    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     cross_install_dir = DefaultInstallDir.ROOTFS
     # LD is used with CFLAGS so don't set to ld/ld.lld
     _define_ld = False
@@ -51,12 +51,13 @@ class BuildOpenSSH(CrossCompileAutotoolsProject):
     def configure(self, **kwargs):
         self.add_configure_env_arg("AR", self.target_info.ar)
         self.add_configure_env_arg("DESTDIR", self.destdir)
+        self.add_configure_env_arg("ac_cv_have_control_in_msghdr", "yes")
         self.run_cmd("autoreconf", str(self.sourceDir), cwd=self.buildDir)
         super().configure(**kwargs)
 
 class BuildFettOpenSSH(BuildOpenSSH):
-    target = "fett-openssh"
     project_name = "fett-openssh"
+    path_in_rootfs = "/fett"
     repository = GitRepository("https://github.com/CTSRD-CHERI/openssh-portable.git",
                                default_branch="fett")
 

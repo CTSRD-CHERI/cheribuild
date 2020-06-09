@@ -74,7 +74,7 @@ class BuildQEMUBase(AutotoolsProject):
             help="Prefer full LTO over LLVM ThinLTO when using LTO")
 
     @classmethod
-    def qemu_binary(cls, caller: SimpleProject):
+    def qemu_cheri_binary(cls, caller: SimpleProject):
         raise NotImplementedError()
 
     def __init__(self, config: CheriConfig):
@@ -240,7 +240,7 @@ class BuildQEMU(BuildQEMUBase):
                                            help="Collect statistics on out-of-bounds capability creation.")
 
     @classmethod
-    def qemu_binary(cls, caller: SimpleProject, xtarget: CrossCompileTarget=None):
+    def qemu_cheri_binary(cls, caller: SimpleProject, xtarget: CrossCompileTarget=None):
         if xtarget is None:
             xtarget = caller.get_crosscompile_target(caller.config)
         if xtarget.is_riscv(include_purecap=True):

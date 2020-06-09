@@ -202,5 +202,5 @@ int main(int argc, char** argv) {
             runCmd([self.sdk_bindir / "clang", "main.c", "-o", test_exe] + compiler_flags, cwd=td)
             runCmd(self.sdk_bindir / "llvm-readobj", "-h", test_exe)
             from ..build_qemu import BuildQEMU
-            runCmd(self.sdk_sysroot / "bin/run_with_qemu.py", "--qemu", BuildQEMU.qemu_binary(self),
+            runCmd(self.sdk_sysroot / "bin/run_with_qemu.py", "--qemu", BuildQEMU.qemu_cheri_binary(self),
                    "--timeout", "20", test_exe, "HELLO", "WORLD")

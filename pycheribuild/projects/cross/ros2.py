@@ -36,6 +36,7 @@ class BuildRos2(CrossCompileCMakeProject):
     repository = GitRepository("https://github.com/dodsonmg/ros2_dashing_minimal.git", default_branch="master", force_branch=True)
 
     # atm, we build and install in the sourceDir.
+    build_in_source_dir = True
     # it may eventually be useful to install to rootfs or sysroot depending on whether we want to use ROS2
     # as a library for building other applications using cheribuild
     # therefore, the _install_dir doesn't do anything, but cheribuild requires them

@@ -157,19 +157,29 @@ class MtreeFile(object):
         return result
 
     def add_file(self, file: Path, path_in_image, mode=None, uname="root", gname="wheel", print_status=True,
-                 parent_dir_mode=None):
+                 parent_dir_mode=None, symlink=False):
         if isinstance(path_in_image, Path):
             path_in_image = str(path_in_image)
         assert not path_in_image.startswith("/")
         assert not path_in_image.startswith("./") and not path_in_image.startswith("..")
         if mode is None:
-            mode = self.infer_mode_string(file, False)
+            if symlink:
+                mode = "0755"
+            else:
+                mode = self.infer_mode_string(file, False)
         mode = self._ensure_mtree_mode_fmt(mode)
         mtree_path = self._ensure_mtree_path_fmt(path_in_image)
         assert mtree_path != ".", "files should not have name ."
+        if symlink:
+            reference_dir = None
+        else:
+            reference_dir = file.parent
         self.add_dir(str(Path(path_in_image).parent), mode=parent_dir_mode, uname=uname, gname=gname,
-                     reference_dir=file.parent, print_status=print_status)
-        if file.is_symlink():
+                     reference_dir=reference_dir, print_status=print_status)
+        if symlink:
+            mtree_type = "link"
+            last_attrib = ("link", str(file))
+        elif file.is_symlink():
             mtree_type = "link"
             last_attrib = ("link", os.readlink(str(file)))
         else:

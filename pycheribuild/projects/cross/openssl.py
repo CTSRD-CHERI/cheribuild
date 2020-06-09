@@ -61,7 +61,7 @@ class BuildOpenSSL(CrossCompileProject):
 
 
 class BuildFettOpenSSL(BuildOpenSSL):
-    target = "fett-openssl"
     project_name = "fett-openssl"
+    path_in_rootfs = "/fett"
     repository = GitRepository("https://github.com/CTSRD-CHERI/openssl.git",
                                default_branch="fett")

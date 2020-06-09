@@ -57,7 +57,7 @@ assert str(_pexpect_dir.resolve()) in sys.path, str(_pexpect_dir) + " not found 
 import pexpect
 from ..utils import find_free_port
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
-from ..qemu_utils import QemuOptions
+from ..qemu_utils import QemuOptions, riscv_bios_arguments
 
 SUPPORTED_ARCHITECTURES = {x.generic_suffix: x for x in (CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
                                                          CompilationTargets.CHERIBSD_MIPS_HYBRID,
@@ -65,6 +65,7 @@ SUPPORTED_ARCHITECTURES = {x.generic_suffix: x for x in (CompilationTargets.CHER
                                                          CompilationTargets.CHERIBSD_RISCV_NO_CHERI,
                                                          CompilationTargets.CHERIBSD_RISCV_HYBRID,
                                                          CompilationTargets.CHERIBSD_RISCV_PURECAP,
+                                                         CompilationTargets.CHERIBSD_X86_64,
                                                          )}
 
 STARTING_INIT = "start_init: trying /sbin/init"
@@ -551,7 +552,7 @@ class FakeSpawn(CheriBSDInstance):
 
 def start_dhclient(qemu: CheriBSDInstance):
     success("===> Setting up QEMU networking")
-    network_iface = "vtnet0" if qemu.qemu_config.can_use_virtio_network() else "le0"
+    network_iface = qemu.qemu_config.network_interface_name()
     qemu.sendline("ifconfig {network_iface} up && dhclient {network_iface}".format(network_iface=network_iface))
     i = qemu.expect([pexpect.TIMEOUT, "DHCPACK from 10.0.2.2", "dhclient already running",
                      "interface ([\\w\\d]+) does not exist"], timeout=120)
@@ -586,8 +587,15 @@ def boot_cheribsd(qemu_options: QemuOptions, qemu_command: typing.Optional[Path]
     if ssh_port is not None:
         user_network_args += ",hostfwd=tcp::" + str(ssh_port) + "-:22"
 
-    assert qemu_options.can_boot_kernel_directly, "X86/AArch64 case not handled yet"
-    bios_args = ["-bios", str(bios_path)] if bios_path is not None else []
+    if not qemu_options.can_boot_kernel_directly:
+        if not disk_image:
+            failure("Cannot boot kernel directly and no disk image passed!")
+    if bios_path is not None:
+        bios_args = ["-bios", str(bios_path)]
+    elif qemu_options.xtarget.is_riscv(include_purecap=True):
+        bios_args = riscv_bios_arguments(qemu_options.xtarget, None)
+    else:
+        bios_args = []
     qemu_args = qemu_options.get_commandline(qemu_command=qemu_command, kernel_file=kernel_image, disk_image=disk_image,
         bios_args=bios_args, user_network_args=user_network_args, add_network_device=True,
         trap_on_unrepresentable=trap_on_unrepresentable,  # For debugging
@@ -620,16 +628,29 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
     # ignore SIGINT for the python code, the child should still receive it
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
-        i = child.expect([STARTING_INIT, BOOT_FAILURE, BOOT_FAILURE2] + FATAL_ERROR_MESSAGES, timeout=15 * 60,
-            timeout_msg="timeout before /sbin/init")
-        if i != 0:  # start up scripts failed
-            failure("start up scripts failed to run")
+        # BOOTVERBOSE is off for the amd64 kernel so we don't see the STARTING_INIT message
+        bootverbose = child.xtarget.is_mips(include_purecap=True) or child.xtarget.is_riscv(include_purecap=True)
+        boot_messages = [STARTING_INIT, "Hit \\[Enter\\] to boot immediately", "Trying to mount root from",
+                         BOOT_FAILURE, BOOT_FAILURE2] + FATAL_ERROR_MESSAGES
+        i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
+        # Skip 10s wait from x86 loader if we see the "Hit [Enter] to boot" message
+        if i == 1:  # Hit Enter
+            success("Got '", child.match.string, "' from loader")
+            child.sendline("")
+            i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
+        if i == 2:
+            success(child.match.string)
+            if bootverbose:
+                i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
+                if i != 0:  # start up scripts failed
+                    failure("failed to start init")
+
         userspace_starttime = datetime.datetime.now()
         success("===> init running (kernel startup time: ", userspace_starttime - starttime, ")")
         if kernel_init_only:
             # To test kernel startup time
             return child
-
+        # TODO: add bad mountroot messages rather than waiting for timeout
         boot_expect_strings = [LOGIN, SHELL_OPEN, BOOT_FAILURE]
         i = child.expect(boot_expect_strings + ["DHCPACK from "] + FATAL_ERROR_MESSAGES, timeout=15 * 60,
             timeout_msg="timeout awaiting login prompt")
@@ -663,14 +684,15 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
             child.expect_exact(INITIAL_PROMPT_SH, timeout=30)
             success("===> /etc/rc completed, got command prompt")
             _set_pexpect_sh_prompt(child)
-            # set up network (bluehive image tries to use atse0)
-            if not have_dhclient:
-                start_dhclient(child)
         else:  # BOOT_FAILURE or FATAL_ERROR_MESSAGES
             # If this was a CHEIR trap wait up to 20 seconds to ensure the dump output has been printed
             child.expect(["THIS STRING SHOULD NOT MATCH, JUST WAITING FOR 20 secs", pexpect.TIMEOUT], timeout=20)
             # If this was a failure of init we should get a debugger backtrace
             failure("Error during boot login prompt: ", str(child), "match index=", i)
+        # set up network in case dhclient wasn't started yet
+        if not have_dhclient:
+            info("Did not see DHCPACK message, starting dhclient manually.")
+            start_dhclient(child)
         success("===> booted CheriBSD (userspace startup time: ", datetime.datetime.now() - userspace_starttime, ")")
     except KeyboardInterrupt:
         failure("Keyboard interrupt during boot", exit=True)
@@ -934,13 +956,6 @@ def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace],
         args.qemu_cmd = qemu_options.get_qemu_binary()
         if args.qemu_cmd is None:
             failure("ERROR: Cannot find QEMU binary for target", qemu_options.qemu_arch_sufffix, exit=True)
-
-    if xtarget.is_riscv(include_purecap=True):
-        if args.bios is None:
-            if xtarget.is_hybrid_or_purecap_cheri():
-                failure("ERROR: Cannot use the default QEMU bios for hybrid/purecap CHERI", exit=True)
-            else:
-                args.bios = "default"
 
     global PRETEND
     if args.pretend:
