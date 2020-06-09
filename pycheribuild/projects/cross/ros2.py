@@ -111,6 +111,7 @@ class BuildRos2(CrossCompileCMakeProject):
 
         # convert LD_LIBRARY_PATH into LD_CHERI_LIBRARY_PATH for CheriBSD
         LD_LIBRARY_PATH = str(self.sourceDir) + ":" + LD_LIBRARY_PATH
+        LD_LIBRARY_PATH = LD_LIBRARY_PATH.replace(str(self.sourceDir), "`pwd`")
         LD_CHERI_LIBRARY_PATH = LD_LIBRARY_PATH
         LD_CHERI_LIBRARY_PATH += ":${LD_CHERI_LIBRARY_PATH}"
         LD_LIBRARY_PATH += ":${LD_LIBRARY_PATH}"
