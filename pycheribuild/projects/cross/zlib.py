@@ -45,6 +45,14 @@ class BuildZlib(CrossCompileAutotoolsProject):
     native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
     cross_install_dir = DefaultInstallDir.ROOTFS
 
+    def setup(self):
+        super().setup()
+        if not self.compiling_for_host():
+            # If we don't set this, the build will use the macOS host libtool instead of llvm-ar and then complain
+            # because the .o files are not macOS object files.
+            self.add_configure_vars(uname=self.target_info.cmake_system_name,
+                AR=self.sdk_bindir / "llvm-ar", RANLIB=self.sdk_bindir / "llvm-ranlib")
+
 
 class BuildFettZlib(BuildZlib):
     project_name = "fett-zlib"
