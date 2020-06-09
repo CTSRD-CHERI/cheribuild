@@ -108,3 +108,8 @@ class BuildFettSQLbox(BuildSQLbox):
                                default_branch="fett")
 
     dependencies = ["fett-sqlite"]
+
+    def setup(self):
+        super().setup()
+        self.COMMON_LDFLAGS.append("-L" + str(self.rootfs_dir / "fett/lib"))
+        self.COMMON_FLAGS.append("-I" + str(self.rootfs_dir / "fett/include"))
