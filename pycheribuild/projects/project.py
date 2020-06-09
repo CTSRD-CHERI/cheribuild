@@ -1891,13 +1891,13 @@ class Project(SimpleProject):
 
         # convert the tuples into mutable lists (this is needed to avoid modifying class variables)
         # See https://github.com/CTSRD-CHERI/cheribuild/issues/33
-        self.cross_warning_flags = ["-Wall", "-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
+        self.cross_warning_flags = ["-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
                                     "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types",
                                     "-Werror=cheri-prototypes", "-Werror=cheri-bitwise-operations"]
         # Make underaligned capability loads/stores an error and require an explicit cast:
         self.cross_warning_flags.append("-Werror=pass-failed")
         self.host_warning_flags = []
-        self.common_warning_flags = []
+        self.common_warning_flags = ["-Wall"]
         target_arch = self.crosscompile_target
         # compiler flags:
         self.COMMON_FLAGS = self.target_info.required_compile_flags()

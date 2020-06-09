@@ -146,9 +146,8 @@ class BuildQEMUBase(AutotoolsProject):
                                 "-Wextra", "-Wno-sign-compare", "-Wno-unused-parameter",
                                 "-Wno-missing-field-initializers"
                                 ])
-        self.COMMON_FLAGS.append("-Wall")
         # This would have cought some problems in the past
-        self.CFLAGS.append("-Werror=return-type")
+        self.common_warning_flags.append("-Werror=return-type")
         if self.use_smbd:
             smbd_path = "/usr/sbin/smbd"
             if self.target_info.is_freebsd():
