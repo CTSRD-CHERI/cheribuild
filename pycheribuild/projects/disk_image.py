@@ -413,8 +413,11 @@ class _BuildDiskImageBase(SimpleProject):
             extra_flags = []
             if self.is_x86:
                 # x86: -t ffs -f 200000 -s 8g -o version=2,bsize=32768,fsize=4096
-                extra_flags = ["-t", "ffs", "-o", "version=2,bsize=32768,fsize=4096"]
+                extra_flags = ["-o", "bsize=32768,fsize=4096"]
             self.run_cmd([self.makefs_cmd] + debug_options + extra_flags + [
+                "-t", "ffs", # BSD fast file system
+                "-o", "version=2", # UFS2
+                "-o", "softupdates=1", # Enable soft updates journaling
                 "-Z",  # sparse file output
                 # For the minimal image 2mb of free space and 1k inodes should be enough
                 # For the larger images we need a lot more space (kyua needs around 400MB and the test might create
