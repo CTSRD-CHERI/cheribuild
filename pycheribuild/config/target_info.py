@@ -86,6 +86,20 @@ class TargetInfo(ABC):
         ...
 
     @property
+    def sysroot_install_prefix_absolute(self) -> Path:
+        return self.sysroot_dir / self.sysroot_install_prefix_relative
+
+    @property
+    def sysroot_install_prefix_relative(self) -> Path:
+        """
+        :return: The install dir inside the sysroot for non-system targets:
+        By default everything is installed directly to the sysroot (i.e. libraries in sysroot/<lib>)
+        For FreeBSD sysroots, we install third-party software to <sysroot>/usr/local and for CheriBSD, we use
+        <sysroot>/usr/local/<target> to allow installing hybrid/non-cheri/cheri to the same sysroot.
+        """
+        return Path()
+
+    @property
     @abstractmethod
     def target_triple(self) -> str:
         ...

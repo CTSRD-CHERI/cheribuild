@@ -31,8 +31,8 @@ import typing
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 
-from .target_info import CPUArchitecture, CrossCompileTarget, TargetInfo, MipsFloatAbi
-from ..utils import OSInfo, getCompilerInfo, is_jenkins_build
+from .target_info import CPUArchitecture, CrossCompileTarget, MipsFloatAbi, TargetInfo
+from ..utils import getCompilerInfo, is_jenkins_build, OSInfo
 
 if typing.TYPE_CHECKING:    # no-combine
     from .chericonfig import CheriConfig    # no-combine    # pytype: disable=pyi-error
@@ -297,15 +297,15 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def pkgconfig_dirs(self) -> str:
-        return str(self.sysroot_dir / "usr/local/lib/pkgconfig")
+        return str(self.sysroot_dir / "lib/pkgconfig") + ":" + str(self.sysroot_install_prefix_absolute / "lib/pkgconfig")
 
     @property
-    def local_install_root(self) -> Path:
-        return self.sysroot_dir / "usr/local"
+    def sysroot_install_prefix_relative(self) -> Path:
+        return Path("usr/local")
 
     @property
     def cmake_prefix_paths(self) -> list:
-        return [self.local_install_root, self.local_install_root / "libcheri/cmake"]
+        return [self.sysroot_install_prefix_absolute, self.sysroot_install_prefix_absolute / "libcheri/cmake"]
 
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         from ..projects.cross.cheribsd import BuildFreeBSD
@@ -388,15 +388,21 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         return ["cheribsd"]
 
     @property
-    def local_install_root(self) -> Path:
-        return self.sysroot_dir / "usr/local" / self.install_prefix_dirname
+    def sysroot_install_prefix_relative(self) -> Path:
+        return Path("usr/local", self.install_prefix_dirname)
+
+    @property
+    def _sysroot_libdir(self):
+        # We currently use the hybrid sysroot for purecap binaries -> libs are in usr/libcheri
+        if self.target.is_cheri_purecap():
+            return "libcheri"
+        return "lib"
 
     @property
     def pkgconfig_dirs(self) -> str:
-        if self.target.is_cheri_purecap():
-            return str(self.local_install_root / "lib/pkgconfig") + ":" + \
-                   str(self.local_install_root / "libcheri/pkgconfig")
-        return str(self.sysroot_dir / "usr/lib/pkgconfig") + ":" + str(self.local_install_root / "lib/pkgconfig")
+        return str(self.sysroot_dir / "usr" / self._sysroot_libdir / "pkgconfig") + ":" + str(
+            self.sysroot_dir / self._sysroot_libdir / "pkgconfig") + ":" + str(
+            self.sysroot_install_prefix_absolute / "lib/pkgconfig")
 
     def _get_rootfs_project(self, xtarget: "CrossCompileTarget") -> "Project":
         from ..projects.cross.cheribsd import BuildCHERIBSD
@@ -492,10 +498,6 @@ class RTEMSTargetInfo(_ClangBasedTargetInfo):
             return ["newlib", "compiler-rt-builtins", "rtems"]
         else:
             assert False, "No support for building RTEMS for non RISC-V targets yet"
-
-    @property
-    def local_install_root(self) -> Path:
-        return self.sysroot_dir
 
 
 class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):

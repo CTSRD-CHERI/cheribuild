@@ -1868,7 +1868,7 @@ class Project(SimpleProject):
                     self.destdir = self.sdk_sysroot.parent
                     self._installPrefix = Path("/", self.target_info.target_triple)
                 else:
-                    self._installPrefix = Path("/usr/local", self.crosscompile_target.generic_suffix)
+                    self._installPrefix = Path("/", self.target_info.sysroot_install_prefix_relative)
                     self.destdir = self._installDir
                 if install_dir_kind == DefaultInstallDir.SYSROOT_AND_ROOTFS:
                     self.rootfs_path = self.target_info.get_rootfs_project().installDir
