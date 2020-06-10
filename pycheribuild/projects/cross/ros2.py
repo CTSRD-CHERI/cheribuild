@@ -114,7 +114,14 @@ class BuildRos2(CrossCompileCMakeProject):
         # write LD_CHERI_LIBRARY_PATH to a text file to source from csh in CheriBSD
         csh_script = """#!/bin/csh
 set rootdir=`pwd`
+# csh doesn't like undefined variables
+if (! $?LD_CHERI_LIBRARY_PATH ) then
+  set LD_CHERI_LIBRARY_PATH=""
+endif
 setenv LD_CHERI_LIBRARY_PATH {LD_CHERI_LIBRARY_PATH}
+if (! $?LD_LIBRARY_PATH ) then
+  set LD_LIBRARY_PATH=""
+endif
 setenv LD_LIBRARY_PATH {LD_LIBRARY_PATH}
 """.format(LD_CHERI_LIBRARY_PATH=LD_CHERI_LIBRARY_PATH, LD_LIBRARY_PATH=LD_LIBRARY_PATH)
         self.writeFile(self.sourceDir / 'cheri_setup.csh', csh_script, overwrite=True)
