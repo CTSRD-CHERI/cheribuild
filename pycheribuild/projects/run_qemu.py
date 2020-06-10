@@ -334,9 +334,16 @@ class LaunchQEMUBase(SimpleProject):
         if OSInfo.IS_FREEBSD:
             self.run_cmd("sockstat", "-P", "tcp", "-p", str(port))
         elif OSInfo.IS_LINUX:
-            self.run_cmd("sh", "-c", "netstat -tulpne | grep \":" + str(port) + "\"")
+            if shutil.which("ss"):
+              self.run_cmd("sh", "-c", "ss -tulpne | grep \":" + str(port) + "\"")
+            elif shutil.which("netstat"):
+              self.run_cmd("sh", "-c", "netstat -tulpne | grep \":" + str(port) + "\"")
+            else:
+              self.info(coloured(AnsiColour.yellow, "Missing ss and netstat; unable to report port usage"))
         elif OSInfo.IS_MAC:
             self.run_cmd("lsof", "-nP", "-iTCP:" + str(port))
+        else:
+            self.info(coloured(AnsiColour.yellow, "Don't know how to report port usage on this OS"))
 
     @staticmethod
     def is_port_available(port: int):
