@@ -39,7 +39,7 @@ from ..disk_image import _default_disk_image_name, BuildCheriBSDDiskImage
 from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
 from ...mtree import MtreeFile
-from ...utils import commandline_to_str
+from ...utils import commandline_to_str, classproperty
 
 
 class BuildFettConfig(CrossCompileProject):
@@ -163,6 +163,10 @@ class BuildFettDiskImage(BuildCheriBSDDiskImage):
     project_name = "disk-image-fett"
     dependencies = ["fett-config"]
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
+
+    @classproperty
+    def default_architecture(cls):
+        return CompilationTargets.CHERIBSD_RISCV_PURECAP
 
     default_disk_image_path = ComputedDefaultValue(
         function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "fett-cheribsd-"),
