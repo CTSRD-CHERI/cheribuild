@@ -43,10 +43,10 @@ class BuildRos2(CrossCompileCMakeProject):
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS
     dependencies = ["poco"]
+    _extra_git_clean_excludes = ["--exclude=src"]  # don't delete src/ when running clean
 
     def _ignore_packages(self):
-        # some repositories have packages we don't want to build, so we add empty COLCON_IGNORE files
-        packages = ["src/ros2/rcl_logging/rcl_logging_log4cxx"] # relative to self.sourceDir
+        packages = ["src/ros2/rcl_logging/rcl_logging_log4cxx"]  # relative to self.sourceDir
         for package in packages:
             cmdline = ["touch", str(self.sourceDir / package / "COLCON_IGNORE")]
             self.run_cmd(cmdline, cwd=self.sourceDir)
