@@ -69,26 +69,20 @@ class BuildRos2(CrossCompileCMakeProject):
             cmdline.append("console_cohesion+")
         self.run_cmd(cmdline, cwd=self.sourceDir, **kwargs)
 
-    def _find_file(self, name, path):
-        for root, dirs, files in os.walk(str(path)):
-            if name in files:
-                return os.path.join(root, name)
-        return ""
-
     def _get_poco(self, **kwargs):
-        # find and copy libPocoFoundation.so.71 from the purecap rootfs into self.sourceDir
+        # find and copy libPocoFoundation.so.71 from the sysroot into self.sourceDir
         # this is a bit ugly, but allows us to link the poco library whether we're running
         # hybrid or purecap cheribsd.  this is helpful because if we're running hybrid cheribsd,
         # the hybrid rootfs gets mounted, which doesn't include the purecap build of the poco library.
         #
         # one day, if we're only running the purecap kernel, we can just append the path
         # of libPocoFoundation.so.71 to LD_CHERI_LIBRARY_PATH in _set_env() below.
-        libPocoFoundation = self._find_file("libPocoFoundation.so.71", self.rootfs_path)
-        if len(libPocoFoundation) > 0:
-            shutil.copyfile(libPocoFoundation, self.sourceDir / "libPocoFoundation.so.71")
+        poco_path = self.target_info.sysroot_install_prefix_absolute / "lib/libPocoUtil.so.71"
+        if poco_path.is_file():
+            self.info("Found pocofoundation:", poco_path)
+            self.installFile(poco_path, self.sourceDir / poco_path.name, force=True, print_verbose_only=False)
         else:
-            print("libPocoFoundation.so.71 cannot be found.")
-            print(self.rootfs_path)
+            self.fatal("libPocoFoundation.so.71 cannot be found at expected path", poco_path)
 
     def _set_env(self, **kwargs):
         # create cheri_setup.csh and cheri_setup.sh files in self.sourceDir which can be source'ed
