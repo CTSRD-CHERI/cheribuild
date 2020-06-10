@@ -33,8 +33,10 @@ from pathlib import Path
 
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileProject, DefaultInstallDir,
                                   GitRepository, MakeCommandKind)
+from .kcgi import BuildFettKCGI
 from .nginx import BuildFettNginx
 from .openssh import BuildFettOpenSSH
+from .sqlbox import BuildFettSQLbox
 from ..disk_image import _default_disk_image_name, BuildCheriBSDDiskImage
 from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
@@ -127,11 +129,11 @@ class BuildFettVoting(CrossCompileProject):
     project_name = "fett-voting"
     path_in_rootfs = "/fett"
     repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Voting.git", default_branch="develop")
-    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
+    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES + [CompilationTargets.NATIVE]
 
     dependencies = ["fett-kcgi", "fett-sqlbox", "fett-sqlite", "fett-zlib", "openradtool"]
 
-    native_install_dir = DefaultInstallDir.DO_NOT_INSTALL
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS
 
     make_kind = MakeCommandKind.GnuMake
@@ -142,21 +144,28 @@ class BuildFettVoting(CrossCompileProject):
         # XXX: The buid system appends -Werror at the end so we can't use -Wno-error=xxx instead of -Wno-xxx
         self.common_warning_flags.append("-Wno-unused-function")
         self.common_warning_flags.append("-Wno-unused-variable")
+        self.COMMON_FLAGS.append("-I" + str(BuildFettKCGI.getInstallDir(self) / "include"))
+        self.COMMON_LDFLAGS.append("-L" + str(BuildFettKCGI.getInstallDir(self) / "lib"))
+        self.COMMON_FLAGS.append("-I" + str(BuildFettSQLbox.getInstallDir(self) / "include"))
+        self.COMMON_LDFLAGS.append("-L" + str(BuildFettSQLbox.getInstallDir(self) / "lib"))
+        if self.target_info.is_freebsd():
+            self.COMMON_LDFLAGS.append("-lmd")  # kcgi requires libmd
         self.make_args.set_env(
             CC=str(self.CC),
-            LFLAGS=commandline_to_str(self.default_ldflags + ["-lmd"]),  # kcgi requires libmd
+            LFLAGS=commandline_to_str(self.default_ldflags),
             CFLAGS=commandline_to_str(self.default_compiler_flags)
             )
         # Note: We must set these variables on the command line since the Makefile assigns to them with =
-        self.make_args.set(PREFIX=self.real_install_root_dir, ORT_PREFIX=self.sdk_bindir / "ort")
+        self.make_args.set(PREFIX=self.real_install_root_dir, ORT_PREFIX=self.config.cheri_sdk_bindir / "ort")
 
     def compile(self, **kwargs):
         self.run_make("bvrs", cwd=self.sourceDir / "source/src", parallel=True)
         self.run_make("bvrs.sql", cwd=self.sourceDir / "source/src", parallel=True)
 
     def install(self, **kwargs):
-        self.installFile(self.buildDir / "source/src/bvrs", self.destdir / "var/www/cgi-bin/bvrs")
-        self.installFile(self.buildDir / "source/src/bvrs.sql", self.real_install_root_dir / "share/bvrs.sql")
+        if not self.compiling_for_host():
+            self.installFile(self.buildDir / "source/src/bvrs", self.destdir / "var/www/cgi-bin/bvrs")
+            self.installFile(self.buildDir / "source/src/bvrs.sql", self.real_install_root_dir / "share/bvrs.sql")
 
 
 class BuildFettDiskImage(BuildCheriBSDDiskImage):

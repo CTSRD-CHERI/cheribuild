@@ -44,19 +44,21 @@ class BuildSQLite(CrossCompileAutotoolsProject):
             return Linkage.STATIC  # make sure it works with webkit
         return super().linkage()
 
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
+    def setup(self):
+        super().setup()
         if not self.compiling_for_host():
             self.configureEnvironment["BUILD_CC"] = self.host_CC
             # self.configureEnvironment["BUILD_CFLAGS"] = "-integrated-as"
             self.configureArgs.extend([
                 "--disable-amalgamation",  # don't concatenate sources
-                "--disable-tcl",
                 "--disable-load-extension",
             ])
-        self.cross_warning_flags += ["-Wno-error=cheri-capability-misuse"]
+        # always disable tcl, since it tries to install to /usr on Ubuntu
+        self.configureArgs.append("--disable-tcl")
+        self.configureArgs.append("--disable-amalgamation")
+        self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")
 
-        if not self.compiling_for_host() or OSInfo.IS_FREEBSD:
+        if self.target_info.is_freebsd():
             self.configureArgs.append("--disable-editline")
             # not sure if needed:
             self.configureArgs.append("--disable-readline")
@@ -77,8 +79,7 @@ class BuildFettSQLite(BuildSQLite):
     project_name = "fett-sqlite"
     path_in_rootfs = "/fett"
     default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
-    repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git",
-                               default_branch="fett")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git", default_branch="fett")
     cross_install_dir = DefaultInstallDir.ROOTFS
 
     def __init__(self, config: CheriConfig):
