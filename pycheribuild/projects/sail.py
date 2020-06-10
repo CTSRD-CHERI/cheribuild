@@ -36,7 +36,7 @@ from typing import Any, Dict, Tuple, Union
 from .project import (AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Path, Project,
                       SimpleProject)
 from ..targets import target_manager
-from ..utils import AnsiColour, coloured, commandline_to_str, get_program_version, OSInfo, runCmd, setEnv
+from ..utils import AnsiColour, coloured, commandline_to_str, get_program_version, OSInfo, runCmd, setEnv, ThreadJoiner
 
 
 class OpamMixin(object):
@@ -196,6 +196,9 @@ class BuildSailFromOpam(ProjectUsingOpam):
         super().setup_config_options(**kwargs)
         cls.use_git_version = cls.add_bool_option("use-git-version", show_help=False,
             help="Install sail from github instead of using the latest released version")
+
+    def clean(self) -> ThreadJoiner:
+        return ThreadJoiner(None)
 
     def update(self):
         if not self.use_git_version:
