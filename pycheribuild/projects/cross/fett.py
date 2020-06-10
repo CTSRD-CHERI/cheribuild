@@ -41,14 +41,12 @@ from ...config.loader import ComputedDefaultValue
 from ...mtree import MtreeFile
 from ...utils import commandline_to_str
 
-fett_supported_architectures = CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS
-
 
 class BuildFettConfig(CrossCompileProject):
     project_name = "fett-config"
     repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Target.git", default_branch="cheri")
     skipGitSubmodules = True
-    supported_architectures = fett_supported_architectures
+    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
 
     dependencies = ["fett-nginx", "fett-openssh", "fett-sqlite", "fett-voting"]
 
@@ -129,7 +127,7 @@ class BuildFettVoting(CrossCompileProject):
     project_name = "fett-voting"
     path_in_rootfs = "/fett"
     repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Voting.git", default_branch="develop")
-    supported_architectures = fett_supported_architectures
+    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
 
     dependencies = ["fett-kcgi", "fett-sqlbox", "fett-sqlite", "fett-zlib", "openradtool"]
 
@@ -164,7 +162,7 @@ class BuildFettVoting(CrossCompileProject):
 class BuildFettDiskImage(BuildCheriBSDDiskImage):
     project_name = "disk-image-fett"
     dependencies = ["fett-config"]
-    supported_architectures = fett_supported_architectures
+    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
 
     default_disk_image_path = ComputedDefaultValue(
         function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "fett-cheribsd-"),
@@ -183,4 +181,4 @@ class BuildFettDiskImage(BuildCheriBSDDiskImage):
 class LaunchFett(LaunchCheriBSD):
     project_name = "run-fett"
     _source_class = BuildFettDiskImage
-    supported_architectures = fett_supported_architectures
+    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
