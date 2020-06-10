@@ -28,8 +28,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import (CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository,
+from .crosscompileproject import (CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository,
                                   MakeCommandKind)
+
 
 class BuildKCGI(CrossCompileAutotoolsProject):
     # Just add add the FETT target below for now.
@@ -59,5 +60,6 @@ class BuildKCGI(CrossCompileAutotoolsProject):
 class BuildFettKCGI(BuildKCGI):
     project_name = "fett-kcgi"
     path_in_rootfs = "/fett"
+    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     repository = GitRepository("https://github.com/CTSRD-CHERI/kcgi.git",
                                default_branch="fett")

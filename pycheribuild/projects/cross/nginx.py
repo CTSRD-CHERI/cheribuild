@@ -27,11 +27,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import os
 import re
 
-from .crosscompileproject import (CheriConfig, commandline_to_str, CrossCompileAutotoolsProject, DefaultInstallDir,
-                                  GitRepository, MakeCommandKind)
+from .crosscompileproject import (CheriConfig, commandline_to_str, CompilationTargets, CrossCompileAutotoolsProject,
+                                  DefaultInstallDir, GitRepository, MakeCommandKind)
 from .openssl import BuildFettOpenSSL
 
 
@@ -120,8 +119,8 @@ class BuildNginx(CrossCompileAutotoolsProject):
 class BuildFettNginx(BuildNginx):
     project_name = "fett-nginx"
     path_in_rootfs = "/fett/nginx"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/nginx.git",
-        default_branch="fett")
+    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
+    repository = GitRepository("https://github.com/CTSRD-CHERI/nginx.git", default_branch="fett")
     dependencies = ["fett-openssl"]
 
     def configure(self):

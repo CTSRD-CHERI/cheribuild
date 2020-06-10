@@ -28,8 +28,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import (CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository,
+from .crosscompileproject import (CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository,
                                   MakeCommandKind)
+
 
 class BuildSQLbox(CrossCompileAutotoolsProject):
     # Just add add the FETT target below for now.
@@ -59,6 +60,7 @@ class BuildSQLbox(CrossCompileAutotoolsProject):
 class BuildFettSQLbox(BuildSQLbox):
     project_name = "fett-sqlbox"
     path_in_rootfs = "/fett"
+    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     repository = GitRepository("https://github.com/CTSRD-CHERI/sqlbox.git",
                                default_branch="fett")
 

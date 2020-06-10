@@ -27,7 +27,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository, Linkage
+from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
+                                  GitRepository, Linkage)
 from .qt5 import BuildQtWebkit
 from ...utils import OSInfo, runCmd
 
@@ -75,6 +76,7 @@ class BuildSQLite(CrossCompileAutotoolsProject):
 class BuildFettSQLite(BuildSQLite):
     project_name = "fett-sqlite"
     path_in_rootfs = "/fett"
+    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git",
                                default_branch="fett")
     cross_install_dir = DefaultInstallDir.ROOTFS

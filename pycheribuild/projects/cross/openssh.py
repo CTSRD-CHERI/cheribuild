@@ -28,7 +28,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import CheriConfig, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
+from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
+                                  GitRepository)
 from .openssl import BuildFettOpenSSL
 from .zlib import BuildFettZlib
 
@@ -58,6 +59,7 @@ class BuildOpenSSH(CrossCompileAutotoolsProject):
 class BuildFettOpenSSH(BuildOpenSSH):
     project_name = "fett-openssh"
     path_in_rootfs = "/fett"
+    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
     repository = GitRepository("https://github.com/CTSRD-CHERI/openssh-portable.git",
                                default_branch="fett")
 
