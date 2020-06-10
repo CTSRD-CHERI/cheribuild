@@ -60,7 +60,7 @@ class BuildSQLbox(CrossCompileAutotoolsProject):
 class BuildFettSQLbox(BuildSQLbox):
     project_name = "fett-sqlbox"
     path_in_rootfs = "/fett"
-    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
+    default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
     repository = GitRepository("https://github.com/CTSRD-CHERI/sqlbox.git",
                                default_branch="fett")
 

@@ -76,7 +76,7 @@ class BuildSQLite(CrossCompileAutotoolsProject):
 class BuildFettSQLite(BuildSQLite):
     project_name = "fett-sqlite"
     path_in_rootfs = "/fett"
-    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
+    default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
     repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git",
                                default_branch="fett")
     cross_install_dir = DefaultInstallDir.ROOTFS

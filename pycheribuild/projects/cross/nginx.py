@@ -116,10 +116,11 @@ class BuildNginx(CrossCompileAutotoolsProject):
         # The cwd for make needs to be the source dir and it expects an empty target name
         self.run_make(cwd=self.sourceDir)
 
+
 class BuildFettNginx(BuildNginx):
     project_name = "fett-nginx"
     path_in_rootfs = "/fett/nginx"
-    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
+    default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
     repository = GitRepository("https://github.com/CTSRD-CHERI/nginx.git", default_branch="fett")
     dependencies = ["fett-openssl"]
 

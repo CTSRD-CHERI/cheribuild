@@ -56,6 +56,6 @@ class BuildZlib(CrossCompileAutotoolsProject):
 
 class BuildFettZlib(BuildZlib):
     project_name = "fett-zlib"
-    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
+    default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
     path_in_rootfs = "/fett"
     repository = GitRepository("https://github.com/CTSRD-CHERI/zlib.git", default_branch="fett")

@@ -56,10 +56,11 @@ class BuildOpenSSH(CrossCompileAutotoolsProject):
         self.run_cmd("autoreconf", str(self.sourceDir), cwd=self.buildDir)
         super().configure(**kwargs)
 
+
 class BuildFettOpenSSH(BuildOpenSSH):
     project_name = "fett-openssh"
     path_in_rootfs = "/fett"
-    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
+    default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
     repository = GitRepository("https://github.com/CTSRD-CHERI/openssh-portable.git",
                                default_branch="fett")
 
