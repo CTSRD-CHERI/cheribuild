@@ -38,7 +38,7 @@ import typing
 # noinspection PyUnresolvedReferences
 from pathlib import Path
 
-from .config.jenkinsconfig import JenkinsConfig, CompilationTargets, JenkinsAction
+from .config.jenkinsconfig import JenkinsConfig, JenkinsAction
 from .config.loader import ConfigLoaderBase, CommandLineConfigOption
 # noinspection PyUnresolvedReferences
 from .projects import *  # make sure all projects are loaded so that target_manager gets populated

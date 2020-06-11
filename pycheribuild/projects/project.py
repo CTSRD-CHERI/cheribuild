@@ -42,26 +42,28 @@ import time
 import typing
 from collections import OrderedDict
 from enum import Enum
-from pathlib import Path
+from pathlib import Path, Path
 from typing import Callable, Union
 
-from ..config.chericonfig import BuildType, CheriConfig
-from ..config.compilation_targets import CompilationTargets
-from ..config.loader import ComputedDefaultValue, ConfigLoaderBase, ConfigOptionBase, DefaultValueOnlyConfigOption
-from ..config.target_info import CPUArchitecture, CrossCompileTarget, Linkage, TargetInfo
+from ..config.chericonfig import BuildType, BuildType, CheriConfig, CheriConfig
+from ..config.loader import (ComputedDefaultValue, ComputedDefaultValue, ConfigLoaderBase, ConfigOptionBase,
+                             DefaultValueOnlyConfigOption)
+from ..config.target_info import (BasicCompilationTargets, CPUArchitecture, CPUArchitecture, CrossCompileTarget,
+                                  CrossCompileTarget, Linkage, Linkage, TargetInfo, TargetInfo)
 from ..filesystemutils import FileSystemUtils
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
-from ..utils import (AnsiColour, check_call_handle_noexec, classproperty, coloured, commandline_to_str, CompilerInfo,
-                     fatalError, find_free_port, get_program_version, get_version_output, getCompilerInfo,
-                     includeLocalFile, is_jenkins_build, OSInfo, popen_handle_noexec, printCommand, runCmd,
-                     SocketAndPort, statusUpdate, ThreadJoiner, warningMessage)
+from ..utils import (AnsiColour, check_call_handle_noexec, classproperty, coloured, commandline_to_str,
+                     commandline_to_str, CompilerInfo, fatalError, get_program_version, get_version_output,
+                     getCompilerInfo,
+                     includeLocalFile, OSInfo, popen_handle_noexec, printCommand, runCmd, statusUpdate, ThreadJoiner,
+                     warningMessage)
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
            "CrossCompileTarget", "CPUArchitecture", "GitRepository", "ComputedDefaultValue", "TargetInfo",  # no-combine
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
            "ReuseOtherProjectDefaultTargetRepository",  # no-combine
-           "TargetBranchInfo", "Linkage", "CompilationTargets", "DefaultInstallDir", "BuildType"]  # no-combine
+           "TargetBranchInfo", "Linkage", "BasicCompilationTargets", "DefaultInstallDir", "BuildType"]  # no-combine
 
 Type_T = typing.TypeVar("Type_T")
 
@@ -178,7 +180,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # However, if the output is just a plain text file don't attempt to do any line clearing
     _clearLineSequence = b"\x1b[2K\r" if sys.stdout.isatty() else b"\n"
     # Default to NATIVE only
-    supported_architectures = [CompilationTargets.NATIVE]
+    supported_architectures = [BasicCompilationTargets.NATIVE]
     # The architecture to build for if no --xmips/--xhost flag is passed (defaults to supported_architectures[0]
     # if no match)
     _default_architecture = None
@@ -1372,7 +1374,7 @@ class Project(SimpleProject):
     @classmethod
     def projectBuildDirHelpStr(cls):
         result = "$BUILD_ROOT/" + cls.project_name.lower()
-        if cls._xtarget is not CompilationTargets.NATIVE or cls.add_build_dir_suffix_for_native:
+        if cls._xtarget is not BasicCompilationTargets.NATIVE or cls.add_build_dir_suffix_for_native:
             result += "-$TARGET"
         result += "-build"
         return result

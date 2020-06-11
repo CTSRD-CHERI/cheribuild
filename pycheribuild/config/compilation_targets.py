@@ -35,84 +35,12 @@ from abc import ABCMeta, abstractmethod
 from pathlib import Path
 
 from .loader import ConfigOptionBase
-from .target_info import CPUArchitecture, CrossCompileTarget, MipsFloatAbi, TargetInfo
-from ..utils import commandline_to_str, find_free_port, getCompilerInfo, is_jenkins_build, OSInfo, SocketAndPort
+from .target_info import BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, MipsFloatAbi, TargetInfo
+from ..utils import commandline_to_str, find_free_port, is_jenkins_build, SocketAndPort
 
 if typing.TYPE_CHECKING:
     from .chericonfig import CheriConfig  # no-combine
     from ..projects.project import Project, SimpleProject  # no-combine
-
-
-class NativeTargetInfo(TargetInfo):
-    shortname = "native"
-
-    @property
-    def sdk_root_dir(self):
-        raise ValueError("Should not be called for native")
-
-    @property
-    def sysroot_dir(self):
-        raise ValueError("Should not be called for native")
-
-    @property
-    def cmake_system_name(self) -> str:
-        raise ValueError("Should not be called for native")
-
-    @classmethod
-    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        raise ValueError("Should not be called for native")
-
-    @classmethod
-    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
-        if config.use_sdk_clang_for_native_xbuild:
-            return ["llvm-native"]
-        return []  # use host tools -> no target needed
-
-    @property
-    def target_triple(self):
-        return getCompilerInfo(self.c_compiler).default_target
-
-    @property
-    def c_compiler(self) -> Path:
-        return self.host_c_compiler(self.config)
-
-    @property
-    def cxx_compiler(self) -> Path:
-        return self.host_cxx_compiler(self.config)
-
-    @property
-    def linker(self) -> Path:
-        # Should rarely be needed
-        return self.c_compiler.parent / "ld"
-
-    @property
-    def ar(self) -> Path:
-        # Should rarely be needed
-        return self.c_compiler.parent / "ar"
-
-    @property
-    def c_preprocessor(self) -> Path:
-        return self.host_c_preprocessor(self.config)
-
-    @classmethod
-    def is_freebsd(cls):
-        return OSInfo.IS_FREEBSD
-
-    @classmethod
-    def is_macos(cls):
-        return OSInfo.IS_MAC
-
-    @classmethod
-    def is_linux(cls):
-        return OSInfo.IS_LINUX
-
-    @classmethod
-    def is_native(cls):
-        return True
-
-    @property
-    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
-        return []  # default host compiler should not need any extra flags
 
 
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
@@ -790,10 +718,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
         return BuildNewlib.get_instance(self.project, cross_target=xtarget)
 
 
-class CompilationTargets(object):
-    # XXX: should probably not harcode x86_64 for native
-    NATIVE = CrossCompileTarget("native", CPUArchitecture.X86_64, NativeTargetInfo)
-
+class CompilationTargets(BasicCompilationTargets):
     CHERIBSD_MIPS_NO_CHERI = CrossCompileTarget("mips-nocheri", CPUArchitecture.MIPS64, CheriBSDTargetInfo)
     CHERIBSD_MIPS_HYBRID = CrossCompileTarget("mips-hybrid", CPUArchitecture.MIPS64, CheriBSDTargetInfo,
         is_cheri_hybrid=True, check_conflict_with=CHERIBSD_MIPS_NO_CHERI, non_cheri_target=CHERIBSD_MIPS_NO_CHERI)
@@ -834,7 +759,7 @@ class CompilationTargets(object):
     # TODO: test RISCV
     ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = [CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI,
                                                CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI,
-                                               NATIVE]
+                                               BasicCompilationTargets.NATIVE]
     ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS = [CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI, CHERIBSD_MIPS_PURECAP,
                                            CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI]
     # Same as above, but the default is purecap RISC-V

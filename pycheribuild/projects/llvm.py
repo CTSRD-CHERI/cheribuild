@@ -31,8 +31,8 @@ import os
 import sys
 import typing
 
-from .project import BuildType, CMakeProject, CompilationTargets, DefaultInstallDir, GitRepository
-from ..config.compilation_targets import CheriBSDTargetInfo
+from .project import BuildType, CMakeProject, DefaultInstallDir, GitRepository
+from ..config.compilation_targets import CheriBSDTargetInfo, CompilationTargets
 from ..config.loader import ComputedDefaultValue
 from ..utils import CompilerInfo, getCompilerInfo, OSInfo, ThreadJoiner
 

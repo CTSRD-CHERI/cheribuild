@@ -31,8 +31,8 @@
 #
 import os
 
-from .crosscompileproject import CrossCompileAutotoolsProject
-from ..project import CheriConfig, CompilationTargets, DefaultInstallDir, GitRepository
+from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
+                                  GitRepository)
 from ...utils import getCompilerInfo, setEnv
 
 

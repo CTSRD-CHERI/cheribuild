@@ -32,7 +32,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
 
-from ..utils import OSInfo
+from ..utils import getCompilerInfo, OSInfo
 
 if typing.TYPE_CHECKING:  # no-combine
     from .chericonfig import CheriConfig  # no-combine    # pytype: disable=pyi-error
@@ -172,7 +172,8 @@ class TargetInfo(ABC):
 
     @property
     def install_prefix_dirname(self):
-        """The name of the root directory to install to: i.e. for CheriBSD /usr/local/mips-purecap or /usr/local/riscv64-hybrid"""
+        """The name of the root directory to install to: i.e. for CheriBSD /usr/local/mips-purecap or
+        /usr/local/riscv64-hybrid"""
         result = self.target.generic_suffix
         if self.config.cross_target_suffix:
             result += "-" + self.config.cross_target_suffix
@@ -278,6 +279,78 @@ class TargetInfo(ABC):
         return config.clangCppPath
 
 
+class NativeTargetInfo(TargetInfo):
+    shortname = "native"
+
+    @property
+    def sdk_root_dir(self):
+        raise ValueError("Should not be called for native")
+
+    @property
+    def sysroot_dir(self):
+        raise ValueError("Should not be called for native")
+
+    @property
+    def cmake_system_name(self) -> str:
+        raise ValueError("Should not be called for native")
+
+    @classmethod
+    def base_sysroot_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        raise ValueError("Should not be called for native")
+
+    @classmethod
+    def toolchain_targets(cls, target: "CrossCompileTarget", config: "CheriConfig") -> typing.List[str]:
+        if config.use_sdk_clang_for_native_xbuild:
+            return ["llvm-native"]
+        return []  # use host tools -> no target needed
+
+    @property
+    def target_triple(self):
+        return getCompilerInfo(self.c_compiler).default_target
+
+    @property
+    def c_compiler(self) -> Path:
+        return self.host_c_compiler(self.config)
+
+    @property
+    def cxx_compiler(self) -> Path:
+        return self.host_cxx_compiler(self.config)
+
+    @property
+    def linker(self) -> Path:
+        # Should rarely be needed
+        return self.c_compiler.parent / "ld"
+
+    @property
+    def ar(self) -> Path:
+        # Should rarely be needed
+        return self.c_compiler.parent / "ar"
+
+    @property
+    def c_preprocessor(self) -> Path:
+        return self.host_c_preprocessor(self.config)
+
+    @classmethod
+    def is_freebsd(cls):
+        return OSInfo.IS_FREEBSD
+
+    @classmethod
+    def is_macos(cls):
+        return OSInfo.IS_MAC
+
+    @classmethod
+    def is_linux(cls):
+        return OSInfo.IS_LINUX
+
+    @classmethod
+    def is_native(cls):
+        return True
+
+    @property
+    def essential_compiler_and_linker_flags(self) -> typing.List[str]:
+        return []  # default host compiler should not need any extra flags
+
+
 class Linkage(Enum):
     DEFAULT = "default"
     STATIC = "static"
@@ -325,6 +398,7 @@ class CrossCompileTarget(object):
         self._set_for(hybrid_target)
         self._set_for(purecap_target)
 
+    # noinspection PyProtectedMember
     def _set_from(self, other_target: "CrossCompileTarget"):
         if self is other_target:
             return
@@ -371,7 +445,8 @@ class CrossCompileTarget(object):
 
     def cheri_config_suffix(self, config: "CheriConfig"):
         """
-        :return: a string such as "-subobject-safe"/"128"/"128-plt" to ensure different build/install dirs for config options
+        :return: a string such as "-subobject-safe"/"128"/"128-plt" to ensure different build/install dirs for config
+        options
         """
         result = ""
         if self.is_hybrid_or_purecap_cheri([CPUArchitecture.MIPS64]):
@@ -481,3 +556,10 @@ class CrossCompileTarget(object):
 
     # def __eq__(self, other):
     #     raise NotImplementedError("Should not compare to CrossCompileTarget, use the is_foo() methods.")
+
+
+# This is a separate class to avoid cyclic dependencies.
+# The real list is in CompilationTargets in compilation_targets.py
+class BasicCompilationTargets:
+    # XXX: should probably not harcode x86_64 for native
+    NATIVE = CrossCompileTarget("native", CPUArchitecture.X86_64, NativeTargetInfo)

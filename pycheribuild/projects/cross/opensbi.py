@@ -30,8 +30,9 @@
 
 from pathlib import Path
 
-from ..project import (BuildType, CheriConfig, CompilationTargets, ComputedDefaultValue, CPUArchitecture,
-                       DefaultInstallDir, GitRepository, MakeCommandKind, Project, SimpleProject)
+from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CPUArchitecture, DefaultInstallDir, GitRepository,
+                       MakeCommandKind, Project)
+from ...config.compilation_targets import CompilationTargets
 from ...utils import classproperty, commandline_to_str, OSInfo
 
 

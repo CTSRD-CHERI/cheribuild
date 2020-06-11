@@ -31,7 +31,7 @@ import shlex
 from pathlib import Path
 
 from .project import (Project, GitRepository, DefaultInstallDir, MakeCommandKind, CheriConfig,
-                      ReuseOtherProjectRepository, CompilationTargets)
+                      ReuseOtherProjectRepository, BasicCompilationTargets)
 from ..utils import OSInfo, commandline_to_str
 
 
@@ -137,7 +137,7 @@ class BuildBeriCtl(Project):
         return None
 
     def compile(self, **kwargs):
-        sim_project = BuildCheriSim.get_instance(self, cross_target=CompilationTargets.NATIVE)
+        sim_project = BuildCheriSim.get_instance(self, cross_target=BasicCompilationTargets.NATIVE)
         setup_sh = sim_project.sourceDir / "cheri" / "setup.sh"
         if self.config.fpga_custom_env_setup_script:
             setup_sh = self.config.fpga_custom_env_setup_script

@@ -27,7 +27,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import datetime
 import inspect
 import os
 import shutil
@@ -39,10 +38,11 @@ from enum import Enum
 from pathlib import Path
 
 from ..llvm import BuildCheriLLVM, BuildUpstreamLLVM
-from ..project import (CheriConfig, CompilationTargets, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,
+from ..project import (CheriConfig, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,
                        MakeCommandKind, MakeOptions, Project, SimpleProject, TargetAliasWithDependencies)
 from ...config.loader import ComputedDefaultValue
 from ...config.target_info import CrossCompileTarget, MipsFloatAbi
+from ...config.compilation_targets import CompilationTargets
 from ...targets import target_manager
 from ...utils import (classproperty, commandline_to_str, getCompilerInfo, includeLocalFile, is_jenkins_build, OSInfo,
                       printCommand, runCmd, statusUpdate, ThreadJoiner, warningMessage)

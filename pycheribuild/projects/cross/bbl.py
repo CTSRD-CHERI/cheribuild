@@ -28,10 +28,10 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import CrossCompileAutotoolsProject
+from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject
 from ..build_qemu import BuildQEMU
-from ..project import (BuildType, CheriConfig, CompilationTargets, ComputedDefaultValue, CrossCompileTarget,
-                       DefaultInstallDir, GitRepository, MakeCommandKind, Project)
+from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CrossCompileTarget, DefaultInstallDir,
+                       GitRepository, MakeCommandKind, Project)
 
 
 class BuildBBLBase(CrossCompileAutotoolsProject):

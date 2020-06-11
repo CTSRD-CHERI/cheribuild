@@ -36,8 +36,8 @@ import typing
 
 from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDGFE, BuildFreeBSDWithDefaultOptions
 from .cross.gdb import BuildGDB
-from .project import (CheriConfig, CompilationTargets, ComputedDefaultValue, CPUArchitecture, CrossCompileTarget, Path,
-                      SimpleProject)
+from .project import CheriConfig, ComputedDefaultValue, CPUArchitecture, CrossCompileTarget, Path, SimpleProject
+from ..config.compilation_targets import CompilationTargets
 from ..mtree import MtreeFile
 from ..targets import target_manager
 from ..utils import AnsiColour, classproperty, coloured, includeLocalFile, OSInfo, setEnv, statusUpdate, warningMessage

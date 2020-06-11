@@ -32,7 +32,8 @@ from pathlib import Path
 from typing import Optional
 
 from .cherisim import BuildBeriCtl, BuildCheriSim
-from .project import CheriConfig, commandline_to_str, CompilationTargets, SimpleProject
+from .project import CheriConfig, commandline_to_str, SimpleProject
+from ..config.compilation_targets import CompilationTargets
 
 
 class LaunchFPGABase(SimpleProject):

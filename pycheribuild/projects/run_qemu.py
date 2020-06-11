@@ -42,7 +42,8 @@ from .cross.gdb import BuildGDB
 from .cross.rtems import BuildRtems
 from .disk_image import (BuildCheriBSDDiskImage, BuildFreeBSDGFEDiskImage, BuildFreeBSDImage,
                          BuildFreeBSDWithDefaultOptionsDiskImage)
-from .project import CheriConfig, commandline_to_str, CompilationTargets, CPUArchitecture, Path, SimpleProject
+from .project import CheriConfig, commandline_to_str, CPUArchitecture, Path, SimpleProject
+from ..config.compilation_targets import CompilationTargets
 from ..qemu_utils import qemu_supports_9pfs, QemuOptions, riscv_bios_arguments
 from ..targets import target_manager
 from ..utils import AnsiColour, classproperty, coloured, find_free_port, OSInfo
