@@ -126,7 +126,7 @@ class CheriConfig(object):
         self.freebsd_host_tools_only = loader.addCommandLineOnlyBoolOption("freebsd-host-tools-only", helpHidden=True,
             group=loader.freebsdGroup, help="Stop the FreeBSD/CheriBSD build after the host tools have been built")
 
-        self.install_subdir_to_sysroot = loader.add_bool_option("CompilationTargets.NONE", group=loader.freebsdGroup,
+        self.install_subdir_to_sysroot = loader.add_bool_option("install-subdir-to-sysroot", group=loader.freebsdGroup,
             help="When using the --subdir option for CheriBSD targets also install the built libraries into the "
                  "sysroot.", default=True)
 
