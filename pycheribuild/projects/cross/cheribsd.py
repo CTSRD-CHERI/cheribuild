@@ -1621,6 +1621,13 @@ class BuildCheriBsdAndSysroot(TargetAliasWithDependencies):
     target = "cheribsd-with-sysroot"
     dependencies = ["cheribsd-mips-hybrid"]
 
-class BuildFreeBSDDeviceModel(BuildFreeBSD):
+class BuildFreeBSDDeviceModel(BuildFreeBSDWithDefaultOptions):
     target = "device-model-freebsd"
-    repository = GitRepository("https://github.com/CTSRD-CHERI/device-model-freebsd.git")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/device-model-freebsd.git",
+        default_branch="dma")
+    supported_architectures = [CompilationTargets.FREEBSD_MIPS]
+    kernelConfig = "BERI_DE4_USBROOT"
+
+    def compile(self, **kwargs):
+        self.kernelConfig = "BERI_DE4_USBROOT"
+        super().compile(all_kernel_configs=self.kernelConfig, **kwargs)
