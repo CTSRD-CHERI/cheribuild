@@ -1362,7 +1362,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         return cls.installed_kernel_for_config(caller, cls.get_kernel_config(caller), config, cross_target)
 
     @classmethod
-    def get_installed_benchmark_kernel_path(cls, caller, config: CheriConfig = None, cross_target: CrossCompileTarget=None) -> Path:
+    def get_installed_benchmark_kernel_path(cls, caller: SimpleProject, config: CheriConfig = None, cross_target: CrossCompileTarget=None) -> Path:
         return cls.installed_kernel_for_config(caller, cls.get_kernel_config(caller) + "_BENCHMARK", config, cross_target)
 
     @staticmethod

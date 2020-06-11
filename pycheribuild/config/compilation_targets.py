@@ -28,13 +28,16 @@
 # SUCH DAMAGE.
 #
 import inspect
+import os
+import shlex
 import typing
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 
 from .loader import ConfigOptionBase
 from .target_info import CPUArchitecture, CrossCompileTarget, MipsFloatAbi, TargetInfo
-from ..utils import getCompilerInfo, is_jenkins_build, OSInfo
+from ..utils import commandline_to_str, find_free_port, getCompilerInfo, is_jenkins_build, OSInfo, SocketAndPort
+
 if typing.TYPE_CHECKING:
     from .chericonfig import CheriConfig  # no-combine
     from ..projects.project import Project, SimpleProject  # no-combine
@@ -153,6 +156,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
 
     @property
     def essential_compiler_and_linker_flags(self) -> typing.List[str]:
+        # noinspection PyProtectedMember
         if not self.project._setup_called:
             self.project.fatal("essential_compiler_and_linker_flags should not be called in __init__, use setup()!",
                 fatalWhenPretending=True)
@@ -300,7 +304,8 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def pkgconfig_dirs(self) -> str:
-        return str(self.sysroot_dir / "lib/pkgconfig") + ":" + str(self.sysroot_install_prefix_absolute / "lib/pkgconfig")
+        return str(self.sysroot_dir / "lib/pkgconfig") + ":" + str(
+            self.sysroot_install_prefix_absolute / "lib/pkgconfig")
 
     @property
     def sysroot_install_prefix_relative(self) -> Path:
@@ -361,10 +366,32 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     def is_cheribsd(cls):
         return True
 
+    def _get_mfs_root_kernel(self, use_benchmark_kernel: bool) -> Path:
+        assert self.is_cheribsd(), "Other cases not handled yet"
+        kernel_xtarget = self._get_mfs_kernel_xtarget()
+        from ..projects.cross.cheribsd import BuildCheriBsdMfsKernel
+        if use_benchmark_kernel:
+            return BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self.project, cross_target=kernel_xtarget)
+        else:
+            return BuildCheriBsdMfsKernel.get_installed_kernel_path(self.project)
+
+    def _get_mfs_kernel_xtarget(self):
+        kernel_xtarget = self.target
+        if self.is_cheribsd():
+            # TODO: allow using non-CHERI kernels? Or the purecap kernel?
+            if kernel_xtarget.is_mips(include_purecap=True):
+                # Always use CHERI hybrid kernel
+                kernel_xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
+            elif kernel_xtarget.is_riscv(include_purecap=True):
+                kernel_xtarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
+        return kernel_xtarget
+
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
                                  mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
                                  mount_installdir=False, use_benchmark_kernel_by_default=False):
         assert self.is_cheribsd(), "Only CheriBSD targets supported right now"
+        if typing.TYPE_CHECKING:
+            assert isinstance(self.project, Project)
         # mount_sysroot may be needed for projects such as QtWebkit where the minimal image doesn't contain all the
         # necessary libraries
         xtarget = self.target
@@ -382,7 +409,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             assert isinstance(use_benchmark_config_option, ConfigOptionBase)
             want_benchmark_kernel = use_benchmark_kernel_value or (
                     use_benchmark_kernel_by_default and use_benchmark_config_option.is_default_value)
-            kernel_path = self.project._get_mfs_root_kernel(use_benchmark_kernel=want_benchmark_kernel)
+            kernel_path = self._get_mfs_root_kernel(use_benchmark_kernel=want_benchmark_kernel)
             if not kernel_path.exists() and is_jenkins_build():
                 cheribsd_image = "cheribsd128-cheri128-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
                 freebsd_image = "freebsd-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
@@ -397,8 +424,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                 if jenkins_kernel_path.exists():
                     kernel_path = jenkins_kernel_path
                 else:
-                    self.project.fatal("Could not find kernel image", kernel_path, "and jenkins path", jenkins_kernel_path,
-                        "is also missing")
+                    self.project.fatal("Could not find kernel image", kernel_path, "and jenkins path",
+                        jenkins_kernel_path, "is also missing")
         if kernel_path is None or not kernel_path.exists():
             self.project.fatal("Could not find kernel image", kernel_path)
         script = self.project.get_test_script_path(script_name)
@@ -419,7 +446,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
             cmd.extend(["--build-dir", self.project.buildDir])
         if mount_sourcedir and self.project.sourceDir and "--source-dir" not in self.config.test_extra_args:
             cmd.extend(["--source-dir", self.project.sourceDir])
-        if mount_sysroot and "--sysroot-dir" not in self.config.test_extra_args and not self.project.compiling_for_host():
+        if mount_sysroot and "--sysroot-dir" not in self.config.test_extra_args:
             cmd.extend(["--sysroot-dir", self.sysroot_dir])
         if mount_installdir:
             if "--install-destdir" not in self.config.test_extra_args:
@@ -445,6 +472,105 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         if self.config.test_extra_args:
             cmd.extend(map(str, self.config.test_extra_args))
         self.project.run_cmd(cmd)
+
+    def run_fpga_benchmark(self, benchmarks_dir: Path, *, output_file: str = None, benchmark_script: str = None,
+                           benchmark_script_args: list = None, extra_runbench_args: list = None):
+        assert benchmarks_dir is not None
+        assert output_file is not None, "output_file must be set to a valid value"
+        if typing.TYPE_CHECKING:
+            assert isinstance(self.project, Project)
+        self.project.strip_elf_files(benchmarks_dir)
+        for root, dirnames, filenames in os.walk(str(benchmarks_dir)):
+            for filename in filenames:
+                file = Path(root, filename)
+                if file.suffix == ".dump":
+                    # TODO: make this an error since we should have deleted them
+                    self.project.warning("Will copy a .dump file to the FPGA:", file)
+
+        runbench_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
+
+        from ..projects.cherisim import BuildCheriSim, BuildBeriCtl
+        sim_project = BuildCheriSim.get_instance(self.project, cross_target=CompilationTargets.NATIVE)
+        cherilibs_dir = Path(sim_project.sourceDir, "cherilibs")
+        cheri_dir = Path(sim_project.sourceDir, "cheri")
+        if not cheri_dir.exists() or not cherilibs_dir.exists():
+            self.project.fatal("cheri-cpu repository missing. Run `cheribuild.py berictl` or `git clone {} {}`".format(
+                sim_project.repository.url, sim_project.sourceDir))
+
+        qemu_ssh_socket = None  # type: typing.Optional[SocketAndPort]
+
+        if self.config.benchmark_with_qemu:
+            from ..projects.build_qemu import BuildQEMU
+            qemu_path = BuildQEMU.qemu_cheri_binary(self.project)
+            qemu_ssh_socket = find_free_port()
+            if not qemu_path.exists():
+                self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
+            basic_args = ["--use-qemu-instead-of-fpga",
+                          "--qemu-path=" + str(qemu_path),
+                          "--qemu-ssh-port=" + str(qemu_ssh_socket.port)]
+        else:
+            basic_args = ["--berictl=" + str(
+                BuildBeriCtl.getBuildDir(self.project, cross_target=CompilationTargets.NATIVE) / "berictl")]
+
+        if self.config.test_ssh_key.with_suffix("").exists():
+            basic_args.extend(["--ssh-key", str(self.config.test_ssh_key.with_suffix(""))])
+
+        if self.config.benchmark_ld_preload:
+            runbench_args.append("--extra-input-files=" + str(self.config.benchmark_ld_preload))
+            env_var = "LD_CHERI_PRELOAD" if self.target.is_cheri_hybrid() else "LD_PRELOAD"
+            pre_cmd = "export {}={};".format(env_var,
+                shlex.quote("/tmp/benchdir/" + self.config.benchmark_ld_preload.name))
+            runbench_args.append("--pre-command=" + pre_cmd)
+        if self.config.benchmark_fpga_extra_args:
+            basic_args.extend(self.config.benchmark_fpga_extra_args)
+        if self.config.benchmark_extra_args:
+            runbench_args.extend(self.config.benchmark_extra_args)
+        if self.config.tests_interact:
+            runbench_args.append("--interact")
+
+        from ..projects.cross.cheribsd import BuildCheriBsdMfsKernel
+        if self.config.benchmark_with_qemu:
+            # When benchmarking with QEMU we always spawn a new instance
+            kernel_image = self._get_mfs_root_kernel(use_benchmark_kernel=not self.config.benchmark_with_debug_kernel)
+            basic_args.append("--kernel-img=" + str(kernel_image))
+        elif self.config.benchmark_clean_boot:
+            # use a bitfile from jenkins. TODO: add option for overriding
+            assert self.target.is_mips(include_purecap=True)
+            basic_args.append("--jenkins-bitfile=cheri128")
+            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(self._get_mfs_kernel_xtarget(),
+                self.config, caller=self.project)
+            if self.config.benchmark_with_debug_kernel:
+                kernel_config = mfs_kernel.fpga_kernconf
+            else:
+                kernel_config = mfs_kernel.fpga_kernconf + "_BENCHMARK"
+            basic_args.append(
+                "--kernel-img=" + str(mfs_kernel.installed_kernel_for_config(self.project, kernel_config)))
+        else:
+            runbench_args.append("--skip-boot")
+        if benchmark_script:
+            runbench_args.append("--script-name=" + benchmark_script)
+        if benchmark_script_args:
+            runbench_args.append("--script-args=" + commandline_to_str(benchmark_script_args))
+        if extra_runbench_args:
+            runbench_args.extend(extra_runbench_args)
+
+        cheribuild_path = Path(__file__).absolute().parent.parent.parent
+        beri_fpga_bsd_boot_script = """
+set +x
+source "{cheri_dir}/setup.sh"
+set -x
+export PATH="$PATH:{cherilibs_dir}/tools:{cherilibs_dir}/tools/debug"
+exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbench_args}
+            """.format(cheri_dir=cheri_dir, cherilibs_dir=cherilibs_dir,
+            runbench_args=commandline_to_str(runbench_args),
+            basic_args=commandline_to_str(basic_args), cheribuild_path=cheribuild_path)
+        if self.config.benchmark_with_qemu:
+            # Free the port that we reserved for QEMU before starting beri-fpga-bsd-boot.py
+            qemu_ssh_socket.socket.close()
+            self.project.run_cmd(
+                [cheribuild_path / "beri-fpga-bsd-boot.py"] + basic_args + ["-vvvvv", "runbench"] + runbench_args)
+        else:
+            self.project.run_shell_script(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
 
     @classmethod
     def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", include_version):

@@ -222,6 +222,10 @@ class TargetInfo(ABC):
                                  mount_installdir=False, use_benchmark_kernel_by_default=False):
         raise ValueError("run_cheribsd_test_script only supports CheriBSD targets")
 
+    def run_fpga_benchmark(self, benchmarks_dir: Path, *, output_file: str = None, benchmark_script: str = None,
+                           benchmark_script_args: list = None, extra_runbench_args: list = None):
+        raise ValueError("run_fpga_benchmark only supports CheriBSD targets")
+
     @classmethod
     def is_macos(cls):
         return False

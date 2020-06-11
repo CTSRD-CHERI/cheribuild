@@ -794,26 +794,6 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # for the --benchmark option
         statusUpdate("No benchmarks defined for target", self.target)
 
-    def _get_mfs_root_kernel(self, use_benchmark_kernel: bool) -> Path:
-        assert self.target_info.is_cheribsd(), "Other cases not handled yet"
-        kernel_xtarget = self._get_mfs_kernel_xtarget()
-        from .cross.cheribsd import BuildCheriBsdMfsKernel
-        if use_benchmark_kernel:
-            return BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self, cross_target=kernel_xtarget)
-        else:
-            return BuildCheriBsdMfsKernel.get_installed_kernel_path(self)
-
-    def _get_mfs_kernel_xtarget(self):
-        kernel_xtarget = self.crosscompile_target
-        if self.target_info.is_cheribsd():
-            # TODO: allow using non-CHERI kernels? Or the purecap kernel?
-            if self.compiling_for_mips(include_purecap=True):
-                # Always use CHERI hybrid kernel
-                kernel_xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
-            elif self.compiling_for_riscv(include_purecap=True):
-                kernel_xtarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
-        return kernel_xtarget
-
     @staticmethod
     def get_test_script_path(script_name: str) -> Path:
         # noinspection PyUnusedLocal
@@ -1584,9 +1564,6 @@ class Project(SimpleProject):
 
         cls.use_lto = cls.add_bool_option("use-lto", help="Build with link-time optimization (LTO)",
             default=cls.lto_by_default)
-        # cls.use_cfi = cls.add_bool_option("use-cfi", help="Build with CFI",
-        #                                 only_add_for_targets=[CompilationTargets.NATIVE,
-        #                                 CompilationTargets.CHERIBSD_MIPS_NO_CHERI])
         cls.use_cfi = False  # doesn't work yet
         cls._linkage = cls.add_config_option("linkage", default=Linkage.DEFAULT, kind=Linkage,
             help="Build static or dynamic (or use the project default)")
@@ -2222,106 +2199,6 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         self.makedirs(dest_libdir)
         for lib in ("usr/lib/librt.so.1", "usr/lib/libexecinfo.so.1", "lib/libgcc_s.so.1", "lib/libelf.so.2"):
             self.installFile(self.sdk_sysroot / lib, dest_libdir / Path(lib).name, force=True, print_verbose_only=False)
-
-    def run_fpga_benchmark(self, benchmarks_dir: Path, *, output_file: str = None, benchmark_script: str = None,
-                           benchmark_script_args: list = None, extra_runbench_args: list = None):
-        assert benchmarks_dir is not None
-        assert output_file is not None, "output_file must be set to a valid value"
-        self.strip_elf_files(benchmarks_dir)
-        for root, dirnames, filenames in os.walk(str(benchmarks_dir)):
-            for filename in filenames:
-                file = Path(root, filename)
-                if file.suffix == ".dump":
-                    # TODO: make this an error since we should have deleted them
-                    self.warning("Will copy a .dump file to the FPGA:", file)
-
-        runbench_args = [benchmarks_dir, "--target=" + self.config.benchmark_ssh_host, "--out-path=" + output_file]
-
-        from .cherisim import BuildCheriSim, BuildBeriCtl
-        sim_project = BuildCheriSim.get_instance(self, cross_target=CompilationTargets.NATIVE)
-        cherilibs_dir = Path(sim_project.sourceDir, "cherilibs")
-        cheri_dir = Path(sim_project.sourceDir, "cheri")
-        if not cheri_dir.exists() or not cherilibs_dir.exists():
-            self.fatal("cheri-cpu repository missing. Run `cheribuild.py berictl` or `git clone {} {}`".format(
-                sim_project.repository.url, sim_project.sourceDir))
-
-        qemu_ssh_socket = None  # type: typing.Optional[SocketAndPort]
-
-        if self.config.benchmark_with_qemu:
-            from .build_qemu import BuildQEMU
-            qemu_path = BuildQEMU.qemu_cheri_binary(self)
-            qemu_ssh_socket = find_free_port()
-            if not qemu_path.exists():
-                self.fatal("QEMU binary", qemu_path, "doesn't exist")
-            basic_args = ["--use-qemu-instead-of-fpga",
-                          "--qemu-path=" + str(qemu_path),
-                          "--qemu-ssh-port=" + str(qemu_ssh_socket.port)]
-        else:
-            basic_args = ["--berictl=" + str(
-                BuildBeriCtl.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "berictl")]
-
-        if self.config.test_ssh_key.with_suffix("").exists():
-            basic_args.extend(["--ssh-key", str(self.config.test_ssh_key.with_suffix(""))])
-
-        if self.config.benchmark_ld_preload:
-            runbench_args.append("--extra-input-files=" + str(self.config.benchmark_ld_preload))
-            env_var = "LD_CHERI_PRELOAD" if self.compiling_for_cheri() else "LD_PRELOAD"
-            pre_cmd = "export {}={};".format(env_var,
-                shlex.quote("/tmp/benchdir/" + self.config.benchmark_ld_preload.name))
-            runbench_args.append("--pre-command=" + pre_cmd)
-        if self.config.benchmark_fpga_extra_args:
-            basic_args.extend(self.config.benchmark_fpga_extra_args)
-        if self.config.benchmark_extra_args:
-            runbench_args.extend(self.config.benchmark_extra_args)
-        if self.config.tests_interact:
-            runbench_args.append("--interact")
-
-        from .cross.cheribsd import BuildCheriBsdMfsKernel
-        if self.config.benchmark_with_qemu:
-            # When benchmarking with QEMU we always spawn a new instance
-            kernel_image = self._get_mfs_root_kernel(use_benchmark_kernel=not self.config.benchmark_with_debug_kernel)
-            basic_args.append("--kernel-img=" + str(kernel_image))
-        elif self.config.benchmark_clean_boot:
-            # use a bitfile from jenkins. TODO: add option for overriding
-            if self.compiling_for_mips(include_purecap=False):
-                basic_args.append("--jenkins-bitfile=cheri128")
-            else:
-                assert self.compiling_for_cheri()
-                basic_args.append("--jenkins-bitfile=cheri" + self.config.mips_cheri_bits_str)
-            mfs_kernel = BuildCheriBsdMfsKernel.get_instance_for_cross_target(self._get_mfs_kernel_xtarget(),
-                self.config, caller=self)
-            if self.config.benchmark_with_debug_kernel:
-                kernel_config = mfs_kernel.fpga_kernconf
-            else:
-                kernel_config = mfs_kernel.fpga_kernconf + "_BENCHMARK"
-            basic_args.append(
-                "--kernel-img=" + str(mfs_kernel.installed_kernel_for_config(self, kernel_config)))
-        else:
-            runbench_args.append("--skip-boot")
-        if benchmark_script:
-            runbench_args.append("--script-name=" + benchmark_script)
-        if benchmark_script_args:
-            runbench_args.append("--script-args=" + commandline_to_str(benchmark_script_args))
-        if extra_runbench_args:
-            runbench_args.extend(extra_runbench_args)
-
-        cheribuild_path = Path(__file__).absolute().parent.parent.parent
-        beri_fpga_bsd_boot_script = """
-set +x
-source "{cheri_dir}/setup.sh"
-set -x
-export PATH="$PATH:{cherilibs_dir}/tools:{cherilibs_dir}/tools/debug"
-exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbench_args}
-        """.format(cheri_dir=cheri_dir, cherilibs_dir=cherilibs_dir,
-            runbench_args=commandline_to_str(runbench_args),
-            basic_args=commandline_to_str(basic_args), cheribuild_path=cheribuild_path)
-        if self.config.benchmark_with_qemu:
-            # Free the port that we reserved for QEMU before starting beri-fpga-bsd-boot.py
-            qemu_ssh_socket.socket.close()
-            self.run_cmd(
-                [cheribuild_path / "beri-fpga-bsd-boot.py"] + basic_args + ["-vvvvv", "runbench"] + runbench_args)
-        else:
-            self.run_shell_script(beri_fpga_bsd_boot_script, shell="bash")  # the setup script needs bash not sh
 
     _check_install_dir_conflict = True
 

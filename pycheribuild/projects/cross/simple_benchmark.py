@@ -69,6 +69,6 @@ class BuildSimpleCheriBenchmarks(CrossCompileCMakeProject):
             return
         with tempfile.TemporaryDirectory() as td:
             benchmarks_dir = self.create_test_dir(Path(td))
-            self.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
-                                    benchmark_script_args=["-d1", "-r10", "-o", self.default_statcounters_csv_name,
-                                                           "-a", self.archname_column])
+            self.target_info.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
+                benchmark_script_args=["-d1", "-r10", "-o", self.default_statcounters_csv_name,
+                                       "-a", self.archname_column])

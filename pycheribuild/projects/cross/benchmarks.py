@@ -146,10 +146,10 @@ class BuildMibench(CrossCompileProject):
             if not (benchmark_dir / "run_jenkins-bluehive.sh").exists():
                 self.fatal("Created invalid benchmark bundle...")
             num_iterations = self.config.benchmark_iterations or 10
-            self.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
-                                    benchmark_script_args=["-d1", "-r" + str(num_iterations), "-s", self.benchmark_size,
-                                                           "-o", self.default_statcounters_csv_name,
-                                                           self.benchmark_version])
+            self.target_info.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
+                benchmark_script_args=["-d1", "-r" + str(num_iterations), "-s", self.benchmark_size,
+                                       "-o", self.default_statcounters_csv_name,
+                                       self.benchmark_version])
 
 
 class BuildOlden(CrossCompileProject):
@@ -242,9 +242,9 @@ class BuildOlden(CrossCompileProject):
             if not (benchmark_dir / "run_jenkins-bluehive.sh").exists():
                 self.fatal("Created invalid benchmark bundle...")
             num_iterations = self.config.benchmark_iterations or 15
-            self.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
-                                    benchmark_script_args=["-d1", "-r" + str(num_iterations), "-o",
-                                                           self.default_statcounters_csv_name, self.test_arch_suffix])
+            self.target_info.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
+                benchmark_script_args=["-d1", "-r" + str(num_iterations), "-o",
+                                       self.default_statcounters_csv_name, self.test_arch_suffix])
 
 
 class BuildSpec2006(CrossCompileProject):
@@ -483,10 +483,10 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_f
                               self.bluehive_benchmark_script_archname]
             if self.config.run_under_gdb:
                 benchmark_args.insert(0, "-g")
-            self.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
-                                    # The benchmarks take a long time to run -> allow up to a 3 hours per iteration
-                                    extra_runbench_args=["--timeout", str(60 * 60 * 3 * num_iterations)],
-                                    benchmark_script_args=benchmark_args)
+            self.target_info.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
+                # The benchmarks take a long time to run -> allow up to a 3 hours per iteration
+                extra_runbench_args=["--timeout", str(60 * 60 * 3 * num_iterations)],
+                benchmark_script_args=benchmark_args)
 
 
     def __check_valid_benchmark_list(self):
