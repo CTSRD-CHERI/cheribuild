@@ -111,16 +111,18 @@ class BuildFettConfig(CrossCompileProject):
 
         # voting app
         voting_src = src / "build/voting"
-        self.mtree.add_dir("var/www")
-        self.mtree.add_dir("var/www/cgi-bin")
-        self.mtree.add_dir("var/www/html")
-        self.mtree.add_dir("var/www/data", uname="www", gname="www", mode="0770")
+        # /fett/var/www/cgi-bin added implicitly in fett-voting
+        #self.mtree.add_dir("fett/var/www")
+        #self.mtree.add_dir("fett/var/www/cgi-bin")
+        self.mtree.add_dir("fett/var/www/data", uname="www", gname="www", mode="0770")
+        self.mtree.add_dir("fett/var/www/html")
+        self.mtree.add_dir("fett/var/www/run")
         self.mtree.add_file(voting_src / "common/conf/fastcgi.conf",
                             nginx_prefix / "conf/fastcgi.conf")
         self.mtree.add_file(voting_src / "common/conf/sites/voting.conf",
                             nginx_prefix / "conf/sites/voting.conf")
-
-        # Install rc script
+        self.mtree.add_file(voting_src / "freebsd/fett_bvrs.sh",
+                            "etc/rc.d/fett_bvrs", mode="0555")
 
         self.mtree.write(self.METALOG)
 
@@ -164,7 +166,7 @@ class BuildFettVoting(CrossCompileProject):
 
     def install(self, **kwargs):
         if not self.compiling_for_host():
-            self.installFile(self.buildDir / "source/src/bvrs", self.destdir / "var/www/cgi-bin/bvrs")
+            self.installFile(self.buildDir / "source/src/bvrs", self.real_install_root_dir / "var/www/cgi-bin/bvrs")
             self.installFile(self.buildDir / "source/src/bvrs.sql", self.real_install_root_dir / "share/bvrs.sql")
 
 
