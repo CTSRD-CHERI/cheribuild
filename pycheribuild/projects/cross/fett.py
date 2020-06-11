@@ -130,7 +130,7 @@ class BuildFettConfig(CrossCompileProject):
 class BuildFettVoting(CrossCompileProject):
     project_name = "fett-voting"
     path_in_rootfs = "/fett"
-    repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Voting.git", default_branch="develop")
+    repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Voting.git", default_branch="cheri")
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES + [CompilationTargets.NATIVE]
 
     dependencies = ["fett-kcgi", "fett-sqlbox", "fett-sqlite", "fett-zlib", "openradtool"]
