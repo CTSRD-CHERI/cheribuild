@@ -16,6 +16,7 @@ nfs_client_enable="YES"
 fsck_y_enable="YES"
 fsck_y_flags="-T ffs:-R -T ufs:-R"
 if [ -e /fett ]; then
+	fett_bvrs_enable="YES"
 	fett_nginx_enable="YES"
 	sshd_enable="NO"
 	fett_sshd_enable="YES"
