@@ -30,7 +30,6 @@
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
                                   GitRepository, Linkage)
 from .qt5 import BuildQtWebkit
-from ...utils import OSInfo, runCmd
 
 
 class BuildSQLite(CrossCompileAutotoolsProject):
@@ -70,7 +69,7 @@ class BuildSQLite(CrossCompileAutotoolsProject):
 
     def compile(self, **kwargs):
         # create the required metadata
-        runCmd(self.sourceDir / "create-fossil-manifest", cwd=self.sourceDir)
+        self.run_cmd(self.sourceDir / "create-fossil-manifest", cwd=self.sourceDir)
         super().compile()
 
     def install(self, **kwargs):

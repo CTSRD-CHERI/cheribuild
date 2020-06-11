@@ -23,10 +23,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-
 import shlex
-import shutil
-import os
 
 from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, GitRepository
 
