@@ -270,12 +270,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
         return self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAP
 
     @classmethod
-    def rootfsDir(cls, caller, config=None, cross_target: CrossCompileTarget = CompilationTargets.NONE):
+    def rootfsDir(cls, caller, config=None, cross_target: CrossCompileTarget = None):
         return cls.getInstallDir(caller, config, cross_target)
 
     @classmethod
     def get_installed_kernel_path(cls, caller, config: CheriConfig = None,
-                                  cross_target: CrossCompileTarget = CompilationTargets.NONE):
+                                  cross_target: CrossCompileTarget = None):
         return cls.rootfsDir(caller, config, cross_target) / "boot/kernel/kernel"
 
     @classmethod
@@ -304,7 +304,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             default=ComputedDefaultValue(function=default_kernel_config, as_string="target-dependent default"),
             help="The kernel configuration to use for `make buildkernel` (default: CHERI_MALTA64)")  # type: str
 
-        if cls._xtarget.is_hybrid_or_purecap_cheri():
+        if cls._xtarget is not None and cls._xtarget.is_hybrid_or_purecap_cheri():
             # When targeting CHERI we have to use CHERI LLVM
             assert not use_upstream_llvm
             assert not bootstrap_toolchain

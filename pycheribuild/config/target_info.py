@@ -384,7 +384,8 @@ class CrossCompileTarget(object):
 
     def is_native(self):
         """returns true if we building for the curent host"""
-        return self.target_info_cls is not None and self.target_info_cls.is_native()
+        assert self.target_info_cls is not None
+        return self.target_info_cls.is_native()
 
     def _check_arch(self, arch: CPUArchitecture, include_purecap: bool):
         if self.cpu_architecture is not arch:

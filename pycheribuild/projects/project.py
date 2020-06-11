@@ -128,8 +128,7 @@ class ProjectSubclassDefinitionHook(type):
             # Add a the target for the default architecture
             base_target = MultiArchTargetAlias(targetName, cls)
             target_manager.add_target(base_target)
-            # TODO: make this hold with CheriBSD
-            assert cls._xtarget is CompilationTargets.NONE, "Should not be set!"
+            assert cls._xtarget is None, "Should not be set!"
             # assert cls._should_not_be_instantiated, "multiarch base classes should not be instantiated"
             for arch in supported_archs:
                 assert isinstance(arch, CrossCompileTarget)
@@ -184,7 +183,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # if no match)
     _default_architecture = None
 
-    _xtarget = CompilationTargets.NONE  # type: CrossCompileTarget
+    _xtarget = None  # type: typing.Optional[CrossCompileTarget]
     # only the subclasses generated in the ProjectSubclassDefinitionHook can have __init__ called
     # To check that we don't create an crosscompile targets without a fixed target
     _should_not_be_instantiated = True
@@ -203,17 +202,17 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def allDependencyNames(cls, config: CheriConfig) -> "typing.List[str]":
-        assert cls._xtarget is not CompilationTargets.NONE
+        assert cls._xtarget is not None
         return [t.name for t in cls.recursive_dependencies(config)]
 
     @classmethod
     def direct_dependencies(cls, config: CheriConfig) -> "typing.Generator[Target]":
-        assert cls._xtarget is not CompilationTargets.NONE
+        assert cls._xtarget is not None
         dependencies = cls.dependencies
         expected_build_arch = cls.get_crosscompile_target(config)
         assert expected_build_arch is not None
         assert cls._xtarget is not None
-        if expected_build_arch is CompilationTargets.NONE or cls._xtarget is CompilationTargets.NONE:
+        if expected_build_arch is None or cls._xtarget is None:
             raise ValueError("Cannot call direct_dependencies() on a target alias")
         if callable(dependencies):
             if inspect.ismethod(dependencies):
@@ -273,7 +272,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if _cached is not None:
             return _cached
         result = []  # type: typing.List[Target]
-        assert cls._xtarget not in (None, CompilationTargets.NONE), cls
+        assert cls._xtarget is not None, cls
         for target in cls.direct_dependencies(config):
             if target not in result:
                 result.append(target)
@@ -295,19 +294,17 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @classmethod
     def get_instance(cls: typing.Type[Type_T], caller: "typing.Optional[SimpleProject]",
-                     config: CheriConfig = None, cross_target: CrossCompileTarget = CompilationTargets.NONE) -> Type_T:
+                     config: CheriConfig = None, cross_target: typing.Optional[CrossCompileTarget] = None) -> Type_T:
         # TODO: assert that target manager has been initialized
-        assert cross_target is not None
         if caller is not None:
             if config is None:
                 config = caller.config
-            if cross_target is CompilationTargets.NONE:
+            if cross_target is None:
                 cross_target = caller.get_crosscompile_target(config)
         else:
-            if cross_target is CompilationTargets.NONE:
+            if cross_target is None:
                 cross_target = cls.get_crosscompile_target(config)
             assert config is not None, "Need either caller or config argument!"
-
         return cls.get_instance_for_cross_target(cross_target, config, caller=caller)
 
     @classmethod
@@ -322,7 +319,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         found_target = result.get_crosscompile_target(config)
         # XXX: FIXME: add cross target to every call
         assert cross_target is not None
-        if cross_target is not CompilationTargets.NONE:
+        if cross_target is not None:
             assert found_target is cross_target, "Didn't find right instance of " + str(cls) + ": " + str(
                 found_target) + " vs. " + str(cross_target) + ", caller was " + repr(caller)
         return result
@@ -330,19 +327,18 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     @classmethod
     def get_crosscompile_target(cls, config: CheriConfig) -> CrossCompileTarget:
         target = cls._xtarget
-        assert target is not None
-        if target is not CompilationTargets.NONE:
+        if target is not None:
             return target
         # Find the best match based on config.preferred_xtarget
         default_target = config.preferred_xtarget
         assert cls.supported_architectures, "Must not be empty"
         # if we can build the default target (--xmips/--xhost) chose that
         if default_target in cls.supported_architectures:
-            assert default_target is not CompilationTargets.NONE
+            assert default_target is not None
             return default_target
         # otherwise fall back to the default specified in the class
         result = cls.default_architecture
-        assert result is not CompilationTargets.NONE
+        assert result is not None
         return result
 
     @classproperty
@@ -423,7 +419,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @property
     def display_name(self):
-        if self._xtarget is CompilationTargets.NONE:
+        if self._xtarget is None:
             return self.project_name + " (target alias)"
         return self.project_name + " (" + self._xtarget.build_suffix(self.config) + ")"
 
@@ -443,7 +439,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         elif isinstance(target, Target):
             # single architecture target
             result = target.projectClass
-            if arch is CompilationTargets.NONE or result._xtarget is arch:
+            if arch is None or result._xtarget is arch:
                 return result
         raise LookupError("Invalid arch " + str(arch) + " for class " + str(cls))
 
@@ -497,14 +493,13 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if only_add_for_targets is not None:
             # Some config options only apply to certain targets -> add them to those targets and the generic one
             target = cls._xtarget
-            assert target is not None
-            # If we are adding to the base class or the target is not in
+            # If we are adding to the base class or the target is not in the list, emit a warning
             if not _allow_unknown_targets:
                 for t in only_add_for_targets:
                     assert t in cls.supported_architectures, \
                         cls.__name__ + ": some of " + str(only_add_for_targets) + " not in " + str(
                             cls.supported_architectures)
-            if target is not CompilationTargets.NONE and target not in only_add_for_targets:
+            if target is not None and target not in only_add_for_targets:
                 kwargs["option_cls"] = DefaultValueOnlyConfigOption
 
         # We don't want to inherit certain options from the non-target specific class since they should always be
@@ -553,8 +548,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     def __init__(self, config: CheriConfig):
         self.target_info = self._xtarget.create_target_info(self)
         super().__init__(config)
-        assert self._xtarget is not None
-        assert self._xtarget is not CompilationTargets.NONE, "Placeholder class should not be instantiated: " + repr(self)
+        assert self._xtarget is not None, "Placeholder class should not be instantiated: " + repr(self)
         assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
         assert self.__class__ in self.__configOptionsSet, "Forgot to call super().setup_config_options()? " + str(self.__class__)
         self.__requiredSystemTools = {}  # type: typing.Dict[str, typing.Any]
@@ -1169,7 +1163,7 @@ class ExternallyManagedSourceRepository(SourceRepository):
 
 class ReuseOtherProjectRepository(SourceRepository):
     def __init__(self, source_project: "typing.Type[Project]", *, subdirectory=".",
-                 repo_for_target: CrossCompileTarget = CompilationTargets.NONE):
+                 repo_for_target: CrossCompileTarget = None):
         self.source_project = source_project
         self.subdirectory = subdirectory
         self.repo_for_target = repo_for_target
@@ -1503,27 +1497,26 @@ class Project(SimpleProject):
     # TODO: remove these three
     @classmethod
     def getSourceDir(cls, caller: "SimpleProject", config: CheriConfig = None,
-                     cross_target: CrossCompileTarget = CompilationTargets.NONE):
+                     cross_target: CrossCompileTarget = None):
         return cls.get_instance(caller, config, cross_target).sourceDir
 
     @classmethod
     def getBuildDir(cls, caller: "SimpleProject", config: CheriConfig = None,
-                    cross_target: CrossCompileTarget = CompilationTargets.NONE):
+                    cross_target: CrossCompileTarget = None):
         return cls.get_instance(caller, config, cross_target).buildDir
 
     @classmethod
     def getInstallDir(cls, caller: "SimpleProject", config: CheriConfig = None,
-                      cross_target: CrossCompileTarget = CompilationTargets.NONE):
+                      cross_target: CrossCompileTarget = None):
         return cls.get_instance(caller, config, cross_target).real_install_root_dir
 
-    def build_configuration_suffix(self, target: CrossCompileTarget = CompilationTargets.NONE) -> str:
+    def build_configuration_suffix(self, target: typing.Optional[CrossCompileTarget] = None) -> str:
         """
         :param target: the target to use
         :return: a string such as -128/-native-asan that identifies the build configuration
         """
         config = self.config
-        assert target is not None
-        if target is CompilationTargets.NONE:
+        if target is None:
             target = self.get_crosscompile_target(config)
         # targets that only support native don't need a suffix
         if target.is_native() and not self.add_build_dir_suffix_for_native:
@@ -1543,7 +1536,7 @@ class Project(SimpleProject):
 
     @classproperty
     def can_build_with_asan(self):
-        return not self._xtarget.is_cheri_purecap()
+        return self._xtarget is None or not self._xtarget.is_cheri_purecap()
 
     @classmethod
     def get_default_install_dir_kind(cls) -> DefaultInstallDir:
@@ -1553,15 +1546,14 @@ class Project(SimpleProject):
             assert cls.cross_install_dir is None, "default_install_dir and cross_install_dir are mutually exclusive"
             install_dir = cls.default_install_dir
         else:
-            if cls._xtarget.is_native():
+            if cls._xtarget is not None and cls._xtarget.is_native():
                 install_dir = cls.native_install_dir
             else:
                 install_dir = cls.cross_install_dir
         if install_dir is None and cls._default_install_dir_fn is Project._default_install_dir_fn:
             raise RuntimeError("native_install_dir/cross_install_dir/_default_install_dir_fn not specified for " + cls.target)
         if install_dir == DefaultInstallDir.SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE:
-            if cls._xtarget is not CompilationTargets.NONE and (cls._xtarget.target_info_cls.is_baremetal() or
-               cls._xtarget.target_info_cls.is_rtems()):
+            if cls._xtarget is not None and (cls._xtarget.target_info_cls.is_baremetal() or cls._xtarget.target_info_cls.is_rtems()):
                 install_dir = DefaultInstallDir.SYSROOT
             else:
                 install_dir = DefaultInstallDir.ROOTFS

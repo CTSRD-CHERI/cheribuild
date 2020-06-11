@@ -208,7 +208,7 @@ class JenkinsConfig(CheriConfig):
             self.cheri_sdk_dir = self.workspace / self.cheri_sdk_directory_name
         self.preferred_xtarget = self.cpu
         if self.cpu == "default":
-            self.preferred_xtarget = CompilationTargets.NONE
+            self.preferred_xtarget = None
         elif self.cpu == "cheri128":
             self.preferred_xtarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
         elif self.cpu in ("mips", "hybrid-cheri128"):  # MIPS with CHERI memcpy

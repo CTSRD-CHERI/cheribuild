@@ -577,9 +577,6 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
 
 
 class CompilationTargets(object):
-    # noinspection PyTypeChecker
-    NONE = CrossCompileTarget("invalid", None, None)  # Placeholder  # pytype: disable=wrong-arg-types
-
     # XXX: should probably not harcode x86_64 for native
     NATIVE = CrossCompileTarget("native", CPUArchitecture.X86_64, NativeTargetInfo)
 

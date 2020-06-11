@@ -120,8 +120,9 @@ class ConfigLoaderBase(object):
 
     def __init__(self, option_cls):
         self.__option_cls = option_cls
-        self._parser = argparse.ArgumentParser(formatter_class=
-                                      lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
+        # noinspection PyTypeChecker
+        self._parser = argparse.ArgumentParser(
+            formatter_class=lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
         self.actionGroup = self._parser.add_argument_group("Actions to be performed")
         self.pathGroup = self._parser.add_argument_group("Configuration of default paths")
         self.crossCompileOptionsGroup = self._parser.add_argument_group("Adjust flags used when compiling MIPS/CHERI projects")

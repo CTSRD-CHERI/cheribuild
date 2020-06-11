@@ -420,7 +420,7 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         for idx, value in enumerate(cls.supported_architectures):
             if cls._xtarget is value:
                 return idx
-        assert cls._xtarget is CompilationTargets.NONE
+        assert cls._xtarget is None
         return -1  # return -1 for NONE
 
     @classproperty

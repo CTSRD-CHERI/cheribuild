@@ -34,7 +34,6 @@ import typing
 from collections import OrderedDict
 
 from .config.chericonfig import CheriConfig
-from .config.compilation_targets import CompilationTargets
 from .config.target_info import CrossCompileTarget
 from .utils import AnsiColour, coloured, fatalError, setEnv, statusUpdate, warningMessage
 
@@ -57,13 +56,13 @@ class Target(object):
     @property
     def projectClass(self) -> "typing.Type[SimpleProject]":
         result = self._project_class
-        assert result._xtarget is not CompilationTargets.NONE
+        assert result._xtarget is not None
         return result
 
-    def get_real_target(self, cross_target: CrossCompileTarget, config, caller=None) -> "Target":
+    def get_real_target(self, cross_target: typing.Optional[CrossCompileTarget], config, caller=None) -> "Target":
         return self
 
-    def get_or_create_project(self, target_arch: "CrossCompileTarget", config) -> "SimpleProject":
+    def get_or_create_project(self, target_arch: typing.Optional[CrossCompileTarget], config) -> "SimpleProject":
         # Note: MultiArchTarget uses caller to select the right project (e.g. libcxxrt-native needs libunwind-native path)
         if self.__project is None:
             self.__project = self.create_project(config)
@@ -76,7 +75,7 @@ class Target(object):
     def checkSystemDeps(self, config: CheriConfig):
         if self._completed:
             return
-        project = self.get_or_create_project(CompilationTargets.NONE, config)
+        project = self.get_or_create_project(None, config)
         with setEnv(PATH=config.dollarPathWithOtherTools):
             # make sure all system dependencies exist first
             project.check_system_dependencies()
@@ -205,7 +204,7 @@ class MultiArchTarget(Target):
 
     @property
     def projectClass(self) -> "typing.Type[SimpleProject]":
-        assert self.target_arch is not CompilationTargets.NONE
+        assert self.target_arch is not None
         return self._project_class
 
     def _create_project(self, config: CheriConfig) -> "SimpleProject":
@@ -224,29 +223,28 @@ class _TargetAliasBase(Target):
     def _create_project(self, config: CheriConfig):
         raise ValueError("Should not be called!")
 
-    def get_real_target(self, cross_target: CrossCompileTarget, config,
+    def get_real_target(self, cross_target: typing.Optional[CrossCompileTarget], config,
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
         raise NotImplementedError()
 
-    def get_or_create_project(self, cross_target: "CrossCompileTarget", config) -> "SimpleProject":
-        assert cross_target is not None
+    def get_or_create_project(self, cross_target: typing.Optional[CrossCompileTarget], config) -> "SimpleProject":
         tgt = self.get_real_target(cross_target, config)
         # Update the cross target
         cross_target = tgt.projectClass._xtarget
-        assert cross_target is not CompilationTargets.NONE
+        assert cross_target is not None
         return tgt.get_or_create_project(cross_target, config)
 
     def execute(self, config):
-        return self.get_real_target(CompilationTargets.NONE, config).execute(config)
+        return self.get_real_target(None, config).execute(config)
 
     def run_tests(self, config: "CheriConfig"):
-        return self.get_real_target(CompilationTargets.NONE, config).run_tests(config)
+        return self.get_real_target(None, config).run_tests(config)
 
     def run_benchmarks(self, config: "CheriConfig"):
-        return self.get_real_target(CompilationTargets.NONE, config).run_benchmarks(config)
+        return self.get_real_target(None, config).run_benchmarks(config)
 
     def checkSystemDeps(self, config: CheriConfig):
-        return self.get_real_target(CompilationTargets.NONE, config).checkSystemDeps(config)
+        return self.get_real_target(None, config).checkSystemDeps(config)
 
 
 # This is used for targets like "libcxx", etc and resolves to "libcxx-cheri/libcxx-native/libcxx-mips"
@@ -259,14 +257,13 @@ class MultiArchTargetAlias(_TargetAliasBase):
     def __repr__(self):
         return "<Cross target alias " + self.name + ">"
 
-    def get_real_target(self, cross_target: CrossCompileTarget, config,
+    def get_real_target(self, cross_target: "typing.Optional[CrossCompileTarget]", config,
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
-        assert cross_target is not None
         assert self.derived_targets, "derived targets must not be empty"
-        if cross_target is CompilationTargets.NONE:
+        if cross_target is None:
             # Use the default target:
             cross_target = self.projectClass.get_crosscompile_target(config)
-        assert cross_target is not None and cross_target is not CompilationTargets.NONE
+        assert cross_target is not None
         # find the correct derived project:
         for tgt in self.derived_targets:
             if tgt.target_arch is cross_target:
@@ -286,7 +283,7 @@ class SimpleTargetAlias(_TargetAliasBase):
         # noinspection PyProtectedMember
         real_cls._alias_target_names = getattr(real_cls, "_alias_target_names", tuple()) + (self.name, )
 
-    def get_real_target(self, cross_target: CrossCompileTarget, config,
+    def get_real_target(self, cross_target: typing.Optional[CrossCompileTarget], config,
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
         return self._real_target
 
@@ -295,7 +292,7 @@ class SimpleTargetAlias(_TargetAliasBase):
 
 
 class DeprecatedTargetAlias(SimpleTargetAlias):
-    def get_real_target(self, cross_target: CrossCompileTarget, config: "CheriConfig",
+    def get_real_target(self, cross_target: typing.Optional[CrossCompileTarget], config: "CheriConfig",
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
         warningMessage("Using deprecated target ", coloured(AnsiColour.red, self.name),
                        coloured(AnsiColour.magenta, ". Please use "),
@@ -344,9 +341,8 @@ class TargetManager(object):
         # return the actual target without resolving MultiArchTargetAlias
         return self._allTargets[name]
 
-    def get_target(self, name: str, arch: "CrossCompileTarget", config: CheriConfig,
+    def get_target(self, name: str, arch: typing.Optional[CrossCompileTarget], config: CheriConfig,
                    caller: "typing.Union[SimpleProject, str]") -> Target:
-        assert arch is not None
         target = self.get_target_raw(name)
         # print("get_target", name, arch, end="")
         if isinstance(target, MultiArchTargetAlias):
@@ -369,7 +365,7 @@ class TargetManager(object):
         while remaining_targets_to_check:
             t = remaining_targets_to_check.pop(0)
             if isinstance(t, SimpleTargetAlias):
-                t = t.get_real_target(CompilationTargets.NONE, config)
+                t = t.get_real_target(None, config)
             chosen_targets.append(t)
             all_target_dependencies = t.get_dependencies(config)  # Ensure we cache the dependencies
             deps_to_add = []
@@ -432,7 +428,7 @@ class TargetManager(object):
             if targetName not in self._allTargets:
                 sys.exit(coloured(AnsiColour.red, "Target", targetName, "does not exist. Valid choices are",
                                   ",".join(self.targetNames)))
-            explicitlyChosenTargets.append(self.get_target(targetName, CompilationTargets.NONE, config, caller="cmdline parsing"))
+            explicitlyChosenTargets.append(self.get_target(targetName, None, config, caller="cmdline parsing"))
         chosenTargets = self.get_all_targets(explicitlyChosenTargets, config)
         print("Will execute the following targets:\n  ", "\n   ".join(t.name for t in chosenTargets))
         # now that the chosen targets have been resolved run them

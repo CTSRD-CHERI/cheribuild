@@ -938,7 +938,7 @@ class BuildFreeBSDImage(BuildMultiArchDiskImage):
         hostUsername = CheriConfig.get_user_name()
         suffix = cls._xtarget.generic_suffix if cls._xtarget else "<TARGET>"
         super().setup_config_options(defaultHostname="qemu-" + suffix + "-" + hostUsername, **kwargs)
-        cls.disableTMPFS = cls._xtarget.is_mips()  # MALTA64 doesn't include tmpfs
+        cls.disableTMPFS = cls._xtarget is not None and cls._xtarget.is_mips()  # MALTA64 doesn't include tmpfs
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)

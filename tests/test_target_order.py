@@ -25,12 +25,12 @@ BuildCHERIBSD.crossbuild = True
 def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolchain=True, skip_sdk=False) -> "typing.List[str]":
     target_manager.reset()
     # print(real_targets)
-    real_targets = list(target_manager.get_target(t, CompilationTargets.NONE, global_config, caller="_sort_targets") for t in targets)
+    real_targets = list(target_manager.get_target(t, None, global_config, caller="_sort_targets") for t in targets)
     global_config.includeDependencies = add_dependencies
     global_config.include_toolchain_dependencies = add_toolchain
     global_config.skipSdk = skip_sdk
     for t in real_targets:
-        if t.projectClass._xtarget is CompilationTargets.NONE:
+        if t.projectClass._xtarget is None:
             continue
         t.projectClass._cached_deps = None
         t.get_dependencies(global_config)  # ensure they have been cached
