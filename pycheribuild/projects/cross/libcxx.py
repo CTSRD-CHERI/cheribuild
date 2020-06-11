@@ -123,7 +123,7 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
             # Check that the four tests compile and then attempt to run them:
             # TODO: run the three combinations here too?
             runCmd("ninja", "check-unwind", "-v", cwd=self.buildDir)
-            self.run_cheribsd_test_script("run_libunwind_tests.py", "--lit-debug-output",
+            self.target_info.run_cheribsd_test_script("run_libunwind_tests.py", "--lit-debug-output",
                                           "--llvm-lit-path", self.lit_path, mount_sysroot=True)
 
 
@@ -175,7 +175,7 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
             if self.compiling_for_host():
                 runCmd("ctest", ".", "-VV", cwd=self.buildDir)
             else:
-                self.run_cheribsd_test_script("run_libcxxrt_tests.py",
+                self.target_info.run_cheribsd_test_script("run_libcxxrt_tests.py",
                                               "--libunwind-build-dir", BuildLibunwind.getBuildDir(self),
                                               mount_builddir=True, mount_sysroot=True)
 
@@ -345,6 +345,6 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             runCmd("ninja", "check-cxx", "-v", cwd=self.buildDir)
         else:
             #  "--lit-debug-output"?
-            self.run_cheribsd_test_script("run_libcxx_tests.py", "--parallel-jobs", self.test_jobs,
+            self.target_info.run_cheribsd_test_script("run_libcxx_tests.py", "--parallel-jobs", self.test_jobs,
                                           # long running test -> speed up by using a kernel without invariants
                                           use_benchmark_kernel_by_default=True)

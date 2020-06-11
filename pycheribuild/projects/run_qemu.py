@@ -467,7 +467,7 @@ class LaunchCheriBSD(_RunMultiArchFreeBSDImage):
         return result
 
     def run_tests(self):
-        self.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.disk_image,
+        self.target_info.run_cheribsd_test_script("run_cheribsd_tests.py", disk_image_path=self.disk_image,
                                       kernel_path=self.currentKernel)
 
 
@@ -623,7 +623,7 @@ class LaunchCheriBsdMfsRoot(LaunchCheriBSD):
         self.rootfs_path = BuildCHERIBSD.rootfsDir(self, config)
 
     def run_tests(self):
-        self.run_cheribsd_test_script("run_cheribsd_tests.py", "--minimal-image")
+        self.target_info.run_cheribsd_test_script("run_cheribsd_tests.py", "--minimal-image")
 
 
 # Backwards compatibility:

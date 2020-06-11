@@ -217,6 +217,11 @@ class TargetInfo(ABC):
     def is_cheribsd(cls):
         return False
 
+    def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
+                                 mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
+                                 mount_installdir=False, use_benchmark_kernel_by_default=False):
+        raise ValueError("run_cheribsd_test_script only supports CheriBSD targets")
+
     @classmethod
     def is_macos(cls):
         return False

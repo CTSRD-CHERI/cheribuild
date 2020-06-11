@@ -104,5 +104,5 @@ class BuildPython(CrossCompileAutotoolsProject):
                          self.config.makeJFlag, cwd=self.buildDir)
         else:
             # Python executes tons of system calls, hopefully using the benchmark kernel helps
-            self.run_cheribsd_test_script("run_python_tests.py", "--buildexe-suffix=" + suffix, mount_installdir=True,
+            self.target_info.run_cheribsd_test_script("run_python_tests.py", "--buildexe-suffix=" + suffix, mount_installdir=True,
                                           mount_sourcedir=True, use_benchmark_kernel_by_default=True)

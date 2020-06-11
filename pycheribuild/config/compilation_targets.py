@@ -27,16 +27,18 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+import inspect
 import typing
 from abc import ABCMeta, abstractmethod
 from pathlib import Path
 
+from .loader import ConfigOptionBase
 from .target_info import CPUArchitecture, CrossCompileTarget, MipsFloatAbi, TargetInfo
 from ..utils import getCompilerInfo, is_jenkins_build, OSInfo
+if typing.TYPE_CHECKING:
+    from .chericonfig import CheriConfig  # no-combine
+    from ..projects.project import Project, SimpleProject  # no-combine
 
-if typing.TYPE_CHECKING:    # no-combine
-    from .chericonfig import CheriConfig    # no-combine    # pytype: disable=pyi-error
-    from ..projects.project import SimpleProject, Project    # no-combine
 
 class NativeTargetInfo(TargetInfo):
     shortname = "native"
@@ -108,6 +110,7 @@ class NativeTargetInfo(TargetInfo):
     @property
     def essential_compiler_and_linker_flags(self) -> typing.List[str]:
         return []  # default host compiler should not need any extra flags
+
 
 class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
     def __init__(self, target: "CrossCompileTarget", project: "SimpleProject"):
@@ -357,6 +360,91 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
     @classmethod
     def is_cheribsd(cls):
         return True
+
+    def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
+                                 mount_builddir=True, mount_sourcedir=False, mount_sysroot=False,
+                                 mount_installdir=False, use_benchmark_kernel_by_default=False):
+        assert self.is_cheribsd(), "Only CheriBSD targets supported right now"
+        # mount_sysroot may be needed for projects such as QtWebkit where the minimal image doesn't contain all the
+        # necessary libraries
+        xtarget = self.target
+        # Only supported for CheriBSD-MIPS,RISC-V and x86-64 right now:
+        if not xtarget.is_mips(include_purecap=True) and not xtarget.is_riscv(
+                include_purecap=True) and not xtarget.is_x86_64(include_purecap=True):
+            self.project.warning("CheriBSD test scripts currently only work for MIPS, RISC-V and x86-64")
+            return
+        if kernel_path is None and "--kernel" not in self.config.test_extra_args:
+            # Use the benchmark kernel by default if the parameter is set and the user didn't pass
+            # --no-use-minimal-benchmark-kernel on the command line or in the config JSON
+            use_benchmark_kernel_value = self.config.use_minimal_benchmark_kernel  # Load the value first to ensure
+            # that it has been loaded
+            use_benchmark_config_option = inspect.getattr_static(self.config, "use_minimal_benchmark_kernel")
+            assert isinstance(use_benchmark_config_option, ConfigOptionBase)
+            want_benchmark_kernel = use_benchmark_kernel_value or (
+                    use_benchmark_kernel_by_default and use_benchmark_config_option.is_default_value)
+            kernel_path = self.project._get_mfs_root_kernel(use_benchmark_kernel=want_benchmark_kernel)
+            if not kernel_path.exists() and is_jenkins_build():
+                cheribsd_image = "cheribsd128-cheri128-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
+                freebsd_image = "freebsd-malta64-mfs-root-minimal-cheribuild-kernel.bz2"
+                if xtarget.is_mips(include_purecap=False) and not xtarget.is_hybrid_or_purecap_cheri():
+                    guessed_archive = freebsd_image
+                elif xtarget.is_cheri_purecap([CPUArchitecture.MIPS64]):
+                    guessed_archive = cheribsd_image
+                else:
+                    self.project.fatal("Could not guess path to kernel image for CheriBSD")
+                    guessed_archive = "invalid path"
+                jenkins_kernel_path = self.config.cheribsd_image_root / guessed_archive
+                if jenkins_kernel_path.exists():
+                    kernel_path = jenkins_kernel_path
+                else:
+                    self.project.fatal("Could not find kernel image", kernel_path, "and jenkins path", jenkins_kernel_path,
+                        "is also missing")
+        if kernel_path is None or not kernel_path.exists():
+            self.project.fatal("Could not find kernel image", kernel_path)
+        script = self.project.get_test_script_path(script_name)
+        if not script.exists():
+            self.project.fatal("Could not find test script", script)
+
+        cmd = [script, "--ssh-key", self.config.test_ssh_key, "--architecture", xtarget.generic_suffix]
+        if "--kernel" not in self.config.test_extra_args:
+            cmd.extend(["--kernel", kernel_path])
+        if "--qemu-cmd" not in self.config.test_extra_args:
+            if xtarget.is_riscv(include_purecap=True) or xtarget.is_mips(include_purecap=True):
+                from ..projects.build_qemu import BuildQEMU
+                qemu_path = BuildQEMU.qemu_cheri_binary(self.project)
+                if not qemu_path.exists():
+                    self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
+                cmd.extend(["--qemu-cmd", qemu_path])
+        if mount_builddir and self.project.buildDir and "--build-dir" not in self.config.test_extra_args:
+            cmd.extend(["--build-dir", self.project.buildDir])
+        if mount_sourcedir and self.project.sourceDir and "--source-dir" not in self.config.test_extra_args:
+            cmd.extend(["--source-dir", self.project.sourceDir])
+        if mount_sysroot and "--sysroot-dir" not in self.config.test_extra_args and not self.project.compiling_for_host():
+            cmd.extend(["--sysroot-dir", self.sysroot_dir])
+        if mount_installdir:
+            if "--install-destdir" not in self.config.test_extra_args:
+                cmd.extend(["--install-destdir", self.project.destdir])
+            if "--install-prefix" not in self.config.test_extra_args:
+                cmd.extend(["--install-prefix", self.project.installPrefix])
+        if disk_image_path and "--disk-image" not in self.config.test_extra_args:
+            cmd.extend(["--disk-image", disk_image_path])
+        if self.config.tests_interact:
+            cmd.append("--interact")
+        if self.config.tests_env_only:
+            cmd.append("--test-environment-only")
+        if self.config.trap_on_unrepresentable:
+            cmd.append("--trap-on-unrepresentable")
+        if self.config.test_ld_preload:
+            cmd.append("--test-ld-preload=" + str(self.config.test_ld_preload))
+            if xtarget.is_cheri_purecap():
+                cmd.append("--test-ld-preload-variable=LD_CHERI_PRELOAD")
+            else:
+                cmd.append("--test-ld-preload-variable=LD_PRELOAD")
+
+        cmd += list(script_args)
+        if self.config.test_extra_args:
+            cmd.extend(map(str, self.config.test_extra_args))
+        self.project.run_cmd(cmd)
 
     @classmethod
     def triple_for_target(cls, target: "CrossCompileTarget", config: "CheriConfig", include_version):

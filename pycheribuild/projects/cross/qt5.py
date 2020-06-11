@@ -252,7 +252,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
         if self.compiling_for_host():
             runCmd("make", "check", cwd=self.buildDir)
         else:
-            self.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=True)
+            self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=True)
 
 
 # Webkit needs ICU (and recommended for QtBase too):
@@ -465,5 +465,5 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         if self.compiling_for_host():
             self.fatal("Running host tests not implemented")
         else:
-            self.run_cheribsd_test_script("run_qtwebkit_tests.py", use_benchmark_kernel_by_default=True,
+            self.target_info.run_cheribsd_test_script("run_qtwebkit_tests.py", use_benchmark_kernel_by_default=True,
                                           mount_builddir=True, mount_sourcedir=True, mount_sysroot=True)

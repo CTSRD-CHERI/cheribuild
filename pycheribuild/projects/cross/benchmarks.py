@@ -129,10 +129,11 @@ class BuildMibench(CrossCompileProject):
     def run_tests(self):
         if self.compiling_for_host():
             self.fatal("running x86 tests is not implemented yet")
+            return
         # testing, not benchmarking -> run only once: (-s small / -s large?)
         test_command = "cd '/build/{dirname}' && ./run_jenkins-bluehive.sh -d0 -r1 -s {size} {version}".format(
             dirname=self.bundle_dir.name, size=self.benchmark_size, version=self.benchmark_version)
-        self.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
+        self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
                                       "--test-timeout", str(120 * 60), mount_builddir=True)
 
     def run_benchmarks(self):
@@ -223,9 +224,10 @@ class BuildOlden(CrossCompileProject):
     def run_tests(self):
         if self.compiling_for_host():
             self.fatal("running x86 tests is not implemented yet")
+            return
         # testing, not benchmarking -> run only once: (-s small / -s large?)
         test_command = "cd /build/bin && ./run_jenkins-bluehive.sh -d0 -r1 {tgt}".format(tgt=self.test_arch_suffix)
-        self.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
+        self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
                                       "--test-timeout", str(120 * 60),
                                       mount_builddir=True)
 
@@ -452,7 +454,7 @@ export LD_CHERI_LIBRARY_PATH=/sysroot/usr/libcheri;
 cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_flags} -b "{bench_list}" -t {config} -d0 -r1 {arch}""".format(
             config=self.config_name, bench_list=" ".join(self.benchmark_list),
             arch=self.bluehive_benchmark_script_archname, debug_flags="-g" if self.config.run_under_gdb else "")
-        self.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
+        self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
                                       "--test-timeout", str(120 * 60), mount_builddir=True, mount_sysroot=True)
 
     @property

@@ -179,5 +179,5 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
                                "--build-dir", self.buildDir])
             self.run_cmd(self.get_test_script_path("run_bodiagsuite.py"), *extra_args)
         else:
-            self.run_cheribsd_test_script("run_bodiagsuite.py", *extra_args,
+            self.target_info.run_cheribsd_test_script("run_bodiagsuite.py", *extra_args,
                                           mount_sourcedir=False, mount_builddir=True)

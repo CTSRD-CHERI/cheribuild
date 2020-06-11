@@ -126,7 +126,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             # self.run_make("check", cwd=self.buildDir / "src/interfaces/ecpg/test", stdout_filter=None)
         else:
             locale_dir = self.rootfs_dir / "usr/share/locale"
-            self.run_cheribsd_test_script("run_postgres_tests.py", "--smb-mount-directory",
+            self.target_info.run_cheribsd_test_script("run_postgres_tests.py", "--smb-mount-directory",
                                           str(self.installDir) + ":" + str(self.installPrefix),
                                           "--locale-files-dir", locale_dir, mount_builddir=False,
                                           # long running test -> speed up by using a kernel without invariants

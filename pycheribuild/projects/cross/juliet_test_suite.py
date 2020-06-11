@@ -94,7 +94,7 @@ class BuildJulietCWESubdir(CrossCompileCMakeProject):
             args.append("--ld-preload-path")
             args.append(self.ld_preload_path)
 
-        self.run_cheribsd_test_script("run_juliet_tests.py", *args, mount_sourcedir=True, mount_sysroot=True, mount_builddir=True)
+        self.target_info.run_cheribsd_test_script("run_juliet_tests.py", *args, mount_sourcedir=True, mount_sysroot=True, mount_builddir=True)
 
 class BuildJulietCWE121(BuildJulietCWESubdir):
     project_name = "juliet-cwe-121"

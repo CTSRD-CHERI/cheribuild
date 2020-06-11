@@ -55,11 +55,12 @@ class BuildSimpleCheriBenchmarks(CrossCompileCMakeProject):
     def run_tests(self):
         if self.compiling_for_host():
             self.fatal("running x86 tests is not implemented yet")
+            return
         self.create_test_dir(self.buildDir / "test-dir")
         # testing, not benchmarking -> run only once: (-s small / -s large?)
         test_command = "cd /build/test-dir && ./run_jenkins-bluehive.sh -d0 -r1 -o {output} -a {tgt}".format(
             tgt=self.archname_column, output=self.default_statcounters_csv_name)
-        self.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
+        self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
                                       "--test-timeout", str(120 * 60), mount_builddir=True)
 
     def run_benchmarks(self):
