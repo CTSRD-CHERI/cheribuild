@@ -1621,3 +1621,6 @@ class BuildCheriBsdAndSysroot(TargetAliasWithDependencies):
     target = "cheribsd-with-sysroot"
     dependencies = ["cheribsd-mips-hybrid"]
 
+class BuildFreeBSDDeviceModel(BuildFreeBSD):
+    target = "device-model-freebsd"
+    repository = GitRepository("https://github.com/CTSRD-CHERI/device-model-freebsd.git")
