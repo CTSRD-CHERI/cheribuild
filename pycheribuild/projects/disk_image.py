@@ -34,7 +34,8 @@ import sys
 import tempfile
 import typing
 
-from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDGFE, BuildFreeBSDWithDefaultOptions
+from .cross.cheribsd import (BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDGFE, BuildFreeBSDWithDefaultOptions,
+                            BuildFreeBSDDeviceModel)
 from .cross.gdb import BuildGDB
 from .project import (CheriConfig, CompilationTargets, ComputedDefaultValue, CPUArchitecture, CrossCompileTarget, Path,
                       SimpleProject)
@@ -955,6 +956,11 @@ class BuildFreeBSDWithDefaultOptionsDiskImage(BuildFreeBSDImage):
 class BuildFreeBSDGFEDiskImage(BuildFreeBSDImage):
     project_name = "disk-image-freebsd-gfe"
     _source_class = BuildFreeBSDGFE
+    hide_options_from_help = True
+
+class BuildFreeBSDDeviceModelDiskImage(BuildFreeBSDWithDefaultOptionsDiskImage):
+    project_name = "disk-image-freebsd-device-model"
+    _source_class = BuildFreeBSDDeviceModel
     hide_options_from_help = True
 
 
