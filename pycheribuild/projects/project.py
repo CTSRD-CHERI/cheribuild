@@ -1761,7 +1761,7 @@ class Project(SimpleProject):
             result.append("-fsanitize=cfi")
             result.append("-fvisibility=hidden")
         if self.compiling_for_host():
-            return result + self.COMMON_FLAGS + self.compiler_warning_flags
+            return result + self.COMMON_FLAGS + self.compiler_warning_flags + self.optimization_flags
         result += self.target_info.essential_compiler_and_linker_flags + self.optimization_flags
         result += self.COMMON_FLAGS + self.compiler_warning_flags
         if self.config.csetbounds_stats:

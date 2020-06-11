@@ -52,7 +52,7 @@ class BuildSQLite(CrossCompileAutotoolsProject):
             self.configureArgs.extend([
                 "--disable-amalgamation",  # don't concatenate sources
                 "--disable-load-extension",
-            ])
+                ])
         # always disable tcl, since it tries to install to /usr on Ubuntu
         self.configureArgs.append("--disable-tcl")
         self.configureArgs.append("--disable-amalgamation")
@@ -62,6 +62,11 @@ class BuildSQLite(CrossCompileAutotoolsProject):
             self.configureArgs.append("--disable-editline")
             # not sure if needed:
             self.configureArgs.append("--disable-readline")
+
+        if self.build_type.should_include_debug_info:
+            self.COMMON_FLAGS.append("-g")
+        if self.build_type.is_debug:
+            self.configureArgs.append("--enable-debug")
 
     def compile(self, **kwargs):
         # create the required metadata

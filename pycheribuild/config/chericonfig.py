@@ -68,6 +68,9 @@ class BuildType(Enum):
     def is_release(self):
         return self in (BuildType.RELEASE, BuildType.RELWITHDEBINFO)
 
+    @property
+    def is_debug(self):
+        return self is BuildType.DEBUG
 
 class CheriConfig(object):
     def __init__(self, loader, action_class):
