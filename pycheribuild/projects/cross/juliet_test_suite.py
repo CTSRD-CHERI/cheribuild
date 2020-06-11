@@ -82,6 +82,10 @@ class BuildJulietCWESubdir(CrossCompileCMakeProject):
         self.fatal("Should not be called")
 
     def run_tests(self):
+        if self.compiling_for_host():
+            self.warning("Not implemented yet")
+            return
+
         args = []
         if self.testcase_timeout:
             args.append("--testcase-timeout")

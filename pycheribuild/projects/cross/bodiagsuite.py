@@ -149,7 +149,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
             self.clean_directory(self.buildDir / "run", keep_root=False)
         testsuite_prefix = self.build_configuration_suffix()[1:]
         testsuite_prefix = testsuite_prefix.replace("-build", "")
-        extra_args = ["--bmake-path", bmake, "--jobs", str(self.config.makeJobs)] if self.compiling_for_host() else []
+        extra_args = []
         tools = []
         if self.compiling_for_cheri():
             tools.append("cheri")
@@ -172,5 +172,12 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
         extra_args.append("--tools")
         extra_args.extend(tools)
 
-        self.run_cheribsd_test_script("run_bodiagsuite.py", "--junit-testsuite-name", testsuite_prefix, *extra_args,
-                                      mount_sourcedir=False, mount_builddir=True)
+        extra_args.extend(["--junit-testsuite-name", testsuite_prefix])
+        if self.compiling_for_host():
+            extra_args.extend(["--test-native", "--bmake-path", bmake,
+                               "--jobs", str(self.config.makeJobs),
+                               "--build-dir", self.buildDir])
+            self.run_cmd(self.get_test_script_path("run_bodiagsuite.py"), *extra_args)
+        else:
+            self.run_cheribsd_test_script("run_bodiagsuite.py", *extra_args,
+                                          mount_sourcedir=False, mount_builddir=True)

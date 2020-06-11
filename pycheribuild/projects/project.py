@@ -814,22 +814,27 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 kernel_xtarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
         return kernel_xtarget
 
+    @staticmethod
+    def get_test_script_path(script_name: str) -> Path:
+        # noinspection PyUnusedLocal
+        script_dir = Path("/this/will/not/work/when/using/remote-cheribuild.py")
+        # generate a sensible error when using remote-cheribuild.py by omitting this line:
+        script_dir = Path(__file__).parent.parent.parent / "test-scripts"   # no-combine
+        return script_dir / script_name
+
     def run_cheribsd_test_script(self, script_name, *script_args, kernel_path=None, disk_image_path=None,
                                  mount_builddir=True, mount_sourcedir=False, mount_sysroot=False, mount_installdir=False,
                                  use_benchmark_kernel_by_default=False):
+        assert self.target_info.is_cheribsd()
         # mount_sysroot may be needed for projects such as QtWebkit where the minimal image doesn't contain all the
         # necessary libraries
         from .build_qemu import BuildQEMU
-        # noinspection PyUnusedLocal
-        script_dir = Path("/this/will/not/work/when/using/remote-cheribuild.py")
         xtarget = self.crosscompile_target
-        test_native = xtarget.is_native()
-        # Only supported for CheriBSD-MIPS right now:
-        if not test_native and self.target_info.is_cheribsd():
-            if not xtarget.is_mips(include_purecap=True) and not xtarget.is_riscv(include_purecap=True) and not xtarget.is_x86_64(include_purecap=True):
-                self.warning("CheriBSD test scripts currently only work for MIPS, RISC-V and x86-64")
-                return
-        if kernel_path is None and not test_native and "--kernel" not in self.config.test_extra_args:
+        # Only supported for CheriBSD-MIPS,RISC-V and x86-64 right now:
+        if not xtarget.is_mips(include_purecap=True) and not xtarget.is_riscv(include_purecap=True) and not xtarget.is_x86_64(include_purecap=True):
+            self.warning("CheriBSD test scripts currently only work for MIPS, RISC-V and x86-64")
+            return
+        if kernel_path is None and "--kernel" not in self.config.test_extra_args:
             from .cross.cheribsd import BuildCheriBsdMfsKernel
             # Use the benchmark kernel by default if the parameter is set and the user didn't pass
             # --no-use-minimal-benchmark-kernel on the command line or in the config JSON
@@ -857,24 +862,20 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                                "is also missing")
         if kernel_path is None or not kernel_path.exists():
             self.fatal("Could not find kernel image", kernel_path)
-        # generate a sensible error when using remote-cheribuild.py by omitting this line:
-        script_dir = Path(__file__).parent.parent.parent / "test-scripts"   # no-combine
-        script = script_dir / script_name
+        script = self.get_test_script_path(script_name)
         if not script.exists():
             self.fatal("Could not find test script", script)
-        if test_native:
-            cmd = [script, "--test-native"]
-        else:
-            assert self.target_info.is_cheribsd(), "Only CheriBSD targets supported right now"
-            cmd = [script, "--ssh-key", self.config.test_ssh_key, "--architecture", xtarget.generic_suffix]
-            if "--kernel" not in self.config.test_extra_args:
-                cmd.extend(["--kernel", kernel_path])
-            if "--qemu-cmd" not in self.config.test_extra_args:
-                if xtarget.is_riscv(include_purecap=True) or xtarget.is_mips(include_purecap=True):
-                    qemu_path = BuildQEMU.qemu_cheri_binary(self)
-                    if not qemu_path.exists():
-                        self.fatal("QEMU binary", qemu_path, "doesn't exist")
-                    cmd.extend(["--qemu-cmd", qemu_path])
+
+        assert self.target_info.is_cheribsd(), "Only CheriBSD targets supported right now"
+        cmd = [script, "--ssh-key", self.config.test_ssh_key, "--architecture", xtarget.generic_suffix]
+        if "--kernel" not in self.config.test_extra_args:
+            cmd.extend(["--kernel", kernel_path])
+        if "--qemu-cmd" not in self.config.test_extra_args:
+            if xtarget.is_riscv(include_purecap=True) or xtarget.is_mips(include_purecap=True):
+                qemu_path = BuildQEMU.qemu_cheri_binary(self)
+                if not qemu_path.exists():
+                    self.fatal("QEMU binary", qemu_path, "doesn't exist")
+                cmd.extend(["--qemu-cmd", qemu_path])
         if mount_builddir and self.buildDir and "--build-dir" not in self.config.test_extra_args:
             cmd.extend(["--build-dir", self.buildDir])
         if mount_sourcedir and self.sourceDir and "--source-dir" not in self.config.test_extra_args:
@@ -887,7 +888,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 cmd.extend(["--install-destdir", self.destdir])
             if "--install-prefix" not in self.config.test_extra_args:
                 cmd.extend(["--install-prefix", self.installPrefix])
-        if disk_image_path and not test_native and "--disk-image" not in self.config.test_extra_args:
+        if disk_image_path and "--disk-image" not in self.config.test_extra_args:
             cmd.extend(["--disk-image", disk_image_path])
         if self.config.tests_interact:
             cmd.append("--interact")
