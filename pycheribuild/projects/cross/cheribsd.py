@@ -110,6 +110,8 @@ def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
         elif xtarget.is_cheri_hybrid():
             return config.outputRoot / ("rootfs-riscv64-hybrid" + project.cheri_config_suffix)
         return config.outputRoot / "rootfs-riscv64"
+    elif project.crosscompile_target.is_aarch64():
+        return config.outputRoot / "rootfs-aarch64"
     else:
         assert project.crosscompile_target.is_x86_64()
         return config.outputRoot / "rootfs-x86"
@@ -1138,7 +1140,7 @@ class BuildCHERIBSD(BuildFreeBSD):
     _default_install_dir_fn = cheribsd_install_dir
     supported_architectures = [CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
                                CompilationTargets.CHERIBSD_RISCV_NO_CHERI, CompilationTargets.CHERIBSD_RISCV_HYBRID,
-                               CompilationTargets.CHERIBSD_X86_64,
+                               CompilationTargets.CHERIBSD_X86_64, CompilationTargets.CHERIBSD_AARCH64,
                                CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_RISCV_PURECAP,
                                ]
     is_sdk_target = True

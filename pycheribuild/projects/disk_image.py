@@ -36,7 +36,8 @@ import typing
 
 from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDGFE, BuildFreeBSDWithDefaultOptions
 from .cross.gdb import BuildGDB
-from .project import CheriConfig, ComputedDefaultValue, CPUArchitecture, CrossCompileTarget, Path, SimpleProject
+from .project import (AutotoolsProject, CheriConfig, ComputedDefaultValue, CPUArchitecture, CrossCompileTarget,
+                      DefaultInstallDir, GitRepository, MakeCommandKind, Path, SimpleProject)
 from ..config.compilation_targets import CompilationTargets
 from ..mtree import MtreeFile
 from ..targets import target_manager
@@ -47,6 +48,31 @@ from ..utils import AnsiColour, classproperty, coloured, includeLocalFile, OSInf
 # Mount the filesystem of a BSD VM: guestmount -a /foo/bar.qcow2 -m /dev/sda1:/:ufstype=ufs2:ufs --ro /mnt/foo
 # ufstype=ufs2 is required as the Linux kernel can't automatically determine which UFS filesystem is being used
 # Same thing is possible with qemu-nbd, but needs root (might be faster)
+
+
+class BuildMtools(AutotoolsProject):
+    repository = GitRepository(url="https://github.com/vapier/mtools.git")
+    native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
+    make_kind = MakeCommandKind.GnuMake
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.add_required_system_tool("autoreconf", homebrew="autoconf")
+        self.add_required_system_tool("aclocal", homebrew="automake")
+        # Manpages won't build:
+        self.make_args.set(MAN1="", MAN5="")
+
+    def process(self):
+        if not (self.sourceDir / "mtools.tmpl.1").exists():
+            self.run_cmd("bash", "-xe", "./mkmanpages", cwd=self.sourceDir)
+        super().process()
+
+    def configure(self, **kwargs):
+        if not (self.sourceDir / "configure").exists():
+            self.run_cmd("autoreconf", "-ivf", cwd=self.sourceDir)
+
+        super().configure(**kwargs)
+
 
 # noinspection PyMethodMayBeStatic
 class _AdditionalFileTemplates(object):
@@ -402,6 +428,58 @@ class _BuildDiskImageBase(SimpleProject):
                         ], cwd=self.rootfsDir)
         self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
 
+    def make_aarch64_disk_image(self):
+        assert self.crosscompile_target.is_aarch64(include_purecap=True)
+        root_partition = self.disk_image_path.with_suffix(".partition.img")
+        efi_partition = self.disk_image_path.with_suffix(".efi.img")
+        try:
+            self.make_efi_partition(efi_partition)
+            self.make_rootfs_image(root_partition)
+            self.run_mkimg(["-s", "mbr",  # use MBR Partition Table
+                            "-p", "efi:=" + str(efi_partition),  # EFI boot partition
+                            "-p", "freebsd:=" + str(root_partition),  # rootfs
+                            "-o", self.disk_image_path  # output file
+                            ], cwd=self.rootfsDir)
+        finally:
+            self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
+            self.deleteFile(efi_partition)  # no need to keep the partition now that we have built the full image
+
+    def make_efi_partition(self, efi_partition: Path):
+        with tempfile.NamedTemporaryFile(mode="w+") as tmp_mtree:
+            use_makefs = True
+            mtools = BuildMtools.get_instance(self, cross_target=CompilationTargets.NATIVE)
+            mtools_bin = mtools.installDir / "bin"
+            if use_makefs:
+                # Makefs doesn't handle contents= right now
+                efi_mtree = MtreeFile()
+                efi_mtree.add_file(self.rootfsDir / "boot/boot1.efi", path_in_image="efi/boot/bootaa64.efi", mode=0o644)
+                efi_mtree.write(tmp_mtree)
+                tmp_mtree.flush()  # ensure the file is actually written
+                mtree_contents = self.read_file(Path(tmp_mtree.name))
+                assert mtree_contents, "Didn't write file??"
+                print(mtree_contents)
+                self.run_cmd("cat", tmp_mtree.name)
+                self.run_cmd([self.makefs_cmd, "-t", "msdos", "-s", "1m",  # 1 MB
+                              # "-d", "0x2fffffff",  # super verbose output
+                              "-d", "0x20000000",  # MSDOSFS debug output
+                              str(efi_partition), str(tmp_mtree.name)], cwd=self.rootfsDir)
+            else:
+                # Use this (and mtools) instead: https://wiki.osdev.org/UEFI_Bare_Bones#Creating_the_FAT_image
+                if not (mtools_bin / "mformat").exists():
+                    self.fatal("Build mtools first: `cheribuild.py mtools`")
+                self.run_cmd("dd", "if=/dev/zero", "of=" + str(efi_partition), "bs=1k", "count=1440")
+                self.run_cmd(mtools_bin / "mformat", "-i", efi_partition, "-f", "1440", "::")
+                self.run_cmd(mtools_bin / "mmd", "-i", efi_partition, "::/EFI")
+                self.run_cmd(mtools_bin / "mmd", "-i", efi_partition, "::/EFI/BOOT")
+                self.run_cmd(mtools_bin / "mcopy", "-i", efi_partition,
+                    self.rootfsDir / "boot/boot1.efi", "::/EFI/BOOT/BOOTAA64.EFI")
+            if (mtools_bin / "minfo").exists():
+                # Get some information about the created image information:
+                self.run_cmd(mtools_bin / "minfo", "-i", efi_partition)
+                self.run_cmd(mtools_bin / "mdir", "-i", efi_partition)
+                self.run_cmd(mtools_bin / "mdir", "-i", efi_partition, "-/", "::")
+                # self.run_cmd(mtools_bin / "mdu", "-i", efi_partition, "-a", "::")
+
     def make_rootfs_image(self, rootfs_img: Path):
         # write out the manifest file:
         self.mtree.write(self.manifestFile)
@@ -442,41 +520,43 @@ class _BuildDiskImageBase(SimpleProject):
             raise
 
     def make_disk_image(self):
+        # check that qemu-img exists before starting the potentially long-running makefs command
+        qemu_img_command = self.config.qemu_bindir / "qemu-img"
+        if not qemu_img_command.is_file():
+            system_qemu_img = shutil.which("qemu-img")
+            if system_qemu_img:
+                self.info("qemu-img from CHERI SDK not found, falling back to system qemu-img")
+                qemu_img_command = Path(system_qemu_img)
+            else:
+                self.warning("qemu-img command was not found! Make sure to build target qemu first.")
+        # AArch64 and x86 require different disk images:
+        if self.crosscompile_target.is_aarch64(include_purecap=True):
+            self.make_aarch64_disk_image()
         if self.is_x86:
-            if not self.mkimg_cmd:
-                self.fatal("Missing mkimg command! Should be found in FreeBSD build dir (or set $MKIMG_CMD)")
             root_partition = self.disk_image_path.with_suffix(".partition.img")
             self.make_rootfs_image(root_partition)
             self.build_gpt_image(root_partition)
             self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
         else:
             self.make_rootfs_image(self.disk_image_path)
-            # check that qemu-img exists before starting the potentially long-running makefs command
-            qemu_img_command = self.config.qemu_bindir / "qemu-img"
-            if not qemu_img_command.is_file():
-                system_qemu_img = shutil.which("qemu-img")
-                if system_qemu_img:
-                    print("qemu-img from CHERI SDK not found, falling back to system qemu-img")
-                    qemu_img_command = Path(system_qemu_img)
-                else:
-                    self.warning("qemu-img command was not found! Make sure to build target qemu first.")
-            # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
-            if not self.config.quiet and qemu_img_command.exists():
+
+        # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
+        if not self.config.quiet and qemu_img_command.exists():
+            self.run_cmd(qemu_img_command, "info", self.disk_image_path)
+        if self.useQCOW2:
+            if not qemu_img_command.exists():
+                self.fatal("Cannot create QCOW2 image without qemu-img command!")
+            # create a qcow2 version from the raw image:
+            raw_img = self.disk_image_path.with_suffix(".raw")
+            self.run_cmd("mv", "-f", self.disk_image_path, raw_img)
+            self.run_cmd(qemu_img_command, "convert",
+                   "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
+                   "-O", "qcow2",  # convert to qcow2 format
+                   raw_img,  # input file
+                   self.disk_image_path)  # output file
+            self.deleteFile(raw_img, print_verbose_only=True)
+            if self.config.verbose:
                 self.run_cmd(qemu_img_command, "info", self.disk_image_path)
-            if self.useQCOW2:
-                if not qemu_img_command.exists():
-                    self.fatal("Cannot create QCOW2 image without qemu-img command!")
-                # create a qcow2 version from the raw image:
-                raw_img = self.disk_image_path.with_suffix(".raw")
-                self.run_cmd("mv", "-f", self.disk_image_path, raw_img)
-                self.run_cmd(qemu_img_command, "convert",
-                       "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
-                       "-O", "qcow2",  # convert to qcow2 format
-                       raw_img,  # input file
-                       self.disk_image_path)  # output file
-                self.deleteFile(raw_img, print_verbose_only=True)
-                if self.config.verbose:
-                    self.run_cmd(qemu_img_command, "info", self.disk_image_path)
 
     def copyFromRemoteHost(self):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
@@ -855,6 +935,14 @@ class _X86FileTemplates(_AdditionalFileTemplates):
         return includeLocalFile("files/x86/fstab.in")
 
 
+class _AArch64FileTemplates(_AdditionalFileTemplates):
+    def get_fstab_template(self):
+        return """
+/dev/vtbd0s2	/	ufs	rw,noatime,async	1	1
+{tmpfsrem}tmpfs /tmp tmpfs rw,failok 0 0
+"""
+
+
 class BuildMultiArchDiskImage(_BuildDiskImageBase):
     doNotAddToTargets = True
     _source_class = None  # type: typing.Type[SimpleProject]
@@ -884,6 +972,8 @@ class BuildMultiArchDiskImage(_BuildDiskImageBase):
             self.file_templates = _RISCVFileTemplates()
         elif self.is_x86:
             self.file_templates = _X86FileTemplates()
+        elif self.crosscompile_target.is_aarch64(include_purecap=True):
+            self.file_templates = _AArch64FileTemplates()
 
 
 class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):

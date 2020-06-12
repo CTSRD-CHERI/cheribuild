@@ -275,6 +275,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         elif self.target.is_riscv(include_purecap=True):
             return self._sysroot_path(config.cheri_sdk_dir, separate_cheri_sysroots,
                 purecap_prefix="-riscv64-purecap", hybrid_prefix="-riscv64-hybrid", nocheri_name="-riscv64")
+        elif self.target.is_aarch64():
+            return config.cheri_sdk_dir / "sysroot-aarch64"
         elif self.target.is_x86_64():
             return config.cheri_sdk_dir / "sysroot-x86_64"
         else:
@@ -730,6 +732,7 @@ class CompilationTargets(BasicCompilationTargets):
         is_cheri_hybrid=True, non_cheri_target=CHERIBSD_RISCV_NO_CHERI)
     CHERIBSD_RISCV_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
         is_cheri_purecap=True, hybrid_target=CHERIBSD_RISCV_HYBRID)
+    CHERIBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, CheriBSDTargetInfo)
     CHERIBSD_X86_64 = CrossCompileTarget("native", CPUArchitecture.X86_64, CheriBSDTargetInfo)
 
     CHERIOS_MIPS_PURECAP = CrossCompileTarget("mips", CPUArchitecture.MIPS64, CheriOSTargetInfo, is_cheri_purecap=True)
@@ -759,7 +762,7 @@ class CompilationTargets(BasicCompilationTargets):
     # TODO: test RISCV
     ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS = [CHERIBSD_MIPS_PURECAP, CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI,
                                                CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI,
-                                               BasicCompilationTargets.NATIVE]
+                                               CHERIBSD_AARCH64, BasicCompilationTargets.NATIVE]
     ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS = [CHERIBSD_MIPS_HYBRID, CHERIBSD_MIPS_NO_CHERI, CHERIBSD_MIPS_PURECAP,
                                            CHERIBSD_RISCV_PURECAP, CHERIBSD_RISCV_HYBRID, CHERIBSD_RISCV_NO_CHERI]
     # Same as above, but the default is purecap RISC-V
