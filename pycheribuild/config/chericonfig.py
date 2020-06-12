@@ -79,7 +79,7 @@ class CheriConfig(object):
         from .target_info import CrossCompileTarget, MipsFloatAbi, Linkage
 
         assert isinstance(loader, ConfigLoaderBase)
-        loader._cheriConfig = self
+        loader._cheri_config = self
         self.loader = loader
         self.pretend = loader.add_commandline_only_bool_option("pretend", "p",
                                                            help="Only print the commands instead of running them")

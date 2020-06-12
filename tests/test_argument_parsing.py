@@ -36,21 +36,21 @@ except ImportError:
 def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")) -> DefaultCheriConfig:
     global _targets_registered
     # noinspection PyGlobalUndefined
-    global _cheriConfig
+    global _cheri_config
     if not _targets_registered:
         allTargetNames = list(sorted(target_manager.targetNames)) + ["__run_everything__"]
-        ConfigLoaderBase._cheriConfig = DefaultCheriConfig(_loader, allTargetNames)
+        ConfigLoaderBase._cheri_config = DefaultCheriConfig(_loader, allTargetNames)
         SimpleProject._configLoader = _loader
         target_manager.registerCommandLineOptions()
         _targets_registered = True
     target_manager.reset()
-    ConfigLoaderBase._cheriConfig.loader._configPath = config_file
+    ConfigLoaderBase._cheri_config.loader._configPath = config_file
     sys.argv = ["cheribuild.py"] + args
-    ConfigLoaderBase._cheriConfig.loader.reload()
-    ConfigLoaderBase._cheriConfig.load()
+    ConfigLoaderBase._cheri_config.loader.reload()
+    ConfigLoaderBase._cheri_config.load()
     # pprint.pprint(vars(ret))
-    assert ConfigLoaderBase._cheriConfig
-    return ConfigLoaderBase._cheriConfig
+    assert ConfigLoaderBase._cheri_config
+    return ConfigLoaderBase._cheri_config
 
 
 def _parse_config_file_and_args(config_file_contents: bytes, *args) -> DefaultCheriConfig:

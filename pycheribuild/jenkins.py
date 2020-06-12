@@ -38,17 +38,17 @@ import typing
 # noinspection PyUnresolvedReferences
 from pathlib import Path
 
-from .config.jenkinsconfig import JenkinsConfig, JenkinsAction
-from .config.loader import ConfigLoaderBase, CommandLineConfigOption
+from .config.jenkinsconfig import JenkinsAction, JenkinsConfig
+from .config.loader import CommandLineConfigOption, ConfigLoaderBase
 # noinspection PyUnresolvedReferences
 from .projects import *  # make sure all projects are loaded so that target_manager gets populated
 # noinspection PyUnresolvedReferences
 from .projects.cross import *  # make sure all projects are loaded so that target_manager gets populated
 from .projects.cross.crosscompileproject import CrossCompileMixin
-from .projects.project import SimpleProject, Project
-from .targets import target_manager, Target, MultiArchTargetAlias, SimpleTargetAlias
-from .utils import (runCmd, statusUpdate, fatalError, setEnv, init_global_config, warningMessage, get_program_version,
-                    ThreadJoiner, commandline_to_str, OSInfo)
+from .projects.project import Project, SimpleProject
+from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
+from .utils import (commandline_to_str, fatalError, get_program_version, init_global_config, OSInfo, runCmd, setEnv,
+                    statusUpdate, ThreadJoiner, warningMessage)
 
 EXTRACT_SDK_TARGET = "extract-sdk"
 
@@ -67,40 +67,42 @@ class JenkinsConfigLoader(ConfigLoaderBase):
         assert isinstance(self._parsedArgs.targets, list)
 
     def finalize_options(self, available_targets: list, **kwargs):
-        targetOption = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.OPTIONAL, help="The target to build",
-                                                 choices=available_targets + [EXTRACT_SDK_TARGET])
+        target_option = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.OPTIONAL,
+            help="The target to build",
+            choices=available_targets + [EXTRACT_SDK_TARGET])
         if self._completing_arguments:
             try:
                 import argcomplete
             except ImportError:
                 sys.exit("argcomplete missing")
-            targetCompleter = argcomplete.completers.ChoicesCompleter(available_targets)
-            targetOption.completer = targetCompleter
+            target_completer = argcomplete.completers.ChoicesCompleter(available_targets)
+            target_option.completer = target_completer
             argcomplete.autocomplete(
                 self._parser,
                 always_complete_options=None,  # don't print -/-- by default
                 print_suppressed=True,  # also include target-specific options
-            )
+                )
 
     def __init__(self):
         super().__init__(CommandLineConfigOption)
 
 
 class SdkArchive(object):
-    def __init__(self, cheriConfig: JenkinsConfig, name, *, required_globs: list=None, extra_args:list=None):
-        self.cheriConfig = cheriConfig
-        self.archive = cheriConfig.workspace / name  # type: Path
+    def __init__(self, cheri_config: JenkinsConfig, name, *, required_globs: list = None, extra_args: list = None):
+        self.cheri_config = cheri_config
+        self.archive = cheri_config.workspace / name  # type: Path
         self.required_globs = [] if required_globs is None else required_globs  # type: list
         self.extra_args = [] if extra_args is None else extra_args  # type: list
 
     def extract(self):
         assert self.archive.exists(), str(self.archive)
-        runCmd(["tar", "Jxf", self.archive, "-C", self.cheriConfig.cheri_sdk_dir] + self.extra_args, cwd=self.cheriConfig.workspace)
+        runCmd(["tar", "Jxf", self.archive, "-C", self.cheri_config.cheri_sdk_dir] + self.extra_args,
+            cwd=self.cheri_config.workspace)
         self.check_required_files()
 
     def check_required_files(self, fatal=True) -> bool:
         for glob in self.required_globs:
-            found = list(self.cheriConfig.cheri_sdk_dir.glob(glob))
+            found = list(self.cheri_config.cheri_sdk_dir.glob(glob))
             # print("Matched files:", found)
             if len(found) == 0:
                 if fatal:
@@ -114,38 +116,40 @@ class SdkArchive(object):
         return str(self.archive)
 
 
-def get_sdk_archives(cheriConfig, needs_cheribsd_sysroot: bool) -> "typing.List[SdkArchive]":
+def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "typing.List[SdkArchive]":
     # Try the full SDK archive first:
-    if cheriConfig.sdkArchivePath.exists():
+    if cheri_config.sdkArchivePath.exists():
         required_globs = ["bin/clang"]
         if needs_cheribsd_sysroot:
             required_globs.append("sysroot/usr/include")
-        return [SdkArchive(cheriConfig, cheriConfig.sdkArchivePath.name, extra_args=["--strip-components", "1"],
-                           required_globs=required_globs)]
+        return [SdkArchive(cheri_config, cheri_config.sdkArchivePath.name, extra_args=["--strip-components", "1"],
+            required_globs=required_globs)]
 
     llvm_cpu = os.getenv("LLVM_CPU", "cheri-multi")
     clang_archive_name = "{}-{}-clang-llvm.tar.xz".format(llvm_cpu, os.getenv("LLVM_BRANCH", "master"))
-    clang_archive = SdkArchive(cheriConfig, clang_archive_name, required_globs=["bin/clang"],
-                               extra_args=["--strip-components", "1"])
+    clang_archive = SdkArchive(cheri_config, clang_archive_name, required_globs=["bin/clang"],
+        extra_args=["--strip-components", "1"])
     if not clang_archive.archive.exists():
-        warningMessage("Neither full SDK archive", cheriConfig.sdkArchiveName, " nor clang archive", clang_archive_name,
-                       "exists, will use only existing $WORKSPACE/cherisdk")
+        warningMessage("Neither full SDK archive", cheri_config.sdkArchiveName, " nor clang archive",
+            clang_archive_name,
+            "exists, will use only existing $WORKSPACE/cherisdk")
         return []
-    if not needs_cheribsd_sysroot or cheriConfig.extract_compiler_only:
+    if not needs_cheribsd_sysroot or cheri_config.extract_compiler_only:
         return [clang_archive]  # only need the clang archive
     # if we only extracted the compiler, extract the sysroot now
-    cheri_sysroot_archive_name = "{}-{}-cheribsd-world.tar.xz".format(cheriConfig.sdk_cpu, cheriConfig.cheri_sdk_isa_name)
+    cheri_sysroot_archive_name = "{}-{}-cheribsd-world.tar.xz".format(cheri_config.sdk_cpu,
+        cheri_config.cheri_sdk_isa_name)
     extra_args = ["--strip-components", "1"]
     # Don't extract FreeBSD binaries on a linux host:
     if not OSInfo.IS_FREEBSD:
         extra_args += ["--exclude", "bin/*"]
-    sysroot_archive = SdkArchive(cheriConfig, cheri_sysroot_archive_name, required_globs=["sysroot/usr/include"],
-                                 extra_args=extra_args)
+    sysroot_archive = SdkArchive(cheri_config, cheri_sysroot_archive_name, required_globs=["sysroot/usr/include"],
+        extra_args=extra_args)
     if not sysroot_archive.archive.exists():
         warningMessage("Project needs a full SDK archive but only clang archive was found and",
-                       sysroot_archive.archive, "is missing. Will attempt to build anyway but build "
-                                                "will most likely fail.")
-        runCmd("ls", "-la", cwd=cheriConfig.workspace)
+            sysroot_archive.archive, "is missing. Will attempt to build anyway but build "
+                                     "will most likely fail.")
+        runCmd("ls", "-la", cwd=cheri_config.workspace)
         return [clang_archive]
     return [clang_archive, sysroot_archive]
 
@@ -168,124 +172,129 @@ def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "typing.List[Sdk
             # If llvm-ar/ranlib/nm exists use that
             if (cheri_config.cheri_sdk_bindir / ("llvm-" + tool)).exists():
                 cheri_config.FS.create_symlink(cheri_config.cheri_sdk_bindir / ("llvm-" + tool),
-                                              cheri_config.cheri_sdk_bindir / tool, relative=True)
+                                               cheri_config.cheri_sdk_bindir / tool, relative=True)
             else:
                 # otherwise fall back to the /usr/bin version
-                cheri_config.FS.create_symlink(Path(shutil.which(tool)), cheri_config.cheri_sdk_bindir / tool, relative=False)
+                cheri_config.FS.create_symlink(Path(shutil.which(tool)), cheri_config.cheri_sdk_bindir / tool,
+                    relative=False)
     if not (cheri_config.cheri_sdk_bindir / "ld").exists():
         statusUpdate("Adding missing $SDK/ld link to ld.lld")
         cheri_config.FS.create_symlink(cheri_config.cheri_sdk_bindir / "ld.lld",
-                                      cheri_config.cheri_sdk_bindir / "ld", relative=True)
+                                       cheri_config.cheri_sdk_bindir / "ld", relative=True)
 
 
-def create_sdk_from_archives(cheriConfig: JenkinsConfig, needs_cheribsd_sysroot):
+def create_sdk_from_archives(cheri_config: JenkinsConfig, needs_cheribsd_sysroot):
     # If the archive is newer, delete the existing sdk unless --keep-sdk is passed install root:
-    possiblyDeleteSdkJob = ThreadJoiner(None)
-    archives = get_sdk_archives(cheriConfig, needs_cheribsd_sysroot=needs_cheribsd_sysroot)
+    possibly_delete_sdk_job = ThreadJoiner(None)
+    archives = get_sdk_archives(cheri_config, needs_cheribsd_sysroot=needs_cheribsd_sysroot)
     statusUpdate("Will use the following SDK archives:", archives)
     if any(not a.check_required_files(fatal=False) for a in archives):
         # if any of the required files is missing clean up and extract
         statusUpdate("Required files missing -> recreating SDK")
-        possiblyDeleteSdkJob = cheriConfig.FS.async_clean_directory(cheriConfig.cheri_sdk_dir)
-    elif cheriConfig.cheri_sdk_dir.exists() and all(a.archive.exists() for a in archives):
+        possibly_delete_sdk_job = cheri_config.FS.async_clean_directory(cheri_config.cheri_sdk_dir)
+    elif cheri_config.cheri_sdk_dir.exists() and all(a.archive.exists() for a in archives):
         for a in archives:
-            if cheriConfig.cheri_sdk_dir.stat().st_ctime < a.archive.stat().st_ctime:
-                msgkind = statusUpdate if not cheriConfig.keepSdkDir else warningMessage
+            if cheri_config.cheri_sdk_dir.stat().st_ctime < a.archive.stat().st_ctime:
+                msgkind = statusUpdate if not cheri_config.keepSdkDir else warningMessage
                 msgkind("SDK archive", a.archive, "is newer than the existing SDK directory")
-                if not cheriConfig.keepSdkDir:
+                if not cheri_config.keepSdkDir:
                     statusUpdate("Deleting old SDK and extracting archive")
-                    possiblyDeleteSdkJob = cheriConfig.FS.async_clean_directory(cheriConfig.cheri_sdk_dir)
+                    possibly_delete_sdk_job = cheri_config.FS.async_clean_directory(cheri_config.cheri_sdk_dir)
                 break
     # unpack the SDK if it has not been extracted yet:
-    with possiblyDeleteSdkJob:
-        extract_sdk_archives(cheriConfig, archives)
+    with possibly_delete_sdk_job:
+        extract_sdk_archives(cheri_config, archives)
 
 
 def _jenkins_main():
     os.environ["_CHERIBUILD_JENKINS_BUILD"] = "1"
-    allTargetNames = list(sorted(target_manager.targetNames))
-    configLoader = JenkinsConfigLoader()
+    all_target_names = list(sorted(target_manager.targetNames))
+    config_loader = JenkinsConfigLoader()
     # Register all command line options
-    cheriConfig = JenkinsConfig(configLoader, allTargetNames)
-    SimpleProject._configLoader = configLoader
+    cheri_config = JenkinsConfig(config_loader, all_target_names)
+    SimpleProject._configLoader = config_loader
     target_manager.registerCommandLineOptions()
-    cheriConfig.load()
-    if cheriConfig.verbose:
+    cheri_config.load()
+    if cheri_config.verbose:
         # json = cheri_config.getOptionsJSON()  # make sure all config options are loaded
-        # pprint.pprint(configLoader.options)
+        # pprint.pprint(config_loader.options)
         pass
-    init_global_config(test_mode=False, pretend_mode=cheriConfig.pretend,
-        verbose_mode=cheriConfig.verbose, quiet_mode=cheriConfig.quiet)
+    init_global_config(test_mode=False, pretend_mode=cheri_config.pretend,
+        verbose_mode=cheri_config.verbose, quiet_mode=cheri_config.quiet)
 
     # special target to extract the sdk
-    if JenkinsAction.EXTRACT_SDK in cheriConfig.action or (len(cheriConfig.targets) > 0 and cheriConfig.targets[0] == EXTRACT_SDK_TARGET):
-        create_sdk_from_archives(cheriConfig, not cheriConfig.extract_compiler_only)
+    if JenkinsAction.EXTRACT_SDK in cheri_config.action or (
+            len(cheri_config.targets) > 0 and cheri_config.targets[0] == EXTRACT_SDK_TARGET):
+        create_sdk_from_archives(cheri_config, not cheri_config.extract_compiler_only)
         sys.exit()
 
-    if cheriConfig.action == [""]:
+    if cheri_config.action == [""]:
         fatalError("No action specified, did you mean to pass --build?")
         sys.exit()
 
-    if len(cheriConfig.targets) != 1:
+    if len(cheri_config.targets) != 1:
         fatalError("Expected exactly one target!")
         sys.exit()
 
-    if JenkinsAction.BUILD in cheriConfig.action or JenkinsAction.TEST in cheriConfig.action:
-        assert len(cheriConfig.targets) == 1
-        target = target_manager.get_target_raw(cheriConfig.targets[0])
+    if JenkinsAction.BUILD in cheri_config.action or JenkinsAction.TEST in cheri_config.action:
+        assert len(cheri_config.targets) == 1
+        target = target_manager.get_target_raw(cheri_config.targets[0])
 
         for tgt in target_manager.targets:
             if isinstance(tgt, SimpleTargetAlias):
                 continue
             cls = tgt.projectClass
             if issubclass(cls, Project):
-                cls._default_install_dir_fn = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
+                cls._default_install_dir_fn = Path(str(cheri_config.outputRoot) + str(cheri_config.installationPrefix))
                 i = inspect.getattr_static(cls, "_installDir")
                 assert isinstance(i, CommandLineConfigOption)
                 # But don't change it if it was specified on the command line. Note: This also does the config
                 # inheritance: i.e. setting --cheribsd/install-dir will also affect cheribsd-cheri/cheribsd-mips
                 # noinspection PyTypeChecker
-                from_cmdline = i.load_option(cheriConfig, cls, cls, return_none_if_default=True)
+                from_cmdline = i.load_option(cheri_config, cls, cls, return_none_if_default=True)
                 if from_cmdline is not None:
                     statusUpdate("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
                 else:
-                    cls._installDir = Path(str(cheriConfig.outputRoot) + str(cheriConfig.installationPrefix))
+                    cls._installDir = Path(str(cheri_config.outputRoot) + str(cheri_config.installationPrefix))
                     cls._check_install_dir_conflict = False
                 # print(project.projectClass.project_name, project.projectClass.installDir)
 
         Target.instantiating_targets_should_warn = False
-        target.checkSystemDeps(cheriConfig)
+        target.checkSystemDeps(cheri_config)
         # need to set destdir after checkSystemDeps:
-        project = target.get_or_create_project(cheriConfig.preferred_xtarget, cheriConfig)
+        project = target.get_or_create_project(cheri_config.preferred_xtarget, cheri_config)
         assert project
-        cross_target = project.get_crosscompile_target(cheriConfig)
-        if isinstance(target, MultiArchTargetAlias) and cross_target is not None and cross_target != cheriConfig.preferred_xtarget and cheriConfig.preferred_xtarget is not None:
+        cross_target = project.get_crosscompile_target(cheri_config)
+        if isinstance(target,
+                MultiArchTargetAlias) and cross_target is not None and cross_target != cheri_config.preferred_xtarget\
+                and cheri_config.preferred_xtarget is not None:
             fatalError("Cannot build project", project.target, "with cross compile target", cross_target.name,
-                       "when --cpu is set to", cheriConfig.preferred_xtarget.name, fatalWhenPretending=True)
+                "when --cpu is set to", cheri_config.preferred_xtarget.name, fatalWhenPretending=True)
         if isinstance(project, CrossCompileMixin):
-            project.destdir = cheriConfig.outputRoot
-            project._installPrefix = cheriConfig.installationPrefix
-            project._installDir = cheriConfig.outputRoot
+            project.destdir = cheri_config.outputRoot
+            project._installPrefix = cheri_config.installationPrefix
+            project._installDir = cheri_config.outputRoot
 
-        if JenkinsAction.BUILD in cheriConfig.action:
+        if JenkinsAction.BUILD in cheri_config.action:
             if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
-                assert cheriConfig.cheri_sdk_dir == Path("/cheri-sdk"), cheriConfig.cheri_sdk_dir
-            elif cheriConfig.without_sdk:
+                assert cheri_config.cheri_sdk_dir == Path("/cheri-sdk"), cheri_config.cheri_sdk_dir
+            elif cheri_config.without_sdk:
                 statusUpdate("Not using CHERI SDK, only files from /usr")
-                assert cheriConfig.clangPath.exists(), cheriConfig.clangPath
-                assert cheriConfig.clangPlusPlusPath.exists(), cheriConfig.clangPlusPlusPath
-            elif cheriConfig.cheri_sdk_path:
-                expected_clang = cheriConfig.cheri_sdk_bindir / "clang"
+                assert cheri_config.clangPath.exists(), cheri_config.clangPath
+                assert cheri_config.clangPlusPlusPath.exists(), cheri_config.clangPlusPlusPath
+            elif cheri_config.cheri_sdk_path:
+                expected_clang = cheri_config.cheri_sdk_bindir / "clang"
                 if not expected_clang.exists():
                     fatalError("--cheri-sdk-path specified but", expected_clang, "does not exist")
             else:
                 need_cheribsd_sysroot = project.needs_sysroot and project.target_info.is_cheribsd()
-                create_sdk_from_archives(cheriConfig, needs_cheribsd_sysroot=need_cheribsd_sysroot)
+                create_sdk_from_archives(cheri_config, needs_cheribsd_sysroot=need_cheribsd_sysroot)
 
-        if project.needs_sysroot and not project.target_info.sysroot_dir.exists() and JenkinsAction.BUILD in cheriConfig.action:
+        if project.needs_sysroot and not project.target_info.sysroot_dir.exists() and JenkinsAction.BUILD in \
+                cheri_config.action:
             fatalError("Sysroot directory", project.target_info.sysroot_dir, "does not exist")
 
-        if cheriConfig.debug_output:
+        if cheri_config.debug_output:
             statusUpdate("Configuration options for building", project.project_name, file=sys.stderr)
             for attr in dir(project):
                 if attr.startswith("_"):
@@ -294,19 +303,19 @@ def _jenkins_main():
                 if not callable(value):
                     print("   ", attr, "=", pprint.pformat(value, width=160, indent=8, compact=True), file=sys.stderr)
         # delete the install root:
-        if JenkinsAction.BUILD in cheriConfig.action:
-            cleaningTask = cheriConfig.FS.async_clean_directory(cheriConfig.outputRoot) if not cheriConfig.keepInstallDir else ThreadJoiner(None)
+        if JenkinsAction.BUILD in cheri_config.action:
+            cleaning_task = cheri_config.FS.async_clean_directory(
+                cheri_config.outputRoot) if not cheri_config.keepInstallDir else ThreadJoiner(None)
             new_path = os.getenv("PATH", "")
-            if not cheriConfig.without_sdk:
-                new_path = str(cheriConfig.cheri_sdk_bindir) + ":" + new_path
+            if not cheri_config.without_sdk:
+                new_path = str(cheri_config.cheri_sdk_bindir) + ":" + new_path
             with setEnv(PATH=new_path):
-                with cleaningTask:
-                    target.execute(cheriConfig)
-        if JenkinsAction.TEST in cheriConfig.action:
-            target.run_tests(cheriConfig)
+                with cleaning_task:
+                    target.execute(cheri_config)
+        if JenkinsAction.TEST in cheri_config.action:
+            target.run_tests(cheri_config)
 
-
-    if JenkinsAction.CREATE_TARBALL in cheriConfig.action:
+    if JenkinsAction.CREATE_TARBALL in cheri_config.action:
         bsdtar_path = shutil.which("bsdtar")
         tar_cmd = None
         owner_flags = ["--invalid-flag"]
@@ -326,15 +335,16 @@ def _jenkins_main():
         if not tar_cmd:
             fatalError("Could not find a usable version of the tar command")
             return
-        statusUpdate("Creating tarball", cheriConfig.tarball_name)
+        statusUpdate("Creating tarball", cheri_config.tarball_name)
         # Strip all ELF files:
-        if cheriConfig.strip_elf_files:
-            strip_binaries(cheriConfig, cheriConfig.workspace / "tarball")
-        runCmd([tar_cmd, "--create", "--xz"] + owner_flags + ["-f", cheriConfig.tarball_name, "-C", "tarball", "."], cwd=cheriConfig.workspace)
-        runCmd("du", "-sh", cheriConfig.workspace / cheriConfig.tarball_name)
+        if cheri_config.strip_elf_files:
+            strip_binaries(cheri_config, cheri_config.workspace / "tarball")
+        runCmd([tar_cmd, "--create", "--xz"] + owner_flags + ["-f", cheri_config.tarball_name, "-C", "tarball", "."],
+            cwd=cheri_config.workspace)
+        runCmd("du", "-sh", cheri_config.workspace / cheri_config.tarball_name)
 
 
-def strip_binaries(cheriConfig: JenkinsConfig, directory: Path):
+def strip_binaries(cheri_config: JenkinsConfig, directory: Path):
     statusUpdate("Tarball directory size before stripping ELF files:")
     runCmd("du", "-sh", directory)
     for root, dirs, filelist in os.walk(str(directory)):
@@ -347,7 +357,7 @@ def strip_binaries(cheriConfig: JenkinsConfig, directory: Path):
                 with filepath.open("rb") as f:
                     if f.read(4) == b"\x7fELF":
                         # self.verbose_print("Stripping ELF binary", filepath)
-                        runCmd(cheriConfig.cheri_sdk_bindir / "llvm-strip", filepath)
+                        runCmd(cheri_config.cheri_sdk_bindir / "llvm-strip", filepath)
             except Exception as e:
                 warningMessage("Failed to detect type of file:", filepath, e)
     statusUpdate("Tarball directory size after stripping ELF files:")
@@ -361,4 +371,4 @@ def jenkins_main():
         sys.exit("Exiting due to Ctrl+C")
     except subprocess.CalledProcessError as err:
         fatalError("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code",
-                   err.returncode)
+            err.returncode)

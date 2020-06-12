@@ -117,7 +117,7 @@ class NoOpHelpFormatter(argparse.HelpFormatter):
 
 class ConfigLoaderBase(object):
     # will be set later...
-    _cheriConfig = None  # type: CheriConfig
+    _cheri_config = None  # type: CheriConfig
 
     options = dict()  # type: typing.Dict[str, "ConfigOptionBase"]
     _parsedArgs = None
@@ -322,7 +322,7 @@ class ConfigOptionBase(object):
             if instance is None:
                 instance = owner
             # noinspection PyProtectedMember
-            self._cached = self.load_option(self._loader._cheriConfig, instance, owner)
+            self._cached = self.load_option(self._loader._cheri_config, instance, owner)
         return self._cached
 
     def _get_default_value(self, config: "CheriConfig", instance: "typing.Optional[SimpleProject]" = None):

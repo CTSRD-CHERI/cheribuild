@@ -64,9 +64,9 @@ def setup_mock_chericonfig(source_root: Path, pretend=True) -> MockConfig:
     # noinspection PyTypeChecker
     init_global_config(test_mode=True, pretend_mode=config.pretend,
         verbose_mode=config.verbose, quiet_mode=config.quiet)
-    ConfigLoaderBase._cheriConfig = config
+    ConfigLoaderBase._cheri_config = config
     SimpleProject._configLoader = DefaultValueOnlyConfigLoader()
-    SimpleProject._configLoader._cheriConfig = config
+    SimpleProject._configLoader._cheri_config = config
     Target.instantiating_targets_should_warn = False
     # FIXME: There should only be one singleton instance
     return config
