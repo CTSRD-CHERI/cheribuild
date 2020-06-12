@@ -8,7 +8,7 @@ from pathlib import Path
 from pycheribuild.config.loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader, JsonAndCommandLineConfigOption
 
 _loader = JsonAndCommandLineConfigLoader()
-from pycheribuild.projects.project import SimpleProject, CompilationTargets
+from pycheribuild.projects.project import SimpleProject
 
 SimpleProject._configLoader = _loader
 from pycheribuild.targets import target_manager, Target
@@ -19,7 +19,6 @@ from pycheribuild.projects.cross import *  # make sure all projects are loaded s
 from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage, _BuildDiskImageBase
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, FreeBSDToolchainKind
-from pycheribuild.utils import commandline_to_str
 
 import pytest
 import re

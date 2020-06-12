@@ -9,7 +9,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can"t do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
-from pycheribuild.projects.project import CompilationTargets
 from pycheribuild.targets import target_manager
 # noinspection PyUnresolvedReferences
 from pycheribuild.projects import *  # make sure all projects are loaded so that target_manager gets populated

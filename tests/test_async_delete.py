@@ -1,6 +1,7 @@
 from pathlib import Path
 from unittest import TestCase
-from pycheribuild.projects.project import Project, CompilationTargets, ExternallyManagedSourceRepository, DefaultInstallDir
+from pycheribuild.projects.project import Project, ExternallyManagedSourceRepository, DefaultInstallDir
+from pycheribuild.config.compilation_targets import CompilationTargets
 from .setup_mock_chericonfig import setup_mock_chericonfig, MockConfig
 import os
 import tempfile
