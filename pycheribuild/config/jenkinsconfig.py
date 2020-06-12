@@ -29,11 +29,12 @@
 #
 
 import os
+import typing
 from enum import Enum
 from pathlib import Path
 
 from .chericonfig import CheriConfig
-from .compilation_targets import CompilationTargets
+from .compilation_targets import CompilationTargets, CrossCompileTarget
 from .loader import ConfigLoaderBase
 from ..filesystemutils import FileSystemUtils
 from ..utils import defaultNumberOfMakeJobs, fatalError, OSInfo, warningMessage
@@ -204,7 +205,7 @@ class JenkinsConfig(CheriConfig):
             self.cheri_sdk_dir = Path("/cheri-sdk")
         else:
             self.cheri_sdk_dir = self.workspace / self.cheri_sdk_directory_name
-        self.preferred_xtarget = self.cpu
+        self.preferred_xtarget = None  # type: typing.Optional[CrossCompileTarget]
         if self.cpu == "default":
             self.preferred_xtarget = None
         elif self.cpu == "cheri128":
@@ -228,16 +229,11 @@ class JenkinsConfig(CheriConfig):
         else:
             fatalError("CPU is not set to a valid value:", self.cpu)
 
-        if OSInfo.IS_MAC and self.preferred_xtarget is not None and self.preferred_xtarget.is_native():
-            self.without_sdk = True  # cannot build macos binaries with lld
-
         if self.force_update:
             self.skipUpdate = False
             self.skipClone = False
 
         if self.without_sdk:
-            if not self.preferred_xtarget.is_native():
-                fatalError("The --without-sdk flag only works when building host binaries")
             self.cheri_sdk_dir = self.outputRoot / str(self.installationPrefix).strip('/')
             # allow overriding the clang/clang++ paths with HOST_CC/HOST_CXX
             self.clangPath = Path(os.getenv("HOST_CC", self.clangPath))
