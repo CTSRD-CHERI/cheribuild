@@ -40,9 +40,7 @@ from ..utils import defaultNumberOfMakeJobs, fatalError, OSInfo, warningMessage
 
 
 def default_install_prefix(conf: "JenkinsConfig", unused):
-    if conf.preferred_xtarget.is_native():
-        return "/opt/" + conf.targets[0]
-    return "/opt/" + conf.cpu
+    return "/opt/" + conf.targets[0]
 
 
 class JenkinsAction(Enum):
