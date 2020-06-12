@@ -108,6 +108,13 @@ class _EnumArgparseType(object):
         return '%s(%s)' % (self.enums.__name__, astr)
 
 
+# When tab-completing, argparse spends 100ms printing the help message for all available targets
+# Avoid this by providing a no-op help formatter
+class NoOpHelpFormatter(argparse.HelpFormatter):
+    def format_help(self):
+        return "TAB-COMPLETING, THIS STRING SHOULD NOT BE VISIBLE"
+
+
 class ConfigLoaderBase(object):
     # will be set later...
     _cheriConfig = None  # type: CheriConfig
@@ -115,14 +122,20 @@ class ConfigLoaderBase(object):
     options = dict()  # type: typing.Dict[str, "ConfigOptionBase"]
     _parsedArgs = None
     _JSON = {}  # type: dict
+    _completing_arguments = "_ARGCOMPLETE" in os.environ
 
-    showAllHelp = any(s in sys.argv for s in ("--help-all", "--help-hidden")) or "_ARGCOMPLETE" in os.environ
+    showAllHelp = any(s in sys.argv for s in ("--help-all", "--help-hidden")) or _completing_arguments
 
     def __init__(self, option_cls):
         self.__option_cls = option_cls
-        # noinspection PyTypeChecker
-        self._parser = argparse.ArgumentParser(
-            formatter_class=lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
+        if self._completing_arguments:
+            # noinspection PyTypeChecker
+            self._parser = argparse.ArgumentParser(formatter_class=NoOpHelpFormatter)
+        else:
+            # noinspection PyTypeChecker
+            self._parser = argparse.ArgumentParser(
+                formatter_class=lambda prog: argparse.HelpFormatter(prog, width=shutil.get_terminal_size()[0]))
+
         self.actionGroup = self._parser.add_argument_group("Actions to be performed")
         self.pathGroup = self._parser.add_argument_group("Configuration of default paths")
         self.crossCompileOptionsGroup = self._parser.add_argument_group("Adjust flags used when compiling MIPS/CHERI projects")
