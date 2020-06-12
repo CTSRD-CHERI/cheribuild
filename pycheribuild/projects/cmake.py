@@ -39,6 +39,6 @@ class BuildCMake(AutotoolsProject):
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     def __init__(self, config: CheriConfig):
-        super().__init__(config, configureScript="bootstrap")
+        super().__init__(config, configure_script="bootstrap")
         self.configureArgs.append("--parallel=" + str(self.config.makeJobs))
         # TODO: do we need to use gmake on FreeBSD?

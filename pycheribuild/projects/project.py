@@ -2649,9 +2649,9 @@ class AutotoolsProject(Project):
     Sets configure command to ./configure, adds --prefix=installdir
     """
 
-    def __init__(self, config, configureScript="configure"):
+    def __init__(self, config, configure_script="configure"):
         super().__init__(config)
-        self.configureCommand = self.sourceDir / configureScript
+        self.configureCommand = self.sourceDir / configure_script
 
     def configure(self, **kwargs):
         if self._configure_supports_prefix:
