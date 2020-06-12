@@ -131,28 +131,23 @@ def get_sdk_archives(cheriConfig, needs_cheribsd_sysroot: bool) -> "typing.List[
         warningMessage("Neither full SDK archive", cheriConfig.sdkArchiveName, " nor clang archive", clang_archive_name,
                        "exists, will use only existing $WORKSPACE/cherisdk")
         return []
-    if cheriConfig.preferred_xtarget.is_native():
-        # we need the LLVM builtin includes (should be part of the clang archive)
-        clang_archive.required_globs.append("lib/clang/*/include/stddef.h")
+    if not needs_cheribsd_sysroot or cheriConfig.extract_compiler_only:
+        return [clang_archive]  # only need the clang archive
+    # if we only extracted the compiler, extract the sysroot now
+    cheri_sysroot_archive_name = "{}-{}-cheribsd-world.tar.xz".format(cheriConfig.sdk_cpu, cheriConfig.cheri_sdk_isa_name)
+    extra_args = ["--strip-components", "1"]
+    # Don't extract FreeBSD binaries on a linux host:
+    if not OSInfo.IS_FREEBSD:
+        extra_args += ["--exclude", "bin/*"]
+    sysroot_archive = SdkArchive(cheriConfig, cheri_sysroot_archive_name, required_globs=["sysroot/usr/include"],
+                                 extra_args=extra_args)
+    if not sysroot_archive.archive.exists():
+        warningMessage("Project needs a full SDK archive but only clang archive was found and",
+                       sysroot_archive.archive, "is missing. Will attempt to build anyway but build "
+                                                "will most likely fail.")
+        runCmd("ls", "-la", cwd=cheriConfig.workspace)
         return [clang_archive]
-    else:
-        if not needs_cheribsd_sysroot or cheriConfig.extract_compiler_only:
-            return [clang_archive]  # only need the clang archive
-        # if we only extracted the compiler, extract the sysroot now
-        cheri_sysroot_archive_name = "{}-{}-cheribsd-world.tar.xz".format(cheriConfig.sdk_cpu, cheriConfig.cheri_sdk_isa_name)
-        extra_args = ["--strip-components", "1"]
-        # Don't extract FreeBSD binaries on a linux host:
-        if not OSInfo.IS_FREEBSD:
-            extra_args += ["--exclude", "bin/*"]
-        sysroot_archive = SdkArchive(cheriConfig, cheri_sysroot_archive_name, required_globs=["sysroot/usr/include"],
-                                     extra_args=extra_args)
-        if not sysroot_archive.archive.exists():
-            warningMessage("Project needs a full SDK archive but only clang archive was found and",
-                           sysroot_archive.archive, "is missing. Will attempt to build anyway but build "
-                                                    "will most likely fail.")
-            runCmd("ls", "-la", cwd=cheriConfig.workspace)
-            return [clang_archive]
-        return [clang_archive, sysroot_archive]
+    return [clang_archive, sysroot_archive]
 
 
 def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "typing.List[SdkArchive]"):
@@ -183,7 +178,7 @@ def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "typing.List[Sdk
                                       cheri_config.cheri_sdk_bindir / "ld", relative=True)
 
 
-def create_sdk_from_archives(cheriConfig: JenkinsConfig, needs_cheribsd_sysroot=True):
+def create_sdk_from_archives(cheriConfig: JenkinsConfig, needs_cheribsd_sysroot):
     # If the archive is newer, delete the existing sdk unless --keep-sdk is passed install root:
     possiblyDeleteSdkJob = ThreadJoiner(None)
     archives = get_sdk_archives(cheriConfig, needs_cheribsd_sysroot=needs_cheribsd_sysroot)
