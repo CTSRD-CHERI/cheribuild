@@ -89,7 +89,10 @@ class BuildCheriMipsTestQEMU(_BuildCheriMipsTestBase):
         if self.single_test:
             self.run_make("pytest/qemu/tests/" + str(self.single_test), parallel=False)
         else:
-            self.run_make("pytest_qemu_all")
+            self.run_make("qemu_logs128")
+            self.run_make("pytest_qemu128")
+            self.run_make("qemu_logs_mips")
+            self.run_make("pytest_qemu_mips")
 
 
 class BuildCheriMipsTestBluesim(_BuildCheriMipsTestBase):
