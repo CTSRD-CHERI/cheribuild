@@ -60,12 +60,12 @@ class CheribuildAction(Enum):
 
 
 class DefaultCheriConfig(CheriConfig):
-    def __init__(self, loader: ConfigLoaderBase, availableTargets: list):
+    def __init__(self, loader: ConfigLoaderBase, available_targets: list):
         super().__init__(loader, action_class=CheribuildAction)
         self.default_action = CheribuildAction.BUILD
         assert isinstance(loader, JsonAndCommandLineConfigLoader)
         # The run mode:
-        self.getConfigOption = loader.addOption("get-config-option", type=str, metavar="KEY", group=loader.actionGroup,
+        self.getConfigOption = loader.add_option("get-config-option", type=str, metavar="KEY", group=loader.actionGroup,
                                                 help="Print the value of config option KEY and exit")
         # boolean flags
         self.quiet = loader.add_bool_option("quiet", "q", help="Don't show stdout of the commands that are executed")
@@ -91,7 +91,7 @@ class DefaultCheriConfig(CheriConfig):
         self.include_toolchain_dependencies = loader.add_bool_option("include-toolchain-dependencies", default=True,
             help="Include toolchain targets such as LLVM and QEMU when --include-dependencies is set.")
 
-        self.copy_compilation_db_to_source_dir = loader.addCommandLineOnlyBoolOption("compilation-db-in-source-dir",
+        self.copy_compilation_db_to_source_dir = loader.add_commandline_only_bool_option("compilation-db-in-source-dir",
             help="Generate a compile_commands.json and also copy it to the source directory")
 
         self.crossCompileForMips = loader.add_bool_option("cross-compile-for-mips", "-xmips", group=loader.crossCompileGroup,
@@ -103,7 +103,7 @@ class DefaultCheriConfig(CheriConfig):
 
         self.makeWithoutNice = loader.add_bool_option("make-without-nice", help="Run make/ninja without nice(1)")
 
-        self.makeJobs = loader.addOption("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
+        self.makeJobs = loader.add_option("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
                                          help="Number of jobs to use for compiling")
 
         # configurable paths
@@ -119,7 +119,7 @@ class DefaultCheriConfig(CheriConfig):
         self.toolsRoot = loader.add_path_option("tools-root",
             default=lambda p, cls: p.outputRoot, group=loader.pathGroup,
             help="The directory to find sdk and bootstrap tools (default: '<OUTPUT_ROOT>')")
-        loader.finalizeOptions(availableTargets)
+        loader.finalize_options(available_targets)
 
     def load(self):
         super().load()

@@ -70,56 +70,56 @@ def absolute_path_only(p: str) -> Path:
 
 
 class JenkinsConfig(CheriConfig):
-    def __init__(self, loader: ConfigLoaderBase, availableTargets: list):
+    def __init__(self, loader: ConfigLoaderBase, available_targets: list):
         super().__init__(loader, action_class=JenkinsAction)
         self.default_action = ""  # error if no action set
 
-        self.cpu = loader.addCommandLineOnlyOption("cpu", default=os.getenv("CPU", "default"),
+        self.cpu = loader.add_commandline_only_option("cpu", default=os.getenv("CPU", "default"),
                                                    help="The target to build the software for (defaults to $CPU).",
                                                    choices=["default", "cheri128", "mips", "hybrid-cheri128",
                                                             "riscv64", "riscv64-hybrid", "riscv64-purecap",
                                                             "native", "x86", "amd64"])  # type: str
-        self.workspace = loader.addCommandLineOnlyOption("workspace", default=os.getenv("WORKSPACE"), type=Path,
+        self.workspace = loader.add_commandline_only_option("workspace", default=os.getenv("WORKSPACE"), type=Path,
                                                          help="The root directory for building (defaults to $WORKSPACE)")  # type: Path
-        self.sdkArchiveName = loader.addCommandLineOnlyOption("sdk-archive", type=str, default=os.getenv("SDK_ARCHIVE"),
+        self.sdkArchiveName = loader.add_commandline_only_option("sdk-archive", type=str, default=os.getenv("SDK_ARCHIVE"),
                                                               help="The name of the sdk archive")  # type: str
-        self.keepInstallDir = loader.addCommandLineOnlyBoolOption("keep-install-dir",
+        self.keepInstallDir = loader.add_commandline_only_bool_option("keep-install-dir",
                                                                   help="Don't delete the install dir prior to build")  # type: bool
-        self.keepSdkDir = loader.addCommandLineOnlyBoolOption("keep-sdk-dir", help="Don't delete existing SDK dir even"
+        self.keepSdkDir = loader.add_commandline_only_bool_option("keep-sdk-dir", help="Don't delete existing SDK dir even"
                                                                                    " if there is a newer archive")  # type: bool
-        self.force_update = loader.addCommandLineOnlyBoolOption("force-update",
+        self.force_update = loader.add_commandline_only_bool_option("force-update",
                                                                 help="Do the updating (not recommended in jenkins!)")  # type: bool
         self.copy_compilation_db_to_source_dir = False
         self.makeWithoutNice = False
 
-        self.makeJobs = loader.addCommandLineOnlyOption("make-jobs", "j", type=int,
+        self.makeJobs = loader.add_commandline_only_option("make-jobs", "j", type=int,
                                                         default=defaultNumberOfMakeJobs(),
                                                         help="Number of jobs to use for compiling")
-        self.installationPrefix = loader.addCommandLineOnlyOption("install-prefix", type=absolute_path_only,
+        self.installationPrefix = loader.add_commandline_only_option("install-prefix", type=absolute_path_only,
                                                                   default=default_install_prefix,
                                                                   help="The install prefix for cross compiled projects"
                                                                        " (the path where it will end up in the install"
                                                                        " image)")  # type: Path
-        self.without_sdk = loader.addCommandLineOnlyBoolOption("without-sdk", help="Don't use the CHERI SDK -> only /usr (for native builds)")
-        self.strip_elf_files = loader.addCommandLineOnlyBoolOption("strip-elf-files", help="Strip ELF files before creating the tarball", default=True)
-        self.cheri_sdk_path = loader.addCommandLineOnlyOption("cheri-sdk-path", default=None, type=Path,
+        self.without_sdk = loader.add_commandline_only_bool_option("without-sdk", help="Don't use the CHERI SDK -> only /usr (for native builds)")
+        self.strip_elf_files = loader.add_commandline_only_bool_option("strip-elf-files", help="Strip ELF files before creating the tarball", default=True)
+        self.cheri_sdk_path = loader.add_commandline_only_option("cheri-sdk-path", default=None, type=Path,
                                                               help="Override the path to the CHERI SDK (default is $WORKSPACE/cherisdk)")  # type: Path
-        self.extract_compiler_only = loader.addCommandLineOnlyBoolOption("extract-compiler-only",
+        self.extract_compiler_only = loader.add_commandline_only_bool_option("extract-compiler-only",
                                                                          help="Don't attempt to extract the CheriBSD sysroot")
-        self.tarball_name = loader.addCommandLineOnlyOption("tarball-name",
+        self.tarball_name = loader.add_commandline_only_option("tarball-name",
             default=lambda conf, cls: conf.targets[0] + "-" + conf.cpu + ".tar.xz")
 
         self.default_output_path = "tarball"
-        self.output_path = loader.addCommandLineOnlyOption("output-path", default=self.default_output_path,
+        self.output_path = loader.add_commandline_only_option("output-path", default=self.default_output_path,
                                                            help="Path for the output (relative to $WORKSPACE)")
 
-        # self.strip_install_prefix_from_archive = loader.addCommandLineOnlyBoolOption("strip-install-prefix-from-archive",
+        # self.strip_install_prefix_from_archive = loader.add_commandline_only_bool_option("strip-install-prefix-from-archive",
         #    help="Only put the files inside the install prefix into the tarball (stripping the leading directories)")  # type: bool
         self.skipUpdate = True
         self.skipClone = True
         self.verbose = True
         self.quiet = False
-        self.clean = loader.addCommandLineOnlyBoolOption("clean", default=True,
+        self.clean = loader.add_commandline_only_bool_option("clean", default=True,
                                                          help="Clean build directory before building")
         self.force = True  # no user input in jenkins
         self.write_logfile = False  # jenkins stores the output anyway
@@ -129,7 +129,7 @@ class JenkinsConfig(CheriConfig):
         # self.dumpConfig = False
         # self.getConfigOption = None
         self.includeDependencies = False
-        loader.finalizeOptions(availableTargets)
+        loader.finalize_options(available_targets)
         self.FS = FileSystemUtils(self)
 
     @property

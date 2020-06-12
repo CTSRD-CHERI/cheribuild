@@ -121,9 +121,9 @@ def real_main():
         sourceOption = inspect.getattr_static(cheriConfig, "sourceRoot")  # type: JsonAndCommandLineConfigOption
         buildOption = inspect.getattr_static(cheriConfig, "buildRoot")  # type: JsonAndCommandLineConfigOption
         # noinspection PyProtectedMember
-        if cheriConfig.buildRoot == buildOption._getDefaultValue(cheriConfig) and \
-                cheriConfig.sourceRoot == sourceOption._getDefaultValue(cheriConfig) and \
-                cheriConfig.outputRoot == outputOption._getDefaultValue(cheriConfig):
+        if cheriConfig.buildRoot == buildOption._get_default_value(cheriConfig) and \
+                cheriConfig.sourceRoot == sourceOption._get_default_value(cheriConfig) and \
+                cheriConfig.outputRoot == outputOption._get_default_value(cheriConfig):
             fatalError("Running cheribuild in docker with the default source/output/build directories is not supported")
 
     if CheribuildAction.LIST_TARGETS in cheriConfig.action:

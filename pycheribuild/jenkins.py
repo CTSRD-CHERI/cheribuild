@@ -66,15 +66,15 @@ class JenkinsConfigLoader(ConfigLoaderBase):
             self._parsedArgs.targets = [self._parsedArgs.targets]
         assert isinstance(self._parsedArgs.targets, list)
 
-    def finalizeOptions(self, availableTargets: list, **kwargs):
+    def finalize_options(self, available_targets: list, **kwargs):
         targetOption = self._parser.add_argument("targets", metavar="TARGET", nargs=argparse.OPTIONAL, help="The target to build",
-                                                 choices=availableTargets + [EXTRACT_SDK_TARGET])
-        if "_ARGCOMPLETE" in os.environ:
+                                                 choices=available_targets + [EXTRACT_SDK_TARGET])
+        if self._completing_arguments:
             try:
                 import argcomplete
             except ImportError:
                 sys.exit("argcomplete missing")
-            targetCompleter = argcomplete.completers.ChoicesCompleter(availableTargets)
+            targetCompleter = argcomplete.completers.ChoicesCompleter(available_targets)
             targetOption.completer = targetCompleter
             argcomplete.autocomplete(
                 self._parser,
@@ -250,7 +250,7 @@ def _jenkins_main():
                 # But don't change it if it was specified on the command line. Note: This also does the config
                 # inheritance: i.e. setting --cheribsd/install-dir will also affect cheribsd-cheri/cheribsd-mips
                 # noinspection PyTypeChecker
-                from_cmdline = i.loadOption(cheriConfig, cls, cls, return_none_if_default=True)
+                from_cmdline = i.load_option(cheriConfig, cls, cls, return_none_if_default=True)
                 if from_cmdline is not None:
                     statusUpdate("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
                 else:

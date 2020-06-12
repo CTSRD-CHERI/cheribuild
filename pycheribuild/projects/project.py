@@ -524,8 +524,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if extra_fallback_config_names:
             fallback_config_names.extend(extra_fallback_config_names)
         alias_target_names = [prefix + "/" + name for prefix in cls.__dict__.get("_alias_target_names", tuple())]
-        return cls._configLoader.addOption(config_option_key + "/" + name, shortname, default=default, type=kind,
-                                           _owning_class=cls, group=cls._commandLineOptionGroup, helpHidden=help_hidden,
+        return cls._configLoader.add_option(config_option_key + "/" + name, shortname, default=default, type=kind,
+                                           _owning_class=cls, group=cls._commandLineOptionGroup, help_hidden=help_hidden,
                                            _fallback_names=fallback_config_names, _alias_names=alias_target_names, **kwargs)
 
     @classmethod
