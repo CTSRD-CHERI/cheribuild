@@ -121,14 +121,14 @@ class BuildSyzkaller(CrossCompileProject):
 
         self.makedirs(syz_remote_install)
 
-        self.installFile(native_build / "syz-manager", self.syzkaller_binary(), mode=0o755)
+        self.install_file(native_build / "syz-manager", self.syzkaller_binary(), mode=0o755)
 
         if not self.config.pretend:
             # mips64_build does not exist if we preted, so skip
             for fname in os.listdir(str(mips64_build)):
                 fpath = mips64_build / fname
                 if os.path.isfile(fpath):
-                    self.installFile(fpath, syz_remote_install / fname, mode=0o755)
+                    self.install_file(fpath, syz_remote_install / fname, mode=0o755)
 
     def clean(self) -> ThreadJoiner:
         self.run_cmd(["chmod", "-R", "u+w", self.buildDir])

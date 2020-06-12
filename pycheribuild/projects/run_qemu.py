@@ -169,7 +169,7 @@ class LaunchQEMUBase(SimpleProject):
             if latest_symlink.is_symlink():
                 latest_symlink.unlink()
             if not latest_symlink.exists():
-                self.createSymlink(self.log_directory / filename, latest_symlink, relative=True, cwd=self.log_directory)
+                self.create_symlink(self.log_directory / filename, latest_symlink, relative=True, cwd=self.log_directory)
             logfile_options = ["-D", self.log_directory / filename]
 
         if self.cvtrace:
@@ -400,7 +400,7 @@ class AbstractLaunchFreeBSD(LaunchQEMUBase):
             return
         scp_path = os.path.expandvars(self.remoteKernelPath)
         self.makedirs(self.currentKernel.parent)
-        self.copyRemoteFile(scp_path, self.currentKernel)
+        self.copy_remote_file(scp_path, self.currentKernel)
 
     def process(self):
         if self.needsRemoteKernelCopy:

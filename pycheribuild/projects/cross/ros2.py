@@ -77,7 +77,7 @@ class BuildRos2(CrossCompileCMakeProject):
         poco_path = self.target_info.sysroot_install_prefix_absolute / "lib/libPocoUtil.so.71"
         if poco_path.is_file():
             self.info("Found pocofoundation:", poco_path)
-            self.installFile(poco_path, self.sourceDir / poco_path.name, force=True, print_verbose_only=False)
+            self.install_file(poco_path, self.sourceDir / poco_path.name, force=True, print_verbose_only=False)
         else:
             self.fatal("libPocoFoundation.so.71 cannot be found at expected path", poco_path)
 
@@ -121,14 +121,14 @@ if (! $?LD_LIBRARY_PATH ) then
 endif
 setenv LD_LIBRARY_PATH {LD_LIBRARY_PATH}
 """.format(LD_CHERI_LIBRARY_PATH=LD_CHERI_LIBRARY_PATH, LD_LIBRARY_PATH=LD_LIBRARY_PATH)
-        self.writeFile(self.sourceDir / 'cheri_setup.csh', csh_script, overwrite=True)
+        self.write_file(self.sourceDir / 'cheri_setup.csh', csh_script, overwrite=True)
         posix_sh_script = """#!/bin/sh
 rootdir=`pwd`
 export LD_CHERI_LIBRARY_PATH={LD_CHERI_LIBRARY_PATH}
 export LD_LIBRARY_PATH={LD_LIBRARY_PATH}
 """.format(LD_CHERI_LIBRARY_PATH=LD_CHERI_LIBRARY_PATH, LD_LIBRARY_PATH=LD_LIBRARY_PATH)
         # write LD_CHERI_LIBRARY_PATH to a text file to source from sh in CheriBSD
-        self.writeFile(self.sourceDir / 'cheri_setup.sh', posix_sh_script, overwrite=True)
+        self.write_file(self.sourceDir / 'cheri_setup.sh', posix_sh_script, overwrite=True)
 
     def update(self):
         super().update()

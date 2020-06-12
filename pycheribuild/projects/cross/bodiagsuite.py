@@ -131,7 +131,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
     def compile(self, **kwargs):
         super().compile(**kwargs)
         # TODO: add this copy to the CMakeLists.txt
-        self.installFile(self.sourceDir / "Makefile.bsd-run", self.buildDir / "Makefile.bsd-run", force=True)
+        self.install_file(self.sourceDir / "Makefile.bsd-run", self.buildDir / "Makefile.bsd-run", force=True)
 
     def install(self, *args, **kwargs):
         self.fatal("Should not be called")

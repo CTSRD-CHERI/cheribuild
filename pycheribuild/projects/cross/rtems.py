@@ -68,7 +68,7 @@ class BuildRtems(CrossCompileProject):
             captureOutput=True)
 
         # waf configure reads config.ini by default to read RTEMS flags from
-        self.writeFile(self.sourceDir / "config.ini", str(waf_run.stdout, 'utf-8'), overwrite=True)
+        self.write_file(self.sourceDir / "config.ini", str(waf_run.stdout, 'utf-8'), overwrite=True)
         self._run_waf("configure", "--prefix", self.destdir)
 
     def compile(self, **kwargs):

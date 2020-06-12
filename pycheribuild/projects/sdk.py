@@ -79,8 +79,8 @@ class BuildFreestandingSdk(SimpleProject):
         config_file = includeLocalFile("files/CheriSDKConfig.cmake")
         cmake_config_dir = self.config.cheri_sdk_dir / "share/cmake/CheriSDK"
         self.makedirs(cmake_config_dir)
-        self.writeFile(cmake_config_dir / "CheriSDKConfig.cmake", config_file, overwrite=True)
-        self.writeFile(cmake_config_dir / "CheriSDKConfigVersion.cmake", version_file, overwrite=True)
+        self.write_file(cmake_config_dir / "CheriSDKConfig.cmake", config_file, overwrite=True)
+        self.write_file(cmake_config_dir / "CheriSDKConfigVersion.cmake", version_file, overwrite=True)
 
     def buildCheridis(self):
         # Compile the cheridis helper (TODO: add it to the LLVM repo instead?)
@@ -114,9 +114,9 @@ class BuildFreestandingSdk(SimpleProject):
         # install tools:
         for tool in binutilsBinaries:
             if (CHERITOOLS_OBJ / tool).is_file():
-                self.installFile(CHERITOOLS_OBJ / tool, self.config.cheri_sdk_bindir / tool, force=True)
+                self.install_file(CHERITOOLS_OBJ / tool, self.config.cheri_sdk_bindir / tool, force=True)
             elif (CHERIBOOTSTRAPTOOLS_OBJ / tool).is_file():
-                self.installFile(CHERIBOOTSTRAPTOOLS_OBJ / tool, self.config.cheri_sdk_bindir / tool, force=True)
+                self.install_file(CHERIBOOTSTRAPTOOLS_OBJ / tool, self.config.cheri_sdk_bindir / tool, force=True)
             else:
                 self.fatal("Required tool", tool, "is missing!")
 
@@ -126,7 +126,7 @@ class BuildFreestandingSdk(SimpleProject):
         # We must make this the same directory that contains ld for linking and
         # compiling to both work...
         # for tool in ("cc1", "cc1plus"):
-        #    self.installFile(CHERILIBEXEC_OBJ / tool, self.config.cheri_sdk_bindir / tool, force=True)
+        #    self.install_file(CHERILIBEXEC_OBJ / tool, self.config.cheri_sdk_bindir / tool, force=True)
 
 
 # Binutils now just builds LLVM since we don't need GNU binutils or Elftoolchain any more

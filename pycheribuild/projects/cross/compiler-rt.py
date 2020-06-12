@@ -89,7 +89,7 @@ class BuildCompilerRt(CrossCompileCMakeProject):
                 self.warning("Did not install compiler runtime", rt_runtime_path.exists)
             else:
                 print(self.target_info.sysroot_dir)
-                self.createSymlink(rt_runtime_path, self.target_info.sysroot_dir / "lib/libclang_rt.builtins-riscv64.a")
+                self.create_symlink(rt_runtime_path, self.target_info.sysroot_dir / "lib/libclang_rt.builtins-riscv64.a")
 
 
 class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
@@ -155,15 +155,15 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         libname = "libclang_rt.builtins-" + self.triple_arch + ".a"
 
         if self.target_info.is_rtems():
-            self.moveFile(self.installDir / "lib/rtems5" / libname, self.installDir / "lib" / libname)
+            self.move_file(self.installDir / "lib/rtems5" / libname, self.installDir / "lib" / libname)
         else:
-            self.moveFile(self.installDir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
+            self.move_file(self.installDir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
 
             if self.compiling_for_cheri():
                 # compatibility with older compilers
-                self.createSymlink(self.real_install_root_dir / "lib" / libname,
+                self.create_symlink(self.real_install_root_dir / "lib" / libname,
                                    self.real_install_root_dir / "lib" / "libclang_rt.builtins-cheri.a", print_verbose_only=False)
-                self.createSymlink(self.real_install_root_dir / "lib" / libname,
+                self.create_symlink(self.real_install_root_dir / "lib" / libname,
                                    self.real_install_root_dir / "lib" / "libclang_rt.builtins-mips64.a", print_verbose_only=False)
             # HACK: we don't really need libunwind but the toolchain pulls it in automatically
             # TODO: is there an easier way to create empty .a files?

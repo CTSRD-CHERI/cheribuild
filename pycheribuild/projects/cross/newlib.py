@@ -181,12 +181,12 @@ class BuildNewlib(CrossCompileAutotoolsProject):
             # create some symlinks to make the current CMakeProject infrastructure happy
             root_dir = self.installDir / self.target_info.target_triple
             self.makedirs(root_dir / "usr")
-            self.createSymlink(root_dir / "lib", root_dir / "usr/libcheri")
-            self.createSymlink(root_dir / "lib", root_dir / "libcheri")
+            self.create_symlink(root_dir / "lib", root_dir / "usr/libcheri")
+            self.create_symlink(root_dir / "lib", root_dir / "libcheri")
 
     def run_tests(self):
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
-            self.writeFile(Path(td, "main.c"), contents="""
+            self.write_file(Path(td, "main.c"), contents="""
 #include <stdio.h>
 int main(int argc, char** argv) {
   for (int i = 0; i < argc; i++) {

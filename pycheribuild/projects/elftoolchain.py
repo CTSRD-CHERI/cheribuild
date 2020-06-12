@@ -152,9 +152,9 @@ class BuildElftoolchain(Project):
                 self.create_triple_prefixed_symlinks(self.installDir / "bin" / prog)
         # if we didn't build ar/ranlib add symlinks to the versions in /usr/bin
         if not self.build_ar:
-            self.createSymlink(Path("/usr/bin/ar"), self.installDir / "bin/ar", relative=False)
+            self.create_symlink(Path("/usr/bin/ar"), self.installDir / "bin/ar", relative=False)
             self.create_triple_prefixed_symlinks(self.installDir / "bin/ar")
-            self.createSymlink(Path("/usr/bin/ranlib"), self.installDir / "bin/ranlib", relative=False)
+            self.create_symlink(Path("/usr/bin/ranlib"), self.installDir / "bin/ranlib", relative=False)
             self.create_triple_prefixed_symlinks(self.installDir / "bin/ranlib")
 
     @property

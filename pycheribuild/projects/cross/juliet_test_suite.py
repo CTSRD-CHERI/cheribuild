@@ -75,7 +75,7 @@ class BuildJulietCWESubdir(CrossCompileCMakeProject):
 
     def configure(self, **kwargs):
         self.add_cmake_options(PLACE_OUTPUT_IN_TOPLEVEL_DIR=False)
-        self.createSymlink(self.sourceDir / "../../CMakeLists.txt", self.sourceDir / "CMakeLists.txt")
+        self.create_symlink(self.sourceDir / "../../CMakeLists.txt", self.sourceDir / "CMakeLists.txt")
         super().configure(**kwargs)
 
     def install(self, *args, **kwargs):

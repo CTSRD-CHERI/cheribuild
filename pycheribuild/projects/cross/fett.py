@@ -166,8 +166,8 @@ class BuildFettVoting(CrossCompileProject):
 
     def install(self, **kwargs):
         if not self.compiling_for_host():
-            self.installFile(self.buildDir / "source/src/bvrs", self.real_install_root_dir / "var/www/cgi-bin/bvrs")
-            self.installFile(self.buildDir / "source/src/bvrs.sql", self.real_install_root_dir / "share/bvrs.sql")
+            self.install_file(self.buildDir / "source/src/bvrs", self.real_install_root_dir / "var/www/cgi-bin/bvrs")
+            self.install_file(self.buildDir / "source/src/bvrs.sql", self.real_install_root_dir / "share/bvrs.sql")
 
 
 class BuildFettDiskImage(BuildCheriBSDDiskImage):

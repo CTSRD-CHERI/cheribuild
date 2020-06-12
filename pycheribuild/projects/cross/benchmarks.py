@@ -188,7 +188,7 @@ class BuildOlden(CrossCompileProject):
                 self.fatal("Unknown target: ", self.crosscompile_target)
         # copy asan libraries and the run script to the bin dir to ensure that we can run with --test from the
         # build directory.
-        self.installFile(self.sourceDir / "run_jenkins-bluehive.sh",
+        self.install_file(self.sourceDir / "run_jenkins-bluehive.sh",
                          self.buildDir / "bin/run_jenkins-bluehive.sh", force=True)
         if self.compiling_for_mips(include_purecap=False) and self.use_asan:
             self.copy_asan_dependencies(self.buildDir / "bin/lib")
@@ -343,7 +343,7 @@ class BuildSpec2006(CrossCompileProject):
             for dir in benchspec_overrides.iterdir():
                 self.run_cmd("cp", "-a", dir, ".", cwd=self.buildDir / "spec/benchspec")
 
-        config_file_text = self.readFile(self.spec_config_dir / "freebsd-cheribuild.cfg")
+        config_file_text = self.read_file(self.spec_config_dir / "freebsd-cheribuild.cfg")
         # FIXME: this should really not be needed....
         self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse") # FIXME: cannot patch xalanbmk
         self.cross_warning_flags.append("-Wno-error=implicit-function-declaration") # FIXME: cannot patch hmmr
@@ -369,8 +369,8 @@ class BuildSpec2006(CrossCompileProject):
         config_file_text = config_file_text.replace("@SYSROOT@", str(self.sdk_sysroot) if not self.compiling_for_host() else "/")
         config_file_text = config_file_text.replace("@SYS_BIN@", str(self.sdk_bindir) if not self.compiling_for_host() else "/")
 
-        self.writeFile(self.buildDir / "spec/config/" / (self.config_name + ".cfg"), contents=config_file_text,
-                       overwrite=True, noCommandPrint=False, mode=0o644)
+        self.write_file(self.buildDir / "spec/config/" / (self.config_name + ".cfg"), contents=config_file_text,
+                       overwrite=True, never_print_cmd=False, mode=0o644)
 
         script = """
 source shrc
@@ -404,7 +404,7 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
                 if (self.spec_run_scripts / dir.name).exists():
                     self.run_cmd("cp", "-av", self.spec_run_scripts / dir.name, str(spec_root) + "/")
         run_script = spec_root / "run_jenkins-bluehive.sh"
-        self.installFile(self.spec_run_scripts / "run_jenkins-bluehive.sh", run_script, mode=0o755, print_verbose_only=False)
+        self.install_file(self.spec_run_scripts / "run_jenkins-bluehive.sh", run_script, mode=0o755, print_verbose_only=False)
         self.run_cmd("find", output_dir, runInPretendMode=True)
         if not self.config.pretend:
             assert run_script.stat().st_mode & stat.S_IXUSR
@@ -421,13 +421,13 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
             for libdir in libdirs:
                 guess = Path(self.sdk_sysroot, libdir, needed_lib)
                 if guess.exists():
-                    self.installFile(guess, spec_root / "lib" / needed_lib, print_verbose_only=False, force=True)
+                    self.install_file(guess, spec_root / "lib" / needed_lib, print_verbose_only=False, force=True)
 
         # Add libcheri_caprevoke if it exists:
         if self.compiling_for_cheri():
             caprevoke = "libcheri_caprevoke.so.1"
             if (self.sdk_sysroot / "usr/libcheri" / caprevoke).exists():
-                self.installFile(self.sdk_sysroot / "usr/libcheri" / caprevoke, spec_root / "lib" / caprevoke,
+                self.install_file(self.sdk_sysroot / "usr/libcheri" / caprevoke, spec_root / "lib" / caprevoke,
                                  print_verbose_only=False, force=True)
 
         # To copy all of them:

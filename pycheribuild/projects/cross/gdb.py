@@ -208,8 +208,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
             binutils = ("objdump", "objcopy", "addr2line", "readelf", "ar", "ranlib", "size", "strings")
             bindir = self.installDir / "bin"
             for util in binutils:
-                self.installFile(self.buildDir / "binutils" / util, bindir / ("g" + util))
+                self.install_file(self.buildDir / "binutils" / util, bindir / ("g" + util))
             # nm and c++filt have a different name in the build dir:
-            self.installFile(self.buildDir / "binutils/cxxfilt", bindir / "gc++filt")
-            self.installFile(self.buildDir / "binutils/nm-new", bindir / "gnm")
-            self.installFile(self.buildDir / "binutils/strip-new", bindir / "gstrip")
+            self.install_file(self.buildDir / "binutils/cxxfilt", bindir / "gc++filt")
+            self.install_file(self.buildDir / "binutils/nm-new", bindir / "gnm")
+            self.install_file(self.buildDir / "binutils/strip-new", bindir / "gstrip")

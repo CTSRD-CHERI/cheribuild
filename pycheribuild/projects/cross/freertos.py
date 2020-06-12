@@ -99,7 +99,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                 self.run_make("clean", cwd=self.sourceDir / str("FreeRTOS/Demo/"+demo))
                 self.make_args.set(PROG=app)
                 self.run_make(cwd=self.sourceDir / str("FreeRTOS/Demo/"+demo))
-                self.moveFile(self.sourceDir / str("FreeRTOS/Demo/"+demo+"/"+app+".elf"),
+                self.move_file(self.sourceDir / str("FreeRTOS/Demo/"+demo+"/"+app+".elf"),
                               self.sourceDir / str("FreeRTOS/Demo/"+demo+"/"+demo+app+".elf"))
 
     def configure(self):
@@ -111,7 +111,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
     def install(self, **kwargs):
         for demo in self.freertos_demos:
             for app in self.demo_apps[demo]:
-                self.installFile(self.sourceDir / str("FreeRTOS/Demo/"+demo+"/"+demo+app+".elf"),
+                self.install_file(self.sourceDir / str("FreeRTOS/Demo/"+demo+"/"+demo+app+".elf"),
                             self.real_install_root_dir / str("FreeRTOS/Demo/"+demo+"_"+app+".elf"))
 
     def process(self):

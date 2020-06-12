@@ -91,7 +91,7 @@ class BuildGo(Project):
 
         # Refresh the link in sdk/bin
         self.deleteFile(self.installDir / "bin" / "go")
-        self.createSymlink(self.gorootDir / "bin" / "go", self.installDir / "bin" / "go")
+        self.create_symlink(self.gorootDir / "bin" / "go", self.installDir / "bin" / "go")
 
     def run_tests(self):
         cmd = "bash run.bash --no-rebuild".split()

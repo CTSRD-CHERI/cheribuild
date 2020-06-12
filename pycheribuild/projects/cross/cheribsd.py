@@ -1323,11 +1323,11 @@ class BuildCheriBsdMfsKernel(SimpleProject):
                 else:
                     # All other kernels are installed with a suffixex name:
                     source_path = Path(td, "boot/kernel." + conf, "kernel")
-                self.installFile(source_path, kernel_install_path, force=True, print_verbose_only=False)
+                self.install_file(source_path, kernel_install_path, force=True, print_verbose_only=False)
                 dbg_info_kernel = source_path.with_suffix(".full")
                 if dbg_info_kernel.exists():
                     fullkernel_install_path = kernel_install_path.with_name(kernel_install_path.name + ".full")
-                    self.installFile(dbg_info_kernel, fullkernel_install_path, force=True, print_verbose_only=False)
+                    self.install_file(dbg_info_kernel, fullkernel_install_path, force=True, print_verbose_only=False)
 
     @property
     def crossbuild(self):
@@ -1496,7 +1496,7 @@ class BuildCheriBsdSysroot(SimpleProject):
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
-        if not OSInfo.IS_FREEBSD and not self.remotePath and not self.rootfs_source_class.get_instance(self).crossbuild:
+        if not OSInfo.IS_FREEBSD and not self.remote_path and not self.rootfs_source_class.get_instance(self).crossbuild:
             config_option = "'--" + self.target + "/" + "remote-sdk-path'"
             self.fatal("Path to the remote SDK is not set, option", config_option,
                        "must be set to a path that scp understands (e.g. vica:~foo/cheri/output/sdk)")
@@ -1508,7 +1508,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         super().setup_config_options(**kwargs)
         cls.copy_remote_sysroot = cls.add_bool_option("copy-remote-sysroot",
             help="Copy sysroot from remote server instead of from local machine")
-        cls.remotePath = cls.add_config_option("remote-sdk-path", show_help=True, metavar="PATH",
+        cls.remote_path = cls.add_config_option("remote-sdk-path", show_help=True, metavar="PATH",
             help="The path to the CHERI SDK on the remote FreeBSD machine (e.g. vica:~foo/cheri/output/sdk)")
         cls.use_cheri_sysroot_for_mips = cls.add_bool_option("use-cheri-sysroot-for-mips",
             help="Create the MIPS sysroot using the files from hybrid CHERI libraries (note: binaries build from this "
@@ -1526,21 +1526,21 @@ class BuildCheriBsdSysroot(SimpleProject):
 
     def copySysrootFromRemoteMachine(self):
         statusUpdate("Copying sysroot from remote system.")
-        if not self.remotePath:
+        if not self.remote_path:
             self.fatal(
                 "Missing remote SDK path: Please set --cheribsd-sysroot/remote-sdk-path (or --freebsd/crossbuild)")
             if self.config.pretend:
-                self.remotePath = "someuser@somehose:this/path/does/not/exist"
+                self.remote_path = "someuser@somehose:this/path/does/not/exist"
         # noinspection PyAttributeOutsideInit
-        self.remotePath = os.path.expandvars(self.remotePath)
-        remote_sysroot_archive = self.remotePath + "/" + self.sysroot_archive_name
+        self.remote_path = os.path.expandvars(self.remote_path)
+        remote_sysroot_archive = self.remote_path + "/" + self.sysroot_archive_name
         statusUpdate("Will copy the sysroot files from ", remote_sysroot_archive, sep="")
         if not self.query_yes_no("Continue?"):
             return
 
         # now copy the files
         self.makedirs(self.crossSysrootPath)
-        self.copyRemoteFile(remote_sysroot_archive, self.sysroot_archive)
+        self.copy_remote_file(remote_sysroot_archive, self.sysroot_archive)
         runCmd("tar", "xzf", self.sysroot_archive, cwd=self.crossSysrootPath.parent)
 
     @property

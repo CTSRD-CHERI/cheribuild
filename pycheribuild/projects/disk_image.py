@@ -80,7 +80,7 @@ class _BuildDiskImageBase(SimpleProject):
         if "useQCOW2" not in cls.__dict__:
             cls.useQCOW2 = cls.add_bool_option("use-qcow2", help="Convert the disk image to QCOW2 format instead of raw")
         if not OSInfo.IS_FREEBSD:
-            cls.remotePath = cls.add_config_option("remote-path", show_help=True, metavar="PATH", help="The path on the "
+            cls.remote_path = cls.add_config_option("remote-path", show_help=True, metavar="PATH", help="The path on the "
                                                  "remote FreeBSD machine from where to copy the disk image")
         cls.wget_via_tmp = cls.add_bool_option("wget-via-tmp",
                                 help="Use a directory in /tmp for recursive wget operations;"
@@ -156,17 +156,17 @@ class _BuildDiskImageBase(SimpleProject):
         if userProvided.is_file():
             self.verbose_print("Using user provided /", pathInImage, " instead of generating default", sep="")
             self.extraFiles.remove(userProvided)
-            targetFile = userProvided
+            target_file = userProvided
             baseDir = self.extraFilesDir
         else:
             assert userProvided not in self.extraFiles
-            targetFile = self.tmpdir / pathInImage
+            target_file = self.tmpdir / pathInImage
             baseDir = self.tmpdir
             if self.config.verbose or (showContentsByDefault and not self.config.quiet):
                 print("Generating /", pathInImage, " with the following contents:\n",
                       coloured(AnsiColour.green, contents), sep="", end="")
-            self.writeFile(targetFile, contents, noCommandPrint=True, overwrite=False, mode=mode)
-        self.add_file_to_image(targetFile, base_directory=baseDir)
+            self.write_file(target_file, contents, never_print_cmd=True, overwrite=False, mode=mode)
+        self.add_file_to_image(target_file, base_directory=baseDir)
 
     def _wget_fetch(self, what, where):
         # https://apple.stackexchange.com/a/100573/251654
@@ -281,7 +281,7 @@ class _BuildDiskImageBase(SimpleProject):
         else:
             self.info("Adding 'PermitRootLogin without-password\nUseDNS no' to /etc/ssh/sshd_config")
             # make sure we can login as root with pubkey auth:
-            newSshdConfigContents = self.readFile(sshdConfig)
+            newSshdConfigContents = self.read_file(sshdConfig)
             newSshdConfigContents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
             newSshdConfigContents += "\n# Major speedup to SSH performance:\n UseDNS no\n"
             self.createFileForImage("/etc/ssh/sshd_config", contents=newSshdConfigContents,
@@ -295,12 +295,12 @@ class _BuildDiskImageBase(SimpleProject):
                 if self.query_yes_no("Should they be added to /root/.ssh/authorized_keys?", default_result=True):
                     contents = ""
                     for pubkey in sshKeys:
-                        contents += self.readFile(pubkey)
+                        contents += self.read_file(pubkey)
                     self.createFileForImage("/root/.ssh/authorized_keys", contents=contents, mode=0o600)
                     if self.query_yes_no("Should this authorized_keys file be used by default? "
                                        "(You can always change them by editing/deleting '" +
                                        str(authorizedKeys) + "')?"):
-                        self.installFile(self.tmpdir / "root/.ssh/authorized_keys", authorizedKeys)
+                        self.install_file(self.tmpdir / "root/.ssh/authorized_keys", authorizedKeys)
                         # SSHD complains and rejects all connections if /root or /root/.ssh is not 0700
                         self.run_cmd("chmod", "0700", authorizedKeys.parent.parent, authorizedKeys.parent)
                         self.run_cmd("chmod", "0600", authorizedKeys)
@@ -480,17 +480,17 @@ class _BuildDiskImageBase(SimpleProject):
 
     def copyFromRemoteHost(self):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
-        if not self.remotePath:
+        if not self.remote_path:
             self.fatal("Path to the remote disk image is not set, option '--", self.target, "/", "remote-path' must "
                        "be set to a path that scp understands (e.g. vica:/foo/bar/disk.img)", sep="")
             return
         # noinspection PyAttributeOutsideInit
-        self.remotePath = os.path.expandvars(self.remotePath)
-        statusUpdate("Will copy the disk-image from ", self.remotePath, sep="")
+        self.remote_path = os.path.expandvars(self.remote_path)
+        statusUpdate("Will copy the disk-image from ", self.remote_path, sep="")
         if not self.query_yes_no("Continue?"):
             return
 
-        self.copyRemoteFile(self.remotePath, self.disk_image_path)
+        self.copy_remote_file(self.remote_path, self.disk_image_path)
 
     def process(self):
         if not OSInfo.IS_FREEBSD and self.crossBuildImage:

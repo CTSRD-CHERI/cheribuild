@@ -83,7 +83,7 @@ class FileSystemUtils(object):
             except Exception as e:
                 warningMessage("Could not remove directory", self.path, e)
 
-    def async_clean_directory(self, path: Path, *, keep_root=False, keep_dirs: list=None) -> ThreadJoiner:
+    def async_clean_directory(self, path: Path, *, keep_root=False, keep_dirs: list = None) -> ThreadJoiner:
         """
         Delete a directory in the background (e.g. deleting the cheribsd build directory delays the build
         with self.async_clean_directory("foo")
@@ -151,36 +151,36 @@ class FileSystemUtils(object):
         file.unlink()
 
     @staticmethod
-    def copyRemoteFile(remotePath: str, targetFile: Path):
+    def copy_remote_file(remote_path: str, target_file: Path):
         # if we have rsync we can skip the copy if file is already up-to-date
         if shutil.which("rsync"):
             try:
-                runCmd("rsync", "-aviu", "--progress", remotePath, targetFile)
+                runCmd("rsync", "-aviu", "--progress", remote_path, target_file)
             except subprocess.CalledProcessError as err:
                 if err.returncode == 127:
                     warningMessage("rysnc doesn't seem to be installed on remote machine, trying scp")
-                    runCmd("scp", remotePath, targetFile)
+                    runCmd("scp", remote_path, target_file)
                 else:
                     raise err
         else:
-            runCmd("scp", remotePath, targetFile)
+            runCmd("scp", remote_path, target_file)
 
-    def readFile(self, file: Path) -> str:
+    def read_file(self, file: Path) -> str:
         # just return an empty string in pretend mode
         if self.config.pretend and not file.is_file():
             return "\n"
         with file.open("r", encoding="utf-8") as f:
             return f.read()
 
-    def writeFile(self, file: Path, contents: str, *, overwrite: bool, noCommandPrint=False, mode=None) -> None:
+    def write_file(self, file: Path, contents: str, *, overwrite: bool, never_print_cmd=False, mode=None) -> None:
         """
         :param file: The target path to write contents to
         :param contents: the contents of the new file
         :param mode: The file mode for the resulting file (octal number or string)
         :param overwrite: If true the file will be overwritten, otherwise it will cause an error if the file exists
-        :param noCommandPrint: don't ever print the echo commmand (even in verbose)
+        :param never_print_cmd: don't ever print the echo commmand (even in verbose)
         """
-        if not noCommandPrint:
+        if not never_print_cmd:
             printCommand("echo", contents, colour=AnsiColour.green, outputFile=file, print_verbose_only=True)
         if self.config.pretend:
             return
@@ -192,7 +192,7 @@ class FileSystemUtils(object):
         if mode:
             file.chmod(mode)
 
-    def createSymlink(self, src: Path, dest: Path, *, relative=True, cwd: Path = None, print_verbose_only = True):
+    def create_symlink(self, src: Path, dest: Path, *, relative=True, cwd: Path = None, print_verbose_only=True):
         assert dest.is_absolute() or cwd is not None
         if not cwd:
             cwd = dest.parent
@@ -205,15 +205,15 @@ class FileSystemUtils(object):
         else:
             runCmd("ln", "-fsn", src, dest, cwd=cwd, print_verbose_only=print_verbose_only)
 
-    def moveFile(self, src: Path, dest: Path, force=False, createDirs=True):
+    def move_file(self, src: Path, dest: Path, force=False, create_dirs=True):
         if not src.exists():
             fatalError(src, "doesn't exist")
         cmd = ["mv", "-f"] if force else ["mv"]
-        if createDirs and not dest.parent.exists():
+        if create_dirs and not dest.parent.exists():
             self.makedirs(dest.parent)
         runCmd(cmd + [str(src), str(dest)])
 
-    def installFile(self, src: Path, dest: Path, *, force=False, createDirs=True, print_verbose_only=True, mode=None):
+    def install_file(self, src: Path, dest: Path, *, force=False, create_dirs=True, print_verbose_only=True, mode=None):
         if force:
             printCommand("cp", "-f", src, dest, print_verbose_only=print_verbose_only)
         else:
@@ -222,12 +222,12 @@ class FileSystemUtils(object):
             if mode is not None:
                 printCommand("chmod", oct(mode), dest, print_verbose_only=print_verbose_only)
             return
-        assert not dest.is_dir(), "installFile: target is a directory and not a file: " + str(dest)
+        assert not dest.is_dir(), "install_file: target is a directory and not a file: " + str(dest)
         if (dest.is_symlink() or dest.exists()) and force:
             dest.unlink()
         if not src.exists():
             fatalError("Required file", src, "does not exist")
-        if createDirs and not dest.parent.exists():
+        if create_dirs and not dest.parent.exists():
             self.makedirs(dest.parent)
         if dest.is_symlink():
             dest.unlink()
@@ -274,11 +274,11 @@ class FileSystemUtils(object):
     @staticmethod
     # Not cached since another target could write to this dir: @functools.lru_cache(maxsize=20)
     def is_nonexistent_or_empty_dir(d: Path):
-        #print("Checking if dir is empty:", d)
+        # print("Checking if dir is empty:", d)
         if not d.exists():
             return True
-        for i, item in enumerate(d.iterdir()):
-            #print(d, "is not empty, found ", item)
+        for _ in d.iterdir():
+            # print(d, "is not empty, found ", item)
             return False
-        #print(d, "is empty")
+        # print(d, "is empty")
         return True

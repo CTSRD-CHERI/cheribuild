@@ -259,7 +259,7 @@ case "$@" in
 esac
 exec {lld} "$@"
 """.format(lld=self.installDir / "bin/ld.lld")
-                self.writeFile(self.installDir / "bin/ld", script, overwrite=True, mode=0o755)
+                self.write_file(self.installDir / "bin/ld", script, overwrite=True, mode=0o755)
             self.create_triple_prefixed_symlinks(self.installDir / "bin/ld.lld", tool_name="ld",
                 create_unprefixed_link=not OSInfo.IS_MAC)
 
@@ -325,14 +325,14 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
                 prefix = "cheribsd" + str(cheri_bits) + abi
                 config_file_contents = config_file_template.format(cheri_bits=cheri_bits, abi=abi,
                     sdk_dir=self.installDir)
-                self.writeFile(self.installDir / "bin" / (prefix + ".cfg"), config_file_contents, overwrite=True,
+                self.write_file(self.installDir / "bin" / (prefix + ".cfg"), config_file_contents, overwrite=True,
                     mode=0o644)
-                self.createSymlink(self.installDir / "bin/clang", self.installDir / "bin" / (prefix + "-clang"))
-                self.createSymlink(self.installDir / "bin/clang++", self.installDir / "bin" / (prefix + "-clang++"))
-                self.createSymlink(self.installDir / "bin/clang-cpp", self.installDir / "bin" / (prefix + "-clang-cpp"))
+                self.create_symlink(self.installDir / "bin/clang", self.installDir / "bin" / (prefix + "-clang"))
+                self.create_symlink(self.installDir / "bin/clang++", self.installDir / "bin" / (prefix + "-clang++"))
+                self.create_symlink(self.installDir / "bin/clang-cpp", self.installDir / "bin" / (prefix + "-clang-cpp"))
         # llvm-objdump currently doesn't infer the available features
         # This depends on https://reviews.llvm.org/D74023
-        self.writeFile(self.installDir / "bin/riscv64cheri-objdump",
+        self.write_file(self.installDir / "bin/riscv64cheri-objdump",
             "#!/bin/sh\nexec '{}' --mattr=+m,+a,+f,+d,+c,+xcheri \"$@\"".format(self.installDir / "bin/llvm-objdump"),
             overwrite=True, mode=0o755)
 
