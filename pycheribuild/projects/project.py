@@ -124,7 +124,8 @@ class ProjectSubclassDefinitionHook(type):
         supported_archs = cls.supported_architectures
         assert supported_archs, "Must not be empty: " + str(supported_archs)
         assert isinstance(supported_archs, list)
-        assert len(set(supported_archs)) == len(supported_archs), "Duplicates in supported archs for " + cls.__name__ + ": " + str(supported_archs)
+        assert len(set(supported_archs)) == len(
+            supported_archs), "Duplicates in supported archs for " + cls.__name__ + ": " + str(supported_archs)
         # TODO: if len(cls.supported_architectures) > 1:
         if cls._always_add_suffixed_targets or len(supported_archs) > 1:
             # Add a the target for the default architecture
@@ -170,7 +171,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     is_sdk_target = False  # for --skip-sdk
     sourceDir = None
     buildDir = None
-    build_in_source_dir = False # For projects that can't build in the source dir
+    build_in_source_dir = False  # For projects that can't build in the source dir
     installDir = None
     # Whether to hide the options from the default --help output (only add to --help-hidden)
     hide_options_from_help = False
@@ -235,13 +236,13 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if config.skipSdk and dep_target.projectClass.is_sdk_target:
                 if config.verbose:
                     statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
-                                 "since it is an SDK target and --skip-sdk was passed.")
+                        "since it is an SDK target and --skip-sdk was passed.")
                 continue
             if config.includeDependencies and (
                     not config.include_toolchain_dependencies and dep_target.projectClass.is_toolchain_target()):
                 if config.verbose:
                     statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
-                                 "since it is a toolchain target and --include-toolchain-dependencies was not passed.")
+                        "since it is a toolchain target and --include-toolchain-dependencies was not passed.")
                 continue
             # Now find the actual crosscompile targets for target aliases:
             if isinstance(dep_target, MultiArchTargetAlias):
@@ -453,11 +454,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     # Duplicate all arguments instead of using **kwargs to get sensible code completion
     @staticmethod
     def run_cmd(*args, captureOutput=False, captureError=False, input: typing.Union[str, bytes] = None, timeout=None,
-           print_verbose_only=False, runInPretendMode=False, raiseInPretendMode=False, no_print=False,
-           replace_env=False, **kwargs):
+                print_verbose_only=False, runInPretendMode=False, raiseInPretendMode=False, no_print=False,
+                replace_env=False, **kwargs):
         return runCmd(*args, captureOutput=captureOutput, captureError=captureError, input=input, timeout=timeout,
-                      print_verbose_only=print_verbose_only, runInPretendMode=runInPretendMode,
-                      raiseInPretendMode=raiseInPretendMode, no_print=no_print, replace_env=replace_env, **kwargs)
+            print_verbose_only=print_verbose_only, runInPretendMode=runInPretendMode,
+            raiseInPretendMode=raiseInPretendMode, no_print=no_print, replace_env=replace_env, **kwargs)
 
     @classmethod
     def add_config_option(cls, name: str, *, show_help=False, shortname=None, _no_fallback_config_name: bool = False,
@@ -525,20 +526,20 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             fallback_config_names.extend(extra_fallback_config_names)
         alias_target_names = [prefix + "/" + name for prefix in cls.__dict__.get("_alias_target_names", tuple())]
         return cls._configLoader.add_option(config_option_key + "/" + name, shortname, default=default, type=kind,
-                                           _owning_class=cls, group=cls._commandLineOptionGroup, help_hidden=help_hidden,
-                                           _fallback_names=fallback_config_names, _alias_names=alias_target_names, **kwargs)
+            _owning_class=cls, group=cls._commandLineOptionGroup, help_hidden=help_hidden,
+            _fallback_names=fallback_config_names, _alias_names=alias_target_names, **kwargs)
 
     @classmethod
     def add_bool_option(cls, name: str, *, shortname=None, only_add_for_targets: list = None,
                         default: "typing.Union[bool, ComputedDefaultValue[bool]]" = False, **kwargs) -> bool:
         # noinspection PyTypeChecker
         return cls.add_config_option(name, default=default, kind=bool, shortname=shortname, action="store_true",
-                                     only_add_for_targets=only_add_for_targets, **kwargs)
+            only_add_for_targets=only_add_for_targets, **kwargs)
 
     @classmethod
     def add_path_option(cls, name: str, *, shortname=None, only_add_for_targets: list = None, **kwargs) -> Path:
         return cls.add_config_option(name, kind=Path, shortname=shortname, only_add_for_targets=only_add_for_targets,
-                                     **kwargs)
+            **kwargs)
 
     __configOptionsSet = dict()  # typing.Dict[Type, bool]
 
@@ -552,7 +553,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         super().__init__(config)
         assert self._xtarget is not None, "Placeholder class should not be instantiated: " + repr(self)
         assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
-        assert self.__class__ in self.__configOptionsSet, "Forgot to call super().setup_config_options()? " + str(self.__class__)
+        assert self.__class__ in self.__configOptionsSet, "Forgot to call super().setup_config_options()? " + str(
+            self.__class__)
         self.__requiredSystemTools = {}  # type: typing.Dict[str, typing.Any]
         self.__requiredSystemHeaders = {}  # type: typing.Dict[str, typing.Any]
         self.__requiredPkgConfig = {}  # type: typing.Dict[str, typing.Any]
@@ -568,30 +570,32 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         assert not self._setup_called, "Should only be called once"
         self._setup_called = True
 
-    def add_required_system_tool(self, executable: str, install_instructions=None, freebsd: str=None, apt: str=None,
-                              zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
+    def add_required_system_tool(self, executable: str, install_instructions=None, freebsd: str = None, apt: str = None,
+                                 zypper: str = None, homebrew: str = None, cheribuild_target: str = None):
         if not install_instructions:
-            install_instructions = OSInfo.install_instructions(executable, False, freebsd=freebsd, zypper=zypper, apt=apt,
-                                                              homebrew=homebrew, cheribuild_target=cheribuild_target)
+            install_instructions = OSInfo.install_instructions(executable, False, freebsd=freebsd, zypper=zypper,
+                apt=apt,
+                homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__requiredSystemTools[executable] = install_instructions
 
-    def _addRequiredPkgConfig(self, package: str, install_instructions=None, freebsd: str=None, apt: str = None,
-                              zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
+    def _addRequiredPkgConfig(self, package: str, install_instructions=None, freebsd: str = None, apt: str = None,
+                              zypper: str = None, homebrew: str = None, cheribuild_target: str = None):
         self.add_required_system_tool("pkg-config", freebsd="pkgconf", homebrew="pkg-config", apt="pkg-config")
         if not install_instructions:
             install_instructions = OSInfo.install_instructions(package, True, freebsd=freebsd, zypper=zypper, apt=apt,
-                                                               homebrew=homebrew, cheribuild_target=cheribuild_target)
+                homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__requiredPkgConfig[package] = install_instructions
 
-    def _addRequiredSystemHeader(self, header: str, install_instructions=None, freebsd: str=None, apt: str = None,
-                              zypper: str=None, homebrew: str=None, cheribuild_target: str=None):
+    def _addRequiredSystemHeader(self, header: str, install_instructions=None, freebsd: str = None, apt: str = None,
+                                 zypper: str = None, homebrew: str = None, cheribuild_target: str = None):
         if not install_instructions:
             install_instructions = OSInfo.install_instructions(header, True, freebsd=freebsd, zypper=zypper, apt=apt,
-                                                               homebrew=homebrew, cheribuild_target=cheribuild_target)
+                homebrew=homebrew, cheribuild_target=cheribuild_target)
         self.__requiredSystemHeaders[header] = install_instructions
 
     @staticmethod
-    def _query_yes_no(config: CheriConfig, message: str = "", *, default_result=False, force_result=True, yes_no_str: str=None) -> bool:
+    def _query_yes_no(config: CheriConfig, message: str = "", *, default_result=False, force_result=True,
+                      yes_no_str: str = None) -> bool:
         if yes_no_str is None:
             yes_no_str = " [Y]/n " if default_result else " y/[N] "
         if config.pretend:
@@ -608,7 +612,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             return not result.startswith("n")  # if default is yes accept anything other than strings starting with "n"
         return str(result).lower().startswith("y")  # anything but y will be treated as false
 
-    def query_yes_no(self, message: str = "", *, default_result=False, force_result=True, yes_no_str: str=None) -> bool:
+    def query_yes_no(self, message: str = "", *, default_result=False, force_result=True,
+                     yes_no_str: str = None) -> bool:
         return self._query_yes_no(self.config, message, default_result=default_result, force_result=force_result,
             yes_no_str=yes_no_str)
 
@@ -655,7 +660,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         self._line_not_important_stdout_filter(line)
 
     def run_with_logfile(self, args: "typing.Sequence[str]", logfile_name: str, *, stdout_filter=None, cwd: Path = None,
-                       env: dict = None, append_to_logfile=False) -> None:
+                         env: dict = None, append_to_logfile=False) -> None:
         """
         Runs make and logs the output
         config.quiet doesn't display anything, normal only status updates and config.verbose everything
@@ -770,7 +775,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             if not shutil.which(str(tool)):
                 if install_instructions is None or install_instructions == "":
                     install_instructions = "Try installing `" + tool + "` using your system package manager."
-                self.dependency_error("Required program", tool, "is missing!", install_instructions=install_instructions)
+                self.dependency_error("Required program", tool, "is missing!",
+                    install_instructions=install_instructions)
         for (package, instructions) in self.__requiredPkgConfig.items():
             if not shutil.which("pkg-config"):
                 # error should already have printed above
@@ -801,7 +807,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         # noinspection PyUnusedLocal
         script_dir = Path("/this/will/not/work/when/using/remote-cheribuild.py")
         # generate a sensible error when using remote-cheribuild.py by omitting this line:
-        script_dir = Path(__file__).parent.parent.parent / "test-scripts"   # no-combine
+        script_dir = Path(__file__).parent.parent.parent / "test-scripts"  # no-combine
         return script_dir / script_name
 
     def run_shell_script(self, script, shell="sh", **kwargs):
@@ -963,7 +969,8 @@ class MakeOptions(object):
             self.__project.fatal("Cannot infer path from CustomMakeTool. Set self.make_args.set_command(\"tool\")")
             raise RuntimeError()
 
-    def set_command(self, value, can_pass_j_flag=True, early_args: "typing.List[str]" = None, *, install_instructions=None):
+    def set_command(self, value, can_pass_j_flag=True, early_args: "typing.List[str]" = None, *,
+                    install_instructions=None):
         self.__command = str(value)
         if early_args is None:
             early_args = []
@@ -1069,14 +1076,14 @@ class ReuseOtherProjectRepository(SourceRepository):
         src = self.get_real_source_dir(current_project, current_project.default_source_dir)
         if not src.exists():
             current_project.fatal("Source repository for target", current_project.target, "does not exist.",
-                                  fixitHint="This project uses the sources from the " + self.source_project.target +
-                                  "target so you will have to clone that first. Try running:\n\t`" +
-                                  "cheribuild.py " + self.source_project.target + "--no-skip-update --skip-configure " +
-                                  "--skip-build --skip-install`")
+                fixitHint="This project uses the sources from the " + self.source_project.target +
+                          "target so you will have to clone that first. Try running:\n\t`" +
+                          "cheribuild.py " + self.source_project.target + "--no-skip-update --skip-configure " +
+                          "--skip-build --skip-install`")
 
     def get_real_source_dir(self, caller: SimpleProject, default_src_dir: typing.Optional[Path]) -> Path:
         return self.source_project.getSourceDir(caller, caller.config,
-                                                cross_target=self.repo_for_target) / self.subdirectory
+            cross_target=self.repo_for_target) / self.subdirectory
 
     def update(self, current_project: "Project", *, src_dir: Path, **kwargs):
         # TODO: allow updating the repo?
@@ -1086,7 +1093,7 @@ class ReuseOtherProjectRepository(SourceRepository):
 class ReuseOtherProjectDefaultTargetRepository(ReuseOtherProjectRepository):
     def __init__(self, source_project: "typing.Type[Project]", *, subdirectory="."):
         super().__init__(source_project, subdirectory=subdirectory,
-                         repo_for_target=source_project.supported_architectures[0])
+            repo_for_target=source_project.supported_architectures[0])
 
 
 # Use git-worktree to handle per-target branches:
@@ -1146,7 +1153,7 @@ class GitRepository(SourceRepository):
         if (src_dir / ".git").exists():
             return
         current_project.info("Creating git-worktree checkout of", default_src_dir, "with branch",
-                             target_override.branch, "for", src_dir)
+            target_override.branch, "for", src_dir)
 
         # Find the first valid remote
         per_target_url = target_override.url if target_override.url else self.url
@@ -1159,14 +1166,14 @@ class GitRepository(SourceRepository):
         while True:
             try:
                 url = runCmd(["git", "-C", default_src_dir, "remote", "get-url", remote_name],
-                              captureOutput=True).stdout.decode("utf-8").strip()
+                    captureOutput=True).stdout.decode("utf-8").strip()
             except subprocess.CalledProcessError as e:
                 current_project.warning("Could not determine URL for remote", remote_name, str(e))
                 url = None
             if url == self.url:
                 break
             current_project.info("URL '", url, "' for remote ", remote_name, " does not match expected url '",
-                                 self.url, "'", sep="")
+                self.url, "'", sep="")
             if current_project.query_yes_no("Use this remote?"):
                 break
             remote_name = input("Please enter the correct remote: ")
@@ -1355,7 +1362,7 @@ class Project(SimpleProject):
     compileDBRequiresBear = True
     doNotAddToTargets = True
 
-    build_dir_suffix = ""   # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
+    build_dir_suffix = ""  # add a suffix to the build dir (e.g. for freebsd-with-bootstrap-clang)
     add_build_dir_suffix_for_native = False  # Whether to add -native to the native build dir
 
     defaultSourceDir = ComputedDefaultValue(
@@ -1439,7 +1446,7 @@ class Project(SimpleProject):
     def get_default_install_dir_kind(cls) -> DefaultInstallDir:
         if cls.default_install_dir is not None:
             assert cls.native_install_dir is None, "default_install_dir and native_install_dir are mutually " \
-                                                       "exclusive"
+                                                   "exclusive"
             assert cls.cross_install_dir is None, "default_install_dir and cross_install_dir are mutually exclusive"
             install_dir = cls.default_install_dir
         else:
@@ -1448,9 +1455,11 @@ class Project(SimpleProject):
             else:
                 install_dir = cls.cross_install_dir
         if install_dir is None and cls._default_install_dir_fn is Project._default_install_dir_fn:
-            raise RuntimeError("native_install_dir/cross_install_dir/_default_install_dir_fn not specified for " + cls.target)
+            raise RuntimeError(
+                "native_install_dir/cross_install_dir/_default_install_dir_fn not specified for " + cls.target)
         if install_dir == DefaultInstallDir.SYSROOT_FOR_BAREMETAL_ROOTFS_OTHERWISE:
-            if cls._xtarget is not None and (cls._xtarget.target_info_cls.is_baremetal() or cls._xtarget.target_info_cls.is_rtems()):
+            if cls._xtarget is not None and (
+                    cls._xtarget.target_info_cls.is_baremetal() or cls._xtarget.target_info_cls.is_rtems()):
                 install_dir = DefaultInstallDir.SYSROOT
             else:
                 install_dir = DefaultInstallDir.ROOTFS
@@ -1482,8 +1491,8 @@ class Project(SimpleProject):
         if compiler not in cls.__can_use_lld_map:
             try:
                 runCmd([compiler, "-fuse-ld=lld", "-xc", "-o", "/dev/null", "-"], runInPretendMode=True,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, raiseInPretendMode=True,
-                       input="int main() { return 0; }\n", print_verbose_only=True)
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, raiseInPretendMode=True,
+                    input="int main() { return 0; }\n", print_verbose_only=True)
                 statusUpdate(compiler, "supports -fuse-ld=lld, linking should be much faster!")
                 cls.__can_use_lld_map[compiler] = True
             except subprocess.CalledProcessError:
@@ -1516,32 +1525,34 @@ class Project(SimpleProject):
         super().setup_config_options(**kwargs)
         # statusUpdate("Setting up config options for", cls, cls.target)
         cls.default_source_dir = cls.add_path_option("source-directory", metavar="DIR", default=cls.defaultSourceDir,
-                                                   help="Override default source directory for " + cls.project_name)
+            help="Override default source directory for " + cls.project_name)
         cls.buildDir = cls.add_path_option("build-directory", metavar="DIR", default=cls.defaultBuildDir,
-                                         help="Override default source directory for " + cls.project_name)
+            help="Override default source directory for " + cls.project_name)
         if cls.can_build_with_asan:
             asan_default = ComputedDefaultValue(
-                function=lambda config, proj: False if proj.get_crosscompile_target(config).is_cheri_purecap() else proj.default_use_asan,
+                function=lambda config, proj: False if proj.get_crosscompile_target(
+                    config).is_cheri_purecap() else proj.default_use_asan,
                 as_string=str(cls.default_use_asan))
-            cls.use_asan = cls.add_bool_option("use-asan", default=asan_default, help="Build with AddressSanitizer enabled")
+            cls.use_asan = cls.add_bool_option("use-asan", default=asan_default,
+                help="Build with AddressSanitizer enabled")
         else:
             cls.use_asan = False
         cls.skipUpdate = cls.add_bool_option("skip-update",
-                                           default=ComputedDefaultValue(lambda config, proj: config.skipUpdate,
-                                                                        "the value of the global --skip-update option"),
-                                           help="Override --skip-update/--no-skip-update for this target only ")
+            default=ComputedDefaultValue(lambda config, proj: config.skipUpdate,
+                "the value of the global --skip-update option"),
+            help="Override --skip-update/--no-skip-update for this target only ")
 
         if not install_directory_help:
             install_directory_help = "Override default install directory for " + cls.project_name
         cls._installDir = cls.add_path_option("install-directory", metavar="DIR", help=install_directory_help,
-                                           default=cls._default_install_dir_fn)
+            default=cls._default_install_dir_fn)
         if "repository" in cls.__dict__ and isinstance(cls.repository, GitRepository):
             cls.gitRevision = cls.add_config_option("git-revision", metavar="REVISION",
                 help="The git revision to checkout prior to building. Useful if HEAD is broken for one "
                      "project but you still want to update the other projects.")
             # TODO: can argparse action be used to store to the class member directly?
             # seems like I can create a new action a pass a reference to the repository:
-            #class FooAction(argparse.Action):
+            # class FooAction(argparse.Action):
             # def __init__(self, option_strings, dest, nargs=None, **kwargs):
             #     if nargs is not None:
             #         raise ValueError("nargs not allowed")
@@ -1550,17 +1561,18 @@ class Project(SimpleProject):
             #     print('%r %r %r' % (namespace, values, option_string))
             #     setattr(namespace, self.dest, values)
             cls._repositoryUrl = cls.add_config_option("repository", kind=str, help="The URL of the git repository",
-                                                    default=cls.repository.url, metavar="REPOSITORY")
+                default=cls.repository.url, metavar="REPOSITORY")
         if "generate_cmakelists" not in cls.__dict__:
             # Make sure not to dereference a parent class descriptor here -> use getattr_static
             option = inspect.getattr_static(cls, "generate_cmakelists")
             # If option is not a fixed bool then we need a command line option:
             if not isinstance(option, bool):
                 assert option is None or isinstance(option, ConfigOptionBase)
-                assert not issubclass(cls, CMakeProject), "generate_cmakelists option needed -> should not be a CMakeProject"
+                assert not issubclass(cls,
+                    CMakeProject), "generate_cmakelists option needed -> should not be a CMakeProject"
                 cls.generate_cmakelists = cls.add_bool_option("generate-cmakelists",
-                                                        help="Generate a CMakeLists.txt that just calls cheribuild. "
-                                                             "Useful for IDEs that only support CMake")
+                    help="Generate a CMakeLists.txt that just calls cheribuild. "
+                         "Useful for IDEs that only support CMake")
             else:
                 assert issubclass(cls, CMakeProject), "Should be a CMakeProject: " + cls.__name__
 
@@ -1573,7 +1585,8 @@ class Project(SimpleProject):
         cls.build_type = cls.add_config_option("build-type",
             help="Optimization+debuginfo defaults (supports the same values as CMake (as well as 'DEFAULT' which"
                  " does not pass any additional flags to the configure command).",
-            default=cls.default_build_type, kind=BuildType, enum_choice_strings=[t.value for t in BuildType]) # type: BuildType
+            default=cls.default_build_type, kind=BuildType,
+            enum_choice_strings=[t.value for t in BuildType])  # type: BuildType
 
     def linkage(self):
         if self.target_info.must_link_statically:
@@ -1624,8 +1637,8 @@ class Project(SimpleProject):
         elif cbt in (BuildType.MINSIZEREL, BuildType.MINSIZERELWITHDEBINFO):
             return ["-Os"]
 
-    needs_mxcaptable_static = False     # E.g. for postgres which is just over the limit:
-    needs_mxcaptable_dynamic = False    # This might be true for Qt/QtWebkit
+    needs_mxcaptable_static = False  # E.g. for postgres which is just over the limit:
+    needs_mxcaptable_dynamic = False  # This might be true for Qt/QtWebkit
 
     @property
     def compiler_warning_flags(self):
@@ -1716,11 +1729,12 @@ class Project(SimpleProject):
             # take the JSON into account
             self.default_source_dir = self.repository.get_real_source_dir(self, self.default_source_dir)
             self.info("Overriding source directory for", self.target, "since it reuses the sources of",
-                      self.repository.source_project.target, "->", self.default_source_dir)
+                self.repository.source_project.target, "->", self.default_source_dir)
         self.sourceDir = self.repository.get_real_source_dir(self, self.default_source_dir)
 
         if self.build_in_source_dir:
-            self.verbose_print("Cannot build", self.project_name, "in a separate build dir, will build in", self.sourceDir)
+            self.verbose_print("Cannot build", self.project_name, "in a separate build dir, will build in",
+                self.sourceDir)
             self.buildDir = self.sourceDir
 
         self.configureCommand = ""
@@ -1746,7 +1760,8 @@ class Project(SimpleProject):
         if not self.compiling_for_host():
             install_dir_kind = self.get_default_install_dir_kind()
             # Install to SDK if CHERIBSD_ROOTFS is the install dir but we are not building for CheriBSD
-            if install_dir_kind == DefaultInstallDir.SYSROOT or install_dir_kind == DefaultInstallDir.SYSROOT_AND_ROOTFS:
+            if install_dir_kind == DefaultInstallDir.SYSROOT or install_dir_kind == \
+                    DefaultInstallDir.SYSROOT_AND_ROOTFS:
                 if self.target_info.is_baremetal():
                     self.destdir = self.sdk_sysroot.parent
                     self._installPrefix = Path("/", self.target_info.target_triple)
@@ -1778,7 +1793,8 @@ class Project(SimpleProject):
         # convert the tuples into mutable lists (this is needed to avoid modifying class variables)
         # See https://github.com/CTSRD-CHERI/cheribuild/issues/33
         self.cross_warning_flags = ["-Werror=cheri-capability-misuse", "-Werror=implicit-function-declaration",
-                                    "-Werror=format", "-Werror=undefined-internal", "-Werror=incompatible-pointer-types",
+                                    "-Werror=format", "-Werror=undefined-internal",
+                                    "-Werror=incompatible-pointer-types",
                                     "-Werror=cheri-prototypes", "-Werror=cheri-bitwise-operations"]
         # Make underaligned capability loads/stores an error and require an explicit cast:
         self.cross_warning_flags.append("-Werror=pass-failed")
@@ -1902,7 +1918,8 @@ class Project(SimpleProject):
                                    self.__class__.__name__)
         self.__dict__[name] = value
 
-    def _get_make_commandline(self, make_target, make_command, options: MakeOptions, parallel: bool=True, compilation_db_name: str=None):
+    def _get_make_commandline(self, make_target, make_command, options: MakeOptions, parallel: bool = True,
+                              compilation_db_name: str = None):
         assert options is not None
         assert make_command is not None
         options = options.copy()
@@ -1954,7 +1971,7 @@ class Project(SimpleProject):
         if not make_command:
             make_command = self.make_args.command
         all_args = self._get_make_commandline(make_target, make_command, options, parallel=parallel,
-                                              compilation_db_name=compilation_db_name)
+            compilation_db_name=compilation_db_name)
         if not cwd:
             cwd = self.buildDir
         if not logfile_name:
@@ -1972,7 +1989,7 @@ class Project(SimpleProject):
             stdout_filter = self._stdout_filter
         env = options.env_vars
         self.run_with_logfile(all_args, logfile_name=logfile_name, stdout_filter=stdout_filter, cwd=cwd, env=env,
-                              append_to_logfile=append_to_logfile)
+            append_to_logfile=append_to_logfile)
         # if we create a compilation db, copy it to the source dir:
         if self.config.copy_compilation_db_to_source_dir and (self.buildDir / compilation_db_name).exists():
             self.install_file(self.buildDir / compilation_db_name, self.sourceDir / compilation_db_name, force=True)
@@ -1982,9 +1999,9 @@ class Project(SimpleProject):
     def update(self):
         if not self.repository and not self.config.skipUpdate:
             self.fatal("Cannot update", self.project_name, "as it is missing a repository source",
-                       fatalWhenPretending=True)
+                fatalWhenPretending=True)
         self.repository.update(self, src_dir=self.sourceDir, default_src_dir=self.default_source_dir,
-                               revision=self.gitRevision, skip_submodules=self.skipGitSubmodules)
+            revision=self.gitRevision, skip_submodules=self.skipGitSubmodules)
         if self.is_large_source_repository and (self.sourceDir / ".git").exists():
             # This is a large repository, tell git to do whatever it can to speed up operations (new in 2.24):
             # https://git-scm.com/docs/git-config#Documentation/git-config.txt-featuremanyFiles
@@ -2006,7 +2023,9 @@ class Project(SimpleProject):
         # TODO: never use the source dir as a build dir (unfortunately mibench and elftoolchain won't work)
         # will have to check how well binutils and qemu work there
         if (self.buildDir / ".git").is_dir():
-            if (self.buildDir / "GNUmakefile").is_file() and self.make_kind != MakeCommandKind.BsdMake and self.target != "elftoolchain":
+            if (
+                    self.buildDir / "GNUmakefile").is_file() and self.make_kind != MakeCommandKind.BsdMake and \
+                    self.target != "elftoolchain":
                 runCmd(self.make_args.command, "distclean", cwd=self.buildDir)
             else:
                 assert self.sourceDir == self.buildDir
@@ -2043,7 +2062,7 @@ class Project(SimpleProject):
             fullpath += " " + commandline_to_str(args)
         self.configureEnvironment[prog] = fullpath
 
-    def configure(self, cwd: Path = None, configure_path: Path=None):
+    def configure(self, cwd: Path = None, configure_path: Path = None):
         if cwd is None:
             cwd = self.buildDir
         if not self.should_run_configure():
@@ -2139,7 +2158,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 create = False
             elif "Generated by cheribuild.py" not in existing_code:
                 print("A different CMakeLists.txt already exists. Contents:\n",
-                      coloured(AnsiColour.green, existing_code), end="")
+                    coloured(AnsiColour.green, existing_code), end="")
                 if not self.query_yes_no("Overwrite?", force_result=False):
                     create = False
         if create:
@@ -2200,7 +2219,8 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         self.info("Adding ASAN library depedencies to", dest_libdir)
         self.makedirs(dest_libdir)
         for lib in ("usr/lib/librt.so.1", "usr/lib/libexecinfo.so.1", "lib/libgcc_s.so.1", "lib/libelf.so.2"):
-            self.install_file(self.sdk_sysroot / lib, dest_libdir / Path(lib).name, force=True, print_verbose_only=False)
+            self.install_file(self.sdk_sysroot / lib, dest_libdir / Path(lib).name, force=True,
+                print_verbose_only=False)
 
     _check_install_dir_conflict = True
 
@@ -2242,7 +2262,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             self._do_generate_cmakelists()
         if self.config.verbose:
             print(self.project_name, "directories: source=%s, build=%s, install=%s" %
-                  (self.sourceDir, self.buildDir, self.installDir))
+                                     (self.sourceDir, self.buildDir, self.installDir))
 
         if self.use_asan and self.compiling_for_mips(include_purecap=False):
             # copy the ASAN lib into the right directory:
@@ -2261,14 +2281,16 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     found_asan_lib = asan_libs / libname
                     break
             if not found_asan_lib:
-                self.fatal("Cannot find", libname, "library in sysroot dirs", asan_libdir_candidates, "-- Compilation will fail!")
+                self.fatal("Cannot find", libname, "library in sysroot dirs", asan_libdir_candidates,
+                    "-- Compilation will fail!")
                 found_asan_lib = Path("/some/invalid/path/to/lib")
             self.makedirs(expected_path)
             runCmd("cp", "-av", found_asan_lib.parent, expected_path.parent)
             # For some reason they are 644 so we can't overwrite for the next build unless we chmod first
             runCmd("chmod", "-R", "u+w", expected_path.parent)
             if not (expected_path / libname).exists():
-                self.fatal("Cannot find", libname, "library in compiler dir", expected_path, "-- Compilation will fail!")
+                self.fatal("Cannot find", libname, "library in compiler dir", expected_path,
+                    "-- Compilation will fail!")
         install_dir_kind = self.get_default_install_dir_kind()
         if install_dir_kind != DefaultInstallDir.DO_NOT_INSTALL and self._check_install_dir_conflict:
             xtarget = self._xtarget  # type: CrossCompileTarget
@@ -2278,19 +2300,21 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 base = getattr(self, "synthetic_base", None)
                 assert base is not None
                 assert issubclass(base, SimpleProject)
-                other_instance = base.get_instance_for_cross_target(xtarget.check_conflict_with, self.config, caller=self)
+                other_instance = base.get_instance_for_cross_target(xtarget.check_conflict_with, self.config,
+                    caller=self)
                 if self.config.verbose:
                     self.info(self.target, "install dir for", xtarget.name, "is", self.installDir)
                     other_xtarget = other_instance.get_crosscompile_target(self.config)
                     self.info(self.target, "install dir for", other_xtarget.name, "is", self.installDir)
                 assert other_instance.installDir != self.installDir, \
-                    other_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(other_instance.installDir)
+                    other_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(
+                        other_instance.installDir)
 
         if self.config.skipUpdate:
             # When --skip-update is set (or we don't have working internet) only check that the repository exists
             if self.repository:
                 self.repository.ensure_cloned(self, src_dir=self.sourceDir, default_src_dir=self.default_source_dir,
-                                              skip_submodules=self.skipGitSubmodules)
+                    skip_submodules=self.skipGitSubmodules)
         else:
             self.update()
         if not self._systemDepsChecked:
@@ -2305,8 +2329,9 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 last_build_kind = self.read_file(last_build_file)
                 if last_build_kind != self.build_configuration_suffix():
                     if not self.query_yes_no("Last build was for configuration" + last_build_kind +
-                                           " but currently building" + self.build_configuration_suffix() +
-                                           ". Will clean before build. Continue?", force_result=True, default_result=True):
+                                             " but currently building" + self.build_configuration_suffix() +
+                                             ". Will clean before build. Continue?", force_result=True,
+                            default_result=True):
                         self.fatal("Cannot continue")
                         return
                     self._force_clean = True
@@ -2362,8 +2387,9 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             # Build step
             if not self.config.skipBuild:
                 if self.config.csetbounds_stats and (self.csetbounds_stats_file.exists() or self.config.pretend):
-                    self.move_file(self.csetbounds_stats_file, self.csetbounds_stats_file.with_suffix(".from-configure.csv"),
-                                  force=True)
+                    self.move_file(self.csetbounds_stats_file,
+                        self.csetbounds_stats_file.with_suffix(".from-configure.csv"),
+                        force=True)
                     # move any csetbounds stats from configuration (since they are not useful)
                 statusUpdate("Building", self.display_name, "... ")
                 self.compile()
@@ -2398,7 +2424,7 @@ class CMakeProject(Project):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.cmakeOptions = cls.add_config_option("cmake-options", default=[], kind=list, metavar="OPTIONS",
-                                               help="Additional command line options to pass to CMake")
+            help="Additional command line options to pass to CMake")
 
     def __init__(self, config, generator=Generator.Ninja):
         super().__init__(config)
@@ -2471,7 +2497,7 @@ class CMakeProject(Project):
                 return
             if any(x.startswith("-D" + option) for x in self.cmakeOptions):
                 self.info("Not using default value of '", value, "' for CMake option '", option,
-                          "' since it is explicitly overwritten in the configuration", sep="")
+                    "' since it is explicitly overwritten in the configuration", sep="")
                 continue
             if isinstance(value, bool):
                 value = "ON" if value else "OFF"
@@ -2552,12 +2578,16 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
             CMAKE_C_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CFLAGS),
             CMAKE_CXX_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.CXXFLAGS),
             CMAKE_ASM_FLAGS_INIT=commandline_to_str(self.default_compiler_flags + self.ASMFLAGS),
-            CMAKE_EXE_LINKER_FLAGS_INIT=commandline_to_str(custom_ldflags + self.target_info.additional_executable_link_flags),
-            CMAKE_SHARED_LINKER_FLAGS_INIT=commandline_to_str(custom_ldflags + self.target_info.additional_shared_library_link_flags),
-            CMAKE_MODULE_LINKER_FLAGS_INIT=commandline_to_str(custom_ldflags + self.target_info.additional_shared_library_link_flags),
+            CMAKE_EXE_LINKER_FLAGS_INIT=commandline_to_str(
+                custom_ldflags + self.target_info.additional_executable_link_flags),
+            CMAKE_SHARED_LINKER_FLAGS_INIT=commandline_to_str(
+                custom_ldflags + self.target_info.additional_shared_library_link_flags),
+            CMAKE_MODULE_LINKER_FLAGS_INIT=commandline_to_str(
+                custom_ldflags + self.target_info.additional_shared_library_link_flags),
             )
         if not self.compiling_for_host():
-            # TODO: set CMAKE_STRIP, CMAKE_NM, CMAKE_OBJDUMP, CMAKE_READELF, CMAKE_DLLTOOL, CMAKE_DLLTOOL, CMAKE_ADDR2LINE
+            # TODO: set CMAKE_STRIP, CMAKE_NM, CMAKE_OBJDUMP, CMAKE_READELF, CMAKE_DLLTOOL, CMAKE_DLLTOOL,
+            #  CMAKE_ADDR2LINE
             self.generate_cmake_toolchain_file(self.toolchainFile)
             self.add_cmake_options(
                 _CMAKE_TOOLCHAIN_LOCATION=self.target_info.sdk_root_dir / "bin",
@@ -2590,7 +2620,8 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
             self.deleteFile(cmakeCache)
         super().configure(**kwargs)
         if self.config.copy_compilation_db_to_source_dir and (self.buildDir / "compile_commands.json").exists():
-            self.install_file(self.buildDir / "compile_commands.json", self.sourceDir / "compile_commands.json", force=True)
+            self.install_file(self.buildDir / "compile_commands.json", self.sourceDir / "compile_commands.json",
+                force=True)
 
     def install(self, _stdout_filter="__DEFAULT__"):
         if _stdout_filter == "__DEFAULT__":
@@ -2622,7 +2653,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
                 instrs = "Use your package manager to install CMake > " + expectedStr + \
                          " or run `cheribuild.py cmake` to install the latest version locally"
                 self.dependency_error("CMake version", versionStr, "is too old (need at least", expectedStr + ")",
-                                     install_instructions=instrs)
+                    install_instructions=instrs)
 
     @staticmethod
     def findPackage(name: str) -> bool:
@@ -2642,7 +2673,7 @@ class AutotoolsProject(Project):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.extraConfigureFlags = cls.add_config_option("configure-options", default=[], kind=list, metavar="OPTIONS",
-                                                      help="Additional command line options to pass to configure")
+            help="Additional command line options to pass to configure")
 
     """
     Like Project but automatically sets up the defaults for autotools like projects
@@ -2668,7 +2699,7 @@ class AutotoolsProject(Project):
         return not (self.buildDir / "Makefile").exists()
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):
-        kwargs = { "NM": nm, "AR": ar, "RANLIB": ranlib }
+        kwargs = {"NM": nm, "AR": ar, "RANLIB": ranlib}
         if ld:
             kwargs["LD"] = ld
         self.configureEnvironment.update(**kwargs)
