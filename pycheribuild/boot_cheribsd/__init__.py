@@ -167,6 +167,7 @@ class CheriBSDInstance(pexpect.spawn):
         assert self.ssh_private_key != self.ssh_public_key
         self.ssh_user = "root"
         self.smb_dirs = []  # type: typing.List[SmbMount]
+        self.smb_failed = True
 
     @property
     def xtarget(self) -> CrossCompileTarget:
@@ -220,28 +221,32 @@ class CheriBSDInstance(pexpect.spawn):
         checked_run_cheribsd_command(self, cmd, timeout=timeout, ignore_cheri_trap=ignore_cheri_trap,
             error_output=error_output, **kwargs)
 
+    def _ssh_options(self, use_controlmaster: bool):
+        result = ["-o", "UserKnownHostsFile=/dev/null",
+                  "-o", "StrictHostKeyChecking=no",
+                  "-o", "NoHostAuthenticationForLocalhost=yes",
+                  # "-o", "ConnectTimeout=20",
+                  # "-o", "ConnectionAttempts=2",
+                  ]
+        if use_controlmaster:
+            # XXX: always use controlmaster for faster connections?
+            controlmaster_dir = Path.home() / ".ssh/controlmasters"
+            controlmaster_dir.mkdir(exist_ok=True)
+            result += ["-o", "ControlPath={control_dir}/%r@%h:%p".format(control_dir=controlmaster_dir),
+                       "-o", "ControlMaster=auto",
+                       # Keep socket open for 10 min (600) or indefinitely (yes)
+                       "-o", "ControlPersist=600"]
+        return result
+
     def run_command_via_ssh(self, command: typing.List[str], *, stdout=None, stderr=None, check=True, verbose=False,
                             use_controlmaster=False, **kwargs) -> subprocess.CompletedProcess:
         assert self.ssh_port is not None
         ssh_command = ["ssh", "{user}@{host}".format(user=self.ssh_user, host="localhost"),
                        "-p", str(self.ssh_port),
-                       "-i", str(self.ssh_private_key),
-                       "-o", "UserKnownHostsFile=/dev/null",
-                       "-o", "StrictHostKeyChecking=no",
-                       "-o", "NoHostAuthenticationForLocalhost=yes",
-                       # "-o", "ConnectTimeout=20",
-                       # "-o", "ConnectionAttempts=2",
-                       ]
+                       "-i", str(self.ssh_private_key)]
         if verbose:
             ssh_command.append("-v")
-        if use_controlmaster:
-            # XXX: always use controlmaster for faster connections?
-            controlmaster_dir = Path.home() / ".ssh/controlmasters"
-            controlmaster_dir.mkdir(exist_ok=True)
-            ssh_command += ["-o", "ControlPath={control_dir}/%r@%h:%p".format(control_dir=controlmaster_dir),
-                            "-o", "ControlMaster=auto",
-                            # Keep socket open for 10 min (600) or indefinitely (yes)
-                            "-o", "ControlPersist=600"]
+        ssh_command.extend(self._ssh_options(use_controlmaster=use_controlmaster))
         ssh_command.append("--")
         ssh_command.extend(command)
         print_cmd(ssh_command, **kwargs)
@@ -260,13 +265,12 @@ class CheriBSDInstance(pexpect.spawn):
             success(prefix, " successful after ", connection_time, " seconds")
             return True
 
-    def copyout(self, qemu_dir, local_dir):
+    def scp_from_guest(self, qemu_dir: str, local_dir: str):
         assert self.ssh_port is not None
-        command = ["scp",
-                   "-p", str(self.ssh_port),
-                   "-i", str(self.ssh_private_key),
-                   "{user}@{host}:{remote_dir}".format(user=self.ssh_user, host="localhost", remote_dir=qemu_dir),
-                   local_dir] #todo check destination?
+        command = ["scp", "-P", str(self.ssh_port), "-i", str(self.ssh_private_key)]
+        command.extend(self._ssh_options(use_controlmaster=False))
+        command.append("{user}@{host}:{remote_dir}".format(user=self.ssh_user, host="localhost", remote_dir=qemu_dir))
+        command.append(local_dir)  # todo: check destination?
         run_host_command(command)
 
 

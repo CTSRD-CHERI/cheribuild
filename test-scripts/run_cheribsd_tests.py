@@ -46,12 +46,12 @@ from run_tests_common import boot_cheribsd, run_tests_main, pexpect, CrossCompil
 
 def run_cheritest(qemu: boot_cheribsd.CheriBSDInstance, binary_name, args: argparse.Namespace) -> bool:
     try:
-        qemu.checked_run("rm -f /test-results/{}.xml".format(binary_name))
+        qemu.checked_run("rm -f /tmp/{}.xml".format(binary_name))
         # Run it once with textual output (for debugging)
         # qemu.run("/bin/{} -a".format(binary_name, binary_name),
         #     ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
         # Generate JUnit XML:
-        qemu.run("/bin/{} -a -x > /test-results/{}.xml".format(binary_name, binary_name),
+        qemu.run("/bin/{} -a -x > /tmp/{}.xml".format(binary_name, binary_name),
             ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=5 * 60)
         qemu.sendline("echo EXITCODE=$?")
         qemu.expect(["EXITCODE=(\\d+)\r"], timeout=5, pretend_result=0)
@@ -61,7 +61,13 @@ def run_cheritest(qemu: boot_cheribsd.CheriBSDInstance, binary_name, args: argpa
             print(qemu.match.groups())
             exit_code = int(qemu.match.group(1))
             qemu.expect_prompt()
-        qemu.run("fsync /test-results/{}.xml".format(binary_name))
+        if qemu.smb_failed:
+            boot_cheribsd.info("SMB mount has failed, performing normal scp")
+            host_path = Path(args.test_output_dir, binary_name + ".xml")
+            qemu.scp_from_guest("/tmp/{}.xml".format(binary_name), str(host_path))
+        else:
+            qemu.checked_run("mv -f /tmp/{}.xml /test-results/{}.xml".format(binary_name, binary_name))
+            qemu.run("fsync /test-results/{}.xml".format(binary_name))
         return exit_code == 0
     except boot_cheribsd.CheriBSDCommandTimeout as e:
         boot_cheribsd.failure("Timeout running cheritest: " + str(e), exit=False)
@@ -135,7 +141,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
             assert shlex.quote(str(results_db)) == str(results_db), "Should not contain any special chars"
             if qemu.smb_failed:
                 boot_cheribsd.info("SMB mount has failed, performing normal scp")
-                qemu.copyout("/tmp/results.db", str(results_db))
+                qemu.scp_from_guest("/tmp/results.db", str(results_db))
             else:
                 qemu.checked_run("cp -v /tmp/results.db {}".format(results_db))
                 qemu.checked_run("fsync " + str(results_db))
@@ -152,8 +158,12 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
                 xml_conversion_start = datetime.datetime.now()
                 qemu.checked_run("kyua report-junit --results-file=/tmp/results.db > /tmp/results.xml",
                                  timeout=200 * 60)
-                qemu.checked_run("cp -v /tmp/results.xml {}".format(results_xml))
-                qemu.checked_run("fsync " + str(results_xml))
+                if qemu.smb_failed:
+                    boot_cheribsd.info("SMB mount has failed, performing normal scp")
+                    qemu.scp_from_guest("/tmp/results.xml", str(results_db))
+                else:
+                    qemu.checked_run("cp -v /tmp/results.xml {}".format(results_xml))
+                    qemu.checked_run("fsync " + str(results_xml))
                 boot_cheribsd.success("Creating JUnit XML ", results_xml, " took: ",
                                       datetime.datetime.now() - xml_conversion_start)
     except boot_cheribsd.CheriBSDCommandTimeout as e:
