@@ -217,6 +217,9 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
         boot_cheribsd.failure("QEMU didn't exit after shutdown!")
         return False
     boot_cheribsd.success("Poweroff took: ", datetime.datetime.now() - poweroff_start)
+    if tests_successful and qemu.smb_failed:
+        boot_cheribsd.info("Tests succeeded, but SMB mount failed -> marking tests as failed.")
+        tests_successful = False
     return tests_successful
 
 
