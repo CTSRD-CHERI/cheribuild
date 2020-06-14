@@ -134,14 +134,16 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
             qemu.run("kyua test --results-file=/tmp/results.db -k {}".format(shlex.quote(tests_file)),
                      ignore_cheri_trap=True, cheri_trap_fatal=False, timeout=24 * 60 * 60)
             if i == 0:
-                results_db = Path("/test-results/test-results.db")
+                result_name = "test-results.db"
             else:
-                results_db = Path("/test-results/test-results-{}.db".format(i))
+                result_name = "test-results-{}.db".format(i)
+            results_db = Path("/test-results/{}".format(result_name))
             results_xml = results_db.with_suffix(".xml")
             assert shlex.quote(str(results_db)) == str(results_db), "Should not contain any special chars"
             if qemu.smb_failed:
                 boot_cheribsd.info("SMB mount has failed, performing normal scp")
-                qemu.scp_from_guest("/tmp/results.db", str(results_db))
+                host_dest = args.smb_mount_directories[0].hostdir
+                qemu.scp_from_guest("/tmp/results.db", host_dest + "/" + result_name)
             else:
                 qemu.checked_run("cp -v /tmp/results.db {}".format(results_db))
                 qemu.checked_run("fsync " + str(results_db))
@@ -160,7 +162,8 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
                                  timeout=200 * 60)
                 if qemu.smb_failed:
                     boot_cheribsd.info("SMB mount has failed, performing normal scp")
-                    qemu.scp_from_guest("/tmp/results.xml", str(results_db))
+                    host_dest = args.smb_mount_directories[0].hostdir
+                    qemu.scp_from_guest("/tmp/results.xml", host_dest + "/" + result_name[:3] + ".xml")
                 else:
                     qemu.checked_run("cp -v /tmp/results.xml {}".format(results_xml))
                     qemu.checked_run("fsync " + str(results_xml))
