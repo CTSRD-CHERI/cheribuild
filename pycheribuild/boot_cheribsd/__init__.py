@@ -267,7 +267,7 @@ class CheriBSDInstance(pexpect.spawn):
                    "-i", str(self.ssh_private_key),
                    "{user}@{host}:{remote_dir}".format(user=self.ssh_user, host="localhost", remote_dir=qemu_dir),
                    local_dir] #todo check destination?
-        boot_cheribsd.run_host_command(command)
+        run_host_command(command)
 
 
 def info(*args, **kwargs):
