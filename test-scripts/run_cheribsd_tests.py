@@ -133,8 +133,12 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
                 results_db = Path("/test-results/test-results-{}.db".format(i))
             results_xml = results_db.with_suffix(".xml")
             assert shlex.quote(str(results_db)) == str(results_db), "Should not contain any special chars"
-            qemu.checked_run("cp -v /tmp/results.db {}".format(results_db))
-            qemu.checked_run("fsync " + str(results_db))
+            if qemu.smb_failed:
+                boot_cheribsd.info("SMB mount has failed, performing normal scp")
+                qemu.copyout("/tmp/results.db", str(results_db))
+            else:
+                qemu.checked_run("cp -v /tmp/results.db {}".format(results_db))
+                qemu.checked_run("fsync " + str(results_db))
             boot_cheribsd.success("Running tests for ", tests_file, " took: ", datetime.datetime.now() - test_start)
 
             # run: kyua report-junit --results-file=test-results.db | vis -os > ${CPU}-${TEST_NAME}-test-results.xml
