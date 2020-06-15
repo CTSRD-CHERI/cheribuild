@@ -35,8 +35,9 @@ from abc import ABCMeta, abstractmethod
 from pathlib import Path
 
 from .loader import ConfigOptionBase
-from .target_info import BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, MipsFloatAbi, TargetInfo
-from ..utils import commandline_to_str, find_free_port, is_jenkins_build, SocketAndPort
+from .target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, MipsFloatAbi,
+                          TargetInfo)
+from ..utils import commandline_to_str, find_free_port, getCompilerInfo, is_jenkins_build, SocketAndPort
 
 if typing.TYPE_CHECKING:
     from .chericonfig import CheriConfig  # no-combine
@@ -97,6 +98,15 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 self.project.fatal("Project", self.project.target, "needs a sysroot, but", self.sysroot_dir,
                     " is empty or does not exist.")
         result += ["-B" + str(self._compiler_dir)]
+
+        if self.project.auto_var_init != AutoVarInit.NONE:
+            compiler = getCompilerInfo(self.c_compiler)
+            valid_clang_version = compiler.is_clang and compiler.version >= (8, 0)
+            # We should have at least 8.0.0 unless the user explicitly selected an incompatible clang
+            if valid_clang_version:
+                result += self.project.auto_var_init.clang_flags()
+            else:
+                self.project.fatal("Requested automatic variable initialization, but don't know how to for", compiler)
 
         if self.target.is_mips(include_purecap=True):
             result.append("-integrated-as")

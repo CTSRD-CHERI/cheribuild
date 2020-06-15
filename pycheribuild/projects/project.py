@@ -48,8 +48,8 @@ from typing import Callable, Union
 from ..config.chericonfig import BuildType, BuildType, CheriConfig, CheriConfig
 from ..config.loader import (ComputedDefaultValue, ComputedDefaultValue, ConfigLoaderBase, ConfigOptionBase,
                              DefaultValueOnlyConfigOption)
-from ..config.target_info import (BasicCompilationTargets, CPUArchitecture, CPUArchitecture, CrossCompileTarget,
-                                  CrossCompileTarget, Linkage, Linkage, TargetInfo, TargetInfo)
+from ..config.target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CPUArchitecture,
+                                  CrossCompileTarget, CrossCompileTarget, Linkage, Linkage, TargetInfo, TargetInfo)
 from ..filesystemutils import FileSystemUtils
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
 from ..utils import (AnsiColour, check_call_handle_noexec, classproperty, coloured, commandline_to_str,
@@ -173,6 +173,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     buildDir = None
     build_in_source_dir = False  # For projects that can't build in the source dir
     installDir = None
+    # For target_info.py. Real value is only set for Project subclasses, since SimpleProject subclasses should not
+    # include C/C++ compilation (there is no source+build dir)
+    auto_var_init = AutoVarInit.NONE
     # Whether to hide the options from the default --help output (only add to --help-hidden)
     hide_options_from_help = False
     # Project subclasses will automatically have a target based on their name generated unless they add this:
@@ -1422,15 +1425,16 @@ class Project(SimpleProject):
         config = self.config
         if target is None:
             target = self.get_crosscompile_target(config)
-        # targets that only support native don't need a suffix
-        if target.is_native() and not self.add_build_dir_suffix_for_native:
-            result = ""
-        else:
-            result = target.build_suffix(config)
-        if self.use_asan:
-            result = "-asan" + result
+        result = ""
         if self.build_dir_suffix:
-            result = self.build_dir_suffix + result
+            result += self.build_dir_suffix
+        if self.use_asan:
+            result += "-asan"
+        if self.auto_var_init != AutoVarInit.NONE:
+            result += "-init-" + str(self.auto_var_init.value)
+        # targets that only support native might not need a suffix
+        if not target.is_native() or self.add_build_dir_suffix_for_native:
+            result += target.build_suffix(config)
         return result
 
     def build_dir_for_target(self, target: CrossCompileTarget):
@@ -1519,6 +1523,7 @@ class Project(SimpleProject):
     prefer_full_lto_over_thin_lto = False  # If LTO is enabled, use LLVM's ThinLTO by default
     lto_set_ld = True
     default_build_type = BuildType.DEFAULT
+    default_auto_var_init = AutoVarInit.NONE
 
     @classmethod
     def setup_config_options(cls, install_directory_help="", **kwargs):
@@ -1537,6 +1542,11 @@ class Project(SimpleProject):
                 help="Build with AddressSanitizer enabled")
         else:
             cls.use_asan = False
+        cls.auto_var_init = cls.add_config_option("auto-var-init", kind=AutoVarInit,
+            default=ComputedDefaultValue(lambda config, proj: proj.default_auto_var_init,
+                lambda c: ("the value of the global --skip-update option (defaults to \"" +
+                           c.default_auto_var_init.value + "\")")),
+            help="Whether to initialize all local variables (currently only supported when compiling with clang)")
         cls.skipUpdate = cls.add_bool_option("skip-update",
             default=ComputedDefaultValue(lambda config, proj: config.skipUpdate,
                 "the value of the global --skip-update option"),
