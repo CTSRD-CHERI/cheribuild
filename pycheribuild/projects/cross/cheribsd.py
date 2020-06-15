@@ -41,7 +41,7 @@ from ..llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..project import (CheriConfig, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,
                        MakeCommandKind, MakeOptions, Project, SimpleProject, TargetAliasWithDependencies)
 from ...config.loader import ComputedDefaultValue
-from ...config.target_info import CrossCompileTarget, MipsFloatAbi
+from ...config.target_info import AutoVarInit, CrossCompileTarget, MipsFloatAbi
 from ...config.compilation_targets import CompilationTargets
 from ...targets import target_manager
 from ...utils import (classproperty, commandline_to_str, getCompilerInfo, includeLocalFile, is_jenkins_build, OSInfo,
@@ -1191,6 +1191,13 @@ class BuildCHERIBSD(BuildFreeBSD):
         if self.compiling_for_riscv(include_purecap=True):
             self.make_args.set(CROSS_BINUTILS_PREFIX=str(self.sdk_bindir / "llvm-"))
             self.use_llvm_binutils = True
+
+        # Support for automatic variable initialization:
+        # See https://github.com/CTSRD-CHERI/cheribsd/commit/57e063b20ec04e543b8a4029871c63bf5cbe6897
+        if self.auto_var_init is AutoVarInit.ZERO:
+            self.make_args.set_with_options(INIT_ALL_ZERO=True)
+        elif self.auto_var_init is AutoVarInit.PATTERN:
+            self.make_args.set_with_options(INIT_ALL_PATTERN=True)
 
         self.extra_kernels = []
         self.extra_kernels_with_mfs = []
