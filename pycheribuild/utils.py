@@ -337,6 +337,9 @@ class CompilerInfo(object):
     def is_apple_clang(self):
         return self.compiler == "apple-clang"
 
+    def __repr__(self):
+        return "{} ({} {})".format(self.path, self.compiler, ".".join(map(str, self.version)))
+
 _cached_compiler_infos = dict()  # type: typing.Dict[Path, CompilerInfo]
 
 

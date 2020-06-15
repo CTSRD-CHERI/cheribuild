@@ -279,6 +279,24 @@ class TargetInfo(ABC):
         return config.clangCppPath
 
 
+# https://reviews.llvm.org/rG14daa20be1ad89639ec209d969232d19cf698845
+class AutoVarInit(Enum):
+    NONE = "none"
+    ZERO = "zero"
+    PATTERN = "pattern"
+
+    def clang_flags(self) -> "typing.List[str]":
+        if self is None:
+            return []  # Equivalent to -ftrivial-auto-var-init=uninitialized
+        elif self is AutoVarInit.ZERO:
+            return ["-ftrivial-auto-var-init=zero",
+                    "-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang"]
+        elif self is AutoVarInit.PATTERN:
+            return ["-ftrivial-auto-var-init=pattern"]
+        else:
+            raise NotImplementedError()
+
+
 class NativeTargetInfo(TargetInfo):
     shortname = "native"
 
@@ -348,7 +366,21 @@ class NativeTargetInfo(TargetInfo):
 
     @property
     def essential_compiler_and_linker_flags(self) -> typing.List[str]:
-        return []  # default host compiler should not need any extra flags
+        result = []
+        if self.project.auto_var_init != AutoVarInit.NONE:
+            compiler = getCompilerInfo(self.c_compiler)
+            valid_clang_version = False
+            if compiler.is_apple_clang:
+                # Not sure which apple clang version is the first to support it but 11.0.3 on my system does
+                valid_clang_version = compiler.version >= (11, 0)
+            else:
+                # Clang 8.0.0 is the first to support auto-var-init
+                valid_clang_version = compiler.is_clang and compiler.version >= (8, 0)
+            if valid_clang_version:
+                result += self.project.auto_var_init.clang_flags()
+            else:
+                self.project.fatal("Requested automatic variable initialization, but don't know how to for", compiler)
+        return result  # default host compiler should not need any extra flags
 
 
 class Linkage(Enum):
