@@ -167,7 +167,7 @@ class CheriBSDInstance(pexpect.spawn):
         assert self.ssh_private_key != self.ssh_public_key
         self.ssh_user = "root"
         self.smb_dirs = []  # type: typing.List[SmbMount]
-        self.smb_failed = True
+        self.smb_failed = False
 
     @property
     def xtarget(self) -> CrossCompileTarget:
