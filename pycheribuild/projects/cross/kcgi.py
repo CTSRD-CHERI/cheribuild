@@ -28,8 +28,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import (CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository,
-                                  MakeCommandKind)
+from .crosscompileproject import (CrossCompileAutotoolsProject, DefaultInstallDir, FettProjectMixin,
+                                  GitRepository, MakeCommandKind)
 
 
 class BuildKCGI(CrossCompileAutotoolsProject):
@@ -57,9 +57,6 @@ class BuildKCGI(CrossCompileAutotoolsProject):
         return not (self.buildDir / "config.h").exists()
 
 
-class BuildFettKCGI(BuildKCGI):
+class BuildFettKCGI(FettProjectMixin, BuildKCGI):
     project_name = "fett-kcgi"
-    path_in_rootfs = "/fett"
-    default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
-    repository = GitRepository("https://github.com/CTSRD-CHERI/kcgi.git",
-                               default_branch="fett")
+    repository = GitRepository("https://github.com/CTSRD-CHERI/kcgi.git", default_branch="fett")

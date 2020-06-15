@@ -29,7 +29,7 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import (CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository,
-                                  MakeCommandKind)
+                                  MakeCommandKind, FettProjectMixin)
 
 
 class BuildSQLbox(CrossCompileAutotoolsProject):
@@ -57,10 +57,8 @@ class BuildSQLbox(CrossCompileAutotoolsProject):
         return not (self.buildDir / "config.h").exists()
 
 
-class BuildFettSQLbox(BuildSQLbox):
+class BuildFettSQLbox(FettProjectMixin, BuildSQLbox):
     project_name = "fett-sqlbox"
-    path_in_rootfs = "/fett"
-    default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
     repository = GitRepository("https://github.com/CTSRD-CHERI/sqlbox.git",
                                default_branch="fett")
 

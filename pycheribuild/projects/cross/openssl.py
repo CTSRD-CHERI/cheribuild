@@ -30,7 +30,7 @@
 #
 import shutil
 
-from .crosscompileproject import CompilationTargets, CrossCompileProject, DefaultInstallDir, GitRepository
+from .crosscompileproject import (CrossCompileProject, DefaultInstallDir, FettProjectMixin, GitRepository)
 
 
 class BuildOpenSSL(CrossCompileProject):
@@ -60,9 +60,7 @@ class BuildOpenSSL(CrossCompileProject):
         super().compile(parallel=False)
 
 
-class BuildFettOpenSSL(BuildOpenSSL):
+class BuildFettOpenSSL(FettProjectMixin, BuildOpenSSL):
     project_name = "fett-openssl"
-    path_in_rootfs = "/fett"
-    default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
     repository = GitRepository("https://github.com/CTSRD-CHERI/openssl.git",
                                default_branch="fett")

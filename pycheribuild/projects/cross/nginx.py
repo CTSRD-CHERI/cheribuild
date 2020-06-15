@@ -29,8 +29,8 @@
 #
 import re
 
-from .crosscompileproject import (CheriConfig, commandline_to_str, CompilationTargets, CrossCompileAutotoolsProject,
-                                  DefaultInstallDir, GitRepository, MakeCommandKind)
+from .crosscompileproject import (CheriConfig, commandline_to_str, CrossCompileAutotoolsProject,
+                                  DefaultInstallDir, FettProjectMixin, GitRepository, MakeCommandKind)
 from .openssl import BuildFettOpenSSL
 
 
@@ -117,10 +117,9 @@ class BuildNginx(CrossCompileAutotoolsProject):
         self.run_make(cwd=self.sourceDir)
 
 
-class BuildFettNginx(BuildNginx):
+class BuildFettNginx(FettProjectMixin, BuildNginx):
     project_name = "fett-nginx"
     path_in_rootfs = "/fett/nginx"
-    default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
     repository = GitRepository("https://github.com/CTSRD-CHERI/nginx.git", default_branch="fett")
     dependencies = ["fett-openssl"]
 
