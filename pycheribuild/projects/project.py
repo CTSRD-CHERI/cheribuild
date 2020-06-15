@@ -902,6 +902,8 @@ class MakeOptions(object):
         :return: dict of VAR=True/False
         """
         for k, v in kwargs.items():
+            assert not k.startswith("WITH_"), "Invalid WITH/WITHOUT options name " + k
+            assert not k.startswith("WITHOUT_"), "Invalid WITH/WITHOUT options name " + k
             assert isinstance(v, bool)
             self._with_options[k] = v
 
