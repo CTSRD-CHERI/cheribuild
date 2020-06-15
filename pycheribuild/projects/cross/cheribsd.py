@@ -1194,6 +1194,8 @@ class BuildCHERIBSD(BuildFreeBSD):
 
         # Support for automatic variable initialization:
         # See https://github.com/CTSRD-CHERI/cheribsd/commit/57e063b20ec04e543b8a4029871c63bf5cbe6897
+        # Explicitly disable first (in case the defaults in the source tree change)
+        self.make_args.set_with_options(INIT_ALL_ZERO=False, INIT_ALL_PATTERN=False)
         if self.auto_var_init is AutoVarInit.ZERO:
             self.make_args.set_with_options(INIT_ALL_ZERO=True)
         elif self.auto_var_init is AutoVarInit.PATTERN:
