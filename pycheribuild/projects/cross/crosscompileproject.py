@@ -38,9 +38,11 @@ from ..project import (AutotoolsProject, BuildType, CheriConfig, CMakeProject, C
 from ...config.compilation_targets import CompilationTargets
 from ...utils import AnsiColour, coloured, commandline_to_str, setEnv
 
-__all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject", "CrossCompileTarget",  # no-combine
-           "CrossCompileProject", "MakeCommandKind", "Linkage", "Path", "DefaultInstallDir", "BuildType",  # no-combine
-           "CompilationTargets", "GitRepository", "commandline_to_str", "CrossCompileMixin"]  # no-combine
+__all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject",  # no-combine
+           "CrossCompileTarget", "CrossCompileProject", "MakeCommandKind", "Linkage",  # no-combine
+           "DefaultInstallDir", "BuildType", "CompilationTargets", "GitRepository",  # no-combine
+           "Path", "commandline_to_str",  # TODO: remove # no-combine
+           "CrossCompileMixin", "FettProjectMixin"]  # no-combine
 
 
 # This mixin sets supported_architectures to ALL_SUPPORTED_CHERIBSD_AND_HOST_TARGETS and thereby
@@ -152,3 +154,9 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
         else:
             # when building the native target we just rely on the host tools in /usr/bin
             super().process()
+
+
+# Sets some default values common to all FETT projects
+class FettProjectMixin:
+    path_in_rootfs = "/fett"
+    default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE

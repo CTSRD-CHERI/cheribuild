@@ -32,7 +32,7 @@ import os
 from pathlib import Path
 
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileProject, DefaultInstallDir,
-                                  GitRepository, MakeCommandKind)
+                                  FettProjectMixin, GitRepository, MakeCommandKind)
 from .kcgi import BuildFettKCGI
 from .nginx import BuildFettNginx
 from .openssh import BuildFettOpenSSH
@@ -127,9 +127,8 @@ class BuildFettConfig(CrossCompileProject):
         self.mtree.write(self.METALOG)
 
 
-class BuildFettVoting(CrossCompileProject):
+class BuildFettVoting(FettProjectMixin, CrossCompileProject):
     project_name = "fett-voting"
-    path_in_rootfs = "/fett"
     repository = GitRepository("git@github.com:CTSRD-CHERI/SSITH-FETT-Voting.git", default_branch="cheri")
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES + [CompilationTargets.NATIVE]
 

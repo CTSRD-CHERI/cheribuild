@@ -28,7 +28,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
+from .crosscompileproject import (CrossCompileAutotoolsProject, DefaultInstallDir, FettProjectMixin, GitRepository)
 
 
 class BuildZlib(CrossCompileAutotoolsProject):
@@ -54,8 +54,6 @@ class BuildZlib(CrossCompileAutotoolsProject):
                 AR=self.sdk_bindir / "llvm-ar", RANLIB=self.sdk_bindir / "llvm-ranlib")
 
 
-class BuildFettZlib(BuildZlib):
+class BuildFettZlib(FettProjectMixin, BuildZlib):
     project_name = "fett-zlib"
-    default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
-    path_in_rootfs = "/fett"
     repository = GitRepository("https://github.com/CTSRD-CHERI/zlib.git", default_branch="fett")

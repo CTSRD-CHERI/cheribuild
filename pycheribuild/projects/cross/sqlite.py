@@ -28,7 +28,7 @@
 # SUCH DAMAGE.
 #
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
-                                  GitRepository, Linkage)
+                                  GitRepository, Linkage, FettProjectMixin)
 from .qt5 import BuildQtWebkit
 
 
@@ -79,10 +79,8 @@ class BuildSQLite(CrossCompileAutotoolsProject):
         return not (self.buildDir / "Makefile").exists()
 
 
-class BuildFettSQLite(BuildSQLite):
+class BuildFettSQLite(FettProjectMixin, BuildSQLite):
     project_name = "fett-sqlite"
-    path_in_rootfs = "/fett"
-    default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
     repository = GitRepository("https://github.com/CTSRD-CHERI/sqlite.git", default_branch="fett")
     cross_install_dir = DefaultInstallDir.ROOTFS
 
