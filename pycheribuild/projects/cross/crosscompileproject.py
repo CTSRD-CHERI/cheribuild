@@ -36,6 +36,7 @@ from pathlib import Path
 from ..project import (AutotoolsProject, BuildType, CheriConfig, CMakeProject, CrossCompileTarget, DefaultInstallDir,
                        GitRepository, Linkage, MakeCommandKind, Project)
 from ...config.compilation_targets import CompilationTargets
+from ...config.target_info import AutoVarInit
 from ...utils import AnsiColour, coloured, commandline_to_str, setEnv
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject",  # no-combine
@@ -160,3 +161,5 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
 class FettProjectMixin:
     path_in_rootfs = "/fett"
     default_architecture = CompilationTargets.FETT_DEFAULT_ARCHITECTURE
+    # We default to zero-initializing all stack variables for FETT projects
+    default_auto_var_init = AutoVarInit.ZERO
