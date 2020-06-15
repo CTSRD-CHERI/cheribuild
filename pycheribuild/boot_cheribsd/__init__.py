@@ -265,12 +265,14 @@ class CheriBSDInstance(pexpect.spawn):
             success(prefix, " successful after ", connection_time, " seconds")
             return True
 
-    def scp_from_guest(self, qemu_dir: str, local_dir: str):
+    def scp_from_guest(self, qemu_dir: str, local_dir: Path):
         assert self.ssh_port is not None
         command = ["scp", "-P", str(self.ssh_port), "-i", str(self.ssh_private_key)]
         command.extend(self._ssh_options(use_controlmaster=False))
         command.append("{user}@{host}:{remote_dir}".format(user=self.ssh_user, host="localhost", remote_dir=qemu_dir))
-        command.append(local_dir)  # todo: check destination?
+        if not local_dir.parent.exists():
+            failure("Parent dir does't exist: ", local_dir, exit=False)
+        command.append(str(local_dir))
         run_host_command(command)
 
 

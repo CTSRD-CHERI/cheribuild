@@ -64,7 +64,7 @@ def run_cheritest(qemu: boot_cheribsd.CheriBSDInstance, binary_name, args: argpa
         if qemu.smb_failed:
             boot_cheribsd.info("SMB mount has failed, performing normal scp")
             host_path = Path(args.test_output_dir, binary_name + ".xml")
-            qemu.scp_from_guest("/tmp/{}.xml".format(binary_name), str(host_path))
+            qemu.scp_from_guest("/tmp/{}.xml".format(binary_name), host_path)
         else:
             qemu.checked_run("mv -f /tmp/{}.xml /test-results/{}.xml".format(binary_name, binary_name))
             qemu.run("fsync /test-results/{}.xml".format(binary_name))
@@ -142,8 +142,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
             assert shlex.quote(str(results_db)) == str(results_db), "Should not contain any special chars"
             if qemu.smb_failed:
                 boot_cheribsd.info("SMB mount has failed, performing normal scp")
-                host_dest = args.smb_mount_directories[0].hostdir
-                qemu.scp_from_guest("/tmp/results.db", host_dest + "/" + result_name)
+                qemu.scp_from_guest("/tmp/results.db", Path(args.test_output_dir, results_db.name))
             else:
                 qemu.checked_run("cp -v /tmp/results.db {}".format(results_db))
                 qemu.checked_run("fsync " + str(results_db))
@@ -162,8 +161,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
                                  timeout=200 * 60)
                 if qemu.smb_failed:
                     boot_cheribsd.info("SMB mount has failed, performing normal scp")
-                    host_dest = args.smb_mount_directories[0].hostdir
-                    qemu.scp_from_guest("/tmp/results.xml", host_dest + "/" + result_name[:3] + ".xml")
+                    qemu.scp_from_guest("/tmp/results.xml", Path(args.test_output_dir, results_xml.name))
                 else:
                     qemu.checked_run("cp -v /tmp/results.xml {}".format(results_xml))
                     qemu.checked_run("fsync " + str(results_xml))
