@@ -153,8 +153,9 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
             self.COMMON_LDFLAGS.append("-lmd")  # kcgi requires libmd
         self.make_args.set_env(
             CC=str(self.CC),
-            LFLAGS=commandline_to_str(self.default_ldflags),
-            CFLAGS=commandline_to_str(self.default_compiler_flags)
+            LDFLAGS=commandline_to_str(self.default_ldflags),
+            CFLAGS=commandline_to_str(self.default_compiler_flags),
+            BVRS_OS="freebsd"
             )
         # Note: We must set these variables on the command line since the Makefile assigns to them with =
         self.make_args.set(PREFIX=self.real_install_root_dir, ORT_PREFIX=self.config.cheri_sdk_bindir / "ort")
