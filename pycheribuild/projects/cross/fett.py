@@ -111,11 +111,11 @@ class BuildFettConfig(CrossCompileProject):
 
         # voting app
         voting_src = src / "build/voting"
-        # /fett/var/www/cgi-bin added implicitly in fett-voting
+        # /fett/var/www/(cgi-bin|html) added implicitly in fett-voting
         #self.mtree.add_dir("fett/var/www")
         #self.mtree.add_dir("fett/var/www/cgi-bin")
+        #self.mtree.add_dir("fett/var/www/html")
         self.mtree.add_dir("fett/var/www/data", uname="www", gname="www", mode="0770")
-        self.mtree.add_dir("fett/var/www/html")
         self.mtree.add_dir("fett/var/www/run")
         self.mtree.add_file(voting_src / "common/conf/fastcgi.conf",
                             nginx_prefix / "conf/fastcgi.conf")
@@ -168,6 +168,27 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
         if not self.compiling_for_host():
             self.install_file(self.buildDir / "source/src/bvrs", self.real_install_root_dir / "var/www/cgi-bin/bvrs")
             self.install_file(self.buildDir / "source/src/bvrs.sql", self.real_install_root_dir / "share/bvrs.sql")
+            html_files = [
+                "election_official_home.html",
+                "election_official_login.html",
+                "election_official_new_voter_registration.html",
+                "election_official_query.html",
+                "index.html",
+                "index.js",
+                "jquery-3.5.1.min.js",
+                "pure-min.css",
+                "query.js",
+                "registration_verification.js",
+                "style.css",
+                "voter_home.html",
+                "voter_registration.html",
+                "voter_registration_confirmation.html",
+                "voter_registration_update.html",
+                "voter_registration_update_login.html",
+                "voter_registration_verification.html",
+                ]
+            for file in html_files:
+                self.install_file(self.buildDir / "public/" / file, self.real_install_root_dir / "var/www/html/bvrs" / file)
 
 
 class BuildFettDiskImage(BuildCheriBSDDiskImage):
