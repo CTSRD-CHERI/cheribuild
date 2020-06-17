@@ -830,7 +830,8 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         self.add_required_libraries(["lib", "usr/lib"])
         # Add compat libraries (may not exist if it was built with -DWITHOUT_LIB64, etc.)
         for libcompat_dir in ("usr/libcheri", "usr/lib64", "usr/lib32"):
-            if (self.rootfsDir / libcompat_dir / "libc.so").exists():
+            fullpath = self.rootfsDir / libcompat_dir
+            if not fullpath.is_symlink() and (fullpath / "libc.so").exists():
                 self.add_required_libraries([libcompat_dir])
 
         if self.include_cheritest:
