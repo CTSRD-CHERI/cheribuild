@@ -49,10 +49,11 @@ from subprocess import CompletedProcess
 from .colour import AnsiColour, coloured
 
 # reduce the number of import statements per project  # no-combine
-__all__ = ["typing", "printCommand", "includeLocalFile", "CompilerInfo",   # no-combine
-           "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setEnv", "init_global_config",  # no-combine
-           "warningMessage", "popen_handle_noexec", "extract_version", "get_program_version",  # no-combine
-           "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latest_system_clang_tool", "SafeDict",  # no-combine
+__all__ = ["typing", "printCommand", "includeLocalFile", "CompilerInfo",  # no-combine
+           "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setEnv",  # no-combine
+           "init_global_config", "warningMessage", "popen_handle_noexec", "extract_version",  # no-combine
+           "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latest_system_clang_tool",  # no-combine
+           "get_program_version", "SafeDict",  # no-combine
            "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build",  # no-combine
            "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
            "is_case_sensitive_dir", "SocketAndPort"]  # no-combine
@@ -346,48 +347,49 @@ class CompilerInfo(object):
     def __repr__(self):
         return "{} ({} {})".format(self.path, self.compiler, ".".join(map(str, self.version)))
 
+
 _cached_compiler_infos = dict()  # type: typing.Dict[Path, CompilerInfo]
 
 
 def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
     assert compiler is not None
     if compiler not in _cached_compiler_infos:
-        clangVersionPattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
-        gccVersionPattern = re.compile(b"gcc version (\\d+)\\.(\\d+)\\.?(\\d+)?")
-        appleLlvmVersionPattern = re.compile(b"Apple (?:clang|LLVM) version (\\d+)\\.(\\d+)\\.?(\\d+)?")
+        clang_version_pattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
+        gcc_version_pattern = re.compile(b"gcc version (\\d+)\\.(\\d+)\\.?(\\d+)?")
+        apple_llvm_version_pattern = re.compile(b"Apple (?:clang|LLVM) version (\\d+)\\.(\\d+)\\.?(\\d+)?")
         # TODO: could also use -dumpmachine to get the triple
-        targetPattern = re.compile(b"Target: (.+)")
+        target_pattern = re.compile(b"Target: (.+)")
         # clang prints this output to stderr
         try:
             # Use -v instead of --version to support both gcc and clang
             # Note: for clang-cpp/cpp we need to have stdin as devnull
-            versionCmd = runCmd(compiler, "-v", captureError=True, print_verbose_only=True, runInPretendMode=True,
-                                stdin=subprocess.DEVNULL, captureOutput=True)
+            version_cmd = runCmd(compiler, "-v", captureError=True, print_verbose_only=True, runInPretendMode=True,
+                                 stdin=subprocess.DEVNULL, captureOutput=True)
         except subprocess.CalledProcessError as e:
             stderr = e.stderr if e.stderr else b"FAILED: " + str(e).encode("utf-8")
-            versionCmd = CompletedProcess(e.cmd, e.returncode, e.output, stderr)
+            version_cmd = CompletedProcess(e.cmd, e.returncode, e.output, stderr)
 
-        clangVersion = clangVersionPattern.search(versionCmd.stderr)
-        appleLlvmVersion = appleLlvmVersionPattern.search(versionCmd.stderr)
-        gccVersion = gccVersionPattern.search(versionCmd.stderr)
-        target = targetPattern.search(versionCmd.stderr)
+        clang_version = clang_version_pattern.search(version_cmd.stderr)
+        apple_llvm_version = apple_llvm_version_pattern.search(version_cmd.stderr)
+        gcc_version = gcc_version_pattern.search(version_cmd.stderr)
+        target = target_pattern.search(version_cmd.stderr)
         kind = "unknown compiler"
         version = (0, 0, 0)
-        targetString = target.group(1).decode("utf-8") if target else ""
-        if gccVersion:
+        target_string = target.group(1).decode("utf-8") if target else ""
+        if gcc_version:
             kind = "gcc"
-            version = tuple(map(int, gccVersion.groups()))
-        elif appleLlvmVersion:
+            version = tuple(map(int, gcc_version.groups()))
+        elif apple_llvm_version:
             kind = "apple-clang"
-            version = tuple(map(int, appleLlvmVersion.groups()))
-        elif clangVersion:
+            version = tuple(map(int, apple_llvm_version.groups()))
+        elif clang_version:
             kind = "clang"
-            version = tuple(map(int, clangVersion.groups()))
+            version = tuple(map(int, clang_version.groups()))
         else:
-            warningMessage("Could not detect compiler info for", compiler, "- output was", versionCmd.stderr)
+            warningMessage("Could not detect compiler info for", compiler, "- output was", version_cmd.stderr)
         if GlobalConfig.VERBOSE_MODE:
-            print(compiler, "is", kind, "version", version, "with default target", targetString)
-        _cached_compiler_infos[compiler] = CompilerInfo(compiler, kind, version, targetString)
+            print(compiler, "is", kind, "version", version, "with default target", target_string)
+        _cached_compiler_infos[compiler] = CompilerInfo(compiler, kind, version, target_string)
     return _cached_compiler_infos[compiler]
 
 
@@ -471,10 +473,12 @@ def defaultNumberOfMakeJobs():
         makeJobs /= 2
     return makeJobs
 
+
 def maybe_add_space(msg, sep) -> tuple:
     if sep == "":
         return msg, " "
-    return (msg, )
+    return (msg,)
+
 
 def statusUpdate(*args, sep=" ", **kwargs):
     print(coloured(AnsiColour.cyan, *args, sep=sep), **kwargs)
@@ -488,14 +492,16 @@ def warningMessage(*args, sep=" "):
 def fatalError(*args, sep=" ", fixitHint=None, fatalWhenPretending=False, exit_code=3):
     # we ignore fatal errors when simulating a run
     if GlobalConfig.PRENTEND_MODE:
-        print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:", sep) + args, sep=sep), file=sys.stderr, flush=True)
+        print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:", sep) + args, sep=sep), file=sys.stderr,
+              flush=True)
         if fixitHint:
             print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr, flush=True)
         if fatalWhenPretending:
             traceback.print_stack()
             sys.exit(exit_code)
     else:
-        print(coloured(AnsiColour.red, maybe_add_space("Fatal error:", sep) + args, sep=sep), file=sys.stderr, flush=True)
+        print(coloured(AnsiColour.red, maybe_add_space("Fatal error:", sep) + args, sep=sep), file=sys.stderr,
+              flush=True)
         if fixitHint:
             print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr, flush=True)
         sys.exit(exit_code)
@@ -640,7 +646,9 @@ class OSInfo(object):
                             if msg_start:
                                 hint = hint[msg_start:]
                             return hint
-                        return "Could not find package for program " + name + ". Maybe `zypper in " + name + "` will work."
+                        return "Could not find package for program " + name + ". Maybe `zypper in " + name + "` will " \
+                                                                                                             "work."
+
                     return command_not_found
                 guessed_package = True
                 install_name = "lib" + name + "-devel" if is_lib else name
@@ -650,7 +658,7 @@ class OSInfo(object):
         if guessed_package:
             # not sure if the package name is correct:
             return "Possibly running `" + cls.package_manager() + " install " + install_name + \
-                                  "` fixes this. Note: package name may not be correct."
+                   "` fixes this. Note: package name may not be correct."
         else:
             return "Run `" + cls.package_manager() + " install " + install_name + "`"
 
@@ -678,7 +686,7 @@ def setEnv(*, print_verbose_only=True, **environ):
     """
     old_environ = dict(os.environ)
     # make sure all environment variables are converted to string
-    str_environ = dict((str(k),str(v)) for k,v in environ.items())
+    str_environ = dict((str(k), str(v)) for k, v in environ.items())
     for k, v in str_environ.items():
         printCommand("export", k + "=" + v, print_verbose_only=print_verbose_only)
     os.environ.update(str_environ)
@@ -769,6 +777,7 @@ class ThreadJoiner(object):
             if self.thread.is_alive():
                 statusUpdate("Waiting for '", self.thread.name, "' to complete", sep="")
             self.thread.join()
+
 
 # A dictionary for string formatting (format_map) that preserves values not
 # provided for later expansion
