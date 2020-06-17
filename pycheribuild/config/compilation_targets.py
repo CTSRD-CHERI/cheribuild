@@ -308,10 +308,9 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
     def _get_mfs_root_kernel(self, use_benchmark_kernel: bool) -> Path:
         assert self.is_cheribsd(), "Other cases not handled yet"
-        kernel_xtarget = self._get_mfs_kernel_xtarget()
         from ..projects.cross.cheribsd import BuildCheriBsdMfsKernel
         if use_benchmark_kernel:
-            return BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self.project, cross_target=kernel_xtarget)
+            return BuildCheriBsdMfsKernel.get_installed_benchmark_kernel_path(self.project)
         else:
             return BuildCheriBsdMfsKernel.get_installed_kernel_path(self.project)
 
