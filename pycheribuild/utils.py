@@ -62,7 +62,7 @@ Type_T = typing.TypeVar("Type_T")
 
 class GlobalConfig:
     TEST_MODE = False
-    PRENTEND_MODE = False
+    PRETEND_MODE = False
     VERBOSE_MODE = False
     QUIET_MODE = False
 
@@ -70,7 +70,7 @@ class GlobalConfig:
 def init_global_config(*, test_mode: bool, pretend_mode: bool, verbose_mode: bool, quiet_mode: bool):
     assert not (verbose_mode and quiet_mode), "mutually exclusive"
     GlobalConfig.TEST_MODE = test_mode
-    GlobalConfig.PRENTEND_MODE = pretend_mode
+    GlobalConfig.PRETEND_MODE = pretend_mode
     GlobalConfig.VERBOSE_MODE = verbose_mode
     GlobalConfig.QUIET_MODE = quiet_mode
 
@@ -214,7 +214,7 @@ def runCmd(*args, capture_output=False, capture_error=False, input: "typing.Unio
             kwargs["cwd"] = os.getcwd()
         except FileNotFoundError:
             kwargs["cwd"] = tempfile.gettempdir()
-    if not run_in_pretend_mode and GlobalConfig.PRENTEND_MODE:
+    if not run_in_pretend_mode and GlobalConfig.PRETEND_MODE:
         return CompletedProcess(args=cmdline, returncode=0, stdout=b"", stderr=b"")
     # actually run the process now:
     if input is not None:
@@ -267,7 +267,7 @@ def runCmd(*args, capture_output=False, capture_error=False, input: "typing.Unio
                 raise
             retcode = process.poll()
             if retcode != expected_exit_code and not allow_unexpected_returncode:
-                if GlobalConfig.PRENTEND_MODE and not raise_in_pretend_mode:
+                if GlobalConfig.PRETEND_MODE and not raise_in_pretend_mode:
                     cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
                     fatalError("Command ", "`" + commandline_to_str(process.args) +
                                "` failed with unexpected exit code ", retcode, *cwd, sep="")
@@ -304,7 +304,7 @@ class CompilerInfo(object):
     def get_resource_dir(self):
         # assert self.is_clang, self.compiler
         if not self._resource_dir:
-            if not self.path.exists() and GlobalConfig.PRENTEND_MODE:
+            if not self.path.exists() and GlobalConfig.PRETEND_MODE:
                 return Path("/unknown/resource/dir")  # avoid failing in jenkins
             # pretend to compile an existing source file and capture the -resource-dir output
             cc1_cmd = runCmd(self.path, "-###", "-xc", "-c", "/dev/null",
@@ -492,7 +492,7 @@ def warningMessage(*args, sep=" "):
 
 def fatalError(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, exit_code=3):
     # we ignore fatal errors when simulating a run
-    if GlobalConfig.PRENTEND_MODE:
+    if GlobalConfig.PRETEND_MODE:
         print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:", sep) + args, sep=sep), file=sys.stderr,
               flush=True)
         if fixit_hint:
