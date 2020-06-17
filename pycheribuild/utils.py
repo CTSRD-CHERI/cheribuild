@@ -46,7 +46,7 @@ import typing
 from pathlib import Path
 from subprocess import CompletedProcess
 
-from .colour import coloured, AnsiColour
+from .colour import AnsiColour, coloured
 
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "printCommand", "includeLocalFile", "CompilerInfo",   # no-combine
@@ -690,13 +690,20 @@ def setEnv(*, print_verbose_only=True, **environ):
 
 
 class TtyState:
+    # noinspection PyBroadException
     def __init__(self, fd: "typing.TextIO"):
         self.fd = fd
         try:
             self.attrs = termios.tcgetattr(fd)
-        except:
+        except Exception:
+            # Can happen if sys.stdin/sys.stdout/sys.stderr is not a TTY
             self.attrs = None
-        self.flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+        try:
+            self.flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+        except Exception:
+            # Can happen if sys.stdin/sys.stdout/sys.stderr is not a real file.  When running tests with pytest, this
+            # will raise UnsupportedOperation("redirected stdin is pseudofile, has no fileno()")
+            self.flags = None
 
     def _restore_attrs(self):
         new_attrs = termios.tcgetattr(self.fd)
@@ -729,7 +736,8 @@ class TtyState:
     def restore(self):
         if self.attrs is not None:  # Not a TTY
             self._restore_attrs()
-        self._restore_flags()
+        if self.flags is not None:  # Not a real file?
+            self._restore_flags()
 
 
 @contextlib.contextmanager
