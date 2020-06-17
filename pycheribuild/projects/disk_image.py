@@ -812,9 +812,8 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         self.is_minimal = True
 
     def _have_cplusplus_support(self, libdirs: "typing.List[str]"):
-        # C++ runtime not available for RISC-V purecap due to https://github.com/CTSRD-CHERI/llvm-project/issues/379
-        if self.rootfs_xtarget.is_riscv(include_purecap=True):
-            return not self.rootfs_xtarget.is_cheri_purecap() and libdirs != ["usr/libcheri"]
+        # C++ runtime was not available for RISC-V purecap due to https://github.com/CTSRD-CHERI/llvm-project/issues/379
+        # This has now been fixed, but could be an issue again in the future so keep this function around.
         return True
 
     def process_files_list(self, files_list):
