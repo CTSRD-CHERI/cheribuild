@@ -42,7 +42,6 @@ from ...utils import AnsiColour, coloured, commandline_to_str, set_env
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject",  # no-combine
            "CrossCompileTarget", "CrossCompileProject", "MakeCommandKind", "Linkage",  # no-combine
            "DefaultInstallDir", "BuildType", "CompilationTargets", "GitRepository",  # no-combine
-           "Path", "commandline_to_str",  # TODO: remove # no-combine
            "CrossCompileMixin", "FettProjectMixin"]  # no-combine
 
 

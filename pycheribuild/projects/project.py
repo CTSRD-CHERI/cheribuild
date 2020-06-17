@@ -42,7 +42,7 @@ import time
 import typing
 from collections import OrderedDict
 from enum import Enum
-from pathlib import Path, Path
+from pathlib import Path
 from typing import Callable, Union
 
 from ..config.chericonfig import BuildType, BuildType, CheriConfig, CheriConfig
@@ -58,7 +58,7 @@ from ..utils import (AnsiColour, check_call_handle_noexec, classproperty, colour
                      statusUpdate, ThreadJoiner, warningMessage)
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
-           "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
+           "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind",  # no-combine
            "CrossCompileTarget", "CPUArchitecture", "GitRepository", "ComputedDefaultValue", "TargetInfo",  # no-combine
            "commandline_to_str", "ReuseOtherProjectRepository", "ExternallyManagedSourceRepository",  # no-combine
            "ReuseOtherProjectDefaultTargetRepository",  # no-combine
