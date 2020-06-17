@@ -692,33 +692,44 @@ def setEnv(*, print_verbose_only=True, **environ):
 class TtyState:
     def __init__(self, fd: "typing.TextIO"):
         self.fd = fd
-        self.attrs = termios.tcgetattr(fd)
+        try:
+            self.attrs = termios.tcgetattr(fd)
+        except:
+            self.attrs = None
         self.flags = fcntl.fcntl(fd, fcntl.F_GETFL)
 
-    def restore(self):
+    def _restore_attrs(self):
+        new_attrs = termios.tcgetattr(self.fd)
+        if new_attrs == self.attrs:
+            return
+        warningMessage("TTY flags for", self.fd.name, "changed, resetting them")
+        print("Previous state", self.attrs)
+        print("New state", new_attrs)
+        termios.tcsetattr(self.fd, termios.TCSANOW, self.attrs)
+        termios.tcdrain(self.fd)
         new_attrs = termios.tcgetattr(self.fd)
         if new_attrs != self.attrs:
-            warningMessage("TTY flags for", self.fd.name, "changed, resetting them")
+            warningMessage("Failed to restore TTY flags for", self.fd.name)
             print("Previous state", self.attrs)
             print("New state", new_attrs)
-            termios.tcsetattr(self.fd, termios.TCSANOW, self.attrs)
-            termios.tcdrain(self.fd)
-            new_attrs = termios.tcgetattr(self.fd)
-            if new_attrs != self.attrs:
-                warningMessage("Failed to restore TTY flags for", self.fd.name)
-                print("Previous state", self.attrs)
-                print("New state", new_attrs)
 
+    def _restore_flags(self):
         new_flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
+        if new_flags == self.flags:
+            return
+        warningMessage("FD flags for", self.fd.name, "changed, resetting them")
+        print("Previous flags", self.flags)
+        print("New flags", new_flags)
+        fcntl.fcntl(sys.stdout, fcntl.F_SETFL, self.flags)
         if new_flags != self.flags:
-            warningMessage("FD flags for", self.fd.name, "changed, resetting them")
+            warningMessage("Failed to restore TTY flags for", self.fd.name)
             print("Previous flags", self.flags)
             print("New flags", new_flags)
-            fcntl.fcntl(sys.stdout, fcntl.F_SETFL, self.flags)
-            if new_flags != self.flags:
-                warningMessage("Failed to restore TTY flags for", self.fd.name)
-                print("Previous flags", self.flags)
-                print("New flags", new_flags)
+
+    def restore(self):
+        if self.attrs is not None:  # Not a TTY
+            self._restore_attrs()
+        self._restore_flags()
 
 
 @contextlib.contextmanager
