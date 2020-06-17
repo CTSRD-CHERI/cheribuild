@@ -28,8 +28,9 @@
 # SUCH DAMAGE.
 #
 import typing
+from pathlib import Path
 
-from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Path, Project
+from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..utils import get_program_version, OSInfo, set_env, statusUpdate, warningMessage
 
 
@@ -76,7 +77,7 @@ class BuildElftoolchain(Project):
         super().setup_config_options(**kwargs)
         cls.build_ar = cls.add_bool_option("build-ar", default=True, help="build the ar/ranlib programs")
         cls.build_static = cls.add_bool_option("build-static", help="Try to link elftoolchain statically "
-                                                                  "(needs patches on Linux)")
+                                                                    "(needs patches on Linux)")
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
@@ -119,7 +120,7 @@ class BuildElftoolchain(Project):
             INFOGRP=group, INFOOWN=user,
             LIBGRP=group, LIBOWN=user,
             FILESGRP=group, FILESOWN=user,
-        )
+            )
 
         self.make_args.set(
             BINDIR="/bin",
@@ -136,14 +137,14 @@ class BuildElftoolchain(Project):
         # The build system assumes all install directories already exist;
         for i in ("bin", "lib", "include", "share") + mandirs:
             self.makedirs(self.installDir / i)
-        firstCall = True  # recreate logfile on first call, after that append
+        first_call = True  # recreate logfile on first call, after that append
         for tgt in self.programsToBuild:
-            self.runMakeInstall(cwd=self.sourceDir / tgt, logfile_name="install", append_to_logfile=not firstCall,
+            self.runMakeInstall(cwd=self.sourceDir / tgt, logfile_name="install", append_to_logfile=not first_call,
                                 parallel=False)
-            firstCall = False
+            first_call = False
 
-        allInstalledTools = self.programsToBuild + self.extraPrograms
-        for prog in allInstalledTools:
+        all_installed_tools = self.programsToBuild + self.extraPrograms
+        for prog in all_installed_tools:
             if prog == "strip":
                 self.deleteFile(self.installDir / "bin" / ("cheri-unknown-freebsd-" + prog))
                 self.deleteFile(self.installDir / "bin" / ("mips64-unknown-freebsd-" + prog))

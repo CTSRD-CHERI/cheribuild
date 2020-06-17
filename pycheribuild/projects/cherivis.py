@@ -28,9 +28,10 @@
 # SUCH DAMAGE.
 #
 import typing
+from pathlib import Path
 
 from .cheritrace import BuildCheriTrace
-from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Path, Project
+from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
 from ..utils import OSInfo, runCmd, ThreadJoiner
 
 

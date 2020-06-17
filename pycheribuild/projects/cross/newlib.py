@@ -29,9 +29,10 @@
 # SUCH DAMAGE.
 #
 import tempfile
+from pathlib import Path
 
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
-                                  GitRepository, MakeCommandKind, Path)
+                                  GitRepository, MakeCommandKind)
 from ...utils import commandline_to_str, runCmd
 
 
@@ -53,7 +54,8 @@ class BuildNewlib(CrossCompileAutotoolsProject):
                                CompilationTargets.BAREMETAL_NEWLIB_MIPS64_PURECAP,
                                CompilationTargets.BAREMETAL_NEWLIB_RISCV64,
                                CompilationTargets.BAREMETAL_NEWLIB_RISCV64_PURECAP] + \
-                               CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
+                              CompilationTargets.ALL_SUPPORTED_RTEMS_TARGETS
+
     # build_in_source_dir = True  # we have to build in the source directory
 
     @classmethod
@@ -66,8 +68,8 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         self._installPrefix = self._installPrefix.parent  # newlib install already appends the triple
         self._installDir = self._installDir.parent  # newlib install already appends the triple
         self.verbose_print("installDir=", self.installDir, "_installPrefix=", self._installPrefix, "_installDir=",
-            self._installDir, "dest=", self.destdir, "real=", self.real_install_root_dir)
-        #self.configureCommand = Path("/this/path/does/not/exist")
+                           self._installDir, "dest=", self.destdir, "real=", self.real_install_root_dir)
+        # self.configureCommand = Path("/this/path/does/not/exist")
         self.configureCommand = self.sourceDir / "configure"
         # FIXME: how can I force it to run a full configure step (this is needed because it runs the newlib configure
         # step during make all rather than during ./configure

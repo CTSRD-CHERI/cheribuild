@@ -30,10 +30,11 @@
 import os
 import shlex
 import shutil
+from pathlib import Path
 from subprocess import CalledProcessError
 from typing import Any, Dict, Tuple, Union
 
-from .project import (AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Path, Project,
+from .project import (AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project,
                       SimpleProject)
 from ..targets import target_manager
 from ..utils import AnsiColour, coloured, commandline_to_str, get_program_version, OSInfo, runCmd, set_env, ThreadJoiner
@@ -45,7 +46,8 @@ class OpamMixin(object):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         assert isinstance(self, SimpleProject)
-        self.add_required_system_tool("opam", homebrew="opam", cheribuild_target="opam-2.0")  # pytype: disable=attribute-error
+        self.add_required_system_tool("opam", homebrew="opam",
+                                      cheribuild_target="opam-2.0")  # pytype: disable=attribute-error
         self.required_ocaml_version = "4.06.1"
         self.__using_correct_switch = False
         self.__ignore_switch_version = False
@@ -61,9 +63,10 @@ class OpamMixin(object):
         if opam_path:
             opam_version = get_program_version(Path(opam_path), regex=b"(\\d+)\\.(\\d+)\\.?(\\d+)?")
             if opam_version < (2, 0, 0):
-                self.dependency_error("Opam version", opam_version, "is too old. Need at least 2.0.0",  # pytype: disable=attribute-error
-                                     install_instructions="Install opam 2.0 with your system package manager or run "
-                                                          "`cheribuild.py opam-2.0` (Linux-only)")
+                self.dependency_error("Opam version", opam_version, "is too old. Need at least 2.0.0",
+                                      # pytype: disable=attribute-error
+                                      install_instructions="Install opam 2.0 with your system package manager or run "
+                                                           "`cheribuild.py opam-2.0` (Linux-only)")
 
     @property
     def opam_binary(self):
@@ -118,14 +121,16 @@ class OpamMixin(object):
             opam_env["OPAM_USER_PATH_RO"] = Path(self.opam_binary).parent
         if not (self.opamroot / "opam-init").exists():
             # noinspection PyUnresolvedReferences
-            self.run_cmd(self.opam_binary, "init", "--root=" + str(self.opamroot), "--no-setup", cwd="/", env=opam_env)  # pytype: disable=attribute-error
+            self.run_cmd(self.opam_binary, "init", "--root=" + str(self.opamroot), "--no-setup", cwd="/",
+                         env=opam_env)  # pytype: disable=attribute-error
         return opam_env, cwd
 
     def run_in_ocaml_env(self, command: str, cwd=None, print_verbose_only=False, **kwargs):
         opam_env, cwd = self._run_in_ocaml_env_prepare(cwd=cwd)
         script = "eval `opam config env`\n" + command + "\n"
         assert isinstance(self, Project)
-        return self.run_shell_script(script, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)  # pytype: disable=attribute-error
+        return self.run_shell_script(script, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env,
+                                     **kwargs)  # pytype: disable=attribute-error
 
     def run_command_in_ocaml_env(self, command: list, cwd=None, print_verbose_only=False, **kwargs):
         self._ensure_correct_switch()
@@ -134,7 +139,8 @@ class OpamMixin(object):
         if command[0] != self.opam_binary:
             command = [self.opam_binary, "exec", "--root=" + str(self.opamroot), "--"] + command
         assert isinstance(self, SimpleProject)
-        return self.run_cmd(command, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env, **kwargs)  # pytype: disable=attribute-error
+        return self.run_cmd(command, cwd=cwd, print_verbose_only=print_verbose_only, env=opam_env,
+                            **kwargs)  # pytype: disable=attribute-error
 
 
 class Opam2(SimpleProject):
@@ -195,7 +201,8 @@ class BuildSailFromOpam(ProjectUsingOpam):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.use_git_version = cls.add_bool_option("use-git-version", show_help=False,
-            help="Install sail from github instead of using the latest released version")
+                                                  help="Install sail from github instead of using the latest released "
+                                                       "version")
 
     def clean(self) -> ThreadJoiner:
         return ThreadJoiner(None)
@@ -222,7 +229,8 @@ class BuildSailFromOpam(ProjectUsingOpam):
         if self.config.clean or True:
             if not self.config.clean:
                 self.info("opam --destdir does not work with update -> doing full reinstall instead of update")
-            self.run_opam_cmd("uninstall", "--verbose", "sail", "--destdir=" + str(self.config.cheri_sdk_dir / "sailprefix"))
+            self.run_opam_cmd("uninstall", "--verbose", "sail",
+                              "--destdir=" + str(self.config.cheri_sdk_dir / "sailprefix"))
             self.run_opam_cmd("uninstall", "--verbose", "sail")
 
         # ensure sail isn't pinned
@@ -268,9 +276,9 @@ class BuildSailCheriMips(ProjectUsingOpam):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.with_trace_support = cls.add_bool_option("trace-support", show_help=True,
-                                                   help="Build sail-cheri-mips simulators with tracing support (they "
-                                                        "will be slow but the traces are useful to debug failing "
-                                                        "tests)")
+                                                     help="Build sail-cheri-mips simulators with tracing support (they "
+                                                          "will be slow but the traces are useful to debug failing "
+                                                          "tests)")
 
     def compile(self, **kwargs):
         if self.with_trace_support:
@@ -321,9 +329,9 @@ class BuildSailRISCV(ProjectUsingOpam):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.with_trace_support = cls.add_bool_option("trace-support", show_help=True,
-                                                   help="Build sail-cheri-mips simulators with tracing support (they "
-                                                        "will be slow but"
-                                                        "the traces are useful to debug failing tests)")
+                                                     help="Build sail-cheri-mips simulators with tracing support (they "
+                                                          "will be slow but"
+                                                          "the traces are useful to debug failing tests)")
 
     def compile(self, **kwargs):
         if self.with_trace_support:
@@ -354,9 +362,9 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.with_trace_support = cls.add_bool_option("trace-support", show_help=True,
-                                                   help="Build sail-cheri-mips simulators with tracing support (they "
-                                                        "will be slow but the traces are useful to debug failing "
-                                                        "tests)")
+                                                     help="Build sail-cheri-mips simulators with tracing support (they "
+                                                          "will be slow but the traces are useful to debug failing "
+                                                          "tests)")
 
     def compile(self, **kwargs):
         if self.with_trace_support:
@@ -384,9 +392,10 @@ class OcamlProject(OpamMixin, Project):
         # This avoids pulling in incompatible ocaml and the python@2 formula
         # self.add_required_system_tool("opam", homebrew="opam --without-ocaml --without-camlp4 --without-aspcud")
         self.add_required_system_tool("opam",
-                                   homebrew="Installing with hombrew generates a broken ocaml env, use this instead: "
-                                            "`wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh "
-                                            "-O - | sh -s /usr/local/bin`")
+                                      homebrew="Installing with hombrew generates a broken ocaml env, "
+                                               "use this instead: "
+                                               "`wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh "
+                                               "-O - | sh -s /usr/local/bin`")
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
@@ -410,7 +419,8 @@ class OcamlProject(OpamMixin, Project):
             self.dependency_error(
                 "OCaml env seems to be messed up. Note: On MacOS homebrew OCaml is not installed correctly. Try "
                 "installing it with opam instead:", install_instructions="Try running `" + self._opam_cmd_str("update",
-                    _add_switch=False) + " && " + self._opam_cmd_str("switch", _add_switch=False) + " 4.06.0`")
+                                                                                                              _add_switch=False) + " && " + self._opam_cmd_str(
+                    "switch", _add_switch=False) + " 4.06.0`")
         super().process()
 
 
@@ -433,7 +443,7 @@ class BuildSailFromSource(OcamlProject):
             self.run_in_ocaml_env("ocamlfind query menhirLib", cwd="/", print_verbose_only=True)
         except CalledProcessError:
             self.dependency_error("missing opam package menhirLib",
-                                 install_instructions="Try running `opam install menhir`")
+                                  install_instructions="Try running `opam install menhir`")
 
     def compile(self, **kwargs):
         self.run_in_ocaml_env("""

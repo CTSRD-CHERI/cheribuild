@@ -29,9 +29,10 @@
 #
 import re
 
-from .crosscompileproject import (CheriConfig, commandline_to_str, CrossCompileAutotoolsProject,
+from .crosscompileproject import (CheriConfig, CrossCompileAutotoolsProject,
                                   DefaultInstallDir, FettProjectMixin, GitRepository, MakeCommandKind)
 from .openssl import BuildFettOpenSSL
+from ...utils import commandline_to_str
 
 
 class BuildNginx(CrossCompileAutotoolsProject):
@@ -125,7 +126,8 @@ class BuildFettNginx(FettProjectMixin, BuildNginx):
 
     def configure(self):
         openssl_dir = str(BuildFettOpenSSL.get_instance(self)._installPrefix)
-        self.configureEnvironment["NGX_OPENSSL_fett_path"] = str(BuildFettOpenSSL.get_instance(self).destdir) + openssl_dir
+        self.configureEnvironment["NGX_OPENSSL_fett_path"] = str(
+            BuildFettOpenSSL.get_instance(self).destdir) + openssl_dir
         self.configureEnvironment["NGX_OPENSSL_fett_rpath"] = openssl_dir + "/lib"
         super().configure()
 

@@ -28,9 +28,8 @@
 # SUCH DAMAGE.
 #
 
-from .crosscompileproject import (commandline_to_str, CrossCompileProject, DefaultInstallDir, GitRepository,
-                                  MakeCommandKind)
-from ...utils import set_env
+from .crosscompileproject import (CrossCompileProject, DefaultInstallDir, GitRepository, MakeCommandKind)
+from ...utils import commandline_to_str, set_env
 
 
 class DLMalloc(CrossCompileProject):
@@ -40,75 +39,76 @@ class DLMalloc(CrossCompileProject):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.SYSROOT
 
-
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
 
-        cls.just_so          = cls.add_bool_option("just-so", help="Just build the .so shim")
-        cls.debug            = cls.add_bool_option("debug", help="Turn on debugging features")
+        cls.just_so = cls.add_bool_option("just-so", help="Just build the .so shim")
+        cls.debug = cls.add_bool_option("debug", help="Turn on debugging features")
 
         cls.cheri_set_bounds = cls.add_bool_option("cheri-bounds", default=True, help="Set bounds on allocations")
 
-        cls.qmabs            = cls.add_config_option("qmabs", kind=int,
-                                                   help="Quarantine memory absolute threshold")
+        cls.qmabs = cls.add_config_option("qmabs", kind=int,
+                                          help="Quarantine memory absolute threshold")
 
-        cls.qmratio          = cls.add_config_option("qmratio", kind=float,
-                                                   help="Quarantine memory ratio threshold")
+        cls.qmratio = cls.add_config_option("qmratio", kind=float,
+                                            help="Quarantine memory ratio threshold")
 
-        cls.qmmin            = cls.add_config_option("qmmin", kind=int,
-                                                   help="Minimum amount quarantined to trigger a revocation based on ratio")
+        cls.qmmin = cls.add_config_option("qmmin", kind=int,
+                                          help="Minimum amount quarantined to trigger a revocation based on ratio")
 
-        cls.revoke           = cls.add_bool_option("revoke", help="Revoke quarantine before reusing")
+        cls.revoke = cls.add_bool_option("revoke", help="Revoke quarantine before reusing")
 
-        cls.consolidate_on_free = cls.add_bool_option("consolidate", default=True, help="Consolidate memory when quarantining")
+        cls.consolidate_on_free = cls.add_bool_option("consolidate", default=True,
+                                                      help="Consolidate memory when quarantining")
 
-        cls.zero_memory      = cls.add_bool_option("zero-memory", help="Zero allocated memory")
+        cls.zero_memory = cls.add_bool_option("zero-memory", help="Zero allocated memory")
 
-        cls.stats_at_exit    = cls.add_bool_option("stats-at-exit", default=True, help="print statistics on exit")
+        cls.stats_at_exit = cls.add_bool_option("stats-at-exit", default=True, help="print statistics on exit")
 
-        cls.unmap_support    = cls.add_bool_option("unmap-support", default=True, help="support for unmapping")
+        cls.unmap_support = cls.add_bool_option("unmap-support", default=True, help="support for unmapping")
 
-        cls.unmap_threshold  = cls.add_config_option("unmap-threshold", kind=int,
-                                                   help="Threshold (in pages) at which interior pages of quanantined chunks are unmapped")
-        cls.quar_unsafe      = cls.add_bool_option("unsafe-quarantine",
-                                                 help="Don't isolate quarantine structures")
+        cls.unmap_threshold = cls.add_config_option("unmap-threshold", kind=int,
+                                                    help="Threshold (in pages) at which interior pages of quanantined "
+                                                         "chunks are unmapped")
+        cls.quar_unsafe = cls.add_bool_option("unsafe-quarantine",
+                                              help="Don't isolate quarantine structures")
 
     def compile(self, **kwargs):
-        if self.cheri_set_bounds :
+        if self.cheri_set_bounds:
             self.CFLAGS.append("-DCHERI_SET_BOUNDS")
 
-        if self.revoke :
+        if self.revoke:
             self.CFLAGS.append("-DCAPREVOKE")
 
-        if self.qmabs :
+        if self.qmabs:
             self.CFLAGS.append("-DDEFAULT_MAX_FREEBUFBYTES=%d" % self.qmabs)
 
-        if self.qmratio :
+        if self.qmratio:
             self.CFLAGS.append("-DDEFAULT_FREEBUF_PERCENT=%f" % self.qmratio)
 
-        if self.qmmin :
+        if self.qmmin:
             self.CFLAGS.append("-DDEFAULT_MIN_FREEBUFBYTES=%d" % self.qmmin)
 
-        if self.consolidate_on_free :
+        if self.consolidate_on_free:
             self.CFLAGS.append("-DCONSOLIDATE_ON_FREE=1")
-        else :
+        else:
             self.CFLAGS.append("-DCONSOLIDATE_ON_FREE=0")
 
-        if self.zero_memory :
+        if self.zero_memory:
             self.CFLAGS.append("-DZERO_MEMORY=1")
-        else :
+        else:
             self.CFLAGS.append("-DZERO_MEMORY=0")
 
-        if self.unmap_support :
+        if self.unmap_support:
             self.CFLAGS.append("-DSUPPORT_UNMAP=1")
-        else :
+        else:
             self.CFLAGS.append("-DSUPPORT_UNMAP=0")
 
-        if self.unmap_threshold :
+        if self.unmap_threshold:
             self.CFLAGS.append("-DDEFAULT_UNMAP_THRESHOLD=%d" % self.unmap_threshold)
 
-        if not self.quar_unsafe :
+        if not self.quar_unsafe:
             self.CFLAGS.append("-DSAFE_FREEBUF")
 
         if self.stats_at_exit:

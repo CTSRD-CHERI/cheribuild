@@ -28,10 +28,11 @@
 # SUCH DAMAGE.
 #
 import tempfile
+from pathlib import Path
 
 from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, CrossCompileAutotoolsProject,
                                   CrossCompileCMakeProject, CrossCompileProject, DefaultInstallDir, GitRepository,
-                                  Linkage, MakeCommandKind, Path)
+                                  Linkage, MakeCommandKind)
 from ...config.loader import ComputedDefaultValue
 from ...utils import commandline_to_str, fatalError, get_compiler_info, OSInfo, runCmd
 
@@ -47,7 +48,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
     needs_mxcaptable_static = True  # Currently over the limit, maybe we need -ffunction-sections/-fdata-sections
     hide_options_from_help = True  # hide this for now
 
-    default_build_type = BuildType.MINSIZERELWITHDEBINFO # Default to -Os with debug info:
+    default_build_type = BuildType.MINSIZERELWITHDEBINFO  # Default to -Os with debug info:
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -68,7 +69,8 @@ class BuildQtWithConfigureScript(CrossCompileProject):
         cls.assertions = cls.add_bool_option("assertions", default=False, show_help=True, help="Include assertions")
         cls.minimal = cls.add_bool_option("minimal", show_help=True, help="Don't build QtWidgets or QtGui, etc")
         cls.optimized_debug_build = cls.add_bool_option("optimized-debug-build",
-                                                      help="Don't build with -Os instead of -O0 for debug info builds")
+                                                        help="Don't build with -Os instead of -O0 for debug info "
+                                                             "builds")
 
     def configure(self, **kwargs):
         if self.force_static_linkage:
@@ -113,7 +115,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-device-option", "LINKER_FLAGS=" + commandline_to_str(linker_flags),
                 "-sysroot", self.crossSysrootPath,
                 "-prefix", "/usr/local/" + self._xtarget.generic_suffix
-            ])
+                ])
 
         self.configureArgs.extend([
             # To ensure the host and cross-compiled version is the same also disable opengl and dbus there
@@ -125,7 +127,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             "-no-Werror",
             "-no-use-gold-linker",
             "-no-iconv"
-        ])
+            ])
         if self.build_tests:
             self.configureArgs.append("-developer-build")
             if OSInfo.IS_MAC:
@@ -152,7 +154,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             # self.configureArgs.append("-optimize-debug")
         else:
             assert self.build_type in (BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO,
-                                             BuildType.MINSIZEREL, BuildType.RELEASE)
+                                       BuildType.MINSIZEREL, BuildType.RELEASE)
             self.configureArgs.append("-release")
             if self.build_type in (BuildType.RELWITHDEBINFO, BuildType.MINSIZERELWITHDEBINFO):
                 self.configureArgs.append("-force-debug-info")
@@ -180,7 +182,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
                 "-no-syslog",
                 "-no-gui",
                 "-no-iconv"
-            ])
+                ])
 
         self.configureArgs.extend(["-opensource", "-confirm-license"])
 
@@ -201,7 +203,7 @@ class BuildQt5(BuildQtWithConfigureScript):
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
         cls.allModules = cls.add_bool_option("all-modules", show_help=True,
-                                          help="Build all modules (even those that don't make sense for CHERI)")
+                                             help="Build all modules (even those that don't make sense for CHERI)")
 
     def configure(self, **kwargs):
         if not self.allModules:
@@ -233,8 +235,9 @@ class BuildQtBase(BuildQtWithConfigureScript):
 
     def __init__(self, config):
         super().__init__(config)
-        #self.COMMON_FLAGS.extend(self.extra_c_compat_flags)
-        self.cross_warning_flags += ["-Wno-shadow", "-Wno-error=cheri-bitwise-operations"]  # FIXME: remove after update to 5.12
+        # self.COMMON_FLAGS.extend(self.extra_c_compat_flags)
+        self.cross_warning_flags += ["-Wno-shadow",
+                                     "-Wno-error=cheri-bitwise-operations"]  # FIXME: remove after update to 5.12
 
     def compile(self, **kwargs):
         if self.minimal:
@@ -246,7 +249,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
                     self.run_make("sub-tests-make_first")
                 self.run_make("sub-corelib", cwd=self.buildDir / "tests/auto")
         else:
-            self.run_make() # QtBase ignores -nomake if you run "gmake all"
+            self.run_make()  # QtBase ignores -nomake if you run "gmake all"
 
     def run_tests(self):
         if self.compiling_for_host():
@@ -259,7 +262,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
 class BuildICU4C(CrossCompileAutotoolsProject):
     # noinspection PyUnreachableCode
     repository = GitRepository("https://github.com/CTSRD-CHERI/icu.git", default_branch="maint/maint-67",
-        force_branch=True, old_urls=[b"https://github.com/unicode-org/icu.git"])
+                               force_branch=True, old_urls=[b"https://github.com/unicode-org/icu.git"])
     project_name = "icu"
     target = "icu4c"
     build_dir_suffix = "4c"
@@ -330,11 +333,12 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
             self.configureCommand = self.sourceDir / "autogen.sh"
         self.configureArgs.extend([
             "--without-python", "--without-modules", "--without-lzma",
-        ])
+            ])
         if OSInfo.IS_MAC:
             self.add_required_system_tool("glibtoolize", homebrew="libtool")
             self.configureEnvironment["LIBTOOLIZE"] = "glibtoolize"
-        self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-capability-misuse"]  # FIXME: build with capability -Werror
+        self.cross_warning_flags += ["-Wno-error",
+                                     "-Wno-error=cheri-capability-misuse"]  # FIXME: build with capability -Werror
 
 
 class BuildQtWebkit(CrossCompileCMakeProject):
@@ -374,7 +378,9 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         self.add_required_system_tool("update-mime-database", homebrew="shared-mime-info", apt="shared-mime-info")
         self.add_required_system_tool("ruby", apt="ruby")
 
-        self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-bitwise-operations", "-Wno-error=cheri-capability-misuse", "-Wno-error=format"]  # FIXME: build with capability -Werror
+        self.cross_warning_flags += ["-Wno-error", "-Wno-error=cheri-bitwise-operations",
+                                     "-Wno-error=cheri-capability-misuse",
+                                     "-Wno-error=format"]  # FIXME: build with capability -Werror
         # We are building an old version of webkit
         self.cross_warning_flags.append("-Wno-deprecated-copy")
         if self.should_include_debug_info:
@@ -387,7 +393,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                                ENABLE_XSLT=False,  # 1 less library to build
                                USE_GSTREAMER=False,  # needs all the glib+gtk crap
                                USE_LD_GOLD=False,  # Webkit wants to use gold by default...
-                               USE_SYSTEM_MALLOC=True,  # we want bounds (instead of the fast bump-the-pointer bmalloc code)
+                               USE_SYSTEM_MALLOC=True,
+                               # we want bounds (instead of the fast bump-the-pointer bmalloc code)
                                ENABLE_API_TESTS=False,
                                )
         # TODO: when we use the full build of Qt enable these:
@@ -407,7 +414,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
                                )
         if not self.compiling_for_host():
             # we need to find the installed Qt
-            self.add_cmake_options(Qt5_DIR=self.crossSysrootPath / ("usr/local/" + self._xtarget.generic_suffix) / "lib/cmake/Qt5")
+            self.add_cmake_options(
+                Qt5_DIR=self.crossSysrootPath / ("usr/local/" + self._xtarget.generic_suffix) / "lib/cmake/Qt5")
             self.add_cmake_options(PNG_LIBRARIES="libqtlibpng.a")
             self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.getSourceDir(self) / "src/3rdparty/libpng")
             if self.force_static_linkage:
@@ -426,13 +434,15 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.build_jsc_only = cls.add_bool_option("build-jsc-only", show_help=True, help="only build the JavaScript interpreter executable")
+        cls.build_jsc_only = cls.add_bool_option("build-jsc-only", show_help=True,
+                                                 help="only build the JavaScript interpreter executable")
 
     def compile(self, **kwargs):
         # Generate the shared mime info cache to MASSIVELY speed up tests
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
             mime_info_src = BuildQtBase.getSourceDir(self) / "src/corelib/mimetypes/mime/packages/freedesktop.org.xml"
-            self.install_file(mime_info_src, Path(td, "mime/packages/freedesktop.org.xml"), force=True, print_verbose_only=False)
+            self.install_file(mime_info_src, Path(td, "mime/packages/freedesktop.org.xml"), force=True,
+                              print_verbose_only=False)
             try:
                 runCmd("update-mime-database", "-V", Path(td, "mime"), cwd="/")
             except:
@@ -442,8 +452,10 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             if not Path(td, "mime/mime.cache").exists():
                 fatalError("Could not generated shared-mime-info cache!")
             # install mime.cache and freedesktop.org.xml into the build dir for tests
-            self.install_file(mime_info_src, self.buildDir / "freedesktop.org.xml", force=True, print_verbose_only=False)
-            self.install_file(Path(td, "mime/mime.cache"), self.buildDir / "mime.cache", force=True, print_verbose_only=False)
+            self.install_file(mime_info_src, self.buildDir / "freedesktop.org.xml", force=True,
+                              print_verbose_only=False)
+            self.install_file(Path(td, "mime/mime.cache"), self.buildDir / "mime.cache", force=True,
+                              print_verbose_only=False)
             # TODO: get https://github.com/annulen/webkit-test-fonts to run the full testsuite
         if self.build_jsc_only:
             self.run_make("jsc")
@@ -455,7 +467,8 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         if not self.build_jsc_only:
             dump_render_tree = self.buildDir / "bin/DumpRenderTree"  # type: Path
             if dump_render_tree.is_file():
-                runCmd(self.llvm_binutils_dir / "llvm-strip", "-o", dump_render_tree.with_suffix(".stripped"), dump_render_tree)
+                runCmd(self.llvm_binutils_dir / "llvm-strip", "-o", dump_render_tree.with_suffix(".stripped"),
+                       dump_render_tree)
         jsc = self.buildDir / "bin/jsc"  # type: Path
         if jsc.is_file():
             runCmd(self.llvm_binutils_dir / "llvm-strip", "-o", jsc.with_suffix(".stripped"), jsc)
@@ -466,4 +479,4 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             self.fatal("Running host tests not implemented")
         else:
             self.target_info.run_cheribsd_test_script("run_qtwebkit_tests.py", use_benchmark_kernel_by_default=True,
-                                          mount_builddir=True, mount_sourcedir=True, mount_sysroot=True)
+                                                      mount_builddir=True, mount_sourcedir=True, mount_sysroot=True)

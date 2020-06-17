@@ -29,9 +29,10 @@
 #
 import stat
 import tempfile
+from pathlib import Path
 
 from .crosscompileproject import (CompilationTargets, CrossCompileProject, DefaultInstallDir, GitRepository,
-                                  MakeCommandKind, Path)
+                                  MakeCommandKind)
 from ..project import ExternallyManagedSourceRepository
 from ...config.target_info import CPUArchitecture
 from ...utils import commandline_to_str, is_jenkins_build, set_env
@@ -134,7 +135,7 @@ class BuildMibench(CrossCompileProject):
         test_command = "cd '/build/{dirname}' && ./run_jenkins-bluehive.sh -d0 -r1 -s {size} {version}".format(
             dirname=self.bundle_dir.name, size=self.benchmark_size, version=self.benchmark_version)
         self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
-                                      "--test-timeout", str(120 * 60), mount_builddir=True)
+                                                  "--test-timeout", str(120 * 60), mount_builddir=True)
 
     def run_benchmarks(self):
         if not self.compiling_for_mips(include_purecap=True):
@@ -147,9 +148,10 @@ class BuildMibench(CrossCompileProject):
                 self.fatal("Created invalid benchmark bundle...")
             num_iterations = self.config.benchmark_iterations or 10
             self.target_info.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
-                benchmark_script_args=["-d1", "-r" + str(num_iterations), "-s", self.benchmark_size,
-                                       "-o", self.default_statcounters_csv_name,
-                                       self.benchmark_version])
+                                                benchmark_script_args=["-d1", "-r" + str(num_iterations), "-s",
+                                                                       self.benchmark_size,
+                                                                       "-o", self.default_statcounters_csv_name,
+                                                                       self.benchmark_version])
 
 
 class BuildOlden(CrossCompileProject):
@@ -189,7 +191,7 @@ class BuildOlden(CrossCompileProject):
         # copy asan libraries and the run script to the bin dir to ensure that we can run with --test from the
         # build directory.
         self.install_file(self.sourceDir / "run_jenkins-bluehive.sh",
-                         self.buildDir / "bin/run_jenkins-bluehive.sh", force=True)
+                          self.buildDir / "bin/run_jenkins-bluehive.sh", force=True)
         if self.compiling_for_mips(include_purecap=False) and self.use_asan:
             self.copy_asan_dependencies(self.buildDir / "bin/lib")
 
@@ -228,8 +230,8 @@ class BuildOlden(CrossCompileProject):
         # testing, not benchmarking -> run only once: (-s small / -s large?)
         test_command = "cd /build/bin && ./run_jenkins-bluehive.sh -d0 -r1 {tgt}".format(tgt=self.test_arch_suffix)
         self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
-                                      "--test-timeout", str(120 * 60),
-                                      mount_builddir=True)
+                                                  "--test-timeout", str(120 * 60),
+                                                  mount_builddir=True)
 
     def run_benchmarks(self):
         if not self.compiling_for_mips(include_purecap=True):
@@ -243,8 +245,9 @@ class BuildOlden(CrossCompileProject):
                 self.fatal("Created invalid benchmark bundle...")
             num_iterations = self.config.benchmark_iterations or 15
             self.target_info.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
-                benchmark_script_args=["-d1", "-r" + str(num_iterations), "-o",
-                                       self.default_statcounters_csv_name, self.test_arch_suffix])
+                                                benchmark_script_args=["-d1", "-r" + str(num_iterations), "-o",
+                                                                       self.default_statcounters_csv_name,
+                                                                       self.test_arch_suffix])
 
 
 class BuildSpec2006(CrossCompileProject):
@@ -259,13 +262,17 @@ class BuildSpec2006(CrossCompileProject):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.ctsrd_evaluation_trunk = cls.add_path_option("ctsrd-evaluation-trunk", default="/you/must/set --spec2006/ctsrd-evaluation-trunk config option",
-                                                        help="Path to the CTSRD evaluation/trunk svn checkout")
+        cls.ctsrd_evaluation_trunk = cls.add_path_option("ctsrd-evaluation-trunk",
+                                                         default="/you/must/set --spec2006/ctsrd-evaluation-trunk "
+                                                                 "config option",
+                                                         help="Path to the CTSRD evaluation/trunk svn checkout")
         cls.ctsrd_evaluation_vendor = cls.add_path_option("ctsrd-evaluation-vendor",
-                                                        default="/you/must/set --spec2006/ctsrd-evaluation-vendor config option",
-                                                        help="Path to the CTSRD evaluation/vendor svn checkout")
+                                                          default="/you/must/set --spec2006/ctsrd-evaluation-vendor "
+                                                                  "config option",
+                                                          help="Path to the CTSRD evaluation/vendor svn checkout")
         cls.fast_benchmarks_only = cls.add_bool_option("fast-benchmarks-only", default=False)
-        cls.benchmark_override = cls.add_config_option("benchmarks", default=[], kind=list, help="override the list of benchmarks to run")
+        cls.benchmark_override = cls.add_config_option("benchmarks", default=[], kind=list,
+                                                       help="override the list of benchmarks to run")
 
     @property
     def config_name(self):
@@ -307,18 +314,19 @@ class BuildSpec2006(CrossCompileProject):
         # Approximate duration for 3 runs on the FPGA:
         self.working_benchmark_list = [
             # "400.perlbench", # --- broken
-            "401.bzip2",       # 3 runs = 0:10:33 -> ~3:30mins per run
+            "401.bzip2",  # 3 runs = 0:10:33 -> ~3:30mins per run
             # "403.gcc", # --- broken
-            # "429.mcf",      # Strange tag violation even after fixing realloc() and would use too much memory to run on 1GB FPGA
-            "445.gobmk",      # 3 runs = 1:05:43 -> ~22mins per run
-            "456.hmmer",      # 3 runs = 0:05:50 -> ~2mins per run
-            "458.sjeng",      # 3 runs = 0:23:14 -> ~7mins per run
-            "462.libquantum", # 3 runs = 0:00:21 -> ~7s per run
-            "464.h264ref",    # 3 runs = 1:20:01 -> ~27mins per run
-            "471.omnetpp",    # 3 runs = 0:05:09 -> ~1:45min per run
-            "473.astar",      # 3 runs = 0:31:41  -> ~10:30 mins per run
-            "483.xalancbmk",   # 3 runs = 0:00:55 -> ~20 secs per run"
-        ]
+            # "429.mcf",      # Strange tag violation even after fixing realloc() and would use too much memory to
+            # run on 1GB FPGA
+            "445.gobmk",  # 3 runs = 1:05:43 -> ~22mins per run
+            "456.hmmer",  # 3 runs = 0:05:50 -> ~2mins per run
+            "458.sjeng",  # 3 runs = 0:23:14 -> ~7mins per run
+            "462.libquantum",  # 3 runs = 0:00:21 -> ~7s per run
+            "464.h264ref",  # 3 runs = 1:20:01 -> ~27mins per run
+            "471.omnetpp",  # 3 runs = 0:05:09 -> ~1:45min per run
+            "473.astar",  # 3 runs = 0:31:41  -> ~10:30 mins per run
+            "483.xalancbmk",  # 3 runs = 0:00:55 -> ~20 secs per run"
+            ]
         self.complete_benchmark_list = self.working_benchmark_list + ["400.perlbench", "403.gcc", "429.mcf"]
         # self.benchmark_list = ["456.hmmer"]
         self.fast_list = ["471.omnetpp", "483.xalancbmk", "456.hmmer", "462.libquantum"]
@@ -345,17 +353,17 @@ class BuildSpec2006(CrossCompileProject):
 
         config_file_text = self.read_file(self.spec_config_dir / "freebsd-cheribuild.cfg")
         # FIXME: this should really not be needed....
-        self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse") # FIXME: cannot patch xalanbmk
-        self.cross_warning_flags.append("-Wno-error=implicit-function-declaration") # FIXME: cannot patch hmmr
-        self.cross_warning_flags.append("-Wcheri") # FIXME: cannot patch xalanbmk
-        self.cross_warning_flags.append("-Wno-c++11-narrowing") # FIXME: cannot patch xalanbmk
+        self.cross_warning_flags.append("-Wno-error=cheri-capability-misuse")  # FIXME: cannot patch xalanbmk
+        self.cross_warning_flags.append("-Wno-error=implicit-function-declaration")  # FIXME: cannot patch hmmr
+        self.cross_warning_flags.append("-Wcheri")  # FIXME: cannot patch xalanbmk
+        self.cross_warning_flags.append("-Wno-c++11-narrowing")  # FIXME: cannot patch xalanbmk
         self.cross_warning_flags.append("-Wno-undefined-bool-conversion")
         self.cross_warning_flags.append("-Wno-writable-strings")
         self.cross_warning_flags.append("-Wno-unused-variable")
         self.cross_warning_flags.append("-Wno-error=format")
         self.cross_warning_flags.append("-Wno-error=cheri-prototypes")  # FIXME: h264 has this, but seeems to run fine
         self.cross_warning_flags.append("-Wno-unused-function")
-        self.cross_warning_flags.append("-Wno-logical-op-parentheses") # so noisy in  xalanbmk
+        self.cross_warning_flags.append("-Wno-logical-op-parentheses")  # so noisy in  xalanbmk
         # The C++ benchmarks have narrowing errors if we compile with the default std (c++14)
         self.CXXFLAGS.append("-std=gnu++98")
 
@@ -363,23 +371,30 @@ class BuildSpec2006(CrossCompileProject):
         config_file_text = config_file_text.replace("@CONFIG_NAME@", self.config_name)
         config_file_text = config_file_text.replace("@CLANG@", str(self.CC))
         config_file_text = config_file_text.replace("@CLANGXX@", str(self.CXX))
-        config_file_text = config_file_text.replace("@CFLAGS@", commandline_to_str(self.default_compiler_flags + self.CFLAGS + ["-ggdb"]))
-        config_file_text = config_file_text.replace("@CXXFLAGS@", commandline_to_str(self.default_compiler_flags + self.CXXFLAGS + ["-ggdb"]))
-        config_file_text = config_file_text.replace("@LDFLAGS@", commandline_to_str(self.default_ldflags + self.LDFLAGS))
-        config_file_text = config_file_text.replace("@SYSROOT@", str(self.sdk_sysroot) if not self.compiling_for_host() else "/")
-        config_file_text = config_file_text.replace("@SYS_BIN@", str(self.sdk_bindir) if not self.compiling_for_host() else "/")
+        config_file_text = config_file_text.replace("@CFLAGS@", commandline_to_str(
+            self.default_compiler_flags + self.CFLAGS + ["-ggdb"]))
+        config_file_text = config_file_text.replace("@CXXFLAGS@", commandline_to_str(
+            self.default_compiler_flags + self.CXXFLAGS + ["-ggdb"]))
+        config_file_text = config_file_text.replace("@LDFLAGS@",
+                                                    commandline_to_str(self.default_ldflags + self.LDFLAGS))
+        config_file_text = config_file_text.replace("@SYSROOT@",
+                                                    str(self.sdk_sysroot) if not self.compiling_for_host() else "/")
+        config_file_text = config_file_text.replace("@SYS_BIN@",
+                                                    str(self.sdk_bindir) if not self.compiling_for_host() else "/")
 
         self.write_file(self.buildDir / "spec/config/" / (self.config_name + ".cfg"), contents=config_file_text,
-                       overwrite=True, never_print_cmd=False, mode=0o644)
+                        overwrite=True, never_print_cmd=False, mode=0o644)
 
         script = """
 source shrc
 # --make_no_clobber can avoid rebuilds but doesn't seem to work correctly
 runspec -c {spec_config_name} --noreportable --action build {benchmark_list}
 # ensure that the overwrite prompt gets yes as an answer:
-echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --iterations 1 --make_bundle {spec_config_name} {benchmark_list}
+echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test \
+                 --iterations 1 --make_bundle {spec_config_name} {benchmark_list}
 """.format(benchmark_list=commandline_to_str(self.benchmark_list), spec_config_name=self.config_name)
-        # TODO: add extra files to the bundle instead of copying later? https://www.spec.org/cpu2006/Docs/runspec.html#makebundle
+        # TODO: add extra files to the bundle instead of copying later?
+        #  https://www.spec.org/cpu2006/Docs/runspec.html#makebundle
         self.run_shell_script(script, shell="bash", cwd=self.buildDir / "spec")
 
     def install(self, **kwargs):
@@ -429,7 +444,7 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
             caprevoke = "libcheri_caprevoke.so.1"
             if (self.sdk_sysroot / "usr/libcheri" / caprevoke).exists():
                 self.install_file(self.sdk_sysroot / "usr/libcheri" / caprevoke, spec_root / "lib" / caprevoke,
-                                 print_verbose_only=False, force=True)
+                                  print_verbose_only=False, force=True)
 
         # To copy all of them:
         # self.run_cmd("cp", "-av", self.spec_run_scripts, output_dir / "benchspec/")
@@ -444,19 +459,21 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
             self.fatal("Cannot run these benchmarks for non-MIPS yet")
             return
         # self.makedirs(self.buildDir / "test")
-        #self.run_cmd("tar", "-xvjf", self.buildDir / "spec/{}.cpu2006bundle.bz2".format(self.config_name),
+        # self.run_cmd("tar", "-xvjf", self.buildDir / "spec/{}.cpu2006bundle.bz2".format(self.config_name),
         #             cwd=self.buildDir / "test")
-        #self.run_cmd("find", ".", cwd=self.buildDir / "test")
+        # self.run_cmd("find", ".", cwd=self.buildDir / "test")
         self.clean_directory(self.buildDir / "spec-test-dir")
         self.create_tests_dir(self.buildDir / "spec-test-dir")
         test_command = """
 export LD_LIBRARY_PATH=/sysroot/usr/lib:/sysroot/lib;
 export LD_CHERI_LIBRARY_PATH=/sysroot/usr/libcheri;
-cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_flags} -b "{bench_list}" -t {config} -d0 -r1 {arch}""".format(
+cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_flags} \
+    -b "{bench_list}" -t {config} -d0 -r1 {arch}""".format(
             config=self.config_name, bench_list=" ".join(self.benchmark_list),
             arch=self.bluehive_benchmark_script_archname, debug_flags="-g" if self.config.run_under_gdb else "")
         self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
-                                      "--test-timeout", str(120 * 60), mount_builddir=True, mount_sysroot=True)
+                                                  "--test-timeout", str(120 * 60), mount_builddir=True,
+                                                  mount_sysroot=True)
 
     @property
     def bluehive_benchmark_script_archname(self):
@@ -485,10 +502,10 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_f
             if self.config.run_under_gdb:
                 benchmark_args.insert(0, "-g")
             self.target_info.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
-                # The benchmarks take a long time to run -> allow up to a 3 hours per iteration
-                extra_runbench_args=["--timeout", str(60 * 60 * 3 * num_iterations)],
-                benchmark_script_args=benchmark_args)
-
+                                                # The benchmarks take a long time to run -> allow up to a 3 hours per
+                                                # iteration
+                                                extra_runbench_args=["--timeout", str(60 * 60 * 3 * num_iterations)],
+                                                benchmark_script_args=benchmark_args)
 
     def __check_valid_benchmark_list(self):
         for x in self.benchmark_list:

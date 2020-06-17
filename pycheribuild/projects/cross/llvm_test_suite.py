@@ -27,9 +27,10 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+from pathlib import Path
 
 from .crosscompileproject import (BuildType, CompilationTargets, CrossCompileCMakeProject, DefaultInstallDir,
-                                  GitRepository, Path)
+                                  GitRepository)
 from ..llvm import BuildCheriLLVM
 from ...config.loader import ComputedDefaultValue
 
@@ -55,7 +56,7 @@ class BuildLLVMTestSuite(CrossCompileCMakeProject):
             TEST_SUITE_LLVM_SIZE=self._find_in_sdk_or_llvm_build_dir("llvm-size"),
             TEST_SUITE_LLVM_PROFDATA=self._find_in_sdk_or_llvm_build_dir("llvm-profdata"),
             TEST_SUITE_LIT=self._find_in_sdk_or_llvm_build_dir("llvm-lit")
-        )
+            )
         # TODO: fix these issues
         self.cross_warning_flags += ["-Wno-error=format", "-Werror=cheri-prototypes"]
         if not self.compiling_for_host():

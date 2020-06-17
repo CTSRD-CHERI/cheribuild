@@ -27,8 +27,9 @@
 # LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
+from pathlib import Path
 
-from .project import CheriConfig, CrossCompileTarget, DefaultInstallDir, GitRepository, Path, Project
+from .project import CheriConfig, CrossCompileTarget, DefaultInstallDir, GitRepository, Project
 from ..utils import ThreadJoiner
 
 
@@ -62,7 +63,7 @@ class BuildGo(Project):
     def compile(self, **kwargs):
         env = {
             "GOROOT_FINAL": self.gorootDir,
-        }
+            }
         if self.go_bootstrap:
             env["GOROOT_BOOTSTRAP"] = self.go_bootstrap
 
@@ -96,4 +97,3 @@ class BuildGo(Project):
     def run_tests(self):
         cmd = "bash run.bash --no-rebuild".split()
         self.run_cmd(cmd, cwd=self.makeDir)
-

@@ -29,9 +29,10 @@
 #
 import sys
 import typing
+from pathlib import Path
 
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
-                                  GitRepository, Linkage, MakeCommandKind, Path)
+                                  GitRepository, Linkage, MakeCommandKind)
 from ...utils import OSInfo, runCmd, statusUpdate
 
 
@@ -110,7 +111,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.configureArgs.append("--enable-gdbtk")
             # if OSInfo.IS_MAC:
             # self.configureArgs.append("--with-tcl=/usr/local/opt/tcl-tk/lib")
-            # self.configureEnvironment["PKG_CONFIG_PATH"] = "/usr/local/opt/tcl-tk/lib/pkgconfig:/usr/local/lib/pkgconfig"
+            # self.configureEnvironment["PKG_CONFIG_PATH"] =
+            # "/usr/local/opt/tcl-tk/lib/pkgconfig:/usr/local/lib/pkgconfig"
 
         # extra ./configure environment variables:
         # compile flags
@@ -137,7 +139,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
             self.configureEnvironment.update(gl_cv_func_gettimeofday_clobber="no",
                                              lt_cv_sys_max_cmd_len="262144",
                                              # The build system run CC without any flags to detect dependency style...
-                                             # (ZW_PROG_COMPILER_DEPENDENCIES([CC])) -> for gcc3 mode which seems correct
+                                             # (ZW_PROG_COMPILER_DEPENDENCIES([CC])) -> for gcc3 mode which seems
+                                             # correct
                                              am_cv_CC_dependencies_compiler_type="gcc3",
                                              MAKEINFO="/bin/false"
                                              )

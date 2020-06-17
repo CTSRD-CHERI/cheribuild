@@ -30,8 +30,9 @@
 import os
 import shutil
 import typing
+from pathlib import Path
 
-from .project import AutotoolsProject, DefaultInstallDir, GitRepository, Path
+from .project import AutotoolsProject, DefaultInstallDir, GitRepository
 from ..utils import get_compiler_info
 
 
@@ -109,22 +110,22 @@ class BuildGnuBinutils(AutotoolsProject):
             # we also need the linker scripts so this is not enough:
             # self.install_file(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
             self.move_file(bindir / "mips64-unknown-freebsd-ld", bindir / "mips64-unknown-freebsd-ld.bfd")
-            installedTools = ["as", "ld.bfd"]
+            installed_tools = ["as", "ld.bfd"]
             # copy objdump from the build dir
             self.install_file(self.buildDir / "binutils/objdump", bindir / "mips64-unknown-freebsd-objdump")
-            installedTools.append("objdump")
+            installed_tools.append("objdump")
         else:
             super().install()
-            installedTools = "addr2line ranlib strip ar nm readelf as objcopy size c++filt objdump strings".split()
+            installed_tools = "addr2line ranlib strip ar nm readelf as objcopy size c++filt objdump strings".split()
             # create links for ld:
             self.create_triple_prefixed_symlinks(bindir / "ld.bfd")
-        for tool in installedTools:
-            prefixedName = "mips64-unknown-freebsd-" + tool
-            if not (bindir / prefixedName).is_file():
-                self.fatal("Binutils binary", prefixedName, "is missing!")
+        for tool in installed_tools:
+            prefixed_name = "mips64-unknown-freebsd-" + tool
+            if not (bindir / prefixed_name).is_file():
+                self.fatal("Binutils binary", prefixed_name, "is missing!")
             # create the right symlinks to the tool (ld -> mips64-unknown-elf-ld, etc)
             # Also symlink cheri-unknown-freebsd-ld -> ld (and the other targets)
-            self.create_triple_prefixed_symlinks(bindir / prefixedName, tool_name=tool, create_unprefixed_link=True)
+            self.create_triple_prefixed_symlinks(bindir / prefixed_name, tool_name=tool, create_unprefixed_link=True)
 
     @property
     def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
