@@ -39,19 +39,16 @@ from run_tests_common import *
 
 def setup_libunwind_env(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
     # Copy the libunwind library to both MIPS and CHERI library dirs so that it is picked up
-    # Do this instead of setting LD_LIBRARY_PATH to use only the libraries that we actually need
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /build/lib/libunwind.so* /usr/lib/")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /build/lib/libunwind.so* /usr/libcheri/")
-    # We also need libdl from the sysroot:
-    boot_cheribsd.checked_run_cheribsd_command(qemu,
-                                               "ln -sfv /sysroot/usr/lib/libcxxrt.so* /sysroot/usr/lib/libdl.so* "
-                                               "/usr/lib/")
-    boot_cheribsd.checked_run_cheribsd_command(qemu,
-                                               "ln -sfv /sysroot/usr/libcheri/libcxxrt.so*  "
-                                               "/sysroot/usr/libcheri/libdl.so* /usr/libcheri/")
+    # Do this instead of setting LD_LIBRARY_PATH to use only the libraries that we actually need.
+    # FIXME: Find a cleaner solution for the lib/libcheri mess
+    qemu.checked_run("ln -sfv /build/lib/libunwind.so* /usr/lib/")
+    # We also need libdl and libcxxrt from the sysroot:
+    if qemu.xtarget.is_cheri_purecap():
+        qemu.checked_run("ln -sfv /sysroot/usr/libcheri/libcxxrt.so* /sysroot/usr/libcheri/libdl.so* /usr/lib/")
+    else:
+        qemu.checked_run("ln -sfv /sysroot/usr/lib/libcxxrt.so* /sysroot/usr/lib/libdl.so* /usr/lib/")
     # Add a fake libgcc_s link to libunwind (this works now that we build libunwind with version info)
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /usr/lib/libunwind.so /usr/lib/libgcc_s.so.1")
-    boot_cheribsd.checked_run_cheribsd_command(qemu, "ln -sfv /usr/libcheri/libunwind.so /usr/libcheri/libgcc_s.so.1")
+    qemu.checked_run("ln -sfv /usr/lib/libunwind.so /usr/lib/libgcc_s.so.1")
 
 
 def run_libunwind_tests(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespace):
