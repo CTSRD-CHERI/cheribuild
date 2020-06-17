@@ -53,10 +53,9 @@ from ..config.target_info import (AutoVarInit, BasicCompilationTargets, CPUArchi
 from ..filesystemutils import FileSystemUtils
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
 from ..utils import (AnsiColour, check_call_handle_noexec, classproperty, coloured, commandline_to_str,
-                     commandline_to_str, CompilerInfo, fatalError, get_program_version, get_version_output,
-                     getCompilerInfo,
-                     includeLocalFile, OSInfo, popen_handle_noexec, printCommand, runCmd, statusUpdate, ThreadJoiner,
-                     warningMessage)
+                     commandline_to_str, CompilerInfo, fatalError, get_compiler_info, get_program_version,
+                     get_version_output, include_local_file, OSInfo, popen_handle_noexec, print_command, runCmd,
+                     statusUpdate, ThreadJoiner, warningMessage)
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind", "Path",  # no-combine
@@ -360,7 +359,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return self.get_crosscompile_target(self.config)
 
     def get_host_triple(self):
-        compiler = getCompilerInfo(self.host_CC)
+        compiler = get_compiler_info(self.host_CC)
         return compiler.default_target
 
     @property
@@ -456,12 +455,12 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     # Duplicate all arguments instead of using **kwargs to get sensible code completion
     @staticmethod
-    def run_cmd(*args, captureOutput=False, captureError=False, input: typing.Union[str, bytes] = None, timeout=None,
-                print_verbose_only=False, runInPretendMode=False, raiseInPretendMode=False, no_print=False,
+    def run_cmd(*args, capture_output=False, capture_error=False, input: typing.Union[str, bytes] = None, timeout=None,
+                print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False, no_print=False,
                 replace_env=False, **kwargs):
-        return runCmd(*args, captureOutput=captureOutput, captureError=captureError, input=input, timeout=timeout,
-            print_verbose_only=print_verbose_only, runInPretendMode=runInPretendMode,
-            raiseInPretendMode=raiseInPretendMode, no_print=no_print, replace_env=replace_env, **kwargs)
+        return runCmd(*args, capture_output=capture_output, capture_error=capture_error, input=input, timeout=timeout,
+                      print_verbose_only=print_verbose_only, run_in_pretend_mode=run_in_pretend_mode,
+                      raise_in_pretend_mode=raise_in_pretend_mode, no_print=no_print, replace_env=replace_env, **kwargs)
 
     @classmethod
     def add_config_option(cls, name: str, *, show_help=False, shortname=None, _no_fallback_config_name: bool = False,
@@ -674,7 +673,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         :param stdout_filter a filter to use for standard output (a function that takes a single bytes argument)
         :param env the environment to pass to make
         """
-        printCommand(args, cwd=cwd, env=env)
+        print_command(args, cwd=cwd, env=env)
         # make sure that env is either None or a os.environ with the updated entries entries
         if env:
             new_env = os.environ.copy()
@@ -767,7 +766,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         self._systemDepsChecked = True  # make sure this is always set
         if callable(install_instructions):
             install_instructions = install_instructions()
-        self.fatal("Dependency for", self.target, "missing:", *args, fixitHint=install_instructions)
+        self.fatal("Dependency for", self.target, "missing:", *args, fixit_hint=install_instructions)
 
     def check_system_dependencies(self) -> None:
         """
@@ -785,7 +784,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 # error should already have printed above
                 break
             check_cmd = ["pkg-config", "--exists", package]
-            printCommand(check_cmd, print_verbose_only=True)
+            print_command(check_cmd, print_verbose_only=True)
             exit_code = subprocess.call(check_cmd)
             if exit_code != 0:
                 self.dependency_error("Required library", package, "is missing!", install_instructions=instructions)
@@ -815,9 +814,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def run_shell_script(self, script, shell="sh", **kwargs):
         print_args = dict(**kwargs)
-        if "captureOutput" in print_args:
-            del print_args["captureOutput"]
-        printCommand(shell, "-xe" if self.config.verbose else "-e", "-i", "-c", script, **print_args)
+        if "capture_output" in print_args:
+            del print_args["capture_output"]
+        print_command(shell, "-xe" if self.config.verbose else "-e", "-i", "-c", script, **print_args)
         kwargs["no_print"] = True
         return runCmd(shell, "-xe" if self.config.verbose else "-e", "-i", "-c", script, **kwargs)
 
@@ -839,8 +838,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         warningMessage(*args, **kwargs)
 
     @staticmethod
-    def fatal(*args, sep=" ", fixitHint=None, fatalWhenPretending=False):
-        fatalError(*args, sep=sep, fixitHint=fixitHint, fatalWhenPretending=fatalWhenPretending)
+    def fatal(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False):
+        fatalError(*args, sep=sep, fixit_hint=fixit_hint, fatal_when_pretending=fatal_when_pretending)
 
 
 def installDirNotSpecified(config: CheriConfig, project: "Project"):
@@ -1081,10 +1080,10 @@ class ReuseOtherProjectRepository(SourceRepository):
         src = self.get_real_source_dir(current_project, current_project.default_source_dir)
         if not src.exists():
             current_project.fatal("Source repository for target", current_project.target, "does not exist.",
-                fixitHint="This project uses the sources from the " + self.source_project.target +
-                          "target so you will have to clone that first. Try running:\n\t`" +
-                          "cheribuild.py " + self.source_project.target + "--no-skip-update --skip-configure " +
-                          "--skip-build --skip-install`")
+                                  fixit_hint="This project uses the sources from the " + self.source_project.target +
+                                             "target so you will have to clone that first. Try running:\n\t`" +
+                                             "cheribuild.py " + self.source_project.target + "--no-skip-update --skip-configure " +
+                                             "--skip-build --skip-install`")
 
     def get_real_source_dir(self, caller: SimpleProject, default_src_dir: typing.Optional[Path]) -> Path:
         return self.source_project.getSourceDir(caller, caller.config,
@@ -1163,7 +1162,7 @@ class GitRepository(SourceRepository):
         # Find the first valid remote
         per_target_url = target_override.url if target_override.url else self.url
         remote_name = "origin"
-        remotes = runCmd(["git", "-C", default_src_dir, "remote", "-v"], captureOutput=True).stdout.decode(
+        remotes = runCmd(["git", "-C", default_src_dir, "remote", "-v"], capture_output=True).stdout.decode(
             "utf-8")  # type: str
         for r in remotes.splitlines():
             if per_target_url in r:
@@ -1171,7 +1170,7 @@ class GitRepository(SourceRepository):
         while True:
             try:
                 url = runCmd(["git", "-C", default_src_dir, "remote", "get-url", remote_name],
-                    captureOutput=True).stdout.decode("utf-8").strip()
+                             capture_output=True).stdout.decode("utf-8").strip()
             except subprocess.CalledProcessError as e:
                 current_project.warning("Could not determine URL for remote", remote_name, str(e))
                 url = None
@@ -1205,12 +1204,12 @@ class GitRepository(SourceRepository):
             # Update from the old url:
             for old_url in self.old_urls:
                 assert isinstance(old_url, bytes)
-                remote_url = runCmd("git", "remote", "get-url", "origin", captureOutput=True,
-                    cwd=src_dir).stdout.strip()
+                remote_url = runCmd("git", "remote", "get-url", "origin", capture_output=True,
+                                    cwd=src_dir).stdout.strip()
                 if remote_url == old_url:
                     warningMessage(current_project.project_name, "still points to old repository", remote_url)
                     if current_project.query_yes_no("Update to correct URL?"):
-                        runCmd("git", "remote", "set-url", "origin", self.url, runInPretendMode=True, cwd=src_dir)
+                        runCmd("git", "remote", "set-url", "origin", self.url, run_in_pretend_mode=True, cwd=src_dir)
 
         # First fetch all the current upstream branch to see if we need to autostash/pull.
         # Note: "git fetch" without other arguments will fetch from the currently configured upstream.
@@ -1222,7 +1221,7 @@ class GitRepository(SourceRepository):
             assert self.default_branch, "default_branch must be set if force_branch is true!"
             # TODO: move this to Project so it can also be used for other targets
             status = runCmd("git", "status", "-b", "-s", "--porcelain", "-u", "no",
-                captureOutput=True, print_verbose_only=True, cwd=src_dir, runInPretendMode=True)
+                            capture_output=True, print_verbose_only=True, cwd=src_dir, run_in_pretend_mode=True)
             if status.stdout.startswith(b"## ") and not status.stdout.startswith(
                     b"## " + self.default_branch.encode("utf-8") + b"..."):
                 current_branch = status.stdout[3:status.stdout.find(b"...")].strip()
@@ -1238,8 +1237,9 @@ class GitRepository(SourceRepository):
         # This check ensures that we avoid a rebase if the current branch is a few commits ahead of upstream.
         # Note: merge-base --is-ancestor exits with code 0/1 instead of printing output so we need a try/catch
         is_ancestor = runCmd("git", "merge-base", "--is-ancestor", "@{upstream}", "HEAD", cwd=src_dir,
-            print_verbose_only=True, captureError=True, runInPretendMode=True, raiseInPretendMode=True,
-            allow_unexpected_returncode=True)
+                             print_verbose_only=True, capture_error=True, run_in_pretend_mode=True,
+                             raise_in_pretend_mode=True,
+                             allow_unexpected_returncode=True)
         if is_ancestor.returncode == 0:
             current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is up-to-date or ahead of upstream."))
             return
@@ -1256,7 +1256,7 @@ class GitRepository(SourceRepository):
 
         # make sure we run git stash if we discover any local changes
         has_changes = len(runCmd("git", "diff", "--stat", "--ignore-submodules",
-            captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
+                                 capture_output=True, cwd=src_dir, print_verbose_only=True).stdout) > 1
 
         pull_cmd = ["git", "pull"]
         has_autostash = False
@@ -1278,7 +1278,7 @@ class GitRepository(SourceRepository):
             if not has_autostash:
                 # TODO: ask if we should continue?
                 stash_result = runCmd("git", "stash", "save", "Automatic stash by cheribuild.py",
-                    captureOutput=True, cwd=src_dir, print_verbose_only=True).stdout
+                                      capture_output=True, cwd=src_dir, print_verbose_only=True).stdout
                 # print("stash_result =", stash_result)
                 if "No local changes to save" in stash_result.decode("utf-8"):
                     # print("NO REAL CHANGES")
@@ -1334,7 +1334,7 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
         # For the NATIVE variant we want to install to CHERI clang:
         if project.compiling_for_host():
             compiler_for_resource_dir = config.cheri_sdk_bindir / "clang"
-        return getCompilerInfo(compiler_for_resource_dir).get_resource_dir()
+        return get_compiler_info(compiler_for_resource_dir).get_resource_dir()
     elif install_dir == DefaultInstallDir.SYSROOT or install_dir == DefaultInstallDir.SYSROOT_AND_ROOTFS:
         return project.sdk_sysroot
     elif install_dir == DefaultInstallDir.CHERI_SDK:
@@ -1496,9 +1496,9 @@ class Project(SimpleProject):
             return False  # lld does not work on MacOS
         if compiler not in cls.__can_use_lld_map:
             try:
-                runCmd([compiler, "-fuse-ld=lld", "-xc", "-o", "/dev/null", "-"], runInPretendMode=True,
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, raiseInPretendMode=True,
-                    input="int main() { return 0; }\n", print_verbose_only=True)
+                runCmd([compiler, "-fuse-ld=lld", "-xc", "-o", "/dev/null", "-"], run_in_pretend_mode=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, raise_in_pretend_mode=True,
+                       input="int main() { return 0; }\n", print_verbose_only=True)
                 statusUpdate(compiler, "supports -fuse-ld=lld, linking should be much faster!")
                 cls.__can_use_lld_map[compiler] = True
             except subprocess.CalledProcessError:
@@ -1861,7 +1861,7 @@ class Project(SimpleProject):
             self.configureEnvironment.update(pkg_config_args)
             self.make_args.set_env(**pkg_config_args)
         if self.use_lto:
-            self.add_lto_build_options(getCompilerInfo(self.CC))
+            self.add_lto_build_options(get_compiler_info(self.CC))
 
     def set_lto_binutils(self, ar, ranlib, nm, ld):
         self.fatal("Building", self.project_name, "with LTO is not supported (yet).")
@@ -2011,7 +2011,7 @@ class Project(SimpleProject):
     def update(self):
         if not self.repository and not self.config.skipUpdate:
             self.fatal("Cannot update", self.project_name, "as it is missing a repository source",
-                fatalWhenPretending=True)
+                       fatal_when_pretending=True)
         self.repository.update(self, src_dir=self.sourceDir, default_src_dir=self.default_source_dir,
             revision=self.gitRevision, skip_submodules=self.skipGitSubmodules)
         if self.is_large_source_repository and (self.sourceDir / ".git").exists():
@@ -2278,7 +2278,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
 
         if self.use_asan and self.compiling_for_mips(include_purecap=False):
             # copy the ASAN lib into the right directory:
-            resource_dir = getCompilerInfo(self.CC).get_resource_dir()
+            resource_dir = get_compiler_info(self.CC).get_resource_dir()
             statusUpdate("Copying ASAN libs to", resource_dir)
             expected_path = resource_dir / "lib/freebsd/"
             asan_libdir_candidates = list((self.sdk_sysroot / "usr/lib/clang").glob("*"))
@@ -2478,7 +2478,7 @@ class CMakeProject(Project):
         if not self.compiling_for_host():
             # Despite the name it should also work for baremetal newlib
             assert self.target_info.is_cheribsd() or self.target_info.is_baremetal() or self.target_info.is_rtems()
-            self._cmakeTemplate = includeLocalFile("files/CrossToolchain.cmake.in")
+            self._cmakeTemplate = include_local_file("files/CrossToolchain.cmake.in")
             self.toolchainFile = self.buildDir / "CrossToolchain.cmake"
             self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self.toolchainFile)
         # The toolchain files need at least CMake 3.7

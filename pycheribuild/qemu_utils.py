@@ -148,8 +148,8 @@ class QemuOptions:
 def qemu_supports_9pfs(qemu: Path) -> bool:
     if not qemu.is_file():
         return False
-    prog = runCmd([str(qemu), "-virtfs", "?"], stdin=subprocess.DEVNULL, captureOutput=True, captureError=True,
-        runInPretendMode=True, expected_exit_code=1, print_verbose_only=True)
+    prog = runCmd([str(qemu), "-virtfs", "?"], stdin=subprocess.DEVNULL, capture_output=True, capture_error=True,
+                  run_in_pretend_mode=True, expected_exit_code=1, print_verbose_only=True)
     return b"-virtfs ?: Usage: -virtfs" in prog.stderr
 
 

@@ -41,7 +41,25 @@ from .project import (AutotoolsProject, CheriConfig, ComputedDefaultValue, CPUAr
 from ..config.compilation_targets import CompilationTargets
 from ..mtree import MtreeFile
 from ..targets import target_manager
-from ..utils import AnsiColour, classproperty, coloured, includeLocalFile, OSInfo, setEnv, statusUpdate, warningMessage
+from ..utils import (AnsiColour, classproperty, coloured, include_local_file, OSInfo, set_env, statusUpdate,
+                     warningMessage)
+
+import io
+import os
+import shutil
+import sys
+import tempfile
+import typing
+
+from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDGFE, BuildFreeBSDWithDefaultOptions
+from .cross.gdb import BuildGDB
+from .project import (AutotoolsProject, CheriConfig, ComputedDefaultValue, CPUArchitecture, CrossCompileTarget,
+                      DefaultInstallDir, GitRepository, MakeCommandKind, Path, SimpleProject)
+from ..config.compilation_targets import CompilationTargets
+from ..mtree import MtreeFile
+from ..targets import target_manager
+from ..utils import (AnsiColour, classproperty, coloured, include_local_file, OSInfo, set_env, statusUpdate,
+                     warningMessage)
 
 
 # Notes:
@@ -77,13 +95,13 @@ class BuildMtools(AutotoolsProject):
 # noinspection PyMethodMayBeStatic
 class _AdditionalFileTemplates(object):
     def get_fstab_template(self):
-        return includeLocalFile("files/cheribsd/fstab.in")
+        return include_local_file("files/cheribsd/fstab.in")
 
     def get_rc_conf_template(self):
-        return includeLocalFile("files/cheribsd/rc.conf.in")
+        return include_local_file("files/cheribsd/rc.conf.in")
 
     def get_cshrc_template(self):
-        return includeLocalFile("files/cheribsd/csh.cshrc.in")
+        return include_local_file("files/cheribsd/csh.cshrc.in")
 
 
 class _BuildDiskImageBase(SimpleProject):
@@ -269,32 +287,32 @@ class _BuildDiskImageBase(SimpleProject):
             non_cheri_dirname = path_relative_to_outputroot(self.crosscompile_target.get_non_cheri_target())
             hybrid_cheri_dirname = path_relative_to_outputroot(self.crosscompile_target.get_cheri_hybrid_target())
             purecap_cheri_dirname = path_relative_to_outputroot(self.crosscompile_target.get_cheri_purecap_target())
-        mount_rootfs_script = includeLocalFile("files/cheribsd/qemu-mount-rootfs.sh.in").format(
+        mount_rootfs_script = include_local_file("files/cheribsd/qemu-mount-rootfs.sh.in").format(
             SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir,
             NOCHERI_ROOTFS_DIRNAME=non_cheri_dirname, HYBRID_ROOTFS_DIRNAME=hybrid_cheri_dirname,
             PURECAP_ROOTFS_DIRNAME=purecap_cheri_dirname)
         self.createFileForImage("/sbin/qemu-mount-rootfs.sh", contents=mount_rootfs_script,
                                 mode=0o755, showContentsByDefault=False)
-        mount_sources_script = includeLocalFile("files/cheribsd/qemu-mount-sources.sh.in").format(
+        mount_sources_script = include_local_file("files/cheribsd/qemu-mount-sources.sh.in").format(
             SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
         self.createFileForImage("/sbin/qemu-mount-sources.sh", contents=mount_sources_script,
                                 mode=0o755, showContentsByDefault=False)
-        do_reroot_script = includeLocalFile("files/cheribsd/qemu-do-reroot.sh.in").format(
+        do_reroot_script = include_local_file("files/cheribsd/qemu-do-reroot.sh.in").format(
             SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
         self.createFileForImage("/sbin/qemu-do-reroot.sh", contents=do_reroot_script,
                                 mode=0o755, showContentsByDefault=False)
 
         # Add a script to launch gdb, run a program and get a backtrace:
-        self.createFileForImage("/usr/bin/gdb-run.sh", contents=includeLocalFile("files/cheribsd/gdb-run.sh"),
-            mode=0o755, showContentsByDefault=False)
+        self.createFileForImage("/usr/bin/gdb-run.sh", contents=include_local_file("files/cheribsd/gdb-run.sh"),
+                                mode=0o755, showContentsByDefault=False)
         # And another one for non-interactive use:
         self.createFileForImage("/usr/bin/gdb-run-noninteractive.sh",
-            contents=includeLocalFile("files/cheribsd/gdb-run-noninteractive.sh"),
-            mode=0o755, showContentsByDefault=False)
+                                contents=include_local_file("files/cheribsd/gdb-run-noninteractive.sh"),
+                                mode=0o755, showContentsByDefault=False)
 
         # Add a script to turn of network and stop running services:
         self.createFileForImage("/usr/bin/prepare-benchmark-environment.sh",
-                                contents=includeLocalFile("files/cheribsd/prepare-benchmark-environment.sh"),
+                                contents=include_local_file("files/cheribsd/prepare-benchmark-environment.sh"),
                                 mode=0o755, showContentsByDefault=False)
 
         # make sure that the disk image always has the same SSH host keys
@@ -574,7 +592,7 @@ class _BuildDiskImageBase(SimpleProject):
 
     def process(self):
         if not OSInfo.IS_FREEBSD and self.crossBuildImage:
-            with setEnv(PATH=str(self.config.outputRoot / "freebsd-cross/bin") + ":" + os.getenv("PATH")):
+            with set_env(PATH=str(self.config.outputRoot / "freebsd-cross/bin") + ":" + os.getenv("PATH")):
                 self.__process()
         else:
             self.__process()
@@ -727,10 +745,10 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
 
     class _MinimalFileTemplates(_AdditionalFileTemplates):
         def get_fstab_template(self):
-            return includeLocalFile("files/minimal-image/etc/fstab.in")
+            return include_local_file("files/minimal-image/etc/fstab.in")
 
         def get_rc_conf_template(self):
-            return includeLocalFile("files/minimal-image/etc/rc.conf.in")
+            return include_local_file("files/minimal-image/etc/rc.conf.in")
 
     default_disk_image_path = ComputedDefaultValue(
         function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "cheribsd-minimal-"),
@@ -790,10 +808,10 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
     def add_unlisted_files_to_metalog(self):
         # Now add all the files from *.files to the image:
         self.verbose_print("Adding files from rootfs to minimal image:")
-        files_to_add = [includeLocalFile("files/minimal-image/base.files"),
-                        includeLocalFile("files/minimal-image/etc.files")]
+        files_to_add = [include_local_file("files/minimal-image/base.files"),
+                        include_local_file("files/minimal-image/etc.files")]
         if self._have_cplusplus_support(["lib", "usr/lib"]):
-            files_to_add.append(includeLocalFile("files/minimal-image/need-cplusplus.files"))
+            files_to_add.append(include_local_file("files/minimal-image/need-cplusplus.files"))
 
         for files_list in files_to_add:
             self.process_files_list(files_list)
@@ -886,13 +904,13 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         super().prepareRootfs()
         # Add the additional sysctl configs
         self.createFileForImage("/etc/pam.d/su", showContentsByDefault=False,
-                                contents=includeLocalFile("files/minimal-image/pam.d/su"))
+                                contents=include_local_file("files/minimal-image/pam.d/su"))
         # disable coredumps (since there is almost no space on the image)
         self.createFileForImage("/etc/sysctl.conf", showContentsByDefault=False,
-                                contents=includeLocalFile("files/minimal-image/etc/sysctl.conf"))
+                                contents=include_local_file("files/minimal-image/etc/sysctl.conf"))
         # The actual minimal startup file:
         self.createFileForImage("/etc/rc", showContentsByDefault=False,
-                                contents=includeLocalFile("files/minimal-image/etc/rc"))
+                                contents=include_local_file("files/minimal-image/etc/rc"))
 
     def make_rootfs_image(self, rootfs_img: Path):
         # update cheribsdbox link in case we stripped it:
@@ -927,12 +945,12 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
 
 class _RISCVFileTemplates(_AdditionalFileTemplates):
     def get_fstab_template(self):
-        return includeLocalFile("files/riscv/fstab.in")
+        return include_local_file("files/riscv/fstab.in")
 
 
 class _X86FileTemplates(_AdditionalFileTemplates):
     def get_fstab_template(self):
-        return includeLocalFile("files/x86/fstab.in")
+        return include_local_file("files/x86/fstab.in")
 
 
 class _AArch64FileTemplates(_AdditionalFileTemplates):

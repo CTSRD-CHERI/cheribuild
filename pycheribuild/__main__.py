@@ -29,27 +29,25 @@
 #
 import fcntl
 import os
-import signal
 import shutil
+import signal
 import subprocess
 import sys
+from pathlib import Path
 
+from .config.defaultconfig import CheribuildAction, DefaultCheriConfig
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from .configloader import ConfigLoader here because that will only update the local copy!
 # https://stackoverflow.com/questions/3536620/how-to-change-a-module-variable-from-another-module
 from .config.loader import JsonAndCommandLineConfigLoader, JsonAndCommandLineConfigOption
-from .config.defaultconfig import DefaultCheriConfig, CheribuildAction
-from .utils import (printCommand, statusUpdate, fatalError, coloured, AnsiColour, init_global_config,
-                    get_program_version, commandline_to_str, have_working_internet_connection)
-from .targets import target_manager
-from .projects.project import SimpleProject
-
 # noinspection PyUnresolvedReferences
 from .projects import *  # make sure all projects are loaded so that target_manager gets populated
 # noinspection PyUnresolvedReferences
 from .projects.cross import *  # make sure all projects are loaded so that target_manager gets populated
-
-from pathlib import Path
+from .projects.project import SimpleProject
+from .targets import target_manager
+from .utils import (AnsiColour, coloured, commandline_to_str, fatalError, get_program_version,
+                    have_working_internet_connection, init_global_config, print_command, statusUpdate)
 
 DIRS_TO_CHECK_FOR_UPDATES = [Path(__file__).parent.parent]
 
@@ -149,7 +147,7 @@ def real_main():
             continue
         if not cheri_config.pretend:
             if cheri_config.verbose:
-                printCommand("mkdir", "-p", str(d))
+                print_command("mkdir", "-p", str(d))
             os.makedirs(str(d), exist_ok=True)
 
     if cheri_config.docker:
@@ -184,15 +182,15 @@ def real_main():
                 # Use docker restart + docker exec instead of docker run
                 # FIXME: docker restart doesn't work for some reason
                 stop_cmd = ["docker", "stop", cheri_config.docker_container]
-                printCommand(stop_cmd)
+                print_command(stop_cmd)
                 subprocess.check_call(stop_cmd)
                 start_cmd = ["docker", "start", cheri_config.docker_container]
-                printCommand(start_cmd)
+                print_command(start_cmd)
                 subprocess.check_call(start_cmd)
                 docker_run_cmd = ["docker", "exec", cheri_config.docker_container] + cheribuild_args
             else:
                 docker_run_cmd = ["docker", "run", "--rm"] + docker_dir_mappings + [cheri_config.docker_container] + cheribuild_args
-            printCommand(docker_run_cmd)
+            print_command(docker_run_cmd)
             subprocess.check_call(docker_run_cmd)
         except subprocess.CalledProcessError as e:
             # if the image is missing print a helpful error message:
@@ -248,7 +246,7 @@ def main():
         error = True
         cwd = (". Working directory was ", err.cwd) if hasattr(err, "cwd") else ()
         fatalError("Command ", "`" + commandline_to_str(err.cmd) + "` failed with non-zero exit code ",
-                   err.returncode, *cwd, fatalWhenPretending=True, sep="", exit_code=err.returncode)
+                   err.returncode, *cwd, fatal_when_pretending=True, sep="", exit_code=err.returncode)
     finally:
         if error:
             signal.signal(signal.SIGTERM, signal.SIG_IGN)

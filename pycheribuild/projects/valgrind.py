@@ -41,7 +41,7 @@ class BuildValgrind(AutotoolsProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # Need the i386 kernel headers
-        if OSInfo.isUbuntu() or OSInfo.isDebian():
+        if OSInfo.is_ubuntu() or OSInfo.is_debian():
             self._addRequiredSystemHeader("/usr/include/i386-linux-gnu/asm/types.h", apt="linux-libc-dev:i386")
             self._addRequiredSystemHeader("/usr/include/x86_64-linux-gnu/asm/types.h", apt="linux-libc-dev:amd64")
             # 32-bit headers not available on ubuntu

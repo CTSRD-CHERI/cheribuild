@@ -33,7 +33,7 @@ import shutil
 from pathlib import Path
 
 from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
-from ..utils import OSInfo, setEnv
+from ..utils import OSInfo, set_env
 
 SMB_OUT_OF_SOURCE_BUILD_WORKS = False
 
@@ -116,11 +116,13 @@ class BuildSamba(Project):
     def process(self):
         if OSInfo.IS_MAC:
             # We need readline and krb5 from homebrew:
-            with setEnv(PATH="/usr/local/opt/krb5/bin:/usr/local/opt/krb5/sbin:" + os.getenv("PATH", ""),
-                        PKG_CONFIG_PATH="/usr/local/opt/krb5/lib/pkgconfig:/usr/local/opt/readline/lib/pkgconfig:" + os.getenv("PKG_CONFIG_PATH", ""),
-                        LDFLAGS="-L/usr/local/opt/krb5/lib -L/usr/local/opt/readline/lib",
-                        CPPFLAGS="-I/usr/local/opt/krb5/include -I/usr/local/opt/readline/include",
-                        CFLAGS="-I/usr/local/opt/krb5/include -I/usr/local/opt/readline/include"):
+            with set_env(PATH="/usr/local/opt/krb5/bin:/usr/local/opt/krb5/sbin:" + os.getenv("PATH", ""),
+                         PKG_CONFIG_PATH="/usr/local/opt/krb5/lib/pkgconfig:/usr/local/opt/readline/lib/pkgconfig:" +
+                                         os.getenv(
+                             "PKG_CONFIG_PATH", ""),
+                         LDFLAGS="-L/usr/local/opt/krb5/lib -L/usr/local/opt/readline/lib",
+                         CPPFLAGS="-I/usr/local/opt/krb5/include -I/usr/local/opt/readline/include",
+                         CFLAGS="-I/usr/local/opt/krb5/include -I/usr/local/opt/readline/include"):
                 super().process()
         else:
             super().process()

@@ -36,7 +36,7 @@ import typing
 from pathlib import Path
 
 from .config.chericonfig import CheriConfig
-from .utils import AnsiColour, fatalError, printCommand, runCmd, statusUpdate, ThreadJoiner, warningMessage
+from .utils import AnsiColour, fatalError, print_command, runCmd, statusUpdate, ThreadJoiner, warningMessage
 
 
 class FileSystemUtils(object):
@@ -45,7 +45,7 @@ class FileSystemUtils(object):
 
     def makedirs(self, path: Path):
         if not self.config.pretend and not path.is_dir():
-            printCommand("mkdir", "-p", path, print_verbose_only=True)
+            print_command("mkdir", "-p", path, print_verbose_only=True)
             os.makedirs(str(path), exist_ok=True)
 
     def _delete_directories(self, *dirs):
@@ -138,12 +138,12 @@ class FileSystemUtils(object):
         return ThreadJoiner(deleterThread)
 
     def copy_directory(self, src_path: Path, dst_path: Path):
-        printCommand("cp", "-r", src_path, dst_path, print_verbose_only=True)
+        print_command("cp", "-r", src_path, dst_path, print_verbose_only=True)
         if not self.config.pretend:
             shutil.copytree(str(src_path), str(dst_path))
 
     def deleteFile(self, file: Path, print_verbose_only=False):
-        printCommand("rm", "-f", file, print_verbose_only=print_verbose_only)
+        print_command("rm", "-f", file, print_verbose_only=print_verbose_only)
         if not file.is_file():
             return
         if self.config.pretend:
@@ -181,7 +181,7 @@ class FileSystemUtils(object):
         :param never_print_cmd: don't ever print the echo commmand (even in verbose)
         """
         if not never_print_cmd:
-            printCommand("echo", contents, colour=AnsiColour.green, outputFile=file, print_verbose_only=True)
+            print_command("echo", contents, colour=AnsiColour.green, output_file=file, print_verbose_only=True)
         if self.config.pretend:
             return
         if not overwrite and file.exists():
@@ -215,12 +215,12 @@ class FileSystemUtils(object):
 
     def install_file(self, src: Path, dest: Path, *, force=False, create_dirs=True, print_verbose_only=True, mode=None):
         if force:
-            printCommand("cp", "-f", src, dest, print_verbose_only=print_verbose_only)
+            print_command("cp", "-f", src, dest, print_verbose_only=print_verbose_only)
         else:
-            printCommand("cp", src, dest, print_verbose_only=print_verbose_only)
+            print_command("cp", src, dest, print_verbose_only=print_verbose_only)
         if self.config.pretend:
             if mode is not None:
-                printCommand("chmod", oct(mode), dest, print_verbose_only=print_verbose_only)
+                print_command("chmod", oct(mode), dest, print_verbose_only=print_verbose_only)
             return
         assert not dest.is_dir(), "install_file: target is a directory and not a file: " + str(dest)
         if (dest.is_symlink() or dest.exists()) and force:
@@ -234,7 +234,7 @@ class FileSystemUtils(object):
         # noinspection PyArgumentList
         shutil.copy(str(src), str(dest), follow_symlinks=False)
         if mode is not None:
-            printCommand("chmod", oct(mode), dest, print_verbose_only=print_verbose_only)
+            print_command("chmod", oct(mode), dest, print_verbose_only=print_verbose_only)
             dest.chmod(mode)
 
     @property

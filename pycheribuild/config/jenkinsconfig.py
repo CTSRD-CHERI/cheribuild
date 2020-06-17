@@ -37,7 +37,7 @@ from .chericonfig import CheriConfig
 from .compilation_targets import CompilationTargets, CrossCompileTarget
 from .loader import ConfigLoaderBase
 from ..filesystemutils import FileSystemUtils
-from ..utils import defaultNumberOfMakeJobs, fatalError, OSInfo, warningMessage
+from ..utils import default_make_jobs_count, fatalError, OSInfo, warningMessage
 
 
 def default_install_prefix(conf: "JenkinsConfig", unused):
@@ -94,8 +94,8 @@ class JenkinsConfig(CheriConfig):
         self.makeWithoutNice = False
 
         self.makeJobs = loader.add_commandline_only_option("make-jobs", "j", type=int,
-                                                        default=defaultNumberOfMakeJobs(),
-                                                        help="Number of jobs to use for compiling")
+                                                           default=default_make_jobs_count(),
+                                                           help="Number of jobs to use for compiling")
         self.installationPrefix = loader.add_commandline_only_option("install-prefix", type=absolute_path_only,
                                                                   default=default_install_prefix,
                                                                   help="The install prefix for cross compiled projects"

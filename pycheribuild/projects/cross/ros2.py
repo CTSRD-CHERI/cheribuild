@@ -93,7 +93,7 @@ class BuildRos2(CrossCompileCMakeProject):
             self.warning("No setup.bash file to source.")
             return
         cmdline = shlex.split("bash -c 'source " + str(setup_script) + " && echo $LD_LIBRARY_PATH'")
-        output = self.run_cmd(cmdline, cwd=self.sourceDir, captureOutput=True, print_verbose_only=False, **kwargs)
+        output = self.run_cmd(cmdline, cwd=self.sourceDir, capture_output=True, print_verbose_only=False, **kwargs)
 
         # extract LD_LIBRARY_PATH into a variable
         LD_LIBRARY_PATH = output.stdout.decode("utf-8").rstrip()

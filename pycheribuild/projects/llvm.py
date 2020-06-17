@@ -34,7 +34,7 @@ import typing
 from .project import BuildType, CMakeProject, DefaultInstallDir, GitRepository
 from ..config.compilation_targets import CheriBSDTargetInfo, CompilationTargets
 from ..config.loader import ComputedDefaultValue
-from ..utils import CompilerInfo, getCompilerInfo, OSInfo, ThreadJoiner
+from ..utils import CompilerInfo, get_compiler_info, OSInfo, ThreadJoiner
 
 
 class BuildLLVMBase(CMakeProject):
@@ -187,7 +187,7 @@ class BuildLLVMBase(CMakeProject):
     def clang_install_hint():
         if OSInfo.IS_FREEBSD:
             return "Try running `pkg install llvm`"
-        if OSInfo.isUbuntu() or OSInfo.isDebian():
+        if OSInfo.is_ubuntu() or OSInfo.is_debian():
             return """Try running:
 sudo apt install software-properties-common
 sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
@@ -200,7 +200,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         self.check_compiler_version(3, 8, install_instructions=self.clang_install_hint())
 
     def check_compiler_version(self, major: int, minor: int, patch=0, install_instructions=None):
-        info = getCompilerInfo(self.CC)
+        info = get_compiler_info(self.CC)
         # noinspection PyTypeChecker
         version_str = ".".join(map(str, info.version))
         if info.compiler == "apple-clang":

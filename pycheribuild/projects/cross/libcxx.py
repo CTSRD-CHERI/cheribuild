@@ -36,7 +36,7 @@ from ..build_qemu import BuildQEMU
 from ..llvm import BuildCheriLLVM
 from ..project import ReuseOtherProjectDefaultTargetRepository
 from ..run_qemu import LaunchCheriBSD
-from ...utils import commandline_to_str, OSInfo, runCmd, setEnv, warningMessage
+from ...utils import commandline_to_str, OSInfo, runCmd, set_env, warningMessage
 
 
 # A base class to set the default installation directory
@@ -85,7 +85,7 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
         self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
         if self.compiling_for_host():
-            if OSInfo.IS_MAC or OSInfo.isUbuntu():
+            if OSInfo.IS_MAC or OSInfo.is_ubuntu():
                 # Can't link libc++abi on MacOS and libsupc++ statically on Ubuntu
                 self.add_cmake_options(LIBUNWIND_TEST_ENABLE_EXCEPTIONS=False)
                 # Static linking is broken on Ubuntu 16.04
@@ -144,7 +144,7 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
         if self.compiling_for_host():
             assert not self.target_info.is_baremetal()
             self.add_cmake_options(BUILD_TESTS=True, TEST_LIBUNWIND=True)
-            if OSInfo.isUbuntu():
+            if OSInfo.is_ubuntu():
                 self.add_cmake_options(COMPARE_TEST_OUTPUT_TO_SYSTEM_OUTPUT=False)
                 # Seems to be needed for at least jenkins (it says relink with -pie)
                 self.add_cmake_options(CMAKE_POSITION_INDEPENDENT_CODE=True)
@@ -171,13 +171,13 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
             self.info("Baremetal tests not implemented")
             return
         # TODO: this won't work on macOS
-        with setEnv(LD_LIBRARY_PATH=self.buildDir / "lib"):
+        with set_env(LD_LIBRARY_PATH=self.buildDir / "lib"):
             if self.compiling_for_host():
                 runCmd("ctest", ".", "-VV", cwd=self.buildDir)
             else:
                 self.target_info.run_cheribsd_test_script("run_libcxxrt_tests.py",
-                                              "--libunwind-build-dir", BuildLibunwind.getBuildDir(self),
-                                              mount_builddir=True, mount_sysroot=True)
+                                                          "--libunwind-build-dir", BuildLibunwind.getBuildDir(self),
+                                                          mount_builddir=True, mount_sysroot=True)
 
 
 class BuildLibCXX(_CxxRuntimeCMakeProject):
@@ -221,7 +221,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         super().setup()
         if self.compiling_for_host():
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=True, LIBCXX_ENABLE_STATIC_ABI_LIBRARY=False)
-            if OSInfo.isUbuntu():
+            if OSInfo.is_ubuntu():
                 # Ubuntu packagers think that static linking should not be possible....
                 self.add_cmake_options(LIBCXX_ENABLE_STATIC=False)
         else:

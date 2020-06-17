@@ -28,10 +28,9 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import sys
 import re
+import sys
 from pathlib import Path
-
 
 scriptDir = Path(__file__).resolve().parent / "pycheribuild"  # type: Path
 
@@ -44,14 +43,14 @@ emptyLines = 0
 
 
 def insertLocalFile(line: str, srcFile: Path):
-    if "def includeLocalFile(" in line:
+    if "def include_local_file(" in line:
         lines.append(line)
         return  # don't replace the function definition
 
-    pattern = re.compile('includeLocalFile\\("(.*)"\\)')
+    pattern = re.compile('include_local_file\\("(.*)"\\)')
     match = re.search(pattern, line)
     if not match or len(match.groups()) < 1:
-        sys.exit("Invalid includeLocalFile: " + line)
+        sys.exit("Invalid include_local_file: " + line)
     relativePath = match.groups()[0]
     # print("Including file", relativePath, "from", srcFile.relative_to(scriptDir), file=sys.stderr)
     target_file = scriptDir / relativePath
@@ -85,7 +84,7 @@ def handleLine(line: str, srcFile: Path):
     else:
         emptyLines = 0
 
-    if "includeLocalFile" in line:
+    if "include_local_file" in line:
         insertLocalFile(line, srcFile)
     else:
         lines.append(line)

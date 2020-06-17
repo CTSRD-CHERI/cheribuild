@@ -30,9 +30,9 @@
 import shlex
 from pathlib import Path
 
-from .project import (Project, GitRepository, DefaultInstallDir, MakeCommandKind, CheriConfig,
-                      ReuseOtherProjectRepository, BasicCompilationTargets)
-from ..utils import OSInfo, commandline_to_str
+from .project import (BasicCompilationTargets, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project,
+                      ReuseOtherProjectRepository)
+from ..utils import commandline_to_str, OSInfo
 
 
 class BuildBluespecCompiler(Project):
@@ -60,9 +60,9 @@ class BuildBluespecCompiler(Project):
                       "If this doesn't fix the issue `v1-install` instead of `install` (e.g. macOS).")
             if OSInfo.IS_MAC:
                 self.info("Alternatively, try running:", self.sourceDir / ".github/workflows/install_dependencies_macos.sh")
-            elif OSInfo.isUbuntu():
+            elif OSInfo.is_ubuntu():
                 self.info("Alternatively, try running:",
-                    self.sourceDir / ".github/workflows/install_dependencies_ubuntu.sh")
+                          self.sourceDir / ".github/workflows/install_dependencies_ubuntu.sh")
             raise
 
 
@@ -113,11 +113,11 @@ class BuildCheriSim(Project):
         pass
 
     def process(self):
-        if OSInfo.isUbuntu() and not Path("/usr/lib/x86_64-linux-gnu/libgmp.so.3").exists():
+        if OSInfo.is_ubuntu() and not Path("/usr/lib/x86_64-linux-gnu/libgmp.so.3").exists():
             # BSC needs libgmp.so.3
             self.fatal("libgmp.so.3 is needed to run BSC",
-                       fixitHint="Creating a symlink to /usr/lib/x86_64-linux-gnu/libgmp.so.10 seems to work.\n"
-                                 "\t\tTry running `sudo ln -s libgmp.so.10 /usr/lib/x86_64-linux-gnu/libgmp.so.3`")
+                       fixit_hint="Creating a symlink to /usr/lib/x86_64-linux-gnu/libgmp.so.10 seems to work.\n"
+                                  "\t\tTry running `sudo ln -s libgmp.so.10 /usr/lib/x86_64-linux-gnu/libgmp.so.3`")
         super().process()
 
 
@@ -150,9 +150,9 @@ class BuildBeriCtl(Project):
         pass
 
     def process(self):
-        if OSInfo.isUbuntu() and not Path("/usr/lib/x86_64-linux-gnu/libgmp.so.3").exists():
+        if OSInfo.is_ubuntu() and not Path("/usr/lib/x86_64-linux-gnu/libgmp.so.3").exists():
             # BSC needs libgmp.so.3
             self.fatal("libgmp.so.3 is needed to run BSC",
-                       fixitHint="Creating a symlink to /usr/lib/x86_64-linux-gnu/libgmp.so.10 seems to work.\n"
-                                 "\t\tTry running `sudo ln -s libgmp.so.10 /usr/lib/x86_64-linux-gnu/libgmp.so.3`")
+                       fixit_hint="Creating a symlink to /usr/lib/x86_64-linux-gnu/libgmp.so.10 seems to work.\n"
+                                  "\t\tTry running `sudo ln -s libgmp.so.10 /usr/lib/x86_64-linux-gnu/libgmp.so.3`")
         super().process()

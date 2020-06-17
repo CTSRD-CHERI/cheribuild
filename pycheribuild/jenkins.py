@@ -47,7 +47,7 @@ from .projects.cross import *  # make sure all projects are loaded so that targe
 from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import Project, SimpleProject
 from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
-from .utils import (commandline_to_str, fatalError, get_program_version, init_global_config, OSInfo, runCmd, setEnv,
+from .utils import (commandline_to_str, fatalError, get_program_version, init_global_config, OSInfo, runCmd, set_env,
                     statusUpdate, ThreadJoiner, warningMessage)
 
 EXTRACT_SDK_TARGET = "extract-sdk"
@@ -269,7 +269,7 @@ def _jenkins_main():
                 MultiArchTargetAlias) and cross_target is not None and cross_target != cheri_config.preferred_xtarget\
                 and cheri_config.preferred_xtarget is not None:
             fatalError("Cannot build project", project.target, "with cross compile target", cross_target.name,
-                "when --cpu is set to", cheri_config.preferred_xtarget.name, fatalWhenPretending=True)
+                       "when --cpu is set to", cheri_config.preferred_xtarget.name, fatal_when_pretending=True)
         if isinstance(project, CrossCompileMixin):
             project.destdir = cheri_config.outputRoot
             project._installPrefix = cheri_config.installationPrefix
@@ -309,7 +309,7 @@ def _jenkins_main():
             new_path = os.getenv("PATH", "")
             if not cheri_config.without_sdk:
                 new_path = str(cheri_config.cheri_sdk_bindir) + ":" + new_path
-            with setEnv(PATH=new_path):
+            with set_env(PATH=new_path):
                 with cleaning_task:
                     target.execute(cheri_config)
         if JenkinsAction.TEST in cheri_config.action:

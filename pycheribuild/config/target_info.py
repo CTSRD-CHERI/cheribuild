@@ -32,7 +32,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from pathlib import Path
 
-from ..utils import getCompilerInfo, OSInfo
+from ..utils import get_compiler_info, OSInfo
 
 if typing.TYPE_CHECKING:  # no-combine
     from .chericonfig import CheriConfig  # no-combine    # pytype: disable=pyi-error
@@ -324,7 +324,7 @@ class NativeTargetInfo(TargetInfo):
 
     @property
     def target_triple(self):
-        return getCompilerInfo(self.c_compiler).default_target
+        return get_compiler_info(self.c_compiler).default_target
 
     @property
     def c_compiler(self) -> Path:
@@ -368,7 +368,7 @@ class NativeTargetInfo(TargetInfo):
     def essential_compiler_and_linker_flags(self) -> typing.List[str]:
         result = []
         if self.project.auto_var_init != AutoVarInit.NONE:
-            compiler = getCompilerInfo(self.c_compiler)
+            compiler = get_compiler_info(self.c_compiler)
             valid_clang_version = False
             if compiler.is_apple_clang:
                 # Not sure which apple clang version is the first to support it but 11.0.3 on my system does

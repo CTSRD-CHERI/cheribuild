@@ -49,12 +49,12 @@ from subprocess import CompletedProcess
 from .colour import AnsiColour, coloured
 
 # reduce the number of import statements per project  # no-combine
-__all__ = ["typing", "printCommand", "includeLocalFile", "CompilerInfo",  # no-combine
-           "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "setEnv",  # no-combine
+__all__ = ["typing", "print_command", "include_local_file", "CompilerInfo",  # no-combine
+           "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "set_env",  # no-combine
            "init_global_config", "warningMessage", "popen_handle_noexec", "extract_version",  # no-combine
-           "check_call_handle_noexec", "ThreadJoiner", "getCompilerInfo", "latest_system_clang_tool",  # no-combine
+           "check_call_handle_noexec", "ThreadJoiner", "get_compiler_info", "latest_system_clang_tool",  # no-combine
            "get_program_version", "SafeDict",  # no-combine
-           "defaultNumberOfMakeJobs", "commandline_to_str", "OSInfo", "is_jenkins_build",  # no-combine
+           "default_make_jobs_count", "commandline_to_str", "OSInfo", "is_jenkins_build",  # no-combine
            "get_version_output", "classproperty", "find_free_port", "have_working_internet_connection",  # no-combine
            "is_case_sensitive_dir", "SocketAndPort"]  # no-combine
 Type_T = typing.TypeVar("Type_T")
@@ -75,6 +75,7 @@ def init_global_config(*, test_mode: bool, pretend_mode: bool, verbose_mode: boo
     GlobalConfig.QUIET_MODE = quiet_mode
 
 
+# noinspection PyPep8Naming
 class classproperty(object):
     def __init__(self, f):
         self.f = f
@@ -99,8 +100,8 @@ def __filter_env(env: dict) -> dict:
     return result
 
 
-def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remaining_args, outputFile=None,
-                 colour=AnsiColour.yellow, cwd=None, env=None, sep=" ", print_verbose_only=False, **kwargs):
+def print_command(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remaining_args, output_file=None,
+                  colour=AnsiColour.yellow, cwd=None, env=None, sep=" ", print_verbose_only=False, **kwargs):
     if GlobalConfig.QUIET_MODE or (print_verbose_only and not GlobalConfig.VERBOSE_MODE):
         return
     # also allow passing a single string
@@ -117,8 +118,8 @@ def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remain
             prefix += ("env", envvars)
     # comma in tuple is required otherwise it creates a tuple of string chars
     new_args = (shlex.quote(str(arg1)),) + tuple(map(shlex.quote, map(str, remaining_args)))
-    if outputFile:
-        new_args += (">", str(outputFile))
+    if output_file:
+        new_args += (">", str(output_file))
     # Avoid a space before the actual command if there is no prefic:
     if not prefix:
         print(coloured(colour, new_args, sep=sep), flush=True, **kwargs)
@@ -126,7 +127,7 @@ def printCommand(arg1: "typing.Union[str, typing.Sequence[typing.Any]]", *remain
         print(coloured(colour, prefix, sep=sep), coloured(colour, new_args, sep=sep), flush=True, **kwargs)
 
 
-def getInterpreter(cmdline: "typing.Sequence[str]") -> "typing.Optional[typing.List[str]]":
+def get_interpreter(cmdline: "typing.Sequence[str]") -> "typing.Optional[typing.List[str]]":
     """
     :param cmdline: The command to check
     :return: The interpreter command if the executable does not have execute permissions
@@ -162,7 +163,7 @@ def check_call_handle_noexec(cmdline: "typing.List[str]", **kwargs):
         with keep_terminal_sane():
             return subprocess.check_call(cmdline, **kwargs)
     except PermissionError as e:
-        interpreter = getInterpreter(cmdline)
+        interpreter = get_interpreter(cmdline)
         if interpreter:
             with keep_terminal_sane():
                 return subprocess.check_call(interpreter + cmdline, **kwargs)
@@ -175,7 +176,7 @@ def popen_handle_noexec(cmdline: "typing.List[str]", **kwargs) -> subprocess.Pop
     try:
         return subprocess.Popen(cmdline, **kwargs)
     except PermissionError as e:
-        interpreter = getInterpreter(cmdline)
+        interpreter = get_interpreter(cmdline)
         if interpreter:
             return subprocess.Popen(interpreter + cmdline, **kwargs)
         raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8"))
@@ -192,19 +193,19 @@ def _become_tty_foreground_process():
     signal.signal(signal.SIGTTOU, hdlr)
 
 
-def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[str, bytes]" = None, timeout=None,
-           print_verbose_only=False, runInPretendMode=False, raiseInPretendMode=False, no_print=False,
+def runCmd(*args, capture_output=False, capture_error=False, input: "typing.Union[str, bytes]" = None, timeout=None,
+           print_verbose_only=False, run_in_pretend_mode=False, raise_in_pretend_mode=False, no_print=False,
            replace_env=False, give_tty_control=False, expected_exit_code=0, allow_unexpected_returncode=False,
            **kwargs):
     if len(args) == 1 and isinstance(args[0], (list, tuple)):
         cmdline = args[0]  # list with parameters was passed
     else:
         cmdline = args
-    assert "_ARGCOMPLETE" not in os.environ, "Should execute any programs as part of bash completion!"
+    assert "_ARGCOMPLETE" not in os.environ, "Should not execute any programs as part of bash completion!"
     cmdline = list(map(str, cmdline))  # ensure it's all strings so that subprocess can handle it
     # When running scripts from a noexec filesystem try to read the interpreter and run that
     if not no_print:
-        printCommand(cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), print_verbose_only=print_verbose_only)
+        print_command(cmdline, cwd=kwargs.get("cwd"), env=kwargs.get("env"), print_verbose_only=print_verbose_only)
     if "cwd" in kwargs:
         kwargs["cwd"] = str(kwargs["cwd"])
     else:
@@ -213,7 +214,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
             kwargs["cwd"] = os.getcwd()
         except FileNotFoundError:
             kwargs["cwd"] = tempfile.gettempdir()
-    if not runInPretendMode and GlobalConfig.PRENTEND_MODE:
+    if not run_in_pretend_mode and GlobalConfig.PRENTEND_MODE:
         return CompletedProcess(args=cmdline, returncode=0, stdout=b"", stderr=b"")
     # actually run the process now:
     if input is not None:
@@ -221,10 +222,10 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
         kwargs['stdin'] = subprocess.PIPE
         if not isinstance(input, bytes):
             input = str(input).encode("utf-8")
-    if captureOutput:
+    if capture_output:
         assert "stdout" not in kwargs  # we need to use stdout here
         kwargs["stdout"] = subprocess.PIPE
-    if captureError:
+    if capture_error:
         assert "stderr" not in kwargs  # we need to use stdout here
         kwargs["stderr"] = subprocess.PIPE
     elif GlobalConfig.QUIET_MODE and "stdout" not in kwargs:
@@ -266,7 +267,7 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
                 raise
             retcode = process.poll()
             if retcode != expected_exit_code and not allow_unexpected_returncode:
-                if GlobalConfig.PRENTEND_MODE and not raiseInPretendMode:
+                if GlobalConfig.PRENTEND_MODE and not raise_in_pretend_mode:
                     cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
                     fatalError("Command ", "`" + commandline_to_str(process.args) +
                                "` failed with unexpected exit code ", retcode, *cwd, sep="")
@@ -307,7 +308,7 @@ class CompilerInfo(object):
                 return Path("/unknown/resource/dir")  # avoid failing in jenkins
             # pretend to compile an existing source file and capture the -resource-dir output
             cc1_cmd = runCmd(self.path, "-###", "-xc", "-c", "/dev/null",
-                             captureError=True, print_verbose_only=True, runInPretendMode=True)
+                             capture_error=True, print_verbose_only=True, run_in_pretend_mode=True)
             resource_dir_pat = re.compile(b'"-cc1".+"-resource-dir" "([^"]+)"')
             self._resource_dir = Path(resource_dir_pat.search(cc1_cmd.stderr).group(1).decode("utf-8"))
         return self._resource_dir
@@ -351,7 +352,7 @@ class CompilerInfo(object):
 _cached_compiler_infos = dict()  # type: typing.Dict[Path, CompilerInfo]
 
 
-def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
+def get_compiler_info(compiler: "typing.Union[str, Path]") -> CompilerInfo:
     assert compiler is not None
     if compiler not in _cached_compiler_infos:
         clang_version_pattern = re.compile(b"clang version (\\d+)\\.(\\d+)\\.?(\\d+)?")
@@ -363,8 +364,8 @@ def getCompilerInfo(compiler: "typing.Union[str, Path]") -> CompilerInfo:
         try:
             # Use -v instead of --version to support both gcc and clang
             # Note: for clang-cpp/cpp we need to have stdin as devnull
-            version_cmd = runCmd(compiler, "-v", captureError=True, print_verbose_only=True, runInPretendMode=True,
-                                 stdin=subprocess.DEVNULL, captureOutput=True)
+            version_cmd = runCmd(compiler, "-v", capture_error=True, print_verbose_only=True, run_in_pretend_mode=True,
+                                 stdin=subprocess.DEVNULL, capture_output=True)
         except subprocess.CalledProcessError as e:
             stderr = e.stderr if e.stderr else b"FAILED: " + str(e).encode("utf-8")
             version_cmd = CompletedProcess(e.cmd, e.returncode, e.output, stderr)
@@ -399,7 +400,7 @@ def get_version_output(program: Path, command_args: tuple = None) -> "bytes":
     if command_args is None:
         command_args = ["--version"]
     prog = runCmd([str(program)] + list(command_args), stdin=subprocess.DEVNULL,
-                  stderr=subprocess.STDOUT, captureOutput=True, runInPretendMode=True)
+                  stderr=subprocess.STDOUT, capture_output=True, run_in_pretend_mode=True)
     return prog.stdout
 
 
@@ -446,7 +447,7 @@ def latest_system_clang_tool(basename: str, fallback_basename: str) -> Path:
                 continue
             # print("Checking compiler candidate", candidate)
             candidate = search_dir / candidate_name
-            info = getCompilerInfo(candidate)
+            info = get_compiler_info(candidate)
             if OSInfo.IS_MAC and not info.is_apple_clang:
                 # print("Ignoring", candidate, "since it is not apple clang and won't be able to build host binaries")
                 continue
@@ -465,13 +466,13 @@ def latest_system_clang_tool(basename: str, fallback_basename: str) -> Path:
     return newest[0]
 
 
-def defaultNumberOfMakeJobs():
-    makeJobs = os.cpu_count()
-    if makeJobs > 24:
+def default_make_jobs_count():
+    make_jobs = os.cpu_count()
+    if make_jobs > 24:
         # don't use up all the resources on shared build systems
         # (you can still override this with the -j command line option)
-        makeJobs /= 2
-    return makeJobs
+        make_jobs /= 2
+    return make_jobs
 
 
 def maybe_add_space(msg, sep) -> tuple:
@@ -489,25 +490,25 @@ def warningMessage(*args, sep=" "):
     print(coloured(AnsiColour.magenta, maybe_add_space("Warning:", sep) + args, sep=sep), file=sys.stderr, flush=True)
 
 
-def fatalError(*args, sep=" ", fixitHint=None, fatalWhenPretending=False, exit_code=3):
+def fatalError(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False, exit_code=3):
     # we ignore fatal errors when simulating a run
     if GlobalConfig.PRENTEND_MODE:
         print(coloured(AnsiColour.red, maybe_add_space("Potential fatal error:", sep) + args, sep=sep), file=sys.stderr,
               flush=True)
-        if fixitHint:
-            print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr, flush=True)
-        if fatalWhenPretending:
+        if fixit_hint:
+            print(coloured(AnsiColour.blue, "Possible solution:", fixit_hint), file=sys.stderr, flush=True)
+        if fatal_when_pretending:
             traceback.print_stack()
             sys.exit(exit_code)
     else:
         print(coloured(AnsiColour.red, maybe_add_space("Fatal error:", sep) + args, sep=sep), file=sys.stderr,
               flush=True)
-        if fixitHint:
-            print(coloured(AnsiColour.blue, "Possible solution:", fixitHint), file=sys.stderr, flush=True)
+        if fixit_hint:
+            print(coloured(AnsiColour.blue, "Possible solution:", fixit_hint), file=sys.stderr, flush=True)
         sys.exit(exit_code)
 
 
-def includeLocalFile(path: str) -> str:
+def include_local_file(path: str) -> str:
     file = Path(__file__).parent / path  # type: Path
     if not file.is_file():
         fatalError(file, "is missing!")
@@ -568,15 +569,15 @@ class OSInfo(object):
     __os_release_cache = None
 
     @classmethod
-    def isUbuntu(cls):
+    def is_ubuntu(cls):
         return cls.__is_linux_distribution("ubuntu")
 
     @classmethod
-    def isSuse(cls):
+    def is_suse(cls):
         return cls.__is_linux_distribution("suse") or cls.__is_linux_distribution("opensuse")
 
     @classmethod
-    def isDebian(cls):
+    def is_debian(cls):
         return cls.__is_linux_distribution("debian")
 
     @classmethod
@@ -664,19 +665,19 @@ class OSInfo(object):
 
     @classmethod
     def uses_apt(cls):
-        return cls.isDebian() or cls.isUbuntu()
+        return cls.is_debian() or cls.is_ubuntu()
 
     @classmethod
     def uses_zypper(cls):
-        return cls.isSuse()
+        return cls.is_suse()
 
 
 @contextlib.contextmanager
-def setEnv(*, print_verbose_only=True, **environ):
+def set_env(*, print_verbose_only=True, **environ):
     """
     Temporarily set the process environment variables.
 
-    >>> with setEnv(PLUGINS_DIR=u'test/plugins'):
+    >>> with set_env(PLUGINS_DIR=u'test/plugins'):
     ...   "PLUGINS_DIR" in os.environ
     True
 
@@ -688,7 +689,7 @@ def setEnv(*, print_verbose_only=True, **environ):
     # make sure all environment variables are converted to string
     str_environ = dict((str(k), str(v)) for k, v in environ.items())
     for k, v in str_environ.items():
-        printCommand("export", k + "=" + v, print_verbose_only=print_verbose_only)
+        print_command("export", k + "=" + v, print_verbose_only=print_verbose_only)
     os.environ.update(str_environ)
     try:
         yield

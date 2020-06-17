@@ -32,7 +32,7 @@
 import os
 
 from .crosscompileproject import CheriConfig, CompilationTargets, CrossCompileProject, DefaultInstallDir, GitRepository
-from ...utils import setEnv
+from ...utils import set_env
 
 
 class BuildRtems(CrossCompileProject):
@@ -64,8 +64,8 @@ class BuildRtems(CrossCompileProject):
         return self.run_cmd(cmdline, cwd=self.sourceDir, **kwargs)
 
     def configure(self, **kwargs):
-        waf_run = self._run_waf("bsp_defaults", "--rtems-bsps="+",".join(self.rtems_bsps),  "--rtems-compiler=clang",
-            captureOutput=True)
+        waf_run = self._run_waf("bsp_defaults", "--rtems-bsps=" + ",".join(self.rtems_bsps), "--rtems-compiler=clang",
+                                capture_output=True)
 
         # waf configure reads config.ini by default to read RTEMS flags from
         self.write_file(self.sourceDir / "config.ini", str(waf_run.stdout, 'utf-8'), overwrite=True)
@@ -78,7 +78,7 @@ class BuildRtems(CrossCompileProject):
         self._run_waf("install")
 
     def process(self):
-        with setEnv(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
-                    CFLAGS="--sysroot=" + str(self.sdk_sysroot),
-                    LDFLAGS="--sysroot=" + str(self.sdk_sysroot)):
+        with set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
+                     CFLAGS="--sysroot=" + str(self.sdk_sysroot),
+                     LDFLAGS="--sysroot=" + str(self.sdk_sysroot)):
             super().process()

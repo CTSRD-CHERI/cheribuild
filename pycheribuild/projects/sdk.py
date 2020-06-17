@@ -37,7 +37,7 @@ from .cross.cheribsd import BuildCHERIBSD
 from .project import (CheriConfig, CMakeProject, DefaultInstallDir, GitRepository, SimpleProject,
                       TargetAliasWithDependencies)
 from ..targets import target_manager
-from ..utils import includeLocalFile, OSInfo, setEnv, statusUpdate
+from ..utils import include_local_file, OSInfo, set_env, statusUpdate
 
 
 class BuildCheriBSDSdk(TargetAliasWithDependencies):
@@ -74,9 +74,9 @@ class BuildFreestandingSdk(SimpleProject):
     def installCMakeConfig(self):
         date = datetime.datetime.now()
         micro_version = str(date.year) + str(date.month) + str(date.day)
-        version_file = includeLocalFile("files/CheriSDKConfigVersion.cmake.in")
+        version_file = include_local_file("files/CheriSDKConfigVersion.cmake.in")
         version_file.replace("@SDK_BUILD_DATE@", micro_version)
-        config_file = includeLocalFile("files/CheriSDKConfig.cmake")
+        config_file = include_local_file("files/CheriSDKConfig.cmake")
         cmake_config_dir = self.config.cheri_sdk_dir / "share/cmake/CheriSDK"
         self.makedirs(cmake_config_dir)
         self.write_file(cmake_config_dir / "CheriSDKConfig.cmake", config_file, overwrite=True)
@@ -84,7 +84,7 @@ class BuildFreestandingSdk(SimpleProject):
 
     def buildCheridis(self):
         # Compile the cheridis helper (TODO: add it to the LLVM repo instead?)
-        cheridis_src = includeLocalFile("files/cheridis.c")
+        cheridis_src = include_local_file("files/cheridis.c")
         self.makedirs(self.config.cheri_sdk_bindir)
         self.run_cmd("cc", "-DLLVM_PATH=\"%s/\"" % str(self.config.cheri_sdk_bindir), "-x", "c", "-",
                "-o", self.config.cheri_sdk_bindir / "cheridis", input=cheridis_src)
@@ -146,7 +146,7 @@ class StartCheriSDKShell(SimpleProject):
         new_man_path = str(self.config.cheri_sdk_dir / "share/man") + ":" + os.getenv("MANPATH", "") + ":"
         new_path = str(self.config.cheri_sdk_bindir) + ":" + str(self.config.dollarPathWithOtherTools)
         shell = os.getenv("SHELL", "/bin/sh")
-        with setEnv(MANPATH=new_man_path, PATH=new_path):
+        with set_env(MANPATH=new_man_path, PATH=new_path):
             statusUpdate("Starting CHERI SDK shell... ", end="")
             try:
                 self.run_cmd(shell)

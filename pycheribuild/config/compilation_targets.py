@@ -37,7 +37,7 @@ from pathlib import Path
 from .loader import ConfigOptionBase
 from .target_info import (AutoVarInit, BasicCompilationTargets, CPUArchitecture, CrossCompileTarget, MipsFloatAbi,
                           TargetInfo)
-from ..utils import commandline_to_str, find_free_port, getCompilerInfo, is_jenkins_build, SocketAndPort
+from ..utils import commandline_to_str, find_free_port, get_compiler_info, is_jenkins_build, SocketAndPort
 
 if typing.TYPE_CHECKING:
     from .chericonfig import CheriConfig  # no-combine
@@ -88,7 +88,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         # noinspection PyProtectedMember
         if not self.project._setup_called:
             self.project.fatal("essential_compiler_and_linker_flags should not be called in __init__, use setup()!",
-                fatalWhenPretending=True)
+                               fatal_when_pretending=True)
         # However, when cross compiling we need at least -target=
         result = ["-target", self.target_triple, "-pipe"]
         # And usually also --sysroot
@@ -100,7 +100,7 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
         result += ["-B" + str(self._compiler_dir)]
 
         if self.project.auto_var_init != AutoVarInit.NONE:
-            compiler = getCompilerInfo(self.c_compiler)
+            compiler = get_compiler_info(self.c_compiler)
             valid_clang_version = compiler.is_clang and compiler.version >= (8, 0)
             # We should have at least 8.0.0 unless the user explicitly selected an incompatible clang
             if valid_clang_version:

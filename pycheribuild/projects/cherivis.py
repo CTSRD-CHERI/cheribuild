@@ -90,14 +90,15 @@ class BuildCheriVis(Project):
         # expectedCheritraceLib = str(self.config.cheri_sdk_dir / "lib/libcheritrace.a")
         # cheritraceLib = Path(os.getenv("CHERITRACE_LIB") or expectedCheritraceLib)
         # if not cheritraceLib.exists():
-        #     self.fatal(cheritraceLib, "does not exist", fixitHint="Try running `cheribuild.py cheritrace` and if that"
+        #     self.fatal(cheritraceLib, "does not exist", fixit_hint="Try running `cheribuild.py cheritrace` and if
+        #     that"
         #                " doesn't work set the environment variable CHERITRACE_LIB to point to libcheritrace.so")
         #     return
         # self.cheritrace_path = cheritraceLib
         if OSInfo.IS_MAC:
             return  # don't need GnuStep here
 
-        configOutput = runCmd("gnustep-config", "--variable=GNUSTEP_MAKEFILES", captureOutput=True).stdout
+        configOutput = runCmd("gnustep-config", "--variable=GNUSTEP_MAKEFILES", capture_output=True).stdout
         self.gnustepMakefilesDir = Path(configOutput.decode("utf-8").strip())
         commonDotMake = self.gnustepMakefilesDir / "common.make"
         if not commonDotMake.is_file():

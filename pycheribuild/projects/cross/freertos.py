@@ -33,7 +33,7 @@ import os
 
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
                                   GitRepository)
-from ...utils import getCompilerInfo, setEnv
+from ...utils import get_compiler_info, set_env
 
 
 class BuildFreeRTOS(CrossCompileAutotoolsProject):
@@ -60,7 +60,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.compiler_resource = getCompilerInfo(self.CC).get_resource_dir()
+        self.compiler_resource = get_compiler_info(self.CC).get_resource_dir()
 
         # We only support building FreeRTOS with llvm from cheribuild
         self.make_args.set(TOOLCHAIN="llvm")
@@ -115,7 +115,7 @@ class BuildFreeRTOS(CrossCompileAutotoolsProject):
                             self.real_install_root_dir / str("FreeRTOS/Demo/"+demo+"_"+app+".elf"))
 
     def process(self):
-        with setEnv(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
-                    # Add compiler-rt location to the search path
-                    LDFLAGS="-L"+str(self.compiler_resource / "lib")):
+        with set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH", ""),
+                     # Add compiler-rt location to the search path
+                     LDFLAGS="-L" + str(self.compiler_resource / "lib")):
             super().process()

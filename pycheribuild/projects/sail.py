@@ -36,7 +36,7 @@ from typing import Any, Dict, Tuple, Union
 from .project import (AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Path, Project,
                       SimpleProject)
 from ..targets import target_manager
-from ..utils import AnsiColour, coloured, commandline_to_str, get_program_version, OSInfo, runCmd, setEnv, ThreadJoiner
+from ..utils import AnsiColour, coloured, commandline_to_str, get_program_version, OSInfo, runCmd, set_env, ThreadJoiner
 
 
 class OpamMixin(object):
@@ -210,7 +210,7 @@ class BuildSailFromOpam(ProjectUsingOpam):
 
     def install(self, **kwargs):
         # self.run_command_in_ocaml_env(["env"])
-        repos = self.run_opam_cmd("repository", "list", captureOutput=True)
+        repos = self.run_opam_cmd("repository", "list", capture_output=True)
         if REMS_OPAM_REPO not in repos.stdout.decode("utf-8"):
             self.run_opam_cmd("repository", "add", "rems", REMS_OPAM_REPO)
         else:
@@ -294,8 +294,8 @@ class RunSailShell(OpamMixin, SimpleProject):
         self.info("Starting sail shell (using {})... ".format(shell))
         import subprocess
         try:
-            with setEnv(PATH=str(self.config.cheri_sdk_bindir) + ":" + os.getenv("PATH", ""),
-                        PS1="SAIL ENV:\\w> "):
+            with set_env(PATH=str(self.config.cheri_sdk_bindir) + ":" + os.getenv("PATH", ""),
+                         PS1="SAIL ENV:\\w> "):
                 self.run_cmd("which", "sail")
                 self.run_command_in_ocaml_env([shell, "--verbose", "--norc", "-i"], cwd=os.getcwd())
         except subprocess.CalledProcessError as e:
@@ -446,9 +446,9 @@ make -C cheri cheri128 cheri128_c""")
         lemdir = BuildLem.getSourceDir(self)
         ottdir = BuildOtt.getSourceDir(self)
         linksemdir = BuildLinksem.getSourceDir(self)
-        with setEnv(LEMLIB=lemdir / "library",
-                    PATH="{}:{}:".format(ottdir / "bin", lemdir / "bin") + os.environ["PATH"],
-                    OCAMLPATH="{}:{}".format(lemdir / "ocaml-lib/local", linksemdir / "src/local")):
+        with set_env(LEMLIB=lemdir / "library",
+                     PATH="{}:{}:".format(ottdir / "bin", lemdir / "bin") + os.environ["PATH"],
+                     OCAMLPATH="{}:{}".format(lemdir / "ocaml-lib/local", linksemdir / "src/local")):
             super().process()
 
 
@@ -485,7 +485,7 @@ make -C src USE_OCAMLBUILD=false local-install
         lemdir = BuildLem.getSourceDir(self)
         ottdir = BuildOtt.getSourceDir(self)
         # linksemdir = BuildLinkSem.getSourceDir(self)
-        with setEnv(LEMLIB=lemdir / "library",
-                    PATH="{}:{}:".format(ottdir / "bin", lemdir / "bin") + os.environ["PATH"],
-                    OCAMLPATH=lemdir / "ocaml-lib/local"):
+        with set_env(LEMLIB=lemdir / "library",
+                     PATH="{}:{}:".format(ottdir / "bin", lemdir / "bin") + os.environ["PATH"],
+                     OCAMLPATH=lemdir / "ocaml-lib/local"):
             super().process()

@@ -34,7 +34,7 @@ from .crosscompileproject import (CompilationTargets, CrossCompileProject, Defau
                                   MakeCommandKind, Path)
 from ..project import ExternallyManagedSourceRepository
 from ...config.target_info import CPUArchitecture
-from ...utils import commandline_to_str, is_jenkins_build, setEnv
+from ...utils import commandline_to_str, is_jenkins_build, set_env
 
 
 class BuildMibench(CrossCompileProject):
@@ -80,14 +80,14 @@ class BuildMibench(CrossCompileProject):
                            CHERI128_SDK=self.target_info.sdk_root_dir,
                            CHERI256_SDK=self.target_info.sdk_root_dir,
                            CHERI_SDK=self.target_info.sdk_root_dir)
-        with setEnv(**new_env):
+        with set_env(**new_env):
             # We can't fall back to /usr/bin/ar here since that breaks on MacOS
             if not self.compiling_for_host():
                 self.make_args.set(AR=str(self.sdk_bindir / "llvm-ar") + " rc")
                 self.make_args.set(AR2=str(self.sdk_bindir / "llvm-ranlib"))
                 self.make_args.set(RANLIB=str(self.sdk_bindir / "llvm-ranlib"))
                 self.make_args.set(MIPS_SYSROOT=self.sdk_sysroot, CHERI128_SYSROOT=self.sdk_sysroot,
-                    CHERI256_SYSROOT=self.sdk_sysroot)
+                                   CHERI256_SYSROOT=self.sdk_sysroot)
 
             self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(self.default_compiler_flags))
             self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
@@ -172,7 +172,7 @@ class BuildOlden(CrossCompileProject):
                            CHERI128_SDK=self.target_info.sdk_root_dir,
                            CHERI256_SDK=self.target_info.sdk_root_dir,
                            CHERI_SDK=self.target_info.sdk_root_dir)
-        with setEnv(**new_env):
+        with set_env(**new_env):
             if not self.compiling_for_host():
                 self.make_args.set(SYSROOT_DIRNAME=self.crossSysrootPath.name)
             self.make_args.add_flags("-f", "Makefile.jenkins")
@@ -389,7 +389,7 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
         self.__check_valid_benchmark_list()
         spec_archive = self.buildDir / "spec/{}.cpu2006bundle.bz2".format(self.config_name)
         self.run_cmd("tar", "-xvjf", spec_archive, cwd=output_dir,
-                     runInPretendMode=spec_archive.exists() and output_dir.exists(), raiseInPretendMode=False)
+                     run_in_pretend_mode=spec_archive.exists() and output_dir.exists(), raise_in_pretend_mode=False)
         spec_root = output_dir / "benchspec/CPU2006"
         if spec_root.exists():
             for dir in spec_root.iterdir():
@@ -398,14 +398,15 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test --it
                     # Delete all benchmark files for benchmarks that we won't run
                     print(dir.name, self.benchmark_list)
                     if dir.name not in self.benchmark_list:
-                        self.run_cmd("rm", "-rf", dir.resolve(), runInPretendMode=True)
+                        self.run_cmd("rm", "-rf", dir.resolve(), run_in_pretend_mode=True)
                         continue
                 # Copy run scripts for the benchmarks that we built
                 if (self.spec_run_scripts / dir.name).exists():
                     self.run_cmd("cp", "-av", self.spec_run_scripts / dir.name, str(spec_root) + "/")
         run_script = spec_root / "run_jenkins-bluehive.sh"
-        self.install_file(self.spec_run_scripts / "run_jenkins-bluehive.sh", run_script, mode=0o755, print_verbose_only=False)
-        self.run_cmd("find", output_dir, runInPretendMode=True)
+        self.install_file(self.spec_run_scripts / "run_jenkins-bluehive.sh", run_script, mode=0o755,
+                          print_verbose_only=False)
+        self.run_cmd("find", output_dir, run_in_pretend_mode=True)
         if not self.config.pretend:
             assert run_script.stat().st_mode & stat.S_IXUSR
 

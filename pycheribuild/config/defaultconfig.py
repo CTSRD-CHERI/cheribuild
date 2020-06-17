@@ -32,9 +32,9 @@ from enum import Enum
 from pathlib import Path
 
 from .chericonfig import CheriConfig
-from .loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader
 from .compilation_targets import CompilationTargets
-from ..utils import defaultNumberOfMakeJobs
+from .loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader
+from ..utils import default_make_jobs_count
 
 
 class CheribuildAction(Enum):
@@ -103,8 +103,8 @@ class DefaultCheriConfig(CheriConfig):
 
         self.makeWithoutNice = loader.add_bool_option("make-without-nice", help="Run make/ninja without nice(1)")
 
-        self.makeJobs = loader.add_option("make-jobs", "j", type=int, default=defaultNumberOfMakeJobs(),
-                                         help="Number of jobs to use for compiling")
+        self.makeJobs = loader.add_option("make-jobs", "j", type=int, default=default_make_jobs_count(),
+                                          help="Number of jobs to use for compiling")
 
         # configurable paths
         self.sourceRoot = loader.add_path_option("source-root",

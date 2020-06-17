@@ -40,12 +40,13 @@ from pathlib import Path
 from ..llvm import BuildCheriLLVM, BuildUpstreamLLVM
 from ..project import (CheriConfig, CPUArchitecture, DefaultInstallDir, flush_stdio, GitRepository,
                        MakeCommandKind, MakeOptions, Project, SimpleProject, TargetAliasWithDependencies)
+from ...config.compilation_targets import CompilationTargets
 from ...config.loader import ComputedDefaultValue
 from ...config.target_info import AutoVarInit, CrossCompileTarget, MipsFloatAbi
-from ...config.compilation_targets import CompilationTargets
 from ...targets import target_manager
-from ...utils import (classproperty, commandline_to_str, getCompilerInfo, includeLocalFile, is_jenkins_build, OSInfo,
-                      printCommand, runCmd, statusUpdate, ThreadJoiner, warningMessage)
+from ...utils import (classproperty, commandline_to_str, get_compiler_info, include_local_file, is_jenkins_build,
+                      OSInfo,
+                      print_command, runCmd, statusUpdate, ThreadJoiner, warningMessage)
 
 
 def default_kernel_config(config: CheriConfig, project: SimpleProject) -> str:
@@ -472,7 +473,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         target_flags = self._setup_arch_specific_options()
 
         # TODO: should I be setting this in the environment instead?
-        xccinfo = getCompilerInfo(self.CC)
+        xccinfo = get_compiler_info(self.CC)
         if not xccinfo.is_clang:
             self.ask_for_confirmation("Cross compiler is not clang, are you sure you want to continue?")
         self.cross_toolchain_config.set_env(
@@ -740,7 +741,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 return None
             # https://github.com/freebsd/freebsd/commit/1edb3ba87657e28b017dffbdc3d0b3a32999d933
             cmd = runCmd([bmake_binary] + bw_flags, env=args.env_vars, cwd=self.sourceDir,
-                         runInPretendMode=True, captureOutput=True, print_verbose_only=True)
+                         run_in_pretend_mode=True, capture_output=True, print_verbose_only=True)
             lines = cmd.stdout.strip().split(b"\n")
             last_line = lines[-1].decode("utf-8").strip()
             if last_line.startswith("/") and cmd.returncode == 0:
@@ -1501,7 +1502,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         # copied from the build_sdk.sh script
         # TODO: we could do this in python as well, but this method works
         # FIXME: should no longer be needed
-        fixlinks_src = includeLocalFile("files/fixlinks.c")
+        fixlinks_src = include_local_file("files/fixlinks.c")
         runCmd("cc", "-x", "c", "-", "-o", self.install_dir / "bin/fixlinks", input=fixlinks_src)
         runCmd(self.install_dir / "bin/fixlinks", cwd=self.crossSysrootPath / "usr/lib")
 
@@ -1587,8 +1588,8 @@ class BuildCheriBsdSysroot(SimpleProject):
                                                " to copy from the CheriBSD sysroot instead"
             else:
                 fixit = "Run `cheribuild.py " + rootfs_target.target + "` first"
-            self.fatal("Sysroot source directory", rootfs_dir, "does not contain libc.so.7", fixitHint=fixit)
-        printCommand(tar_cmd, cwd=rootfs_dir)
+            self.fatal("Sysroot source directory", rootfs_dir, "does not contain libc.so.7", fixit_hint=fixit)
+        print_command(tar_cmd, cwd=rootfs_dir)
         if not self.config.pretend:
             tar_cwd = str(rootfs_dir)
             with subprocess.Popen(tar_cmd, stdout=subprocess.PIPE, cwd=tar_cwd) as tar:

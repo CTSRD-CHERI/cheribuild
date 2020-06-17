@@ -37,7 +37,7 @@ from ..project import (AutotoolsProject, BuildType, CheriConfig, CMakeProject, C
                        GitRepository, Linkage, MakeCommandKind, Project)
 from ...config.compilation_targets import CompilationTargets
 from ...config.target_info import AutoVarInit
-from ...utils import AnsiColour, coloured, commandline_to_str, setEnv
+from ...utils import AnsiColour, coloured, commandline_to_str, set_env
 
 __all__ = ["CheriConfig", "CrossCompileCMakeProject", "CrossCompileAutotoolsProject",  # no-combine
            "CrossCompileTarget", "CrossCompileProject", "MakeCommandKind", "Linkage",  # no-combine
@@ -150,7 +150,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
     def process(self):
         if not self.compiling_for_host():
             # We run all these commands with $PATH containing $CHERI_SDK/bin to ensure the right tools are used
-            with setEnv(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH")):
+            with set_env(PATH=str(self.sdk_bindir) + ":" + os.getenv("PATH")):
                 super().process()
         else:
             # when building the native target we just rely on the host tools in /usr/bin

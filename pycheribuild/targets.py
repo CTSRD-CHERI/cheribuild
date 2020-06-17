@@ -35,7 +35,7 @@ from collections import OrderedDict
 
 from .config.chericonfig import CheriConfig
 from .config.target_info import CrossCompileTarget
-from .utils import AnsiColour, coloured, fatalError, setEnv, statusUpdate, warningMessage
+from .utils import AnsiColour, coloured, fatalError, set_env, statusUpdate, warningMessage
 
 if typing.TYPE_CHECKING:   # no-combine
     from .projects.project import SimpleProject   # no-combine
@@ -76,7 +76,7 @@ class Target(object):
         if self._completed:
             return
         project = self.get_or_create_project(None, config)
-        with setEnv(PATH=config.dollarPathWithOtherTools):
+        with set_env(PATH=config.dollarPathWithOtherTools):
             # make sure all system dependencies exist first
             project.check_system_dependencies()
 
@@ -107,7 +107,7 @@ class Target(object):
         new_env = {"PATH": project.config.dollarPathWithOtherTools}
         if project.config.clang_colour_diags:
             new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
-        with setEnv(**new_env):
+        with set_env(**new_env):
             project.process()
         statusUpdate("Built target '" + self.name + "' in", time.time() - starttime, "seconds")
         self._completed = True
@@ -126,7 +126,7 @@ class Target(object):
         new_env = {"PATH": project.config.dollarPathWithOtherTools}
         if project.config.clang_colour_diags:
             new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
-        with setEnv(**new_env):
+        with set_env(**new_env):
             project.run_tests()
         statusUpdate("Ran tests for target '" + self.name + "' in", time.time() - starttime, "seconds")
         self._tests_have_run = True
@@ -145,7 +145,7 @@ class Target(object):
         new_env = {"PATH": project.config.dollarPathWithOtherTools}
         if project.config.clang_colour_diags:
             new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
-        with setEnv(**new_env):
+        with set_env(**new_env):
             project.run_benchmarks()
         statusUpdate("Ran benchmarks for target '" + self.name + "' in", time.time() - starttime, "seconds")
         self._benchmarks_have_run = True

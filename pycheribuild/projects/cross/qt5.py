@@ -33,7 +33,7 @@ from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, Cr
                                   CrossCompileCMakeProject, CrossCompileProject, DefaultInstallDir, GitRepository,
                                   Linkage, MakeCommandKind, Path)
 from ...config.loader import ComputedDefaultValue
-from ...utils import commandline_to_str, fatalError, getCompilerInfo, OSInfo, runCmd
+from ...utils import commandline_to_str, fatalError, get_compiler_info, OSInfo, runCmd
 
 
 # This class is used to build qtbase and all of qt5
@@ -78,7 +78,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             self.configureArgs.extend(["-prefix", str(self.installDir)])
             self.configureArgs.append("QMAKE_CC=" + str(self.CC))
             self.configureArgs.append("QMAKE_CXX=" + str(self.CXX))
-            if OSInfo.IS_LINUX and getCompilerInfo(self.CC).is_clang:
+            if OSInfo.IS_LINUX and get_compiler_info(self.CC).is_clang:
                 # otherwise the build assumes GCC
                 self.configureArgs.append("-platform")
                 self.configureArgs.append("linux-clang")
@@ -306,7 +306,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
     def process(self):
         if not self.compiling_for_host() and not (self.nativeBuildDir / "bin/icupkg").exists():
             self.fatal("Missing host build directory", self.nativeBuildDir, " (needed for cross-compiling)",
-                       fixitHint="Run `cheribuild.py " + self.target + "-native`")
+                       fixit_hint="Run `cheribuild.py " + self.target + "-native`")
         super().process()
 
 

@@ -39,7 +39,7 @@ from .project import (AutotoolsProject, BuildType, CheriConfig, CrossCompileTarg
                       MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets, NewlibBaremetalTargetInfo
 from ..config.loader import ComputedDefaultValue
-from ..utils import commandline_to_str, getCompilerInfo
+from ..utils import commandline_to_str, get_compiler_info
 
 
 class BuildQEMUBase(AutotoolsProject):
@@ -96,8 +96,9 @@ class BuildQEMUBase(AutotoolsProject):
         else:
             self.COMMON_FLAGS.append("-O3")
         if shutil.which("pkg-config"):
-            glib_includes = self.run_cmd("pkg-config", "--cflags-only-I", "glib-2.0", captureOutput=True,
-                                         print_verbose_only=True, runInPretendMode=True).stdout.decode("utf-8").strip()
+            glib_includes = self.run_cmd("pkg-config", "--cflags-only-I", "glib-2.0", capture_output=True,
+                                         print_verbose_only=True, run_in_pretend_mode=True).stdout.decode(
+                "utf-8").strip()
             self.COMMON_FLAGS.extend(shlex.split(glib_includes))
 
         # Disable some more unneeded things (we don't usually need the GUI frontends)
@@ -134,7 +135,7 @@ class BuildQEMUBase(AutotoolsProject):
     def setup(self):
         super().setup()
         compiler = self.CC
-        ccinfo = getCompilerInfo(compiler)
+        ccinfo = get_compiler_info(compiler)
         if ccinfo.compiler == "apple-clang" or (ccinfo.compiler == "clang" and ccinfo.version >= (4, 0, 0)):
             # Turn implicit function declaration into an error -Wimplicit-function-declaration
             self.CFLAGS.extend(["-Werror=implicit-function-declaration",
@@ -154,7 +155,7 @@ class BuildQEMUBase(AutotoolsProject):
                 smbd_path = "/usr/local/sbin/smbd"
             elif self.target_info.is_macos():
                 try:
-                    prefix = self.run_cmd("brew", "--prefix", "samba", captureOutput=True, runInPretendMode=True,
+                    prefix = self.run_cmd("brew", "--prefix", "samba", capture_output=True, run_in_pretend_mode=True,
                                           print_verbose_only=True).stdout.decode("utf-8").strip()
                 except subprocess.CalledProcessError:
                     prefix = self.config.otherToolsDir
@@ -176,9 +177,9 @@ class BuildQEMUBase(AutotoolsProject):
                                  "from source (using `cheribuild.py samba`) since the /usr/sbin/smbd shipped by MacOS"
                                  " is incompatible with QEMU")
                 self.fatal("Could not find smbd -> QEMU SMB shares networking will not work",
-                           fixitHint="Either install samba using the system package manager or with cheribuild. "
-                                     "If you really don't need QEMU host shares you can disable the samba dependency "
-                                     "by setting --qemu/no-use-smbd")
+                           fixit_hint="Either install samba using the system package manager or with cheribuild. "
+                                      "If you really don't need QEMU host shares you can disable the samba dependency "
+                                      "by setting --qemu/no-use-smbd")
 
         self.configureArgs.extend([
             "--target-list=" + self.qemu_targets,
