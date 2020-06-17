@@ -55,7 +55,7 @@ _pexpect_dir = _cheribuild_root / "3rdparty/pexpect"
 assert (_pexpect_dir / "pexpect/__init__.py").exists()
 assert str(_pexpect_dir.resolve()) in sys.path, str(_pexpect_dir) + " not found in " + str(sys.path)
 import pexpect
-from ..utils import find_free_port
+from ..utils import find_free_port, keep_terminal_sane
 from ..config.compilation_targets import CompilationTargets, CrossCompileTarget
 from ..qemu_utils import QemuOptions, riscv_bios_arguments
 
@@ -934,7 +934,7 @@ def get_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]" = None,
+def _main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]" = None,
          test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None,
          argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]" = None,
          argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]" = None):
@@ -1111,6 +1111,17 @@ def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace],
     if not tests_okay:
         failure("ERROR: Some tests failed!", exit=False)
         sys.exit(2)  # different exit code for test failures
+
+
+def main(test_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], bool]" = None,
+         test_setup_function: "typing.Callable[[CheriBSDInstance, argparse.Namespace], None]" = None,
+         argparse_setup_callback: "typing.Callable[[argparse.ArgumentParser], None]" = None,
+         argparse_adjust_args_callback: "typing.Callable[[argparse.Namespace], None]" = None):
+    # Some programs (such as QEMU) can mess up the TTY state if they don't exit cleanly
+    with keep_terminal_sane():
+        _main(test_function=test_function, test_setup_function=test_setup_function,
+            argparse_setup_callback=argparse_setup_callback,
+            argparse_adjust_args_callback=argparse_adjust_args_callback)
 
 
 if __name__ == "__main__":
