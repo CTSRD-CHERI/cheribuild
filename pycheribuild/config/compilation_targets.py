@@ -545,7 +545,8 @@ exec {cheribuild_path}/beri-fpga-bsd-boot.py {basic_args} -vvvvv runbench {runbe
 
     @property
     def _sysroot_libdir(self):
-        # We currently use the hybrid sysroot for purecap binaries -> libs are in usr/libcheri
+        # For purecap we can unconditionally use libcheri since it is either a real directory (hybrid sysroot) or
+        # a symlink to lib (since https://github.com/CTSRD-CHERI/cheribsd/pull/548).
         if self.target.is_cheri_purecap():
             return "libcheri"
         return "lib"

@@ -429,10 +429,9 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test \
         # TODO: should we add these to the minimal disk image? would make things a bit easier.
         cxx_libs = ["libc++.so.1", "libcxxrt.so.1", "libgcc_s.so.1"]
         for needed_lib in cxx_libs:
-            libdirs = []
-            if self.compiling_for_cheri():
-                libdirs = ["usr/libcheri"]
-            elif self.compiling_for_mips(include_purecap=False):
+            if self.crosscompile_target.is_cheri_purecap():
+                libdirs = ["usr/libcheri", "libcheri"]
+            else:
                 libdirs = ["usr/lib", "lib"]
             for libdir in libdirs:
                 guess = Path(self.sdk_sysroot, libdir, needed_lib)
