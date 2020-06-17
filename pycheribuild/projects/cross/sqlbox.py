@@ -28,8 +28,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-from .crosscompileproject import (CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository,
-                                  MakeCommandKind, FettProjectMixin)
+from .crosscompileproject import (CrossCompileAutotoolsProject, DefaultInstallDir, FettProjectMixin, GitRepository,
+                                  MakeCommandKind)
 
 
 class BuildSQLbox(CrossCompileAutotoolsProject):
