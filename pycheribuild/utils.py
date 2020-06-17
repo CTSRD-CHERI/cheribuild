@@ -28,6 +28,7 @@
 # SUCH DAMAGE.
 #
 import contextlib
+import fcntl
 import functools
 import os
 import re
@@ -38,6 +39,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import termios
 import threading
 import traceback
 import typing
@@ -156,11 +158,13 @@ def _make_called_process_error(retcode, args, *, stdout=None, stderr=None, cwd=N
 
 def check_call_handle_noexec(cmdline: "typing.List[str]", **kwargs):
     try:
-        return subprocess.check_call(cmdline, **kwargs)
+        with keep_terminal_sane():
+            return subprocess.check_call(cmdline, **kwargs)
     except PermissionError as e:
         interpreter = getInterpreter(cmdline)
         if interpreter:
-            return subprocess.check_call(interpreter + cmdline, **kwargs)
+            with keep_terminal_sane():
+                return subprocess.check_call(interpreter + cmdline, **kwargs)
         raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8"))
     except FileNotFoundError as e:
         raise _make_called_process_error(e.errno, cmdline, cwd=kwargs.get("cwd", None), stderr=str(e).encode("utf-8"))
@@ -238,34 +242,36 @@ def runCmd(*args, captureOutput=False, captureError=False, input: "typing.Union[
         kwargs["preexec_fn"] = _become_tty_foreground_process
     stdout = b""
     stderr = b""
-    with popen_handle_noexec(cmdline, **kwargs) as process:
-        try:
-            stdout, stderr = process.communicate(input, timeout=timeout)
-        except KeyboardInterrupt:
-            process.send_signal(signal.SIGINT)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            stdout, stderr = process.communicate()
-            assert timeout is not None
-            raise subprocess.TimeoutExpired(process.args, timeout, output=stdout, stderr=stderr)
-        except BrokenPipeError:
-            # just return the exit code
-            process.kill()
-            retcode = process.wait()
-            raise _make_called_process_error(retcode, process.args, stdout=b"", cwd=kwargs["cwd"])
-        except Exception:
-            process.kill()
-            process.wait()
-            raise
-        retcode = process.poll()
-        if retcode != expected_exit_code and not allow_unexpected_returncode:
-            if GlobalConfig.PRENTEND_MODE and not raiseInPretendMode:
-                cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
-                fatalError("Command ", "`" + commandline_to_str(process.args) +
-                           "` failed with unexpected exit code ", retcode, *cwd, sep="")
-            else:
-                raise _make_called_process_error(retcode, process.args, stdout=stdout, cwd=kwargs["cwd"])
-        return CompletedProcess(process.args, retcode, stdout, stderr)
+    # Some programs (such as QEMU) can mess up the TTY state if they don't exit cleanly
+    with keep_terminal_sane():
+        with popen_handle_noexec(cmdline, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except KeyboardInterrupt:
+                process.send_signal(signal.SIGINT)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                stdout, stderr = process.communicate()
+                assert timeout is not None
+                raise subprocess.TimeoutExpired(process.args, timeout, output=stdout, stderr=stderr)
+            except BrokenPipeError:
+                # just return the exit code
+                process.kill()
+                retcode = process.wait()
+                raise _make_called_process_error(retcode, process.args, stdout=b"", cwd=kwargs["cwd"])
+            except Exception:
+                process.kill()
+                process.wait()
+                raise
+            retcode = process.poll()
+            if retcode != expected_exit_code and not allow_unexpected_returncode:
+                if GlobalConfig.PRENTEND_MODE and not raiseInPretendMode:
+                    cwd = (". Working directory was ", kwargs["cwd"]) if "cwd" in kwargs else ()
+                    fatalError("Command ", "`" + commandline_to_str(process.args) +
+                               "` failed with unexpected exit code ", retcode, *cwd, sep="")
+                else:
+                    raise _make_called_process_error(retcode, process.args, stdout=stdout, cwd=kwargs["cwd"])
+            return CompletedProcess(process.args, retcode, stdout, stderr)
 
 
 def commandline_to_str(args: "typing.Iterable[str]") -> str:
@@ -681,6 +687,54 @@ def setEnv(*, print_verbose_only=True, **environ):
     finally:
         os.environ.clear()
         os.environ.update(old_environ)
+
+
+class TtyState:
+    def __init__(self, fd: "typing.TextIO"):
+        self.fd = fd
+        self.attrs = termios.tcgetattr(fd)
+        self.flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+
+    def restore(self):
+        new_attrs = termios.tcgetattr(self.fd)
+        if new_attrs != self.attrs:
+            warningMessage("TTY flags for", self.fd.name, "changed, resetting them")
+            print("Previous state", self.attrs)
+            print("New state", new_attrs)
+            termios.tcsetattr(self.fd, termios.TCSANOW, self.attrs)
+            termios.tcdrain(self.fd)
+            new_attrs = termios.tcgetattr(self.fd)
+            if new_attrs != self.attrs:
+                warningMessage("Failed to restore TTY flags for", self.fd.name)
+                print("Previous state", self.attrs)
+                print("New state", new_attrs)
+
+        new_flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
+        if new_flags != self.flags:
+            warningMessage("FD flags for", self.fd.name, "changed, resetting them")
+            print("Previous flags", self.flags)
+            print("New flags", new_flags)
+            fcntl.fcntl(sys.stdout, fcntl.F_SETFL, self.flags)
+            if new_flags != self.flags:
+                warningMessage("Failed to restore TTY flags for", self.fd.name)
+                print("Previous flags", self.flags)
+                print("New flags", new_flags)
+
+
+@contextlib.contextmanager
+def keep_terminal_sane():
+    # Programs such as QEMU can change the terminal state and if they don't exit cleanly this state is
+    # propagated to the shell that invoked cheribuild.
+    # This function attempts to restore the stdin/stdout/stderr state in those cases:
+    stdin_state = TtyState(sys.stdin)
+    stdout_state = TtyState(sys.stdout)
+    stderr_state = TtyState(sys.stderr)
+    try:
+        yield
+    finally:
+        stdin_state.restore()
+        stdout_state.restore()
+        stderr_state.restore()
 
 
 class ThreadJoiner(object):
