@@ -27,22 +27,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import io
-import os
-import shutil
-import sys
-import tempfile
-import typing
-
-from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDGFE, BuildFreeBSDWithDefaultOptions
-from .cross.gdb import BuildGDB
-from .project import (AutotoolsProject, CheriConfig, ComputedDefaultValue, CPUArchitecture, CrossCompileTarget,
-                      DefaultInstallDir, GitRepository, MakeCommandKind, Path, SimpleProject)
-from ..config.compilation_targets import CompilationTargets
-from ..mtree import MtreeFile
-from ..targets import target_manager
-from ..utils import (AnsiColour, classproperty, coloured, include_local_file, OSInfo, set_env, statusUpdate,
-                     warningMessage)
 
 import io
 import os
@@ -116,23 +100,29 @@ class _BuildDiskImageBase(SimpleProject):
     def setup_config_options(cls, *, defaultHostname, extraFilesSuffix="", **kwargs):
         super().setup_config_options()
         cls.extraFilesDir = cls.add_path_option("extra-files", show_help=True,
-            default=lambda config, project: (config.sourceRoot / ("extra-files" + extraFilesSuffix)),
-            help="A directory with additional files that will be added to the image (default: "
-                 "'$SOURCE_ROOT/extra-files" + extraFilesSuffix + "')", metavar="DIR")
+                                                default=lambda config, project: (
+                                                        config.sourceRoot / ("extra-files" + extraFilesSuffix)),
+                                                help="A directory with additional files that will be added to the "
+                                                     "image (default: "
+                                                     "'$SOURCE_ROOT/extra-files" + extraFilesSuffix + "')",
+                                                metavar="DIR")
         cls.hostname = cls.add_config_option("hostname", show_help=True, default=defaultHostname, metavar="HOSTNAME",
-                                           help="The hostname to use for the QEMU image")
+                                             help="The hostname to use for the QEMU image")
         if "useQCOW2" not in cls.__dict__:
-            cls.useQCOW2 = cls.add_bool_option("use-qcow2", help="Convert the disk image to QCOW2 format instead of raw")
+            cls.useQCOW2 = cls.add_bool_option("use-qcow2",
+                                               help="Convert the disk image to QCOW2 format instead of raw")
         if not OSInfo.IS_FREEBSD:
-            cls.remote_path = cls.add_config_option("remote-path", show_help=True, metavar="PATH", help="The path on the "
-                                                 "remote FreeBSD machine from where to copy the disk image")
+            cls.remote_path = cls.add_config_option("remote-path", show_help=True, metavar="PATH",
+                                                    help="The path on the "
+                                                         "remote FreeBSD machine from where to copy the disk image")
         cls.wget_via_tmp = cls.add_bool_option("wget-via-tmp",
-                                help="Use a directory in /tmp for recursive wget operations;"
-                                      "of interest in rare cases, like extra-files on smbfs.")
-        cls.include_gdb = cls.add_bool_option("include-gdb", default=True, help="Include GDB in the disk image (if it exists)")
+                                               help="Use a directory in /tmp for recursive wget operations;"
+                                                    "of interest in rare cases, like extra-files on smbfs.")
+        cls.include_gdb = cls.add_bool_option("include-gdb", default=True,
+                                              help="Include GDB in the disk image (if it exists)")
         assert cls.default_disk_image_path is not None
         cls.disk_image_path = cls.add_path_option("path", default=cls.default_disk_image_path, metavar="IMGPATH",
-                                              help="The output path for the QEMU disk image", show_help=True)
+                                                  help="The output path for the QEMU disk image", show_help=True)
         cls.disableTMPFS = None
 
     def __init__(self, config, source_class: "typing.Type[BuildFreeBSD]"):
@@ -162,7 +152,7 @@ class _BuildDiskImageBase(SimpleProject):
         # used during process to generated files
         self.tmpdir = None  # type: typing.Optional[Path]
         self.file_templates = _AdditionalFileTemplates()
-        self.hostname = os.path.expandvars(self.hostname)   # Expand env vars in hostname to allow $CHERI_BITS
+        self.hostname = os.path.expandvars(self.hostname)  # Expand env vars in hostname to allow $CHERI_BITS
         # MIPS needs big-endian disk images
         self.big_endian = self.compiling_for_mips(include_purecap=True)
 
@@ -192,7 +182,7 @@ class _BuildDiskImageBase(SimpleProject):
         if file in self.extraFiles:
             self.extraFiles.remove(file)  # remove it from extraFiles so we don't install it twice
 
-    def createFileForImage(self, pathInImage: str, *, contents: str="\n", showContentsByDefault=False, mode=None):
+    def createFileForImage(self, pathInImage: str, *, contents: str = "\n", showContentsByDefault=False, mode=None):
         if pathInImage.startswith("/"):
             pathInImage = pathInImage[1:]
         assert not pathInImage.startswith("/")
@@ -216,8 +206,9 @@ class _BuildDiskImageBase(SimpleProject):
         # https://apple.stackexchange.com/a/100573/251654
         # https://www.gnu.org/software/wget/manual/html_node/Directory-Options.html
         wget_cmd = ["wget", "--no-host-directories", "--cut-dirs=3",  # strip prefix
-                    "--timestamping", "-r", "--level",  "inf", "--no-parent",  # recursive but ignore parents
-                    "--convert-links", "--execute=robots = off",  # ignore robots.txt files, don't download robots.txt files"
+                    "--timestamping", "-r", "--level", "inf", "--no-parent",  # recursive but ignore parents
+                    "--convert-links", "--execute=robots = off",
+                    # ignore robots.txt files, don't download robots.txt files"
                     "--no-verbose",
                     ]
         self.run_cmd(wget_cmd + what, cwd=where)
@@ -281,7 +272,7 @@ class _BuildDiskImageBase(SimpleProject):
                 return install_dir.relative_to(self.config.outputRoot)
             except ValueError:
                 self.info(install_dir, "is not relative to", self.config.outputRoot,
-                    "-- qemu-mount-rootfs.sh may not mount it")
+                          "-- qemu-mount-rootfs.sh may not mount it")
 
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
             non_cheri_dirname = path_relative_to_outputroot(self.crosscompile_target.get_non_cheri_target())
@@ -342,8 +333,8 @@ class _BuildDiskImageBase(SimpleProject):
                         contents += self.read_file(pubkey)
                     self.createFileForImage("/root/.ssh/authorized_keys", contents=contents, mode=0o600)
                     if self.query_yes_no("Should this authorized_keys file be used by default? "
-                                       "(You can always change them by editing/deleting '" +
-                                       str(authorizedKeys) + "')?"):
+                                         "(You can always change them by editing/deleting '" +
+                                         str(authorizedKeys) + "')?"):
                         self.install_file(self.tmpdir / "root/.ssh/authorized_keys", authorizedKeys)
                         # SSHD complains and rejects all connections if /root or /root/.ssh is not 0700
                         self.run_cmd("chmod", "0700", authorizedKeys.parent.parent, authorizedKeys.parent)
@@ -490,7 +481,7 @@ class _BuildDiskImageBase(SimpleProject):
                 self.run_cmd(mtools_bin / "mmd", "-i", efi_partition, "::/EFI")
                 self.run_cmd(mtools_bin / "mmd", "-i", efi_partition, "::/EFI/BOOT")
                 self.run_cmd(mtools_bin / "mcopy", "-i", efi_partition,
-                    self.rootfsDir / "boot/boot1.efi", "::/EFI/BOOT/BOOTAA64.EFI")
+                             self.rootfsDir / "boot/boot1.efi", "::/EFI/BOOT/BOOTAA64.EFI")
             if (mtools_bin / "minfo").exists():
                 # Get some information about the created image information:
                 self.run_cmd(mtools_bin / "minfo", "-i", efi_partition)
@@ -511,9 +502,9 @@ class _BuildDiskImageBase(SimpleProject):
                 # x86: -t ffs -f 200000 -s 8g -o version=2,bsize=32768,fsize=4096
                 extra_flags = ["-o", "bsize=32768,fsize=4096"]
             self.run_cmd([self.makefs_cmd] + debug_options + extra_flags + [
-                "-t", "ffs", # BSD fast file system
-                "-o", "version=2", # UFS2
-                "-o", "softupdates=1", # Enable soft updates journaling
+                "-t", "ffs",  # BSD fast file system
+                "-o", "version=2",  # UFS2
+                "-o", "softupdates=1",  # Enable soft updates journaling
                 "-Z",  # sparse file output
                 # For the minimal image 2mb of free space and 1k inodes should be enough
                 # For the larger images we need a lot more space (kyua needs around 400MB and the test might create
@@ -534,7 +525,7 @@ class _BuildDiskImageBase(SimpleProject):
             warningMessage("makefs failed, if it reports an issue with METALOG report a bug (could be either cheribuild"
                            " or cheribsd) and attach the METALOG file.")
             self.query_yes_no("About to delete the temporary directory. Copy any files you need before pressing enter.",
-                            yes_no_str="")
+                              yes_no_str="")
             raise
 
     def make_disk_image(self):
@@ -568,10 +559,10 @@ class _BuildDiskImageBase(SimpleProject):
             raw_img = self.disk_image_path.with_suffix(".raw")
             self.run_cmd("mv", "-f", self.disk_image_path, raw_img)
             self.run_cmd(qemu_img_command, "convert",
-                   "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
-                   "-O", "qcow2",  # convert to qcow2 format
-                   raw_img,  # input file
-                   self.disk_image_path)  # output file
+                         "-f", "raw",  # input file is in raw format (not required as QEMU can detect it
+                         "-O", "qcow2",  # convert to qcow2 format
+                         raw_img,  # input file
+                         self.disk_image_path)  # output file
             self.deleteFile(raw_img, print_verbose_only=True)
             if self.config.verbose:
                 self.run_cmd(qemu_img_command, "info", self.disk_image_path)
@@ -580,7 +571,11 @@ class _BuildDiskImageBase(SimpleProject):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
         if not self.remote_path:
             self.fatal("Path to the remote disk image is not set, option '--", self.target, "/", "remote-path' must "
-                       "be set to a path that scp understands (e.g. vica:/foo/bar/disk.img)", sep="")
+                                                                                                 "be set to a path "
+                                                                                                 "that scp "
+                                                                                                 "understands (e.g. "
+                                                                                                 "vica:/foo/bar/disk.img)",
+                       sep="")
             return
         # noinspection PyAttributeOutsideInit
         self.remote_path = os.path.expandvars(self.remote_path)
@@ -693,7 +688,8 @@ class _BuildDiskImageBase(SimpleProject):
             print("Found the following files in the rootfs that are not listed in METALOG:")
             for i in unlisted_files:
                 print("\t", i[1])
-            if self.query_yes_no("Should these files also be added to the image?", default_result=True, force_result=True):
+            if self.query_yes_no("Should these files also be added to the image?", default_result=True,
+                                 force_result=True):
                 for i in unlisted_files:
                     self.mtree.add_file(i[0], i[1], print_status=self.config.verbose)
 
@@ -711,8 +707,8 @@ class _BuildDiskImageBase(SimpleProject):
             public_key = sshDir / (private_key_name + ".pub")
             if not private_key.is_file():
                 self.run_cmd("ssh-keygen", "-t", keyType,
-                    "-N", "",  # no passphrase
-                    "-f", str(private_key))
+                             "-N", "",  # no passphrase
+                             "-f", str(private_key))
             self.add_file_to_image(private_key, base_directory=self.extraFilesDir, mode="0600")
             self.add_file_to_image(public_key, base_directory=self.extraFilesDir, mode="0644")
 
@@ -763,11 +759,11 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
 
         super().setup_config_options(defaultHostname=defaultHostname, extraFilesSuffix="-minimal", **kwargs)
         cls.strip_binaries = cls.add_bool_option("strip", default=True,
-                                               help="strip ELF files to reduce size of generated image")
+                                                 help="strip ELF files to reduce size of generated image")
         cls.include_cheritest = cls.add_bool_option("include-cheritest", default=True,
-                                                  help="Also add cheritest/cheriabitest to the disk image")
+                                                    help="Also add cheritest/cheriabitest to the disk image")
         cls.use_cheribsd_purecap_rootfs = cls.add_bool_option("use-cheribsd-purecap-rootfs", default=False,
-                                                            help="Use the rootfs built by cheribsd-purecap instead")
+                                                              help="Use the rootfs built by cheribsd-purecap instead")
 
     def __init__(self, config: CheriConfig):
         self.rootfs_xtarget = self.get_crosscompile_target(config)
@@ -775,7 +771,8 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             self.rootfs_xtarget = CompilationTargets.CHERIBSD_MIPS_PURECAP
         if self.rootfs_xtarget.is_cheri_hybrid([CPUArchitecture.RISCV64]) and self.use_cheribsd_purecap_rootfs:
             self.rootfs_xtarget = CompilationTargets.CHERIBSD_RISCV_HYBRID
-        self.cheribsd_class = BuildCHERIBSD.get_class_for_target(self.rootfs_xtarget)  # type: typing.Type[BuildCHERIBSD]
+        self.cheribsd_class = BuildCHERIBSD.get_class_for_target(
+            self.rootfs_xtarget)  # type: typing.Type[BuildCHERIBSD]
         assert self.cheribsd_class.get_crosscompile_target(config) == self.rootfs_xtarget
         super().__init__(config, source_class=self.cheribsd_class)
         self.minimumImageSize = "20m"  # let's try to shrink the image size
@@ -896,7 +893,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                 else:
                     prefix = "{" + ",".join(libdirs) + "}/"
                 self.fatal("Could not find required library '", prefix + library_basename, "' in rootfs ",
-                    self.rootfsDir, sep="")
+                           self.rootfsDir, sep="")
                 continue
             self.add_file_to_image(full_lib_path, base_directory=self.rootfsDir)
 
