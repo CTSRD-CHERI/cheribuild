@@ -338,25 +338,20 @@ def prepend_ld_library_path(qemu: CheriBSDInstance, path: str):
 
 
 def set_ld_library_path_with_sysroot(qemu: CheriBSDInstance):
-    non_cheri_libdir = "lib64" if qemu.xtarget.is_cheri_purecap() else "lib"
-    cheri_libdir = "libcheri" if not qemu.xtarget.is_cheri_purecap() else "lib"
+    non_cheri_libdir = "lib64"
+    cheri_libdir = "libcheri"
     purecap_install_prefix = "usr/local/" + qemu.xtarget.get_cheri_purecap_target().generic_suffix
     hybrid_install_prefix = "usr/local/" + qemu.xtarget.get_cheri_hybrid_target().generic_suffix
     nocheri_install_prefix = "usr/local/" + qemu.xtarget.get_non_cheri_target().generic_suffix
-    # FIXME: we currently use they hybrid sysroot!
-    sysroot_non_cheri_libdir = "lib"
-    sysroot_cheri_libdir = "libcheri"
 
     noncheri_ld_lib_path_var = "LD_LIBRARY_PATH" if not qemu.xtarget.is_cheri_purecap() else "LD64_LIBRARY_PATH"
     cheri_ld_lib_path_var = "LD_LIBRARY_PATH" if qemu.xtarget.is_cheri_purecap() else "LD_CHERI_LIBRARY_PATH"
-    qemu.run("export {var}=/{lib}:/usr/{lib}:/usr/local/{lib}:"
-             "/sysroot/{syslib}:/sysroot/usr/{syslib}:/sysroot/{hybrid_prefix}/lib:"
-             "/sysroot/{noncheri_prefix}/lib".format(lib=non_cheri_libdir, syslib=sysroot_non_cheri_libdir,
-                                                     hybrid_prefix=hybrid_install_prefix,
-                                                     noncheri_prefix=nocheri_install_prefix,
-                                                     var=noncheri_ld_lib_path_var), timeout=3)
-    qemu.run("export {var}=/{l}:/usr/{l}:/usr/local/{l}:/sysroot/{sl}:/sysroot/usr/{sl}:/sysroot/{prefix}/lib".format(
-        prefix=purecap_install_prefix, l=cheri_libdir, sl=sysroot_cheri_libdir, var=cheri_ld_lib_path_var), timeout=3)
+    qemu.run("export {var}=/{lib}:/usr/{lib}:/usr/local/{lib}:/sysroot/{lib}:/sysroot/usr/{lib}:/sysroot/{hybrid}/lib:"
+             "/sysroot/{noncheri}/lib".format(lib=non_cheri_libdir, hybrid=hybrid_install_prefix,
+                                              noncheri=nocheri_install_prefix,
+                                              var=noncheri_ld_lib_path_var), timeout=3)
+    qemu.run("export {var}=/{l}:/usr/{l}:/usr/local/{l}:/sysroot/{l}:/sysroot/usr/{l}:/sysroot/{prefix}/lib".format(
+        prefix=purecap_install_prefix, l=cheri_libdir, var=cheri_ld_lib_path_var), timeout=3)
 
 
 def maybe_decompress(path: Path, force_decompression: bool, keep_archive=True, args: argparse.Namespace = None, *,
