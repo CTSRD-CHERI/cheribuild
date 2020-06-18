@@ -75,6 +75,8 @@ class BuildLLVMBase(CMakeProject):
         cls.use_llvm_cxx = cls.add_bool_option("use-in-tree-cxx-libs", default=False,
                                                help="Use in-tree, not host, C++ runtime")
         cls.dylib = cls.add_bool_option("dylib", default=False, help="Build dynamic-link LLVM")
+        cls.install_toolchain_only = cls.add_bool_option("install-toolchain-only", default=False,
+                                                         help="Install only toolchain binaries (i.e. no test tools)")
 
     def setup(self):
         super().setup()
@@ -123,6 +125,8 @@ class BuildLLVMBase(CMakeProject):
                 )
         if self.dylib:
             self.add_cmake_options(LLVM_LINK_LLVM_DYLIB=True)
+        if self.install_toolchain_only:
+            self.add_cmake_options(LLVM_INSTALL_TOOLCHAIN_ONLY=True)
         if self.skip_static_analyzer:
             # save some build time by skipping the static analyzer
             self.add_cmake_options(CLANG_ENABLE_STATIC_ANALYZER=False,
