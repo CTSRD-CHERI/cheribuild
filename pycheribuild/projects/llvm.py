@@ -36,6 +36,11 @@ from ..config.compilation_targets import CheriBSDTargetInfo, CompilationTargets
 from ..config.loader import ComputedDefaultValue
 from ..utils import CompilerInfo, get_compiler_info, OSInfo, ThreadJoiner
 
+_true_unless_build_all_set = ComputedDefaultValue(function=lambda config, project: not project.build_everything,
+                                                  as_string="True unless build-everything is set")
+_false_unless_build_all_set = ComputedDefaultValue(function=lambda config, project: project.build_everything,
+                                                   as_string="False unless build-everything is set")
+
 
 class BuildLLVMBase(CMakeProject):
     githubBaseUrl = "https://github.com/CTSRD-CHERI/"
@@ -59,19 +64,18 @@ class BuildLLVMBase(CMakeProject):
             cls.included_projects = cls.add_config_option("include-projects", default=["llvm", "clang", "lld"],
                                                           kind=list,
                                                           help="List of LLVM subprojects that should be built")
-
         cls.add_default_sysroot = False
-
         cls.enable_assertions = cls.add_bool_option("assertions", help="build with assertions enabled", default=True)
         if "skip_static_analyzer" not in cls.__dict__:
-            cls.skip_static_analyzer = cls.add_bool_option("skip-static-analyzer", default=True,
+            cls.skip_static_analyzer = cls.add_bool_option("skip-static-analyzer", default=_true_unless_build_all_set,
                                                            help="Don't build the clang static analyzer")
         if "skip_misc_llvm_tools" not in cls.__dict__:
-            cls.skip_misc_llvm_tools = cls.add_bool_option("skip-unused-tools", default=True,
+            cls.skip_misc_llvm_tools = cls.add_bool_option("skip-unused-tools", default=_true_unless_build_all_set,
                                                            help="Don't build some of the LLVM tools that should not be "
                                                                 "needed by default (e.g. llvm-mca, llvm-pdbutil)")
         cls.build_everything = cls.add_bool_option("build-everything", default=False,
-                                                   help="Also build documentation,examples and bindings")
+                                                   help="Build everything for the projects that are enabled (e.g. "
+                                                        "documentation,examples and bindings)")
         cls.use_llvm_cxx = cls.add_bool_option("use-in-tree-cxx-libs", default=False,
                                                help="Use in-tree, not host, C++ runtime")
         cls.dylib = cls.add_bool_option("dylib", default=False, help="Build dynamic-link LLVM")
@@ -296,7 +300,7 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.build_all_targets = cls.add_bool_option("build-all-targets",
+        cls.build_all_targets = cls.add_bool_option("build-all-targets", default=_false_unless_build_all_set,
                                                     help="Support code generation for all architectures instead of "
                                                          "only for CHERI+Host. This is off by "
                                                          "default to reduce compile time.")
