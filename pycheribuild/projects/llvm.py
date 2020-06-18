@@ -222,7 +222,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         if self.skip_cheri_symlinks:
             return
         # create a symlink for the target
-        llvm_binaries = "llvm-mc llvm-objdump llvm-readobj llvm-size llc".split()
+        llvm_binaries = ["llvm-objdump", "llvm-readobj", "llvm-size"]
         if "clang" in self.included_projects:
             llvm_binaries += ["clang", "clang++", "clang-cpp"]
         for tool in llvm_binaries:
