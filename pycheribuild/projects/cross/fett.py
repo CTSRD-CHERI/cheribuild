@@ -73,6 +73,9 @@ class BuildFettConfig(CrossCompileProject):
         self.mtree.load(self.METALOG)
         src = self.sourceDir
 
+        # general config
+        self.mtree.add_file(src / "build/freebsd/malloc.conf", "etc/malloc.conf")
+
         # nginx bits
         nginx_src = src / "build/webserver"
         nginx_prefix = BuildFettNginx.get_instance(self)._installPrefix.relative_to('/')
