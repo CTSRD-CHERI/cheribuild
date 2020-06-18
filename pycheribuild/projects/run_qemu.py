@@ -58,7 +58,7 @@ def get_default_ssh_forwarding_port(addend: int):
 class LaunchQEMUBase(SimpleProject):
     doNotAddToTargets = True
     _forwardSSHPort = True
-    _provide_src_via_smb = False
+    _can_provide_src_via_smb = False
     sshForwardingPort = None  # type: int
     custom_qemu_smb_mount = None
     # Add a virtio RNG to speed up random number generation
@@ -112,12 +112,15 @@ class LaunchQEMUBase(SimpleProject):
     def setup(self):
         super().setup()
         xtarget = self.crosscompile_target
+        self._can_provide_src_via_smb = False
         if xtarget.is_riscv(include_purecap=True):
             self._add_virtio_rng = False
             self.bios_flags += self.get_riscv_bios_args()
             self.qemuBinary = BuildQEMU.qemu_cheri_binary(self)
+            self._can_provide_src_via_smb = True
         elif xtarget.is_mips(include_purecap=True):
             self.qemuBinary = BuildQEMU.qemu_cheri_binary(self)
+            self._can_provide_src_via_smb = True
         elif xtarget.is_any_x86() or xtarget.is_aarch64():
             # Use the system QEMU instead of CHERI QEMU (for now)
             # Note: x86_64 can be either CHERI QEMU or system QEMU:
@@ -125,14 +128,13 @@ class LaunchQEMUBase(SimpleProject):
         else:
             assert False, "Unknown target " + str(xtarget)
         if self.qemuBinary is None:
+            # only CHERI QEMU supports more than one SMB share
+            self._can_provide_src_via_smb = True
             binary_name = "qemu-system-" + self.qemu_options.qemu_arch_sufffix
             if (self.config.qemu_bindir / binary_name).is_file():
                 self.qemuBinary = self.config.qemu_bindir / binary_name
             else:
                 self.qemuBinary = Path(shutil.which(binary_name) or "/could/not/find/qemu")
-        # only CHERI QEMU supports more than one SMB share
-        self._provide_src_via_smb = self.compiling_for_mips(include_purecap=True) or self.compiling_for_riscv(
-            include_purecap=True)
 
     def process(self):
         assert self.qemuBinary is not None
@@ -187,7 +189,7 @@ class LaunchQEMUBase(SimpleProject):
         have_9pfs_support = (self.crosscompile_target.is_native() or
                              self.crosscompile_target.is_any_x86()) and qemu_supports_9pfs(self.qemuBinary)
         # Only default to providing the smb mount if smbd exists
-        have_smbfs_support = self._provide_src_via_smb and shutil.which("smbd")
+        have_smbfs_support = self._can_provide_src_via_smb and shutil.which("smbd")
 
         def add_smb_or_9p_dir(directory, target, share_name=None, readonly=False):
             if not directory:
@@ -368,7 +370,7 @@ class LaunchQEMUBase(SimpleProject):
 
 class AbstractLaunchFreeBSD(LaunchQEMUBase):
     doNotAddToTargets = True
-    _provide_src_via_smb = True
+    _can_provide_src_via_smb = True
 
     @classmethod
     def setup_config_options(cls, **kwargs):
