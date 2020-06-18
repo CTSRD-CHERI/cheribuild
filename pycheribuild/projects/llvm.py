@@ -207,7 +207,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         elif info.compiler != "clang" or info.version < (major, minor, patch):
             self.dependency_error(self.CC, "version", version_str,
                                   "is not supported. Clang version %d.%d or newer is required." % (major, minor),
-                                  install_instructions=self.clang_install_hint())
+                                  install_instructions=install_instructions)
 
     def install(self, **kwargs):
         super().install()
@@ -379,10 +379,10 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
     doNotAddToTargets = True
 
     @classmethod
-    def setup_config_options(cls, includeLldRevision=True, includeLldbRevision=False, **kwargs):
+    def setup_config_options(cls, include_lld_revision=True, include_lldb_revision=False, **kwargs):
         super().setup_config_options(**kwargs)
 
-        def addToolOptions(name):
+        def add_subproject_ptions(name):
             rev = cls.add_config_option(name + "-git-revision", kind=str, metavar="REVISION",
                                         help="The git revision for tools/" + name)
             repo = cls.add_config_option(name + "-repository", kind=str, metavar="REPOSITORY",
@@ -390,11 +390,11 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
                                          help="The git repository for tools/" + name)
             return repo, rev
 
-        cls.clangRepository, cls.clangRevision = addToolOptions("clang")
-        if includeLldRevision:  # not built yet
-            cls.lldRepository, cls.lldRevision = addToolOptions("lld")
-        if includeLldbRevision:  # not built yet
-            cls.lldbRepository, cls.lldbRevision = addToolOptions("lldb")
+        cls.clangRepository, cls.clangRevision = add_subproject_ptions("clang")
+        if include_lld_revision:  # not built yet
+            cls.lldRepository, cls.lldRevision = add_subproject_ptions("lld")
+        if include_lldb_revision:  # not built yet
+            cls.lldbRepository, cls.lldbRevision = add_subproject_ptions("lldb")
 
     def setup(self):
         super().setup()
