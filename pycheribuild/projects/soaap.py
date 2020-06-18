@@ -49,7 +49,7 @@ class BuildSoaapLLVM(BuildLLVMSplitRepoBase):
     @classmethod
     def setup_config_options(cls, **kwargs):
         cls.included_projects = ["llvm", "clang"]
-        super().setup_config_options(includeLldbRevision=False, includeLldRevision=False, useDefaultSysroot=False)
+        super().setup_config_options(includeLldbRevision=False, includeLldRevision=False, **kwargs)
 
 
 class BuildSoaap(CMakeProject):
