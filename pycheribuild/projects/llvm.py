@@ -262,6 +262,12 @@ exec {lld} "$@"
             self.create_triple_prefixed_symlinks(self.installDir / "bin/ld.lld", tool_name="ld",
                                                  create_unprefixed_link=not OSInfo.IS_MAC)
 
+    def run_tests(self):
+        if not self.compiling_for_host():
+            self.fatal("Cannot run tests yet for", self.crosscompile_target)
+            return
+        self.run_cmd("cmake", "--build", self.buildDir, "--target", "check-all")
+
     def prepare_install_dir_for_archiving(self):
         assert is_jenkins_build(), "Should only be called for jenkins builds"
         """Perform cleanup to reduce the size of the tarball that jenkins creates"""
