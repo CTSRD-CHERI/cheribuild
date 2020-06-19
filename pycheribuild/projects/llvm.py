@@ -34,7 +34,7 @@ import typing
 from .project import BuildType, CMakeProject, DefaultInstallDir, GitRepository
 from ..config.compilation_targets import CheriBSDTargetInfo, CompilationTargets
 from ..config.loader import ComputedDefaultValue
-from ..utils import CompilerInfo, get_compiler_info, is_jenkins_build, OSInfo, ThreadJoiner
+from ..utils import CompilerInfo, get_compiler_info, is_jenkins_build, OSInfo, set_env, ThreadJoiner
 
 _true_unless_build_all_set = ComputedDefaultValue(function=lambda config, project: not project.build_everything,
                                                   as_string="True unless build-everything is set")
@@ -101,6 +101,10 @@ class BuildLLVMBase(CMakeProject):
         if self.use_asan:
             # Use asan+ubsan
             self.add_cmake_options(LLVM_USE_SANITIZER="Address;Undefined")
+
+        if self.build_type is BuildType.DEBUG:
+            # For debug builds we default to enabling expensive checks (override using --llvm/cmake-options)
+            self.add_cmake_options(LLVM_ENABLE_EXPENSIVE_CHECKS=True)
 
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for
         # libunwind/libcxx)
@@ -266,7 +270,10 @@ exec {lld} "$@"
         if not self.compiling_for_host():
             self.fatal("Cannot run tests yet for", self.crosscompile_target)
             return
-        self.run_cmd("cmake", "--build", self.buildDir, "--target", "check-all")
+        # Without setting LC_ALL lit attempts to encode some things as ASCII and fails.
+        # This only happens on FreeBSD, but we might as well set it everywhere
+        with set_env(LC_ALL="en_US.UTF-8", FILECHECK_DUMP_INPUT_ON_FAILURE=1):
+            self.run_cmd("cmake", "--build", self.buildDir, "--target", "check-all")
 
     def prepare_install_dir_for_archiving(self):
         assert is_jenkins_build(), "Should only be called for jenkins builds"
