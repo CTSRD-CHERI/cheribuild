@@ -221,13 +221,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         super().install()
         if self.skip_cheri_symlinks:
             return
-        # create a symlink for the target
-        llvm_binaries = ["llvm-objdump", "llvm-readobj", "llvm-size"]
-        if "clang" in self.included_projects:
-            llvm_binaries += ["clang", "clang++", "clang-cpp"]
-        for tool in llvm_binaries:
-            self.create_triple_prefixed_symlinks(self.installDir / "bin" / tool)
-
+        # create a symlinks for triple-prefixed tools
         if "clang" in self.included_projects:
             # create cc and c++ symlinks (expected by some build systems)
             self.create_triple_prefixed_symlinks(self.installDir / "bin/clang", tool_name="cc",
@@ -236,8 +230,10 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
                                                  create_unprefixed_link=False)
             self.create_triple_prefixed_symlinks(self.installDir / "bin/clang-cpp", tool_name="cpp",
                                                  create_unprefixed_link=False)
+            for tool in ("clang", "clang++", "clang-cpp"):
+                self.create_triple_prefixed_symlinks(self.installDir / "bin" / tool)
 
-        # Use the LLVM versions of ranlib and ar and nm
+        # Use the LLVM versions of all binutils by default
         if "llvm" in self.included_projects:
             for tool in ("ar", "ranlib", "nm", "objcopy", "readelf", "objdump", "strip"):
                 self.create_triple_prefixed_symlinks(self.installDir / ("bin/llvm-" + tool), tool_name=tool,
