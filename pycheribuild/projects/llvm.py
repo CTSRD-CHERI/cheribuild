@@ -243,6 +243,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
                 if not (self.installDir / ("bin/llvm-" + tool)).exists():
                     # Handle old versions of LLVM where readelf isn't installed
                     self.warning(self.installDir / ("bin/llvm-" + tool), "is missing, please update LLVM")
+                    continue
                 self.create_triple_prefixed_symlinks(self.installDir / ("bin/llvm-" + tool), tool_name=tool,
                                                      create_unprefixed_link=True)
             self.create_triple_prefixed_symlinks(self.installDir / "bin/llvm-symbolizer", tool_name="addr2line",
