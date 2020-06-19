@@ -124,7 +124,7 @@ class JenkinsConfig(CheriConfig):
                                                          help="Clean build directory before building")
         self.force = True  # no user input in jenkins
         self.write_logfile = False  # jenkins stores the output anyway
-        self.skipConfigure = False
+        self.skipConfigure = loader.add_bool_option("skip-configure", help="Skip the configure step")
         self.forceConfigure = True
         # self.listTargets = False
         # self.dumpConfig = False

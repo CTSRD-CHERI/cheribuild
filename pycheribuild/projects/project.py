@@ -54,8 +54,8 @@ from ..filesystemutils import FileSystemUtils
 from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_manager
 from ..utils import (AnsiColour, check_call_handle_noexec, classproperty, coloured, commandline_to_str,
                      commandline_to_str, CompilerInfo, fatalError, get_compiler_info, get_program_version,
-                     get_version_output, include_local_file, OSInfo, popen_handle_noexec, print_command, runCmd,
-                     statusUpdate, ThreadJoiner, warningMessage)
+                     get_version_output, include_local_file, is_jenkins_build, OSInfo, popen_handle_noexec,
+                     print_command, runCmd, statusUpdate, ThreadJoiner, warningMessage)
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind",  # no-combine
@@ -2269,6 +2269,10 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 self.warning("Could not find latest counter in", require_clean_path)
             return latest_counter
 
+    def prepare_install_dir_for_archiving(self):
+        """Perform cleanup to reduce the size of the tarball that jenkins creates"""
+        self.info("No project-specific cleanup for", self.target)
+
     def process(self):
         if self.generate_cmakelists:
             self._do_generate_cmakelists()
@@ -2413,7 +2417,8 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                     self.info("Not installing", self.target, "since install dir is set to DO_NOT_INSTALL")
                 else:
                     self.install()
-
+                if is_jenkins_build():
+                    self.prepare_install_dir_for_archiving()
 
 class CMakeProject(Project):
     """

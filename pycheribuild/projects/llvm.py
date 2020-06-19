@@ -34,7 +34,7 @@ import typing
 from .project import BuildType, CMakeProject, DefaultInstallDir, GitRepository
 from ..config.compilation_targets import CheriBSDTargetInfo, CompilationTargets
 from ..config.loader import ComputedDefaultValue
-from ..utils import CompilerInfo, get_compiler_info, OSInfo, ThreadJoiner
+from ..utils import CompilerInfo, get_compiler_info, is_jenkins_build, OSInfo, ThreadJoiner
 
 _true_unless_build_all_set = ComputedDefaultValue(function=lambda config, project: not project.build_everything,
                                                   as_string="True unless build-everything is set")
@@ -265,6 +265,34 @@ exec {lld} "$@"
                 self.write_file(self.installDir / "bin/ld", script, overwrite=True, mode=0o755)
             self.create_triple_prefixed_symlinks(self.installDir / "bin/ld.lld", tool_name="ld",
                                                  create_unprefixed_link=not OSInfo.IS_MAC)
+
+    def prepare_install_dir_for_archiving(self):
+        assert is_jenkins_build(), "Should only be called for jenkins builds"
+        """Perform cleanup to reduce the size of the tarball that jenkins creates"""
+        self.info("Removing LLVM files that are not required for other Jenkins jobs. Size before:")
+        self.run_cmd("du", "-sh", self.installDir)
+        # We don't use libclang.so or the other llvm libraries:
+        # Note: this is a non-recursive search since we *do* need the files in lib/clang/<version>/
+        if (self.installDir / "lib").is_dir():
+            for f in (self.installDir / "lib").iterdir():
+                if f.is_dir():
+                    continue
+                if any(f.name.startswith(prefix) for prefix in ("libclang", "libRemarks", "libLTO")):
+                    self.deleteFile(f, warn_if_missing=True)
+                    continue
+                self.warning("Found an unexpected file in libdir. Was this installed by another project?", f)
+        # We also don't need the C API headers since we deleted the libraries
+        self.clean_directory(self.installDir / "include/", ensure_dir_exists=False)
+        # Each of these executables are 30-40MB and we don't use them anywhere:
+        # 31685928	/local/scratch/alr48/jenkins-test/tarball/opt/llvm-native/bin/clang-scan-deps
+        # 32103560	/local/scratch/alr48/jenkins-test/tarball/opt/llvm-native/bin/clang-rename
+        # 33349288	/local/scratch/alr48/jenkins-test/tarball/opt/llvm-native/bin/clang-refactor
+        # 41052504	/local/scratch/alr48/jenkins-test/tarball/opt/llvm-native/bin/clang-import-test
+        for i in ("clang-scan-deps", "clang-rename", "clang-refactor", "clang-import-test", "clang-offload-bundler",
+                  "clang-offload-wrapper"):
+            self.deleteFile(self.installDir / "bin" / i, warn_if_missing=True)
+        self.info("Size after cleanup")
+        self.run_cmd("du", "-sh", self.installDir)
 
 
 class BuildLLVMMonoRepoBase(BuildLLVMBase):
