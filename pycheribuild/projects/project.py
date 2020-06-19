@@ -1811,7 +1811,7 @@ class Project(SimpleProject):
         # Make underaligned capability loads/stores an error and require an explicit cast:
         self.cross_warning_flags.append("-Werror=pass-failed")
         self.host_warning_flags = []
-        self.common_warning_flags = ["-Wall"]
+        self.common_warning_flags = []
         target_arch = self.crosscompile_target
         # compiler flags:
         self.COMMON_FLAGS = self.target_info.required_compile_flags()
