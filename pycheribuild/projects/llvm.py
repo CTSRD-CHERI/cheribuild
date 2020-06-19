@@ -240,6 +240,9 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         # Use the LLVM versions of all binutils by default
         if "llvm" in self.included_projects:
             for tool in ("ar", "ranlib", "nm", "objcopy", "readelf", "objdump", "strip"):
+                if not (self.installDir / ("bin/llvm-" + tool)).exists():
+                    # Handle old versions of LLVM where readelf isn't installed
+                    self.warning(self.installDir / ("bin/llvm-" + tool), "is missing, please update LLVM")
                 self.create_triple_prefixed_symlinks(self.installDir / ("bin/llvm-" + tool), tool_name=tool,
                                                      create_unprefixed_link=True)
             self.create_triple_prefixed_symlinks(self.installDir / "bin/llvm-symbolizer", tool_name="addr2line",
