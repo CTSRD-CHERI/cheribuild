@@ -1639,6 +1639,11 @@ class Project(SimpleProject):
 
     @property
     def optimization_flags(self):
+        return self._build_type_basic_compiler_flags
+
+    @property
+    def _build_type_basic_compiler_flags(self):
+        # Not needed for CMakeProjects since those already add flags based on build type
         cbt = self.build_type
         if cbt == BuildType.DEFAULT:
             return []
@@ -2420,6 +2425,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 if is_jenkins_build():
                     self.prepare_install_dir_for_archiving()
 
+
 class CMakeProject(Project):
     """
     Like Project but automatically sets up the defaults for CMake projects
@@ -2436,6 +2442,11 @@ class CMakeProject(Project):
         Makefiles = 2
 
     default_build_type = BuildType.RELWITHDEBINFO
+
+    @property
+    def _build_type_basic_compiler_flags(self):
+        # No need to add any flags here, cmake does it for us already
+        return []
 
     @classmethod
     def setup_config_options(cls, **kwargs):
