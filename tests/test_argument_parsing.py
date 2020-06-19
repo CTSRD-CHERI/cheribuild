@@ -558,7 +558,7 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
     pytest.param("disk-image-riscv64", "cheribsd-riscv64.img"),
     pytest.param("disk-image-riscv64-hybrid", "cheribsd-riscv64-hybrid.img"),
     pytest.param("disk-image-riscv64-purecap", "cheribsd-riscv64-purecap.img"),
-    pytest.param("disk-image-native", "cheribsd-native.img"),
+    pytest.param("disk-image-native", "cheribsd-x86_64.img"),
     # Minimal image
     pytest.param("disk-image-minimal-mips-nocheri", "cheribsd-minimal-mips-nocheri.img"),
     pytest.param("disk-image-minimal-mips-hybrid", "cheribsd-minimal-mips-hybrid128.img"),

@@ -1644,6 +1644,7 @@ class BuildCheriBsdSysroot(SimpleProject):
 # Add a target aliases for old script invocations
 target_manager.add_target_alias("cheribsd-cheri", "cheribsd-mips-hybrid", deprecated=True)
 target_manager.add_target_alias("cheribsd-purecap", "cheribsd-mips-purecap", deprecated=True)
+target_manager.add_target_alias("cheribsd-native", "cheribsd-x86_64", deprecated=True)
 
 
 class BuildCheriBsdAndSysroot(TargetAliasWithDependencies):

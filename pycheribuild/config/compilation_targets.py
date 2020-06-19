@@ -742,7 +742,7 @@ class CompilationTargets(BasicCompilationTargets):
     CHERIBSD_RISCV_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
         is_cheri_purecap=True, hybrid_target=CHERIBSD_RISCV_HYBRID)
     CHERIBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, CheriBSDTargetInfo)
-    CHERIBSD_X86_64 = CrossCompileTarget("native", CPUArchitecture.X86_64, CheriBSDTargetInfo)
+    CHERIBSD_X86_64 = CrossCompileTarget("x86_64", CPUArchitecture.X86_64, CheriBSDTargetInfo)
 
     CHERIOS_MIPS_PURECAP = CrossCompileTarget("mips", CPUArchitecture.MIPS64, CheriOSTargetInfo, is_cheri_purecap=True)
 

@@ -1067,3 +1067,4 @@ class BuildFreeBSDGFEDiskImage(BuildFreeBSDImage):
 # Backwards compatibility:
 target_manager.add_target_alias("disk-image-purecap", "disk-image-mips-purecap", deprecated=True)
 target_manager.add_target_alias("disk-image-minimal-purecap", "disk-image-minimal-mips-purecap", deprecated=True)
+target_manager.add_target_alias("disk-image-native", "disk-image-x86_64", deprecated=True)
