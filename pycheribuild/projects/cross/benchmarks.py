@@ -517,3 +517,113 @@ cd /build/spec-test-dir/benchspec/CPU2006/ && ./run_jenkins-bluehive.sh {debug_f
     def process(self):
         self.__check_valid_benchmark_list()
         super().process()
+
+
+class BuildLMBench(CrossCompileProject):
+    repository = GitRepository("git@github.com:qwattash/lmbench")
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.ROOTFS
+    project_name = "lmbench"
+    # Needs bsd make to build
+    make_kind = MakeCommandKind.GnuMake
+    # and we have to build in the source directory
+    build_in_source_dir = True
+    # Keep the old bundles when cleaning
+    _extra_git_clean_excludes = ["--exclude=*-bundle"]
+    # The makefiles here can't support any other other tagets:
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
+                               CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.NATIVE]
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+
+    @property
+    def bundle_dir(self):
+        return Path(self.build_dir, "lmbench-" + self.crosscompile_target.generic_suffix +
+                    self.build_configuration_suffix() + "-bundle")
+
+    @property
+    def benchmark_version(self):
+        if self.compiling_for_host():
+            return "x86"
+        if self.crosscompile_target.is_cheri_purecap([CPUArchitecture.MIPS64]):
+            return "cheri" + self.config.mips_cheri_bits_str
+        if self.compiling_for_mips(include_purecap=False):
+            return "mips-asan" if self.use_asan else "mips"
+        raise ValueError("Unsupported target architecture!")
+
+    def compile(self, **kwargs):
+        new_env = dict()
+        if not self.compiling_for_host():
+            new_env = dict(MIPS_SDK=self.target_info.sdk_root_dir,
+                           CHERI128_SDK=self.target_info.sdk_root_dir,
+                           CHERI_SDK=self.target_info.sdk_root_dir)
+        with set_env(**new_env):
+            self.make_args.set(CC="clang")
+            if not self.compiling_for_host():
+                self.make_args.set(AR=str(self.sdk_bindir / "llvm-ar"))
+                self.make_args.set(OS="mips64c128-unknown-freebsd")
+
+            self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(self.default_compiler_flags))
+            self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
+            if self.build_type.is_debug:
+                self.run_make("debug", cwd=self.source_dir / "src")
+            else:
+                self.run_make("build")
+
+    def _create_benchmark_dir(self, install_dir: Path):
+        self.makedirs(install_dir)
+        self.clean_directory(install_dir / "bin", keep_root=False,
+                             ensure_dir_exists=False)
+        self.clean_directory(install_dir / "scripts", keep_root=False,
+                             ensure_dir_exists=False)
+        self.copy_directory(self.build_dir / "bin", install_dir / "bin")
+        self.copy_directory(self.build_dir / "scripts", install_dir / "scripts")
+        self.install_file(self.source_dir / "src" / "Makefile",
+                          install_dir / "src" / "Makefile")
+        self.install_file(self.source_dir / "Makefile", install_dir / "Makefile")
+
+    def install(self, **kwargs):
+        if is_jenkins_build():
+            self._create_benchmark_dir(self.install_dir / self.bundle_dir.name)
+        else:
+            self._create_benchmark_dir(self.bundle_dir)
+            self.info("Not installing LMBench for non-Jenkins builds")
+
+    def run_tests(self):
+        if self.compiling_for_host():
+            self.fatal("running x86 tests is not implemented yet")
+            return
+        # testing, not benchmarking -> run only once
+        test_command = "cd '/build/{dirname}' && ./run_jenkins-bluehive.sh -d0 -r1 -s".format(dirname=self.bundle_dir.name)
+        self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
+                                                  "--test-timeout", str(120 * 60), mount_builddir=True)
+
+
+
+    # def run_tests(self):
+    #     if self.compiling_for_host():
+    #         self.fatal("running x86 tests is not implemented yet")
+    #         return
+    #     # testing, not benchmarking -> run only once: (-s small / -s large?)
+    #     test_command = "cd '/build/{dirname}' && ./run_jenkins-bluehive.sh -d0 -r1 -s {size} {version}".format(
+    #         dirname=self.bundle_dir.name, size=self.benchmark_size, version=self.benchmark_version)
+    #     self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
+    #                                               "--test-timeout", str(120 * 60), mount_builddir=True)
+
+    # def run_benchmarks(self):
+    #     if not self.compiling_for_mips(include_purecap=True):
+    #         self.fatal("Cannot run these benchmarks for non-MIPS yet")
+    #         return
+    #     with tempfile.TemporaryDirectory() as td:
+    #         self._create_benchmark_dir(Path(td), keep_both_sizes=False)
+    #         benchmark_dir = Path(td, self.bundle_dir.name)
+    #         if not (benchmark_dir / "run_jenkins-bluehive.sh").exists():
+    #             self.fatal("Created invalid benchmark bundle...")
+    #         num_iterations = self.config.benchmark_iterations or 10
+    #         self.target_info.run_fpga_benchmark(benchmark_dir, output_file=self.default_statcounters_csv_name,
+    #                                             benchmark_script_args=["-d1", "-r" + str(num_iterations), "-s",
+    #                                                                    self.benchmark_size,
+    #                                                                    "-o", self.default_statcounters_csv_name,
+    #                                                                    self.benchmark_version])
