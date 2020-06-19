@@ -125,8 +125,6 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                     result.append("-mno-abicalls")
             else:
                 result.append(self.config.mips_float_abi.clang_float_flag())
-                # always use libc++
-                result.append("-stdlib=libc++")
 
             # CPU flags (currently always BERI):
             if self.is_cheribsd():
@@ -146,8 +144,6 @@ class _ClangBasedTargetInfo(TargetInfo, metaclass=ABCMeta):
                 if self.target.is_cheri_hybrid():
                     result.append("-cheri=" + self.config.mips_cheri_bits_str)
                     result.append("-mcpu=beri")
-                # always use libc++
-                result.append("-stdlib=libc++")
         elif self.target.is_riscv(include_purecap=True):
             assert self.target.cpu_architecture == CPUArchitecture.RISCV64
             # Use the insane RISC-V arch string to enable CHERI
