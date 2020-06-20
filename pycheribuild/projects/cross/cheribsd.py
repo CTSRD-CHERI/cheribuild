@@ -1179,6 +1179,9 @@ class BuildCHERIBSD(BuildFreeBSD):
         cls.buildFpgaKernels = cls.add_bool_option("build-fpga-kernels", show_help=True, _allow_unknown_targets=True,
                                                  only_add_for_targets=fpga_targets,
                                                  help="Also build kernels for the FPGA.")
+        cls.buildFettKernels = cls.add_bool_option("build-fett-kernels", show_help=True, _allow_unknown_targets=True,
+                                                 only_add_for_targets=fpga_targets,
+                                                 help="Also build kernels for FETT.")
         cls.mfs_root_image = cls.add_path_option("mfs-root-image",
             help="Path to an MFS root image to be embedded in the kernel for booting")
 
@@ -1235,6 +1238,14 @@ class BuildCHERIBSD(BuildFreeBSD):
                     self.extra_kernels_with_mfs.append("GFE")
             else:
                 self.fatal("Unsupported architecture for FPGA kernels")
+        if self.buildFettKernels:
+            if self.compiling_for_riscv(include_purecap=True):
+                if self.crosscompile_target.is_hybrid_or_purecap_cheri():
+                    self.extra_kernels.append("CHERI_FETT")
+                else:
+                    self.extra_kernels.append("FETT")
+            else:
+                warningMessage("Unsupported architecture for FETT kernels")
 
     def _removeSchgFlag(self, *paths: "typing.Iterable[str]"):
         for i in paths:
