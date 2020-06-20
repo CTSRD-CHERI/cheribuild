@@ -653,7 +653,7 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
     try:
         # BOOTVERBOSE is off for the amd64 kernel so we don't see the STARTING_INIT message
         bootverbose = child.xtarget.is_mips(include_purecap=True) or child.xtarget.is_riscv(include_purecap=True)
-        boot_messages = [STARTING_INIT, "Hit \\[Enter\\] to boot immediately", "Trying to mount root from",
+        boot_messages = [STARTING_INIT, "Hit \\[Enter\\] to boot immediately", "Trying to mount root from.+\\r\\n",
                          BOOT_FAILURE, BOOT_FAILURE2] + FATAL_ERROR_MESSAGES
         i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
         # Skip 10s wait from x86 loader if we see the "Hit [Enter] to boot" message
@@ -662,14 +662,15 @@ def boot_and_login(child: CheriBSDInstance, *, starttime, kernel_init_only=False
             child.sendline("")
             i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
         if i == 2:
-            success(child.match.string)
+            success("===> mounting rootfs")
             if bootverbose:
                 i = child.expect(boot_messages, timeout=5 * 60, timeout_msg="timeout before /sbin/init")
                 if i != 0:  # start up scripts failed
                     failure("failed to start init")
+                userspace_starttime = datetime.datetime.now()
+                success("===> init running (kernel startup time: ", userspace_starttime - starttime, ")")
 
         userspace_starttime = datetime.datetime.now()
-        success("===> init running (kernel startup time: ", userspace_starttime - starttime, ")")
         if kernel_init_only:
             # To test kernel startup time
             return child
