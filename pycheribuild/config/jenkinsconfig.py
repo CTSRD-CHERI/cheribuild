@@ -35,13 +35,19 @@ from pathlib import Path
 
 from .chericonfig import CheriConfig
 from .compilation_targets import CompilationTargets, CrossCompileTarget
-from .loader import ConfigLoaderBase
+from .loader import ComputedDefaultValue, ConfigLoaderBase
 from ..filesystemutils import FileSystemUtils
 from ..utils import default_make_jobs_count, fatalError, OSInfo, warningMessage
 
 
 def default_install_prefix(conf: "JenkinsConfig", unused):
     return "/opt/" + conf.targets[0]
+
+
+def default_jenkins_make_jobs_count(conf: "JenkinsConfig", unused):
+    if conf.use_all_cores:
+        return os.cpu_count()
+    return default_make_jobs_count()
 
 
 class JenkinsAction(Enum):
@@ -94,8 +100,12 @@ class JenkinsConfig(CheriConfig):
         self.makeWithoutNice = False
 
         self.makeJobs = loader.add_commandline_only_option("make-jobs", "j", type=int,
-                                                           default=default_make_jobs_count(),
+                                                           default=default_jenkins_make_jobs_count,
                                                            help="Number of jobs to use for compiling")
+        self.use_all_cores = loader.add_commandline_only_bool_option("use-all-cores",
+                                                                     help="Use all available cores for building ("
+                                                                          "Note: Should only be used for LLVM or "
+                                                                          "short-running jobs!)")
         self.installationPrefix = loader.add_commandline_only_option("install-prefix", type=absolute_path_only,
                                                                   default=default_install_prefix,
                                                                   help="The install prefix for cross compiled projects"
