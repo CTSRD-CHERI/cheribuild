@@ -736,7 +736,8 @@ class TtyState:
         warningMessage("FD flags for", self.fd.name, "changed, resetting them")
         print("Previous flags", self.flags)
         print("New flags", new_flags)
-        fcntl.fcntl(sys.stdout, fcntl.F_SETFL, self.flags)
+        fcntl.fcntl(sys.fd, fcntl.F_SETFL, self.flags)
+        new_flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
         if new_flags != self.flags:
             warningMessage("Failed to restore TTY flags for", self.fd.name)
             print("Previous flags", self.flags)
