@@ -272,7 +272,8 @@ def runCmd(*args, capture_output=False, capture_error=False, input: "typing.Unio
                     fatalError("Command ", "`" + commandline_to_str(process.args) +
                                "` failed with unexpected exit code ", retcode, *cwd, sep="")
                 else:
-                    raise _make_called_process_error(retcode, process.args, stdout=stdout, cwd=kwargs["cwd"])
+                    raise _make_called_process_error(retcode, process.args, stdout=stdout, stderr=stderr,
+                                                     cwd=kwargs["cwd"])
             return CompletedProcess(process.args, retcode, stdout, stderr)
 
 
