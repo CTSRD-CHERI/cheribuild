@@ -94,13 +94,6 @@ class DefaultCheriConfig(CheriConfig):
         self.copy_compilation_db_to_source_dir = loader.add_commandline_only_bool_option("compilation-db-in-source-dir",
             help="Generate a compile_commands.json and also copy it to the source directory")
 
-        self.crossCompileForMips = loader.add_bool_option("cross-compile-for-mips", "-xmips", group=loader.crossCompileGroup,
-                                                        help="Make cross compile projects target MIPS hybrid ABI "
-                                                             "instead of CheriABI")
-        self.crossCompileForHost = loader.add_bool_option("cross-compile-for-host", "-xhost", group=loader.crossCompileGroup,
-                                                        help="Make cross compile projects target the host system and "
-                                                             "use cheri clang to compile (tests that we didn't break x86)")
-
         self.makeWithoutNice = loader.add_bool_option("make-without-nice", help="Run make/ninja without nice(1)")
 
         self.makeJobs = loader.add_option("make-jobs", "j", type=int, default=default_make_jobs_count(),
@@ -123,14 +116,7 @@ class DefaultCheriConfig(CheriConfig):
 
     def load(self):
         super().load()
-        if self.crossCompileForHost:
-            assert not self.crossCompileForMips
-            self.preferred_xtarget = CompilationTargets.NATIVE
-        elif self.crossCompileForMips:
-            assert not self.crossCompileForHost
-            self.preferred_xtarget = CompilationTargets.CHERIBSD_MIPS_HYBRID
-        else:
-            self.preferred_xtarget = None
+        self.preferred_xtarget = None
         # now set some generic derived config options
         self.cheri_sdk_dir = self.toolsRoot / self.cheri_sdk_directory_name  # qemu and binutils (and llvm/clang)
         self.otherToolsDir = self.toolsRoot / "bootstrap"
