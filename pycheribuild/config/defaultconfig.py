@@ -32,7 +32,6 @@ from enum import Enum
 from pathlib import Path
 
 from .chericonfig import CheriConfig
-from .compilation_targets import CompilationTargets
 from .loader import ConfigLoaderBase, JsonAndCommandLineConfigLoader
 from ..utils import default_make_jobs_count
 
@@ -72,11 +71,12 @@ class DefaultCheriConfig(CheriConfig):
         self.verbose = loader.add_bool_option("verbose", "v", help="Print all commmands that are executed")
         self.clean = loader.add_bool_option("clean", "c", help="Remove the build directory before build")
         self.force = loader.add_bool_option("force", "f", help="Don't prompt for user input but use the default action")
-        self.write_logfile = loader.add_bool_option("logfile", help="Don't write a logfile for the build steps", default=False)
+        self.write_logfile = loader.add_bool_option("logfile", help="Don't write a logfile for the build steps",
+                                                    default=False)
         self.skipUpdate = loader.add_bool_option("skip-update", help="Skip the git pull step")
         self.skipClone = False
         self.force_update = loader.add_bool_option("force-update", help="Always update (with autostash) even if there "
-                                                                      "are uncommitted changes")
+                                                                        "are uncommitted changes")
         self.skipConfigure = loader.add_bool_option("skip-configure", help="Skip the configure step",
                                                   group=loader.configureGroup)
         self.forceConfigure = loader.add_bool_option("reconfigure", "-force-configure",
