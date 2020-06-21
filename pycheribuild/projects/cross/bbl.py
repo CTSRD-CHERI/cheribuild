@@ -148,6 +148,7 @@ class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
 
 class BuildBBLNoPayloadFETT(BuildBBLNoPayloadGFE):
     target = "bbl-fett"
+    project_name = "bbl"  # reuse same source dir
     build_dir_suffix = "-fett"  # but not the build dir
 
     _default_install_dir_fn = ComputedDefaultValue(
