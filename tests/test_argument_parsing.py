@@ -1,8 +1,11 @@
 import inspect
+import re
 import sys
 import tempfile
 # noinspection PyUnresolvedReferences
 from pathlib import Path
+
+import pytest
 
 # First thing we need to do is set up the config loader (before importing anything else!)
 # We can't do from pycheribuild.configloader import ConfigLoader here because that will only update the local copy
@@ -20,9 +23,6 @@ from pycheribuild.projects.cross import *  # make sure all projects are loaded s
 from pycheribuild.projects.disk_image import BuildCheriBSDDiskImage, _BuildDiskImageBase
 from pycheribuild.projects.cross.qt5 import BuildQtBase
 from pycheribuild.projects.cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, FreeBSDToolchainKind
-
-import pytest
-import re
 
 _targets_registered = False
 Target.instantiating_targets_should_warn = False
