@@ -130,7 +130,7 @@ class BuildBBLNoPayload(BuildBBLBase):
         # Only install BuildBBLNoPayload as the QEMU bios and not the GFE version by checking build_dir_suffix
         if self.crosscompile_target.is_cheri_purecap() and not self.build_dir_suffix:
             # Install into the QEMU firware directory so that `-bios default` works
-            qemu_fw_dir = BuildQEMU.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "share/qemu/"
+            qemu_fw_dir = BuildQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "share/qemu/"
             self.makedirs(qemu_fw_dir)
             self.run_cmd(self.sdk_bindir / "llvm-objcopy", "-S", "-O", "binary",
                 self.get_installed_kernel_path(self), qemu_fw_dir / "bbl-riscv64cheri-virt-fw_jump.bin")

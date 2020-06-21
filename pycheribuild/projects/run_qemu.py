@@ -266,7 +266,7 @@ class LaunchQEMUBase(SimpleProject):
                       " Once connected enter 'continue\\n' to continue booting".format(gdb_port))
 
             def gdb_command(main_binary, bp=None, extra_binary=None) -> str:
-                gdb_cmd = BuildGDB.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/gdb"
+                gdb_cmd = BuildGDB.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/gdb"
                 # Set the sysroot to ensure that the .debug file is loaded from $SYSROOT/usr/lib/debug/boot/kernel
                 result = [gdb_cmd, main_binary, "--init-eval-command=set sysroot " + str(self.rootfs_path)]
                 # Once the file has been loaded set a breakpoint on panic() and connect to the remote host
@@ -503,7 +503,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
         super().__init__(config)
         # FIXME: these should be config options
         cherios = BuildCheriOS.get_instance(self, config)
-        self.currentKernel = BuildCheriOS.getBuildDir(self) / "boot/cherios.elf"
+        self.currentKernel = BuildCheriOS.get_build_dir(self) / "boot/cherios.elf"
         self.disk_image = self.config.outputRoot / "cherios-disk.img"
         self._projectSpecificOptions = ["-no-reboot"]
 
@@ -550,7 +550,7 @@ class LaunchRtemsQEMU(LaunchQEMUBase):
 
     def get_riscv_bios_args(self) -> typing.List[str]:
         # Run a simple RTEMS shell application (run in machine mode using the -bios QEMU argument)
-        return ["-bios", str(BuildRtems.getBuildDir(self) / "riscv/rv64xcheri_qemu/testsuites/samples/capture.exe")]
+        return ["-bios", str(BuildRtems.get_build_dir(self) / "riscv/rv64xcheri_qemu/testsuites/samples/capture.exe")]
 
     def process(self):
         super().process()
@@ -575,7 +575,7 @@ class LaunchFreeRTOSQEMU(LaunchQEMUBase):
 
     def get_riscv_bios_args(self) -> typing.List[str]:
         # Run a simple FreeRTOS blinky demo application (run in machine mode using the -bios QEMU argument)
-        return ["-bios", str(BuildFreeRTOS.getInstallDir(self) / "FreeRTOS/Demo/RISC-V-Generic_main_blinky.elf")]
+        return ["-bios", str(BuildFreeRTOS.get_install_dir(self) / "FreeRTOS/Demo/RISC-V-Generic_main_blinky.elf")]
 
     def process(self):
         super().process()

@@ -102,7 +102,7 @@ class BuildCheriMipsTestBluesim(_BuildCheriMipsTestBase):
 
     def setup(self):
         super().setup()
-        self.make_args.set(CHERI_CPU_GIT_ROOT=BuildCheriSim.getSourceDir(self))
+        self.make_args.set(CHERI_CPU_GIT_ROOT=BuildCheriSim.get_source_dir(self))
 
     def do_cheritest(self):
         multicore = False
@@ -129,7 +129,7 @@ class BuildCheriMipsTestSail(_BuildCheriMipsTestBase):
 
     def setup(self):
         super().setup()
-        self.make_args.set(SAIL_CHERI_MIPS_DIR=BuildSailCheriMips.getBuildDir(self))
+        self.make_args.set(SAIL_CHERI_MIPS_DIR=BuildSailCheriMips.get_build_dir(self))
 
     def do_cheritest(self):
         if self.single_test:

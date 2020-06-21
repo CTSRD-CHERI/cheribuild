@@ -55,9 +55,9 @@ class BuildCompilerRt(CrossCompileCMakeProject):
         self.add_cmake_options(
             LLVM_CONFIG_PATH=self.sdk_bindir / "llvm-config" if is_jenkins_build() and not self.compiling_for_host()
             else
-            BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
+            BuildCheriLLVM.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
             LLVM_EXTERNAL_LIT=self.sdk_bindir / "llvm-lit" if is_jenkins_build() and not self.compiling_for_host() else
-            BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
+            BuildCheriLLVM.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=True,
             COMPILER_RT_BUILD_XRAY=False,
@@ -130,9 +130,9 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         self.add_cmake_options(
             LLVM_CONFIG_PATH=self.sdk_bindir / "llvm-config" if is_jenkins_build() and not self.compiling_for_host()
             else
-            BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
+            BuildCheriLLVM.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-config",
             LLVM_EXTERNAL_LIT=self.sdk_bindir / "llvm-lit" if is_jenkins_build() and not self.compiling_for_host() else
-            BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
+            BuildCheriLLVM.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
             COMPILER_RT_BUILD_BUILTINS=True,
             COMPILER_RT_BUILD_SANITIZERS=False,
             COMPILER_RT_BUILD_XRAY=False,

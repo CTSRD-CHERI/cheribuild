@@ -1085,8 +1085,8 @@ class ReuseOtherProjectRepository(SourceRepository):
                                              "--skip-build --skip-install`")
 
     def get_real_source_dir(self, caller: SimpleProject, default_src_dir: typing.Optional[Path]) -> Path:
-        return self.source_project.getSourceDir(caller, caller.config,
-            cross_target=self.repo_for_target) / self.subdirectory
+        return self.source_project.get_source_dir(caller, caller.config,
+                                                  cross_target=self.repo_for_target) / self.subdirectory
 
     def update(self, current_project: "Project", *, src_dir: Path, **kwargs):
         # TODO: allow updating the repo?
@@ -1404,18 +1404,18 @@ class Project(SimpleProject):
 
     # TODO: remove these three
     @classmethod
-    def getSourceDir(cls, caller: "SimpleProject", config: CheriConfig = None,
-                     cross_target: CrossCompileTarget = None):
+    def get_source_dir(cls, caller: "SimpleProject", config: CheriConfig = None,
+                       cross_target: CrossCompileTarget = None):
         return cls.get_instance(caller, config, cross_target).source_dir
 
     @classmethod
-    def getBuildDir(cls, caller: "SimpleProject", config: CheriConfig = None,
-                    cross_target: CrossCompileTarget = None):
+    def get_build_dir(cls, caller: "SimpleProject", config: CheriConfig = None,
+                      cross_target: CrossCompileTarget = None):
         return cls.get_instance(caller, config, cross_target).build_dir
 
     @classmethod
-    def getInstallDir(cls, caller: "SimpleProject", config: CheriConfig = None,
-                      cross_target: CrossCompileTarget = None):
+    def get_install_dir(cls, caller: "SimpleProject", config: CheriConfig = None,
+                        cross_target: CrossCompileTarget = None):
         return cls.get_instance(caller, config, cross_target).real_install_root_dir
 
     def build_configuration_suffix(self, target: typing.Optional[CrossCompileTarget] = None) -> str:

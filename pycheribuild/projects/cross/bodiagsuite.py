@@ -73,17 +73,17 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
     @property
     def CC(self):
         if self.use_effectivesan:
-            return BuildEffectiveSan.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang"
+            return BuildEffectiveSan.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang"
         if self.use_softboundcets:
-            return BuildSoftBoundCETS.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang"
+            return BuildSoftBoundCETS.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang"
         return super().CC
 
     @property
     def CXX(self):
         if self.use_effectivesan:
-            return BuildEffectiveSan.getInstallDir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang++"
+            return BuildEffectiveSan.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang++"
         if self.use_softboundcets:
-            return BuildSoftBoundCETS.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang++"
+            return BuildSoftBoundCETS.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/clang++"
         return super().CXX
 
     def __init__(self, config: CheriConfig, *args, **kwargs):
@@ -99,7 +99,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
                 self.COMMON_LDFLAGS.append("-lrt")
                 self.COMMON_LDFLAGS.append("-lsoftboundcets_rt")
                 # TODO: would be nice to build the runtime in the build dir and not the source dir..
-                self.COMMON_LDFLAGS.append("-L" + str(BuildSoftBoundCETS.getSourceDir(self) / "runtime"))
+                self.COMMON_LDFLAGS.append("-L" + str(BuildSoftBoundCETS.get_source_dir(self) / "runtime"))
                 # Recent BFD seems unhappy with the softboundcets runtime
                 self.COMMON_LDFLAGS.append("-fuse-ld=lld")
             if self.use_effectivesan:

@@ -148,10 +148,10 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
         # XXX: The buid system appends -Werror at the end so we can't use -Wno-error=xxx instead of -Wno-xxx
         self.common_warning_flags.append("-Wno-unused-function")
         self.common_warning_flags.append("-Wno-unused-variable")
-        self.COMMON_FLAGS.append("-I" + str(BuildFettKCGI.getInstallDir(self) / "include"))
-        self.COMMON_LDFLAGS.append("-L" + str(BuildFettKCGI.getInstallDir(self) / "lib"))
-        self.COMMON_FLAGS.append("-I" + str(BuildFettSQLbox.getInstallDir(self) / "include"))
-        self.COMMON_LDFLAGS.append("-L" + str(BuildFettSQLbox.getInstallDir(self) / "lib"))
+        self.COMMON_FLAGS.append("-I" + str(BuildFettKCGI.get_install_dir(self) / "include"))
+        self.COMMON_LDFLAGS.append("-L" + str(BuildFettKCGI.get_install_dir(self) / "lib"))
+        self.COMMON_FLAGS.append("-I" + str(BuildFettSQLbox.get_install_dir(self) / "include"))
+        self.COMMON_LDFLAGS.append("-L" + str(BuildFettSQLbox.get_install_dir(self) / "lib"))
         if self.target_info.is_freebsd():
             self.COMMON_LDFLAGS.append("-lmd")  # kcgi requires libmd
         self.make_args.set_env(

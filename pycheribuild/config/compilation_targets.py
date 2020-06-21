@@ -206,7 +206,7 @@ class FreeBSDTargetInfo(_ClangBasedTargetInfo):
 
     def _get_sdk_root_dir_lazy(self):
         from ..projects.llvm import BuildUpstreamLLVM
-        return BuildUpstreamLLVM.getInstallDir(self.project, cross_target=CompilationTargets.NATIVE)
+        return BuildUpstreamLLVM.get_install_dir(self.project, cross_target=CompilationTargets.NATIVE)
 
     @property
     def sysroot_dir(self):
@@ -445,7 +445,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                           "--qemu-ssh-port=" + str(qemu_ssh_socket.port)]
         else:
             basic_args = ["--berictl=" + str(
-                BuildBeriCtl.getBuildDir(self.project, cross_target=CompilationTargets.NATIVE) / "berictl")]
+                BuildBeriCtl.get_build_dir(self.project, cross_target=CompilationTargets.NATIVE) / "berictl")]
 
         if self.config.test_ssh_key.with_suffix("").exists():
             basic_args.extend(["--ssh-key", str(self.config.test_ssh_key.with_suffix(""))])
@@ -568,7 +568,7 @@ class CheriOSTargetInfo(CheriBSDTargetInfo):
 
     def _get_sdk_root_dir_lazy(self):
         from ..projects.llvm import BuildCheriOSLLVM
-        return BuildCheriOSLLVM.getInstallDir(self.project, cross_target=CompilationTargets.NATIVE)
+        return BuildCheriOSLLVM.get_install_dir(self.project, cross_target=CompilationTargets.NATIVE)
 
     @property
     def sysroot_dir(self):

@@ -230,7 +230,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
     repository = GitRepository("https://github.com/CTSRD-CHERI/qtbase", default_branch="5.10", force_branch=True)
     is_large_source_repository = True
     defaultSourceDir = ComputedDefaultValue(
-        function=lambda config, project: BuildQt5.getSourceDir(project, config) / "qtbase",
+        function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtbase",
         as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())
 
     def __init__(self, config):
@@ -352,7 +352,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     native_install_dir = DefaultInstallDir.CHERI_SDK
     cross_install_dir = DefaultInstallDir.SYSROOT
     defaultSourceDir = ComputedDefaultValue(
-        function=lambda config, project: BuildQt5.getSourceDir(project, config) / "qtwebkit",
+        function=lambda config, project: BuildQt5.get_source_dir(project, config) / "qtwebkit",
         as_string=lambda cls: "$SOURCE_ROOT/qt5" + cls.project_name.lower())
     needs_mxcaptable_static = True  # Currently way over the limit
     needs_mxcaptable_dynamic = True  # Currently way over the limit
@@ -417,7 +417,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             self.add_cmake_options(
                 Qt5_DIR=self.crossSysrootPath / ("usr/local/" + self._xtarget.generic_suffix) / "lib/cmake/Qt5")
             self.add_cmake_options(PNG_LIBRARIES="libqtlibpng.a")
-            self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.getSourceDir(self) / "src/3rdparty/libpng")
+            self.add_cmake_options(PNG_INCLUDE_DIRS=BuildQtBase.get_source_dir(self) / "src/3rdparty/libpng")
             if self.force_static_linkage:
                 self.LDFLAGS.append("-pthread")  # Needed for DumpRenderTree when linking statically
 
@@ -440,7 +440,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     def compile(self, **kwargs):
         # Generate the shared mime info cache to MASSIVELY speed up tests
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
-            mime_info_src = BuildQtBase.getSourceDir(self) / "src/corelib/mimetypes/mime/packages/freedesktop.org.xml"
+            mime_info_src = BuildQtBase.get_source_dir(self) / "src/corelib/mimetypes/mime/packages/freedesktop.org.xml"
             self.install_file(mime_info_src, Path(td, "mime/packages/freedesktop.org.xml"), force=True,
                               print_verbose_only=False)
             try:

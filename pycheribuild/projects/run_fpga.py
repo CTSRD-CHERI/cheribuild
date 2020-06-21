@@ -63,7 +63,8 @@ class LaunchFPGABase(SimpleProject):
         if not cheri_dir.exists() or not cherilibs_dir.exists():
             self.fatal("cheri-cpu repository missing. Run `cheribuild.py berictl` or `git clone {} {}`".format(
                 sim_project.repository.url, sim_project.source_dir))
-        basic_args = ["--berictl=" + str(BuildBeriCtl.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "berictl")]
+        basic_args = [
+            "--berictl=" + str(BuildBeriCtl.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "berictl")]
 
         if self.extra_base_options:
             basic_args.extend(self.extra_base_options)

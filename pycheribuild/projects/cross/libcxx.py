@@ -58,9 +58,9 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self.add_cmake_options(LIBUNWIND_HAS_DL_LIB=False)  # Adding -ldl won't work: no libdl in /usr/libcheri
-        self.lit_path = BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit"
+        self.lit_path = BuildCheriLLVM.get_build_dir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit"
         self.add_cmake_options(
-            LLVM_PATH=BuildCheriLLVM.getSourceDir(self, cross_target=CompilationTargets.NATIVE) / "llvm",
+            LLVM_PATH=BuildCheriLLVM.get_source_dir(self, cross_target=CompilationTargets.NATIVE) / "llvm",
             LLVM_EXTERNAL_LIT=self.lit_path,
             )
 
@@ -74,12 +74,12 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
 
         self.add_cmake_options(LIBUNWIND_LIBCXX_PATH=cxx_instance.source_dir,
                                # Should use libc++ from sysroot
-                               # LIBUNWIND_LIBCXX_LIBRARY_PATH=BuildLibCXX.getBuildDir(self) / "lib",
+                               # LIBUNWIND_LIBCXX_LIBRARY_PATH=BuildLibCXX.get_build_dir(self) / "lib",
                                LIBUNWIND_LIBCXX_LIBRARY_PATH="",
                                LIBUNWIND_TEST_LINKER_FLAGS=test_linker_flags,
                                LIBUNWIND_TEST_COMPILER_FLAGS=test_compiler_flags,
                                # For the test binaries we link libcxxrt statically
-                               LIBUNWIND_TEST_CXX_ABI_LIB=BuildLibCXXRT.getBuildDir(self) / "lib/libcxxrt.a",
+                               LIBUNWIND_TEST_CXX_ABI_LIB=BuildLibCXXRT.get_build_dir(self) / "lib/libcxxrt.a",
                                LIBUNWIND_ENABLE_ASSERTIONS=True,
                                )
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
@@ -139,7 +139,7 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         if not self.target_info.is_baremetal():
-            self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.getInstallDir(self) / "lib",
+            self.add_cmake_options(LIBUNWIND_PATH=BuildLibunwind.get_install_dir(self) / "lib",
                                    CMAKE_INSTALL_RPATH_USE_LINK_PATH=True)
         if self.compiling_for_host():
             assert not self.target_info.is_baremetal()
@@ -177,7 +177,7 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
                 runCmd("ctest", ".", "-VV", cwd=self.build_dir)
             else:
                 self.target_info.run_cheribsd_test_script("run_libcxxrt_tests.py",
-                                                          "--libunwind-build-dir", BuildLibunwind.getBuildDir(self),
+                                                          "--libunwind-build-dir", BuildLibunwind.get_build_dir(self),
                                                           mount_builddir=True, mount_sysroot=True)
 
 
@@ -231,12 +231,13 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         self.add_cmake_options(
             CMAKE_INSTALL_RPATH_USE_LINK_PATH=True,  # Fix finding libunwind.so
             LIBCXX_INCLUDE_TESTS=True,
-            LLVM_PATH=BuildCheriLLVM.getSourceDir(self, cross_target=CompilationTargets.NATIVE) / "llvm",
-            LLVM_EXTERNAL_LIT=BuildCheriLLVM.getBuildDir(self, cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
+            LLVM_PATH=BuildCheriLLVM.get_source_dir(self, cross_target=CompilationTargets.NATIVE) / "llvm",
+            LLVM_EXTERNAL_LIT=BuildCheriLLVM.get_build_dir(self,
+                                                           cross_target=CompilationTargets.NATIVE) / "bin/llvm-lit",
             LIBCXXABI_USE_LLVM_UNWINDER=False,  # we have a fake libunwind in libcxxrt
             LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
                           "/libcxx-test-results.xml --max-time 3600 --timeout 120 -s -vv" + self.libcxx_lit_jobs
-        )
+            )
         # Lit multiprocessing seems broken with python 2.7 on FreeBSD (and python 3 seems faster at least for libunwind/libcxx)
         self.add_cmake_options(PYTHON_EXECUTABLE=sys.executable)
         # select libcxxrt as the runtime library (except on macos where this doesn't seem to work very well)
@@ -244,13 +245,13 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             self.add_cmake_options(
                 LIBCXX_CXX_ABI="libcxxrt",
                 LIBCXX_CXX_ABI_LIBNAME="libcxxrt",
-                LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.getSourceDir(self) / "src",
-                LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.getBuildDir(self) / "lib")
+                LIBCXX_CXX_ABI_INCLUDE_PATHS=BuildLibCXXRT.get_source_dir(self) / "src",
+                LIBCXX_CXX_ABI_LIBRARY_PATH=BuildLibCXXRT.get_build_dir(self) / "lib")
             if not self.target_info.is_baremetal():
                 # use llvm libunwind when testing
                 self.add_cmake_options(LIBCXX_STATIC_CXX_ABI_LIBRARY_NEEDS_UNWIND_LIBRARY=True,
                                        LIBCXX_CXX_ABI_UNWIND_LIBRARY="unwind",
-                                       LIBCXX_CXX_ABI_UNWIND_LIBRARY_PATH=BuildLibunwind.getBuildDir(self) / "lib")
+                                       LIBCXX_CXX_ABI_UNWIND_LIBRARY_PATH=BuildLibunwind.get_build_dir(self) / "lib")
 
         if not self.exceptions or self.target_info.is_baremetal():
             self.add_cmake_options(LIBCXX_ENABLE_EXCEPTIONS=False, LIBCXX_ENABLE_RTTI=False)

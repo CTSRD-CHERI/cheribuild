@@ -63,7 +63,7 @@ class BuildCheriSpike(AutotoolsProject):
 
     @classmethod
     def get_simulator_binary(cls, caller):
-        return cls.getInstallDir(caller, cross_target=CompilationTargets.NATIVE) / "bin/spike"
+        return cls.get_install_dir(caller, cross_target=CompilationTargets.NATIVE) / "bin/spike"
 
 
 class RunCheriSpikeBase(SimpleProject):

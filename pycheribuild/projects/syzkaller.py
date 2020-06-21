@@ -80,7 +80,7 @@ class BuildSyzkaller(CrossCompileProject):
         self._newPath = (str(self.config.cheri_sdk_dir / "bin") + ":" +
                          str(self.config.dollarPathWithOtherTools))
 
-        self.cheribsd_dir = BuildCHERIBSD.getSourceDir(self)
+        self.cheribsd_dir = BuildCHERIBSD.get_source_dir(self)
 
     def syzkaller_install_path(self):
         return self.config.cheri_sdk_bindir

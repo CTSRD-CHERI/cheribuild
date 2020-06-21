@@ -139,7 +139,7 @@ class _BuildDiskImageBase(SimpleProject):
         self.mkimg_cmd = None  # type: typing.Optional[Path]
         self.source_project = source_class.get_instance(self)
         assert isinstance(self.source_project, BuildFreeBSD)
-        self.rootfsDir = self.source_project.getInstallDir(self)
+        self.rootfsDir = self.source_project.get_install_dir(self)
         assert self.rootfsDir is not None
         if (self.source_project.source_dir / "lib/libc/gen/master.passwd").is_file():
             self.userGroupDbDir = self.source_project.source_dir / "lib/libc/gen"
@@ -269,7 +269,7 @@ class _BuildDiskImageBase(SimpleProject):
         purecap_cheri_dirname = "purecap-cheri-rootfs-not-found"
 
         def path_relative_to_outputroot(xtarget) -> Path:
-            install_dir = self.source_project.getInstallDir(self, cross_target=xtarget)
+            install_dir = self.source_project.get_install_dir(self, cross_target=xtarget)
             try:
                 return install_dir.relative_to(self.config.outputRoot)
             except ValueError:

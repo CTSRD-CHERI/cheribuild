@@ -274,7 +274,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     @classmethod
     def rootfsDir(cls, caller, config=None, cross_target: CrossCompileTarget = None):
-        return cls.getInstallDir(caller, config, cross_target)
+        return cls.get_install_dir(caller, config, cross_target)
 
     @classmethod
     def get_installed_kernel_path(cls, caller, config: CheriConfig = None,
@@ -438,9 +438,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.build_toolchain == FreeBSDToolchainKind.BOOTSTRAP:
             self.target_info._sdk_root_dir = Path("/this/path/should/not/be/used/when/bootstrapping")
         elif self.build_toolchain == FreeBSDToolchainKind.UPSTREAM_LLVM:
-            self.target_info._sdk_root_dir = BuildUpstreamLLVM.getInstallDir(self, cross_target=CompilationTargets.NATIVE)
+            self.target_info._sdk_root_dir = BuildUpstreamLLVM.get_install_dir(self,
+                                                                               cross_target=CompilationTargets.NATIVE)
         elif self.build_toolchain == FreeBSDToolchainKind.CHERI_LLVM:
-            self.target_info._sdk_root_dir = BuildCheriLLVM.getInstallDir(self, cross_target=CompilationTargets.NATIVE)
+            self.target_info._sdk_root_dir = BuildCheriLLVM.get_install_dir(self,
+                                                                            cross_target=CompilationTargets.NATIVE)
         elif self.build_toolchain == FreeBSDToolchainKind.CUSTOM:
             if self._cross_toolchain_root is None:
                 self.fatal("Requested custom toolchain but path is not set.")
