@@ -51,7 +51,7 @@ class BuildOpenRADTool(AutotoolsProject):
         super().configure(**kwargs)
 
     def needsConfigure(self):
-        return not (self.buildDir / "config.h").exists()
+        return not (self.build_dir / "config.h").exists()
 
 
 class BuildFettOpenRADTool(BuildOpenRADTool):

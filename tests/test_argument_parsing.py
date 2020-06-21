@@ -1,6 +1,7 @@
 import inspect
 import sys
 import tempfile
+# noinspection PyUnresolvedReferences
 from pathlib import Path
 
 # First thing we need to do is set up the config loader (before importing anything else!)
@@ -168,15 +169,15 @@ def test_cross_compile_project_inherits():
     assert qtbase_native.build_tests, "qtbase-native should inherit build-tests from qtbase(default)"
     assert not qtbase_mips.build_tests, "qtbase-mips should have a JSON false override for build-tests"
 
-    # However, don't inherit for buildDir since that doesn't make sense:
+    # However, don't inherit for build_dir since that doesn't make sense:
     def assertBuildDirsDifferent():
         # Default should be CHERI purecap
-        # print("Default build dir:", qtbase_default.buildDir)
-        # print("Native build dir:", qtbase_native.buildDir)
-        # print("Mips build dir:", qtbase_mips.buildDir)
-        assert qtbase_default.buildDir != qtbase_native.buildDir
-        assert qtbase_default.buildDir != qtbase_mips.buildDir
-        assert qtbase_mips.buildDir != qtbase_native.buildDir
+        # print("Default build dir:", qtbase_default.build_dir)
+        # print("Native build dir:", qtbase_native.build_dir)
+        # print("Mips build dir:", qtbase_mips.build_dir)
+        assert qtbase_default.build_dir != qtbase_native.build_dir
+        assert qtbase_default.build_dir != qtbase_mips.build_dir
+        assert qtbase_mips.build_dir != qtbase_native.build_dir
 
     assertBuildDirsDifferent()
     # overriding native build dir is fine:
@@ -272,37 +273,37 @@ def test_cheribsd_purecap_inherits_config_from_cheribsd():
     assert cheribsd_mips.debug_kernel, "cheribsd-mips debug-kernel should be inherited from cheribsd(default)"
     assert not cheribsd_cheri.debug_kernel, "cheribsd-cheri should have a JSON false override for debug-kernel"
 
-    # However, don't inherit for buildDir since that doesn't make sense:
+    # However, don't inherit for build_dir since that doesn't make sense:
     def assertBuildDirsDifferent():
-        assert cheribsd_cheri.buildDir != cheribsd_purecap.buildDir
-        assert cheribsd_cheri.buildDir != cheribsd_mips.buildDir
-        assert cheribsd_cheri.buildDir == cheribsd_default_tgt.buildDir
+        assert cheribsd_cheri.build_dir != cheribsd_purecap.build_dir
+        assert cheribsd_cheri.build_dir != cheribsd_mips.build_dir
+        assert cheribsd_cheri.build_dir == cheribsd_default_tgt.build_dir
 
     assertBuildDirsDifferent()
     # overriding native build dir is fine:
     _parse_arguments(["--cheribsd-purecap/build-directory=/foo/bar"])
-    assert cheribsd_purecap.buildDir == Path("/foo/bar")
+    assert cheribsd_purecap.build_dir == Path("/foo/bar")
     assertBuildDirsDifferent()
     _parse_config_file_and_args(b'{"cheribsd-purecap/build-directory": "/foo/bar"}')
-    assert cheribsd_purecap.buildDir == Path("/foo/bar")
+    assert cheribsd_purecap.build_dir == Path("/foo/bar")
     assertBuildDirsDifferent()
     # cheribsd-cheri should inherit from the default one, but not cheribsd-purecap:
     _parse_arguments(["--cheribsd/build-directory=/foo/bar"])
-    assert cheribsd_cheri.buildDir == Path("/foo/bar")
-    assert cheribsd_purecap.buildDir != Path("/foo/bar")
+    assert cheribsd_cheri.build_dir == Path("/foo/bar")
+    assert cheribsd_purecap.build_dir != Path("/foo/bar")
     assertBuildDirsDifferent()
     _parse_config_file_and_args(b'{"cheribsd/build-directory": "/foo/bar"}')
-    assert cheribsd_cheri.buildDir == Path("/foo/bar")
-    assert cheribsd_purecap.buildDir != Path("/foo/bar")
+    assert cheribsd_cheri.build_dir == Path("/foo/bar")
+    assert cheribsd_purecap.build_dir != Path("/foo/bar")
     assertBuildDirsDifferent()
 
     # cheribsd-cheri/builddir should have higher prirority:
     _parse_arguments(["--cheribsd/build-directory=/foo/bar", "--cheribsd-cheri/build-directory=/bar/foo"])
-    assert cheribsd_cheri.buildDir == Path("/bar/foo")
+    assert cheribsd_cheri.build_dir == Path("/bar/foo")
     assertBuildDirsDifferent()
     _parse_config_file_and_args(b'{"cheribsd/build-directory": "/foo/bar",'
                                 b' "cheribsd-cheri/build-directory": "/bar/foo"}')
-    assert cheribsd_cheri.buildDir == Path("/bar/foo")
+    assert cheribsd_cheri.build_dir == Path("/bar/foo")
     assertBuildDirsDifferent()
 
 
@@ -359,10 +360,10 @@ def test_cheri_mips_purecap_alias():
     # We should load config options for that target from
     qtbase_cheri = target_manager.get_target_raw("qtbase-mips-purecap").get_or_create_project(None,
         config)  # type: BuildCHERIBSD
-    assert str(qtbase_cheri.buildDir) == "/some/build/dir"
+    assert str(qtbase_cheri.build_dir) == "/some/build/dir"
     qtbase_mips_purecap = target_manager.get_target_raw("qtbase-mips-purecap").get_or_create_project(None,
         config)  # type: BuildCHERIBSD
-    assert str(qtbase_mips_purecap.buildDir) == "/some/build/dir"
+    assert str(qtbase_mips_purecap.build_dir) == "/some/build/dir"
 
 
 def test_kernconf():
@@ -627,6 +628,6 @@ def test_default_build_dir(target: str, args: list, expected: str):
     # Check that the cheribsd build dir is correct
     config = _parse_arguments(args)
     target = target_manager.get_target(target, None, config, caller="test_default_arch")
-    builddir = target.get_or_create_project(None, config).buildDir
+    builddir = target.get_or_create_project(None, config).build_dir
     assert isinstance(builddir, Path)
     assert builddir.name == expected

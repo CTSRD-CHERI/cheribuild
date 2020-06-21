@@ -377,8 +377,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                 if not qemu_path.exists():
                     self.project.fatal("QEMU binary", qemu_path, "doesn't exist")
                 cmd.extend(["--qemu-cmd", qemu_path])
-        if mount_builddir and self.project.buildDir and "--build-dir" not in self.config.test_extra_args:
-            cmd.extend(["--build-dir", self.project.buildDir])
+        if mount_builddir and self.project.build_dir and "--build-dir" not in self.config.test_extra_args:
+            cmd.extend(["--build-dir", self.project.build_dir])
         if mount_sourcedir and self.project.sourceDir and "--source-dir" not in self.config.test_extra_args:
             cmd.extend(["--source-dir", self.project.sourceDir])
         if mount_sysroot and "--sysroot-dir" not in self.config.test_extra_args:

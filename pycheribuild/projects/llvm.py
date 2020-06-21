@@ -277,7 +277,7 @@ exec {lld} "$@"
         # Without setting LC_ALL lit attempts to encode some things as ASCII and fails.
         # This only happens on FreeBSD, but we might as well set it everywhere
         with set_env(LC_ALL="en_US.UTF-8", FILECHECK_DUMP_INPUT_ON_FAILURE=1):
-            self.run_cmd("cmake", "--build", self.buildDir, "--target", "check-all")
+            self.run_cmd("cmake", "--build", self.build_dir, "--target", "check-all")
 
     def prepare_install_dir_for_archiving(self):
         assert is_jenkins_build(), "Should only be called for jenkins builds"

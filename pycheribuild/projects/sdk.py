@@ -97,7 +97,7 @@ class BuildFreestandingSdk(SimpleProject):
         # if we pass a string starting with a slash to Path() it will reset to that absolute path
         # luckily we have to prepend mips.mips64, so it works out fine
         # expands to e.g. /home/alr48/cheri/output/cheribsd-obj/mips.mips64/home/alr48/cheri/cheribsd
-        possibleBuildRoots = [Path(BuildCHERIBSD.buildDir, "mips.mips64" + path) for path in
+        possibleBuildRoots = [Path(BuildCHERIBSD.build_dir, "mips.mips64" + path) for path in
                               (str(BuildCHERIBSD.sourceDir), os.path.realpath(str(BuildCHERIBSD.sourceDir)))]
         for directory in possibleBuildRoots:
             if directory.exists():

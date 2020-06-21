@@ -54,7 +54,7 @@ class BuildKCGI(CrossCompileAutotoolsProject):
         self.configureArgs.append("PREFIX=" + str(self.installPrefix))
 
     def needsConfigure(self):
-        return not (self.buildDir / "config.h").exists()
+        return not (self.build_dir / "config.h").exists()
 
 
 class BuildFettKCGI(FettProjectMixin, BuildKCGI):

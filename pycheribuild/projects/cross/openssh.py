@@ -53,7 +53,7 @@ class BuildOpenSSH(CrossCompileAutotoolsProject):
         self.add_configure_env_arg("AR", self.target_info.ar)
         self.add_configure_env_arg("DESTDIR", self.destdir)
         self.add_configure_env_arg("ac_cv_have_control_in_msghdr", "yes")
-        self.run_cmd("autoreconf", str(self.sourceDir), cwd=self.buildDir)
+        self.run_cmd("autoreconf", str(self.sourceDir), cwd=self.build_dir)
         super().configure(**kwargs)
 
 

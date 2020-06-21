@@ -76,7 +76,7 @@ class BuildSQLite(CrossCompileAutotoolsProject):
         super().install()
 
     def needsConfigure(self):
-        return not (self.buildDir / "Makefile").exists()
+        return not (self.build_dir / "Makefile").exists()
 
 
 class BuildFettSQLite(FettProjectMixin, BuildSQLite):

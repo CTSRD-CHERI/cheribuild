@@ -169,8 +169,8 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
 
     def install(self, **kwargs):
         if not self.compiling_for_host():
-            self.install_file(self.buildDir / "source/src/bvrs", self.real_install_root_dir / "var/www/cgi-bin/bvrs")
-            self.install_file(self.buildDir / "source/src/bvrs.sql", self.real_install_root_dir / "share/bvrs.sql")
+            self.install_file(self.build_dir / "source/src/bvrs", self.real_install_root_dir / "var/www/cgi-bin/bvrs")
+            self.install_file(self.build_dir / "source/src/bvrs.sql", self.real_install_root_dir / "share/bvrs.sql")
             html_files = [
                 "election_official_home.html",
                 "election_official_login.html",
@@ -191,7 +191,8 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
                 "voter_registration_verification.html",
                 ]
             for file in html_files:
-                self.install_file(self.buildDir / "public/" / file, self.real_install_root_dir / "var/www/html/bvrs" / file)
+                self.install_file(self.build_dir / "public/" / file,
+                                  self.real_install_root_dir / "var/www/html/bvrs" / file)
 
 
 class BuildFettDiskImage(BuildCheriBSDDiskImage):

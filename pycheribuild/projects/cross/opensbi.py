@@ -72,7 +72,7 @@ class BuildOpenSBI(Project):
         compflags = " " + commandline_to_str(self.target_info.essential_compiler_and_linker_flags)
         compflags += " -Qunused-arguments"  # -mstrict-align -no-pie
         self.make_args.set(
-            O=self.buildDir,  # output dir
+            O=self.build_dir,  # output dir
             I=self.install_dir,  # install dir
             CROSS_COMPILE=str(self.sdk_bindir) + "/",
             CC=str(self.CC) + compflags,

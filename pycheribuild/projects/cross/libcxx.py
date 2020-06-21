@@ -93,7 +93,7 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
         else:
             self.add_cmake_options(LIBCXX_ENABLE_SHARED=False,
                                    LIBUNWIND_ENABLE_SHARED=True)
-            collect_test_binaries = self.buildDir / "test-output"
+            collect_test_binaries = self.build_dir / "test-output"
             executor = "CollectBinariesExecutor(\\\"{path}\\\", self)".format(path=collect_test_binaries)
             self.add_cmake_options(
                 LLVM_LIT_ARGS="--xunit-xml-output " + os.getenv("WORKSPACE", ".") +
@@ -118,13 +118,13 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
             self.info("Baremetal tests not implemented")
             return
         if self.compiling_for_host():
-            runCmd("ninja", "check-unwind", "-v", cwd=self.buildDir)
+            runCmd("ninja", "check-unwind", "-v", cwd=self.build_dir)
         else:
             # Check that the four tests compile and then attempt to run them:
             # TODO: run the three combinations here too?
-            runCmd("ninja", "check-unwind", "-v", cwd=self.buildDir)
+            runCmd("ninja", "check-unwind", "-v", cwd=self.build_dir)
             self.target_info.run_cheribsd_test_script("run_libunwind_tests.py", "--lit-debug-output",
-                                          "--llvm-lit-path", self.lit_path, mount_sysroot=True)
+                                                      "--llvm-lit-path", self.lit_path, mount_sysroot=True)
 
 
 class BuildLibCXXRT(_CxxRuntimeCMakeProject):
@@ -161,10 +161,10 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
                 self.add_cmake_options(BUILD_TESTS=True, TEST_LIBUNWIND=True)
 
     def install(self, **kwargs):
-        self.install_file(self.buildDir / "lib/libcxxrt.a", self.install_dir / "lib" / "libcxxrt.a", force=True)
-        self.install_file(self.buildDir / "lib/libcxxrt.so", self.install_dir / "lib" / "libcxxrt.soa", force=True)
-        # self.install_file(self.buildDir / "lib/libcxxrt.a", libdir / "libcxxrt.so", force=True)
-        # self.install_file(self.buildDir / "lib/libcxxrt.so", self.install_dir / "usr/libcheri/libcxxrt.so",
+        self.install_file(self.build_dir / "lib/libcxxrt.a", self.install_dir / "lib" / "libcxxrt.a", force=True)
+        self.install_file(self.build_dir / "lib/libcxxrt.so", self.install_dir / "lib" / "libcxxrt.soa", force=True)
+        # self.install_file(self.build_dir / "lib/libcxxrt.a", libdir / "libcxxrt.so", force=True)
+        # self.install_file(self.build_dir / "lib/libcxxrt.so", self.install_dir / "usr/libcheri/libcxxrt.so",
         # force=True)
 
     def run_tests(self):
@@ -172,9 +172,9 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
             self.info("Baremetal tests not implemented")
             return
         # TODO: this won't work on macOS
-        with set_env(LD_LIBRARY_PATH=self.buildDir / "lib"):
+        with set_env(LD_LIBRARY_PATH=self.build_dir / "lib"):
             if self.compiling_for_host():
-                runCmd("ctest", ".", "-VV", cwd=self.buildDir)
+                runCmd("ctest", ".", "-VV", cwd=self.build_dir)
             else:
                 self.target_info.run_cheribsd_test_script("run_libcxxrt_tests.py",
                                                           "--libunwind-build-dir", BuildLibunwind.getBuildDir(self),
@@ -343,7 +343,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             self.info("Baremetal tests not implemented")
             return
         if self.compiling_for_host():
-            runCmd("ninja", "check-cxx", "-v", cwd=self.buildDir)
+            runCmd("ninja", "check-cxx", "-v", cwd=self.build_dir)
         else:
             #  "--lit-debug-output"?
             self.target_info.run_cheribsd_test_script("run_libcxx_tests.py", "--parallel-jobs", self.test_jobs,

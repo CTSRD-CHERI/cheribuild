@@ -61,7 +61,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
             self.configureEnvironment["AR"] = str(self.sdk_bindir / "cheri-unknown-freebsd-ar")
         # The makefile expects the current working directory to be the source dir. Therefore we add -f $build/Makefile
         # This is also in the makefile generated in the source dir but it doesn't work with multiple build dirs
-        self.make_args.add_flags("-f", self.buildDir / "Makefile")
+        self.make_args.add_flags("-f", self.build_dir / "Makefile")
         self.cross_warning_flags += ["-Wno-error=cheri-capability-misuse", "-Wno-error=sign-compare"]
 
     def install(self, **kwargs):
@@ -77,7 +77,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
         self.write_file(self.real_install_root_dir / "nginx-benchmark.sh", benchmark, overwrite=True, mode=0o755)
 
     def needsConfigure(self):
-        return not (self.buildDir / "Makefile").exists()
+        return not (self.build_dir / "Makefile").exists()
 
     def configure(self):
         if self.should_include_debug_info:
@@ -89,7 +89,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
                                    "--without-http_gzip_module",
                                    "--without-http_rewrite_module",
                                    "--without-pcre",
-                                   "--builddir=" + str(self.buildDir)])
+                                   "--builddir=" + str(self.build_dir)])
         if not self.compiling_for_host():
             self.LDFLAGS.append("-v")
             self.configureArgs.extend(["--crossbuild=FreeBSD:12.0-CURRENT:mips",

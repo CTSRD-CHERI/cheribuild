@@ -56,9 +56,9 @@ class BuildSamba(Project):
             self.configureCommand = self.sourceDir / "buildtools/bin/waf"
             self.configureArgs.insert(0, "configure")
             self.make_args.set_command(self.sourceDir / "buildtools/bin/waf")
-            self.make_args.add_flags("--blddir=" + str(self.buildDir))
+            self.make_args.add_flags("--blddir=" + str(self.build_dir))
             self.make_args.add_flags("--srcdir=" + str(self.sourceDir))
-            self.configureArgs.append("--blddir=" + str(self.buildDir))
+            self.configureArgs.append("--blddir=" + str(self.build_dir))
             self.configureArgs.append("--srcdir=" + str(self.sourceDir))
         # Based on https://willhaley.com/blog/compile-samba-macos/
         # Also try to disable everything that is not needed for QEMU user shares

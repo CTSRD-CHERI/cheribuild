@@ -355,7 +355,7 @@ class _BuildDiskImageBase(SimpleProject):
                 gdb_binary = gdb_path / "bin/gdb"
                 if not gdb_binary.exists():
                     # try to add GDB from the build directory
-                    gdb_binary = gdb_instance.buildDir / "gdb/gdb"
+                    gdb_binary = gdb_instance.build_dir / "gdb/gdb"
                     # self.info("Adding GDB binary from GDB build directory to image")
                 if gdb_binary.exists():
                     self.info("Adding GDB binary", gdb_binary, "to disk image")

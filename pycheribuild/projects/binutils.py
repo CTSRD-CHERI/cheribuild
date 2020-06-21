@@ -108,11 +108,11 @@ class BuildGnuBinutils(AutotoolsProject):
             self.delete_file(bindir / "mips64-unknown-freebsd-ld")
             self.run_make("install-ld", logfile_name="install", append_to_logfile=True, parallel=False)
             # we also need the linker scripts so this is not enough:
-            # self.install_file(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)
+            # self.install_file(self.build_dir / "ld/ld-new", bindir / "ld.bfd", force=True)
             self.move_file(bindir / "mips64-unknown-freebsd-ld", bindir / "mips64-unknown-freebsd-ld.bfd")
             installed_tools = ["as", "ld.bfd"]
             # copy objdump from the build dir
-            self.install_file(self.buildDir / "binutils/objdump", bindir / "mips64-unknown-freebsd-objdump")
+            self.install_file(self.build_dir / "binutils/objdump", bindir / "mips64-unknown-freebsd-objdump")
             installed_tools.append("objdump")
         else:
             super().install()

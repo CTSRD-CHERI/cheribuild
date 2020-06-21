@@ -78,16 +78,16 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         self.COMMON_FLAGS.extend(["--sysroot", "/this/path/does/not/exist"])
 
     # def install(self, **kwargs):
-    #     # self.runMakeInstall(cwd=self.buildDir / "newlib")
-    #     self.runMakeInstall(cwd=self.buildDir / "libgloss")
+    #     # self.runMakeInstall(cwd=self.build_dir / "newlib")
+    #     self.runMakeInstall(cwd=self.build_dir / "libgloss")
 
     # def compile(self, **kwargs):
-    #     # super().compile(cwd=self.buildDir / "newlib")
+    #     # super().compile(cwd=self.build_dir / "newlib")
     #     self.make_args.env_vars["MULTILIB"] = self.target_cflags + " -mabicalls"
-    #     super().compile(cwd=self.buildDir / "libgloss")
+    #     super().compile(cwd=self.build_dir / "libgloss")
 
     def needsConfigure(self):
-        return not (self.buildDir / "Makefile").exists()
+        return not (self.build_dir / "Makefile").exists()
 
     def add_configure_vars(self, **kwargs):
         # newlib is annoying, we need to pass all these arguments to make as well because it won't run all

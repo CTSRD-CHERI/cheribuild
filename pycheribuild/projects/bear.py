@@ -43,5 +43,5 @@ class BuildBear(CMakeProject):
     #
     # def install(self, **kwargs):
     #     self.makedirs(self.install_dir / "bin")
-    #     self.create_symlink(self.buildDir / "bear/bin/bear", self.install_dir / "bin/bear", relative=False,
+    #     self.create_symlink(self.build_dir / "bear/bin/bear", self.install_dir / "bin/bear", relative=False,
     #         print_verbose_only=False)

@@ -61,7 +61,7 @@ class BuildMibench(CrossCompileProject):
 
     @property
     def bundle_dir(self):
-        return Path(self.buildDir, self.crosscompile_target.generic_suffix +
+        return Path(self.build_dir, self.crosscompile_target.generic_suffix +
                     self.build_configuration_suffix() + "-bundle")
 
     @property
@@ -93,15 +93,15 @@ class BuildMibench(CrossCompileProject):
             self.make_args.set(ADDITIONAL_CFLAGS=commandline_to_str(self.default_compiler_flags))
             self.make_args.set(ADDITIONAL_LDFLAGS=commandline_to_str(self.default_ldflags))
             self.make_args.set(VERSION=self.benchmark_version)
-            self.makedirs(self.buildDir / "bundle")
-            self.make_args.set(BUNDLE_DIR=self.buildDir / self.bundle_dir)
+            self.makedirs(self.build_dir / "bundle")
+            self.make_args.set(BUNDLE_DIR=self.build_dir / self.bundle_dir)
             self.run_make("bundle_dump", cwd=self.sourceDir)
             if self.compiling_for_mips(include_purecap=False) and self.use_asan:
-                self.copy_asan_dependencies(self.buildDir / "bundle/lib")
+                self.copy_asan_dependencies(self.build_dir / "bundle/lib")
 
     def _create_benchmark_dir(self, bench_dir: Path, *, keep_both_sizes: bool):
         self.makedirs(bench_dir)
-        self.run_cmd("cp", "-av", self.bundle_dir, bench_dir, cwd=self.buildDir)
+        self.run_cmd("cp", "-av", self.bundle_dir, bench_dir, cwd=self.build_dir)
         # Remove all the .dump files from the tarball
         if self.config.verbose:
             self.run_cmd("find", bench_dir, "-name", "*.dump", "-print")
@@ -191,9 +191,9 @@ class BuildOlden(CrossCompileProject):
         # copy asan libraries and the run script to the bin dir to ensure that we can run with --test from the
         # build directory.
         self.install_file(self.sourceDir / "run_jenkins-bluehive.sh",
-                          self.buildDir / "bin/run_jenkins-bluehive.sh", force=True)
+                          self.build_dir / "bin/run_jenkins-bluehive.sh", force=True)
         if self.compiling_for_mips(include_purecap=False) and self.use_asan:
-            self.copy_asan_dependencies(self.buildDir / "bin/lib")
+            self.copy_asan_dependencies(self.build_dir / "bin/lib")
 
     @property
     def test_arch_suffix(self):
@@ -212,12 +212,12 @@ class BuildOlden(CrossCompileProject):
             self._create_benchmark_dir(self.install_dir)
         else:
             # Note: no trailing slash to ensure bin/ subdir exists
-            self.run_cmd("cp", "-av", self.sourceDir / "bin", self.install_dir, cwd=self.buildDir)
+            self.run_cmd("cp", "-av", self.sourceDir / "bin", self.install_dir, cwd=self.build_dir)
 
     def _create_benchmark_dir(self, bench_dir: Path):
         self.makedirs(bench_dir)
         # Note: no trailing slash to ensure bin/ subdir exists
-        self.run_cmd("cp", "-av", self.sourceDir / "bin", bench_dir, cwd=self.buildDir)
+        self.run_cmd("cp", "-av", self.sourceDir / "bin", bench_dir, cwd=self.build_dir)
         # Remove all the .dump files from the tarball
         self.run_cmd("find", bench_dir, "-name", "*.dump", "-delete")
         self.run_cmd("du", "-sh", bench_dir)
@@ -338,18 +338,18 @@ class BuildSpec2006(CrossCompileProject):
             self.benchmark_list = self.working_benchmark_list
 
     def compile(self, **kwargs):
-        self.makedirs(self.buildDir / "spec")
-        if not (self.buildDir / "spec/install.sh").exists():
-            self.clean_directory(self.buildDir / "spec")  # clean up partial builds
-            self.run_cmd("bsdtar", "xf", self.spec_iso, "-C", "spec", cwd=self.buildDir)
-            self.run_cmd("chmod", "-R", "u+w", "spec/", cwd=self.buildDir)
-            self.run_cmd(self.buildDir / "spec/install.sh", "-f", cwd=self.buildDir / "spec")
+        self.makedirs(self.build_dir / "spec")
+        if not (self.build_dir / "spec/install.sh").exists():
+            self.clean_directory(self.build_dir / "spec")  # clean up partial builds
+            self.run_cmd("bsdtar", "xf", self.spec_iso, "-C", "spec", cwd=self.build_dir)
+            self.run_cmd("chmod", "-R", "u+w", "spec/", cwd=self.build_dir)
+            self.run_cmd(self.build_dir / "spec/install.sh", "-f", cwd=self.build_dir / "spec")
 
         # TODO: apply a patch instead?
         benchspec_overrides = self.ctsrd_evaluation_trunk / "spec-cpu2006-v1.1/benchspec"
         if benchspec_overrides.exists():
             for dir in benchspec_overrides.iterdir():
-                self.run_cmd("cp", "-a", dir, ".", cwd=self.buildDir / "spec/benchspec")
+                self.run_cmd("cp", "-a", dir, ".", cwd=self.build_dir / "spec/benchspec")
 
         config_file_text = self.read_file(self.spec_config_dir / "freebsd-cheribuild.cfg")
         # FIXME: this should really not be needed....
@@ -382,7 +382,7 @@ class BuildSpec2006(CrossCompileProject):
         config_file_text = config_file_text.replace("@SYS_BIN@",
                                                     str(self.sdk_bindir) if not self.compiling_for_host() else "/")
 
-        self.write_file(self.buildDir / "spec/config/" / (self.config_name + ".cfg"), contents=config_file_text,
+        self.write_file(self.build_dir / "spec/config/" / (self.config_name + ".cfg"), contents=config_file_text,
                         overwrite=True, never_print_cmd=False, mode=0o644)
 
         script = """
@@ -395,14 +395,14 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test \
 """.format(benchmark_list=commandline_to_str(self.benchmark_list), spec_config_name=self.config_name)
         # TODO: add extra files to the bundle instead of copying later?
         #  https://www.spec.org/cpu2006/Docs/runspec.html#makebundle
-        self.run_shell_script(script, shell="bash", cwd=self.buildDir / "spec")
+        self.run_shell_script(script, shell="bash", cwd=self.build_dir / "spec")
 
     def install(self, **kwargs):
         pass
 
     def create_tests_dir(self, output_dir: Path) -> Path:
         self.__check_valid_benchmark_list()
-        spec_archive = self.buildDir / "spec/{}.cpu2006bundle.bz2".format(self.config_name)
+        spec_archive = self.build_dir / "spec/{}.cpu2006bundle.bz2".format(self.config_name)
         self.run_cmd("tar", "-xvjf", spec_archive, cwd=output_dir,
                      run_in_pretend_mode=spec_archive.exists() and output_dir.exists(), raise_in_pretend_mode=False)
         spec_root = output_dir / "benchspec/CPU2006"
@@ -458,12 +458,12 @@ echo y | runspec -c {spec_config_name} --noreportable --nobuild --size test \
         if not self.compiling_for_mips(include_purecap=True):
             self.fatal("Cannot run these benchmarks for non-MIPS yet")
             return
-        # self.makedirs(self.buildDir / "test")
-        # self.run_cmd("tar", "-xvjf", self.buildDir / "spec/{}.cpu2006bundle.bz2".format(self.config_name),
-        #             cwd=self.buildDir / "test")
-        # self.run_cmd("find", ".", cwd=self.buildDir / "test")
-        self.clean_directory(self.buildDir / "spec-test-dir")
-        self.create_tests_dir(self.buildDir / "spec-test-dir")
+        # self.makedirs(self.build_dir / "test")
+        # self.run_cmd("tar", "-xvjf", self.build_dir / "spec/{}.cpu2006bundle.bz2".format(self.config_name),
+        #             cwd=self.build_dir / "test")
+        # self.run_cmd("find", ".", cwd=self.build_dir / "test")
+        self.clean_directory(self.build_dir / "spec-test-dir")
+        self.create_tests_dir(self.build_dir / "spec-test-dir")
         test_command = """
 export LD_LIBRARY_PATH=/sysroot/usr/lib:/sysroot/lib;
 export LD_CHERI_LIBRARY_PATH=/sysroot/usr/libcheri;

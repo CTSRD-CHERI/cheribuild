@@ -131,7 +131,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
     def compile(self, **kwargs):
         super().compile(**kwargs)
         # TODO: add this copy to the CMakeLists.txt
-        self.install_file(self.sourceDir / "Makefile.bsd-run", self.buildDir / "Makefile.bsd-run", force=True)
+        self.install_file(self.sourceDir / "Makefile.bsd-run", self.build_dir / "Makefile.bsd-run", force=True)
 
     def install(self, *args, **kwargs):
         self.fatal("Should not be called")
@@ -144,9 +144,9 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
         if bmake is None:
             self.fatal("Could not find bmake")
         # Ensure the run directory exists
-        self.makedirs(self.buildDir / "run")
+        self.makedirs(self.build_dir / "run")
         if self.config.clean:
-            self.clean_directory(self.buildDir / "run", keep_root=False)
+            self.clean_directory(self.build_dir / "run", keep_root=False)
         testsuite_prefix = self.build_configuration_suffix()[1:]
         testsuite_prefix = testsuite_prefix.replace("-build", "")
         extra_args = []
@@ -176,7 +176,7 @@ class BuildBODiagSuite(CrossCompileCMakeProject):
         if self.compiling_for_host():
             extra_args.extend(["--test-native", "--bmake-path", bmake,
                                "--jobs", str(self.config.makeJobs),
-                               "--build-dir", self.buildDir])
+                               "--build-dir", self.build_dir])
             self.run_cmd(self.get_test_script_path("run_bodiagsuite.py"), *extra_args)
         else:
             self.target_info.run_cheribsd_test_script("run_bodiagsuite.py", *extra_args,

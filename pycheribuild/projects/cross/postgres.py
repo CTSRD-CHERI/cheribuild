@@ -118,12 +118,12 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         return True
 
     def needsConfigure(self):
-        return not (self.buildDir / "GNUmakefile").exists()
+        return not (self.build_dir / "GNUmakefile").exists()
 
     def run_tests(self):
         if self.compiling_for_host():
-            self.run_make("check", cwd=self.buildDir / "src/test/regress", stdout_filter=None)
-            # self.run_make("check", cwd=self.buildDir / "src/interfaces/ecpg/test", stdout_filter=None)
+            self.run_make("check", cwd=self.build_dir / "src/test/regress", stdout_filter=None)
+            # self.run_make("check", cwd=self.build_dir / "src/interfaces/ecpg/test", stdout_filter=None)
         else:
             locale_dir = self.rootfs_dir / "usr/share/locale"
             self.target_info.run_cheribsd_test_script("run_postgres_tests.py", "--smb-mount-directory",

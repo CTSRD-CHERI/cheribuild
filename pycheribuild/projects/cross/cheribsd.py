@@ -170,9 +170,9 @@ class BuildFreeBSDBase(Project):
     def __init__(self, config):
         super().__init__(config)
 
-        self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.buildDir)}
+        self.make_args.env_vars = {"MAKEOBJDIRPREFIX": str(self.build_dir)}
         # TODO? Avoid lots of nested child directories by using MAKEOBJDIR instead of MAKEOBJDIRPREFIX
-        # self.make_args.env_vars = {"MAKEOBJDIR": str(self.buildDir)}
+        # self.make_args.env_vars = {"MAKEOBJDIR": str(self.build_dir)}
 
         if self.crossbuild:
             # Use the script that I added for building on Linux/MacOS:
@@ -617,9 +617,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
             # Clean up pre-MAKEOBJDIR change directories for now
             # The only advantage of only deleting .OBJDIR is that it doesn't confuse a shell in that
             # directory but I doubt that is a compelling usecase
-            builddir = self.buildDir
-        if builddir.exists() and self.buildDir.exists():
-            assert not os.path.relpath(str(builddir.resolve()), str(self.buildDir.resolve())).startswith(".."), builddir
+            builddir = self.build_dir
+        if builddir.exists() and self.build_dir.exists():
+            assert not os.path.relpath(str(builddir.resolve()), str(self.build_dir.resolve())).startswith(
+                ".."), builddir
         if self.crossbuild:
             # avoid rebuilding bmake and libbsd when crossbuilding:
             return self.async_clean_directory(builddir, keep_root=not cleaning_kerneldir, keep_dirs=["bmake-install"])
@@ -724,7 +725,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         but when crossbuilding we will usually use bmake-install/bin/bmake"
         """
         if self.crossbuild:
-            make_cmd = self.buildDir / "bmake-install/bin/bmake"
+            make_cmd = self.build_dir / "bmake-install/bin/bmake"
         else:
             make_cmd = Path(shutil.which(self.make_args.command) or self.make_args.command)
         if not make_cmd.exists():
@@ -767,7 +768,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if not objdir or objdir == Path():
             # just clean the whole directory instead
             warningMessage("Could not infer buildworld root objdir")
-            return self.buildDir
+            return self.build_dir
         return objdir
 
     def kernel_objdir(self, config):

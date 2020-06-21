@@ -98,10 +98,10 @@ class BuildPython(CrossCompileAutotoolsProject):
 
     def run_tests(self):
         # python build system adds .exe for case-insensitive dirs
-        suffix = "" if is_case_sensitive_dir(self.buildDir) else ".exe"
+        suffix = "" if is_case_sensitive_dir(self.build_dir) else ".exe"
         if self.compiling_for_host():
-            self.run_cmd(self.buildDir / ("python" + suffix), "-m", "test", "-w", "--junit-xml=python-tests.xml",
-                         self.config.makeJFlag, cwd=self.buildDir)
+            self.run_cmd(self.build_dir / ("python" + suffix), "-m", "test", "-w", "--junit-xml=python-tests.xml",
+                         self.config.makeJFlag, cwd=self.build_dir)
         else:
             # Python executes tons of system calls, hopefully using the benchmark kernel helps
             self.target_info.run_cheribsd_test_script("run_python_tests.py", "--buildexe-suffix=" + suffix, mount_installdir=True,

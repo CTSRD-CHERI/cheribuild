@@ -185,8 +185,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
         with TemporarilyRemoveProgramsFromSdk(["as", "ld", "objcopy", "objdump"], self.config,
                                               self.install_dir):
             # also install objdump
-            self.run_make(make_target="all-binutils", cwd=self.buildDir)
-            self.run_make(make_target="all-gdb", cwd=self.buildDir)
+            self.run_make(make_target="all-binutils", cwd=self.build_dir)
+            self.run_make(make_target="all-gdb", cwd=self.build_dir)
 
     def install(self, **kwargs):
         self.runMakeInstall(target="install-gdb")
@@ -211,8 +211,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
             binutils = ("objdump", "objcopy", "addr2line", "readelf", "ar", "ranlib", "size", "strings")
             bindir = self.install_dir / "bin"
             for util in binutils:
-                self.install_file(self.buildDir / "binutils" / util, bindir / ("g" + util))
+                self.install_file(self.build_dir / "binutils" / util, bindir / ("g" + util))
             # nm and c++filt have a different name in the build dir:
-            self.install_file(self.buildDir / "binutils/cxxfilt", bindir / "gc++filt")
-            self.install_file(self.buildDir / "binutils/nm-new", bindir / "gnm")
-            self.install_file(self.buildDir / "binutils/strip-new", bindir / "gstrip")
+            self.install_file(self.build_dir / "binutils/cxxfilt", bindir / "gc++filt")
+            self.install_file(self.build_dir / "binutils/nm-new", bindir / "gnm")
+            self.install_file(self.build_dir / "binutils/strip-new", bindir / "gstrip")

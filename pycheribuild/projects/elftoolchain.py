@@ -45,8 +45,8 @@ class BuildElftoolchain(Project):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         # TODO: move this to project
-        self.makedirs(self.buildDir)
-        self.make_args.env_vars["MAKEOBJDIRPREFIX"] = self.buildDir
+        self.makedirs(self.build_dir)
+        self.make_args.env_vars["MAKEOBJDIRPREFIX"] = self.build_dir
         self.makeArgs = ["WITH_TESTS=no", "-DNO_ROOT"]
         # TODO: build static?
         if self.build_static:

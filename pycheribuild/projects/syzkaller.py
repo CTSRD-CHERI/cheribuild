@@ -74,7 +74,7 @@ class BuildSyzkaller(CrossCompileProject):
         repo_url = urlparse(self.repository.url)
         repo_path = repo_url.path.split(".")[0]
         parts = ["src", repo_url.netloc] + repo_path.split("/")
-        self.gopath = self.buildDir
+        self.gopath = self.build_dir
         self.gosrc = self.sourceDir
 
         self._newPath = (str(self.config.cheri_sdk_dir / "bin") + ":" +
@@ -131,7 +131,7 @@ class BuildSyzkaller(CrossCompileProject):
                     self.install_file(fpath, syz_remote_install / fname, mode=0o755)
 
     def clean(self) -> ThreadJoiner:
-        self.run_cmd(["chmod", "-R", "u+w", self.buildDir])
+        self.run_cmd(["chmod", "-R", "u+w", self.build_dir])
         self.make_args.set_env(
             HOSTARCH="amd64",
             TARGETARCH="mips64",
@@ -173,8 +173,10 @@ class RunSyzkaller(SimpleProject):
             self, cross_target=CompilationTargets.CHERIBSD_MIPS_HYBRID).syzkaller_binary()
         self.kernel_path = BuildCHERIBSD.get_installed_kernel_path(
             self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP)
-        self.kernel_src_path = BuildCHERIBSD.get_instance(self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).sourceDir
-        self.kernel_build_path = BuildCHERIBSD.get_instance(self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).buildDir
+        self.kernel_src_path = BuildCHERIBSD.get_instance(self,
+                                                          cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).sourceDir
+        self.kernel_build_path = BuildCHERIBSD.get_instance(self,
+                                                            cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).build_dir
         self.disk_image = BuildCheriBSDDiskImage.get_instance(
             self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).disk_image_path
 

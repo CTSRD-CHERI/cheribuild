@@ -81,7 +81,7 @@ class BuildCheriVis(Project):
         # Build Cheritrace as a subproject
         self.cheritrace_subproject = BuildCheriTrace(config)
         self.cheritrace_subproject.sourceDir = self.sourceDir / "cheritrace"
-        self.cheritrace_subproject.buildDir = self.sourceDir / "cheritrace/Build"
+        self.cheritrace_subproject.build_dir = self.sourceDir / "cheritrace/Build"
         self.cheritrace_subproject._install_dir = "/this/path/does/not/exist"
 
     def check_system_dependencies(self):
@@ -128,16 +128,16 @@ class BuildCheriVis(Project):
     def clean(self):
         # doesn't seem to be possible to use a out of source build
         self.run_make("clean", cwd=self.sourceDir)
-        self.clean_directory(self.cheritrace_subproject.buildDir)
+        self.clean_directory(self.cheritrace_subproject.build_dir)
         return ThreadJoiner(None)   # can't be done async
 
     def compile(self, **kwargs):
         # First build the bundled cheritrace
         assert self.cheritrace_subproject.sourceDir == self.sourceDir / "cheritrace"
-        assert self.cheritrace_subproject.buildDir == self.sourceDir / "cheritrace/Build"
+        assert self.cheritrace_subproject.build_dir == self.sourceDir / "cheritrace/Build"
         assert self.cheritrace_subproject.install_dir == "/this/path/does/not/exist", \
             self.cheritrace_subproject.install_dir
-        self.makedirs(self.cheritrace_subproject.buildDir)
+        self.makedirs(self.cheritrace_subproject.build_dir)
         self.cheritrace_subproject.setup()
         self.cheritrace_subproject.configure()
         self.cheritrace_subproject.compile()

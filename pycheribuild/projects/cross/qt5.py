@@ -186,13 +186,13 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
         self.configureArgs.extend(["-opensource", "-confirm-license"])
 
-        self.delete_file(self.buildDir / "config.cache")
-        self.delete_file(self.buildDir / "config.opt")
-        self.delete_file(self.buildDir / "config.status")
+        self.delete_file(self.build_dir / "config.cache")
+        self.delete_file(self.build_dir / "config.opt")
+        self.delete_file(self.build_dir / "config.status")
         super().configure()
 
     def needsConfigure(self):
-        return not (self.buildDir / "Makefile").exists()
+        return not (self.build_dir / "Makefile").exists()
 
 
 class BuildQt5(BuildQtWithConfigureScript):
@@ -244,16 +244,16 @@ class BuildQtBase(BuildQtWithConfigureScript):
             self.run_make("sub-src")
             if self.build_tests:
                 # only build the tests for corelib:
-                if not (self.buildDir / "tests/auto/corelib").exists():
+                if not (self.build_dir / "tests/auto/corelib").exists():
                     # generate the makefiles
                     self.run_make("sub-tests-make_first")
-                self.run_make("sub-corelib", cwd=self.buildDir / "tests/auto")
+                self.run_make("sub-corelib", cwd=self.build_dir / "tests/auto")
         else:
             self.run_make()  # QtBase ignores -nomake if you run "gmake all"
 
     def run_tests(self):
         if self.compiling_for_host():
-            runCmd("make", "check", cwd=self.buildDir)
+            runCmd("make", "check", cwd=self.build_dir)
         else:
             self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=True)
 
@@ -452,9 +452,9 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             if not Path(td, "mime/mime.cache").exists():
                 fatalError("Could not generated shared-mime-info cache!")
             # install mime.cache and freedesktop.org.xml into the build dir for tests
-            self.install_file(mime_info_src, self.buildDir / "freedesktop.org.xml", force=True,
+            self.install_file(mime_info_src, self.build_dir / "freedesktop.org.xml", force=True,
                               print_verbose_only=False)
-            self.install_file(Path(td, "mime/mime.cache"), self.buildDir / "mime.cache", force=True,
+            self.install_file(Path(td, "mime/mime.cache"), self.build_dir / "mime.cache", force=True,
                               print_verbose_only=False)
             # TODO: get https://github.com/annulen/webkit-test-fonts to run the full testsuite
         if self.build_jsc_only:
@@ -465,11 +465,11 @@ class BuildQtWebkit(CrossCompileCMakeProject):
     def install(self, **kwargs):
         # create a stripped version of DumpRenderTree and jsc since the one with debug info is too big
         if not self.build_jsc_only:
-            dump_render_tree = self.buildDir / "bin/DumpRenderTree"  # type: Path
+            dump_render_tree = self.build_dir / "bin/DumpRenderTree"  # type: Path
             if dump_render_tree.is_file():
                 runCmd(self.llvm_binutils_dir / "llvm-strip", "-o", dump_render_tree.with_suffix(".stripped"),
                        dump_render_tree)
-        jsc = self.buildDir / "bin/jsc"  # type: Path
+        jsc = self.build_dir / "bin/jsc"  # type: Path
         if jsc.is_file():
             runCmd(self.llvm_binutils_dir / "llvm-strip", "-o", jsc.with_suffix(".stripped"), jsc)
         self.info("Not installing qtwebit since it uses too much space. If you really want this run `ninja install`")
