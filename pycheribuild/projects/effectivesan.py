@@ -59,6 +59,5 @@ class BuildEffectiveSan(BuildLLVMMonoRepoBase):
             filename = "effectivesan-{}.tar.xz".format(version)
             url = "https://github.com/GJDuck/EffectiveSan/releases/download/v{}/{}".format(version, filename)
             self.run_cmd("wget", url, cwd=td)
-            self.clean_directory(self.installDir, ensure_dir_exists=True)
-            self.run_cmd("tar", "xvfJ", filename, "-C", self.installDir, "--strip-components=1", cwd=td)
-
+            self.clean_directory(self.install_dir, ensure_dir_exists=True)
+            self.run_cmd("tar", "xvfJ", filename, "-C", self.install_dir, "--strip-components=1", cwd=td)

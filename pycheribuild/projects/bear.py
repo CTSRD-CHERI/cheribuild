@@ -32,8 +32,8 @@ from .project import CMakeProject, DefaultInstallDir, GitRepository
 
 class BuildBear(CMakeProject):
     repository = GitRepository("https://github.com/rizsotto/Bear.git", force_branch=True,
-        #default_branch="devel")
-        default_branch="master")
+                               # default_branch="devel")
+                               default_branch="master")
     native_install_dir = DefaultInstallDir.BOOTSTRAP_TOOLS
 
     # For devel branch:
@@ -42,6 +42,6 @@ class BuildBear(CMakeProject):
     #     self.add_required_system_tool("go")
     #
     # def install(self, **kwargs):
-    #     self.makedirs(self.installDir / "bin")
-    #     self.create_symlink(self.buildDir / "bear/bin/bear", self.installDir / "bin/bear", relative=False,
+    #     self.makedirs(self.install_dir / "bin")
+    #     self.create_symlink(self.buildDir / "bear/bin/bear", self.install_dir / "bin/bear", relative=False,
     #         print_verbose_only=False)

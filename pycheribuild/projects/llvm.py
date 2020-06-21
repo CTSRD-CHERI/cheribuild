@@ -228,33 +228,33 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         # create a symlinks for triple-prefixed tools
         if "clang" in self.included_projects:
             # create cc and c++ symlinks (expected by some build systems)
-            self.create_triple_prefixed_symlinks(self.installDir / "bin/clang", tool_name="cc",
+            self.create_triple_prefixed_symlinks(self.install_dir / "bin/clang", tool_name="cc",
                                                  create_unprefixed_link=False)
-            self.create_triple_prefixed_symlinks(self.installDir / "bin/clang++", tool_name="c++",
+            self.create_triple_prefixed_symlinks(self.install_dir / "bin/clang++", tool_name="c++",
                                                  create_unprefixed_link=False)
-            self.create_triple_prefixed_symlinks(self.installDir / "bin/clang-cpp", tool_name="cpp",
+            self.create_triple_prefixed_symlinks(self.install_dir / "bin/clang-cpp", tool_name="cpp",
                                                  create_unprefixed_link=False)
             for tool in ("clang", "clang++", "clang-cpp"):
-                self.create_triple_prefixed_symlinks(self.installDir / "bin" / tool)
+                self.create_triple_prefixed_symlinks(self.install_dir / "bin" / tool)
 
         # Use the LLVM versions of all binutils by default
         if "llvm" in self.included_projects:
             for tool in ("ar", "ranlib", "nm", "objcopy", "readelf", "objdump", "strip"):
-                if not (self.installDir / ("bin/llvm-" + tool)).exists():
+                if not (self.install_dir / ("bin/llvm-" + tool)).exists():
                     # Handle old versions of LLVM where readelf isn't installed
-                    self.warning(self.installDir / ("bin/llvm-" + tool), "is missing, please update LLVM")
+                    self.warning(self.install_dir / ("bin/llvm-" + tool), "is missing, please update LLVM")
                     continue
-                self.create_triple_prefixed_symlinks(self.installDir / ("bin/llvm-" + tool), tool_name=tool,
+                self.create_triple_prefixed_symlinks(self.install_dir / ("bin/llvm-" + tool), tool_name=tool,
                                                      create_unprefixed_link=True)
-            self.create_triple_prefixed_symlinks(self.installDir / "bin/llvm-symbolizer", tool_name="addr2line",
+            self.create_triple_prefixed_symlinks(self.install_dir / "bin/llvm-symbolizer", tool_name="addr2line",
                                                  create_unprefixed_link=True)
-            self.create_triple_prefixed_symlinks(self.installDir / "bin/llvm-cxxfilt", tool_name="c++filt",
+            self.create_triple_prefixed_symlinks(self.install_dir / "bin/llvm-cxxfilt", tool_name="c++filt",
                                                  create_unprefixed_link=True)
 
         if "lld" in self.included_projects:
-            self.create_triple_prefixed_symlinks(self.installDir / "bin/ld.lld")
+            self.create_triple_prefixed_symlinks(self.install_dir / "bin/ld.lld")
             if OSInfo.IS_MAC:
-                self.delete_file(self.installDir / "bin/ld", print_verbose_only=True)
+                self.delete_file(self.install_dir / "bin/ld", print_verbose_only=True)
                 # lld will call the mach-o linker when invoked as ld -> need to create a shell script instead
                 # that forwards to /usr/bin/ld for macOS binaries and ld.lld for cross-compilation
                 script = """#!/bin/sh
@@ -265,9 +265,9 @@ case "$@" in
     ;;
 esac
 exec {lld} "$@"
-""".format(lld=self.installDir / "bin/ld.lld")
-                self.write_file(self.installDir / "bin/ld", script, overwrite=True, mode=0o755)
-            self.create_triple_prefixed_symlinks(self.installDir / "bin/ld.lld", tool_name="ld",
+""".format(lld=self.install_dir / "bin/ld.lld")
+                self.write_file(self.install_dir / "bin/ld", script, overwrite=True, mode=0o755)
+            self.create_triple_prefixed_symlinks(self.install_dir / "bin/ld.lld", tool_name="ld",
                                                  create_unprefixed_link=not OSInfo.IS_MAC)
 
     def run_tests(self):
@@ -283,11 +283,11 @@ exec {lld} "$@"
         assert is_jenkins_build(), "Should only be called for jenkins builds"
         """Perform cleanup to reduce the size of the tarball that jenkins creates"""
         self.info("Removing LLVM files that are not required for other Jenkins jobs. Size before:")
-        self.run_cmd("du", "-sh", self.installDir)
+        self.run_cmd("du", "-sh", self.install_dir)
         # We don't use libclang.so or the other llvm libraries:
         # Note: this is a non-recursive search since we *do* need the files in lib/clang/<version>/
-        if (self.installDir / "lib").is_dir():
-            for f in (self.installDir / "lib").iterdir():
+        if (self.install_dir / "lib").is_dir():
+            for f in (self.install_dir / "lib").iterdir():
                 if f.is_dir():
                     continue
                 if any(f.name.startswith(prefix) for prefix in ("libclang", "libRemarks", "libLTO")):
@@ -295,7 +295,7 @@ exec {lld} "$@"
                     continue
                 self.warning("Found an unexpected file in libdir. Was this installed by another project?", f)
         # We also don't need the C API headers since we deleted the libraries
-        self.clean_directory(self.installDir / "include/", ensure_dir_exists=False)
+        self.clean_directory(self.install_dir / "include/", ensure_dir_exists=False)
         # Each of these executables are 30-40MB and we don't use them anywhere:
         # 31685928	/local/scratch/alr48/jenkins-test/tarball/opt/llvm-native/bin/clang-scan-deps
         # 32103560	/local/scratch/alr48/jenkins-test/tarball/opt/llvm-native/bin/clang-rename
@@ -303,9 +303,9 @@ exec {lld} "$@"
         # 41052504	/local/scratch/alr48/jenkins-test/tarball/opt/llvm-native/bin/clang-import-test
         for i in ("clang-scan-deps", "clang-rename", "clang-refactor", "clang-import-test", "clang-offload-bundler",
                   "clang-offload-wrapper"):
-            self.delete_file(self.installDir / "bin" / i, warn_if_missing=True)
+            self.delete_file(self.install_dir / "bin" / i, warn_if_missing=True)
         self.info("Size after cleanup")
-        self.run_cmd("du", "-sh", self.installDir)
+        self.run_cmd("du", "-sh", self.install_dir)
 
 
 class BuildLLVMMonoRepoBase(BuildLLVMBase):
@@ -369,18 +369,18 @@ class BuildCheriLLVM(BuildLLVMMonoRepoBase):
             for abi in ("purecap", "n64"):
                 prefix = "cheribsd" + str(cheri_bits) + abi
                 config_file_contents = config_file_template.format(cheri_bits=cheri_bits, abi=abi,
-                                                                   sdk_dir=self.installDir)
-                self.write_file(self.installDir / "bin" / (prefix + ".cfg"), config_file_contents, overwrite=True,
+                                                                   sdk_dir=self.install_dir)
+                self.write_file(self.install_dir / "bin" / (prefix + ".cfg"), config_file_contents, overwrite=True,
                                 mode=0o644)
-                self.create_symlink(self.installDir / "bin/clang", self.installDir / "bin" / (prefix + "-clang"))
-                self.create_symlink(self.installDir / "bin/clang++", self.installDir / "bin" / (prefix + "-clang++"))
-                self.create_symlink(self.installDir / "bin/clang-cpp",
-                                    self.installDir / "bin" / (prefix + "-clang-cpp"))
+                self.create_symlink(self.install_dir / "bin/clang", self.install_dir / "bin" / (prefix + "-clang"))
+                self.create_symlink(self.install_dir / "bin/clang++", self.install_dir / "bin" / (prefix + "-clang++"))
+                self.create_symlink(self.install_dir / "bin/clang-cpp",
+                                    self.install_dir / "bin" / (prefix + "-clang-cpp"))
         # llvm-objdump currently doesn't infer the available features
         # This depends on https://reviews.llvm.org/D74023
-        self.write_file(self.installDir / "bin/riscv64cheri-objdump",
+        self.write_file(self.install_dir / "bin/riscv64cheri-objdump",
                         "#!/bin/sh\nexec '{}' --mattr=+m,+a,+f,+d,+c,+xcheri \"$@\"".format(
-                            self.installDir / "bin/llvm-objdump"),
+                            self.install_dir / "bin/llvm-objdump"),
                         overwrite=True, mode=0o755)
 
     @property

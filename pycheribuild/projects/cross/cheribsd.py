@@ -446,7 +446,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 self.fatal("Requested custom toolchain but path is not set.")
             self.target_info._sdk_root_dir = self._cross_toolchain_root
         self._setup_make_args_called = False
-        self.destdir = self.installDir
+        self.destdir = self.install_dir
         self._installPrefix = Path("/")
         self.kernel_toolchain_exists = False
         self.cross_toolchain_config = MakeOptions(MakeCommandKind.BsdMake, self)
@@ -712,12 +712,12 @@ class BuildFreeBSD(BuildFreeBSDBase):
     def _removeOldRootfs(self):
         assert self.config.clean or not self.keepOldRootfs
         if self.config.skipBuildworld:
-            self.makedirs(self.installDir)
+            self.makedirs(self.install_dir)
         else:
             # make sure the old install is purged before building, otherwise we might get strange errors
             # and also make sure it exists (if DESTDIR doesn't exist yet install will fail!)
             # We have to keep the rootfs directory in case it has been NFS mounted
-            self.clean_directory(self.installDir, keep_root=True)
+            self.clean_directory(self.install_dir, keep_root=True)
 
     def find_real_bmake_binary(self) -> Path:
         """return the path the bmake binary used for building. On FreeBSD this will generally be /usr/bin/make,
@@ -820,7 +820,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                     self.fatal("Can't use installsysroot here")
                 if is_jenkins_build():
                     # Install to the install dir in jenkins, but the sysroot otherwise
-                    installsysroot_args.set_env(DESTDIR=self.installDir)
+                    installsysroot_args.set_env(DESTDIR=self.install_dir)
                 self.run_make("installsysroot", options=installsysroot_args)
                 # Don't try to install the kernel if we are only building a sysroot
                 return
@@ -1249,7 +1249,7 @@ class BuildCHERIBSD(BuildFreeBSD):
 
     def _removeSchgFlag(self, *paths: "typing.Iterable[str]"):
         for i in paths:
-            file = self.installDir / i
+            file = self.install_dir / i
             if file.exists():
                 runCmd("chflags", "noschg", str(file))
 
@@ -1480,9 +1480,9 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 #                                           skip_install=True, install_to_internal_sysroot=True)
 #
 #     def install(self, **kwargs):
-#         self.makedirs(self.installDir)
+#         self.makedirs(self.install_dir)
 #         for i in ("bin", "sbin", "usr/sbin", "usr/bin", "lib", "usr/lib", "usr/libcheri"):
-#             self.makedirs(self.installDir / i)
+#             self.makedirs(self.install_dir / i)
 #         # install all the needed libs
 #         args = self.installworld_args
 #         args.remove_var("SUBDIR_OVERRIDE")

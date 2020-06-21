@@ -66,9 +66,9 @@ class BuildNewlib(CrossCompileAutotoolsProject):
     def __init__(self, config: CheriConfig):
         super().__init__(config)
         self._installPrefix = self._installPrefix.parent  # newlib install already appends the triple
-        self._installDir = self._installDir.parent  # newlib install already appends the triple
-        self.verbose_print("installDir=", self.installDir, "_installPrefix=", self._installPrefix, "_installDir=",
-                           self._installDir, "dest=", self.destdir, "real=", self.real_install_root_dir)
+        self._install_dir = self._install_dir.parent  # newlib install already appends the triple
+        self.verbose_print("install_dir=", self.install_dir, "_installPrefix=", self._installPrefix, "_install_dir=",
+                           self._install_dir, "dest=", self.destdir, "real=", self.real_install_root_dir)
         # self.configureCommand = Path("/this/path/does/not/exist")
         self.configureCommand = self.sourceDir / "configure"
         # FIXME: how can I force it to run a full configure step (this is needed because it runs the newlib configure
@@ -181,7 +181,7 @@ class BuildNewlib(CrossCompileAutotoolsProject):
         super().install(**kwargs)
         if self.compiling_for_cheri():
             # create some symlinks to make the current CMakeProject infrastructure happy
-            root_dir = self.installDir / self.target_info.target_triple
+            root_dir = self.install_dir / self.target_info.target_triple
             self.makedirs(root_dir / "usr")
             self.create_symlink(root_dir / "lib", root_dir / "usr/libcheri")
             self.create_symlink(root_dir / "lib", root_dir / "libcheri")

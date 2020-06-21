@@ -171,7 +171,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     sourceDir = None
     buildDir = None
     build_in_source_dir = False  # For projects that can't build in the source dir
-    installDir = None
+    install_dir = None
     # For target_info.py. Real value is only set for Project subclasses, since SimpleProject subclasses should not
     # include C/C++ compilation (there is no source+build dir)
     auto_var_init = AutoVarInit.NONE
@@ -842,8 +842,8 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         fatalError(*args, sep=sep, fixit_hint=fixit_hint, fatal_when_pretending=fatal_when_pretending)
 
 
-def installDirNotSpecified(config: CheriConfig, project: "Project"):
-    raise RuntimeError("installDirNotSpecified! dummy impl must not be called: " + str(project))
+def install_dir_not_specified(config: CheriConfig, project: "Project"):
+    raise RuntimeError("install_dir_not_specified! dummy impl must not be called: " + str(project))
 
 
 def _defaultBuildDir(config: CheriConfig, project: "SimpleProject"):
@@ -1325,9 +1325,9 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
         rootfs_target = project.target_info.get_rootfs_project()
         if hasattr(project, "path_in_rootfs"):
             assert project.path_in_rootfs.startswith("/"), project.path_in_rootfs
-            return rootfs_target.installDir / project.path_in_rootfs[1:]
+            return rootfs_target.install_dir / project.path_in_rootfs[1:]
         return Path(
-            rootfs_target.installDir / "opt" / project.target_info.install_prefix_dirname /
+            rootfs_target.install_dir / "opt" / project.target_info.install_prefix_dirname /
             project._rootfs_install_dir_name)
     elif install_dir == DefaultInstallDir.COMPILER_RESOURCE_DIR:
         compiler_for_resource_dir = project.CC
@@ -1556,8 +1556,8 @@ class Project(SimpleProject):
 
         if not install_directory_help:
             install_directory_help = "Override default install directory for " + cls.project_name
-        cls._installDir = cls.add_path_option("install-directory", metavar="DIR", help=install_directory_help,
-            default=cls._default_install_dir_fn)
+        cls._install_dir = cls.add_path_option("install-directory", metavar="DIR", help=install_directory_help,
+                                               default=cls._default_install_dir_fn)
         if "repository" in cls.__dict__ and isinstance(cls.repository, GitRepository):
             cls.gitRevision = cls.add_config_option("git-revision", metavar="REVISION",
                 help="The git revision to checkout prior to building. Useful if HEAD is broken for one "
@@ -1787,22 +1787,22 @@ class Project(SimpleProject):
                     self._installPrefix = Path("/", self.target_info.target_triple)
                 else:
                     self._installPrefix = Path("/", self.target_info.sysroot_install_prefix_relative)
-                    self.destdir = self._installDir
+                    self.destdir = self._install_dir
                 if install_dir_kind == DefaultInstallDir.SYSROOT_AND_ROOTFS:
-                    self.rootfs_path = self.target_info.get_rootfs_project().installDir
+                    self.rootfs_path = self.target_info.get_rootfs_project().install_dir
             elif install_dir_kind == DefaultInstallDir.ROOTFS:
-                self.rootfs_path = self.target_info.get_rootfs_project().installDir
-                relative_to_rootfs = os.path.relpath(str(self._installDir), str(self.rootfs_path))
+                self.rootfs_path = self.target_info.get_rootfs_project().install_dir
+                relative_to_rootfs = os.path.relpath(str(self._install_dir), str(self.rootfs_path))
                 if relative_to_rootfs.startswith(os.path.pardir):
-                    self.verbose_print("Custom install dir", self._installDir, "-> using / as install prefix")
+                    self.verbose_print("Custom install dir", self._install_dir, "-> using / as install prefix")
                     self._installPrefix = Path("/")
-                    self.destdir = self._installDir
+                    self.destdir = self._install_dir
                 else:
                     self._installPrefix = Path("/", relative_to_rootfs)
                     self.destdir = self.rootfs_path
             elif install_dir_kind in (None, DefaultInstallDir.DO_NOT_INSTALL, DefaultInstallDir.COMPILER_RESOURCE_DIR,
                                       DefaultInstallDir.IN_BUILD_DIRECTORY, DefaultInstallDir.CUSTOM_INSTALL_DIR):
-                self._installPrefix = self._installDir
+                self._installPrefix = self._install_dir
                 self.destdir = None
             else:
                 assert self._installPrefix and self.destdir is not None, "both must be set!"
@@ -1832,9 +1832,9 @@ class Project(SimpleProject):
         if not self.compiling_for_host():
             self.COMMON_FLAGS.append("-Wno-unused-command-line-argument")
 
-        assert self.installDir, "must be set"
-        self.verbose_print(self.target, "INSTALLDIR = ", self._installDir, "INSTALL_PREFIX=", self._installPrefix,
-            "DESTDIR=", self.destdir)
+        assert self.install_dir, "must be set"
+        self.verbose_print(self.target, "INSTALLDIR = ", self._install_dir, "INSTALL_PREFIX=", self._installPrefix,
+                           "DESTDIR=", self.destdir)
 
         if self.should_include_debug_info:
             if not self.target_info.is_macos():
@@ -1925,9 +1925,9 @@ class Project(SimpleProject):
         #     raise AttributeError, "MyClass does not allow assignment to .x member"
         # self.__dict__[name] = value
         if self.__dict__.get("_preventAssign"):
-            # assert name not in ("sourceDir", "buildDir", "installDir")
-            assert name != "installDir", "installDir should not be modified, only _installDir or _installPrefix"
-            assert name != "installPrefix", "installPrefix should not be modified, only _installDir or _installPrefix"
+            # assert name not in ("sourceDir", "buildDir", "install_dir")
+            assert name != "install_dir", "install_dir should not be modified, only _install_dir or _installPrefix"
+            assert name != "installPrefix", "installPrefix should not be modified, only _install_dir or _installPrefix"
             if name in self._no_overwrite_allowed:
                 import traceback
                 traceback.print_stack()
@@ -2117,17 +2117,17 @@ class Project(SimpleProject):
         if self.destdir is not None:
             assert self._installPrefix
             return self.destdir / Path(self._installPrefix).relative_to(Path("/"))
-        return self._installDir
+        return self._install_dir
 
     @property
-    def installDir(self):
+    def install_dir(self):
         return self.real_install_root_dir
 
     @property
     def installPrefix(self) -> Path:
         if self._installPrefix is not None:
             return self._installPrefix
-        return self._installDir
+        return self._install_dir
 
     def runMakeInstall(self, *, options: MakeOptions = None, target="install", _stdout_filter=_default_stdout_filter,
                        cwd=None, parallel=False, make_install_env=None, **kwargs):
@@ -2283,7 +2283,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             self._do_generate_cmakelists()
         if self.config.verbose:
             print(self.project_name, "directories: source=%s, build=%s, install=%s" %
-                                     (self.sourceDir, self.buildDir, self.installDir))
+                  (self.sourceDir, self.buildDir, self.install_dir))
 
         if self.use_asan and self.compiling_for_mips(include_purecap=False):
             # copy the ASAN lib into the right directory:
@@ -2322,14 +2322,14 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                 assert base is not None
                 assert issubclass(base, SimpleProject)
                 other_instance = base.get_instance_for_cross_target(xtarget.check_conflict_with, self.config,
-                    caller=self)
+                                                                    caller=self)
                 if self.config.verbose:
-                    self.info(self.target, "install dir for", xtarget.name, "is", self.installDir)
+                    self.info(self.target, "install dir for", xtarget.name, "is", self.install_dir)
                     other_xtarget = other_instance.get_crosscompile_target(self.config)
-                    self.info(self.target, "install dir for", other_xtarget.name, "is", self.installDir)
-                assert other_instance.installDir != self.installDir, \
+                    self.info(self.target, "install dir for", other_xtarget.name, "is", self.install_dir)
+                assert other_instance.install_dir != self.install_dir, \
                     other_instance.target + " reuses the same install prefix! This will cause conflicts: " + str(
-                        other_instance.installDir)
+                        other_instance.install_dir)
 
         if self.config.skipUpdate:
             # When --skip-update is set (or we don't have working internet) only check that the repository exists
@@ -2592,11 +2592,11 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
             )
 
     def configure(self, **kwargs):
-        if self.installPrefix != self.installDir:
+        if self.installPrefix != self.install_dir:
             assert self.destdir, "custom install prefix requires DESTDIR being set!"
             self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installPrefix)
         else:
-            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.installDir)
+            self.add_cmake_options(CMAKE_INSTALL_PREFIX=self.install_dir)
         custom_ldflags = self.default_ldflags + self.LDFLAGS
         self.add_cmake_options(
             CMAKE_C_COMPILER=self.CC,
@@ -2714,11 +2714,11 @@ class AutotoolsProject(Project):
 
     def configure(self, **kwargs):
         if self._configure_supports_prefix:
-            if self.installPrefix != self.installDir:
+            if self.installPrefix != self.install_dir:
                 assert self.destdir, "custom install prefix requires DESTDIR being set!"
                 self.configureArgs.append("--prefix=" + str(self.installPrefix))
             else:
-                self.configureArgs.append("--prefix=" + str(self.installDir))
+                self.configureArgs.append("--prefix=" + str(self.install_dir))
         if self.extraConfigureFlags:
             self.configureArgs.extend(self.extraConfigureFlags)
         super().configure(**kwargs)

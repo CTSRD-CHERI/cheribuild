@@ -49,7 +49,7 @@ class BuildBluespecCompiler(Project):
         self.add_required_system_tool("cabal", apt="cabal-install", homebrew="cabal-install")
         for i in ("autoconf", "gperf", "bison", "flex"):
             self.add_required_system_tool(i, homebrew=i)
-        self.make_args.set(PREFIX=self.installDir)
+        self.make_args.set(PREFIX=self.install_dir)
 
     def compile(self, **kwargs):
         try:

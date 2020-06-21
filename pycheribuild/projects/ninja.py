@@ -41,4 +41,4 @@ class BuildNinja(Project):
         self.run_cmd(self.sourceDir / "configure.py", "--bootstrap", cwd=self.buildDir)
 
     def install(self, **kwargs):
-        self.install_file(self.buildDir / "ninja", self.installDir / "bin/ninja")
+        self.install_file(self.buildDir / "ninja", self.install_dir / "bin/ninja")

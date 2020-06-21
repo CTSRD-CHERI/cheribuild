@@ -101,7 +101,7 @@ class BuildGnuBinutils(AutotoolsProject):
         self.run_make("all-binutils", logfile_name="build")
 
     def install(self, **kwargs):
-        bindir = self.installDir / "bin"
+        bindir = self.install_dir / "bin"
         if not self.fullInstall:
             # we don't want to install all programs, as the rest comes from elftoolchain
             self.run_make("install-gas", logfile_name="install", append_to_logfile=True, parallel=False)

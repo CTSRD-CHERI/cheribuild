@@ -459,7 +459,7 @@ class _BuildDiskImageBase(SimpleProject):
         with tempfile.NamedTemporaryFile(mode="w+") as tmp_mtree:
             use_makefs = True
             mtools = BuildMtools.get_instance(self, cross_target=CompilationTargets.NATIVE)
-            mtools_bin = mtools.installDir / "bin"
+            mtools_bin = mtools.install_dir / "bin"
             if use_makefs:
                 # Makefs doesn't handle contents= right now
                 efi_mtree = MtreeFile()

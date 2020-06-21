@@ -85,8 +85,8 @@ class BuildSamba(Project):
             # Avoid depending on libraries from the build tree:
             "--bundled-libraries=talloc,tdb,pytdb,ldb,pyldb,tevent,pytevent",
             "--with-static-modules=ALL",
-            "--prefix=" + str(self.installDir),
-        ])
+            "--prefix=" + str(self.install_dir),
+            ])
         # Force python2 for now (since py3 seems broken)
         self.configureEnvironment["PYTHON"] = shutil.which("python")
         #  version 4.9 "--without-json-audit",

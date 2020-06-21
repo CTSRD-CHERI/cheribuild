@@ -101,7 +101,7 @@ class BuildPostgres(CrossCompileAutotoolsProject):
             if self.installPrefix:
                 pg_root = str(self.installPrefix)
             else:
-                pg_root = str(self.installDir)
+                pg_root = str(self.install_dir)
             benchmark = re.sub(r'POSTGRES_ROOT=".*"', "POSTGRES_ROOT=\"" + pg_root + "\"", benchmark)
             self.write_file(self.real_install_root_dir / benchname, benchmark, overwrite=True, mode=0o755)
         self.install_file(self.sourceDir / "run-postgres-tests.sh", self.real_install_root_dir / "run-postgres-tests.sh")
@@ -127,10 +127,11 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         else:
             locale_dir = self.rootfs_dir / "usr/share/locale"
             self.target_info.run_cheribsd_test_script("run_postgres_tests.py", "--smb-mount-directory",
-                                          str(self.installDir) + ":" + str(self.installPrefix),
-                                          "--locale-files-dir", locale_dir, mount_builddir=False,
-                                          # long running test -> speed up by using a kernel without invariants
-                                          use_benchmark_kernel_by_default=True)
+                                                      str(self.install_dir) + ":" + str(self.installPrefix),
+                                                      "--locale-files-dir", locale_dir, mount_builddir=False,
+                                                      # long running test -> speed up by using a kernel without
+                                                      # invariants
+                                                      use_benchmark_kernel_by_default=True)
 
     @classmethod
     def setup_config_options(cls, **kwargs):

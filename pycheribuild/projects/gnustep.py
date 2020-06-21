@@ -70,8 +70,8 @@ class BuildGnuStep_Make(AutotoolsProject):
             "--enable-objc-nonfragile-abi",  # not sure if required but given in install guide
             "CC=" + str(self.CC),
             "CXX=" + str(self.CXX),
-            "LDFLAGS=-Wl,-rpath," + str(self.installDir / "lib")  # add rpath, otherwise everything breaks
-        ])
+            "LDFLAGS=-Wl,-rpath," + str(self.install_dir / "lib")  # add rpath, otherwise everything breaks
+            ])
 
 
 # FIXME: do we need to source Makefiles/GNUstep.sh before building?
@@ -97,7 +97,7 @@ class GnuStepModule(AutotoolsProject):
                                           capture_output=True, print_verbose_only=True,
                                           run_in_pretend_mode=True).stdout.strip().decode("utf-8")
         # Just to confirm that we have set up the -rpath flag correctly
-        expected_libdir = self.installDir / "lib"
+        expected_libdir = self.install_dir / "lib"
         if not expected_libdir.is_dir():
             self.fatal("Expected gnustep libdir", expected_libdir, "doesn't exist")
         if not Path(gnustep_libdir).is_dir():
@@ -119,7 +119,7 @@ class BuildGnuStep_Base(GnuStepModule):
         self.configureArgs.extend([
             "--disable-mixedabi",
             # TODO: "--enable-libdispatch",
-            # "--with-config-file=" + str(self.installDir / "etc/GNUStep/GNUStep.conf")
+            # "--with-config-file=" + str(self.install_dir / "etc/GNUStep/GNUStep.conf")
         ])
 
 

@@ -246,7 +246,7 @@ def _jenkins_main():
             cls = tgt.projectClass
             if issubclass(cls, Project):
                 cls._default_install_dir_fn = Path(str(cheri_config.outputRoot) + str(cheri_config.installationPrefix))
-                i = inspect.getattr_static(cls, "_installDir")
+                i = inspect.getattr_static(cls, "_install_dir")
                 assert isinstance(i, CommandLineConfigOption)
                 # But don't change it if it was specified on the command line. Note: This also does the config
                 # inheritance: i.e. setting --cheribsd/install-dir will also affect cheribsd-cheri/cheribsd-mips
@@ -255,9 +255,9 @@ def _jenkins_main():
                 if from_cmdline is not None:
                     statusUpdate("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
                 else:
-                    cls._installDir = Path(str(cheri_config.outputRoot) + str(cheri_config.installationPrefix))
+                    cls._install_dir = Path(str(cheri_config.outputRoot) + str(cheri_config.installationPrefix))
                     cls._check_install_dir_conflict = False
-                # print(project.projectClass.project_name, project.projectClass.installDir)
+                # print(project.projectClass.project_name, project.projectClass.install_dir)
 
         Target.instantiating_targets_should_warn = False
         target.checkSystemDeps(cheri_config)
@@ -273,7 +273,7 @@ def _jenkins_main():
         if isinstance(project, CrossCompileMixin):
             project.destdir = cheri_config.outputRoot
             project._installPrefix = cheri_config.installationPrefix
-            project._installDir = cheri_config.outputRoot
+            project._install_dir = cheri_config.outputRoot
 
         if JenkinsAction.BUILD in cheri_config.action:
             if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():

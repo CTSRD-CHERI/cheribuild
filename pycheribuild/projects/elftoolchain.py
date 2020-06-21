@@ -108,11 +108,11 @@ class BuildElftoolchain(Project):
             self.run_make("all", cwd=self.sourceDir, append_to_logfile=True)
 
     def install(self, **kwargs):
-        self.makedirs(self.installDir / "bin")
+        self.makedirs(self.install_dir / "bin")
         # We don't actually want to install all the files, just copy the binaries that we want
         group = self.config.get_group_name()
         user = self.config.get_user_name()
-        self.make_args.set(DESTDIR=self.installDir)
+        self.make_args.set(DESTDIR=self.install_dir)
         self.make_args.set(
             # elftoolchain tries to install as root -> override *GRP and *OWN flags
             BINGRP=group, BINOWN=user,
@@ -136,7 +136,7 @@ class BuildElftoolchain(Project):
         mandirs = ("share/man/man1", "share/man/man3", "share/man/man5", "share/man1", "share/man3", "share/man5")
         # The build system assumes all install directories already exist;
         for i in ("bin", "lib", "include", "share") + mandirs:
-            self.makedirs(self.installDir / i)
+            self.makedirs(self.install_dir / i)
         first_call = True  # recreate logfile on first call, after that append
         for tgt in self.programsToBuild:
             self.runMakeInstall(cwd=self.sourceDir / tgt, logfile_name="install", append_to_logfile=not first_call,
@@ -146,17 +146,17 @@ class BuildElftoolchain(Project):
         all_installed_tools = self.programsToBuild + self.extraPrograms
         for prog in all_installed_tools:
             if prog == "strip":
-                self.delete_file(self.installDir / "bin" / ("cheri-unknown-freebsd-" + prog))
-                self.delete_file(self.installDir / "bin" / ("mips64-unknown-freebsd-" + prog))
-                self.delete_file(self.installDir / "bin" / ("mips4-unknown-freebsd-" + prog))
+                self.delete_file(self.install_dir / "bin" / ("cheri-unknown-freebsd-" + prog))
+                self.delete_file(self.install_dir / "bin" / ("mips64-unknown-freebsd-" + prog))
+                self.delete_file(self.install_dir / "bin" / ("mips4-unknown-freebsd-" + prog))
             else:
-                self.create_triple_prefixed_symlinks(self.installDir / "bin" / prog)
+                self.create_triple_prefixed_symlinks(self.install_dir / "bin" / prog)
         # if we didn't build ar/ranlib add symlinks to the versions in /usr/bin
         if not self.build_ar:
-            self.create_symlink(Path("/usr/bin/ar"), self.installDir / "bin/ar", relative=False)
-            self.create_triple_prefixed_symlinks(self.installDir / "bin/ar")
-            self.create_symlink(Path("/usr/bin/ranlib"), self.installDir / "bin/ranlib", relative=False)
-            self.create_triple_prefixed_symlinks(self.installDir / "bin/ranlib")
+            self.create_symlink(Path("/usr/bin/ar"), self.install_dir / "bin/ar", relative=False)
+            self.create_triple_prefixed_symlinks(self.install_dir / "bin/ar")
+            self.create_symlink(Path("/usr/bin/ranlib"), self.install_dir / "bin/ranlib", relative=False)
+            self.create_triple_prefixed_symlinks(self.install_dir / "bin/ranlib")
 
     @property
     def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:

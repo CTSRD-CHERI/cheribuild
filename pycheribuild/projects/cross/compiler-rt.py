@@ -81,12 +81,12 @@ class BuildCompilerRt(CrossCompileCMakeProject):
         if self.compiling_for_cheri():
             # HACK: we don't really need the ubsan runtime but the toolchain pulls it in automatically
             # TODO: is there an easier way to create an empty archive?
-            ubsan_runtime_path = self.installDir / (
-                        "lib/freebsd/libclang_rt.ubsan_standalone-mips64c" + self.config.mips_cheri_bits_str + ".a")
+            ubsan_runtime_path = self.install_dir / (
+                    "lib/freebsd/libclang_rt.ubsan_standalone-mips64c" + self.config.mips_cheri_bits_str + ".a")
             if not ubsan_runtime_path.exists():
                 self.warning("Did not install ubsan runtime", ubsan_runtime_path)
         if self.target_info.is_rtems():
-            rt_runtime_path = self.installDir / "lib/generic/libclang_rt.builtins-riscv64.a"
+            rt_runtime_path = self.install_dir / "lib/generic/libclang_rt.builtins-riscv64.a"
             if not rt_runtime_path.exists():
                 self.warning("Did not install compiler runtime", rt_runtime_path.exists)
             else:
@@ -159,9 +159,9 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
         libname = "libclang_rt.builtins-" + self.triple_arch + ".a"
 
         if self.target_info.is_rtems():
-            self.move_file(self.installDir / "lib/rtems5" / libname, self.installDir / "lib" / libname)
+            self.move_file(self.install_dir / "lib/rtems5" / libname, self.install_dir / "lib" / libname)
         else:
-            self.move_file(self.installDir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
+            self.move_file(self.install_dir / "lib/generic" / libname, self.real_install_root_dir / "lib" / libname)
 
             if self.compiling_for_cheri():
                 # compatibility with older compilers
@@ -173,6 +173,6 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
                                     print_verbose_only=False)
             # HACK: we don't really need libunwind but the toolchain pulls it in automatically
             # TODO: is there an easier way to create empty .a files?
-            self.run_cmd("ar", "rcv", self.installDir / "lib/libunwind.a", "/dev/null")
-            self.run_cmd("ar", "dv", self.installDir / "lib/libunwind.a", "null")
-            self.run_cmd("ar", "t", self.installDir / "lib/libunwind.a")  # should be empty now
+            self.run_cmd("ar", "rcv", self.install_dir / "lib/libunwind.a", "/dev/null")
+            self.run_cmd("ar", "dv", self.install_dir / "lib/libunwind.a", "null")
+            self.run_cmd("ar", "t", self.install_dir / "lib/libunwind.a")  # should be empty now

@@ -77,7 +77,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
             self.configureArgs.append("-static")
 
         if self.compiling_for_host():
-            self.configureArgs.extend(["-prefix", str(self.installDir)])
+            self.configureArgs.extend(["-prefix", str(self.install_dir)])
             self.configureArgs.append("QMAKE_CC=" + str(self.CC))
             self.configureArgs.append("QMAKE_CXX=" + str(self.CXX))
             if OSInfo.IS_LINUX and get_compiler_info(self.CC).is_clang:

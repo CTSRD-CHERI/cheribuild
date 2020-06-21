@@ -64,7 +64,7 @@ class BuildSyzkaller(CrossCompileProject):
 
     def __init__(self, config):
         self._installPrefix = config.cheri_sdk_dir
-        self._installDir = config.cheri_sdk_dir
+        self._install_dir = config.cheri_sdk_dir
         self.destdir = ""
         super().__init__(config)
 

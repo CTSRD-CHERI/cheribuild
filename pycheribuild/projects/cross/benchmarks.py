@@ -123,7 +123,7 @@ class BuildMibench(CrossCompileProject):
 
     def install(self, **kwargs):
         if is_jenkins_build():
-            self._create_benchmark_dir(self.installDir, keep_both_sizes=True)
+            self._create_benchmark_dir(self.install_dir, keep_both_sizes=True)
         else:
             self.info("Not installing MiBench for non-Jenkins builds")
 
@@ -207,12 +207,12 @@ class BuildOlden(CrossCompileProject):
             raise ValueError("other arches not supported")
 
     def install(self, **kwargs):
-        self.makedirs(self.installDir)
+        self.makedirs(self.install_dir)
         if is_jenkins_build():
-            self._create_benchmark_dir(self.installDir)
+            self._create_benchmark_dir(self.install_dir)
         else:
             # Note: no trailing slash to ensure bin/ subdir exists
-            self.run_cmd("cp", "-av", self.sourceDir / "bin", self.installDir, cwd=self.buildDir)
+            self.run_cmd("cp", "-av", self.sourceDir / "bin", self.install_dir, cwd=self.buildDir)
 
     def _create_benchmark_dir(self, bench_dir: Path):
         self.makedirs(bench_dir)

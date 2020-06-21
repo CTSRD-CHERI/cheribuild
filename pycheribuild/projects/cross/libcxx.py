@@ -161,10 +161,11 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
                 self.add_cmake_options(BUILD_TESTS=True, TEST_LIBUNWIND=True)
 
     def install(self, **kwargs):
-        self.install_file(self.buildDir / "lib/libcxxrt.a", self.installDir / "lib" / "libcxxrt.a", force=True)
-        self.install_file(self.buildDir / "lib/libcxxrt.so", self.installDir / "lib" / "libcxxrt.soa", force=True)
+        self.install_file(self.buildDir / "lib/libcxxrt.a", self.install_dir / "lib" / "libcxxrt.a", force=True)
+        self.install_file(self.buildDir / "lib/libcxxrt.so", self.install_dir / "lib" / "libcxxrt.soa", force=True)
         # self.install_file(self.buildDir / "lib/libcxxrt.a", libdir / "libcxxrt.so", force=True)
-        # self.install_file(self.buildDir / "lib/libcxxrt.so", self.installDir / "usr/libcheri/libcxxrt.so", force=True)
+        # self.install_file(self.buildDir / "lib/libcxxrt.so", self.install_dir / "usr/libcheri/libcxxrt.so",
+        # force=True)
 
     def run_tests(self):
         if self.target_info.is_baremetal():

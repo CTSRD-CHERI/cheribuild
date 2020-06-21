@@ -54,7 +54,7 @@ class BuildGo(Project):
         self.makeDir = self.sourceDir / "src"
         self.binDir = self.sourceDir / "bin"
         self.pkgDir = self.sourceDir / "pkg"
-        self.gorootDir = self.installDir / "go"
+        self.gorootDir = self.install_dir / "go"
         self.goCache = Path("~").expanduser() / ".cache" / "go-build"
 
     def build_dir_for_target(self, target: CrossCompileTarget):
@@ -91,8 +91,8 @@ class BuildGo(Project):
         self.copy_directory(self.makeDir, self.gorootDir / "src")
 
         # Refresh the link in sdk/bin
-        self.delete_file(self.installDir / "bin" / "go")
-        self.create_symlink(self.gorootDir / "bin" / "go", self.installDir / "bin" / "go")
+        self.delete_file(self.install_dir / "bin" / "go")
+        self.create_symlink(self.gorootDir / "bin" / "go", self.install_dir / "bin" / "go")
 
     def run_tests(self):
         cmd = "bash run.bash --no-rebuild".split()

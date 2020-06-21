@@ -73,7 +73,7 @@ class BuildPython(CrossCompileAutotoolsProject):
             self.configureArgs.append("--without-pymalloc")  # use system malloc
             self.configureArgs.append("--without-doc-strings")  # should reduce size
             native_python = self.get_instance_for_cross_target(CompilationTargets.NATIVE,
-                                                               self.config).installDir / "bin/python3"
+                                                               self.config).install_dir / "bin/python3"
             if not native_python.exists():
                 self.fatal("Native python3 doesn't exist, you must build the `python-native` target first.")
             self.add_configure_vars(

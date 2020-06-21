@@ -674,7 +674,7 @@ class NewlibBaremetalTargetInfo(_ClangBasedTargetInfo):
 
     @property
     def _compiler_dir(self) -> Path:
-        # TODO: BuildUpstreamLLVM.installDir?
+        # TODO: BuildUpstreamLLVM.install_dir?
         return self.config.cheri_sdk_bindir
 
     @classmethod

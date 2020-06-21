@@ -64,7 +64,7 @@ class BuildMakefsOnLinux(Project):
         return super().clean()
 
     def install(self, **kwargs):
-        self.install_file(self.sourceDir / "builddir/usr.sbin/makefs/makefs", self.installDir / "bin/makefs")
+        self.install_file(self.sourceDir / "builddir/usr.sbin/makefs/makefs", self.install_dir / "bin/makefs")
 
     def process(self):
         if OSInfo.IS_FREEBSD:

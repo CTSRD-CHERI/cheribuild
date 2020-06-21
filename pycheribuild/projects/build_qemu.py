@@ -304,4 +304,4 @@ class BuildCheriOSQEMU(BuildQEMU):
     def qemu_binary(cls, caller: SimpleProject, xtarget=None):
         binary_name = "qemu-system-cheri" + caller.config.mips_cheri_bits_str
         return cls.get_instance(caller, caller.config,
-                                cross_target=CompilationTargets.NATIVE).installDir / "bin" / binary_name
+                                cross_target=CompilationTargets.NATIVE).install_dir / "bin" / binary_name

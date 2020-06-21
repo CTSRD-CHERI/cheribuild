@@ -25,14 +25,14 @@ class MockProject(Project):
         expected_src = config.sourceRoot / "sources" / name  # type: Path
         self.default_source_dir = expected_src
         expected_install = config.sourceRoot / "install" / name  # type: Path
-        self._installDir = expected_install
+        self._install_dir = expected_install
         expected_build = Path(config.sourceRoot, "build", name + "-build")  # type: Path
         self.buildDir = expected_build
         super().__init__(config)
         assert self.default_source_dir == expected_src
         assert self.sourceDir == expected_src
         assert self.buildDir == expected_build
-        assert self.installDir == expected_install
+        assert self.install_dir == expected_install
         os.makedirs(str(self.sourceDir))
 
     def _delete_directories(self, *dirs):

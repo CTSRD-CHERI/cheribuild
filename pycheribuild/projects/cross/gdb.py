@@ -86,7 +86,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
     def setup(self):
         super().setup()
-        install_root = self.installDir if self.compiling_for_host() else self.installPrefix
+        install_root = self.install_dir if self.compiling_for_host() else self.installPrefix
         # See https://github.com/bsdjhb/kdbg/blob/master/gdb/build
         # ./configure flags
         self.configureArgs.extend([
@@ -183,7 +183,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
     def compile(self, **kwargs):
         with TemporarilyRemoveProgramsFromSdk(["as", "ld", "objcopy", "objdump"], self.config,
-                                              self.installDir):
+                                              self.install_dir):
             # also install objdump
             self.run_make(make_target="all-binutils", cwd=self.buildDir)
             self.run_make(make_target="all-gdb", cwd=self.buildDir)
@@ -195,7 +195,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
             make_install_env = self.makeInstallEnv.copy()
             purecap_target = self.crosscompile_target.get_cheri_purecap_target()
             rootfs_project = self.target_info.get_rootfs_project(xtarget=purecap_target)
-            purecap_rootfs = rootfs_project.installDir
+            purecap_rootfs = rootfs_project.install_dir
             if (purecap_rootfs / "usr").exists():
                 self.info("Also installing to", purecap_rootfs)
                 assert "DESTDIR" in make_install_env, "DESTDIR must be set in install"
@@ -209,7 +209,7 @@ class BuildGDB(CrossCompileAutotoolsProject):
         # TODO: also build upstream ld.bfd?
         if self.compiling_for_host():
             binutils = ("objdump", "objcopy", "addr2line", "readelf", "ar", "ranlib", "size", "strings")
-            bindir = self.installDir / "bin"
+            bindir = self.install_dir / "bin"
             for util in binutils:
                 self.install_file(self.buildDir / "binutils" / util, bindir / ("g" + util))
             # nm and c++filt have a different name in the build dir:

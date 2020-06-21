@@ -73,7 +73,7 @@ class BuildOpenSBI(Project):
         compflags += " -Qunused-arguments"  # -mstrict-align -no-pie
         self.make_args.set(
             O=self.buildDir,  # output dir
-            I=self.installDir,  # install dir
+            I=self.install_dir,  # install dir
             CROSS_COMPILE=str(self.sdk_bindir) + "/",
             CC=str(self.CC) + compflags,
             CXX=str(self.CXX) + compflags,
@@ -114,7 +114,7 @@ class BuildOpenSBI(Project):
             self.run_make(parallel=False, cwd=self.sourceDir, options=args)
 
     def install(self, **kwargs):
-        self.makedirs(self.installDir)
+        self.makedirs(self.install_dir)
         for platform in self.all_platforms:
             args = self.make_args.copy()
             args.set(PLATFORM=platform)
@@ -122,7 +122,7 @@ class BuildOpenSBI(Project):
 
     def _fw_jump_path(self) -> Path:
         # share/opensbi/lp64/generic/firmware//fw_payload.bin
-        return self.installDir / "share/opensbi/{abi}/generic/firmware/fw_jump.elf".format(
+        return self.install_dir / "share/opensbi/{abi}/generic/firmware/fw_jump.elf".format(
             abi=self.target_info.riscv_softfloat_abi)
 
     @classmethod
