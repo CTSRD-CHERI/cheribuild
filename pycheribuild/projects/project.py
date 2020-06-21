@@ -184,8 +184,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     _clearLineSequence = b"\x1b[2K\r" if sys.stdout.isatty() else b"\n"
     # Default to NATIVE only
     supported_architectures = [BasicCompilationTargets.NATIVE]
-    # The architecture to build for if no --xmips/--xhost flag is passed (defaults to supported_architectures[0]
-    # if no match)
+    # The architecture to build for the unsuffixed target name (defaults to supported_architectures[0] if no match)
     _default_architecture = None
 
     _xtarget = None  # type: typing.Optional[CrossCompileTarget]

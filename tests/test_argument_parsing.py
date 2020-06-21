@@ -506,11 +506,9 @@ def test_libcxxrt_dependency_path():
     check_libunwind_path(config.outputRoot / "rootfs-purecap128/opt/mips-purecap/c++/lib", "libcxxrt-mips-purecap")
     check_libunwind_path(config.outputRoot / "rootfs128/opt/mips-hybrid/c++/lib", "libcxxrt-mips-hybrid")
     # Check the defaults:
-    config = _parse_arguments(["--skip-configure", "--xhost"])
-    check_libunwind_path(config.buildRoot / "libunwind-native-build/test-install-prefix/lib", "libcxxrt")
+    config = _parse_arguments(["--skip-configure"])
     check_libunwind_path(config.buildRoot / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
-    config = _parse_arguments(["--skip-configure", "--xmips", "--no-use-hybrid-sysroot-for-mips"])
-    check_libunwind_path(config.outputRoot / "rootfs128/opt/mips-hybrid/c++/lib", "libcxxrt")
+    config = _parse_arguments(["--skip-configure", "--no-use-hybrid-sysroot-for-mips"])
     check_libunwind_path(config.outputRoot / "rootfs128/opt/mips-hybrid/c++/lib", "libcxxrt-mips-hybrid")
     check_libunwind_path(config.outputRoot / "rootfs-mips/opt/mips-nocheri/c++/lib", "libcxxrt-mips-nocheri")
 

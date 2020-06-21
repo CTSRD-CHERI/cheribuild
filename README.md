@@ -342,11 +342,6 @@ optional arguments:
                         real target. (run with --list-targets for more information) (default: 'False')
   --compilation-db-in-source-dir
                         Generate a compile_commands.json and also copy it to the source directory (default: 'False')
-  --cross-compile-for-mips, --xmips
-                        Make cross compile projects target MIPS hybrid ABI instead of CheriABI (default: 'False')
-  --cross-compile-for-host, --xhost
-                        Make cross compile projects target the host system and use cheri clang to compile (tests that we
-                        didn't break x86) (default: 'False')
   --make-without-nice   Run make/ninja without nice(1) (default: 'False')
   --make-jobs MAKE_JOBS, -j MAKE_JOBS
                         Number of jobs to use for compiling (default: '8')
