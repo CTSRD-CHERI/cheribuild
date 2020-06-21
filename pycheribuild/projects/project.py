@@ -140,7 +140,7 @@ class ProjectSubclassDefinitionHook(type):
                     new_name = cls.custom_target_name(targetName, arch)
                 else:
                     new_name = targetName + "-" + arch.generic_suffix
-                new_dict = dict()
+                new_dict = cls.__dict__.copy()
                 new_dict["_xtarget"] = arch
                 new_dict["_should_not_be_instantiated"] = False  # unlike the subclass we can instantiate these
                 new_dict["doNotAddToTargets"] = True  # We are already adding it here
