@@ -52,7 +52,7 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.configureCommand = self.sourceDir / "configure"
+        self.configureCommand = self.source_dir / "configure"
         if not self.compiling_for_host():
             self._linkage = Linkage.STATIC
 
@@ -217,7 +217,7 @@ class BuildQt5(BuildQtWithConfigureScript):
         super().update()
         # qtlocation breaks for some reason if qt5 is forked on github
         # TODO: qtwebkit, but that won't cross-compile with QMAKE
-        runCmd("perl", "init-repository", "--module-subset=essential", "-f", "--branch", cwd=self.sourceDir)
+        runCmd("perl", "init-repository", "--module-subset=essential", "-f", "--branch", cwd=self.source_dir)
 
     def process(self):
         if not self.compiling_for_host():
@@ -286,7 +286,7 @@ class BuildICU4C(CrossCompileAutotoolsProject):
 
     def __init__(self, config):
         super().__init__(config)
-        self.configureCommand = self.sourceDir / "icu4c/source/configure"
+        self.configureCommand = self.source_dir / "icu4c/source/configure"
         self.configureArgs.extend(["--disable-plugins", "--disable-dyload",
                                    "--disable-tests",
                                    "--disable-samples"])
@@ -327,10 +327,10 @@ class BuildLibXml2(CrossCompileAutotoolsProject):
 
     def __init__(self, config):
         super().__init__(config)
-        if (self.sourceDir / "configure").exists():
-            self.configureCommand = self.sourceDir / "configure"
+        if (self.source_dir / "configure").exists():
+            self.configureCommand = self.source_dir / "configure"
         else:
-            self.configureCommand = self.sourceDir / "autogen.sh"
+            self.configureCommand = self.source_dir / "autogen.sh"
         self.configureArgs.extend([
             "--without-python", "--without-modules", "--without-lzma",
             ])

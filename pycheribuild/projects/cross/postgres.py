@@ -97,14 +97,14 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         self.runMakeInstall(target="install-tests", options=install_tests_args)
         # install the benchmark script
         for benchname in ("postgres-benchmark.sh", "postgres-initdb-benchmark.sh"):
-            benchmark = self.read_file(self.sourceDir / benchname)
+            benchmark = self.read_file(self.source_dir / benchname)
             if self.installPrefix:
                 pg_root = str(self.installPrefix)
             else:
                 pg_root = str(self.install_dir)
             benchmark = re.sub(r'POSTGRES_ROOT=".*"', "POSTGRES_ROOT=\"" + pg_root + "\"", benchmark)
             self.write_file(self.real_install_root_dir / benchname, benchmark, overwrite=True, mode=0o755)
-        self.install_file(self.sourceDir / "run-postgres-tests.sh", self.real_install_root_dir / "run-postgres-tests.sh")
+        self.install_file(self.source_dir / "run-postgres-tests.sh", self.real_install_root_dir / "run-postgres-tests.sh")
 
     @property
     def default_ldflags(self):

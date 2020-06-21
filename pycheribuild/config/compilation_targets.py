@@ -379,8 +379,8 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
                 cmd.extend(["--qemu-cmd", qemu_path])
         if mount_builddir and self.project.build_dir and "--build-dir" not in self.config.test_extra_args:
             cmd.extend(["--build-dir", self.project.build_dir])
-        if mount_sourcedir and self.project.sourceDir and "--source-dir" not in self.config.test_extra_args:
-            cmd.extend(["--source-dir", self.project.sourceDir])
+        if mount_sourcedir and self.project.source_dir and "--source-dir" not in self.config.test_extra_args:
+            cmd.extend(["--source-dir", self.project.source_dir])
         if mount_sysroot and "--sysroot-dir" not in self.config.test_extra_args:
             cmd.extend(["--sysroot-dir", self.sysroot_dir])
         if mount_installdir:
@@ -426,11 +426,11 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
 
         from ..projects.cherisim import BuildCheriSim, BuildBeriCtl
         sim_project = BuildCheriSim.get_instance(self.project, cross_target=CompilationTargets.NATIVE)
-        cherilibs_dir = Path(sim_project.sourceDir, "cherilibs")
-        cheri_dir = Path(sim_project.sourceDir, "cheri")
+        cherilibs_dir = Path(sim_project.source_dir, "cherilibs")
+        cheri_dir = Path(sim_project.source_dir, "cheri")
         if not cheri_dir.exists() or not cherilibs_dir.exists():
             self.project.fatal("cheri-cpu repository missing. Run `cheribuild.py berictl` or `git clone {} {}`".format(
-                sim_project.repository.url, sim_project.sourceDir))
+                sim_project.repository.url, sim_project.source_dir))
 
         qemu_ssh_socket = None  # type: typing.Optional[SocketAndPort]
 

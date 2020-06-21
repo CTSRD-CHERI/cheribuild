@@ -48,7 +48,7 @@ class BuildOpenSSL(CrossCompileProject):
         self.configureCommand = shutil.which("perl")
         self.set_configure_prog_with_args("CC", self.CC, self.default_compiler_flags + ["-fuse-ld=lld"])
         self.add_configure_env_arg("AR", self.target_info.ar)
-        self.configureArgs.append(self.sourceDir / "Configure")
+        self.configureArgs.append(self.source_dir / "Configure")
         self.configureArgs.append("BSD-generic64")
         self.configureArgs.append("-shared")
         self.configureArgs.append("--install-prefix=" + str(self.destdir))

@@ -51,14 +51,14 @@ class BuildGo(Project):
         super().__init__(config)
 
         # It does not seem possible to change this in the go build scripts (easily).
-        self.makeDir = self.sourceDir / "src"
-        self.binDir = self.sourceDir / "bin"
-        self.pkgDir = self.sourceDir / "pkg"
+        self.makeDir = self.source_dir / "src"
+        self.binDir = self.source_dir / "bin"
+        self.pkgDir = self.source_dir / "pkg"
         self.gorootDir = self.install_dir / "go"
         self.goCache = Path("~").expanduser() / ".cache" / "go-build"
 
     def build_dir_for_target(self, target: CrossCompileTarget):
-        return self.sourceDir / "pkg"
+        return self.source_dir / "pkg"
 
     def compile(self, **kwargs):
         env = {

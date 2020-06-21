@@ -100,12 +100,12 @@ class BuildElftoolchain(Project):
             # To speed it up run make for the individual library directories instead and then for all the binaries
             first_call = True  # recreate logfile on first call, after that append
             for tgt in self.libTargets + self.programsToBuild:
-                self.run_make("obj", cwd=self.sourceDir / tgt, logfile_name="build", append_to_logfile=not first_call)
-                self.run_make("all", cwd=self.sourceDir / tgt, logfile_name="build", append_to_logfile=True)
+                self.run_make("obj", cwd=self.source_dir / tgt, logfile_name="build", append_to_logfile=not first_call)
+                self.run_make("all", cwd=self.source_dir / tgt, logfile_name="build", append_to_logfile=True)
                 first_call = False
         else:
-            self.run_make("obj", cwd=self.sourceDir)
-            self.run_make("all", cwd=self.sourceDir, append_to_logfile=True)
+            self.run_make("obj", cwd=self.source_dir)
+            self.run_make("all", cwd=self.source_dir, append_to_logfile=True)
 
     def install(self, **kwargs):
         self.makedirs(self.install_dir / "bin")
@@ -139,7 +139,7 @@ class BuildElftoolchain(Project):
             self.makedirs(self.install_dir / i)
         first_call = True  # recreate logfile on first call, after that append
         for tgt in self.programsToBuild:
-            self.runMakeInstall(cwd=self.sourceDir / tgt, logfile_name="install", append_to_logfile=not first_call,
+            self.runMakeInstall(cwd=self.source_dir / tgt, logfile_name="install", append_to_logfile=not first_call,
                                 parallel=False)
             first_call = False
 

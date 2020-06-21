@@ -59,12 +59,12 @@ class BuildMakefsOnLinux(Project):
         self.run_make(make_target="", parallel=False)
 
     def clean(self):
-        self.delete_file(self.sourceDir / "builddir/.build_stamp")
-        self.clean_directory(self.sourceDir / "builddir")
+        self.delete_file(self.source_dir / "builddir/.build_stamp")
+        self.clean_directory(self.source_dir / "builddir")
         return super().clean()
 
     def install(self, **kwargs):
-        self.install_file(self.sourceDir / "builddir/usr.sbin/makefs/makefs", self.install_dir / "bin/makefs")
+        self.install_file(self.source_dir / "builddir/usr.sbin/makefs/makefs", self.install_dir / "bin/makefs")
 
     def process(self):
         if OSInfo.IS_FREEBSD:

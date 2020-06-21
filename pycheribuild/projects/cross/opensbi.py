@@ -94,7 +94,7 @@ class BuildOpenSBI(Project):
 
     @property
     def all_platforms(self):
-        platforms_dir = self.sourceDir / "platform"
+        platforms_dir = self.source_dir / "platform"
         self.info(list(platforms_dir.glob("**/config.mk")))
         all_platforms = []
         for c in platforms_dir.glob("**/config.mk"):
@@ -111,14 +111,14 @@ class BuildOpenSBI(Project):
         for platform in self.all_platforms:
             args = self.make_args.copy()
             args.set(PLATFORM=platform)
-            self.run_make(parallel=False, cwd=self.sourceDir, options=args)
+            self.run_make(parallel=False, cwd=self.source_dir, options=args)
 
     def install(self, **kwargs):
         self.makedirs(self.install_dir)
         for platform in self.all_platforms:
             args = self.make_args.copy()
             args.set(PLATFORM=platform)
-            self.runMakeInstall(cwd=self.sourceDir, options=args)
+            self.runMakeInstall(cwd=self.source_dir, options=args)
 
     def _fw_jump_path(self) -> Path:
         # share/opensbi/lp64/generic/firmware//fw_payload.bin

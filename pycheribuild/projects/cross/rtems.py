@@ -58,17 +58,17 @@ class BuildRtems(CrossCompileProject):
             self.rtems_bsps = ["rv64imafdc_medany"]
 
     def _run_waf(self, *args, **kwargs):
-        cmdline = [self.sourceDir / "waf", "-t", self.sourceDir, "-o", self.build_dir] + list(args)
+        cmdline = [self.source_dir / "waf", "-t", self.source_dir, "-o", self.build_dir] + list(args)
         if self.config.verbose:
             cmdline.append("-v")
-        return self.run_cmd(cmdline, cwd=self.sourceDir, **kwargs)
+        return self.run_cmd(cmdline, cwd=self.source_dir, **kwargs)
 
     def configure(self, **kwargs):
         waf_run = self._run_waf("bsp_defaults", "--rtems-bsps=" + ",".join(self.rtems_bsps), "--rtems-compiler=clang",
                                 capture_output=True)
 
         # waf configure reads config.ini by default to read RTEMS flags from
-        self.write_file(self.sourceDir / "config.ini", str(waf_run.stdout, 'utf-8'), overwrite=True)
+        self.write_file(self.source_dir / "config.ini", str(waf_run.stdout, 'utf-8'), overwrite=True)
         self._run_waf("configure", "--prefix", self.destdir)
 
     def compile(self, **kwargs):

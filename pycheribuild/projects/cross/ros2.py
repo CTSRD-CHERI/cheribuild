@@ -32,7 +32,7 @@ class BuildRos2(CrossCompileCMakeProject):
     project_name = "ros2"
     repository = GitRepository("https://github.com/dodsonmg/ros2_dashing_minimal.git", default_branch="master", force_branch=True)
 
-    # atm, we build and install in the sourceDir.
+    # atm, we build and install in the source_dir.
     build_in_source_dir = True
     # it may eventually be useful to install to rootfs or sysroot depending on whether we want to use ROS2
     # as a library for building other applications using cheribuild
@@ -43,15 +43,15 @@ class BuildRos2(CrossCompileCMakeProject):
     _extra_git_clean_excludes = ["--exclude=src"]  # don't delete src/ when running clean
 
     def _ignore_packages(self):
-        packages = ["src/ros2/rcl_logging/rcl_logging_log4cxx"]  # relative to self.sourceDir
+        packages = ["src/ros2/rcl_logging/rcl_logging_log4cxx"]  # relative to self.source_dir
         for package in packages:
-            cmdline = ["touch", str(self.sourceDir / package / "COLCON_IGNORE")]
-            self.run_cmd(cmdline, cwd=self.sourceDir)
+            cmdline = ["touch", str(self.source_dir / package / "COLCON_IGNORE")]
+            self.run_cmd(cmdline, cwd=self.source_dir)
 
     def _run_vcs(self):
         # this is the meta version control system used by ros for downloading and unpacking repos
         cmdline = ["vcs", "import", "--input", "ros2_minimal.repos", "src"]
-        self.run_cmd(cmdline, cwd=self.sourceDir)
+        self.run_cmd(cmdline, cwd=self.source_dir)
 
     def _run_colcon(self, **kwargs):
         # colcon is the meta build system (on top of cmake) used by ros
@@ -59,15 +59,15 @@ class BuildRos2(CrossCompileCMakeProject):
         colcon_args = ["--no-warn-unused-cli", "--packages-skip-build-finished"]
         cmake_args = ["--cmake-args", "-DBUILD_TESTING=NO"]
         if not self.compiling_for_host():
-            cmake_args.append("-DCMAKE_TOOLCHAIN_FILE=" + str(self.sourceDir / "CrossToolchain.cmake"))
+            cmake_args.append("-DCMAKE_TOOLCHAIN_FILE=" + str(self.source_dir / "CrossToolchain.cmake"))
         cmdline = colcon_cmd + cmake_args + colcon_args
         if self.config.verbose:
             cmdline.append("--event-handlers")
             cmdline.append("console_cohesion+")
-        self.run_cmd(cmdline, cwd=self.sourceDir, **kwargs)
+        self.run_cmd(cmdline, cwd=self.source_dir, **kwargs)
 
     def _get_poco(self, **kwargs):
-        # find and copy libPocoFoundation.so.71 from the sysroot into self.sourceDir
+        # find and copy libPocoFoundation.so.71 from the sysroot into self.source_dir
         # this is a bit ugly, but allows us to link the poco library whether we're running
         # hybrid or purecap cheribsd.  this is helpful because if we're running hybrid cheribsd,
         # the hybrid rootfs gets mounted, which doesn't include the purecap build of the poco library.
@@ -77,23 +77,23 @@ class BuildRos2(CrossCompileCMakeProject):
         poco_path = self.target_info.sysroot_install_prefix_absolute / "lib/libPocoUtil.so.71"
         if poco_path.is_file():
             self.info("Found pocofoundation:", poco_path)
-            self.install_file(poco_path, self.sourceDir / poco_path.name, force=True, print_verbose_only=False)
+            self.install_file(poco_path, self.source_dir / poco_path.name, force=True, print_verbose_only=False)
         else:
             self.fatal("libPocoFoundation.so.71 cannot be found at expected path", poco_path)
 
     def _set_env(self, **kwargs):
-        # create cheri_setup.csh and cheri_setup.sh files in self.sourceDir which can be source'ed
+        # create cheri_setup.csh and cheri_setup.sh files in self.source_dir which can be source'ed
         # to set environment variables (primarily LD_CHERI_LIBRARY_PATH)
         #
         # based off the install/setup.bash file sourced for ubuntu installs
 
         # source the setup script created by ROS to set LD_LIBRARY_PATH
-        setup_script = self.sourceDir / "install" / "setup.bash"
+        setup_script = self.source_dir / "install" / "setup.bash"
         if not setup_script.is_file():
             self.warning("No setup.bash file to source.")
             return
         cmdline = shlex.split("bash -c 'source " + str(setup_script) + " && echo $LD_LIBRARY_PATH'")
-        output = self.run_cmd(cmdline, cwd=self.sourceDir, capture_output=True, print_verbose_only=False, **kwargs)
+        output = self.run_cmd(cmdline, cwd=self.source_dir, capture_output=True, print_verbose_only=False, **kwargs)
 
         # extract LD_LIBRARY_PATH into a variable
         LD_LIBRARY_PATH = output.stdout.decode("utf-8").rstrip()
@@ -102,8 +102,8 @@ class BuildRos2(CrossCompileCMakeProject):
             return
 
         # convert LD_LIBRARY_PATH into LD_CHERI_LIBRARY_PATH for CheriBSD
-        LD_LIBRARY_PATH = str(self.sourceDir) + ":" + LD_LIBRARY_PATH
-        LD_LIBRARY_PATH = LD_LIBRARY_PATH.replace(str(self.sourceDir), "${rootdir}")
+        LD_LIBRARY_PATH = str(self.source_dir) + ":" + LD_LIBRARY_PATH
+        LD_LIBRARY_PATH = LD_LIBRARY_PATH.replace(str(self.source_dir), "${rootdir}")
         LD_CHERI_LIBRARY_PATH = LD_LIBRARY_PATH
         LD_CHERI_LIBRARY_PATH += ":${LD_CHERI_LIBRARY_PATH}"
         LD_LIBRARY_PATH += ":${LD_LIBRARY_PATH}"
@@ -121,19 +121,19 @@ if (! $?LD_LIBRARY_PATH ) then
 endif
 setenv LD_LIBRARY_PATH {LD_LIBRARY_PATH}
 """.format(LD_CHERI_LIBRARY_PATH=LD_CHERI_LIBRARY_PATH, LD_LIBRARY_PATH=LD_LIBRARY_PATH)
-        self.write_file(self.sourceDir / 'cheri_setup.csh', csh_script, overwrite=True)
+        self.write_file(self.source_dir / 'cheri_setup.csh', csh_script, overwrite=True)
         posix_sh_script = """#!/bin/sh
 rootdir=`pwd`
 export LD_CHERI_LIBRARY_PATH={LD_CHERI_LIBRARY_PATH}
 export LD_LIBRARY_PATH={LD_LIBRARY_PATH}
 """.format(LD_CHERI_LIBRARY_PATH=LD_CHERI_LIBRARY_PATH, LD_LIBRARY_PATH=LD_LIBRARY_PATH)
         # write LD_CHERI_LIBRARY_PATH to a text file to source from sh in CheriBSD
-        self.write_file(self.sourceDir / 'cheri_setup.sh', posix_sh_script, overwrite=True)
+        self.write_file(self.source_dir / 'cheri_setup.sh', posix_sh_script, overwrite=True)
 
     def update(self):
         super().update()
-        if not (self.sourceDir / "src").is_dir():
-            self.makedirs(self.sourceDir / "src")
+        if not (self.source_dir / "src").is_dir():
+            self.makedirs(self.source_dir / "src")
         self._run_vcs()
         self._ignore_packages()
 
@@ -141,7 +141,7 @@ export LD_LIBRARY_PATH={LD_LIBRARY_PATH}
         # overriding this method allows creation of CrossToolchain.cmake
         # without actually calling cmake, as super().configure() would do
         if not self.compiling_for_host():
-            self.generate_cmake_toolchain_file(self.sourceDir / "CrossToolchain.cmake")
+            self.generate_cmake_toolchain_file(self.source_dir / "CrossToolchain.cmake")
 
     def compile(self, **kwargs):
         self._run_colcon(**kwargs)

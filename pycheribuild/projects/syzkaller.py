@@ -75,7 +75,7 @@ class BuildSyzkaller(CrossCompileProject):
         repo_path = repo_url.path.split(".")[0]
         parts = ["src", repo_url.netloc] + repo_path.split("/")
         self.gopath = self.build_dir
-        self.gosrc = self.sourceDir
+        self.gosrc = self.source_dir
 
         self._newPath = (str(self.config.cheri_sdk_dir / "bin") + ":" +
                          str(self.config.dollarPathWithOtherTools))
@@ -115,7 +115,7 @@ class BuildSyzkaller(CrossCompileProject):
 
     def install(self, **kwargs):
         # XXX-AM: should have a propert install dir configuration
-        native_build = self.sourceDir / "bin"
+        native_build = self.source_dir / "bin"
         mips64_build = native_build / "freebsd_mips64"
         syz_remote_install = self.syzkaller_install_path() / "freebsd_mips64"
 
@@ -174,7 +174,7 @@ class RunSyzkaller(SimpleProject):
         self.kernel_path = BuildCHERIBSD.get_installed_kernel_path(
             self, cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP)
         self.kernel_src_path = BuildCHERIBSD.get_instance(self,
-                                                          cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).sourceDir
+                                                          cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).source_dir
         self.kernel_build_path = BuildCHERIBSD.get_instance(self,
                                                             cross_target=CompilationTargets.CHERIBSD_MIPS_PURECAP).build_dir
         self.disk_image = BuildCheriBSDDiskImage.get_instance(

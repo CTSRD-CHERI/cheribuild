@@ -150,7 +150,7 @@ class BuildCompilerRtBuiltins(CrossCompileCMakeProject):
             self.add_cmake_options(COMPILER_RT_DEFAULT_TARGET_ONLY=True)
 
     def configure(self, **kwargs):
-        self.configureArgs[0] = str(self.sourceDir / "lib/builtins")
+        self.configureArgs[0] = str(self.source_dir / "lib/builtins")
         super().configure()
 
     def install(self, **kwargs):

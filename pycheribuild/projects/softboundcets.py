@@ -48,7 +48,7 @@ class BuildSoftBoundCETS(BuildLLVMMonoRepoBase):
         super().compile(**kwargs)
         make = shutil.which("gmake") or "make"
         # TODO: clean runtime
-        self.run_cmd(make, cwd=self.sourceDir / "runtime")
+        self.run_cmd(make, cwd=self.source_dir / "runtime")
 
     def install(self, **kwargs):
         self.info("Not installing, to use SoftBoundCETS run from the source dir")

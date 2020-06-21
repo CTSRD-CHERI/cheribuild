@@ -48,5 +48,5 @@ class BuildValgrind(AutotoolsProject):
             # self.configureArgs.append("--enable-only64bit")
 
     def configure(self, **kwargs):
-        self.run_cmd(self.sourceDir / "autogen.sh", cwd=self.sourceDir)
+        self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
         super().configure()

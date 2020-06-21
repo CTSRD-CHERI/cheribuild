@@ -50,7 +50,7 @@ class BuildNginx(CrossCompileAutotoolsProject):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.configureCommand = self.sourceDir / "auto/configure"
+        self.configureCommand = self.source_dir / "auto/configure"
         if not self.compiling_for_host():
             self.COMMON_FLAGS.extend(["-pedantic",
                                       "-Wno-gnu-statement-expression",
@@ -66,10 +66,10 @@ class BuildNginx(CrossCompileAutotoolsProject):
 
     def install(self, **kwargs):
         # We have to run make inside the source directory
-        self.runMakeInstall(cwd=self.sourceDir)
-        self.install_file(self.sourceDir / "fetchbench", self.real_install_root_dir / "sbin/fetchbench")
+        self.runMakeInstall(cwd=self.source_dir)
+        self.install_file(self.source_dir / "fetchbench", self.real_install_root_dir / "sbin/fetchbench")
         # install the benchmark script
-        benchmark = self.read_file(self.sourceDir / "nginx-benchmark.sh")
+        benchmark = self.read_file(self.source_dir / "nginx-benchmark.sh")
         if not self.compiling_for_host():
             benchmark = re.sub(r'NGINX=.*', "NGINX=\"" + str(self.installPrefix / "sbin/nginx") + "\"", benchmark)
             benchmark = re.sub(r'FETCHBENCH=.*', "FETCHBENCH=\"" + str(self.installPrefix / "sbin/fetchbench") + "\"",
@@ -111,11 +111,11 @@ class BuildNginx(CrossCompileAutotoolsProject):
             self.configureEnvironment["NGX_HAVE_SYSVSHM"] = "yes"
             self.configureEnvironment["NGX_HAVE_MAP_ANON"] = "yes"
             self.configureEnvironment["NGX_HAVE_POSIX_SEM"] = "yes"
-        super().configure(cwd=self.sourceDir)
+        super().configure(cwd=self.source_dir)
 
     def compile(self, **kwargs):
         # The cwd for make needs to be the source dir and it expects an empty target name
-        self.run_make(cwd=self.sourceDir)
+        self.run_make(cwd=self.source_dir)
 
 
 class BuildFettNginx(FettProjectMixin, BuildNginx):

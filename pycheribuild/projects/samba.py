@@ -51,15 +51,15 @@ class BuildSamba(Project):
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
-        self.configureCommand = self.sourceDir / "configure"
+        self.configureCommand = self.source_dir / "configure"
         if SMB_OUT_OF_SOURCE_BUILD_WORKS:
-            self.configureCommand = self.sourceDir / "buildtools/bin/waf"
+            self.configureCommand = self.source_dir / "buildtools/bin/waf"
             self.configureArgs.insert(0, "configure")
-            self.make_args.set_command(self.sourceDir / "buildtools/bin/waf")
+            self.make_args.set_command(self.source_dir / "buildtools/bin/waf")
             self.make_args.add_flags("--blddir=" + str(self.build_dir))
-            self.make_args.add_flags("--srcdir=" + str(self.sourceDir))
+            self.make_args.add_flags("--srcdir=" + str(self.source_dir))
             self.configureArgs.append("--blddir=" + str(self.build_dir))
-            self.configureArgs.append("--srcdir=" + str(self.sourceDir))
+            self.configureArgs.append("--srcdir=" + str(self.source_dir))
         # Based on https://willhaley.com/blog/compile-samba-macos/
         # Also try to disable everything that is not needed for QEMU user shares
         self.configureArgs.extend([
@@ -99,17 +99,17 @@ class BuildSamba(Project):
     def configure(self, **kwargs):
         # Add the yapp binary
         self.configureEnvironment["PATH"] = os.getenv("PATH") + ":" + str(Path(shutil.which("perl")).resolve().parent)
-        super().configure(cwd=self.sourceDir, **kwargs)
+        super().configure(cwd=self.source_dir, **kwargs)
 
     def compile(self, **kwargs):
         if SMB_OUT_OF_SOURCE_BUILD_WORKS:
-            self.run_make("build", cwd=self.sourceDir)
+            self.run_make("build", cwd=self.source_dir)
         else:
             super().compile(**kwargs)
 
     def install(self, **kwargs):
         if SMB_OUT_OF_SOURCE_BUILD_WORKS:
-            self.run_make("install", cwd=self.sourceDir)
+            self.run_make("install", cwd=self.source_dir)
         else:
             super().install(**kwargs)
 

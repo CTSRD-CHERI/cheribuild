@@ -71,7 +71,7 @@ class BuildFettConfig(CrossCompileProject):
             return
 
         self.mtree.load(self.METALOG)
-        src = self.sourceDir
+        src = self.source_dir
 
         # general config
         self.mtree.add_file(src / "build/freebsd/malloc.conf", "etc/malloc.conf")
@@ -164,8 +164,8 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
         self.make_args.set(PREFIX=self.real_install_root_dir, ORT_PREFIX=self.config.cheri_sdk_bindir / "ort")
 
     def compile(self, **kwargs):
-        self.run_make("bvrs", cwd=self.sourceDir / "source/src", parallel=True)
-        self.run_make("bvrs.sql", cwd=self.sourceDir / "source/src", parallel=True)
+        self.run_make("bvrs", cwd=self.source_dir / "source/src", parallel=True)
+        self.run_make("bvrs.sql", cwd=self.source_dir / "source/src", parallel=True)
 
     def install(self, **kwargs):
         if not self.compiling_for_host():

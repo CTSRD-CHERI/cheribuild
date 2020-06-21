@@ -72,7 +72,7 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
 
         cxx_instance = BuildLibCXX.get_instance(self)
 
-        self.add_cmake_options(LIBUNWIND_LIBCXX_PATH=cxx_instance.sourceDir,
+        self.add_cmake_options(LIBUNWIND_LIBCXX_PATH=cxx_instance.source_dir,
                                # Should use libc++ from sysroot
                                # LIBUNWIND_LIBCXX_LIBRARY_PATH=BuildLibCXX.getBuildDir(self) / "lib",
                                LIBUNWIND_LIBCXX_LIBRARY_PATH="",
@@ -104,7 +104,7 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
             # add the config options required for running tests:
             self.add_cmake_options(LIBUNWIND_EXECUTOR=executor, LIBUNWIND_TARGET_INFO=target_info,
                                    LIBUNWIND_CXX_ABI_LIBNAME="libcxxrt")
-            version_script = self.sourceDir / "Version.map.FreeBSD"
+            version_script = self.source_dir / "Version.map.FreeBSD"
             if not version_script.exists():
                 self.fatal("libunwind version script is missing, please update llvm-project!")
             self.add_cmake_options(LIBUNWIND_USE_VERSION_SCRIPT=version_script)

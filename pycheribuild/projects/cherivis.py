@@ -80,8 +80,8 @@ class BuildCheriVis(Project):
         self.cheritrace_path = None
         # Build Cheritrace as a subproject
         self.cheritrace_subproject = BuildCheriTrace(config)
-        self.cheritrace_subproject.sourceDir = self.sourceDir / "cheritrace"
-        self.cheritrace_subproject.build_dir = self.sourceDir / "cheritrace/Build"
+        self.cheritrace_subproject.source_dir = self.source_dir / "cheritrace"
+        self.cheritrace_subproject.build_dir = self.source_dir / "cheritrace/Build"
         self.cheritrace_subproject._install_dir = "/this/path/does/not/exist"
 
     def check_system_dependencies(self):
@@ -114,7 +114,7 @@ class BuildCheriVis(Project):
 
         # has to be a relative path for some reason....
         # pathlib.relative_to() won't work if the prefix is not the same...
-        # cheritrace_rel_path = os.path.relpath(str(self.cheritrace_path.parent.resolve()), str(self.sourceDir.resolve()))
+        # cheritrace_rel_path = os.path.relpath(str(self.cheritrace_path.parent.resolve()), str(self.source_dir.resolve()))
         self.make_args.set(CXX=self.CXX,
                            CC=self.CPP,
                            GNUSTEP_MAKEFILES=self.gnustepMakefilesDir,
@@ -127,14 +127,14 @@ class BuildCheriVis(Project):
 
     def clean(self):
         # doesn't seem to be possible to use a out of source build
-        self.run_make("clean", cwd=self.sourceDir)
+        self.run_make("clean", cwd=self.source_dir)
         self.clean_directory(self.cheritrace_subproject.build_dir)
         return ThreadJoiner(None)   # can't be done async
 
     def compile(self, **kwargs):
         # First build the bundled cheritrace
-        assert self.cheritrace_subproject.sourceDir == self.sourceDir / "cheritrace"
-        assert self.cheritrace_subproject.build_dir == self.sourceDir / "cheritrace/Build"
+        assert self.cheritrace_subproject.source_dir == self.source_dir / "cheritrace"
+        assert self.cheritrace_subproject.build_dir == self.source_dir / "cheritrace/Build"
         assert self.cheritrace_subproject.install_dir == "/this/path/does/not/exist", \
             self.cheritrace_subproject.install_dir
         self.makedirs(self.cheritrace_subproject.build_dir)
@@ -142,17 +142,17 @@ class BuildCheriVis(Project):
         self.cheritrace_subproject.configure()
         self.cheritrace_subproject.compile()
         if OSInfo.IS_MAC:
-            self.run_make(cwd=self.sourceDir)
+            self.run_make(cwd=self.source_dir)
         else:
-            self.run_make("print-gnustep-make-help", cwd=self.sourceDir)
-            self.run_make("all", cwd=self.sourceDir)
+            self.run_make("print-gnustep-make-help", cwd=self.source_dir)
+            self.run_make("all", cwd=self.source_dir)
 
     def install(self, **kwargs):
         if OSInfo.IS_MAC:
             # TODO: xcodebuild install?
-            runCmd("cp", "-aRv", self.sourceDir / "build/Release/CheriVis.app", self.config.cheri_sdk_dir)
+            runCmd("cp", "-aRv", self.source_dir / "build/Release/CheriVis.app", self.config.cheri_sdk_dir)
         else:
-            self.run_make("install", cwd=self.sourceDir)
+            self.run_make("install", cwd=self.source_dir)
 
 #
 # Some of these settings seem required:

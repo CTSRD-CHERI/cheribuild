@@ -30,10 +30,10 @@ class MockProject(Project):
         self.build_dir = expected_build
         super().__init__(config)
         assert self.default_source_dir == expected_src
-        assert self.sourceDir == expected_src
+        assert self.source_dir == expected_src
         assert self.build_dir == expected_build
         assert self.install_dir == expected_install
-        os.makedirs(str(self.sourceDir))
+        os.makedirs(str(self.source_dir))
 
     def _delete_directories(self, *dirs):
         if self.config.sleep_before_delete:
@@ -57,7 +57,7 @@ class TestAsyncDelete(TestCase):
         self.assertEqual(self.tempRoot, self.config.sourceRoot)
         self.assertEqual(self.tempRoot / "build", self.config.buildRoot)
         self.project = MockProject(self.config, "foo")
-        assert self.project.sourceDir.exists(), self.project.sourceDir
+        assert self.project.source_dir.exists(), self.project.source_dir
 
     def tearDown(self):
         self._tempRoot.cleanup()

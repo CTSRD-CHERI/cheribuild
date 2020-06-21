@@ -317,7 +317,7 @@ class BuildLLVMMonoRepoBase(BuildLLVMBase):
         super().setup_config_options(**kwargs)
 
     def configure(self, **kwargs):
-        if (self.sourceDir / "tools/clang/.git").exists():
+        if (self.source_dir / "tools/clang/.git").exists():
             self.fatal("Attempting to build LLVM Monorepo but the checkout is from the split repos!")
         if not self.included_projects:
             self.fatal("Need at least one project in --include-projects config option")
@@ -454,11 +454,11 @@ class BuildLLVMSplitRepoBase(BuildLLVMBase):
     def update(self):
         super().update()
         if "clang" in self.included_projects:
-            GitRepository(self.clangRepository).update(self, src_dir=self.sourceDir / "tools/clang",
+            GitRepository(self.clangRepository).update(self, src_dir=self.source_dir / "tools/clang",
                                                        revision=self.clangRevision),
         if "lld" in self.included_projects:
-            GitRepository(self.lldRepository).update(self, src_dir=self.sourceDir / "tools/lld",
+            GitRepository(self.lldRepository).update(self, src_dir=self.source_dir / "tools/lld",
                                                      revision=self.lldRevision),
         if "lldb" in self.included_projects:  # Not yet usable
-            GitRepository(self.lldbRepository).update(self, src_dir=self.sourceDir / "tools/lldb",
+            GitRepository(self.lldbRepository).update(self, src_dir=self.source_dir / "tools/lldb",
                                                       revision=self.lldbRevision),

@@ -66,13 +66,13 @@ class BuildMtools(AutotoolsProject):
         self.make_args.set(MAN1="", MAN5="")
 
     def process(self):
-        if not (self.sourceDir / "mtools.tmpl.1").exists():
-            self.run_cmd("bash", "-xe", "./mkmanpages", cwd=self.sourceDir)
+        if not (self.source_dir / "mtools.tmpl.1").exists():
+            self.run_cmd("bash", "-xe", "./mkmanpages", cwd=self.source_dir)
         super().process()
 
     def configure(self, **kwargs):
-        if not (self.sourceDir / "configure").exists():
-            self.run_cmd("autoreconf", "-ivf", cwd=self.sourceDir)
+        if not (self.source_dir / "configure").exists():
+            self.run_cmd("autoreconf", "-ivf", cwd=self.source_dir)
 
         super().configure(**kwargs)
 
@@ -141,10 +141,10 @@ class _BuildDiskImageBase(SimpleProject):
         assert isinstance(self.source_project, BuildFreeBSD)
         self.rootfsDir = self.source_project.getInstallDir(self)
         assert self.rootfsDir is not None
-        if (self.source_project.sourceDir / "lib/libc/gen/master.passwd").is_file():
-            self.userGroupDbDir = self.source_project.sourceDir / "lib/libc/gen"
+        if (self.source_project.source_dir / "lib/libc/gen/master.passwd").is_file():
+            self.userGroupDbDir = self.source_project.source_dir / "lib/libc/gen"
         else:
-            self.userGroupDbDir = self.source_project.sourceDir / "etc"
+            self.userGroupDbDir = self.source_project.source_dir / "etc"
         self.crossBuildImage = self.source_project.crossbuild
         self.minimumImageSize = "1g"  # minimum image size = 1GB
         self.mtree = MtreeFile()

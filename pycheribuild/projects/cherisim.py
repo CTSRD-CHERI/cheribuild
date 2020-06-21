@@ -59,10 +59,10 @@ class BuildBluespecCompiler(Project):
                       "\tcabal install regex-compat syb old-time split\n"
                       "If this doesn't fix the issue `v1-install` instead of `install` (e.g. macOS).")
             if OSInfo.IS_MAC:
-                self.info("Alternatively, try running:", self.sourceDir / ".github/workflows/install_dependencies_macos.sh")
+                self.info("Alternatively, try running:", self.source_dir / ".github/workflows/install_dependencies_macos.sh")
             elif OSInfo.is_ubuntu():
                 self.info("Alternatively, try running:",
-                          self.sourceDir / ".github/workflows/install_dependencies_ubuntu.sh")
+                          self.source_dir / ".github/workflows/install_dependencies_ubuntu.sh")
             raise
 
 
@@ -96,18 +96,18 @@ class BuildCheriSim(Project):
         cls.build_cheri = cls.add_bool_option("cheri", default=True, help="include the CHERI code in the simulator. If false build BERI")
 
     def clean(self):
-        self.run_make("clean", parallel=False, cwd=self.sourceDir / "cheri")
+        self.run_make("clean", parallel=False, cwd=self.source_dir / "cheri")
         return None
 
     def compile(self, **kwargs):
-        setup_sh = self.sourceDir / "cheri" / "setup.sh"
+        setup_sh = self.source_dir / "cheri" / "setup.sh"
         if self.config.fpga_custom_env_setup_script:
             setup_sh = self.config.fpga_custom_env_setup_script
         if not setup_sh.exists():
             self.fatal("Could not find setup.sh, please set --cheri-sim/source-directory or --fpga-env-setup-script")
         source_cmd = "source {setup_script}".format(setup_script=setup_sh)
         self.run_shell_script(source_cmd + " && " + commandline_to_str(self.get_make_commandline("sim", parallel=False)),
-                            cwd=self.sourceDir / "cheri", shell="bash")
+                            cwd=self.source_dir / "cheri", shell="bash")
 
     def install(self, **kwargs):
         pass
@@ -133,18 +133,18 @@ class BuildBeriCtl(Project):
         self.make_args.set(JTAG_ATLANTIC=1) # MUCH faster
 
     def clean(self):
-        self.run_make("clean", parallel=False, cwd=self.sourceDir)
+        self.run_make("clean", parallel=False, cwd=self.source_dir)
         return None
 
     def compile(self, **kwargs):
         sim_project = BuildCheriSim.get_instance(self, cross_target=BasicCompilationTargets.NATIVE)
-        setup_sh = sim_project.sourceDir / "cheri" / "setup.sh"
+        setup_sh = sim_project.source_dir / "cheri" / "setup.sh"
         if self.config.fpga_custom_env_setup_script:
             setup_sh = self.config.fpga_custom_env_setup_script
         if not setup_sh.exists():
             self.fatal("Could not find setup.sh")
         self.run_shell_script("source {} && ".format(shlex.quote(str(setup_sh))) + commandline_to_str(self.get_make_commandline(None, parallel=False)),
-                            cwd=self.sourceDir, shell="bash")
+                            cwd=self.source_dir, shell="bash")
 
     def install(self, **kwargs):
         pass

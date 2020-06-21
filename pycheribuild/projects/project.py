@@ -168,7 +168,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     dependenciesMustBeBuilt = False
     isAlias = False
     is_sdk_target = False  # for --skip-sdk
-    sourceDir = None
+    source_dir = None
     build_dir = None
     build_in_source_dir = False  # For projects that can't build in the source dir
     install_dir = None
@@ -1406,7 +1406,7 @@ class Project(SimpleProject):
     @classmethod
     def getSourceDir(cls, caller: "SimpleProject", config: CheriConfig = None,
                      cross_target: CrossCompileTarget = None):
-        return cls.get_instance(caller, config, cross_target).sourceDir
+        return cls.get_instance(caller, config, cross_target).source_dir
 
     @classmethod
     def getBuildDir(cls, caller: "SimpleProject", config: CheriConfig = None,
@@ -1746,12 +1746,12 @@ class Project(SimpleProject):
             self.default_source_dir = self.repository.get_real_source_dir(self, self.default_source_dir)
             self.info("Overriding source directory for", self.target, "since it reuses the sources of",
                 self.repository.source_project.target, "->", self.default_source_dir)
-        self.sourceDir = self.repository.get_real_source_dir(self, self.default_source_dir)
+        self.source_dir = self.repository.get_real_source_dir(self, self.default_source_dir)
 
         if self.build_in_source_dir:
             self.verbose_print("Cannot build", self.project_name, "in a separate build dir, will build in",
-                self.sourceDir)
-            self.build_dir = self.sourceDir
+                self.source_dir)
+            self.build_dir = self.source_dir
 
         self.configureCommand = ""
         # non-assignable variables:
@@ -1924,7 +1924,7 @@ class Project(SimpleProject):
         #     raise AttributeError, "MyClass does not allow assignment to .x member"
         # self.__dict__[name] = value
         if self.__dict__.get("_preventAssign"):
-            # assert name not in ("sourceDir", "build_dir", "install_dir")
+            # assert name not in ("source_dir", "build_dir", "install_dir")
             assert name != "install_dir", "install_dir should not be modified, only _install_dir or _installPrefix"
             assert name != "installPrefix", "installPrefix should not be modified, only _install_dir or _installPrefix"
             if name in self._no_overwrite_allowed:
@@ -2008,7 +2008,7 @@ class Project(SimpleProject):
                               append_to_logfile=append_to_logfile)
         # if we create a compilation db, copy it to the source dir:
         if self.config.copy_compilation_db_to_source_dir and (self.build_dir / compilation_db_name).exists():
-            self.install_file(self.build_dir / compilation_db_name, self.sourceDir / compilation_db_name, force=True)
+            self.install_file(self.build_dir / compilation_db_name, self.source_dir / compilation_db_name, force=True)
         # add a newline at the end in case it ended with a filtered line (no final newline)
         print("Running", make_command, make_target, "took", time.time() - starttime, "seconds")
 
@@ -2016,12 +2016,12 @@ class Project(SimpleProject):
         if not self.repository and not self.config.skipUpdate:
             self.fatal("Cannot update", self.project_name, "as it is missing a repository source",
                        fatal_when_pretending=True)
-        self.repository.update(self, src_dir=self.sourceDir, default_src_dir=self.default_source_dir,
+        self.repository.update(self, src_dir=self.source_dir, default_src_dir=self.default_source_dir,
             revision=self.gitRevision, skip_submodules=self.skipGitSubmodules)
-        if self.is_large_source_repository and (self.sourceDir / ".git").exists():
+        if self.is_large_source_repository and (self.source_dir / ".git").exists():
             # This is a large repository, tell git to do whatever it can to speed up operations (new in 2.24):
             # https://git-scm.com/docs/git-config#Documentation/git-config.txt-featuremanyFiles
-            self.run_cmd("git", "config", "--local", "feature.manyFiles", "true", cwd=self.sourceDir,
+            self.run_cmd("git", "config", "--local", "feature.manyFiles", "true", cwd=self.source_dir,
                 print_verbose_only=True)
 
     _extra_git_clean_excludes = []
@@ -2032,7 +2032,7 @@ class Project(SimpleProject):
                                           "build artifacts.")
         git_clean_cmd = ["git", "clean", "-dfx", "--exclude=.*"] + self._extra_git_clean_excludes
         # Try to keep project files for IDEs and other dotfiles:
-        runCmd(git_clean_cmd, cwd=self.sourceDir)
+        runCmd(git_clean_cmd, cwd=self.source_dir)
 
     def clean(self) -> ThreadJoiner:
         assert self.config.clean or self._force_clean
@@ -2044,9 +2044,9 @@ class Project(SimpleProject):
                     self.target != "elftoolchain":
                 runCmd(self.make_args.command, "distclean", cwd=self.build_dir)
             else:
-                assert self.sourceDir == self.build_dir
+                assert self.source_dir == self.build_dir
                 self._git_clean_source_dir()
-        elif self.build_dir == self.sourceDir:
+        elif self.build_dir == self.source_dir:
             self.fatal("Cannot clean non-git source directories. Please override")
         else:
             return self.async_clean_directory(self.build_dir, keep_root=True)
@@ -2166,7 +2166,7 @@ add_custom_target(cheribuild-verbose-j1 VERBATIM USES_TERMINAL COMMAND {command}
 add_custom_target(cheribuild-with-install VERBATIM USES_TERMINAL COMMAND {command} --skip-update {target})
 add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {target})
 """.format(command="${CLEAR_MAKEENV} " + sys.argv[0], project=self.project_name, target=self.target)
-        target_file = self.sourceDir / "CMakeLists.txt"
+        target_file = self.source_dir / "CMakeLists.txt"
         create = True
         if target_file.exists():
             existing_code = self.read_file(target_file)
@@ -2247,7 +2247,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         return Path(self.build_dir, ".cheribuild_last_clean_counter")
 
     def _parse_require_clean_build_counter(self) -> typing.Optional[int]:
-        require_clean_path = Path(self.sourceDir, ".require_clean_build")
+        require_clean_path = Path(self.source_dir, ".require_clean_build")
         if not require_clean_path.exists():
             return None
         with require_clean_path.open("r") as f:
@@ -2282,7 +2282,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             self._do_generate_cmakelists()
         if self.config.verbose:
             print(self.project_name, "directories: source=%s, build=%s, install=%s" %
-                  (self.sourceDir, self.build_dir, self.install_dir))
+                  (self.source_dir, self.build_dir, self.install_dir))
 
         if self.use_asan and self.compiling_for_mips(include_purecap=False):
             # copy the ASAN lib into the right directory:
@@ -2333,7 +2333,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if self.config.skipUpdate:
             # When --skip-update is set (or we don't have working internet) only check that the repository exists
             if self.repository:
-                self.repository.ensure_cloned(self, src_dir=self.sourceDir, default_src_dir=self.default_source_dir,
+                self.repository.ensure_cloned(self, src_dir=self.source_dir, default_src_dir=self.default_source_dir,
                     skip_submodules=self.skipGitSubmodules)
         else:
             self.update()
@@ -2468,7 +2468,7 @@ class CMakeProject(Project):
                 # TODO: add support for cmake --build <dir> --target <tgt> -- <args>
                 fatalError("Unknown CMake Generator", custom_generator, "-> don't know which build command to run")
         self.generator = generator
-        self.configureArgs.append(str(self.sourceDir))  # TODO: use undocumented -H and -B options?
+        self.configureArgs.append(str(self.source_dir))  # TODO: use undocumented -H and -B options?
         if self.generator == CMakeProject.Generator.Ninja:
             if not custom_generator:
                 self.configureArgs.append("-GNinja")
@@ -2647,7 +2647,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
             self.delete_file(cmakeCache)
         super().configure(**kwargs)
         if self.config.copy_compilation_db_to_source_dir and (self.build_dir / "compile_commands.json").exists():
-            self.install_file(self.build_dir / "compile_commands.json", self.sourceDir / "compile_commands.json",
+            self.install_file(self.build_dir / "compile_commands.json", self.source_dir / "compile_commands.json",
                               force=True)
 
     def install(self, _stdout_filter="__DEFAULT__"):
@@ -2709,7 +2709,7 @@ class AutotoolsProject(Project):
 
     def __init__(self, config, configure_script="configure"):
         super().__init__(config)
-        self.configureCommand = self.sourceDir / configure_script
+        self.configureCommand = self.source_dir / configure_script
 
     def configure(self, **kwargs):
         if self._configure_supports_prefix:

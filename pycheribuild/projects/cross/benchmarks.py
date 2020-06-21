@@ -95,7 +95,7 @@ class BuildMibench(CrossCompileProject):
             self.make_args.set(VERSION=self.benchmark_version)
             self.makedirs(self.build_dir / "bundle")
             self.make_args.set(BUNDLE_DIR=self.build_dir / self.bundle_dir)
-            self.run_make("bundle_dump", cwd=self.sourceDir)
+            self.run_make("bundle_dump", cwd=self.source_dir)
             if self.compiling_for_mips(include_purecap=False) and self.use_asan:
                 self.copy_asan_dependencies(self.build_dir / "bundle/lib")
 
@@ -190,7 +190,7 @@ class BuildOlden(CrossCompileProject):
                 self.fatal("Unknown target: ", self.crosscompile_target)
         # copy asan libraries and the run script to the bin dir to ensure that we can run with --test from the
         # build directory.
-        self.install_file(self.sourceDir / "run_jenkins-bluehive.sh",
+        self.install_file(self.source_dir / "run_jenkins-bluehive.sh",
                           self.build_dir / "bin/run_jenkins-bluehive.sh", force=True)
         if self.compiling_for_mips(include_purecap=False) and self.use_asan:
             self.copy_asan_dependencies(self.build_dir / "bin/lib")
@@ -212,12 +212,12 @@ class BuildOlden(CrossCompileProject):
             self._create_benchmark_dir(self.install_dir)
         else:
             # Note: no trailing slash to ensure bin/ subdir exists
-            self.run_cmd("cp", "-av", self.sourceDir / "bin", self.install_dir, cwd=self.build_dir)
+            self.run_cmd("cp", "-av", self.source_dir / "bin", self.install_dir, cwd=self.build_dir)
 
     def _create_benchmark_dir(self, bench_dir: Path):
         self.makedirs(bench_dir)
         # Note: no trailing slash to ensure bin/ subdir exists
-        self.run_cmd("cp", "-av", self.sourceDir / "bin", bench_dir, cwd=self.build_dir)
+        self.run_cmd("cp", "-av", self.source_dir / "bin", bench_dir, cwd=self.build_dir)
         # Remove all the .dump files from the tarball
         self.run_cmd("find", bench_dir, "-name", "*.dump", "-delete")
         self.run_cmd("du", "-sh", bench_dir)

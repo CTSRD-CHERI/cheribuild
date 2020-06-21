@@ -54,11 +54,11 @@ class BuildAflCheriNinja(Project):
         base_flags = self.make_args.copy()
         base_flags.env_vars["XCFLAGS"] = base_xcflags + " -mabi=n64"
         #  $  XCC=${SDK_PATH}/bin/clang XCFLAGS='-cheri-linker -target mips64-unknown-freebsd -mcpu=mips3 -integrated-as -msoft-float' gmake
-        self.run_make(options=base_flags, cwd=self.sourceDir)
+        self.run_make(options=base_flags, cwd=self.source_dir)
         #  $  XCC=${SDK_PATH}/bin/clang XCFLAGS='-cheri-linker -target mips64-unknown-freebsd -mcpu=mips3 -integrated-as -msoft-float' gmake
         llvm_mode_flags = self.make_args.copy()
         llvm_mode_flags.env_vars["XCFLAGS"] = base_xcflags + " -mabi=purecap"
-        self.run_make(options=llvm_mode_flags, cwd=self.sourceDir / "llvm_mode")
+        self.run_make(options=llvm_mode_flags, cwd=self.source_dir / "llvm_mode")
 
     def install(self, **kwargs):
         self.make_args.set(DESTDIR=self.config.cheri_sdk_dir / "afl")

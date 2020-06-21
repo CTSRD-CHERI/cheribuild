@@ -176,7 +176,7 @@ class BuildFreeBSDBase(Project):
 
         if self.crossbuild:
             # Use the script that I added for building on Linux/MacOS:
-            self.make_args.set_command(self.sourceDir / "tools/build/make.py")
+            self.make_args.set_command(self.source_dir / "tools/build/make.py")
 
         # if not OSInfo.IS_FREEBSD:
         #     self._addRequiredSystemHeader("archive.h", apt="libarchive-dev", homebrew="libarchive")
@@ -219,7 +219,7 @@ class BuildFreeBSDBase(Project):
         # make behaves differently with -j1 and not j flags -> remove the j flag if j1 is requested
         if parallel and self.config.makeJobs == 1:
             parallel = False
-        super().run_make(make_target, options=options, cwd=self.sourceDir, parallel=parallel, **kwargs)
+        super().run_make(make_target, options=options, cwd=self.source_dir, parallel=parallel, **kwargs)
 
     @property
     def jflag(self) -> list:
@@ -744,11 +744,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
                                                     "BUILDENV_SHELL=" + buildenv_cmd]
             if self.crossbuild:
                 bw_flags.append("PATH=" + os.getenv("PATH"))
-            if not self.sourceDir.exists():
+            if not self.source_dir.exists():
                 assert self.config.pretend, "This should only happen when running in a test environment"
                 return None
             # https://github.com/freebsd/freebsd/commit/1edb3ba87657e28b017dffbdc3d0b3a32999d933
-            cmd = runCmd([bmake_binary] + bw_flags, env=args.env_vars, cwd=self.sourceDir,
+            cmd = runCmd([bmake_binary] + bw_flags, env=args.env_vars, cwd=self.source_dir,
                          run_in_pretend_mode=True, capture_output=True, print_verbose_only=True)
             lines = cmd.stdout.strip().split(b"\n")
             last_line = lines[-1].decode("utf-8").strip()
@@ -941,7 +941,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             if self.config.libcompat_buildenv and self.libcompat_name():
                 buildenv_target = self.libcompat_name() + "buildenv"
             runCmd([self.make_args.command] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
-                   cwd=self.sourceDir)
+                   cwd=self.source_dir)
         else:
             super().process()
 
@@ -999,7 +999,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         else:
             statusUpdate("Building", subdir, "using buildenv target")
             runCmd([self.make_args.command] + make_args.all_commandline_args + ["buildenv"], env=make_args.env_vars,
-                   cwd=self.sourceDir)
+                   cwd=self.source_dir)
         # If we are building a library, we want to build both the CHERI and the mips version (unless the
         # user explicitly specified --libcompat-buildenv)
         if has_libcompat and not noncheri_only and self.libcompat_name():
@@ -1007,7 +1007,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             statusUpdate("Building", subdir, "using", compat_buildenv_target, "target")
             runCmd([self.make_args.command] + make_args.all_commandline_args + [compat_buildenv_target],
                    env=make_args.env_vars,
-                   cwd=self.sourceDir)
+                   cwd=self.source_dir)
 
 
 class BuildFreeBSDGFE(BuildFreeBSD):
@@ -1390,9 +1390,9 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         if xtarget.is_mips(include_purecap=True):
             return build_cheribsd.kernelConfig + "_MFS_ROOT"
         elif xtarget.is_riscv(include_purecap=True):
-            print(build_cheribsd.sourceDir)
+            print(build_cheribsd.source_dir)
             # Use the SPIKE kernel config for older cheribsd versions that don't have QEMU_MFS_ROOT yet
-            if (build_cheribsd.sourceDir / "sys/riscv/conf/QEMU_MFS_ROOT").exists():
+            if (build_cheribsd.source_dir / "sys/riscv/conf/QEMU_MFS_ROOT").exists():
                 return "CHERI_QEMU_MFS_ROOT" if xtarget.is_hybrid_or_purecap_cheri() else "QEMU_MFS_ROOT"
             return "CHERI_SPIKE" if xtarget.is_hybrid_or_purecap_cheri() else "SPIKE"
         return build_cheribsd.kernelConfig

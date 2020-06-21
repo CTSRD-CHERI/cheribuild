@@ -114,10 +114,10 @@ class DLMalloc(CrossCompileProject):
         if self.stats_at_exit:
             self.CFLAGS.append("-DSWEEP_STATS=1")
 
-        self.make_args.add_flags("-f", self.sourceDir / "Makefile.cheribuild")
+        self.make_args.add_flags("-f", self.source_dir / "Makefile.cheribuild")
         self.make_args.set(DEBUG=self.debug)
         self.make_args.set(CAPREVOKE=self.revoke)
-        self.make_args.set(SRCDIR=self.sourceDir)
+        self.make_args.set(SRCDIR=self.source_dir)
         if not self.compiling_for_host():
             self.CFLAGS.append("--sysroot=%s" % self.sdk_sysroot)
         new_env = dict(CC=self.CC, CFLAGS=commandline_to_str(self.default_compiler_flags + self.CFLAGS))

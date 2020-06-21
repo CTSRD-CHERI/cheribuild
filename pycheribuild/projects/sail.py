@@ -111,7 +111,7 @@ class OpamMixin(object):
     def _run_in_ocaml_env_prepare(self, cwd=None) -> "Tuple[Dict[Any, Union[Union[str, int], Any]], Union[str, Any]]":
         if cwd is None:
             # noinspection PyUnresolvedReferences
-            cwd = self.sourceDir if getattr(self, "sourceDir") else "/"  # pytype: disable=attribute-error
+            cwd = self.source_dir if getattr(self, "source_dir") else "/"  # pytype: disable=attribute-error
 
         self._ensure_correct_switch()
         opam_env = dict(GIT_TEMPLATE_DIR="",  # see https://github.com/ocaml/opam/issues/3493
@@ -174,7 +174,7 @@ class BuildBubbleWrap(AutotoolsProject):
     def __init__(self, config):
         super().__init__(config)
         self._addRequiredSystemHeader("sys/capability.h", apt="libcap-dev")
-        self.configureCommand = self.sourceDir / "autogen.sh"
+        self.configureCommand = self.source_dir / "autogen.sh"
         self.configureArgs.append("--with-bash-completion-dir=no")
 
 
@@ -238,7 +238,7 @@ class BuildSailFromOpam(ProjectUsingOpam):
         if self.use_git_version:
             # Force installation from latest git (pin repo now, but pass --no-action since we need to install with
             # --destdir)
-            self.run_opam_cmd("pin", "add", "sail", self.sourceDir, "--verbose", "--no-action")
+            self.run_opam_cmd("pin", "add", "sail", self.source_dir, "--verbose", "--no-action")
         try:
             self.run_opam_cmd("install", "-y", "--verbose", "sail", "--destdir=" + str(self.config.cheri_sdk_dir))
             # I bet this will not work as intended... Probably better to just uninstall and reinstall
@@ -284,7 +284,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
         cmd = [self.make_args.command, self.config.makeJFlag, "all"] + self.make_args.all_commandline_args
-        self.run_command_in_ocaml_env(cmd, cwd=self.sourceDir)
+        self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
         self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
@@ -337,7 +337,7 @@ class BuildSailRISCV(ProjectUsingOpam):
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
         cmd = [self.make_args.command, self.config.makeJFlag, "opam-build"] + self.make_args.all_commandline_args
-        self.run_command_in_ocaml_env(cmd, cwd=self.sourceDir)
+        self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
         self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
@@ -370,7 +370,7 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
         cmd = [self.make_args.command, self.config.makeJFlag, "opam-build"] + self.make_args.all_commandline_args
-        self.run_command_in_ocaml_env(cmd, cwd=self.sourceDir)
+        self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
         self.make_args.set(INSTALL_DIR=self.config.cheri_sdk_dir)
