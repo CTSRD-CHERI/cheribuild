@@ -30,10 +30,7 @@
 import datetime
 import os
 import subprocess
-import typing
-from pathlib import Path
 
-from .cross.cheribsd import BuildCHERIBSD
 from .project import (CheriConfig, CMakeProject, DefaultInstallDir, GitRepository, SimpleProject,
                       TargetAliasWithDependencies)
 from ..targets import target_manager
@@ -71,7 +68,7 @@ class BuildFreestandingSdk(SimpleProject):
             self.add_required_system_tool("ar")
         self.cheribsdBuildRoot = None
 
-    def installCMakeConfig(self):
+    def install_cmake_config(self):
         date = datetime.datetime.now()
         micro_version = str(date.year) + str(date.month) + str(date.day)
         version_file = include_local_file("files/CheriSDKConfigVersion.cmake.in")
@@ -82,16 +79,16 @@ class BuildFreestandingSdk(SimpleProject):
         self.write_file(cmake_config_dir / "CheriSDKConfig.cmake", config_file, overwrite=True)
         self.write_file(cmake_config_dir / "CheriSDKConfigVersion.cmake", version_file, overwrite=True)
 
-    def buildCheridis(self):
+    def build_cheridis(self):
         # Compile the cheridis helper (TODO: add it to the LLVM repo instead?)
         cheridis_src = include_local_file("files/cheridis.c")
         self.makedirs(self.config.cheri_sdk_bindir)
         self.run_cmd("cc", "-DLLVM_PATH=\"%s/\"" % str(self.config.cheri_sdk_bindir), "-x", "c", "-",
-               "-o", self.config.cheri_sdk_bindir / "cheridis", input=cheridis_src)
+                     "-o", self.config.cheri_sdk_bindir / "cheridis", input=cheridis_src)
 
     def process(self):
-        self.installCMakeConfig()
-        self.buildCheridis()
+        self.install_cmake_config()
+        self.build_cheridis()
 
 
 # Binutils now just builds LLVM since we don't need GNU binutils or Elftoolchain any more
@@ -100,7 +97,8 @@ target_manager.add_target_alias("binutils", "llvm-native")
 
 class BuildBaremetalSdk(TargetAliasWithDependencies):
     target = "baremetal-sdk"  # FIXME: this should be a multi-arch target (or just build both probably)
-    dependencies = ["freestanding-sdk", "newlib-baremetal-mips", "libcxx-baremetal-mips"]  # TODO: add libcxx-baremetal-cheri
+    dependencies = ["freestanding-sdk", "newlib-baremetal-mips",
+                    "libcxx-baremetal-mips"]  # TODO: add libcxx-baremetal-cheri
     is_sdk_target = True
 
 
