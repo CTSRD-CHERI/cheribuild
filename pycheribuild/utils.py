@@ -149,11 +149,7 @@ def get_interpreter(cmdline: "typing.Sequence[str]") -> "typing.Optional[typing.
 
 
 def _make_called_process_error(retcode, args, *, stdout=None, stderr=None, cwd=None):
-    if sys.version_info < (3, 5):
-        err = subprocess.CalledProcessError(retcode, args, output=stdout)
-        err.stderr = stderr
-    else:
-        err = subprocess.CalledProcessError(retcode, args, output=stdout, stderr=stderr)
+    err = subprocess.CalledProcessError(retcode, args, output=stdout, stderr=stderr)
     err.cwd = cwd
     return err
 
