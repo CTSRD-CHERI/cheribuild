@@ -93,41 +93,6 @@ class BuildFreestandingSdk(SimpleProject):
         self.installCMakeConfig()
         self.buildCheridis()
 
-    def copyCrossToolsFromCheriBSD(self, binutilsBinaries: "typing.List[str]"):
-        # if we pass a string starting with a slash to Path() it will reset to that absolute path
-        # luckily we have to prepend mips.mips64, so it works out fine
-        # expands to e.g. /home/alr48/cheri/output/cheribsd-obj/mips.mips64/home/alr48/cheri/cheribsd
-        possibleBuildRoots = [Path(BuildCHERIBSD.build_dir, "mips.mips64" + path) for path in
-                              (str(BuildCHERIBSD.source_dir), os.path.realpath(str(BuildCHERIBSD.source_dir)))]
-        for directory in possibleBuildRoots:
-            if directory.exists():
-                self.cheribsdBuildRoot = directory
-        if not self.cheribsdBuildRoot:
-            self.fatal("CheriBSD build directory is missing! (Tried", possibleBuildRoots, ")")
-        CHERITOOLS_OBJ = self.cheribsdBuildRoot / "tmp/usr/bin/"
-        CHERIBOOTSTRAPTOOLS_OBJ = self.cheribsdBuildRoot / "tmp/legacy/usr/bin/"
-        CHERILIBEXEC_OBJ = self.cheribsdBuildRoot / "tmp/usr/libexec/"
-        for i in (CHERIBOOTSTRAPTOOLS_OBJ, CHERITOOLS_OBJ, CHERITOOLS_OBJ, BuildCHERIBSD.rootfsDir(self, self.config)):
-            if not i.is_dir():
-                self.fatal("Directory", i, "is missing!")
-
-        # install tools:
-        for tool in binutilsBinaries:
-            if (CHERITOOLS_OBJ / tool).is_file():
-                self.install_file(CHERITOOLS_OBJ / tool, self.config.cheri_sdk_bindir / tool, force=True)
-            elif (CHERIBOOTSTRAPTOOLS_OBJ / tool).is_file():
-                self.install_file(CHERIBOOTSTRAPTOOLS_OBJ / tool, self.config.cheri_sdk_bindir / tool, force=True)
-            else:
-                self.fatal("Required tool", tool, "is missing!")
-
-        # We should no longer need GCC:
-        return
-        # GCC wants the cc1 and cc1plus tools to be in the directory specified by -B.
-        # We must make this the same directory that contains ld for linking and
-        # compiling to both work...
-        # for tool in ("cc1", "cc1plus"):
-        #    self.install_file(CHERILIBEXEC_OBJ / tool, self.config.cheri_sdk_bindir / tool, force=True)
-
 
 # Binutils now just builds LLVM since we don't need GNU binutils or Elftoolchain any more
 target_manager.add_target_alias("binutils", "llvm-native")
