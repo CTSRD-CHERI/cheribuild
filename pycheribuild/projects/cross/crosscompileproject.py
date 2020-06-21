@@ -81,7 +81,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             # Most scripts don't like the final -purecap component:
             autotools_triple = autotools_triple.replace("-purecap", "")
             # TODO: do we have to remove these too?
-            #autotools_triple = autotools_triple.replace("mips64c128-", "cheri-")
+            # autotools_triple = autotools_triple.replace("mips64c128-", "cheri-")
             self.configureArgs.extend(["--host=" + autotools_triple, "--target=" + autotools_triple,
                                        "--build=" + buildhost])
 
@@ -120,7 +120,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
 
     def configure(self, **kwargs):
         if self._autotools_add_default_compiler_args:
-            CPPFLAGS = self.default_compiler_flags
+            cppflags = self.default_compiler_flags
             for key in ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS"):
                 assert key not in self.configureEnvironment, key
             # We have to include -target xxx-unknown-freebsd as part of CC for some build systems since they fail
@@ -128,13 +128,13 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             self.set_configure_prog_with_args("CC", self.CC, self.target_info.essential_compiler_and_linker_flags)
             self.set_configure_prog_with_args("CXX", self.CXX, self.target_info.essential_compiler_and_linker_flags)
             # self.add_configure_env_arg("CPPFLAGS", commandline_to_str(CPPFLAGS))
-            self.add_configure_env_arg("CFLAGS", commandline_to_str(CPPFLAGS + self.CFLAGS))
-            self.add_configure_env_arg("CXXFLAGS", commandline_to_str(CPPFLAGS + self.CXXFLAGS))
+            self.add_configure_env_arg("CFLAGS", commandline_to_str(cppflags + self.CFLAGS))
+            self.add_configure_env_arg("CXXFLAGS", commandline_to_str(cppflags + self.CXXFLAGS))
             # this one seems to work:
             self.add_configure_env_arg("LDFLAGS", commandline_to_str(self.LDFLAGS + self.default_ldflags))
 
             if not self.compiling_for_host():
-                self.set_configure_prog_with_args("CPP", self.CPP, CPPFLAGS)
+                self.set_configure_prog_with_args("CPP", self.CPP, cppflags)
                 if self._define_ld:
                     self.add_configure_env_arg("LD", self.target_info.linker)
 
