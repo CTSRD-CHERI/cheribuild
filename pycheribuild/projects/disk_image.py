@@ -34,11 +34,12 @@ import shutil
 import sys
 import tempfile
 import typing
+from pathlib import Path
 
 from .cross.cheribsd import BuildCHERIBSD, BuildFreeBSD, BuildFreeBSDGFE, BuildFreeBSDWithDefaultOptions
 from .cross.gdb import BuildGDB
 from .project import (AutotoolsProject, CheriConfig, ComputedDefaultValue, CPUArchitecture, CrossCompileTarget,
-                      DefaultInstallDir, GitRepository, MakeCommandKind, Path, SimpleProject)
+                      DefaultInstallDir, GitRepository, MakeCommandKind, SimpleProject)
 from ..config.compilation_targets import CompilationTargets
 from ..mtree import MtreeFile
 from ..targets import target_manager
@@ -97,20 +98,20 @@ class _BuildDiskImageBase(SimpleProject):
     default_disk_image_path = None
 
     @classmethod
-    def setup_config_options(cls, *, defaultHostname, extraFilesSuffix="", **kwargs):
+    def setup_config_options(cls, *, default_hostname, extra_files_suffix="", **kwargs):
         super().setup_config_options()
-        cls.extraFilesDir = cls.add_path_option("extra-files", show_help=True,
-                                                default=lambda config, project: (
-                                                        config.sourceRoot / ("extra-files" + extraFilesSuffix)),
-                                                help="A directory with additional files that will be added to the "
-                                                     "image (default: "
-                                                     "'$SOURCE_ROOT/extra-files" + extraFilesSuffix + "')",
-                                                metavar="DIR")
-        cls.hostname = cls.add_config_option("hostname", show_help=True, default=defaultHostname, metavar="HOSTNAME",
+        cls.extra_files_dir = cls.add_path_option("extra-files", show_help=True,
+                                                  default=lambda config, project: (
+                                                          config.sourceRoot / ("extra-files" + extra_files_suffix)),
+                                                  help="A directory with additional files that will be added to the "
+                                                       "image (default: "
+                                                       "'$SOURCE_ROOT/extra-files" + extra_files_suffix + "')",
+                                                  metavar="DIR")
+        cls.hostname = cls.add_config_option("hostname", show_help=True, default=default_hostname, metavar="HOSTNAME",
                                              help="The hostname to use for the QEMU image")
-        if "useQCOW2" not in cls.__dict__:
-            cls.useQCOW2 = cls.add_bool_option("use-qcow2",
-                                               help="Convert the disk image to QCOW2 format instead of raw")
+        if "use_qcow2" not in cls.__dict__:
+            cls.use_qcow2 = cls.add_bool_option("use-qcow2",
+                                                help="Convert the disk image to QCOW2 format instead of raw")
         if not OSInfo.IS_FREEBSD:
             cls.remote_path = cls.add_config_option("remote-path", show_help=True, metavar="PATH",
                                                     help="The path on the "
@@ -182,25 +183,26 @@ class _BuildDiskImageBase(SimpleProject):
         if file in self.extraFiles:
             self.extraFiles.remove(file)  # remove it from extraFiles so we don't install it twice
 
-    def createFileForImage(self, pathInImage: str, *, contents: str = "\n", showContentsByDefault=False, mode=None):
-        if pathInImage.startswith("/"):
-            pathInImage = pathInImage[1:]
-        assert not pathInImage.startswith("/")
-        userProvided = self.extraFilesDir / pathInImage
-        if userProvided.is_file():
-            self.verbose_print("Using user provided /", pathInImage, " instead of generating default", sep="")
-            self.extraFiles.remove(userProvided)
-            target_file = userProvided
-            baseDir = self.extraFilesDir
+    def create_file_for_image(self, path_in_image: str, *, contents: str = "\n", show_contents_non_verbose=False,
+                              mode=None):
+        if path_in_image.startswith("/"):
+            path_in_image = path_in_image[1:]
+        assert not path_in_image.startswith("/")
+        user_provided = self.extra_files_dir / path_in_image
+        if user_provided.is_file():
+            self.verbose_print("Using user provided /", path_in_image, " instead of generating default", sep="")
+            self.extraFiles.remove(user_provided)
+            target_file = user_provided
+            base_dir = self.extra_files_dir
         else:
-            assert userProvided not in self.extraFiles
-            target_file = self.tmpdir / pathInImage
-            baseDir = self.tmpdir
-            if self.config.verbose or (showContentsByDefault and not self.config.quiet):
-                print("Generating /", pathInImage, " with the following contents:\n",
+            assert user_provided not in self.extraFiles
+            target_file = self.tmpdir / path_in_image
+            base_dir = self.tmpdir
+            if self.config.verbose or (show_contents_non_verbose and not self.config.quiet):
+                print("Generating /", path_in_image, " with the following contents:\n",
                       coloured(AnsiColour.green, contents), sep="", end="")
             self.write_file(target_file, contents, never_print_cmd=True, overwrite=False, mode=mode)
-        self.add_file_to_image(target_file, base_directory=baseDir)
+        self.add_file_to_image(target_file, base_directory=base_dir)
 
     def _wget_fetch(self, what, where):
         # https://apple.stackexchange.com/a/100573/251654
@@ -223,7 +225,7 @@ class _BuildDiskImageBase(SimpleProject):
         else:
             self._wget_fetch(what, where)
 
-    def prepareRootfs(self):
+    def prepare_rootfs(self):
         assert self.tmpdir is not None
         assert self.manifestFile is not None
         # skip parsing the metalog in the git push hook since it takes a long time and isn't that useful
@@ -236,29 +238,29 @@ class _BuildDiskImageBase(SimpleProject):
         # If they do not exist in the extra-files directory yet we generate a default one and use that
         # Additionally all other files in the extra-files directory will be added to the disk image
 
-        if self.extraFilesDir.exists():
-            self.add_all_files_in_dir(self.extraFilesDir)
+        if self.extra_files_dir.exists():
+            self.add_all_files_in_dir(self.extra_files_dir)
 
         # TODO: https://www.freebsd.org/cgi/man.cgi?mount_unionfs(8) should make this easier
         # Overlay extra-files over additional stuff over cheribsd rootfs dir
 
-        fstabContents = self.file_templates.get_fstab_template()
+        fstab_contents = self.file_templates.get_fstab_template()
 
         if self.disableTMPFS:
-            fstabContents = fstabContents.format_map(dict(tmpfsrem="#"))
+            fstab_contents = fstab_contents.format_map(dict(tmpfsrem="#"))
         else:
-            fstabContents = fstabContents.format_map(dict(tmpfsrem=""))
+            fstab_contents = fstab_contents.format_map(dict(tmpfsrem=""))
 
-        self.createFileForImage("/etc/fstab", contents=fstabContents, showContentsByDefault=True)
+        self.create_file_for_image("/etc/fstab", contents=fstab_contents, show_contents_non_verbose=True)
 
         # enable ssh and set hostname
         # TODO: use separate file in /etc/rc.conf.d/ ?
-        rcConfContents = self.file_templates.get_rc_conf_template().format(hostname=self.hostname)
-        self.createFileForImage("/etc/rc.conf", contents=rcConfContents, showContentsByDefault=False)
+        rc_conf_contents = self.file_templates.get_rc_conf_template().format(hostname=self.hostname)
+        self.create_file_for_image("/etc/rc.conf", contents=rc_conf_contents, show_contents_non_verbose=False)
 
-        cshrcContents = self.file_templates.get_cshrc_template().format(
-            SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
-        self.createFileForImage("/etc/csh.cshrc", contents=cshrcContents)
+        cshrc_contents = self.file_templates.get_cshrc_template().format(SRCPATH=self.config.sourceRoot,
+                                                                         ROOTFS_DIR=self.rootfsDir)
+        self.create_file_for_image("/etc/csh.cshrc", contents=cshrc_contents)
 
         # Add the mount-source/mount-rootfs/do-reroot scripts (even in the minimal image)
         # TODO: should we omit this from the minimal image?
@@ -282,63 +284,63 @@ class _BuildDiskImageBase(SimpleProject):
             SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir,
             NOCHERI_ROOTFS_DIRNAME=non_cheri_dirname, HYBRID_ROOTFS_DIRNAME=hybrid_cheri_dirname,
             PURECAP_ROOTFS_DIRNAME=purecap_cheri_dirname)
-        self.createFileForImage("/sbin/qemu-mount-rootfs.sh", contents=mount_rootfs_script,
-                                mode=0o755, showContentsByDefault=False)
+        self.create_file_for_image("/sbin/qemu-mount-rootfs.sh", contents=mount_rootfs_script,
+                                   mode=0o755, show_contents_non_verbose=False)
         mount_sources_script = include_local_file("files/cheribsd/qemu-mount-sources.sh.in").format(
             SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
-        self.createFileForImage("/sbin/qemu-mount-sources.sh", contents=mount_sources_script,
-                                mode=0o755, showContentsByDefault=False)
+        self.create_file_for_image("/sbin/qemu-mount-sources.sh", contents=mount_sources_script,
+                                   mode=0o755, show_contents_non_verbose=False)
         do_reroot_script = include_local_file("files/cheribsd/qemu-do-reroot.sh.in").format(
             SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
-        self.createFileForImage("/sbin/qemu-do-reroot.sh", contents=do_reroot_script,
-                                mode=0o755, showContentsByDefault=False)
+        self.create_file_for_image("/sbin/qemu-do-reroot.sh", contents=do_reroot_script,
+                                   mode=0o755, show_contents_non_verbose=False)
 
         # Add a script to launch gdb, run a program and get a backtrace:
-        self.createFileForImage("/usr/bin/gdb-run.sh", contents=include_local_file("files/cheribsd/gdb-run.sh"),
-                                mode=0o755, showContentsByDefault=False)
+        self.create_file_for_image("/usr/bin/gdb-run.sh", contents=include_local_file("files/cheribsd/gdb-run.sh"),
+                                   mode=0o755, show_contents_non_verbose=False)
         # And another one for non-interactive use:
-        self.createFileForImage("/usr/bin/gdb-run-noninteractive.sh",
-                                contents=include_local_file("files/cheribsd/gdb-run-noninteractive.sh"),
-                                mode=0o755, showContentsByDefault=False)
+        self.create_file_for_image("/usr/bin/gdb-run-noninteractive.sh",
+                                   contents=include_local_file("files/cheribsd/gdb-run-noninteractive.sh"),
+                                   mode=0o755, show_contents_non_verbose=False)
 
         # Add a script to turn of network and stop running services:
-        self.createFileForImage("/usr/bin/prepare-benchmark-environment.sh",
-                                contents=include_local_file("files/cheribsd/prepare-benchmark-environment.sh"),
-                                mode=0o755, showContentsByDefault=False)
+        self.create_file_for_image("/usr/bin/prepare-benchmark-environment.sh",
+                                   contents=include_local_file("files/cheribsd/prepare-benchmark-environment.sh"),
+                                   mode=0o755, show_contents_non_verbose=False)
 
         # make sure that the disk image always has the same SSH host keys
         # If they don't exist the system will generate one on first boot and we have to accept them every time
-        self.generateSshHostKeys()
+        self.generate_ssh_host_keys()
 
-        sshdConfig = self.rootfsDir / "etc/ssh/sshd_config"
-        if not sshdConfig.exists():
+        sshd_config = self.rootfsDir / "etc/ssh/sshd_config"
+        if not sshd_config.exists():
             self.info("SSHD not installed, not changing sshd_config")
         else:
             self.info("Adding 'PermitRootLogin without-password\nUseDNS no' to /etc/ssh/sshd_config")
             # make sure we can login as root with pubkey auth:
-            newSshdConfigContents = self.read_file(sshdConfig)
-            newSshdConfigContents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
-            newSshdConfigContents += "\n# Major speedup to SSH performance:\n UseDNS no\n"
-            self.createFileForImage("/etc/ssh/sshd_config", contents=newSshdConfigContents,
-                                    showContentsByDefault=False)
+            new_sshd_config_contents = self.read_file(sshd_config)
+            new_sshd_config_contents += "\n# Allow root login with pubkey auth:\nPermitRootLogin without-password\n"
+            new_sshd_config_contents += "\n# Major speedup to SSH performance:\n UseDNS no\n"
+            self.create_file_for_image("/etc/ssh/sshd_config", contents=new_sshd_config_contents,
+                                       show_contents_non_verbose=False)
         # now try adding the right ~/.ssh/authorized_keys
-        authorizedKeys = self.extraFilesDir / "root/.ssh/authorized_keys"
-        if not authorizedKeys.is_file():
-            sshKeys = list(Path(os.path.expanduser("~/.ssh/")).glob("*.pub"))
-            if len(sshKeys) > 0:
-                print("Found the following ssh keys:", list(map(str, sshKeys)))
+        authorized_keys = self.extra_files_dir / "root/.ssh/authorized_keys"
+        if not authorized_keys.is_file():
+            ssh_keys = list(Path(os.path.expanduser("~/.ssh/")).glob("*.pub"))
+            if len(ssh_keys) > 0:
+                print("Found the following ssh keys:", list(map(str, ssh_keys)))
                 if self.query_yes_no("Should they be added to /root/.ssh/authorized_keys?", default_result=True):
                     contents = ""
-                    for pubkey in sshKeys:
+                    for pubkey in ssh_keys:
                         contents += self.read_file(pubkey)
-                    self.createFileForImage("/root/.ssh/authorized_keys", contents=contents, mode=0o600)
+                    self.create_file_for_image("/root/.ssh/authorized_keys", contents=contents, mode=0o600)
                     if self.query_yes_no("Should this authorized_keys file be used by default? "
                                          "(You can always change them by editing/deleting '" +
-                                         str(authorizedKeys) + "')?"):
-                        self.install_file(self.tmpdir / "root/.ssh/authorized_keys", authorizedKeys)
+                                         str(authorized_keys) + "')?"):
+                        self.install_file(self.tmpdir / "root/.ssh/authorized_keys", authorized_keys)
                         # SSHD complains and rejects all connections if /root or /root/.ssh is not 0700
-                        self.run_cmd("chmod", "0700", authorizedKeys.parent.parent, authorizedKeys.parent)
-                        self.run_cmd("chmod", "0600", authorizedKeys)
+                        self.run_cmd("chmod", "0700", authorized_keys.parent.parent, authorized_keys.parent)
+                        self.run_cmd("chmod", "0600", authorized_keys)
 
         if self.include_gdb:
             cross_target = self.source_project.get_crosscompile_target(self.config)
@@ -362,7 +364,7 @@ class _BuildDiskImageBase(SimpleProject):
         loader_conf_contents = "beastie_disable=\"yes\"\n"
         if self.is_x86:
             loader_conf_contents += "console=\"comconsole\"\n"
-        self.createFileForImage("/boot/loader.conf", contents=loader_conf_contents, mode=0o644)
+        self.create_file_for_image("/boot/loader.conf", contents=loader_conf_contents, mode=0o644)
 
         # Avoid long boot time on first start due to missing entropy:
         # for i in ("boot/entropy", "entropy"):
@@ -380,12 +382,12 @@ class _BuildDiskImageBase(SimpleProject):
 
     def add_all_files_in_dir(self, root_dir: Path):
         for root, dirnames, filenames in os.walk(str(root_dir)):
-            for blacklisted_dirname in ('.svn', '.git', '.idea'):
-                if blacklisted_dirname in dirnames:
-                    dirnames.remove(blacklisted_dirname)
+            for ignored_dirname in ('.svn', '.git', '.idea'):
+                if ignored_dirname in dirnames:
+                    dirnames.remove(ignored_dirname)
             for filename in filenames:
                 new_file = Path(root, filename)
-                if root_dir == self.extraFilesDir:
+                if root_dir == self.extra_files_dir:
                     self.extraFiles.append(new_file)
                 else:
                     self.add_file_to_image(new_file, base_directory=root_dir)
@@ -422,8 +424,8 @@ class _BuildDiskImageBase(SimpleProject):
                         "-p", "freebsd:=" + str(s1_path),  # rootfs
                         "-o", self.disk_image_path  # output file
                         ], cwd=self.rootfsDir)
-        self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
-        self.deleteFile(s1_path)  # no need to keep the partition now that we have built the full image
+        self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
+        self.delete_file(s1_path)  # no need to keep the partition now that we have built the full image
 
     def build_gpt_image(self, root_partition: Path):
         assert self.is_x86
@@ -435,7 +437,7 @@ class _BuildDiskImageBase(SimpleProject):
                         "-p", "freebsd-ufs:=" + str(root_partition),  # rootfs
                         "-o", self.disk_image_path  # output file
                         ], cwd=self.rootfsDir)
-        self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
+        self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
 
     def make_aarch64_disk_image(self):
         assert self.crosscompile_target.is_aarch64(include_purecap=True)
@@ -450,8 +452,8 @@ class _BuildDiskImageBase(SimpleProject):
                             "-o", self.disk_image_path  # output file
                             ], cwd=self.rootfsDir)
         finally:
-            self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
-            self.deleteFile(efi_partition)  # no need to keep the partition now that we have built the full image
+            self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
+            self.delete_file(efi_partition)  # no need to keep the partition now that we have built the full image
 
     def make_efi_partition(self, efi_partition: Path):
         with tempfile.NamedTemporaryFile(mode="w+") as tmp_mtree:
@@ -521,7 +523,7 @@ class _BuildDiskImageBase(SimpleProject):
                 rootfs_img,  # output file
                 self.manifestFile,  # use METALOG as the manifest for the disk image
                 ], cwd=self.rootfsDir)
-        except:
+        except Exception:
             warningMessage("makefs failed, if it reports an issue with METALOG report a bug (could be either cheribuild"
                            " or cheribsd) and attach the METALOG file.")
             self.query_yes_no("About to delete the temporary directory. Copy any files you need before pressing enter.",
@@ -545,14 +547,14 @@ class _BuildDiskImageBase(SimpleProject):
             root_partition = self.disk_image_path.with_suffix(".partition.img")
             self.make_rootfs_image(root_partition)
             self.build_gpt_image(root_partition)
-            self.deleteFile(root_partition)  # no need to keep the partition now that we have built the full image
+            self.delete_file(root_partition)  # no need to keep the partition now that we have built the full image
         else:
             self.make_rootfs_image(self.disk_image_path)
 
         # Converting QEMU images: https://en.wikibooks.org/wiki/QEMU/Images
         if not self.config.quiet and qemu_img_command.exists():
             self.run_cmd(qemu_img_command, "info", self.disk_image_path)
-        if self.useQCOW2:
+        if self.use_qcow2:
             if not qemu_img_command.exists():
                 self.fatal("Cannot create QCOW2 image without qemu-img command!")
             # create a qcow2 version from the raw image:
@@ -563,19 +565,15 @@ class _BuildDiskImageBase(SimpleProject):
                          "-O", "qcow2",  # convert to qcow2 format
                          raw_img,  # input file
                          self.disk_image_path)  # output file
-            self.deleteFile(raw_img, print_verbose_only=True)
+            self.delete_file(raw_img, print_verbose_only=True)
             if self.config.verbose:
                 self.run_cmd(qemu_img_command, "info", self.disk_image_path)
 
-    def copyFromRemoteHost(self):
+    def copy_from_remote_host(self):
         statusUpdate("Cannot build disk image on non-FreeBSD systems, will attempt to copy instead.")
         if not self.remote_path:
-            self.fatal("Path to the remote disk image is not set, option '--", self.target, "/", "remote-path' must "
-                                                                                                 "be set to a path "
-                                                                                                 "that scp "
-                                                                                                 "understands (e.g. "
-                                                                                                 "vica:/foo/bar/disk.img)",
-                       sep="")
+            self.fatal("Path to the remote disk image is not set, option '--", self.target,
+                       "/remote-path' must be set to a path that scp understands (e.g. vica:/foo/bar/disk.img)", sep="")
             return
         # noinspection PyAttributeOutsideInit
         self.remote_path = os.path.expandvars(self.remote_path)
@@ -611,11 +609,11 @@ class _BuildDiskImageBase(SimpleProject):
                 print("An image already exists (" + str(self.disk_image_path) + "). ", end="")
                 if not self.query_yes_no("Overwrite?", default_result=True):
                     return  # we are done here
-            self.deleteFile(self.disk_image_path)
+            self.delete_file(self.disk_image_path)
 
         # we can only build disk images on FreeBSD, so copy the file if we aren't
         if not OSInfo.IS_FREEBSD and not self.crossBuildImage:
-            self.copyFromRemoteHost()
+            self.copy_from_remote_host()
             return
 
         self.makefs_cmd = self.path_from_env("MAKEFS_CMD")
@@ -638,7 +636,7 @@ class _BuildDiskImageBase(SimpleProject):
                     self.makefs_cmd))
         statusUpdate("Disk image will be saved to", self.disk_image_path)
         statusUpdate("Disk image root fs is", self.rootfsDir)
-        statusUpdate("Extra files for the disk image will be copied from", self.extraFilesDir)
+        statusUpdate("Extra files for the disk image will be copied from", self.extra_files_dir)
 
         if not self.input_METALOG.is_file():
             self.fatal("mtree manifest", self.input_METALOG, "is missing")
@@ -648,13 +646,13 @@ class _BuildDiskImageBase(SimpleProject):
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as tmp:
             self.tmpdir = Path(tmp)
             self.manifestFile = self.tmpdir / "METALOG"
-            self.prepareRootfs()
+            self.prepare_rootfs()
             # now add all the user provided files to the image:
             # we have to make a copy as we modify self.extraFiles in self.add_file_to_image()
             for p in self.extraFiles.copy():
-                pathInImage = p.relative_to(self.extraFilesDir)
-                self.verbose_print("Adding user provided file /", pathInImage, " to disk image.", sep="")
-                self.add_file_to_image(p, base_directory=self.extraFilesDir)
+                path_in_image = p.relative_to(self.extra_files_dir)
+                self.verbose_print("Adding user provided file /", path_in_image, " to disk image.", sep="")
+                self.add_file_to_image(p, base_directory=self.extra_files_dir)
 
             # then walk the rootfs to see if any additional files should be added:
             if not os.getenv("_TEST_SKIP_METALOG"):
@@ -693,24 +691,24 @@ class _BuildDiskImageBase(SimpleProject):
                 for i in unlisted_files:
                     self.mtree.add_file(i[0], i[1], print_status=self.config.verbose)
 
-    def generateSshHostKeys(self):
+    def generate_ssh_host_keys(self):
         # do the same as "ssh-keygen -A" just with a different output directory as it does not allow customizing that
-        sshDir = self.extraFilesDir / "etc/ssh"
-        self.makedirs(sshDir)
+        ssh_dir = self.extra_files_dir / "etc/ssh"
+        self.makedirs(ssh_dir)
         # -t type Specifies the type of key to create.  The possible values are "rsa1" for protocol version 1
         #  and "dsa", "ecdsa","ed25519", or "rsa" for protocol version 2.
 
         for keyType in ("rsa", "dsa", "ecdsa", "ed25519"):
             # SSH1 protocol uses just /etc/ssh/ssh_host_key without the type
             private_key_name = "ssh_host_key" if keyType == "rsa1" else "ssh_host_" + keyType + "_key"
-            private_key = sshDir / private_key_name
-            public_key = sshDir / (private_key_name + ".pub")
+            private_key = ssh_dir / private_key_name
+            public_key = ssh_dir / (private_key_name + ".pub")
             if not private_key.is_file():
                 self.run_cmd("ssh-keygen", "-t", keyType,
                              "-N", "",  # no passphrase
                              "-f", str(private_key))
-            self.add_file_to_image(private_key, base_directory=self.extraFilesDir, mode="0600")
-            self.add_file_to_image(public_key, base_directory=self.extraFilesDir, mode="0644")
+            self.add_file_to_image(private_key, base_directory=self.extra_files_dir, mode="0600")
+            self.add_file_to_image(public_key, base_directory=self.extra_files_dir, mode="0644")
 
 
 def _default_disk_image_name(config: CheriConfig, directory: Path, project: SimpleProject, img_prefix=""):
@@ -752,12 +750,12 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        hostUsername = CheriConfig.get_user_name()
-        defaultHostname = ComputedDefaultValue(
-            function=lambda conf, proj: "qemu-cheri" + proj.cheri_config_suffix + "-" + hostUsername,
-            as_string="qemu-cheri${ABI}-" + hostUsername)
+        host_username = CheriConfig.get_user_name()
+        default_hostname = ComputedDefaultValue(
+            function=lambda conf, proj: "qemu-cheri" + proj.cheri_config_suffix + "-" + host_username,
+            as_string="qemu-cheri${ABI}-" + host_username)
 
-        super().setup_config_options(defaultHostname=defaultHostname, extraFilesSuffix="-minimal", **kwargs)
+        super().setup_config_options(default_hostname=default_hostname, extra_files_suffix="-minimal", **kwargs)
         cls.strip_binaries = cls.add_bool_option("strip", default=True,
                                                  help="strip ELF files to reduce size of generated image")
         cls.include_cheritest = cls.add_bool_option("include-cheritest", default=True,
@@ -898,17 +896,17 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
                 continue
             self.add_file_to_image(full_lib_path, base_directory=self.rootfsDir)
 
-    def prepareRootfs(self):
-        super().prepareRootfs()
+    def prepare_rootfs(self):
+        super().prepare_rootfs()
         # Add the additional sysctl configs
-        self.createFileForImage("/etc/pam.d/su", showContentsByDefault=False,
-                                contents=include_local_file("files/minimal-image/pam.d/su"))
+        self.create_file_for_image("/etc/pam.d/su", show_contents_non_verbose=False,
+                                   contents=include_local_file("files/minimal-image/pam.d/su"))
         # disable coredumps (since there is almost no space on the image)
-        self.createFileForImage("/etc/sysctl.conf", showContentsByDefault=False,
-                                contents=include_local_file("files/minimal-image/etc/sysctl.conf"))
+        self.create_file_for_image("/etc/sysctl.conf", show_contents_non_verbose=False,
+                                   contents=include_local_file("files/minimal-image/etc/sysctl.conf"))
         # The actual minimal startup file:
-        self.createFileForImage("/etc/rc", showContentsByDefault=False,
-                                contents=include_local_file("files/minimal-image/etc/rc"))
+        self.create_file_for_image("/etc/rc", show_contents_non_verbose=False,
+                                   contents=include_local_file("files/minimal-image/etc/rc"))
 
     def make_rootfs_image(self, rootfs_img: Path):
         # update cheribsdbox link in case we stripped it:
@@ -921,7 +919,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             # create at least one hardlink to cheribsdbox so that mtree can detect that the files are all the same
             dummy_hardlink = Path(cheribsdbox_path).with_suffix(".dummy_hardlink")
             if not self.config.pretend:
-                self.deleteFile(dummy_hardlink)
+                self.delete_file(dummy_hardlink)
                 os.link(str(cheribsdbox_path), str(dummy_hardlink))
                 if Path(cheribsdbox_path).stat().st_nlink < 2:
                     self.fatal("Need at least one hardlink to cheribsdbox so that makefs can detect deduplicate. "
@@ -964,12 +962,12 @@ class BuildMultiArchDiskImage(_BuildDiskImageBase):
     _source_class = None  # type: typing.Type[SimpleProject]
 
     @classproperty
-    def default_architecture(cls) -> CrossCompileTarget:
-        return cls._source_class.default_architecture
+    def default_architecture(self) -> CrossCompileTarget:
+        return self._source_class.default_architecture
 
     @classproperty
-    def supported_architectures(cls):
-        return cls._source_class.supported_architectures
+    def supported_architectures(self):
+        return self._source_class.supported_architectures
 
     @classmethod
     def dependencies(cls, config: CheriConfig):
@@ -1020,12 +1018,12 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        hostUsername = CheriConfig.get_user_name()
-        defaultHostname = ComputedDefaultValue(
-            function=lambda conf, proj: "qemu-cheri" + proj.cheri_config_suffix + "-" + hostUsername,
-            as_string="qemu-cheri${ABI}-" + hostUsername)
+        host_username = CheriConfig.get_user_name()
+        default_hostname = ComputedDefaultValue(
+            function=lambda conf, proj: "qemu-cheri" + proj.cheri_config_suffix + "-" + host_username,
+            as_string="qemu-cheri${ABI}-" + host_username)
 
-        super().setup_config_options(defaultHostname=defaultHostname, **kwargs)
+        super().setup_config_options(default_hostname=default_hostname, **kwargs)
 
     def __init__(self, config: CheriConfig):
         super().__init__(config)
@@ -1041,9 +1039,9 @@ class BuildFreeBSDImage(BuildMultiArchDiskImage):
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        hostUsername = CheriConfig.get_user_name()
+        host_username = CheriConfig.get_user_name()
         suffix = cls._xtarget.generic_suffix if cls._xtarget else "<TARGET>"
-        super().setup_config_options(defaultHostname="qemu-" + suffix + "-" + hostUsername, **kwargs)
+        super().setup_config_options(default_hostname="qemu-" + suffix + "-" + host_username, **kwargs)
         cls.disableTMPFS = cls._xtarget is not None and cls._xtarget.is_mips()  # MALTA64 doesn't include tmpfs
 
     def __init__(self, config: CheriConfig):

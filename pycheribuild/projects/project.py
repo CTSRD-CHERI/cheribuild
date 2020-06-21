@@ -2645,7 +2645,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
         # make sure we get a completely fresh cache when --reconfigure is passed:
         cmakeCache = self.buildDir / "CMakeCache.txt"
         if self.config.forceConfigure:
-            self.deleteFile(cmakeCache)
+            self.delete_file(cmakeCache)
         super().configure(**kwargs)
         if self.config.copy_compilation_db_to_source_dir and (self.buildDir / "compile_commands.json").exists():
             self.install_file(self.buildDir / "compile_commands.json", self.sourceDir / "compile_commands.json",

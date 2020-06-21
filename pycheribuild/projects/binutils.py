@@ -105,7 +105,7 @@ class BuildGnuBinutils(AutotoolsProject):
         if not self.fullInstall:
             # we don't want to install all programs, as the rest comes from elftoolchain
             self.run_make("install-gas", logfile_name="install", append_to_logfile=True, parallel=False)
-            self.deleteFile(bindir / "mips64-unknown-freebsd-ld")
+            self.delete_file(bindir / "mips64-unknown-freebsd-ld")
             self.run_make("install-ld", logfile_name="install", append_to_logfile=True, parallel=False)
             # we also need the linker scripts so this is not enough:
             # self.install_file(self.buildDir / "ld/ld-new", bindir / "ld.bfd", force=True)

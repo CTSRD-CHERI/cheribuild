@@ -135,4 +135,4 @@ class BuildFettNginx(FettProjectMixin, BuildNginx):
         super().install()
         nginx_conf = self.installDir / "conf/nginx.conf"
         if nginx_conf.is_file():
-            self.deleteFile(nginx_conf)
+            self.delete_file(nginx_conf)

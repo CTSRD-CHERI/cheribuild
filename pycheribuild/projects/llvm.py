@@ -254,7 +254,7 @@ sudo bash -c "$(wget -O - https://apt.llvm.org/llvm.sh)"
         if "lld" in self.included_projects:
             self.create_triple_prefixed_symlinks(self.installDir / "bin/ld.lld")
             if OSInfo.IS_MAC:
-                self.deleteFile(self.installDir / "bin/ld", print_verbose_only=True)
+                self.delete_file(self.installDir / "bin/ld", print_verbose_only=True)
                 # lld will call the mach-o linker when invoked as ld -> need to create a shell script instead
                 # that forwards to /usr/bin/ld for macOS binaries and ld.lld for cross-compilation
                 script = """#!/bin/sh
@@ -291,7 +291,7 @@ exec {lld} "$@"
                 if f.is_dir():
                     continue
                 if any(f.name.startswith(prefix) for prefix in ("libclang", "libRemarks", "libLTO")):
-                    self.deleteFile(f, warn_if_missing=True)
+                    self.delete_file(f, warn_if_missing=True)
                     continue
                 self.warning("Found an unexpected file in libdir. Was this installed by another project?", f)
         # We also don't need the C API headers since we deleted the libraries
@@ -303,7 +303,7 @@ exec {lld} "$@"
         # 41052504	/local/scratch/alr48/jenkins-test/tarball/opt/llvm-native/bin/clang-import-test
         for i in ("clang-scan-deps", "clang-rename", "clang-refactor", "clang-import-test", "clang-offload-bundler",
                   "clang-offload-wrapper"):
-            self.deleteFile(self.installDir / "bin" / i, warn_if_missing=True)
+            self.delete_file(self.installDir / "bin" / i, warn_if_missing=True)
         self.info("Size after cleanup")
         self.run_cmd("du", "-sh", self.installDir)
 

@@ -186,9 +186,9 @@ class BuildQtWithConfigureScript(CrossCompileProject):
 
         self.configureArgs.extend(["-opensource", "-confirm-license"])
 
-        self.deleteFile(self.buildDir / "config.cache")
-        self.deleteFile(self.buildDir / "config.opt")
-        self.deleteFile(self.buildDir / "config.status")
+        self.delete_file(self.buildDir / "config.cache")
+        self.delete_file(self.buildDir / "config.opt")
+        self.delete_file(self.buildDir / "config.status")
         super().configure()
 
     def needsConfigure(self):

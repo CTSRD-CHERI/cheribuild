@@ -1357,7 +1357,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
             runCmd("find", td)
             for conf in kernconfs:
                 kernel_install_path = self.installed_kernel_for_config(self, conf)
-                self.deleteFile(kernel_install_path)
+                self.delete_file(kernel_install_path)
                 if conf == kernconfs[0]:
                     source_path = Path(td, "boot/kernel/kernel")
                 else:
@@ -1629,7 +1629,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         print("Fixing absolute paths in symbolic links inside lib directory...")
         self.fixSymlinks()
         # create an archive to make it easier to copy the sysroot to another machine
-        self.deleteFile(self.sysroot_archive, print_verbose_only=True)
+        self.delete_file(self.sysroot_archive, print_verbose_only=True)
         runCmd("tar", "-czf", self.sysroot_archive, self.crossSysrootPath.name, cwd=self.crossSysrootPath.parent)
         print("Successfully populated sysroot")
 

@@ -85,24 +85,24 @@ def test_per_project_override():
     config = _parse_arguments(["--skip-configure"])
     source_root = config.sourceRoot
     assert config.cheri_sdk_dir is not None
-    assert BuildCheriBSDDiskImage.get_instance(None, config).extraFilesDir == source_root / "extra-files"
+    assert BuildCheriBSDDiskImage.get_instance(None, config).extra_files_dir == source_root / "extra-files"
     _parse_arguments(["--disk-image/extra-files=/foo/bar"])
-    assert BuildCheriBSDDiskImage.get_instance(None, config).extraFilesDir == Path("/foo/bar/")
+    assert BuildCheriBSDDiskImage.get_instance(None, config).extra_files_dir == Path("/foo/bar/")
     _parse_arguments(["--disk-image/extra-files", "/bar/foo"])
-    assert BuildCheriBSDDiskImage.get_instance(None, config).extraFilesDir == Path("/bar/foo/")
+    assert BuildCheriBSDDiskImage.get_instance(None, config).extra_files_dir == Path("/bar/foo/")
     # different source root should affect the value:
     _parse_arguments(["--source-root=/tmp"])
-    assert BuildCheriBSDDiskImage.get_instance(None, config).extraFilesDir == Path("/tmp/extra-files")
+    assert BuildCheriBSDDiskImage.get_instance(None, config).extra_files_dir == Path("/tmp/extra-files")
 
     with tempfile.NamedTemporaryFile() as t:
         config_path = Path(t.name)
         config_path.write_bytes(b'{ "source-root": "/x"}')
         _parse_arguments([], config_file=config_path)
-        assert BuildCheriBSDDiskImage.get_instance(None, config).extraFilesDir == Path("/x/extra-files")
+        assert BuildCheriBSDDiskImage.get_instance(None, config).extra_files_dir == Path("/x/extra-files")
 
         # check that source root can be overridden
         _parse_arguments(["--source-root=/y"])
-        assert BuildCheriBSDDiskImage.get_instance(None, config).extraFilesDir == Path("/y/extra-files")
+        assert BuildCheriBSDDiskImage.get_instance(None, config).extra_files_dir == Path("/y/extra-files")
 
 
 def test_cross_compile_project_inherits():

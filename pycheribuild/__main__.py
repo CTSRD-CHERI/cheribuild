@@ -158,15 +158,15 @@ def real_main():
         # we can't pass all args
         filtered_cheribuild_args = ["--source-root", "/source", "--build-root", "/build", "--output-root", "/output"]
         skip_next = False
-        blacklisted = ("--source-root", "--build-root", "--output-root", "--docker-container")
+        excluded_args = ("--source-root", "--build-root", "--output-root", "--docker-container")
         for arg in sys.argv[1:]:
             if skip_next:
                 skip_next = False
                 continue
-            if arg in blacklisted:
+            if arg in excluded_args:
                 skip_next = True
                 continue
-            if any(arg.startswith(s + "=") for s in blacklisted):
+            if any(arg.startswith(s + "=") for s in excluded_args):
                 continue
             if arg == "--docker" or arg == "--docker-reuse-container":
                 continue

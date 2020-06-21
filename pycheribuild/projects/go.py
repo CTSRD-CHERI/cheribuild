@@ -91,7 +91,7 @@ class BuildGo(Project):
         self.copy_directory(self.makeDir, self.gorootDir / "src")
 
         # Refresh the link in sdk/bin
-        self.deleteFile(self.installDir / "bin" / "go")
+        self.delete_file(self.installDir / "bin" / "go")
         self.create_symlink(self.gorootDir / "bin" / "go", self.installDir / "bin" / "go")
 
     def run_tests(self):

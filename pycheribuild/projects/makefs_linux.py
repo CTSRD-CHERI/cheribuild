@@ -59,7 +59,7 @@ class BuildMakefsOnLinux(Project):
         self.run_make(make_target="", parallel=False)
 
     def clean(self):
-        self.deleteFile(self.sourceDir / "builddir/.build_stamp")
+        self.delete_file(self.sourceDir / "builddir/.build_stamp")
         self.clean_directory(self.sourceDir / "builddir")
         return super().clean()
 

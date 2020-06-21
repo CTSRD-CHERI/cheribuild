@@ -142,7 +142,7 @@ class FileSystemUtils(object):
         if not self.config.pretend:
             shutil.copytree(str(src_path), str(dst_path))
 
-    def deleteFile(self, file: Path, print_verbose_only=False, warn_if_missing=False):
+    def delete_file(self, file: Path, print_verbose_only=False, warn_if_missing=False):
         print_command("rm", "-f", file, print_verbose_only=print_verbose_only)
         if not file.is_file() and not file.is_symlink():
             if warn_if_missing:
