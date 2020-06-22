@@ -376,7 +376,7 @@ def test_kernconf():
         config)  # type: BuildCHERIBSD
     freebsd_mips = target_manager.get_target_raw("freebsd-mips").get_or_create_project(None,
         config)  # type: BuildFreeBSD
-    freebsd_native = target_manager.get_target_raw("freebsd-x86_64").get_or_create_project(None,
+    freebsd_native = target_manager.get_target_raw("freebsd-amd64").get_or_create_project(None,
         config)  # type: BuildFreeBSD
     assert config.freebsd_kernconf is None
     assert freebsd_mips.kernelConfig == "MALTA64"
@@ -557,7 +557,7 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
     pytest.param("disk-image-riscv64", "cheribsd-riscv64.img"),
     pytest.param("disk-image-riscv64-hybrid", "cheribsd-riscv64-hybrid.img"),
     pytest.param("disk-image-riscv64-purecap", "cheribsd-riscv64-purecap.img"),
-    pytest.param("disk-image-native", "cheribsd-x86_64.img"),
+    pytest.param("disk-image-amd64", "cheribsd-amd64.img"),
     # Minimal image
     pytest.param("disk-image-minimal-mips-nocheri", "cheribsd-minimal-mips-nocheri.img"),
     pytest.param("disk-image-minimal-mips-hybrid", "cheribsd-minimal-mips-hybrid128.img"),
@@ -570,13 +570,13 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
     pytest.param("disk-image-freebsd-riscv", "freebsd-riscv.img"),
     # pytest.param("disk-image-freebsd-aarch64", "freebsd-aarch64.img"),
     # pytest.param("disk-image-freebsd-i386", "freebsd-i386.img"),
-    pytest.param("disk-image-freebsd-x86_64", "freebsd-x86_64.img"),
+    pytest.param("disk-image-freebsd-amd64", "freebsd-amd64.img"),
     # FreeBSD with default options
     pytest.param("disk-image-freebsd-with-default-options-mips", "freebsd-mips.img"),
     pytest.param("disk-image-freebsd-with-default-options-riscv", "freebsd-riscv.img"),
     # pytest.param("disk-image-freebsd-with-default-options-aarch64", "freebsd-aarch64.img"),
     pytest.param("disk-image-freebsd-with-default-options-i386", "freebsd-i386.img"),
-    pytest.param("disk-image-freebsd-with-default-options-x86_64", "freebsd-x86_64.img"),
+    pytest.param("disk-image-freebsd-with-default-options-amd64", "freebsd-amd64.img"),
     ])
 def test_disk_image_path(target, expected_name):
     config = _parse_arguments([])

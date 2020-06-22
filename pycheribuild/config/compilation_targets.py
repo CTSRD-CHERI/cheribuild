@@ -284,7 +284,7 @@ class CheriBSDTargetInfo(FreeBSDTargetInfo):
         elif self.target.is_aarch64():
             return config.cheri_sdk_dir / "sysroot-aarch64"
         elif self.target.is_x86_64():
-            return config.cheri_sdk_dir / "sysroot-x86_64"
+            return config.cheri_sdk_dir / "sysroot-amd64"
         else:
             assert False, "Invalid cross_compile_target: " + str(self.target)
 
@@ -738,7 +738,7 @@ class CompilationTargets(BasicCompilationTargets):
     CHERIBSD_RISCV_PURECAP = CrossCompileTarget("riscv64-purecap", CPUArchitecture.RISCV64, CheriBSDTargetInfo,
         is_cheri_purecap=True, hybrid_target=CHERIBSD_RISCV_HYBRID)
     CHERIBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, CheriBSDTargetInfo)
-    CHERIBSD_X86_64 = CrossCompileTarget("x86_64", CPUArchitecture.X86_64, CheriBSDTargetInfo)
+    CHERIBSD_X86_64 = CrossCompileTarget("amd64", CPUArchitecture.X86_64, CheriBSDTargetInfo)
 
     CHERIOS_MIPS_PURECAP = CrossCompileTarget("mips", CPUArchitecture.MIPS64, CheriOSTargetInfo, is_cheri_purecap=True)
 
@@ -757,7 +757,7 @@ class CompilationTargets(BasicCompilationTargets):
     FREEBSD_RISCV = CrossCompileTarget("riscv", CPUArchitecture.RISCV64, FreeBSDTargetInfo)
     FREEBSD_I386 = CrossCompileTarget("i386", CPUArchitecture.I386, FreeBSDTargetInfo)
     FREEBSD_AARCH64 = CrossCompileTarget("aarch64", CPUArchitecture.AARCH64, FreeBSDTargetInfo)
-    FREEBSD_X86_64 = CrossCompileTarget("x86_64", CPUArchitecture.X86_64, FreeBSDTargetInfo)
+    FREEBSD_X86_64 = CrossCompileTarget("amd64", CPUArchitecture.X86_64, FreeBSDTargetInfo)
 
     # RTEMS targets
     RTEMS_RISCV64 = CrossCompileTarget("rtems-riscv64", CPUArchitecture.RISCV64, RTEMSTargetInfo)
