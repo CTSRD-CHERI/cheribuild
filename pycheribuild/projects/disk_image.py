@@ -125,6 +125,8 @@ class _BuildDiskImageBase(SimpleProject):
         assert cls.default_disk_image_path is not None
         cls.disk_image_path = cls.add_path_option("path", default=cls.default_disk_image_path, metavar="IMGPATH",
                                                   help="The output path for the QEMU disk image", show_help=True)
+        cls.force_overwrite = cls.add_bool_option("force-overwrite", default=False,
+                                                  help="Overwrite an existing disk image without prompting")
         cls.disableTMPFS = None
 
     def __init__(self, config, source_class: "typing.Type[BuildFreeBSD]"):
@@ -605,7 +607,7 @@ class _BuildDiskImageBase(SimpleProject):
 
         if self.disk_image_path.is_file():
             # only show prompt if we can actually input something to stdin
-            if not self.config.clean:
+            if not self.config.clean and not self.force_overwrite:
                 # with --clean always delete the image
                 print("An image already exists (" + str(self.disk_image_path) + "). ", end="")
                 if not self.query_yes_no("Overwrite?", default_result=True):
