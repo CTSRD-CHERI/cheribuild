@@ -815,9 +815,9 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         print_args = dict(**kwargs)
         if "capture_output" in print_args:
             del print_args["capture_output"]
-        print_command(shell, "-xe" if self.config.verbose else "-e", "-i", "-c", script, **print_args)
+        print_command(shell, "-xe" if self.config.verbose else "-e", "-c", script, **print_args)
         kwargs["no_print"] = True
-        return runCmd(shell, "-xe" if self.config.verbose else "-e", "-i", "-c", script, **kwargs)
+        return runCmd(shell, "-xe" if self.config.verbose else "-e", "-c", script, **kwargs)
 
     def print(self, *args, **kwargs):
         if not self.config.quiet:
