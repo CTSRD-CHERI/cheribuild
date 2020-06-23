@@ -92,6 +92,7 @@ class BuildFettConfig(CrossCompileProject):
             "etc/rc.d/fett_nginx", mode="0555")
         self.mtree.add_dir(nginx_prefix / "post", uname="www", gname="www")
         html_files = [
+            "favicon.ico",
             "index.html",
             "private/secret.html",
             "stanford.png",
