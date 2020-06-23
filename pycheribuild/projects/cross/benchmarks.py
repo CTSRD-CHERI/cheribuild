@@ -32,8 +32,8 @@ import tempfile
 from pathlib import Path
 
 from .crosscompileproject import (CompilationTargets, CrossCompileProject, DefaultInstallDir, GitRepository,
-                                  MakeCommandKind)
-from ..project import ExternallyManagedSourceRepository
+                                  MakeCommandKind, CrossCompileAutotoolsProject)
+from ..project import ExternallyManagedSourceRepository, ComputedDefaultValue
 from ...config.target_info import CPUArchitecture
 from ...utils import commandline_to_str, is_jenkins_build, set_env
 
@@ -672,3 +672,40 @@ class BuildUnixBench(CrossCompileProject):
 
     def install(self, **kwargs):
         self._create_benchmark_dir(self.bundle_dir)
+
+
+class NetPerfBench(CrossCompileAutotoolsProject):
+    repository = GitRepository("git@github.com:qwattash/netperf", default_branch="cheri")
+    native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
+    cross_install_dir = DefaultInstallDir.CUSTOM_INSTALL_DIR
+    project_name = "netperf"
+    # Needs bsd make to build
+    make_kind = MakeCommandKind.GnuMake
+    # Keep the old bundles when cleaning
+    _extra_git_clean_excludes = ["--exclude=*-bundle"]
+    # The makefiles here can't support any other other tagets:
+    supported_architectures = [CompilationTargets.CHERIBSD_MIPS_PURECAP, CompilationTargets.CHERIBSD_MIPS_NO_CHERI,
+                               CompilationTargets.CHERIBSD_MIPS_HYBRID, CompilationTargets.NATIVE]
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=lambda c, p: p.bundle_dir,
+        as_string="${BUILDDIR}/netperf-<target-suffix>-bundle")
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+
+    @property
+    def bundle_dir(self):
+        return Path(self.build_dir, "netperf-" + self.crosscompile_target.generic_suffix +
+                    self.build_configuration_suffix() + "-bundle")
+
+    def configure(self, **kwargs):
+        if not (self.source_dir / "configure").exists():
+            self.run_cmd(self.source_dir / "autogen.sh", cwd=self.source_dir)
+        self.configure_args.append("--enable-unixdomain")
+        self.add_configure_vars(ac_cv_func_setpgrp_void="yes")
+        super().configure(**kwargs)
+
+    def install(self, **kwargs):
+        self.makedirs(self.install_dir)
+        self.run_make_install()
