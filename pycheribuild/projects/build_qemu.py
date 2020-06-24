@@ -286,22 +286,3 @@ class BuildQEMU(BuildQEMUBase):
                 "--cross-cc-cflags-riscv64=" + commandline_to_str(tgt_info_riscv64.essential_compiler_and_linker_flags).replace("=", " ")
                 ])
 
-
-class BuildCheriOSQEMU(BuildQEMU):
-    repository = GitRepository("https://github.com/CTSRD-CHERI/qemu.git", default_branch="cherios", force_branch=True)
-    default_targets = "cheri128-softmmu"
-    project_name = "cherios-qemu"
-    target = "cherios-qemu"
-    _default_install_dir_fn = ComputedDefaultValue(
-        function=lambda config, project: config.outputRoot / "cherios-sdk",
-        as_string="$INSTALL_ROOT/cherios-sdk")
-    skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
-
-    def __init__(self, config: CheriConfig):
-        super().__init__(config)
-
-    @classmethod
-    def qemu_binary(cls, caller: SimpleProject, xtarget=None):
-        binary_name = "qemu-system-cheri" + caller.config.mips_cheri_bits_str
-        return cls.get_instance(caller, caller.config,
-                                cross_target=CompilationTargets.NATIVE).install_dir / "bin" / binary_name

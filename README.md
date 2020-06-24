@@ -276,8 +276,7 @@ usage: cheribuild.py [-h] [--config-file FILE] [--help-all] [--pretend] [--build
                      [--cheribsd/sysroot-only] [--cheribsd/build-fpga-kernels] [--cheribsd/pure-cap-kernel]
                      [--cheribsd-mfs-root-kernel/no-build-fpga-kernels] [--cheribsd-sysroot/remote-sdk-path PATH]
                      [--qemu/gui] [--qemu/targets QEMU/TARGETS] [--qemu/unaligned] [--qemu/statistics]
-                     [--cherios-qemu/gui] [--cherios-qemu/targets CHERIOS_QEMU/TARGETS] [--cherios-qemu/unaligned]
-                     [--cherios-qemu/statistics] [--disk-image-minimal/extra-files DIR]
+                     [--disk-image-minimal/extra-files DIR]
                      [--disk-image-minimal/hostname HOSTNAME] [--disk-image-minimal/remote-path PATH]
                      [--disk-image-minimal/path IMGPATH] [--disk-image/extra-files DIR] [--disk-image/hostname HOSTNAME]
                      [--disk-image/remote-path PATH] [--disk-image/path IMGPATH] [--disk-image-freebsd/extra-files DIR]
@@ -524,16 +523,6 @@ Options for target 'qemu':
                         softmmu,mips64-softmmu,riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu')
   --qemu/unaligned      Permit un-aligned loads/stores (default: 'False')
   --qemu/statistics     Collect statistics on out-of-bounds capability creation. (default: 'False')
-
-Options for target 'cherios-qemu':
-  --cherios-qemu/gui    Build a the graphical UI bits for QEMU (SDL,VNC) (default: 'False')
-  --cherios-qemu/targets CHERIOS_QEMU/TARGETS
-                        Build QEMU for the following targets (default: 'cheri128-softmmu,cheri128magic-
-                        softmmu,mips64-softmmu,riscv64-softmmu,riscv64cheri-softmmu,riscv32-softmmu')
-  --cherios-qemu/unaligned
-                        Permit un-aligned loads/stores (default: 'False')
-  --cherios-qemu/statistics
-                        Collect statistics on out-of-bounds capability creation. (default: 'False')
 
 Options for target 'disk-image-minimal':
   --disk-image-minimal/extra-files DIR
