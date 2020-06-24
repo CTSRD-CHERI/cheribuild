@@ -38,7 +38,7 @@ from .nginx import BuildFettNginx
 from .openssh import BuildFettOpenSSH
 from .sqlbox import BuildFettSQLbox
 from ..disk_image import _default_disk_image_name, BuildCheriBSDDiskImage
-from ..run_qemu import LaunchCheriBSD
+from ..run_qemu import LaunchCheriBSD, get_default_ssh_forwarding_port
 from ...config.loader import ComputedDefaultValue
 from ...mtree import MtreeFile
 from ...utils import commandline_to_str, classproperty
@@ -223,3 +223,9 @@ class LaunchFett(LaunchCheriBSD):
     project_name = "run-fett"
     _source_class = BuildFettDiskImage
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        add_to_port = LaunchCheriBSD.get_cross_target_index()
+        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
+                                     default_ssh_port=get_default_ssh_forwarding_port(60 + add_to_port), **kwargs)
