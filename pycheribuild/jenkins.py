@@ -295,7 +295,7 @@ def _jenkins_main():
             fatalError("Sysroot directory", project.target_info.sysroot_dir, "does not exist")
 
         if cheri_config.debug_output:
-            statusUpdate("Configuration options for building", project.project_name, file=sys.stderr)
+            statusUpdate("Configuration options for building", project.target, file=sys.stderr)
             for attr in dir(project):
                 if attr.startswith("_"):
                     continue
