@@ -429,11 +429,12 @@ class _RunMultiArchFreeBSDImage(AbstractLaunchFreeBSD):
         return cls._source_class.supported_architectures
 
     @classmethod
-    def get_cross_target_index(cls):
+    def get_cross_target_index(cls, **kwargs):
+        xtarget = kwargs.get('xtarget', cls._xtarget)
         for idx, value in enumerate(cls.supported_architectures):
-            if cls._xtarget is value:
+            if xtarget is value:
                 return idx
-        assert cls._xtarget is None
+        assert xtarget is None
         return -1  # return -1 for NONE
 
     @classproperty

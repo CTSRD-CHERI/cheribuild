@@ -225,7 +225,5 @@ class LaunchFett(LaunchCheriBSD):
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
 
     @classmethod
-    def setup_config_options(cls, **kwargs):
-        add_to_port = LaunchCheriBSD.get_cross_target_index()
-        super().setup_config_options(sshPortShortname=None, useTelnetShortName=None,
-                                     default_ssh_port=get_default_ssh_forwarding_port(60 + add_to_port), **kwargs)
+    def get_cross_target_index(cls):
+        return LaunchCheriBSD.get_cross_target_index(xtarget=cls._xtarget)
