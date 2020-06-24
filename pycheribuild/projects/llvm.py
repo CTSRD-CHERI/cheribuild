@@ -302,7 +302,7 @@ exec {lld} "$@"
         # 33349288	/local/scratch/alr48/jenkins-test/tarball/opt/llvm-native/bin/clang-refactor
         # 41052504	/local/scratch/alr48/jenkins-test/tarball/opt/llvm-native/bin/clang-import-test
         for i in ("clang-scan-deps", "clang-rename", "clang-refactor", "clang-import-test", "clang-offload-bundler",
-                  "clang-offload-wrapper"):
+                  "clang-offload-wrapper", "clang-extdef-mapping", "clang-check"):
             self.delete_file(self.install_dir / "bin" / i, warn_if_missing=True)
         self.info("Size after cleanup")
         self.run_cmd("du", "-sh", self.install_dir)
