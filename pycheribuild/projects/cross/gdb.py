@@ -162,8 +162,8 @@ class BuildGDB(CrossCompileAutotoolsProject):
 
         self.configureEnvironment["CC_FOR_BUILD"] = str(self.host_CC)
         self.configureEnvironment["CXX_FOR_BUILD"] = str(self.host_CXX)
-        self.configureEnvironment["CFLAGS_FOR_BUILD"] = "-g"
-        self.configureEnvironment["CXXFLAGS_FOR_BUILD"] = "-g"
+        self.configureEnvironment["CFLAGS_FOR_BUILD"] = "-g -fcommon"
+        self.configureEnvironment["CXXFLAGS_FOR_BUILD"] = "-g -fcommon"
 
         if not self.compiling_for_host():
             self.add_configure_env_arg("AR", self.sdk_bindir / "ar")
