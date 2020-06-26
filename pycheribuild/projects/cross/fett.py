@@ -115,10 +115,10 @@ class BuildFettConfig(CrossCompileProject):
 
         # voting app
         voting_src = src / "build/voting"
-        # /fett/var/www/(cgi-bin|html) added implicitly in fett-voting
+        # /fett/var/www/(bvrs|cgi-bin) added implicitly in fett-voting
         #self.mtree.add_dir("fett/var/www")
+        #self.mtree.add_dir("fett/var/www/bvrs")
         #self.mtree.add_dir("fett/var/www/cgi-bin")
-        #self.mtree.add_dir("fett/var/www/html")
         self.mtree.add_dir("fett/var/www/data", uname="www", gname="www", mode="0770")
         self.mtree.add_dir("fett/var/www/run")
         self.mtree.add_file(voting_src / "common/conf/fastcgi.conf",
@@ -193,7 +193,7 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
                 ]
             for file in html_files:
                 self.install_file(self.build_dir / "public/" / file,
-                                  self.real_install_root_dir / "var/www/html/bvrs" / file)
+                                  self.real_install_root_dir / "var/www/bvrs" / file)
 
 
 class BuildFettDiskImage(BuildCheriBSDDiskImage):
