@@ -446,11 +446,12 @@ class BuildSailFromSource(OcamlProject):
                                   install_instructions="Try running `opam install menhir`")
 
     def compile(self, **kwargs):
-        self.run_in_ocaml_env("""
-make
-make -C mips mips mips_c
-make -C cheri cheri cheri_c
-make -C cheri cheri128 cheri128_c""")
+        pass
+
+    def install(self, **kwargs):
+        # Use ./opam to just build sail, not coq-sail.  Using '.' will try to
+        # build both and we probably don't need all of coq installed just now
+        self.run_in_ocaml_env("opam install -y ./opam")
 
     def process(self):
         lemdir = BuildLem.get_source_dir(self)
