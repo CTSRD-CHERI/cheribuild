@@ -23,7 +23,10 @@
 # SUCH DAMAGE.
 #
 
+from pathlib import Path
+
 from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
+from ...mtree import MtreeFile
 
 
 class BuildBash(CrossCompileAutotoolsProject):
@@ -34,6 +37,9 @@ class BuildBash(CrossCompileAutotoolsProject):
 
     def setup(self):
         super().setup()
+        if not self.compiling_for_host():
+            self._installPrefix = Path("/usr/local")
+
         # Bash is horrible K&R C in many places and deliberately uses uses
         # declarations with no protoype. Hopefully it gets everything right.
         self.cross_warning_flags.append("-Wno-error=cheri-prototypes")
@@ -42,3 +48,11 @@ class BuildBash(CrossCompileAutotoolsProject):
         if self.destdir:
             self.make_args.set(DESTDIR=self.destdir)
         super().install(**kwargs)
+
+        if not self.compiling_for_host():
+            mtree = MtreeFile()
+            METALOG = self.destdir / "METALOG"
+            mtree.load(METALOG)
+            self.create_symlink(Path("/usr/local/bin/bash"), self.destdir / "bin/bash", relative=False)
+            mtree.add_file(self.destdir / "bin/bash", "bin/bash")
+            mtree.write(METALOG)
