@@ -403,7 +403,7 @@ class OcamlProject(OpamMixin, Project):
             try:
                 self.run_in_ocaml_env("ocamlfind query " + shlex.quote(pkg), cwd="/", print_verbose_only=True)
             except CalledProcessError:
-                instrs = "Try running `" + self._opam_cmd_str("install", _add_switch=False) + pkg + "`"
+                instrs = "Try running `" + self._opam_cmd_str("install", _add_switch=False) + " " + pkg + "`"
                 self.dependency_error("missing opam package " + pkg, install_instructions=instrs)
 
     def install(self, **kwargs):
@@ -467,18 +467,21 @@ class BuildLem(OcamlProject):
     needed_ocaml_packages = OcamlProject.needed_ocaml_packages + ["zarith"]
 
     def compile(self, **kwargs):
-        # Note: this all breaks on MacOS if ocamlfind is installed via opam
-        self.run_in_ocaml_env("make && make -C ocaml-lib local-install")
+        pass
 
     def install(self, **kwargs):
-        pass
+        self.run_in_ocaml_env("opam install -y .")
 
 
 class BuildOtt(OcamlProject):
     repository = GitRepository("https://github.com/ott-lang/ott")
 
     def compile(self, **kwargs):
-        self.run_in_ocaml_env("make")
+        pass
+
+    def install(self, **kwargs):
+        # Use ./ott.opam to dodge coq-ott
+        self.run_in_ocaml_env("opam install -y ./ott.opam")
 
 
 class BuildLinksem(OcamlProject):
@@ -486,10 +489,10 @@ class BuildLinksem(OcamlProject):
     dependencies = ["lem", "ott"]
 
     def compile(self, **kwargs):
-        self.run_in_ocaml_env("""
-make USE_OCAMLBUILD=false
-make -C src USE_OCAMLBUILD=false local-install
-        """)
+        pass
+
+    def install(self, **kwargs):
+        self.run_in_ocaml_env("opam install -y .")
 
     def process(self):
         lemdir = BuildLem.get_source_dir(self)
