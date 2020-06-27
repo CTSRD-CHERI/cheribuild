@@ -89,6 +89,12 @@ class _AdditionalFileTemplates(object):
     def get_cshrc_template(self):
         return include_local_file("files/cheribsd/csh.cshrc.in")
 
+    def get_dot_bashrc_template(self):
+        return include_local_file("files/cheribsd/dot.bashrc.in")
+
+    def get_dot_bash_profile_template(self):
+        return include_local_file("files/cheribsd/dot.bash_profile.in")
+
 
 class _BuildDiskImageBase(SimpleProject):
     doNotAddToTargets = True
@@ -264,6 +270,16 @@ class _BuildDiskImageBase(SimpleProject):
         cshrc_contents = self.file_templates.get_cshrc_template().format(SRCPATH=self.config.sourceRoot,
                                                                          ROOTFS_DIR=self.rootfsDir)
         self.create_file_for_image("/etc/csh.cshrc", contents=cshrc_contents)
+
+        # Basic .bashrc/.bash_profile template
+        dot_bashrc_contents = self.file_templates.get_dot_bashrc_template().format(SRCPATH=self.config.sourceRoot,
+                                                                                   ROOTFS_DIR=self.rootfsDir)
+        self.create_file_for_image("/root/.bashrc", contents=dot_bashrc_contents)
+        self.create_file_for_image("/usr/share/skel/dot.bashrc", contents=dot_bashrc_contents)
+        dot_bash_profile_contents = self.file_templates.get_dot_bash_profile_template().format(SRCPATH=self.config.sourceRoot,
+                                                                                   ROOTFS_DIR=self.rootfsDir)
+        self.create_file_for_image("/root/.bash_profile", contents=dot_bash_profile_contents)
+        self.create_file_for_image("/usr/share/skel/dot.bash_profile", contents=dot_bash_profile_contents)
 
         # Add the mount-source/mount-rootfs/do-reroot scripts (even in the minimal image)
         # TODO: should we omit this from the minimal image?
