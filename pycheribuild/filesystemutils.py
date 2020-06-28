@@ -239,6 +239,20 @@ class FileSystemUtils(object):
             print_command("chmod", oct(mode), dest, print_verbose_only=print_verbose_only)
             dest.chmod(mode)
 
+    def rewrite_file(self, file: Path, rewrite: typing.Callable[[typing.Iterable[str]], typing.Iterable[str]]):
+        if self.config.pretend:
+            return
+        if not file.exists():
+            fatalError("Required file", file, "does not exist")
+        with file.open("r+", encoding="utf-8") as f:
+            lines = list(rewrite(f.read().splitlines()))
+            f.seek(0)
+            f.writelines(map(lambda line: line + '\n', lines))
+            f.truncate()
+
+    def add_unique_line_to_file(self, file: Path, line):
+        self.rewrite_file(file, lambda lines: lines if line in lines else (lines + [line]))
+
     @property
     def triple_prefixes_for_binaries(self) -> typing.Iterable[str]:
         raise ValueError("Must override triple_prefixes_for_binaries to use create_triple_prefixed_symlinks!")
