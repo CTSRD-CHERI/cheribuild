@@ -2695,6 +2695,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
 class AutotoolsProject(Project):
     doNotAddToTargets = True
     _configure_supports_prefix = True
+    make_kind = MakeCommandKind.GnuMake
 
     @classmethod
     def setup_config_options(cls, **kwargs):
