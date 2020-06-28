@@ -27,6 +27,7 @@ from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
 from ...mtree import MtreeFile
+from ...utils import runCmd
 
 
 class BuildBash(CrossCompileAutotoolsProject):
@@ -41,6 +42,12 @@ class BuildBash(CrossCompileAutotoolsProject):
         # Bash is horrible K&R C in many places and deliberately uses uses
         # declarations with no protoype. Hopefully it gets everything right.
         self.cross_warning_flags.append("-Wno-error=cheri-prototypes")
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.set_as_root_shell = cls.add_bool_option("set-as-root-shell", show_help=True,
+                                                    help="Set root's shell to bash")
 
     def install(self, **kwargs):
         if self.destdir:
@@ -57,3 +64,17 @@ class BuildBash(CrossCompileAutotoolsProject):
             mtree.add_file(self.destdir / "bin/bash", "bin/bash")
             mtree.write(metalog)
             self.add_unique_line_to_file(self.destdir / "etc/shells", "/usr/local/bin/bash")
+            if self.set_as_root_shell:
+                def rewrite(old):
+                    new = []
+                    for line in old:
+                        fields = line.split(':')
+                        if len(fields) == 10 and fields[0] == "root":
+                            line = ':'.join(fields[0:9] + ["/usr/local/bin/bash"])
+                        new.append(line)
+                    return new
+
+                freebsd_builddir = self.target_info.get_rootfs_project().objdir
+                pwd_mkdb_cmd = freebsd_builddir / "tmp/legacy/usr/sbin/pwd_mkdb"
+                self.rewrite_file(self.destdir / "etc/master.passwd", rewrite)
+                runCmd([pwd_mkdb_cmd, "-p", "-d", self.destdir / "etc", self.destdir / "etc/master.passwd"])
