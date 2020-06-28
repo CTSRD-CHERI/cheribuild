@@ -60,3 +60,4 @@ class BuildBash(CrossCompileAutotoolsProject):
             self.create_symlink(Path("/usr/local/bin/bash"), self.destdir / "bin/bash", relative=False)
             mtree.add_file(self.destdir / "bin/bash", "bin/bash")
             mtree.write(metalog)
+            self.add_unique_line_to_file(self.destdir / "etc/shells", "/usr/local/bin/bash")
