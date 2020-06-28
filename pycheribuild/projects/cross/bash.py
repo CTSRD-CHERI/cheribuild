@@ -38,10 +38,6 @@ class BuildBash(CrossCompileAutotoolsProject):
 
     def setup(self):
         super().setup()
-        # All CHERI architectures lack sbrk(2), required for Bash's malloc.
-        if self.crosscompile_target.is_cheri_purecap():
-            self.configureArgs.append("--without-bash-malloc")
-
         # Bash is horrible K&R C in many places and deliberately uses uses
         # declarations with no protoype. Hopefully it gets everything right.
         self.cross_warning_flags.append("-Wno-error=cheri-prototypes")
