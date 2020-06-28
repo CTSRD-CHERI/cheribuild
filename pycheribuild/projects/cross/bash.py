@@ -34,12 +34,10 @@ class BuildBash(CrossCompileAutotoolsProject):
                                default_branch="cheri")
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS
+    path_in_rootfs = "/usr/local"
 
     def setup(self):
         super().setup()
-        if not self.compiling_for_host():
-            self._installPrefix = Path("/usr/local")
-
         # All CHERI architectures lack sbrk(2), required for Bash's malloc.
         if self.crosscompile_target.is_cheri_purecap():
             self.configureArgs.append("--without-bash-malloc")
