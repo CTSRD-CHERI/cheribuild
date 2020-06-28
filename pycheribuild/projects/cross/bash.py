@@ -27,7 +27,6 @@ from pathlib import Path
 
 from .crosscompileproject import CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
 from ...mtree import MtreeFile
-from ...utils import runCmd
 
 
 class BuildBash(CrossCompileAutotoolsProject):
@@ -77,4 +76,4 @@ class BuildBash(CrossCompileAutotoolsProject):
                 freebsd_builddir = self.target_info.get_rootfs_project().objdir
                 pwd_mkdb_cmd = freebsd_builddir / "tmp/legacy/usr/sbin/pwd_mkdb"
                 self.rewrite_file(self.destdir / "etc/master.passwd", rewrite)
-                runCmd([pwd_mkdb_cmd, "-p", "-d", self.destdir / "etc", self.destdir / "etc/master.passwd"])
+                self.run_cmd([pwd_mkdb_cmd, "-p", "-d", self.destdir / "etc", self.destdir / "etc/master.passwd"])
