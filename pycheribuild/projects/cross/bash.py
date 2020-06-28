@@ -56,6 +56,9 @@ class BuildBash(CrossCompileAutotoolsProject):
         if not self.compiling_for_host():
             mtree = MtreeFile()
             METALOG = self.destdir / "METALOG"
+            if not METALOG.exists():
+                self.fatal("METALOG", METALOG, "does not exist")
+                return
             mtree.load(METALOG)
             self.create_symlink(Path("/usr/local/bin/bash"), self.destdir / "bin/bash", relative=False)
             mtree.add_file(self.destdir / "bin/bash", "bin/bash")
