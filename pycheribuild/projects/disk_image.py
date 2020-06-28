@@ -150,10 +150,7 @@ class _BuildDiskImageBase(SimpleProject):
         assert isinstance(self.source_project, BuildFreeBSD)
         self.rootfsDir = self.source_project.get_install_dir(self)
         assert self.rootfsDir is not None
-        if (self.source_project.source_dir / "lib/libc/gen/master.passwd").is_file():
-            self.userGroupDbDir = self.source_project.source_dir / "lib/libc/gen"
-        else:
-            self.userGroupDbDir = self.source_project.source_dir / "etc"
+        self.userGroupDbDir = self.rootfsDir / "etc"
         self.crossBuildImage = self.source_project.crossbuild
         self.minimumImageSize = "1g"  # minimum image size = 1GB
         self.mtree = MtreeFile()
