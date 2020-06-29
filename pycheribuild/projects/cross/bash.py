@@ -45,6 +45,8 @@ class BuildBash(CrossCompileAutotoolsProject):
         # the dependencies logic wants to run it. Disable it as per
         # aclocal.m4's advice.
         self.add_configure_vars(BISON=":")
+        self.add_configure_vars(INTLBISON=":")
+        self.add_configure_vars(YACC=":")
 
         # Bash is horrible K&R C in many places and deliberately uses uses
         # declarations with no protoype. Hopefully it gets everything right.
