@@ -41,6 +41,11 @@ class BuildBash(CrossCompileAutotoolsProject):
         if not self.compiling_for_host():
             self.add_configure_vars(CC_FOR_BUILD=self.host_CC)
 
+        # Our bison seems to generate incompatible results, and for some reason
+        # the dependencies logic wants to run it. Disable it as per
+        # aclocal.m4's advice.
+        self.add_configure_vars(BISON=":")
+
         # Bash is horrible K&R C in many places and deliberately uses uses
         # declarations with no protoype. Hopefully it gets everything right.
         self.cross_warning_flags.append("-Wno-error=cheri-prototypes")
