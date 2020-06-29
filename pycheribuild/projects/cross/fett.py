@@ -74,6 +74,7 @@ class BuildFettConfig(CrossCompileProject):
 
         # general config
         mtree.add_file(src / "build/freebsd/malloc.conf", "etc/malloc.conf")
+        mtree.add_file(src / "build/freebsd/motd.template", "etc/motd.template")
 
         # nginx bits
         nginx_src = src / "build/webserver"
