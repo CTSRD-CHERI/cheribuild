@@ -38,6 +38,9 @@ class BuildBash(CrossCompileAutotoolsProject):
 
     def setup(self):
         super().setup()
+        if not self.compiling_for_host():
+            self.add_configure_vars(CC_FOR_BUILD=self.host_C)
+
         # Bash is horrible K&R C in many places and deliberately uses uses
         # declarations with no protoype. Hopefully it gets everything right.
         self.cross_warning_flags.append("-Wno-error=cheri-prototypes")
