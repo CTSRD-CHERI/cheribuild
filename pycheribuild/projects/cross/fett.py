@@ -38,10 +38,10 @@ from .nginx import BuildFettNginx
 from .openssh import BuildFettOpenSSH
 from .sqlbox import BuildFettSQLbox
 from ..disk_image import _default_disk_image_name, BuildCheriBSDDiskImage
-from ..run_qemu import LaunchCheriBSD, get_default_ssh_forwarding_port
+from ..run_qemu import LaunchCheriBSD
 from ...config.loader import ComputedDefaultValue
 from ...mtree import MtreeFile
-from ...utils import commandline_to_str, classproperty
+from ...utils import classproperty, commandline_to_str
 
 
 class BuildFettConfig(CrossCompileProject):
@@ -57,7 +57,6 @@ class BuildFettConfig(CrossCompileProject):
 
     def __init__(self, config):
         super().__init__(config)
-        self.mtree = MtreeFile()
         self.METALOG = self.destdir / "METALOG"
 
     def compile(self, **kwargs):
@@ -70,27 +69,27 @@ class BuildFettConfig(CrossCompileProject):
             self.fatal("METALOG " + str(self.METALOG) + "does not exist")
             return
 
-        self.mtree.load(self.METALOG)
+        mtree = MtreeFile(self.METALOG)
         src = self.source_dir
 
         # general config
-        self.mtree.add_file(src / "build/freebsd/malloc.conf", "etc/malloc.conf")
+        mtree.add_file(src / "build/freebsd/malloc.conf", "etc/malloc.conf")
 
         # nginx bits
         nginx_src = src / "build/webserver"
         nginx_prefix = BuildFettNginx.get_instance(self)._installPrefix.relative_to('/')
-        self.mtree.add_file(nginx_src / "common/conf/nginx.conf",
-                            nginx_prefix / "conf/nginx.conf")
-        self.mtree.add_dir(nginx_prefix / "conf/sites")
-        self.mtree.add_dir(nginx_prefix / "logs")
+        mtree.add_file(nginx_src / "common/conf/nginx.conf",
+                       nginx_prefix / "conf/nginx.conf")
+        mtree.add_dir(nginx_prefix / "conf/sites")
+        mtree.add_dir(nginx_prefix / "logs")
         # XXX: make private key dir 700?
-        self.mtree.add_file(nginx_src / "common/keys/private-selfsigned.key",
-                            nginx_prefix / "etc/ssl/private/private-selfsigned.key", mode="0600")
-        self.mtree.add_file(nginx_src / "common/certs/selfsigned.crt",
-                            nginx_prefix / "etc/ssl/certs/selfsigned.crt")
-        self.mtree.add_file(src / "build/webserver/FreeBSD/rcfile",
-            "etc/rc.d/fett_nginx", mode="0555")
-        self.mtree.add_dir(nginx_prefix / "post", uname="www", gname="www")
+        mtree.add_file(nginx_src / "common/keys/private-selfsigned.key",
+                       nginx_prefix / "etc/ssl/private/private-selfsigned.key", mode="0600")
+        mtree.add_file(nginx_src / "common/certs/selfsigned.crt",
+                       nginx_prefix / "etc/ssl/certs/selfsigned.crt")
+        mtree.add_file(src / "build/webserver/FreeBSD/rcfile",
+                       "etc/rc.d/fett_nginx", mode="0555")
+        mtree.add_dir(nginx_prefix / "post", uname="www", gname="www")
         html_files = [
             "favicon.ico",
             "index.html",
@@ -100,15 +99,15 @@ class BuildFettConfig(CrossCompileProject):
             "test.txt",
             ]
         for file in html_files:
-            self.mtree.add_file(src / "build/webserver/common/html" / file,
-                                nginx_prefix / "html" / file)
+            mtree.add_file(src / "build/webserver/common/html" / file,
+                           nginx_prefix / "html" / file)
 
         # sshd bits
         ssh_prefix = BuildFettOpenSSH.get_instance(self)._installPrefix.relative_to('/')
         keyfiles = ["ssh_host_dsa_key", "ssh_host_ecdsa_key", "ssh_host_ed25519_key", "ssh_host_rsa_key"]
         for keyfile in keyfiles:
-            self.mtree.add_file(Path("/etc/ssh", keyfile), ssh_prefix / "etc/" / keyfile, symlink=True)
-        self.mtree.add_file(src / "build/ssh/FreeBSD/fett_sshd", "etc/rc.d/fett_sshd", mode="0555")
+            mtree.add_file(Path("/etc/ssh", keyfile), ssh_prefix / "etc/" / keyfile, symlink=True)
+        mtree.add_file(src / "build/ssh/FreeBSD/fett_sshd", "etc/rc.d/fett_sshd", mode="0555")
 
         # sqlite bits
         # XXX-TODO: install a smoketest?
@@ -116,21 +115,21 @@ class BuildFettConfig(CrossCompileProject):
         # voting app
         voting_src = src / "build/voting"
         # /fett/var/www/(cgi-bin|bvrs) added implicitly in fett-voting
-        #self.mtree.add_dir("fett/var/www")
-        #self.mtree.add_dir("fett/var/www/cgi-bin")
-        #self.mtree.add_dir("fett/var/www/bvrs")
-        self.mtree.add_file(voting_src / "common/static/index.html",
-                            "fett/var/www/bvrs/index.html")
-        self.mtree.add_dir("fett/var/www/data", uname="www", gname="www", mode="0770")
-        self.mtree.add_dir("fett/var/www/run")
-        self.mtree.add_file(voting_src / "common/conf/fastcgi.conf",
-                            nginx_prefix / "conf/fastcgi.conf")
-        self.mtree.add_file(voting_src / "common/conf/sites/voting.conf",
-                            nginx_prefix / "conf/sites/voting.conf")
-        self.mtree.add_file(voting_src / "freebsd/fett_bvrs.sh",
-                            "etc/rc.d/fett_bvrs", mode="0555")
+        # mtree.add_dir("fett/var/www")
+        # mtree.add_dir("fett/var/www/cgi-bin")
+        # mtree.add_dir("fett/var/www/bvrs")
+        mtree.add_file(voting_src / "common/static/index.html",
+                       "fett/var/www/bvrs/index.html")
+        mtree.add_dir("fett/var/www/data", uname="www", gname="www", mode="0770")
+        mtree.add_dir("fett/var/www/run")
+        mtree.add_file(voting_src / "common/conf/fastcgi.conf",
+                       nginx_prefix / "conf/fastcgi.conf")
+        mtree.add_file(voting_src / "common/conf/sites/voting.conf",
+                       nginx_prefix / "conf/sites/voting.conf")
+        mtree.add_file(voting_src / "freebsd/fett_bvrs.sh",
+                       "etc/rc.d/fett_bvrs", mode="0555")
 
-        self.mtree.write(self.METALOG)
+        mtree.write(self.METALOG)
 
 
 class BuildFettVoting(FettProjectMixin, CrossCompileProject):
