@@ -206,12 +206,12 @@ def run_bodiagsuite(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Namespa
         boot_cheribsd.checked_run_cheribsd_command(qemu, "rm -rf {}/run".format(LONG_NAME_FOR_BUILDDIR))
         boot_cheribsd.checked_run_cheribsd_command(qemu, "cd {} && mkdir -p run".format(LONG_NAME_FOR_BUILDDIR))
         # Don't log all the CHERI traps while running (should speed up the tests a bit and produce shorter logfiles)
-        boot_cheribsd.run_cheribsd_command(qemu, "sysctl machdep.log_cheri_exceptions=0 || true")
+        boot_cheribsd.run_cheribsd_command(qemu, "sysctl machdep.log_user_cheri_exceptions=0 || true")
         boot_cheribsd.checked_run_cheribsd_command(qemu, "{} -r -f {}/Makefile.bsd-run all".format(args.bmake_path,
                                                                                                    LONG_NAME_FOR_BUILDDIR),
                                                    timeout=120 * 60, ignore_cheri_trap=True)
         # restore old behaviour
-        boot_cheribsd.run_cheribsd_command(qemu, "sysctl machdep.log_cheri_exceptions=1 || true")
+        boot_cheribsd.run_cheribsd_command(qemu, "sysctl machdep.log_user_cheri_exceptions=1 || true")
 
     if not create_junit_xml(Path(args.build_dir), args.junit_testsuite_name, args.tools):
         return False

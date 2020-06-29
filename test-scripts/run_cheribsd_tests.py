@@ -105,9 +105,8 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
 
     # Run the various cheritest binaries
     if args.run_cheritest:
-        # Disable trap dumps while running cheritest (only available on MIPS):
-        if qemu.xtarget.is_mips(include_purecap=True):
-            qemu.checked_run("sysctl machdep.log_cheri_exceptions=0")
+        # Disable trap dumps while running cheritest (handle both old and new sysctl names until dev is merged):
+        qemu.run("sysctl machdep.log_user_cheri_exceptions=0 || sysctl machdep.log_cheri_exceptions=0")
         # The minimal disk image only has the statically linked variants:
         test_binaries = ["cheritest", "cheriabitest"]
         if not args.minimal_image:
@@ -117,8 +116,7 @@ def run_cheribsd_test(qemu: boot_cheribsd.CheriBSDInstance, args: argparse.Names
             if not run_cheritest(qemu, test, args):
                 tests_successful = False
                 boot_cheribsd.failure("At least one test failure in", test, exit=False)
-        if qemu.xtarget.is_mips(include_purecap=True):
-            qemu.checked_run("sysctl machdep.log_cheri_exceptions=1")
+        qemu.run("sysctl machdep.log_user_cheri_exceptions=1 || sysctl machdep.log_cheri_exceptions=1")
 
     # Run kyua tests
     try:
