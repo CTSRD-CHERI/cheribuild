@@ -1287,6 +1287,20 @@ class BuildCHERIBSD(BuildFreeBSD):
         super().install(all_kernel_configs=all_kernel_configs, sysroot_only=self.sysroot_only, **kwargs)
 
 
+class BuildCheriBSDFett(BuildCHERIBSD):
+    project_name = "cheribsd"	# reuse working directory
+    target = "cheribsd-fett"
+    supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
+
+    @classmethod
+    def setup_config_options(cls, **kwargs):
+        super().setup_config_options(**kwargs)
+        cls.auto_var_init = AutoVarInit.ZERO
+        if cls._xtarget is not None and cls._xtarget.is_cheri_purecap():
+            cls.buildFettKernels = True
+            cls.with_manpages = True
+
+
 # FIXME: this should inherit from BuildCheriBSD to avoid subtle problems
 class BuildCheriBsdMfsKernel(SimpleProject):
     project_name = "cheribsd-mfs-root-kernel"
