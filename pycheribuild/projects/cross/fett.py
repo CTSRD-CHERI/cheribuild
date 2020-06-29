@@ -194,13 +194,13 @@ class BuildFettVoting(FettProjectMixin, CrossCompileProject):
                 "voter_registration_verification.html",
                 ]
             for file in html_files:
-                self.install_file(self.build_dir / "public/" / file,
+                self.install_file(self.build_dir / "public/bvrs" / file,
                                   self.real_install_root_dir / "var/www/bvrs/bvrs" / file)
 
 
 class BuildFettDiskImage(BuildCheriBSDDiskImage):
     project_name = "disk-image-fett"
-    dependencies = ["fett-config"]
+    dependencies = ["bash", "fett-config"]
     supported_architectures = CompilationTargets.FETT_SUPPORTED_ARCHITECTURES
 
     @classproperty
