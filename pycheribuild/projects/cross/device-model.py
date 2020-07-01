@@ -1,4 +1,4 @@
-#-
+# -
 # SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2020 A. Theodore Markettos
@@ -30,10 +30,8 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-import os
 
-from .crosscompileproject import CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
-from ...utils import set_env
+from .crosscompileproject import CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir, GitRepository
 
 
 class BuildDeviceModel(CrossCompileAutotoolsProject):

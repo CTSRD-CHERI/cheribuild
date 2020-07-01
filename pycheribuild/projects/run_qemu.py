@@ -102,7 +102,7 @@ class LaunchQEMUBase(SimpleProject):
         self.bios_flags = []
         self.qemu_options = QemuOptions(self.crosscompile_target)
         self._qemuUserNetworking = True
-        self.rootfs_path = typing.Optional[None]  # type: Path
+        self.rootfs_path = None  # type:typing.Optional[Path]
         self._after_disk_options = []
 
     def get_riscv_bios_args(self) -> typing.List[str]:

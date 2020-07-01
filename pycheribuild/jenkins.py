@@ -118,11 +118,11 @@ class SdkArchive(object):
 
 def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "typing.List[SdkArchive]":
     # Try the full SDK archive first:
-    if cheri_config.sdkArchivePath.exists():
+    if cheri_config.sdk_archive_path.exists():
         required_globs = ["bin/clang"]
         if needs_cheribsd_sysroot:
             required_globs.append("sysroot/usr/include")
-        return [SdkArchive(cheri_config, cheri_config.sdkArchivePath.name, extra_args=["--strip-components", "1"],
+        return [SdkArchive(cheri_config, cheri_config.sdk_archive_path.name, extra_args=["--strip-components", "1"],
             required_globs=required_globs)]
 
     llvm_cpu = os.getenv("LLVM_CPU", "cheri-multi")
