@@ -37,8 +37,9 @@ from ..project import (BuildType, CheriConfig, ComputedDefaultValue, CrossCompil
 class BuildBBLBase(CrossCompileAutotoolsProject):
     do_not_add_to_targets = True
     repository = GitRepository("https://github.com/CTSRD-CHERI/riscv-pk",
-        force_branch=True, default_branch="cheri_purecap",  # Compilation fixes for clang and support for CHERI
-        old_urls=[b"https://github.com/jrtc27/riscv-pk.git"])
+                               force_branch=True, default_branch="cheri_purecap",
+                               # Compilation fixes for clang and support for CHERI
+                               old_urls=[b"https://github.com/jrtc27/riscv-pk.git"])
     make_kind = MakeCommandKind.GnuMake
     _always_add_suffixed_targets = True
     is_sdk_target = False
@@ -123,7 +124,7 @@ class BuildBBLNoPayload(BuildBBLBase):
                                CompilationTargets.BAREMETAL_NEWLIB_RISCV64]
 
     _default_install_dir_fn = ComputedDefaultValue(function=_bbl_install_dir,
-        as_string="$SDK_ROOT/bbl/riscv{32,64}{,-purecap}")
+                                                   as_string="$SDK_ROOT/bbl/riscv{32,64}{,-purecap}")
 
     def install(self):
         super().install()
@@ -133,7 +134,7 @@ class BuildBBLNoPayload(BuildBBLBase):
             qemu_fw_dir = BuildQEMU.get_install_dir(self, cross_target=CompilationTargets.NATIVE) / "share/qemu/"
             self.makedirs(qemu_fw_dir)
             self.run_cmd(self.sdk_bindir / "llvm-objcopy", "-S", "-O", "binary",
-                self.get_installed_kernel_path(self), qemu_fw_dir / "bbl-riscv64cheri-virt-fw_jump.bin")
+                         self.get_installed_kernel_path(self), qemu_fw_dir / "bbl-riscv64cheri-virt-fw_jump.bin")
 
 
 class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
@@ -143,7 +144,7 @@ class BuildBBLNoPayloadGFE(BuildBBLNoPayload):
     build_dir_suffix = "-gfe"  # but not the build dir
 
     _default_install_dir_fn = ComputedDefaultValue(function=_bbl_install_dir,
-        as_string="$SDK_ROOT/bbl-gfe/riscv{32,64}{,-purecap}")
+                                                   as_string="$SDK_ROOT/bbl-gfe/riscv{32,64}{,-purecap}")
 
 
 class BuildBBLNoPayloadFETT(BuildBBLNoPayloadGFE):
@@ -152,8 +153,7 @@ class BuildBBLNoPayloadFETT(BuildBBLNoPayloadGFE):
     build_dir_suffix = "-fett"  # but not the build dir
 
     _default_install_dir_fn = ComputedDefaultValue(function=_bbl_install_dir,
-        as_string="$SDK_ROOT/bbl-fett/riscv{32,64}{,-purecap}")
-
+                                                   as_string="$SDK_ROOT/bbl-fett/riscv{32,64}{,-purecap}")
 
 # class BuildBBLFreeBSDRISCV(BuildBBLBase):
 #     project_name = "bbl"  # reuse same source dir

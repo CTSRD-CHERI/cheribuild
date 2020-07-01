@@ -47,7 +47,9 @@ class _BuildCheriMipsTestBase(Project):
         super().setup_config_options(**kwargs)
         cls.single_test = cls.add_config_option("single-test", help="Run a single test instead of all of them")
         cls.run_tests_with_build = cls.add_bool_option("run-tests-with-build",
-            help="Run tests as part of the --build step (option is useful for jenkins)", show_help=False, default=True)
+                                                       help="Run tests as part of the --build step (option is useful "
+                                                            "for jenkins)",
+                                                       show_help=False, default=True)
 
     def setup(self):
         super().setup()

@@ -68,7 +68,6 @@ class BuildPython(CrossCompileAutotoolsProject):
         # fails to cross-compile and does weird stuff on host (uses wrong python version?)
         self.configure_args.append("--without-ensurepip")
 
-
         if not self.compiling_for_host():
             self.configure_args.append("--without-pymalloc")  # use system malloc
             self.configure_args.append("--without-doc-strings")  # should reduce size
@@ -104,5 +103,6 @@ class BuildPython(CrossCompileAutotoolsProject):
                          self.config.make_j_flag, cwd=self.build_dir)
         else:
             # Python executes tons of system calls, hopefully using the benchmark kernel helps
-            self.target_info.run_cheribsd_test_script("run_python_tests.py", "--buildexe-suffix=" + suffix, mount_installdir=True,
-                                          mount_sourcedir=True, use_benchmark_kernel_by_default=True)
+            self.target_info.run_cheribsd_test_script("run_python_tests.py", "--buildexe-suffix=" + suffix,
+                                                      mount_installdir=True,
+                                                      mount_sourcedir=True, use_benchmark_kernel_by_default=True)

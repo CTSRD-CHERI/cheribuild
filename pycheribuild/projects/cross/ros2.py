@@ -30,7 +30,8 @@ from .crosscompileproject import CrossCompileCMakeProject, DefaultInstallDir, Gi
 
 class BuildRos2(CrossCompileCMakeProject):
     project_name = "ros2"
-    repository = GitRepository("https://github.com/dodsonmg/ros2_dashing_minimal.git", default_branch="master", force_branch=True)
+    repository = GitRepository("https://github.com/dodsonmg/ros2_dashing_minimal.git", default_branch="master",
+                               force_branch=True)
 
     # atm, we build and install in the source_dir.
     build_in_source_dir = True

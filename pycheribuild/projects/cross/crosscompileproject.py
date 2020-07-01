@@ -83,7 +83,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
             # TODO: do we have to remove these too?
             # autotools_triple = autotools_triple.replace("mips64c128-", "cheri-")
             self.configure_args.extend(["--host=" + autotools_triple, "--target=" + autotools_triple,
-                                       "--build=" + buildhost])
+                                        "--build=" + buildhost])
 
     def add_configure_and_make_env_arg(self, arg: str, value: "typing.Union[str,Path]"):
         self.add_configure_env_arg(arg, value)
@@ -105,7 +105,7 @@ class CrossCompileAutotoolsProject(CrossCompileMixin, AutotoolsProject):
 
     def setup(self):
         super().setup()
-        if self._configure_understands_enable_static:     # workaround for nginx which isn't really autotools
+        if self._configure_understands_enable_static:  # workaround for nginx which isn't really autotools
             if self.force_static_linkage:
                 self.configure_args.extend(["--enable-static", "--disable-shared"])
             elif self.force_dynamic_linkage:

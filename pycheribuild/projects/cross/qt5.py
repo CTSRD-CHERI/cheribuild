@@ -288,8 +288,8 @@ class BuildICU4C(CrossCompileAutotoolsProject):
         super().__init__(config)
         self.configure_command = self.source_dir / "icu4c/source/configure"
         self.configure_args.extend(["--disable-plugins", "--disable-dyload",
-                                   "--disable-tests",
-                                   "--disable-samples"])
+                                    "--disable-tests",
+                                    "--disable-samples"])
         self.native_build_dir = self.build_dir_for_target(CompilationTargets.NATIVE)
         # we can't create objects for a different endianess:
         self.COMMON_FLAGS.append("-DU_DISABLE_OBJ_CODE")

@@ -43,7 +43,8 @@ class BuildPostgres(CrossCompileAutotoolsProject):
     # TODO: only use mxcaptable for some files
     needs_mxcaptable_static = True  # both are slightly over the limit
     needs_mxcaptable_dynamic = True  # both are slightly over the limit
-    # warning: added 31332 entries to .cap_table but current maximum is 16384; try recompiling non-performance critical source files with -mxcaptable
+    # warning: added 31332 entries to .cap_table but current maximum is 16384; try recompiling non-performance
+    # critical source files with -mxcaptable
     native_install_dir = DefaultInstallDir.IN_BUILD_DIRECTORY
     cross_install_dir = DefaultInstallDir.ROOTFS
 
@@ -60,7 +61,8 @@ class BuildPostgres(CrossCompileAutotoolsProject):
         self.LDFLAGS.append("-pthread")
         if OSInfo.IS_FREEBSD and self.compiling_for_host():
             # Something werid is happending with the locale code (somehow not being built -FPIC?):
-            # /usr/local/llvm60/bin/ld: error: can't create dynamic relocation R_X86_64_PC32 against symbol: _CurrentRuneLocale in readonly segment; recompile object files with -fPIC
+            # /usr/local/llvm60/bin/ld: error: can't create dynamic relocation R_X86_64_PC32 against symbol:
+            # _CurrentRuneLocale in readonly segment; recompile object files with -fPIC
             # >>> defined in /lib/libc.so.7
             # >>> referenced by pgstrcasecmp.c:37 (/exports/users/alr48/sources/postgres/src/port/pgstrcasecmp.c:37)
             # >>>               pgstrcasecmp.o:(pg_strcasecmp) in archive ../../src/port/libpgport.a
@@ -104,7 +106,8 @@ class BuildPostgres(CrossCompileAutotoolsProject):
                 pg_root = str(self.install_dir)
             benchmark = re.sub(r'POSTGRES_ROOT=".*"', "POSTGRES_ROOT=\"" + pg_root + "\"", benchmark)
             self.write_file(self.real_install_root_dir / benchname, benchmark, overwrite=True, mode=0o755)
-        self.install_file(self.source_dir / "run-postgres-tests.sh", self.real_install_root_dir / "run-postgres-tests.sh")
+        self.install_file(self.source_dir / "run-postgres-tests.sh",
+                          self.real_install_root_dir / "run-postgres-tests.sh")
 
     @property
     def default_ldflags(self):

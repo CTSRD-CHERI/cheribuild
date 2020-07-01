@@ -61,7 +61,7 @@ class BuildSimpleCheriBenchmarks(CrossCompileCMakeProject):
         test_command = "cd /build/test-dir && ./run_jenkins-bluehive.sh -d0 -r1 -o {output} -a {tgt}".format(
             tgt=self.archname_column, output=self.default_statcounters_csv_name)
         self.target_info.run_cheribsd_test_script("run_simple_tests.py", "--test-command", test_command,
-                                      "--test-timeout", str(120 * 60), mount_builddir=True)
+                                                  "--test-timeout", str(120 * 60), mount_builddir=True)
 
     def run_benchmarks(self):
         if not self.compiling_for_mips(include_purecap=True):
@@ -70,5 +70,6 @@ class BuildSimpleCheriBenchmarks(CrossCompileCMakeProject):
         with tempfile.TemporaryDirectory() as td:
             benchmarks_dir = self.create_test_dir(Path(td))
             self.target_info.run_fpga_benchmark(benchmarks_dir, output_file=self.default_statcounters_csv_name,
-                benchmark_script_args=["-d1", "-r10", "-o", self.default_statcounters_csv_name,
-                                       "-a", self.archname_column])
+                                                benchmark_script_args=["-d1", "-r10", "-o",
+                                                                       self.default_statcounters_csv_name,
+                                                                       "-a", self.archname_column])

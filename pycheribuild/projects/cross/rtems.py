@@ -1,4 +1,4 @@
-#-
+# -
 # SPDX-License-Identifier: BSD-2-Clause
 #
 # Author: Hesham Almatary <Hesham.Almatary@cl.cam.ac.uk>
@@ -37,7 +37,7 @@ from ...utils import set_env
 
 class BuildRtems(CrossCompileProject):
     repository = GitRepository("https://github.com/CTSRD-CHERI/rtems",
-        force_branch=True, default_branch="cheri_waf1")
+                               force_branch=True, default_branch="cheri_waf1")
     target = "rtems"
     project_name = "rtems"
     dependencies = ["newlib", "compiler-rt-builtins"]
