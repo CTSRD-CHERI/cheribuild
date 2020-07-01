@@ -263,7 +263,7 @@ class _BuildDiskImageBase(SimpleProject):
                                                                          ROOTFS_DIR=self.rootfs_dir)
         self.create_file_for_image("/etc/csh.cshrc", contents=cshrc_contents)
 
-        # Basic .bashrc/.bash_profile template
+        # Basic .bashrc/.bash_profile template
         dot_bashrc_contents = self.file_templates.get_dot_bashrc_template().format(SRCPATH=self.config.source_root,
                                                                                    ROOTFS_DIR=self.rootfs_dir)
         self.create_file_for_image("/root/.bashrc", contents=dot_bashrc_contents)
