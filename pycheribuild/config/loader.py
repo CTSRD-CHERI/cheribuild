@@ -556,9 +556,6 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                                           str(self.default_config_path) + "')")
         self._parser.add_argument("--help-all", "--help-hidden", action="help", help="Show all help options, including"
                                                                                      " the target-specific ones.")
-        # argument groups:
-        # self.deprecatedOptionsGroup = _parser.add_argument_group("Old deprecated options", "These should not be
-        # used any more")
         self.configure_group = self._parser.add_mutually_exclusive_group()
         self.completion_excludes = []
 

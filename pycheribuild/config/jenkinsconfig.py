@@ -146,9 +146,6 @@ class JenkinsConfig(CheriConfig):
         self.write_logfile = False  # jenkins stores the output anyway
         self.skip_configure = loader.add_bool_option("skip-configure", help="Skip the configure step")
         self.force_configure = True
-        # self.listTargets = False
-        # self.dumpConfig = False
-        # self.get_config_option = None
         self.include_dependencies = False
         loader.finalize_options(available_targets)
         self.FS = FileSystemUtils(self)

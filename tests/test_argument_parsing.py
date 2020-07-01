@@ -371,40 +371,42 @@ def test_kernconf():
     # check default values
     config = _parse_arguments([])
     cheribsd_cheri = target_manager.get_target_raw("cheribsd-cheri").get_or_create_project(None,
-        config)  # type: BuildCHERIBSD
+                                                                                           config)  # type:
+    # BuildCHERIBSD
     cheribsd_mips = target_manager.get_target_raw("cheribsd-mips-nocheri").get_or_create_project(None,
-        config)  # type: BuildCHERIBSD
+                                                                                                 config)  # type:
+    # BuildCHERIBSD
     freebsd_mips = target_manager.get_target_raw("freebsd-mips").get_or_create_project(None,
-        config)  # type: BuildFreeBSD
+                                                                                       config)  # type: BuildFreeBSD
     freebsd_native = target_manager.get_target_raw("freebsd-amd64").get_or_create_project(None,
-        config)  # type: BuildFreeBSD
+                                                                                          config)  # type: BuildFreeBSD
     assert config.freebsd_kernconf is None
-    assert freebsd_mips.kernelConfig == "MALTA64"
-    assert cheribsd_cheri.kernelConfig == "CHERI_MALTA64"
-    assert freebsd_native.kernelConfig == "GENERIC"
+    assert freebsd_mips.kernel_config == "MALTA64"
+    assert cheribsd_cheri.kernel_config == "CHERI_MALTA64"
+    assert freebsd_native.kernel_config == "GENERIC"
 
     # Check that --kernconf is used as the fallback
     config = _parse_arguments(["--kernconf=LINT", "--freebsd-mips/kernel-config=NOTMALTA64"])
     assert config.freebsd_kernconf == "LINT"
-    attr = inspect.getattr_static(freebsd_mips, "kernelConfig")
+    attr = inspect.getattr_static(freebsd_mips, "kernel_config")
     # previously we would replace the command line attribute with a string -> check this is no longer true
     assert isinstance(attr, JsonAndCommandLineConfigOption)
-    assert freebsd_mips.kernelConfig == "NOTMALTA64"
-    assert cheribsd_cheri.kernelConfig == "LINT"
-    assert freebsd_native.kernelConfig == "LINT"
+    assert freebsd_mips.kernel_config == "NOTMALTA64"
+    assert cheribsd_cheri.kernel_config == "LINT"
+    assert freebsd_native.kernel_config == "LINT"
 
     config = _parse_arguments(["--kernconf=LINT", "--cheribsd-cheri/kernel-config=SOMETHING"])
     assert config.freebsd_kernconf == "LINT"
-    assert freebsd_mips.kernelConfig == "LINT"
-    assert cheribsd_cheri.kernelConfig == "SOMETHING"
-    assert freebsd_native.kernelConfig == "LINT"
+    assert freebsd_mips.kernel_config == "LINT"
+    assert cheribsd_cheri.kernel_config == "SOMETHING"
+    assert freebsd_native.kernel_config == "LINT"
 
     config = _parse_arguments(["--kernconf=GENERIC", "--cheribsd/kernel-config=SOMETHING_ELSE"])
     assert config.freebsd_kernconf == "GENERIC"
-    assert cheribsd_cheri.kernelConfig == "SOMETHING_ELSE"
-    assert cheribsd_mips.kernelConfig == "SOMETHING_ELSE"
-    assert freebsd_mips.kernelConfig == "GENERIC"
-    assert freebsd_native.kernelConfig == "GENERIC"
+    assert cheribsd_cheri.kernel_config == "SOMETHING_ELSE"
+    assert cheribsd_mips.kernel_config == "SOMETHING_ELSE"
+    assert freebsd_mips.kernel_config == "GENERIC"
+    assert freebsd_native.kernel_config == "GENERIC"
 
 
 def test_duplicate_key():
