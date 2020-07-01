@@ -195,9 +195,9 @@ def create_sdk_from_archives(cheri_config: JenkinsConfig, needs_cheribsd_sysroot
     elif cheri_config.cheri_sdk_dir.exists() and all(a.archive.exists() for a in archives):
         for a in archives:
             if cheri_config.cheri_sdk_dir.stat().st_ctime < a.archive.stat().st_ctime:
-                msgkind = statusUpdate if not cheri_config.keepSdkDir else warningMessage
+                msgkind = statusUpdate if not cheri_config.keep_sdk_dir else warningMessage
                 msgkind("SDK archive", a.archive, "is newer than the existing SDK directory")
-                if not cheri_config.keepSdkDir:
+                if not cheri_config.keep_sdk_dir:
                     statusUpdate("Deleting old SDK and extracting archive")
                     possibly_delete_sdk_job = cheri_config.FS.async_clean_directory(cheri_config.cheri_sdk_dir)
                 break
@@ -216,7 +216,7 @@ def _jenkins_main():
     target_manager.register_command_line_options()
     cheri_config.load()
     if cheri_config.verbose:
-        # json = cheri_config.getOptionsJSON()  # make sure all config options are loaded
+        # json = cheri_config.get_options_json()  # make sure all config options are loaded
         # pprint.pprint(config_loader.options)
         pass
     init_global_config(test_mode=False, pretend_mode=cheri_config.pretend,

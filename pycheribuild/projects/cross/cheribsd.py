@@ -123,7 +123,7 @@ class BuildFreeBSDBase(Project):
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
     make_kind = MakeCommandKind.BsdMake
     crossbuild = None
-    skipBuildworld = False
+    skip_buildworld = False
     is_large_source_repository = True
     has_installsysroot_target = False
 
@@ -604,7 +604,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def clean(self) -> ThreadJoiner:
         cleaning_kerneldir = False
-        if self.config.skipBuildworld:
+        if self.config.skip_buildworld:
             root_builddir = self.objdir
             kernel_dir = self.kernel_objdir(self.kernelConfig)
             print(kernel_dir)
@@ -694,7 +694,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.run_make("buildsysroot", options=build_args)
             return  # We are done after building the sysroot
 
-        if not self.config.skipBuildworld:
+        if not self.config.skip_buildworld:
             if self.fast_rebuild:
                 if self.config.clean:
                     self.info("Ignoring --", self.target, "/fast option since --clean was passed", sep="")
@@ -714,7 +714,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def _removeOldRootfs(self):
         assert self.config.clean or not self.keepOldRootfs
-        if self.config.skipBuildworld:
+        if self.config.skip_buildworld:
             self.makedirs(self.install_dir)
         else:
             # make sure the old install is purged before building, otherwise we might get strange errors
@@ -798,7 +798,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if self.config.clean or not self.keepOldRootfs:
             self._removeOldRootfs()
 
-        if not self.config.skipBuildworld or sysroot_only:
+        if not self.config.skip_buildworld or sysroot_only:
             install_world_args = self.installworld_args
             # https://github.com/CTSRD-CHERI/cheribsd/issues/220
             # installworld reads compiler metadata which was written by kernel-toolchain which means that
@@ -954,8 +954,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
         if skip_clean is None:
             skip_clean = not self.config.clean
         if skip_install is None:
-            skip_install = self.config.skipInstall
-        if self.config.passDashKToMake:
+            skip_install = self.config.skip_install
+        if self.config.pass_dash_k_to_make:
             make_in_subdir += "-k "
         install_to_sysroot_cmd = ""
         if is_lib:
@@ -1083,7 +1083,7 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
         cls.worlds_only = cls.add_bool_option("worlds-only", help="Only build worlds (skip building kernels)")
         cls.kernels_only = cls.add_bool_option("kernels-only", help="Only build kernels (skip building worlds)",
                                              default=ComputedDefaultValue(
-                                                 function=lambda conf, proj: conf.skipBuildworld,
+                                                 function=lambda conf, proj: conf.skip_buildworld,
                                                  as_string="true if --skip-buildworld is set"))
 
         cls.jflag_in_subjobs = cls.add_config_option("jflag-in-subjobs", help="Number of jobs in each world/kernel build",
@@ -1257,7 +1257,7 @@ class BuildCHERIBSD(BuildFreeBSD):
                 runCmd("chflags", "noschg", str(file))
 
     def _removeOldRootfs(self):
-        if not self.config.skipBuildworld:
+        if not self.config.skip_buildworld:
             if self.installAsRoot:
                 # if we installed as root remove the schg flag from files before cleaning (otherwise rm will fail)
                 self._removeSchgFlag(
@@ -1651,7 +1651,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         print("Successfully populated sysroot")
 
     def process(self):
-        if self.config.skipBuildworld:
+        if self.config.skip_buildworld:
             statusUpdate("Not building sysroot because --skip-buildworld was passed")
             return
 

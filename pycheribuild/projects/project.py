@@ -234,7 +234,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
                 fatalError("Could not find target '", dep_name, "' for ", cls.__name__, sep="")
                 raise
             # Handle --include-dependencies with --skip-sdk is passed
-            if config.skipSdk and dep_target.project_class.is_sdk_target:
+            if config.skip_sdk and dep_target.project_class.is_sdk_target:
                 if config.verbose:
                     statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
                                  "since it is an SDK target and --skip-sdk was passed.")
@@ -1555,11 +1555,11 @@ class Project(SimpleProject):
                                                   default=ComputedDefaultValue(
                                                       lambda config, proj: proj.default_auto_var_init,
                                                       lambda c: (
-                                                                  "the value of the global --skip-update option ("
-                                                                  "defaults to \"" +
-                                                                  c.default_auto_var_init.value + "\")")),
+                                                              "the value of the global --skip-update option ("
+                                                              "defaults to \"" +
+                                                              c.default_auto_var_init.value + "\")")),
                                                   help="Whether to initialize all local variables (currently only "
-                                                  "supported when compiling with clang)")
+                                                       "supported when compiling with clang)")
         cls.skip_update = cls.add_bool_option("skip-update",
                                               default=ComputedDefaultValue(lambda config, proj: config.skip_update,
                                                                            "the value of the global --skip-update "
@@ -1739,7 +1739,7 @@ class Project(SimpleProject):
         if self.should_include_debug_info and ".bfd" not in self.target_info.linker.name:
             # Add a gdb_index to massively speed up running GDB on CHERIBSD:
             result.append("-Wl,--gdb-index")
-        if self.target_info.is_cheribsd() and self.config.withLibstatcounters:
+        if self.target_info.is_cheribsd() and self.config.with_libstatcounters:
             # We need to include the constructor even if there is no reference to libstatcounters:
             # TODO: always include the .a file?
             result += ["-Wl,--whole-archive", "-lstatcounters", "-Wl,--no-whole-archive"]
@@ -1978,7 +1978,7 @@ class Project(SimpleProject):
             all_args = ["nice"] + all_args
         if self.config.debug_output and options.kind == MakeCommandKind.Ninja:
             all_args.append("-v")
-        if self.config.passDashKToMake:
+        if self.config.pass_dash_k_to_make:
             all_args.append("-k")
             if options.kind == MakeCommandKind.Ninja:
                 # ninja needs the maximum number of failed jobs as an argument
@@ -2074,7 +2074,7 @@ class Project(SimpleProject):
         return True
 
     def should_run_configure(self):
-        if self.config.force_configure or self.config.configureOnly:
+        if self.config.force_configure or self.config.configure_only:
             return True
         if self.config.clean:
             return True
@@ -2413,25 +2413,25 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             # Clean completed
 
             # Configure step
-            if not self.config.skip_configure or self.config.configureOnly:
+            if not self.config.skip_configure or self.config.configure_only:
                 if self.should_run_configure():
                     statusUpdate("Configuring", self.display_name, "... ")
                     self.configure()
-            if self.config.configureOnly:
+            if self.config.configure_only:
                 return
 
             # Build step
-            if not self.config.skipBuild:
+            if not self.config.skip_build:
                 if self.config.csetbounds_stats and (self.csetbounds_stats_file.exists() or self.config.pretend):
                     self.move_file(self.csetbounds_stats_file,
-                        self.csetbounds_stats_file.with_suffix(".from-configure.csv"),
-                        force=True)
+                                   self.csetbounds_stats_file.with_suffix(".from-configure.csv"),
+                                   force=True)
                     # move any csetbounds stats from configuration (since they are not useful)
                 statusUpdate("Building", self.display_name, "... ")
                 self.compile()
 
             # Install step
-            if not self.config.skipInstall:
+            if not self.config.skip_install:
                 statusUpdate("Installing", self.display_name, "... ")
                 if install_dir_kind == DefaultInstallDir.DO_NOT_INSTALL:
                     self.info("Not installing", self.target, "since install dir is set to DO_NOT_INSTALL")

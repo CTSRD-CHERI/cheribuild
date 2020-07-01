@@ -32,7 +32,7 @@ class MockConfig(CheriConfig):
         self.debug_output = True
         self.quiet = False
         self.skip_update = True
-        self.skipInstall = True
+        self.skip_install = True
         self.skip_clone = True
         self.skip_configure = True
         self.force_configure = False

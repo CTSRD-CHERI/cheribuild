@@ -37,7 +37,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from ..utils import latest_system_clang_tool, warningMessage, statusUpdate, have_working_internet_connection
+from ..utils import have_working_internet_connection, latest_system_clang_tool, statusUpdate, warningMessage
 
 
 # custom encoder to handle pathlib.Path objects
@@ -112,38 +112,52 @@ class CheriConfig(object):
         self.clang_cpp_path = loader.add_path_option("clang-cpp-path", shortname="-cpp-path",
                                                      default=latest_system_clang_tool("clang-cpp", "cpp"),
                                                      group=loader.pathGroup,
-                                                     help="The C preprocessor to use for host binaries (must be compatible with Clang >= 3.7)")
+                                                     help="The C preprocessor to use for host binaries (must be "
+                                                          "compatible with Clang >= 3.7)")
 
-        self.passDashKToMake = loader.add_commandline_only_bool_option("pass-k-to-make", "k",
-                                                                   help="Pass the -k flag to make to continue after"
-                                                                        " the first error")
-        self.withLibstatcounters = loader.add_bool_option("with-libstatcounters", group=loader.crossCompileOptionsGroup,
-                                                        help="Link cross compiled CHERI project with libstatcounters.")
-        self.skipBuildworld = loader.add_bool_option("skip-buildworld", "-skip-world", group=loader.freebsdGroup,
-                                                   help="Skip the buildworld step when building FreeBSD or CheriBSD")
-        self.freebsd_kernconf = loader.add_option("kernel-config", "-kernconf", group=loader.freebsdGroup, help_hidden=True,
-                                                 help="Override default kernel config to use.")
+        self.pass_dash_k_to_make = loader.add_commandline_only_bool_option("pass-k-to-make", "k",
+                                                                           help="Pass the -k flag to make to continue "
+                                                                                "after"
+                                                                                " the first error")
+        self.with_libstatcounters = loader.add_bool_option("with-libstatcounters",
+                                                           group=loader.crossCompileOptionsGroup,
+                                                           help="Link cross compiled CHERI project with "
+                                                                "libstatcounters.")
+        self.skip_buildworld = loader.add_bool_option("skip-buildworld", "-skip-world", group=loader.freebsdGroup,
+                                                      help="Skip the buildworld step when building FreeBSD or CheriBSD")
+        self.freebsd_kernconf = loader.add_option("kernel-config", "-kernconf", group=loader.freebsdGroup,
+                                                  help_hidden=True, help="Override default kernel config to use.")
         self.freebsd_subdir = loader.add_commandline_only_option("freebsd-subdir", "-subdir",
-            group=loader.freebsdGroup, type=list, metavar="SUBDIRS",
-            help="Only build subdirs SUBDIRS of FreeBSD/CheriBSD instead of the full tree. Useful "
-            "for quickly rebuilding an individual programs/libraries. If more than one dir is passed they will be "
-            "processed in order.  Note: This will break if not all dependencies have been built.")
-        self.freebsd_host_tools_only = loader.add_commandline_only_bool_option("freebsd-host-tools-only", help_hidden=True,
-            group=loader.freebsdGroup, help="Stop the FreeBSD/CheriBSD build after the host tools have been built")
+                                                                 group=loader.freebsdGroup, type=list,
+                                                                 metavar="SUBDIRS",
+                                                                 help="Only build subdirs SUBDIRS of FreeBSD/CheriBSD "
+                                                                      "instead of the full tree. Useful "
+                                                                      "for quickly rebuilding an individual "
+                                                                      "programs/libraries. If more than one dir is "
+                                                                      "passed they will be "
+                                                                      "processed in order.  Note: This will break if "
+                                                                      "not all dependencies have been built.")
+        self.freebsd_host_tools_only = loader.add_commandline_only_bool_option(
+            "freebsd-host-tools-only", help_hidden=True, group=loader.freebsdGroup,
+            help="Stop the FreeBSD/CheriBSD build after the host tools have been built")
 
         self.install_subdir_to_sysroot = loader.add_bool_option("install-subdir-to-sysroot", group=loader.freebsdGroup,
-            help="When using the --subdir option for CheriBSD targets also install the built libraries into the "
-                 "sysroot.", default=True)
+                                                                help="When using the --subdir option for CheriBSD "
+                                                                     "targets also install the built libraries into "
+                                                                     "the "
+                                                                     "sysroot.", default=True)
 
-        self.buildenv = loader.add_commandline_only_bool_option("buildenv", group=loader.freebsdGroup,
-                                                            help="Open a shell with the right environment for building"
-                                                                 " the project. Currently only works for FreeBSD/CheriBSD")
-        self.libcompat_buildenv = loader.add_commandline_only_bool_option("libcompat-buildenv", "-libcheri-buildenv", group=loader.freebsdGroup,
-             help="Open a shell with the right environment for building compat libraries.")
+        self.buildenv = loader.add_commandline_only_bool_option(
+            "buildenv", group=loader.freebsdGroup,
+            help="Open a shell with the right environment for building the project. Currently only works for "
+                 "FreeBSD/CheriBSD")
+        self.libcompat_buildenv = loader.add_commandline_only_bool_option(
+            "libcompat-buildenv", "-libcheri-buildenv", group=loader.freebsdGroup,
+            help="Open a shell with the right environment for building compat libraries.")
 
         self.cheri_cap_table_abi = loader.add_option("cap-table-abi", help_hidden=True, default="pcrel",
-                                                    choices=("pcrel", "plt", "legacy", "fn-desc"),
-                                                    help="The ABI to use for cap-table mode")
+                                                     choices=("pcrel", "plt", "legacy", "fn-desc"),
+                                                     help="The ABI to use for cap-table mode")
         self.cross_target_suffix = loader.add_option("cross-target-suffix", help_hidden=True, default="",
                                                      help="Add a suffix to the cross build and install directories. "
                                                           "With VALUE=-pcrel it will use "
@@ -168,7 +182,8 @@ class CheriConfig(object):
         self.crosscompile_linkage = loader.add_option("cross-compile-linkage", default=Linkage.DYNAMIC, type=Linkage,
                                                       group=loader.crossCompileOptionsGroup,
                                                       enum_choices=(Linkage.DYNAMIC, Linkage.STATIC),
-                                                      help="Whether to link cross-compile projects static or dynamic by default")
+                                                      help="Whether to link cross-compile projects static or dynamic "
+                                                           "by default")
         self.csetbounds_stats = loader.add_bool_option("collect-csetbounds-stats",
                                                        group=loader.crossCompileOptionsGroup, help_hidden=True,
                                                      help="Whether to log CSetBounds statistics in csv format")
@@ -180,26 +195,27 @@ class CheriConfig(object):
                                                  " (Note: this should be turned off for benchmarks!)")
 
         self.clang_colour_diags = loader.add_bool_option("clang-colour-diags", "-clang-color-diags", default=True,
-                                                       help="Force CHERI clang to emit coloured diagnostics")
+                                                         help="Force CHERI clang to emit coloured diagnostics")
         self.use_sdk_clang_for_native_xbuild = loader.add_bool_option("use-sdk-clang-for-native-xbuild",
-                                                                    group=loader.crossCompileOptionsGroup,
-                                                                    help="Compile cross-compile project with CHERI "
-                                                                         "clang from the SDK instead of host compiler")
+                                                                      group=loader.crossCompileOptionsGroup,
+                                                                      help="Compile cross-compile project with CHERI "
+                                                                           "clang from the SDK instead of host "
+                                                                           "compiler")
 
-        self.configureOnly = loader.add_bool_option("configure-only",
-                                                  help="Only run the configure step (skip build and install)")
-        self.skipInstall = loader.add_bool_option("skip-install", help="Skip the install step (only do the build)")
-        self.skipBuild = loader.add_bool_option("skip-build", help="Skip the build step (only do the install)")
-        self.skipSdk = loader.add_bool_option("skip-sdk", help="When building with --include-dependencies ignore the "
-                                                             "CHERI sdk dependencies. Saves a lot of time when "
-                                                             "building libc++, etc. with dependencies but the sdk "
-                                                             "is already up-to-date")
+        self.configure_only = loader.add_bool_option("configure-only",
+                                                     help="Only run the configure step (skip build and install)")
+        self.skip_install = loader.add_bool_option("skip-install", help="Skip the install step (only do the build)")
+        self.skip_build = loader.add_bool_option("skip-build", help="Skip the build step (only do the install)")
+        self.skip_sdk = loader.add_bool_option("skip-sdk", help="When building with --include-dependencies ignore the "
+                                                                "CHERI sdk dependencies. Saves a lot of time when "
+                                                                "building libc++, etc. with dependencies but the sdk "
+                                                                "is already up-to-date")
 
         self.trap_on_unrepresentable = loader.add_bool_option("trap-on-unrepresentable", default=False,
-            help="Raise a CHERI exception when capabilities become unreprestable instead of detagging. Useful for "
-                 "debugging, but deviates from the spec, and therefore off by default.")
+                                                              help="Raise a CHERI exception when capabilities become unreprestable instead of detagging. Useful for "
+                                                                   "debugging, but deviates from the spec, and therefore off by default.")
         self.debugger_on_cheri_trap = loader.add_bool_option("qemu-gdb-break-on-cheri-trap", default=False,
-            help="Drop into GDB attached to QEMU when a CHERI exception is triggered (QEMU only).")
+                                                             help="Drop into GDB attached to QEMU when a CHERI exception is triggered (QEMU only).")
         self.qemu_debug_program = loader.add_option("qemu-gdb-debug-userspace-program",
                                                     help="Print the command to debug the following userspace program "
                                                          "in GDB attaced to QEMU")
@@ -223,7 +239,9 @@ class CheriConfig(object):
         self.docker_container = loader.add_option("docker-container", help="Name of the docker container to use",
                                                   default="cheribuild-test", group=loader.dockerGroup)
         self.docker_reuse_container = loader.add_bool_option("docker-reuse-container", group=loader.dockerGroup,
-                                                             help="Attach to the same container again (note: docker-container option must be an id rather than a container name")
+                                                             help="Attach to the same container again (note: "
+                                                                  "docker-container option must be an id rather than "
+                                                                  "a container name")
 
         # compilation db options:
         self.create_compilation_db = loader.add_commandline_only_bool_option(
@@ -231,76 +249,89 @@ class CheriConfig(object):
                                            "(requires Bear for non-CMake projects)")
         self.copy_compilation_db_to_source_dir = None  # False for jenkins, an option for cheribuild
 
-
         # Run QEMU options
         self.wait_for_debugger = loader.add_bool_option("wait-for-debugger", group=loader.run_group,
                                                         help="Start QEMU in the 'wait for a debugger' state when"
                                                              "launching CheriBSD,FreeBSD, etc.")
 
-        self.debugger_in_tmux_pane = loader.add_bool_option("debugger-in-tmux-pane",
-                                                            group=loader.run_group,
-                                                            help="Start Qemu and "
-                                                             "gdb in another "
-                                                             "tmux split")
+        self.debugger_in_tmux_pane = loader.add_bool_option("debugger-in-tmux-pane", group=loader.run_group,
+                                                            help="Start Qemu and gdb in another tmux split")
 
-        self.gdb_random_port = loader.add_bool_option("gdb-random-port",
-                                                        default=True,
-                                                        group=loader.run_group,
-                                                        help="Wait for gdb "
-                                                             "using a random "
-                                                             "port")
+        self.gdb_random_port = loader.add_bool_option("gdb-random-port", default=True, group=loader.run_group,
+                                                      help="Wait for gdb using a random port")
 
         self.run_under_gdb = loader.add_bool_option("run-under-gdb", group=loader.run_group,
-            help="Run tests/benchmarks under GDB. Note: currently most targets ignore this flag.")
+                                                    help="Run tests/benchmarks under GDB. Note: currently most "
+                                                         "targets ignore this flag.")
 
         # Test options:
         self.test_ssh_key = loader.add_path_option("test-ssh-key", default=os.path.expanduser("~/.ssh/id_ed25519.pub"),
-                                                 help="The SSH key to used to connect to the QEMU instance when running"
-                                                      " tests on CheriBSD", group=loader.testsGroup)
+                                                   help="The SSH key to used to connect to the QEMU instance when "
+                                                        "running"
+                                                        " tests on CheriBSD", group=loader.testsGroup)
         self.use_minimal_benchmark_kernel = loader.add_bool_option("use-minimal-benchmark-kernel",
-            help="Use a CHERI BENCHMARK version of the cheribsd-mfs-root-kernel (without INVARIATES) for the "
+                                                                   help="Use a CHERI BENCHMARK version of the "
+                                                                        "cheribsd-mfs-root-kernel (without "
+                                                                        "INVARIATES) for the "
                  "run-minimal target and for tests. This can speed up longer running tests. This is the default for "
                  "PostgreSQL and libc++ tests (passing use-minimal-benchmark-kernel can force these tests to use "
                  "an INVARIANTS kernel).", group=loader.testsGroup, default=False)
 
         self.test_extra_args = loader.add_commandline_only_option("test-extra-args", group=loader.testsGroup, type=list,
-            metavar="ARGS", help="Additional flags to pass to the test script in --test")
+                                                                  metavar="ARGS",
+                                                                  help="Additional flags to pass to the test script "
+                                                                       "in --test")
         self.tests_interact = loader.add_commandline_only_bool_option("interact-after-tests", group=loader.testsGroup,
-            help="Interact with the CheriBSD instance after running the tests on QEMU (only for --test)")
+                                                                      help="Interact with the CheriBSD instance after "
+                                                                           "running the tests on QEMU (only for "
+                                                                           "--test)")
         self.tests_env_only = loader.add_commandline_only_bool_option("test-environment-only", group=loader.testsGroup,
-            help="Don't actually run the tests. Instead setup a QEMU instance with the right paths set up.")
+                                                                      help="Don't actually run the tests. Instead "
+                                                                           "setup a QEMU instance with the right "
+                                                                           "paths set up.")
         self.test_ld_preload = loader.add_path_option("test-ld-preload", group=loader.testsGroup,
-                                                    help="Preload the given library before running tests")
+                                                      help="Preload the given library before running tests")
 
-        self.benchmark_fpga_extra_args = loader.add_commandline_only_option("benchmark-fpga-extra-args", group=loader.benchmarkGroup,
-                                                                         type=list, metavar="ARGS",
-                                                                         help="Extra options for beri-fpga-bsd-boot.py")
+        self.benchmark_fpga_extra_args = loader.add_commandline_only_option(
+            "benchmark-fpga-extra-args", group=loader.benchmarkGroup, type=list, metavar="ARGS",
+            help="Extra options for beri-fpga-bsd-boot.py")
         self.benchmark_clean_boot = loader.add_bool_option("benchmark-clean-boot", group=loader.benchmarkGroup,
-            help="Reboot the FPGA with a new bitfile and kernel before running benchmarks. "
-                 "If not set, assume the FPGA is running.")
-        self.benchmark_extra_args = loader.add_commandline_only_option("benchmark-extra-args", group=loader.benchmarkGroup, type=list,
+                                                           help="Reboot the FPGA with a new bitfile and kernel before "
+                                                                "running benchmarks. "
+                                                                "If not set, assume the FPGA is running.")
+        self.benchmark_extra_args = loader.add_commandline_only_option(
+            "benchmark-extra-args", group=loader.benchmarkGroup, type=list,
             metavar="ARGS", help="Additional flags to pass to the beri-fpga-bsd-boot.py script in --benchmark")
-        self.benchmark_ssh_host = loader.add_option("benchmark-ssh-host", group=loader.benchmarkGroup, type=str,
-                                                   default="cheri-fpga", help="The SSH hostname/IP for the benchmark FPGA")
-        self.benchmark_statcounters_suffix = loader.add_option("benchmark-csv-suffix", group=loader.benchmarkGroup,
-                                                              help="Add a custom suffix for the statcounters CSV.")
-        self.benchmark_ld_preload = loader.add_path_option("benchmark-ld-preload", group=loader.benchmarkGroup,
-                                                         help="Preload the given library before running benchmarks")
-        self.benchmark_with_debug_kernel = loader.add_bool_option("benchmark-with-debug-kernel", group=loader.benchmarkGroup,
-                                                                help="Run the benchmark with a kernel that has assertions enabled.")
-        self.benchmark_lazy_binding = loader.add_bool_option("benchmark-lazy-binding", group=loader.benchmarkGroup,
-                                                                help="Run the benchmark without setting LD_BIND_NOW.")
-        self.benchmark_iterations = loader.add_option("benchmark-iterations", type=int, group=loader.benchmarkGroup,
-                                                     help="Override the number of iterations for the benchmark. "
-                                                          "Note: not all benchmarks support this option")
-        self.benchmark_with_qemu = loader.add_bool_option("benchmark-with-qemu", group=loader.benchmarkGroup,
-                                                         help="Run the benchmarks on QEMU instead of the FPGA (only useful to collect instruction counts or test the benchmarks)")
-        self.shallow_clone = loader.add_bool_option("shallow-clone", default=True,
+        self.benchmark_ssh_host = loader.add_option(
+            "benchmark-ssh-host", group=loader.benchmarkGroup, type=str,
+            default="cheri-fpga", help="The SSH hostname/IP for the benchmark FPGA")
+        self.benchmark_statcounters_suffix = loader.add_option(
+            "benchmark-csv-suffix", group=loader.benchmarkGroup,
+            help="Add a custom suffix for the statcounters CSV.")
+        self.benchmark_ld_preload = loader.add_path_option(
+            "benchmark-ld-preload", group=loader.benchmarkGroup,
+            help="Preload the given library before running benchmarks")
+        self.benchmark_with_debug_kernel = loader.add_bool_option(
+            "benchmark-with-debug-kernel", group=loader.benchmarkGroup,
+            help="Run the benchmark with a kernel that has assertions enabled.")
+        self.benchmark_lazy_binding = loader.add_bool_option(
+            "benchmark-lazy-binding", group=loader.benchmarkGroup,
+            help="Run the benchmark without setting LD_BIND_NOW.")
+        self.benchmark_iterations = loader.add_option(
+            "benchmark-iterations", type=int, group=loader.benchmarkGroup,
+            help="Override the number of iterations for the benchmark. "
+                 "Note: not all benchmarks support this option")
+        self.benchmark_with_qemu = loader.add_bool_option(
+            "benchmark-with-qemu", group=loader.benchmarkGroup,
+            help="Run the benchmarks on QEMU instead of the FPGA (only useful to collect instruction counts or test "
+                 "the benchmarks)")
+        self.shallow_clone = loader.add_bool_option(
+            "shallow-clone", default=True,
             help="Perform a shallow `git clone` when cloning new projects. This can save a lot of time for large"
-            "repositories such as FreeBSD or LLVM. Use `git fetch --unshallow` to convert to a non-shallow clone")
+                 "repositories such as FreeBSD or LLVM. Use `git fetch --unshallow` to convert to a non-shallow clone")
 
         self.fpga_custom_env_setup_script = loader.add_path_option("beri-fpga-env-setup-script",
-            help="Custom script to source to setup PATH and quartus, default to using cheri-cpu/cheri/setup.sh")
+                                                                   help="Custom script to source to setup PATH and quartus, default to using cheri-cpu/cheri/setup.sh")
 
         self.targets = None  # type: typing.Optional[typing.List[str]]
         self.__optionalProperties = ["preferred_xtarget"]
@@ -408,12 +439,13 @@ class CheriConfig(object):
             return v.__get__(self, self.__class__)  # pytype: disable=attribute-error
         return v
 
-    def getOptionsJSON(self):
-        jsonDict = OrderedDict()
+    def get_options_json(self):
+        json_dict = OrderedDict()
         for v in self.loader.options.values():
             # noinspection PyProtectedMember
-            jsonDict[v.full_option_name] = v.__get__(self, v._owning_class if v._owning_class else self)  # pytype: disable=attribute-error
-        return json.dumps(jsonDict, sort_keys=True, cls=MyJsonEncoder, indent=4)
+            json_dict[v.full_option_name] = v.__get__(self,
+                                                      v._owning_class if v._owning_class else self)  # pytype: disable=attribute-error
+        return json.dumps(json_dict, sort_keys=True, cls=MyJsonEncoder, indent=4)
 
     @classmethod
     def get_user_name(cls) -> str:

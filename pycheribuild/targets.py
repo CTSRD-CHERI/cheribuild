@@ -385,7 +385,7 @@ class TargetManager(object):
             # Now add all the dependencies:
             for dep_target in deps_to_add:
                 # when --skip-sdk is passed don't include sdk dependencies
-                if config.skipSdk and dep_target.project_class.is_sdk_target:
+                if config.skip_sdk and dep_target.project_class.is_sdk_target:
                     if config.verbose:
                         statusUpdate("Not adding ", t, "dependency", dep_target,
                                      "since it is an SDK target and --skip-sdk was passed.")

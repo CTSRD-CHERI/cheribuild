@@ -27,7 +27,7 @@ def _sort_targets(targets: "typing.List[str]", add_dependencies=False, add_toolc
     real_targets = list(target_manager.get_target(t, None, global_config, caller="_sort_targets") for t in targets)
     global_config.include_dependencies = add_dependencies
     global_config.include_toolchain_dependencies = add_toolchain
-    global_config.skipSdk = skip_sdk
+    global_config.skip_sdk = skip_sdk
     for t in real_targets:
         if t.project_class._xtarget is None:
             continue
@@ -127,7 +127,7 @@ def _check_deps_cached(classes):
 def test_webkit_cached_deps():
     # regression test for a bug in caching deps
     config = copy.copy(global_config)
-    config.skipSdk = True
+    config.skip_sdk = True
     webkit_native = target_manager.get_target_raw("qtwebkit-native").project_class
     webkit_cheri = target_manager.get_target_raw("qtwebkit-mips-purecap").project_class
     webkit_mips = target_manager.get_target_raw("qtwebkit-mips-hybrid").project_class

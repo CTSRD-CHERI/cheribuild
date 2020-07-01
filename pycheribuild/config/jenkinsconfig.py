@@ -96,9 +96,9 @@ class JenkinsConfig(CheriConfig):
         self.keep_install_dir = loader.add_commandline_only_bool_option("keep-install-dir",
                                                                         help="Don't delete the install dir prior to "
                                                                              "build")  # type: bool
-        self.keepSdkDir = loader.add_commandline_only_bool_option("keep-sdk-dir",
-                                                                  help="Don't delete existing SDK dir even"
-                                                                       " if there is a newer archive")  # type: bool
+        self.keep_sdk_dir = loader.add_commandline_only_bool_option("keep-sdk-dir",
+                                                                    help="Don't delete existing SDK dir even"
+                                                                         " if there is a newer archive")  # type: bool
         self.force_update = loader.add_commandline_only_bool_option("force-update",
                                                                     help="Do the updating (not recommended in "
                                                                          "jenkins!)")  # type: bool
@@ -148,7 +148,7 @@ class JenkinsConfig(CheriConfig):
         self.force_configure = True
         # self.listTargets = False
         # self.dumpConfig = False
-        # self.getConfigOption = None
+        # self.get_config_option = None
         self.include_dependencies = False
         loader.finalize_options(available_targets)
         self.FS = FileSystemUtils(self)

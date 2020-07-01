@@ -130,12 +130,12 @@ def real_main():
         print("Available targets are:\n ", "\n  ".join(all_target_names))
         sys.exit()
     elif CheribuildAction.DUMP_CONFIGURATION in cheri_config.action:
-        print(cheri_config.getOptionsJSON())
+        print(cheri_config.get_options_json())
         sys.exit()
-    elif cheri_config.getConfigOption:
-        if cheri_config.getConfigOption not in config_loader.options:
-            fatalError("Unknown config key", cheri_config.getConfigOption)
-        option = config_loader.options[cheri_config.getConfigOption]
+    elif cheri_config.get_config_option:
+        if cheri_config.get_config_option not in config_loader.options:
+            fatalError("Unknown config key", cheri_config.get_config_option)
+        option = config_loader.options[cheri_config.get_config_option]
         # noinspection PyProtectedMember
         print(option.__get__(cheri_config,
                              option._owning_class if option._owning_class else cheri_config))  # pytype:

@@ -64,8 +64,9 @@ class DefaultCheriConfig(CheriConfig):
         self.default_action = CheribuildAction.BUILD
         assert isinstance(loader, JsonAndCommandLineConfigLoader)
         # The run mode:
-        self.getConfigOption = loader.add_option("get-config-option", type=str, metavar="KEY", group=loader.actionGroup,
-                                                 help="Print the value of config option KEY and exit")
+        self.get_config_option = loader.add_option("get-config-option", type=str, metavar="KEY",
+                                                   group=loader.actionGroup,
+                                                   help="Print the value of config option KEY and exit")
         # boolean flags
         self.quiet = loader.add_bool_option("quiet", "q", help="Don't show stdout of the commands that are executed")
         self.verbose = loader.add_bool_option("verbose", "v", help="Print all commmands that are executed")
@@ -119,18 +120,18 @@ class DefaultCheriConfig(CheriConfig):
                                                  group=loader.pathGroup,
                                                  help="The directory for all the builds (default: "
                                                       "'<SOURCE_ROOT>/build')")
-        self.toolsRoot = loader.add_path_option("tools-root",
-                                                default=lambda p, cls: p.output_root, group=loader.pathGroup,
-                                                help="The directory to find sdk and bootstrap tools (default: "
-                                                     "'<OUTPUT_ROOT>')")
+        self.tools_root = loader.add_path_option("tools-root",
+                                                 default=lambda p, cls: p.output_root, group=loader.pathGroup,
+                                                 help="The directory to find sdk and bootstrap tools (default: "
+                                                      "'<OUTPUT_ROOT>')")
         loader.finalize_options(available_targets)
 
     def load(self):
         super().load()
         self.preferred_xtarget = None
         # now set some generic derived config options
-        self.cheri_sdk_dir = self.toolsRoot / self.cheri_sdk_directory_name  # qemu and binutils (and llvm/clang)
-        self.other_tools_dir = self.toolsRoot / "bootstrap"
+        self.cheri_sdk_dir = self.tools_root / self.cheri_sdk_directory_name  # qemu and binutils (and llvm/clang)
+        self.other_tools_dir = self.tools_root / "bootstrap"
         self.cheribsd_image_root = self.output_root  # TODO: allow this to be different?
         self._initializeDerivedPaths()
 
