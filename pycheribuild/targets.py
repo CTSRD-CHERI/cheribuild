@@ -92,64 +92,48 @@ class Target(object):
     def _create_project(self, config: CheriConfig) -> "SimpleProject":
         return self.project_class(config)
 
+    def _do_run(self, config, msg: str, func: "typing.Callable[[SimpleProject], typing.Any]"):
+        # instantiate the project and run it
+        starttime = time.time()
+        project = self.get_or_create_project(self.project_class.get_crosscompile_target(config), config)
+        # noinspection PyProtectedMember
+        if not project._setup_called:
+            project.setup()
+        # noinspection PyProtectedMember
+        assert project._setup_called, str(self._project_class) + ": forgot to call super().setup()?"
+        new_env = {"PATH": project.config.dollarPathWithOtherTools}
+        if project.config.clang_colour_diags:
+            new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
+        with set_env(**new_env):
+            func(project)
+        statusUpdate(msg, "for target '" + self.name + "' in", time.time() - starttime, "seconds")
+        self._tests_have_run = True
+
     def execute(self, config: CheriConfig):
         if self._completed:
             # TODO: make this an error once I have a clean solution for the pseudo targets
             warningMessage(self.name, "has already been executed!")
             return
-        # instantiate the project and run it
-        starttime = time.time()
         assert self.__project is not None, "Should have been initialized in check_system_deps()"
-        project = self.__project
         # noinspection PyProtectedMember
         assert not self.__project._setup_called, str(self._project_class) + ".setup() should not have been called yet."
-        self.__project.setup()
-        # noinspection PyProtectedMember
-        assert self.__project._setup_called, str(self._project_class) + ": forgot to call super().setup()?"
-        new_env = {"PATH": project.config.dollarPathWithOtherTools}
-        if project.config.clang_colour_diags:
-            new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
-        with set_env(**new_env):
-            project.process()
-        statusUpdate("Built target '" + self.name + "' in", time.time() - starttime, "seconds")
+        self._do_run(config, msg="Built", func=lambda project: project.process())
         self._completed = True
 
     def run_tests(self, config: "CheriConfig"):
         if self._tests_have_run:
             # TODO: make this an error once I have a clean solution for the pseudo targets
-            warningMessage(self.name, "has already been executed!")
+            warningMessage(self.name, "has already been tested!")
             return
-        # instantiate the project and run it
-        starttime = time.time()
-        project = self.get_or_create_project(self.project_class.get_crosscompile_target(config), config)
-        # noinspection PyProtectedMember
-        if not project._setup_called:
-            project.setup()
-        new_env = {"PATH": project.config.dollarPathWithOtherTools}
-        if project.config.clang_colour_diags:
-            new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
-        with set_env(**new_env):
-            project.run_tests()
-        statusUpdate("Ran tests for target '" + self.name + "' in", time.time() - starttime, "seconds")
+        self._do_run(config, msg="Ran benchmarks", func=lambda project: project.run_benchmarks())
         self._tests_have_run = True
 
     def run_benchmarks(self, config: "CheriConfig"):
         if self._benchmarks_have_run:
             # TODO: make this an error once I have a clean solution for the pseudo targets
-            warningMessage(self.name, "has already been executed!")
+            warningMessage(self.name, "has already been tested!")
             return
-        # instantiate the project and run it
-        starttime = time.time()
-        project = self.get_or_create_project(self.project_class.get_crosscompile_target(config), config)
-        # noinspection PyProtectedMember
-        if not project._setup_called:
-            project.setup()
-        new_env = {"PATH": project.config.dollarPathWithOtherTools}
-        if project.config.clang_colour_diags:
-            new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
-        with set_env(**new_env):
-            project.run_benchmarks()
-        statusUpdate("Ran benchmarks for target '" + self.name + "' in", time.time() - starttime, "seconds")
+        self._do_run(config, msg="Ran tests", func=lambda project: project.run_tests())
         self._benchmarks_have_run = True
 
     def reset(self):

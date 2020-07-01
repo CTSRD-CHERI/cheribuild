@@ -118,6 +118,14 @@ def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
         return config.output_root / "rootfs-x86"
 
 
+def _clear_dangerous_make_env_vars():
+    # remove any environment variables that could interfere with bmake running
+    for k, v in os.environ.copy().items():
+        if k in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL", "MAKE_TERMERR", "MAKE_TERMOUT", "MAKE"):
+            os.unsetenv(k)
+            del os.environ[k]
+
+
 class BuildFreeBSDBase(Project):
     doNotAddToTargets = True  # base class only
     repository = GitRepository("https://github.com/freebsd/freebsd.git")
@@ -918,16 +926,10 @@ class BuildFreeBSD(BuildFreeBSDBase):
         return ""
 
     def process(self):
-        if not OSInfo.IS_FREEBSD:
-            if not self.crossbuild:
-                statusUpdate("Can't build CHERIBSD on a non-FreeBSD host! Any targets that depend on this will need"
-                             " to scp the required files from another server (see --frebsd-build-server options)")
-                return
-        # remove any environment variables that could interfere with bmake running
-        for k, v in os.environ.copy().items():
-            if k in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL", "MAKE_TERMERR", "MAKE_TERMOUT", "MAKE"):
-                os.unsetenv(k)
-                del os.environ[k]
+        if not OSInfo.IS_FREEBSD and not self.crossbuild:
+            statusUpdate("Can't build FreeBSD on a non-FreeBSD host (yet)!")
+            return
+        _clear_dangerous_make_env_vars()
 
         if self.explicit_subdirs_only:
             # Allow building a single FreeBSD/CheriBSD directory using the BUILDENV_SHELL trick
@@ -1137,17 +1139,10 @@ class BuildFreeBSDUniverse(BuildFreeBSDBase):
     _stdout_filter = Project._show_line_stdout_filter
 
     def process(self):
-        if not OSInfo.IS_FREEBSD:
-            if not self.crossbuild:
-                statusUpdate("Can't build CHERIBSD on a non-FreeBSD host! Any targets that depend on this will need"
-                             " to scp the required files from another server (see --frebsd-build-server options)")
-                return
-        # remove any environment variables that could interfere with bmake running
-        for k, v in os.environ.copy().items():
-            if k in ("MAKEFLAGS", "MFLAGS", "MAKELEVEL", "MAKE_TERMERR", "MAKE_TERMOUT", "MAKE"):
-                os.unsetenv(k)
-                del os.environ[k]
-
+        if not OSInfo.IS_FREEBSD and not self.crossbuild:
+            statusUpdate("Can't build FreeBSD on a non-FreeBSD host (yet)!")
+            return
+        _clear_dangerous_make_env_vars()
         super().process()
 
 
