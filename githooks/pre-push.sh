@@ -41,6 +41,8 @@ try_run() {
 
 # skip expensive metalog checks in pre-push hook
 export _TEST_SKIP_METALOG=1
+# Also skip `git status`, etc. invocations
+export _TEST_SKIP_GIT_COMMANDS=1
 export CHERIBUILD_DEBUG=1
 
 

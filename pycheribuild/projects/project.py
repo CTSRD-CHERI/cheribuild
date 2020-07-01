@@ -1120,6 +1120,9 @@ class TargetBranchInfo(object):
         self.url = url
 
 
+_PRETEND_RUN_GIT_COMMANDS = os.getenv("_TEST_SKIP_GIT_COMMANDS") is None
+
+
 class GitRepository(SourceRepository):
     def __init__(self, url, *, old_urls: typing.List[bytes] = None, default_branch: str = None,
                  force_branch: bool = False,
@@ -1222,8 +1225,8 @@ class GitRepository(SourceRepository):
                 if remote_url == old_url:
                     current_project.warning(current_project.project_name, "still points to old repository", remote_url)
                     if current_project.query_yes_no("Update to correct URL?"):
-                        run_command("git", "remote", "set-url", "origin", self.url, run_in_pretend_mode=True,
-                                    cwd=src_dir)
+                        run_command("git", "remote", "set-url", "origin", self.url,
+                                    run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, cwd=src_dir)
 
         # First fetch all the current upstream branch to see if we need to autostash/pull.
         # Note: "git fetch" without other arguments will fetch from the currently configured upstream.
@@ -1235,7 +1238,8 @@ class GitRepository(SourceRepository):
             assert self.default_branch, "default_branch must be set if force_branch is true!"
             # TODO: move this to Project so it can also be used for other targets
             status = run_command("git", "status", "-b", "-s", "--porcelain", "-u", "no",
-                                 capture_output=True, print_verbose_only=True, cwd=src_dir, run_in_pretend_mode=True)
+                                 capture_output=True, print_verbose_only=True, cwd=src_dir,
+                                 run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS)
             if status.stdout.startswith(b"## ") and not status.stdout.startswith(
                     b"## " + self.default_branch.encode("utf-8") + b"..."):
                 current_branch = status.stdout[3:status.stdout.find(b"...")].strip()
@@ -1252,9 +1256,8 @@ class GitRepository(SourceRepository):
         # This check ensures that we avoid a rebase if the current branch is a few commits ahead of upstream.
         # Note: merge-base --is-ancestor exits with code 0/1 instead of printing output so we need a try/catch
         is_ancestor = run_command("git", "merge-base", "--is-ancestor", "@{upstream}", "HEAD", cwd=src_dir,
-                                  print_verbose_only=True, capture_error=True, run_in_pretend_mode=True,
-                                  raise_in_pretend_mode=True,
-                                  allow_unexpected_returncode=True)
+                                  print_verbose_only=True, capture_error=True, allow_unexpected_returncode=True,
+                                  run_in_pretend_mode=_PRETEND_RUN_GIT_COMMANDS, raise_in_pretend_mode=True)
         if is_ancestor.returncode == 0:
             current_project.verbose_print(coloured(AnsiColour.blue, "Current HEAD is up-to-date or ahead of upstream."))
             return
