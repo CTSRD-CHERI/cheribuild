@@ -109,7 +109,7 @@ class _BuildDiskImageBase(SimpleProject):
         super().setup_config_options()
         cls.extra_files_dir = cls.add_path_option("extra-files", show_help=True,
                                                   default=lambda config, project: (
-                                                          config.sourceRoot / ("extra-files" + extra_files_suffix)),
+                                                          config.source_root / ("extra-files" + extra_files_suffix)),
                                                   help="A directory with additional files that will be added to the "
                                                        "image (default: "
                                                        "'$SOURCE_ROOT/extra-files" + extra_files_suffix + "')",
@@ -264,17 +264,18 @@ class _BuildDiskImageBase(SimpleProject):
         rc_conf_contents = self.file_templates.get_rc_conf_template().format(hostname=self.hostname)
         self.create_file_for_image("/etc/rc.conf", contents=rc_conf_contents, show_contents_non_verbose=False)
 
-        cshrc_contents = self.file_templates.get_cshrc_template().format(SRCPATH=self.config.sourceRoot,
+        cshrc_contents = self.file_templates.get_cshrc_template().format(SRCPATH=self.config.source_root,
                                                                          ROOTFS_DIR=self.rootfsDir)
         self.create_file_for_image("/etc/csh.cshrc", contents=cshrc_contents)
 
         # Basic .bashrc/.bash_profile template
-        dot_bashrc_contents = self.file_templates.get_dot_bashrc_template().format(SRCPATH=self.config.sourceRoot,
+        dot_bashrc_contents = self.file_templates.get_dot_bashrc_template().format(SRCPATH=self.config.source_root,
                                                                                    ROOTFS_DIR=self.rootfsDir)
         self.create_file_for_image("/root/.bashrc", contents=dot_bashrc_contents)
         self.create_file_for_image("/usr/share/skel/dot.bashrc", contents=dot_bashrc_contents)
-        dot_bash_profile_contents = self.file_templates.get_dot_bash_profile_template().format(SRCPATH=self.config.sourceRoot,
-                                                                                   ROOTFS_DIR=self.rootfsDir)
+        dot_bash_profile_contents = self.file_templates.get_dot_bash_profile_template().format(
+            SRCPATH=self.config.source_root,
+            ROOTFS_DIR=self.rootfsDir)
         self.create_file_for_image("/root/.bash_profile", contents=dot_bash_profile_contents)
         self.create_file_for_image("/usr/share/skel/dot.bash_profile", contents=dot_bash_profile_contents)
 
@@ -287,9 +288,9 @@ class _BuildDiskImageBase(SimpleProject):
         def path_relative_to_outputroot(xtarget) -> Path:
             install_dir = self.source_project.get_install_dir(self, cross_target=xtarget)
             try:
-                return install_dir.relative_to(self.config.outputRoot)
+                return install_dir.relative_to(self.config.output_root)
             except ValueError:
-                self.info(install_dir, "is not relative to", self.config.outputRoot,
+                self.info(install_dir, "is not relative to", self.config.output_root,
                           "-- qemu-mount-rootfs.sh may not mount it")
 
         if self.crosscompile_target.is_hybrid_or_purecap_cheri():
@@ -297,17 +298,17 @@ class _BuildDiskImageBase(SimpleProject):
             hybrid_cheri_dirname = path_relative_to_outputroot(self.crosscompile_target.get_cheri_hybrid_target())
             purecap_cheri_dirname = path_relative_to_outputroot(self.crosscompile_target.get_cheri_purecap_target())
         mount_rootfs_script = include_local_file("files/cheribsd/qemu-mount-rootfs.sh.in").format(
-            SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir,
+            SRCPATH=self.config.source_root, ROOTFS_DIR=self.rootfsDir,
             NOCHERI_ROOTFS_DIRNAME=non_cheri_dirname, HYBRID_ROOTFS_DIRNAME=hybrid_cheri_dirname,
             PURECAP_ROOTFS_DIRNAME=purecap_cheri_dirname)
         self.create_file_for_image("/sbin/qemu-mount-rootfs.sh", contents=mount_rootfs_script,
                                    mode=0o755, show_contents_non_verbose=False)
         mount_sources_script = include_local_file("files/cheribsd/qemu-mount-sources.sh.in").format(
-            SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
+            SRCPATH=self.config.source_root, ROOTFS_DIR=self.rootfsDir)
         self.create_file_for_image("/sbin/qemu-mount-sources.sh", contents=mount_sources_script,
                                    mode=0o755, show_contents_non_verbose=False)
         do_reroot_script = include_local_file("files/cheribsd/qemu-do-reroot.sh.in").format(
-            SRCPATH=self.config.sourceRoot, ROOTFS_DIR=self.rootfsDir)
+            SRCPATH=self.config.source_root, ROOTFS_DIR=self.rootfsDir)
         self.create_file_for_image("/sbin/qemu-do-reroot.sh", contents=do_reroot_script,
                                    mode=0o755, show_contents_non_verbose=False)
 
@@ -601,7 +602,7 @@ class _BuildDiskImageBase(SimpleProject):
 
     def process(self):
         if not OSInfo.IS_FREEBSD and self.crossBuildImage:
-            with set_env(PATH=str(self.config.outputRoot / "freebsd-cross/bin") + ":" + os.getenv("PATH")):
+            with set_env(PATH=str(self.config.output_root / "freebsd-cross/bin") + ":" + os.getenv("PATH")):
                 self.__process()
         else:
             self.__process()
@@ -737,11 +738,11 @@ def _default_disk_image_name(config: CheriConfig, directory: Path, project: Simp
         if xtarget.is_cheri_purecap():
             return directory / (img_prefix + "mips-purecap" + project.cheri_config_suffix + ".img")
     suffix = (xtarget.generic_suffix if xtarget else "<TARGET>") + project.cheri_config_suffix
-    return config.outputRoot / (img_prefix + suffix + ".img")
+    return config.output_root / (img_prefix + suffix + ".img")
 
 
 def _default_freebsd_disk_image_name(config: CheriConfig, project: SimpleProject):
-    return _default_disk_image_name(config, config.outputRoot, project, "freebsd-")
+    return _default_disk_image_name(config, config.output_root, project, "freebsd-")
 
 
 class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
@@ -761,7 +762,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
             return include_local_file("files/minimal-image/etc/rc.conf.in")
 
     default_disk_image_path = ComputedDefaultValue(
-        function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "cheribsd-minimal-"),
+        function=lambda conf, proj: _default_disk_image_name(conf, conf.output_root, proj, "cheribsd-minimal-"),
         as_string="$OUTPUT_ROOT/minimal-<TARGET>-disk.img depending on architecture")
 
     @classmethod
@@ -1012,7 +1013,7 @@ class BuildCheriBSDDiskImage(BuildMultiArchDiskImage):
     _always_add_suffixed_targets = True  # preparation for future multi-target support
 
     default_disk_image_path = ComputedDefaultValue(
-        function=lambda conf, proj: _default_disk_image_name(conf, conf.outputRoot, proj, "cheribsd-"),
+        function=lambda conf, proj: _default_disk_image_name(conf, conf.output_root, proj, "cheribsd-"),
         as_string="$OUTPUT_ROOT/$arch_prefix-disk.img.")
 
     @classmethod

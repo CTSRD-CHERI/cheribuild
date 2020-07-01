@@ -117,13 +117,13 @@ def real_main():
         cheri_config.docker = True
         # get the actual descriptor
         import inspect
-        output_option = inspect.getattr_static(cheri_config, "outputRoot")  # type: JsonAndCommandLineConfigOption
-        source_option = inspect.getattr_static(cheri_config, "sourceRoot")  # type: JsonAndCommandLineConfigOption
-        build_option = inspect.getattr_static(cheri_config, "buildRoot")  # type: JsonAndCommandLineConfigOption
+        output_option = inspect.getattr_static(cheri_config, "output_root")  # type: JsonAndCommandLineConfigOption
+        source_option = inspect.getattr_static(cheri_config, "source_root")  # type: JsonAndCommandLineConfigOption
+        build_option = inspect.getattr_static(cheri_config, "build_root")  # type: JsonAndCommandLineConfigOption
         # noinspection PyProtectedMember
-        if cheri_config.buildRoot == build_option._get_default_value(cheri_config) and \
-                cheri_config.sourceRoot == source_option._get_default_value(cheri_config) and \
-                cheri_config.outputRoot == output_option._get_default_value(cheri_config):
+        if cheri_config.build_root == build_option._get_default_value(cheri_config) and \
+                cheri_config.source_root == source_option._get_default_value(cheri_config) and \
+                cheri_config.output_root == output_option._get_default_value(cheri_config):
             fatalError("Running cheribuild in docker with the default source/output/build directories is not supported")
 
     if CheribuildAction.LIST_TARGETS in cheri_config.action:
@@ -146,7 +146,7 @@ def real_main():
                                                   CheribuildAction.BUILD, CheribuildAction.BENCHMARK))
 
     # create the required directories
-    for d in (cheri_config.sourceRoot, cheri_config.outputRoot, cheri_config.buildRoot):
+    for d in (cheri_config.source_root, cheri_config.output_root, cheri_config.build_root):
         if d.exists():
             continue
         if not cheri_config.pretend:
@@ -176,10 +176,10 @@ def real_main():
             docker_dir_mappings = [
                 # map cheribuild and the sources read-only into the container
                 "-v", cheribuild_dir + ":/cheribuild:ro",
-                "-v", str(cheri_config.sourceRoot.absolute()) + ":/source:ro",
+                "-v", str(cheri_config.source_root.absolute()) + ":/source:ro",
                 # build and output are read-write:
-                "-v", str(cheri_config.buildRoot.absolute()) + ":/build",
-                "-v", str(cheri_config.outputRoot.absolute()) + ":/output",
+                "-v", str(cheri_config.build_root.absolute()) + ":/build",
+                "-v", str(cheri_config.output_root.absolute()) + ":/output",
                 ]
             cheribuild_args = ["/cheribuild/cheribuild.py", "--skip-update"] + filtered_cheribuild_args
             if cheri_config.docker_reuse_container:
@@ -218,8 +218,8 @@ def real_main():
             fatalError("At least one target name is required (see --list-targets).")
 
     if not cheri_config.quiet:
-        print("Sources will be stored in", cheri_config.sourceRoot)
-        print("Build artifacts will be stored in", cheri_config.outputRoot)
+        print("Sources will be stored in", cheri_config.source_root)
+        print("Build artifacts will be stored in", cheri_config.output_root)
     # Don't do the update check when tab-completing (otherwise it freezes)
     if "_ARGCOMPLETE" not in os.environ and not cheri_config.skipUpdate:  # no-combine
         try:  # no-combine

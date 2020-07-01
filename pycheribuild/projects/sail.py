@@ -154,13 +154,13 @@ class Opam2(SimpleProject):
 
     def process(self):
         if OSInfo.IS_LINUX:
-            self.makedirs(self.config.otherToolsDir / "bin")
+            self.makedirs(self.config.other_tools_dir / "bin")
             # NOTE: 2.0.2 won't work for me
             runCmd("wget", "https://github.com/ocaml/opam/releases/download/2.0.6/opam-2.0.6-x86_64-linux", "-O",
-                   self.config.otherToolsDir / "bin/opam")
+                   self.config.other_tools_dir / "bin/opam")
             # Make it executable
             if not self.config.pretend:
-                (self.config.otherToolsDir / "bin/opam").chmod(0o755)
+                (self.config.other_tools_dir / "bin/opam").chmod(0o755)
         else:
             self.fatal("This target is only implement for Linux x86_64, for others operating systems you will have"
                        " to install opam 2.0 manually")

@@ -1351,7 +1351,7 @@ def _default_install_dir_handler(config: CheriConfig, project: "Project") -> Pat
     elif install_dir == DefaultInstallDir.BOOTSTRAP_TOOLS:
         assert project.compiling_for_host(), "BOOTSTRAP_TOOLS is only a valid install dir for native, " \
                                              "use SYSROOT/ROOTS for cross"
-        return config.otherToolsDir
+        return config.other_tools_dir
     elif install_dir == DefaultInstallDir.CUSTOM_INSTALL_DIR:
         return _INVALID_INSTALL_DIR
     project.fatal("Unknown install dir for", project.project_name)
@@ -1378,7 +1378,7 @@ class Project(SimpleProject):
     add_build_dir_suffix_for_native = False  # Whether to add -native to the native build dir
 
     defaultSourceDir = ComputedDefaultValue(
-        function=lambda config, project: Path(config.sourceRoot / project.project_name.lower()),
+        function=lambda config, project: Path(config.source_root / project.project_name.lower()),
         as_string=lambda cls: "$SOURCE_ROOT/" + cls.project_name.lower())
 
     @classmethod
@@ -1447,7 +1447,7 @@ class Project(SimpleProject):
         return result
 
     def build_dir_for_target(self, target: CrossCompileTarget):
-        return self.config.buildRoot / (self.project_name.lower() + self.build_configuration_suffix(target) + "-build")
+        return self.config.build_root / (self.project_name.lower() + self.build_configuration_suffix(target) + "-build")
 
     default_use_asan = False
 

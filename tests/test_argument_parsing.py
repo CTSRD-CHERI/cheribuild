@@ -84,7 +84,7 @@ def test_skip_update():
 
 def test_per_project_override():
     config = _parse_arguments(["--skip-configure"])
-    source_root = config.sourceRoot
+    source_root = config.source_root
     assert config.cheri_sdk_dir is not None
     assert BuildCheriBSDDiskImage.get_instance(None, config).extra_files_dir == source_root / "extra-files"
     _parse_arguments(["--disk-image/extra-files=/foo/bar"])
@@ -430,32 +430,32 @@ def test_config_file_include():
 
         # Check that the config file is parsed:
         result = _get_config_with_include(config_dir, b'{ "#include": "common.json"}')
-        assert "/this/is/a/unit/test" == str(result.sourceRoot)
+        assert "/this/is/a/unit/test" == str(result.source_root)
 
         # Check that the current file always has precendence
         result = _get_config_with_include(config_dir, b'{ "#include": "256-common.json", "output-root": "/output128"}')
-        assert "/output128" == str(result.outputRoot)
+        assert "/output128" == str(result.output_root)
         result = _get_config_with_include(config_dir, b'{ "#include": "128-common.json", "output-root": "/output256"}')
-        assert "/output256" == str(result.outputRoot)
+        assert "/output256" == str(result.output_root)
         # order doesn't matter since the #include is only evaluated after the whole file has been parsed:
         result = _get_config_with_include(config_dir, b'{ "output-root": "/output128", "#include": "256-common.json"}')
-        assert "/output128" == str(result.outputRoot)
+        assert "/output128" == str(result.output_root)
         result = _get_config_with_include(config_dir, b'{ "output-root": "/output256", "#include": "128-common.json"}')
-        assert "/output256" == str(result.outputRoot)
+        assert "/output256" == str(result.output_root)
 
         # TODO: handled nested cases: the level closest to the initial file wins
         (config_dir / "change-source-root.json").write_bytes(
             b'{ "source-root": "/source/root/override", "#include": "common.json" }')
         result = _get_config_with_include(config_dir, b'{ "#include": "change-source-root.json"}')
-        assert "/source/root/override" == str(result.sourceRoot)
+        assert "/source/root/override" == str(result.source_root)
         # And again the root file wins:
         result = _get_config_with_include(config_dir,
             b'{ "source-root": "/override/twice", "#include": "change-source-root.json"}')
-        assert "/override/twice" == str(result.sourceRoot)
+        assert "/override/twice" == str(result.source_root)
         # no matter in which order it is written:
         result = _get_config_with_include(config_dir,
             b'{ "#include": "change-source-root.json", "source-root": "/override/again"}')
-        assert "/override/again" == str(result.sourceRoot)
+        assert "/override/again" == str(result.source_root)
 
         # Test merging of objects:
         (config_dir / "change-smb-dir.json").write_bytes(
@@ -471,13 +471,13 @@ def test_config_file_include():
             relpath = b"../" + str(Path(d).relative_to(Path(d2).parent)).encode("utf-8")
             result = _get_config_with_include(config_dir,
                 b'{ "#include": "' + relpath + b'/common.json" }', workdir=Path(d2))
-            assert "/this/is/a/unit/test" == str(result.sourceRoot)
+            assert "/this/is/a/unit/test" == str(result.source_root)
 
             # Check that absolute paths work as expected:
             abspath = b"" + str(Path(d)).encode("utf-8")
             result = _get_config_with_include(config_dir,
                 b'{ "#include": "' + abspath + b'/common.json" }', workdir=Path(d2))
-            assert "/this/is/a/unit/test" == str(result.sourceRoot)
+            assert "/this/is/a/unit/test" == str(result.source_root)
 
         # Nonexistant paths should raise an error
         with pytest.raises(FileNotFoundError) as excinfo:
@@ -503,15 +503,15 @@ def test_libcxxrt_dependency_path():
         assert False, "Should have found -DLIBUNWIND_PATH= in " + str(tgt.configure_args)
 
     config = _parse_arguments(["--skip-configure"])
-    check_libunwind_path(config.buildRoot / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
-    check_libunwind_path(config.outputRoot / "rootfs-purecap128/opt/mips-purecap/c++/lib", "libcxxrt-mips-purecap")
-    check_libunwind_path(config.outputRoot / "rootfs128/opt/mips-hybrid/c++/lib", "libcxxrt-mips-hybrid")
+    check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
+    check_libunwind_path(config.output_root / "rootfs-purecap128/opt/mips-purecap/c++/lib", "libcxxrt-mips-purecap")
+    check_libunwind_path(config.output_root / "rootfs128/opt/mips-hybrid/c++/lib", "libcxxrt-mips-hybrid")
     # Check the defaults:
     config = _parse_arguments(["--skip-configure"])
-    check_libunwind_path(config.buildRoot / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
+    check_libunwind_path(config.build_root / "libunwind-native-build/test-install-prefix/lib", "libcxxrt-native")
     config = _parse_arguments(["--skip-configure", "--no-use-hybrid-sysroot-for-mips"])
-    check_libunwind_path(config.outputRoot / "rootfs128/opt/mips-hybrid/c++/lib", "libcxxrt-mips-hybrid")
-    check_libunwind_path(config.outputRoot / "rootfs-mips/opt/mips-nocheri/c++/lib", "libcxxrt-mips-nocheri")
+    check_libunwind_path(config.output_root / "rootfs128/opt/mips-hybrid/c++/lib", "libcxxrt-mips-hybrid")
+    check_libunwind_path(config.output_root / "rootfs-mips/opt/mips-nocheri/c++/lib", "libcxxrt-mips-nocheri")
 
 
 @pytest.mark.parametrize("target,expected_path,kind,extra_args", [
@@ -537,7 +537,7 @@ def test_freebsd_toolchains(target, expected_path, kind: FreeBSDToolchainKind, e
     args = ["--" + target + "/toolchain", kind.value]
     args.extend(extra_args)
     config = _parse_arguments(args)
-    expected_path = expected_path.replace("$OUTPUT$", str(config.outputRoot))
+    expected_path = expected_path.replace("$OUTPUT$", str(config.output_root))
     project = target_manager.get_target_raw(target).get_or_create_project(None, config)
     assert isinstance(project, BuildFreeBSD)
     assert str(project.CC) == str(expected_path)
@@ -582,7 +582,7 @@ def test_disk_image_path(target, expected_name):
     config = _parse_arguments([])
     project = target_manager.get_target_raw(target).get_or_create_project(None, config)
     assert isinstance(project, _BuildDiskImageBase)
-    assert str(project.disk_image_path) == str(config.outputRoot / expected_name)
+    assert str(project.disk_image_path) == str(config.output_root / expected_name)
 
 
 def test_freebsd_toolchains_cheribsd_purecap():

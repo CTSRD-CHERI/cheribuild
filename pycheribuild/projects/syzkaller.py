@@ -155,12 +155,15 @@ class RunSyzkaller(SimpleProject):
                                            help="Path to the syzkaller configuration file to use.",
                                            show_help=True)
         cls.syz_ssh_key = cls.add_path_option("ssh-privkey", show_help=True,
-            default=lambda config, project: (config.sourceRoot / "extra-files" / "syzkaller_id_rsa"),
-            help="A directory with additional files that will be added to the image (default: "
-                 "'$SOURCE_ROOT/extra-files/syzkaller_id_rsa')", metavar="syzkaller_id_rsa")
+                                              default=lambda config, project: (
+                                                          config.source_root / "extra-files" / "syzkaller_id_rsa"),
+                                              help="A directory with additional files that will be added to the image (default: "
+                                                   "'$SOURCE_ROOT/extra-files/syzkaller_id_rsa')",
+                                              metavar="syzkaller_id_rsa")
         cls.syz_workdir = cls.add_path_option("workdir", show_help=True,
-            default=lambda config, project: (config.outputRoot / "syzkaller-workdir"),
-            help="Working directory for syzkaller output.", metavar="DIR")
+                                              default=lambda config, project: (
+                                                          config.output_root / "syzkaller-workdir"),
+                                              help="Working directory for syzkaller output.", metavar="DIR")
         cls.syz_debug = cls.add_bool_option("debug",
             help="Run syz-manager in debug mode, requires manual startup of the VM.")
 

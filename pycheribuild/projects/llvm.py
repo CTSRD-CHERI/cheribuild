@@ -441,8 +441,9 @@ class BuildUpstreamLLVM(BuildLLVMMonoRepoBase):
     repository = GitRepository("https://github.com/llvm/llvm-project.git")
     project_name = "upstream-llvm-project"
     target = "upstream-llvm"
-    _default_install_dir_fn = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "upstream-llvm",
-                                                   as_string="$INSTALL_ROOT/upstream-llvm")
+    _default_install_dir_fn = ComputedDefaultValue(
+        function=lambda config, project: config.output_root / "upstream-llvm",
+        as_string="$INSTALL_ROOT/upstream-llvm")
     skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
 
 
@@ -451,7 +452,7 @@ class BuildCheriOSLLVM(BuildLLVMMonoRepoBase):
                                default_branch="temporal")
     project_name = "cherios-llvm-project"
     target = "cherios-llvm"
-    _default_install_dir_fn = ComputedDefaultValue(function=lambda config, project: config.outputRoot / "cherios-sdk",
+    _default_install_dir_fn = ComputedDefaultValue(function=lambda config, project: config.output_root / "cherios-sdk",
                                                    as_string="$INSTALL_ROOT/cherios-sdk")
     skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
 

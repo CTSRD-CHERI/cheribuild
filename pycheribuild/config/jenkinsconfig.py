@@ -206,18 +206,18 @@ class JenkinsConfig(CheriConfig):
 
         if not self.workspace or not self.workspace.is_dir():
             fatalError("WORKSPACE is not set to a valid directory:", self.workspace)
-        self.sourceRoot = self.workspace
-        self.buildRoot = self.workspace
+        self.source_root = self.workspace
+        self.build_root = self.workspace
         if self.output_path != self.default_output_path:
             if not self.keepInstallDir:
                 print("Not cleaning non-default output path", self.workspace / self.output_path)
             self.keepInstallDir = True
-        self.outputRoot = self.workspace / self.output_path
+        self.output_root = self.workspace / self.output_path
 
         # expect the CheriBSD disk images in the workspace root
         self.cheribsd_image_root = self.workspace
 
-        self.otherToolsDir = self.workspace / "bootstrap"
+        self.other_tools_dir = self.workspace / "bootstrap"
         # check for ctsrd/cheri-sdk-{cheri128,mips} docker image
         if self.cheri_sdk_path is not None:
             self.cheri_sdk_dir = self.cheri_sdk_path
@@ -254,7 +254,7 @@ class JenkinsConfig(CheriConfig):
             self.skipClone = False
 
         if self.without_sdk:
-            self.cheri_sdk_dir = self.outputRoot / str(self.installationPrefix).strip('/')
+            self.cheri_sdk_dir = self.output_root / str(self.installationPrefix).strip('/')
             # allow overriding the clang/clang++ paths with HOST_CC/HOST_CXX
             self.clangPath = Path(os.getenv("HOST_CC", self.clangPath))
             self.clangPlusPlusPath = Path(os.getenv("HOST_CXX", self.clangPlusPlusPath))

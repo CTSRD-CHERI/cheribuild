@@ -79,16 +79,16 @@ def freebsd_install_dir(config: CheriConfig, project: SimpleProject):
     assert not target.is_cheri_purecap(), "Should not reach this code!"
     if target.is_mips(include_purecap=False):
         if config.mips_float_abi == MipsFloatAbi.HARD:
-            return config.outputRoot / "freebsd-mipshf"
-        return config.outputRoot / "freebsd-mips"
+            return config.output_root / "freebsd-mipshf"
+        return config.output_root / "freebsd-mips"
     elif target.is_x86_64():
-        return config.outputRoot / "freebsd-x86"
+        return config.output_root / "freebsd-x86"
     elif target.is_aarch64():
-        return config.outputRoot / "freebsd-aarch64"
+        return config.output_root / "freebsd-aarch64"
     elif target.is_riscv(include_purecap=False):
-        return config.outputRoot / "freebsd-riscv"
+        return config.output_root / "freebsd-riscv"
     elif target.is_i386():
-        return config.outputRoot / "freebsd-i386"
+        return config.output_root / "freebsd-i386"
     else:
         assert False, "should not be reached"
 
@@ -99,23 +99,23 @@ def cheribsd_install_dir(config: CheriConfig, project: "BuildCHERIBSD"):
     xtarget = project.crosscompile_target
     if xtarget.is_mips(include_purecap=True):
         if xtarget.is_cheri_purecap():
-            return config.outputRoot / ("rootfs-purecap" + project.cheri_config_suffix)
+            return config.output_root / ("rootfs-purecap" + project.cheri_config_suffix)
         elif xtarget.is_cheri_hybrid():
-            return config.outputRoot / ("rootfs" + project.cheri_config_suffix)
+            return config.output_root / ("rootfs" + project.cheri_config_suffix)
         if config.mips_float_abi == MipsFloatAbi.HARD:
-            return config.outputRoot / "rootfs-mipshf"
-        return config.outputRoot / "rootfs-mips"
+            return config.output_root / "rootfs-mipshf"
+        return config.output_root / "rootfs-mips"
     elif xtarget.is_riscv(include_purecap=True):
         if xtarget.is_cheri_purecap():
-            return config.outputRoot / ("rootfs-riscv64-purecap" + project.cheri_config_suffix)
+            return config.output_root / ("rootfs-riscv64-purecap" + project.cheri_config_suffix)
         elif xtarget.is_cheri_hybrid():
-            return config.outputRoot / ("rootfs-riscv64-hybrid" + project.cheri_config_suffix)
-        return config.outputRoot / "rootfs-riscv64"
+            return config.output_root / ("rootfs-riscv64-hybrid" + project.cheri_config_suffix)
+        return config.output_root / "rootfs-riscv64"
     elif project.crosscompile_target.is_aarch64():
-        return config.outputRoot / "rootfs-aarch64"
+        return config.output_root / "rootfs-aarch64"
     else:
         assert project.crosscompile_target.is_x86_64()
-        return config.outputRoot / "rootfs-x86"
+        return config.output_root / "rootfs-x86"
 
 
 class BuildFreeBSDBase(Project):
@@ -1436,17 +1436,17 @@ class BuildCheriBsdMfsKernel(SimpleProject):
 #     assert isinstance(project, BuildCHERIBSD)
 #     if project.compiling_for_mips(include_purecap=False):
 #         if project.crosscompile_target.is_cheri_hybrid():
-#             return config.outputRoot / ("rootfs-minimal" + project.cheri_config_suffix)
+#             return config.output_root / ("rootfs-minimal" + project.cheri_config_suffix)
 #         if config.mips_float_abi == MipsFloatAbi.HARD:
-#             return config.outputRoot / "rootfs-minimal-mipshf"
-#         return config.outputRoot / "rootfs-minimal-mips"
+#             return config.output_root / "rootfs-minimal-mipshf"
+#         return config.output_root / "rootfs-minimal-mips"
 #     elif project.compiling_for_riscv(include_purecap=False):
 #         if project.crosscompile_target.is_cheri_hybrid():
-#             return config.outputRoot / ("rootfs-minimal-riscv64" + project.cheri_config_suffix)
-#         return config.outputRoot / "rootfs-minimal-riscv64"
+#             return config.output_root / ("rootfs-minimal-riscv64" + project.cheri_config_suffix)
+#         return config.output_root / "rootfs-minimal-riscv64"
 #     else:
 #         assert project.crosscompile_target.is_x86_64()
-#         return config.outputRoot / "rootfs-minimal-x86"
+#         return config.output_root / "rootfs-minimal-x86"
 #
 #
 # class BuildCHERIBSDMinimal(BuildCHERIBSD):

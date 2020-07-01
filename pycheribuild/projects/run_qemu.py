@@ -234,9 +234,9 @@ class LaunchQEMUBase(SimpleProject):
         virtfs_args = []
         if have_smbfs_support or have_9pfs_support:  # for running CheriBSD + FreeBSD
             add_smb_or_9p_dir(self.custom_qemu_smb_mount, "/mnt")
-            add_smb_or_9p_dir(self.config.sourceRoot, "/srcroot", share_name="source_root", readonly=True)
-            add_smb_or_9p_dir(self.config.buildRoot, "/buildroot", share_name="build_root", readonly=False)
-            add_smb_or_9p_dir(self.config.outputRoot, "/outputroot", share_name="output_root", readonly=True)
+            add_smb_or_9p_dir(self.config.source_root, "/srcroot", share_name="source_root", readonly=True)
+            add_smb_or_9p_dir(self.config.build_root, "/buildroot", share_name="build_root", readonly=False)
+            add_smb_or_9p_dir(self.config.output_root, "/outputroot", share_name="output_root", readonly=True)
             add_smb_or_9p_dir(self.rootfs_path, "/rootfs", share_name="rootfs", readonly=False)
 
         if self._forwardSSHPort:
@@ -505,7 +505,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
         # FIXME: these should be config options
         cherios = BuildCheriOS.get_instance(self, config)
         self.currentKernel = BuildCheriOS.get_build_dir(self) / "boot/cherios.elf"
-        self.disk_image = self.config.outputRoot / "cherios-disk.img"
+        self.disk_image = self.config.output_root / "cherios-disk.img"
         self._projectSpecificOptions = ["-no-reboot"]
 
         if cherios.build_net:

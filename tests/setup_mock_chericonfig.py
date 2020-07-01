@@ -22,10 +22,10 @@ class MockConfig(CheriConfig):
         self.fake_loader._parsedArgs = MockArgs()
         super().__init__(self.fake_loader, action_class=MockActions)
         self.default_action = ""
-        self.sourceRoot = source_root
-        self.buildRoot = source_root / "build"
-        self.outputRoot = source_root / "output"
-        self.cheribsd_image_root = self.outputRoot
+        self.source_root = source_root
+        self.build_root = source_root / "build"
+        self.output_root = source_root / "output"
+        self.cheribsd_image_root = self.output_root
         self.pretend = pretend
         self.clean = True
         self.verbose = True
@@ -50,11 +50,11 @@ class MockConfig(CheriConfig):
         self.load()
 
         # for the async delete test:
-        self.sourceRoot = source_root
-        self.buildRoot = source_root / "build"
-        self.outputRoot = source_root / "output"
-        self.cheri_sdk_dir = self.outputRoot / "sdk"
-        self.otherToolsDir = self.outputRoot / "other"
+        self.source_root = source_root
+        self.build_root = source_root / "build"
+        self.output_root = source_root / "output"
+        self.cheri_sdk_dir = self.output_root / "sdk"
+        self.other_tools_dir = self.output_root / "other"
 
         assert self._ensure_required_properties_set()
 

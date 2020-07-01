@@ -158,15 +158,15 @@ class BuildQEMUBase(AutotoolsProject):
                     prefix = self.run_cmd("brew", "--prefix", "samba", capture_output=True, run_in_pretend_mode=True,
                                           print_verbose_only=True).stdout.decode("utf-8").strip()
                 except subprocess.CalledProcessError:
-                    prefix = self.config.otherToolsDir
+                    prefix = self.config.other_tools_dir
                 smbd_path = Path(prefix, "sbin/smbd")
                 print("Guessed samba path", smbd_path)
 
-            if (self.config.otherToolsDir / "sbin/smbd").exists():
-                smbd_path = self.config.otherToolsDir / "sbin/smbd"
+            if (self.config.other_tools_dir / "sbin/smbd").exists():
+                smbd_path = self.config.other_tools_dir / "sbin/smbd"
 
             self.add_required_system_tool(smbd_path, cheribuild_target="samba", freebsd="samba48", apt="samba",
-                                       homebrew="samba")
+                                          homebrew="samba")
 
             self.configure_args.append("--smbd=" + str(smbd_path))
             if not Path(smbd_path).exists():
@@ -293,7 +293,7 @@ class BuildCheriOSQEMU(BuildQEMU):
     project_name = "cherios-qemu"
     target = "cherios-qemu"
     _default_install_dir_fn = ComputedDefaultValue(
-        function=lambda config, project: config.outputRoot / "cherios-sdk",
+        function=lambda config, project: config.output_root / "cherios-sdk",
         as_string="$INSTALL_ROOT/cherios-sdk")
     skip_misc_llvm_tools = False  # Cannot skip these tools in upstream LLVM
 

@@ -22,11 +22,11 @@ class MockProject(Project):
     def __init__(self, config: MockConfig, name: str):
         self._xtarget = CompilationTargets.NATIVE
         self.project_name = name
-        expected_src = config.sourceRoot / "sources" / name  # type: Path
+        expected_src = config.source_root / "sources" / name  # type: Path
         self.default_source_dir = expected_src
-        expected_install = config.sourceRoot / "install" / name  # type: Path
+        expected_install = config.source_root / "install" / name  # type: Path
         self._install_dir = expected_install
-        expected_build = Path(config.sourceRoot, "build", name + "-build")  # type: Path
+        expected_build = Path(config.source_root, "build", name + "-build")  # type: Path
         self.build_dir = expected_build
         super().__init__(config)
         assert self.default_source_dir == expected_src
@@ -54,8 +54,8 @@ class TestAsyncDelete(TestCase):
         self.config = setup_mock_chericonfig(self.tempRoot, pretend=False)
         self.config.sleep_before_delete = False
 
-        self.assertEqual(self.tempRoot, self.config.sourceRoot)
-        self.assertEqual(self.tempRoot / "build", self.config.buildRoot)
+        self.assertEqual(self.tempRoot, self.config.source_root)
+        self.assertEqual(self.tempRoot / "build", self.config.build_root)
         self.project = MockProject(self.config, "foo")
         assert self.project.source_dir.exists(), self.project.source_dir
 
@@ -116,7 +116,7 @@ class TestAsyncDelete(TestCase):
         print("   ", "\n    ".join(files))
 
     def _check_async_delete(self, message, tmpdirExpected: bool):
-        self._dump_dir_tree(self.config.sourceRoot / "build", message)
+        self._dump_dir_tree(self.config.source_root / "build", message)
         moved_builddir = self.project.build_dir.with_suffix(".delete-me-pls")
         with self.project.async_clean_directory(self.project.build_dir):
             self._assertDirEmpty(self.project.build_dir)  # build directory should be available immediately and be empty
@@ -183,7 +183,7 @@ class TestAsyncDelete(TestCase):
         assert not moved_builddir.exists()
 
         # default test: full build dir
-        self._dump_dir_tree(self.config.sourceRoot / "build", "non-empty buildir, no tmpdir, keep root")
+        self._dump_dir_tree(self.config.source_root / "build", "non-empty buildir, no tmpdir, keep root")
         with self.project.async_clean_directory(self.project.build_dir, keep_root=True):
             self._assertDirEmpty(self.project.build_dir)  # build directory should be available immediately and be empty
             # should take 1 second before the deleting starts
@@ -197,7 +197,7 @@ class TestAsyncDelete(TestCase):
         os.makedirs(str(subdir))
         os.makedirs(str(subdir2))
         os.makedirs(str(subdir3))
-        self._dump_dir_tree(self.config.sourceRoot / "build", "non-empty buildir, with tmpdir, keep root")
+        self._dump_dir_tree(self.config.source_root / "build", "non-empty buildir, with tmpdir, keep root")
         with self.project.async_clean_directory(self.project.build_dir, keep_root=True):
             self._assertDirEmpty(self.project.build_dir)  # build directory should be available immediately and be empty
             # should take 1 second before the deleting starts

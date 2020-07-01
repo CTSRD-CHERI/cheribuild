@@ -194,7 +194,8 @@ class CheriConfig(object):
         self.debugger_on_cheri_trap = loader.add_bool_option("qemu-gdb-break-on-cheri-trap", default=False,
             help="Drop into GDB attached to QEMU when a CHERI exception is triggered (QEMU only).")
         self.qemu_debug_program = loader.add_option("qemu-gdb-debug-userspace-program",
-            help="Print the command to debug the following userspace program in GDB attaced to QEMU")
+                                                    help="Print the command to debug the following userspace program "
+                                                         "in GDB attaced to QEMU")
         self.includeDependencies = None  # type: Optional[bool]
         self.include_toolchain_dependencies = True
         self.preferred_xtarget = None  # type: Optional[CrossCompileTarget]
@@ -203,19 +204,19 @@ class CheriConfig(object):
         self.mips_cheri_bits = 128  # Backwards compat
         self.makeJobs = None  # type: Optional[int]
 
-        self.sourceRoot = None  # type: Optional[Path]
-        self.outputRoot = None  # type: Optional[Path]
-        self.buildRoot = None  # type: Optional[Path]
-        # Path to kernel/disk images (this is the same as outputRoot by default but different in Jenkins)
+        self.source_root = None  # type: Optional[Path]
+        self.output_root = None  # type: Optional[Path]
+        self.build_root = None  # type: Optional[Path]
+        # Path to kernel/disk images (this is the same as output_root by default but different in Jenkins)
         self.cheribsd_image_root = None  # type: Optional[Path]
         self.cheri_sdk_dir = None  # type: Optional[Path]
-        self.otherToolsDir = None  # type: Optional[Path]
+        self.other_tools_dir = None  # type: Optional[Path]
         self.docker = loader.add_bool_option("docker", help="Run the build inside a docker container",
-                                           group=loader.dockerGroup)
+                                             group=loader.dockerGroup)
         self.docker_container = loader.add_option("docker-container", help="Name of the docker container to use",
-                                                 default="cheribuild-test", group=loader.dockerGroup)
+                                                  default="cheribuild-test", group=loader.dockerGroup)
         self.docker_reuse_container = loader.add_bool_option("docker-reuse-container", group=loader.dockerGroup,
-            help="Attach to the same container again (note: docker-container option must be an id rather than a container name")
+                                                             help="Attach to the same container again (note: docker-container option must be an id rather than a container name")
 
         # compilation db options:
         self.create_compilation_db = loader.add_commandline_only_bool_option(
@@ -355,7 +356,7 @@ class CheriConfig(object):
 
     @property
     def dollarPathWithOtherTools(self) -> str:
-        return str(self.otherToolsDir / "bin") + ":" + os.getenv("PATH")
+        return str(self.other_tools_dir / "bin") + ":" + os.getenv("PATH")
 
     @property
     def makeJFlag(self):
@@ -386,10 +387,10 @@ class CheriConfig(object):
             if value is None:
                 raise RuntimeError("Required property " + key + " is not set!")
         assert self.cheri_sdk_dir.is_absolute()
-        assert self.otherToolsDir.is_absolute()
-        assert self.outputRoot.is_absolute()
-        assert self.sourceRoot.is_absolute()
-        assert self.buildRoot.is_absolute()
+        assert self.other_tools_dir.is_absolute()
+        assert self.output_root.is_absolute()
+        assert self.source_root.is_absolute()
+        assert self.build_root.is_absolute()
         return True
 
     # FIXME: not sure why this is needed

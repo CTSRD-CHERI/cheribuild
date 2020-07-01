@@ -245,7 +245,7 @@ def _jenkins_main():
                 continue
             cls = tgt.project_class
             if issubclass(cls, Project):
-                cls._default_install_dir_fn = Path(str(cheri_config.outputRoot) + str(cheri_config.installationPrefix))
+                cls._default_install_dir_fn = Path(str(cheri_config.output_root) + str(cheri_config.installationPrefix))
                 i = inspect.getattr_static(cls, "_install_dir")
                 assert isinstance(i, CommandLineConfigOption)
                 # But don't change it if it was specified on the command line. Note: This also does the config
@@ -255,7 +255,7 @@ def _jenkins_main():
                 if from_cmdline is not None:
                     statusUpdate("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
                 else:
-                    cls._install_dir = Path(str(cheri_config.outputRoot) + str(cheri_config.installationPrefix))
+                    cls._install_dir = Path(str(cheri_config.output_root) + str(cheri_config.installationPrefix))
                     cls._check_install_dir_conflict = False
                 # print(project.project_class.project_name, project.project_class.install_dir)
 
@@ -271,9 +271,9 @@ def _jenkins_main():
             fatalError("Cannot build project", project.target, "with cross compile target", cross_target.name,
                        "when --cpu is set to", cheri_config.preferred_xtarget.name, fatal_when_pretending=True)
         if isinstance(project, CrossCompileMixin):
-            project.destdir = cheri_config.outputRoot
+            project.destdir = cheri_config.output_root
             project._install_prefix = cheri_config.installationPrefix
-            project._install_dir = cheri_config.outputRoot
+            project._install_dir = cheri_config.output_root
 
         if JenkinsAction.BUILD in cheri_config.action:
             if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
@@ -305,7 +305,7 @@ def _jenkins_main():
         # delete the install root:
         if JenkinsAction.BUILD in cheri_config.action:
             cleaning_task = cheri_config.FS.async_clean_directory(
-                cheri_config.outputRoot) if not cheri_config.keepInstallDir else ThreadJoiner(None)
+                cheri_config.output_root) if not cheri_config.keepInstallDir else ThreadJoiner(None)
             new_path = os.getenv("PATH", "")
             if not cheri_config.without_sdk:
                 new_path = str(cheri_config.cheri_sdk_bindir) + ":" + new_path
