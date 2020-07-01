@@ -45,7 +45,7 @@ from ...config.loader import ComputedDefaultValue
 from ...config.target_info import AutoVarInit, CrossCompileTarget, MipsFloatAbi
 from ...targets import target_manager
 from ...utils import (classproperty, commandline_to_str, get_compiler_info, include_local_file, is_jenkins_build,
-                      OSInfo, print_command, runCmd, ThreadJoiner)
+                      OSInfo, print_command, ThreadJoiner)
 
 
 def default_kernel_config(_: CheriConfig, project: SimpleProject) -> str:
@@ -765,8 +765,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 assert self.config.pretend, "This should only happen when running in a test environment"
                 return None
             # https://github.com/freebsd/freebsd/commit/1edb3ba87657e28b017dffbdc3d0b3a32999d933
-            cmd = runCmd([bmake_binary] + bw_flags, env=args.env_vars, cwd=self.source_dir,
-                         run_in_pretend_mode=True, capture_output=True, print_verbose_only=True)
+            cmd = self.run_cmd([bmake_binary] + bw_flags, env=args.env_vars, cwd=self.source_dir,
+                               run_in_pretend_mode=True, capture_output=True, print_verbose_only=True)
             lines = cmd.stdout.strip().split(b"\n")
             last_line = lines[-1].decode("utf-8").strip()
             if last_line.startswith("/") and cmd.returncode == 0:
@@ -947,8 +947,8 @@ class BuildFreeBSD(BuildFreeBSDBase):
             buildenv_target = "buildenv"
             if self.config.libcompat_buildenv and self.libcompat_name():
                 buildenv_target = self.libcompat_name() + "buildenv"
-            runCmd([self.make_args.command] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
-                   cwd=self.source_dir)
+            self.run_cmd([self.make_args.command] + args.all_commandline_args + [buildenv_target], env=args.env_vars,
+                         cwd=self.source_dir)
         else:
             super().process()
 
@@ -1005,16 +1005,15 @@ class BuildFreeBSD(BuildFreeBSDBase):
             self.info("Skipping default ABI build of", subdir, "since --libcompat-buildenv was passed.")
         else:
             self.info("Building", subdir, "using buildenv target")
-            runCmd([self.make_args.command] + make_args.all_commandline_args + ["buildenv"], env=make_args.env_vars,
-                   cwd=self.source_dir)
+            self.run_cmd([self.make_args.command] + make_args.all_commandline_args + ["buildenv"],
+                         env=make_args.env_vars, cwd=self.source_dir)
         # If we are building a library, we want to build both the CHERI and the mips version (unless the
         # user explicitly specified --libcompat-buildenv)
         if has_libcompat and not noncheri_only and self.libcompat_name():
             compat_buildenv_target = self.libcompat_name() + "buildenv"
             self.info("Building", subdir, "using", compat_buildenv_target, "target")
-            runCmd([self.make_args.command] + make_args.all_commandline_args + [compat_buildenv_target],
-                   env=make_args.env_vars,
-                   cwd=self.source_dir)
+            self.run_cmd([self.make_args.command] + make_args.all_commandline_args + [compat_buildenv_target],
+                         env=make_args.env_vars, cwd=self.source_dir)
 
 
 class BuildFreeBSDGFE(BuildFreeBSD):
@@ -1256,7 +1255,7 @@ class BuildCHERIBSD(BuildFreeBSD):
         for i in paths:
             file = self.install_dir / i
             if file.exists():
-                runCmd("chflags", "noschg", str(file))
+                self.run_cmd("chflags", "noschg", str(file))
 
     def _remove_old_rootfs(self):
         if not self.config.skip_buildworld:
@@ -1376,7 +1375,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
             # noinspection PyProtectedMember
             build_cheribsd._installkernel(kernconf=" ".join(kernconfs), destdir=td, extra_make_args=extra_make_args)
-            runCmd("find", td)
+            self.run_cmd("find", td)
             for conf in kernconfs:
                 kernel_install_path = self.installed_kernel_for_config(self, conf)
                 self.delete_file(kernel_install_path)
@@ -1555,8 +1554,8 @@ class BuildCheriBsdSysroot(SimpleProject):
         # TODO: we could do this in python as well, but this method works
         # FIXME: should no longer be needed
         fixlinks_src = include_local_file("files/fixlinks.c")
-        runCmd("cc", "-x", "c", "-", "-o", self.install_dir / "bin/fixlinks", input=fixlinks_src)
-        runCmd(self.install_dir / "bin/fixlinks", cwd=self.cross_sysroot_path / "usr/lib")
+        self.run_cmd("cc", "-x", "c", "-", "-o", self.install_dir / "bin/fixlinks", input=fixlinks_src)
+        self.run_cmd(self.install_dir / "bin/fixlinks", cwd=self.cross_sysroot_path / "usr/lib")
 
     def check_system_dependencies(self):
         super().check_system_dependencies()
@@ -1609,7 +1608,7 @@ class BuildCheriBsdSysroot(SimpleProject):
         # now copy the files
         self.makedirs(self.cross_sysroot_path)
         self.copy_remote_file(remote_sysroot_archive, self.sysroot_archive)
-        runCmd("tar", "xzf", self.sysroot_archive, cwd=self.cross_sysroot_path.parent)
+        self.run_cmd("tar", "xzf", self.sysroot_archive, cwd=self.cross_sysroot_path.parent)
 
     @property
     def sysroot_archive_name(self):
@@ -1649,17 +1648,18 @@ class BuildCheriBsdSysroot(SimpleProject):
         if not self.config.pretend:
             tar_cwd = str(rootfs_dir)
             with subprocess.Popen(tar_cmd, stdout=subprocess.PIPE, cwd=tar_cwd) as tar:
-                runCmd(["tar", "xf", "-"], stdin=tar.stdout, cwd=self.cross_sysroot_path)
+                self.run_cmd(["tar", "xf", "-"], stdin=tar.stdout, cwd=self.cross_sysroot_path)
         if not (self.cross_sysroot_path / "lib/libc.so.7").is_file():
             self.fatal(self.cross_sysroot_path, "is missing the libc library, install seems to have failed!")
 
         # fix symbolic links in the sysroot:
-        print("Fixing absolute paths in symbolic links inside lib directory...")
+        self.info("Fixing absolute paths in symbolic links inside lib directory...")
         self.fix_symlinks()
         # create an archive to make it easier to copy the sysroot to another machine
         self.delete_file(self.sysroot_archive, print_verbose_only=True)
-        runCmd("tar", "-czf", self.sysroot_archive, self.cross_sysroot_path.name, cwd=self.cross_sysroot_path.parent)
-        print("Successfully populated sysroot")
+        self.run_cmd("tar", "-czf", self.sysroot_archive, self.cross_sysroot_path.name,
+                     cwd=self.cross_sysroot_path.parent)
+        self.info("Successfully populated sysroot")
 
     def process(self):
         if self.config.skip_buildworld:
@@ -1677,7 +1677,7 @@ class BuildCheriBsdSysroot(SimpleProject):
                 libgcc_eh = self.cross_sysroot_path / "usr/libcheri/libgcc_eh.a"
                 if not libgcc_eh.is_file():
                     self.warning("CHERI libgcc_eh missing! You should probably update CheriBSD")
-                    runCmd("ar", "rc", libgcc_eh)
+                    self.run_cmd("ar", "rc", libgcc_eh)
 
 
 # Add a target aliases for old script invocations

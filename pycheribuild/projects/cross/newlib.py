@@ -33,7 +33,7 @@ from pathlib import Path
 
 from .crosscompileproject import (CheriConfig, CompilationTargets, CrossCompileAutotoolsProject, DefaultInstallDir,
                                   GitRepository, MakeCommandKind)
-from ...utils import commandline_to_str, runCmd
+from ...utils import commandline_to_str
 
 
 class BuildNewlib(CrossCompileAutotoolsProject):
@@ -200,9 +200,9 @@ int main(int argc, char** argv) {
             # FIXME: CHERI helloworld
             compiler_flags = self.target_info.essential_compiler_and_linker_flags + self.COMMON_FLAGS + [
                 "-Wl,-T,qemu-malta.ld", "-Wl,-verbose", "--sysroot=" + str(self.sdk_sysroot)]
-            runCmd([self.sdk_bindir / "clang", "main.c", "-o", test_exe] + compiler_flags + ["-###"], cwd=td)
-            runCmd([self.sdk_bindir / "clang", "main.c", "-o", test_exe] + compiler_flags, cwd=td)
-            runCmd(self.sdk_bindir / "llvm-readobj", "-h", test_exe)
+            self.run_cmd([self.sdk_bindir / "clang", "main.c", "-o", test_exe] + compiler_flags + ["-###"], cwd=td)
+            self.run_cmd([self.sdk_bindir / "clang", "main.c", "-o", test_exe] + compiler_flags, cwd=td)
+            self.run_cmd(self.sdk_bindir / "llvm-readobj", "-h", test_exe)
             from ..build_qemu import BuildQEMU
-            runCmd(self.sdk_sysroot / "bin/run_with_qemu.py", "--qemu", BuildQEMU.qemu_cheri_binary(self),
-                   "--timeout", "20", test_exe, "HELLO", "WORLD")
+            self.run_cmd(self.sdk_sysroot / "bin/run_with_qemu.py", "--qemu", BuildQEMU.qemu_cheri_binary(self),
+                         "--timeout", "20", test_exe, "HELLO", "WORLD")

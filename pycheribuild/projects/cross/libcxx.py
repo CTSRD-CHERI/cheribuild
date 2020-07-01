@@ -36,7 +36,7 @@ from ..build_qemu import BuildQEMU
 from ..llvm import BuildCheriLLVM
 from ..project import ReuseOtherProjectDefaultTargetRepository
 from ..run_qemu import LaunchCheriBSD
-from ...utils import commandline_to_str, OSInfo, runCmd, set_env
+from ...utils import commandline_to_str, OSInfo, set_env
 
 
 # A base class to set the default installation directory
@@ -119,11 +119,10 @@ class BuildLibunwind(_CxxRuntimeCMakeProject):
             self.info("Baremetal tests not implemented")
             return
         if self.compiling_for_host():
-            runCmd("ninja", "check-unwind", "-v", cwd=self.build_dir)
+            self.run_make("check-unwind", cwd=self.build_dir)
         else:
             # Check that the four tests compile and then attempt to run them:
-            # TODO: run the three combinations here too?
-            runCmd("ninja", "check-unwind", "-v", cwd=self.build_dir)
+            self.run_make("check-unwind", cwd=self.build_dir)
             self.target_info.run_cheribsd_test_script("run_libunwind_tests.py", "--lit-debug-output",
                                                       "--llvm-lit-path", self.lit_path, mount_sysroot=True)
 
@@ -175,7 +174,7 @@ class BuildLibCXXRT(_CxxRuntimeCMakeProject):
         # TODO: this won't work on macOS
         with set_env(LD_LIBRARY_PATH=self.build_dir / "lib"):
             if self.compiling_for_host():
-                runCmd("ctest", ".", "-VV", cwd=self.build_dir)
+                self.run_cmd("ctest", ".", "-VV", cwd=self.build_dir)
             else:
                 self.target_info.run_cheribsd_test_script("run_libcxxrt_tests.py",
                                                           "--libunwind-build-dir", BuildLibunwind.get_build_dir(self),
@@ -350,7 +349,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
             self.info("Baremetal tests not implemented")
             return
         if self.compiling_for_host():
-            runCmd("ninja", "check-cxx", "-v", cwd=self.build_dir)
+            self.run_make("check-cxx", cwd=self.build_dir)
         else:
             # long running test -> speed up by using a kernel without invariants
             self.target_info.run_cheribsd_test_script("run_libcxx_tests.py", "--parallel-jobs", self.test_jobs,

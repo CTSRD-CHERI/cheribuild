@@ -34,7 +34,7 @@ from .crosscompileproject import (BuildType, CheriConfig, CompilationTargets, Cr
                                   CrossCompileCMakeProject, CrossCompileProject, DefaultInstallDir, GitRepository,
                                   Linkage, MakeCommandKind)
 from ...config.loader import ComputedDefaultValue
-from ...utils import commandline_to_str, get_compiler_info, OSInfo, runCmd
+from ...utils import commandline_to_str, get_compiler_info, OSInfo
 
 
 # This class is used to build qtbase and all of qt5
@@ -217,7 +217,7 @@ class BuildQt5(BuildQtWithConfigureScript):
         super().update()
         # qtlocation breaks for some reason if qt5 is forked on github
         # TODO: qtwebkit, but that won't cross-compile with QMAKE
-        runCmd("perl", "init-repository", "--module-subset=essential", "-f", "--branch", cwd=self.source_dir)
+        self.run_cmd("perl", "init-repository", "--module-subset=essential", "-f", "--branch", cwd=self.source_dir)
 
     def process(self):
         if not self.compiling_for_host():
@@ -253,7 +253,7 @@ class BuildQtBase(BuildQtWithConfigureScript):
 
     def run_tests(self):
         if self.compiling_for_host():
-            runCmd("make", "check", cwd=self.build_dir)
+            self.run_cmd("make", "check", cwd=self.build_dir)
         else:
             self.target_info.run_cheribsd_test_script("run_qtbase_tests.py", use_benchmark_kernel_by_default=True)
 
@@ -443,11 +443,7 @@ class BuildQtWebkit(CrossCompileCMakeProject):
             mime_info_src = BuildQtBase.get_source_dir(self) / "src/corelib/mimetypes/mime/packages/freedesktop.org.xml"
             self.install_file(mime_info_src, Path(td, "mime/packages/freedesktop.org.xml"), force=True,
                               print_verbose_only=False)
-            try:
-                runCmd("update-mime-database", "-V", Path(td, "mime"), cwd="/")
-            except:
-                input("Failed in" + td + "/mime")
-                raise
+            self.run_cmd("update-mime-database", "-V", Path(td, "mime"), cwd="/")
 
             if not Path(td, "mime/mime.cache").exists():
                 self.fatal("Could not generated shared-mime-info cache!")
@@ -467,11 +463,11 @@ class BuildQtWebkit(CrossCompileCMakeProject):
         if not self.build_jsc_only:
             dump_render_tree = self.build_dir / "bin/DumpRenderTree"  # type: Path
             if dump_render_tree.is_file():
-                runCmd(self.llvm_binutils_dir / "llvm-strip", "-o", dump_render_tree.with_suffix(".stripped"),
-                       dump_render_tree)
+                self.run_cmd(self.llvm_binutils_dir / "llvm-strip", "-o", dump_render_tree.with_suffix(".stripped"),
+                             dump_render_tree)
         jsc = self.build_dir / "bin/jsc"  # type: Path
         if jsc.is_file():
-            runCmd(self.llvm_binutils_dir / "llvm-strip", "-o", jsc.with_suffix(".stripped"), jsc)
+            self.run_cmd(self.llvm_binutils_dir / "llvm-strip", "-o", jsc.with_suffix(".stripped"), jsc)
         self.info("Not installing qtwebit since it uses too much space. If you really want this run `ninja install`")
 
     def run_tests(self):

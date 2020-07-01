@@ -32,7 +32,7 @@ from pathlib import Path
 
 from .cheritrace import BuildCheriTrace
 from .project import CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project
-from ..utils import OSInfo, runCmd, ThreadJoiner
+from ..utils import OSInfo, ThreadJoiner
 
 
 def gnuStepInstallInstructions():
@@ -99,11 +99,11 @@ class BuildCheriVis(Project):
         if OSInfo.IS_MAC:
             return  # don't need GnuStep here
 
-        configOutput = runCmd("gnustep-config", "--variable=GNUSTEP_MAKEFILES", capture_output=True).stdout
-        self.gnustep_makefiles_dir = Path(configOutput.decode("utf-8").strip())
-        commonDotMake = self.gnustep_makefiles_dir / "common.make"
-        if not commonDotMake.is_file():
-            self.dependency_error("gnustep-config binary exists, but", commonDotMake, "does not exist!",
+        config_output = self.run_cmd("gnustep-config", "--variable=GNUSTEP_MAKEFILES", capture_output=True).stdout
+        self.gnustep_makefiles_dir = Path(config_output.decode("utf-8").strip())
+        common_dot_make = self.gnustep_makefiles_dir / "common.make"
+        if not common_dot_make.is_file():
+            self.dependency_error("gnustep-config binary exists, but", common_dot_make, "does not exist!",
                                   install_instructions=gnuStepInstallInstructions())
         # TODO: set ADDITIONAL_LIB_DIRS?
         # http://www.gnustep.org/resources/documentation/Developer/Make/Manual/gnustep-make_1.html#SEC17
@@ -150,7 +150,7 @@ class BuildCheriVis(Project):
     def install(self, **kwargs):
         if OSInfo.IS_MAC:
             # TODO: xcodebuild install?
-            runCmd("cp", "-aRv", self.source_dir / "build/Release/CheriVis.app", self.config.cheri_sdk_dir)
+            self.run_cmd("cp", "-aRv", self.source_dir / "build/Release/CheriVis.app", self.config.cheri_sdk_dir)
         else:
             self.run_make("install", cwd=self.source_dir)
 

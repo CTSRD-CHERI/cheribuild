@@ -37,7 +37,7 @@ from typing import Any, Dict, Tuple, Union
 from .project import (AutotoolsProject, CheriConfig, DefaultInstallDir, GitRepository, MakeCommandKind, Project,
                       SimpleProject)
 from ..targets import target_manager
-from ..utils import AnsiColour, coloured, commandline_to_str, get_program_version, OSInfo, runCmd, set_env, ThreadJoiner
+from ..utils import AnsiColour, coloured, commandline_to_str, get_program_version, OSInfo, set_env, ThreadJoiner
 
 
 class OpamMixin(object):
@@ -156,8 +156,8 @@ class Opam2(SimpleProject):
         if OSInfo.IS_LINUX:
             self.makedirs(self.config.other_tools_dir / "bin")
             # NOTE: 2.0.2 won't work for me
-            runCmd("wget", "https://github.com/ocaml/opam/releases/download/2.0.6/opam-2.0.6-x86_64-linux", "-O",
-                   self.config.other_tools_dir / "bin/opam")
+            self.run_cmd("wget", "https://github.com/ocaml/opam/releases/download/2.0.6/opam-2.0.6-x86_64-linux", "-O",
+                         self.config.other_tools_dir / "bin/opam")
             # Make it executable
             if not self.config.pretend:
                 (self.config.other_tools_dir / "bin/opam").chmod(0o755)
@@ -251,7 +251,7 @@ class BuildSailFromOpam(ProjectUsingOpam):
         if False:
             self.run_opam_cmd("install", "-y", "--verbose", "sail")
             opamroot_sail_binary = self.opamroot / "4.06.0/bin/sail"
-            runCmd(opamroot_sail_binary, "-v")
+            self.run_cmd(opamroot_sail_binary, "-v")
             self.create_symlink(opamroot_sail_binary, self.config.cheri_sdk_bindir / opamroot_sail_binary.name)
 
 

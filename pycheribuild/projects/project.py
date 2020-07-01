@@ -1153,10 +1153,11 @@ class GitRepository(SourceRepository):
                 clone_cmd.append("--recurse-submodules")
             if self.default_branch:
                 clone_cmd += ["--branch", self.default_branch]
-            runCmd(clone_cmd + [self.url, default_src_dir], cwd="/")
+            current_project.run_cmd(clone_cmd + [self.url, default_src_dir], cwd="/")
             # Could also do this but it seems to fetch more data than --no-single-branch
             # if self.config.shallow_clone:
-            #    runCmd(["git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"], cwd=src_dir)
+            #    current_project.run_cmd(["git", "config", "remote.origin.fetch",
+            #                             "+refs/heads/*:refs/remotes/origin/*"], cwd=src_dir)
 
         if src_dir == default_src_dir:
             return  # Nothing else to do
