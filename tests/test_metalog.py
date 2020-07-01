@@ -1,3 +1,4 @@
+import os
 import pytest
 import sys
 import io
@@ -14,6 +15,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from pycheribuild.mtree import MtreeFile
 
 HAVE_LCHMOD = True
+del os.environ["_TEST_SKIP_METALOG"]
 
 
 def _create_file(parent: Path, name: str, mode: int) -> Path:
