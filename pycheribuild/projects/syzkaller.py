@@ -76,8 +76,8 @@ class BuildSyzkaller(CrossCompileProject):
         self.gopath = self.build_dir
         self.gosrc = self.source_dir
 
-        self._newPath = (str(self.config.cheri_sdk_dir / "bin") + ":" +
-                         str(self.config.dollarPathWithOtherTools))
+        self._new_path = (str(self.config.cheri_sdk_dir / "bin") + ":" +
+                          str(self.config.dollarPathWithOtherTools))
 
         self.cheribsd_dir = BuildCHERIBSD.get_source_dir(self)
 
@@ -100,7 +100,7 @@ class BuildSyzkaller(CrossCompileProject):
             GOROOT=self.goroot.expanduser(),
             GOPATH=self.gopath.expanduser(),
             CC=self.CC, CXX=self.CXX,
-            PATH=self._newPath)
+            PATH=self._new_path)
         if self.sysgen:
             self.generate()
 
@@ -108,7 +108,7 @@ class BuildSyzkaller(CrossCompileProject):
         self.run_make(parallel=False, cwd=self.gosrc)
 
     def generate(self):
-        with set_env(PATH=self._newPath, SOURCEDIR=self.cheribsd_dir):
+        with set_env(PATH=self._new_path, SOURCEDIR=self.cheribsd_dir):
             self.run_make("extract", parallel=False, cwd=self.gosrc)
             self.run_make("generate", parallel=False, cwd=self.gosrc)
 
@@ -138,7 +138,7 @@ class BuildSyzkaller(CrossCompileProject):
             GOROOT=self.goroot.expanduser(),
             GOPATH=self.gopath.expanduser(),
             CC=self.CC, CXX=self.CXX,
-            PATH=self._newPath)
+            PATH=self._new_path)
 
         self.run_make("clean", parallel=False, cwd=self.gosrc)
         joiner = super().clean()

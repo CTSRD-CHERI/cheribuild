@@ -272,7 +272,7 @@ class JenkinsConfig(CheriConfig):
         if self.cheri_sdk_path is not None:
             assert self.cheri_sdk_bindir == self.cheri_sdk_path / "bin"
 
-        self._initializeDerivedPaths()
+        self._initialize_derived_paths()
 
         assert self._ensure_required_properties_set()
         if os.getenv("DEBUG") is not None:

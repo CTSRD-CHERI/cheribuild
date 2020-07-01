@@ -549,24 +549,24 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         return cls.add_config_option(name, kind=Path, shortname=shortname, only_add_for_targets=only_add_for_targets,
             **kwargs)
 
-    __configOptionsSet = dict()  # typing.Dict[Type, bool]
+    __config_options_set = dict()  # typing.Dict[Type, bool]
 
     @classmethod
     def setup_config_options(cls, **kwargs):
-        # assert cls not in cls.__configOptionsSet, "Setup called twice?"
-        cls.__configOptionsSet[cls] = True
+        # assert cls not in cls.__config_options_set, "Setup called twice?"
+        cls.__config_options_set[cls] = True
 
     def __init__(self, config: CheriConfig):
         self.target_info = self._xtarget.create_target_info(self)
         super().__init__(config)
         assert self._xtarget is not None, "Placeholder class should not be instantiated: " + repr(self)
         assert not self._should_not_be_instantiated, "Should not have instantiated " + self.__class__.__name__
-        assert self.__class__ in self.__configOptionsSet, "Forgot to call super().setup_config_options()? " + str(
+        assert self.__class__ in self.__config_options_set, "Forgot to call super().setup_config_options()? " + str(
             self.__class__)
-        self.__requiredSystemTools = {}  # type: typing.Dict[str, typing.Any]
-        self.__requiredSystemHeaders = {}  # type: typing.Dict[str, typing.Any]
-        self.__requiredPkgConfig = {}  # type: typing.Dict[str, typing.Any]
-        self._systemDepsChecked = False
+        self.__required_system_tools = {}  # type: typing.Dict[str, typing.Any]
+        self.__required_system_headers = {}  # type: typing.Dict[str, typing.Any]
+        self.__required_pkg_config = {}  # type: typing.Dict[str, typing.Any]
+        self._system_deps_checked = False
         self._setup_called = False
         assert not hasattr(self, "gitBranch"), "gitBranch must not be used: " + self.__class__.__name__
 
@@ -584,7 +584,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             install_instructions = OSInfo.install_instructions(executable, False, freebsd=freebsd, zypper=zypper,
                 apt=apt,
                 homebrew=homebrew, cheribuild_target=cheribuild_target)
-        self.__requiredSystemTools[executable] = install_instructions
+        self.__required_system_tools[executable] = install_instructions
 
     def add_required_pkg_config(self, package: str, install_instructions=None, freebsd: str = None, apt: str = None,
                               zypper: str = None, homebrew: str = None, cheribuild_target: str = None):
@@ -592,14 +592,14 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         if not install_instructions:
             install_instructions = OSInfo.install_instructions(package, True, freebsd=freebsd, zypper=zypper, apt=apt,
                 homebrew=homebrew, cheribuild_target=cheribuild_target)
-        self.__requiredPkgConfig[package] = install_instructions
+        self.__required_pkg_config[package] = install_instructions
 
     def add_required_system_header(self, header: str, install_instructions=None, freebsd: str = None, apt: str = None,
                                  zypper: str = None, homebrew: str = None, cheribuild_target: str = None):
         if not install_instructions:
             install_instructions = OSInfo.install_instructions(header, True, freebsd=freebsd, zypper=zypper, apt=apt,
                 homebrew=homebrew, cheribuild_target=cheribuild_target)
-        self.__requiredSystemHeaders[header] = install_instructions
+        self.__required_system_headers[header] = install_instructions
 
     @staticmethod
     def _query_yes_no(config: CheriConfig, message: str = "", *, default_result=False, force_result=True,
@@ -635,10 +635,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             with file_lock:
                 try:
                     # noinspection PyProtectedMember
-                    if project._lastStdoutLineCanBeOverwritten:
+                    if project._last_stdout_line_can_be_overwritten:
                         sys.stdout.buffer.write(b"\n")
                         flush_stdio(sys.stdout)
-                        project._lastStdoutLineCanBeOverwritten = False
+                        project._last_stdout_line_can_be_overwritten = False
                     sys.stderr.buffer.write(errLine)
                     flush_stdio(sys.stderr)
                     if project.config.write_logfile:
@@ -650,19 +650,19 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def _line_not_important_stdout_filter(self, line: bytes):
         # by default we don't keep any line persistent, just have updating output
-        if self._lastStdoutLineCanBeOverwritten:
+        if self._last_stdout_line_can_be_overwritten:
             sys.stdout.buffer.write(Project._clearLineSequence)
         sys.stdout.buffer.write(line[:-1])  # remove the newline at the end
         sys.stdout.buffer.write(b" ")  # add a space so that there is a gap before error messages
         flush_stdio(sys.stdout)
-        self._lastStdoutLineCanBeOverwritten = True
+        self._last_stdout_line_can_be_overwritten = True
 
     def _show_line_stdout_filter(self, line: bytes):
-        if self._lastStdoutLineCanBeOverwritten:
+        if self._last_stdout_line_can_be_overwritten:
             sys.stdout.buffer.write(b"\n")
         sys.stdout.buffer.write(line)
         flush_stdio(sys.stdout)
-        self._lastStdoutLineCanBeOverwritten = False
+        self._last_stdout_line_can_be_overwritten = False
 
     def _stdout_filter(self, line: bytes):
         self._line_not_important_stdout_filter(line)
@@ -760,7 +760,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             sys.stdout.buffer.write(remaining_out)
             if logfile:
                 logfile.write(remaining_err)
-        if stdout_filter and self._lastStdoutLineCanBeOverwritten:
+        if stdout_filter and self._last_stdout_line_can_be_overwritten:
             # add the final new line after the filtering
             sys.stdout.buffer.write(b"\n")
         if retcode:
@@ -770,7 +770,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             raise SystemExit(message)
 
     def dependency_error(self, *args, install_instructions: str = None):
-        self._systemDepsChecked = True  # make sure this is always set
+        self._system_deps_checked = True  # make sure this is always set
         if callable(install_instructions):
             install_instructions = install_instructions()
         self.fatal("Dependency for", self.target, "missing:", *args, fixit_hint=install_instructions)
@@ -780,13 +780,13 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
         Checks that all the system dependencies (required tool, etc) are available
         :return: Throws an error if dependencies are missing
         """
-        for (tool, install_instructions) in self.__requiredSystemTools.items():
+        for (tool, install_instructions) in self.__required_system_tools.items():
             if not shutil.which(str(tool)):
                 if install_instructions is None or install_instructions == "":
                     install_instructions = "Try installing `" + tool + "` using your system package manager."
                 self.dependency_error("Required program", tool, "is missing!",
-                    install_instructions=install_instructions)
-        for (package, instructions) in self.__requiredPkgConfig.items():
+                                      install_instructions=install_instructions)
+        for (package, instructions) in self.__required_pkg_config.items():
             if not shutil.which("pkg-config"):
                 # error should already have printed above
                 break
@@ -795,10 +795,10 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             exit_code = subprocess.call(check_cmd)
             if exit_code != 0:
                 self.dependency_error("Required library", package, "is missing!", install_instructions=instructions)
-        for (header, instructions) in self.__requiredSystemHeaders.items():
+        for (header, instructions) in self.__required_system_headers.items():
             if not Path("/usr/include", header).exists() and not Path("/usr/local/include", header).exists():
                 self.dependency_error("Required C header", header, "is missing!", install_instructions=instructions)
-        self._systemDepsChecked = True
+        self._system_deps_checked = True
 
     def process(self):
         raise NotImplementedError()
@@ -1585,8 +1585,8 @@ class Project(SimpleProject):
             # def __call__(self, parser, namespace, values, option_string=None):
             #     print('%r %r %r' % (namespace, values, option_string))
             #     setattr(namespace, self.dest, values)
-            cls._repositoryUrl = cls.add_config_option("repository", kind=str, help="The URL of the git repository",
-                default=cls.repository.url, metavar="REPOSITORY")
+            cls._repository_url = cls.add_config_option("repository", kind=str, help="The URL of the git repository",
+                                                        default=cls.repository.url, metavar="REPOSITORY")
         if "generate_cmakelists" not in cls.__dict__:
             # Make sure not to dereference a parent class descriptor here -> use getattr_static
             option = inspect.getattr_static(cls, "generate_cmakelists")
@@ -1749,17 +1749,17 @@ class Project(SimpleProject):
         super().__init__(config)
         # set up the install/build/source directories (allowing overrides from config file)
         assert isinstance(self.repository, SourceRepository), self.target + " repository member is wrong!"
-        if hasattr(self, "_repositoryUrl"):
+        if hasattr(self, "_repository_url"):
             # TODO: remove this and use a custom argparse.Action subclass
             assert isinstance(self.repository, GitRepository)
-            self.repository.url = self._repositoryUrl
+            self.repository.url = self._repository_url
         if isinstance(self.repository, ReuseOtherProjectRepository):
             # HACK: override the source directory (ignoring the setting from the JSON)
             # This should be done using a decorator that also changes defaultSourceDir so that we can
             # take the JSON into account
             self.default_source_dir = self.repository.get_real_source_dir(self, self.default_source_dir)
             self.info("Overriding source directory for", self.target, "since it reuses the sources of",
-                self.repository.source_project.target, "->", self.default_source_dir)
+                      self.repository.source_project.target, "->", self.default_source_dir)
         self.source_dir = self.repository.get_real_source_dir(self, self.default_source_dir)
 
         if self.build_in_source_dir:
@@ -1771,7 +1771,7 @@ class Project(SimpleProject):
         # non-assignable variables:
         self.configure_args = []  # type: typing.List[str]
         self.configure_environment = {}  # type: typing.Dict[str,str]
-        self._lastStdoutLineCanBeOverwritten = False
+        self._last_stdout_line_can_be_overwritten = False
         self.make_args = MakeOptions(self.make_kind, self)
         if self.config.create_compilation_db and self.compile_db_requires_bear:
             # CompileDB seems to generate broken compile_commands,json
@@ -1784,7 +1784,7 @@ class Project(SimpleProject):
                 self.add_required_system_tool("bear", install_instructions="Run `cheribuild.py bear`")
                 self._compiledb_tool = "bear"
         self._force_clean = False
-        self._preventAssign = True
+        self._prevent_assign = True
 
         # Setup destdir and installprefix:
         if not self.compiling_for_host():
@@ -1937,7 +1937,7 @@ class Project(SimpleProject):
         # if self.__dict__.get("_locked") and name == "x":
         #     raise AttributeError, "MyClass does not allow assignment to .x member"
         # self.__dict__[name] = value
-        if self.__dict__.get("_preventAssign"):
+        if self.__dict__.get("_prevent_assign"):
             # assert name not in ("source_dir", "build_dir", "install_dir")
             assert name != "install_dir", "install_dir should not be modified, only _install_dir or _install_prefix"
             assert name != "install_prefix", "install_prefix should not be modified, only _install_dir or " \
@@ -1973,7 +1973,7 @@ class Project(SimpleProject):
         else:
             all_args = [make_command] + options.all_commandline_args
         if parallel and options.can_pass_jflag:
-            all_args.append(self.config.makeJFlag)
+            all_args.append(self.config.make_j_flag)
         if not self.config.make_without_nice:
             all_args = ["nice"] + all_args
         if self.config.debug_output and options.kind == MakeCommandKind.Ninja:
@@ -2353,9 +2353,9 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                                               skip_submodules=self.skip_git_submodules)
         else:
             self.update()
-        if not self._systemDepsChecked:
+        if not self._system_deps_checked:
             self.check_system_dependencies()
-        assert self._systemDepsChecked, "self._systemDepsChecked must be set by now!"
+        assert self._system_deps_checked, "self._system_deps_checked must be set by now!"
 
         last_build_file = self._last_build_kind_path()
         if self.build_in_source_dir and not self.config.clean:
@@ -2510,14 +2510,14 @@ class CMakeProject(Project):
         if not self.compiling_for_host():
             # Despite the name it should also work for baremetal newlib
             assert self.target_info.is_cheribsd() or self.target_info.is_baremetal() or self.target_info.is_rtems()
-            self._cmakeTemplate = include_local_file("files/CrossToolchain.cmake.in")
+            self._cmake_template = include_local_file("files/CrossToolchain.cmake.in")
             self.toolchain_file = self.build_dir / "CrossToolchain.cmake"
             self.add_cmake_options(CMAKE_TOOLCHAIN_FILE=self.toolchain_file)
         # The toolchain files need at least CMake 3.7
         self.set_minimum_cmake_version(3, 7)
 
     def _prepare_toolchain_file(self, file: Path, **kwargs):
-        configured_template = self._cmakeTemplate
+        configured_template = self._cmake_template
         for key, value in kwargs.items():
             if value is None:
                 continue

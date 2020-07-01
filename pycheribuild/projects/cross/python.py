@@ -101,7 +101,7 @@ class BuildPython(CrossCompileAutotoolsProject):
         suffix = "" if is_case_sensitive_dir(self.build_dir) else ".exe"
         if self.compiling_for_host():
             self.run_cmd(self.build_dir / ("python" + suffix), "-m", "test", "-w", "--junit-xml=python-tests.xml",
-                         self.config.makeJFlag, cwd=self.build_dir)
+                         self.config.make_j_flag, cwd=self.build_dir)
         else:
             # Python executes tons of system calls, hopefully using the benchmark kernel helps
             self.target_info.run_cheribsd_test_script("run_python_tests.py", "--buildexe-suffix=" + suffix, mount_installdir=True,

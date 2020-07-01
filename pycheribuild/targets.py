@@ -312,39 +312,39 @@ class DeprecatedTargetAlias(SimpleTargetAlias):
 
 class TargetManager(object):
     def __init__(self):
-        self._allTargets = {}  # type: typing.Dict[str, Target]
+        self._all_targets = {}  # type: typing.Dict[str, Target]
 
     def add_target(self, target: Target) -> None:
-        assert target.name not in self._allTargets
+        assert target.name not in self._all_targets
         assert target.name != "cheribsd-cheri"
-        self._allTargets[target.name] = target
+        self._all_targets[target.name] = target
 
     def add_target_alias(self, name: str, real_target: str, deprecated=False) -> None:
-        assert name not in self._allTargets
+        assert name not in self._all_targets
         if deprecated:
-            self._allTargets[name] = DeprecatedTargetAlias(name, real_target, self)
+            self._all_targets[name] = DeprecatedTargetAlias(name, real_target, self)
         else:
-            self._allTargets[name] = SimpleTargetAlias(name, real_target, self)
+            self._all_targets[name] = SimpleTargetAlias(name, real_target, self)
 
     def register_command_line_options(self):
         # this cannot be done in the Project metaclass as otherwise we get
         # RuntimeError: super(): empty __class__ cell
         # https://stackoverflow.com/questions/13126727/how-is-super-in-python-3-implemented/28605694#28605694
-        for tgt in self._allTargets.values():
+        for tgt in self._all_targets.values():
             if not isinstance(tgt, SimpleTargetAlias):
                 tgt.project_class.setup_config_options()
 
     @property
     def target_names(self):
-        return self._allTargets.keys()
+        return self._all_targets.keys()
 
     @property
     def targets(self) -> "typing.Iterable[Target]":
-        return self._allTargets.values()
+        return self._all_targets.values()
 
     def get_target_raw(self, name: str) -> Target:
         # return the actual target without resolving MultiArchTargetAlias
-        return self._allTargets[name]
+        return self._all_targets[name]
 
     def get_target(self, name: str, arch: typing.Optional[CrossCompileTarget], config: CheriConfig,
                    caller: "typing.Union[SimpleProject, str]") -> Target:
@@ -416,21 +416,21 @@ class TargetManager(object):
     def get_all_chosen_targets(self, config) -> "typing.Iterable[Target]":
         # check that all target dependencies are correct:
         if os.getenv("CHERIBUILD_DEBUG"):
-            for t in self._allTargets.values():
+            for t in self._all_targets.values():
                 if isinstance(t, MultiArchTargetAlias):
                     continue
                 for dep in t.get_dependencies(config):
-                    if dep.name not in self._allTargets:
+                    if dep.name not in self._all_targets:
                         sys.exit("Invalid dependency " + dep.name + " for " + t.project_class.__name__)
-        # targetsSorted = sorted(self._allTargets.values())
+        # targetsSorted = sorted(self._all_targets.values())
         # print(" ".join(t.name for t in targetsSorted))
-        # assert self._allTargets["llvm"] < self._allTargets["cheribsd"]
-        # assert self._allTargets["llvm"] < self._allTargets["all"]
-        # assert self._allTargets["disk-image"] > self._allTargets["qemu"]
-        # assert self._allTargets["sdk"] > self._allTargets["sdk-sysroot"]
+        # assert self._all_targets["llvm"] < self._all_targets["cheribsd"]
+        # assert self._all_targets["llvm"] < self._all_targets["all"]
+        # assert self._all_targets["disk-image"] > self._all_targets["qemu"]
+        # assert self._all_targets["sdk"] > self._all_targets["sdk-sysroot"]
         explicitly_chosen_targets = []  # type: typing.List[Target]
         for targetName in config.targets:
-            if targetName not in self._allTargets:
+            if targetName not in self._all_targets:
                 sys.exit(coloured(AnsiColour.red, "Target", targetName, "does not exist. Valid choices are",
                                   ",".join(self.target_names)))
             explicitly_chosen_targets.append(self.get_target(targetName, None, config, caller="cmdline parsing"))
@@ -441,7 +441,7 @@ class TargetManager(object):
         return chosen_targets
 
     def reset(self):
-        for i in self._allTargets.values():
+        for i in self._all_targets.values():
             i.reset()
 
 

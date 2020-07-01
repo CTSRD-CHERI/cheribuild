@@ -97,7 +97,7 @@ class LaunchQEMUBase(SimpleProject):
         self.qemu_binary = None  # type: typing.Optional[Path]
         self.current_kernel = None  # type: typing.Optional[Path]
         self.disk_image = None  # type: typing.Optional[Path]
-        self._projectSpecificOptions = []
+        self._project_specific_options = []
         self.bios_flags = []
         self.qemu_options = QemuOptions(self.crosscompile_target)
         self.qemu_user_networking = True
@@ -254,7 +254,7 @@ class LaunchQEMUBase(SimpleProject):
                                                          trap_on_unrepresentable=self.config.trap_on_unrepresentable,
                                                          debugger_on_cheri_trap=self.config.debugger_on_cheri_trap,
                                                          add_virtio_rng=self._add_virtio_rng)
-        qemu_command += self._projectSpecificOptions + self._after_disk_options + monitor_options
+        qemu_command += self._project_specific_options + self._after_disk_options + monitor_options
         qemu_command += logfile_options + self.extra_qemu_options + virtfs_args
         self.info("About to run QEMU with image", self.disk_image, "and kernel", self.current_kernel)
 
@@ -503,7 +503,7 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
         cherios = BuildCheriOS.get_instance(self, config)
         self.current_kernel = BuildCheriOS.get_build_dir(self) / "boot/cherios.elf"
         self.disk_image = self.config.output_root / "cherios-disk.img"
-        self._projectSpecificOptions = ["-no-reboot"]
+        self._project_specific_options = ["-no-reboot"]
 
         if cherios.build_net:
             self._after_disk_options.extend([
@@ -512,8 +512,8 @@ class LaunchCheriOSQEMU(LaunchQEMUBase):
                 ])
 
         if cherios.smp_cores > 1:
-            self._projectSpecificOptions.append("-smp")
-            self._projectSpecificOptions.append(str(cherios.smp_cores))
+            self._project_specific_options.append("-smp")
+            self._project_specific_options.append(str(cherios.smp_cores))
 
         self.qemu_options.virtio_disk = True  # CheriOS needs virtio
         self.qemu_user_networking = False

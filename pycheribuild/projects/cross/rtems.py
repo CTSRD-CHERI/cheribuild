@@ -72,7 +72,7 @@ class BuildRtems(CrossCompileProject):
         self._run_waf("configure", "--prefix", self.destdir)
 
     def compile(self, **kwargs):
-        self._run_waf("build", self.config.makeJFlag)
+        self._run_waf("build", self.config.make_j_flag)
 
     def install(self, **kwargs):
         self._run_waf("install")

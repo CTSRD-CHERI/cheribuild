@@ -45,7 +45,7 @@ def _parse_arguments(args, *, config_file=Path("/this/does/not/exist")) -> Defau
         target_manager.register_command_line_options()
         _targets_registered = True
     target_manager.reset()
-    ConfigLoaderBase._cheri_config.loader._configPath = config_file
+    ConfigLoaderBase._cheri_config.loader._config_path = config_file
     sys.argv = ["cheribuild.py"] + args
     ConfigLoaderBase._cheri_config.loader.reload()
     ConfigLoaderBase._cheri_config.load()

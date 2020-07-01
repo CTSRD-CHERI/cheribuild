@@ -224,7 +224,7 @@ class BuildFreeBSDBase(Project):
 
     @property
     def jflag(self) -> list:
-        return [self.config.makeJFlag] if self.config.make_jobs > 1 else []
+        return [self.config.make_j_flag] if self.config.make_jobs > 1 else []
 
     # Return the path the a potetial sysroot created from installing this project
     # Currently we only create sysroots for CheriBSD but we might change that in the future
@@ -356,11 +356,11 @@ class BuildFreeBSD(BuildFreeBSDBase):
 
     def _stdout_filter(self, line: bytes):
         if line.startswith(b">>> "):  # major status update
-            if self._lastStdoutLineCanBeOverwritten:
+            if self._last_stdout_line_can_be_overwritten:
                 sys.stdout.buffer.write(Project._clearLineSequence)
             sys.stdout.buffer.write(line)
             flush_stdio(sys.stdout)
-            self._lastStdoutLineCanBeOverwritten = False
+            self._last_stdout_line_can_be_overwritten = False
         elif line.startswith(b"===> "):  # new subdirectory
             self._line_not_important_stdout_filter(line)
         elif line == b"--------------------------------------------------------------\n":
@@ -720,7 +720,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
                 all_kernel_configs = self.kernel_config
             self._buildkernel(kernconf=all_kernel_configs, mfs_root_image=mfs_root_image)
 
-    def _removeOldRootfs(self):
+    def _remove_old_rootfs(self):
         assert self.config.clean or not self.keep_old_rootfs
         if self.config.skip_buildworld:
             self.makedirs(self.install_dir)
@@ -804,7 +804,7 @@ class BuildFreeBSD(BuildFreeBSDBase):
             return
         # keeping the old rootfs directory prior to install can sometimes cause the build to fail so delete by default
         if self.config.clean or not self.keep_old_rootfs:
-            self._removeOldRootfs()
+            self._remove_old_rootfs()
 
         if not self.config.skip_buildworld or sysroot_only:
             install_world_args = self.installworld_args
@@ -1258,24 +1258,24 @@ class BuildCHERIBSD(BuildFreeBSD):
             else:
                 warningMessage("Unsupported architecture for FETT kernels")
 
-    def _removeSchgFlag(self, *paths: "typing.Iterable[str]"):
+    def _remove_schg_flag(self, *paths: "typing.Iterable[str]"):
         for i in paths:
             file = self.install_dir / i
             if file.exists():
                 runCmd("chflags", "noschg", str(file))
 
-    def _removeOldRootfs(self):
+    def _remove_old_rootfs(self):
         if not self.config.skip_buildworld:
             if self.install_as_root:
                 # if we installed as root remove the schg flag from files before cleaning (otherwise rm will fail)
-                self._removeSchgFlag(
+                self._remove_schg_flag(
                     "lib/libc.so.7", "lib/libcrypt.so.5", "lib/libthr.so.3", "libexec/ld-cheri-elf.so.1",
                     "libexec/ld-elf.so.1", "sbin/init", "usr/bin/chpass", "usr/bin/chsh", "usr/bin/ypchpass",
                     "usr/bin/ypchfn", "usr/bin/ypchsh", "usr/bin/login", "usr/bin/opieinfo", "usr/bin/opiepasswd",
                     "usr/bin/passwd", "usr/bin/yppasswd", "usr/bin/su", "usr/bin/crontab", "usr/lib/librt.so.1",
                     "var/empty"
                     )
-        super()._removeOldRootfs()
+        super()._remove_old_rootfs()
 
     def compile(self, **kwargs):
         # We could also just pass all values in KERNCONF to build all those kernels. However, if MFS_ROOT is set
@@ -1318,7 +1318,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
     _always_add_suffixed_targets = True
 
     @classproperty
-    def supported_architectures(cls) -> list:
+    def supported_architectures(self) -> list:
         return list(CompilationTargets.ALL_CHERIBSD_MIPS_AND_RISCV_TARGETS)
 
     @classmethod
@@ -1377,6 +1377,7 @@ class BuildCheriBsdMfsKernel(SimpleProject):
         # noinspection PyProtectedMember
         # Don't bother with modules for the MFS kernels:
         extra_make_args = dict(NO_MODULES="yes")
+        # noinspection PyProtectedMember
         build_cheribsd._buildkernel(kernconf=" ".join(kernconfs), mfs_root_image=image, extra_make_args=extra_make_args)
         with tempfile.TemporaryDirectory(prefix="cheribuild-" + self.target + "-") as td:
             # noinspection PyProtectedMember
@@ -1534,8 +1535,8 @@ class BuildCheriBsdSysroot(SimpleProject):
     rootfs_source_class = BuildCHERIBSD  # type: typing.Type[BuildCHERIBSD]
 
     @classproperty
-    def supported_architectures(cls):
-        return cls.rootfs_source_class.supported_architectures
+    def supported_architectures(self):
+        return self.rootfs_source_class.supported_architectures
 
     @classmethod
     def dependencies(cls, config: CheriConfig):

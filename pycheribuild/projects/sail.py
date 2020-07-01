@@ -283,7 +283,7 @@ class BuildSailCheriMips(ProjectUsingOpam):
     def compile(self, **kwargs):
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
-        cmd = [self.make_args.command, self.config.makeJFlag, "all"] + self.make_args.all_commandline_args
+        cmd = [self.make_args.command, self.config.make_j_flag, "all"] + self.make_args.all_commandline_args
         self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
@@ -336,7 +336,7 @@ class BuildSailRISCV(ProjectUsingOpam):
     def compile(self, **kwargs):
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
-        cmd = [self.make_args.command, self.config.makeJFlag, "opam-build"] + self.make_args.all_commandline_args
+        cmd = [self.make_args.command, self.config.make_j_flag, "opam-build"] + self.make_args.all_commandline_args
         self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):
@@ -369,7 +369,7 @@ class BuildSailCheriRISCV(ProjectUsingOpam):
     def compile(self, **kwargs):
         if self.with_trace_support:
             self.make_args.set(TRACE="yes")
-        cmd = [self.make_args.command, self.config.makeJFlag, "opam-build"] + self.make_args.all_commandline_args
+        cmd = [self.make_args.command, self.config.make_j_flag, "opam-build"] + self.make_args.all_commandline_args
         self.run_command_in_ocaml_env(cmd, cwd=self.source_dir)
 
     def install(self, **kwargs):

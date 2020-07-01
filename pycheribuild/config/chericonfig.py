@@ -72,6 +72,7 @@ class BuildType(Enum):
     def is_debug(self):
         return self is BuildType.DEBUG
 
+
 class CheriConfig(object):
     def __init__(self, loader, action_class):
         # Work around circular dependencies
@@ -82,7 +83,7 @@ class CheriConfig(object):
         loader._cheri_config = self
         self.loader = loader
         self.pretend = loader.add_commandline_only_bool_option("pretend", "p",
-                                                           help="Only print the commands instead of running them")
+                                                               help="Only print the commands instead of running them")
 
         # add the actions:
         self.action = loader.add_option("action", default=[], action="append", type=action_class, help_hidden=True,
@@ -192,9 +193,10 @@ class CheriConfig(object):
         self.subobject_bounds = loader.add_option("subobject-bounds", type=str,
                                                   group=loader.cross_compile_options_group,
                                                   choices=(
-                                                  "conservative", "subobject-safe", "aggressive", "very-aggressive",
-                                                  "everywhere-unsafe"),
-                                                  help="Whether to add additional CSetBounds to subobject references/&-operator")
+                                                      "conservative", "subobject-safe", "aggressive", "very-aggressive",
+                                                      "everywhere-unsafe"),
+                                                  help="Whether to add additional CSetBounds to subobject "
+                                                       "references/&-operator")
         self.subobject_debug = loader.add_bool_option("subobject-debug", group=loader.cross_compile_options_group,
                                                       default=True, help_hidden=False,
                                                       help="Clear software permission bit 2 when subobject bounds "
@@ -219,10 +221,13 @@ class CheriConfig(object):
                                                                 "is already up-to-date")
 
         self.trap_on_unrepresentable = loader.add_bool_option("trap-on-unrepresentable", default=False,
-                                                              help="Raise a CHERI exception when capabilities become unreprestable instead of detagging. Useful for "
-                                                                   "debugging, but deviates from the spec, and therefore off by default.")
+                                                              help="Raise a CHERI exception when capabilities become "
+                                                                   "unreprestable instead of detagging. Useful for "
+                                                                   "debugging, but deviates from the spec, "
+                                                                   "and therefore off by default.")
         self.debugger_on_cheri_trap = loader.add_bool_option("qemu-gdb-break-on-cheri-trap", default=False,
-                                                             help="Drop into GDB attached to QEMU when a CHERI exception is triggered (QEMU only).")
+                                                             help="Drop into GDB attached to QEMU when a CHERI "
+                                                                  "exception is triggered (QEMU only).")
         self.qemu_debug_program = loader.add_option("qemu-gdb-debug-userspace-program",
                                                     help="Print the command to debug the following userspace program "
                                                          "in GDB attaced to QEMU")
@@ -343,11 +348,12 @@ class CheriConfig(object):
             help="Perform a shallow `git clone` when cloning new projects. This can save a lot of time for large"
                  "repositories such as FreeBSD or LLVM. Use `git fetch --unshallow` to convert to a non-shallow clone")
 
-        self.fpga_custom_env_setup_script = loader.add_path_option("beri-fpga-env-setup-script",
-                                                                   help="Custom script to source to setup PATH and quartus, default to using cheri-cpu/cheri/setup.sh")
+        self.fpga_custom_env_setup_script = loader.add_path_option(
+            "beri-fpga-env-setup-script",
+            help="Custom script to source to setup PATH and quartus, default to using cheri-cpu/cheri/setup.sh")
 
         self.targets = None  # type: typing.Optional[typing.List[str]]
-        self.__optionalProperties = ["preferred_xtarget"]
+        self.__optional_properties = ["preferred_xtarget"]
 
     def load(self):
         self.loader.load()
@@ -400,7 +406,7 @@ class CheriConfig(object):
         if "CLICOLOR" in os.environ:
             del os.environ["CLICOLOR"]
 
-    def _initializeDerivedPaths(self):
+    def _initialize_derived_paths(self):
         # Set CHERI_BITS variable to allow e.g. { cheribsd": { "install-directory": "~/rootfs${CHERI_BITS}" } }
         os.environ["CHERI_BITS"] = self.mips_cheri_bits_str
         os.environ["CHERI_CAPTABLE_ABI"] = self.cheri_cap_table_abi
@@ -410,7 +416,7 @@ class CheriConfig(object):
         return str(self.other_tools_dir / "bin") + ":" + os.getenv("PATH")
 
     @property
-    def makeJFlag(self):
+    def make_j_flag(self):
         return "-j" + str(self.make_jobs)
 
     @property
@@ -431,7 +437,7 @@ class CheriConfig(object):
 
     def _ensure_required_properties_set(self) -> bool:
         for key in self.__dict__.keys():
-            if key in self.__optionalProperties:
+            if key in self.__optional_properties:
                 continue
             # don't do the descriptor stuff:
             value = object.__getattribute__(self, key)
@@ -457,7 +463,8 @@ class CheriConfig(object):
         for v in self.loader.options.values():
             # noinspection PyProtectedMember
             json_dict[v.full_option_name] = v.__get__(self,
-                                                      v._owning_class if v._owning_class else self)  # pytype: disable=attribute-error
+                                                      v._owning_class if v._owning_class else self)  # pytype:
+            # disable=attribute-error
         return json.dumps(json_dict, sort_keys=True, cls=MyJsonEncoder, indent=4)
 
     @classmethod

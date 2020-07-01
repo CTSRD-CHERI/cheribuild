@@ -121,7 +121,7 @@ class ConfigLoaderBase(object):
 
     options = dict()  # type: typing.Dict[str, "ConfigOptionBase"]
     _parsed_args = None
-    _JSON = {}  # type: dict
+    _json = {}  # type: dict
     _completing_arguments = "_ARGCOMPLETE" in os.environ
 
     showAllHelp = any(s in sys.argv for s in ("--help-all", "--help-hidden")) or _completing_arguments
@@ -464,13 +464,13 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
         return None  # not found -> fall back to default
 
     def _lookup_key_in_json(self, full_option_name: str):
-        if full_option_name in self._loader._JSON:
-            return self._loader._JSON[full_option_name]
+        if full_option_name in self._loader._json:
+            return self._loader._json[full_option_name]
         # if there are any / characters treat these as an object reference
         json_path = full_option_name.split(sep="/")
         json_key = json_path[-1]  # last item is the key (e.g. llvm/build-type -> build-type)
         json_path = json_path[:-1]  # all but the last item is the path (e.g. llvm/build-type -> llvm)
-        json_object = self._loader._JSON
+        json_object = self._loader._json
         for objRef in json_path:
             # Return an empty dict if it is not found
             json_object = json_object.get(objRef, {})
@@ -495,7 +495,7 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
         # FIXME: it's about time I removed this code
         if result is None:
             # also check action.dest (as a fallback so I don't have to update all my config files right now)
-            result = self._loader._JSON.get(self.action.dest, None)
+            result = self._loader._json.get(self.action.dest, None)
             if result is not None:
                 print(coloured(AnsiColour.cyan, "Old JSON key", self.action.dest, "used, please use",
                     full_option_name, "instead"))
@@ -542,7 +542,7 @@ class ArgparseSetGivenAction(argparse.Action):
 class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
     def __init__(self):
         super().__init__(JsonAndCommandLineConfigOption)
-        self._configPath = None  # type: typing.Optional[Path]
+        self._config_path = None  # type: typing.Optional[Path]
         self.configdir = os.getenv("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
         # Choose the default config file based on argv[0]
         # This allows me to have symlinks for e.g. stable-cheribuild.py release-cheribuild.py debug-cheribuild.py
@@ -647,18 +647,18 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
         return result
 
     def _load_json_config_file(self) -> None:
-        self._JSON = {}
-        if not self._configPath:
-            self._configPath = Path(os.path.expanduser(self._parsed_args.config_file)).absolute()
-        if self._configPath.exists():
-            self._JSON = self.__load_json_with_includes(self._configPath)
+        self._json = {}
+        if not self._config_path:
+            self._config_path = Path(os.path.expanduser(self._parsed_args.config_file)).absolute()
+        if self._config_path.exists():
+            self._json = self.__load_json_with_includes(self._config_path)
         elif hasattr(self._parsed_args, "config_file_given"):
-            print(coloured(AnsiColour.red, "Configuration file", self._configPath,
+            print(coloured(AnsiColour.red, "Configuration file", self._config_path,
                            "does not exist, using only command line arguments."), file=sys.stderr)
             raise FileNotFoundError(self._parsed_args.config_file)
         else:
-            print(coloured(AnsiColour.green, "Configuration file", self._configPath,
-                "does not exist, using only command line arguments."), file=sys.stderr)
+            print(coloured(AnsiColour.green, "Configuration file", self._config_path,
+                           "does not exist, using only command line arguments."), file=sys.stderr)
 
     def load(self):
         if argcomplete and self._completing_arguments:
@@ -714,11 +714,11 @@ class JsonAndCommandLineConfigLoader(ConfigLoaderBase):
                 if fullname in option.alias_names:
                     return True
 
-        print(coloured(AnsiColour.red, "Unknown config option '", fullname, "' in ", self._configPath, sep=""))
+        print(coloured(AnsiColour.red, "Unknown config option '", fullname, "' in ", self._config_path, sep=""))
         return False
 
     def _validate_config_file(self):
-        for k, v in self._JSON.items():
+        for k, v in self._json.items():
             self.__validate("", k, v)
 
     def reset(self) -> None:

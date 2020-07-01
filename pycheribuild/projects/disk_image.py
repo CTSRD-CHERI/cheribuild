@@ -153,8 +153,8 @@ class _BuildDiskImageBase(SimpleProject):
         self.cross_build_image = self.source_project.crossbuild
         self.minimum_image_size = "1g"  # minimum image size = 1GB
         self.mtree = MtreeFile()
-        self.input_METALOG = self.rootfs_dir / "METALOG"
-        self.input_METALOG_required = True
+        self.input_metalog = self.rootfs_dir / "METALOG"
+        self.input_metalog_required = True
         # used during process to generated files
         self.tmpdir = None  # type: typing.Optional[Path]
         self.file_templates = _AdditionalFileTemplates()
@@ -234,10 +234,10 @@ class _BuildDiskImageBase(SimpleProject):
         assert self.tmpdir is not None
         assert self.manifest_file is not None
         # skip parsing the metalog in the git push hook since it takes a long time and isn't that useful
-        if self.input_METALOG.exists() and not os.getenv("_TEST_SKIP_METALOG"):
-            self.mtree.load(self.input_METALOG)
-        elif self.input_METALOG_required:
-            self.fatal("Could not find required input mtree file", self.input_METALOG)
+        if self.input_metalog.exists() and not os.getenv("_TEST_SKIP_METALOG"):
+            self.mtree.load(self.input_metalog)
+        elif self.input_metalog_required:
+            self.fatal("Could not find required input mtree file", self.input_metalog)
 
         # We need to add /etc/fstab and /etc/rc.conf and the SSH host keys to the disk-image.
         # If they do not exist in the extra-files directory yet we generate a default one and use that
@@ -651,8 +651,8 @@ class _BuildDiskImageBase(SimpleProject):
         statusUpdate("Disk image root fs is", self.rootfs_dir)
         statusUpdate("Extra files for the disk image will be copied from", self.extra_files_dir)
 
-        if not self.input_METALOG.is_file():
-            self.fatal("mtree manifest", self.input_METALOG, "is missing")
+        if not self.input_metalog.is_file():
+            self.fatal("mtree manifest", self.input_metalog, "is missing")
         if not (self.user_group_db_dir / "master.passwd").is_file():
             self.fatal("master.passwd does not exist in ", self.user_group_db_dir)
 
@@ -788,7 +788,7 @@ class BuildMinimalCheriBSDDiskImage(_BuildDiskImageBase):
         super().__init__(config, source_class=self.cheribsd_class)
         self.minimum_image_size = "20m"  # let's try to shrink the image size
         # The base input is only cheribsdbox and all the symlinks
-        self.input_METALOG = self.rootfs_dir / "cheribsdbox.mtree"
+        self.input_metalog = self.rootfs_dir / "cheribsdbox.mtree"
         self.file_templates = BuildMinimalCheriBSDDiskImage._MinimalFileTemplates()
         self.is_minimal = True
 
