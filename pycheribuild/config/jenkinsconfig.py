@@ -37,7 +37,7 @@ from .chericonfig import CheriConfig
 from .compilation_targets import CompilationTargets, CrossCompileTarget
 from .loader import ConfigLoaderBase
 from ..filesystemutils import FileSystemUtils
-from ..utils import default_make_jobs_count, fatalError, OSInfo, warningMessage
+from ..utils import default_make_jobs_count, fatalError, OSInfo, warning_message
 
 
 def default_install_prefix(conf: "JenkinsConfig", _):
@@ -163,7 +163,7 @@ class JenkinsConfig(CheriConfig):
             if self.cpu == "hybrid-cheri128":
                 return "cheri128"
             else:
-                warningMessage("SDK_CPU variable not set, cannot infer the name of the SDK archive")
+                warning_message("SDK_CPU variable not set, cannot infer the name of the SDK archive")
                 return "unknown-cpu"
         return sdk_cpu
 

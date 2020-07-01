@@ -37,7 +37,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from ..utils import have_working_internet_connection, latest_system_clang_tool, status_update, warningMessage
+from ..utils import have_working_internet_connection, latest_system_clang_tool, status_update, warning_message
 
 
 # custom encoder to handle pathlib.Path objects
@@ -398,7 +398,7 @@ class CheriConfig(object):
 
         # turn on skip-update if we don't have a working internet connection to avoid errors in git pull
         if not self.skip_update and not have_working_internet_connection():
-            warningMessage("No internet connection detected, will skip git updates!")
+            warning_message("No internet connection detected, will skip git updates!")
             self.skip_update = True
 
         # CLICOLOR environment variable can confuse ./configure scripts:
@@ -477,7 +477,7 @@ class CheriConfig(object):
                 return "jenkins"
             else:
                 result = str(os.getgid())
-                warningMessage("Could not get group name for GID", result)
+                warning_message("Could not get group name for GID", result)
                 return result
 
     @classmethod
@@ -490,7 +490,7 @@ class CheriConfig(object):
                 return "jenkins"
             else:
                 result = str(os.getgid())
-                warningMessage("Could not get group name for GID", result)
+                warning_message("Could not get group name for GID", result)
                 return result
 
     def debug_message(self, *args, **kwargs):

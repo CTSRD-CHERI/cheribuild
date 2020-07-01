@@ -51,7 +51,7 @@ from .colour import AnsiColour, coloured
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "print_command", "include_local_file", "CompilerInfo",  # no-combine
            "runCmd", "status_update", "fatalError", "coloured", "AnsiColour", "set_env",  # no-combine
-           "init_global_config", "warningMessage", "popen_handle_noexec", "extract_version",  # no-combine
+           "init_global_config", "warning_message", "popen_handle_noexec", "extract_version",  # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "get_compiler_info", "latest_system_clang_tool",  # no-combine
            "get_program_version", "SafeDict", "keep_terminal_sane",  # no-combine
            "default_make_jobs_count", "commandline_to_str", "OSInfo", "is_jenkins_build",  # no-combine
@@ -329,7 +329,7 @@ class CompilerInfo(object):
             # Clang is installed in a different directory (e.g. /usr/lib/llvm-7) -> should be unversioned
             result = real_compiler_path.parent / binutil
             if not result.exists():
-                warningMessage("Could not find", binutil, "in expected path", result)
+                warning_message("Could not find", binutil, "in expected path", result)
                 result = None
         if not result:
             result = shutil.which(binutil)  # fall back to the default and assume clang can find the right one
@@ -385,7 +385,7 @@ def get_compiler_info(compiler: "typing.Union[str, Path]") -> CompilerInfo:
             kind = "clang"
             version = tuple(map(int, clang_version.groups()))
         else:
-            warningMessage("Could not detect compiler info for", compiler, "- output was", version_cmd.stderr)
+            warning_message("Could not detect compiler info for", compiler, "- output was", version_cmd.stderr)
         if GlobalConfig.VERBOSE_MODE:
             print(compiler, "is", kind, "version", version, "with default target", target_string)
         _cached_compiler_infos[compiler] = CompilerInfo(compiler, kind, version, target_string)
@@ -483,7 +483,7 @@ def status_update(*args, sep=" ", **kwargs):
     print(coloured(AnsiColour.cyan, *args, sep=sep), **kwargs)
 
 
-def warningMessage(*args, sep=" "):
+def warning_message(*args, sep=" "):
     # we ignore fatal errors when simulating a run
     print(coloured(AnsiColour.magenta, maybe_add_space("Warning:", sep) + args, sep=sep), file=sys.stderr, flush=True)
 
@@ -716,14 +716,14 @@ class TtyState:
         new_attrs = termios.tcgetattr(self.fd)
         if new_attrs == self.attrs:
             return
-        warningMessage("TTY flags for", self.fd.name, "changed, resetting them")
+        warning_message("TTY flags for", self.fd.name, "changed, resetting them")
         print("Previous state", self.attrs)
         print("New state", new_attrs)
         termios.tcsetattr(self.fd, termios.TCSANOW, self.attrs)
         termios.tcdrain(self.fd)
         new_attrs = termios.tcgetattr(self.fd)
         if new_attrs != self.attrs:
-            warningMessage("Failed to restore TTY flags for", self.fd.name)
+            warning_message("Failed to restore TTY flags for", self.fd.name)
             print("Previous state", self.attrs)
             print("New state", new_attrs)
 
@@ -731,13 +731,13 @@ class TtyState:
         new_flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
         if new_flags == self.flags:
             return
-        warningMessage("FD flags for", self.fd.name, "changed, resetting them")
+        warning_message("FD flags for", self.fd.name, "changed, resetting them")
         print("Previous flags", self.flags)
         print("New flags", new_flags)
         fcntl.fcntl(self.fd, fcntl.F_SETFL, self.flags)
         new_flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
         if new_flags != self.flags:
-            warningMessage("Failed to restore TTY flags for", self.fd.name)
+            warning_message("Failed to restore TTY flags for", self.fd.name)
             print("Previous flags", self.flags)
             print("New flags", new_flags)
 

@@ -37,7 +37,7 @@ import typing
 from collections import OrderedDict
 from pathlib import Path
 
-from .utils import commandline_to_str, status_update, warningMessage
+from .utils import commandline_to_str, status_update, warning_message
 
 
 class MtreeEntry(object):
@@ -85,7 +85,7 @@ class MtreeEntry(object):
                     try:
                         result.append(MtreeEntry.parse(line))
                     except Exception as e:
-                        warningMessage("Could not parse line", line, "in mtree file", mtree_file, e)
+                        warning_message("Could not parse line", line, "in mtree file", mtree_file, e)
             return result
 
     def __str__(self):
@@ -116,10 +116,10 @@ class MtreeFile(object):
                 key = str(entry.path)
                 assert key == "." or os.path.normpath(key[2:]) == key[2:]
                 if key in self._mtree:
-                    warningMessage("Found duplicate definition for", entry.path)
+                    warning_message("Found duplicate definition for", entry.path)
                 self._mtree[key] = entry
             except Exception as e:
-                warningMessage("Could not parse line", line, "in mtree file", file, ":", e)
+                warning_message("Could not parse line", line, "in mtree file", file, ":", e)
 
     @staticmethod
     def _ensure_mtree_mode_fmt(mode: "typing.Union[str, int]") -> str:
@@ -145,14 +145,14 @@ class MtreeFile(object):
             result = "0{0:o}".format(stat.S_IMODE(path.lstat().st_mode))  # format as octal with leading 0 prefix
         except IOError as e:
             default = "0755" if should_be_dir else "0644"
-            warningMessage("Failed to stat", path, "assuming mode", default, e)
+            warning_message("Failed to stat", path, "assuming mode", default, e)
             result = default
         # make sure that the .ssh config files are installed with the right permissions
         if path.name == ".ssh" and result != "0700":
-            warningMessage("Wrong file mode", result, "for", path, " --  it should be 0700, fixing it for image")
+            warning_message("Wrong file mode", result, "for", path, " --  it should be 0700, fixing it for image")
             return "0700"
         if path.parent.name == ".ssh" and not path.name.endswith(".pub") and result != "0600":
-            warningMessage("Wrong file mode", result, "for", path, " --  it should be 0600, fixing it for image")
+            warning_message("Wrong file mode", result, "for", path, " --  it should be 0600, fixing it for image")
             return "0600"
         return result
 
@@ -212,7 +212,7 @@ class MtreeFile(object):
         # Ensure that SSH will work even if the extra-file directory has wrong permissions
         if path == "root" or path == "root/.ssh":
             if mode != "0700" and mode != "0755":
-                warningMessage("Wrong file mode", mode, "for /", path, " --  it should be 0755, fixing it for image")
+                warning_message("Wrong file mode", mode, "for /", path, " --  it should be 0755, fixing it for image")
                 mode = "0755"
         # recursively add all parent dirs that don't exist yet
         parent = str(Path(path).parent)

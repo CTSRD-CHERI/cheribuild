@@ -35,7 +35,7 @@ from collections import OrderedDict
 
 from .config.chericonfig import CheriConfig
 from .config.target_info import CrossCompileTarget
-from .utils import AnsiColour, coloured, fatalError, set_env, status_update, warningMessage
+from .utils import AnsiColour, coloured, fatalError, set_env, status_update, warning_message
 
 if typing.TYPE_CHECKING:  # no-combine
     from .projects.project import SimpleProject  # no-combine
@@ -112,7 +112,7 @@ class Target(object):
     def execute(self, config: CheriConfig):
         if self._completed:
             # TODO: make this an error once I have a clean solution for the pseudo targets
-            warningMessage(self.name, "has already been executed!")
+            warning_message(self.name, "has already been executed!")
             return
         assert self.__project is not None, "Should have been initialized in check_system_deps()"
         # noinspection PyProtectedMember
@@ -123,7 +123,7 @@ class Target(object):
     def run_tests(self, config: "CheriConfig"):
         if self._tests_have_run:
             # TODO: make this an error once I have a clean solution for the pseudo targets
-            warningMessage(self.name, "has already been tested!")
+            warning_message(self.name, "has already been tested!")
             return
         self._do_run(config, msg="Ran benchmarks", func=lambda project: project.run_benchmarks())
         self._tests_have_run = True
@@ -131,7 +131,7 @@ class Target(object):
     def run_benchmarks(self, config: "CheriConfig"):
         if self._benchmarks_have_run:
             # TODO: make this an error once I have a clean solution for the pseudo targets
-            warningMessage(self.name, "has already been tested!")
+            warning_message(self.name, "has already been tested!")
             return
         self._do_run(config, msg="Ran tests", func=lambda project: project.run_tests())
         self._benchmarks_have_run = True
@@ -283,10 +283,10 @@ class SimpleTargetAlias(_TargetAliasBase):
 class DeprecatedTargetAlias(SimpleTargetAlias):
     def get_real_target(self, cross_target: typing.Optional[CrossCompileTarget], config: "CheriConfig",
                         caller: "typing.Union[SimpleProject, str]" = "<unknown>") -> Target:
-        warningMessage("Using deprecated target ", coloured(AnsiColour.red, self.name),
-                       coloured(AnsiColour.magenta, ". Please use "),
-                       coloured(AnsiColour.yellow, self.real_target_name),
-                       coloured(AnsiColour.magenta, " instead."), sep="")
+        warning_message("Using deprecated target ", coloured(AnsiColour.red, self.name),
+                        coloured(AnsiColour.magenta, ". Please use "),
+                        coloured(AnsiColour.yellow, self.real_target_name),
+                        coloured(AnsiColour.magenta, " instead."), sep="")
         from .projects.project import SimpleProject
         # noinspection PyProtectedMember
         if not SimpleProject._query_yes_no(config, "Continue?", default_result=True):

@@ -42,7 +42,7 @@ except ImportError:
     argcomplete = None
 
 from ..colour import *
-from ..utils import fatalError, warningMessage
+from ..utils import fatalError, warning_message
 from pathlib import Path
 
 if typing.TYPE_CHECKING:  # no-combine
@@ -487,7 +487,7 @@ class JsonAndCommandLineConfigOption(CommandLineConfigOption):
                     json_key = optionName[2:]
                     result = self._lookup_key_in_json(json_key)
                     if result is not None:
-                        warningMessage("Old JSON key", json_key, "used, please use", full_option_name, "instead")
+                        warning_message("Old JSON key", json_key, "used, please use", full_option_name, "instead")
                         used_key = json_key
                         break
         else:

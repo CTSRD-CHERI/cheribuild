@@ -36,7 +36,7 @@ import typing
 from pathlib import Path
 
 from .config.chericonfig import CheriConfig
-from .utils import AnsiColour, fatalError, print_command, runCmd, status_update, ThreadJoiner, warningMessage
+from .utils import AnsiColour, fatalError, print_command, runCmd, status_update, ThreadJoiner, warning_message
 
 
 class FileSystemUtils(object):
@@ -81,7 +81,7 @@ class FileSystemUtils(object):
                 if self.parent.config.verbose:
                     status_update("Async delete of", self.path, "finished")
             except Exception as e:
-                warningMessage("Could not remove directory", self.path, e)
+                warning_message("Could not remove directory", self.path, e)
 
     def async_clean_directory(self, path: Path, *, keep_root=False, keep_dirs: list = None) -> ThreadJoiner:
         """
@@ -104,7 +104,7 @@ class FileSystemUtils(object):
             status_update("Not cleaning", path, "it is already empty")
         else:
             if tempdir.is_dir():
-                warningMessage("Previous async cleanup of ", path, "failed. Cleaning up now")
+                warning_message("Previous async cleanup of ", path, "failed. Cleaning up now")
                 self._delete_directories(tempdir)
             if keep_root:
                 # Move all subdirectories/files to a temp directory and delete that
@@ -146,7 +146,7 @@ class FileSystemUtils(object):
         print_command("rm", "-f", file, print_verbose_only=print_verbose_only)
         if not file.is_file() and not file.is_symlink():
             if warn_if_missing:
-                warningMessage("Expected", file, "to exist but is missing!")
+                warning_message("Expected", file, "to exist but is missing!")
             return
         if self.config.pretend:
             return
@@ -160,7 +160,7 @@ class FileSystemUtils(object):
                 runCmd("rsync", "-aviu", "--progress", remote_path, target_file)
             except subprocess.CalledProcessError as err:
                 if err.returncode == 127:
-                    warningMessage("rysnc doesn't seem to be installed on remote machine, trying scp")
+                    warning_message("rysnc doesn't seem to be installed on remote machine, trying scp")
                     runCmd("scp", remote_path, target_file)
                 else:
                     raise err

@@ -55,7 +55,7 @@ from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_mana
 from ..utils import (AnsiColour, check_call_handle_noexec, classproperty, coloured, commandline_to_str,
                      commandline_to_str, CompilerInfo, fatalError, get_compiler_info, get_program_version,
                      get_version_output, include_local_file, is_jenkins_build, OSInfo, popen_handle_noexec,
-                     print_command, runCmd, status_update, ThreadJoiner, warningMessage)
+                     print_command, runCmd, status_update, ThreadJoiner, warning_message)
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind",  # no-combine
@@ -844,7 +844,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     @staticmethod
     def warning(*args, **kwargs):
-        warningMessage(*args, **kwargs)
+        warning_message(*args, **kwargs)
 
     @staticmethod
     def fatal(*args, sep=" ", fixit_hint=None, fatal_when_pretending=False):
@@ -1216,7 +1216,7 @@ class GitRepository(SourceRepository):
                 remote_url = runCmd("git", "remote", "get-url", "origin", capture_output=True,
                                     cwd=src_dir).stdout.strip()
                 if remote_url == old_url:
-                    warningMessage(current_project.project_name, "still points to old repository", remote_url)
+                    current_project.warning(current_project.project_name, "still points to old repository", remote_url)
                     if current_project.query_yes_no("Update to correct URL?"):
                         runCmd("git", "remote", "set-url", "origin", self.url, run_in_pretend_mode=True, cwd=src_dir)
 
@@ -1234,8 +1234,8 @@ class GitRepository(SourceRepository):
             if status.stdout.startswith(b"## ") and not status.stdout.startswith(
                     b"## " + self.default_branch.encode("utf-8") + b"..."):
                 current_branch = status.stdout[3:status.stdout.find(b"...")].strip()
-                warningMessage("You are trying to build the", current_branch.decode("utf-8"),
-                    "branch. You should be using", self.default_branch)
+                current_project.warning("You are trying to build the", current_branch.decode("utf-8"),
+                                        "branch. You should be using", self.default_branch)
                 if current_project.query_yes_no("Would you like to change to the " + self.default_branch + " branch?"):
                     runCmd("git", "checkout", self.default_branch, cwd=src_dir)
                 else:
@@ -2044,11 +2044,11 @@ class Project(SimpleProject):
 
     def _git_clean_source_dir(self):
         # just use git clean for cleanup
-        warningMessage(self.project_name, "does not support out-of-source builds, using git clean to remove "
-                                          "build artifacts.")
+        self.warning(self.project_name, "does not support out-of-source builds, using git clean to remove "
+                                        "build artifacts.")
         git_clean_cmd = ["git", "clean", "-dfx", "--exclude=.*"] + self._extra_git_clean_excludes
         # Try to keep project files for IDEs and other dotfiles:
-        runCmd(git_clean_cmd, cwd=self.source_dir)
+        self.run_cmd(git_clean_cmd, cwd=self.source_dir)
 
     def clean(self) -> ThreadJoiner:
         assert self.config.clean or self._force_clean
@@ -2607,7 +2607,7 @@ set(CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX "cheri")
             TOOLCHAIN_PKGCONFIG_DIRS=self.target_info.pkgconfig_dirs,
             TOOLCHAIN_PREFIX_PATHS=";".join(map(str, self.target_info.cmake_prefix_paths)),
             TOOLCHAIN_FORCE_STATIC=self.force_static_linkage,
-        )
+            )
 
     def configure(self, **kwargs):
         if self.install_prefix != self.install_dir:

@@ -48,7 +48,7 @@ from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import Project, SimpleProject
 from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
 from .utils import (commandline_to_str, fatalError, get_program_version, init_global_config, OSInfo, runCmd, set_env,
-                    status_update, ThreadJoiner, warningMessage)
+                    status_update, ThreadJoiner, warning_message)
 
 EXTRACT_SDK_TARGET = "extract-sdk"
 
@@ -130,9 +130,9 @@ def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "typing.List
     clang_archive = SdkArchive(cheri_config, clang_archive_name, required_globs=["bin/clang"],
         extra_args=["--strip-components", "1"])
     if not clang_archive.archive.exists():
-        warningMessage("Neither full SDK archive", cheri_config.sdk_archive_name, " nor clang archive",
-                       clang_archive_name,
-                       "exists, will use only existing $WORKSPACE/cherisdk")
+        warning_message("Neither full SDK archive", cheri_config.sdk_archive_name, " nor clang archive",
+                        clang_archive_name,
+                        "exists, will use only existing $WORKSPACE/cherisdk")
         return []
     if not needs_cheribsd_sysroot or cheri_config.extract_compiler_only:
         return [clang_archive]  # only need the clang archive
@@ -146,9 +146,9 @@ def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "typing.List
     sysroot_archive = SdkArchive(cheri_config, cheri_sysroot_archive_name, required_globs=["sysroot/usr/include"],
         extra_args=extra_args)
     if not sysroot_archive.archive.exists():
-        warningMessage("Project needs a full SDK archive but only clang archive was found and",
-            sysroot_archive.archive, "is missing. Will attempt to build anyway but build "
-                                     "will most likely fail.")
+        warning_message("Project needs a full SDK archive but only clang archive was found and",
+                        sysroot_archive.archive, "is missing. Will attempt to build anyway but build "
+                                                 "will most likely fail.")
         runCmd("ls", "-la", cwd=cheri_config.workspace)
         return [clang_archive]
     return [clang_archive, sysroot_archive]
@@ -195,7 +195,7 @@ def create_sdk_from_archives(cheri_config: JenkinsConfig, needs_cheribsd_sysroot
     elif cheri_config.cheri_sdk_dir.exists() and all(a.archive.exists() for a in archives):
         for a in archives:
             if cheri_config.cheri_sdk_dir.stat().st_ctime < a.archive.stat().st_ctime:
-                msgkind = status_update if not cheri_config.keep_sdk_dir else warningMessage
+                msgkind = status_update if not cheri_config.keep_sdk_dir else warning_message
                 msgkind("SDK archive", a.archive, "is newer than the existing SDK directory")
                 if not cheri_config.keep_sdk_dir:
                     status_update("Deleting old SDK and extracting archive")
@@ -360,7 +360,7 @@ def strip_binaries(cheri_config: JenkinsConfig, directory: Path):
                         # self.verbose_print("Stripping ELF binary", filepath)
                         runCmd(cheri_config.cheri_sdk_bindir / "llvm-strip", filepath)
             except Exception as e:
-                warningMessage("Failed to detect type of file:", filepath, e)
+                warning_message("Failed to detect type of file:", filepath, e)
     status_update("Tarball directory size after stripping ELF files:")
     runCmd("du", "-sh", directory)
 

@@ -36,7 +36,7 @@ from ..build_qemu import BuildQEMU
 from ..llvm import BuildCheriLLVM
 from ..project import ReuseOtherProjectDefaultTargetRepository
 from ..run_qemu import LaunchCheriBSD
-from ...utils import commandline_to_str, OSInfo, runCmd, set_env, warningMessage
+from ...utils import commandline_to_str, OSInfo, runCmd, set_env
 
 
 # A base class to set the default installation directory
@@ -322,8 +322,8 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         elif self.target_info.is_baremetal():
             run_qemu_script = self.target_info.sdk_root_dir / "baremetal/mips64-qemu-elf/bin/run_with_qemu.py"
             if not run_qemu_script.exists():
-                warningMessage("run_with_qemu.py is needed to run libcxx baremetal tests but could not find it:",
-                               run_qemu_script, "does not exist")
+                self.warning("run_with_qemu.py is needed to run libcxx baremetal tests but could not find it:",
+                             run_qemu_script, "does not exist")
             prefix = [str(run_qemu_script), "--qemu", str(BuildQEMU.qemu_cheri_binary(self)), "--timeout", "20"]
             prefix_list = '[\\\"' + "\\\", \\\"".join(prefix) + "\\\"]"
             executor = "PrefixExecutor(" + prefix_list + ", LocalExecutor())"
