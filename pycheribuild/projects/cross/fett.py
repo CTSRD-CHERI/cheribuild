@@ -148,7 +148,7 @@ class BuildFettConfig(CrossCompileProject):
             ]
         for file in html_files:
             mtree.add_file(voting_src / "common/static/bvrs" / file,
-                              voting_prefix / "bvrs/bvrs" / file)
+                           voting_prefix / "bvrs/bvrs" / file)
         mtree.add_dir(voting_prefix / "data", uname="www", gname="www", mode="0770")
         mtree.add_dir(voting_prefix / "run")
         mtree.add_file(voting_src / "common/conf/fastcgi.conf",
