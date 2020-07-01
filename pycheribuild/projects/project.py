@@ -55,7 +55,7 @@ from ..targets import MultiArchTarget, MultiArchTargetAlias, Target, target_mana
 from ..utils import (AnsiColour, check_call_handle_noexec, classproperty, coloured, commandline_to_str,
                      commandline_to_str, CompilerInfo, fatalError, get_compiler_info, get_program_version,
                      get_version_output, include_local_file, is_jenkins_build, OSInfo, popen_handle_noexec,
-                     print_command, runCmd, statusUpdate, ThreadJoiner, warningMessage)
+                     print_command, runCmd, status_update, ThreadJoiner, warningMessage)
 
 __all__ = ["Project", "CMakeProject", "AutotoolsProject", "TargetAlias", "TargetAliasWithDependencies",  # no-combine
            "SimpleProject", "CheriConfig", "flush_stdio", "MakeOptions", "MakeCommandKind",  # no-combine
@@ -236,14 +236,14 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
             # Handle --include-dependencies with --skip-sdk is passed
             if config.skip_sdk and dep_target.project_class.is_sdk_target:
                 if config.verbose:
-                    statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
-                                 "since it is an SDK target and --skip-sdk was passed.")
+                    status_update("Not adding ", cls.target, "dependency", dep_target.name,
+                                  "since it is an SDK target and --skip-sdk was passed.")
                 continue
             if config.include_dependencies and (
                     not config.include_toolchain_dependencies and dep_target.project_class.is_toolchain_target()):
                 if config.verbose:
-                    statusUpdate("Not adding ", cls.target, "dependency", dep_target.name,
-                                 "since it is a toolchain target and --include-toolchain-dependencies was not passed.")
+                    status_update("Not adding ", cls.target, "dependency", dep_target.name,
+                                  "since it is a toolchain target and --include-toolchain-dependencies was not passed.")
                 continue
             # Now find the actual crosscompile targets for target aliases:
             if isinstance(dep_target, MultiArchTargetAlias):
@@ -807,11 +807,11 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
 
     def run_tests(self):
         # for the --test option
-        statusUpdate("No tests defined for target", self.target)
+        status_update("No tests defined for target", self.target)
 
     def run_benchmarks(self):
         # for the --benchmark option
-        statusUpdate("No benchmarks defined for target", self.target)
+        status_update("No benchmarks defined for target", self.target)
 
     @staticmethod
     def get_test_script_path(script_name: str) -> Path:
@@ -840,7 +840,7 @@ class SimpleProject(FileSystemUtils, metaclass=ProjectSubclassDefinitionHook):
     @staticmethod
     def info(*args, **kwargs):
         # TODO: move all those methods here
-        statusUpdate(*args, **kwargs)
+        status_update(*args, **kwargs)
 
     @staticmethod
     def warning(*args, **kwargs):
@@ -961,7 +961,7 @@ class MakeOptions(object):
                 return "make"
         elif self.kind == MakeCommandKind.GnuMake:
             if OSInfo.IS_LINUX and not shutil.which("gmake"):
-                statusUpdate("Could not find `gmake` command, assuming `make` is GNU make")
+                status_update("Could not find `gmake` command, assuming `make` is GNU make")
                 self.__project.add_required_system_tool("make")
                 return "make"
             else:
@@ -1279,10 +1279,10 @@ class GitRepository(SourceRepository):
             print(coloured(AnsiColour.green, "Local changes detected in", src_dir))
             # TODO: add a config option to skip this query?
             if current_project.config.force_update:
-                statusUpdate("Updating", src_dir, "with autostash due to --force-update")
+                status_update("Updating", src_dir, "with autostash due to --force-update")
             elif not current_project.query_yes_no("Stash the changes, update and reapply?", default_result=True,
                     force_result=True):
-                statusUpdate("Skipping update of", src_dir)
+                status_update("Skipping update of", src_dir)
                 return
             if not has_autostash:
                 # TODO: ask if we should continue?
@@ -1508,10 +1508,10 @@ class Project(SimpleProject):
                 runCmd([compiler, "-fuse-ld=lld", "-xc", "-o", "/dev/null", "-"], run_in_pretend_mode=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, raise_in_pretend_mode=True,
                        input="int main() { return 0; }\n", print_verbose_only=True)
-                statusUpdate(compiler, "supports -fuse-ld=lld, linking should be much faster!")
+                status_update(compiler, "supports -fuse-ld=lld, linking should be much faster!")
                 cls.__can_use_lld_map[compiler] = True
             except subprocess.CalledProcessError:
-                statusUpdate(compiler, "does not support -fuse-ld=lld, using slower bfd instead")
+                status_update(compiler, "does not support -fuse-ld=lld, using slower bfd instead")
                 cls.__can_use_lld_map[compiler] = False
         return cls.__can_use_lld_map[compiler]
 
@@ -2304,7 +2304,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
         if self.use_asan and self.compiling_for_mips(include_purecap=False):
             # copy the ASAN lib into the right directory:
             resource_dir = get_compiler_info(self.CC).get_resource_dir()
-            statusUpdate("Copying ASAN libs to", resource_dir)
+            status_update("Copying ASAN libs to", resource_dir)
             expected_path = resource_dir / "lib/freebsd/"
             asan_libdir_candidates = list((self.sdk_sysroot / "usr/lib/clang").glob("*"))
             versions = [a.name for a in asan_libdir_candidates]
@@ -2416,7 +2416,7 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
             # Configure step
             if not self.config.skip_configure or self.config.configure_only:
                 if self.should_run_configure():
-                    statusUpdate("Configuring", self.display_name, "... ")
+                    status_update("Configuring", self.display_name, "... ")
                     self.configure()
             if self.config.configure_only:
                 return
@@ -2428,12 +2428,12 @@ add_custom_target(cheribuild-full VERBATIM USES_TERMINAL COMMAND {command} {targ
                                    self.csetbounds_stats_file.with_suffix(".from-configure.csv"),
                                    force=True)
                     # move any csetbounds stats from configuration (since they are not useful)
-                statusUpdate("Building", self.display_name, "... ")
+                status_update("Building", self.display_name, "... ")
                 self.compile()
 
             # Install step
             if not self.config.skip_install:
-                statusUpdate("Installing", self.display_name, "... ")
+                status_update("Installing", self.display_name, "... ")
                 if install_dir_kind == DefaultInstallDir.DO_NOT_INSTALL:
                     self.info("Not installing", self.target, "since install dir is set to DO_NOT_INSTALL")
                 else:

@@ -36,7 +36,7 @@ import typing
 from pathlib import Path
 
 from .config.chericonfig import CheriConfig
-from .utils import AnsiColour, fatalError, print_command, runCmd, statusUpdate, ThreadJoiner, warningMessage
+from .utils import AnsiColour, fatalError, print_command, runCmd, status_update, ThreadJoiner, warningMessage
 
 
 class FileSystemUtils(object):
@@ -76,10 +76,10 @@ class FileSystemUtils(object):
         def run(self):
             try:
                 if self.parent.config.verbose:
-                    statusUpdate("Deleting", self.path, "asynchronously")
+                    status_update("Deleting", self.path, "asynchronously")
                 self.parent._delete_directories(self.path)
                 if self.parent.config.verbose:
-                    statusUpdate("Async delete of", self.path, "finished")
+                    status_update("Async delete of", self.path, "finished")
             except Exception as e:
                 warningMessage("Could not remove directory", self.path, e)
 
@@ -101,7 +101,7 @@ class FileSystemUtils(object):
         if not path.is_dir():
             self.makedirs(path)
         elif len(list(path.iterdir())) == 0:
-            statusUpdate("Not cleaning", path, "it is already empty")
+            status_update("Not cleaning", path, "it is already empty")
         else:
             if tempdir.is_dir():
                 warningMessage("Previous async cleanup of ", path, "failed. Cleaning up now")
@@ -117,7 +117,7 @@ class FileSystemUtils(object):
                     all_entries_new = []
                     for i in all_entries:
                         if i.name in keep_dirs:
-                            statusUpdate("Not deleting", i, "- If you really want it removed, delete it manually.")
+                            status_update("Not deleting", i, "- If you really want it removed, delete it manually.")
                         else:
                             all_entries_new.append(i)
                     all_entries = all_entries_new

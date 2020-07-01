@@ -35,7 +35,7 @@ from collections import OrderedDict
 
 from .config.chericonfig import CheriConfig
 from .config.target_info import CrossCompileTarget
-from .utils import AnsiColour, coloured, fatalError, set_env, statusUpdate, warningMessage
+from .utils import AnsiColour, coloured, fatalError, set_env, status_update, warningMessage
 
 if typing.TYPE_CHECKING:  # no-combine
     from .projects.project import SimpleProject  # no-combine
@@ -106,7 +106,7 @@ class Target(object):
             new_env["CLANG_FORCE_COLOR_DIAGNOSTICS"] = "always"
         with set_env(**new_env):
             func(project)
-        statusUpdate(msg, "for target '" + self.name + "' in", time.time() - starttime, "seconds")
+        status_update(msg, "for target '" + self.name + "' in", time.time() - starttime, "seconds")
         self._tests_have_run = True
 
     def execute(self, config: CheriConfig):
@@ -371,13 +371,13 @@ class TargetManager(object):
                 # when --skip-sdk is passed don't include sdk dependencies
                 if config.skip_sdk and dep_target.project_class.is_sdk_target:
                     if config.verbose:
-                        statusUpdate("Not adding ", t, "dependency", dep_target,
-                                     "since it is an SDK target and --skip-sdk was passed.")
+                        status_update("Not adding ", t, "dependency", dep_target,
+                                      "since it is an SDK target and --skip-sdk was passed.")
                     continue
                 if dep_target.project_class.is_toolchain_target() and not config.include_toolchain_dependencies:
                     if config.verbose:
-                        statusUpdate("Not adding ", t, "dependency", dep_target,
-                                     "since it is an SDK target and --no-include-toolchain-dependencies was passed.")
+                        status_update("Not adding ", t, "dependency", dep_target,
+                                      "since it is an SDK target and --no-include-toolchain-dependencies was passed.")
                     continue
                 remaining_targets_to_check.append(dep_target)
 
@@ -392,7 +392,7 @@ class TargetManager(object):
         # all dependencies exist -> run the targets
         for target in chosen_targets:
             if config.print_targets_only:
-                statusUpdate("Will build target", coloured(AnsiColour.yellow, target.name))
+                status_update("Will build target", coloured(AnsiColour.yellow, target.name))
                 print("    Dependencies for", target.name, "are", target.project_class.all_dependency_names(config))
             else:
                 target.execute(config)

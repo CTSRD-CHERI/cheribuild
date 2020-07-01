@@ -50,7 +50,7 @@ from .colour import AnsiColour, coloured
 
 # reduce the number of import statements per project  # no-combine
 __all__ = ["typing", "print_command", "include_local_file", "CompilerInfo",  # no-combine
-           "runCmd", "statusUpdate", "fatalError", "coloured", "AnsiColour", "set_env",  # no-combine
+           "runCmd", "status_update", "fatalError", "coloured", "AnsiColour", "set_env",  # no-combine
            "init_global_config", "warningMessage", "popen_handle_noexec", "extract_version",  # no-combine
            "check_call_handle_noexec", "ThreadJoiner", "get_compiler_info", "latest_system_clang_tool",  # no-combine
            "get_program_version", "SafeDict", "keep_terminal_sane",  # no-combine
@@ -136,15 +136,15 @@ def get_interpreter(cmdline: "typing.Sequence[str]") -> "typing.Optional[typing.
     print(executable, os.access(str(executable), os.X_OK), cmdline)
     if not executable.exists():
         executable = Path(shutil.which(str(executable)))
-    statusUpdate(executable, "is not executable, looking for shebang:", end=" ")
+    status_update(executable, "is not executable, looking for shebang:", end=" ")
     with executable.open("r", encoding="utf-8") as f:
         first_line = f.readline()
         if first_line.startswith("#!"):
             interpreter = shlex.split(first_line[2:])
-            statusUpdate("Will run", executable, "using", interpreter)
+            status_update("Will run", executable, "using", interpreter)
             return interpreter
         else:
-            statusUpdate("No shebang found.")
+            status_update("No shebang found.")
             return None
 
 
@@ -324,7 +324,7 @@ class CompilerInfo(object):
         if result.exists():
             return result
         else:
-            statusUpdate("Could not find version-suffixed", binutil, "in expected path", result)
+            status_update("Could not find version-suffixed", binutil, "in expected path", result)
         if real_compiler_path != self.path.parent:
             # Clang is installed in a different directory (e.g. /usr/lib/llvm-7) -> should be unversioned
             result = real_compiler_path.parent / binutil
@@ -479,7 +479,7 @@ def maybe_add_space(msg, sep) -> tuple:
     return (msg,)
 
 
-def statusUpdate(*args, sep=" ", **kwargs):
+def status_update(*args, sep=" ", **kwargs):
     print(coloured(AnsiColour.cyan, *args, sep=sep), **kwargs)
 
 
@@ -775,7 +775,7 @@ class ThreadJoiner(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.thread is not None:
             if self.thread.is_alive():
-                statusUpdate("Waiting for '", self.thread.name, "' to complete", sep="")
+                status_update("Waiting for '", self.thread.name, "' to complete", sep="")
             self.thread.join()
 
 

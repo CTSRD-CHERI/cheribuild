@@ -48,7 +48,7 @@ from .projects.cross.crosscompileproject import CrossCompileMixin
 from .projects.project import Project, SimpleProject
 from .targets import MultiArchTargetAlias, SimpleTargetAlias, Target, target_manager
 from .utils import (commandline_to_str, fatalError, get_program_version, init_global_config, OSInfo, runCmd, set_env,
-                    statusUpdate, ThreadJoiner, warningMessage)
+                    status_update, ThreadJoiner, warningMessage)
 
 EXTRACT_SDK_TARGET = "extract-sdk"
 
@@ -108,7 +108,7 @@ class SdkArchive(object):
                 if fatal:
                     fatalError("required files", glob, "missing. Source archive =", self.archive)
                 else:
-                    statusUpdate("required files", glob, "missing. Source archive was", self.archive)
+                    status_update("required files", glob, "missing. Source archive was", self.archive)
                     return False
         return True
 
@@ -156,7 +156,7 @@ def get_sdk_archives(cheri_config, needs_cheribsd_sysroot: bool) -> "typing.List
 
 def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "typing.List[SdkArchive]"):
     if cheri_config.cheri_sdk_bindir.is_dir():
-        statusUpdate(cheri_config.cheri_sdk_bindir, "already exists, not extracting SDK archives")
+        status_update(cheri_config.cheri_sdk_bindir, "already exists, not extracting SDK archives")
         return
 
     cheri_config.FS.makedirs(cheri_config.cheri_sdk_dir)
@@ -178,7 +178,7 @@ def extract_sdk_archives(cheri_config: JenkinsConfig, archives: "typing.List[Sdk
                 cheri_config.FS.create_symlink(Path(shutil.which(tool)), cheri_config.cheri_sdk_bindir / tool,
                     relative=False)
     if not (cheri_config.cheri_sdk_bindir / "ld").exists():
-        statusUpdate("Adding missing $SDK/ld link to ld.lld")
+        status_update("Adding missing $SDK/ld link to ld.lld")
         cheri_config.FS.create_symlink(cheri_config.cheri_sdk_bindir / "ld.lld",
                                        cheri_config.cheri_sdk_bindir / "ld", relative=True)
 
@@ -187,18 +187,18 @@ def create_sdk_from_archives(cheri_config: JenkinsConfig, needs_cheribsd_sysroot
     # If the archive is newer, delete the existing sdk unless --keep-sdk is passed install root:
     possibly_delete_sdk_job = ThreadJoiner(None)
     archives = get_sdk_archives(cheri_config, needs_cheribsd_sysroot=needs_cheribsd_sysroot)
-    statusUpdate("Will use the following SDK archives:", archives)
+    status_update("Will use the following SDK archives:", archives)
     if any(not a.check_required_files(fatal=False) for a in archives):
         # if any of the required files is missing clean up and extract
-        statusUpdate("Required files missing -> recreating SDK")
+        status_update("Required files missing -> recreating SDK")
         possibly_delete_sdk_job = cheri_config.FS.async_clean_directory(cheri_config.cheri_sdk_dir)
     elif cheri_config.cheri_sdk_dir.exists() and all(a.archive.exists() for a in archives):
         for a in archives:
             if cheri_config.cheri_sdk_dir.stat().st_ctime < a.archive.stat().st_ctime:
-                msgkind = statusUpdate if not cheri_config.keep_sdk_dir else warningMessage
+                msgkind = status_update if not cheri_config.keep_sdk_dir else warningMessage
                 msgkind("SDK archive", a.archive, "is newer than the existing SDK directory")
                 if not cheri_config.keep_sdk_dir:
-                    statusUpdate("Deleting old SDK and extracting archive")
+                    status_update("Deleting old SDK and extracting archive")
                     possibly_delete_sdk_job = cheri_config.FS.async_clean_directory(cheri_config.cheri_sdk_dir)
                 break
     # unpack the SDK if it has not been extracted yet:
@@ -254,7 +254,7 @@ def _jenkins_main():
                 # noinspection PyTypeChecker
                 from_cmdline = i.load_option(cheri_config, cls, cls, return_none_if_default=True)
                 if from_cmdline is not None:
-                    statusUpdate("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
+                    status_update("Install directory for", cls.target, "was specified on commandline:", from_cmdline)
                 else:
                     cls._install_dir = Path(str(cheri_config.output_root) + str(cheri_config.installation_prefix))
                     cls._check_install_dir_conflict = False
@@ -280,7 +280,7 @@ def _jenkins_main():
             if Path("/cheri-sdk/bin/cheri-unknown-freebsd-clang").exists():
                 assert cheri_config.cheri_sdk_dir == Path("/cheri-sdk"), cheri_config.cheri_sdk_dir
             elif cheri_config.without_sdk:
-                statusUpdate("Not using CHERI SDK, only files from /usr")
+                status_update("Not using CHERI SDK, only files from /usr")
                 assert cheri_config.clang_path.exists(), cheri_config.clang_path
                 assert cheri_config.clang_plusplus_path.exists(), cheri_config.clang_plusplus_path
             elif cheri_config.cheri_sdk_path:
@@ -296,7 +296,7 @@ def _jenkins_main():
             fatalError("Sysroot directory", project.target_info.sysroot_dir, "does not exist")
 
         if cheri_config.debug_output:
-            statusUpdate("Configuration options for building", project.target, file=sys.stderr)
+            status_update("Configuration options for building", project.target, file=sys.stderr)
             for attr in dir(project):
                 if attr.startswith("_"):
                     continue
@@ -336,7 +336,7 @@ def _jenkins_main():
         if not tar_cmd:
             fatalError("Could not find a usable version of the tar command")
             return
-        statusUpdate("Creating tarball", cheri_config.tarball_name)
+        status_update("Creating tarball", cheri_config.tarball_name)
         # Strip all ELF files:
         if cheri_config.strip_elf_files:
             strip_binaries(cheri_config, cheri_config.workspace / "tarball")
@@ -346,7 +346,7 @@ def _jenkins_main():
 
 
 def strip_binaries(cheri_config: JenkinsConfig, directory: Path):
-    statusUpdate("Tarball directory size before stripping ELF files:")
+    status_update("Tarball directory size before stripping ELF files:")
     runCmd("du", "-sh", directory)
     for root, dirs, filelist in os.walk(str(directory)):
         for file in filelist:
@@ -361,7 +361,7 @@ def strip_binaries(cheri_config: JenkinsConfig, directory: Path):
                         runCmd(cheri_config.cheri_sdk_bindir / "llvm-strip", filepath)
             except Exception as e:
                 warningMessage("Failed to detect type of file:", filepath, e)
-    statusUpdate("Tarball directory size after stripping ELF files:")
+    status_update("Tarball directory size after stripping ELF files:")
     runCmd("du", "-sh", directory)
 
 

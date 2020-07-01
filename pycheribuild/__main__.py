@@ -48,7 +48,7 @@ from .projects.cross import *  # make sure all projects are loaded so that targe
 from .projects.project import SimpleProject
 from .targets import target_manager
 from .utils import (AnsiColour, coloured, commandline_to_str, fatalError, get_program_version,
-                    have_working_internet_connection, init_global_config, print_command, statusUpdate,
+                    have_working_internet_connection, init_global_config, print_command, status_update,
                     runCmd)
 
 DIRS_TO_CHECK_FOR_UPDATES = [Path(__file__).parent.parent]
@@ -74,7 +74,7 @@ def _update_check(d: Path):
         msg_end = output.find(b"\n  (use \"git pull\" to update your local branch)")
         if msg_end > 0:
             output = output[behind_index:msg_end]
-        statusUpdate("Current", d.name, "checkout can be updated: ", output.decode("utf-8"))
+        status_update("Current", d.name, "checkout can be updated: ", output.decode("utf-8"))
         if input("Would you like to update before continuing? y/[n] (Enter to skip) ").lower().startswith("y"):
             git_version = get_program_version(Path(shutil.which("git")))
             # Use the autostash flag for Git >= 2.14
@@ -200,8 +200,8 @@ def real_main():
         except subprocess.CalledProcessError as e:
             # if the image is missing print a helpful error message:
             if e.returncode == 125:
-                statusUpdate("It seems like the docker image", cheri_config.docker_container, "was not found.")
-                statusUpdate("In order to build the default docker image for cheribuild (cheribuild-test) run:")
+                status_update("It seems like the docker image", cheri_config.docker_container, "was not found.")
+                status_update("In order to build the default docker image for cheribuild (cheribuild-test) run:")
                 print(
                     coloured(AnsiColour.blue, "cd", cheribuild_dir + "/docker && docker build --tag cheribuild-test ."))
                 sys.exit(coloured(AnsiColour.red, "Failed to start docker!"))

@@ -37,7 +37,7 @@ import typing
 from collections import OrderedDict
 from pathlib import Path
 
-from .utils import commandline_to_str, statusUpdate, warningMessage
+from .utils import commandline_to_str, status_update, warningMessage
 
 
 class MtreeEntry(object):
@@ -190,7 +190,7 @@ class MtreeFile(object):
             last_attrib = ("contents", contents_path)
         attribs = OrderedDict([("type", mtree_type), ("uname", uname), ("gname", gname), ("mode", mode), last_attrib])
         if print_status:
-            statusUpdate("Adding file", file, "to mtree as", mtree_path, file=sys.stderr)
+            status_update("Adding file", file, "to mtree as", mtree_path, file=sys.stderr)
         self._mtree[mtree_path] = MtreeEntry(mtree_path, attribs)
 
     def add_dir(self, path, mode=None, uname="root", gname="wheel", print_status=True, reference_dir=None):
@@ -206,7 +206,7 @@ class MtreeFile(object):
                 mode = "0755"
             else:
                 if print_status:
-                    statusUpdate("Inferring permissions for", path, "from", reference_dir, file=sys.stderr)
+                    status_update("Inferring permissions for", path, "from", reference_dir, file=sys.stderr)
                 mode = self.infer_mode_string(reference_dir, True)
         mode = self._ensure_mtree_mode_fmt(mode)
         # Ensure that SSH will work even if the extra-file directory has wrong permissions
@@ -225,7 +225,7 @@ class MtreeFile(object):
         # now add the actual entry
         attribs = OrderedDict([("type", "dir"), ("uname", uname), ("gname", gname), ("mode", mode)])
         if print_status:
-            statusUpdate("Adding dir", path, "to mtree", file=sys.stderr)
+            status_update("Adding dir", path, "to mtree", file=sys.stderr)
         self._mtree[mtree_path] = MtreeEntry(mtree_path, attribs)
 
     def __contains__(self, item):

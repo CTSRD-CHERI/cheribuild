@@ -37,7 +37,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from ..utils import have_working_internet_connection, latest_system_clang_tool, statusUpdate, warningMessage
+from ..utils import have_working_internet_connection, latest_system_clang_tool, status_update, warningMessage
 
 
 # custom encoder to handle pathlib.Path objects
@@ -495,4 +495,4 @@ class CheriConfig(object):
 
     def debug_message(self, *args, **kwargs):
         if self.debug_output:
-            statusUpdate(*args, **kwargs)
+            status_update(*args, **kwargs)
