@@ -66,7 +66,6 @@ class BuildFreestandingSdk(SimpleProject):
         super().__init__(config)
         if OSInfo.IS_FREEBSD:
             self.add_required_system_tool("ar")
-        self.cheribsdBuildRoot = None
 
     def install_cmake_config(self):
         date = datetime.datetime.now()

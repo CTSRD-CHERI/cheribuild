@@ -227,7 +227,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
                 # Ubuntu packagers think that static linking should not be possible....
                 self.add_cmake_options(LIBCXX_ENABLE_STATIC=False)
         else:
-            self.addCrossFlags()
+            self.add_cross_flags()
         # add the common test options
         self.add_cmake_options(
             CMAKE_INSTALL_RPATH_USE_LINK_PATH=True,  # Fix finding libunwind.so
@@ -262,7 +262,7 @@ class BuildLibCXX(_CxxRuntimeCMakeProject):
         self.common_warning_flags.append("-Wno-ignored-attributes")
         print(self.common_warning_flags)
 
-    def addCrossFlags(self):
+    def add_cross_flags(self):
         # TODO: do I even need the toolchain file to cross compile?
 
         self.add_cmake_options(LIBCXX_TARGET_TRIPLE=self.target_info.target_triple,

@@ -202,11 +202,11 @@ class BuildQt5(BuildQtWithConfigureScript):
     @classmethod
     def setup_config_options(cls, **kwargs):
         super().setup_config_options(**kwargs)
-        cls.allModules = cls.add_bool_option("all-modules", show_help=True,
-                                             help="Build all modules (even those that don't make sense for CHERI)")
+        cls.all_modules = cls.add_bool_option("all-modules", show_help=True,
+                                              help="Build all modules (even those that don't make sense for CHERI)")
 
     def configure(self, **kwargs):
-        if not self.allModules:
+        if not self.all_modules:
             modules_to_skip = "qtgamepad qtlocation".split()
             for i in modules_to_skip:
                 self.configure_args.extend(["-skip", i])
@@ -290,13 +290,13 @@ class BuildICU4C(CrossCompileAutotoolsProject):
         self.configure_args.extend(["--disable-plugins", "--disable-dyload",
                                    "--disable-tests",
                                    "--disable-samples"])
-        self.nativeBuildDir = self.build_dir_for_target(CompilationTargets.NATIVE)
+        self.native_build_dir = self.build_dir_for_target(CompilationTargets.NATIVE)
         # we can't create objects for a different endianess:
         self.COMMON_FLAGS.append("-DU_DISABLE_OBJ_CODE")
         self.cross_warning_flags += ["-Wno-error"]  # FIXME: build with capability -Werror
 
         if not self.compiling_for_host():
-            self.configure_args.append("--with-cross-build=" + str(self.nativeBuildDir))
+            self.configure_args.append("--with-cross-build=" + str(self.native_build_dir))
             # can't build them yet
             # error: undefined symbol: uconvmsg_dat
             # self.configure_args.append("--disable-tools")
@@ -307,8 +307,8 @@ class BuildICU4C(CrossCompileAutotoolsProject):
             self.configure_args.append("--with-data-packaging=archive")
 
     def process(self):
-        if not self.compiling_for_host() and not (self.nativeBuildDir / "bin/icupkg").exists():
-            self.fatal("Missing host build directory", self.nativeBuildDir, " (needed for cross-compiling)",
+        if not self.compiling_for_host() and not (self.native_build_dir / "bin/icupkg").exists():
+            self.fatal("Missing host build directory", self.native_build_dir, " (needed for cross-compiling)",
                        fixit_hint="Run `cheribuild.py " + self.target + "-native`")
         super().process()
 
